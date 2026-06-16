@@ -4,6 +4,32 @@ const definitions = @import("definitions.zig");
 const lib = @import("../lib.zig");
 const io_helper = lib.io_helper;
 
+/// Whether services are managed in the per-user systemd instance (`systemctl
+/// --user`, units under `~/.config/systemd/user`, `WantedBy=default.target`) or
+/// the system instance (`systemctl`, units under `/etc/systemd/system`,
+/// `WantedBy=multi-user.target`).
+///
+/// User scope is right for an interactive dev machine. It is unusable on a
+/// headless server: root in a cloud-init / SSH-command context has no user
+/// systemd bus (`Failed to connect to bus`) and `--user` units never start at
+/// boot without `loginctl enable-linger`. So default to **system** scope when
+/// running as root, and let `PANTRY_SERVICE_SCOPE=user|system` force either.
+pub const ServiceScope = enum {
+    user,
+    system,
+
+    pub fn detect() ServiceScope {
+        if (io_helper.getEnvVarOwned(std.heap.page_allocator, "PANTRY_SERVICE_SCOPE")) |raw| {
+            defer std.heap.page_allocator.free(raw);
+            if (std.mem.eql(u8, raw, "system")) return .system;
+            if (std.mem.eql(u8, raw, "user")) return .user;
+        } else |_| {}
+        // No explicit override: root manages system services, everyone else
+        // manages their own user services.
+        return if (builtin.os.tag == .windows) .user else if (std.posix.geteuid() == 0) .system else .user;
+    }
+};
+
 /// Platform-specific service management
 pub const Platform = enum {
     macos,
@@ -75,11 +101,13 @@ pub const Platform = enum {
 /// Platform-specific service controller
 pub const ServiceController = struct {
     platform: Platform,
+    scope: ServiceScope,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) ServiceController {
         return .{
             .platform = Platform.detect(),
+            .scope = ServiceScope.detect(),
             .allocator = allocator,
         };
     }
@@ -267,69 +295,61 @@ pub const ServiceController = struct {
     // Linux systemd implementation
     // ========================================================================
 
-    fn systemdStart(self: *ServiceController, service_name: []const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name);
-        defer self.allocator.free(service_unit);
-
-        // Use --user flag for user services
-        const argv = [_][]const u8{ "systemctl", "--user", "start", service_unit };
-        const result = try io_helper.spawnAndWait(.{ .argv = &argv });
-
-        const ok = switch (result) {
+    /// Run `systemctl [--user] <verb> <unit>` (the `--user` flag is added only in
+    /// user scope) and report whether it exited 0.
+    fn runSystemctl(self: *ServiceController, verb: []const u8, unit: []const u8) !bool {
+        const result = switch (self.scope) {
+            .user => try io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "systemctl", "--user", verb, unit } }),
+            .system => try io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "systemctl", verb, unit } }),
+        };
+        return switch (result) {
             .exited => |code| code == 0,
             else => false,
         };
-        if (!ok) return error.ServiceStartFailed;
+    }
+
+    /// Reload the relevant systemd manager so a freshly written unit is picked
+    /// up before start/enable. Best-effort — a failure here surfaces on the
+    /// subsequent start.
+    pub fn systemdDaemonReload(self: *ServiceController) void {
+        _ = switch (self.scope) {
+            .user => io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "systemctl", "--user", "daemon-reload" } }),
+            .system => io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "systemctl", "daemon-reload" } }),
+        } catch return;
+    }
+
+    fn systemdStart(self: *ServiceController, service_name: []const u8) !void {
+        const service_unit = try self.getSystemdUnit(service_name);
+        defer self.allocator.free(service_unit);
+        if (!try self.runSystemctl("start", service_unit)) return error.ServiceStartFailed;
     }
 
     fn systemdStop(self: *ServiceController, service_name: []const u8) !void {
         const service_unit = try self.getSystemdUnit(service_name);
         defer self.allocator.free(service_unit);
-
-        const argv = [_][]const u8{ "systemctl", "--user", "stop", service_unit };
-        const result = try io_helper.spawnAndWait(.{ .argv = &argv });
-
-        const ok = switch (result) {
-            .exited => |code| code == 0,
-            else => false,
-        };
-        if (!ok) return error.ServiceStopFailed;
+        if (!try self.runSystemctl("stop", service_unit)) return error.ServiceStopFailed;
     }
 
     fn systemdEnable(self: *ServiceController, service_name: []const u8) !void {
         const service_unit = try self.getSystemdUnit(service_name);
         defer self.allocator.free(service_unit);
-
-        const argv = [_][]const u8{ "systemctl", "--user", "enable", service_unit };
-        const result = try io_helper.spawnAndWait(.{ .argv = &argv });
-
-        const ok = switch (result) {
-            .exited => |code| code == 0,
-            else => false,
-        };
-        if (!ok) return error.ServiceEnableFailed;
+        if (!try self.runSystemctl("enable", service_unit)) return error.ServiceEnableFailed;
     }
 
     fn systemdDisable(self: *ServiceController, service_name: []const u8) !void {
         const service_unit = try self.getSystemdUnit(service_name);
         defer self.allocator.free(service_unit);
-
-        const argv = [_][]const u8{ "systemctl", "--user", "disable", service_unit };
-        const result = try io_helper.spawnAndWait(.{ .argv = &argv });
-
-        const ok = switch (result) {
-            .exited => |code| code == 0,
-            else => false,
-        };
-        if (!ok) return error.ServiceDisableFailed;
+        if (!try self.runSystemctl("disable", service_unit)) return error.ServiceDisableFailed;
     }
 
     fn systemdStatus(self: *ServiceController, service_name: []const u8) !definitions.ServiceStatus {
         const service_unit = try self.getSystemdUnit(service_name);
         defer self.allocator.free(service_unit);
 
-        const argv = [_][]const u8{ "systemctl", "--user", "is-active", service_unit };
-        const result = try io_helper.childRun(self.allocator, &argv);
+        const result = switch (self.scope) {
+            .user => try io_helper.childRun(self.allocator, &[_][]const u8{ "systemctl", "--user", "is-active", service_unit }),
+            .system => try io_helper.childRun(self.allocator, &[_][]const u8{ "systemctl", "is-active", service_unit }),
+        };
         defer self.allocator.free(result.stdout);
         defer self.allocator.free(result.stderr);
 
@@ -352,6 +372,25 @@ pub const ServiceController = struct {
             "pantry-{s}.service",
             .{service_name},
         );
+    }
+
+    /// Caller-owned directory the systemd unit is written to for the active
+    /// scope: `/etc/systemd/system` for system services, the per-user dir
+    /// (`~/.config/systemd/user`) otherwise.
+    pub fn systemdUnitDirectory(self: *ServiceController) ![]const u8 {
+        return switch (self.scope) {
+            .system => try self.allocator.dupe(u8, "/etc/systemd/system"),
+            .user => try self.platform.userServiceDirectory(self.allocator),
+        };
+    }
+
+    /// The `WantedBy=` install target for the active scope. The per-user manager
+    /// has no `multi-user.target`, so user units anchor to `default.target`.
+    pub fn systemdWantedBy(self: *ServiceController) []const u8 {
+        return switch (self.scope) {
+            .system => "multi-user.target",
+            .user => "default.target",
+        };
     }
 
     // ========================================================================

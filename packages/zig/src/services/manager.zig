@@ -172,6 +172,10 @@ pub const ServiceManager = struct {
         // Generate service file if it doesn't exist
         try self.ensureServiceFile(service);
 
+        // Pick up a freshly written unit before starting (system/user systemd
+        // both need a daemon-reload; no-op on platforms without systemctl).
+        if (platform.Platform.detect() == .linux) self.controller.systemdDaemonReload();
+
         // Start the service
         try self.controller.start(service_name);
     }
@@ -360,9 +364,9 @@ pub const ServiceManager = struct {
             try std.fmt.allocPrint(self.allocator, "pantry-{s}.service", .{service.name});
         defer self.allocator.free(unit_name);
 
-        // Use user systemd directory instead of system
-        const plat = platform.Platform.detect();
-        const service_dir = try plat.userServiceDirectory(self.allocator);
+        // Scope-aware unit directory: /etc/systemd/system for system services
+        // (root / servers), ~/.config/systemd/user for per-user dev services.
+        const service_dir = try self.controller.systemdUnitDirectory();
         defer self.allocator.free(service_dir);
 
         // Ensure directory exists
@@ -440,13 +444,15 @@ pub const ServiceManager = struct {
                 try io_helper.writeAllToFile(file, env_line);
             }
 
-            // These are USER units (systemctl --user): the user manager has
-            // no multi-user.target, and an empty [Install] makes
-            // `systemctl --user enable` fail outright. Always anchor to
-            // default.target — whether pantry CALLS enable is governed by
-            // auto_start / `pantry services enable`, not by the unit shape.
-            try io_helper.writeAllToFile(file, "\n[Install]\n");
-            try io_helper.writeAllToFile(file, "WantedBy=default.target\n");
+            // An empty [Install] makes `systemctl enable` fail outright, so
+            // always anchor to the scope's target: multi-user.target for system
+            // units (boot-time start), default.target for the per-user manager
+            // (which has no multi-user.target). Whether pantry CALLS enable is
+            // governed by auto_start / `pantry services enable`, not unit shape.
+            const wanted_by = self.controller.systemdWantedBy();
+            const install_line = try std.fmt.allocPrint(self.allocator, "\n[Install]\nWantedBy={s}\n", .{wanted_by});
+            defer self.allocator.free(install_line);
+            try io_helper.writeAllToFile(file, install_line);
         };
     }
 
