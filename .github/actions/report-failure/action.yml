@@ -1,0 +1,53 @@
+name: Report Failure
+description: Open (or update) a GitHub issue when a build/publish job fails, so failures are never silent.
+
+inputs:
+  token:
+    description: GitHub token with `issues: write`.
+    required: true
+  name:
+    description: Name of the workflow that failed (defaults to the current one).
+    required: false
+    default: ${{ github.workflow }}
+  run-url:
+    description: URL of the failed run (defaults to the current run).
+    required: false
+    default: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  context:
+    description: Short extra context (e.g. the packages/platform being built).
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: File or update CI-failure issue
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        CTX: ${{ inputs.context }}
+        WF: ${{ inputs.name }}
+        REPO: ${{ github.repository }}
+        RUN_URL: ${{ inputs.run-url }}
+        SHA: ${{ github.sha }}
+        REF: ${{ github.ref_name }}
+      run: |
+        set -uo pipefail
+        TITLE="[ci-failure] ${WF}"
+        BODY=$(printf 'Workflow **%s** failed.\n\n- Run: %s\n- Commit: %s\n- Ref: %s\n- Context: %s\n\n_Auto-filed by the report-failure action; re-runs comment here instead of opening duplicates._' \
+          "$WF" "$RUN_URL" "$SHA" "$REF" "${CTX:-n/a}")
+
+        # Dedupe: if an open issue with this exact title exists, comment on it;
+        # otherwise open a new one. Never fail the run because reporting failed.
+        EXISTING=$(gh issue list --repo "$REPO" --state open --label ci-failure --search "$TITLE in:title" \
+          --json number,title --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty" 2>/dev/null || true)
+
+        if [ -n "${EXISTING:-}" ]; then
+          gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY" || true
+          echo "Commented on existing issue #$EXISTING"
+        else
+          # Ensure the label exists (ignore if it already does), then create.
+          gh label create ci-failure --repo "$REPO" --color B60205 --description "Automated CI build/publish failure" >/dev/null 2>&1 || true
+          gh issue create --repo "$REPO" --title "$TITLE" --body "$BODY" --label ci-failure \
+            || gh issue create --repo "$REPO" --title "$TITLE" --body "$BODY" || true
+        fi

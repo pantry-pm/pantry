@@ -1,0 +1,32 @@
+name: CI Failure Issue
+
+# Whenever any build/publish/release workflow finishes in failure, open (or
+# update) a GitHub issue so the failure is never silent. Centralized via
+# workflow_run so it covers every build workflow without editing each one.
+on:
+  workflow_run:
+    workflows:
+      - Build
+      - Build Multi-Version Packages
+      - Publish Changed Packages
+      - Build Zig (All Platforms)
+      - Releaser
+      - Update Packages
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/report-failure
+        with:
+          token: ${{ github.token }}
+          name: ${{ github.event.workflow_run.name }}
+          run-url: ${{ github.event.workflow_run.html_url }}
+          context: "head_branch: ${{ github.event.workflow_run.head_branch }}, sha: ${{ github.event.workflow_run.head_sha }}"
