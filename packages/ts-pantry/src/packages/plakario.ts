@@ -66,6 +66,7 @@ export const plakarioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.1.3',
     '1.1.2',
     '1.1.1',
     '1.1.0',
