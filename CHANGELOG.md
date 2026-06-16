@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.41...v0.9.42)
+
+### 🐛 Bug Fixes
+
+- **install**: expand transitive deps for explicit `install <pkg>` too ([59ef255](https://github.com/pantry-pm/pantry/commit/59ef255)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.42 ([0536e47](https://github.com/pantry-pm/pantry/commit/0536e47)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.40...v0.9.41)
 
 ### 🐛 Bug Fixes
