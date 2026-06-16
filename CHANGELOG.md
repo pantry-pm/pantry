@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.43...v0.9.44)
+
+### 🐛 Bug Fixes
+
+- **catalog**: merge recipe deps into generated catalog + filter bogus deps ([a186556](https://github.com/pantry-pm/pantry/commit/a186556)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.44 ([38e184c](https://github.com/pantry-pm/pantry/commit/38e184c)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.42...v0.9.43)
 
 ### 🐛 Bug Fixes
