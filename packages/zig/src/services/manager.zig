@@ -476,7 +476,8 @@ pub const ServiceManager = struct {
         defer libs.deinit(self.allocator);
         self.scanLibDirs(pantry_root, 0, &libs);
         if (libs.items.len == 0) return;
-        const joined = std.mem.trimRight(u8, libs.items, ":");
+        // Drop the trailing ':' appended after the last entry.
+        const joined = if (libs.items[libs.items.len - 1] == ':') libs.items[0 .. libs.items.len - 1] else libs.items;
         if (joined.len == 0) return;
 
         const line = try std.fmt.allocPrint(self.allocator, "Environment=\"LD_LIBRARY_PATH={s}\"\n", .{joined});
