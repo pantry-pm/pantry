@@ -1,3 +1,20 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.47...v0.9.48)
+
+### 🐛 Bug Fixes
+
+- **env**: make LD_LIBRARY_PATH export safe under set -u ([a704b4f](https://github.com/pantry-pm/pantry/commit/a704b4f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: report-failure action YAML (colon in description broke parsing) ([e51b815](https://github.com/pantry-pm/pantry/commit/e51b815)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: enable pdo_mysql + mysqli in php ([b7c1710](https://github.com/pantry-pm/pantry/commit/b7c1710)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.48 ([b1de422](https://github.com/pantry-pm/pantry/commit/b1de422)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update lxml.de, zarf.dev ([0314d94](https://github.com/pantry-pm/pantry/commit/0314d94)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.46...v0.9.47)
 
 ### 🐛 Bug Fixes
