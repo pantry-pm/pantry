@@ -60,6 +60,7 @@ export const fmtdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '12.2.0',
     '12.1.0',
     '12.0.0',
     '11.2.0',
