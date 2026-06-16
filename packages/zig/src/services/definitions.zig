@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const Paths = @import("../core/platform.zig").Paths;
 
 /// Service configuration
@@ -2273,6 +2274,14 @@ pub const Services = struct {
         const data_dir = try serviceDataDir(allocator, home, "php-fpm");
         defer allocator.free(data_dir);
 
+        // php-fpm's master refuses to start (exit 78) when it runs as root but
+        // the pool sets no user/group. On a server (system scope) the service
+        // runs as root, so pin the pool to root; on a dev machine the master
+        // isn't root and must NOT setuid, so omit it.
+        const pool_user = if (builtin.os.tag == .linux and std.os.linux.geteuid() == 0)
+            "user = root\ngroup = root\n"
+        else
+            "";
         const conf = try std.fmt.allocPrint(allocator,
             \\[global]
             \\error_log = {s}/php-fpm.log
@@ -2280,11 +2289,11 @@ pub const Services = struct {
             \\
             \\[www]
             \\listen = 127.0.0.1:{d}
-            \\pm = static
-            \\pm.max_children = 2
+            \\{s}pm = static
+            \\pm.max_children = 5
             \\ping.path = /ping
             \\
-        , .{ data_dir, port });
+        , .{ data_dir, port, pool_user });
         defer allocator.free(conf);
         const conf_path = try writeServiceFile(allocator, data_dir, "php-fpm.conf", conf);
         defer allocator.free(conf_path);
