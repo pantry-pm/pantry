@@ -3,18 +3,18 @@ description: Open (or update) a GitHub issue when a build/publish job fails, so 
 
 inputs:
   token:
-    description: GitHub token with `issues: write`.
+    description: "GitHub token with issues-write permission."
     required: true
   name:
-    description: Name of the workflow that failed (defaults to the current one).
+    description: "Name of the workflow that failed."
     required: false
-    default: ${{ github.workflow }}
+    default: ''
   run-url:
-    description: URL of the failed run (defaults to the current run).
+    description: "URL of the failed run."
     required: false
-    default: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    default: ''
   context:
-    description: Short extra context (e.g. the packages/platform being built).
+    description: "Short extra context (e.g. the packages/platform being built)."
     required: false
     default: ''
 
@@ -31,8 +31,12 @@ runs:
         RUN_URL: ${{ inputs.run-url }}
         SHA: ${{ github.sha }}
         REF: ${{ github.ref_name }}
+        FALLBACK_WF: ${{ github.workflow }}
+        FALLBACK_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         set -uo pipefail
+        WF="${WF:-$FALLBACK_WF}"
+        RUN_URL="${RUN_URL:-$FALLBACK_URL}"
         TITLE="[ci-failure] ${WF}"
         BODY=$(printf 'Workflow **%s** failed.\n\n- Run: %s\n- Commit: %s\n- Ref: %s\n- Context: %s\n\n_Auto-filed by the report-failure action; re-runs comment here instead of opening duplicates._' \
           "$WF" "$RUN_URL" "$SHA" "$REF" "${CTX:-n/a}")
