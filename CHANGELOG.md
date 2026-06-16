@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.39...v0.9.40)
+
+### 🚀 Features
+
+- **install**: install transitive system dependencies ([a233c66](https://github.com/pantry-pm/pantry/commit/a233c66)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **env**: export LD_LIBRARY_PATH so directly-run binaries find dep libs ([f525e00](https://github.com/pantry-pm/pantry/commit/f525e00)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🐛 Bug Fixes
+
+- **recipes**: build redis + nginx against OpenSSL 3 ([dd15324](https://github.com/pantry-pm/pantry/commit/dd15324)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🤖 Continuous Integration
+
+- auto-file a GitHub issue when any build/publish workflow fails ([64cb045](https://github.com/pantry-pm/pantry/commit/64cb045)) _(by Chris <chrisbreuer93@gmail.com>)_
+- auto-publish changed packages to the registry on push ([80ff236](https://github.com/pantry-pm/pantry/commit/80ff236)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.40 ([871759f](https://github.com/pantry-pm/pantry/commit/871759f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.38...v0.9.39)
 
 ### 🚀 Features
