@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.46...v0.9.47)
+
+### 🐛 Bug Fixes
+
+- **services**: nginx starts as a system service (absolute bin + writable config) ([b151b2d](https://github.com/pantry-pm/pantry/commit/b151b2d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.47 ([19cc9f4](https://github.com/pantry-pm/pantry/commit/19cc9f4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.45...v0.9.46)
 
 ### 🐛 Bug Fixes
