@@ -8,10 +8,12 @@
 //! Phase 3: Extract all packages + create bin shims
 
 const std = @import("std");
+const builtin = @import("builtin");
 const io_helper = @import("../io_helper.zig");
 const installer_mod = @import("installer.zig");
 const cache_mod = @import("../cache.zig");
 const packages = @import("../packages.zig");
+const generated = @import("../packages/generated.zig");
 const style = @import("../cli/style.zig");
 const offline = @import("offline.zig");
 const patches_mod = @import("patches.zig");
@@ -216,6 +218,76 @@ const ResolveThreadCtx = struct {
     }
 };
 
+/// Parse a generated-catalog dependency spec into a domain + version
+/// constraint, honoring the optional `os:` prefix and stripping ` # comments`.
+/// Examples: `apache.org/apr^1`, `linux:gnu.org/gcc/libstdcxx^14 # since …`,
+/// `gnome.org/libxml2~2.13`, `apache.org/thrift=0.22.0`, `…libstdcxx@14`.
+/// Returns null when the spec targets a different OS. Returned slices point
+/// into `spec_in` (a static catalog string), so callers dupe before storing.
+fn parsePantryDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
+    var spec = spec_in;
+    if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
+    spec = std.mem.trim(u8, spec, " \t");
+    if (spec.len == 0) return null;
+
+    // `linux:` / `darwin:` / `windows:` OS guard.
+    if (std.mem.indexOfScalar(u8, spec, ':')) |colon| {
+        const prefix = spec[0..colon];
+        const is_os = std.mem.eql(u8, prefix, "linux") or std.mem.eql(u8, prefix, "darwin") or std.mem.eql(u8, prefix, "windows");
+        if (is_os) {
+            const cur = switch (builtin.os.tag) {
+                .linux => "linux",
+                .macos => "darwin",
+                .windows => "windows",
+                else => "",
+            };
+            if (!std.mem.eql(u8, prefix, cur)) return null;
+            spec = std.mem.trim(u8, spec[colon + 1 ..], " \t");
+        }
+    }
+    if (spec.len == 0) return null;
+
+    // Split the domain from its version constraint at the first operator char.
+    var vstart: usize = spec.len;
+    for (spec, 0..) |c, i| {
+        if (c == '^' or c == '~' or c == '>' or c == '<' or c == '=' or c == '@') {
+            vstart = i;
+            break;
+        }
+    }
+    const domain = std.mem.trim(u8, spec[0..vstart], " \t");
+    if (domain.len == 0) return null;
+    var version: []const u8 = "latest";
+    if (vstart < spec.len) {
+        var v = spec[vstart..];
+        if (v.len > 0 and v[0] == '@') v = v[1..]; // `domain@14` → exact 14
+        v = std.mem.trim(u8, v, " \t");
+        if (v.len > 0) version = v;
+    }
+    return .{ .domain = domain, .version = version };
+}
+
+/// Append `domain`'s transitive system (pantry) dependencies — read from the
+/// embedded package catalog — to `wave` so they get resolved + downloaded too.
+/// Without this, a package's shared-library deps (php → libpq/libonig/…,
+/// nginx → libpcre) are never installed and the binary fails to load.
+/// Best-effort; never fails the install.
+fn enqueuePantryDeps(allocator: std.mem.Allocator, domain: []const u8, wave: *std.ArrayList(PipelineDep)) void {
+    const info = generated.getPackageByDomain(domain) orelse return;
+    for (info.dependencies) |spec| {
+        const parsed = parsePantryDepSpec(spec) orelse continue;
+        const name = allocator.dupe(u8, parsed.domain) catch continue;
+        const ver = allocator.dupe(u8, parsed.version) catch {
+            allocator.free(name);
+            continue;
+        };
+        wave.append(allocator, .{ .name = name, .version = ver, .source = .pantry }) catch {
+            allocator.free(name);
+            allocator.free(ver);
+        };
+    }
+}
+
 fn resolvePantryRegistryTarball(
     allocator: std.mem.Allocator,
     name: []const u8,
@@ -409,6 +481,8 @@ fn resolveFullTree(
                             try seen.put(try allocator.dupe(u8, dep.name), {});
                             try resolved.append(allocator, pantry_pkg);
                             inst.hoisted_versions.put(pantry_pkg.name, pantry_pkg.version);
+                            // Pull in its transitive system deps (shared libs).
+                            enqueuePantryDeps(allocator, dep.name, &next_wave);
                         } else {
                             allocator.free(pantry_pkg.name);
                             allocator.free(pantry_pkg.version);
@@ -431,6 +505,9 @@ fn resolveFullTree(
                                     .source = dep.source,
                                 });
                             }
+                            // Pull in its transitive system deps (shared libs)
+                            // from the embedded catalog so the binary can load.
+                            enqueuePantryDeps(allocator, dep.name, &next_wave);
                         } else {
                             try resolved.append(allocator, .{
                                 .name = try allocator.dupe(u8, dep.name),
