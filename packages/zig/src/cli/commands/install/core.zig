@@ -228,6 +228,80 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
     return .{ .exit_code = 0 };
 }
 
+/// Extract the dependency domain from a generated-catalog spec, honoring the
+/// `os:` prefix (returns null for other-OS deps) and stripping the version
+/// constraint and ` # comment`. e.g. `linux:gnu.org/gcc^14 # note` → `gnu.org/gcc`
+/// (on Linux), `apache.org/apr^1` → `apache.org/apr`. Returned slice points into
+/// `spec_in` (a static catalog string).
+fn depDomainFromSpec(spec_in: []const u8) ?[]const u8 {
+    var spec = spec_in;
+    if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
+    spec = std.mem.trim(u8, spec, " \t");
+    if (spec.len == 0) return null;
+    if (std.mem.indexOfScalar(u8, spec, ':')) |colon| {
+        const prefix = spec[0..colon];
+        const is_os = std.mem.eql(u8, prefix, "linux") or std.mem.eql(u8, prefix, "darwin") or std.mem.eql(u8, prefix, "windows");
+        if (is_os) {
+            const cur = switch (@import("builtin").os.tag) {
+                .linux => "linux",
+                .macos => "darwin",
+                .windows => "windows",
+                else => "",
+            };
+            if (!std.mem.eql(u8, prefix, cur)) return null;
+            spec = std.mem.trim(u8, spec[colon + 1 ..], " \t");
+        }
+    }
+    var vend: usize = spec.len;
+    for (spec, 0..) |c, i| {
+        if (c == '^' or c == '~' or c == '>' or c == '<' or c == '=' or c == '@') {
+            vend = i;
+            break;
+        }
+    }
+    const domain = std.mem.trim(u8, spec[0..vend], " \t");
+    return if (domain.len == 0) null else domain;
+}
+
+/// Append the transitive system-dependency closure of the explicitly-requested
+/// packages to `package_args` (deduped) so a package's shared-library deps
+/// (php → libpq/libonig/libxml2/icu/libsodium, nginx → libpcre) are installed
+/// alongside it. Deps are read from the embedded catalog and installed at
+/// `latest` (packages are built against current dep versions). Best-effort.
+fn appendTransitiveDeps(allocator: std.mem.Allocator, package_args: *std.ArrayList([]const u8)) void {
+    const generated = @import("../../../packages/generated.zig");
+    var seen = std.StringHashMap(void).init(allocator);
+    defer seen.deinit();
+    var queue = std.ArrayList([]const u8).empty;
+    defer queue.deinit(allocator);
+
+    // Seed with the resolved domains of the requested packages.
+    for (package_args.items) |a| {
+        const at = std.mem.indexOfScalar(u8, a, '@');
+        const raw = if (at) |p| a[0..p] else a;
+        const domain = helpers.resolvePackageAlias(raw);
+        if (seen.contains(domain)) continue;
+        seen.put(domain, {}) catch {};
+        queue.append(allocator, domain) catch {};
+    }
+
+    // BFS the dependency graph from the embedded catalog.
+    var i: usize = 0;
+    while (i < queue.items.len) : (i += 1) {
+        const info = generated.getPackageByDomain(queue.items[i]) orelse continue;
+        for (info.dependencies) |spec| {
+            const dep = depDomainFromSpec(spec) orelse continue;
+            if (seen.contains(dep)) continue;
+            seen.put(dep, {}) catch {};
+            queue.append(allocator, dep) catch {};
+            const owned = allocator.dupe(u8, dep) catch continue;
+            package_args.append(allocator, owned) catch {
+                allocator.free(owned);
+            };
+        }
+    }
+}
+
 /// Install packages - main entry point
 pub fn installCommand(allocator: std.mem.Allocator, args: []const []const u8) !types.CommandResult {
     return installCommandWithOptions(allocator, args, .{});
@@ -1173,7 +1247,14 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     const start_ts2 = io_helper.clockGettime();
     const start_time = @as(i64, @intCast(start_ts2.sec)) * 1000 + @as(i64, @intCast(@divFloor(start_ts2.nsec, 1_000_000)));
 
-    style.printInstalling(package_args.items.len);
+    // Expand the requested packages with their transitive system-dependency
+    // closure so dependent binaries can load their shared libraries. The first
+    // `user_requested_count` entries are what the user asked for; the rest are
+    // pulled-in deps whose install failures are non-fatal.
+    const user_requested_count = package_args.items.len;
+    appendTransitiveDeps(allocator, &package_args);
+
+    style.printInstalling(user_requested_count);
 
     var success_count: usize = 0;
     var failed_count: usize = 0;
@@ -1197,7 +1278,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         installed_packages.deinit(allocator);
     }
 
-    for (package_args.items) |pkg_spec_str| {
+    for (package_args.items, 0..) |pkg_spec_str, arg_idx| {
+        const is_transitive_dep = arg_idx >= user_requested_count;
         // Parse package spec (name@version)
         const at_pos = std.mem.indexOf(u8, pkg_spec_str, "@");
         const raw_name = if (at_pos) |pos| pkg_spec_str[0..pos] else pkg_spec_str;
@@ -1340,9 +1422,15 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 error.NoTarballUrl => "npm package found but no tarball URL available",
                 else => style.friendlyErrorName(err),
             };
-            style.printFailed(name, spec.version, error_msg);
-
-            failed_count += 1;
+            // A pulled-in transitive dep failing is non-fatal (it may lack a
+            // build for this platform); only requested packages count as failures.
+            if (is_transitive_dep) {
+                if (opts.verbose)
+                    style.print("{s}  ? optional dep {s}: {s}{s}\n", .{ style.dim, name, error_msg, style.reset });
+            } else {
+                style.printFailed(name, spec.version, error_msg);
+                failed_count += 1;
+            }
             continue;
         };
 
