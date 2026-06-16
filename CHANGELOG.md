@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.40...v0.9.41)
+
+### 🐛 Bug Fixes
+
+- **install**: expand transitive deps after server-side resolution too ([cf0449e](https://github.com/pantry-pm/pantry/commit/cf0449e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.41 ([f5899cf](https://github.com/pantry-pm/pantry/commit/f5899cf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update arkade.dev, asciinema.org, buf.build, casdoor.org, daytona.io, dozzle.dev, github.com/ggerganov/llama.cpp, libcxx.llvm.org, llvm.org, openmp.llvm.org, planetscale.com, pugixml.org, railway.app, sentry.io, tilt.dev ([078fb3a](https://github.com/pantry-pm/pantry/commit/078fb3a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.39...v0.9.40)
 
 ### 🚀 Features
