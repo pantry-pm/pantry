@@ -24,9 +24,13 @@ pub const ServiceScope = enum {
             if (std.mem.eql(u8, raw, "system")) return .system;
             if (std.mem.eql(u8, raw, "user")) return .user;
         } else |_| {}
-        // No explicit override: root manages system services, everyone else
-        // manages their own user services.
-        return if (builtin.os.tag == .windows) .user else if (std.posix.geteuid() == 0) .system else .user;
+        // No explicit override: system scope only applies to systemd (Linux),
+        // where root manages system services and everyone else their own user
+        // services. macOS (launchd) / FreeBSD (rc.d) / Windows stay user scope.
+        return switch (builtin.os.tag) {
+            .linux => if (std.os.linux.geteuid() == 0) .system else .user,
+            else => .user,
+        };
     }
 };
 
