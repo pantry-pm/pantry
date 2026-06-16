@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.45...v0.9.46)
+
+### 🐛 Bug Fixes
+
+- **services**: php-fpm pool runs as www-data (not root) ([d6a48c4](https://github.com/pantry-pm/pantry/commit/d6a48c4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.46 ([b9e9865](https://github.com/pantry-pm/pantry/commit/b9e9865)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, just.systems, ohmyposh.dev ([21a0a64](https://github.com/pantry-pm/pantry/commit/21a0a64)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.44...v0.9.45)
 
 ### 🐛 Bug Fixes
