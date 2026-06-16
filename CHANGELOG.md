@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.42...v0.9.43)
+
+### 🐛 Bug Fixes
+
+- **services**: drop std.mem.trimRight (absent in zig-dev) ([8471703](https://github.com/pantry-pm/pantry/commit/8471703)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **env+services**: LD_LIBRARY_PATH covers all installed packages ([dee3e0a](https://github.com/pantry-pm/pantry/commit/dee3e0a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.43 ([ee63d66](https://github.com/pantry-pm/pantry/commit/ee63d66)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.41...v0.9.42)
 
 ### 🐛 Bug Fixes
