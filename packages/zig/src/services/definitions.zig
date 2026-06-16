@@ -532,17 +532,58 @@ pub const Services = struct {
 
     /// Nginx service
     pub fn nginx(allocator: std.mem.Allocator, port: u16) !ServiceConfig {
+        return nginxWithContext(allocator, port, null);
+    }
+
+    pub fn nginxWithContext(allocator: std.mem.Allocator, port: u16, project_root: ?[]const u8) !ServiceConfig {
         const env_vars = std.StringHashMap([]const u8).init(allocator);
+        const home = getHome(allocator);
+        defer if (home) |h| allocator.free(h);
+
+        // Bare `nginx -g 'daemon off;'` relies on PATH (absent in the systemd
+        // unit) and nginx's compiled-in prefix for logs/pid/temp dirs, which
+        // isn't writable/present on a fresh box — so it crash-loops. Generate a
+        // minimal self-contained config under a writable data dir and run nginx
+        // with an absolute binary, `-p <data_dir>`, and `-c <conf>`. (Real sites
+        // replace this config; this just makes the service start cleanly.)
+        const data_dir = try serviceDataDir(allocator, home, "nginx");
+        defer allocator.free(data_dir);
+
+        // Workers can't run as root; drop to www-data on a server (system scope).
+        const worker_user = if (builtin.os.tag == .linux and std.os.linux.geteuid() == 0)
+            "user www-data;\n"
+        else
+            "";
+        const conf = try std.fmt.allocPrint(allocator,
+            \\{s}pid {s}/nginx.pid;
+            \\error_log {s}/error.log;
+            \\events {{ worker_connections 1024; }}
+            \\http {{
+            \\    access_log {s}/access.log;
+            \\    server {{
+            \\        listen {d};
+            \\        location / {{ return 200 "pantry nginx ok\n"; }}
+            \\    }}
+            \\}}
+            \\
+        , .{ worker_user, data_dir, data_dir, data_dir, port });
+        defer allocator.free(conf);
+        const conf_path = try writeServiceFile(allocator, data_dir, "nginx.conf", conf);
+        defer allocator.free(conf_path);
+
+        const nginx_bin = try resolveServiceBinary(allocator, "nginx", project_root, home);
+        defer allocator.free(nginx_bin);
 
         return ServiceConfig{
             .name = try allocator.dupe(u8, "nginx"),
             .display_name = try allocator.dupe(u8, "Nginx"),
             .description = try allocator.dupe(u8, "Nginx web server"),
-            .start_command = try allocator.dupe(u8, "nginx -g 'daemon off;'"),
+            .start_command = try std.fmt.allocPrint(allocator, "{s} -p {s}/ -c {s} -g 'daemon off;'", .{ nginx_bin, data_dir, conf_path }),
             .env_vars = env_vars,
             .port = port,
             .auto_start = false,
             .keep_alive = true,
+            .working_directory = try allocator.dupe(u8, data_dir),
             .health_check = try std.fmt.allocPrint(allocator, "curl -sf http://127.0.0.1:{d}/", .{port}),
         };
     }

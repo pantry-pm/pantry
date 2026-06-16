@@ -918,7 +918,7 @@ fn getServiceConfigRaw(allocator: std.mem.Allocator, name: []const u8, project_r
     }
     // Web Servers
     else if (std.mem.eql(u8, name, "nginx")) {
-        return try Services.nginx(allocator, port);
+        return try Services.nginxWithContext(allocator, port, project_root);
     } else if (std.mem.eql(u8, name, "caddy")) {
         return try Services.caddy(allocator, port);
     } else if (std.mem.eql(u8, name, "httpd")) {
@@ -1077,7 +1077,7 @@ fn getServiceConfigWithPortRaw(allocator: std.mem.Allocator, name: []const u8, p
     } else if (std.mem.eql(u8, name, "keycloak")) {
         return try Services.keycloak(allocator, port);
     } else if (std.mem.eql(u8, name, "nginx")) {
-        return try Services.nginx(allocator, port);
+        return try Services.nginxWithContext(allocator, port, project_root);
     } else if (std.mem.eql(u8, name, "caddy")) {
         return try Services.caddy(allocator, port);
     } else if (std.mem.eql(u8, name, "httpd")) {
