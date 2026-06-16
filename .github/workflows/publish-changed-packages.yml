@@ -1,0 +1,123 @@
+name: Publish Changed Packages
+
+# Auto-publish to the pantry registry whenever a commit changes a package's
+# recipe or metadata — including the automated version bumps pushed by
+# `update-packages.yml`. Builds FROM SOURCE (no --pkgx-mirror) so the published
+# binaries are linked against current libraries and actually run on modern
+# distros, rather than re-mirroring stale pkgx prebuilts.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/ts-pantry/src/recipes/**'
+      - 'packages/ts-pantry/src/packages/**'
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Domains to build (space/comma separated). Empty = autodetect from the push diff.'
+        required: false
+        type: string
+      max-versions:
+        description: 'Max versions per package to (re)build.'
+        required: false
+        default: '3'
+        type: string
+
+concurrency:
+  group: publish-changed-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Authenticated build-status reporting (same ptry_ registry token).
+  PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+  # Object storage (defaults to AWS S3; repo vars point it at Hetzner).
+  STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
+  S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}
+  S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+  S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+  AWS_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+  S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+  S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Detect changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      domains: ${{ steps.detect.outputs.domains }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed package domains
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANUAL="${{ github.event.inputs.packages }}"
+          if [ -n "$MANUAL" ]; then
+            DOMAINS=$(echo "$MANUAL" | tr ', ' '\n' | sed '/^$/d')
+          else
+            BEFORE="${{ github.event.before }}"
+            # New branch / unknown base ⇒ fall back to the last commit.
+            case "$BEFORE" in ''|0000000000000000000000000000000000000000) BEFORE="${{ github.sha }}~1" ;; esac
+            FILES=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- \
+              'packages/ts-pantry/src/recipes/**' 'packages/ts-pantry/src/packages/**' || true)
+            DOMAINS=""
+            for f in $FILES; do
+              case "$f" in
+                # Recipe filename IS the domain (e.g. redis.io.ts → redis.io).
+                */recipes/*.ts) d=$(basename "$f" .ts) ;;
+                # Metadata files (e.g. redisio.ts) carry an explicit `domain:` field.
+                */packages/*.ts) d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//") ;;
+                *) d="" ;;
+              esac
+              [ -n "$d" ] && DOMAINS="$DOMAINS"$'\n'"$d"
+            done
+          fi
+          DOMAINS=$(echo "$DOMAINS" | sed '/^$/d' | sort -u | paste -sd' ' -)
+          echo "Detected changed packages: ${DOMAINS:-<none>}"
+          echo "domains=$DOMAINS" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Source-build + publish (${{ matrix.platform.name }})
+    needs: detect
+    if: needs.detect.outputs.domains != ''
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { name: linux-x86-64, os: ubuntu-latest }
+          - { name: linux-arm64, os: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Pantry
+        uses: ./packages/action
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Source-build + publish changed packages
+        working-directory: packages/ts-pantry
+        shell: bash
+        run: |
+          set -o pipefail
+          DOMAINS="${{ needs.detect.outputs.domains }}"
+          PKGS=$(echo "$DOMAINS" | tr ' ' ',')
+          MAXV="${{ github.event.inputs.max-versions || '3' }}"
+          echo "Source-building (NO pkgx-mirror) and publishing: $PKGS"
+          # No --pkgx-mirror ⇒ compile from the recipe so binaries link current
+          # libs. --force re-uploads even if a (stale, mirrored) artifact exists.
+          bun scripts/build-all-packages.ts \
+            -b "$S3_BUCKET" -r "$S3_REGION" \
+            --platform "${{ matrix.platform.name }}" \
+            -p "$PKGS" --multi-version --max-versions "$MAXV" --force
