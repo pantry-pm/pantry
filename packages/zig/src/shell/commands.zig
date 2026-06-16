@@ -457,6 +457,47 @@ pub const ShellCommands = struct {
         const new_path = try std.mem.join(self.allocator, ":", path_components.items);
         defer self.allocator.free(new_path);
 
+        // Build the dynamic-linker library path from each package's `lib` dir.
+        // pantry's shims set this, but a bare `eval "$(pantry env)"` (and the
+        // service units that exec binaries directly) previously did not — so a
+        // package needing a dependency's shared lib (e.g. nginx → libpcre,
+        // php → its many libs) failed to load at runtime. Derive `<pkg>/lib`
+        // from each PATH dir (mapping a trailing `/bin` to `/lib`) and keep only
+        // the ones that exist.
+        var lib_components: std.ArrayList([]const u8) = .empty;
+        defer {
+            for (lib_components.items) |p| self.allocator.free(p);
+            lib_components.deinit(self.allocator);
+        }
+        var seen_libs = std.StringHashMap(void).init(self.allocator);
+        defer seen_libs.deinit();
+        for (path_components.items) |dir| {
+            const base = if (std.mem.endsWith(u8, dir, "/bin")) dir[0 .. dir.len - 4] else dir;
+            const libdir = try std.fmt.allocPrint(self.allocator, "{s}/lib", .{base});
+            if (seen_libs.contains(libdir)) {
+                self.allocator.free(libdir);
+                continue;
+            }
+            var ld = io_helper.cwd().openDir(io_helper.io, libdir, .{}) catch {
+                self.allocator.free(libdir);
+                continue;
+            };
+            ld.close(io_helper.io);
+            try seen_libs.put(libdir, {});
+            try lib_components.append(self.allocator, libdir);
+        }
+        const lib_join = try std.mem.join(self.allocator, ":", lib_components.items);
+        defer self.allocator.free(lib_join);
+        const lib_var = switch (lib.Platform.current()) {
+            .darwin => "DYLD_LIBRARY_PATH",
+            else => "LD_LIBRARY_PATH",
+        };
+        const lib_export = if (lib_join.len > 0)
+            try std.fmt.allocPrint(self.allocator, "\nexport {s}=\"{s}:${s}\"", .{ lib_var, lib_join, lib_var })
+        else
+            try self.allocator.dupe(u8, "");
+        defer self.allocator.free(lib_export);
+
         // QoL: activation banner + the project's deps so `dev` visibly "locks
         // in". stdout carries the eval'd shell code, so this goes to stderr.
         {
@@ -514,9 +555,9 @@ pub const ShellCommands = struct {
                 \\export PANTRY_ENV_DIR="{s}"
                 \\export PANTRY_BIN_PATH="{s}"
                 \\PATH="{s}:$PATH"
-                \\export PATH
+                \\export PATH{s}
             ,
-                .{ project_root, env_bin, env_dir, pantry_bin, new_path },
+                .{ project_root, env_bin, env_dir, pantry_bin, new_path, lib_export },
             );
         } else {
             return try std.fmt.allocPrint(
@@ -525,9 +566,9 @@ pub const ShellCommands = struct {
                 \\export PANTRY_ENV_BIN_PATH="{s}"
                 \\export PANTRY_ENV_DIR="{s}"
                 \\PATH="{s}:$PATH"
-                \\export PATH
+                \\export PATH{s}
             ,
-                .{ project_root, env_bin, env_dir, new_path },
+                .{ project_root, env_bin, env_dir, new_path, lib_export },
             );
         }
     }
