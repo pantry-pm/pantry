@@ -324,6 +324,45 @@ fn resolvePantryRegistryTarball(
     return null;
 }
 
+/// Post-resolution pass: walk the resolved set and pull in the transitive
+/// system (pantry) dependencies of every pantry package, reading the dep specs
+/// from the embedded catalog and resolving each from the registry. Runs after
+/// resolution regardless of which resolver produced the set (server-side bulk
+/// `resolveViaRegistry` OR the client-side BFS), so a package's shared-library
+/// deps (php → libpq/libonig/libxml2/icu/libsodium, nginx → libpcre) are always
+/// installed alongside it. BFS via index walk — appended deps get expanded too.
+/// Best-effort: a dep missing from the registry is logged (verbose) and skipped.
+fn expandTransitivePantryDeps(
+    allocator: std.mem.Allocator,
+    resolved: *std.ArrayList(ResolvedPackage),
+    verbose: bool,
+) void {
+    var present = std.StringHashMap(void).init(allocator);
+    defer present.deinit();
+    for (resolved.items) |p| present.put(p.name, {}) catch {};
+
+    var i: usize = 0;
+    while (i < resolved.items.len) : (i += 1) {
+        if (resolved.items[i].source != .pantry) continue;
+        const info = generated.getPackageByDomain(resolved.items[i].name) orelse continue;
+        for (info.dependencies) |spec| {
+            const parsed = parsePantryDepSpec(spec) orelse continue;
+            if (present.contains(parsed.domain)) continue;
+            const pkg = resolvePantryRegistryTarball(allocator, parsed.domain, parsed.version) orelse {
+                if (verbose) std.debug.print("[verbose:pipeline] transitive dep {s} not in registry — skipped\n", .{parsed.domain});
+                continue;
+            };
+            present.put(pkg.name, {}) catch {};
+            resolved.append(allocator, pkg) catch {
+                allocator.free(pkg.name);
+                allocator.free(pkg.version);
+                allocator.free(pkg.tarball_url);
+                if (pkg.integrity) |x| allocator.free(x);
+            };
+        }
+    }
+}
+
 /// Resolve the full dependency tree from npm registry metadata.
 /// Returns a flat deduplicated list of all packages to install.
 fn resolveFullTree(
@@ -1334,6 +1373,10 @@ pub fn run(
         }
         resolved.deinit(allocator);
     }
+
+    // Pull in transitive system (pantry) dependencies so dependent binaries can
+    // load their shared libraries. Independent of which resolver ran above.
+    expandTransitivePantryDeps(allocator, &resolved, verbose);
 
     const phase1_ts = io_helper.clockGettime();
     const phase1_ms = @as(i64, @intCast(phase1_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(phase1_ts.nsec)), 1_000_000);
