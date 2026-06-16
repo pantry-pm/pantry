@@ -16,7 +16,10 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   dependencies: {
-    'openssl.org': '^1',
+    // Redis 8 links libssl/libcrypto for BUILD_TLS=yes. Pin OpenSSL 3 so the
+    // binary needs libssl.so.3 — present on modern distros (Ubuntu 22.04+/24.04)
+    // — instead of the long-gone libssl.so.1.1 that broke `redis-server` at load.
+    'openssl.org': '^3',
   },
 
   build: {

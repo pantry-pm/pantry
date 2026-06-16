@@ -19,7 +19,9 @@ export const recipe: Recipe = {
   dependencies: {
     'pcre.org': '8.45',
     'zlib.net': '^1.2.13',
-    'openssl.org': '^1.1.1k',
+    // OpenSSL 3 so the built nginx needs libssl.so.3 (present on modern distros),
+    // not the long-gone libssl.so.1.1.
+    'openssl.org': '^3',
   },
 
   build: {
