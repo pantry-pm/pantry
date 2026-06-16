@@ -2275,11 +2275,13 @@ pub const Services = struct {
         defer allocator.free(data_dir);
 
         // php-fpm's master refuses to start (exit 78) when it runs as root but
-        // the pool sets no user/group. On a server (system scope) the service
-        // runs as root, so pin the pool to root; on a dev machine the master
+        // the pool sets no user/group — and it explicitly rejects user=root
+        // ("please specify user and group other than root"). On a server (system
+        // scope, running as root) drop privileges to www-data, the standard web
+        // user present on the Ubuntu deploy target. On a dev machine the master
         // isn't root and must NOT setuid, so omit it.
         const pool_user = if (builtin.os.tag == .linux and std.os.linux.geteuid() == 0)
-            "user = root\ngroup = root\n"
+            "user = www-data\ngroup = www-data\n"
         else
             "";
         const conf = try std.fmt.allocPrint(allocator,
