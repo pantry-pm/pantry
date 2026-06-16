@@ -257,6 +257,8 @@ fn parsePantryDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version
     }
     const domain = std.mem.trim(u8, spec[0..vstart], " \t");
     if (domain.len == 0) return null;
+    // Skip malformed platform-tag pseudo-domains (e.g. `darwin/x86-64`).
+    if (std.mem.startsWith(u8, domain, "darwin/") or std.mem.startsWith(u8, domain, "linux/") or std.mem.startsWith(u8, domain, "windows/")) return null;
     var version: []const u8 = "latest";
     if (vstart < spec.len) {
         var v = spec[vstart..];

@@ -166,8 +166,87 @@ function packageToZigStruct(pkg: ZigPackageDefinition): string {
 /**
  * Generate Zig package definitions file
  */
+/** The `os:domain` (or `domain`) key of a dependency spec, ignoring its version
+ * constraint and any ` # comment` — used to dedupe metadata vs recipe deps. */
+function depKey(spec: string): string {
+  let x = spec
+  const h = x.indexOf('#')
+  if (h >= 0)
+    x = x.slice(0, h)
+  x = x.trim()
+  let prefix = ''
+  const colon = x.indexOf(':')
+  if (colon >= 0 && ['linux', 'darwin', 'windows'].includes(x.slice(0, colon))) {
+    prefix = `${x.slice(0, colon)}:`
+    x = x.slice(colon + 1)
+  }
+  const m = x.search(/[\^~><=@]/)
+  const domain = (m >= 0 ? x.slice(0, m) : x).trim()
+  return prefix + domain
+}
+
+/** Flatten a recipe's `dependencies` object (`{ 'php.net': '^8', darwin: { … } }`)
+ * into the metadata's string-array form (`['php.net^8', 'darwin:…']`). */
+function recipeDepsToSpecs(deps: unknown): string[] {
+  if (!deps || typeof deps !== 'object')
+    return []
+  // Recipe constraints are operator-prefixed (`^3`, `>=10.30`, `~1.9`, `@14`)
+  // or a bare exact version (`14`, `1.1`) or `*`/empty. Metadata specs are
+  // `domain<constraint>`; a bare version must become `@<v>` so it doesn't fuse
+  // onto the domain (`libstdcxx14`) and so it dedupes against the metadata form.
+  const fmt = (c: string): string => {
+    const t = (c || '').trim()
+    if (t === '' || t === '*')
+      return ''
+    return /^[\^~><=@]/.test(t) ? t : `@${t}`
+  }
+  const out: string[] = []
+  for (const [k, v] of Object.entries(deps as Record<string, unknown>)) {
+    if ((k === 'linux' || k === 'darwin' || k === 'windows') && v && typeof v === 'object') {
+      for (const [d, c] of Object.entries(v as Record<string, string>))
+        out.push(`${k}:${d}${fmt(c)}`)
+    }
+    else if (typeof v === 'string') {
+      out.push(`${k}${fmt(v)}`)
+    }
+  }
+  return out
+}
+
+/** Load a package's build-recipe runtime dependencies (src/recipes/<domain>.ts),
+ * if any, as metadata-style specs. The recipe is authoritative for what we
+ * actually compiled against, so its deps must flow into the catalog. */
+async function loadRecipeDeps(recipesDir: string, domain: string): Promise<string[]> {
+  const file = path.join(recipesDir, `${domain}.ts`)
+  if (!fs.existsSync(file))
+    return []
+  try {
+    const mod = await import(`file://${path.resolve(file)}`)
+    return recipeDepsToSpecs(mod.recipe?.dependencies)
+  }
+  catch {
+    return []
+  }
+}
+
+/** Union metadata deps with recipe deps, deduping by `os:domain` (metadata wins
+ * on conflict; recipe-only deps — e.g. php's `postgresql.org` — are appended). */
+function mergeDeps(metaDeps: string[], recipeDeps: string[]): string[] {
+  const seen = new Set(metaDeps.map(depKey))
+  const merged = [...metaDeps]
+  for (const spec of recipeDeps) {
+    const key = depKey(spec)
+    if (!seen.has(key)) {
+      seen.add(key)
+      merged.push(spec)
+    }
+  }
+  return merged
+}
+
 export async function generateZigDefinitions(packagesDir: string, outputFile: string): Promise<void> {
   console.log(`🔍 Scanning packages directory: ${packagesDir}`)
+  const recipesDir = path.resolve(packagesDir, '..', 'recipes')
 
   // Recursively find all TypeScript package files
   const packageFiles = findPackageFiles(packagesDir)
@@ -212,7 +291,14 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
         description: pkgData.description || '',
         homepageUrl: pkgData.homepageUrl,
         programs: Array.isArray(pkgData.programs) ? pkgData.programs : [],
-        dependencies: Array.isArray(pkgData.dependencies) ? pkgData.dependencies : [],
+        // Merge the build recipe's runtime deps into the metadata deps so the
+        // catalog reflects what we actually compiled against (e.g. php links
+        // libpq, so php.net must depend on postgresql.org even though pkgx's
+        // upstream metadata omits it).
+        dependencies: mergeDeps(
+          Array.isArray(pkgData.dependencies) ? pkgData.dependencies : [],
+          await loadRecipeDeps(recipesDir, pkgData.domain),
+        ),
         buildDependencies: Array.isArray(pkgData.buildDependencies) ? pkgData.buildDependencies : [],
         aliases: mergeAliases(pkgData.domain, Array.isArray(pkgData.aliases) ? pkgData.aliases : []),
         versions: sortedVersions,

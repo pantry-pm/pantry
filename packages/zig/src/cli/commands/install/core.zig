@@ -260,7 +260,11 @@ fn depDomainFromSpec(spec_in: []const u8) ?[]const u8 {
         }
     }
     const domain = std.mem.trim(u8, spec[0..vend], " \t");
-    return if (domain.len == 0) null else domain;
+    if (domain.len == 0) return null;
+    // Skip malformed platform-tag pseudo-domains (e.g. `darwin/x86-64`) some
+    // catalog entries carry — not installable packages.
+    if (std.mem.startsWith(u8, domain, "darwin/") or std.mem.startsWith(u8, domain, "linux/") or std.mem.startsWith(u8, domain, "windows/")) return null;
+    return domain;
 }
 
 /// Append the transitive system-dependency closure of the explicitly-requested
