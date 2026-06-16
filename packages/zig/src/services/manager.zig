@@ -444,6 +444,12 @@ pub const ServiceManager = struct {
                 try io_helper.writeAllToFile(file, env_line);
             }
 
+            // LD_LIBRARY_PATH so the service binary (exec'd directly, not via a
+            // shim or `pantry env`) can load its dependencies' shared libraries.
+            // Without it, lib-dependent services (php-fpm, nginx, …) crash-loop
+            // with status=127. Scanned from the project's pantry tree.
+            self.writeLibraryPathEnv(file, service.start_command) catch {};
+
             // An empty [Install] makes `systemctl enable` fail outright, so
             // always anchor to the scope's target: multi-user.target for system
             // units (boot-time start), default.target for the per-user manager
@@ -454,6 +460,54 @@ pub const ServiceManager = struct {
             defer self.allocator.free(install_line);
             try io_helper.writeAllToFile(file, install_line);
         };
+    }
+
+    /// Write an `Environment="LD_LIBRARY_PATH=…"` line covering every installed
+    /// package's `lib` dir, so a directly-exec'd service binary finds its
+    /// dependencies' shared libraries. The project's `pantry/` root is derived
+    /// from the service binary path in `start_command`. Best-effort.
+    fn writeLibraryPathEnv(self: *ServiceManager, file: anytype, start_command: []const u8) !void {
+        const bin = if (std.mem.indexOfScalar(u8, start_command, ' ')) |sp| start_command[0..sp] else start_command;
+        const marker = "/pantry/";
+        const idx = std.mem.indexOf(u8, bin, marker) orelse return;
+        const pantry_root = bin[0 .. idx + marker.len - 1]; // up to and including "/pantry"
+
+        var libs = std.ArrayList(u8).empty;
+        defer libs.deinit(self.allocator);
+        self.scanLibDirs(pantry_root, 0, &libs);
+        if (libs.items.len == 0) return;
+        const joined = std.mem.trimRight(u8, libs.items, ":");
+        if (joined.len == 0) return;
+
+        const line = try std.fmt.allocPrint(self.allocator, "Environment=\"LD_LIBRARY_PATH={s}\"\n", .{joined});
+        defer self.allocator.free(line);
+        try io_helper.writeAllToFile(file, line);
+    }
+
+    /// Append (`dir:`-separated) every package version dir's `lib/` under
+    /// `dir_path` to `out`. Recurses domain dirs until a `v<digit>…` version
+    /// dir, bounded depth.
+    fn scanLibDirs(self: *ServiceManager, dir_path: []const u8, depth: u32, out: *std.ArrayList(u8)) void {
+        if (depth > 5) return;
+        var dir = io_helper.openDirForIteration(dir_path) catch return;
+        defer dir.close();
+        var it = dir.iterate();
+        while (it.next() catch null) |entry| {
+            if (entry.kind != .directory or entry.name.len == 0 or entry.name[0] == '.') continue;
+            const child = std.fs.path.join(self.allocator, &[_][]const u8{ dir_path, entry.name }) catch continue;
+            defer self.allocator.free(child);
+            const is_version = entry.name.len >= 2 and entry.name[0] == 'v' and entry.name[1] >= '0' and entry.name[1] <= '9';
+            if (is_version) {
+                const libdir = std.fs.path.join(self.allocator, &[_][]const u8{ child, "lib" }) catch continue;
+                defer self.allocator.free(libdir);
+                var ld = io_helper.openDirForIteration(libdir) catch continue;
+                ld.close();
+                out.appendSlice(self.allocator, libdir) catch {};
+                out.append(self.allocator, ':') catch {};
+            } else {
+                self.scanLibDirs(child, depth + 1, out);
+            }
+        }
     }
 
     /// Generate FreeBSD rc.d script

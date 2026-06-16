@@ -457,36 +457,14 @@ pub const ShellCommands = struct {
         const new_path = try std.mem.join(self.allocator, ":", path_components.items);
         defer self.allocator.free(new_path);
 
-        // Build the dynamic-linker library path from each package's `lib` dir.
-        // pantry's shims set this, but a bare `eval "$(pantry env)"` (and the
-        // service units that exec binaries directly) previously did not — so a
-        // package needing a dependency's shared lib (e.g. nginx → libpcre,
-        // php → its many libs) failed to load at runtime. Derive `<pkg>/lib`
-        // from each PATH dir (mapping a trailing `/bin` to `/lib`) and keep only
-        // the ones that exist.
-        var lib_components: std.ArrayList([]const u8) = .empty;
-        defer {
-            for (lib_components.items) |p| self.allocator.free(p);
-            lib_components.deinit(self.allocator);
-        }
-        var seen_libs = std.StringHashMap(void).init(self.allocator);
-        defer seen_libs.deinit();
-        for (path_components.items) |dir| {
-            const base = if (std.mem.endsWith(u8, dir, "/bin")) dir[0 .. dir.len - 4] else dir;
-            const libdir = try std.fmt.allocPrint(self.allocator, "{s}/lib", .{base});
-            if (seen_libs.contains(libdir)) {
-                self.allocator.free(libdir);
-                continue;
-            }
-            var ld = io_helper.cwd().openDir(io_helper.io, libdir, .{}) catch {
-                self.allocator.free(libdir);
-                continue;
-            };
-            ld.close(io_helper.io);
-            try seen_libs.put(libdir, {});
-            try lib_components.append(self.allocator, libdir);
-        }
-        const lib_join = try std.mem.join(self.allocator, ":", lib_components.items);
+        // Build the dynamic-linker library path from EVERY installed package's
+        // `lib` dir, scanned from the project's `pantry/` tree — not derived
+        // from PATH. Library-only dependencies (editline → libedit, postgresql
+        // → libpq, …) contribute no `bin/` and so never appear on PATH; deriving
+        // from PATH missed them and their dependents (php, …) failed to load at
+        // runtime. pantry's shims set this per-binary, but `eval "$(pantry env)"`
+        // and the service units that exec binaries directly did not.
+        const lib_join = self.getProjectLibPaths(project_root) catch try self.allocator.dupe(u8, "");
         defer self.allocator.free(lib_join);
         const lib_var = switch (lib.Platform.current()) {
             .darwin => "DYLD_LIBRARY_PATH",
@@ -616,6 +594,55 @@ pub const ShellCommands = struct {
         }
 
         return try std.mem.join(self.allocator, ":", path_parts.items);
+    }
+
+    /// Collect every installed package's `lib` directory under the project's
+    /// `pantry/` tree, deduped + ':'-joined, for LD_LIBRARY_PATH. Covers all
+    /// packages (incl. transitively-installed, library-only ones), not just the
+    /// deps-file entries `getProjectPackagePaths` walks.
+    fn getProjectLibPaths(self: *ShellCommands, project_root: []const u8) ![]const u8 {
+        const pantry_dir = try std.fs.path.join(self.allocator, &[_][]const u8{ project_root, "pantry" });
+        defer self.allocator.free(pantry_dir);
+
+        var libs: std.ArrayList([]const u8) = .empty;
+        defer {
+            for (libs.items) |p| self.allocator.free(p);
+            libs.deinit(self.allocator);
+        }
+        self.collectLibDirs(pantry_dir, 0, &libs);
+        if (libs.items.len == 0) return try self.allocator.dupe(u8, "");
+        return try std.mem.join(self.allocator, ":", libs.items);
+    }
+
+    /// Walk `dir_path` for package version dirs (`v<digit>…`) and append each
+    /// one's `lib/` (when present) to `out`. Domain dirs (`apache.org`, then
+    /// `apr`) are recursed into until a version dir is reached; bounded depth.
+    fn collectLibDirs(self: *ShellCommands, dir_path: []const u8, depth: u32, out: *std.ArrayList([]const u8)) void {
+        if (depth > 5) return;
+        var dir = io_helper.openDirForIteration(dir_path) catch return;
+        defer dir.close();
+        var it = dir.iterate();
+        while (it.next() catch null) |entry| {
+            if (entry.kind != .directory) continue;
+            if (entry.name.len == 0 or entry.name[0] == '.') continue; // skip .bin etc.
+            const child = std.fs.path.join(self.allocator, &[_][]const u8{ dir_path, entry.name }) catch continue;
+            const is_version = entry.name.len >= 2 and entry.name[0] == 'v' and entry.name[1] >= '0' and entry.name[1] <= '9';
+            if (is_version) {
+                const libdir = std.fs.path.join(self.allocator, &[_][]const u8{ child, "lib" }) catch {
+                    self.allocator.free(child);
+                    continue;
+                };
+                if (self.pathIsDirectory(libdir)) {
+                    out.append(self.allocator, libdir) catch self.allocator.free(libdir);
+                } else {
+                    self.allocator.free(libdir);
+                }
+                self.allocator.free(child);
+            } else {
+                self.collectLibDirs(child, depth + 1, out);
+                self.allocator.free(child);
+            }
+        }
     }
 
     fn resolveProjectPackageDir(
