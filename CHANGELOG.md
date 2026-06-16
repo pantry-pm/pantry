@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.44...v0.9.45)
+
+### 🐛 Bug Fixes
+
+- **services**: php-fpm pool user/group when running as root ([48d815b](https://github.com/pantry-pm/pantry/commit/48d815b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.45 ([fa1e500](https://github.com/pantry-pm/pantry/commit/fa1e500)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.43...v0.9.44)
 
 ### 🐛 Bug Fixes
