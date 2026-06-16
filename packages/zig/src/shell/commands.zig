@@ -470,8 +470,10 @@ pub const ShellCommands = struct {
             .darwin => "DYLD_LIBRARY_PATH",
             else => "LD_LIBRARY_PATH",
         };
+        // `${VAR:-}` so the export is safe under `set -u` when the var is unset
+        // (a deploy script that runs `eval "$(pantry env)"` typically uses it).
         const lib_export = if (lib_join.len > 0)
-            try std.fmt.allocPrint(self.allocator, "\nexport {s}=\"{s}:${s}\"", .{ lib_var, lib_join, lib_var })
+            try std.fmt.allocPrint(self.allocator, "\nexport {s}=\"{s}:${{{s}:-}}\"", .{ lib_var, lib_join, lib_var })
         else
             try self.allocator.dupe(u8, "");
         defer self.allocator.free(lib_export);
