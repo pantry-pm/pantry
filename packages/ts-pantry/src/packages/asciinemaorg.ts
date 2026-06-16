@@ -68,11 +68,12 @@ export const asciinemaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.2.1',
     '3.2.0',
     '3.1.0',
     '3.0.1',
-    '3.0.0-rc.5',
     '3.0.0',
+    '3.0.0-rc.5',
     '2.4.0',
     '2.3.0',
     '2.2.0',

@@ -69,6 +69,7 @@ export const sentryioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.5.1',
     '3.5.0',
     '3.4.3',
     '3.4.2',
