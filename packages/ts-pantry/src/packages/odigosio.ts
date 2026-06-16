@@ -69,6 +69,7 @@ export const odigosioPackage = {
   */
   versions: [
     '1.29.0',
+    '1.28.6',
     '1.28.5',
     '1.28.4',
     '1.28.3',
