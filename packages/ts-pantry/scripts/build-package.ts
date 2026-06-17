@@ -703,13 +703,17 @@ catch {
     console.log(`📦 Cloning git repository...`)
     // Clone with specific ref/tag if provided, shallow for speed
     const refArg = ref ? `--branch "${ref}" --single-branch` : ''
+    // Fetch submodules at clone time — packages like mariadb.com/server vendor
+    // their build inputs (libmariadb, wsrep, …) as git submodules and their
+    // CMake aborts ("submodules.cmake") if they're missing. `--shallow-submodules`
+    // keeps it fast; harmless for repos without submodules.
     try {
-      execSync(`git clone --depth 1 ${refArg} "${gitUrl}" "${destDir}/_git_clone"`, { stdio: 'inherit' })
+      execSync(`git clone --depth 1 --recurse-submodules --shallow-submodules ${refArg} "${gitUrl}" "${destDir}/_git_clone"`, { stdio: 'inherit' })
     }
 catch {
       // If shallow clone with ref fails, try full clone + checkout
       try {
-        execSync(`git clone "${gitUrl}" "${destDir}/_git_clone"`, { stdio: 'inherit' })
+        execSync(`git clone --recurse-submodules "${gitUrl}" "${destDir}/_git_clone"`, { stdio: 'inherit' })
       }
 catch (cloneError: unknown) {
         const err = new Error(`DOWNLOAD_FAILED: Failed to clone ${gitUrl}`) as any
@@ -718,7 +722,7 @@ catch (cloneError: unknown) {
       }
       if (ref) {
         try {
-          execSync(`cd "${destDir}/_git_clone" && git checkout "${ref}"`, { stdio: 'inherit' })
+          execSync(`cd "${destDir}/_git_clone" && git checkout "${ref}" && git submodule update --init --recursive`, { stdio: 'inherit' })
         }
 catch {
           console.log(`Warning: Could not checkout ref ${ref}, using default branch`)
