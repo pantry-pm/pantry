@@ -556,7 +556,11 @@ pub const Services = struct {
             \\
         , .{ data_dir, pantry_root, pantry_root, mysqld, basedir_flag, mysqld, basedir_flag, port });
         defer allocator.free(script);
-        const script_path = try writeServiceFile(allocator, data_dir, "start.sh", script);
+        // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
+        // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
+        const script_dir = try serviceDataDir(allocator, home, "mysql-run");
+        defer allocator.free(script_dir);
+        const script_path = try writeServiceFile(allocator, script_dir, "start.sh", script);
         defer allocator.free(script_path);
 
         return ServiceConfig{
@@ -1396,7 +1400,11 @@ pub const Services = struct {
             \\
         , .{ data_dir, pantry_root, pantry_root, installdb, basedir_flag, mariadbd, basedir_flag, port });
         defer allocator.free(script);
-        const script_path = try writeServiceFile(allocator, data_dir, "start.sh", script);
+        // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
+        // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
+        const script_dir = try serviceDataDir(allocator, home, "mariadb-run");
+        defer allocator.free(script_dir);
+        const script_path = try writeServiceFile(allocator, script_dir, "start.sh", script);
         defer allocator.free(script_path);
 
         return ServiceConfig{
