@@ -1362,18 +1362,6 @@ pub const Services = struct {
         const mariadbd = try resolveServiceBinary(allocator, "mariadbd", project_root, home);
         defer allocator.free(mariadbd);
 
-        // Pass the real package home so mariadbd/mariadb-install-db find their
-        // share/ (errmsg, charsets, system-table SQL) instead of deriving the
-        // wrong basedir from the .bin symlink.
-        const basedir = (try resolvePackageHome(allocator, "mariadb.com/server", project_root, home)) orelse
-            try allocator.dupe(u8, "");
-        defer allocator.free(basedir);
-        const basedir_flag = if (basedir.len > 0)
-            try std.fmt.allocPrint(allocator, " --basedir=\"{s}\"", .{basedir})
-        else
-            try allocator.dupe(u8, "");
-        defer allocator.free(basedir_flag);
-
         // pantry install root (".../pantry") from the binary path, so the script
         // can compute LD_LIBRARY_PATH itself (mariadbd links libssl/pcre/zstd/…
         // from sibling deps). mariadbd refuses to run as root, so in system scope
@@ -1384,28 +1372,27 @@ pub const Services = struct {
             \\#!/bin/sh
             \\DATADIR="{s}"
             \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
-            \\MDBD="{s}"
-            \\BIN="$(dirname "$MDBD")"
-            \\# Locate mariadb-install-db (a script that isn't symlinked into .bin):
-            \\# next to mariadbd, or under the package's bin/scripts dirs.
-            \\IDB="$(ls "$BIN/mariadb-install-db" "$BIN/../scripts/mariadb-install-db" {s}/bin/mariadb-install-db {s}/scripts/mariadb-install-db 2>/dev/null | head -1)"
+            \\# Resolve the .bin symlink to the REAL binary so we can derive the
+            \\# package base ($BASE = .../mariadb.com/server/v<ver>): mariadb-install-db
+            \\# lives in $BASE/scripts (NOT symlinked into .bin), and mariadbd needs
+            \\# $BASE/share for errmsg/system-table SQL via --basedir.
+            \\MDBD="$(readlink -f "{s}")"
+            \\BASE="$(dirname "$(dirname "$MDBD")")"
+            \\IDB="$BASE/scripts/mariadb-install-db"
             \\if [ "$(id -u)" = 0 ]; then
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
-            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L PATH=$BIN:$PATH"
-            \\else R="env LD_LIBRARY_PATH=$L PATH=$BIN:$PATH"; fi
-            \\# Initialize once. Detect an existing datadir by its system tables
-            \\# (the `mysql` dir), NOT a marker gated on install-db's exit code —
-            \\# install-db can return non-zero yet populate the datadir, and a
-            \\# missing marker previously caused a DESTRUCTIVE rm+reinit on every
-            \\# restart (connection-refused loop). Only initialize a truly-empty
-            \\# datadir, and never wipe a populated one. install-db (a script that
-            \\# calls mariadbd/my_print_defaults) needs the package bin on PATH.
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$BASE/scripts:$PATH"
+            \\else R="env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$BASE/scripts:$PATH"; fi
+            \\# Initialize only a truly-empty datadir (detected by the `mysql`
+            \\# system-tables dir); never wipe a populated one. install-db (a perl
+            \\# script calling mariadbd/my_print_defaults) needs $BASE/bin on PATH
+            \\# and --basedir for share/.
             \\if [ ! -d "$DATADIR/mysql" ]; then
-            \\  $R "$IDB"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal || true
+            \\  $R "$IDB" --basedir="$BASE" --datadir="$DATADIR" --auth-root-authentication-method=normal || true
             \\fi
-            \\exec $R "$MDBD"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
+            \\exec $R "$MDBD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
-        , .{ data_dir, pantry_root, pantry_root, mariadbd, basedir, basedir, basedir_flag, basedir_flag, port });
+        , .{ data_dir, pantry_root, pantry_root, mariadbd, port });
         defer allocator.free(script);
         // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
         // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
