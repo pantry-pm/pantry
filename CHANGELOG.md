@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.50...v0.9.51)
+
+### 🐛 Bug Fixes
+
+- **services**: derive LD_LIBRARY_PATH from the real binary in wrapper commands ([5f20975](https://github.com/pantry-pm/pantry/commit/5f20975)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.51 ([cf1127d](https://github.com/pantry-pm/pantry/commit/cf1127d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.49...v0.9.50)
 
 ### 🐛 Bug Fixes
