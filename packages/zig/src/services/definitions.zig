@@ -534,19 +534,27 @@ pub const Services = struct {
             try allocator.dupe(u8, "");
         defer allocator.free(basedir_flag);
 
+        // pantry root for self-contained LD_LIBRARY_PATH; mysqld refuses root, so
+        // run as the unprivileged `pantry` user via runuser in system scope.
+        const pantry_root = pantryRootOf(mysqld) orelse "/opt/pantry/pantry";
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
             \\DATADIR="{s}"
+            \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
+            \\if [ "$(id -u)" = 0 ]; then
+            \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L"
+            \\else R="env LD_LIBRARY_PATH=$L"; fi
             \\# Initialize once. Use a completion marker so an interrupted init
             \\# (e.g. killed mid-run) starts clean next time instead of failing on
             \\# a half-written InnoDB datadir.
             \\if [ ! -f "$DATADIR/.pantry-initialized" ]; then
             \\  rm -rf "$DATADIR"/* "$DATADIR"/.[!.]* 2>/dev/null
-            \\  "{s}"{s} --initialize-insecure --datadir="$DATADIR" && touch "$DATADIR/.pantry-initialized"
+            \\  $R "{s}"{s} --initialize-insecure --datadir="$DATADIR" && touch "$DATADIR/.pantry-initialized"
             \\fi
-            \\exec "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
+            \\exec $R "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
             \\
-        , .{ data_dir, mysqld, basedir_flag, mysqld, basedir_flag, port });
+        , .{ data_dir, pantry_root, pantry_root, mysqld, basedir_flag, mysqld, basedir_flag, port });
         defer allocator.free(script);
         const script_path = try writeServiceFile(allocator, data_dir, "start.sh", script);
         defer allocator.free(script_path);
@@ -1364,18 +1372,29 @@ pub const Services = struct {
             try allocator.dupe(u8, "");
         defer allocator.free(basedir_flag);
 
+        // pantry install root (".../pantry") from the binary path, so the script
+        // can compute LD_LIBRARY_PATH itself (mariadbd links libssl/pcre/zstd/…
+        // from sibling deps). mariadbd refuses to run as root, so in system scope
+        // (root) provision an unprivileged `pantry` user, chown the datadir, and
+        // run via runuser (which drops LD_LIBRARY_PATH, so pass it via `env`).
+        const pantry_root = pantryRootOf(mariadbd) orelse "/opt/pantry/pantry";
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
             \\DATADIR="{s}"
+            \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
+            \\if [ "$(id -u)" = 0 ]; then
+            \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L"
+            \\else R="env LD_LIBRARY_PATH=$L"; fi
             \\# Initialize once; a completion marker makes an interrupted init retry
             \\# from a clean datadir rather than failing on half-written state.
             \\if [ ! -f "$DATADIR/.pantry-initialized" ]; then
             \\  rm -rf "$DATADIR"/* "$DATADIR"/.[!.]* 2>/dev/null
-            \\  "{s}"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal && touch "$DATADIR/.pantry-initialized"
+            \\  $R "{s}"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal && touch "$DATADIR/.pantry-initialized"
             \\fi
-            \\exec "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
+            \\exec $R "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
-        , .{ data_dir, installdb, basedir_flag, mariadbd, basedir_flag, port });
+        , .{ data_dir, pantry_root, pantry_root, installdb, basedir_flag, mariadbd, basedir_flag, port });
         defer allocator.free(script);
         const script_path = try writeServiceFile(allocator, data_dir, "start.sh", script);
         defer allocator.free(script_path);
