@@ -95,7 +95,9 @@ export const recipe: Recipe = {
     'gnome.org/libxml2': '~2.13',
     'invisible-island.net/ncurses': '^6',
     'zlib.net': '^1',
-    'openssl.org': '^1.1',
+    // OpenSSL 3 (with -DWITH_SSL=system) so mariadbd needs libssl.so.3 — present
+    // on modern distros — not the long-gone libssl.so.1.1 the mirror linked.
+    'openssl.org': '^3',
     'pcre.org/v2': '^10',
     'facebook.com/zstd': '^1',
   },
