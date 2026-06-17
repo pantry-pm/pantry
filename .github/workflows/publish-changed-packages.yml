@@ -70,8 +70,11 @@ jobs:
             DOMAINS=""
             for f in $FILES; do
               case "$f" in
-                # Recipe filename IS the domain (e.g. redis.io.ts → redis.io).
-                */recipes/*.ts) d=$(basename "$f" .ts) ;;
+                # Recipe path under recipes/ IS the domain — including nested
+                # ones (recipes/redis.io.ts → redis.io;
+                # recipes/mariadb.com/server.ts → mariadb.com/server;
+                # recipes/gnu.org/readline.ts → gnu.org/readline).
+                */recipes/*.ts) d=$(echo "$f" | sed -E 's#.*/recipes/##; s#\.ts$##') ;;
                 # Metadata files (e.g. redisio.ts) carry an explicit `domain:` field.
                 */packages/*.ts) d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//") ;;
                 *) d="" ;;
