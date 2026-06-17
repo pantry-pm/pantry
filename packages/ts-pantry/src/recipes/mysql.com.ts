@@ -37,13 +37,16 @@ export const recipe: Recipe = {
       // The sed expression must be single-quoted; the previous backslash-escaped
       // form rendered to `\s/…` which sed rejects ("unknown command: `/`").
       'sed -i -e \'s/\\(STRING_APPEND.*moutline-atomics.*\\)/# \\1/\' ../CMakeLists.txt || true',
-      'run: export ARGS="$(echo $ARGS | sed \'s/WITH_ZLIB=system/WITH_ZLIB=bundled/g\')"',
-      'run: export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
+      // Plain command strings — a leading `run:` is NOT stripped by buildkit
+      // (that's the object-step form `{ run: … }`), it would emit a literal
+      // `run:` into the script ("run:: command not found").
+      'export ARGS="$(echo $ARGS | sed \'s/WITH_ZLIB=system/WITH_ZLIB=bundled/g\')"',
+      'export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
       // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
       // the build host's system libs.
-      'run: export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
+      'export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
       // The mysql-boost tarball bundles the exact boost MySQL needs at <src>/boost.
-      'run: export ARGS="$ARGS -DWITH_BOOST=../boost"',
+      'export ARGS="$ARGS -DWITH_BOOST=../boost"',
       'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}} install',
     ],
