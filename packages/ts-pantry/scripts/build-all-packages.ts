@@ -915,10 +915,14 @@ function selectImportantVersions(pkg: BuildablePackage, maxVersions: number): st
 
   const selected = new Set<string>()
 
-  // Always include latest
-  const latest = pkg.latestVersion !== '999.999.999' && pkg.latestVersion !== '0.0.0'
-    ? pkg.latestVersion
-    : validVersions[0]
+  // Always include latest — but only if it survived skip-filtering. Seeding the
+  // (possibly skipped) pkg.latestVersion here would, with a small maxVersions,
+  // consume the slot and then get dropped by the final `validVersions` filter,
+  // yielding zero builds. Fall back to the newest valid version instead.
+  const latestIsValid = pkg.latestVersion !== '999.999.999'
+    && pkg.latestVersion !== '0.0.0'
+    && !isVersionSkipped(pkg.domain, pkg.latestVersion)
+  const latest = latestIsValid ? pkg.latestVersion : validVersions[0]
   selected.add(latest)
 
   // Parse versions into components
