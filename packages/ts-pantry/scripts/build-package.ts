@@ -1979,7 +1979,10 @@ else {
       },
       stdio: 'inherit',
       shell: bashShell,
-      timeout: 30 * 60 * 1000, // 30 minute timeout per build
+      // Build-script timeout. Default 60 min (heavy C++ like mariadb/mysql can
+      // exceed 30 min on slower x86-64 runners — that ETIMEDOUT killed mariadb
+      // at 64%). Override with BUILD_SCRIPT_TIMEOUT_MS.
+      timeout: Number(process.env.BUILD_SCRIPT_TIMEOUT_MS) || 60 * 60 * 1000,
     })
   }
 catch (error: unknown) {
