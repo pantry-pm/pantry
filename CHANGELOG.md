@@ -1,3 +1,20 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.48...v0.9.49)
+
+### 🐛 Bug Fixes
+
+- **services**: run postgres as unprivileged user in system scope ([ff5d3b2](https://github.com/pantry-pm/pantry/commit/ff5d3b2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: pass termcap lib via SHLIB_LIBS for readline shared lib ([50fa5cd](https://github.com/pantry-pm/pantry/commit/50fa5cd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: link readline against libtinfow (resolve UP/BC/PC) ([ccd1fa6](https://github.com/pantry-pm/pantry/commit/ccd1fa6)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.49 ([e3ad889](https://github.com/pantry-pm/pantry/commit/e3ad889)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update mise.jdx.dev to 2026.6.11 ([74bb182](https://github.com/pantry-pm/pantry/commit/74bb182)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.47...v0.9.48)
 
 ### 🐛 Bug Fixes
