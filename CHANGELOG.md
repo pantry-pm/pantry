@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.58...v0.9.59)
+
+### 🐛 Bug Fixes
+
+- **services**: run mariadb-install-db via sh (script lacks exec bit) ([2998f56](https://github.com/pantry-pm/pantry/commit/2998f56)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.59 ([0542738](https://github.com/pantry-pm/pantry/commit/0542738)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.57...v0.9.58)
 
 ### 🐛 Bug Fixes
