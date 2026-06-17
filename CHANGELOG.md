@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.51...v0.9.52)
+
+### 🐛 Bug Fixes
+
+- **services**: skip CLI-side postgres pre-init as root ([f9eef50](https://github.com/pantry-pm/pantry/commit/f9eef50)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.52 ([c40ddc9](https://github.com/pantry-pm/pantry/commit/c40ddc9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.50...v0.9.51)
 
 ### 🐛 Bug Fixes
