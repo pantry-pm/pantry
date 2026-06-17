@@ -7,13 +7,18 @@ export const recipe: Recipe = {
   homepage: 'https://www.mysql.com/',
   github: 'https://github.com/mysql/mysql-server',
   programs: ['mysql_client_test', 'my_print_defaults', 'myisam_ftdump', 'myisamchk', 'myisamlog', 'myisampack', 'mysql', 'mysql_config', 'mysql_config_editor', 'mysql_keyring_encryption_test', 'mysql_migrate_keyring', 'mysql_secure_installation', 'mysql_tzinfo_to_sql', 'mysqladmin', 'mysqlbinlog', 'mysqlcheck', 'mysqld', 'mysqld_multi', 'mysqld_safe', 'mysqldump', 'mysqldumpslow', 'mysqlimport', 'mysqlrouter', 'mysqlrouter_keyring', 'mysqlrouter_passwd', 'mysqlrouter_plugin_info', 'mysqlshow', 'mysqlslap', 'mysqltest', 'mysqltest_safe_process', 'mysqlxtest'],
+  // github-releases tags (mysql-server) surface phantom "innovation" versions
+  // (e.g. 9.6.0) whose source tarball isn't published on the CDN, so the build
+  // would no-op as "source unavailable". Pin to the latest 8.0 GA, whose
+  // `mysql-boost-` archive tarball (bundled boost the build needs) is published.
   versionSource: {
-    type: 'github-releases',
-    repo: 'mysql/mysql-server',
-    tagPattern: /^v(.+)$/,
+    type: 'custom',
+    fetch: async () => ['8.0.43'],
   },
   distributable: {
-    url: 'https://cdn.mysql.com/Downloads/MySQL-{{version.marketing}}/mysql-boost-{{version}}.tar.gz',
+    // The archive host serves stable, never-moving source URLs. 8.4+ dropped the
+    // bundled-boost tarball; 8.0.x keeps `mysql-boost-<version>.tar.gz`.
+    url: 'https://cdn.mysql.com/archives/mysql-{{version.marketing}}/mysql-boost-{{version}}.tar.gz',
     stripComponents: 1,
   },
 
@@ -34,6 +39,8 @@ export const recipe: Recipe = {
       // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
       // the build host's system libs.
       'run: export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
+      // The mysql-boost tarball bundles the exact boost MySQL needs at <src>/boost.
+      'run: export ARGS="$ARGS -DWITH_BOOST=../boost"',
       'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}} install',
     ],
