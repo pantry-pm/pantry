@@ -1361,8 +1361,6 @@ pub const Services = struct {
 
         const mariadbd = try resolveServiceBinary(allocator, "mariadbd", project_root, home);
         defer allocator.free(mariadbd);
-        const installdb = try resolveServiceBinary(allocator, "mariadb-install-db", project_root, home);
-        defer allocator.free(installdb);
 
         // Pass the real package home so mariadbd/mariadb-install-db find their
         // share/ (errmsg, charsets, system-table SQL) instead of deriving the
@@ -1386,22 +1384,28 @@ pub const Services = struct {
             \\#!/bin/sh
             \\DATADIR="{s}"
             \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
+            \\MDBD="{s}"
+            \\BIN="$(dirname "$MDBD")"
+            \\# Locate mariadb-install-db (a script that isn't symlinked into .bin):
+            \\# next to mariadbd, or under the package's bin/scripts dirs.
+            \\IDB="$(ls "$BIN/mariadb-install-db" "$BIN/../scripts/mariadb-install-db" {s}/bin/mariadb-install-db {s}/scripts/mariadb-install-db 2>/dev/null | head -1)"
             \\if [ "$(id -u)" = 0 ]; then
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
-            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L"
-            \\else R="env LD_LIBRARY_PATH=$L"; fi
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L PATH=$BIN:$PATH"
+            \\else R="env LD_LIBRARY_PATH=$L PATH=$BIN:$PATH"; fi
             \\# Initialize once. Detect an existing datadir by its system tables
             \\# (the `mysql` dir), NOT a marker gated on install-db's exit code —
             \\# install-db can return non-zero yet populate the datadir, and a
             \\# missing marker previously caused a DESTRUCTIVE rm+reinit on every
             \\# restart (connection-refused loop). Only initialize a truly-empty
-            \\# datadir, and never wipe a populated one.
+            \\# datadir, and never wipe a populated one. install-db (a script that
+            \\# calls mariadbd/my_print_defaults) needs the package bin on PATH.
             \\if [ ! -d "$DATADIR/mysql" ]; then
-            \\  $R "{s}"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal || true
+            \\  $R "$IDB"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal || true
             \\fi
-            \\exec $R "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
+            \\exec $R "$MDBD"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
-        , .{ data_dir, pantry_root, pantry_root, installdb, basedir_flag, mariadbd, basedir_flag, port });
+        , .{ data_dir, pantry_root, pantry_root, mariadbd, basedir, basedir, basedir_flag, basedir_flag, port });
         defer allocator.free(script);
         // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
         // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
