@@ -111,9 +111,18 @@ jobs:
 
       - name: Install build tools (Linux)
         if: runner.os == 'Linux'
+        env:
+          # Without this a transitively-pulled package (tzdata, x11, …) opens an
+          # interactive debconf prompt and apt hangs forever — which is what
+          # stalled the x86-64 runner for an hour until the 120-min job timeout.
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          # Retry the index refresh — GitHub's apt mirrors occasionally stall.
+          for i in 1 2 3; do sudo -E apt-get update -y && break; sleep 5; done
+          # `-E` keeps DEBIAN_FRONTEND across sudo; --no-install-recommends keeps
+          # the (already huge) install lean and avoids prompt-triggering extras.
+          sudo -E apt-get install -y --no-install-recommends \
+            -o Dpkg::Options::=--force-confnew \
             build-essential libreadline-dev zlib1g-dev libssl-dev \
             cmake meson ninja-build patchelf pkg-config \
             autoconf automake libtool gettext intltool \
