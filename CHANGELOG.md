@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.52...v0.9.53)
+
+### 🐛 Bug Fixes
+
+- **services**: postgres computes LD_LIBRARY_PATH in-shell from pantry root ([c8325fd](https://github.com/pantry-pm/pantry/commit/c8325fd)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.53 ([896ede9](https://github.com/pantry-pm/pantry/commit/896ede9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.51...v0.9.52)
 
 ### 🐛 Bug Fixes
