@@ -467,15 +467,26 @@ pub const ServiceManager = struct {
     /// dependencies' shared libraries. The project's `pantry/` root is derived
     /// from the service binary path in `start_command`. Best-effort.
     fn writeLibraryPathEnv(self: *ServiceManager, file: anytype, start_command: []const u8) !void {
-        const bin = if (std.mem.indexOfScalar(u8, start_command, ' ')) |sp| start_command[0..sp] else start_command;
+        // Find the pantry INSTALL root anywhere in the command, not just the
+        // leading binary — wrapper commands like `/bin/sh -c '… /opt/pantry/
+        // pantry/<pkg>/bin/x …'` (postgres) have the real binary mid-string.
+        // A command can contain several `/pantry/` substrings (e.g. the data dir
+        // `/var/lib/pantry/postgres`), so try each candidate root and keep the
+        // first that actually contains package version dirs with `lib/`.
         const marker = "/pantry/";
-        const idx = std.mem.indexOf(u8, bin, marker) orelse return;
-        const pantry_root = bin[0 .. idx + marker.len - 1]; // up to and including "/pantry"
-
         var libs = std.ArrayList(u8).empty;
         defer libs.deinit(self.allocator);
-        self.scanLibDirs(pantry_root, 0, &libs);
+
+        var search_from: usize = 0;
+        while (std.mem.indexOfPos(u8, start_command, search_from, marker)) |idx| {
+            search_from = idx + marker.len;
+            const root = start_command[0 .. idx + marker.len - 1]; // up to & incl. "/pantry"
+            libs.clearRetainingCapacity();
+            self.scanLibDirs(root, 0, &libs);
+            if (libs.items.len > 0) break;
+        }
         if (libs.items.len == 0) return;
+
         // Drop the trailing ':' appended after the last entry.
         const joined = if (libs.items[libs.items.len - 1] == ':') libs.items[0 .. libs.items.len - 1] else libs.items;
         if (joined.len == 0) return;
