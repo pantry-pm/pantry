@@ -51,7 +51,7 @@ export const recipe: Recipe = {
       // CMakeConfigureLog.yaml (not CMakeError.log). Also reproduce a minimal
       // pthread compile through the wrapper `gcc` (on PATH) vs the real compiler
       // to localize whether the cc-wrapper breaks try_compile.
-      'cmake .. $ARGS || { echo "===== pthread probe (wrapper gcc) ====="; printf "#include <pthread.h>\\nint main(){return (int)(long)pthread_create;}\\n" > /tmp/ptst.c; gcc -pthread /tmp/ptst.c -o /tmp/ptst.out; echo "wrapper rc=$?"; echo "===== which gcc ====="; command -v gcc; echo "===== CMakeConfigureLog (pthread section) ====="; f=$(find . -name CMakeConfigureLog.yaml | head -1); grep -nE "pthread|HAVE_LIBC_PTHREAD|accepts -pthread|error|stderr|stdout" "$f" 2>/dev/null | head -60; echo "===== CMakeError.log ====="; tail -n 120 CMakeFiles/CMakeError.log 2>/dev/null; exit 1; }',
+      'cmake .. $ARGS || { f=$(find . -name CMakeConfigureLog.yaml | head -1); echo "===== CMAKE_HAVE_LIBC_PTHREAD block ====="; awk "/Performing Test CMAKE_HAVE_LIBC_PTHREAD/{f=1} f{print} f&&/exitCode:/{n++; if(n>=1)exit}" "$f" 2>/dev/null | head -80; echo "===== HAVE_OUTLINE_ATOMICS block (compile-only) ====="; awk "/Performing Test HAVE_OUTLINE_ATOMICS/{f=1} f{print} f&&/exitCode:/{exit}" "$f" 2>/dev/null | head -60; exit 1; }',
       'make --jobs {{hw.concurrency}} install',
     ],
   },
