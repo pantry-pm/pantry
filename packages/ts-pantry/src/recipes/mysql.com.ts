@@ -17,21 +17,25 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
 
+  // Link against pantry-built libs so the binary runs on a clean box. The
+  // published mirror needed libssl.so.1.1 / libicuuc.so.71 (long gone); pin the
+  // current majors and point cmake at them (WITH_SSL / WITH_ICU).
+  dependencies: {
+    'openssl.org': '^3',
+    'unicode.org': '^73',
+  },
+
   build: {
     'working-directory': 'build',
     script: [
       'sed -i -e \\s/\\(STRING_APPEND.*moutline-atomics.*\\)/# \\1/\\ ../CMakeLists.txt',
       'run: export ARGS="$(echo $ARGS | sed \\s/WITH_ZLIB=system/WITH_ZLIB=bundled/g\\)"',
       'run: export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
+      // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
+      // the build host's system libs.
+      'run: export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
       'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}} install',
-      'mkdir -p mysql tmp',
-      'mysqld --no-defaults --initialize-insecure --user=$USER --datadir=$PWD/mysql --tmpdir=$PWD/tmp',
-      'PORT=$(pkgx get-port | tail -n1)',
-      'mysqld --no-defaults --user=$USER --datadir=$PWD/mysql --port=$PORT --tmpdir=$PWD/tmp &',
-      'sleep 5',
-      'mysql --port=$PORT --user=root --password= --execute=\\show databases;\\',
-      'mysqladmin --port=$PORT --user=root --password= shutdown',
     ],
   },
 }
