@@ -186,6 +186,23 @@ fn ensureDir(path: []const u8) void {
 /// Return {HOME}/.local/share/pantry/data/<name> (or /tmp/<name>-data without a
 /// HOME), creating it. Many daemons require their data/working dir to already
 /// exist and be writable — launchd/systemd create nothing. Caller owns the result.
+/// Given an installed binary path (e.g. `/opt/pantry/pantry/.bin/postgres` or
+/// `/opt/pantry/pantry/postgresql.org/v18.4/bin/postgres`), return the pantry
+/// install root (`/opt/pantry/pantry`) — the path up to and including the LAST
+/// `/pantry/` segment. Used to glob sibling packages' lib dirs. Returns null if
+/// the binary isn't under a pantry tree (slice into `bin`, no allocation).
+fn pantryRootOf(bin: []const u8) ?[]const u8 {
+    const marker = "/pantry/";
+    var last: ?usize = null;
+    var from: usize = 0;
+    while (std.mem.indexOfPos(u8, bin, from, marker)) |i| {
+        last = i;
+        from = i + marker.len;
+    }
+    const idx = last orelse return null;
+    return bin[0 .. idx + marker.len - 1]; // include "/pantry"
+}
+
 fn serviceDataDir(allocator: std.mem.Allocator, home: ?[]const u8, name: []const u8) ![]const u8 {
     const io_helper = @import("../io_helper.zig");
     // System scope (root on Linux): use /var/lib/pantry so a service that drops
@@ -401,24 +418,30 @@ pub const Services = struct {
         const initdb_bin = try resolveServiceBinary(allocator, "initdb", project_root, home);
         defer allocator.free(initdb_bin);
 
+        // The pantry install root (".../pantry") derived from the binary path,
+        // so the command can compute LD_LIBRARY_PATH itself by globbing every
+        // installed package's lib dir — self-contained, independent of the unit
+        // Environment. postgres links libpq/readline/icu/... from sibling deps.
+        const pantry_root = pantryRootOf(postgres_bin) orelse "/opt/pantry/pantry";
+
         // Self-initializing launch command: on first start (no PG_VERSION yet)
         // run initdb, then exec postgres. postgres/initdb refuse to run as root,
         // so in system scope (root) provision an unprivileged `pantry` user,
         // chown the data dir, and run both via `runuser`. On a dev box (non-root)
         // run directly. `exec` keeps the server as the tracked PID for KeepAlive.
-        // `runuser` changing uid causes the loader to drop LD_LIBRARY_PATH, so
-        // pass it back explicitly via `env` (the unit sets it; see manager.zig)
-        // — otherwise initdb/postgres can't find pantry's shared libs and fail.
+        // LD_LIBRARY_PATH is exported in-shell (runuser drops it on uid change,
+        // so it's passed through `env`) from the globbed package lib dirs.
         const start_cmd = try std.fmt.allocPrint(
             allocator,
             "/bin/sh -c 'D=\"{s}\"; " ++
+                "L=\"$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr \"\\n\" \":\")\"; " ++
                 "if [ \"$(id -u)\" = 0 ]; then " ++
                 "id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry; " ++
-                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env LD_LIBRARY_PATH=$LD_LIBRARY_PATH\"; " ++
-                "else R=\"env LD_LIBRARY_PATH=$LD_LIBRARY_PATH\"; fi; " ++
+                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env LD_LIBRARY_PATH=$L\"; " ++
+                "else R=\"env LD_LIBRARY_PATH=$L\"; fi; " ++
                 "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
                 "exec $R {s} -D \"$D\" -p {d}'",
-            .{ pgdata, initdb_bin, postgres_bin, port },
+            .{ pgdata, pantry_root, pantry_root, initdb_bin, postgres_bin, port },
         );
 
         return ServiceConfig{
