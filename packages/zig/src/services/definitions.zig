@@ -1388,7 +1388,7 @@ pub const Services = struct {
             \\# script calling mariadbd/my_print_defaults) needs $BASE/bin on PATH
             \\# and --basedir for share/.
             \\if [ ! -d "$DATADIR/mysql" ]; then
-            \\  $R "$IDB" --basedir="$BASE" --datadir="$DATADIR" --auth-root-authentication-method=normal || true
+            \\  $R sh "$IDB" --basedir="$BASE" --datadir="$DATADIR" --auth-root-authentication-method=normal || true
             \\fi
             \\exec $R "$MDBD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
