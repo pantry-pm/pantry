@@ -119,16 +119,16 @@ export const recipe: Recipe = {
     'linux/x86-64',
   ],
   distributable: {
-    url: 'git+https://github.com/MariaDB/server',
-    // pkgx pins the git checkout to the requested release tag (`ref: mariadb-{{version.raw}}`).
-    // Without this, downloadSource() clones the default branch HEAD instead of the
-    // version's tag, so submodules and the version-gated build steps don't match {{version}}.
-    // build-package.ts forwards `distributable.ref` as `git clone --branch <ref> --single-branch`.
-    ref: 'mariadb-{{version.raw}}',
+    // Official MariaDB source tarball — bundles ALL submodules (libmariadb,
+    // wsrep, columnstore, …) vendored in, so the build needs no git/submodule
+    // fetch. The previous `git+` clone failed at cmake/submodules.cmake because
+    // a shallow clone (then cp'd out of its .git) couldn't resolve the pinned
+    // submodule SHAs.
+    url: 'https://archive.mariadb.org/mariadb-{{version}}/source/mariadb-{{version}}.tar.gz',
+    stripComponents: 1,
   },
   build: {
     script: [
-      'git submodule update --init --recursive',
       'rm -rf storage/mroonga/vendor/groonga',
       {
         run: 'if test "{{hw.platform}}" = "darwin"; then\n  sed -i \'s/OS_DATA_FILE_NO_O_DIRECT/OS_DATA_FILE/g\' \\\n    storage/innobase/include/os0file.h \\\n    storage/innobase/fil/fil0fil.cc \\\n    storage/innobase/os/os0file.cc \\\n    extra/mariabackup/xtrabackup.cc\nfi\n',
