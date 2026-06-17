@@ -18,7 +18,11 @@ export const recipe: Recipe = {
     ],
     env: {
       linux: {
-        LDFLAGS: "$LDFLAGS -lncursesw",
+        // The termcap globals readline uses (UP/BC/PC) live in libtinfow, not
+        // libncursesw — link it explicitly so libreadline.so records the
+        // dependency (DT_NEEDED) and resolves them at load time. Without this,
+        // psql/mysql crash with "undefined symbol: UP".
+        LDFLAGS: "$LDFLAGS -lncursesw -ltinfow",
       },
     },
   },
