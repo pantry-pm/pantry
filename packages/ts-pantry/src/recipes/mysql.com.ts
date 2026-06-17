@@ -47,7 +47,9 @@ export const recipe: Recipe = {
       'export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
       // The mysql-boost tarball bundles the exact boost MySQL needs at <src>/boost.
       'export ARGS="$ARGS -DWITH_BOOST=../boost"',
-      'cmake .. $ARGS',
+      // Dump CMake's feature-detection logs on a configure failure so a broken
+      // try_compile/try_link (e.g. Threads/timer detection) is diagnosable.
+      'cmake .. $ARGS || { echo "===== CMakeError.log ====="; tail -n 250 CMakeFiles/CMakeError.log 2>/dev/null; echo "===== CMakeOutput.log (tail) ====="; tail -n 40 CMakeFiles/CMakeOutput.log 2>/dev/null; exit 1; }',
       'make --jobs {{hw.concurrency}} install',
     ],
   },
