@@ -1,3 +1,28 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.54...v0.9.55)
+
+### 🐛 Bug Fixes
+
+- **services**: write mariadb/mysql start.sh outside the datadir ([7296ba4](https://github.com/pantry-pm/pantry/commit/7296ba4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: disable mroonga plugin in mariadb (clang/libstdc++ build error) ([d113b90](https://github.com/pantry-pm/pantry/commit/d113b90)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: raise build-script timeout to 60 min (configurable) ([077ad75](https://github.com/pantry-pm/pantry/commit/077ad75)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: build mariadb from the official source tarball (bundles submodules) ([e12cfbd](https://github.com/pantry-pm/pantry/commit/e12cfbd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: fetch git submodules when cloning git+ sources ([ac2b5cd](https://github.com/pantry-pm/pantry/commit/ac2b5cd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: detect nested recipe domains for auto-publish ([c517d72](https://github.com/pantry-pm/pantry/commit/c517d72)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 📦 Build System
+
+- allow building mariadb latest (only skip older versions) ([20166b2](https://github.com/pantry-pm/pantry/commit/20166b2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.55 ([c81f560](https://github.com/pantry-pm/pantry/commit/c81f560)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp to 9673 ([0519f08](https://github.com/pantry-pm/pantry/commit/0519f08)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/tw93/mole, mailpit.axllent.org, ollama.ai ([cda70ca](https://github.com/pantry-pm/pantry/commit/cda70ca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.53...v0.9.54)
 
 ### 🐛 Bug Fixes
