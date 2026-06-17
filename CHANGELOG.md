@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.53...v0.9.54)
+
+### 🐛 Bug Fixes
+
+- **services**: run mariadb/mysql as non-root with LD_LIBRARY_PATH ([f914bd4](https://github.com/pantry-pm/pantry/commit/f914bd4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: build mariadb against OpenSSL 3 ([3aa73c0](https://github.com/pantry-pm/pantry/commit/3aa73c0)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🤖 Continuous Integration
+
+- install apt build-prereqs before source-building changed packages ([2df9d39](https://github.com/pantry-pm/pantry/commit/2df9d39)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.54 ([d3a18a9](https://github.com/pantry-pm/pantry/commit/d3a18a9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.52...v0.9.53)
 
 ### 🐛 Bug Fixes
