@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.57...v0.9.58)
+
+### 🐛 Bug Fixes
+
+- **services**: mariadb init via readlink-resolved base + scripts/install-db ([d4c40f1](https://github.com/pantry-pm/pantry/commit/d4c40f1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.58 ([63d7fe3](https://github.com/pantry-pm/pantry/commit/63d7fe3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **config**: move stx.config.ts to config/stx.ts ([40cf1da](https://github.com/pantry-pm/pantry/commit/40cf1da)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.56...v0.9.57)
 
 ### 🐛 Bug Fixes
