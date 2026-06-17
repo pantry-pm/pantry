@@ -33,8 +33,11 @@ export const recipe: Recipe = {
   build: {
     'working-directory': 'build',
     script: [
-      'sed -i -e \\s/\\(STRING_APPEND.*moutline-atomics.*\\)/# \\1/\\ ../CMakeLists.txt',
-      'run: export ARGS="$(echo $ARGS | sed \\s/WITH_ZLIB=system/WITH_ZLIB=bundled/g\\)"',
+      // Comment out the ARM -moutline-atomics STRING_APPEND (no-op match on x86).
+      // The sed expression must be single-quoted; the previous backslash-escaped
+      // form rendered to `\s/…` which sed rejects ("unknown command: `/`").
+      'sed -i -e \'s/\\(STRING_APPEND.*moutline-atomics.*\\)/# \\1/\' ../CMakeLists.txt || true',
+      'run: export ARGS="$(echo $ARGS | sed \'s/WITH_ZLIB=system/WITH_ZLIB=bundled/g\')"',
       'run: export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
       // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
       // the build host's system libs.
