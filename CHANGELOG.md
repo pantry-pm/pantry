@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.55...v0.9.56)
+
+### 🐛 Bug Fixes
+
+- **services**: non-destructive mariadb/mysql init (no restart wipe loop) ([26faff4](https://github.com/pantry-pm/pantry/commit/26faff4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.56 ([89bcd41](https://github.com/pantry-pm/pantry/commit/89bcd41)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update casdoor.org, duckdb.org, github.com/ggerganov/llama.cpp, ohmyposh.dev, openbao.org/openbao ([42b2cea](https://github.com/pantry-pm/pantry/commit/42b2cea)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.54...v0.9.55)
 
 ### 🐛 Bug Fixes
