@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.56...v0.9.57)
+
+### 🐛 Bug Fixes
+
+- **services**: locate mariadb-install-db near mariadbd + add bin to PATH ([0dc23d4](https://github.com/pantry-pm/pantry/commit/0dc23d4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.57 ([498aa86](https://github.com/pantry-pm/pantry/commit/498aa86)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.55...v0.9.56)
 
 ### 🐛 Bug Fixes
