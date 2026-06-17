@@ -545,12 +545,12 @@ pub const Services = struct {
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
             \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L"
             \\else R="env LD_LIBRARY_PATH=$L"; fi
-            \\# Initialize once. Use a completion marker so an interrupted init
-            \\# (e.g. killed mid-run) starts clean next time instead of failing on
-            \\# a half-written InnoDB datadir.
-            \\if [ ! -f "$DATADIR/.pantry-initialized" ]; then
-            \\  rm -rf "$DATADIR"/* "$DATADIR"/.[!.]* 2>/dev/null
-            \\  $R "{s}"{s} --initialize-insecure --datadir="$DATADIR" && touch "$DATADIR/.pantry-initialized"
+            \\# Initialize only a truly-empty datadir (detected by the `mysql`
+            \\# system-tables dir). Never wipe a populated datadir — a marker
+            \\# gated on the init's exit code previously caused a destructive
+            \\# rm+reinit on every restart (connection-refused loop).
+            \\if [ ! -d "$DATADIR/mysql" ]; then
+            \\  $R "{s}"{s} --initialize-insecure --datadir="$DATADIR" || true
             \\fi
             \\exec $R "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
             \\
@@ -1390,11 +1390,14 @@ pub const Services = struct {
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
             \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L"
             \\else R="env LD_LIBRARY_PATH=$L"; fi
-            \\# Initialize once; a completion marker makes an interrupted init retry
-            \\# from a clean datadir rather than failing on half-written state.
-            \\if [ ! -f "$DATADIR/.pantry-initialized" ]; then
-            \\  rm -rf "$DATADIR"/* "$DATADIR"/.[!.]* 2>/dev/null
-            \\  $R "{s}"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal && touch "$DATADIR/.pantry-initialized"
+            \\# Initialize once. Detect an existing datadir by its system tables
+            \\# (the `mysql` dir), NOT a marker gated on install-db's exit code —
+            \\# install-db can return non-zero yet populate the datadir, and a
+            \\# missing marker previously caused a DESTRUCTIVE rm+reinit on every
+            \\# restart (connection-refused loop). Only initialize a truly-empty
+            \\# datadir, and never wipe a populated one.
+            \\if [ ! -d "$DATADIR/mysql" ]; then
+            \\  $R "{s}"{s} --datadir="$DATADIR" --auth-root-authentication-method=normal || true
             \\fi
             \\exec $R "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
