@@ -188,7 +188,14 @@ fn ensureDir(path: []const u8) void {
 /// exist and be writable — launchd/systemd create nothing. Caller owns the result.
 fn serviceDataDir(allocator: std.mem.Allocator, home: ?[]const u8, name: []const u8) ![]const u8 {
     const io_helper = @import("../io_helper.zig");
-    const dir = if (home) |h|
+    // System scope (root on Linux): use /var/lib/pantry so a service that drops
+    // privileges (postgres/mysql refuse to run as root) can still reach its data
+    // dir — $HOME is /root (mode 700), which an unprivileged service user can't
+    // traverse.
+    const system = builtin.os.tag == .linux and std.os.linux.geteuid() == 0;
+    const dir = if (system)
+        try std.fmt.allocPrint(allocator, "/var/lib/pantry/{s}", .{name})
+    else if (home) |h|
         try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/{s}", .{ h, name })
     else
         try std.fmt.allocPrint(allocator, "/tmp/{s}-data", .{name});
@@ -381,10 +388,7 @@ pub const Services = struct {
         const home = io_helper.getEnvVarOwned(allocator, "HOME") catch null;
         defer if (home) |h| allocator.free(h);
 
-        const pgdata = if (home) |h|
-            try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/postgres", .{h})
-        else
-            try allocator.dupe(u8, "/usr/local/var/postgres");
+        const pgdata = try serviceDataDir(allocator, home, "postgres");
         defer allocator.free(pgdata);
 
         var env_vars = std.StringHashMap([]const u8).init(allocator);
@@ -398,15 +402,20 @@ pub const Services = struct {
         defer allocator.free(initdb_bin);
 
         // Self-initializing launch command: on first start (no PG_VERSION yet)
-        // run initdb, then exec postgres. This makes the launchd/systemd unit
-        // self-sufficient on a fresh machine and across reboots, instead of
-        // depending on a separate interactive init step that the daemon
-        // launcher (launchd RunAtLoad) never runs. `exec` keeps postgres as the
-        // tracked PID so KeepAlive works.
+        // run initdb, then exec postgres. postgres/initdb refuse to run as root,
+        // so in system scope (root) provision an unprivileged `pantry` user,
+        // chown the data dir, and run both via `runuser`. On a dev box (non-root)
+        // run directly. `exec` keeps the server as the tracked PID for KeepAlive.
         const start_cmd = try std.fmt.allocPrint(
             allocator,
-            "/bin/sh -c \"test -f {s}/PG_VERSION || {s} -D {s} --no-locale --encoding=UTF8; exec {s} -D {s} -p {d}\"",
-            .{ pgdata, initdb_bin, pgdata, postgres_bin, pgdata, port },
+            "/bin/sh -c 'D=\"{s}\"; " ++
+                "if [ \"$(id -u)\" = 0 ]; then " ++
+                "id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry; " ++
+                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry --\"; " ++
+                "else R=\"\"; fi; " ++
+                "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
+                "exec $R {s} -D \"$D\" -p {d}'",
+            .{ pgdata, initdb_bin, postgres_bin, port },
         );
 
         return ServiceConfig{
