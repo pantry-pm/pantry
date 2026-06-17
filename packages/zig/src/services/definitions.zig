@@ -406,13 +406,16 @@ pub const Services = struct {
         // so in system scope (root) provision an unprivileged `pantry` user,
         // chown the data dir, and run both via `runuser`. On a dev box (non-root)
         // run directly. `exec` keeps the server as the tracked PID for KeepAlive.
+        // `runuser` changing uid causes the loader to drop LD_LIBRARY_PATH, so
+        // pass it back explicitly via `env` (the unit sets it; see manager.zig)
+        // — otherwise initdb/postgres can't find pantry's shared libs and fail.
         const start_cmd = try std.fmt.allocPrint(
             allocator,
             "/bin/sh -c 'D=\"{s}\"; " ++
                 "if [ \"$(id -u)\" = 0 ]; then " ++
                 "id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry; " ++
-                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry --\"; " ++
-                "else R=\"\"; fi; " ++
+                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env LD_LIBRARY_PATH=$LD_LIBRARY_PATH\"; " ++
+                "else R=\"env LD_LIBRARY_PATH=$LD_LIBRARY_PATH\"; fi; " ++
                 "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
                 "exec $R {s} -D \"$D\" -p {d}'",
             .{ pgdata, initdb_bin, postgres_bin, port },
