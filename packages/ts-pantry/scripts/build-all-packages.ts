@@ -638,8 +638,10 @@ const SKIP_VERSIONS: Record<string, string[]> = {
   'gtk.org/gtk4': ['<4.19.0'],
   // libvips GIR generation fails on darwin for all tested versions
   'libvips.org': ['<8.18.0'],
-  // MariaDB server: extremely slow build (~60min each), times out CI
-  'mariadb.com/server': ['*'],
+  // MariaDB server: slow build (~40-60min). Only the latest (the version
+  // ts-cloud provisions) is built; older versions stay skipped so the daily
+  // multi-version sweep doesn't time out.
+  'mariadb.com/server': ['<12.3.1'],
   // starship fails on darwin (Xcode 26.3 mac-notification-sys); 1.25.0+ works
   'starship.rs': ['<1.25.0'],
   // cargo-c 0.9.32 fails on darwin; 0.10.0+ works
