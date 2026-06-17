@@ -175,6 +175,10 @@ export const recipe: Recipe = {
         '-DDEFAULT_COLLATION=utf8mb4_general_ci',
         '-DCOMPILATION_COMMENT=made_by_tea',
         '-DPLUGIN_ROCKSDB=NO',
+        // Mroonga (optional full-text engine) fails to compile on the newer
+        // clang/libstdc++ (missing <cstring>: memcpy/memset/strlen undeclared in
+        // ha_mroonga.cpp). Not needed for general/Laravel use — disable it.
+        '-DPLUGIN_MROONGA=NO',
         '-DCMAKE_POLICY_VERSION_MINIMUM=3.5',
       ],
       linux: {
