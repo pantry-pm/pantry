@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.49...v0.9.50)
+
+### 🐛 Bug Fixes
+
+- **services**: preserve LD_LIBRARY_PATH across runuser for postgres ([035c7e7](https://github.com/pantry-pm/pantry/commit/035c7e7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.50 ([dcfed51](https://github.com/pantry-pm/pantry/commit/dcfed51)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.48...v0.9.49)
 
 ### 🐛 Bug Fixes
