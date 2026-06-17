@@ -1701,6 +1701,13 @@ pub const ShellCommands = struct {
 
     /// Ensure PostgreSQL data directory exists and is initialized
     fn ensurePostgresDataDir(self: *ShellCommands, project_root: ?[]const u8) !void {
+        // System scope (root on Linux): skip this CLI-side pre-init entirely.
+        // initdb/postgres refuse to run as root, and the data dir lives under
+        // /var/lib/pantry — both handled by the self-initializing systemd unit
+        // (runuser to the `pantry` user, LD_LIBRARY_PATH preserved). Running it
+        // here as root would just fail (exit 127) and leave a half-made dir.
+        if (@import("builtin").os.tag == .linux and std.os.linux.geteuid() == 0) return;
+
         const home_dir = try lib.core.Paths.home(self.allocator);
         defer self.allocator.free(home_dir);
 
