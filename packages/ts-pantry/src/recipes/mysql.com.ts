@@ -51,7 +51,7 @@ export const recipe: Recipe = {
       // CMakeConfigureLog.yaml (not CMakeError.log). Also reproduce a minimal
       // pthread compile through the wrapper `gcc` (on PATH) vs the real compiler
       // to localize whether the cc-wrapper breaks try_compile.
-      'cmake .. $ARGS || { f=$(find . -name CMakeConfigureLog.yaml | head -1); echo "===== CMAKE_HAVE_LIBC_PTHREAD block ====="; awk "/Performing Test CMAKE_HAVE_LIBC_PTHREAD/{f=1} f{print} f&&/exitCode:/{n++; if(n>=1)exit}" "$f" 2>/dev/null | head -80; echo "===== HAVE_OUTLINE_ATOMICS block (compile-only) ====="; awk "/Performing Test HAVE_OUTLINE_ATOMICS/{f=1} f{print} f&&/exitCode:/{exit}" "$f" 2>/dev/null | head -60; exit 1; }',
+      'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}} install',
     ],
   },

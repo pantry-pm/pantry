@@ -1440,6 +1440,14 @@ SYSLIB_OVERRIDE_EOF`)
   sections.push('  case "$arg" in')
   sections.push('    -Werror|-Werror=*) continue ;;  # filter -Werror (brewkit shim)')
   sections.push('    -force_cpusubtype_ALL|-Wl,-force_cpusubtype_ALL) continue ;;  # obsolete Apple linker flag')
+  // Strip LTO flags. GCC 14+ fat-LTO objects encode the LTO bytecode with the
+  // `.base64` assembler directive (binutils >= 2.42); when the `as` paired with
+  // the build`s gcc predates that, EVERY compile fails at assembly ("unknown
+  // pseudo-op: `.base64`"), which silently breaks CMake try_compile feature
+  // detection (FindThreads, timer_create, …). LTO is an optional optimization,
+  // so dropping it yields correct binaries on any gcc/as pairing. Inherited
+  // dpkg-buildflags (`-flto=auto -ffat-lto-objects`) are the usual source.
+  sections.push('    -flto|-flto=*|-ffat-lto-objects|-fno-fat-lto-objects|-flto-partition=*) continue ;;  # strip LTO (fat-LTO emits .base64; mismatched as rejects it)')
   sections.push('    -shared) has_shared=true; args+=("$arg") ;;')
   sections.push('    *) args+=("$arg") ;;')
   sections.push('  esac')
