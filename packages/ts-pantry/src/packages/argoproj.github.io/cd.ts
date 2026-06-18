@@ -70,9 +70,11 @@ export const argoprojgithubiocdPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.4.4',
     '3.4.3',
     '3.4.2',
     '3.4.1',
+    '3.3.12',
     '3.3.11',
     '3.3.10',
     '3.3.9',
