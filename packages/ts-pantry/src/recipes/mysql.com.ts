@@ -40,7 +40,7 @@ export const recipe: Recipe = {
     script: [
       // [diag] Show the deployed cc-wrapper + whether -ffat-lto-objects through it
       // still emits `.base64` assembly (localizes whether the wrapper neutralizes LTO).
-      'echo "=== gcc/as versions ==="; cc --version | head -1; as --version | head -1; echo "as path: $(command -v as)"; gcc -print-prog-name=as; echo "=== probes (.base64 count) ==="; printf "int f(int x){return x*3+1;}\\n" > /tmp/p.c; for FL in "-O2" "-g -O2" "-g -O2 -ffat-lto-objects" "-g1 -O2"; do cc $FL -S /tmp/p.c -o /tmp/p.s 2>/tmp/perr; echo "[$FL] base64=$(grep -c base64 /tmp/p.s 2>/dev/null) err=$(head -1 /tmp/perr)"; done',
+      'echo "=== gcc as ==="; gcc -print-prog-name=as; echo "=== /usr/bin/as .base64 support ==="; printf ".text\\n.base64 \\"QQ==\\"\\n" | /usr/bin/as -o /tmp/sa.o - 2>&1 | head -2; echo "sysas /usr/bin/as: $(/usr/bin/as --version | head -1)"; echo "=== pantry binutils as ==="; PAS=$(ls -d /tmp/buildkit-deps-mysql.com/gnu.org/binutils/*/bin/as 2>/dev/null | head -1); echo "pantry as path: $PAS"; [ -n "$PAS" ] && { printf ".text\\n.base64 \\"QQ==\\"\\n" | "$PAS" -o /tmp/pa.o - 2>&1 | head -2; echo "pantry-as ok? $?"; "$PAS" --version | head -1; }; echo "=== reproduce trees.c (object,-g) ==="; printf "int f(int x){return x*3+1;}\\n" > /tmp/p.c; cc -g -O2 -c /tmp/p.c -o /tmp/p.o 2>&1 | head -3; echo "obj compile rc=$?"',
       // Comment out the ARM -moutline-atomics STRING_APPEND (no-op match on x86).
       // The sed expression must be single-quoted; the previous backslash-escaped
       // form rendered to `\s/…` which sed rejects ("unknown command: `/`").
