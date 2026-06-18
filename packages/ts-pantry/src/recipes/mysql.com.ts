@@ -77,6 +77,11 @@ export const recipe: Recipe = {
       // own gtest headers on CPATH, which shadow MySQL's vendored googletest and
       // break the gmock/gtest compile. The server doesn't need unit tests.
       'export ARGS="$ARGS -DWITH_UNIT_TESTS=OFF"',
+      // Use MySQL's vendored protobuf 24.4 (source + its own protoc). A pantry
+      // protobuf (v21) on CPATH otherwise shadows the bundled headers and the
+      // generated .pb.cc fails to compile ("ClassData does not name a type").
+      // The pantry protobuf dep is removed from the catalog so it isn't installed.
+      'export ARGS="$ARGS -DWITH_PROTOBUF=bundled"',
       // Disable LTO/IPO entirely. MySQL (and/or CMake IPO) enable -flto, whose
       // GCC fat-LTO `.base64` assembly the build`s `as` rejects; WITH_LTO=OFF +
       // INTERPROCEDURAL_OPTIMIZATION=OFF keep it off for every target (the bundled
