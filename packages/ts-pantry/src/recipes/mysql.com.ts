@@ -52,10 +52,10 @@ export const recipe: Recipe = {
       'export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
       // The mysql-boost tarball bundles the exact boost MySQL needs at <src>/boost.
       'export ARGS="$ARGS -DWITH_BOOST=../boost"',
-      // Diagnose a configure failure: modern CMake logs probe failures to
-      // CMakeConfigureLog.yaml (not CMakeError.log). Also reproduce a minimal
-      // pthread compile through the wrapper `gcc` (on PATH) vs the real compiler
-      // to localize whether the cc-wrapper breaks try_compile.
+      // Skip the bundled googletest unit tests: a build-tool dep (ninja) puts its
+      // own gtest headers on CPATH, which shadow MySQL's vendored googletest and
+      // break the gmock/gtest compile. The server doesn't need unit tests.
+      'export ARGS="$ARGS -DWITH_UNIT_TESTS=OFF"',
       'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}} install',
     ],
