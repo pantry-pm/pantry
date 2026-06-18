@@ -522,39 +522,36 @@ pub const Services = struct {
         const mysqld = try resolveServiceBinary(allocator, "mysqld", project_root, home);
         defer allocator.free(mysqld);
 
-        // mysqld derives basedir from argv[0]'s dir (../), which for the .bin
-        // symlink resolves to pantry/ — wrong, so it can't find share/english/
-        // errmsg.sys or charsets and aborts. Pass the real package home.
-        const basedir = (try resolvePackageHome(allocator, "mysql.com", project_root, home)) orelse
-            try allocator.dupe(u8, "");
-        defer allocator.free(basedir);
-        const basedir_flag = if (basedir.len > 0)
-            try std.fmt.allocPrint(allocator, " --basedir=\"{s}\"", .{basedir})
-        else
-            try allocator.dupe(u8, "");
-        defer allocator.free(basedir_flag);
-
         // pantry root for self-contained LD_LIBRARY_PATH; mysqld refuses root, so
         // run as the unprivileged `pantry` user via runuser in system scope.
         const pantry_root = pantryRootOf(mysqld) orelse "/opt/pantry/pantry";
+        // Locate the REAL mysqld robustly: resolveServiceBinary can fall back to
+        // bare "mysqld" (not symlinked into .bin), and `env mysqld` then fails
+        // with 127. Glob the installed mysql.com package for bin/mysqld (only
+        // built versions have it; pick the highest), falling back to the resolved
+        // path. $BASE = .../mysql.com/v<ver>; mysqld needs --basedir for share/
+        // (errmsg/charsets) since argv[0] via a symlink derives the wrong basedir.
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
             \\DATADIR="{s}"
             \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
+            \\MYSQLD="$(ls -d {s}/mysql.com/v*/bin/mysqld 2>/dev/null | sort -V | tail -1)"
+            \\[ -n "$MYSQLD" ] || MYSQLD="$(readlink -f "{s}")"
+            \\BASE="$(dirname "$(dirname "$MYSQLD")")"
             \\if [ "$(id -u)" = 0 ]; then
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
-            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L"
-            \\else R="env LD_LIBRARY_PATH=$L"; fi
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$PATH"
+            \\else R="env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$PATH"; fi
             \\# Initialize only a truly-empty datadir (detected by the `mysql`
             \\# system-tables dir). Never wipe a populated datadir — a marker
             \\# gated on the init's exit code previously caused a destructive
             \\# rm+reinit on every restart (connection-refused loop).
             \\if [ ! -d "$DATADIR/mysql" ]; then
-            \\  $R "{s}"{s} --initialize-insecure --datadir="$DATADIR" || true
+            \\  $R "$MYSQLD" --basedir="$BASE" --initialize-insecure --datadir="$DATADIR" || true
             \\fi
-            \\exec $R "{s}"{s} --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
+            \\exec $R "$MYSQLD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
             \\
-        , .{ data_dir, pantry_root, pantry_root, mysqld, basedir_flag, mysqld, basedir_flag, port });
+        , .{ data_dir, pantry_root, pantry_root, pantry_root, mysqld, port });
         defer allocator.free(script);
         // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
         // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
