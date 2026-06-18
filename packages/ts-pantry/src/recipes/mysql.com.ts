@@ -67,6 +67,9 @@ export const recipe: Recipe = {
       // (that's the object-step form `{ run: … }`), it would emit a literal
       // `run:` into the script ("run:: command not found").
       'export ARGS="$(echo $ARGS | sed \'s/WITH_ZLIB=system/WITH_ZLIB=bundled/g\')"',
+      // Install into the pantry prefix; MySQL otherwise defaults to
+      // /usr/local/mysql and `make install` fails (no write permission).
+      'export ARGS="$ARGS -DCMAKE_INSTALL_PREFIX={{prefix}}"',
       'export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
       // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
       // the build host's system libs.
@@ -88,8 +91,7 @@ export const recipe: Recipe = {
       // zlib was getting -flto via IPO, bypassing the CFLAGS/wrapper scrubbing).
       'export ARGS="$ARGS -DWITH_LTO=OFF -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"',
       'cmake .. $ARGS',
-      // VERBOSE so any remaining compile failure shows the exact command/flags.
-      'make VERBOSE=1 --jobs {{hw.concurrency}} install',
+      'make --jobs {{hw.concurrency}} install',
     ],
   },
 }
