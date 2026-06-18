@@ -1,3 +1,55 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.59...v0.9.60)
+
+### 🐛 Bug Fixes
+
+- **services**: locate mysqld robustly for pantry start mysql ([00129cc](https://github.com/pantry-pm/pantry/commit/00129cc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: bundle ICU + hoist bundled shared libs to lib for runtime ([5b1ab59](https://github.com/pantry-pm/pantry/commit/5b1ab59)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: set CMAKE_INSTALL_PREFIX to pantry prefix (make install) ([31f9c73](https://github.com/pantry-pm/pantry/commit/31f9c73)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: honor BUILD_SCRIPT_TIMEOUT_MS in build-all-packages; set 180m ([3124196](https://github.com/pantry-pm/pantry/commit/3124196)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: use bundled protobuf (drop pantry protobuf that shadows it) ([8c4bc43](https://github.com/pantry-pm/pantry/commit/8c4bc43)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: point GCC 15 at pantry binutils as via -B (host as too old for .base64) ([2104054](https://github.com/pantry-pm/pantry/commit/2104054)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **buildkit**: append -fno-fat-lto-objects/-fno-lto for GCC on Linux ([629b1af](https://github.com/pantry-pm/pantry/commit/629b1af)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: disable LTO/IPO at cmake level (-DWITH_LTO=OFF, IPO=OFF) ([e02a68f](https://github.com/pantry-pm/pantry/commit/e02a68f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: strip -flto from CFLAGS/CXXFLAGS/LDFLAGS at source ([b5eff48](https://github.com/pantry-pm/pantry/commit/b5eff48)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: -DWITH_UNIT_TESTS=OFF (ninja dep's gtest headers shadow vendored googletest) ([43ad9b1](https://github.com/pantry-pm/pantry/commit/43ad9b1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: provide libtirpc for rpc/rpc.h (Sun RPC dropped from glibc) ([1b06175](https://github.com/pantry-pm/pantry/commit/1b06175)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **buildkit**: strip LTO flags in cc-wrapper (fat-LTO .base64 breaks try_compile) ([7476347](https://github.com/pantry-pm/pantry/commit/7476347)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: drop bogus run: prefix from build ARGS steps ([5c5ef07](https://github.com/pantry-pm/pantry/commit/5c5ef07)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: correct malformed sed in build script ([2d115db](https://github.com/pantry-pm/pantry/commit/2d115db)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: seed selectImportantVersions latest skip-aware ([b93cbe7](https://github.com/pantry-pm/pantry/commit/b93cbe7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: skip mysql.com versions without a bundled-boost source tarball ([c1d017b](https://github.com/pantry-pm/pantry/commit/c1d017b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: pin buildable 8.0.43 source + openssl3/icu73 runtime deps ([e3566f8](https://github.com/pantry-pm/pantry/commit/e3566f8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: make build-tools apt step non-interactive + resilient ([2b074a8](https://github.com/pantry-pm/pantry/commit/2b074a8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: build mysql against pantry openssl3 + icu (runs on clean box) ([58160ac](https://github.com/pantry-pm/pantry/commit/58160ac)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🤖 Continuous Integration
+
+- raise build timeout to 350m for heavy source builds (mysql) ([ccd83b7](https://github.com/pantry-pm/pantry/commit/ccd83b7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.9.60 ([639f0d4](https://github.com/pantry-pm/pantry/commit/639f0d4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update ansible.com to 2.21.1 ([04ef318](https://github.com/pantry-pm/pantry/commit/04ef318)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update alttab.app, casdoor.org, github.com/ggerganov/llama.cpp, gohugo.io, opentofu.org, werf.io ([daf53ae](https://github.com/pantry-pm/pantry/commit/daf53ae)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bytebase.com, github.com/ggerganov/llama.cpp, huggingface.co, jupyter.org, projen.io, pulumi.io ([ab48278](https://github.com/pantry-pm/pantry/commit/ab48278)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update argoproj.github.io/cd, github.com/ggerganov/llama.cpp, pnpm.io, projen.io ([415e71e](https://github.com/pantry-pm/pantry/commit/415e71e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com/code-server, github.com/ggerganov/llama.cpp, materialize.com, nodejs.org, openai.com/codex, openexr.com ([9648d95](https://github.com/pantry-pm/pantry/commit/9648d95)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **mysql**: diag — which as gcc uses + per-as .base64 support + -c repro ([3920bd4](https://github.com/pantry-pm/pantry/commit/3920bd4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: diag — gcc/as versions + -g vs lto base64 probes ([17bede8](https://github.com/pantry-pm/pantry/commit/17bede8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update ollama.ai to 0.30.10 ([2737b6b](https://github.com/pantry-pm/pantry/commit/2737b6b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **mysql**: diag — dump deployed cc-wrapper + probe -ffat-lto-objects ([48812bc](https://github.com/pantry-pm/pantry/commit/48812bc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: dump exact CMAKE_HAVE_LIBC_PTHREAD ConfigureLog block ([f8e2e01](https://github.com/pantry-pm/pantry/commit/f8e2e01)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: richer configure-failure diagnostic (ConfigureLog + pthread probe) ([0e31227](https://github.com/pantry-pm/pantry/commit/0e31227)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql**: dump CMakeError.log on configure failure (diagnostic) ([db884b3](https://github.com/pantry-pm/pantry/commit/db884b3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update coder.com, openexr.com ([3897825](https://github.com/pantry-pm/pantry/commit/3897825)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cli.github.com, github.com/ggerganov/llama.cpp, helm.sh, opencode.ai, vaultproject.io ([c62fe27](https://github.com/pantry-pm/pantry/commit/c62fe27)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cmake.org, dagger.io, github.com/ggerganov/llama.cpp, projen.io ([920862d](https://github.com/pantry-pm/pantry/commit/920862d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/ggerganov/llama.cpp, jupyter.org, nginx.org, projen.io, zed.dev ([6b93833](https://github.com/pantry-pm/pantry/commit/6b93833)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.58...v0.9.59)
 
 ### 🐛 Bug Fixes
