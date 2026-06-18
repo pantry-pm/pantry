@@ -1479,6 +1479,19 @@ SYSLIB_OVERRIDE_EOF`)
   sections.push('  done')
   sections.push('  args=("${_clean[@]}")')
   sections.push('fi')
+  // Force fat-LTO off for GCC on Linux. GCC fat-LTO objects encode the LTO
+  // bytecode with the `.base64` assembler directive (binutils >= 2.42); when the
+  // `as` paired with the build's gcc predates it, EVERY compile dies at assembly
+  // ("unknown pseudo-op: `.base64`"), silently failing CMake try_compile probes.
+  // Inherited dpkg-buildflags AND gcc's own spec defaults can add
+  // `-ffat-lto-objects`, so stripping the arg isn't enough — append
+  // `-fno-fat-lto-objects -fno-lto` LAST so they override any earlier/implicit
+  // LTO (GCC takes the last LTO flag). Skipped for clang (no such flag) and
+  // non-Linux. LTO is optional; binaries stay correct.
+  sections.push('case "__REAL_CC__" in')
+  sections.push('  *clang*) ;;')
+  sections.push('  *) [ "$(uname)" = "Linux" ] && args+=("-fno-fat-lto-objects" "-fno-lto") ;;')
+  sections.push('esac')
   // GCC specs workaround: if ./specs is a directory, run GCC from /tmp
   // to prevent "fatal error: cannot read spec file './specs': Is a directory"
   // We convert relative file paths to absolute so GCC can still find them.
