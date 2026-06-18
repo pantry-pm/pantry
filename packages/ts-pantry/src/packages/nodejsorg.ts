@@ -86,6 +86,7 @@ export const nodePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '26.3.1',
     '26.3.0',
     '26.2.0',
     '26.1.0',
@@ -104,6 +105,7 @@ export const nodePackage = {
     '25.2.0',
     '25.1.0',
     '25.0.0',
+    '24.17.0',
     '24.16.0',
     '24.15.0',
     '24.14.1',
@@ -141,6 +143,7 @@ export const nodePackage = {
     '23.2.0',
     '23.1.0',
     '23.0.0',
+    '22.23.0',
     '22.22.3',
     '22.22.2',
     '22.22.1',
