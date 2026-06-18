@@ -42,6 +42,14 @@ export const recipe: Recipe = {
       // The sed expression must be single-quoted; the previous backslash-escaped
       // form rendered to `\s/…` which sed rejects ("unknown command: `/`").
       'sed -i -e \'s/\\(STRING_APPEND.*moutline-atomics.*\\)/# \\1/\' ../CMakeLists.txt || true',
+      // Strip inherited LTO flags at the source. GCC fat-LTO objects encode with
+      // the `.base64` assembler directive that the build`s `as` rejects; the
+      // cc-wrapper drops `-flto` per-invocation, but flags reach some bundled
+      // sub-builds (zlib) another way — clearing CFLAGS/CXXFLAGS/LDFLAGS here means
+      // cmake never puts `-flto` into CMAKE_*_FLAGS, so no compile ever sees it.
+      'export CFLAGS="$(echo "${CFLAGS:-}" | sed -E \'s/-flto[^ ]*//g; s/-ffat-lto-objects//g\')"',
+      'export CXXFLAGS="$(echo "${CXXFLAGS:-}" | sed -E \'s/-flto[^ ]*//g; s/-ffat-lto-objects//g\')"',
+      'export LDFLAGS="$(echo "${LDFLAGS:-}" | sed -E \'s/-flto[^ ]*//g; s/-ffat-lto-objects//g\')"',
       // Plain command strings — a leading `run:` is NOT stripped by buildkit
       // (that's the object-step form `{ run: … }`), it would emit a literal
       // `run:` into the script ("run:: command not found").
