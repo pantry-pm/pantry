@@ -68,6 +68,7 @@ export const gohugoioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.163.3',
     '0.163.2',
     '0.163.1',
     '0.163.0',
