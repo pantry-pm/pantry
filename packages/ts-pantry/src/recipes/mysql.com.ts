@@ -40,7 +40,7 @@ export const recipe: Recipe = {
     script: [
       // [diag] Show the deployed cc-wrapper + whether -ffat-lto-objects through it
       // still emits `.base64` assembly (localizes whether the wrapper neutralizes LTO).
-      'echo "=== which cc ==="; command -v cc gcc; echo "=== wrapper head ==="; sed -n "1,60p" "$(command -v cc)" 2>/dev/null; echo "=== probe: -ffat-lto-objects -> .base64? ==="; printf "int f(int x){return x*3+1;}\\n" > /tmp/ltoprobe.c; cc -ffat-lto-objects -O2 -S /tmp/ltoprobe.c -o /tmp/ltoprobe.s 2>&1 | head -5; echo "base64 in probe .s: $(grep -c base64 /tmp/ltoprobe.s 2>/dev/null)"',
+      'echo "=== gcc/as versions ==="; cc --version | head -1; as --version | head -1; echo "as path: $(command -v as)"; gcc -print-prog-name=as; echo "=== probes (.base64 count) ==="; printf "int f(int x){return x*3+1;}\\n" > /tmp/p.c; for FL in "-O2" "-g -O2" "-g -O2 -ffat-lto-objects" "-g1 -O2"; do cc $FL -S /tmp/p.c -o /tmp/p.s 2>/tmp/perr; echo "[$FL] base64=$(grep -c base64 /tmp/p.s 2>/dev/null) err=$(head -1 /tmp/perr)"; done',
       // Comment out the ARM -moutline-atomics STRING_APPEND (no-op match on x86).
       // The sed expression must be single-quoted; the previous backslash-escaped
       // form rendered to `\s/…` which sed rejects ("unknown command: `/`").
