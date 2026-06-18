@@ -64,8 +64,14 @@ export const recipe: Recipe = {
       // own gtest headers on CPATH, which shadow MySQL's vendored googletest and
       // break the gmock/gtest compile. The server doesn't need unit tests.
       'export ARGS="$ARGS -DWITH_UNIT_TESTS=OFF"',
+      // Disable LTO/IPO entirely. MySQL (and/or CMake IPO) enable -flto, whose
+      // GCC fat-LTO `.base64` assembly the build`s `as` rejects; WITH_LTO=OFF +
+      // INTERPROCEDURAL_OPTIMIZATION=OFF keep it off for every target (the bundled
+      // zlib was getting -flto via IPO, bypassing the CFLAGS/wrapper scrubbing).
+      'export ARGS="$ARGS -DWITH_LTO=OFF -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"',
       'cmake .. $ARGS',
-      'make --jobs {{hw.concurrency}} install',
+      // VERBOSE so any remaining compile failure shows the exact command/flags.
+      'make VERBOSE=1 --jobs {{hw.concurrency}} install',
     ],
   },
 }
