@@ -38,6 +38,9 @@ export const recipe: Recipe = {
   build: {
     'working-directory': 'build',
     script: [
+      // [diag] Show the deployed cc-wrapper + whether -ffat-lto-objects through it
+      // still emits `.base64` assembly (localizes whether the wrapper neutralizes LTO).
+      'echo "=== which cc ==="; command -v cc gcc; echo "=== wrapper head ==="; sed -n "1,60p" "$(command -v cc)" 2>/dev/null; echo "=== probe: -ffat-lto-objects -> .base64? ==="; printf "int f(int x){return x*3+1;}\\n" > /tmp/ltoprobe.c; cc -ffat-lto-objects -O2 -S /tmp/ltoprobe.c -o /tmp/ltoprobe.s 2>&1 | head -5; echo "base64 in probe .s: $(grep -c base64 /tmp/ltoprobe.s 2>/dev/null)"',
       // Comment out the ARM -moutline-atomics STRING_APPEND (no-op match on x86).
       // The sed expression must be single-quoted; the previous backslash-escaped
       // form rendered to `\s/…` which sed rejects ("unknown command: `/`").
