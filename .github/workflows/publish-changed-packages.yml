@@ -91,7 +91,10 @@ jobs:
     needs: detect
     if: needs.detect.outputs.domains != ''
     runs-on: ${{ matrix.platform.os }}
-    timeout-minutes: 120
+    # Heavy source builds (mysql/mariadb compile the full server + bundled libs)
+    # need well over the old 120 min once queue + apt + dep builds are included —
+    # mysql 8.0.43 reached 64% in ~60 min of compile, so give big builds headroom.
+    timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
