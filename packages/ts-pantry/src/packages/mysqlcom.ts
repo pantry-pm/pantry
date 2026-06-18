@@ -107,6 +107,7 @@ export const mysqlPackage = {
     'curl.se>=6.0',
     'thrysoee.dk/editline^3',
     'developers.yubico.com/libfido2^1',
+    'linux:sourceforge.net/libtirpc',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,
   /**

@@ -184,6 +184,7 @@ jobs:
             libfido2-dev \
             libdouble-conversion-dev libgoogle-glog-dev libgflags-dev \
             libsodium-dev liblzo2-dev libsnappy-dev libbrotli-dev \
+            libtirpc-dev \
             doxygen xsltproc docbook-xsl xmlto
 
       - name: Source-build + publish changed packages

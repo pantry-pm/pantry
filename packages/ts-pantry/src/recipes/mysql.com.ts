@@ -28,6 +28,11 @@ export const recipe: Recipe = {
   dependencies: {
     'openssl.org': '^3',
     'unicode.org': '^73',
+    // Sun RPC (rpc/rpc.h) was dropped from glibc >= 2.32; MySQL's MYSQL_CHECK_RPC
+    // needs it. libtirpc provides it (header at <prefix>/include/tirpc, lib
+    // libtirpc.so.3) — declared so the runtime dep resolves on the box. The build
+    // host also installs libtirpc-dev so cmake finds /usr/include/tirpc/rpc/rpc.h.
+    'sourceforge.net/libtirpc': '*',
   },
 
   build: {
