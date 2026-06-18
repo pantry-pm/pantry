@@ -97,7 +97,6 @@ export const mysqlPackage = {
   * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'unicode.org^73',
     'libevent.org^2',
     'lz4.org^1',
     'openssl.org^3',

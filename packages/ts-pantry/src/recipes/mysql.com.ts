@@ -26,8 +26,11 @@ export const recipe: Recipe = {
   // published mirror needed libssl.so.1.1 / libicuuc.so.71 (long gone); pin the
   // current majors and point cmake at them (WITH_SSL / WITH_ICU).
   dependencies: {
+    // openssl 3.x is soname-stable (libssl.so.3), so the pantry dep matches at
+    // runtime. ICU is NOT (libicuuc.so.<major>): the registry only carries the
+    // latest ICU, so a build pinned to .so.73 won't load — ICU is bundled
+    // statically instead (see -DWITH_ICU=bundled).
     'openssl.org': '^3',
-    'unicode.org': '^73',
     // Sun RPC (rpc/rpc.h) was dropped from glibc >= 2.32; MySQL's MYSQL_CHECK_RPC
     // needs it. libtirpc provides it (header at <prefix>/include/tirpc, lib
     // libtirpc.so.3) — declared so the runtime dep resolves on the box. The build
@@ -73,7 +76,9 @@ export const recipe: Recipe = {
       'export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
       // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
       // the build host's system libs.
-      'export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU={{deps.unicode.org.prefix}}"',
+      // openssl from pantry (soname-stable so.3); ICU bundled (static) so mysqld
+      // has no external libicuuc.so.<major> the registry can't version-match.
+      'export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU=bundled"',
       // The mysql-boost tarball bundles the exact boost MySQL needs at <src>/boost.
       'export ARGS="$ARGS -DWITH_BOOST=../boost"',
       // Skip the bundled googletest unit tests: a build-tool dep (ninja) puts its
@@ -92,6 +97,12 @@ export const recipe: Recipe = {
       'export ARGS="$ARGS -DWITH_LTO=OFF -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF"',
       'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}} install',
+      // MySQL installs its bundled shared libs (e.g. libprotobuf-lite.so) into
+      // <prefix>/lib/private with an $ORIGIN rpath. pantry's `pantry env` only
+      // adds <pkg>/lib (not lib/private) to LD_LIBRARY_PATH, so mysqld can't find
+      // them at runtime. Hoist them into <prefix>/lib so they resolve.
+      'if [ -d {{prefix}}/lib/private ]; then mv {{prefix}}/lib/private/*.so* {{prefix}}/lib/ 2>/dev/null || true; fi',
+      'if [ -d {{prefix}}/lib/mysql/private ]; then mv {{prefix}}/lib/mysql/private/*.so* {{prefix}}/lib/ 2>/dev/null || true; fi',
     ],
   },
 }
