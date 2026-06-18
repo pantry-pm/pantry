@@ -1191,7 +1191,10 @@ async function tryBuildVersion(
   // setsid) and on timeout signal the WHOLE group via a negative PID, escalating
   // SIGTERM → SIGKILL after a short grace period so no orphaned compiler/make
   // survives.
-  const PER_PACKAGE_TIMEOUT_MS = 60 * 60 * 1000 // 60 min (fbthrift/heavy C++ need >45 min)
+  // 60 min default; override via BUILD_SCRIPT_TIMEOUT_MS for the heaviest C++
+  // builds (mysql 8.0's full server compiles ~90 min — it reached 70% at the old
+  // 60-min cap). Matches the same env knob build-package.ts honors.
+  const PER_PACKAGE_TIMEOUT_MS = Number(process.env.BUILD_SCRIPT_TIMEOUT_MS) || 60 * 60 * 1000
   const KILL_GRACE_MS = 15 * 1000 // grace between SIGTERM and SIGKILL for the group
   await new Promise<void>((resolve, reject) => {
     const child = spawn('bun', args, {

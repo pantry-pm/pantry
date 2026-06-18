@@ -38,6 +38,9 @@ env:
   AWS_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
   S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
   S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+  # Per-package build-script timeout (ms). Default is 60 min; the full mysql
+  # server compile needs ~90 min, so raise it to 180 min for the heavy builds.
+  BUILD_SCRIPT_TIMEOUT_MS: '10800000'
 
 permissions:
   contents: read
