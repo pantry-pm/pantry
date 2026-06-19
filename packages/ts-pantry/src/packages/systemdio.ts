@@ -151,6 +151,7 @@ export const systemdioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '261',
     '260.2',
     '260.1',
     '260',

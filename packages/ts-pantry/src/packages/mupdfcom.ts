@@ -90,6 +90,7 @@ export const mupdfcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.28.0-rc1',
     '1.27.2',
     '1.27.1',
     '1.27.0',
