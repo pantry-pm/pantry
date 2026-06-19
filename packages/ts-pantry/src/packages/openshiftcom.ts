@@ -80,6 +80,7 @@ export const openshiftcomPackage = {
   versions: [
     '4.22.1',
     '4.22.0',
+    '4.21.21',
     '4.21.20',
     '4.21.19',
     '4.21.18',
