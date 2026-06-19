@@ -61,6 +61,7 @@ export const maturinrsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.14.1',
     '1.14.0',
     '1.13.3',
     '1.13.2',
