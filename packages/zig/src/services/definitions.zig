@@ -2378,10 +2378,18 @@ pub const Services = struct {
             "user = www-data\ngroup = www-data\n"
         else
             "";
+        // Additional per-site pools (Forge-style site isolation) are dropped as
+        // separate *.conf files into pool.d/ by the deploy layer (ts-cloud) and
+        // picked up by the master via this glob. An empty/absent dir is a no-op.
+        const pool_dir = try std.fmt.allocPrint(allocator, "{s}/pool.d", .{data_dir});
+        defer allocator.free(pool_dir);
+        @import("../io_helper.zig").makePath(pool_dir) catch {};
+
         const conf = try std.fmt.allocPrint(allocator,
             \\[global]
             \\error_log = {s}/php-fpm.log
             \\daemonize = no
+            \\include = {s}/pool.d/*.conf
             \\
             \\[www]
             \\listen = 127.0.0.1:{d}
@@ -2389,7 +2397,7 @@ pub const Services = struct {
             \\pm.max_children = 5
             \\ping.path = /ping
             \\
-        , .{ data_dir, port, pool_user });
+        , .{ data_dir, data_dir, port, pool_user });
         defer allocator.free(conf);
         const conf_path = try writeServiceFile(allocator, data_dir, "php-fpm.conf", conf);
         defer allocator.free(conf_path);
