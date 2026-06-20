@@ -1,0 +1,64 @@
+name: Check Desktop App & Font Updates
+
+# Keeps the desktop-app and font recipes fresh: checks each one's latest
+# upstream release against what's published in the registry, publishes the
+# out-of-date ones, and commits the updated desktop-versions.json manifest.
+
+on:
+  schedule:
+    # Daily at 5am UTC
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Build + upload out-of-date packages (needs storage creds)'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: check-desktop-updates
+  cancel-in-progress: false
+
+env:
+  # Avoid the 60-req/h unauthenticated GitHub API rate limit when resolving
+  # upstream versions across ~50 packages.
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Object storage provider — set repo var STORAGE_PROVIDER=hetzner plus the S3_*
+  # vars and S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY secrets to publish to Hetzner
+  # Object Storage. Defaults to AWS S3 (unchanged) when unset.
+  STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
+  S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}
+  S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+  S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+  AWS_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+  S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+  S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+  PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    # macOS: desktop apps/fonts are built with hdiutil/ditto/unzip.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Check, publish & record desktop updates
+        working-directory: packages/ts-pantry
+        run: |
+          PUBLISH_FLAG=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then
+            PUBLISH_FLAG="--publish"
+          fi
+          bun scripts/check-desktop-updates.ts $PUBLISH_FLAG --commit
+
+      - name: Push manifest commit
+        working-directory: packages/ts-pantry
+        run: git push || echo "nothing to push"
