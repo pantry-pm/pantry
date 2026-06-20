@@ -223,6 +223,32 @@ const DESKTOP_APPS: Array<{ domain: string, label: string, desc: string, categor
   { domain: 'tunnelblick.net', label: 'Tunnelblick', desc: 'OpenVPN client', category: 'VPN & Security' },
 ]
 
+/**
+ * Curated desktop fonts pantry publishes to its registry (binaries/<domain>/…),
+ * installed natively the same way as apps (download tarball → ~/Library/Fonts).
+ * Domains follow the `<slug>.font` convention. Keep in sync with the recipes in
+ * ts-pantry/src/recipes/<domain>.ts.
+ */
+const DESKTOP_FONTS: Array<{ domain: string, label: string, desc: string, category: string }> = [
+  // Monospace / coding
+  { domain: 'jetbrains-mono.font', label: 'JetBrains Mono', desc: 'Typeface for developers', category: 'Monospace' },
+  { domain: 'fira-code.font', label: 'Fira Code', desc: 'Monospaced font with programming ligatures', category: 'Monospace' },
+  { domain: 'cascadia-code.font', label: 'Cascadia Code', desc: "Microsoft's monospaced coding font", category: 'Monospace' },
+  { domain: 'source-code-pro.font', label: 'Source Code Pro', desc: "Adobe's monospaced coding font", category: 'Monospace' },
+  { domain: 'hack.font', label: 'Hack', desc: 'A typeface designed for source code', category: 'Monospace' },
+  { domain: 'ibm-plex-mono.font', label: 'IBM Plex Mono', desc: "IBM's monospaced typeface", category: 'Monospace' },
+  { domain: 'geist-mono.font', label: 'Geist Mono', desc: "Vercel's monospaced typeface", category: 'Monospace' },
+  { domain: 'meslo-lg-nerd-font.font', label: 'MesloLG Nerd Font', desc: 'Meslo patched with Nerd Font glyphs', category: 'Nerd Fonts' },
+  { domain: 'jetbrains-mono-nerd-font.font', label: 'JetBrainsMono Nerd Font', desc: 'JetBrains Mono patched with Nerd Font glyphs', category: 'Nerd Fonts' },
+  // Sans / UI
+  { domain: 'inter.font', label: 'Inter', desc: 'Typeface designed for screens', category: 'Sans Serif' },
+  { domain: 'geist.font', label: 'Geist', desc: "Vercel's sans-serif typeface", category: 'Sans Serif' },
+  { domain: 'roboto.font', label: 'Roboto', desc: "Google's signature sans-serif", category: 'Sans Serif' },
+  { domain: 'open-sans.font', label: 'Open Sans', desc: 'Humanist sans-serif typeface', category: 'Sans Serif' },
+  { domain: 'lato.font', label: 'Lato', desc: 'Sans-serif typeface family', category: 'Sans Serif' },
+  { domain: 'ibm-plex-sans.font', label: 'IBM Plex Sans', desc: "IBM's sans-serif typeface", category: 'Sans Serif' },
+]
+
 /** Featured packages shown on the homepage */
 const FEATURED_PACKAGES = [
   { domain: 'bun.sh', label: 'Bun', desc: 'JavaScript runtime & toolkit' },
@@ -360,6 +386,7 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  * GET  /packages/{name}/versions  - List all versions
  * GET  /search?q={query}          - Search packages
  * GET  /desktop-apps              - List all desktop apps (optional ?category=)
+ * GET  /fonts                     - List all desktop fonts (optional ?category=)
  * POST /publish                   - Publish package (multipart/form-data)
  * GET  /health                    - Health check
  *
@@ -854,6 +881,40 @@ export function createHandler(
           categories,
           total: apps.length,
           totalAvailable: DESKTOP_APPS.length,
+        }, {
+          headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=300' },
+        })
+      }
+
+      if (path === '/fonts' && req.method === 'GET') {
+        const category = url.searchParams.get('category') || ''
+        const results = await Promise.allSettled(
+          DESKTOP_FONTS
+            .filter(font => !category || font.category.toLowerCase() === category.toLowerCase())
+            .map(async (font) => {
+              try {
+                const meta = await fetchPackageMetadata(font.domain, binaryStorage)
+                return {
+                  ...font,
+                  version: meta?.latestVersion || null,
+                  platforms: meta?.latestVersion
+                    ? Object.keys(meta.versions?.[meta.latestVersion]?.platforms || {})
+                    : [],
+                  installed: false,
+                }
+              }
+              catch {
+                return { ...font, version: null, platforms: [], installed: false }
+              }
+            }),
+        )
+        const fonts = results.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean)
+        const categories = [...new Set(DESKTOP_FONTS.map(f => f.category))].sort()
+        return Response.json({
+          fonts,
+          categories,
+          total: fonts.length,
+          totalAvailable: DESKTOP_FONTS.length,
         }, {
           headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=300' },
         })
