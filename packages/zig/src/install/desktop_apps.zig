@@ -10,12 +10,11 @@
 //! deps.yaml shape (all top-level keys, sibling to `dependencies:`):
 //!
 //!   apps:
-//!     - cursor                              # bare slug → cask of the same name
-//!     - { cask: ghostty }                   # explicit Homebrew cask
+//!     - ghostty.org                         # pantry app domain
 //!     - { mas: "1147396723", name: WhatsApp }  # Mac App Store id
 //!   fonts:
-//!     - font-inter                          # Homebrew font cask
-//!     - meslo-lg-nerd-font                  # "font-" prefix added if missing
+//!     - inter.font                          # pantry font domain
+//!     - meslo-lg-nerd-font.font
 //!
 //! This is a no-op on non-macOS targets. Installs are idempotent: a per-project
 //! marker file records what has already been installed so repeat runs (and the
@@ -34,7 +33,8 @@ pub const AppSource = enum { cask, mas };
 
 pub const App = struct {
     source: AppSource,
-    /// For .cask: the Homebrew cask token. For .mas: the App Store numeric id.
+    /// For .cask: the pantry app domain (e.g. ghostty.org). For .mas: the App
+    /// Store numeric id.
     id: []const u8,
     /// Human-facing name for output (mas display name, or the cask token).
     name: []const u8,
@@ -46,7 +46,7 @@ pub const App = struct {
 };
 
 pub const Font = struct {
-    /// Homebrew font cask token (always carries the "font-" prefix).
+    /// pantry font domain (e.g. `inter.font`). Field kept as `cask` for compat.
     cask: []const u8,
 
     pub fn deinit(self: *Font, allocator: std.mem.Allocator) void {
@@ -208,18 +208,17 @@ pub fn parseFonts(allocator: std.mem.Allocator, content: []const u8) ![]Font {
     }
 
     for (raw) |item| {
-        // Accept inline `{ cask: font-x }` too, but the common form is a bare name.
+        // A `fonts:` entry is a pantry font domain (e.g. `inter.font`). Accept an
+        // inline `{ domain: x }`/`{ cask: x }` map too, but the common form is a
+        // bare domain. Used verbatim — no `font-` prefix munging (that was a
+        // Homebrew-cask convention; pantry resolves fonts by domain).
         var name = item;
         if (item.len >= 2 and item[0] == '{' and item[item.len - 1] == '}') {
             const body = std.mem.trim(u8, item[1 .. item.len - 1], " \t");
-            name = flowMapGet(body, "cask") orelse continue;
+            name = flowMapGet(body, "domain") orelse flowMapGet(body, "cask") orelse continue;
         }
         if (name.len == 0) continue;
-        const cask = if (std.mem.startsWith(u8, name, "font-"))
-            try allocator.dupe(u8, name)
-        else
-            try std.fmt.allocPrint(allocator, "font-{s}", .{name});
-        try fonts.append(allocator, .{ .cask = cask });
+        try fonts.append(allocator, .{ .cask = try allocator.dupe(u8, name) });
     }
 
     return fonts.toOwnedSlice(allocator);
@@ -455,12 +454,12 @@ test "parseApps: bare slugs, cask maps, and mas maps" {
     try std.testing.expectEqualStrings("WhatsApp", apps[2].name);
 }
 
-test "parseFonts: adds font- prefix when missing" {
+test "parseFonts: keeps font domains verbatim" {
     const a = std.testing.allocator;
     const content =
         \\fonts:
-        \\  - font-inter
-        \\  - meslo-lg-nerd-font
+        \\  - inter.font
+        \\  - meslo-lg-nerd-font.font
         \\
     ;
     const fonts = try parseFonts(a, content);
@@ -473,8 +472,8 @@ test "parseFonts: adds font- prefix when missing" {
     }
 
     try std.testing.expectEqual(@as(usize, 2), fonts.len);
-    try std.testing.expectEqualStrings("font-inter", fonts[0].cask);
-    try std.testing.expectEqualStrings("font-meslo-lg-nerd-font", fonts[1].cask);
+    try std.testing.expectEqualStrings("inter.font", fonts[0].cask);
+    try std.testing.expectEqualStrings("meslo-lg-nerd-font.font", fonts[1].cask);
 }
 
 test "parseApps: no apps section yields empty" {
