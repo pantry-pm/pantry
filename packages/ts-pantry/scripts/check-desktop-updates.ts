@@ -97,6 +97,23 @@ function listFontRecipes(dir: string): string[] {
   return out
 }
 
+/** Locate `<domain>.ts` anywhere under recipes/ (recipes are organised into
+ * fonts/ and apps/ subfolders). */
+function findRecipeFile(dir: string, filename: string): string | null {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name)
+    if (statSync(full).isDirectory()) {
+      const hit = findRecipeFile(full, filename)
+      if (hit)
+        return hit
+    }
+    else if (name === filename) {
+      return full
+    }
+  }
+  return null
+}
+
 /** The desktop-app domains the registry catalogues (so we only import ~40
  * recipes, not the thousands of CLI ones). Empty on network failure. */
 async function appDomains(): Promise<string[]> {
@@ -119,8 +136,10 @@ async function main(): Promise<void> {
   for (const file of listFontRecipes(RECIPES_DIR))
     candidates.push({ file, kind: 'font' })
   for (const domain of await appDomains()) {
-    const file = join(RECIPES_DIR, `${domain}.ts`)
-    if (existsSync(file))
+    if (domain.includes('/'))
+      continue // slash-domains stay in their own nested path; skip here
+    const file = findRecipeFile(RECIPES_DIR, `${domain}.ts`)
+    if (file)
       candidates.push({ file, kind: 'app' })
   }
 

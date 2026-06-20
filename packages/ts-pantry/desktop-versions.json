@@ -76,9 +76,9 @@
       "domain": "code.visualstudio.com",
       "name": "Visual Studio Code",
       "kind": "app",
-      "latest": "1.125.0",
+      "latest": null,
       "published": "1.96.4",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "cursor.com",
@@ -102,14 +102,6 @@
       "kind": "app",
       "latest": null,
       "published": "0.0.337",
-      "needsUpdate": false
-    },
-    {
-      "domain": "docker.com/desktop",
-      "name": "Docker Desktop",
-      "kind": "app",
-      "latest": null,
-      "published": "4.37.2",
       "needsUpdate": false
     },
     {
@@ -164,7 +156,7 @@
       "domain": "hack.font",
       "name": "Hack",
       "kind": "font",
-      "latest": "3.003",
+      "latest": null,
       "published": "3.003",
       "needsUpdate": false
     },
@@ -220,7 +212,7 @@
       "domain": "jetbrains-mono-nerd-font.font",
       "name": "JetBrainsMono Nerd Font",
       "kind": "font",
-      "latest": "3.4.0",
+      "latest": null,
       "published": "3.4.0",
       "needsUpdate": false
     },
@@ -228,7 +220,7 @@
       "domain": "jetbrains-mono.font",
       "name": "JetBrains Mono",
       "kind": "font",
-      "latest": "2.304",
+      "latest": null,
       "published": "2.304",
       "needsUpdate": false
     },
@@ -236,9 +228,9 @@
       "domain": "karabiner-elements.pqrs.org",
       "name": "Karabiner-Elements",
       "kind": "app",
-      "latest": "16.0.0",
+      "latest": null,
       "published": null,
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "keepassxc.org",
@@ -284,9 +276,9 @@
       "domain": "maccy.app",
       "name": "Maccy",
       "kind": "app",
-      "latest": "2.6.1",
+      "latest": null,
       "published": "2.4.0",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "meetingbar.app",
@@ -300,7 +292,7 @@
       "domain": "meslo-lg-nerd-font.font",
       "name": "MesloLG Nerd Font",
       "kind": "font",
-      "latest": "3.4.0",
+      "latest": null,
       "published": "3.4.0",
       "needsUpdate": false
     },
@@ -396,9 +388,9 @@
       "domain": "stats.app",
       "name": "Stats",
       "kind": "app",
-      "latest": "3.0.3",
+      "latest": null,
       "published": "3.0.1",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "tableplus.com",

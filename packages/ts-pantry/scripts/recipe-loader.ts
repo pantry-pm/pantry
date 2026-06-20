@@ -8,7 +8,7 @@
  * to native TS recipes one at a time without breaking anything.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Recipe, LoadedRecipe } from './recipe-types'
@@ -93,6 +93,31 @@ export async function loadRecipe(
   }
 }
 
+// Lazy `<filename>.ts` → absolute path index, so recipes organised into
+// subfolders (e.g. recipes/fonts/, recipes/apps/) resolve without the domain
+// having to encode the folder. Domain filenames (ghostty.org.ts, inter.font.ts)
+// are unique, so a basename index is collision-free for these.
+let _recipeIndex: Map<string, string> | null = null
+function recipeIndex(): Map<string, string> {
+  if (_recipeIndex)
+    return _recipeIndex
+  const map = new Map<string, string>()
+  const recipesDir = join(tsPackagesDir, 'recipes')
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory())
+        walk(full)
+      else if (entry.name.endsWith('.ts') && !map.has(entry.name))
+        map.set(entry.name, full)
+    }
+  }
+  if (existsSync(recipesDir))
+    walk(recipesDir)
+  _recipeIndex = map
+  return map
+}
+
 /** Find a native TS recipe file for a domain */
 function findRecipeFile(domain: string): string | null {
   const recipesDir = join(tsPackagesDir, 'recipes')
@@ -108,7 +133,8 @@ function findRecipeFile(domain: string): string | null {
     const nestedFile = join(recipesDir, ...parts.slice(0, -1), `${parts[parts.length - 1]}.ts`)
     if (existsSync(nestedFile)) return nestedFile
   }
-  return null
+  // Fallback: a `<domain>.ts` file anywhere under recipes/ (subfolder layout).
+  return recipeIndex().get(`${domain}.ts`) ?? null
 }
 
 /** Find a YAML recipe file in pantry or desktop-pantry */
