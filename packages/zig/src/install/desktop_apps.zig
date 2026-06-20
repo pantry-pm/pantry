@@ -2,8 +2,10 @@
 //!
 //! Lets a project's `deps.yaml` declare GUI applications and fonts alongside its
 //! command-line `dependencies:`, so a single `pantry install` provisions the
-//! whole machine. Apps are installed via Homebrew casks (`brew install --cask`)
-//! or the Mac App Store (`mas install`); fonts via Homebrew font casks.
+//! whole machine. Apps and fonts are installed NATIVELY (see install/cask.zig:
+//! Homebrew's public cask JSON + hdiutil/ditto/installer — no `brew` needed),
+//! with `brew` used only as a fallback when present; Mac App Store apps use the
+//! standalone `mas` CLI.
 //!
 //! deps.yaml shape (all top-level keys, sibling to `dependencies:`):
 //!
@@ -26,6 +28,7 @@ const lib = @import("../lib.zig");
 const style = @import("../cli/style.zig");
 
 const deps_parser = @import("../deps/parser.zig");
+const native_apps = @import("native_apps.zig");
 
 pub const AppSource = enum { cask, mas };
 
@@ -348,11 +351,10 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     }
     if (pending == 0) return;
 
-    // Casks (apps + fonts) need Homebrew; mas apps need the `mas` CLI. Resolve
-    // each to an absolute path once — std.process.spawn does not search $PATH,
-    // so argv[0] must be the full path to the executable.
-    const brew_path: ?[]const u8 = io_helper.findExecutable(allocator, "brew") catch null;
-    defer if (brew_path) |p| allocator.free(p);
+    // Apps and fonts install NATIVELY from pantry's own registry (see
+    // install/native_apps.zig) — no Homebrew anywhere. Only App Store apps need
+    // the standalone `mas` CLI. Resolve it to an absolute path once —
+    // std.process.spawn does not search $PATH, so argv[0] must be a full path.
     const mas_path: ?[]const u8 = io_helper.findExecutable(allocator, "mas") catch null;
     defer if (mas_path) |p| allocator.free(p);
 
@@ -363,29 +365,26 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     var installed_any = false;
 
     for (apps) |app| {
-        const prefix = if (app.source == .cask) "cask:" else "mas:";
+        const prefix = if (app.source == .cask) "app:" else "mas:";
         const key = std.fmt.allocPrint(allocator, "{s}{s}", .{ prefix, app.id }) catch continue;
         defer allocator.free(key);
         if (markerHas(marked.items, key)) continue;
 
         switch (app.source) {
             .cask => {
-                const bp = brew_path orelse {
-                    printFail(app.name, "cask", "Homebrew not found");
-                    continue;
-                };
-                if (runOk(allocator, &[_][]const u8{ bp, "install", "--cask", app.id })) {
-                    printOk(app.name, "cask");
+                // `app.id` is a pantry app domain (e.g. ghostty.org).
+                if (native_apps.install(allocator, app.id, quiet) == .installed) {
+                    printOk(app.name, "app");
                     marked.appendSlice(allocator, key) catch {};
                     marked.append(allocator, '\n') catch {};
                     installed_any = true;
                 } else {
-                    printFail(app.name, "cask", "brew install failed");
+                    printFail(app.name, "app", "not in pantry registry for this platform");
                 }
             },
             .mas => {
                 const mp = mas_path orelse {
-                    printFail(app.name, "app store", "`mas` not found (try: pantry install mas, or brew install mas)");
+                    printFail(app.name, "app store", "`mas` not found (try: pantry install mas)");
                     continue;
                 };
                 if (runOk(allocator, &[_][]const u8{ mp, "install", app.id })) {
@@ -405,17 +404,14 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
         defer allocator.free(key);
         if (markerHas(marked.items, key)) continue;
 
-        const bp = brew_path orelse {
-            printFail(font.cask, "font", "Homebrew not found");
-            continue;
-        };
-        if (runOk(allocator, &[_][]const u8{ bp, "install", "--cask", font.cask })) {
+        // Fonts are pantry packages too (font domain → tarball of font files).
+        if (native_apps.install(allocator, font.cask, quiet) == .installed) {
             printOk(font.cask, "font");
             marked.appendSlice(allocator, key) catch {};
             marked.append(allocator, '\n') catch {};
             installed_any = true;
         } else {
-            printFail(font.cask, "font", "brew install failed");
+            printFail(font.cask, "font", "not in pantry registry");
         }
     }
 
