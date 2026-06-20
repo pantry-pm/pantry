@@ -1,7 +1,7 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Generated on: 2026-06-20T15:46:04.208Z
-//! Total packages: 1727
+//! Generated on: 2026-06-20T17:18:01.037Z
+//! Total packages: 1734
 
 const std = @import("std");
 
@@ -18,7 +18,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1727 total)
+/// All known packages (1734 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -969,6 +969,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{"go.dev@~1.21"},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "1.7.0", "1.6.6", "1.6.5", "1.6.4", "1.6.3", "1.6.2", "1.6.1", "1.6.0", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.3", "1.5.2", "1.5.1", "1.5.0", "1.4.1", "1.4.0", "1.3.3", "1.3.2", "1.3.1", "1.3.0", "1.2.1", "1.2.0", "1.1.1", "1.1.0", "1.0.7", "1.0.6", "1.0.5", "1.0.4", "1.0.3", "1.0.2", "1.0.1", "1.0.0", "0.30.2", "0.30.1", "0.30.0", "0.29.1", "0.29.0", "0.28.5", "0.28.4", "0.28.3", "0.28.2", "0.28.1", "0.28.0", "0.27.0", "0.26.0", "0.25.3", "0.25.2", "0.25.1", "0.25.0", "0.24.5", "0.24.4" },
+}, .{
+    .name = "Cascadia Code",
+    .domain = "cascadia-code",
+    .description = "Microsofts monospaced coding font.",
+    .homepage_url = "https://github.com/microsoft/cascadia-code",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"2407.24"},
 }, .{
     .name = "casdoor",
     .domain = "casdoor.org",
@@ -3899,6 +3909,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{"go.dev@^1.20"},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{"0.1.6"},
+}, .{
+    .name = "Fira Code",
+    .domain = "fira-code",
+    .description = "Monospaced font with programming ligatures.",
+    .homepage_url = "https://github.com/tonsky/FiraCode",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"6.2"},
 }, .{
     .name = "Firefox",
     .domain = "firefox.org",
@@ -9890,6 +9910,16 @@ pub const packages = [_]PackageInfo{ .{
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{"0.7.6"},
 }, .{
+    .name = "Hack",
+    .domain = "hack",
+    .description = "A typeface designed for source code.",
+    .homepage_url = "https://sourcefoundry.org/hack/",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"3.003"},
+}, .{
     .name = "libmd",
     .domain = "hadrons.org/libmd",
     .description = "BSD Mesage Digest library (mirror)",
@@ -10320,6 +10350,16 @@ pub const packages = [_]PackageInfo{ .{
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "2.23.0", "2.22.0", "2.21.0", "2.20.0", "2.19.0" },
 }, .{
+    .name = "Inter",
+    .domain = "inter",
+    .description = "Typeface designed for screens.",
+    .homepage_url = "https://rsms.me/inter/",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"4.1"},
+}, .{
     .name = "dialog",
     .domain = "invisible-island.net/dialog",
     .description = "Display user-friendly message boxes from shell scripts",
@@ -10519,6 +10559,26 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "0.6.0", "0.5.9", "0.5.8", "0.5.7", "0.5.6", "0.5.5", "0.5.4", "0.5.3" },
+}, .{
+    .name = "JetBrains Mono",
+    .domain = "jetbrains-mono",
+    .description = "A typeface for developers.",
+    .homepage_url = "https://www.jetbrains.com/lp/mono/",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"2.304"},
+}, .{
+    .name = "JetBrainsMono Nerd Font",
+    .domain = "jetbrains-mono-nerd-font",
+    .description = "JetBrains Mono patched with Nerd Font glyphs.",
+    .homepage_url = "https://www.nerdfonts.com",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"3.4.0"},
 }, .{
     .name = "jetp",
     .domain = "jetporch.com",
@@ -12019,6 +12079,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "gnu.org/bison", "mesonbuild.com", "pygments.org", "python.org@~3.11", "x.org/protocol", "github.com/westes/flex", "llvm.org", "linux:curl.se", "linux:cmake.org@3" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "26.0.3", "26.0.2", "26.0.1", "26.0.0", "25.3.6", "25.3.5", "25.3.4", "25.3.3", "25.3.2", "25.3.1", "25.3.0", "25.2.8", "25.2.7", "25.2.6", "25.2.5", "25.2.4", "25.2.3", "25.2.2", "25.2.1", "25.2.0", "25.1.9", "25.1.8", "25.1.7", "25.1.6", "25.1.5", "25.1.4", "25.1.3", "25.1.2", "25.1.1", "25.1.0", "25.0.7", "25.0.6", "25.0.5", "25.0.4", "25.0.3", "25.0.2", "25.0.1", "25.0.0", "24.3.4", "24.3.3", "24.3.2", "24.3.1", "24.3.0", "24.2.8", "24.2.7", "24.2.6", "24.2.5", "24.2.4", "24.2.3", "24.2.2", "24.2.1", "24.2.0", "24.1.7", "24.1.6", "24.1.5", "24.1.4", "24.1.3", "24.1.2", "24.1.1", "24.1.0", "24.0.9", "24.0.8", "24.0.7", "24.0.6", "24.0.5", "24.0.4", "24.0.3", "24.0.2", "24.0.1", "24.0.0", "23.3.6", "23.3.5", "23.3.4", "23.3.3", "23.3.2", "23.3.1", "23.3.0", "23.2.1", "23.1.8", "23.1.7" },
+}, .{
+    .name = "MesloLG Nerd Font",
+    .domain = "meslo-lg-nerd-font",
+    .description = "Meslo patched with Nerd Font glyphs.",
+    .homepage_url = "https://www.nerdfonts.com",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"3.4.0"},
 }, .{
     .name = "meson",
     .domain = "mesonbuild.com",
