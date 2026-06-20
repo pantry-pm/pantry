@@ -36,3 +36,4 @@ pantry
 /packages/registry/.stx
 /.stx
 .cloud-migration
+/packages/ts-pantry/artifacts

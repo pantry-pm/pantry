@@ -5,7 +5,7 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'cascadia-code.font',
   name: 'Cascadia Code',
-  description: 'Microsoft's monospaced coding font.',
+  description: 'A monospaced coding font from Microsoft.',
   homepage: 'https://github.com/microsoft/cascadia-code',
   github: 'https://github.com/microsoft/cascadia-code',
   programs: [],
