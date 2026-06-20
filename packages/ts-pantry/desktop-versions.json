@@ -13,8 +13,8 @@
       "name": "AltTab",
       "kind": "app",
       "latest": "11.3.1",
-      "published": "11.3.0",
-      "needsUpdate": true
+      "published": "11.3.1",
+      "needsUpdate": false
     },
     {
       "domain": "arc.net",
@@ -76,9 +76,9 @@
       "domain": "code.visualstudio.com",
       "name": "Visual Studio Code",
       "kind": "app",
-      "latest": null,
+      "latest": "1.125.0",
       "published": "1.96.4",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "cursor.com",
@@ -156,7 +156,7 @@
       "domain": "hack.font",
       "name": "Hack",
       "kind": "font",
-      "latest": null,
+      "latest": "3.003",
       "published": "3.003",
       "needsUpdate": false
     },
@@ -165,8 +165,8 @@
       "name": "HandBrake",
       "kind": "app",
       "latest": "1.11.2",
-      "published": "1.9.0",
-      "needsUpdate": true
+      "published": "1.11.2",
+      "needsUpdate": false
     },
     {
       "domain": "hiddenbar.app",
@@ -212,7 +212,7 @@
       "domain": "jetbrains-mono-nerd-font.font",
       "name": "JetBrainsMono Nerd Font",
       "kind": "font",
-      "latest": null,
+      "latest": "3.4.0",
       "published": "3.4.0",
       "needsUpdate": false
     },
@@ -220,7 +220,7 @@
       "domain": "jetbrains-mono.font",
       "name": "JetBrains Mono",
       "kind": "font",
-      "latest": null,
+      "latest": "2.304",
       "published": "2.304",
       "needsUpdate": false
     },
@@ -228,8 +228,8 @@
       "domain": "karabiner-elements.pqrs.org",
       "name": "Karabiner-Elements",
       "kind": "app",
-      "latest": null,
-      "published": null,
+      "latest": "16.0.0",
+      "published": "16.0.0",
       "needsUpdate": false
     },
     {
@@ -276,8 +276,8 @@
       "domain": "maccy.app",
       "name": "Maccy",
       "kind": "app",
-      "latest": null,
-      "published": "2.4.0",
+      "latest": "2.6.1",
+      "published": "2.6.1",
       "needsUpdate": false
     },
     {
@@ -292,7 +292,7 @@
       "domain": "meslo-lg-nerd-font.font",
       "name": "MesloLG Nerd Font",
       "kind": "font",
-      "latest": null,
+      "latest": "3.4.0",
       "published": "3.4.0",
       "needsUpdate": false
     },
@@ -388,8 +388,8 @@
       "domain": "stats.app",
       "name": "Stats",
       "kind": "app",
-      "latest": null,
-      "published": "3.0.1",
+      "latest": "3.0.3",
+      "published": "3.0.3",
       "needsUpdate": false
     },
     {
@@ -445,8 +445,8 @@
       "name": "Zed",
       "kind": "app",
       "latest": "1.7.2",
-      "published": "1.5.4",
-      "needsUpdate": true
+      "published": "1.7.2",
+      "needsUpdate": false
     }
   ]
 }
