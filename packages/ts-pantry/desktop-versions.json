@@ -1,0 +1,452 @@
+{
+  "packages": [
+    {
+      "domain": "1password.com",
+      "name": "1Password",
+      "kind": "app",
+      "latest": null,
+      "published": "8.10.56",
+      "needsUpdate": false
+    },
+    {
+      "domain": "alttab.app",
+      "name": "AltTab",
+      "kind": "app",
+      "latest": "11.3.1",
+      "published": "11.3.0",
+      "needsUpdate": true
+    },
+    {
+      "domain": "arc.net",
+      "name": "Arc",
+      "kind": "app",
+      "latest": null,
+      "published": "1.76.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "bitwarden.com",
+      "name": "bw",
+      "kind": "app",
+      "latest": null,
+      "published": "2026.5.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "blender.org",
+      "name": "Blender",
+      "kind": "app",
+      "latest": null,
+      "published": "4.3.2",
+      "needsUpdate": false
+    },
+    {
+      "domain": "brave.com",
+      "name": "Brave Browser",
+      "kind": "app",
+      "latest": null,
+      "published": "1.74.48",
+      "needsUpdate": false
+    },
+    {
+      "domain": "bruno.app",
+      "name": "Bruno",
+      "kind": "app",
+      "latest": null,
+      "published": "1.38.1",
+      "needsUpdate": false
+    },
+    {
+      "domain": "cleanshot.com",
+      "name": "CleanShot X",
+      "kind": "app",
+      "latest": null,
+      "published": "4.7.4",
+      "needsUpdate": false
+    },
+    {
+      "domain": "code.visualstudio.com",
+      "name": "Visual Studio Code",
+      "kind": "app",
+      "latest": "1.125.0",
+      "published": "1.96.4",
+      "needsUpdate": true
+    },
+    {
+      "domain": "cursor.com",
+      "name": "Cursor",
+      "kind": "app",
+      "latest": null,
+      "published": "0.45.11",
+      "needsUpdate": false
+    },
+    {
+      "domain": "dbeaver.io",
+      "name": "DBeaver",
+      "kind": "app",
+      "latest": null,
+      "published": "24.3.4",
+      "needsUpdate": false
+    },
+    {
+      "domain": "discord.com",
+      "name": "Discord",
+      "kind": "app",
+      "latest": null,
+      "published": "0.0.337",
+      "needsUpdate": false
+    },
+    {
+      "domain": "docker.com/desktop",
+      "name": "Docker Desktop",
+      "kind": "app",
+      "latest": null,
+      "published": "4.37.2",
+      "needsUpdate": false
+    },
+    {
+      "domain": "element.io",
+      "name": "Element",
+      "kind": "app",
+      "latest": null,
+      "published": "1.11.86",
+      "needsUpdate": false
+    },
+    {
+      "domain": "figma.com",
+      "name": "Figma",
+      "kind": "app",
+      "latest": null,
+      "published": "124.7.4",
+      "needsUpdate": false
+    },
+    {
+      "domain": "fira-code.font",
+      "name": "Fira Code",
+      "kind": "font",
+      "latest": "6.2",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "firefox.org",
+      "name": "Firefox",
+      "kind": "app",
+      "latest": null,
+      "published": "134.0.2",
+      "needsUpdate": false
+    },
+    {
+      "domain": "ghostty.org",
+      "name": "Ghostty",
+      "kind": "app",
+      "latest": null,
+      "published": "1.1.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "gimp.org",
+      "name": "GIMP",
+      "kind": "app",
+      "latest": null,
+      "published": "2.10.38",
+      "needsUpdate": false
+    },
+    {
+      "domain": "hack.font",
+      "name": "Hack",
+      "kind": "font",
+      "latest": "3.003",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "handbrake.fr",
+      "name": "HandBrake",
+      "kind": "app",
+      "latest": "1.11.2",
+      "published": "1.9.0",
+      "needsUpdate": true
+    },
+    {
+      "domain": "hiddenbar.app",
+      "name": "Hidden Bar",
+      "kind": "app",
+      "latest": null,
+      "published": "1.10",
+      "needsUpdate": false
+    },
+    {
+      "domain": "iina.io",
+      "name": "IINA",
+      "kind": "app",
+      "latest": null,
+      "published": "1.3.5",
+      "needsUpdate": false
+    },
+    {
+      "domain": "inkscape.org",
+      "name": "Inkscape",
+      "kind": "app",
+      "latest": null,
+      "published": "1.4.1",
+      "needsUpdate": false
+    },
+    {
+      "domain": "inter.font",
+      "name": "Inter",
+      "kind": "font",
+      "latest": "4.1",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "iterm2.com",
+      "name": "iTerm2",
+      "kind": "app",
+      "latest": null,
+      "published": "3.5.6",
+      "needsUpdate": false
+    },
+    {
+      "domain": "jetbrains-mono-nerd-font.font",
+      "name": "JetBrainsMono Nerd Font",
+      "kind": "font",
+      "latest": "3.4.0",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "jetbrains-mono.font",
+      "name": "JetBrains Mono",
+      "kind": "font",
+      "latest": "2.304",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "karabiner-elements.pqrs.org",
+      "name": "Karabiner-Elements",
+      "kind": "app",
+      "latest": "16.0.0",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "keepassxc.org",
+      "name": "KeePassXC",
+      "kind": "app",
+      "latest": null,
+      "published": "2.7.9",
+      "needsUpdate": false
+    },
+    {
+      "domain": "keka.io",
+      "name": "Keka",
+      "kind": "app",
+      "latest": null,
+      "published": "1.4.7",
+      "needsUpdate": false
+    },
+    {
+      "domain": "libreoffice.org",
+      "name": "LibreOffice",
+      "kind": "app",
+      "latest": null,
+      "published": "24.8.5",
+      "needsUpdate": false
+    },
+    {
+      "domain": "linear.app",
+      "name": "Linear",
+      "kind": "app",
+      "latest": null,
+      "published": null,
+      "needsUpdate": false
+    },
+    {
+      "domain": "lmstudio.ai",
+      "name": "LM Studio",
+      "kind": "app",
+      "latest": null,
+      "published": "0.3.8",
+      "needsUpdate": false
+    },
+    {
+      "domain": "maccy.app",
+      "name": "Maccy",
+      "kind": "app",
+      "latest": "2.6.1",
+      "published": "2.4.0",
+      "needsUpdate": true
+    },
+    {
+      "domain": "meetingbar.app",
+      "name": "MeetingBar",
+      "kind": "app",
+      "latest": null,
+      "published": "4.10.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "meslo-lg-nerd-font.font",
+      "name": "MesloLG Nerd Font",
+      "kind": "font",
+      "latest": "3.4.0",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "monitorcontrol.app",
+      "name": "MonitorControl",
+      "kind": "app",
+      "latest": null,
+      "published": "4.3.3",
+      "needsUpdate": false
+    },
+    {
+      "domain": "notion.so",
+      "name": "Notion",
+      "kind": "app",
+      "latest": null,
+      "published": "4.5.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "obsidian.md",
+      "name": "Obsidian",
+      "kind": "app",
+      "latest": "1.12.7",
+      "published": "1.12.7",
+      "needsUpdate": false
+    },
+    {
+      "domain": "ollama.com",
+      "name": "Ollama",
+      "kind": "app",
+      "latest": null,
+      "published": "0.5.7",
+      "needsUpdate": false
+    },
+    {
+      "domain": "orbstack.dev",
+      "name": "OrbStack",
+      "kind": "app",
+      "latest": null,
+      "published": "1.9.2",
+      "needsUpdate": false
+    },
+    {
+      "domain": "postman.com",
+      "name": "Postman",
+      "kind": "app",
+      "latest": null,
+      "published": "11.27.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "raycast.com",
+      "name": "Raycast",
+      "kind": "app",
+      "latest": null,
+      "published": "1.89.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "rectangle.app",
+      "name": "Rectangle",
+      "kind": "app",
+      "latest": "0.96",
+      "published": "0.96",
+      "needsUpdate": false
+    },
+    {
+      "domain": "signal.org",
+      "name": "Signal",
+      "kind": "app",
+      "latest": null,
+      "published": "7.36.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "slack.com",
+      "name": "Slack",
+      "kind": "app",
+      "latest": null,
+      "published": "4.41.105",
+      "needsUpdate": false
+    },
+    {
+      "domain": "spotify.com",
+      "name": "Spotify",
+      "kind": "app",
+      "latest": null,
+      "published": "1.2.52",
+      "needsUpdate": false
+    },
+    {
+      "domain": "stats.app",
+      "name": "Stats",
+      "kind": "app",
+      "latest": "3.0.3",
+      "published": "3.0.1",
+      "needsUpdate": true
+    },
+    {
+      "domain": "tableplus.com",
+      "name": "TablePlus",
+      "kind": "app",
+      "latest": null,
+      "published": "6.2.6",
+      "needsUpdate": false
+    },
+    {
+      "domain": "telegram.org",
+      "name": "Telegram",
+      "kind": "app",
+      "latest": null,
+      "published": "5.8.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "tunnelblick.net",
+      "name": "Tunnelblick",
+      "kind": "app",
+      "latest": null,
+      "published": "4.0.1",
+      "needsUpdate": false
+    },
+    {
+      "domain": "vlc.app",
+      "name": "VLC",
+      "kind": "app",
+      "latest": null,
+      "published": "3.0.21",
+      "needsUpdate": false
+    },
+    {
+      "domain": "warp.dev",
+      "name": "Warp",
+      "kind": "app",
+      "latest": null,
+      "published": "0.2025.01.21",
+      "needsUpdate": false
+    },
+    {
+      "domain": "whatsapp.com",
+      "name": "WhatsApp",
+      "kind": "app",
+      "latest": null,
+      "published": "2.24.25.0",
+      "needsUpdate": false
+    },
+    {
+      "domain": "zed.dev",
+      "name": "Zed",
+      "kind": "app",
+      "latest": "1.7.2",
+      "published": "1.5.4",
+      "needsUpdate": true
+    }
+  ]
+}
