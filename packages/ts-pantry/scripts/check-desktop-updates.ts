@@ -222,10 +222,10 @@ async function main(): Promise<void> {
   if (doCommit) {
     const status = await $`git status --porcelain ${MANIFEST}`.cwd(ROOT).text()
     if (status.trim()) {
-      const subject = outdated.length > 0
-        ? `chore(desktop): ${outdated.length} app/font version update(s)`
-        : 'chore(desktop): refresh version manifest'
-      const body = outdated.map(e => `- ${e.domain}: ${e.published ?? '—'} → ${e.latest}`).join('\n')
+      const subject = commitSubject(outdated)
+      const body = outdated.map(e =>
+        `- ${e.kind} ${e.domain}: ${e.published ? `${e.published} → ${e.latest}` : `added at ${e.latest}`}`,
+      ).join('\n')
       await $`git add ${MANIFEST}`.cwd(ROOT)
       await $`git commit -m ${subject} -m ${body || 'no version changes'}`.cwd(ROOT)
       console.warn(`Committed: ${subject}`)
@@ -234,6 +234,32 @@ async function main(): Promise<void> {
       console.warn('Manifest unchanged — nothing to commit.')
     }
   }
+}
+
+/** A precise, readable commit subject (no "(s)" hedging). */
+function commitSubject(outdated: Entry[]): string {
+  if (outdated.length === 0)
+    return 'chore(desktop): refresh version manifest'
+
+  // Single update: name it exactly.
+  if (outdated.length === 1) {
+    const e = outdated[0]
+    return e.published
+      ? `chore(desktop): bump ${e.kind} ${e.domain} ${e.published} → ${e.latest}`
+      : `chore(desktop): add ${e.kind} ${e.domain} ${e.latest}`
+  }
+
+  // Several: count per kind ("2 apps & 1 font"), append names if they fit.
+  const n = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
+  const apps = outdated.filter(e => e.kind === 'app').length
+  const fonts = outdated.filter(e => e.kind === 'font').length
+  const what = [apps && n(apps, 'app'), fonts && n(fonts, 'font')].filter(Boolean).join(' & ')
+
+  let subject = `chore(desktop): bump ${what}`
+  const names = outdated.map(e => e.domain).join(', ')
+  if (`${subject} (${names})`.length <= 72)
+    subject += ` (${names})`
+  return subject
 }
 
 main().catch((err) => {
