@@ -50,6 +50,13 @@ jobs:
         with:
           bun-version: latest
 
+      # Author automated commits as the standard github-actions bot (never the
+      # runner's default "Anka" identity).
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Check, publish & record desktop updates
         working-directory: packages/ts-pantry
         run: |
