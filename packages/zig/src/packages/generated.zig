@@ -1,6 +1,5 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Generated on: 2026-06-20T20:12:29.612Z
 //! Total packages: 1734
 
 const std = @import("std");
