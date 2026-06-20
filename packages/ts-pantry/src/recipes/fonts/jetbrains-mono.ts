@@ -3,7 +3,7 @@ import type { Recipe } from '../../scripts/recipe-types'
 // Auto-authored font recipe. Fonts install natively from pantry's registry into
 // ~/Library/Fonts (see zig/src/install/native_apps.zig) — no Homebrew.
 export const recipe: Recipe = {
-  domain: 'jetbrains-mono.font',
+  domain: 'jetbrains-mono',
   name: 'JetBrains Mono',
   description: 'A typeface for developers.',
   homepage: 'https://www.jetbrains.com/lp/mono/',

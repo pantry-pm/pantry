@@ -1,19 +1,19 @@
 /**
  * **Fira Code** - Monospaced font with programming ligatures.
  *
- * @domain `fira-code.font`
+ * @domain `fira-code`
  * @version `6.2`
- * @install `pantry install fira-code.font`
+ * @install `pantry install fira-code`
  * @homepage https://github.com/tonsky/FiraCode
  */
-export const firacodefontPackage = {
+export const firacodePackage = {
   name: 'Fira Code' as const,
-  domain: 'fira-code.font' as const,
+  domain: 'fira-code' as const,
   description: 'Monospaced font with programming ligatures.' as const,
   packageYmlUrl: '' as const,
   homepageUrl: 'https://github.com/tonsky/FiraCode' as const,
   githubUrl: 'https://github.com/tonsky/FiraCode' as const,
-  installCommand: 'pantry install fira-code.font' as const,
+  installCommand: 'pantry install fira-code' as const,
   programs: [] as const,
   companions: [] as const,
   dependencies: [] as const,
@@ -21,4 +21,4 @@ export const firacodefontPackage = {
   versions: ['6.2'] as const,
   aliases: [] as const,
 }
-export type FiracodefontPackage = typeof firacodefontPackage
+export type FiracodePackage = typeof firacodePackage

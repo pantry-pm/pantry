@@ -57,12 +57,12 @@
       "needsUpdate": false
     },
     {
-      "domain": "cascadia-code.font",
+      "domain": "cascadia-code",
       "name": "Cascadia Code",
       "kind": "font",
       "latest": "2407.24",
-      "published": "2407.24",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "cleanshot.com",
@@ -121,12 +121,12 @@
       "needsUpdate": false
     },
     {
-      "domain": "fira-code.font",
+      "domain": "fira-code",
       "name": "Fira Code",
       "kind": "font",
       "latest": "6.2",
-      "published": "6.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "firefox.org",
@@ -153,12 +153,12 @@
       "needsUpdate": false
     },
     {
-      "domain": "hack.font",
+      "domain": "hack",
       "name": "Hack",
       "kind": "font",
       "latest": "3.003",
-      "published": "3.003",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "handbrake.fr",
@@ -193,12 +193,12 @@
       "needsUpdate": false
     },
     {
-      "domain": "inter.font",
+      "domain": "inter",
       "name": "Inter",
       "kind": "font",
       "latest": "4.1",
-      "published": "4.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "iterm2.com",
@@ -209,20 +209,20 @@
       "needsUpdate": false
     },
     {
-      "domain": "jetbrains-mono-nerd-font.font",
-      "name": "JetBrainsMono Nerd Font",
-      "kind": "font",
-      "latest": "3.4.0",
-      "published": "3.4.0",
-      "needsUpdate": false
-    },
-    {
-      "domain": "jetbrains-mono.font",
+      "domain": "jetbrains-mono",
       "name": "JetBrains Mono",
       "kind": "font",
       "latest": "2.304",
-      "published": "2.304",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
+    },
+    {
+      "domain": "jetbrains-mono-nerd-font",
+      "name": "JetBrainsMono Nerd Font",
+      "kind": "font",
+      "latest": "3.4.0",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "karabiner-elements.pqrs.org",
@@ -289,12 +289,12 @@
       "needsUpdate": false
     },
     {
-      "domain": "meslo-lg-nerd-font.font",
+      "domain": "meslo-lg-nerd-font",
       "name": "MesloLG Nerd Font",
       "kind": "font",
       "latest": "3.4.0",
-      "published": "3.4.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "monitorcontrol.app",

@@ -1,19 +1,19 @@
 /**
  * **JetBrains Mono** - A typeface for developers.
  *
- * @domain `jetbrains-mono.font`
+ * @domain `jetbrains-mono`
  * @version `2.304`
- * @install `pantry install jetbrains-mono.font`
+ * @install `pantry install jetbrains-mono`
  * @homepage https://www.jetbrains.com/lp/mono/
  */
-export const jetbrainsmonofontPackage = {
+export const jetbrainsmonoPackage = {
   name: 'JetBrains Mono' as const,
-  domain: 'jetbrains-mono.font' as const,
+  domain: 'jetbrains-mono' as const,
   description: 'A typeface for developers.' as const,
   packageYmlUrl: '' as const,
   homepageUrl: 'https://www.jetbrains.com/lp/mono/' as const,
   githubUrl: 'https://github.com/JetBrains/JetBrainsMono' as const,
-  installCommand: 'pantry install jetbrains-mono.font' as const,
+  installCommand: 'pantry install jetbrains-mono' as const,
   programs: [] as const,
   companions: [] as const,
   dependencies: [] as const,
@@ -21,4 +21,4 @@ export const jetbrainsmonofontPackage = {
   versions: ['2.304'] as const,
   aliases: [] as const,
 }
-export type JetbrainsmonofontPackage = typeof jetbrainsmonofontPackage
+export type JetbrainsmonoPackage = typeof jetbrainsmonoPackage

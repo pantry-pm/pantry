@@ -231,22 +231,22 @@ const DESKTOP_APPS: Array<{ domain: string, label: string, desc: string, categor
  */
 const DESKTOP_FONTS: Array<{ domain: string, label: string, desc: string, category: string }> = [
   // Monospace / coding
-  { domain: 'jetbrains-mono.font', label: 'JetBrains Mono', desc: 'Typeface for developers', category: 'Monospace' },
-  { domain: 'fira-code.font', label: 'Fira Code', desc: 'Monospaced font with programming ligatures', category: 'Monospace' },
-  { domain: 'cascadia-code.font', label: 'Cascadia Code', desc: "Microsoft's monospaced coding font", category: 'Monospace' },
-  { domain: 'source-code-pro.font', label: 'Source Code Pro', desc: "Adobe's monospaced coding font", category: 'Monospace' },
-  { domain: 'hack.font', label: 'Hack', desc: 'A typeface designed for source code', category: 'Monospace' },
-  { domain: 'ibm-plex-mono.font', label: 'IBM Plex Mono', desc: "IBM's monospaced typeface", category: 'Monospace' },
-  { domain: 'geist-mono.font', label: 'Geist Mono', desc: "Vercel's monospaced typeface", category: 'Monospace' },
-  { domain: 'meslo-lg-nerd-font.font', label: 'MesloLG Nerd Font', desc: 'Meslo patched with Nerd Font glyphs', category: 'Nerd Fonts' },
-  { domain: 'jetbrains-mono-nerd-font.font', label: 'JetBrainsMono Nerd Font', desc: 'JetBrains Mono patched with Nerd Font glyphs', category: 'Nerd Fonts' },
+  { domain: 'jetbrains-mono', label: 'JetBrains Mono', desc: 'Typeface for developers', category: 'Monospace' },
+  { domain: 'fira-code', label: 'Fira Code', desc: 'Monospaced font with programming ligatures', category: 'Monospace' },
+  { domain: 'cascadia-code', label: 'Cascadia Code', desc: "Microsoft's monospaced coding font", category: 'Monospace' },
+  { domain: 'source-code-pro', label: 'Source Code Pro', desc: "Adobe's monospaced coding font", category: 'Monospace' },
+  { domain: 'hack', label: 'Hack', desc: 'A typeface designed for source code', category: 'Monospace' },
+  { domain: 'ibm-plex-mono', label: 'IBM Plex Mono', desc: "IBM's monospaced typeface", category: 'Monospace' },
+  { domain: 'geist-mono', label: 'Geist Mono', desc: "Vercel's monospaced typeface", category: 'Monospace' },
+  { domain: 'meslo-lg-nerd-font', label: 'MesloLG Nerd Font', desc: 'Meslo patched with Nerd Font glyphs', category: 'Nerd Fonts' },
+  { domain: 'jetbrains-mono-nerd-font', label: 'JetBrainsMono Nerd Font', desc: 'JetBrains Mono patched with Nerd Font glyphs', category: 'Nerd Fonts' },
   // Sans / UI
-  { domain: 'inter.font', label: 'Inter', desc: 'Typeface designed for screens', category: 'Sans Serif' },
-  { domain: 'geist.font', label: 'Geist', desc: "Vercel's sans-serif typeface", category: 'Sans Serif' },
-  { domain: 'roboto.font', label: 'Roboto', desc: "Google's signature sans-serif", category: 'Sans Serif' },
-  { domain: 'open-sans.font', label: 'Open Sans', desc: 'Humanist sans-serif typeface', category: 'Sans Serif' },
-  { domain: 'lato.font', label: 'Lato', desc: 'Sans-serif typeface family', category: 'Sans Serif' },
-  { domain: 'ibm-plex-sans.font', label: 'IBM Plex Sans', desc: "IBM's sans-serif typeface", category: 'Sans Serif' },
+  { domain: 'inter', label: 'Inter', desc: 'Typeface designed for screens', category: 'Sans Serif' },
+  { domain: 'geist', label: 'Geist', desc: "Vercel's sans-serif typeface", category: 'Sans Serif' },
+  { domain: 'roboto', label: 'Roboto', desc: "Google's signature sans-serif", category: 'Sans Serif' },
+  { domain: 'open-sans', label: 'Open Sans', desc: 'Humanist sans-serif typeface', category: 'Sans Serif' },
+  { domain: 'lato', label: 'Lato', desc: 'Sans-serif typeface family', category: 'Sans Serif' },
+  { domain: 'ibm-plex-sans', label: 'IBM Plex Sans', desc: "IBM's sans-serif typeface", category: 'Sans Serif' },
 ]
 
 /** Featured packages shown on the homepage */

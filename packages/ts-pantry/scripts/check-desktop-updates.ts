@@ -84,16 +84,22 @@ async function publishedVersion(domain: string): Promise<string | null> {
   }
 }
 
-/** Recursively list `*.font.ts` recipe files (cheap filename filter). */
+/** List font recipes (every `.ts` under recipes/fonts/). */
 function listFontRecipes(dir: string): string[] {
+  const fontsDir = join(dir, 'fonts')
+  if (!existsSync(fontsDir))
+    return []
   const out: string[] = []
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name)
-    if (statSync(full).isDirectory())
-      out.push(...listFontRecipes(full))
-    else if (name.endsWith('.font.ts'))
-      out.push(full)
+  const walk = (d: string): void => {
+    for (const name of readdirSync(d)) {
+      const full = join(d, name)
+      if (statSync(full).isDirectory())
+        walk(full)
+      else if (name.endsWith('.ts'))
+        out.push(full)
+    }
   }
+  walk(fontsDir)
   return out
 }
 

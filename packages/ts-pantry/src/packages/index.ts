@@ -435,13 +435,13 @@ import { flyioPackage } from './flyio'
 import { flywaydborgPackage } from './flywaydborg'
 import { fmtdevPackage } from './fmtdev'
 import { fnaxnagithubioPackage } from './fna-xnagithubio'
-import { cascadiacodefontPackage } from './fonts/cascadiacodefont'
-import { firacodefontPackage } from './fonts/firacodefont'
-import { hackfontPackage } from './fonts/hackfont'
-import { interfontPackage } from './fonts/interfont'
-import { jetbrainsmonofontPackage } from './fonts/jetbrainsmonofont'
-import { jetbrainsmononerdfontfontPackage } from './fonts/jetbrainsmononerdfontfont'
-import { meslolgnerdfontfontPackage } from './fonts/meslolgnerdfontfont'
+import { cascadiacodePackage } from './fonts/cascadiacode'
+import { firacodePackage } from './fonts/firacode'
+import { hackPackage } from './fonts/hack'
+import { interPackage } from './fonts/inter'
+import { jetbrainsmonoPackage } from './fonts/jetbrainsmono'
+import { jetbrainsmononerdfontPackage } from './fonts/jetbrainsmononerdfont'
+import { meslolgnerdfontPackage } from './fonts/meslolgnerdfont'
 import { fossiesorglibelfPackage } from './fossies.org/libelf'
 import { freedesktoporgxkeyboardconfigPackage } from './freedesktop.org/XKeyboardConfig'
 import { freedesktoporgappstreamPackage } from './freedesktop.org/appstream'
@@ -2431,13 +2431,13 @@ export interface Pantry {
   fmtdev: typeof fmtdevPackage
   fna_xnagithubio: typeof fnaxnagithubioPackage
   fnaxnagithubio: typeof fnaxnagithubioPackage
-  cascadiacodefont: typeof cascadiacodefontPackage
-  firacodefont: typeof firacodefontPackage
-  hackfont: typeof hackfontPackage
-  interfont: typeof interfontPackage
-  jetbrainsmonofont: typeof jetbrainsmonofontPackage
-  jetbrainsmononerdfontfont: typeof jetbrainsmononerdfontfontPackage
-  meslolgnerdfontfont: typeof meslolgnerdfontfontPackage
+  cascadiacode: typeof cascadiacodePackage
+  firacode: typeof firacodePackage
+  hack: typeof hackPackage
+  inter: typeof interPackage
+  jetbrainsmono: typeof jetbrainsmonoPackage
+  jetbrainsmononerdfont: typeof jetbrainsmononerdfontPackage
+  meslolgnerdfont: typeof meslolgnerdfontPackage
 
   fossiesorglibelf: typeof fossiesorglibelfPackage
 
@@ -4765,7 +4765,7 @@ export interface Pantry {
   'cargo-tarpaulin': typeof cratesiocargotarpaulinPackage
   cargox: typeof pkgxshcargoxPackage
   carthage: typeof carthagePackage
-  'Cascadia Code': typeof cascadiacodefontPackage
+  'Cascadia Code': typeof cascadiacodePackage
   casdoor: typeof casdoororgPackage
   cask: typeof caskreadthedocsioPackage
   cassandra: typeof cassandraapacheorgPackage
@@ -5005,7 +5005,7 @@ export interface Pantry {
   file: typeof darwinsyscomfilePackage
   filelock: typeof filelockPackage
   findutils: typeof gnuorgfindutilsPackage
-  'Fira Code': typeof firacodefontPackage
+  'Fira Code': typeof firacodePackage
   firebase: typeof googlecomfirebasetoolsPackage
   firefox: typeof firefoxorgPackage
   Firefox: typeof firefoxorgPackage
@@ -5183,7 +5183,7 @@ export interface Pantry {
   gum: typeof charmshgumPackage
   'gvisor-tap-vsock': typeof gvisortapvsockPackage
   hac: typeof cratesiohacclientPackage
-  Hack: typeof hackfontPackage
+  Hack: typeof hackPackage
   hadolint: typeof hadolintPackage
   halibut: typeof chiarkgreenendorgukhalibutPackage
   handbrake: typeof handbrakefrPackage
@@ -5245,7 +5245,7 @@ export interface Pantry {
   Inkscape: typeof inkscapeorgPackage
   insomnia: typeof insomniarestPackage
   Insomnia: typeof insomniarestPackage
-  Inter: typeof interfontPackage
+  Inter: typeof interPackage
   intltool: typeof freedesktoporgintltoolPackage
   invoice: typeof invoicePackage
   invoke: typeof pyinvokeorgPackage
@@ -5274,8 +5274,8 @@ export interface Pantry {
   'Jenkins X': typeof jenkinsxioPackage
   'jenkins-lts': typeof jenkinsioPackage
   jenv: typeof jenvbePackage
-  'JetBrains Mono': typeof jetbrainsmonofontPackage
-  'JetBrainsMono Nerd Font': typeof jetbrainsmononerdfontfontPackage
+  'JetBrains Mono': typeof jetbrainsmonoPackage
+  'JetBrainsMono Nerd Font': typeof jetbrainsmononerdfontPackage
   jetp: typeof jetporchcomPackage
   'jfrog-cli': typeof jfrogcomjfrogcliPackage
   jinja2: typeof jinja2cliPackage
@@ -5551,7 +5551,7 @@ export interface Pantry {
   mergiraf: typeof mergiraforgPackage
   'mesa-glu': typeof freedesktoporgmesagluPackage
   mesa3d: typeof mesa3dorgPackage
-  'MesloLG Nerd Font': typeof meslolgnerdfontfontPackage
+  'MesloLG Nerd Font': typeof meslolgnerdfontPackage
   meson: typeof mesonbuildcomPackage
   MetaGPT: typeof deepwisdomaiPackage
   metis: typeof glarosdtcumnedumetisPackage
@@ -7045,13 +7045,13 @@ export const pantry: Pantry = {
   fmtdev: fmtdevPackage,
   fna_xnagithubio: fnaxnagithubioPackage,
   fnaxnagithubio: fnaxnagithubioPackage,
-  cascadiacodefont: cascadiacodefontPackage,
-  firacodefont: firacodefontPackage,
-  hackfont: hackfontPackage,
-  interfont: interfontPackage,
-  jetbrainsmonofont: jetbrainsmonofontPackage,
-  jetbrainsmononerdfontfont: jetbrainsmononerdfontfontPackage,
-  meslolgnerdfontfont: meslolgnerdfontfontPackage,
+  cascadiacode: cascadiacodePackage,
+  firacode: firacodePackage,
+  hack: hackPackage,
+  inter: interPackage,
+  jetbrainsmono: jetbrainsmonoPackage,
+  jetbrainsmononerdfont: jetbrainsmononerdfontPackage,
+  meslolgnerdfont: meslolgnerdfontPackage,
 
   fossiesorglibelf: fossiesorglibelfPackage,
 
@@ -9379,7 +9379,7 @@ export const pantry: Pantry = {
   'cargo-tarpaulin': cratesiocargotarpaulinPackage,
   cargox: pkgxshcargoxPackage,
   carthage: carthagePackage,
-  'Cascadia Code': cascadiacodefontPackage,
+  'Cascadia Code': cascadiacodePackage,
   casdoor: casdoororgPackage,
   cask: caskreadthedocsioPackage,
   cassandra: cassandraapacheorgPackage,
@@ -9619,7 +9619,7 @@ export const pantry: Pantry = {
   file: darwinsyscomfilePackage,
   filelock: filelockPackage,
   findutils: gnuorgfindutilsPackage,
-  'Fira Code': firacodefontPackage,
+  'Fira Code': firacodePackage,
   firebase: googlecomfirebasetoolsPackage,
   firefox: firefoxorgPackage,
   Firefox: firefoxorgPackage,
@@ -9797,7 +9797,7 @@ export const pantry: Pantry = {
   gum: charmshgumPackage,
   'gvisor-tap-vsock': gvisortapvsockPackage,
   hac: cratesiohacclientPackage,
-  Hack: hackfontPackage,
+  Hack: hackPackage,
   hadolint: hadolintPackage,
   halibut: chiarkgreenendorgukhalibutPackage,
   handbrake: handbrakefrPackage,
@@ -9859,7 +9859,7 @@ export const pantry: Pantry = {
   Inkscape: inkscapeorgPackage,
   insomnia: insomniarestPackage,
   Insomnia: insomniarestPackage,
-  Inter: interfontPackage,
+  Inter: interPackage,
   intltool: freedesktoporgintltoolPackage,
   invoice: invoicePackage,
   invoke: pyinvokeorgPackage,
@@ -9888,8 +9888,8 @@ export const pantry: Pantry = {
   'Jenkins X': jenkinsxioPackage,
   'jenkins-lts': jenkinsioPackage,
   jenv: jenvbePackage,
-  'JetBrains Mono': jetbrainsmonofontPackage,
-  'JetBrainsMono Nerd Font': jetbrainsmononerdfontfontPackage,
+  'JetBrains Mono': jetbrainsmonoPackage,
+  'JetBrainsMono Nerd Font': jetbrainsmononerdfontPackage,
   jetp: jetporchcomPackage,
   'jfrog-cli': jfrogcomjfrogcliPackage,
   jinja2: jinja2cliPackage,
@@ -10165,7 +10165,7 @@ export const pantry: Pantry = {
   mergiraf: mergiraforgPackage,
   'mesa-glu': freedesktoporgmesagluPackage,
   mesa3d: mesa3dorgPackage,
-  'MesloLG Nerd Font': meslolgnerdfontfontPackage,
+  'MesloLG Nerd Font': meslolgnerdfontPackage,
   meson: mesonbuildcomPackage,
   MetaGPT: deepwisdomaiPackage,
   metis: glarosdtcumnedumetisPackage,
