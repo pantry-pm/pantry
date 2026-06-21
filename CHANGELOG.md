@@ -1158,8 +1158,8 @@
 
 ### 📄 Miscellaneous
 
--  ([$ENV{au](https://github.com/pantry-pm/pantry/commit/$ENV{au)) _(by <fallback> and $ENV{AC_MACRODIR} <>)_
--  ([time (u](https://github.com/pantry-pm/pantry/commit/time (u)) _(by  $prefix./...' into ' <>)_
+- ([$ENV{au](https://github.com/pantry-pm/pantry/commit/$ENV{au)) _(by <fallback> and $ENV{AC_MACRODIR} <>)_
+- ([time (u](https://github.com/pantry-pm/pantry/commit/time (u)) _(by  $prefix./...' into ' <>)_
 - Revert "perf(site): gzip-negotiate dashboard HTML + /api/packages" ([af7c22d](https://github.com/pantry-pm/pantry/commit/af7c22d)) _(by Chris <chrisbreuer93@gmail.com>)_
 
 ### Contributors

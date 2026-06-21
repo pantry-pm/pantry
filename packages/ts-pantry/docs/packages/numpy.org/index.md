@@ -25,8 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 42 versions</summary>
+<summary>Show all 43 versions</summary>
 
+- `2.5.0`
 - `2.4.6`, `2.4.5`, `2.4.4`, `2.4.3`, `2.4.2`, `2.4.1`, `2.4.0`
 - `2.3.5`, `2.3.4`, `2.3.3`, `2.3.2`, `2.3.1`, `2.3.0`
 - `2.2.6`, `2.2.5`, `2.2.4`, `2.2.3`, `2.2.2`, `2.2.1`, `2.2.0`
@@ -39,13 +40,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `2.4.6`
+**Latest Version**: `2.5.0`
 
 ### Install Specific Version
 
 ```bash
 # Install a specific version
-pantry install numpy.org@2.4.6
+pantry install numpy.org@2.5.0
 ```
 
 ## Dependencies

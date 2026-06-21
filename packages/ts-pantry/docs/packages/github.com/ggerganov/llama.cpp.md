@@ -26,8 +26,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 4889 versions</summary>
+<summary>Show all 4890 versions</summary>
 
+- `9754`
 - `9753`
 - `9752`
 - `9751`
@@ -4920,13 +4921,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `9753`
+**Latest Version**: `9754`
 
 ### Install Specific Version
 
 ```bash
 # Install a specific version
-pantry install github.com/ggerganov/llama.cpp@9753
+pantry install github.com/ggerganov/llama.cpp@9754
 ```
 
 ## Dependencies
