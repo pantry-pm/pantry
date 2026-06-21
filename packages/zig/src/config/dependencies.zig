@@ -95,8 +95,9 @@ pub fn extractDependencies(
     else
         false;
 
-    // Extract regular dependencies
-    if (config.config.object.get("dependencies")) |deps_val| {
+    // Extract regular dependencies. `deps` is accepted as a synonym for
+    // `dependencies` (deps.yaml's shorthand; matches the section header parser).
+    if (config.config.object.get("dependencies") orelse config.config.object.get("deps")) |deps_val| {
         try extractDependencyField(allocator, deps_val, global_flag, .normal, &dependencies);
     }
 

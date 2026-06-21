@@ -451,6 +451,12 @@ fn parseDepsScalar(value: []const u8) []const u8 {
 ///   python.org:             # Object format with explicit global
 ///     version: ~3.12
 ///     global: true
+/// True for a top-level dependencies section header. `deps:` is accepted as a
+/// shorthand synonym for `dependencies:`.
+fn isDependenciesHeader(trimmed: []const u8) bool {
+    return std.mem.eql(u8, trimmed, "dependencies:") or std.mem.eql(u8, trimmed, "deps:");
+}
+
 pub fn parseDepsFile(allocator: std.mem.Allocator, file_path: []const u8) ![]PackageDependency {
     // Read file contents
 
@@ -479,7 +485,7 @@ pub fn parseDepsFile(allocator: std.mem.Allocator, file_path: []const u8) ![]Pac
         }
 
         // Stop at dependencies section
-        if (std.mem.eql(u8, trimmed, "dependencies:")) {
+        if (isDependenciesHeader(trimmed)) {
             break;
         }
     }
@@ -499,7 +505,7 @@ pub fn parseDepsFile(allocator: std.mem.Allocator, file_path: []const u8) ![]Pac
         if (trimmed.len == 0 or trimmed[0] == '#') continue;
 
         // Check if we're entering dependencies section
-        if (std.mem.eql(u8, trimmed, "dependencies:")) {
+        if (isDependenciesHeader(trimmed)) {
             in_dependencies = true;
             continue;
         }
