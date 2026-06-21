@@ -33,6 +33,33 @@ function findRecipeFile(dir: string, filename: string): string | null {
   return null
 }
 
+/**
+ * Locate a recipe whose exported `recipe.domain` equals `domain`, by importing
+ * every `.ts` under recipes/. Needed for slash-domains (e.g.
+ * `logitech.com/options-plus`) whose recipe lives at a nested path
+ * (`apps/logitech.com/options-plus.ts`) — there's no single file literally named
+ * `<domain>.ts`, so the basename lookup can't find it.
+ */
+async function findRecipeFileByDomain(dir: string, domain: string): Promise<string | null> {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name)
+    if (statSync(full).isDirectory()) {
+      const hit = await findRecipeFileByDomain(full, domain)
+      if (hit)
+        return hit
+    }
+    else if (name.endsWith('.ts')) {
+      try {
+        const mod = await import(full) as { recipe?: { domain?: string } }
+        if (mod.recipe?.domain === domain)
+          return full
+      }
+      catch { /* skip files that fail to import */ }
+    }
+  }
+  return null
+}
+
 /** Map a recipe platform token (`darwin/aarch64`) to a registry key (`darwin-arm64`). */
 function toRegistryKey(p: string): string | null {
   const [os, arch] = p.split('/')
@@ -48,7 +75,10 @@ async function main(): Promise<void> {
   if (!domain) {
     process.exit(0)
   }
+  // Plain domains map to a `<domain>.ts` file; slash-domains live at a nested
+  // path with a different basename, so fall back to matching by recipe.domain.
   const file = findRecipeFile(RECIPES_DIR, `${domain}.ts`)
+    ?? (domain.includes('/') ? await findRecipeFileByDomain(RECIPES_DIR, domain) : null)
   if (!file) {
     process.exit(0)
   }

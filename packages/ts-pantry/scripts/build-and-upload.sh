@@ -28,11 +28,18 @@ else
 fi
 PLATFORM="${OS}-${ARCH}"
 
+# Slash-domains (e.g. "logitech.com/options-plus") must not leak their slash into
+# filesystem paths or the tarball name — otherwise the artifact/tarball paths gain
+# a spurious nested directory and tar/upload break. Sanitize to a flat name for all
+# on-disk paths (matching upload-to-s3.ts, which expects <pkg-with-dashes>-<ver>.tar.gz).
+# The real $PACKAGE (with slash) is still passed to build/upload as the package id.
+SAFE_PACKAGE="${PACKAGE//\//-}"
+
 # Directories (ARTIFACTS_DIR is absolute so it survives any cd)
-BUILD_DIR="/tmp/pantry-build/${PACKAGE}-${VERSION}"
-INSTALL_DIR="/tmp/pantry-install/${PACKAGE}-${VERSION}"
+BUILD_DIR="/tmp/pantry-build/${SAFE_PACKAGE}-${VERSION}"
+INSTALL_DIR="/tmp/pantry-install/${SAFE_PACKAGE}-${VERSION}"
 ARTIFACTS_DIR="${REPO_DIR}/artifacts"
-ARTIFACT_NAME="${PACKAGE}-${VERSION}-${PLATFORM}"
+ARTIFACT_NAME="${SAFE_PACKAGE}-${VERSION}-${PLATFORM}"
 ARTIFACT_DIR="${ARTIFACTS_DIR}/${ARTIFACT_NAME}"
 
 echo "============================================================"
@@ -68,7 +75,7 @@ fi
 # Step 2: Package (tar -C avoids cd, and all paths are absolute)
 echo ""
 echo ">>> Step 2: Creating tarball..."
-TARBALL="${PACKAGE}-${VERSION}.tar.gz"
+TARBALL="${SAFE_PACKAGE}-${VERSION}.tar.gz"
 tar -czf "${ARTIFACT_DIR}/${TARBALL}" -C "${INSTALL_DIR}" .
 
 # Generate SHA256 (subshell keeps the cwd change local)

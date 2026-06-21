@@ -133,8 +133,12 @@ function findRecipeFile(domain: string): string | null {
     const nestedFile = join(recipesDir, ...parts.slice(0, -1), `${parts[parts.length - 1]}.ts`)
     if (existsSync(nestedFile)) return nestedFile
   }
-  // Fallback: a `<domain>.ts` file anywhere under recipes/ (subfolder layout).
-  return recipeIndex().get(`${domain}.ts`) ?? null
+  // Fallback: a `<basename>.ts` file anywhere under recipes/ (subfolder layout).
+  // For slash-domains (logitech.com/options-plus) the file is named by the last
+  // path segment (options-plus.ts), not the whole domain — try both keys.
+  const idx = recipeIndex()
+  const lastSegment = parts[parts.length - 1]
+  return idx.get(`${domain}.ts`) ?? (parts.length > 1 ? idx.get(`${lastSegment}.ts`) ?? null : null)
 }
 
 /** Find a YAML recipe file in pantry or desktop-pantry */
