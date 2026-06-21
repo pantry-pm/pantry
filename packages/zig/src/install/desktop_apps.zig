@@ -328,6 +328,62 @@ fn addFonts(allocator: std.mem.Allocator, list: *std.ArrayList(Font), parsed: []
     allocator.free(parsed);
 }
 
+/// Which kind a bare (un-keyed) top-level list in a sibling file defaults to,
+/// implied by the file's name (apps.yaml → apps, fonts.yaml → fonts).
+const BareKind = enum { apps, fonts };
+
+/// Collect the apps and fonts declared in one sibling file into the running
+/// lists. Like `deps:`/`dependencies:` in deps.yaml, the keyed `apps:` and
+/// `fonts:` sections are honored regardless of which file they appear in — so
+/// apps.yaml may also carry a `fonts:` section and vice versa. A file with no
+/// keyed section is treated as a bare list of `bare_kind` (its filename's kind).
+fn collectSiblingFile(
+    allocator: std.mem.Allocator,
+    content: []const u8,
+    bare_kind: BareKind,
+    apps_list: *std.ArrayList(App),
+    fonts_list: *std.ArrayList(Font),
+) void {
+    var found_keyed = false;
+
+    // `apps:` section (honored in any sibling file).
+    if (collectSequenceItems(allocator, content, "apps")) |raw| {
+        defer {
+            for (raw) |it| allocator.free(it);
+            allocator.free(raw);
+        }
+        if (raw.len > 0) {
+            found_keyed = true;
+            if (appsFromRaw(allocator, raw)) |a| addApps(allocator, apps_list, a) else |_| {}
+        }
+    } else |_| {}
+
+    // `fonts:` section (honored in any sibling file).
+    if (collectSequenceItems(allocator, content, "fonts")) |raw| {
+        defer {
+            for (raw) |it| allocator.free(it);
+            allocator.free(raw);
+        }
+        if (raw.len > 0) {
+            found_keyed = true;
+            if (fontsFromRaw(allocator, raw)) |f| addFonts(allocator, fonts_list, f) else |_| {}
+        }
+    } else |_| {}
+
+    // No keyed section → the file is a bare list of its filename's kind.
+    if (!found_keyed) {
+        const raw = collectBareSequence(allocator, content) catch return;
+        defer {
+            for (raw) |it| allocator.free(it);
+            allocator.free(raw);
+        }
+        switch (bare_kind) {
+            .apps => if (appsFromRaw(allocator, raw)) |a| addApps(allocator, apps_list, a) else |_| {},
+            .fonts => if (fontsFromRaw(allocator, raw)) |f| addFonts(allocator, fonts_list, f) else |_| {},
+        }
+    }
+}
+
 // ── Idempotency marker ───────────────────────────────────────────────────────
 
 /// Path of the per-project marker file recording installed app/font keys.
@@ -419,21 +475,22 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     if (parseFonts(allocator, content)) |f| addFonts(allocator, &fonts_list, f) else |_| {}
 
     // 2. Sibling apps.yaml / fonts.yaml next to the deps file, letting a project
-    //    keep its GUI apps and fonts out of deps.yaml. Merged with the above.
+    //    keep its GUI apps and fonts out of deps.yaml. Each file may use the
+    //    keyed `apps:` / `fonts:` sections (either key works in either file) or a
+    //    bare list defaulting to the filename's kind. Merged with the above.
     const dir = std.fs.path.dirname(deps_file_path) orelse ".";
-    for ([_][]const u8{ "apps.yaml", "apps.yml" }) |fname| {
-        const p = std.fs.path.join(allocator, &[_][]const u8{ dir, fname }) catch continue;
+    const sibling_files = [_]struct { name: []const u8, kind: BareKind }{
+        .{ .name = "apps.yaml", .kind = .apps },
+        .{ .name = "apps.yml", .kind = .apps },
+        .{ .name = "fonts.yaml", .kind = .fonts },
+        .{ .name = "fonts.yml", .kind = .fonts },
+    };
+    for (sibling_files) |sf| {
+        const p = std.fs.path.join(allocator, &[_][]const u8{ dir, sf.name }) catch continue;
         defer allocator.free(p);
         const c = io_helper.readFileAlloc(allocator, p, 10 * 1024 * 1024) catch continue;
         defer allocator.free(c);
-        if (parseAppsFile(allocator, c)) |a| addApps(allocator, &apps_list, a) else |_| {}
-    }
-    for ([_][]const u8{ "fonts.yaml", "fonts.yml" }) |fname| {
-        const p = std.fs.path.join(allocator, &[_][]const u8{ dir, fname }) catch continue;
-        defer allocator.free(p);
-        const c = io_helper.readFileAlloc(allocator, p, 10 * 1024 * 1024) catch continue;
-        defer allocator.free(c);
-        if (parseFontsFile(allocator, c)) |f| addFonts(allocator, &fonts_list, f) else |_| {}
+        collectSiblingFile(allocator, c, sf.kind, &apps_list, &fonts_list);
     }
 
     const apps = apps_list.items;
@@ -674,6 +731,57 @@ test "parseFontsFile: bare list of font domains" {
     try std.testing.expectEqual(@as(usize, 2), fonts.len);
     try std.testing.expectEqualStrings("inter.font", fonts[0].cask);
     try std.testing.expectEqualStrings("meslo-lg-nerd-font.font", fonts[1].cask);
+}
+
+test "collectSiblingFile: keyed apps: and fonts: honored in any file" {
+    const a = std.testing.allocator;
+    // An apps.yaml that also declares a fonts: section — both are picked up.
+    const content =
+        \\apps:
+        \\  - 1password
+        \\  - { mas: "1147396723", name: WhatsApp }
+        \\fonts:
+        \\  - inter.font
+    ;
+    var apps = std.ArrayList(App).empty;
+    var fonts = std.ArrayList(Font).empty;
+    defer {
+        for (apps.items) |*x| x.deinit(a);
+        apps.deinit(a);
+        for (fonts.items) |*x| x.deinit(a);
+        fonts.deinit(a);
+    }
+
+    collectSiblingFile(a, content, .apps, &apps, &fonts);
+
+    try std.testing.expectEqual(@as(usize, 2), apps.items.len);
+    try std.testing.expectEqualStrings("1password", apps.items[0].id);
+    try std.testing.expectEqual(AppSource.mas, apps.items[1].source);
+    try std.testing.expectEqual(@as(usize, 1), fonts.items.len);
+    try std.testing.expectEqualStrings("inter.font", fonts.items[0].cask);
+}
+
+test "collectSiblingFile: bare list defaults to the filename's kind" {
+    const a = std.testing.allocator;
+    const content =
+        \\- inter.font
+        \\- meslo-lg-nerd-font.font
+    ;
+    var apps = std.ArrayList(App).empty;
+    var fonts = std.ArrayList(Font).empty;
+    defer {
+        for (apps.items) |*x| x.deinit(a);
+        apps.deinit(a);
+        for (fonts.items) |*x| x.deinit(a);
+        fonts.deinit(a);
+    }
+
+    // Same bare content, read as a fonts.yaml → goes to fonts, not apps.
+    collectSiblingFile(a, content, .fonts, &apps, &fonts);
+
+    try std.testing.expectEqual(@as(usize, 0), apps.items.len);
+    try std.testing.expectEqual(@as(usize, 2), fonts.items.len);
+    try std.testing.expectEqualStrings("inter.font", fonts.items[0].cask);
 }
 
 test "markerHas matches whole lines only" {
