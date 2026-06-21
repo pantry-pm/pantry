@@ -1,5 +1,5 @@
 /**
- * Auto-generated aliases for pkgx packages
+ * Auto-generated aliases for pantry packages
  */
 
 export const aliases: Record<string, string> = {
