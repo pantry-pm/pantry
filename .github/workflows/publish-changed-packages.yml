@@ -76,10 +76,21 @@ jobs:
                 # Recipe path under recipes/ IS the domain — including nested
                 # ones (recipes/redis.io.ts → redis.io;
                 # recipes/mariadb.com/server.ts → mariadb.com/server;
-                # recipes/gnu.org/readline.ts → gnu.org/readline).
+                # recipes/gnu.org/readline.ts → gnu.org/readline). A recipe change
+                # alters build logic, so always (re)build it.
                 */recipes/*.ts) d=$(echo "$f" | sed -E 's#.*/recipes/##; s#\.ts$##') ;;
                 # Metadata files (e.g. redisio.ts) carry an explicit `domain:` field.
-                */packages/*.ts) d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//") ;;
+                # Only (re)build when the published artifact would actually differ —
+                # i.e. the `versions:` line changed (a new version to build). Skip
+                # cosmetic metadata edits (description/aliases/field removals), so a
+                # repo-wide touch doesn't trigger thousands of pointless rebuilds.
+                */packages/*.ts)
+                  if git diff "$BEFORE" "${{ github.sha }}" -- "$f" | grep -qE '^[-+]\s*versions:'; then
+                    d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//")
+                  else
+                    d=""
+                  fi
+                  ;;
                 *) d="" ;;
               esac
               [ -n "$d" ] && DOMAINS="$DOMAINS"$'\n'"$d"
