@@ -9,32 +9,37 @@
  * defaults to AWS S3. Uses ts-cloud for the S3-compatible client.
  */
 
-import { createReadStream, existsSync, openSync, readdirSync, readFileSync, readSync, closeSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
+import { execFileSync } from 'node:child_process'
 import * as crypto from 'node:crypto'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 
 const DYNAMO_TABLE = process.env.DYNAMODB_TABLE || 'pantry-packages'
 
 /**
- * Tarballs at/above this size are uploaded via S3 multipart upload instead of a
- * single PutObject. A single PutObject reads the whole file into memory and
- * issues one request — which hangs / OOMs for large desktop apps (e.g. Dia is
- * ~710MB). Multipart streams the file in fixed-size chunks from disk so memory
- * stays flat and each part is an independent, retryable request.
+ * Tarballs at/above this size are uploaded via a presigned PUT URL streamed
+ * with curl instead of putObject. putObject reads the whole file into memory
+ * and posts a single in-memory request, which hangs / OOMs for large desktop
+ * apps (e.g. Dia is ~710MB). A presigned PUT lets curl stream the file straight
+ * from disk — memory stays flat and S3 accepts a single object up to 5GB.
+ *
+ * (ts-cloud's S3 multipart API can't be used here: its createMultipartUpload
+ * initiates path-style while uploadPart targets the virtual-host endpoint, so on
+ * Hetzner the part upload 404s with NoSuchUpload. The presigned single-PUT path
+ * sidesteps that entirely and works on every S3-compatible provider.)
  */
-const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100 MB
-/** Size of each multipart chunk (must be ≥ 5MB per the S3 spec, except the last). */
-const MULTIPART_PART_SIZE = 64 * 1024 * 1024 // 64 MB
+const LARGE_FILE_THRESHOLD = 100 * 1024 * 1024 // 100 MB
 
 /**
- * Upload a tarball to S3, transparently using multipart for large files.
+ * Upload a tarball to S3, streaming large files via a presigned PUT + curl.
  *
- * - Small files (< {@link MULTIPART_THRESHOLD}): single PutObject (existing path).
- * - Large files: createMultipartUpload → uploadPart (read from disk in chunks,
- *   so we never hold the whole file in memory) → completeMultipartUpload. On any
- *   error the upload is aborted so no orphaned parts are billed/left behind.
+ * - Small files (< {@link LARGE_FILE_THRESHOLD}): single putObject (existing path).
+ * - Large files: presign a PUT URL (works against the provider's real,
+ *   virtual-host endpoint) and `curl -T` the file from disk so it never lands in
+ *   JS memory. The presigned URL signs UNSIGNED-PAYLOAD with host-only headers,
+ *   so curl must send no extra signed headers.
  */
 async function uploadTarballToS3(
   s3: ReturnType<typeof createObjectStorageClient>,
@@ -44,42 +49,21 @@ async function uploadTarballToS3(
   size: number,
   contentType: string,
 ): Promise<void> {
-  if (size < MULTIPART_THRESHOLD) {
+  if (size < LARGE_FILE_THRESHOLD) {
     await s3.putObject({ bucket, key, body: readFileSync(filePath), contentType })
     return
   }
 
-  console.log(`   ⛓  Large file (${(size / 1024 / 1024).toFixed(0)} MB) — using multipart upload`)
-  const { UploadId } = await s3.createMultipartUpload(bucket, key, { contentType })
-  const parts: Array<{ PartNumber: number, ETag: string }> = []
-  const fd = openSync(filePath, 'r')
-  try {
-    const buffer = Buffer.allocUnsafe(MULTIPART_PART_SIZE)
-    let offset = 0
-    let partNumber = 1
-    const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
-    while (offset < size) {
-      const toRead = Math.min(MULTIPART_PART_SIZE, size - offset)
-      const bytesRead = readSync(fd, buffer, 0, toRead, offset)
-      // Slice a copy of exactly the bytes read — uploadPart keeps a reference to
-      // the body, so we must not hand it the reused full-size buffer.
-      const part = Buffer.from(buffer.subarray(0, bytesRead))
-      console.log(`   📤 Part ${partNumber}/${totalParts} (${(bytesRead / 1024 / 1024).toFixed(1)} MB)`)
-      const { ETag } = await s3.uploadPart(bucket, key, UploadId, partNumber, part)
-      parts.push({ PartNumber: partNumber, ETag })
-      offset += bytesRead
-      partNumber++
-    }
-    await s3.completeMultipartUpload(bucket, key, UploadId, parts)
-  }
-  catch (err) {
-    try { await s3.abortMultipartUpload(bucket, key, UploadId) }
-    catch { /* best-effort cleanup */ }
-    throw err
-  }
-  finally {
-    closeSync(fd)
-  }
+  console.log(`   ⛓  Large file (${(size / 1024 / 1024).toFixed(0)} MB) — streaming via presigned PUT`)
+  const url = await s3.getSignedUrl({ bucket, key, expiresIn: 3600, operation: 'putObject' })
+  // -T streams the file from disk; -f fails the process on any HTTP 4xx/5xx so
+  // the caller's try/catch sees the error. No Content-Type header: the presigned
+  // signature covers host only, and adding an unsigned header can break the sig.
+  execFileSync('curl', [
+    '-fsS', '--connect-timeout', '30', '--max-time', '3600',
+    '--retry', '2', '--retry-delay', '5',
+    '-X', 'PUT', '-T', filePath, url,
+  ], { stdio: ['ignore', 'ignore', 'inherit'] })
 }
 
 /** SHA256 of a file, streamed from disk (no full read into memory). */
