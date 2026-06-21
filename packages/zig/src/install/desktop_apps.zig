@@ -2,10 +2,11 @@
 //!
 //! Lets a project's `deps.yaml` declare GUI applications and fonts alongside its
 //! command-line `dependencies:`, so a single `pantry install` provisions the
-//! whole machine. Apps and fonts are installed NATIVELY (see install/cask.zig:
-//! Homebrew's public cask JSON + hdiutil/ditto/installer — no `brew` needed),
-//! with `brew` used only as a fallback when present. Mac App Store apps need no
-//! extra tooling: pantry opens the App Store to the app's page (one click to
+//! whole machine. Apps and fonts come from pantry's OWN registry (see
+//! install/native_apps.zig): each is a pantry package keyed by domain
+//! (ghostty.org, 1password.com, …), downloaded and installed with ditto/xattr.
+//! There is NO Homebrew and no `brew` anywhere. Mac App Store apps need no extra
+//! tooling either: pantry opens the App Store to the app's page (one click to
 //! install) and skips any App Store app already in /Applications.
 //!
 //! deps.yaml shape (all top-level keys, sibling to `dependencies:`):
