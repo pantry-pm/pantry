@@ -262,7 +262,22 @@ async function main(): Promise<void> {
       : null
     const tagPattern: RegExp | undefined = recipe.versionSource?.tagPattern
 
-    const latest = repo ? await latestGithub(repo, tagPattern) : null
+    // Resolve the latest upstream version. `github-releases` queries the GitHub
+    // API; `custom` calls the recipe's own `fetch()` (newest-first) — this lets
+    // apps with no GitHub feed but a machine-readable version source (e.g.
+    // Linear's Content-Disposition header) auto-update too. Other source types
+    // (`github-tags`, `url-pattern`) and pinned recipes resolve to null and are
+    // simply tracked at their published version (no auto-bump).
+    let latest: string | null = repo ? await latestGithub(repo, tagPattern) : null
+    if (!latest && recipe.versionSource?.type === 'custom' && typeof recipe.versionSource.fetch === 'function') {
+      try {
+        const versions = await recipe.versionSource.fetch()
+        latest = Array.isArray(versions) && versions.length > 0 ? versions[0] : null
+      }
+      catch {
+        latest = null
+      }
+    }
     const published = await publishedVersion(recipe.domain)
     entries.push({
       domain: recipe.domain,
