@@ -1,16 +1,16 @@
 # Custom Output Formats
 
-ts-pkgx generates TypeScript or JSON files by default, but you can customize the output format to suit your specific needs.
+ts-pantry generates TypeScript or JSON files by default, but you can customize the output format to suit your specific needs.
 
 ## Custom Markdown Output
 
 You can generate markdown documentation for packages:
 
 ```typescript
-import type { PkgxPackage } from 'ts-pkgx'
+import type { PkgxPackage } from 'ts-pantry'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fetchPantryPackage } from 'ts-pkgx'
+import { fetchPantryPackage } from 'ts-pantry'
 
 async function saveAsMarkdown(packageName: string, outputDir: string): Promise<void> {
   const { packageInfo } = await fetchPantryPackage(packageName)
@@ -319,4 +319,4 @@ cli
   })
 ```
 
-These custom output formats allow you to integrate ts-pkgx with other tools in your workflow.
+These custom output formats allow you to integrate ts-pantry with other tools in your workflow.

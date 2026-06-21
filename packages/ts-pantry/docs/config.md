@@ -1,6 +1,6 @@
 # Configuration
 
-ts-pkgx provides various configuration options for both the CLI and the library API.
+ts-pantry provides various configuration options for both the CLI and the library API.
 
 ## CLI Configuration
 
@@ -44,7 +44,7 @@ bun run resolve-deps deps.yaml --verbose --install-command
 
 ## Cache Configuration
 
-ts-pkgx implements caching to improve performance and avoid unnecessary network requests:
+ts-pantry implements caching to improve performance and avoid unnecessary network requests:
 
 ```bash
 # Specify a custom cache directory
@@ -75,7 +75,7 @@ The default concurrency is 10 packages at a time.
 
 ## Retry and Timeout Settings
 
-Configure how ts-pkgx handles network issues and timeouts:
+Configure how ts-pantry handles network issues and timeouts:
 
 ```bash
 # Set a longer timeout for each package (in milliseconds)
@@ -172,7 +172,7 @@ interface PackageFetchOptions {
 
 ## Package Aliases
 
-ts-pkgx maintains a map of common package aliases in the `PACKAGE*ALIASES` object. This is used to resolve package names to their full domain names.
+ts-pantry maintains a map of common package aliases in the `PACKAGE*ALIASES` object. This is used to resolve package names to their full domain names.
 
 ```typescript
 // Example aliases
@@ -189,7 +189,7 @@ You can extend this map with your own aliases or use it to resolve package names
 
 ## Output Format
 
-By default, ts-pkgx generates TypeScript files for each package. You can also configure it to output JSON files instead:
+By default, ts-pantry generates TypeScript files for each package. You can also configure it to output JSON files instead:
 
 ```bash
 # CLI option
@@ -215,19 +215,19 @@ The dependency resolver supports extensive configuration options:
 
 ```bash
 # Basic dependency resolution
-ts-pkgx resolve-deps deps.yaml
+ts-pantry resolve-deps deps.yaml
 
 # With custom directories
-ts-pkgx resolve-deps deps.yaml --pantry-dir ./my-pantry --packages-dir ./my-packages
+ts-pantry resolve-deps deps.yaml --pantry-dir ./my-pantry --packages-dir ./my-packages
 
 # OS-specific filtering
-ts-pkgx resolve-deps deps.yaml --target-os darwin --include-os-deps
+ts-pantry resolve-deps deps.yaml --target-os darwin --include-os-deps
 
 # Custom recursion depth and verbose output
-ts-pkgx resolve-deps deps.yaml --max-depth 5 --verbose
+ts-pantry resolve-deps deps.yaml --max-depth 5 --verbose
 
 # JSON output for automation
-ts-pkgx resolve-deps deps.yaml --json
+ts-pantry resolve-deps deps.yaml --json
 ```
 
 ### Dependency Resolver Options
@@ -247,7 +247,7 @@ This increases your GitHub API rate limit from 60 requests/hour to 5,000 request
 
 ## Type Safety Configuration
 
-ts-pkgx provides comprehensive TypeScript type safety features that work automatically with your configuration:
+ts-pantry provides comprehensive TypeScript type safety features that work automatically with your configuration:
 
 ```typescript
 import type {
@@ -255,12 +255,12 @@ import type {
   PackageName,
   PackageSpec,
   SupportedPlatform
-} from 'ts-pkgx'
+} from 'ts-pantry'
 import {
   detectPlatform,
   fetchAndSavePackage,
   isValidPackageName
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe configuration
 const options: PackageFetchOptions = {

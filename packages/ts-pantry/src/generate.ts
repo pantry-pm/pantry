@@ -30,7 +30,6 @@ interface PkgxPackage {
   homepageUrl: string
   githubUrl: string
   installCommand: string
-  pkgxInstallCommand: string
   pantryInstallCommand: string
   programs: readonly string[]
   companions: readonly string[]
@@ -203,7 +202,6 @@ function extractPackageDataFromFile(content: string, fallbackDomain: string): Pk
     const homepageUrl = extractString('homepageUrl') || ''
     const githubUrl = extractString('githubUrl') || ''
     const installCommand = extractString('installCommand') || ''
-    const pkgxInstallCommand = extractString('pkgxInstallCommand') || `sh <(curl https://pkgx.sh) +${domain} -- $SHELL -i`
     const pantryInstallCommand = extractString('pantryInstallCommand') || `pantry install ${domain}`
     const fullPath = extractString('fullPath') || domain
 
@@ -221,7 +219,6 @@ function extractPackageDataFromFile(content: string, fallbackDomain: string): Pk
       homepageUrl,
       githubUrl,
       installCommand,
-      pkgxInstallCommand,
       pantryInstallCommand,
       programs,
       companions,
@@ -1453,7 +1450,7 @@ export async function generateAliases(packagesDir?: string): Promise<string> {
     const filteredAliases: Record<string, string> = aliases
 
     // Generate the file content
-    let content = '/**\n * Auto-generated aliases for pkgx packages\n */\n\n'
+    let content = '/**\n * Auto-generated aliases for pantry packages\n */\n\n'
     content += 'export const aliases: Record<string, string> = {\n'
 
     // Sort aliases alphabetically
@@ -1683,10 +1680,10 @@ function shouldExcludePackage(pkg: PkgxPackage): boolean {
     'Go home.',
     'Crafters of fine Open Source products',
     'Package information for',
-    'pkgx package',
+    'pantry package',
     'Loading...',
     'Please wait...',
-    'Package information available on pkgx.dev',
+    'Package information available in the pantry registry.',
   ]
 
   return placeholderDescriptions.some(placeholder =>
@@ -1980,7 +1977,7 @@ Each package can be accessed using \`getPackage(name)\` or directly via \`pantry
         // Escape literal `{{ }}` so BunPress/markdown doesn't treat it as a
         // template expression (incomplete braces included).
         installName = installName.replace(/\{\{/g, '&lbrace;&lbrace;').replace(/\}\}/g, '&rbrace;&rbrace;')
-        const installCmd = `\`pkgx ${installName}\``
+        const installCmd = `\`pantry install ${installName}\``
 
         // Create safe filename for package link in catalog (must match generatePackagePages logic)
         let catalogLinkPath: string
@@ -2034,7 +2031,7 @@ Each package can be accessed using \`getPackage(name)\` or directly via \`pantry
 ### Basic Usage
 
 \`\`\`typescript
-import { getPackage, pantry } from 'ts-pkgx'
+import { getPackage, pantry } from 'ts-pantry'
 
 // Get a package by domain
 const nodePackage = pantry.nodejsorg
@@ -2071,17 +2068,17 @@ console.log(\`Node.js dependencies: \$\{nodeDeps.join(', ')\}\`)
 ### Installation Examples
 
 \`\`\`bash
-# Install using pkgx
-pkgx node
-pkgx python
-pkgx rust
+# Install using pantry
+pantry install node
+pantry install python
+pantry install rust
 
 # Install specific versions
-pkgx node@20
-pkgx python@3.11
+pantry install node@20
+pantry install python@3.11
 
 # Install multiple packages
-pkgx node python rust
+pantry install node python rust
 \`\`\`
 
 ## Package Information
@@ -2095,11 +2092,11 @@ Each package includes:
 - **Versions**: Available versions
 - **Dependencies**: Required dependencies
 - **Companions**: Related packages
-- **Install Command**: How to install with pkgx
+- **Install Command**: How to install with pantry
 
 ## Contributing
 
-To add or update packages, see the pkgx [contribution guide](https://docs.pkgx.sh/appendix/packaging/pantry).
+To add or update packages, see the [pantry repository](https://github.com/pantry-pm/pantry).
 `
 
   await fs.promises.writeFile(catalogPath, cleanTrailingSpaces(content))
@@ -2297,7 +2294,7 @@ ${resolvedDescription ? `> ${resolvedDescription}` : ''}
 - **Domain**: \`${domain}\`
 - **Name**: \`${resolvedName}\`
 - **Homepage**: ${pkg.homepageUrl || 'Not specified'}
-- **Source**: [View on GitHub](${pkg.packageYmlUrl || `https://github.com/pkgxdev/pantry/tree/main/projects/${domain}/package.yml`})
+- **Source**: [View on GitHub](${pkg.packageYmlUrl || `https://github.com/pantry-pm/pantry/tree/main/projects/${domain}/package.yml`})
 
 ## Installation
 
@@ -2372,8 +2369,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 \`\`\`bash
-# Install specific version
-${pkg.pkgxInstallCommand ? resolveTemplateVars(pkg.pkgxInstallCommand.replace(`+${domain}`, `+${domain}@${pkg.versions[0]}`)) : `sh <(curl https://pkgx.sh) +${domain}@${pkg.versions[0]} -- $SHELL -i`}
+# Install a specific version
+pantry install ${domain}@${pkg.versions[0]}
 \`\`\`
 `
       }
@@ -2455,7 +2452,7 @@ These packages work well with ${pkg.name || domain}:
       content += `\n## Usage Examples
 
 \`\`\`typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = ${accessPattern}
@@ -2467,7 +2464,7 @@ console.log(\`Programs: \${pkg.programs.join(', ')}\`)
 
 ## Links
 
-- [Package Source](${pkg.packageYmlUrl || `https://github.com/pkgxdev/pantry/tree/main/projects/${domain}/package.yml`})
+- [Package Source](${pkg.packageYmlUrl || `https://github.com/pantry-pm/pantry/tree/main/projects/${domain}/package.yml`})
 - [Homepage](${pkg.homepageUrl || '#'})
 - [Back to Package Catalog](${packageCatalogPath})
 
@@ -2562,7 +2559,7 @@ async function generateCategoryPages(outputDir: string, packagesDir?: string): P
 ${validPackages.length} packages in this category
 
 ${categoryName === 'Programming Languages'
-    ? 'Popular programming languages and their runtimes available through pkgx.'
+    ? 'Popular programming languages and their runtimes available through pantry.'
     : categoryName === 'Databases'
       ? 'Database systems and data storage solutions.'
       : categoryName === 'Development Tools'

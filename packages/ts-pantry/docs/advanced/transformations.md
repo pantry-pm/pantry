@@ -1,14 +1,14 @@
 # Custom Package Transformations
 
-ts-pkgx allows you to implement custom transformations for package data to suit your specific needs.
+ts-pantry allows you to implement custom transformations for package data to suit your specific needs.
 
 ## Basic Transformation
 
 You can implement custom transformation logic when processing packages:
 
 ```typescript
-import type { PkgxPackage } from 'ts-pkgx'
-import { fetchPantryPackage } from 'ts-pkgx'
+import type { PkgxPackage } from 'ts-pantry'
+import { fetchPantryPackage } from 'ts-pantry'
 
 async function fetchAndTransform(packageName: string): Promise<PkgxPackage> {
   const { packageInfo } = await fetchPantryPackage(packageName)
@@ -40,8 +40,8 @@ This approach allows you to extend the basic package information with your own c
 You can apply transformations to multiple packages at once:
 
 ```typescript
-import { fetchPantryPackage } from 'ts-pkgx'
-import { fetchPackageListFromGitHub } from 'ts-pkgx/utils'
+import { fetchPantryPackage } from 'ts-pantry'
+import { fetchPackageListFromGitHub } from 'ts-pantry/utils'
 
 async function transformPackageBatch(category: string): Promise<PkgxPackage[]> {
   // Get all packages from GitHub

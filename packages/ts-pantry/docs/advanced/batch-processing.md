@@ -1,10 +1,10 @@
 # Optimized Batch Processing
 
-Fetching and processing packages can be resource-intensive, especially when dealing with a large number of packages. This section explains the optimized batch processing techniques used in ts-pkgx.
+Fetching and processing packages can be resource-intensive, especially when dealing with a large number of packages. This section explains the optimized batch processing techniques used in ts-pantry.
 
 ## How Batch Processing Works
 
-When fetching multiple packages at once, ts-pkgx uses a batched approach to prevent overwhelming system resources:
+When fetching multiple packages at once, ts-pantry uses a batched approach to prevent overwhelming system resources:
 
 1. Packages are processed in small batches (typically 15-20 packages per batch)
 2. Each batch is processed in parallel using Promise.all
@@ -72,7 +72,7 @@ See the source code for implementation details.
 
 ## Understanding Batch Processing
 
-Batch processing allows ts-pkgx to efficiently process hundreds or thousands of packages by:
+Batch processing allows ts-pantry to efficiently process hundreds or thousands of packages by:
 
 1. Breaking the work into smaller batches
 2. Processing each batch in parallel
@@ -86,7 +86,7 @@ Implement dynamic batch size adjustment based on system performance:
 
 ```typescript
 import { performance } from 'node:perf_hooks'
-import { fetchPackageListFromGitHub } from 'ts-pkgx/utils'
+import { fetchPackageListFromGitHub } from 'ts-pantry/utils'
 
 async function updatePackagesWithDynamicBatching() {
   // Get the list of all packages from GitHub
@@ -636,4 +636,4 @@ const results = await batchProcessWithWorkers(
 )
 ```
 
-These advanced batch processing techniques allow you to customize and optimize ts-pkgx for your specific needs, especially when working with large numbers of packages.
+These advanced batch processing techniques allow you to customize and optimize ts-pantry for your specific needs, especially when working with large numbers of packages.

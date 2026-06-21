@@ -1,6 +1,6 @@
 # Usage
 
-ts-pkgx provides both a TypeScript library and CLI tools for working with pkgx packages.
+ts-pantry provides both a TypeScript library and CLI tools for working with pkgx packages.
 
 ## CLI Usage
 
@@ -8,37 +8,37 @@ After installing the package, you can use the CLI tools to fetch and manage pack
 
 ```bash
 # Fetch a single package
-ts-pkgx fetch nodejs.org
+ts-pantry fetch nodejs.org
 
 # Fetch multiple packages at once
-ts-pkgx fetch --pkg nodejs.org,bun.sh,deno.land
+ts-pantry fetch --pkg nodejs.org,bun.sh,deno.land
 
 # Fetch all available packages
-ts-pkgx fetch --all
+ts-pantry fetch --all
 
 # Generate index file
-ts-pkgx generate-index
+ts-pantry generate-index
 
 # Generate TypeScript from cached JSON
-ts-pkgx generate-ts
+ts-pantry generate-ts
 
 # Generate aliases file
-ts-pkgx generate-aliases
+ts-pantry generate-aliases
 
 # Generate documentation
-ts-pkgx generate-docs
+ts-pantry generate-docs
 
 # Update local pantry
-ts-pkgx update-pantry
+ts-pantry update-pantry
 
 # Generate constants file
-ts-pkgx generate-consts
+ts-pantry generate-consts
 
 # Resolve dependency files
-ts-pkgx resolve-deps deps.yaml
+ts-pantry resolve-deps deps.yaml
 
 # Show version information
-ts-pkgx version
+ts-pantry version
 ```
 
 You can also use the Bun scripts:
@@ -101,40 +101,40 @@ The fetch command supports several options:
 
 ```bash
 # Fetch with custom settings
-ts-pkgx fetch --all --concurrency 12 --timeout 60000 --cache-expiration 60
+ts-pantry fetch --all --concurrency 12 --timeout 60000 --cache-expiration 60
 
 # Fetch specific packages with verbose output
-ts-pkgx fetch --pkg "node,bun,python,go" --verbose
+ts-pantry fetch --pkg "node,bun,python,go" --verbose
 
 # Disable caching and save as JSON
-ts-pkgx fetch --pkg "rust-lang.org,deno.land" --no-cache --json
+ts-pantry fetch --pkg "rust-lang.org,deno.land" --no-cache --json
 
 # Fetch for CI integration
-ts-pkgx fetch --pkg "nodejs.org,bun.sh" --output-json
+ts-pantry fetch --pkg "nodejs.org,bun.sh" --output-json
 
 # Debug mode for troubleshooting
-ts-pkgx fetch agwa.name/git-crypt --debug --verbose
+ts-pantry fetch agwa.name/git-crypt --debug --verbose
 ```
 
 ## Dependency Resolution
 
-ts-pkgx includes a powerful dependency resolver that can analyze dependency files and resolve all transitive dependencies:
+ts-pantry includes a powerful dependency resolver that can analyze dependency files and resolve all transitive dependencies:
 
 ```bash
 # Resolve a single dependency file
-ts-pkgx resolve-deps deps.yaml
+ts-pantry resolve-deps deps.yaml
 
 # Resolve with verbose output and install command
-ts-pkgx resolve-deps pkgx.yaml --verbose --install-command
+ts-pantry resolve-deps pkgx.yaml --verbose --install-command
 
 # Find all dependency files in a project
-ts-pkgx resolve-deps --find-files ./my-project
+ts-pantry resolve-deps --find-files ./my-project
 
 # Output as JSON for automation
-ts-pkgx resolve-deps deps.yaml --json
+ts-pantry resolve-deps deps.yaml --json
 
 # Filter for specific OS
-ts-pkgx resolve-deps deps.yaml --target-os darwin --include-os-deps
+ts-pantry resolve-deps deps.yaml --target-os darwin --include-os-deps
 ```
 
 ### Dependency File Formats
@@ -153,7 +153,7 @@ dependencies:
 ### Programmatic Dependency Resolution
 
 ```typescript
-import { findDependencyFiles, resolveDependencyFile } from 'ts-pkgx'
+import { findDependencyFiles, resolveDependencyFile } from 'ts-pantry'
 
 // Resolve a single dependency file
 const result = await resolveDependencyFile('./deps.yaml', {
@@ -176,10 +176,10 @@ for (const file of depFiles) {
 
 ## Library Usage
 
-You can also use ts-pkgx as a library in your TypeScript/JavaScript projects:
+You can also use ts-pantry as a library in your TypeScript/JavaScript projects:
 
 ```typescript
-import { fetchAndSaveAllPackages, fetchPantryPackageWithMetadata } from 'ts-pkgx'
+import { fetchAndSaveAllPackages, fetchPantryPackageWithMetadata } from 'ts-pantry'
 
 // Fetch a single package using the pantry-based approach
 const result = await fetchPantryPackageWithMetadata('nodejs.org', {
@@ -215,7 +215,7 @@ console.log(`Saved ${savedPackages.length} packages`)
 After fetching packages, you can import them from your packages directory:
 
 ```typescript
-import { getPackage, pantry } from 'ts-pkgx'
+import { getPackage, pantry } from 'ts-pantry'
 
 // Get a package by domain name
 const nodePackage = pantry['nodejs.org']
@@ -231,7 +231,7 @@ console.log(nodePackage.domain) // 'nodejs.org'
 
 ### Understanding Package Variable Names
 
-ts-pkgx uses intelligent alias-based naming for better developer experience:
+ts-pantry uses intelligent alias-based naming for better developer experience:
 
 1. **Packages with aliases use the primary alias for naming:**
 
@@ -240,7 +240,7 @@ ts-pkgx uses intelligent alias-based naming for better developer experience:
      bunPackage, // For bun.sh (alias: 'bun') - NOT bunshPackage
      nodePackage, // For nodejs.org (alias: 'node') - NOT nodejsorgPackage
      pythonPackage // For python.org (alias: 'python') - NOT pythonorgPackage
-   } from 'ts-pkgx'
+   } from 'ts-pantry'
    ```
 
 2. **Packages without aliases use domain-based naming:**
@@ -249,13 +249,13 @@ ts-pkgx uses intelligent alias-based naming for better developer experience:
    import {
      astgrepgithubioPackage, // For ast-grep.github.io (no alias)
      examplecomPackage // For example.com (no alias)
-   } from 'ts-pkgx'
+   } from 'ts-pantry'
    ```
 
 3. **Nested paths are concatenated:**
 
    ```typescript
-   import { agwanamegitcryptPackage } from 'ts-pkgx' // For 'agwa.name/git-crypt'
+   import { agwanamegitcryptPackage } from 'ts-pantry' // For 'agwa.name/git-crypt'
    ```
 
 ### Enhanced TypeScript Intellisense
@@ -263,7 +263,7 @@ ts-pkgx uses intelligent alias-based naming for better developer experience:
 All generated packages include comprehensive JSDoc documentation:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Hovering over pantry.bun shows:
 // - Package description
@@ -283,7 +283,7 @@ console.log(pantry.bun.versions) // Excellent intellisense support
 The pantry object supports both domain names and aliases:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Both approaches work and return the same object
 const bunViaAlias = pantry.bun // Using alias
@@ -329,21 +329,21 @@ const packages = await fetchAndSaveAllPackages({
 
 ### Pantry Management
 
-ts-pkgx now includes powerful pantry management features:
+ts-pantry now includes powerful pantry management features:
 
 ```bash
 # Update local pantry from pkgx distribution
-ts-pkgx update-pantry
+ts-pantry update-pantry
 
 # Generate constants file from local pantry
-ts-pkgx generate-consts --source pantry
+ts-pantry generate-consts --source pantry
 
 # Generate constants file from S3 registry
-ts-pkgx generate-consts --source registry --validate
+ts-pantry generate-consts --source registry --validate
 
 # Use custom pantry directory
-ts-pkgx update-pantry --pantry-dir ./my-pantry
-ts-pkgx generate-consts --pantry-dir ./my-pantry
+ts-pantry update-pantry --pantry-dir ./my-pantry
+ts-pantry generate-consts --pantry-dir ./my-pantry
 ```
 
 ### Cache Management
@@ -352,16 +352,16 @@ Control caching behavior for optimal performance:
 
 ```bash
 # Use fresh data (disable cache)
-ts-pkgx fetch --all --no-cache
+ts-pantry fetch --all --no-cache
 
 # Custom cache expiration (30 minutes)
-ts-pkgx fetch --all --cache-expiration 30
+ts-pantry fetch --all --cache-expiration 30
 
 # Custom cache directory
-ts-pkgx fetch --all --cache-dir ./my-cache
+ts-pantry fetch --all --cache-dir ./my-cache
 
 # Generate TypeScript from cached JSON files
-ts-pkgx generate-ts --cache-dir ./my-cache --output-dir ./output
+ts-pantry generate-ts --cache-dir ./my-cache --output-dir ./output
 ```
 
 ### Performance Optimization
@@ -370,13 +370,13 @@ Optimize for different scenarios:
 
 ```bash
 # High-performance bulk fetching
-ts-pkgx fetch --all --concurrency 12 --timeout 60000
+ts-pantry fetch --all --concurrency 12 --timeout 60000
 
 # Conservative fetching for slow networks
-ts-pkgx fetch --all --concurrency 4 --timeout 120000
+ts-pantry fetch --all --concurrency 4 --timeout 120000
 
 # Quick testing with limited packages
-ts-pkgx fetch --all --limit 10 --verbose
+ts-pantry fetch --all --limit 10 --verbose
 ```
 
 ### CI/CD Integration
@@ -385,11 +385,11 @@ Use output-json for automation:
 
 ```bash
 # Get structured JSON output for CI systems
-result=$(ts-pkgx fetch --pkg "node,bun,python" --output-json)
+result=$(ts-pantry fetch --pkg "node,bun,python" --output-json)
 echo "$result" | jq '.updatedPackages[]'
 
 # Batch process specific packages
-ts-pkgx fetch --pkg "$(cat package-list.txt | tr '\n' ',')" --output-json
+ts-pantry fetch --pkg "$(cat package-list.txt | tr '\n' ',')" --output-json
 ```
 
 ## Advanced Usage

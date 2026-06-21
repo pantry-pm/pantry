@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: home-lang/pantry/packages/action@main
+      - uses: pantry-pm/pantry/packages/action@main
 
       - run: bun install
 

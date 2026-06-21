@@ -1,6 +1,6 @@
 # Working with GitHub API Rate Limits
 
-ts-pkgx uses the GitHub API to fetch package information. This page covers advanced techniques for handling GitHub API rate limits effectively.
+ts-pantry uses the GitHub API to fetch package information. This page covers advanced techniques for handling GitHub API rate limits effectively.
 
 ## Understanding GitHub API Rate Limits
 
@@ -27,7 +27,7 @@ This increases your limit from 60 to 5,000 requests per hour, which is usually s
 
 ## Smart Caching
 
-ts-pkgx implements built-in caching for API responses to avoid hitting rate limits:
+ts-pantry implements built-in caching for API responses to avoid hitting rate limits:
 
 ```bash
 # Use custom cache directory
@@ -125,7 +125,7 @@ interface RateLimitInfo {
 async function checkRateLimitStatus(token?: string): Promise<RateLimitInfo> {
   const headers: Record<string, string> = {
     'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'ts-pkgx'
+    'User-Agent': 'ts-pantry'
   }
 
   if (token) {
@@ -191,4 +191,4 @@ async function fetchWithRateLimitAwareness(
 5. **Implement adaptive fetching** that respects GitHub's rate limits
 6. **Add delays** between batches to avoid hitting limits
 
-By following these practices, you can effectively manage GitHub API rate limits while working with ts-pkgx, even when processing large numbers of packages.
+By following these practices, you can effectively manage GitHub API rate limits while working with ts-pantry, even when processing large numbers of packages.

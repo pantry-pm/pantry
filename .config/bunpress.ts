@@ -18,7 +18,7 @@ const config = {
         { text: 'Stacks Framework', link: 'https://stacksjs.com' },
       ],
     },
-    { text: 'GitHub', link: 'https://github.com/home-lang/pantry' },
+    { text: 'GitHub', link: 'https://github.com/pantry-pm/pantry' },
   ],
 
   markdown: {

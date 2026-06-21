@@ -164,7 +164,7 @@ pantry install --force node@22
 
 ### Package Registry
 
-pantry uses the pkgx registry through ts-pkgx for package installation:
+pantry uses the pkgx registry through ts-pantry for package installation:
 
 ```bash
 # Install from the pkgx registry
@@ -462,7 +462,7 @@ pantry bootstrap --no-auto-path
 
 The bootstrap process installs:
 
-- **ts-pkgx**: Core package registry integration
+- **ts-pantry**: Core package registry integration
 - **Bun**: JavaScript runtime
 - **PATH setup**: Configures both `bin/` and `sbin/` directories
 - **Shell integration**: Sets up auto-activation hooks

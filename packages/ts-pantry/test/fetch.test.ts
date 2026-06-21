@@ -51,7 +51,7 @@ describe('Fetch Module', () => {
 
   beforeEach(() => {
     // Create temporary directories for testing
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-pkgx-test-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-pantry-test-'))
     tempCacheDir = path.join(tempDir, 'cache')
     tempOutputDir = path.join(tempDir, 'output')
 

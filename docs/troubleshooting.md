@@ -300,7 +300,7 @@ shell prints a single line:
 pantry: v0.10.0 available — run `pantry upgrade`
 ```
 
-- Source is the GitHub releases of `home-lang/pantry` — the same place
+- Source is the GitHub releases of `pantry-pm/pantry` — the same place
   `pantry upgrade` installs from, so the notice never advertises a version
   `upgrade` can't fetch.
 - `pantry upgrade` clears the notice immediately on success.
@@ -639,9 +639,9 @@ journalctl | grep -i pantry         # Linux systemd
 
 ### Community Support
 
-- **GitHub Discussions**: [home-lang/pantry discussions](https://github.com/home-lang/pantry/discussions)
+- **GitHub Discussions**: [pantry-pm/pantry discussions](https://github.com/pantry-pm/pantry/discussions)
 - **Discord**: [Join Stacks Discord](https://discord.gg/stacksjs)
-- **Issues**: [Report bugs](https://github.com/home-lang/pantry/issues)
+- **Issues**: [Report bugs](https://github.com/pantry-pm/pantry/issues)
 
 ### Reporting Bugs
 

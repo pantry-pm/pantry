@@ -482,12 +482,12 @@ Integrate pantry into your CI/CD workflows:
 
 - name: Setup Development Environment
 
-  uses: home-lang/pantry-installer@v1
+  uses: pantry-pm/pantry-installer@v1
   with:
     packages: node@22 typescript@5.7 bun@1.2.14
 ```
 
-See [GitHub Action Documentation](https://github.com/home-lang/pantry/tree/main/packages/action/README.md) for details.
+See [GitHub Action Documentation](https://github.com/pantry-pm/pantry/tree/main/packages/action/README.md) for details.
 
 ## Advanced Usage
 
@@ -528,17 +528,17 @@ Explore advanced dependency management topics:
 
 ## Changelog
 
-Please see our [releases](https://github.com/home-lang/pantry/releases) page for information on changes.
+Please see our [releases](https://github.com/pantry-pm/pantry/releases) page for information on changes.
 
 ## Contributing
 
-Please see [CONTRIBUTING](https://github.com/home-lang/pantry/blob/main/.github/CONTRIBUTING.md) for details.
+Please see [CONTRIBUTING](https://github.com/pantry-pm/pantry/blob/main/.github/CONTRIBUTING.md) for details.
 
 ## Community
 
 For help or discussion:
 
-- [Discussions on GitHub](https://github.com/home-lang/pantry/discussions)
+- [Discussions on GitHub](https://github.com/pantry-pm/pantry/discussions)
 - [Join the Stacks Discord Server](https://discord.gg/stacksjs)
 
 ## Postcardware
@@ -552,7 +552,7 @@ Our address: Stacks.js, 12665 Village Ln #2306, Playa Vista, CA 90094, United St
 - [Max Howell](https://github.com/mxcl) - for creating [pkgx](https://github.com/pkgxdev/pkgx) and [Homebrew](https://github.com/Homebrew/brew)
 - [pkgm](https://github.com/pkgxdev/pkgm) & [dev](https://github.com/pkgxdev/dev) - thanks for the inspiration
 - [Chris Breuer](https://github.com/chrisbbreuer)
-- [All Contributors](https://github.com/home-lang/pantry/graphs/contributors)
+- [All Contributors](https://github.com/pantry-pm/pantry/graphs/contributors)
 
 ## Sponsors
 
@@ -570,8 +570,8 @@ Made with 💙
 <!-- Badges -->
 [npm-version-src]: https://img.shields.io/npm/v/ts-pantry?style=flat-square
 [npm-version-href]: https://npmjs.com/package/ts-pantry
-[github-actions-src]: https://img.shields.io/github/actions/workflow/status/home-lang/pantry/ci.yml?style=flat-square&branch=main
-[github-actions-href]: https://github.com/home-lang/pantry/actions?query=workflow%3Aci
+[github-actions-src]: https://img.shields.io/github/actions/workflow/status/pantry-pm/pantry/ci.yml?style=flat-square&branch=main
+[github-actions-href]: https://github.com/pantry-pm/pantry/actions?query=workflow%3Aci
 
-<!-- [codecov-src]: https://img.shields.io/codecov/c/gh/home-lang/pantry/main?style=flat-square
-[codecov-href]: https://codecov.io/gh/home-lang/pantry -->
+<!-- [codecov-src]: https://img.shields.io/codecov/c/gh/pantry-pm/pantry/main?style=flat-square
+[codecov-href]: https://codecov.io/gh/pantry-pm/pantry -->

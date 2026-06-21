@@ -66,7 +66,7 @@ const config: CloudConfig = {
           packages: ['bun', 'git'],
           commands: [
             'mkdir -p /opt/pantry-registry',
-            'cd /opt/pantry-registry && git clone --depth 1 https://github.com/home-lang/pantry.git repo || true',
+            'cd /opt/pantry-registry && git clone --depth 1 https://github.com/pantry-pm/pantry.git repo || true',
           ],
         },
       },

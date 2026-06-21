@@ -1,13 +1,13 @@
 # Package Management
 
-ts-pkgx provides robust features for managing and accessing package information after it has been fetched.
+ts-pantry provides robust features for managing and accessing package information after it has been fetched.
 
 ## Package Index Generation
 
-ts-pkgx can automatically generate an index file that exports all packages and provides utility functions for working with them:
+ts-pantry can automatically generate an index file that exports all packages and provides utility functions for working with them:
 
 ```typescript
-import { getPackage, pantry } from 'ts-pkgx'
+import { getPackage, pantry } from 'ts-pantry'
 
 // Access a package by domain
 const bunPackage = pantry['bun.sh']
@@ -20,7 +20,7 @@ The index file is regenerated whenever you fetch or update packages, ensuring it
 
 ## Package Organization
 
-ts-pkgx organizes packages in a structured way:
+ts-pantry organizes packages in a structured way:
 
 1. **Individual Package Files**: Each package has its own file (e.g., `nodejsorg.ts`, `bunsh.ts`) with its exported data
 2. **Index File**: Provides a unified way to access all packages
@@ -30,7 +30,7 @@ This organization makes it easy to find and work with specific packages.
 
 ## Alias Support
 
-ts-pkgx supports package aliases, making it easy to find packages by their common names rather than their full domain names:
+ts-pantry supports package aliases, making it easy to find packages by their common names rather than their full domain names:
 
 ```typescript
 // These both return the same package
@@ -59,7 +59,7 @@ You can also extend this list with your own aliases for your specific needs.
 
 ## Automatic Updates
 
-ts-pkgx provides tools for automatically updating package information:
+ts-pantry provides tools for automatically updating package information:
 
 ```bash
 # Update all packages
@@ -70,7 +70,7 @@ This ensures your package information stays up to date without requiring manual 
 
 ## Package Catalog Generation
 
-ts-pkgx can generate a comprehensive package catalog in markdown format:
+ts-pantry can generate a comprehensive package catalog in markdown format:
 
 ```bash
 # Generate package catalog
@@ -84,7 +84,7 @@ This creates a well-organized document with all packages grouped by category, ma
 After fetching packages, you can easily search through them:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Find all packages related to JavaScript
 const jsPackages = Object.values(pantry).filter(pkg =>
@@ -100,10 +100,10 @@ const rustPackages = Object.entries(pantry)
 
 ## Package Comparison
 
-ts-pkgx makes it easy to compare packages:
+ts-pantry makes it easy to compare packages:
 
 ```typescript
-import { getPackage } from 'ts-pkgx'
+import { getPackage } from 'ts-pantry'
 
 // Compare Node.js and Deno
 const node = getPackage('node')

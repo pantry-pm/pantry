@@ -12,7 +12,7 @@ set -euo pipefail
 
 PANTRY_INSTALL_DIR="${PANTRY_INSTALL_DIR:-$HOME/.local/bin}"
 PANTRY_VERSION="${PANTRY_VERSION:-latest}"
-REPO="home-lang/pantry"
+REPO="pantry-pm/pantry"
 
 # Colors
 if [ -t 1 ]; then

@@ -1,10 +1,10 @@
 # Maintenance and Troubleshooting Guide
 
-This guide provides information on maintaining your ts-pkgx environment, focusing on package variable naming conventions, cleaning up your codebase, and troubleshooting common issues.
+This guide provides information on maintaining your ts-pantry environment, focusing on package variable naming conventions, cleaning up your codebase, and troubleshooting common issues.
 
 ## Package Variable Naming Conventions
 
-ts-pkgx follows specific naming conventions for package variables to ensure compatibility with JavaScript/TypeScript requirements and maintain consistency across the codebase.
+ts-pantry follows specific naming conventions for package variables to ensure compatibility with JavaScript/TypeScript requirements and maintain consistency across the codebase.
 
 ### Naming Rules
 
@@ -34,7 +34,7 @@ The system automatically handles conversion between these formats.
 
 ## Cleaning Up Package Variables
 
-When working with ts-pkgx packages, you might encounter situations where package variable names don't follow the required conventions, particularly when packages have hyphens in their names. The `cleanup` command helps to fix these issues automatically.
+When working with ts-pantry packages, you might encounter situations where package variable names don't follow the required conventions, particularly when packages have hyphens in their names. The `cleanup` command helps to fix these issues automatically.
 
 ### When to Run Cleanup
 
@@ -151,4 +151,4 @@ bun run generate:index
 3. **Testing**: After cleanup, ensure all tests pass to verify package functionality
 4. **Documentation**: Keep documentation up-to-date when adding new packages
 
-By following these guidelines and using the maintenance tools provided, you can ensure your ts-pkgx codebase remains clean, consistent, and error-free.
+By following these guidelines and using the maintenance tools provided, you can ensure your ts-pantry codebase remains clean, consistent, and error-free.

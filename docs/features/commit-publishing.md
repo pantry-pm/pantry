@@ -127,7 +127,7 @@ jobs:
 
       - name: Install Dependencies
 
-        uses: home-lang/pantry-installer@v1
+        uses: pantry-pm/pantry-installer@v1
 
       - name: Publish Commit Packages
 

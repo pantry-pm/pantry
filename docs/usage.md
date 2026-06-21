@@ -131,7 +131,7 @@ Install packages using the standard install command:
 # Install packages
 pantry install node@22 python@3.12 git
 
-# pantry uses the pkgx registry through ts-pkgx for package installation
+# pantry uses the pkgx registry through ts-pantry for package installation
 ```
 
 ## Updating Packages

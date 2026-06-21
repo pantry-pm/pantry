@@ -1,10 +1,10 @@
-<p align="center"><img src="https://github.com/stacksjs/ts-pkgx/blob/main/.github/art/cover.jpg?raw=true" alt="Social Card of ts-pkgx"></p>
+<p align="center"><img src="https://github.com/pantry-pm/pantry/blob/main/.github/art/cover.jpg?raw=true" alt="Social Card of ts-pantry"></p>
 
-# Introduction to ts-pkgx
+# Introduction to ts-pantry
 
 > A TypeScript library for fetching and working with pkgx.dev package information
 
-ts-pkgx is a specialized library that provides tools for fetching, storing, and accessing package data from [pkgx.dev](https://pkgx.dev). It offers both programmatic APIs and CLI tools for developers who want to work with pkgx packages in their TypeScript applications.
+ts-pantry is a specialized library that provides tools for fetching, storing, and accessing package data from [pkgx.dev](https://pkgx.dev). It offers both programmatic APIs and CLI tools for developers who want to work with pkgx packages in their TypeScript applications.
 
 ## What is pkgx
 
@@ -26,17 +26,17 @@ ts-pkgx is a specialized library that provides tools for fetching, storing, and 
 - **Compiled Binaries**: Use pre-compiled binaries for various platforms
 - **Advanced Error Handling**: Robust error handling with automatic retries
 
-## Why ts-pkgx
+## Why ts-pantry
 
-ts-pkgx simplifies the process of working with pkgx.dev package data in TypeScript projects. Instead of manually scraping the pkgx.dev website or trying to parse package information yourself, ts-pkgx provides a clean, type-safe interface for accessing this data.
+ts-pantry simplifies the process of working with pkgx.dev package data in TypeScript projects. Instead of manually scraping the pkgx.dev website or trying to parse package information yourself, ts-pantry provides a clean, type-safe interface for accessing this data.
 
 ## Get Started
 
-To start using ts-pkgx in your project, check out the [Installation](./install.md) guide.
+To start using ts-pantry in your project, check out the [Installation](./install.md) guide.
 
 ```bash
 # Install with bun
-bun install ts-pkgx
+bun install ts-pantry
 
 # Quick example: fetch package info
 bun run pkgx:fetch node
@@ -55,17 +55,17 @@ The project follows a clean and maintainable structure:
 
 ## Changelog
 
-Please see our [releases](https://github.com/home-lang/pantry/releases) page for information on changes.
+Please see our [releases](https://github.com/pantry-pm/pantry/releases) page for information on changes.
 
 ## Contributing
 
-Please see [CONTRIBUTING](https://github.com/home-lang/pantry/blob/main/.github/CONTRIBUTING.md) for details.
+Please see [CONTRIBUTING](https://github.com/pantry-pm/pantry/blob/main/.github/CONTRIBUTING.md) for details.
 
 ## Community
 
 For help or discussion:
 
-- [Discussions on GitHub](https://github.com/home-lang/pantry/discussions)
+- [Discussions on GitHub](https://github.com/pantry-pm/pantry/discussions)
 - [Join the Stacks Discord Server](https://discord.gg/stacksjs)
 
 ## Postcardware
@@ -79,7 +79,7 @@ Our address: Stacks.js, 12665 Village Ln #2306, Playa Vista, CA 90094, United St
 - [Max Howell](https://github.com/mxcl) - for creating [pkgx](https://github.com/pkgxdev/pkgx) and [Homebrew](https://github.com/Homebrew/brew)
 - [pkgm](https://github.com/pkgxdev/pkgm) & [dev](https://github.com/pkgxdev/dev) - thanks for the inspiration
 - [Chris Breuer](https://github.com/chrisbbreuer)
-- [All Contributors](https://github.com/home-lang/pantry/graphs/contributors)
+- [All Contributors](https://github.com/pantry-pm/pantry/graphs/contributors)
 
 ## Sponsors
 
@@ -90,7 +90,7 @@ We would like to extend our thanks to the following sponsors for funding Stacks 
 
 ## License
 
-The MIT License (MIT). Please see [LICENSE](https://github.com/stacksjs/ts-pkgx/blob/main/LICENSE.md) for more information.
+The MIT License (MIT). Please see [LICENSE](https://github.com/pantry-pm/pantry/blob/main/LICENSE.md) for more information.
 
 Made with 💙
 

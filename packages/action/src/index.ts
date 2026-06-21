@@ -15,7 +15,7 @@ import { isKnownAlias, resolvePackageDomain } from '../../ts-pantry/src/utils'
 
 export * from './types'
 
-const REPO = 'home-lang/pantry'
+const REPO = 'pantry-pm/pantry'
 
 function detectPlatform(): Platform {
   const platform = os.platform()
@@ -53,7 +53,7 @@ async function resolveVersion(version: string): Promise<string> {
     silent: true,
   }).catch(() => { redirectOutput = '' })
 
-  // URL will be like https://github.com/home-lang/pantry/releases/tag/v0.8.16
+  // URL will be like https://github.com/pantry-pm/pantry/releases/tag/v0.8.16
   const tagMatch = redirectOutput.trim().match(/\/tag\/(.+)$/)
   if (tagMatch)
     return tagMatch[1].replace(/^v/, '')
@@ -621,7 +621,7 @@ export async function run(): Promise<void> {
     core.startGroup('Setup pantry')
     const resolvedVersion = await resolveVersion(inputs.version)
     if (!resolvedVersion) {
-      throw new Error('Failed to resolve pantry version — check https://github.com/home-lang/pantry/releases')
+      throw new Error('Failed to resolve pantry version — check https://github.com/pantry-pm/pantry/releases')
     }
     const installDir = await downloadAndInstall(resolvedVersion, platform)
     core.addPath(installDir)

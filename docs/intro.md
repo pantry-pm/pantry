@@ -1,4 +1,4 @@
-<p align="center"><img src="https://github.com/home-lang/pantry/blob/main/.github/art/cover.jpg?raw=true" alt="Social Card of pantry"></p>
+<p align="center"><img src="https://github.com/pantry-pm/pantry/blob/main/.github/art/cover.jpg?raw=true" alt="Social Card of pantry"></p>
 
 # Introduction
 
@@ -14,7 +14,7 @@ pantry serves as an alternative to package managers like Homebrew, focusing on:
 - Cross-platform support
 - Clean separation from other package managers
 
-At its core, pantry leverages the pkgx package registry through ts-pkgx, providing access to thousands of packages with convenient commands, better management of executables, and improved integration with your development workflow.
+At its core, pantry leverages the pkgx package registry through ts-pantry, providing access to thousands of packages with convenient commands, better management of executables, and improved integration with your development workflow.
 
 ## Installation Philosophy
 
@@ -29,7 +29,7 @@ This approach ensures that pantry can coexist peacefully with Homebrew, system p
 
 ## Key Features
 
-- 📦 **Package Management** — Install and manage packages from the pkgx registry via ts-pkgx
+- 📦 **Package Management** — Install and manage packages from the pkgx registry via ts-pantry
 - 🗑️ **Package Removal** — Remove specific packages or completely uninstall pantry
 - 🔄 **Executable Shims** — Create executable shims for packages automatically
 - 🌍 **Environment Isolation** — Project-specific environments with automatic activation/deactivation
@@ -43,7 +43,7 @@ This approach ensures that pantry can coexist peacefully with Homebrew, system p
 
 ## How It Works
 
-pantry works by utilizing the pkgx package registry through ts-pkgx and creating shims (executable scripts) that automatically run the correct versions of your tools. It can:
+pantry works by utilizing the pkgx package registry through ts-pantry and creating shims (executable scripts) that automatically run the correct versions of your tools. It can:
 
 - Figure out required system or project dependencies and install them
 - Provide project-specific environment isolation with automatic dependency activation/deactiviation
@@ -184,7 +184,7 @@ Ready to get started with pantry? Check out these guides:
 
 For help, discussion about best practices, or any other conversation that would benefit from being searchable:
 
-[Discussions on GitHub](https://github.com/home-lang/pantry/discussions)
+[Discussions on GitHub](https://github.com/pantry-pm/pantry/discussions)
 
 For casual chit-chat with others using this package:
 
@@ -208,11 +208,11 @@ We would like to extend our thanks to the following sponsors for funding Stacks 
 - [Max Howell](https://github.com/mxcl) - for creating [pkgx](https://github.com/pkgxdev/pkgx) and [Homebrew](https://github.com/Homebrew/brew)
 - [pkgm](https://github.com/pkgxdev/pkgm) & [dev](https://github.com/pkgxdev/dev) - for the initial project inspiration
 - [Chris Breuer](https://github.com/chrisbbreuer)
-- [All Contributors](https://github.com/home-lang/pantry/graphs/contributors)
+- [All Contributors](https://github.com/pantry-pm/pantry/graphs/contributors)
 
 ## License
 
-The MIT License (MIT). Please see [LICENSE](https://github.com/home-lang/pantry/tree/main/LICENSE.md) for more information.
+The MIT License (MIT). Please see [LICENSE](https://github.com/pantry-pm/pantry/tree/main/LICENSE.md) for more information.
 
 Made with 💙
 

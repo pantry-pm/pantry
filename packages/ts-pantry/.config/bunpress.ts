@@ -8,7 +8,7 @@ const config = {
     { text: 'Install', link: '/install' },
     { text: 'Package Catalog', link: '/package-catalog' },
     { text: 'API', link: '/api-reference' },
-    { text: 'GitHub', link: 'https://github.com/home-lang/pantry/tree/main/packages/ts-pantry' },
+    { text: 'GitHub', link: 'https://github.com/pantry-pm/pantry/tree/main/packages/ts-pantry' },
   ],
 
   markdown: {

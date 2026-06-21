@@ -17,7 +17,7 @@ set -euo pipefail
 #
 # Usage:
 #   ./scripts/rotate-registry-token.sh
-#   ./scripts/rotate-registry-token.sh --repos "pickier/pickier,home-lang/pantry"
+#   ./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry"
 
 REGISTRY_HOST="54.243.196.101"
 SSH_KEY="$HOME/.ssh/stacks-production.pem"
@@ -27,7 +27,7 @@ AWS_REGION="us-east-1"
 SERVICE_FILE="/etc/systemd/system/pantry-registry.service"
 
 # Default repos to update
-DEFAULT_REPOS="pickier/pickier,home-lang/pantry,cwcss/crosswind"
+DEFAULT_REPOS="pickier/pickier,pantry-pm/pantry,cwcss/crosswind"
 
 # Parse args
 REPOS="${1:---repos}"

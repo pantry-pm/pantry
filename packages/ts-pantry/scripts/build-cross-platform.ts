@@ -5,11 +5,11 @@ import { existsSync, statSync } from 'node:fs'
 import process from 'node:process'
 
 const platforms = [
-  { name: 'linux-x64', target: 'bun-linux-x64', output: 'bin/ts-pkgx-linux-x64' },
-  { name: 'linux-arm64', target: 'bun-linux-arm64', output: 'bin/ts-pkgx-linux-arm64' },
-  { name: 'darwin-x64', target: 'bun-darwin-x64', output: 'bin/ts-pkgx-darwin-x64' },
-  { name: 'darwin-arm64', target: 'bun-darwin-arm64', output: 'bin/ts-pkgx-darwin-arm64' },
-  { name: 'windows-x64', target: 'bun-windows-x64', output: 'bin/ts-pkgx-windows-x64.exe' },
+  { name: 'linux-x64', target: 'bun-linux-x64', output: 'bin/ts-pantry-linux-x64' },
+  { name: 'linux-arm64', target: 'bun-linux-arm64', output: 'bin/ts-pantry-linux-arm64' },
+  { name: 'darwin-x64', target: 'bun-darwin-x64', output: 'bin/ts-pantry-darwin-x64' },
+  { name: 'darwin-arm64', target: 'bun-darwin-arm64', output: 'bin/ts-pantry-darwin-arm64' },
+  { name: 'windows-x64', target: 'bun-windows-x64', output: 'bin/ts-pantry-windows-x64.exe' },
 ]
 
 async function waitForFile(filepath: string, maxAttempts = 10): Promise<boolean> {

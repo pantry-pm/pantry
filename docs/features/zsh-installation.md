@@ -155,7 +155,7 @@ If `chsh` doesn't work:
 
 | Method | Pros | Cons |
 |--------|------|------|
-| **pantry** | Simple, cross-platform, automatic PATH management | Uses ts-pkgx registry |
+| **pantry** | Simple, cross-platform, automatic PATH management | Uses ts-pantry registry |
 | **Package Manager** | System integration | Platform-specific, may need sudo |
 | **From Source** | Latest features | Complex, time-consuming |
 

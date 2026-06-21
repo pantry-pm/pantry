@@ -1,10 +1,10 @@
 # Advanced Type Safety
 
-ts-pkgx provides comprehensive TypeScript type safety features that enable compile-time validation, IntelliSense support, and type-safe package management operations. This guide covers advanced usage patterns and best practices.
+ts-pantry provides comprehensive TypeScript type safety features that enable compile-time validation, IntelliSense support, and type-safe package management operations. This guide covers advanced usage patterns and best practices.
 
 ## Type System Overview
 
-ts-pkgx's type system is built around the actual package data from pkgx.dev, providing:
+ts-pantry's type system is built around the actual package data from pkgx.dev, providing:
 
 - **Compile-time validation** of package names and versions
 - **IntelliSense support** for all package operations
@@ -21,7 +21,7 @@ import type {
   PackageAlias,     // All available package aliases (22 aliases)
   PackageDomain,    // All available package domains (872+ domains)
   PackageSpec       // Package specifications with versions
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Examples of valid package names
 const aliases: PackageAlias[] = ['node', 'python', 'go', 'rust', 'bun']
@@ -36,7 +36,7 @@ import {
   isPackageAlias,
   isPackageDomain,
   isValidPackageName
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 function processPackage(input: string) {
   if (isPackageAlias(input)) {
@@ -59,7 +59,7 @@ function processPackage(input: string) {
 ### Version Specifications
 
 ```typescript
-import type { VersionSpec } from 'ts-pkgx'
+import type { VersionSpec } from 'ts-pantry'
 
 // Supported version specification formats
 const versionSpecs: VersionSpec[] = [
@@ -80,7 +80,7 @@ import {
   getAvailableVersions,
   resolveVersion,
   isVersionAvailable
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe version operations
 function managePackageVersions(packageName: PackageName) {
@@ -103,8 +103,8 @@ import type {
   SupportedArchitecture,
   SupportedFormat,
   PlatformInfo
-} from 'ts-pkgx'
-import { detectPlatform } from 'ts-pkgx'
+} from 'ts-pantry'
+import { detectPlatform } from 'ts-pantry'
 
 // Type-safe platform operations
 const platformInfo: PlatformInfo = detectPlatform()
@@ -125,8 +125,8 @@ function createDownloadUrl(
 ### Comprehensive Package Data
 
 ```typescript
-import type { PackageInfo } from 'ts-pkgx'
-import { getPackageInfo } from 'ts-pkgx'
+import type { PackageInfo } from 'ts-pantry'
+import { getPackageInfo } from 'ts-pantry'
 
 // Get comprehensive package information
 function analyzePackage(packageName: PackageName): PackageInfo | null {
@@ -152,12 +152,12 @@ function analyzePackage(packageName: PackageName): PackageInfo | null {
 ### Error Handling with Types
 
 ```typescript
-import type { CLIResult } from 'ts-pkgx'
+import type { CLIResult } from 'ts-pantry'
 import {
   showPackageInfo,
   createInstallPlan,
   searchPackagesCommand
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe CLI operations with comprehensive error handling
 function handleCLIOperation<T>(result: CLIResult<T>): T | null {
@@ -188,12 +188,12 @@ import type {
   PackageInfo,
   InstallationPlan,
   SupportedPlatform
-} from 'ts-pkgx'
+} from 'ts-pantry'
 import {
   getPackageInfo,
   createInstallPlan,
   detectPlatform
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 class TypeSafePackageManager {
   private installed = new Set<PackageName>()
@@ -231,8 +231,8 @@ class TypeSafePackageManager {
 ### Type-Safe Package Categories
 
 ```typescript
-import type { PackageName } from 'ts-pkgx'
-import { PACKAGE_CATEGORIES, getPackagesByCategory } from 'ts-pkgx'
+import type { PackageName } from 'ts-pantry'
+import { PACKAGE_CATEGORIES, getPackagesByCategory } from 'ts-pantry'
 
 // Type-safe category operations
 function getLanguagePackages(): readonly PackageName[] {
@@ -262,11 +262,11 @@ import type {
   PackageName,
   PackageInfo,
   InstallationPlan
-} from 'ts-pkgx'
+} from 'ts-pantry'
 import {
   getPackageInfo,
   createInstallPlan
-} from 'ts-pkgx'
+} from 'ts-pantry'
 ```
 
 ### 2. Leverage Type Guards
@@ -274,7 +274,7 @@ import {
 Use type guards for runtime validation:
 
 ```typescript
-import { isValidPackageName } from 'ts-pkgx'
+import { isValidPackageName } from 'ts-pantry'
 
 function safeGetPackageInfo(input: string) {
   if (isValidPackageName(input)) {
@@ -320,8 +320,8 @@ function processPackages<T extends PackageName>(
 ### React Component with Type Safety
 
 ```tsx
-import type { PackageName, PackageInfo } from 'ts-pkgx'
-import { getPackageInfo } from 'ts-pkgx'
+import type { PackageName, PackageInfo } from 'ts-pantry'
+import { getPackageInfo } from 'ts-pantry'
 import { useState, useEffect } from 'react'
 
 interface PackageCardProps {
@@ -352,12 +352,12 @@ function PackageCard({ packageName }: PackageCardProps) {
 ### CLI Tool with Type Safety
 
 ```typescript
-import type { PackageName } from 'ts-pkgx'
+import type { PackageName } from 'ts-pantry'
 import {
   isValidPackageName,
   showPackageInfo,
   createInstallPlan
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 function createTypeSafeCLI() {
   return {

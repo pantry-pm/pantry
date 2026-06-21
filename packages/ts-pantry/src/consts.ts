@@ -1,5 +1,5 @@
 /**
- * Constants used throughout the ts-pkgx package
+ * Constants used throughout the ts-pantry package
  * This file is auto-generated from pantry. Do not edit manually.
  * Generated on 2026-03-22T07:10:42.159Z
  */

@@ -1,6 +1,6 @@
-# ts-pkgx Documentation
+# ts-pantry Documentation
 
-Welcome to the ts-pkgx documentation! This directory contains comprehensive documentation for all packages available in the ts-pkgx ecosystem.
+Welcome to the ts-pantry documentation! This directory contains comprehensive documentation for all packages available in the ts-pantry ecosystem.
 
 ## 📚 Documentation Structure
 

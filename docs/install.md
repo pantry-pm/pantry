@@ -93,7 +93,7 @@ To build and install from source:
 
 ```sh
 # Clone the repository
-git clone https://github.com/home-lang/pantry.git
+git clone https://github.com/pantry-pm/pantry.git
 cd pantry
 
 # Install dependencies

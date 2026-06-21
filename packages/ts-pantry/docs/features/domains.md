@@ -1,10 +1,10 @@
 # Domain Handling
 
-ts-pkgx provides sophisticated tools for working with package domains and managing path conversions.
+ts-pantry provides sophisticated tools for working with package domains and managing path conversions.
 
 ## Nested Path Support
 
-ts-pkgx properly handles packages with nested paths, such as `agwa.name/git-crypt`:
+ts-pantry properly handles packages with nested paths, such as `agwa.name/git-crypt`:
 
 ```typescript
 // Fetch a nested package
@@ -21,10 +21,10 @@ This ensures that you can work with all packages, regardless of their path struc
 
 ## Domain Utilities
 
-ts-pkgx provides utility functions for converting between domain names, variable names, and file names:
+ts-pantry provides utility functions for converting between domain names, variable names, and file names:
 
 ```typescript
-import { convertDomainToFileName, convertDomainToVarName, guessOriginalDomain } from 'ts-pkgx/tools/domainUtils'
+import { convertDomainToFileName, convertDomainToVarName, guessOriginalDomain } from 'ts-pantry/tools/domainUtils'
 
 // Convert domain to variable name
 const varName = convertDomainToVarName('bun.sh') // "bunsh"
@@ -43,7 +43,7 @@ These utilities make it easy to convert between different naming conventions.
 
 ## Automatic Domain Resolution
 
-ts-pkgx automatically resolves package names to their full domain names:
+ts-pantry automatically resolves package names to their full domain names:
 
 ```typescript
 // These all resolve to 'nodejs.org'
@@ -56,7 +56,7 @@ This allows users to refer to packages in different ways, while still getting th
 
 ## Safeguarding Package Names
 
-ts-pkgx ensures that package names are safe for use as variable names and file names:
+ts-pantry ensures that package names are safe for use as variable names and file names:
 
 1. Converting dots to empty strings: `node.js` → `nodejs`
 2. Handling special characters: `/` → `-`
@@ -66,7 +66,7 @@ This lets you safely use package names in generated TypeScript files.
 
 ## Domain Validation
 
-ts-pkgx validates domain names to ensure they are properly formatted:
+ts-pantry validates domain names to ensure they are properly formatted:
 
 ```typescript
 // Valid domains
@@ -80,7 +80,7 @@ fetchPantryPackage('node') // Resolves to nodejs.org
 
 ## Domain Aliases
 
-ts-pkgx maintains a map of aliases to full domain names:
+ts-pantry maintains a map of aliases to full domain names:
 
 ```typescript
 const PACKAGE_ALIASES: Record<string, string> = {
@@ -93,7 +93,7 @@ const PACKAGE_ALIASES: Record<string, string> = {
 You can extend this map with your own aliases:
 
 ```typescript
-import { PACKAGE_ALIASES } from 'ts-pkgx'
+import { PACKAGE_ALIASES } from 'ts-pantry'
 
 // Add your custom aliases
 PACKAGE_ALIASES.js = 'nodejs.org'
@@ -102,7 +102,7 @@ PACKAGE_ALIASES.py = 'python.org'
 
 ## Path Normalization
 
-ts-pkgx normalizes package paths to ensure consistent handling:
+ts-pantry normalizes package paths to ensure consistent handling:
 
 ```typescript
 // These all resolve to the same package
@@ -115,7 +115,7 @@ This makes it easier to work with packages that have complex paths.
 
 ## Subpath Extraction
 
-For nested paths, ts-pkgx automatically extracts the relevant parts:
+For nested paths, ts-pantry automatically extracts the relevant parts:
 
 ```typescript
 const { packageInfo, originalName, fullDomainName } = await fetchPantryPackage('agwa.name/git-crypt')

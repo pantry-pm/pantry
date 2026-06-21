@@ -27,7 +27,7 @@ That gives you four values: bucket name, region, access key, secret key.
 
 ### GitHub repo settings (binary build/sync workflows)
 
-`build.yml` and `sync-binaries.yml` read these. Set on `home-lang/pantry`:
+`build.yml` and `sync-binaries.yml` read these. Set on `pantry-pm/pantry`:
 
 | Kind | Name | Value (Hetzner example) |
 |------|------|--------------------------|
@@ -39,11 +39,11 @@ That gives you four values: bucket name, region, access key, secret key.
 | Secret | `S3_SECRET_ACCESS_KEY` | your Hetzner secret key |
 
 ```bash
-gh variable set STORAGE_PROVIDER --repo home-lang/pantry --body hetzner
-gh variable set S3_BUCKET        --repo home-lang/pantry --body pantry-registry
-gh variable set S3_REGION        --repo home-lang/pantry --body fsn1
-gh secret   set S3_ACCESS_KEY_ID     --repo home-lang/pantry --body '<access-key>'
-gh secret   set S3_SECRET_ACCESS_KEY --repo home-lang/pantry --body '<secret-key>'
+gh variable set STORAGE_PROVIDER --repo pantry-pm/pantry --body hetzner
+gh variable set S3_BUCKET        --repo pantry-pm/pantry --body pantry-registry
+gh variable set S3_REGION        --repo pantry-pm/pantry --body fsn1
+gh secret   set S3_ACCESS_KEY_ID     --repo pantry-pm/pantry --body '<access-key>'
+gh secret   set S3_SECRET_ACCESS_KEY --repo pantry-pm/pantry --body '<secret-key>'
 ```
 
 Leaving `STORAGE_PROVIDER` unset (or `aws`) keeps everything on S3 — fully reversible.
@@ -95,8 +95,8 @@ Resolved by `packages/registry/src/storage/provider.ts` and ts-cloud's
 Once the variables/secrets are set, repopulate from CI:
 
 ```bash
-gh workflow run sync-binaries.yml --repo home-lang/pantry   # re-sync pre-built binaries
-gh workflow run build.yml         --repo home-lang/pantry   # rebuild source packages
+gh workflow run sync-binaries.yml --repo pantry-pm/pantry   # re-sync pre-built binaries
+gh workflow run build.yml         --repo pantry-pm/pantry   # rebuild source packages
 ```
 
 Watch with `gh run watch <id>`. After the bucket is populated and the server is

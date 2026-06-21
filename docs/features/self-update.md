@@ -20,7 +20,7 @@ pantry upgrade --verbose
 
 ## How It Works
 
-1. Queries the [GitHub Releases API](https://github.com/home-lang/pantry/releases) for the latest version
+1. Queries the [GitHub Releases API](https://github.com/pantry-pm/pantry/releases) for the latest version
 2. Compares against your currently installed version
 3. Downloads the platform-specific binary zip (`pantry-{os}-{arch}.zip`)
 4. Extracts and replaces the binary at `~/.local/bin/pantry`
@@ -75,7 +75,7 @@ If you see "Already up to date!", your version matches the latest release. Use `
 If your platform isn't in the release assets, you can build from source:
 
 ```bash
-git clone https://github.com/home-lang/pantry
+git clone https://github.com/pantry-pm/pantry
 cd pantry/packages/zig
 zig build -Doptimize=ReleaseSafe
 cp zig-out/bin/pantry ~/.local/bin/

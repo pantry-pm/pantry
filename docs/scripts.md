@@ -6,7 +6,7 @@ This document describes the utility scripts available in the pantry project for 
 
 ### `scripts/get-php-versions.ts`
 
-A TypeScript script that dynamically fetches the latest PHP versions from the ts-pkgx registry and generates configuration descriptions.
+A TypeScript script that dynamically fetches the latest PHP versions from the ts-pantry registry and generates configuration descriptions.
 
 ### `scripts/check-php-updates.ts`
 
@@ -24,7 +24,7 @@ bun scripts/check-php-updates.ts
 
 #### Features
 
-- **Dynamic Version Fetching**: Retrieves the latest PHP versions from ts-pkgx registry
+- **Dynamic Version Fetching**: Retrieves the latest PHP versions from ts-pantry registry
 - **Version Filtering**: Automatically filters to stable versions and sorts by version number
 - **Configuration Descriptions**: Generates improved descriptions for all PHP configurations
 - **Multiple Output Formats**:
@@ -115,7 +115,7 @@ The script is integrated into the GitHub workflow for PHP binary compilation:
 
 ```yaml
 
-- name: Get PHP versions from ts-pkgx
+- name: Get PHP versions from ts-pantry
 
   id: get-versions
   run: |
@@ -129,7 +129,7 @@ The script is integrated into the GitHub workflow for PHP binary compilation:
 
 The script includes robust error handling:
 
-- **Fallback Versions**: If ts-pkgx is unavailable, falls back to hardcoded versions
+- **Fallback Versions**: If ts-pantry is unavailable, falls back to hardcoded versions
 - **Version Validation**: Filters out invalid version strings
 - **Sorting**: Automatically sorts versions by major.minor.patch
 - **Limit**: Keeps only the 4 most recent stable versions
@@ -137,7 +137,7 @@ The script includes robust error handling:
 #### Dependencies
 
 - **Bun**: Required for execution
-- **ts-pkgx**: Used to fetch PHP versions from the registry
+- **ts-pantry**: Used to fetch PHP versions from the registry
 - **child_process**: Used to execute external commands
 
 ## Contributing

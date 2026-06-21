@@ -13,7 +13,7 @@ hero:
       link: /intro
     - theme: alt
       text: View on GitHub
-      link: https://github.com/home-lang/pantry/tree/main/packages/ts-pantry
+      link: https://github.com/pantry-pm/pantry/tree/main/packages/ts-pantry
 
 features:
   - title: "Package Discovery"

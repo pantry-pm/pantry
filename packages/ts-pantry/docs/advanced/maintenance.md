@@ -1,6 +1,6 @@
 # Package Maintenance and Troubleshooting
 
-Maintaining a large collection of package definitions can sometimes lead to issues with variable naming, file organization, and TypeScript compatibility. This guide covers common maintenance tasks and troubleshooting steps for the ts-pkgx library.
+Maintaining a large collection of package definitions can sometimes lead to issues with variable naming, file organization, and TypeScript compatibility. This guide covers common maintenance tasks and troubleshooting steps for the ts-pantry library.
 
 ## Common Issues and Solutions
 
@@ -13,7 +13,7 @@ TypeScript variable names must be valid JavaScript identifiers. This means they 
 - Special characters
 - Names that start with numbers
 
-When package domain names contain these characters, ts-pkgx automatically converts them to valid identifiers. For example:
+When package domain names contain these characters, ts-pantry automatically converts them to valid identifiers. For example:
 
 | Domain Name | Variable Name |
 |-------------|--------------|
@@ -130,4 +130,4 @@ diff packages.txt exports.txt
 4. **Update Index**: Always regenerate the index file after adding or removing package files
 5. **Use Batch Processing**: For large operations, use batch processing to avoid memory issues
 
-By following these maintenance practices, you can keep your ts-pkgx installation running smoothly and avoid common issues.
+By following these maintenance practices, you can keep your ts-pantry installation running smoothly and avoid common issues.

@@ -1,10 +1,10 @@
 # Advanced
 
-This section covers advanced usage scenarios and customization options for ts-pkgx.
+This section covers advanced usage scenarios and customization options for ts-pantry.
 
 ## Dependency Resolution System
 
-ts-pkgx includes a sophisticated dependency resolution system that can analyze dependency files and resolve all transitive dependencies with intelligent version conflict resolution.
+ts-pantry includes a sophisticated dependency resolution system that can analyze dependency files and resolve all transitive dependencies with intelligent version conflict resolution.
 
 ### Advanced Dependency Resolution
 
@@ -15,7 +15,7 @@ import {
   resolveDependencyFile,
   findDependencyFiles,
   type DependencyResolverOptions
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Advanced dependency resolution with custom options
 const resolverOptions: DependencyResolverOptions = {
@@ -54,7 +54,7 @@ The system intelligently resolves version constraints against actual available v
 import {
   getAvailableVersionsForPackage,
   resolveVersionConstraint
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Get available versions for a package
 const versions = await getAvailableVersionsForPackage('bun.sh')
@@ -124,25 +124,25 @@ console.log('Dependency Analysis:', complexity)
 
 ## Pantry-Based Package Fetching
 
-ts-pkgx uses a pantry-based approach for fetching package information. This provides more reliable and comprehensive metadata than traditional web scraping.
+ts-pantry uses a pantry-based approach for fetching package information. This provides more reliable and comprehensive metadata than traditional web scraping.
 
 ### Pantry Management
 
 ```bash
 # Download and extract the latest pantry
-ts-pkgx update-pantry --pantry-dir ./custom-pantry
+ts-pantry update-pantry --pantry-dir ./custom-pantry
 
 # Generate constants from local pantry
-ts-pkgx generate-consts --source pantry --pantry-dir ./custom-pantry
+ts-pantry generate-consts --source pantry --pantry-dir ./custom-pantry
 
 # Generate constants from S3 registry (alternative)
-ts-pkgx generate-consts --source registry --validate
+ts-pantry generate-consts --source registry --validate
 ```
 
 ### Advanced Fetching Options
 
 ```typescript
-import { fetchPantryPackageWithMetadata } from 'ts-pkgx'
+import { fetchPantryPackageWithMetadata } from 'ts-pantry'
 
 // Custom configuration for complex packages
 const result = await fetchPantryPackageWithMetadata('rust-lang.org', {
@@ -163,7 +163,7 @@ When enabled, debug mode saves screenshots and additional debugging information:
 
 ```bash
 # CLI debug mode
-ts-pkgx fetch rust-lang.org --debug --verbose
+ts-pantry fetch rust-lang.org --debug --verbose
 
 # API debug mode
 const result = await fetchPantryPackageWithMetadata('rust-lang.org', { debug: true })
@@ -173,7 +173,7 @@ Screenshots and debug information are saved in the `debug` directory.
 
 ## Enhanced Package Generation
 
-ts-pkgx generates packages with comprehensive JSDoc documentation and intelligent naming conventions. Each package includes rich type hints and documentation links.
+ts-pantry generates packages with comprehensive JSDoc documentation and intelligent naming conventions. Each package includes rich type hints and documentation links.
 
 ### JSDoc Documentation Features
 
@@ -202,7 +202,7 @@ Every generated package includes detailed JSDoc comments:
 
  *
 
- * @see https://ts-pkgx.netlify.app/packages/bunsh
+ * @see https://ts-pantry.netlify.app/packages/bunsh
 
  */
 export const bunPackage = {
@@ -210,7 +210,7 @@ export const bunPackage = {
 
    * List of available versions of this package
    * From newest version to oldest.
-   * @see https://ts-pkgx.netlify.app/usage
+   * @see https://ts-pantry.netlify.app/usage
 
    */
   versions: ['1.2.15', '1.2.14',] as const,
@@ -237,8 +237,8 @@ export const examplecomPackage = { ... } // For example.com (no alias)
 You can implement custom transformation logic when processing packages:
 
 ```typescript
-import type { PkgxPackage } from 'ts-pkgx'
-import { fetchPantryPackageWithMetadata } from 'ts-pkgx'
+import type { PkgxPackage } from 'ts-pantry'
+import { fetchPantryPackageWithMetadata } from 'ts-pantry'
 
 async function fetchAndTransform(packageName: string): Promise<PkgxPackage | null> {
   const result = await fetchPantryPackageWithMetadata(packageName)
@@ -267,13 +267,13 @@ function determineCategory(pkg: PkgxPackage): string {
 
 ## Custom Output Formats
 
-ts-pkgx generates TypeScript or JSON files by default, but you can customize the output format:
+ts-pantry generates TypeScript or JSON files by default, but you can customize the output format:
 
 ```typescript
-import type { PkgxPackage } from 'ts-pkgx'
+import type { PkgxPackage } from 'ts-pantry'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fetchPantryPackageWithMetadata } from 'ts-pkgx'
+import { fetchPantryPackageWithMetadata } from 'ts-pantry'
 
 async function saveAsMarkdown(packageName: string, outputDir: string): Promise<void> {
   const result = await fetchPantryPackageWithMetadata(packageName)
@@ -324,7 +324,7 @@ ${pkg.dependencies.length ? pkg.dependencies.map(d => `- ${d}`).join('\n') : 'No
 You can extend the built-in package aliases system:
 
 ```typescript
-import { aliases as PACKAGE*ALIASES } from 'ts-pkgx'
+import { aliases as PACKAGE*ALIASES } from 'ts-pantry'
 
 // Add custom aliases
 function extendAliases(customAliases: Record<string, string>): void {
@@ -350,7 +350,7 @@ extendAliases({
 Implement custom error handling for package fetching:
 
 ```typescript
-import { fetchPantryPackageWithMetadata } from 'ts-pkgx'
+import { fetchPantryPackageWithMetadata } from 'ts-pantry'
 
 async function fetchWithRetry(packageName: string, maxRetries = 3): Promise<any> {
   let lastError
@@ -391,7 +391,7 @@ Customize the generated index.ts file:
 ```typescript
 import fs from 'node:fs'
 import path from 'node:path'
-import { convertDomainToVarName } from 'ts-pkgx/tools/domainUtils'
+import { convertDomainToVarName } from 'ts-pantry/tools/domainUtils'
 
 function generateCustomIndex(packagesDir: string, outputFile: string): void {
   const files = fs.readdirSync(packagesDir)
@@ -455,7 +455,7 @@ export function getPackage(name: string): PkgxPackage | undefined {
 
 ## Advanced Caching Strategies
 
-ts-pkgx provides sophisticated caching capabilities for optimal performance:
+ts-pantry provides sophisticated caching capabilities for optimal performance:
 
 ```typescript
 import fs from 'node:fs'
@@ -544,10 +544,10 @@ async function fetchWithAdvancedCache(packageName: string) {
 
 ## Optimized Batch Processing
 
-ts-pkgx implements optimized batch processing to efficiently handle large numbers of packages:
+ts-pantry implements optimized batch processing to efficiently handle large numbers of packages:
 
 ```typescript
-import { fetchAndSaveAllPackages } from 'ts-pkgx'
+import { fetchAndSaveAllPackages } from 'ts-pantry'
 
 async function optimizedBatchProcessing() {
   // Process packages with fine-tuned settings
@@ -571,13 +571,13 @@ The optimal settings depend on several factors:
 
 ```bash
 # High-performance setup (good network, powerful machine)
-ts-pkgx fetch --all --concurrency 15 --timeout 30000
+ts-pantry fetch --all --concurrency 15 --timeout 30000
 
 # Conservative setup (slower network or machine)
-ts-pkgx fetch --all --concurrency 4 --timeout 120000
+ts-pantry fetch --all --concurrency 4 --timeout 120000
 
 # Testing setup (quick validation)
-ts-pkgx fetch --all --limit 20 --concurrency 8 --verbose
+ts-pantry fetch --all --limit 20 --concurrency 8 --verbose
 ```
 
 ### Resource Management
@@ -585,7 +585,7 @@ ts-pkgx fetch --all --limit 20 --concurrency 8 --verbose
 Control memory usage and prevent resource leaks:
 
 ```typescript
-import { cleanupBrowserResources } from 'ts-pkgx'
+import { cleanupBrowserResources } from 'ts-pantry'
 
 async function processPackagesWithCleanup() {
   try {
@@ -605,12 +605,12 @@ async function processPackagesWithCleanup() {
 
 ## Custom CLI Integration
 
-Create custom CLI tools that integrate with ts-pkgx:
+Create custom CLI tools that integrate with ts-pantry:
 
 ```typescript
 # !/usr/bin/env node
 import { CAC } from 'cac'
-import { fetchPantryPackageWithMetadata, generateDocs } from 'ts-pkgx'
+import { fetchPantryPackageWithMetadata, generateDocs } from 'ts-pantry'
 
 const cli = new CAC('my-custom-tool')
 
@@ -652,7 +652,7 @@ cli.parse()
 
 ## Environment-Specific Configuration
 
-Configure ts-pkgx for different environments:
+Configure ts-pantry for different environments:
 
 ```typescript
 interface EnvironmentConfig {

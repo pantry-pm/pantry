@@ -1,6 +1,6 @@
 # Package Catalog
 
-This comprehensive catalog lists all 0+ packages available in ts-pkgx, organized by category.
+This comprehensive catalog lists all 0+ packages available in ts-pantry, organized by category.
 
 Each package can be accessed using `getPackage(name)` or directly via `pantry.domain`.
 
@@ -45,7 +45,7 @@ Each package can be accessed using `getPackage(name)` or directly via `pantry.do
 ### Basic Usage
 
 ```typescript
-import { getPackage, pantry } from 'ts-pkgx'
+import { getPackage, pantry } from 'ts-pantry'
 
 // Get a package by domain
 const nodePackage = pantry.nodejsorg

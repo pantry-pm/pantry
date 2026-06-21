@@ -13,7 +13,7 @@ hero:
       link: /intro
     - theme: alt
       text: View on GitHub
-      link: https://github.com/home-lang/pantry
+      link: https://github.com/pantry-pm/pantry
 
 features:
   - title: "Package Management"

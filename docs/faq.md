@@ -275,7 +275,7 @@ pantry info node --versions
 
 ### Can I install packages not available in pkgx
 
-Currently, pantry uses the pkgx registry through ts-pkgx. If a package isn't available, you can:
+Currently, pantry uses the pkgx registry through ts-pantry. If a package isn't available, you can:
 
 ```bash
 # Check what packages are available
@@ -654,9 +654,9 @@ python --version
 ### Where can I get support
 
 - **Documentation**: [https://pantry.sh](https://pantry.sh)
-- **GitHub Discussions**: [Ask questions](https://github.com/home-lang/pantry/discussions)
+- **GitHub Discussions**: [Ask questions](https://github.com/pantry-pm/pantry/discussions)
 - **Discord**: [Real-time chat](https://discord.gg/stacksjs)
-- **Issues**: [Report bugs](https://github.com/home-lang/pantry/issues)
+- **Issues**: [Report bugs](https://github.com/pantry-pm/pantry/issues)
 
 ### How do I report a bug
 
@@ -680,6 +680,6 @@ When reporting issues, include:
 
 **Yes!** pantry is open source under the MIT license:
 
-- **GitHub**: [https://github.com/home-lang/pantry](https://github.com/home-lang/pantry)
-- **License**: [MIT License](https://github.com/home-lang/pantry/blob/main/LICENSE.md)
-- **Contributing**: [Contribution Guidelines](https://github.com/home-lang/pantry/blob/main/.github/CONTRIBUTING.md)
+- **GitHub**: [https://github.com/pantry-pm/pantry](https://github.com/pantry-pm/pantry)
+- **License**: [MIT License](https://github.com/pantry-pm/pantry/blob/main/LICENSE.md)
+- **Contributing**: [Contribution Guidelines](https://github.com/pantry-pm/pantry/blob/main/.github/CONTRIBUTING.md)

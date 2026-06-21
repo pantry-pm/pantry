@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Generate comprehensive documentation for ts-pkgx packages
+# Generate comprehensive documentation for ts-pantry packages
 # This script creates VitePress-compatible markdown files
 
-echo "🚀 Generating ts-pkgx package documentation..."
+echo "🚀 Generating ts-pantry package documentation..."
 
 # Change to the project root directory
 cd "$(dirname "$0")/.."

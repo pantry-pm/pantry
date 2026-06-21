@@ -1,6 +1,6 @@
 # Multiple Package Fetching
 
-ts-pkgx provides flexible options for fetching multiple packages at once using the pantry-based approach, giving you precise control over which packages to fetch.
+ts-pantry provides flexible options for fetching multiple packages at once using the pantry-based approach, giving you precise control over which packages to fetch.
 
 ## Using the `--pkg` Option
 
@@ -8,10 +8,10 @@ The `--pkg` option allows you to fetch multiple specific packages in a single co
 
 ```bash
 # Fetch multiple packages with one command
-ts-pkgx fetch --pkg node,bun,python
+ts-pantry fetch --pkg node,bun,python
 
 # With custom options
-ts-pkgx fetch --pkg "go.dev,python.org,rust-lang.org" --json --timeout 60000
+ts-pantry fetch --pkg "go.dev,python.org,rust-lang.org" --json --timeout 60000
 
 # Using Bun scripts (alternative)
 bun run pkgx:fetch --pkg node,bun,python
@@ -25,13 +25,13 @@ The `--pkg` option accepts a comma-separated list of package names:
 
 ```bash
 # Fetch packages by their aliases or domain names
-ts-pkgx fetch --pkg node,python,bun,deno
+ts-pantry fetch --pkg node,python,bun,deno
 
 # Quotes are helpful when using dots or special characters
-ts-pkgx fetch --pkg "nodejs.org,python.org,rust-lang.org"
+ts-pantry fetch --pkg "nodejs.org,python.org,rust-lang.org"
 
 # Nested packages are also supported
-ts-pkgx fetch --pkg "agwa.name/git-crypt,aws.amazon.com/cli"
+ts-pantry fetch --pkg "agwa.name/git-crypt,aws.amazon.com/cli"
 ```
 
 Both aliases (like `node`) and full domain names (like `nodejs.org`) are supported, including nested packages.
@@ -42,25 +42,25 @@ The multiple package fetching feature can be combined with other CLI options:
 
 ```bash
 # Save as JSON instead of TypeScript
-ts-pkgx fetch --pkg node,bun --json
+ts-pantry fetch --pkg node,bun --json
 
 # Custom output directory
-ts-pkgx fetch --pkg node,bun --output-dir ./custom-packages
+ts-pantry fetch --pkg node,bun --output-dir ./custom-packages
 
 # Increased timeout for complex packages
-ts-pkgx fetch --pkg "rust-lang.org,go.dev" --timeout 60000
+ts-pantry fetch --pkg "rust-lang.org,go.dev" --timeout 60000
 
 # Debug mode for troubleshooting
-ts-pkgx fetch --pkg "rust-lang.org,go.dev" --debug --verbose
+ts-pantry fetch --pkg "rust-lang.org,go.dev" --debug --verbose
 
 # Custom cache settings
-ts-pkgx fetch --pkg node,bun --cache-dir ./my-cache --cache-expiration 30
+ts-pantry fetch --pkg node,bun --cache-dir ./my-cache --cache-expiration 30
 
 # Disable caching for fresh data
-ts-pkgx fetch --pkg node,bun --no-cache
+ts-pantry fetch --pkg node,bun --no-cache
 
 # CI integration with JSON output
-ts-pkgx fetch --pkg "node,bun,python" --output-json
+ts-pantry fetch --pkg "node,bun,python" --output-json
 ```
 
 ## Benefits Over Individual Fetching
@@ -79,7 +79,7 @@ Fetching multiple packages at once offers several advantages:
 You can also fetch multiple packages programmatically using the pantry-based approach:
 
 ```typescript
-import { fetchPantryPackageWithMetadata, saveToCacheAndOutput } from 'ts-pkgx'
+import { fetchPantryPackageWithMetadata, saveToCacheAndOutput } from 'ts-pantry'
 
 async function fetchMultiplePackages(packageNames: string[], options = {}) {
   const results = await Promise.all(
@@ -134,7 +134,7 @@ fetchMultiplePackages(['node', 'python', 'bun', 'agwa.name/git-crypt'])
 For high-performance batch operations:
 
 ```typescript
-import { fetchAndSaveAllPackages } from 'ts-pkgx'
+import { fetchAndSaveAllPackages } from 'ts-pantry'
 
 async function fetchSpecificPackagesBatch(packageNames: string[]) {
   // Create a temporary pantry filtering approach
@@ -184,13 +184,13 @@ Optimize multiple package fetching for your environment:
 
 ```bash
 # High-performance setup
-ts-pkgx fetch --pkg "node,bun,python,go,rust" --concurrency 8 --timeout 30000
+ts-pantry fetch --pkg "node,bun,python,go,rust" --concurrency 8 --timeout 30000
 
 # Conservative setup for slower networks
-ts-pkgx fetch --pkg "node,bun,python" --timeout 120000 --cache-expiration 60
+ts-pantry fetch --pkg "node,bun,python" --timeout 120000 --cache-expiration 60
 
 # Debug setup for troubleshooting
-ts-pkgx fetch --pkg "problematic-package" --debug --verbose --timeout 180000
+ts-pantry fetch --pkg "problematic-package" --debug --verbose --timeout 180000
 ```
 
 ## CI/CD Integration
@@ -199,7 +199,7 @@ Use multiple package fetching in automation:
 
 ```bash
 # Get structured JSON output for CI systems
-result=$(ts-pkgx fetch --pkg "node,bun,python" --output-json)
+result=$(ts-pantry fetch --pkg "node,bun,python" --output-json)
 
 # Extract updated packages
 echo "$result" | jq -r '.updatedPackages[]'

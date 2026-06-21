@@ -202,7 +202,7 @@ async function updateConstsFile(packages: string[], source: string): Promise<voi
   const constsPath = 'src/consts.ts'
 
   const constantsContent = `/**
- * Constants used throughout the ts-pkgx package
+ * Constants used throughout the ts-pantry package
  * This file is auto-generated from ${source}. Do not edit manually.
  * Generated on ${new Date().toISOString()}
  */
@@ -304,7 +304,7 @@ function parseInstallPlatform(value?: string): { os: 'darwin' | 'linux' | 'windo
   return { os, arch }
 }
 
-const cli = new CLI('ts-pkgx')
+const cli = new CLI('ts-pantry')
 
 // Force exit after a maximum timeout to prevent hung processes
 // This is a safety mechanism in case Playwright doesn't close properly

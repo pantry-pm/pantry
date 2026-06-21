@@ -73,7 +73,7 @@ describe('Generate Module', () => {
 
   beforeEach(() => {
     // Create temporary directories for testing
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-pkgx-generate-test-'))
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-pantry-generate-test-'))
     tempPackagesDir = path.join(tempDir, 'src', 'packages')
     tempDocsDir = path.join(tempDir, 'docs')
 
@@ -1066,7 +1066,7 @@ export type CaseVariationsPackage = typeof caseVariationsPackage
 
   describe('Error Handling', () => {
     test('should handle missing packages directory gracefully', async () => {
-      const emptyTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-pkgx-empty-'))
+      const emptyTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-pantry-empty-'))
 
       try {
         // Should not throw even if packages directory doesn't exist

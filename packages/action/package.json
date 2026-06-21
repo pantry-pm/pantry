@@ -5,13 +5,13 @@
   "description": "GitHub Action to install pantry from pre-built binaries",
   "author": "home-lang",
   "license": "MIT",
-  "homepage": "https://github.com/home-lang/pantry#readme",
+  "homepage": "https://github.com/pantry-pm/pantry#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/home-lang/pantry.git"
+    "url": "git+https://github.com/pantry-pm/pantry.git"
   },
   "bugs": {
-    "url": "https://github.com/home-lang/pantry/issues"
+    "url": "https://github.com/pantry-pm/pantry/issues"
   },
   "keywords": [
     "github-action",

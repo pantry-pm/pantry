@@ -1,10 +1,10 @@
 # TypeScript Types
 
-ts-pkgx provides comprehensive TypeScript types that enable you to work in a fully typed environment with all packages from the pkgx.dev pantry. This page documents the available types and how to use them effectively.
+ts-pantry provides comprehensive TypeScript types that enable you to work in a fully typed environment with all packages from the pkgx.dev pantry. This page documents the available types and how to use them effectively.
 
 ## New Type Safety Features
 
-ts-pkgx now includes extensive type safety features that provide compile-time validation, IntelliSense support, and type-safe package management operations:
+ts-pantry now includes extensive type safety features that provide compile-time validation, IntelliSense support, and type-safe package management operations:
 
 ### Package Name Types
 
@@ -14,7 +14,7 @@ import type {
   PackageDomain, // All available package domains (e.g., 'nodejs.org')
   PackageName, // Union of all valid package identifiers
   PackageSpec // Package specifications with versions (e.g., 'node@20.1.0')
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe package names
 const validPackages: PackageName[] = ['node', 'python', 'nodejs.org', 'python.org']
@@ -28,7 +28,7 @@ import type {
   SupportedArchitecture, // 'x86_64' | 'aarch64' | 'armv7l' | 'i686'
   SupportedFormat, // 'tar.xz' | 'tar.gz' | 'zip' | etc.
   SupportedPlatform // 'darwin' | 'linux' | 'windows'
-} from 'ts-pkgx'
+} from 'ts-pantry'
 ```
 
 ### Version Resolution Types
@@ -38,7 +38,7 @@ import type {
   PackageInfo, // Comprehensive package information
   PackageResolution, // Package name resolution results
   VersionSpec // Version specifications like '^20', '~3.11', 'latest'
-} from 'ts-pkgx'
+} from 'ts-pantry'
 ```
 
 ## Core Types
@@ -48,7 +48,7 @@ import type {
 The `Pantry` interface is the main type that represents all available packages. It provides type-safe access to every package in the pkgx.dev ecosystem.
 
 ```typescript
-import type { Pantry } from 'ts-pkgx'
+import type { Pantry } from 'ts-pantry'
 
 // The Pantry interface maps domain names to package types
 interface Pantry {
@@ -65,7 +65,7 @@ interface Pantry {
 The `Packages` type is an alias for `Pantry`, providing the same functionality with a more concise name:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
 
 // Packages is equivalent to Pantry
 type Packages = Pantry
@@ -76,7 +76,7 @@ type Packages = Pantry
 Each package in the pantry has its own typed object with detailed metadata:
 
 ```typescript
-import { nodePackage } from 'ts-pkgx'
+import { nodePackage } from 'ts-pantry'
 
 // Each package object contains:
 const packageInfo = {
@@ -97,7 +97,7 @@ const packageInfo = {
 Access packages in a fully typed manner using the pantry object:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Fully typed access to any package
 const nodeInfo = pantry.nodejs_org
@@ -115,8 +115,8 @@ console.log(nodeInfo.invalidProp) // ❌ TypeScript error
 For dynamic package access, use type assertions or the `Packages` type:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { pantry } from 'ts-pantry'
 
 function getPackageInfo(packageKey: keyof Packages) {
   return pantry[packageKey]
@@ -146,8 +146,8 @@ Domain names are converted to valid TypeScript property names by replacing dots 
 Find packages by category or functionality:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { pantry } from 'ts-pantry'
 
 // Type-safe package filtering
 function findLanguagePackages(): Array<keyof Packages> {
@@ -173,7 +173,7 @@ const languages = findLanguagePackages().map(key => ({
 Work with package versions in a type-safe way:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 function getLatestVersion(packageKey: keyof Packages): string {
   const pkg = pantry[packageKey]
@@ -198,8 +198,8 @@ const hasPython39 = isVersionAvailable('python_org', '3.9.0')
 Resolve package aliases to their canonical names:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { aliases } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { aliases } from 'ts-pantry'
 
 function resolveAlias(alias: string): keyof Packages | null {
   // The aliases object maps short names to package keys
@@ -217,8 +217,8 @@ const goKey = resolveAlias('go') // → 'go_dev'
 Create type-safe package management utilities:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { pantry } from 'ts-pantry'
 
 class PackageManager {
   private installed: Set<keyof Packages> = new Set()
@@ -254,8 +254,8 @@ pm.install('python_org')
 Create reusable functions that work with any package:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { pantry } from 'ts-pantry'
 
 function analyzePackage<K extends keyof Packages>(
   packageKey: K
@@ -287,8 +287,8 @@ const pythonAnalysis = analyzePackage('python_org')
 Create type guards for runtime package validation:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { pantry } from 'ts-pantry'
 
 function isValidPackageKey(key: string): key is keyof Packages {
   return key in pantry
@@ -311,8 +311,8 @@ const pkg = getPackageSafely(userInput) // Safely typed
 ### With React Components
 
 ```tsx
-import type { Packages } from 'ts-pkgx'
-import { pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { pantry } from 'ts-pantry'
 
 interface PackageCardProps {
   packageKey: keyof Packages
@@ -346,8 +346,8 @@ function PackageCard({ packageKey }: PackageCardProps) {
 ### With CLI Tools
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
-import { aliases, pantry } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
+import { aliases, pantry } from 'ts-pantry'
 
 function createInstallCommand(input: string): string {
   // Try to resolve as alias first, then as direct package key
@@ -377,8 +377,8 @@ console.log(createInstallCommand('python')) // pkgx install python.org
 Always import types separately from runtime values:
 
 ```typescript
-import type { Packages, Pantry } from 'ts-pkgx'
-import { aliases, pantry } from 'ts-pkgx'
+import type { Packages, Pantry } from 'ts-pantry'
+import { aliases, pantry } from 'ts-pantry'
 ```
 
 ### 2. Leverage Autocomplete
@@ -386,7 +386,7 @@ import { aliases, pantry } from 'ts-pkgx'
 Take advantage of TypeScript's autocomplete for package discovery:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // TypeScript will suggest all available packages
 // const pkg = pantry. // Autocomplete shows all options
@@ -407,7 +407,7 @@ function processPackages(keys: Array<keyof Packages>) {
 Build reusable utilities that maintain type safety:
 
 ```typescript
-import type { Packages } from 'ts-pkgx'
+import type { Packages } from 'ts-pantry'
 
 interface PackageInfo<K extends keyof Packages> {
   key: K
@@ -426,7 +426,7 @@ function createPackageInfo<K extends keyof Packages>(
 
 ## Type-Safe Utilities
 
-ts-pkgx provides numerous utility functions that work with the type system:
+ts-pantry provides numerous utility functions that work with the type system:
 
 ### Package Resolution
 
@@ -436,7 +436,7 @@ import {
   isPackageAlias,
   isValidPackageName,
   resolvePackageName
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe package resolution
 const resolution = resolvePackageName('node') // Returns PackageResolution
@@ -453,7 +453,7 @@ import {
   getLatestVersion,
   getPackageInfo,
   resolveVersion
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe version operations
 const latest = getLatestVersion('node') // string | null
@@ -470,7 +470,7 @@ import {
   searchPackagesCommand,
   showPackageInfo,
   validatePackage
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe CLI operations
 const infoResult = showPackageInfo('node') // CLIResult<PackageInfo>
@@ -485,7 +485,7 @@ const validation = validatePackage('node@latest') // CLIResult<{...}>
 import {
   createInstallationContext,
   detectPlatform
-} from 'ts-pkgx'
+} from 'ts-pantry'
 
 // Type-safe platform operations
 const platform = detectPlatform() // PlatformInfo
@@ -494,7 +494,7 @@ const context = createInstallationContext('node') // InstallationContext
 
 ## Related Documentation
 
-- [TypeScript Integration](./features/typescript.md) - Using ts-pkgx with TypeScript
+- [TypeScript Integration](./features/typescript.md) - Using ts-pantry with TypeScript
 - [Package Management](./features/management.md) - Managing packages programmatically
 - [API Reference](./api-reference.md) - Complete API documentation
 - [CLI Reference](./cli-reference.md) - Command-line interface

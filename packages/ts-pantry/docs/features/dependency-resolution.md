@@ -1,6 +1,6 @@
 # Dependency Resolution
 
-ts-pkgx includes a sophisticated dependency resolution system that can analyze dependency files and resolve all transitive dependencies with intelligent version conflict resolution.
+ts-pantry includes a sophisticated dependency resolution system that can analyze dependency files and resolve all transitive dependencies with intelligent version conflict resolution.
 
 ## Overview
 
@@ -40,32 +40,32 @@ dependencies:
 
 ```bash
 # Resolve a single dependency file
-ts-pkgx resolve-deps deps.yaml
+ts-pantry resolve-deps deps.yaml
 
 # Resolve with verbose output
-ts-pkgx resolve-deps deps.yaml --verbose
+ts-pantry resolve-deps deps.yaml --verbose
 
 # Show install commands for all unique packages
-ts-pkgx resolve-deps deps.yaml --install-command
+ts-pantry resolve-deps deps.yaml --install-command
 ```
 
 ### Advanced Options
 
 ```bash
 # Find and resolve all dependency files in a directory
-ts-pkgx resolve-deps --find-files ./my-project
+ts-pantry resolve-deps --find-files ./my-project
 
 # Filter for specific operating system
-ts-pkgx resolve-deps deps.yaml --target-os darwin --include-os-deps
+ts-pantry resolve-deps deps.yaml --target-os darwin --include-os-deps
 
 # Custom pantry and packages directories
-ts-pkgx resolve-deps deps.yaml --pantry-dir ./custom-pantry --packages-dir ./custom-packages
+ts-pantry resolve-deps deps.yaml --pantry-dir ./custom-pantry --packages-dir ./custom-packages
 
 # Limit recursion depth for transitive dependencies
-ts-pkgx resolve-deps deps.yaml --max-depth 5
+ts-pantry resolve-deps deps.yaml --max-depth 5
 
 # Output as JSON for automation
-ts-pkgx resolve-deps deps.yaml --json
+ts-pantry resolve-deps deps.yaml --json
 ```
 
 ## Programmatic Usage
@@ -73,7 +73,7 @@ ts-pkgx resolve-deps deps.yaml --json
 ### Basic Resolution
 
 ```typescript
-import { resolveDependencyFile } from 'ts-pkgx'
+import { resolveDependencyFile } from 'ts-pantry'
 
 const result = await resolveDependencyFile('./deps.yaml', {
   pantryDir: 'src/pantry',
@@ -89,7 +89,7 @@ console.log(`Resolved ${result.conflicts.length} version conflicts`)
 ### Finding All Dependency Files
 
 ```typescript
-import { findDependencyFiles, resolveDependencyFile } from 'ts-pkgx'
+import { findDependencyFiles, resolveDependencyFile } from 'ts-pantry'
 
 // Find all dependency files in a project
 const depFiles = findDependencyFiles('./my-project')
@@ -132,7 +132,7 @@ The resolver supports various version constraint formats and resolves them again
 ### Version Resolution Example
 
 ```typescript
-import { getAvailableVersionsForPackage, resolveVersionConstraint } from 'ts-pkgx'
+import { getAvailableVersionsForPackage, resolveVersionConstraint } from 'ts-pantry'
 
 // Get available versions for a package
 const versions = await getAvailableVersionsForPackage('bun.sh')
@@ -172,10 +172,10 @@ The resolver can handle OS-specific dependencies and filter them based on your t
 
 ```bash
 # Include OS-specific dependencies for macOS
-ts-pkgx resolve-deps deps.yaml --target-os darwin --include-os-deps
+ts-pantry resolve-deps deps.yaml --target-os darwin --include-os-deps
 
 # Include OS-specific dependencies for Linux
-ts-pkgx resolve-deps deps.yaml --target-os linux --include-os-deps
+ts-pantry resolve-deps deps.yaml --target-os linux --include-os-deps
 ```
 
 ## Output Formats
@@ -183,7 +183,7 @@ ts-pkgx resolve-deps deps.yaml --target-os linux --include-os-deps
 ### Human-Readable Output
 
 ```bash
-ts-pkgx resolve-deps deps.yaml --verbose --install-command
+ts-pantry resolve-deps deps.yaml --verbose --install-command
 ```
 
 ```
@@ -200,13 +200,13 @@ ts-pkgx resolve-deps deps.yaml --verbose --install-command
   nodejs.org: 20.0.0, 18.0.0 → resolved to 20.0.0
 
 💾 Install command:
-sh <(curl https://pkgx.sh) +bun.sh +nodejs.org +python.org +git-scm.com -- $SHELL -i
+pantry install bun.sh nodejs.org python.org git-scm.com
 ```
 
 ### JSON Output
 
 ```bash
-ts-pkgx resolve-deps deps.yaml --json
+ts-pantry resolve-deps deps.yaml --json
 ```
 
 ```json
@@ -384,7 +384,7 @@ catch (error) {
 # ci-resolve-deps.sh
 
 # Resolve all dependencies and output JSON for further processing
-result=$(ts-pkgx resolve-deps --find-files . --json)
+result=$(ts-pantry resolve-deps --find-files . --json)
 
 # Extract package count
 package_count=$(echo "$result" | jq '.uniquePackages | length')
@@ -411,9 +411,9 @@ FROM ubuntu:latest
 # Copy dependency files
 COPY deps.yaml .
 
-# Install ts-pkgx and resolve dependencies
-RUN npm install -g ts-pkgx && \
-    deps=$(ts-pkgx resolve-deps deps.yaml --json) && \
+# Install ts-pantry and resolve dependencies
+RUN npm install -g ts-pantry && \
+    deps=$(ts-pantry resolve-deps deps.yaml --json) && \
     packages=$(echo "$deps" | jq -r '.uniquePackages[]' | tr '\n' ' ') && \
     echo "Installing packages: $packages"
 

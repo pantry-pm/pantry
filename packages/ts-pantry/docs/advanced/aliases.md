@@ -1,13 +1,13 @@
 # Extending the Aliases System
 
-ts-pkgx includes a built-in aliases system that maps common package names to their full domain names. You can extend this system to customize it for your specific needs.
+ts-pantry includes a built-in aliases system that maps common package names to their full domain names. You can extend this system to customize it for your specific needs.
 
 ## Understanding the Aliases System
 
 The aliases system is a simple mapping from shorthand names to full domain names:
 
 ```typescript
-import { PACKAGE_ALIASES } from 'ts-pkgx/fetch'
+import { PACKAGE_ALIASES } from 'ts-pantry/fetch'
 
 // Examine the built-in aliases
 console.log(PACKAGE_ALIASES)
@@ -35,7 +35,7 @@ const PACKAGE_ALIASES: Record<string, string> = {
 You can add your own aliases to the system:
 
 ```typescript
-import { PACKAGE_ALIASES } from 'ts-pkgx/fetch'
+import { PACKAGE_ALIASES } from 'ts-pantry/fetch'
 
 // Add custom aliases
 function extendAliases(customAliases: Record<string, string>): void {
@@ -180,7 +180,7 @@ process.on('exit', saveAliases)
 You can generate aliases automatically based on domain patterns:
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Generate aliases for all packages
 function generateAliases(): Record<string, string> {
@@ -255,4 +255,4 @@ cli
   })
 ```
 
-These extensions to the aliases system allow you to customize ts-pkgx to fit your specific workflow and preferences.
+These extensions to the aliases system allow you to customize ts-pantry to fit your specific workflow and preferences.

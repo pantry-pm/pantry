@@ -1,13 +1,13 @@
 # Error Handling
 
-ts-pkgx provides several ways to handle errors when fetching and processing packages. This page covers advanced error handling techniques for more robust applications.
+ts-pantry provides several ways to handle errors when fetching and processing packages. This page covers advanced error handling techniques for more robust applications.
 
 ## Custom Retry Logic
 
 Implement custom retry logic for package fetching:
 
 ```typescript
-import { fetchPantryPackage } from 'ts-pkgx'
+import { fetchPantryPackage } from 'ts-pantry'
 
 async function fetchWithRetry(packageName: string, maxRetries = 3): Promise<any> {
   let lastError
@@ -98,7 +98,7 @@ function classifyError(error: any, packageName: string): {
 Create fallback content when package fetching fails:
 
 ```typescript
-import type { PkgxPackage } from 'ts-pkgx'
+import type { PkgxPackage } from 'ts-pantry'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -393,4 +393,4 @@ catch (error) {
 console.log(errorTracker.getReport())
 ```
 
-These advanced error handling techniques will help you build more robust applications that can gracefully handle failures when working with ts-pkgx.
+These advanced error handling techniques will help you build more robust applications that can gracefully handle failures when working with ts-pantry.

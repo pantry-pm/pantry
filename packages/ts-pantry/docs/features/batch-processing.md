@@ -1,10 +1,10 @@
 # Batch Processing
 
-ts-pkgx implements smart batch processing to optimize the fetching and updating of multiple packages.
+ts-pantry implements smart batch processing to optimize the fetching and updating of multiple packages.
 
 ## Overview
 
-Batch processing in ts-pkgx allows you to efficiently process large numbers of packages by:
+Batch processing in ts-pantry allows you to efficiently process large numbers of packages by:
 
 1. Breaking the work into smaller batches
 2. Processing batches in parallel where possible
@@ -15,7 +15,7 @@ This approach is particularly valuable when working with the pkgx.dev pantry, wh
 
 ## Automatic Batching
 
-When using the `--all` flag, ts-pkgx automatically implements batch processing:
+When using the `--all` flag, ts-pantry automatically implements batch processing:
 
 ```bash
 # Fetch all packages with optimized batch processing
@@ -65,7 +65,7 @@ The default concurrency is 10, which works well for most systems.
 
 ## Progress Feedback
 
-ts-pkgx provides detailed progress feedback during batch processing:
+ts-pantry provides detailed progress feedback during batch processing:
 
 ```
 Processing batch 1/50 (packages 1-20)
@@ -78,7 +78,7 @@ This keeps you informed about the progress of long-running operations.
 
 ## Skip Unchanged Packages
 
-For better performance, ts-pkgx checks if a package file has changed before writing to disk:
+For better performance, ts-pantry checks if a package file has changed before writing to disk:
 
 ```typescript
 // Only write if content has changed
@@ -93,7 +93,7 @@ This optimization significantly speeds up subsequent runs as only changed packag
 
 ## Automatic Retry
 
-ts-pkgx implements automatic retry logic for failed package fetches:
+ts-pantry implements automatic retry logic for failed package fetches:
 
 ```typescript
 // Retry with increased timeout if fetch fails
@@ -142,7 +142,7 @@ Actual performance depends on your network connection, system specs, and the spe
 You can implement the same batch processing approach in your own code:
 
 ```typescript
-import { fetchPackageListFromGitHub } from 'ts-pkgx/utils'
+import { fetchPackageListFromGitHub } from 'ts-pantry/utils'
 
 async function updatePackagesInBatches() {
   // Get all packages

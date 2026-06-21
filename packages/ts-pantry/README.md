@@ -5,7 +5,7 @@ TypeScript types for Pantry package manager configuration with **full type valid
 ## Installation
 
 ```bash
-bun add -d ts-pantry ts-pkgx
+bun add -d ts-pantry ts-pantry
 ```
 
 ## Usage

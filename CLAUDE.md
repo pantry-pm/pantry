@@ -49,7 +49,7 @@ The registry validates tokens via simple string equality (`zig-routes.ts:validat
 | AWS SSM `/pantry/registry-token` (us-east-1, SecureString) | Source of truth |
 | EC2 systemd service `/etc/systemd/system/pantry-registry.service` | Runtime config |
 | GitHub secret `PANTRY_TOKEN` on `pickier/pickier` | CI publish |
-| GitHub secret `PANTRY_TOKEN` on `home-lang/pantry` | CI publish |
+| GitHub secret `PANTRY_TOKEN` on `pantry-pm/pantry` | CI publish |
 
 ### Rotating the token
 
@@ -65,7 +65,7 @@ This script:
 4. Restarts the registry service
 5. Updates `PANTRY_TOKEN` GitHub secret on all repos
 
-To add more repos: `./scripts/rotate-registry-token.sh --repos "pickier/pickier,home-lang/pantry,other/repo"`
+To add more repos: `./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry,other/repo"`
 
 ### Manual retrieval
 
@@ -99,7 +99,7 @@ If `flex rule present: false`, crosswind isn't loading — investigate before de
 
 ### Site deployment secrets
 
-The `deploy-registry.yml` workflow SSHes from a GitHub runner into the registry EC2 box. It needs **two** repo secrets on `home-lang/pantry`:
+The `deploy-registry.yml` workflow SSHes from a GitHub runner into the registry EC2 box. It needs **two** repo secrets on `pantry-pm/pantry`:
 
 | Secret | Source of truth | Value |
 |--------|-----------------|-------|
@@ -110,8 +110,8 @@ If `REGISTRY_HOST` is missing the deploy silently SSHes to `ec2-user@` (empty ho
 
 ```bash
 HOST=$(aws ssm get-parameter --name /pantry/registry-host --region us-east-1 --query Parameter.Value --output text)
-echo -n "$HOST" | gh secret set REGISTRY_HOST --repo home-lang/pantry
-gh workflow run deploy-registry.yml --repo home-lang/pantry --ref main
+echo -n "$HOST" | gh secret set REGISTRY_HOST --repo pantry-pm/pantry
+gh workflow run deploy-registry.yml --repo pantry-pm/pantry --ref main
 ```
 
 ### Prerequisites
@@ -128,7 +128,7 @@ In a GitHub Actions workflow:
 
 - name: Setup Pantry
 
-  uses: home-lang/pantry/packages/action@main
+  uses: pantry-pm/pantry/packages/action@main
 
 - name: Publish Commit
 
@@ -214,14 +214,14 @@ One-time stack rename script: `bun scripts/migrate-production-site-stack.ts` (al
 
 ## GitHub Action (`packages/action/`)
 
-The Setup Pantry action (`home-lang/pantry/packages/action@main`):
+The Setup Pantry action (`pantry-pm/pantry/packages/action@main`):
 
 - Default behavior: installs pantry CLI + runs `pantry install` (reads `pantry.jsonc`/`deps.yaml`)
 - Built-in caching: caches `pantry/` dir keyed on `pantry.lock` hash
 - Installs bun via pantry, creates `bunx` symlink, sets `BUN_INSTALL` env var
 - Use `install: 'false'` to skip `pantry install` (just CLI in PATH)
 - For local repo: `uses: ./packages/action`
-- For external repos: `uses: home-lang/pantry/packages/action@main`
+- For external repos: `uses: pantry-pm/pantry/packages/action@main`
 
 ## Deps Files
 

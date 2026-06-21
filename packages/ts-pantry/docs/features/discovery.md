@@ -1,10 +1,10 @@
 # Package Discovery
 
-ts-pkgx provides robust features for discovering and fetching package information from pkgx.dev.
+ts-pantry provides robust features for discovering and fetching package information from pkgx.dev.
 
 ## Package Fetching
 
-ts-pkgx can fetch detailed information about packages from pkgx.dev, including:
+ts-pantry can fetch detailed information about packages from pkgx.dev, including:
 
 - Basic metadata (name, domain, description)
 - Available versions
@@ -14,7 +14,7 @@ ts-pkgx can fetch detailed information about packages from pkgx.dev, including:
 - Links to documentation, source code, and related resources
 
 ```typescript
-import { fetchPantryPackage } from 'ts-pkgx'
+import { fetchPantryPackage } from 'ts-pantry'
 
 // Fetch a single package
 const { packageInfo, originalName, fullDomainName } = await fetchPantryPackage('node')
@@ -27,7 +27,7 @@ You can fetch information about a specific package using the `fetchPantryPackage
 
 ```bash
 # API approach
-import { fetchPantryPackage } from 'ts-pkgx'
+import { fetchPantryPackage } from 'ts-pantry'
 const result = await fetchPantryPackage('nodejs.org')
 
 # CLI approach
@@ -54,7 +54,7 @@ You can fetch information about all available packages at once using the `fetchA
 
 ```bash
 # API approach
-import { fetchAndSaveAllPackages } from 'ts-pkgx'
+import { fetchAndSaveAllPackages } from 'ts-pantry'
 const savedPackages = await fetchAndSaveAllPackages()
 
 # CLI approach
@@ -65,7 +65,7 @@ This will retrieve information about all packages listed on pkgx.dev and save th
 
 ## Smart Caching
 
-ts-pkgx implements caching for GitHub API requests to improve performance and avoid hitting rate limits:
+ts-pantry implements caching for GitHub API requests to improve performance and avoid hitting rate limits:
 
 ```bash
 # Custom cache duration (in minutes)
@@ -80,7 +80,7 @@ After packages are fetched, you can easily search and look them up:
 
 ```typescript
 // Using the pantry object (indexed by domain)
-import { getPackage, pantry } from 'ts-pkgx'
+import { getPackage, pantry } from 'ts-pantry'
 
 const nodePackage = pantry['nodejs.org']
 const nodeByAlias = getPackage('node')

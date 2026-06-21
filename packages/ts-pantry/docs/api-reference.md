@@ -1,12 +1,12 @@
 # API Reference
 
-This page documents the API of ts-pkgx, including all the functions, interfaces, and types that are available for use.
+This page documents the API of ts-pantry, including all the functions, interfaces, and types that are available for use.
 
 ## Core Types
 
 ### Type Safety Features
 
-ts-pkgx provides comprehensive TypeScript type safety with the following types:
+ts-pantry provides comprehensive TypeScript type safety with the following types:
 
 ```typescript
 // Package name types
@@ -112,7 +112,7 @@ interface PkgxPackage {
   /**
 
    _ List of executable programs provided by the package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   programs: string[]
@@ -120,7 +120,7 @@ interface PkgxPackage {
   /**
 
    _ List of companion packages that are often used with this package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   companions: string[]
@@ -128,7 +128,7 @@ interface PkgxPackage {
   /**
 
    _ List of dependencies required by this package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   dependencies: string[]
@@ -137,7 +137,7 @@ interface PkgxPackage {
 
    _ List of available versions of the package
    _ From newest version to oldest.
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    _/
   versions: string[]
@@ -145,7 +145,7 @@ interface PkgxPackage {
   /**
 
    _ List of alternative names or aliases for this package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   aliases?: string[]
@@ -186,7 +186,7 @@ _ List of programs provided
 _ Installation command
 _ Links to homepage, GitHub, and package documentation
 _ Version information with "From newest version to oldest" description
-_ Links to our usage documentation at <https://ts-pkgx.netlify.app/usage>
+_ Links to our usage documentation at <https://ts-pantry.netlify.app/usage>
 
 ### PackageFetchOptions
 
@@ -271,7 +271,7 @@ interface PackageFetchOptions {
 
 ### Alias-Based Naming Convention
 
-ts-pkgx uses intelligent alias-based naming for package variables and types:
+ts-pantry uses intelligent alias-based naming for package variables and types:
 
 1. **Packages with aliases use the primary alias for naming:**
 
@@ -324,7 +324,7 @@ Every generated package includes rich JSDoc documentation:
 
  _
 
- _ @see https://ts-pkgx.netlify.app/packages/bunsh
+ _ @see https://ts-pantry.netlify.app/packages/bunsh
 
  */
 export const bunPackage = {
@@ -334,7 +334,7 @@ export const bunPackage = {
   /**
 
    _ List of executable programs provided by this package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   programs: ['bun'] as const,
@@ -342,21 +342,21 @@ export const bunPackage = {
 
    _ List of available versions of this package
    _ From newest version to oldest.
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    _/
   versions: ['1.2.15', '1.2.14',] as const,
   /**
 
    _ List of dependencies required by this package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   dependencies: [] as const,
   /**
 
    _ List of companion packages that are often used with this package
-   _ @see https://ts-pkgx.netlify.app/usage
+   _ @see https://ts-pantry.netlify.app/usage
 
    */
   companions: [] as const,
@@ -389,7 +389,7 @@ The generated packages provide excellent TypeScript intellisense:
 
 ### Dependency Resolution Types
 
-ts-pkgx provides comprehensive dependency resolution capabilities with the following types:
+ts-pantry provides comprehensive dependency resolution capabilities with the following types:
 
 ```typescript
 interface Dependency {

@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-pkgx-
 
       - name: Install dependencies with pantry
-        uses: home-lang/pantry-installer@v1
+        uses: pantry-pm/pantry-installer@v1
         with:
           packages: node typescript go rust
 

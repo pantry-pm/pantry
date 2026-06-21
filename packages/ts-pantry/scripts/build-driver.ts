@@ -271,7 +271,7 @@ function fullScript(platform: string, force: boolean): string {
     'command -v bun >/dev/null || { echo "### FATAL: bun not installed"; exit 1; }',
     'echo "### toolchains: bun=$(bun --version) rust=$(rustc --version 2>/dev/null) go=$(go version 2>/dev/null)"',
     'echo "### SETUP: cloning repo"',
-    'rm -rf /opt/pantry && git clone --depth 1 https://github.com/home-lang/pantry.git /opt/pantry',
+    'rm -rf /opt/pantry && git clone --depth 1 https://github.com/pantry-pm/pantry.git /opt/pantry',
     'cd /opt/pantry && bun install',
     'cd /opt/pantry/packages/ts-pantry',
     'set -a; . /root/.storage.env; set +a',

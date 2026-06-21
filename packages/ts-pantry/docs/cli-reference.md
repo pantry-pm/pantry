@@ -1,28 +1,28 @@
 # CLI Reference
 
-ts-pkgx provides a powerful command-line interface for working with pkgx.dev packages. This page documents all the available commands and their options.
+ts-pantry provides a powerful command-line interface for working with pkgx.dev packages. This page documents all the available commands and their options.
 
 ## Installation
 
-The CLI commands are available when you install ts-pkgx:
+The CLI commands are available when you install ts-pantry:
 
 ```bash
-bun install ts-pkgx
+bun install ts-pantry
 ```
 
 ## Commands Overview
 
 | Command | Description |
 |---------|-------------|
-| `ts-pkgx fetch [packageName]` | Fetch a single package, multiple packages, or all packages |
-| `ts-pkgx resolve-deps [file]` | Resolve dependency files and find all transitive dependencies |
-| `ts-pkgx generate-index` | Generate TypeScript index file for packages |
-| `ts-pkgx generate-ts` | Generate TypeScript files from cached JSON |
-| `ts-pkgx generate-aliases` | Generate TypeScript aliases file for packages |
-| `ts-pkgx generate-docs` | Generate comprehensive BunPress documentation for all packages |
-| `ts-pkgx update-pantry` | Download and extract the latest pantry.tgz file |
-| `ts-pkgx generate-consts` | Generate or update the consts.ts file with all known packages |
-| `ts-pkgx version` | Display version information |
+| `ts-pantry fetch [packageName]` | Fetch a single package, multiple packages, or all packages |
+| `ts-pantry resolve-deps [file]` | Resolve dependency files and find all transitive dependencies |
+| `ts-pantry generate-index` | Generate TypeScript index file for packages |
+| `ts-pantry generate-ts` | Generate TypeScript files from cached JSON |
+| `ts-pantry generate-aliases` | Generate TypeScript aliases file for packages |
+| `ts-pantry generate-docs` | Generate comprehensive BunPress documentation for all packages |
+| `ts-pantry update-pantry` | Download and extract the latest pantry.tgz file |
+| `ts-pantry generate-consts` | Generate or update the consts.ts file with all known packages |
+| `ts-pantry version` | Display version information |
 
 ## fetch Command
 
@@ -32,13 +32,13 @@ The `fetch` command retrieves package information from pkgx.dev for one or more 
 
 ```bash
 # Fetch a single package
-ts-pkgx fetch [packageName] [options]
+ts-pantry fetch [packageName] [options]
 
 # Fetch multiple specific packages
-ts-pkgx fetch --pkg <packageNames> [options]
+ts-pantry fetch --pkg <packageNames> [options]
 
 # Fetch all packages
-ts-pkgx fetch --all [options]
+ts-pantry fetch --all [options]
 ```
 
 ### Arguments
@@ -68,31 +68,31 @@ ts-pkgx fetch --all [options]
 
 ```bash
 # Fetch a single package
-ts-pkgx fetch node
+ts-pantry fetch node
 
 # Fetch a package with specific path
-ts-pkgx fetch agwa.name/git-crypt
+ts-pantry fetch agwa.name/git-crypt
 
 # Fetch multiple packages
-ts-pkgx fetch --pkg node,bun,python
+ts-pantry fetch --pkg node,bun,python
 
 # Fetch packages with custom output directory and timeout
-ts-pkgx fetch --pkg "nodejs.org,python.org" --output-dir ./custom-packages --timeout 60000
+ts-pantry fetch --pkg "nodejs.org,python.org" --output-dir ./custom-packages --timeout 60000
 
 # Save as JSON instead of TypeScript
-ts-pkgx fetch --pkg "go.dev,rust-lang.org" --json
+ts-pantry fetch --pkg "go.dev,rust-lang.org" --json
 
 # Fetch all packages with a limit
-ts-pkgx fetch --all --limit 50
+ts-pantry fetch --all --limit 50
 
 # Fetch with increased concurrency and verbose output
-ts-pkgx fetch --all --concurrency 12 --verbose
+ts-pantry fetch --all --concurrency 12 --verbose
 
 # Fetch with custom cache settings
-ts-pkgx fetch --all --cache-expiration 120 --no-cache
+ts-pantry fetch --all --cache-expiration 120 --no-cache
 
 # Output JSON for CI integration
-ts-pkgx fetch --pkg "node,bun,python" --output-json
+ts-pantry fetch --pkg "node,bun,python" --output-json
 ```
 
 ## resolve-deps Command
@@ -103,10 +103,10 @@ The `resolve-deps` command analyzes dependency files and resolves all transitive
 
 ```bash
 # Resolve a specific dependency file
-ts-pkgx resolve-deps [file] [options]
+ts-pantry resolve-deps [file] [options]
 
 # Find and resolve all dependency files in a directory
-ts-pkgx resolve-deps --find-files [directory] [options]
+ts-pantry resolve-deps --find-files [directory] [options]
 ```
 
 ### Arguments
@@ -132,22 +132,22 @@ ts-pkgx resolve-deps --find-files [directory] [options]
 
 ```bash
 # Resolve a single dependency file
-ts-pkgx resolve-deps deps.yaml
+ts-pantry resolve-deps deps.yaml
 
 # Resolve with verbose output and install command
-ts-pkgx resolve-deps pkgx.yaml --verbose --install-command
+ts-pantry resolve-deps pkgx.yaml --verbose --install-command
 
 # Find all dependency files in a project
-ts-pkgx resolve-deps --find-files ./my-project
+ts-pantry resolve-deps --find-files ./my-project
 
 # Output as JSON for automation
-ts-pkgx resolve-deps deps.yaml --json
+ts-pantry resolve-deps deps.yaml --json
 
 # Filter for specific OS
-ts-pkgx resolve-deps deps.yaml --target-os darwin --include-os-deps
+ts-pantry resolve-deps deps.yaml --target-os darwin --include-os-deps
 
 # Custom configuration
-ts-pkgx resolve-deps deps.yaml --pantry-dir ./custom-pantry --max-depth 5
+ts-pantry resolve-deps deps.yaml --pantry-dir ./custom-pantry --max-depth 5
 ```
 
 ### Supported File Formats
@@ -185,7 +185,7 @@ Generate a TypeScript index file for packages with comprehensive JSDoc documenta
 ### Usage
 
 ```bash
-ts-pkgx generate-index [options]
+ts-pantry generate-index [options]
 ```
 
 ### Options
@@ -198,10 +198,10 @@ ts-pkgx generate-index [options]
 
 ```bash
 # Generate index with default settings
-ts-pkgx generate-index
+ts-pantry generate-index
 
 # With custom output directory
-ts-pkgx generate-index --output-dir ./custom/packages
+ts-pantry generate-index --output-dir ./custom/packages
 ```
 
 ## generate-ts Command
@@ -211,7 +211,7 @@ Generate TypeScript files from cached JSON files.
 ### Usage
 
 ```bash
-ts-pkgx generate-ts [options]
+ts-pantry generate-ts [options]
 ```
 
 ### Options
@@ -225,10 +225,10 @@ ts-pkgx generate-ts [options]
 
 ```bash
 # Generate TypeScript from cached JSON
-ts-pkgx generate-ts
+ts-pantry generate-ts
 
 # With custom directories
-ts-pkgx generate-ts --cache-dir ./custom-cache --output-dir ./custom-output
+ts-pantry generate-ts --cache-dir ./custom-cache --output-dir ./custom-output
 ```
 
 ## generate-aliases Command
@@ -238,14 +238,14 @@ Generate a TypeScript aliases file for packages.
 ### Usage
 
 ```bash
-ts-pkgx generate-aliases
+ts-pantry generate-aliases
 ```
 
 ### Examples
 
 ```bash
 # Generate aliases file
-ts-pkgx generate-aliases
+ts-pantry generate-aliases
 ```
 
 ## generate-docs Command
@@ -255,7 +255,7 @@ Generate comprehensive BunPress documentation for all packages.
 ### Usage
 
 ```bash
-ts-pkgx generate-docs [options]
+ts-pantry generate-docs [options]
 ```
 
 ### Options
@@ -268,10 +268,10 @@ ts-pkgx generate-docs [options]
 
 ```bash
 # Generate documentation with default settings
-ts-pkgx generate-docs
+ts-pantry generate-docs
 
 # Generate documentation with custom output directory
-ts-pkgx generate-docs --output-dir ./custom-docs
+ts-pantry generate-docs --output-dir ./custom-docs
 ```
 
 ## update-pantry Command
@@ -281,7 +281,7 @@ Download and extract the latest pantry.tgz file from the pkgx distribution.
 ### Usage
 
 ```bash
-ts-pkgx update-pantry [options]
+ts-pantry update-pantry [options]
 ```
 
 ### Options
@@ -294,10 +294,10 @@ ts-pkgx update-pantry [options]
 
 ```bash
 # Update pantry with default settings
-ts-pkgx update-pantry
+ts-pantry update-pantry
 
 # Update pantry to custom directory
-ts-pkgx update-pantry --pantry-dir ./my-pantry
+ts-pantry update-pantry --pantry-dir ./my-pantry
 ```
 
 ## generate-consts Command
@@ -307,7 +307,7 @@ Generate or update the consts.ts file with all known packages from either the lo
 ### Usage
 
 ```bash
-ts-pkgx generate-consts [options]
+ts-pantry generate-consts [options]
 ```
 
 ### Options
@@ -322,16 +322,16 @@ ts-pkgx generate-consts [options]
 
 ```bash
 # Generate consts from local pantry
-ts-pkgx generate-consts
+ts-pantry generate-consts
 
 # Generate consts from S3 registry
-ts-pkgx generate-consts --source registry
+ts-pantry generate-consts --source registry
 
 # Generate with validation
-ts-pkgx generate-consts --source registry --validate
+ts-pantry generate-consts --source registry --validate
 
 # Use custom pantry directory
-ts-pkgx generate-consts --pantry-dir ./my-pantry
+ts-pantry generate-consts --pantry-dir ./my-pantry
 ```
 
 ## Using with Bun Scripts
@@ -353,25 +353,25 @@ For faster execution, you can use the compiled binaries that are distributed wit
 
 ```bash
 # Run directly from bin directory
-./bin/ts-pkgx fetch node
+./bin/ts-pantry fetch node
 
 # Create a symlink in your path
-ln -s $(pwd)/bin/ts-pkgx /usr/local/bin/ts-pkgx
-ts-pkgx fetch node
+ln -s $(pwd)/bin/ts-pantry /usr/local/bin/ts-pantry
+ts-pantry fetch node
 ```
 
 ## Type Safety Features
 
-The CLI commands work seamlessly with ts-pkgx's comprehensive type safety features:
+The CLI commands work seamlessly with ts-pantry's comprehensive type safety features:
 
 ```bash
 # Type-safe package names are validated at runtime
-ts-pkgx fetch node          # ✅ Valid alias
-ts-pkgx fetch nodejs.org    # ✅ Valid domain
-ts-pkgx fetch invalid-pkg   # ❌ Will show error for invalid package
+ts-pantry fetch node          # ✅ Valid alias
+ts-pantry fetch nodejs.org    # ✅ Valid domain
+ts-pantry fetch invalid-pkg   # ❌ Will show error for invalid package
 
 # Nested package paths are supported
-ts-pkgx fetch agwa.name/git-crypt  # ✅ Valid nested package
+ts-pantry fetch agwa.name/git-crypt  # ✅ Valid nested package
 ```
 
 ## CI Integration
@@ -380,14 +380,14 @@ Use the `--output-json` flag for CI integration:
 
 ```bash
 # Output structured JSON for CI systems
-ts-pkgx fetch --pkg "node,bun,python" --output-json
+ts-pantry fetch --pkg "node,bun,python" --output-json
 ```
 
 This outputs structured JSON with information about processed packages, friendly names, and success status.
 
 ## Environment Variables
 
-ts-pkgx respects the following environment variables:
+ts-pantry respects the following environment variables:
 
 - `DEBUG`: Set to `true` to enable debug mode
 - `NODE_ENV`: Affects logging behavior
@@ -400,13 +400,13 @@ Control caching behavior for better performance:
 
 ```bash
 # Use fresh data (disable cache)
-ts-pkgx fetch --all --no-cache
+ts-pantry fetch --all --no-cache
 
 # Custom cache expiration (in minutes)
-ts-pkgx fetch --all --cache-expiration 60
+ts-pantry fetch --all --cache-expiration 60
 
 # Custom cache directory
-ts-pkgx fetch --all --cache-dir ./my-cache
+ts-pantry fetch --all --cache-dir ./my-cache
 ```
 
 ### Performance Tuning
@@ -415,13 +415,13 @@ Optimize performance for large operations:
 
 ```bash
 # Increase concurrency for faster fetching
-ts-pkgx fetch --all --concurrency 20
+ts-pantry fetch --all --concurrency 20
 
 # Set longer timeout for slow networks
-ts-pkgx fetch --all --timeout 60000
+ts-pantry fetch --all --timeout 60000
 
 # Limit packages for testing
-ts-pkgx fetch --all --limit 10
+ts-pantry fetch --all --limit 10
 ```
 
 ### Development and Debugging
@@ -430,11 +430,11 @@ Enable debugging and verbose output:
 
 ```bash
 # Enable debug mode (saves screenshots)
-ts-pkgx fetch node --debug
+ts-pantry fetch node --debug
 
 # Verbose output for detailed logging
-ts-pkgx fetch --pkg "node,bun" --verbose
+ts-pantry fetch --pkg "node,bun" --verbose
 
 # Both debug and verbose
-ts-pkgx fetch --all --debug --verbose --limit 5
+ts-pantry fetch --all --debug --verbose --limit 5
 ```
