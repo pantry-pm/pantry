@@ -41,7 +41,33 @@ export interface CustomVersionSource {
   fetch: () => Promise<string[]>
 }
 
-export type VersionSource = GitHubReleasesSource | GitHubTagsSource | URLPatternSource | CustomVersionSource
+/**
+ * Homebrew Cask version source.
+ *
+ * Resolves the latest version from Homebrew's Cask JSON API
+ * (https://formulae.brew.sh/api/cask/<token>.json) — the same registry the
+ * `brew` CLI uses, kept current by Homebrew's `livecheck`/autobump. This lets
+ * any cask-backed desktop app auto-update without us reverse-engineering a
+ * vendor feed.
+ *
+ * Homebrew encodes the version as `marketing` or `marketing,build` (a comma
+ * separates the build number, e.g. `1.9,426`). `versionField` selects which
+ * piece becomes our published version:
+ *   - 'marketing' (default): the part before the comma (e.g. `1.9`).
+ *   - 'build': the part after the comma (e.g. `426`).
+ *   - 'full': the whole string with the comma replaced by `.` (e.g. `1.9.426`).
+ * The resolved cask `url` is exposed to the build script as `{{caskUrl}}` so a
+ * recipe never has to hardcode a build-numbered download URL.
+ */
+export interface HomebrewCaskSource {
+  type: 'homebrew-cask'
+  /** Cask token, e.g. 'muzzle' or 'logi-options+'. */
+  cask: string
+  /** Which slice of Homebrew's `version` to publish as ours. Default 'marketing'. */
+  versionField?: 'marketing' | 'build' | 'full'
+}
+
+export type VersionSource = GitHubReleasesSource | GitHubTagsSource | URLPatternSource | CustomVersionSource | HomebrewCaskSource
 
 // ── Build Context ─────────────────────────────────────────────────────
 

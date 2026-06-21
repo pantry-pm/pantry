@@ -1,14 +1,14 @@
 import type { Recipe } from '../../../scripts/recipe-types'
 
 // Desktop app — installs natively from pantry's registry into /Applications
-// (see zig/src/install/native_apps.zig). No Homebrew.
+// (see zig/src/install/native_apps.zig).
 //
 // Logi Options+ ships a rolling installer zip with NO version in the URL
-// (logioptionsplus_installer.zip is always "latest"). The published version
-// (2.3.879545) is the installer .app's CFBundleVersion. With no clean version
-// feed, the version is PINNED — the daily updater tracks it at the published
-// version (no auto-bump). The install is the installer .app itself (Logitech
-// distributes the app via this stub installer).
+// (logioptionsplus_installer.zip is always "latest"), but it IS a Homebrew cask
+// (`logi-options+`). Homebrew tracks the current version (e.g. 2.1.854976), kept
+// fresh by its livecheck/autobump — so we resolve the latest version from the
+// Cask API and the daily updater auto-republishes new releases. The download URL
+// is rolling, so the build keeps using it directly.
 export const recipe: Recipe = {
   domain: 'logitech.com/options-plus',
   name: 'Logi Options+',
@@ -16,11 +16,10 @@ export const recipe: Recipe = {
   homepage: 'https://www.logitech.com/software/logi-options-plus.html',
   programs: [],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Rolling installer, no version in the URL — pinned.
+  // Auto-update via the Homebrew cask's tracked version.
   versionSource: {
-    type: 'url-pattern',
-    url: 'https://download01.logi.com/web/ftp/pub/techsupport/optionsplus/logioptionsplus_installer.zip',
-    knownVersions: ['2.3.879545'],
+    type: 'homebrew-cask',
+    cask: 'logi-options+',
   },
   distributable: null,
 

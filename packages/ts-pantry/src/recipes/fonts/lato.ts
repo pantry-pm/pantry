@@ -1,11 +1,15 @@
 import type { Recipe } from '../../scripts/recipe-types'
+import { fontVersionFromTtf } from '../_lib/font-version'
 
 // Auto-authored font recipe. Fonts install natively from pantry's registry into
 // ~/Library/Fonts (see zig/src/install/native_apps.zig) — no Homebrew.
 //
-// Lato ships a single OFL zip (Lato2OFL.zip) with no version in the URL and no
-// GitHub releases/tags feed, so the version is PINNED. The daily updater tracks
-// it at the published version (no auto-bump) until a new release is cut.
+// Lato has no GitHub releases/appcast, but the font version is recorded in the
+// TTF nametable. The latofonts.com OFL zip only serves the whole archive, so we
+// read the version from Google Fonts' canonical Lato-Regular.ttf (a lightweight
+// ~640KB file that ships the same release, e.g. 2.015) and the daily updater
+// auto-republishes when it bumps. The actual download stays the latofonts.com
+// OFL zip (the full upstream family).
 export const recipe: Recipe = {
   domain: 'lato',
   name: 'Lato',
@@ -13,11 +17,13 @@ export const recipe: Recipe = {
   homepage: 'https://www.latofonts.com/',
   programs: [],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'linux/aarch64', 'linux/x86-64'],
-  // No upstream version feed (single fixed zip URL) — pinned.
+  // Auto-update: read the version from the canonical Lato TTF nametable.
   versionSource: {
-    type: 'url-pattern',
-    url: 'https://www.latofonts.com/files/Lato2OFL.zip',
-    knownVersions: ['2.0'],
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const v = await fontVersionFromTtf('https://github.com/google/fonts/raw/main/ofl/lato/Lato-Regular.ttf')
+      return v ? [v] : []
+    },
   },
   distributable: null,
 

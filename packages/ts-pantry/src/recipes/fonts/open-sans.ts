@@ -1,12 +1,12 @@
 import type { Recipe } from '../../scripts/recipe-types'
+import { fontVersionFromTtf } from '../_lib/font-version'
 
 // Auto-authored font recipe. Fonts install natively from pantry's registry into
 // ~/Library/Fonts (see zig/src/install/native_apps.zig) — no Homebrew.
 //
-// googlefonts/opensans has neither GitHub releases nor tags, so the version is
-// PINNED (3.003 — the version embedded in the font files). The build downloads
-// the repo archive and copies the TTFs from fonts/ttf. The daily updater tracks
-// it at the published version (no auto-bump) until upstream tags a release.
+// googlefonts/opensans has no GitHub releases/tags, but the font version lives in
+// the TTF nametable (e.g. 3.003). We read it from the same repo TTF the build
+// ships, so the daily updater auto-republishes whenever upstream bumps the font.
 export const recipe: Recipe = {
   domain: 'open-sans',
   name: 'Open Sans',
@@ -15,11 +15,13 @@ export const recipe: Recipe = {
   github: 'https://github.com/googlefonts/opensans',
   programs: [],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'linux/aarch64', 'linux/x86-64'],
-  // No releases/tags upstream — pinned to the repo's current font version.
+  // Auto-update: read the version from the repo's Open Sans TTF nametable.
   versionSource: {
-    type: 'url-pattern',
-    url: 'https://github.com/googlefonts/opensans/archive/refs/heads/main.zip',
-    knownVersions: ['3.003'],
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const v = await fontVersionFromTtf('https://github.com/googlefonts/opensans/raw/main/fonts/ttf/OpenSans-Regular.ttf')
+      return v ? [v] : []
+    },
   },
   distributable: null,
 
