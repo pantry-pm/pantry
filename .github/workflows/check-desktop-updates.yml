@@ -40,8 +40,36 @@ permissions:
   contents: write
 
 jobs:
-  check:
-    # macOS: desktop apps/fonts are built with hdiutil/ditto/unzip.
+  # Zip-only recipes (most fonts + apps like maccy/pearcleaner that just
+  # curl + unzip a .zip) don't need macOS, so they publish on the fast
+  # ubuntu-latest runner instead of waiting 10–15 min in the scarce macOS
+  # runner queue. This job does NOT commit the manifest — the macos job below
+  # is the single committer to avoid a push race.
+  ubuntu-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Publish ubuntu-safe desktop updates
+        working-directory: packages/ts-pantry
+        run: |
+          PUBLISH_FLAG=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then
+            PUBLISH_FLAG="--publish"
+          fi
+          bun scripts/check-desktop-updates.ts --platform=ubuntu $PUBLISH_FLAG
+
+  # macOS-only recipes (mount a .dmg via hdiutil, or use ditto/sips/installer/
+  # pkgutil) must build on macOS. This runs AFTER the ubuntu job so that by the
+  # time it scans + records the manifest, the ubuntu publishes are already
+  # reflected in the registry — making it the single, race-free committer of
+  # desktop-versions.json.
+  macos:
+    needs: ubuntu-safe
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,14 +85,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Check, publish & record desktop updates
+      - name: Publish macOS desktop updates & commit manifest
         working-directory: packages/ts-pantry
         run: |
           PUBLISH_FLAG=""
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then
             PUBLISH_FLAG="--publish"
           fi
-          bun scripts/check-desktop-updates.ts $PUBLISH_FLAG --commit
+          bun scripts/check-desktop-updates.ts --platform=macos $PUBLISH_FLAG --commit
 
       - name: Push manifest commit
         working-directory: packages/ts-pantry

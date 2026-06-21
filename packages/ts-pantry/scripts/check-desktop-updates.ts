@@ -15,6 +15,18 @@
  *   bun scripts/check-desktop-updates.ts --commit        # + commit manifest
  *   bun scripts/check-desktop-updates.ts --publish --commit
  *
+ * Build-host selection: each recipe is classified by its build script as
+ * needing macOS (mounts a .dmg / uses hdiutil/ditto/sips/installer/pkgutil)
+ * or being "ubuntu-safe" (curl + unzip a .zip — most fonts and zip-based
+ * apps). The CI workflow splits publishing across a fast ubuntu-latest job and
+ * a macos-latest job so the whole pipeline no longer waits on the scarce macOS
+ * runner queue. Select a host's slice with `--platform=ubuntu` / `--platform=macos`
+ * (default: all). Affects which recipes get *published*; the manifest always
+ * records every recipe.
+ *
+ *   bun scripts/check-desktop-updates.ts --platform=ubuntu --publish
+ *   bun scripts/check-desktop-updates.ts --platform=macos  --publish
+ *
  * Scope: every `*.font.ts` recipe (fonts) plus darwin-only download recipes
  * with a github-releases source (desktop apps). CLI packages are untouched —
  * they have their own version pipeline (build-versions.yml).
@@ -29,9 +41,49 @@ const RECIPES_DIR = join(ROOT, 'src', 'recipes')
 const MANIFEST = join(ROOT, 'desktop-versions.json')
 const REGISTRY = process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev'
 
-const flags = new Set(process.argv.slice(2))
+const args = process.argv.slice(2)
+const flags = new Set(args)
 const doCommit = flags.has('--commit')
 const doPublish = flags.has('--publish')
+
+/** Build host this run publishes for: 'ubuntu' (zip-only), 'macos' (.dmg /
+ * macOS-tool recipes) or 'all' (default). Drives which out-of-date packages
+ * actually get built + uploaded — the manifest still records every recipe. */
+type Platform = 'ubuntu' | 'macos' | 'all'
+const platform: Platform = (() => {
+  const arg = args.find(a => a.startsWith('--platform=') || a.startsWith('--only='))
+  const v = arg?.split('=')[1]
+  if (v === 'ubuntu' || v === 'ubuntu-safe' || v === 'linux')
+    return 'ubuntu'
+  if (v === 'macos' || v === 'mac' || v === 'darwin')
+    return 'macos'
+  return 'all'
+})()
+
+/** Tokens in a build script that genuinely require a macOS runner: mounting a
+ * disk image, the macOS-only copy/resize tools, or the .pkg installer chain. */
+const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\.dmg\b/
+
+/** Flatten a recipe's build script (strings + { run } step objects) to one
+ * blob so we can scan it for macOS-only tooling. */
+function buildScriptText(recipe: any): string {
+  const steps: any[] = recipe?.build?.script ?? []
+  const parts: string[] = []
+  for (const step of steps) {
+    if (typeof step === 'string')
+      parts.push(step)
+    else if (step && typeof step === 'object' && step.run)
+      parts.push(Array.isArray(step.run) ? step.run.join('\n') : String(step.run))
+  }
+  return parts.join('\n')
+}
+
+/** True when a recipe must build on macOS (mounts a .dmg or uses a macOS-only
+ * tool). Zip-only recipes (most fonts, apps like maccy/pearcleaner) are false
+ * and publish fine on the fast ubuntu-latest runner. */
+function needsMacos(recipe: any): boolean {
+  return MACOS_BUILD.test(buildScriptText(recipe))
+}
 
 interface Entry {
   domain: string
@@ -41,6 +93,8 @@ interface Entry {
   latest: string | null
   published: string | null
   needsUpdate: boolean
+  /** 'macos' if the build script needs a macOS runner, else 'ubuntu'. */
+  host: 'macos' | 'ubuntu'
 }
 
 function ghHeaders(): Record<string, string> {
@@ -207,6 +261,7 @@ async function main(): Promise<void> {
       latest,
       published,
       needsUpdate: !!latest && latest !== published,
+      host: needsMacos(recipe) ? 'macos' : 'ubuntu',
     })
   }
 
@@ -216,16 +271,19 @@ async function main(): Promise<void> {
   // Report.
   for (const e of entries) {
     const mark = e.needsUpdate ? '⬆' : (e.published ? '✓' : '·')
-    console.warn(`  ${mark} ${e.domain.padEnd(34)} latest=${e.latest ?? '?'} published=${e.published ?? '—'}`)
+    console.warn(`  ${mark} [${e.host === 'macos' ? 'macos ' : 'ubuntu'}] ${e.domain.padEnd(34)} latest=${e.latest ?? '?'} published=${e.published ?? '—'}`)
   }
-  console.warn(`\n${entries.length} desktop package(s), ${outdated.length} out of date.`)
+  const ubuntuOut = outdated.filter(e => e.host === 'ubuntu').length
+  const macosOut = outdated.length - ubuntuOut
+  console.warn(`\n${entries.length} desktop package(s), ${outdated.length} out of date (${ubuntuOut} ubuntu-safe, ${macosOut} macos).`)
 
   const manifest = {
     generatedFromUpstreamAt: undefined as string | undefined, // stamped by CI, not here (keeps diffs clean)
-    packages: entries.map(({ domain, name, kind, latest, published, needsUpdate }) => ({
+    packages: entries.map(({ domain, name, kind, host, latest, published, needsUpdate }) => ({
       domain,
       name,
       kind,
+      host,
       latest,
       published,
       needsUpdate,
@@ -234,9 +292,15 @@ async function main(): Promise<void> {
   writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`)
   console.warn(`Wrote ${MANIFEST}`)
 
-  // Publish out-of-date packages (requires storage creds in the env).
-  if (doPublish && outdated.length > 0) {
-    for (const e of outdated) {
+  // Publish out-of-date packages (requires storage creds in the env). Only the
+  // packages for this run's build host — so the ubuntu-latest job publishes the
+  // zip-only ones and the macos-latest job publishes the .dmg/macOS-tool ones.
+  const toPublish = platform === 'all'
+    ? outdated
+    : outdated.filter(e => e.host === platform)
+  if (doPublish && toPublish.length > 0) {
+    console.warn(`\nPublishing ${toPublish.length} package(s) for host=${platform}.`)
+    for (const e of toPublish) {
       if (!e.latest)
         continue
       console.warn(`\n==> Publishing ${e.domain} @ ${e.latest}`)
@@ -249,8 +313,12 @@ async function main(): Promise<void> {
     }
   }
 
-  // Commit the manifest when it changed.
-  if (doCommit) {
+  // Commit the manifest when it changed. In the split CI pipeline the ubuntu
+  // job runs first and publishes its slice; the macos job runs after and is the
+  // single committer — by then its fresh scan already reflects the ubuntu
+  // publishes, so the one manifest commit is complete and the two jobs never
+  // race on the commit/push. (`--platform=ubuntu` therefore skips committing.)
+  if (doCommit && platform !== 'ubuntu') {
     const status = await $`git status --porcelain ${MANIFEST}`.cwd(ROOT).text()
     if (status.trim()) {
       const subject = commitSubject(outdated)
