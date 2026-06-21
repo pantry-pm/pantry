@@ -78,6 +78,21 @@ echo "Created: ${ARTIFACT_DIR}/${TARBALL}"
 echo "SHA256: $(cat "${ARTIFACT_DIR}/${TARBALL}.sha256")"
 
 # Step 3: Upload
+# Desktop apps/fonts produce a platform-agnostic artifact (a zip-extracted
+# .app bundle or font files) but are built on a single runner — so the artifact
+# dir is tagged with only the build host's platform (e.g. linux-x86-64 on the
+# ubuntu runner). The Zig CLI's registry lookup only matches the *client's* own
+# darwin-<arch> key, so we must register the artifact under every platform the
+# recipe targets. Derive those keys from the recipe; fall back to the build
+# host's platform when the recipe declares none (source-built CLI packages).
+RECIPE_PLATFORMS="$(bun scripts/recipe-platforms.ts "${PACKAGE}" 2>/dev/null || true)"
+PLATFORMS_ARG=()
+if [ -n "${RECIPE_PLATFORMS}" ]; then
+  PLATFORMS_CSV="$(echo "${RECIPE_PLATFORMS}" | tr ' ' ',')"
+  PLATFORMS_ARG=(--platforms "${PLATFORMS_CSV}")
+  echo "Publishing under recipe-declared platforms: ${PLATFORMS_CSV}"
+fi
+
 echo ""
 echo ">>> Step 3: Uploading to S3..."
 bun scripts/upload-to-s3.ts \
@@ -85,7 +100,8 @@ bun scripts/upload-to-s3.ts \
   --version "${VERSION}" \
   --artifacts-dir "${ARTIFACTS_DIR}" \
   --bucket "${BUCKET}" \
-  --region "${REGION}"
+  --region "${REGION}" \
+  ${PLATFORMS_ARG[@]+"${PLATFORMS_ARG[@]}"}
 
 # Cleanup
 echo ""

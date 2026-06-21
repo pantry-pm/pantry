@@ -23,6 +23,16 @@ export interface UploadOptions {
   artifactsDir: string
   bucket: string
   region: string
+  /**
+   * Optional explicit list of registry platform keys (e.g. ['darwin-arm64',
+   * 'darwin-x86-64']) to publish each discovered artifact under, overriding the
+   * platform parsed from the artifact directory name. Used for platform-agnostic
+   * desktop apps/fonts that are built on a single (e.g. ubuntu) runner but must
+   * be installable on the platforms their recipe targets — the CLI's registry
+   * lookup only matches the host's own `darwin-<arch>` key, so a `linux-x86-64`
+   * upload would be invisible to macOS clients.
+   */
+  platforms?: string[]
 }
 
 interface PackageMetadata {
@@ -159,6 +169,7 @@ function compareSemverDesc(a: string, b: string): number {
 
 export async function uploadToS3(options: UploadOptions): Promise<void> {
   const { package: pkgName, version, artifactsDir, bucket, region } = options
+  const platformOverride = options.platforms && options.platforms.length > 0 ? options.platforms : null
   const provider = (process.env.STORAGE_PROVIDER || 'aws') as 'aws' | 'backblaze' | 'hetzner'
 
   console.log(`\n${'='.repeat(60)}`)
@@ -213,17 +224,17 @@ export async function uploadToS3(options: UploadOptions): Promise<void> {
       continue
     }
 
-    // Extract platform from artifact name (e.g., "php-net-8.4.11-darwin-arm64")
+    // Extract platform from artifact name (e.g., "php-net-8.4.11-darwin-arm64").
+    // A --platforms override replaces this (a platform-agnostic desktop/font
+    // artifact built on one runner gets registered under every target platform).
     const match = artifactDir.match(/-(darwin|linux)-(arm64|x86-64)$/)
-    if (!match) {
+    if (!match && !platformOverride) {
       console.log(`⚠️  Could not determine platform from ${artifactDir}, skipping`)
       continue
     }
-    const platform = `${match[1]}-${match[2]}`
+    const targetPlatforms = platformOverride ?? [`${match![1]}-${match![2]}`]
 
-    console.log(`\n📤 Uploading ${platform}...`)
-
-    // Read tarball
+    // Read tarball once; reuse across all target platform keys.
     const tarballPath = join(artifactPath, tarball)
     const tarballContent = readFileSync(tarballPath)
     const tarballSize = statSync(tarballPath).size
@@ -238,33 +249,37 @@ else {
       sha256Hash = crypto.createHash('sha256').update(tarballContent).digest('hex')
     }
 
-    // S3 keys
-    const tarballKey = `binaries/${pkgName}/${version}/${platform}/${tarball}`
-    const sha256Key = `binaries/${pkgName}/${version}/${platform}/${tarball}.sha256`
+    for (const platform of targetPlatforms) {
+      console.log(`\n📤 Uploading ${platform}...`)
 
-    // Upload tarball
-    console.log(`   📁 Uploading ${tarball} (${(tarballSize / 1024 / 1024).toFixed(2)} MB)`)
-    await s3.putObject({
-      bucket,
-      key: tarballKey,
-      body: tarballContent,
-      contentType: 'application/gzip',
-    })
-    console.log(`   ✓ Uploaded to s3://${bucket}/${tarballKey}`)
+      // S3 keys
+      const tarballKey = `binaries/${pkgName}/${version}/${platform}/${tarball}`
+      const sha256Key = `binaries/${pkgName}/${version}/${platform}/${tarball}.sha256`
 
-    // Upload SHA256
-    await s3.putObject({
-      bucket,
-      key: sha256Key,
-      body: `${sha256Hash}  ${tarball}\n`,
-      contentType: 'text/plain',
-    })
-    console.log(`   ✓ Uploaded SHA256`)
+      // Upload tarball
+      console.log(`   📁 Uploading ${tarball} (${(tarballSize / 1024 / 1024).toFixed(2)} MB)`)
+      await s3.putObject({
+        bucket,
+        key: tarballKey,
+        body: tarballContent,
+        contentType: 'application/gzip',
+      })
+      console.log(`   ✓ Uploaded to s3://${bucket}/${tarballKey}`)
 
-    uploadedPlatforms[platform] = {
-      tarball: tarballKey,
-      sha256: sha256Hash,
-      size: tarballSize,
+      // Upload SHA256
+      await s3.putObject({
+        bucket,
+        key: sha256Key,
+        body: `${sha256Hash}  ${tarball}\n`,
+        contentType: 'text/plain',
+      })
+      console.log(`   ✓ Uploaded SHA256`)
+
+      uploadedPlatforms[platform] = {
+        tarball: tarballKey,
+        sha256: sha256Hash,
+        size: tarballSize,
+      }
     }
   }
 
@@ -360,6 +375,7 @@ async function main() {
       'artifacts-dir': { type: 'string' },
       bucket: { type: 'string', short: 'b' },
       region: { type: 'string', short: 'r', default: 'us-east-1' },
+      platforms: { type: 'string' },
     },
     strict: true,
   })
@@ -376,6 +392,7 @@ async function main() {
     artifactsDir: values['artifacts-dir'],
     bucket: values.bucket,
     region: values.region || 'us-east-1',
+    platforms: values.platforms ? values.platforms.split(',').map(s => s.trim()).filter(Boolean) : undefined,
   })
 }
 

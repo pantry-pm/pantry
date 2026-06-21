@@ -46,6 +46,17 @@ const flags = new Set(args)
 const doCommit = flags.has('--commit')
 const doPublish = flags.has('--publish')
 
+/** Domains to (re)publish even when already at the latest published version —
+ * `--force=roboto,pearcleaner.app`. Lets an operator re-run a publish after a
+ * pipeline fix (e.g. re-keying a package's platforms) without bumping a version.
+ * Empty/absent = no forcing. */
+const forceDomains = new Set(
+  (args.find(a => a.startsWith('--force='))?.slice('--force='.length) ?? '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean),
+)
+
 /** Build host this run publishes for: 'ubuntu' (zip-only), 'macos' (.dmg /
  * macOS-tool recipes) or 'all' (default). Drives which out-of-date packages
  * actually get built + uploaded — the manifest still records every recipe. */
@@ -260,7 +271,7 @@ async function main(): Promise<void> {
       repo,
       latest,
       published,
-      needsUpdate: !!latest && latest !== published,
+      needsUpdate: !!latest && (latest !== published || forceDomains.has(recipe.domain)),
       host: needsMacos(recipe) ? 'macos' : 'ubuntu',
     })
   }
