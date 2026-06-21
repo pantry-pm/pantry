@@ -193,6 +193,7 @@ export const aliases: Record<string, string> = {
   'cJSON': 'github.com/DaveGamble/cJSON',
   'clang-format': 'llvm.org/clang-format',
   'classic.yarnpkg': 'classic.yarnpkg.com',
+  'claude-code': 'anthropic.com/claude-code',
   'cleanshot': 'cleanshot.com',
   'CleanShot X': 'cleanshot.com',
   'click': 'crates.io/click',
