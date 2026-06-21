@@ -32,7 +32,7 @@
       "name": "bw",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "2026.5.0",
       "published": "2026.5.0",
       "needsUpdate": false
     },
@@ -106,6 +106,15 @@
       "host": "macos",
       "latest": null,
       "published": "24.3.4",
+      "needsUpdate": false
+    },
+    {
+      "domain": "diabrowser.com",
+      "name": "Dia",
+      "kind": "app",
+      "host": "ubuntu",
+      "latest": null,
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -280,6 +289,15 @@
       "needsUpdate": false
     },
     {
+      "domain": "lato",
+      "name": "Lato",
+      "kind": "font",
+      "host": "ubuntu",
+      "latest": null,
+      "published": "2.0",
+      "needsUpdate": false
+    },
+    {
       "domain": "libreoffice.org",
       "name": "LibreOffice",
       "kind": "app",
@@ -293,9 +311,9 @@
       "name": "Linear",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "1.31.0",
       "published": null,
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "lmstudio.ai",
@@ -307,12 +325,30 @@
       "needsUpdate": false
     },
     {
+      "domain": "logitech.com/options-plus",
+      "name": "Logi Options+",
+      "kind": "app",
+      "host": "ubuntu",
+      "latest": null,
+      "published": "2.3.879545",
+      "needsUpdate": false
+    },
+    {
       "domain": "maccy.app",
       "name": "Maccy",
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.6.1",
       "published": "2.6.1",
+      "needsUpdate": false
+    },
+    {
+      "domain": "mediaarea.net",
+      "name": "MediaInfo",
+      "kind": "app",
+      "host": "macos",
+      "latest": "26.05",
+      "published": "26.05",
       "needsUpdate": false
     },
     {
@@ -343,6 +379,15 @@
       "needsUpdate": false
     },
     {
+      "domain": "muzzleapp.com",
+      "name": "Muzzle",
+      "kind": "app",
+      "host": "ubuntu",
+      "latest": null,
+      "published": "1.9",
+      "needsUpdate": false
+    },
+    {
       "domain": "notion.so",
       "name": "Notion",
       "kind": "app",
@@ -370,6 +415,15 @@
       "needsUpdate": false
     },
     {
+      "domain": "open-sans",
+      "name": "Open Sans",
+      "kind": "font",
+      "host": "ubuntu",
+      "latest": null,
+      "published": "3.003",
+      "needsUpdate": false
+    },
+    {
       "domain": "orbstack.dev",
       "name": "OrbStack",
       "kind": "app",
@@ -385,7 +439,7 @@
       "host": "ubuntu",
       "latest": "5.4.3",
       "published": "5.4.3",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "postman.com",
@@ -421,7 +475,7 @@
       "host": "ubuntu",
       "latest": "2.138",
       "published": "2.138",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "signal.org",
@@ -439,6 +493,15 @@
       "host": "macos",
       "latest": null,
       "published": "4.41.105",
+      "needsUpdate": false
+    },
+    {
+      "domain": "source-code-pro",
+      "name": "Source Code Pro",
+      "kind": "font",
+      "host": "ubuntu",
+      "latest": "2.042",
+      "published": "2.042",
       "needsUpdate": false
     },
     {
