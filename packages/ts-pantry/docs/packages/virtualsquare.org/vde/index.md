@@ -25,7 +25,7 @@ This package provides the following executable programs:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.vde

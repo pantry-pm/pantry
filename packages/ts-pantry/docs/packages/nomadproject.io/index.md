@@ -44,14 +44,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +nomadproject.io@2.0.3 -- $SHELL -i
+# Install a specific version
+pantry install nomadproject.io@2.0.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.nomad

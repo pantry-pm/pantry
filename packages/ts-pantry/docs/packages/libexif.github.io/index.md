@@ -36,8 +36,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +libexif.github.io@0.6.26 -- $SHELL -i
+# Install a specific version
+pantry install libexif.github.io@0.6.26
 ```
 
 ## Dependencies
@@ -49,7 +49,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['libexif.github']

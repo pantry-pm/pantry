@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +people.redhat.com/sgrubb/libcap-ng@0.8.5 -- $SHELL -i
+# Install a specific version
+pantry install people.redhat.com/sgrubb/libcap-ng@0.8.5
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['libcap-ng']

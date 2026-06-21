@@ -42,14 +42,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +openmp.llvm.org@22.1.8 -- $SHELL -i
+# Install a specific version
+pantry install openmp.llvm.org@22.1.8
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libomp

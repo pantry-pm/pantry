@@ -50,14 +50,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +bun.sh@1.3.11 -- $SHELL -i
+# Install a specific version
+pantry install bun.sh@1.3.11
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['bun.com']

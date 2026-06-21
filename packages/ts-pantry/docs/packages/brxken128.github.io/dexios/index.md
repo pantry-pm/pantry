@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +brxken128.github.io/dexios@8.8.1 -- $SHELL -i
+# Install a specific version
+pantry install brxken128.github.io/dexios@8.8.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.dexios

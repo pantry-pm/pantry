@@ -7,7 +7,7 @@
 - **Domain**: `tableplus.com`
 - **Name**: `TablePlus`
 - **Homepage**: <https://tableplus.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/tableplus.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/tableplus.com/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +tableplus.com@6.2.6 -- $SHELL -i
+# Install a specific version
+pantry install tableplus.com@6.2.6
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.tableplus
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/tableplus.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/tableplus.com/package.yml)
 - [Homepage](https://tableplus.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -40,14 +40,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +argoproj.github.io/workflows@4.0.6 -- $SHELL -i
+# Install a specific version
+pantry install argoproj.github.io/workflows@4.0.6
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['argo-workflows']

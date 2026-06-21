@@ -51,14 +51,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/charliermarsh/ruff@0.15.7 -- $SHELL -i
+# Install a specific version
+pantry install github.com/charliermarsh/ruff@0.15.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.ruff

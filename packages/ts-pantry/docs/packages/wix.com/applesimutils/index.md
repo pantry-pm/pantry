@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +wix.com/applesimutils@0.9.12 -- $SHELL -i
+# Install a specific version
+pantry install wix.com/applesimutils@0.9.12
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.applesimutils

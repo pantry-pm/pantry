@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/tom-on-the-internet/cemetery-escape@0.0.7 -- $SHELL -i
+# Install a specific version
+pantry install github.com/tom-on-the-internet/cemetery-escape@0.0.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['cemetery-escape']

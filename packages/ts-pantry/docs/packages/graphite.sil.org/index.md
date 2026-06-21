@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +graphite.sil.org@1.3.15 -- $SHELL -i
+# Install a specific version
+pantry install graphite.sil.org@1.3.15
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gr2fonttest

@@ -2,7 +2,7 @@
 
 17 packages in this category
 
-Popular programming languages and their runtimes available through pkgx.
+Popular programming languages and their runtimes available through pantry.
 
 ## Packages
 

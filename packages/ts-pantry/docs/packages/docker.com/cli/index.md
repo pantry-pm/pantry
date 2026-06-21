@@ -63,14 +63,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +docker.com/cli@29.3.0 -- $SHELL -i
+# Install a specific version
+pantry install docker.com/cli@29.3.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.docker

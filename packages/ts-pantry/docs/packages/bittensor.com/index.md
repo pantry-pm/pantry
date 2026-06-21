@@ -55,8 +55,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +bittensor.com@10.4.1 -- $SHELL -i
+# Install a specific version
+pantry install bittensor.com@10.4.1
 ```
 
 ## Dependencies
@@ -69,7 +69,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.Bittensor

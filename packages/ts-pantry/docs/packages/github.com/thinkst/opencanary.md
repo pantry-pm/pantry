@@ -36,8 +36,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/thinkst/opencanary@0.9.7 -- $SHELL -i
+# Install a specific version
+pantry install github.com/thinkst/opencanary@0.9.7
 ```
 
 ## Dependencies
@@ -51,7 +51,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.opencanaryd

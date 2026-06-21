@@ -46,14 +46,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +sourceware.org/libffi@3.6.0 -- $SHELL -i
+# Install a specific version
+pantry install sourceware.org/libffi@3.6.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libffi

@@ -38,14 +38,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/kubernetes-sigs/aws-iam-authenticator@0.7.12 -- $SHELL -i
+# Install a specific version
+pantry install github.com/kubernetes-sigs/aws-iam-authenticator@0.7.12
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['aws-iam-authenticator']

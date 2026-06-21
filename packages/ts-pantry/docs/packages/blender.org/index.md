@@ -7,7 +7,7 @@
 - **Domain**: `blender.org`
 - **Name**: `Blender`
 - **Homepage**: <https://blender.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/blender.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/blender.org/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +blender.org@4.3.2 -- $SHELL -i
+# Install a specific version
+pantry install blender.org@4.3.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.blender
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/blender.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/blender.org/package.yml)
 - [Homepage](https://blender.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

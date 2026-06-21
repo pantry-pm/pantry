@@ -42,14 +42,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +git.tozt.net/rbw@1.15.0 -- $SHELL -i
+# Install a specific version
+pantry install git.tozt.net/rbw@1.15.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.rbw

@@ -48,14 +48,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +maturin.rs@1.14.1 -- $SHELL -i
+# Install a specific version
+pantry install maturin.rs@1.14.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.maturin

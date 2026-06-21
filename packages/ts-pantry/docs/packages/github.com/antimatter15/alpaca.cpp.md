@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/antimatter15/alpaca.cpp@2023.3.21 -- $SHELL -i
+# Install a specific version
+pantry install github.com/antimatter15/alpaca.cpp@2023.3.21
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['alpaca.cpp']

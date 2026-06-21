@@ -37,8 +37,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +sourceforge.net/xmlstar@1.6.1 -- $SHELL -i
+# Install a specific version
+pantry install sourceforge.net/xmlstar@1.6.1
 ```
 
 ## Dependencies
@@ -51,7 +51,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.XMLStarlet

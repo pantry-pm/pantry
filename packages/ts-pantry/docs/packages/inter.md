@@ -7,7 +7,7 @@
 - **Domain**: `inter`
 - **Name**: `Inter`
 - **Homepage**: <https://rsms.me/inter/>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/inter/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/inter/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +inter@4.1 -- $SHELL -i
+# Install a specific version
+pantry install inter@4.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.Inter
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/inter/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/inter/package.yml)
 - [Homepage](https://rsms.me/inter/)
 - [Back to Package Catalog](../package-catalog.md)
 

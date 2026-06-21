@@ -37,8 +37,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/zsh-users/zsh-completions@0.36.0 -- $SHELL -i
+# Install a specific version
+pantry install github.com/zsh-users/zsh-completions@0.36.0
 ```
 
 ## Dependencies
@@ -50,7 +50,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['zsh-completions']

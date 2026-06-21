@@ -36,8 +36,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +ebassi.github.io/graphene@1.10.8 -- $SHELL -i
+# Install a specific version
+pantry install ebassi.github.io/graphene@1.10.8
 ```
 
 ## Dependencies
@@ -49,7 +49,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.graphene

@@ -56,8 +56,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +python.org@3.14.3 -- $SHELL -i
+# Install a specific version
+pantry install python.org@3.14.3
 ```
 
 ## Dependencies
@@ -81,7 +81,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.py

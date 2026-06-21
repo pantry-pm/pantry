@@ -37,14 +37,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +glm.g-truc.net@1.0.3 -- $SHELL -i
+# Install a specific version
+pantry install glm.g-truc.net@1.0.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['glm.g-truc']

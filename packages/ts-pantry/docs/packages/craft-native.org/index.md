@@ -7,7 +7,7 @@
 - **Domain**: `craft-native.org`
 - **Name**: `craft`
 - **Homepage**: <https://craft-native.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/craft-native.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/craft-native.org/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +craft-native.org@0.0.37 -- $SHELL -i
+# Install a specific version
+pantry install craft-native.org@0.0.37
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.craft
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/craft-native.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/craft-native.org/package.yml)
 - [Homepage](https://craft-native.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -40,14 +40,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +khronos.org/opencl-headers@2025.7.22 -- $SHELL -i
+# Install a specific version
+pantry install khronos.org/opencl-headers@2025.7.22
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['opencl-headers']

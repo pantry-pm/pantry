@@ -39,8 +39,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +openinterpreter.com@0.4.0 -- $SHELL -i
+# Install a specific version
+pantry install openinterpreter.com@0.4.0
 ```
 
 ## Dependencies
@@ -53,7 +53,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['open-interpreter']

@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +crates.io/albion_terminal_rpg@2024.5.7 -- $SHELL -i
+# Install a specific version
+pantry install crates.io/albion_terminal_rpg@2024.5.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.albionrpg

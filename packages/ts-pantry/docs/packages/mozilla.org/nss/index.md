@@ -96,8 +96,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +mozilla.org/nss@3.92.0 -- $SHELL -i
+# Install a specific version
+pantry install mozilla.org/nss@3.92.0
 ```
 
 ## Dependencies
@@ -111,7 +111,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.nss

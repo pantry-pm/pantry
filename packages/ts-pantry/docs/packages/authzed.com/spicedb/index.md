@@ -52,14 +52,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +authzed.com/spicedb@1.50.0 -- $SHELL -i
+# Install a specific version
+pantry install authzed.com/spicedb@1.50.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.spicedb

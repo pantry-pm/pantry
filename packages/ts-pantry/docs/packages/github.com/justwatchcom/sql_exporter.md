@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/justwatchcom/sql_exporter@0.5.0 -- $SHELL -i
+# Install a specific version
+pantry install github.com/justwatchcom/sql_exporter@0.5.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['justwatchcom/sql_exporter']

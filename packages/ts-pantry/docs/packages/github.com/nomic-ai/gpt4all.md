@@ -52,14 +52,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/nomic-ai/gpt4all@2023.03.29 -- $SHELL -i
+# Install a specific version
+pantry install github.com/nomic-ai/gpt4all@2023.03.29
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gpt4all

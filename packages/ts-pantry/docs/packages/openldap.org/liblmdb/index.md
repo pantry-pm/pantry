@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +openldap.org/liblmdb@0.9.35 -- $SHELL -i
+# Install a specific version
+pantry install openldap.org/liblmdb@0.9.35
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.liblmdb

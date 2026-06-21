@@ -38,8 +38,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +libevent.org@2.1.12 -- $SHELL -i
+# Install a specific version
+pantry install libevent.org@2.1.12
 ```
 
 ## Dependencies
@@ -51,7 +51,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libevent

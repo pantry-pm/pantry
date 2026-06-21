@@ -44,8 +44,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/rrthomas/psutils@3.3.14 -- $SHELL -i
+# Install a specific version
+pantry install github.com/rrthomas/psutils@3.3.14
 ```
 
 ## Dependencies
@@ -58,7 +58,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.psutils

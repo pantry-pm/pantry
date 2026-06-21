@@ -38,14 +38,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +ivarch.com/pv@1.10.5 -- $SHELL -i
+# Install a specific version
+pantry install ivarch.com/pv@1.10.5
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.pv

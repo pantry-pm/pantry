@@ -37,8 +37,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +swagger.io/swagger-codegen@3.0.77 -- $SHELL -i
+# Install a specific version
+pantry install swagger.io/swagger-codegen@3.0.77
 ```
 
 ## Dependencies
@@ -50,7 +50,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['swagger-codegen']

@@ -7,7 +7,7 @@
 - **Domain**: `discord.com`
 - **Name**: `Discord`
 - **Homepage**: <https://discord.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/discord.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/discord.com/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +discord.com@0.0.337 -- $SHELL -i
+# Install a specific version
+pantry install discord.com@0.0.337
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.discord
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/discord.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/discord.com/package.yml)
 - [Homepage](https://discord.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

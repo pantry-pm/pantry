@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/numactl/numactl@2.0.16 -- $SHELL -i
+# Install a specific version
+pantry install github.com/numactl/numactl@2.0.16
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.numactl

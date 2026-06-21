@@ -7,7 +7,7 @@
 - **Domain**: `the-unarchiver.com`
 - **Name**: `The Unarchiver`
 - **Homepage**: <https://theunarchiver.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/the-unarchiver.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/the-unarchiver.com/package.yml)
 
 ## Installation
 
@@ -44,14 +44,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +the-unarchiver.com@5.7.3 -- $SHELL -i
+# Install a specific version
+pantry install the-unarchiver.com@5.7.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['the-unarchiver']
@@ -63,7 +63,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/the-unarchiver.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/the-unarchiver.com/package.yml)
 - [Homepage](https://theunarchiver.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

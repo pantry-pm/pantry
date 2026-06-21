@@ -7,7 +7,7 @@
 - **Domain**: `docker.com/desktop`
 - **Name**: `Docker Desktop`
 - **Homepage**: <https://docker.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/docker.com/desktop/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/docker.com/desktop/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +docker.com/desktop@4.37.2 -- $SHELL -i
+# Install a specific version
+pantry install docker.com/desktop@4.37.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['docker-desktop']
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/docker.com/desktop/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/docker.com/desktop/package.yml)
 - [Homepage](https://docker.com)
 - [Back to Package Catalog](../../../package-catalog.md)
 

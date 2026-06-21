@@ -39,8 +39,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +waterlan.home.xs4all.nl/dos2unix@7.5.4 -- $SHELL -i
+# Install a specific version
+pantry install waterlan.home.xs4all.nl/dos2unix@7.5.4
 ```
 
 ## Dependencies
@@ -52,7 +52,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.dos2unix

@@ -110,8 +110,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +postgresql.org@18.4 -- $SHELL -i
+# Install a specific version
+pantry install postgresql.org@18.4
 ```
 
 ## Dependencies
@@ -129,7 +129,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.postgres

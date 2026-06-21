@@ -65,8 +65,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +po4a.org@0.74 -- $SHELL -i
+# Install a specific version
+pantry install po4a.org@0.74
 ```
 
 ## Dependencies
@@ -80,7 +80,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.po4a

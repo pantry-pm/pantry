@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +amber-lang.com@0.6.0-alpha -- $SHELL -i
+# Install a specific version
+pantry install amber-lang.com@0.6.0-alpha
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.amber

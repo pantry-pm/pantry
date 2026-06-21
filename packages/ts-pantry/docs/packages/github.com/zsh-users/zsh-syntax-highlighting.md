@@ -37,14 +37,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/zsh-users/zsh-syntax-highlighting@0.8.0 -- $SHELL -i
+# Install a specific version
+pantry install github.com/zsh-users/zsh-syntax-highlighting@0.8.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['zsh-syntax-highlighting']

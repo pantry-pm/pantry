@@ -38,14 +38,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +leethomason.github.io/tinyxml2@11.0.0 -- $SHELL -i
+# Install a specific version
+pantry install leethomason.github.io/tinyxml2@11.0.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.tinyxml2

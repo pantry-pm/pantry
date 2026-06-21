@@ -7,7 +7,7 @@
 - **Domain**: `alttab.app`
 - **Name**: `AltTab`
 - **Homepage**: <https://alt-tab-macos.netlify.app>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/alttab.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/alttab.app/package.yml)
 
 ## Installation
 
@@ -90,14 +90,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +alttab.app@11.3.1 -- $SHELL -i
+# Install a specific version
+pantry install alttab.app@11.3.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.alttab
@@ -109,7 +109,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/alttab.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/alttab.app/package.yml)
 - [Homepage](https://alt-tab-macos.netlify.app)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -165,8 +165,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +aws.amazon.com/cdk@3.0.0 -- $SHELL -i
+# Install a specific version
+pantry install aws.amazon.com/cdk@3.0.0
 ```
 
 ## Dependencies
@@ -178,7 +178,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.cdk

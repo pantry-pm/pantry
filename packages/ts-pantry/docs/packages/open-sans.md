@@ -7,7 +7,7 @@
 - **Domain**: `open-sans`
 - **Name**: `Open Sans`
 - **Homepage**: <https://fonts.google.com/specimen/Open+Sans>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/open-sans/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/open-sans/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +open-sans@3.003 -- $SHELL -i
+# Install a specific version
+pantry install open-sans@3.003
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['Open Sans']
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/open-sans/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/open-sans/package.yml)
 - [Homepage](https://fonts.google.com/specimen/Open+Sans)
 - [Back to Package Catalog](../package-catalog.md)
 

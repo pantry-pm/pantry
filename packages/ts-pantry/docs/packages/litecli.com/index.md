@@ -43,8 +43,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +litecli.com@1.17.1 -- $SHELL -i
+# Install a specific version
+pantry install litecli.com@1.17.1
 ```
 
 ## Dependencies
@@ -57,7 +57,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.litecli

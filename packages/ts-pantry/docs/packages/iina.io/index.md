@@ -7,7 +7,7 @@
 - **Domain**: `iina.io`
 - **Name**: `IINA`
 - **Homepage**: <https://iina.io>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/iina.io/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/iina.io/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +iina.io@1.3.5 -- $SHELL -i
+# Install a specific version
+pantry install iina.io@1.3.5
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.iina
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/iina.io/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/iina.io/package.yml)
 - [Homepage](https://iina.io)
 - [Back to Package Catalog](../../package-catalog.md)
 

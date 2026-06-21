@@ -45,8 +45,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/AUTOMATIC1111/stable-diffusion-webui@1.10.1 -- $SHELL -i
+# Install a specific version
+pantry install github.com/AUTOMATIC1111/stable-diffusion-webui@1.10.1
 ```
 
 ## Dependencies
@@ -60,7 +60,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['Stable Diffusion web UI']

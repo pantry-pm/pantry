@@ -42,14 +42,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +crates.io/rustls-ffi@0.15.1 -- $SHELL -i
+# Install a specific version
+pantry install crates.io/rustls-ffi@0.15.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['rustls-ffi']

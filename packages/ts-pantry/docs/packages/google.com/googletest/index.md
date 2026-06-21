@@ -40,14 +40,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +google.com/googletest@1.17.0 -- $SHELL -i
+# Install a specific version
+pantry install google.com/googletest@1.17.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.googletest

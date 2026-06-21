@@ -7,7 +7,7 @@
 - **Domain**: `mediaarea.net`
 - **Name**: `MediaInfo`
 - **Homepage**: <https://mediaarea.net/en/MediaInfo>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/mediaarea.net/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/mediaarea.net/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +mediaarea.net@26.05 -- $SHELL -i
+# Install a specific version
+pantry install mediaarea.net@26.05
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.MediaInfo
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/mediaarea.net/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/mediaarea.net/package.yml)
 - [Homepage](https://mediaarea.net/en/MediaInfo)
 - [Back to Package Catalog](../../package-catalog.md)
 

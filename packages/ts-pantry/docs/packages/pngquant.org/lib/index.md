@@ -38,14 +38,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +pngquant.org/lib@4.4.1 -- $SHELL -i
+# Install a specific version
+pantry install pngquant.org/lib@4.4.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libimagequant

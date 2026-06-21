@@ -7,7 +7,7 @@
 - **Domain**: `cassandra.apache.org`
 - **Name**: `cassandra`
 - **Homepage**: <https://cassandra.apache.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/cassandra.apache.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/cassandra.apache.org/package.yml)
 
 ## Installation
 
@@ -49,8 +49,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +cassandra.apache.org@6.0-alpha1 -- $SHELL -i
+# Install a specific version
+pantry install cassandra.apache.org@6.0-alpha1
 ```
 
 ## Dependencies
@@ -62,7 +62,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.cassandra
@@ -74,7 +74,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/cassandra.apache.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/cassandra.apache.org/package.yml)
 - [Homepage](https://cassandra.apache.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

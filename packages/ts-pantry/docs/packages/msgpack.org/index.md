@@ -40,14 +40,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +msgpack.org@7.0.1 -- $SHELL -i
+# Install a specific version
+pantry install msgpack.org@7.0.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.msgpack

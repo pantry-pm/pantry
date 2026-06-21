@@ -7,7 +7,7 @@
 - **Domain**: `imageoptim.com`
 - **Name**: `ImageOptim`
 - **Homepage**: <https://imageoptim.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/imageoptim.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/imageoptim.com/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +imageoptim.com@1.9.1 -- $SHELL -i
+# Install a specific version
+pantry install imageoptim.com@1.9.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.imageoptim
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/imageoptim.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/imageoptim.com/package.yml)
 - [Homepage](https://imageoptim.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

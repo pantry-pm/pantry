@@ -42,14 +42,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +sing-box.app@1.13.3 -- $SHELL -i
+# Install a specific version
+pantry install sing-box.app@1.13.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['sing-box']

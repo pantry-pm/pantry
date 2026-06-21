@@ -49,8 +49,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +php.net@8.5.7 -- $SHELL -i
+# Install a specific version
+pantry install php.net@8.5.7
 ```
 
 ## Dependencies
@@ -92,7 +92,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.php

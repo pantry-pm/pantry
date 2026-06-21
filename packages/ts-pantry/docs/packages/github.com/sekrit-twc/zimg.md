@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/sekrit-twc/zimg@3.0.6 -- $SHELL -i
+# Install a specific version
+pantry install github.com/sekrit-twc/zimg@3.0.6
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.zimg

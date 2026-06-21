@@ -45,14 +45,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +aomedia.googlesource.com/aom@3.13.2 -- $SHELL -i
+# Install a specific version
+pantry install aomedia.googlesource.com/aom@3.13.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.aom

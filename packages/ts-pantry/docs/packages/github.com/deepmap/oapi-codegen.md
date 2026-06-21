@@ -44,14 +44,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/deepmap/oapi-codegen@2.6.0 -- $SHELL -i
+# Install a specific version
+pantry install github.com/deepmap/oapi-codegen@2.6.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['oapi-codegen']

@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/Cyan4973/xxHash@0.8.3 -- $SHELL -i
+# Install a specific version
+pantry install github.com/Cyan4973/xxHash@0.8.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.xxh

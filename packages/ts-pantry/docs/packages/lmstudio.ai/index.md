@@ -7,7 +7,7 @@
 - **Domain**: `lmstudio.ai`
 - **Name**: `LM Studio`
 - **Homepage**: <https://lmstudio.ai>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/lmstudio.ai/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/lmstudio.ai/package.yml)
 
 ## Installation
 
@@ -43,14 +43,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +lmstudio.ai@0.3.8 -- $SHELL -i
+# Install a specific version
+pantry install lmstudio.ai@0.3.8
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['lm-studio']
@@ -62,7 +62,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/lmstudio.ai/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/lmstudio.ai/package.yml)
 - [Homepage](https://lmstudio.ai)
 - [Back to Package Catalog](../../package-catalog.md)
 

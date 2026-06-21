@@ -37,14 +37,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +devpod.sh/cli@0.6.15 -- $SHELL -i
+# Install a specific version
+pantry install devpod.sh/cli@0.6.15
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.devpod

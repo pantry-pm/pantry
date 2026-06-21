@@ -41,14 +41,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +convco.github.io@0.6.4 -- $SHELL -i
+# Install a specific version
+pantry install convco.github.io@0.6.4
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.convco

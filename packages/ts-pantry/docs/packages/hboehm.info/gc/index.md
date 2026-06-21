@@ -38,14 +38,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +hboehm.info/gc@8.2.12 -- $SHELL -i
+# Install a specific version
+pantry install hboehm.info/gc@8.2.12
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gc

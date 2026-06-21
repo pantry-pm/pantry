@@ -37,8 +37,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +gphoto.org/libgphoto2@2.5.33 -- $SHELL -i
+# Install a specific version
+pantry install gphoto.org/libgphoto2@2.5.33
 ```
 
 ## Dependencies
@@ -56,7 +56,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gphoto2

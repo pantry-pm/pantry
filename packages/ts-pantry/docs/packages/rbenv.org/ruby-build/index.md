@@ -101,8 +101,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +rbenv.org/ruby-build@20260317.0.0 -- $SHELL -i
+# Install a specific version
+pantry install rbenv.org/ruby-build@20260317.0.0
 ```
 
 ## Dependencies
@@ -119,7 +119,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['ruby-build']

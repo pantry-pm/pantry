@@ -7,7 +7,7 @@
 - **Domain**: `cascadia-code`
 - **Name**: `Cascadia Code`
 - **Homepage**: <https://github.com/microsoft/cascadia-code>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/cascadia-code/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/cascadia-code/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +cascadia-code@2407.24 -- $SHELL -i
+# Install a specific version
+pantry install cascadia-code@2407.24
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['Cascadia Code']
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/cascadia-code/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/cascadia-code/package.yml)
 - [Homepage](https://github.com/microsoft/cascadia-code)
 - [Back to Package Catalog](../package-catalog.md)
 

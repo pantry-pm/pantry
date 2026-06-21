@@ -49,14 +49,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +invisible-island.net/ncurses@6.6.0 -- $SHELL -i
+# Install a specific version
+pantry install invisible-island.net/ncurses@6.6.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.ncurses

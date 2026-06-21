@@ -47,8 +47,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/realm/SwiftLint@0.63.2 -- $SHELL -i
+# Install a specific version
+pantry install github.com/realm/SwiftLint@0.63.2
 ```
 
 ## Dependencies
@@ -61,7 +61,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.swiftlint

@@ -62,14 +62,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +fmt.dev@12.2.0 -- $SHELL -i
+# Install a specific version
+pantry install fmt.dev@12.2.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.fmt

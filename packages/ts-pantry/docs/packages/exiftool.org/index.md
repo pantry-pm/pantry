@@ -47,8 +47,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +exiftool.org@13.50.0 -- $SHELL -i
+# Install a specific version
+pantry install exiftool.org@13.50.0
 ```
 
 ## Dependencies
@@ -60,7 +60,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.exiftool

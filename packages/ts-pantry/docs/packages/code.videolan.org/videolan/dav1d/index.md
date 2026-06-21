@@ -38,14 +38,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +code.videolan.org/videolan/dav1d@1.5.3 -- $SHELL -i
+# Install a specific version
+pantry install code.videolan.org/videolan/dav1d@1.5.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.dav1d

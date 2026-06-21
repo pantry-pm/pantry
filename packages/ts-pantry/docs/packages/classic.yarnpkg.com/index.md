@@ -54,8 +54,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +classic.yarnpkg.com@1.22.22 -- $SHELL -i
+# Install a specific version
+pantry install classic.yarnpkg.com@1.22.22
 ```
 
 ## Dependencies
@@ -67,7 +67,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.yarn

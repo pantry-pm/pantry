@@ -36,8 +36,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/MaestroError/heif-converter-image@2023.6.23 -- $SHELL -i
+# Install a specific version
+pantry install github.com/MaestroError/heif-converter-image@2023.6.23
 ```
 
 ## Dependencies
@@ -49,7 +49,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['heif-converter']

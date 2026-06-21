@@ -7,7 +7,7 @@
 - **Domain**: `linear.app`
 - **Name**: `Linear`
 - **Homepage**: <https://linear.app>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/linear.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/linear.app/package.yml)
 
 ## Installation
 
@@ -44,14 +44,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +linear.app@1.53.0 -- $SHELL -i
+# Install a specific version
+pantry install linear.app@1.53.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.linear
@@ -63,7 +63,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/linear.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/linear.app/package.yml)
 - [Homepage](https://linear.app)
 - [Back to Package Catalog](../../package-catalog.md)
 

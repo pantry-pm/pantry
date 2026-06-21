@@ -53,14 +53,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +nghttp2.org@1.68.1 -- $SHELL -i
+# Install a specific version
+pantry install nghttp2.org@1.68.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.nghttp2

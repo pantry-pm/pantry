@@ -36,8 +36,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/libass/libass@0.17.4 -- $SHELL -i
+# Install a specific version
+pantry install github.com/libass/libass@0.17.4
 ```
 
 ## Dependencies
@@ -53,7 +53,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libass

@@ -49,14 +49,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +dgraph.io@25.3.6 -- $SHELL -i
+# Install a specific version
+pantry install dgraph.io@25.3.6
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.dgraph

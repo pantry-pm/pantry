@@ -7,7 +7,7 @@
 - **Domain**: `rectangle.app`
 - **Name**: `Rectangle`
 - **Homepage**: <https://rectangleapp.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/rectangle.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/rectangle.app/package.yml)
 
 ## Installation
 
@@ -92,14 +92,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +rectangle.app@0.96 -- $SHELL -i
+# Install a specific version
+pantry install rectangle.app@0.96
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.rectangle
@@ -111,7 +111,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/rectangle.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/rectangle.app/package.yml)
 - [Homepage](https://rectangleapp.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -7,7 +7,7 @@
 - **Domain**: `bruno.app`
 - **Name**: `Bruno`
 - **Homepage**: <https://usebruno.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/bruno.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/bruno.app/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +bruno.app@1.38.1 -- $SHELL -i
+# Install a specific version
+pantry install bruno.app@1.38.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.bruno
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/bruno.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/bruno.app/package.yml)
 - [Homepage](https://usebruno.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

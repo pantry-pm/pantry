@@ -48,8 +48,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/jjjake/internetarchive@5.8.0 -- $SHELL -i
+# Install a specific version
+pantry install github.com/jjjake/internetarchive@5.8.0
 ```
 
 ## Dependencies
@@ -62,7 +62,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.ia

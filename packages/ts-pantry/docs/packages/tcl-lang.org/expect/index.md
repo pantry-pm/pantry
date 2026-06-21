@@ -57,8 +57,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +tcl-lang.org/expect@5.45.4 -- $SHELL -i
+# Install a specific version
+pantry install tcl-lang.org/expect@5.45.4
 ```
 
 ## Dependencies
@@ -70,7 +70,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.expect

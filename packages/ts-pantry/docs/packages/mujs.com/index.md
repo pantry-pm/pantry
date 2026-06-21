@@ -37,8 +37,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +mujs.com@1.3.9 -- $SHELL -i
+# Install a specific version
+pantry install mujs.com@1.3.9
 ```
 
 ## Dependencies
@@ -51,7 +51,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.mujs

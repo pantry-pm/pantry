@@ -45,8 +45,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +boost.org@1.90.0 -- $SHELL -i
+# Install a specific version
+pantry install boost.org@1.90.0
 ```
 
 ## Dependencies
@@ -58,7 +58,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.boost

@@ -7,7 +7,7 @@
 - **Domain**: `meslo-lg-nerd-font`
 - **Name**: `MesloLG Nerd Font`
 - **Homepage**: <https://www.nerdfonts.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/meslo-lg-nerd-font/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/meslo-lg-nerd-font/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +meslo-lg-nerd-font@3.4.0 -- $SHELL -i
+# Install a specific version
+pantry install meslo-lg-nerd-font@3.4.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['MesloLG Nerd Font']
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/meslo-lg-nerd-font/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/meslo-lg-nerd-font/package.yml)
 - [Homepage](https://www.nerdfonts.com)
 - [Back to Package Catalog](../package-catalog.md)
 

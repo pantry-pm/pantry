@@ -71,8 +71,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +openjdk.org@21.0.8.7 -- $SHELL -i
+# Install a specific version
+pantry install openjdk.org@21.0.8.7
 ```
 
 ## Dependencies
@@ -103,7 +103,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.java

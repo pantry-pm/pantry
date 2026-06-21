@@ -37,14 +37,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/igor-petruk/scriptisto@2.2.0 -- $SHELL -i
+# Install a specific version
+pantry install github.com/igor-petruk/scriptisto@2.2.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.Scriptisto

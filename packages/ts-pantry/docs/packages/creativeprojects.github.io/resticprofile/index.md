@@ -41,14 +41,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +creativeprojects.github.io/resticprofile@0.32.0 -- $SHELL -i
+# Install a specific version
+pantry install creativeprojects.github.io/resticprofile@0.32.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.resticprofile

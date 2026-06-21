@@ -39,14 +39,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/JuliaStrings/utf8proc@2.11.3 -- $SHELL -i
+# Install a specific version
+pantry install github.com/JuliaStrings/utf8proc@2.11.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.utf8proc

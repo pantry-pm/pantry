@@ -37,8 +37,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +agpt.co@autogpt-platform-beta-v0.6.52 -- $SHELL -i
+# Install a specific version
+pantry install agpt.co@autogpt-platform-beta-v0.6.52
 ```
 
 ## Dependencies
@@ -52,7 +52,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['Auto-GPT']

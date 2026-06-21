@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +khronos.org/SPIRV-Cross@2021.1.15 -- $SHELL -i
+# Install a specific version
+pantry install khronos.org/SPIRV-Cross@2021.1.15
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['spirv-cross']

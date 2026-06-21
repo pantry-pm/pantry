@@ -37,14 +37,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +templ.guide@0.3.1020 -- $SHELL -i
+# Install a specific version
+pantry install templ.guide@0.3.1020
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.templ

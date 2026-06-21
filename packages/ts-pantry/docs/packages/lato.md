@@ -7,7 +7,7 @@
 - **Domain**: `lato`
 - **Name**: `Lato`
 - **Homepage**: <https://www.latofonts.com/>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/lato/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/lato/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +lato@2.0 -- $SHELL -i
+# Install a specific version
+pantry install lato@2.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.Lato
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/lato/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/lato/package.yml)
 - [Homepage](https://www.latofonts.com/)
 - [Back to Package Catalog](../package-catalog.md)
 

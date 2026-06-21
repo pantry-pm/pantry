@@ -37,14 +37,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/KhronosGroup/Vulkan-Headers@1.4.347 -- $SHELL -i
+# Install a specific version
+pantry install github.com/KhronosGroup/Vulkan-Headers@1.4.347
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['Vulkan-Headers']

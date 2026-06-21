@@ -7,7 +7,7 @@
 - **Domain**: `libreoffice.org`
 - **Name**: `LibreOffice`
 - **Homepage**: <https://libreoffice.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/libreoffice.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/libreoffice.org/package.yml)
 
 ## Installation
 
@@ -43,14 +43,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +libreoffice.org@24.8.5 -- $SHELL -i
+# Install a specific version
+pantry install libreoffice.org@24.8.5
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libreoffice
@@ -62,7 +62,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/libreoffice.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/libreoffice.org/package.yml)
 - [Homepage](https://libreoffice.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -61,14 +61,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +golangci-lint.run@2.11.4 -- $SHELL -i
+# Install a specific version
+pantry install golangci-lint.run@2.11.4
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['golangci-lint']

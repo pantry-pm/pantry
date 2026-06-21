@@ -7,7 +7,7 @@
 - **Domain**: `obsidian.md`
 - **Name**: `Obsidian`
 - **Homepage**: <https://obsidian.md>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/obsidian.md/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/obsidian.md/package.yml)
 
 ## Installation
 
@@ -55,14 +55,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +obsidian.md@1.12.7 -- $SHELL -i
+# Install a specific version
+pantry install obsidian.md@1.12.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.obsidian
@@ -74,7 +74,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/obsidian.md/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/obsidian.md/package.yml)
 - [Homepage](https://obsidian.md)
 - [Back to Package Catalog](../../package-catalog.md)
 

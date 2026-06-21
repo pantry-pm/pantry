@@ -43,14 +43,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +ziglang.org@0.17.0-dev.131+73c51c142 -- $SHELL -i
+# Install a specific version
+pantry install ziglang.org@0.17.0-dev.131+73c51c142
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.zig

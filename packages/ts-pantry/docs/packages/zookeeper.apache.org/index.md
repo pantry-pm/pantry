@@ -7,7 +7,7 @@
 - **Domain**: `zookeeper.apache.org`
 - **Name**: `zookeeper`
 - **Homepage**: <https://zookeeper.apache.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/zookeeper.apache.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/zookeeper.apache.org/package.yml)
 
 ## Installation
 
@@ -40,8 +40,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +zookeeper.apache.org@3.9.5 -- $SHELL -i
+# Install a specific version
+pantry install zookeeper.apache.org@3.9.5
 ```
 
 ## Dependencies
@@ -53,7 +53,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.zookeeper
@@ -65,7 +65,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/zookeeper.apache.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/zookeeper.apache.org/package.yml)
 - [Homepage](https://zookeeper.apache.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

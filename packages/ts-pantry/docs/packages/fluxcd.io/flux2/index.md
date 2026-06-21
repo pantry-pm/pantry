@@ -49,14 +49,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +fluxcd.io/flux2@2.8.8 -- $SHELL -i
+# Install a specific version
+pantry install fluxcd.io/flux2@2.8.8
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.flux

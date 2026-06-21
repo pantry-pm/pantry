@@ -74,8 +74,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +gdal.org@3.13.1 -- $SHELL -i
+# Install a specific version
+pantry install gdal.org@3.13.1
 ```
 
 ## Dependencies
@@ -129,7 +129,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gdal

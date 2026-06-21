@@ -47,14 +47,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +prql-lang.org@0.13.11 -- $SHELL -i
+# Install a specific version
+pantry install prql-lang.org@0.13.11
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.prql

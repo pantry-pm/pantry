@@ -46,8 +46,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +openldap.org@2.6.13 -- $SHELL -i
+# Install a specific version
+pantry install openldap.org@2.6.13
 ```
 
 ## Dependencies
@@ -60,7 +60,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.ldap

@@ -7,7 +7,7 @@
 - **Domain**: `whatsapp.com`
 - **Name**: `WhatsApp`
 - **Homepage**: <https://whatsapp.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/whatsapp.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/whatsapp.com/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +whatsapp.com@2.24.25.0 -- $SHELL -i
+# Install a specific version
+pantry install whatsapp.com@2.24.25.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.whatsapp
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/whatsapp.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/whatsapp.com/package.yml)
 - [Homepage](https://whatsapp.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

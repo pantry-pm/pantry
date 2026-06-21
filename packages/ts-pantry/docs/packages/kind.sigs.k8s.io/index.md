@@ -62,14 +62,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +kind.sigs.k8s.io@0.32.0 -- $SHELL -i
+# Install a specific version
+pantry install kind.sigs.k8s.io@0.32.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.kind

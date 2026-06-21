@@ -7,7 +7,7 @@
 - **Domain**: `anthropic.com/claude-code`
 - **Name**: `claude-code`
 - **Homepage**: <https://github.com/anthropics/claude-code>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/anthropic.com/claude-code/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/anthropic.com/claude-code/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +anthropic.com/claude-code@2.1.185 -- $SHELL -i
+# Install a specific version
+pantry install anthropic.com/claude-code@2.1.185
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['claude-code']
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/anthropic.com/claude-code/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/anthropic.com/claude-code/package.yml)
 - [Homepage](https://github.com/anthropics/claude-code)
 - [Back to Package Catalog](../../../package-catalog.md)
 

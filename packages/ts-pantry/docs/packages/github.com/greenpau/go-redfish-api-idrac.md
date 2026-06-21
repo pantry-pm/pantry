@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/greenpau/go-redfish-api-idrac@1.0.6 -- $SHELL -i
+# Install a specific version
+pantry install github.com/greenpau/go-redfish-api-idrac@1.0.6
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['go-redfish-api-idrac']

@@ -51,8 +51,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +pypa.io/trove-classifiers@2026.1.14.14 -- $SHELL -i
+# Install a specific version
+pantry install pypa.io/trove-classifiers@2026.1.14.14
 ```
 
 ## Dependencies
@@ -64,7 +64,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['trove-classifiers']

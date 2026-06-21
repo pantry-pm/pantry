@@ -7,7 +7,7 @@
 - **Domain**: `typesense.org`
 - **Name**: `typesense`
 - **Homepage**: <https://typesense.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/typesense.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/typesense.org/package.yml)
 
 ## Installation
 
@@ -62,14 +62,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +typesense.org@30.2 -- $SHELL -i
+# Install a specific version
+pantry install typesense.org@30.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.typesense
@@ -81,7 +81,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/typesense.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/typesense.org/package.yml)
 - [Homepage](https://typesense.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

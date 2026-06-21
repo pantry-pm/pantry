@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +public.hronopik.de/vid.stab@1.1.1 -- $SHELL -i
+# Install a specific version
+pantry install public.hronopik.de/vid.stab@1.1.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['vid.stab']

@@ -41,14 +41,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +grafana.com/loki@3.6.7 -- $SHELL -i
+# Install a specific version
+pantry install grafana.com/loki@3.6.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.loki

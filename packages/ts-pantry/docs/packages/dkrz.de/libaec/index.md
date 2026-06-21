@@ -37,14 +37,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +dkrz.de/libaec@1.1.6 -- $SHELL -i
+# Install a specific version
+pantry install dkrz.de/libaec@1.1.6
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libaec

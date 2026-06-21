@@ -7,7 +7,7 @@
 - **Domain**: `maccy.app`
 - **Name**: `Maccy`
 - **Homepage**: <https://maccy.app>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/maccy.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/maccy.app/package.yml)
 
 ## Installation
 
@@ -44,14 +44,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +maccy.app@2.4.0 -- $SHELL -i
+# Install a specific version
+pantry install maccy.app@2.4.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.maccy
@@ -63,7 +63,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/maccy.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/maccy.app/package.yml)
 - [Homepage](https://maccy.app)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -7,7 +7,7 @@
 - **Domain**: `monitorcontrol.app`
 - **Name**: `MonitorControl`
 - **Homepage**: <https://github.com/MonitorControl/MonitorControl>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/monitorcontrol.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/monitorcontrol.app/package.yml)
 
 ## Installation
 
@@ -54,14 +54,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +monitorcontrol.app@4.3.3 -- $SHELL -i
+# Install a specific version
+pantry install monitorcontrol.app@4.3.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.monitorcontrol
@@ -73,7 +73,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/monitorcontrol.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/monitorcontrol.app/package.yml)
 - [Homepage](https://github.com/MonitorControl/MonitorControl)
 - [Back to Package Catalog](../../package-catalog.md)
 

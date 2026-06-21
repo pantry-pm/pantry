@@ -99,14 +99,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +gitlab.com/gitlab-org/cli@1.90.0 -- $SHELL -i
+# Install a specific version
+pantry install gitlab.com/gitlab-org/cli@1.90.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.glab

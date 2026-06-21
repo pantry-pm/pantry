@@ -47,8 +47,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +lxml.de@7.0.0a3 -- $SHELL -i
+# Install a specific version
+pantry install lxml.de@7.0.0a3
 ```
 
 ## Dependencies
@@ -62,7 +62,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['lxml.de']

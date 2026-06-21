@@ -62,8 +62,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +fna-xna.github.io@26.3.0 -- $SHELL -i
+# Install a specific version
+pantry install fna-xna.github.io@26.3.0
 ```
 
 ## Dependencies
@@ -75,7 +75,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['fna-xna.github']

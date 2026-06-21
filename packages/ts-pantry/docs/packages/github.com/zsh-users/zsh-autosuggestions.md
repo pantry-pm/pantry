@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/zsh-users/zsh-autosuggestions@0.7.1 -- $SHELL -i
+# Install a specific version
+pantry install github.com/zsh-users/zsh-autosuggestions@0.7.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['zsh-autosuggestions']

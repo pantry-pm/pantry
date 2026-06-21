@@ -7,7 +7,7 @@
 - **Domain**: `fira-code`
 - **Name**: `Fira Code`
 - **Homepage**: <https://github.com/tonsky/FiraCode>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/fira-code/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/fira-code/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +fira-code@6.2 -- $SHELL -i
+# Install a specific version
+pantry install fira-code@6.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['Fira Code']
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/fira-code/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/fira-code/package.yml)
 - [Homepage](https://github.com/tonsky/FiraCode)
 - [Back to Package Catalog](../package-catalog.md)
 

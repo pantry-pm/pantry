@@ -38,8 +38,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +libwebsockets.org@4.5.7 -- $SHELL -i
+# Install a specific version
+pantry install libwebsockets.org@4.5.7
 ```
 
 ## Dependencies
@@ -52,7 +52,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libwebsockets

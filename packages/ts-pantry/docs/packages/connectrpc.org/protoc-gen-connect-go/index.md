@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +connectrpc.org/protoc-gen-connect-go@1.19.1 -- $SHELL -i
+# Install a specific version
+pantry install connectrpc.org/protoc-gen-connect-go@1.19.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['protoc-gen-connect-go']

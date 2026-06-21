@@ -7,7 +7,7 @@
 - **Domain**: `arc.net`
 - **Name**: `Arc`
 - **Homepage**: <https://arc.net>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/arc.net/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/arc.net/package.yml)
 
 ## Installation
 
@@ -44,14 +44,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +arc.net@1.76.0 -- $SHELL -i
+# Install a specific version
+pantry install arc.net@1.76.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.arc
@@ -63,7 +63,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/arc.net/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/arc.net/package.yml)
 - [Homepage](https://arc.net)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -40,14 +40,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +priver.dev/geni@2023.12.27 -- $SHELL -i
+# Install a specific version
+pantry install priver.dev/geni@2023.12.27
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.geni

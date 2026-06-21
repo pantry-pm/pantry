@@ -7,7 +7,7 @@
 - **Domain**: `muzzleapp.com`
 - **Name**: `Muzzle`
 - **Homepage**: <https://muzzleapp.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/muzzleapp.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/muzzleapp.com/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +muzzleapp.com@1.9 -- $SHELL -i
+# Install a specific version
+pantry install muzzleapp.com@1.9
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.Muzzle
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/muzzleapp.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/muzzleapp.com/package.yml)
 - [Homepage](https://muzzleapp.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

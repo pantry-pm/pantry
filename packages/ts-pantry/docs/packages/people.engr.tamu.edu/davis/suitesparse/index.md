@@ -47,8 +47,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +people.engr.tamu.edu/davis/suitesparse@7.12.2 -- $SHELL -i
+# Install a specific version
+pantry install people.engr.tamu.edu/davis/suitesparse@7.12.2
 ```
 
 ## Dependencies
@@ -66,7 +66,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['suite-sparse']

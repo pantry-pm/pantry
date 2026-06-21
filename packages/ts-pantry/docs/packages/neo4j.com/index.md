@@ -7,7 +7,7 @@
 - **Domain**: `neo4j.com`
 - **Name**: `neo4j`
 - **Homepage**: <https://neo4j.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/neo4j.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/neo4j.com/package.yml)
 
 ## Installation
 
@@ -57,8 +57,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +neo4j.com@2026.05.0 -- $SHELL -i
+# Install a specific version
+pantry install neo4j.com@2026.05.0
 ```
 
 ## Dependencies
@@ -70,7 +70,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.neo4j
@@ -82,7 +82,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/neo4j.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/neo4j.com/package.yml)
 - [Homepage](https://neo4j.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

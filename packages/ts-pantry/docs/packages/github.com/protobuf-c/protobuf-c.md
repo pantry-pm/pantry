@@ -42,8 +42,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/protobuf-c/protobuf-c@1.5.2 -- $SHELL -i
+# Install a specific version
+pantry install github.com/protobuf-c/protobuf-c@1.5.2
 ```
 
 ## Dependencies
@@ -56,7 +56,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.protoc

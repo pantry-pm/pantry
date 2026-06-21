@@ -51,14 +51,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +gitleaks.io@8.30.1 -- $SHELL -i
+# Install a specific version
+pantry install gitleaks.io@8.30.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gitleaks

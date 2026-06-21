@@ -54,14 +54,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +tea.xyz@2.10.3 -- $SHELL -i
+# Install a specific version
+pantry install tea.xyz@2.10.3
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['tea/cli']

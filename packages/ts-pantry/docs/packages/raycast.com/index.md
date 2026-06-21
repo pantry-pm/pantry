@@ -7,7 +7,7 @@
 - **Domain**: `raycast.com`
 - **Name**: `Raycast`
 - **Homepage**: <https://raycast.com>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/raycast.com/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/raycast.com/package.yml)
 
 ## Installation
 
@@ -44,14 +44,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +raycast.com@1.89.0 -- $SHELL -i
+# Install a specific version
+pantry install raycast.com@1.89.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.raycast
@@ -63,7 +63,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/raycast.com/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/raycast.com/package.yml)
 - [Homepage](https://raycast.com)
 - [Back to Package Catalog](../../package-catalog.md)
 

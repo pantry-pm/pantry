@@ -42,14 +42,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +tree-sitter.github.io@0.26.7 -- $SHELL -i
+# Install a specific version
+pantry install tree-sitter.github.io@0.26.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['tree-sitter']

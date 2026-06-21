@@ -46,8 +46,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +crates.io/git-branchless@0.11.1 -- $SHELL -i
+# Install a specific version
+pantry install crates.io/git-branchless@0.11.1
 ```
 
 ## Dependencies
@@ -59,7 +59,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['git-branchless']

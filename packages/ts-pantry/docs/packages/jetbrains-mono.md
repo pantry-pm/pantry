@@ -7,7 +7,7 @@
 - **Domain**: `jetbrains-mono`
 - **Name**: `JetBrains Mono`
 - **Homepage**: <https://www.jetbrains.com/lp/mono/>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/jetbrains-mono/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/jetbrains-mono/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +jetbrains-mono@2.304 -- $SHELL -i
+# Install a specific version
+pantry install jetbrains-mono@2.304
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['JetBrains Mono']
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/jetbrains-mono/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/jetbrains-mono/package.yml)
 - [Homepage](https://www.jetbrains.com/lp/mono/)
 - [Back to Package Catalog](../package-catalog.md)
 

@@ -76,14 +76,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +tuist.io/xcbeautify@3.1.4 -- $SHELL -i
+# Install a specific version
+pantry install tuist.io/xcbeautify@3.1.4
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.xcbeautify

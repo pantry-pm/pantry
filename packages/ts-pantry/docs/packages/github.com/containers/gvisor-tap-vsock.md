@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/containers/gvisor-tap-vsock@0.8.8 -- $SHELL -i
+# Install a specific version
+pantry install github.com/containers/gvisor-tap-vsock@0.8.8
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['gvisor-tap-vsock']

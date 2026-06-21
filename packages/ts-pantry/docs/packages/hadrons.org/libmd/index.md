@@ -37,14 +37,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +hadrons.org/libmd@1.1.0 -- $SHELL -i
+# Install a specific version
+pantry install hadrons.org/libmd@1.1.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libmd

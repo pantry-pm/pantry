@@ -7,7 +7,7 @@
 - **Domain**: `warp.dev`
 - **Name**: `Warp`
 - **Homepage**: <https://warp.dev>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/warp.dev/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/warp.dev/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +warp.dev@0.2025.01.21 -- $SHELL -i
+# Install a specific version
+pantry install warp.dev@0.2025.01.21
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.warp
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/warp.dev/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/warp.dev/package.yml)
 - [Homepage](https://warp.dev)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -80,8 +80,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +pypa.io/setuptools@82.0.1 -- $SHELL -i
+# Install a specific version
+pantry install pypa.io/setuptools@82.0.1
 ```
 
 ## Dependencies
@@ -93,7 +93,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.setuptools

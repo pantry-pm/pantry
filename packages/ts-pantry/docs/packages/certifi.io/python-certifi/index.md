@@ -49,8 +49,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +certifi.io/python-certifi@2026.2.25 -- $SHELL -i
+# Install a specific version
+pantry install certifi.io/python-certifi@2026.2.25
 ```
 
 ## Dependencies
@@ -62,7 +62,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['python-certifi']

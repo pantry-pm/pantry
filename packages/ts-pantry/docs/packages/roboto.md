@@ -7,7 +7,7 @@
 - **Domain**: `roboto`
 - **Name**: `Roboto`
 - **Homepage**: <https://fonts.google.com/specimen/Roboto>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/roboto/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/roboto/package.yml)
 
 ## Installation
 
@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +roboto@2.138 -- $SHELL -i
+# Install a specific version
+pantry install roboto@2.138
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.Roboto
@@ -55,7 +55,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/roboto/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/roboto/package.yml)
 - [Homepage](https://fonts.google.com/specimen/Roboto)
 - [Back to Package Catalog](../package-catalog.md)
 

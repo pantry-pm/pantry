@@ -37,8 +37,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +wpewebkit.org/libwpe@1.16.3 -- $SHELL -i
+# Install a specific version
+pantry install wpewebkit.org/libwpe@1.16.3
 ```
 
 ## Dependencies
@@ -51,7 +51,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libwpe

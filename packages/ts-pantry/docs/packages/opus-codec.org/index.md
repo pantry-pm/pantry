@@ -39,14 +39,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +opus-codec.org@1.6.1 -- $SHELL -i
+# Install a specific version
+pantry install opus-codec.org@1.6.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['opus-codec']

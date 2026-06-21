@@ -36,8 +36,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +dhall-lang.org@1.42.3 -- $SHELL -i
+# Install a specific version
+pantry install dhall-lang.org@1.42.3
 ```
 
 ## Dependencies
@@ -50,7 +50,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.dhall

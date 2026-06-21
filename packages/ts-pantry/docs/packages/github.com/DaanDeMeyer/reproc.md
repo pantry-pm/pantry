@@ -36,14 +36,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/DaanDeMeyer/reproc@14.2.5 -- $SHELL -i
+# Install a specific version
+pantry install github.com/DaanDeMeyer/reproc@14.2.5
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.reproc

@@ -39,14 +39,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +webmproject.org/libvpx@1.16.0 -- $SHELL -i
+# Install a specific version
+pantry install webmproject.org/libvpx@1.16.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.libvpx

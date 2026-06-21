@@ -40,8 +40,8 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +cryptography.io@46.0.5 -- $SHELL -i
+# Install a specific version
+pantry install cryptography.io@46.0.5
 ```
 
 ## Dependencies
@@ -55,7 +55,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.cryptography

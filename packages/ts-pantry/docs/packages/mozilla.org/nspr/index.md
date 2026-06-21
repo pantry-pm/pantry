@@ -38,14 +38,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +mozilla.org/nspr@4.38.1 -- $SHELL -i
+# Install a specific version
+pantry install mozilla.org/nspr@4.38.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['nspr-config']

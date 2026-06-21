@@ -52,8 +52,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +grpc.io/grpc-go@1.79.3 -- $SHELL -i
+# Install a specific version
+pantry install grpc.io/grpc-go@1.79.3
 ```
 
 ## Dependencies
@@ -65,7 +65,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['protoc-gen-go-grpc']

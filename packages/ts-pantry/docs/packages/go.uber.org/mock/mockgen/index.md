@@ -39,8 +39,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +go.uber.org/mock/mockgen@0.6.0 -- $SHELL -i
+# Install a specific version
+pantry install go.uber.org/mock/mockgen@0.6.0
 ```
 
 ## Dependencies
@@ -52,7 +52,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.mockgen

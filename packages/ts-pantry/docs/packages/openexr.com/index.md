@@ -49,8 +49,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +openexr.com@3.4.13 -- $SHELL -i
+# Install a specific version
+pantry install openexr.com@3.4.13
 ```
 
 ## Dependencies
@@ -64,7 +64,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.exr

@@ -43,14 +43,14 @@ No programs specified.
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +python.org/typing_extensions@4.15.0 -- $SHELL -i
+# Install a specific version
+pantry install python.org/typing_extensions@4.15.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.typing_extensions

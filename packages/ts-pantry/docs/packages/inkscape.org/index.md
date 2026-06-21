@@ -7,7 +7,7 @@
 - **Domain**: `inkscape.org`
 - **Name**: `Inkscape`
 - **Homepage**: <https://inkscape.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/inkscape.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/inkscape.org/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +inkscape.org@1.4.1 -- $SHELL -i
+# Install a specific version
+pantry install inkscape.org@1.4.1
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.inkscape
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/inkscape.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/inkscape.org/package.yml)
 - [Homepage](https://inkscape.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

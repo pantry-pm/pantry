@@ -7,7 +7,7 @@
 - **Domain**: `vlc.app`
 - **Name**: `VLC`
 - **Homepage**: <https://videolan.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/vlc.app/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/vlc.app/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +vlc.app@3.0.21 -- $SHELL -i
+# Install a specific version
+pantry install vlc.app@3.0.21
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.vlc
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/vlc.app/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/vlc.app/package.yml)
 - [Homepage](https://videolan.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

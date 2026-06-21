@@ -37,8 +37,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +pantsbuild.org/scie-pants@0.13.2 -- $SHELL -i
+# Install a specific version
+pantry install pantsbuild.org/scie-pants@0.13.2
 ```
 
 ## Dependencies
@@ -50,7 +50,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['scie-pants']

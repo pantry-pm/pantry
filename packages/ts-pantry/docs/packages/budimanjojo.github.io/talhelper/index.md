@@ -39,14 +39,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +budimanjojo.github.io/talhelper@3.1.7 -- $SHELL -i
+# Install a specific version
+pantry install budimanjojo.github.io/talhelper@3.1.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.talhelper

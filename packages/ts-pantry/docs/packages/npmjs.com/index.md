@@ -81,8 +81,8 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +npmjs.com@11.17.0 -- $SHELL -i
+# Install a specific version
+pantry install npmjs.com@11.17.0
 ```
 
 ## Dependencies
@@ -94,7 +94,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.npm

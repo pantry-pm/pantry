@@ -7,7 +7,7 @@
 - **Domain**: `gimp.org`
 - **Name**: `GIMP`
 - **Homepage**: <https://gimp.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/gimp.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/gimp.org/package.yml)
 
 ## Installation
 
@@ -42,14 +42,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +gimp.org@2.10.38 -- $SHELL -i
+# Install a specific version
+pantry install gimp.org@2.10.38
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gimp
@@ -61,7 +61,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/gimp.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/gimp.org/package.yml)
 - [Homepage](https://gimp.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

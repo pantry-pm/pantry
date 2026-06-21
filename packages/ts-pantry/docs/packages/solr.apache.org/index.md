@@ -7,7 +7,7 @@
 - **Domain**: `solr.apache.org`
 - **Name**: `solr`
 - **Homepage**: <https://solr.apache.org>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/solr.apache.org/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/solr.apache.org/package.yml)
 
 ## Installation
 
@@ -51,8 +51,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +solr.apache.org@10.0.0 -- $SHELL -i
+# Install a specific version
+pantry install solr.apache.org@10.0.0
 ```
 
 ## Dependencies
@@ -64,7 +64,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.solr
@@ -76,7 +76,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/solr.apache.org/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/solr.apache.org/package.yml)
 - [Homepage](https://solr.apache.org)
 - [Back to Package Catalog](../../package-catalog.md)
 

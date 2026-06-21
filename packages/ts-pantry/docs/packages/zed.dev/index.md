@@ -7,7 +7,7 @@
 - **Domain**: `zed.dev`
 - **Name**: `Zed`
 - **Homepage**: <https://zed.dev>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/zed.dev/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/zed.dev/package.yml)
 
 ## Installation
 
@@ -61,14 +61,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +zed.dev@1.7.2 -- $SHELL -i
+# Install a specific version
+pantry install zed.dev@1.7.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.zed
@@ -80,7 +80,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/zed.dev/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/zed.dev/package.yml)
 - [Homepage](https://zed.dev)
 - [Back to Package Catalog](../../package-catalog.md)
 

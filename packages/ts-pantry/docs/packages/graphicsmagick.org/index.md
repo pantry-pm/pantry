@@ -36,8 +36,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +graphicsmagick.org@1.3.46 -- $SHELL -i
+# Install a specific version
+pantry install graphicsmagick.org@1.3.46
 ```
 
 ## Dependencies
@@ -60,7 +60,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.gm

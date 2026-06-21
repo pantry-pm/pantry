@@ -46,14 +46,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +crates.io/ripgrep@15.1.0 -- $SHELL -i
+# Install a specific version
+pantry install crates.io/ripgrep@15.1.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.ripgrep

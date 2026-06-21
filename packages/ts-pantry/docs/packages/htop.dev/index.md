@@ -42,8 +42,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +htop.dev@3.5.1 -- $SHELL -i
+# Install a specific version
+pantry install htop.dev@3.5.1
 ```
 
 ## Dependencies
@@ -55,7 +55,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.htop

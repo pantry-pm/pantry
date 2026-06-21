@@ -75,8 +75,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +oracle.com/oci-cli@3.76.1 -- $SHELL -i
+# Install a specific version
+pantry install oracle.com/oci-cli@3.76.1
 ```
 
 ## Dependencies
@@ -91,7 +91,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.oci

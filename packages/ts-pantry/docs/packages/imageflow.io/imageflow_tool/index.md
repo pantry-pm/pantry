@@ -40,8 +40,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +imageflow.io/imageflow_tool@2023.9.25 -- $SHELL -i
+# Install a specific version
+pantry install imageflow.io/imageflow_tool@2023.9.25
 ```
 
 ## Dependencies
@@ -53,7 +53,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.imageflow_tool

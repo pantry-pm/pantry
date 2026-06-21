@@ -36,14 +36,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/cpuguy83/go-md2man@2.0.7 -- $SHELL -i
+# Install a specific version
+pantry install github.com/cpuguy83/go-md2man@2.0.7
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry['go-md2man']

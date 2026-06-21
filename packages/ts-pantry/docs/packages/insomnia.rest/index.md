@@ -7,7 +7,7 @@
 - **Domain**: `insomnia.rest`
 - **Name**: `Insomnia`
 - **Homepage**: <https://insomnia.rest>
-- **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/insomnia.rest/package.yml)
+- **Source**: [View on GitHub](https://github.com/pantry-pm/pantry/tree/main/projects/insomnia.rest/package.yml)
 
 ## Installation
 
@@ -43,14 +43,14 @@ This package can also be accessed using these aliases:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +insomnia.rest@10.3.0 -- $SHELL -i
+# Install a specific version
+pantry install insomnia.rest@10.3.0
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.insomnia
@@ -62,7 +62,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 
 ## Links
 
-- [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/insomnia.rest/package.yml)
+- [Package Source](https://github.com/pantry-pm/pantry/tree/main/projects/insomnia.rest/package.yml)
 - [Homepage](https://insomnia.rest)
 - [Back to Package Catalog](../../package-catalog.md)
 

@@ -41,8 +41,8 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +unixodbc.org@2.3.14 -- $SHELL -i
+# Install a specific version
+pantry install unixodbc.org@2.3.14
 ```
 
 ## Dependencies
@@ -54,7 +54,7 @@ This package depends on:
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.unixodbc

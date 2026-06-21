@@ -38,14 +38,14 @@ This package provides the following executable programs:
 ### Install Specific Version
 
 ```bash
-# Install specific version
-sh <(curl https://pkgx.sh) +github.com/XcodesOrg/xcodes@1.6.2 -- $SHELL -i
+# Install a specific version
+pantry install github.com/XcodesOrg/xcodes@1.6.2
 ```
 
 ## Usage Examples
 
 ```typescript
-import { pantry } from 'ts-pkgx'
+import { pantry } from 'ts-pantry'
 
 // Access this package
 const pkg = pantry.xcodes
