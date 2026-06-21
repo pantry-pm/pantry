@@ -33,6 +33,7 @@
     "changelog:generate": "bunx --bun logsmith --output CHANGELOG.md",
     "release": "bunx --bun bumpx prompt --recursive",
     "release:patch": "bunx --bun bumpx patch --recursive --yes",
+    "release:minor": "bunx --bun bumpx minor --recursive --yes",
     "publish:oidc": "./scripts/publish-oidc.sh",
     "publish:dry-run": "./scripts/publish-oidc.sh --dry-run",
     "dev:docs": "bun bunpress dev docs",
