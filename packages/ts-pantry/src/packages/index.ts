@@ -68,6 +68,7 @@ import { notionsoPackage } from './apps/notionso'
 import { obsidianmdPackage } from './apps/obsidianmd'
 import { ollamacomPackage } from './apps/ollamacom'
 import { orbstackdevPackage } from './apps/orbstackdev'
+import { pearcleanerappPackage } from './apps/pearcleanerapp'
 import { postmancomPackage } from './apps/postmancom'
 import { raycastcomPackage } from './apps/raycastcom'
 import { rectangleappPackage } from './apps/rectangleapp'
@@ -442,6 +443,7 @@ import { interPackage } from './fonts/inter'
 import { jetbrainsmonoPackage } from './fonts/jetbrainsmono'
 import { jetbrainsmononerdfontPackage } from './fonts/jetbrainsmononerdfont'
 import { meslolgnerdfontPackage } from './fonts/meslolgnerdfont'
+import { robotoPackage } from './fonts/roboto'
 import { fossiesorglibelfPackage } from './fossies.org/libelf'
 import { freedesktoporgxkeyboardconfigPackage } from './freedesktop.org/XKeyboardConfig'
 import { freedesktoporgappstreamPackage } from './freedesktop.org/appstream'
@@ -1827,6 +1829,7 @@ export interface Pantry {
   obsidianmd: typeof obsidianmdPackage
   ollamacom: typeof ollamacomPackage
   orbstackdev: typeof orbstackdevPackage
+  pearcleanerapp: typeof pearcleanerappPackage
   postmancom: typeof postmancomPackage
   raycastcom: typeof raycastcomPackage
   rectangleapp: typeof rectangleappPackage
@@ -2438,6 +2441,7 @@ export interface Pantry {
   jetbrainsmono: typeof jetbrainsmonoPackage
   jetbrainsmononerdfont: typeof jetbrainsmononerdfontPackage
   meslolgnerdfont: typeof meslolgnerdfontPackage
+  roboto: typeof robotoPackage
 
   fossiesorglibelf: typeof fossiesorglibelfPackage
 
@@ -5720,6 +5724,7 @@ export interface Pantry {
   pcre2: typeof pcreorgv2Package
   'pcsc-lite': typeof pcscliteapdufrPackage
   pdm: typeof pdmfmingdevPackage
+  Pearcleaner: typeof pearcleanerappPackage
   periphery: typeof peripheryPackage
   perl: typeof perlorgPackage
   pgen: typeof cratesiopgenPackage
@@ -5878,6 +5883,7 @@ export interface Pantry {
   rist: typeof codevideolanorgristlibristPackage
   rmz: typeof cratesiormzPackage
   robot: typeof robotframeworkorgPackage
+  Roboto: typeof robotoPackage
   rome: typeof rometoolsPackage
   ronn: typeof rtomaykogithubioronnPackage
   rover: typeof apollographqlcomroverPackage
@@ -6441,6 +6447,7 @@ export const pantry: Pantry = {
   obsidianmd: obsidianmdPackage,
   ollamacom: ollamacomPackage,
   orbstackdev: orbstackdevPackage,
+  pearcleanerapp: pearcleanerappPackage,
   postmancom: postmancomPackage,
   raycastcom: raycastcomPackage,
   rectangleapp: rectangleappPackage,
@@ -7052,6 +7059,7 @@ export const pantry: Pantry = {
   jetbrainsmono: jetbrainsmonoPackage,
   jetbrainsmononerdfont: jetbrainsmononerdfontPackage,
   meslolgnerdfont: meslolgnerdfontPackage,
+  roboto: robotoPackage,
 
   fossiesorglibelf: fossiesorglibelfPackage,
 
@@ -10334,6 +10342,7 @@ export const pantry: Pantry = {
   pcre2: pcreorgv2Package,
   'pcsc-lite': pcscliteapdufrPackage,
   pdm: pdmfmingdevPackage,
+  Pearcleaner: pearcleanerappPackage,
   periphery: peripheryPackage,
   perl: perlorgPackage,
   pgen: cratesiopgenPackage,
@@ -10492,6 +10501,7 @@ export const pantry: Pantry = {
   rist: codevideolanorgristlibristPackage,
   rmz: cratesiormzPackage,
   robot: robotframeworkorgPackage,
+  Roboto: robotoPackage,
   rome: rometoolsPackage,
   ronn: rtomaykogithubioronnPackage,
   rover: apollographqlcomroverPackage,

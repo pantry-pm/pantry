@@ -23,7 +23,9 @@ export const recipe: Recipe = {
       'curl -fSL -L "https://github.com/alienator88/Pearcleaner/releases/download/{{version}}/Pearcleaner.zip" -o /tmp/pearcleaner.zip',
       'cd /tmp && rm -rf pearcleaner-x && mkdir -p pearcleaner-x && unzip -qo pearcleaner.zip -d pearcleaner-x',
       'mkdir -p {{prefix}}',
-      'find /tmp/pearcleaner-x -maxdepth 2 -name "Pearcleaner.app" -exec cp -R {} {{prefix}}/Pearcleaner.app \\;',
+      // The zip ships a __MACOSX/Pearcleaner.app AppleDouble shadow alongside the
+      // real bundle — exclude it so we copy the app with the actual Mach-O binaries.
+      'src_app="$(find /tmp/pearcleaner-x -maxdepth 2 -name "Pearcleaner.app" -not -path "*/__MACOSX/*" | head -1)" && cp -R "$src_app" {{prefix}}/Pearcleaner.app',
     ],
   },
 }

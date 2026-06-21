@@ -23,7 +23,8 @@ export const recipe: Recipe = {
       'curl -fSL "https://github.com/googlefonts/roboto/releases/download/v{{version}}/roboto-unhinted.zip" -o /tmp/pantry-font.archive',
       'rm -rf /tmp/pantry-font-x && mkdir -p /tmp/pantry-font-x',
       'unzip -q -o /tmp/pantry-font.archive -d /tmp/pantry-font-x',
-      "find /tmp/pantry-font-x -type f \\( -iname '*.ttf' -o -iname '*.otf' \\) -exec cp -f {} {{prefix}}/share/fonts/ \\;",
+      // Exclude __MACOSX AppleDouble (._*) shadow files that ship inside the zip.
+      "find /tmp/pantry-font-x -type f \\( -iname '*.ttf' -o -iname '*.otf' \\) -not -name '._*' -not -path '*/__MACOSX/*' -exec cp -f {} {{prefix}}/share/fonts/ \\;",
     ],
   },
 }
