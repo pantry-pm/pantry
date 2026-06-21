@@ -199,7 +199,7 @@ ts-pkgx generate-aliases
 
 ## Documentation Generation
 
-Generate comprehensive VitePress documentation of all packages:
+Generate comprehensive BunPress documentation of all packages:
 
 ```bash
 # Generate package documentation with default settings

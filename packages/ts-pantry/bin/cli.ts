@@ -773,7 +773,7 @@ cli
 
 // Generate comprehensive documentation command
 cli
-  .command('generate-docs', 'Generate comprehensive VitePress documentation for all packages')
+  .command('generate-docs', 'Generate comprehensive BunPress documentation for all packages')
   .option('-o, --output-dir <dir>', 'Output directory for documentation', { default: 'docs' })
   .action(async (options) => {
     try {

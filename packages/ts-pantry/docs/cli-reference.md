@@ -19,7 +19,7 @@ bun install ts-pkgx
 | `ts-pkgx generate-index` | Generate TypeScript index file for packages |
 | `ts-pkgx generate-ts` | Generate TypeScript files from cached JSON |
 | `ts-pkgx generate-aliases` | Generate TypeScript aliases file for packages |
-| `ts-pkgx generate-docs` | Generate comprehensive VitePress documentation for all packages |
+| `ts-pkgx generate-docs` | Generate comprehensive BunPress documentation for all packages |
 | `ts-pkgx update-pantry` | Download and extract the latest pantry.tgz file |
 | `ts-pkgx generate-consts` | Generate or update the consts.ts file with all known packages |
 | `ts-pkgx version` | Display version information |
@@ -250,7 +250,7 @@ ts-pkgx generate-aliases
 
 ## generate-docs Command
 
-Generate comprehensive VitePress documentation for all packages.
+Generate comprehensive BunPress documentation for all packages.
 
 ### Usage
 

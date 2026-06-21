@@ -1,11 +1,11 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
+# BunPress home layout — https://bunpress.sh
 layout: home
 
 hero:
-  name: "ts-pkgx"
-  text: "pkgx Package Information"
-  tagline: "Fetch & access package data from pkgx with ease"
+  name: "ts-pantry"
+  text: "Pantry Package Information"
+  tagline: "Fetch & access package data from Pantry with ease"
   image: /images/logo-white.png
   actions:
     - theme: brand
@@ -13,7 +13,7 @@ hero:
       link: /intro
     - theme: alt
       text: View on GitHub
-      link: https://github.com/stacksjs/ts-pkgx
+      link: https://github.com/home-lang/pantry/tree/main/packages/ts-pantry
 
 features:
   - title: "Package Discovery"

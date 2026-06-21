@@ -79,9 +79,9 @@
     "changelog": "bunx logsmith --verbose",
     "changelog:generate": "bunx logsmith --output CHANGELOG.md",
     "release": "bun run changelog:generate && bunx --bun bumpx prompt --recursive",
-    "dev:docs": "bun vitepress dev docs",
-    "build:docs": "NODE_OPTIONS=\"--max-old-space-size=8192\" bun vitepress build docs",
-    "preview:docs": "bun vitepress preview docs",
+    "dev:docs": "bun bunpress dev docs",
+    "build:docs": "NODE_OPTIONS=\"--max-old-space-size=8192\" bun bunpress build docs",
+    "preview:docs": "bun bunpress preview docs",
     "typecheck": "bun tsc --noEmit",
     "pantry:fetch": "bun bin/cli.ts fetch",
     "pantry:fetch-all": "bun bin/cli.ts fetch --all",
@@ -98,6 +98,7 @@
     "ts-web-scraper": "^0.1.1"
   },
   "devDependencies": {
+    "@stacksjs/bunpress": "^0.1.6",
     "better-dx": "^0.2.6"
   }
 }

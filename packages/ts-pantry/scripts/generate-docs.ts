@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
- * Enhanced documentation generator for ts-pkgx packages
- * Creates comprehensive VitePress-compatible documentation
+ * Enhanced documentation generator for ts-pantry packages
+ * Creates comprehensive BunPress-compatible documentation
  *
  * This script now delegates to the consolidated generation logic in src/generate.ts
  */

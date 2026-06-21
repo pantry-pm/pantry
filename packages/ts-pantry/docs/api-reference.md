@@ -799,7 +799,7 @@ console.log(`Generated aliases: ${aliasesPath}`)
 
 ### generateDocs
 
-Generates comprehensive VitePress documentation for all packages.
+Generates comprehensive BunPress documentation for all packages.
 
 ```typescript
 async function generateDocs(outputDir: string = 'docs'): Promise<void>

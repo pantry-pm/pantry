@@ -45,7 +45,7 @@ bun bin/cli.ts generate-docs
 
 - **📊 Quick Stats**: Total package count, categories, and last updated date
 - **🔍 Searchable**: Easy navigation with table of contents and category organization
-- **📱 VitePress Compatible**: Optimized for VitePress static site generation
+- **📱 BunPress Compatible**: Optimized for BunPress static site generation
 - **🔗 Cross-Referenced**: Links between related packages and categories
 - **💻 Code Examples**: TypeScript usage examples for each package
 - **📦 Installation Commands**: Ready-to-use pkgx installation commands

@@ -1937,10 +1937,11 @@ Each package can be accessed using \`getPackage(name)\` or directly via \`pantry
       try {
         const domain = pkg.domain || pkg.fullPath || 'unknown'
 
-        // Format aliases and escape template variables for VitePress
+        // Format aliases and escape template variables so BunPress/markdown
+        // doesn't interpret literal `{{ }}` as template syntax.
         const aliases = pkg.aliases ? ` (${pkg.aliases.map(a => a.replace(/\{\{/g, '&lbrace;&lbrace;').replace(/\}\}/g, '&rbrace;&rbrace;')).join(', ')})` : ''
 
-        // Limit programs display and escape template variables for VitePress
+        // Limit programs display and escape template variables for BunPress
         let programs = pkg.programs.slice(0, 3).map((p: string) => p.replace(/\{\{/g, '&lbrace;&lbrace;').replace(/\}\}/g, '&rbrace;&rbrace;')).join(', ')
         if (pkg.programs.length > 3) {
           programs += `, ... (+${pkg.programs.length - 3})`
@@ -1976,7 +1977,8 @@ Each package can be accessed using \`getPackage(name)\` or directly via \`pantry
           const sortedAliases = [...pkg.aliases].sort((a, b) => a.length - b.length)
           installName = sortedAliases[0]
         }
-        // Escape template variables for VitePress using v-pre (including incomplete ones)
+        // Escape literal `{{ }}` so BunPress/markdown doesn't treat it as a
+        // template expression (incomplete braces included).
         installName = installName.replace(/\{\{/g, '&lbrace;&lbrace;').replace(/\}\}/g, '&rbrace;&rbrace;')
         const installCmd = `\`pkgx ${installName}\``
 

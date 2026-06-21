@@ -1,5 +1,5 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
+# BunPress home layout — https://bunpress.sh
 layout: home
 
 hero:
