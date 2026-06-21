@@ -55,15 +55,31 @@ async function uploadTarballToS3(
   }
 
   console.log(`   ⛓  Large file (${(size / 1024 / 1024).toFixed(0)} MB) — streaming via presigned PUT`)
-  const url = await s3.getSignedUrl({ bucket, key, expiresIn: 3600, operation: 'putObject' })
-  // -T streams the file from disk; -f fails the process on any HTTP 4xx/5xx so
-  // the caller's try/catch sees the error. No Content-Type header: the presigned
-  // signature covers host only, and adding an unsigned header can break the sig.
-  execFileSync('curl', [
-    '-fsS', '--connect-timeout', '30', '--max-time', '3600',
-    '--retry', '2', '--retry-delay', '5',
-    '-X', 'PUT', '-T', filePath, url,
-  ], { stdio: ['ignore', 'ignore', 'inherit'] })
+  // -T streams the file from disk; -f fails on any HTTP 4xx/5xx so the caller's
+  // try/catch sees it. No Content-Type header: the presigned signature covers
+  // host only, and an unsigned header can break the sig.
+  // --speed-limit/--speed-time abort a stalled connection (Hetzner occasionally
+  // hangs a PUT) after 60s below 1KB/s instead of waiting out --max-time; --retry
+  // then re-presigns+reconnects, so an intermittent stall self-heals rather than
+  // blocking for the full hour. We re-presign per attempt because a presigned URL
+  // can't be replayed after a partial PUT.
+  const maxAttempts = 4
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const url = await s3.getSignedUrl({ bucket, key, expiresIn: 3600, operation: 'putObject' })
+    try {
+      execFileSync('curl', [
+        '-fsS', '--connect-timeout', '30', '--max-time', '1800',
+        '--speed-limit', '1024', '--speed-time', '60',
+        '-X', 'PUT', '-T', filePath, url,
+      ], { stdio: ['ignore', 'ignore', 'inherit'] })
+      return
+    }
+    catch (err) {
+      if (attempt === maxAttempts)
+        throw err
+      console.log(`   ↻ upload attempt ${attempt} failed/stalled — retrying (${attempt + 1}/${maxAttempts})`)
+    }
+  }
 }
 
 /** SHA256 of a file, streamed from disk (no full read into memory). */
