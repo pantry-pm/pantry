@@ -44,6 +44,7 @@ import { cleanshotcomPackage } from './apps/cleanshotcom'
 import { codevisualstudiocomPackage } from './apps/codevisualstudiocom'
 import { cursorcomPackage } from './apps/cursorcom'
 import { dbeaverioPackage } from './apps/dbeaverio'
+import { diabrowsercomPackage } from './apps/diabrowsercom'
 import { discordcomPackage } from './apps/discordcom'
 import { elementioPackage } from './apps/elementio'
 import { figmacomPackage } from './apps/figmacom'
@@ -62,7 +63,9 @@ import { libreofficeorgPackage } from './apps/libreofficeorg'
 import { linearappPackage } from './apps/linearapp'
 import { lmstudioaiPackage } from './apps/lmstudioai'
 import { maccyappPackage } from './apps/maccyapp'
+import { mediaareanetPackage } from './apps/mediaareanet'
 import { meetingbarappPackage } from './apps/meetingbarapp'
+import { muzzleappcomPackage } from './apps/muzzleappcom'
 import { monitorcontrolappPackage } from './apps/monitorcontrolapp'
 import { notionsoPackage } from './apps/notionso'
 import { obsidianmdPackage } from './apps/obsidianmd'
@@ -442,8 +445,11 @@ import { hackPackage } from './fonts/hack'
 import { interPackage } from './fonts/inter'
 import { jetbrainsmonoPackage } from './fonts/jetbrainsmono'
 import { jetbrainsmononerdfontPackage } from './fonts/jetbrainsmononerdfont'
+import { latoPackage } from './fonts/lato'
 import { meslolgnerdfontPackage } from './fonts/meslolgnerdfont'
+import { opensansPackage } from './fonts/open-sans'
 import { robotoPackage } from './fonts/roboto'
+import { sourcecodeproPackage } from './fonts/source-code-pro'
 import { fossiesorglibelfPackage } from './fossies.org/libelf'
 import { freedesktoporgxkeyboardconfigPackage } from './freedesktop.org/XKeyboardConfig'
 import { freedesktoporgappstreamPackage } from './freedesktop.org/appstream'
@@ -1198,6 +1204,7 @@ import { localstackcloudawsclilocalPackage } from './localstack.cloud/awscli-loc
 import { localstackcloudcliPackage } from './localstack.cloud/cli'
 import { logdydevPackage } from './logdydev'
 import { logitechcomoptionsPackage } from './logitechcomoptions'
+import { logitechcomoptionsplusPackage } from './logitechcomoptionsplus'
 import { logologicalorggppPackage } from './logological.org/gpp'
 import { luajitorgPackage } from './luajitorg'
 import { luaorgPackage } from './luaorg'
@@ -1805,6 +1812,7 @@ export interface Pantry {
   codevisualstudiocom: typeof codevisualstudiocomPackage
   cursorcom: typeof cursorcomPackage
   dbeaverio: typeof dbeaverioPackage
+  diabrowsercom: typeof diabrowsercomPackage
   discordcom: typeof discordcomPackage
   elementio: typeof elementioPackage
   figmacom: typeof figmacomPackage
@@ -1823,7 +1831,9 @@ export interface Pantry {
   linearapp: typeof linearappPackage
   lmstudioai: typeof lmstudioaiPackage
   maccyapp: typeof maccyappPackage
+  mediaareanet: typeof mediaareanetPackage
   meetingbarapp: typeof meetingbarappPackage
+  muzzleappcom: typeof muzzleappcomPackage
   monitorcontrolapp: typeof monitorcontrolappPackage
   notionso: typeof notionsoPackage
   obsidianmd: typeof obsidianmdPackage
@@ -2440,8 +2450,11 @@ export interface Pantry {
   inter: typeof interPackage
   jetbrainsmono: typeof jetbrainsmonoPackage
   jetbrainsmononerdfont: typeof jetbrainsmononerdfontPackage
+  lato: typeof latoPackage
   meslolgnerdfont: typeof meslolgnerdfontPackage
+  opensans: typeof opensansPackage
   roboto: typeof robotoPackage
+  sourcecodepro: typeof sourcecodeproPackage
 
   fossiesorglibelf: typeof fossiesorglibelfPackage
 
@@ -3813,6 +3826,7 @@ export interface Pantry {
   localstackcloudcli: typeof localstackcloudcliPackage
   logdydev: typeof logdydevPackage
   logitechcomoptions: typeof logitechcomoptionsPackage
+  'logitech.com/options-plus': typeof logitechcomoptionsplusPackage
 
   logologicalorggpp: typeof logologicalorggppPackage
   luajitorg: typeof luajitorgPackage
@@ -6423,6 +6437,7 @@ export const pantry: Pantry = {
   codevisualstudiocom: codevisualstudiocomPackage,
   cursorcom: cursorcomPackage,
   dbeaverio: dbeaverioPackage,
+  diabrowsercom: diabrowsercomPackage,
   discordcom: discordcomPackage,
   elementio: elementioPackage,
   figmacom: figmacomPackage,
@@ -6441,7 +6456,9 @@ export const pantry: Pantry = {
   linearapp: linearappPackage,
   lmstudioai: lmstudioaiPackage,
   maccyapp: maccyappPackage,
+  mediaareanet: mediaareanetPackage,
   meetingbarapp: meetingbarappPackage,
+  muzzleappcom: muzzleappcomPackage,
   monitorcontrolapp: monitorcontrolappPackage,
   notionso: notionsoPackage,
   obsidianmd: obsidianmdPackage,
@@ -7058,8 +7075,11 @@ export const pantry: Pantry = {
   inter: interPackage,
   jetbrainsmono: jetbrainsmonoPackage,
   jetbrainsmononerdfont: jetbrainsmononerdfontPackage,
+  lato: latoPackage,
   meslolgnerdfont: meslolgnerdfontPackage,
+  opensans: opensansPackage,
   roboto: robotoPackage,
+  sourcecodepro: sourcecodeproPackage,
 
   fossiesorglibelf: fossiesorglibelfPackage,
 
@@ -8431,6 +8451,7 @@ export const pantry: Pantry = {
   localstackcloudcli: localstackcloudcliPackage,
   logdydev: logdydevPackage,
   logitechcomoptions: logitechcomoptionsPackage,
+  'logitech.com/options-plus': logitechcomoptionsplusPackage,
 
   logologicalorggpp: logologicalorggppPackage,
   luajitorg: luajitorgPackage,
