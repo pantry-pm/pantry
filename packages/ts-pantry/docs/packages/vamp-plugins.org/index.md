@@ -26,10 +26,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 1 versions</summary>
 
 - `2.10.0`
-- `2.9.0`
 
 </details>
 

@@ -30,8 +30,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 15 versions</summary>
+<summary>Show all 17 versions</summary>
 
+- `1.25.1`, `1.25.0`
 - `1.24.2`, `1.24.1`, `1.24.0`
 - `1.23.1`, `1.23.0`
 - `1.22.0`
@@ -43,13 +44,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `1.24.2`
+**Latest Version**: `1.25.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +unbound.net@1.24.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +unbound.net@1.25.1 -- $SHELL -i
 ```
 
 ## Dependencies

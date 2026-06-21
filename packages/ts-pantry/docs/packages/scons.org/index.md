@@ -25,14 +25,18 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 9 versions</summary>
+<summary>Show all 15 versions</summary>
 
 - `4.10.1`, `4.10.0`
 - `4.9.1`, `4.9.0`
 - `4.8.1`, `4.8.0`
 - `4.7.0`
 - `4.6.0`
-- `4.5.2`
+- `4.5.2`, `4.5.1`, `4.5.0`
+- `4.4.0`
+- `4.3.0`
+- `4.2.0`
+- `4.1.0`
 
 </details>
 

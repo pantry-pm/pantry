@@ -25,9 +25,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 51 versions</summary>
+<summary>Show all 57 versions</summary>
 
-- `3.16.0`
+- `3.19.1`, `3.19.0`
+- `3.18.1`, `3.18.0`
+- `3.17.1`, `3.17.0`
+- `3.16.1`, `3.16.0`
 - `3.15.1`, `3.15.0`
 - `3.14.1`, `3.14.0`
 - `3.13.1`, `3.13.0`
@@ -53,17 +56,16 @@ This package provides the following executable programs:
 - `2.17.0`
 - `2.16.0`
 - `2.15.0`
-- `2.14.1`
 
 </details>
 
-**Latest Version**: `3.16.0`
+**Latest Version**: `3.19.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +bytebase.com@3.16.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +bytebase.com@3.19.1 -- $SHELL -i
 ```
 
 ## Dependencies

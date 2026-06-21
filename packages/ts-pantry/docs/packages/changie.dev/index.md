@@ -25,25 +25,50 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 11 versions</summary>
+<summary>Show all 48 versions</summary>
 
-- `1.24.0`
+- `1.24.2`, `1.24.1`, `1.24.0`
 - `1.23.0`
 - `1.22.1`, `1.22.0`
 - `1.21.1`, `1.21.0`
 - `1.20.1`, `1.20.0`
 - `1.19.1`, `1.19.0`
 - `1.18.0`
+- `1.17.0`
+- `1.16.1`, `1.16.0`
+- `1.15.1`, `1.15.0`
+- `1.14.0`
+- `1.13.1`, `1.13.0`
+- `1.12.0`
+- `1.11.1`, `1.11.0`
+- `1.10.2`, `1.10.1`, `1.10.0`
+- `1.9.1`, `1.9.0`
+- `1.8.0`
+- `1.7.0`
+- `1.6.1`, `1.6.0`
+- `1.5.1`, `1.5.0`
+- `1.4.0`
+- `1.3.0`
+- `1.2.0`
+- `1.1.0`
+- `1.0.0`
+- `0.7.0`
+- `0.6.0`
+- `0.5.0`
+- `0.4.1`, `0.4.0`
+- `0.3.0`
+- `0.2.0`
+- `0.1.0`
 
 </details>
 
-**Latest Version**: `1.24.0`
+**Latest Version**: `1.24.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +changie.dev@1.24.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +changie.dev@1.24.2 -- $SHELL -i
 ```
 
 ## Usage Examples

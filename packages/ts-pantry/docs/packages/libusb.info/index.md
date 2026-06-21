@@ -25,19 +25,19 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 4 versions</summary>
+<summary>Show all 14 versions</summary>
 
-- `1.0.29`, `1.0.28`, `1.0.27`, `1.0.26`
+- `1.0.30`, `1.0.29`, `1.0.28`, `1.0.27`, `1.0.26`, `1.0.25`, `1.0.24`, `1.0.23`, `1.0.22`, `1.0.21`, `1.0.20`, `1.0.20-rc3`, `1.0.20-rc2`, `1.0.20-rc1`
 
 </details>
 
-**Latest Version**: `1.0.29`
+**Latest Version**: `1.0.30`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +libusb.info@1.0.29 -- $SHELL -i
+sh <(curl https://pkgx.sh) +libusb.info@1.0.30 -- $SHELL -i
 ```
 
 ## Usage Examples

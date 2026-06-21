@@ -25,11 +25,18 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 13 versions</summary>
 
 - `3.8.0`
 - `3.6.0`
 - `3.4.0`
+- `3.2.2`, `3.2.1`, `3.2.0`
+- `3.0.0`
+- `2.8.0`
+- `2.6.0`
+- `2.4.0`
+- `2.2.0`
+- `2.0.1`, `2.0.0`
 
 </details>
 

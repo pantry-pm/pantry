@@ -25,21 +25,31 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 6 versions</summary>
+<summary>Show all 31 versions</summary>
 
+- `5.2.0`
 - `5.1.3`, `5.1.2`, `5.1.1`
 - `5.0.7`, `5.0.6`
-- `4.10.2`
+- `4.10.2`, `4.10.1`
+- `4.9.1`
+- `4.8.3`, `4.8.2`, `4.8.0`
+- `4.7.2`, `4.7.1`
+- `4.6.2`, `4.6.1`, `4.6.0`
+- `4.5.0`
+- `4.4.3`, `4.4.2`, `4.4.1`, `4.4.0`
+- `4.2.5`, `4.2.4`, `4.2.3`, `4.2.1`
+- `4.1.2`, `4.1.1`, `4.1.0`
+- `4.0.5`, `4.0.4`
 
 </details>
 
-**Latest Version**: `5.1.3`
+**Latest Version**: `5.2.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +macfuse.github.io@5.1.3 -- $SHELL -i
+sh <(curl https://pkgx.sh) +macfuse.github.io@5.2.0 -- $SHELL -i
 ```
 
 ## Usage Examples

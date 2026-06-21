@@ -25,9 +25,13 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 27 versions</summary>
 
 - `2023.9.25`
+- `2.3.1-rc01`, `2.3.0-rc01`
+- `2.2.0-rc01`
+- `2.1.2-rc03`, `2.1.2-rc02`, `2.1.2-rc01`, `2.1.1-rc11`, `2.1.1-rc10`, `2.1.1-rc09`, `2.1.1-rc08`, `2.1.1-rc07`, `2.1.1-rc06`, `2.1.1-rc05`, `2.1.1-rc03`, `2.1.0-rc11`, `2.1.0-rc10`, `2.1.0-rc09`, `2.1.0-rc08`, `2.1.0-rc07`, `2.1.0-rc06`, `2.1.0-rc05`, `2.1.0-rc04`, `2.1.0-rc02`, `2.1.0-rc01`
+- `2.0.1-rc07`, `2.0.0-preview8`
 
 </details>
 

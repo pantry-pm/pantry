@@ -25,8 +25,14 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 54 versions</summary>
+<summary>Show all 61 versions</summary>
 
+- `1.53.0`
+- `1.52.0`
+- `1.51.0`
+- `1.50.0`
+- `1.49.0`
+- `1.48.1`, `1.48.0`
 - `1.47.1`, `1.47.0`
 - `1.46.0`
 - `1.45.0`
@@ -71,13 +77,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `1.47.1`
+**Latest Version**: `1.53.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +just.systems@1.47.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +just.systems@1.53.0 -- $SHELL -i
 ```
 
 ## Usage Examples

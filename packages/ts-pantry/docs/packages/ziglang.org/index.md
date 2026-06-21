@@ -25,8 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 10 versions</summary>
+<summary>Show all 12 versions</summary>
 
+- `0.17.0-dev.131+73c51c142`
+- `0.16.0-dev.3153+d6f43caad`
 - `0.15.2`, `0.15.1`, `0.15.0`
 - `0.14.1`, `0.14.0`
 - `0.13.0`
@@ -36,13 +38,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `0.15.2`
+**Latest Version**: `0.17.0-dev.131+73c51c142`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +ziglang.org@0.15.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +ziglang.org@0.17.0-dev.131+73c51c142 -- $SHELL -i
 ```
 
 ## Usage Examples

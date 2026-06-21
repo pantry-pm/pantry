@@ -25,8 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 76 versions</summary>
+<summary>Show all 79 versions</summary>
 
+- `2.0.3`, `2.0.1`, `2.0.0`
 - `1.7.2`, `1.7.1`, `1.7.0`
 - `1.6.5`, `1.6.4`, `1.6.3`, `1.6.2`, `1.6.1`
 - `1.5.15`, `1.5.14`, `1.5.13`, `1.5.12`, `1.5.11`, `1.5.10`, `1.5.9`, `1.5.8`, `1.5.7`, `1.5.6`, `1.5.5`, `1.5.4`, `1.5.2`, `1.5.1`, `1.5.0`
@@ -40,13 +41,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `1.7.2`
+**Latest Version**: `2.0.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +elizaOS.github.io@1.7.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +elizaOS.github.io@2.0.3 -- $SHELL -i
 ```
 
 ## Dependencies

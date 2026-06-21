@@ -25,25 +25,33 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 27 versions</summary>
+<summary>Show all 54 versions</summary>
 
-- `1.6.4`, `1.6.3`, `1.6.2`, `1.6.1`, `1.6.0`
+- `1.7.1`, `1.7.0`
+- `1.6.6`, `1.6.5`, `1.6.4`, `1.6.3`, `1.6.2`, `1.6.1`, `1.6.0`
 - `1.5.7`, `1.5.6`, `1.5.5`, `1.5.4`, `1.5.3`, `1.5.2`, `1.5.1`, `1.5.0`
 - `1.4.1`, `1.4.0`
 - `1.3.3`, `1.3.2`, `1.3.1`, `1.3.0`
 - `1.2.1`, `1.2.0`
 - `1.1.1`, `1.1.0`
-- `1.0.7`, `1.0.6`, `1.0.5`, `1.0.4`
+- `1.0.7`, `1.0.6`, `1.0.5`, `1.0.4`, `1.0.3`, `1.0.2`, `1.0.1`, `1.0.0`
+- `0.30.2`, `0.30.1`, `0.30.0`
+- `0.29.1`, `0.29.0`
+- `0.28.5`, `0.28.4`, `0.28.3`, `0.28.2`, `0.28.1`, `0.28.0`
+- `0.27.0`
+- `0.26.0`
+- `0.25.3`, `0.25.2`, `0.25.1`, `0.25.0`
+- `0.24.5`, `0.24.4`
 
 </details>
 
-**Latest Version**: `1.6.4`
+**Latest Version**: `1.7.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +carapace.sh@1.6.4 -- $SHELL -i
+sh <(curl https://pkgx.sh) +carapace.sh@1.7.1 -- $SHELL -i
 ```
 
 ## Usage Examples

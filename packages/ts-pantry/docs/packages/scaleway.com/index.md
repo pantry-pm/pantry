@@ -25,8 +25,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 22 versions</summary>
+<summary>Show all 56 versions</summary>
 
+- `2.57.0`
+- `2.56.3`, `2.56.1`, `2.56.0`
+- `2.55.0`
+- `2.54.0`
 - `2.53.0`
 - `2.52.0`
 - `2.51.0`
@@ -49,16 +53,42 @@ This package provides the following executable programs:
 - `2.34.0`
 - `2.33.0`
 - `2.32.1`
+- `2.31.0`
+- `2.30.0`
+- `2.29.0`
+- `2.28.0`
+- `2.27.0`
+- `2.26.0`
+- `2.25.0`
+- `2.24.0`
+- `2.23.0`
+- `2.22.0`
+- `2.21.0`
+- `2.20.0`
+- `2.19.0`
+- `2.18.0`
+- `2.17.0`
+- `2.16.1`, `2.16.0`
+- `2.15.0`
+- `2.14.0`
+- `2.13.0`
+- `2.12.0`
+- `2.11.1`, `2.11.0`
+- `2.10.0`
+- `2.9.0`
+- `2.8.0`
+- `2.7.0`
+- `2.6.2`
 
 </details>
 
-**Latest Version**: `2.53.0`
+**Latest Version**: `2.57.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +scaleway.com@2.53.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +scaleway.com@2.57.0 -- $SHELL -i
 ```
 
 ## Usage Examples

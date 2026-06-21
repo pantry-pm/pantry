@@ -25,19 +25,19 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 12 versions</summary>
 
-- `1.3.14`
+- `1.3.15`, `1.3.14`, `1.3.13`, `1.3.12`, `1.3.11`, `1.3.10`, `1.3.9`, `1.3.8`, `1.3.7`, `1.3.6`, `1.3.5`, `1.3.4`
 
 </details>
 
-**Latest Version**: `1.3.14`
+**Latest Version**: `1.3.15`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +graphite.sil.org@1.3.14 -- $SHELL -i
+sh <(curl https://pkgx.sh) +graphite.sil.org@1.3.15 -- $SHELL -i
 ```
 
 ## Usage Examples

@@ -28,11 +28,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 23 versions</summary>
+<summary>Show all 25 versions</summary>
 
 - `2024.4.12`
 - `2023.12.7`
 - `2023.7.16`
+- `1.7.1`, `1.7.0`
 - `1.5.1`, `1.5.0`
 - `1.4.4`, `1.4.3`, `1.4.2`, `1.4.1`, `1.4.0`
 - `1.3.6`, `1.3.5`, `1.3.4`, `1.3.3`, `1.3.1`, `1.3.0`

@@ -26,14 +26,18 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 51 versions</summary>
+<summary>Show all 63 versions</summary>
 
-- `39.4.1`, `39.4.0`
+- `40.3.0`
+- `40.2.0`
+- `40.1.2`, `40.1.1`, `40.1.0`
+- `40.0.0`
+- `39.4.2`, `39.4.1`, `39.4.0`
 - `39.3.1`, `39.3.0`
 - `39.2.0`
 - `39.1.0`
 - `39.0.0`
-- `38.5.4`, `38.5.3`, `38.5.2`, `38.5.1`, `38.5.0`
+- `38.5.5`, `38.5.4`, `38.5.3`, `38.5.2`, `38.5.1`, `38.5.0`
 - `38.4.0`
 - `38.3.0`
 - `38.2.0`
@@ -45,14 +49,14 @@ This package provides the following executable programs:
 - `37.4.0`
 - `37.3.0`
 - `37.2.0`
-- `37.1.0`
+- `37.1.0.post1`, `37.1.0`
 - `37.0.0`
 - `36.5.0`
 - `36.4.0`
 - `36.3.0`
 - `36.2.0`
 - `36.1.0`
-- `35.8.4`, `35.8.2`, `35.8.1`, `35.8.0`
+- `35.8.5`, `35.8.4`, `35.8.3`, `35.8.2`, `35.8.1`, `35.8.0`
 - `35.7.0`
 - `35.6.1`, `35.6.0`
 - `35.5.0`
@@ -64,16 +68,17 @@ This package provides the following executable programs:
 - `34.6.0`
 - `34.5.0`
 - `34.4.3`
+- `32.8.6`
 
 </details>
 
-**Latest Version**: `39.4.1`
+**Latest Version**: `40.3.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +rucio.cern.ch/rucio-client@39.4.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +rucio.cern.ch/rucio-client@40.3.0 -- $SHELL -i
 ```
 
 ## Dependencies

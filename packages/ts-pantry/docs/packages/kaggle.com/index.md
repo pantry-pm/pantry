@@ -25,21 +25,23 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 5 versions</summary>
+<summary>Show all 12 versions</summary>
 
+- `2.2.2`, `2.2.1`, `2.2.0`
+- `2.0.1`
 - `1.7.4.5`, `1.7.4.2`
-- `1.6.3`, `1.6.1`
-- `1.5.16`
+- `1.6.3`, `1.6.1`, `1.6.0a3`
+- `1.5.16`, `1.5.15`, `1.5.14`
 
 </details>
 
-**Latest Version**: `1.7.4.5`
+**Latest Version**: `2.2.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +kaggle.com@1.7.4.5 -- $SHELL -i
+sh <(curl https://pkgx.sh) +kaggle.com@2.2.2 -- $SHELL -i
 ```
 
 ## Dependencies

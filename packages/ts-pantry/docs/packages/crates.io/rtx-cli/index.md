@@ -20,7 +20,8 @@ pantry install crates.io/rtx-cli
 
 This package provides the following executable programs:
 
-No programs specified.
+- `mise`
+- `rtx`
 
 ## Available Versions
 
@@ -79,13 +80,6 @@ No programs specified.
 # Install specific version
 sh <(curl https://pkgx.sh) +crates.io/rtx-cli@2026.3.13 -- $SHELL -i
 ```
-
-## Dependencies
-
-This package depends on:
-
-- `openssl.org^1.1 # newer RTX after 1.35.2 versions require openssl`
-- `libgit2.org^1 # newer mise after 2024.5.12 versions require libgit2`
 
 ## Usage Examples
 

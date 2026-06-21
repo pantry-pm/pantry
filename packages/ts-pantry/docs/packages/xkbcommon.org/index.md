@@ -25,9 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 16 versions</summary>
+<summary>Show all 22 versions</summary>
 
-- `1.13.0`
+- `1.13.2`, `1.13.1`, `1.13.0`
 - `1.12.4`, `1.12.3`, `1.12.2`, `1.12.1`, `1.12.0`
 - `1.11.0`
 - `1.10.0`
@@ -36,16 +36,19 @@ This package provides the following executable programs:
 - `1.7.0`
 - `1.6.0`
 - `1.5.0`
+- `1.4.1`, `1.4.0`
+- `1.3.1`
+- `1.1.0`
 
 </details>
 
-**Latest Version**: `1.13.0`
+**Latest Version**: `1.13.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +xkbcommon.org@1.13.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +xkbcommon.org@1.13.2 -- $SHELL -i
 ```
 
 ## Dependencies

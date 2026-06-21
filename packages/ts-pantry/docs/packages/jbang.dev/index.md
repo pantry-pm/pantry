@@ -25,8 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 41 versions</summary>
+<summary>Show all 53 versions</summary>
 
+- `0.139.3`, `0.139.2`
+- `0.138.0`
 - `0.137.0`
 - `0.136.0`
 - `0.135.1`, `0.135.0`
@@ -53,17 +55,22 @@ This package provides the following executable programs:
 - `0.113.0`
 - `0.112.4`
 - `0.111.0`
-- `0.110.1`
+- `0.110.1`, `0.110.0`
+- `0.109.0`
+- `0.108.0`
+- `0.107.0`
+- `0.106.3`, `0.106.1`, `0.106.0`
+- `0.105.2`, `0.105.1`
 
 </details>
 
-**Latest Version**: `0.137.0`
+**Latest Version**: `0.139.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +jbang.dev@0.137.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +jbang.dev@0.139.3 -- $SHELL -i
 ```
 
 ## Dependencies

@@ -25,24 +25,27 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 27 versions</summary>
+<summary>Show all 42 versions</summary>
 
-- `2.4.3`, `2.4.2`, `2.4.1`, `2.4.0`
+- `2.4.6`, `2.4.5`, `2.4.4`, `2.4.3`, `2.4.2`, `2.4.1`, `2.4.0`
 - `2.3.5`, `2.3.4`, `2.3.3`, `2.3.2`, `2.3.1`, `2.3.0`
 - `2.2.6`, `2.2.5`, `2.2.4`, `2.2.3`, `2.2.2`, `2.2.1`, `2.2.0`
 - `2.1.3`, `2.1.2`, `2.1.1`, `2.1.0`
 - `2.0.2`, `2.0.1`, `2.0.0`
-- `1.26.4`, `1.26.3`, `1.26.2`
+- `1.26.4`, `1.26.3`, `1.26.2`, `1.26.1`, `1.26.0`
+- `1.25.2`, `1.25.1`, `1.25.0`
+- `1.24.4`, `1.24.3`, `1.24.2`, `1.24.1`, `1.24.0`
+- `1.23.5`, `1.23.4`
 
 </details>
 
-**Latest Version**: `2.4.3`
+**Latest Version**: `2.4.6`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +numpy.org@2.4.3 -- $SHELL -i
+sh <(curl https://pkgx.sh) +numpy.org@2.4.6 -- $SHELL -i
 ```
 
 ## Dependencies

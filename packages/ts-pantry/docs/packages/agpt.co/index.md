@@ -25,20 +25,20 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 9 versions</summary>
+<summary>Show all 50 versions</summary>
 
-- `0.4.7`, `0.4.6`, `0.4.5`, `0.4.4`, `0.4.3`, `0.4.2`, `0.4.0`
-- `0.3.1`, `0.3.0`
+- `autogpt-platform-beta-v0.6.52`, `autogpt-platform-beta-v0.6.51`, `autogpt-platform-beta-v0.6.50`, `autogpt-platform-beta-v0.6.49`, `autogpt-platform-beta-v0.6.48`, `autogpt-platform-beta-v0.6.47`, `autogpt-platform-beta-v0.6.46`, `autogpt-platform-beta-v0.6.45`, `autogpt-platform-beta-v0.6.43`, `autogpt-platform-beta-v0.6.42`, `autogpt-platform-beta-v0.6.41`, `autogpt-platform-beta-v0.6.40`, `autogpt-platform-beta-v0.6.39`, `autogpt-platform-beta-v0.6.38`, `autogpt-platform-beta-v0.6.37`, `autogpt-platform-beta-v0.6.36`, `autogpt-platform-beta-v0.6.35`, `autogpt-platform-beta-v0.6.34`, `autogpt-platform-beta-v0.6.33`, `autogpt-platform-beta-v0.6.32`, `autogpt-platform-beta-v0.6.31`, `autogpt-platform-beta-v0.6.30`, `autogpt-platform-beta-v0.6.29`, `autogpt-platform-beta-v0.6.28`, `autogpt-platform-beta-v0.6.27`, `autogpt-platform-beta-v0.6.26`, `autogpt-platform-beta-v0.6.25`, `autogpt-platform-beta-v0.6.23`, `autogpt-platform-beta-v0.6.22`, `autogpt-platform-beta-v0.6.21`, `autogpt-platform-beta-v0.6.20`, `autogpt-platform-beta-v0.6.19`, `autogpt-platform-beta-v0.6.18`, `autogpt-platform-beta-v0.6.17`, `autogpt-platform-beta-v0.6.16`, `autogpt-platform-beta-v0.6.15`, `autogpt-platform-beta-v0.6.14`, `autogpt-platform-beta-v0.6.13`, `autogpt-platform-beta-v0.6.12`, `autogpt-platform-beta-v0.6.11`, `autogpt-platform-beta-v0.6.10`, `autogpt-platform-beta-v0.6.9`, `autogpt-platform-beta-v0.6.8`, `autogpt-platform-beta-v0.6.7`, `autogpt-platform-beta-v0.6.6`, `autogpt-platform-beta-v0.6.5`, `autogpt-platform-beta-v0.6.4`, `autogpt-platform-beta-v0.6.3`, `autogpt-platform-beta-v0.6.2`
+- `0.6.44`
 
 </details>
 
-**Latest Version**: `0.4.7`
+**Latest Version**: `autogpt-platform-beta-v0.6.52`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +agpt.co@0.4.7 -- $SHELL -i
+sh <(curl https://pkgx.sh) +agpt.co@autogpt-platform-beta-v0.6.52 -- $SHELL -i
 ```
 
 ## Dependencies

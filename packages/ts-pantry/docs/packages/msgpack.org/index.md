@@ -25,19 +25,23 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 8 versions</summary>
 
+- `7.0.1`, `7.0.0`
+- `6.1.0`
 - `6.0.2`, `6.0.1`, `6.0.0`
+- `5.0.0`
+- `4.0.0`
 
 </details>
 
-**Latest Version**: `6.0.2`
+**Latest Version**: `7.0.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +msgpack.org@6.0.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +msgpack.org@7.0.1 -- $SHELL -i
 ```
 
 ## Usage Examples

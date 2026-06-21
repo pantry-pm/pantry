@@ -25,16 +25,26 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 177 versions</summary>
+<summary>Show all 195 versions</summary>
 
-- `25.8.1`, `25.8.0`
+- `26.3.1`, `26.3.0`
+- `26.2.0`
+- `26.1.0`
+- `26.0.0`
+- `25.9.0`
+- `25.8.2`, `25.8.1`, `25.8.0`
 - `25.7.0`
 - `25.6.1`, `25.6.0`
 - `25.5.0`
 - `25.4.0`
 - `25.3.0`
-- `25.2.1`
-- `24.14.0`
+- `25.2.1`, `25.2.0`
+- `25.1.0`
+- `25.0.0`
+- `24.17.0`
+- `24.16.0`
+- `24.15.0`
+- `24.14.1`, `24.14.0`
 - `24.13.1`, `24.13.0`
 - `24.12.0`
 - `24.11.1`, `24.11.0`
@@ -61,7 +71,8 @@ This package provides the following executable programs:
 - `23.2.0`
 - `23.1.0`
 - `23.0.0`
-- `22.22.1`, `22.22.0`
+- `22.23.0`
+- `22.22.3`, `22.22.2`, `22.22.1`, `22.22.0`
 - `22.21.1`, `22.21.0`
 - `22.20.0`
 - `22.19.0`
@@ -92,7 +103,7 @@ This package provides the following executable programs:
 - `21.2.0`
 - `21.1.0`
 - `21.0.0`
-- `20.20.1`, `20.20.0`
+- `20.20.2`, `20.20.1`, `20.20.0`
 - `20.19.6`, `20.19.5`, `20.19.4`, `20.19.3`, `20.19.2`, `20.19.1`, `20.19.0`
 - `20.18.3`, `20.18.2`, `20.18.1`, `20.18.0`
 - `20.17.0`
@@ -144,13 +155,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `25.8.1`
+**Latest Version**: `26.3.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +nodejs.org@25.8.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +nodejs.org@26.3.1 -- $SHELL -i
 ```
 
 ## Dependencies

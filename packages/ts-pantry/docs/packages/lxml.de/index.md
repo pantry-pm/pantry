@@ -25,25 +25,30 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 17 versions</summary>
+<summary>Show all 39 versions</summary>
 
-- `6.0.2`, `6.0.1`, `6.0.0`
+- `7.0.0a3`, `7.0.0a2`, `7.0.0a1`
+- `6.1.1`, `6.1.0`
+- `6.0.4`, `6.0.3`, `6.0.2`, `6.0.1`, `6.0.0`
 - `5.4.0`
 - `5.3.2`, `5.3.1`, `5.3.0`
 - `5.2.2`, `5.2.1`, `5.2.0`
-- `5.1.1`, `5.1.0`
-- `5.0.2`, `5.0.1`, `5.0.0`
-- `4.9.4`, `4.9.3`
+- `5.1.1`, `5.1.0`, `5.1.0-2`
+- `5.0.2`, `5.0.1`, `5.0.1-1`, `5.0.0`, `5.0.0-1`
+- `4.9.4`, `4.9.3`, `4.9.2`, `4.9.1`, `4.9.0`
+- `4.8.0`
+- `4.7.1`, `4.7.0`
+- `4.6.5`, `4.6.4`, `4.6.4-5`, `4.6.4-4`, `4.6.4-2`, `4.6.4-1`
 
 </details>
 
-**Latest Version**: `6.0.2`
+**Latest Version**: `7.0.0a3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +lxml.de@6.0.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +lxml.de@7.0.0a3 -- $SHELL -i
 ```
 
 ## Dependencies

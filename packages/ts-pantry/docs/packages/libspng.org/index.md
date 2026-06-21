@@ -25,19 +25,21 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 10 versions</summary>
 
+- `0.7.4`, `0.7.3`, `0.7.2`, `0.7.1`, `0.7.0`
+- `0.6.3`, `0.6.2`, `0.6.1`, `0.6.0`
 - `0.5.0`
 
 </details>
 
-**Latest Version**: `0.5.0`
+**Latest Version**: `0.7.4`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +libspng.org@0.5.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +libspng.org@0.7.4 -- $SHELL -i
 ```
 
 ## Dependencies

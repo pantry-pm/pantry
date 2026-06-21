@@ -25,25 +25,40 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 15 versions</summary>
+<summary>Show all 39 versions</summary>
 
-- `0.28.0`
+- `0.28.1`, `0.28.0`
 - `0.27.0`
 - `0.26.3`, `0.26.2`, `0.26.1`, `0.26.0`
 - `0.25.2`, `0.25.1`, `0.25.0`
 - `0.24.3`, `0.24.2`, `0.24.1`, `0.24.0`
 - `0.23.0`
-- `0.22.1`
+- `0.22.1`, `0.22.0`
+- `0.21.0`
+- `0.20.1`, `0.20.0`
+- `0.19.0`
+- `0.18.0`
+- `0.17.1`, `0.17`
+- `0.16.2`, `0.16.1`, `0.16.0`
+- `0.15.0`
+- `0.14.0`
+- `0.13.0`
+- `0.12.0`
+- `0.11.0`
+- `0.10.1`, `0.10.0`
+- `0.9.1`, `0.9.0`
+- `0.8.1`, `0.8.0`
+- `0.7.0`
 
 </details>
 
-**Latest Version**: `0.28.0`
+**Latest Version**: `0.28.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +crates.io/gitui@0.28.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +crates.io/gitui@0.28.1 -- $SHELL -i
 ```
 
 ## Dependencies

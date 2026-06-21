@@ -25,9 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 96 versions</summary>
+<summary>Show all 101 versions</summary>
 
-- `2.70.0`
+- `2.70.5`, `2.70.4`, `2.70.3`, `2.70.2`, `2.70.1`, `2.70.0`
 - `2.69.4`, `2.69.3`, `2.69.2`, `2.69.1`, `2.69.0`
 - `2.68.1`, `2.68.0`
 - `2.67.1`, `2.67.0`
@@ -70,13 +70,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `2.70.0`
+**Latest Version**: `2.70.5`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +chezmoi.io@2.70.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +chezmoi.io@2.70.5 -- $SHELL -i
 ```
 
 ## Usage Examples

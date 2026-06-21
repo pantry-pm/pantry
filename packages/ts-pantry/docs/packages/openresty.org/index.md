@@ -29,10 +29,15 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 16 versions</summary>
 
 - `1.27.1.2`, `1.27.1.1`
-- `1.25.3.2`
+- `1.25.3.2`, `1.25.3.1`
+- `1.21.4.3`, `1.21.4.2`
+- `1.15.8.3`, `1.15.8.2`, `1.15.8.1`
+- `1.13.6.2`, `1.13.6.1`
+- `1.11.2.5`, `1.11.2.3`, `1.11.2.2`, `1.11.2.1`
+- `1.9.15.1`
 
 </details>
 

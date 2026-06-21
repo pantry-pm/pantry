@@ -30,9 +30,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 2 versions</summary>
 
 - `8.0.2`
+- `8.1-alpha1`
 
 </details>
 

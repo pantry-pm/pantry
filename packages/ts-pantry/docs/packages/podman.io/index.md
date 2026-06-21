@@ -27,9 +27,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 47 versions</summary>
+<summary>Show all 49 versions</summary>
 
-- `5.8.1`, `5.8.0`
+- `5.8.3`, `5.8.2`, `5.8.1`, `5.8.0`
 - `5.7.1`, `5.7.0`
 - `5.6.2`, `5.6.1`, `5.6.0`
 - `5.5.2`, `5.5.1`, `5.5.0`
@@ -46,13 +46,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `5.8.1`
+**Latest Version**: `5.8.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +podman.io@5.8.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +podman.io@5.8.3 -- $SHELL -i
 ```
 
 ## Dependencies

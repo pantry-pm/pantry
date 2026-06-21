@@ -25,23 +25,34 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 5 versions</summary>
+<summary>Show all 43 versions</summary>
 
-- `5.22.0`
+- `5.23.0`
+- `5.22.5`, `5.22.4`, `5.22.3`, `5.22.2`, `5.22.1`, `5.22.0`
 - `5.21.0`
 - `5.20.0`
 - `5.19.0`
-- `5.18.2`
+- `5.18.2`, `5.18.1`, `5.18.0`
+- `5.17.0`
+- `5.16.1`, `5.16.0`
+- `5.15.0`
+- `5.14.3`, `5.14.2`, `5.14.1`, `5.14.0`
+- `5.13.2`, `5.13.1`, `5.13.0`
+- `5.12.4`, `5.12.3`, `5.12.2`, `5.12.1`, `5.12.0`
+- `5.11.7`, `5.11.6`, `5.11.5`, `5.11.4`, `5.11.3`, `5.11.2`, `5.11.1`, `5.11.0`
+- `5.10.0`
+- `5.9.2`, `5.9.1`, `5.9.0`
+- `5.8.5`, `5.8.4`
 
 </details>
 
-**Latest Version**: `5.22.0`
+**Latest Version**: `5.23.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +sdkman.io@5.22.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +sdkman.io@5.23.0 -- $SHELL -i
 ```
 
 ## Usage Examples

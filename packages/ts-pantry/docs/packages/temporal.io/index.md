@@ -25,9 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 20 versions</summary>
+<summary>Show all 34 versions</summary>
 
-- `1.6.1`, `1.6.0`
+- `1.7.2`, `1.7.1`, `1.7.0`
+- `1.6.2`, `1.6.1`, `1.6.0`
 - `1.5.1`, `1.5.0`
 - `1.4.1`, `1.4.0`
 - `1.3.0`
@@ -37,17 +38,22 @@ This package provides the following executable programs:
 - `0.13.2`, `0.13.1`, `0.13.0`
 - `0.12.0`
 - `0.11.0`
-- `0.10.7`, `0.10.6`, `0.10.5`
+- `0.10.7`, `0.10.6`, `0.10.5`, `0.10.4`, `0.10.3`, `0.10.2`, `0.10.1`, `0.10.0`
+- `0.9.0`
+- `0.8.0`
+- `0.7.0`
+- `0.6.0`
+- `0.5.0`
 
 </details>
 
-**Latest Version**: `1.6.1`
+**Latest Version**: `1.7.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +temporal.io@1.6.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +temporal.io@1.7.2 -- $SHELL -i
 ```
 
 ## Usage Examples

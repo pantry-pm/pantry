@@ -25,9 +25,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 5 versions</summary>
 
 - `0.9.0`
+- `0.8.0`
+- `0.7.2`, `0.7.1`, `0.7.0`
 
 </details>
 

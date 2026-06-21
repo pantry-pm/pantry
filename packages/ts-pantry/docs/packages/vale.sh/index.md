@@ -25,9 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 49 versions</summary>
+<summary>Show all 53 versions</summary>
 
-- `3.14.1`, `3.14.0`
+- `3.15.1`, `3.15.0`
+- `3.14.2`, `3.14.1`, `3.14.0`
 - `3.13.1`, `3.13.0`
 - `3.12.0`
 - `3.11.2`, `3.11.1`, `3.11.0`
@@ -44,17 +45,17 @@ This package provides the following executable programs:
 - `3.0.7`, `3.0.6`, `3.0.5`, `3.0.4`, `3.0.3`, `3.0.2`, `3.0.1`, `3.0.0`
 - `2.30.0`
 - `2.29.7`, `2.29.6`, `2.29.5`, `2.29.4`, `2.29.3`, `2.29.2`, `2.29.1`, `2.29.0`
-- `2.28.3`
+- `2.28.3`, `2.28.2`
 
 </details>
 
-**Latest Version**: `3.14.1`
+**Latest Version**: `3.15.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +vale.sh@3.14.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +vale.sh@3.15.1 -- $SHELL -i
 ```
 
 ## Usage Examples

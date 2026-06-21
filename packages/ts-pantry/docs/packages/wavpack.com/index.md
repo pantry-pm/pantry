@@ -28,11 +28,19 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 4 versions</summary>
+<summary>Show all 12 versions</summary>
 
 - `5.9.0`
 - `5.8.1`, `5.8.0`
 - `5.7.0`
+- `5.6.0`
+- `5.5.0`
+- `5.4.0`
+- `5.3.0`
+- `5.2.0`
+- `5.1.0`
+- `5.0.0`
+- `4.80.0`
 
 </details>
 

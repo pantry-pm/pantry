@@ -25,10 +25,11 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 7 versions</summary>
 
 - `2.3.0`
-- `2.2.2`
+- `2.2.2`, `2.2.1`, `2.2.0`
+- `2.1.2`, `2.1.1`, `2.1.0`
 
 </details>
 

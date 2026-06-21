@@ -25,19 +25,19 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 4 versions</summary>
 
-- `0.6.25`, `0.6.24`
+- `0.6.26`, `0.6.25`, `0.6.24`, `0.6.23`
 
 </details>
 
-**Latest Version**: `0.6.25`
+**Latest Version**: `0.6.26`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +libexif.github.io@0.6.25 -- $SHELL -i
+sh <(curl https://pkgx.sh) +libexif.github.io@0.6.26 -- $SHELL -i
 ```
 
 ## Dependencies

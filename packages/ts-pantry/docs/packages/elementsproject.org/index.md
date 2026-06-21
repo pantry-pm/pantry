@@ -31,21 +31,25 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 11 versions</summary>
+<summary>Show all 33 versions</summary>
 
-- `23.3.2`, `23.3.1`, `23.3.0`
+- `23.3.3`, `23.3.2`, `23.3.1`, `23.3.0`
 - `23.2.7`, `23.2.6`, `23.2.5`, `23.2.4`, `23.2.3`, `23.2.2`, `23.2.1`
-- `22.1.1`
+- `22.1.1`, `22.1`
+- `22.0.2`
+- `0.21.0.3`, `0.21.0.2`, `0.21.0.1`, `0.21.0`
+- `0.18.1.12`, `0.18.1.11`, `0.18.1.9`, `0.18.1.8`, `0.18.1.7`, `0.18.1.6`, `0.18.1.5`, `0.18.1.4`, `0.18.1.3`, `0.18.1.2`, `0.18.1.1`
+- `0.17.0.3`, `0.17.0.2`, `0.17.0.1`, `0.17.0`
 
 </details>
 
-**Latest Version**: `23.3.2`
+**Latest Version**: `23.3.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +elementsproject.org@23.3.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +elementsproject.org@23.3.3 -- $SHELL -i
 ```
 
 ## Dependencies

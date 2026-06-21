@@ -26,24 +26,26 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 40 versions</summary>
+<summary>Show all 58 versions</summary>
 
-- `2.9.5`, `2.9.4`, `2.9.3`, `2.9.2`, `2.9.1`, `2.9.0`
+- `2.10.1`, `2.10.0`, `2.10.0-RC1`
+- `2.9.8`, `2.9.7`, `2.9.6`, `2.9.5`, `2.9.4`, `2.9.3`, `2.9.2`, `2.9.1`, `2.9.0`
 - `2.8.12`, `2.8.11`, `2.8.10`, `2.8.9`, `2.8.8`, `2.8.7`, `2.8.6`, `2.8.5`, `2.8.4`, `2.8.3`, `2.8.2`, `2.8.1`, `2.8.0`
 - `2.7.9`, `2.7.8`, `2.7.7`, `2.7.6`, `2.7.5`, `2.7.4`, `2.7.3`, `2.7.2`, `2.7.1`, `2.7.0`
 - `2.6.6`, `2.6.5`, `2.6.4`, `2.6.3`, `2.6.2`, `2.6.1`, `2.6.0`
-- `2.5.8`
-- `2.2.26`, `2.2.24`, `2.2.23`
+- `2.5.8`, `2.5.7`, `2.5.6`, `2.5.5`, `2.5.4`, `2.5.3`
+- `2.2.28`, `2.2.27`, `2.2.26`, `2.2.25`, `2.2.24`, `2.2.23`, `2.2.22`, `2.2.21`
+- `1.10.28`, `1.10.27`
 
 </details>
 
-**Latest Version**: `2.9.5`
+**Latest Version**: `2.10.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +getcomposer.org@2.9.5 -- $SHELL -i
+sh <(curl https://pkgx.sh) +getcomposer.org@2.10.1 -- $SHELL -i
 ```
 
 ## Dependencies

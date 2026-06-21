@@ -6,7 +6,7 @@
 
 - **Domain**: `fermyon.com/spin`
 - **Name**: `spin`
-- **Homepage**: <https://spinroot.com/spin/whatispin.html>
+- **Homepage**: <https://www.fermyon.com/spin>
 - **Source**: [View on GitHub](https://github.com/pkgxdev/pantry/tree/main/projects/fermyon.com/spin/package.yml)
 
 ## Installation
@@ -63,7 +63,7 @@ console.log(`Programs: ${pkg.programs.join(', ')}`)
 ## Links
 
 - [Package Source](https://github.com/pkgxdev/pantry/tree/main/projects/fermyon.com/spin/package.yml)
-- [Homepage](https://spinroot.com/spin/whatispin.html)
+- [Homepage](https://www.fermyon.com/spin)
 - [Back to Package Catalog](../../../package-catalog.md)
 
 ---

@@ -25,21 +25,33 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 18 versions</summary>
 
-- `0.56.0`
-- `0.55.0`
-- `0.54.0`
+- `0.56`, `0.56.0`
+- `0.55`, `0.55.0`
+- `0.54`, `0.54.0`
+- `0.53`
+- `0.52`
+- `0.51`
+- `0.49`
+- `0.48`
+- `0.47`
+- `0.46`
+- `0.45`
+- `0.44`
+- `0.43`
+- `0.42`
+- `0.41`
 
 </details>
 
-**Latest Version**: `0.56.0`
+**Latest Version**: `0.56`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +gource.io@0.56.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +gource.io@0.56 -- $SHELL -i
 ```
 
 ## Dependencies

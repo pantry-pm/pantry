@@ -25,8 +25,13 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 59 versions</summary>
+<summary>Show all 58 versions</summary>
 
+- `4.55.1`, `4.55.0`
+- `4.54.0`
+- `4.53.1`, `4.53.0`
+- `4.52.1`, `4.52.0`
+- `4.51.0`
 - `4.50.3`, `4.50.2`, `4.50.1`, `4.50.0`
 - `4.49.1`, `4.49.0`
 - `4.48.1`, `4.48.0`
@@ -54,22 +59,17 @@ This package provides the following executable programs:
 - `4.26.0`
 - `4.25.0`
 - `4.24.2`, `4.24.1`, `4.24.0`
-- `4.23.2`, `4.23.1`, `4.23.0`
-- `4.22.0`
-- `4.21.2`, `4.21.1`, `4.21.0`
-- `4.20.0`
-- `4.19.0`
-- `4.18.1`
+- `4.23.2`
 
 </details>
 
-**Latest Version**: `4.50.3`
+**Latest Version**: `4.55.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +tox.wiki@4.50.3 -- $SHELL -i
+sh <(curl https://pkgx.sh) +tox.wiki@4.55.1 -- $SHELL -i
 ```
 
 ## Dependencies

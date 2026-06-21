@@ -25,21 +25,22 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 8 versions</summary>
+<summary>Show all 13 versions</summary>
 
-- `0.5.1`, `0.5.0`
-- `0.4.0`
-- `0.3.5`, `0.3.4`, `0.3.3`, `0.3.2`, `0.3.1`
+- `0.6.0-alpha`
+- `0.5.1-alpha`, `0.5.1`, `0.5.0-alpha`, `0.5.0`
+- `0.4.0-alpha`, `0.4.0`
+- `0.3.5-alpha`, `0.3.5`, `0.3.4`, `0.3.3`, `0.3.2`, `0.3.1`
 
 </details>
 
-**Latest Version**: `0.5.1`
+**Latest Version**: `0.6.0-alpha`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +amber-lang.com@0.5.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +amber-lang.com@0.6.0-alpha -- $SHELL -i
 ```
 
 ## Usage Examples

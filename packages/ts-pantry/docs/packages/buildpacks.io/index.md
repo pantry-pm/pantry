@@ -25,26 +25,32 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 20 versions</summary>
+<summary>Show all 33 versions</summary>
 
-- `0.40.2`, `0.40.1`, `0.40.0`
+- `0.40.6`, `0.40.5`, `0.40.4`, `0.40.3`, `0.40.2`, `0.40.1`, `0.40.0`
 - `0.39.1`, `0.39.0`
 - `0.38.2`, `0.38.1`, `0.38.0`
 - `0.37.0`
 - `0.36.4`, `0.36.3`, `0.36.2`, `0.36.1`, `0.36.0`
 - `0.35.1`, `0.35.0`
 - `0.34.2`, `0.34.1`, `0.34.0`
-- `0.33.2`
+- `0.33.2`, `0.33.1`, `0.33.0`
+- `0.32.1`, `0.32.0`
+- `0.31.0`
+- `0.30.0`
+- `0.29.0`
+- `0.28.0`
+- `0.27.0`
 
 </details>
 
-**Latest Version**: `0.40.2`
+**Latest Version**: `0.40.6`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +buildpacks.io@0.40.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +buildpacks.io@0.40.6 -- $SHELL -i
 ```
 
 ## Usage Examples

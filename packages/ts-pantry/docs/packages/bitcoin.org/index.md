@@ -67,18 +67,6 @@ This package provides the following executable programs:
 sh <(curl https://pkgx.sh) +bitcoin.org@30.2.0 -- $SHELL -i
 ```
 
-## Dependencies
-
-This package depends on:
-
-- `oracle.com/berkeley-db^18`
-- `boost.org^1`
-- `libevent.org^2`
-- `zeromq.org^4`
-- `sqlite.org^3`
-- `capnproto.org^1 # since 30.0`
-- `linux:gnu.org/gcc/libstdcxx`
-
 ## Usage Examples
 
 ```typescript

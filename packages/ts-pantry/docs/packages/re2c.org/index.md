@@ -25,25 +25,37 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 10 versions</summary>
+<summary>Show all 47 versions</summary>
 
-- `4.4.0`
-- `4.3.1`, `4.3.0`
-- `4.2.0`
-- `4.1.0`
-- `4.0.2`, `4.0.1`, `4.0.0`
-- `3.1.0`
-- `3.0.0`
+- `4.5.1`, `4.5`
+- `4.4`, `4.4.0`
+- `4.3.1`, `4.3`, `4.3.0`
+- `4.2`, `4.2.0`
+- `4.1`, `4.1.0`
+- `4.0.2`, `4.0.1`, `4.0`, `4.0.0`
+- `3.1`, `3.1.0`
+- `3.0`, `3.0.0`
+- `2.2`
+- `2.1.1`, `2.1`
+- `2.0.3`, `2.0.2`, `2.0.1`, `2.0`
+- `1.3`
+- `1.2.1`, `1.2`
+- `1.1.1`, `1.1`
+- `1.0.3`, `1.0.2`, `1.0.1`, `1.0`
+- `0.16`
+- `0.15.3`
+- `0.14.3`, `0.14.2`, `0.14.1`, `0.14`
+- `0.13.7.5`, `0.13.7.4`, `0.13.7.3`, `0.13.7.2`, `0.13.7.1`, `0.13.6`
 
 </details>
 
-**Latest Version**: `4.4.0`
+**Latest Version**: `4.5.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +re2c.org@4.4.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +re2c.org@4.5.1 -- $SHELL -i
 ```
 
 ## Usage Examples

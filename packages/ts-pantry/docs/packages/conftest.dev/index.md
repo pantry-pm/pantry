@@ -25,9 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 25 versions</summary>
+<summary>Show all 53 versions</summary>
 
-- `0.67.0`
+- `0.68.2`, `0.68.1`, `0.68.0`
+- `0.67.1`, `0.67.0`
 - `0.66.0`
 - `0.65.0`
 - `0.64.0`
@@ -49,16 +50,32 @@ This package provides the following executable programs:
 - `0.48.0`
 - `0.47.0`
 - `0.46.0`
+- `0.45.0`
+- `0.44.1`, `0.44.0`
+- `0.43.1`, `0.43.0`
+- `0.42.1`, `0.42.0`
+- `0.41.0`
+- `0.40.0`
+- `0.39.2`, `0.39.1`, `0.39.0`
+- `0.38.0`
+- `0.37.0`
+- `0.36.0`
+- `0.35.0`
+- `0.34.0`
+- `0.33.2`, `0.33.1`, `0.33.0`
+- `0.32.1`, `0.32.0`
+- `0.31.0`
+- `0.30.1`
 
 </details>
 
-**Latest Version**: `0.67.0`
+**Latest Version**: `0.68.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +conftest.dev@0.67.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +conftest.dev@0.68.2 -- $SHELL -i
 ```
 
 ## Usage Examples

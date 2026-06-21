@@ -25,10 +25,15 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 11 versions</summary>
 
-- `0.7.0`
+- `0.7.0`, `0.7.0-rc2`, `0.7.0-rc1`
 - `0.6.1`, `0.6.0`
+- `0.5.0`
+- `0.4.1`, `0.4.0`
+- `0.3.0`
+- `0.2.0`
+- `0.1.0`
 
 </details>
 
@@ -45,7 +50,7 @@ sh <(curl https://pkgx.sh) +github.com/snowplow/factotum@0.7.0 -- $SHELL -i
 
 This package depends on:
 
-- `openssl.org^1.1`
+- `openssl.org^3`
 
 ## Usage Examples
 

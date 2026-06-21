@@ -25,9 +25,11 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 13 versions</summary>
 
-- `2.1.12`
+- `2.1.12`, `2.1.11`, `2.1.10`, `2.1.8`, `2.1.6-beta`
+- `2.0.22`, `2.0.21`, `2.0.20`, `2.0.19`, `2.0.18`, `2.0.17`, `2.0.16`
+- `1.4.15`
 
 </details>
 

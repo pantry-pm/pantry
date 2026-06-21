@@ -25,10 +25,14 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 8 versions</summary>
 
 - `1.11.1`, `1.11.0`
 - `1.10.0`
+- `1.9.0`
+- `1.8.2`, `1.8.0`
+- `1.7.0`
+- `1.6.0`
 
 </details>
 

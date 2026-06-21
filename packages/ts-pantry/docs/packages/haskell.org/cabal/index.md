@@ -25,29 +25,31 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 7 versions</summary>
+<summary>Show all 17 versions</summary>
 
+- `3.16.1.0`, `3.16.0.0`
 - `3.14.2.0`, `3.14.1.1`, `3.14.1.0`
 - `3.12.1.0`
-- `3.10.3.0`, `3.10.1`
-- `3.8.1`
+- `3.10.3.0`, `3.10.2.1`, `3.10.1.0`, `3.10.1`
+- `3.8.1.0`, `3.8.1`
+- `3.6.2.0`, `3.6.1.0`, `3.6.0.0`
+- `2.0.0.2`, `2.0.0.0`
 
 </details>
 
-**Latest Version**: `3.14.2.0`
+**Latest Version**: `3.16.1.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +haskell.org/cabal@3.14.2.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +haskell.org/cabal@3.16.1.0 -- $SHELL -i
 ```
 
 ## Dependencies
 
 This package depends on:
 
-- `haskell.org@9`
 - `gnu.org/gmp@6`
 - `zlib.net@1`
 

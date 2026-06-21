@@ -26,7 +26,7 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 53 versions</summary>
+<summary>Show all 75 versions</summary>
 
 - `9.11.0`
 - `9.10.0`
@@ -67,6 +67,20 @@ This package provides the following executable programs:
 - `8.14.0`
 - `8.13.2`, `8.13.1`, `8.13.0`
 - `8.12.3`, `8.12.2`, `8.12.1`, `8.12.0`
+- `7.18.1`
+- `7.9.0`
+- `7.8.0`
+- `7.7.0`
+- `7.6.1`, `7.6.0`
+- `7.5.0`
+- `7.4.0`
+- `7.3.0`
+- `7.2.0`
+- `7.1.1`, `7.1.0`
+- `7.0.1`, `7.0.0`, `7.0.0rc1`, `7.0.0b1`, `7.0.0-doc`
+- `6.2.1`, `6.2.0`
+- `6.1.0`
+- `6.0.0`, `6.0.0rc1`
 
 </details>
 

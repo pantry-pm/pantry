@@ -26,9 +26,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 10 versions</summary>
 
-- `4.9.3`, `4.9.2`, `4.9.1`
+- `4.9.3`, `4.9.2`, `4.9.1`, `4.9.0`
+- `4.8.4`, `4.8.3`, `4.8.2`, `4.8.1`, `4.8.0`
+- `4.7.8`
 
 </details>
 

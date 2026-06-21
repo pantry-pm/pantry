@@ -25,8 +25,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 26 versions</summary>
+<summary>Show all 44 versions</summary>
 
+- `0.44.0`
+- `0.43.0`
+- `0.42.0`
+- `0.41.0`
 - `0.40.0`
 - `0.39.0`
 - `0.38.0`
@@ -43,16 +47,19 @@ This package provides the following executable programs:
 - `0.27.3`, `0.27.2`, `0.27.1`, `0.27.0`
 - `0.26.0`
 - `0.25.0`
+- `0.24.4`, `0.24.3`, `0.24.2`, `0.24.1`
+- `0.23.5`, `0.23.4`, `0.23.3`, `0.23.2`, `0.23.1`, `0.23.0`
+- `0.22.3`, `0.22.2`, `0.22.1`, `0.22.0`
 
 </details>
 
-**Latest Version**: `0.40.0`
+**Latest Version**: `0.44.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +runatlantis.io@0.40.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +runatlantis.io@0.44.0 -- $SHELL -i
 ```
 
 ## Usage Examples

@@ -27,20 +27,30 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 30 versions</summary>
 
-- `4.0.0`
-- `3.4.1`
+- `4.0.1`, `4.0.0`
+- `3.4.1`, `3.4.0`
+- `3.3.3`, `3.3.2`, `3.3.1`, `3.3.0`
+- `3.2.6`, `3.2.5`, `3.2.4`, `3.2.3`, `3.2.2`, `3.2.1`, `3.2.0`
+- `3.1.1`, `3.1.0`
+- `3.0.3`, `3.0.2`, `3.0.1`, `3.0.0`
+- `2.3.1`, `2.3.0`
+- `2.2.1`, `2.2.0`
+- `2.1.0`
+- `2.0.0`
+- `1.1.1`, `1.1.0`
+- `1.0.0`
 
 </details>
 
-**Latest Version**: `4.0.0`
+**Latest Version**: `4.0.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +openslide.org@4.0.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +openslide.org@4.0.1 -- $SHELL -i
 ```
 
 ## Dependencies

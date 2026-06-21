@@ -25,9 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 28 versions</summary>
+<summary>Show all 56 versions</summary>
 
-- `1.73.2`, `1.73.1`, `1.73.0`
+- `1.74.3`, `1.74.2`, `1.74.1`, `1.74.0`
+- `1.73.5`, `1.73.4`, `1.73.3`, `1.73.2`, `1.73.1`, `1.73.0`
 - `1.72.1`, `1.72.0`
 - `1.71.2`, `1.71.1`, `1.71.0`
 - `1.70.3`, `1.70.2`, `1.70.1`, `1.70.0`
@@ -37,17 +38,26 @@ This package provides the following executable programs:
 - `1.66.0`
 - `1.65.2`, `1.65.1`, `1.65.0`
 - `1.64.2`, `1.64.1`, `1.64.0`
-- `1.63.1`
+- `1.63.1`, `1.63.0`
+- `1.62.2`, `1.62.1`, `1.62.0`
+- `1.61.1`, `1.61.0`
+- `1.60.1`, `1.60.0`
+- `1.59.2`, `1.59.1`, `1.59.0`
+- `1.58.1`, `1.58.0`
+- `1.57.0`
+- `1.56.2`, `1.56.1`, `1.56.0`
+- `1.55.1`, `1.55.0`
+- `1.54.1`, `1.54.0`
 
 </details>
 
-**Latest Version**: `1.73.2`
+**Latest Version**: `1.74.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +rclone.org@1.73.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +rclone.org@1.74.3 -- $SHELL -i
 ```
 
 ## Usage Examples

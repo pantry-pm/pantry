@@ -25,7 +25,7 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 9 versions</summary>
+<summary>Show all 27 versions</summary>
 
 - `26.1.0`
 - `25.4.0`
@@ -36,6 +36,23 @@ No programs specified.
 - `24.2.0`
 - `24.1.0`
 - `23.2.0`
+- `23.1.0`
+- `22.2.0`
+- `22.1.0`
+- `21.4.0`
+- `21.3.0`
+- `21.2.0`
+- `21.1.0`
+- `20.3.0`
+- `20.2.0`
+- `20.1.0`
+- `19.3.0`
+- `19.2.0`
+- `19.1.0`
+- `18.2.0`
+- `18.1.0`
+- `17.4.0`
+- `17.3.0.post2`, `17.3.0.post1`
 
 </details>
 

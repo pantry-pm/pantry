@@ -32,8 +32,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 55 versions</summary>
+<summary>Show all 33 versions</summary>
 
+- `1.81.1`, `1.81.0`
+- `1.80.0`
 - `1.78.1`, `1.78.0`
 - `1.76.0`
 - `1.75.1`, `1.75.0`
@@ -45,28 +47,19 @@ This package provides the following executable programs:
 - `1.69.0`
 - `1.68.2`, `1.68.1`, `1.68.0`
 - `1.67.1`, `1.67.0`
-- `1.66.2`
-- `1.65.5`, `1.65.4`, `1.65.3`, `1.65.2`, `1.65.1`, `1.65.0`
-- `1.64.2`, `1.64.1`, `1.64.0`
-- `1.63.1`
-- `1.62.2`, `1.62.1`, `1.62.0`
-- `1.61.2`, `1.61.1`, `1.61.0`
-- `1.60.1`, `1.60.0`
-- `1.59.4`, `1.59.3`, `1.59.2`, `1.59.1`, `1.59.0`
-- `1.58.2`, `1.58.1`, `1.58.0`
-- `1.57.1`
-- `1.56.4`, `1.56.3`
-- `1.55.4`
+- `1.66.2`, `1.66.1`, `1.66.0`
+- `1.65.5`, `1.65.4`
+- `1.58.3`
 
 </details>
 
-**Latest Version**: `1.78.1`
+**Latest Version**: `1.81.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +grpc.io@1.78.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +grpc.io@1.81.1 -- $SHELL -i
 ```
 
 ## Dependencies

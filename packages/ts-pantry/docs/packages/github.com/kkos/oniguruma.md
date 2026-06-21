@@ -25,9 +25,19 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 31 versions</summary>
 
-- `6.9.10`, `6.9.9`, `6.9.8`
+- `6.9.10`, `6.9.9`, `6.9.8`, `6.9.7.1`, `6.9.7`, `6.9.6`, `6.9.5_rev1`, `6.9.5`, `6.9.4`, `6.9.3`, `6.9.2`, `6.9.1`, `6.9.0`
+- `6.8.2`, `6.8.1`, `6.8.0`
+- `6.7.1`, `6.7.0`
+- `6.6.1`, `6.6.0`
+- `6.5.0`
+- `6.4.0`
+- `6.3.0`
+- `6.2.0`
+- `6.1.3`, `6.1.2`, `6.1.1`, `6.1.0`
+- `6.0.0`
+- `5.9.6_p1`, `5.9.6`
 
 </details>
 

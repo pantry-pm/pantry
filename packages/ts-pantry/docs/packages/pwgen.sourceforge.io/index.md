@@ -25,19 +25,23 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 5 versions</summary>
 
+- `2.08`
 - `2.8.0`
+- `2.07`
+- `2.06`
+- `2.05`
 
 </details>
 
-**Latest Version**: `2.8.0`
+**Latest Version**: `2.08`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +pwgen.sourceforge.io@2.8.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +pwgen.sourceforge.io@2.08 -- $SHELL -i
 ```
 
 ## Usage Examples

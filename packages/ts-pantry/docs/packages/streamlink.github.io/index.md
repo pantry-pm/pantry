@@ -25,8 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 28 versions</summary>
+<summary>Show all 52 versions</summary>
 
+- `8.4.0`
+- `8.3.0`
 - `8.2.1`, `8.2.0`
 - `8.1.2`, `8.1.1`, `8.1.0`
 - `8.0.0`
@@ -42,16 +44,27 @@ This package provides the following executable programs:
 - `6.9.0`
 - `6.8.3`, `6.8.2`, `6.8.1`, `6.8.0`
 - `6.7.4`, `6.7.3`, `6.7.2`, `6.7.1`, `6.7.0`
+- `6.6.2`, `6.6.1`, `6.6.0`
+- `6.5.1`, `6.5.0`
+- `6.4.2`, `6.4.1`, `6.4.0`
+- `6.3.1`, `6.3.0`
+- `6.2.1`, `6.2.0`
+- `6.1.0`
+- `6.0.1`, `6.0.0`
+- `5.5.1`, `5.5.0`
+- `5.4.0`
+- `5.3.1`, `5.3.0`
+- `5.2.1`, `5.2.0`
 
 </details>
 
-**Latest Version**: `8.2.1`
+**Latest Version**: `8.4.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +streamlink.github.io@8.2.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +streamlink.github.io@8.4.0 -- $SHELL -i
 ```
 
 ## Dependencies

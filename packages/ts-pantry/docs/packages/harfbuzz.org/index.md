@@ -28,9 +28,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 52 versions</summary>
+<summary>Show all 58 versions</summary>
 
 - `999.999.999`
+- `14.2.1`, `14.2.0`
+- `14.1.0`
+- `14.0.0`
 - `13.2.1`, `13.2.0`
 - `13.1.1`, `13.1.0`
 - `13.0.1`, `13.0.0`
@@ -39,7 +42,7 @@ This package provides the following executable programs:
 - `12.1.0`
 - `12.0.0`
 - `11.5.1`, `11.5.0`
-- `11.4.5`, `11.4.4`, `11.4.3`, `11.4.2`, `11.4.1`
+- `11.4.5`, `11.4.4`, `11.4.3`, `11.4.2`, `11.4.1`, `11.4.0`
 - `11.3.3`, `11.3.2`, `11.3.1`, `11.3.0`
 - `11.2.1`, `11.2.0`
 - `11.1.0`
@@ -52,7 +55,7 @@ This package provides the following executable programs:
 - `9.0.0`
 - `8.5.0`
 - `8.4.0`
-- `8.3.0`
+- `8.3.1`, `8.3.0`
 - `8.2.2`, `8.2.1`, `8.2.0`
 - `8.1.1`, `8.1.0`
 - `8.0.1`, `8.0.0`

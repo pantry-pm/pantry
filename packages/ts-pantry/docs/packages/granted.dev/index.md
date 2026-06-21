@@ -25,8 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 38 versions</summary>
+<summary>Show all 51 versions</summary>
 
+- `0.39.0`
 - `0.38.0`
 - `0.37.0`
 - `0.36.3`, `0.36.2`, `0.36.1`, `0.36.0`
@@ -44,17 +45,19 @@ This package provides the following executable programs:
 - `0.24.0`
 - `0.23.2`, `0.23.1`, `0.23.0`
 - `0.22.0`
-- `0.21.1`
+- `0.21.1`, `0.21.0`
+- `0.20.7`, `0.20.6`, `0.20.5`, `0.20.4`, `0.20.3`, `0.20.2`, `0.20.1`, `0.20.0`
+- `0.19.2`, `0.19.1`, `0.19.0`
 
 </details>
 
-**Latest Version**: `0.38.0`
+**Latest Version**: `0.39.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +granted.dev@0.38.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +granted.dev@0.39.0 -- $SHELL -i
 ```
 
 ## Usage Examples

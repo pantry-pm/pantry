@@ -25,29 +25,39 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 21 versions</summary>
+<summary>Show all 54 versions</summary>
 
-- `2.18.1`, `2.18.0`
+- `2.22.0`
+- `2.21.0`
+- `2.20.0`
+- `2.19.0`
+- `2.18.3`, `2.18.2`, `2.18.1`, `2.18.0`
 - `2.17.3`, `2.17.2`, `2.17.1`, `2.17.0`
 - `2.16.1`, `2.16.0`
 - `2.15.0`
 - `2.14.2`, `2.14.1`, `2.14.0`
-- `2.13.2`, `2.13.0`
+- `2.13.2`, `2.13.1`, `2.13.0`
 - `2.12.0`
 - `2.11.1`, `2.11.0`
 - `2.10.1`, `2.10.0`
 - `2.9.0`
 - `2.8.0`
+- `2.7.1`, `2.7.0`
+- `2.6.4`, `2.6.3`, `2.6.2`, `2.6.1`, `2.6.0`
+- `2.5.1`
+- `2.3.8`, `2.3.7`, `2.3.6`, `2.3.5`, `2.3.4`
+- `2.0.18`, `2.0.17`, `2.0.16`, `2.0.15`, `2.0.14`, `2.0.13`
+- `1.39.18`, `1.39.17`, `1.39.16`, `1.39.15`, `1.39.14`, `1.39.13`, `1.39.11`
 
 </details>
 
-**Latest Version**: `2.18.1`
+**Latest Version**: `2.22.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +skaffold.dev@2.18.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +skaffold.dev@2.22.0 -- $SHELL -i
 ```
 
 ## Usage Examples

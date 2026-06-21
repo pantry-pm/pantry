@@ -25,8 +25,14 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 20 versions</summary>
+<summary>Show all 64 versions</summary>
 
+- `14.13`
+- `14.12`
+- `14.11`
+- `14.10`
+- `14.9`
+- `14.8`
 - `14.7`, `14.7.0`
 - `14.6`, `14.6.0`
 - `14.5`, `14.5.0`
@@ -35,17 +41,28 @@ This package provides the following executable programs:
 - `14.2`, `14.2.0`
 - `14.1`, `14.1.0`
 - `14.0`, `14.0.0`
-- `13.0.8`, `13.0.7`, `13.0.6`, `13.0.5`
+- `13.0.8`, `13.0.7`, `13.0.6`, `13.0.5`, `13.0.4`, `13.0.3`, `13.0.2`, `13.0.1`, `13.0.0`
+- `12.2.12`, `12.2.11`, `12.2.10`, `12.2.9`, `12.2.8`, `12.2.7`, `12.2.6`, `12.2.5`, `12.2.4`, `12.2.3`, `12.2.2`, `12.2.1`, `12.2.0`
+- `12.0.3`, `12.0.2`, `12.0.1`, `12.0.0`
+- `11.2.2`, `11.2.1`, `11.2.0`
+- `11.1.0`
+- `11.0.1`, `11.0.0`
+- `10.2.0`
+- `10.1.2`, `10.1.1`, `10.1.0`
+- `10.0.0`
+- `9.0.1`, `9.0.0`
+- `8.0.0`
+- `7.0.1`, `7.0.0`
 
 </details>
 
-**Latest Version**: `14.7`
+**Latest Version**: `14.13`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +postgrest.org@14.7 -- $SHELL -i
+sh <(curl https://pkgx.sh) +postgrest.org@14.13 -- $SHELL -i
 ```
 
 ## Dependencies

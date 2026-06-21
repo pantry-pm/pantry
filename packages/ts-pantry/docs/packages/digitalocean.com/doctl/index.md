@@ -25,9 +25,17 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 57 versions</summary>
+<summary>Show all 64 versions</summary>
 
-- `2.59.3`, `2.59.2`
+- `1.162.0`
+- `1.161.0`
+- `1.160.1`
+- `1.159.0`
+- `1.158.0`
+- `1.157.0`
+- `1.155.0`
+- `1.154.0`
+- `1.153.0`
 - `1.152.0`
 - `1.151.0`
 - `1.150.0`
@@ -80,13 +88,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `2.59.3`
+**Latest Version**: `1.162.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +digitalocean.com/doctl@2.59.3 -- $SHELL -i
+sh <(curl https://pkgx.sh) +digitalocean.com/doctl@1.162.0 -- $SHELL -i
 ```
 
 ## Usage Examples

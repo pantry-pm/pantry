@@ -25,20 +25,44 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 5 versions</summary>
+<summary>Show all 45 versions</summary>
 
+- `lychee-v0.23.0`
+- `lychee-lib-v0.23.0`
+- `lychee-v0.22.0`
+- `lychee-lib-v0.22.0`
+- `lychee-v0.21.0`
+- `lychee-lib-v0.21.0`
+- `lychee-v0.20.1`, `lychee-v0.20.0`
+- `lychee-lib-v0.20.1`, `lychee-lib-v0.20.0`
+- `lychee-v0.19.1`, `lychee-v0.19.0`
+- `lychee-lib-v0.19.1`, `lychee-lib-v0.19.0`
+- `lychee-v0.18.1`, `lychee-v0.18.0`
+- `lychee-lib-v0.18.1`, `lychee-lib-v0.18.0`
+- `lychee-v0.17.0`
+- `lychee-lib-v0.17.0`
+- `lychee-v0.16.1`, `lychee-v0.16.0`
+- `lychee-lib-v0.16.1`, `lychee-lib-v0.16.0`
 - `0.15.1`, `0.15.0`
-- `0.14.3`, `0.14.2`, `0.14.1`
+- `0.14.3`, `0.14.2`, `0.14.1`, `0.14.0`
+- `0.13.0`
+- `0.12.0`
+- `0.11.1`, `0.11.0`
+- `0.10.3`, `0.10.2`, `0.10.1`, `0.10.0`
+- `0.9.0`
+- `0.8.2`, `0.8.1`, `0.8.0`
+- `0.7.1`, `0.7.0`
+- `0.6.0`
 
 </details>
 
-**Latest Version**: `0.15.1`
+**Latest Version**: `lychee-v0.23.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +lychee.cli.rs@0.15.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +lychee.cli.rs@lychee-v0.23.0 -- $SHELL -i
 ```
 
 ## Dependencies

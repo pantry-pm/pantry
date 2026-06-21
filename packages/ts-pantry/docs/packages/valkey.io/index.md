@@ -27,22 +27,23 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 26 versions</summary>
+<summary>Show all 34 versions</summary>
 
-- `9.0.3`, `9.0.2`, `9.0.1`, `9.0.0`
-- `8.1.6`, `8.1.5`, `8.1.4`, `8.1.3`, `8.1.2`, `8.1.1`, `8.1.0`
-- `8.0.6`, `8.0.5`, `8.0.4`, `8.0.3`, `8.0.2`, `8.0.1`, `8.0.0`
-- `7.2.12`, `7.2.11`, `7.2.10`, `7.2.9`, `7.2.8`, `7.2.7`, `7.2.6`, `7.2.5`
+- `9.1.0`
+- `9.0.4`, `9.0.3`, `9.0.2`, `9.0.1`, `9.0.0`
+- `8.1.8`, `8.1.7`, `8.1.6`, `8.1.5`, `8.1.4`, `8.1.3`, `8.1.2`, `8.1.1`, `8.1.0`
+- `8.0.9`, `8.0.8`, `8.0.7`, `8.0.6`, `8.0.5`, `8.0.4`, `8.0.3`, `8.0.2`, `8.0.1`, `8.0.0`
+- `7.2.13`, `7.2.12`, `7.2.11`, `7.2.10`, `7.2.9`, `7.2.8`, `7.2.7`, `7.2.6`, `7.2.5`
 
 </details>
 
-**Latest Version**: `9.0.3`
+**Latest Version**: `9.1.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +valkey.io@9.0.3 -- $SHELL -i
+sh <(curl https://pkgx.sh) +valkey.io@9.1.0 -- $SHELL -i
 ```
 
 ## Dependencies

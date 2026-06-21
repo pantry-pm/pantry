@@ -25,19 +25,20 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 5 versions</summary>
+<summary>Show all 6 versions</summary>
 
+- `0.13.2`
 - `0.12.5`, `0.12.3`, `0.12.2`, `0.12.1`, `0.12.0`
 
 </details>
 
-**Latest Version**: `0.12.5`
+**Latest Version**: `0.13.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +pantsbuild.org/scie-pants@0.12.5 -- $SHELL -i
+sh <(curl https://pkgx.sh) +pantsbuild.org/scie-pants@0.13.2 -- $SHELL -i
 ```
 
 ## Dependencies

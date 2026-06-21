@@ -32,8 +32,9 @@ This package can also be accessed using these aliases:
 ## Available Versions
 
 <details>
-<summary>Show all 20 versions</summary>
+<summary>Show all 47 versions</summary>
 
+- `16.0.0`
 - `15.9.0`
 - `15.8.0`
 - `15.7.0`
@@ -54,16 +55,42 @@ This package can also be accessed using these aliases:
 - `14.5.0`
 - `14.4.0`
 - `14.3.0`
+- `14.2.0`
+- `13.7.0`
+- `13.6.0`
+- `13.5.0`
+- `13.4.0`
+- `13.3.0`
+- `13.1.0`
+- `13.0.0`
+- `12.10.0`
+- `12.9.0`
+- `12.8.0`
+- `12.7.0`
+- `12.6.0`
+- `12.5.0`
+- `12.4.0`
+- `12.3.0`
+- `12.2.0`
+- `12.1.0`
+- `12.0.0`
+- `11.6.0`
+- `11.5.0`
+- `11.4.0`
+- `11.3.0`
+- `11.2.0`
+- `11.1.0`
+- `11.0.0`
 
 </details>
 
-**Latest Version**: `15.9.0`
+**Latest Version**: `16.0.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +karabiner-elements.pqrs.org@15.9.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +karabiner-elements.pqrs.org@16.0.0 -- $SHELL -i
 ```
 
 ## Usage Examples

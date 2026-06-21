@@ -25,25 +25,31 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 12 versions</summary>
+<summary>Show all 26 versions</summary>
 
-- `6.12.1`, `6.12.0`
+- `6.12.2`, `6.12.1`, `6.12.0`
 - `6.11.2`, `6.11.1`, `6.11.0`
 - `6.10.0`
 - `6.9.0`
 - `6.8.1`, `6.8.0`
 - `6.7.0`
-- `6.6.2`, `6.6.1`
+- `6.6.2`, `6.6.1`, `6.6.0`
+- `6.5.0`
+- `6.4.1`, `6.4.0`
+- `6.3.0`
+- `6.2.3`, `6.2.2`, `6.2.1`, `6.2.0`
+- `6.1.0`
+- `6.0.2`, `6.0.1`, `6.0.0`
 
 </details>
 
-**Latest Version**: `6.12.1`
+**Latest Version**: `6.12.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +github.com/maxbrunsfeld/counterfeiter@6.12.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +github.com/maxbrunsfeld/counterfeiter@6.12.2 -- $SHELL -i
 ```
 
 ## Dependencies

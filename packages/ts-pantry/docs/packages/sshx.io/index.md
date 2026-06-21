@@ -25,9 +25,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 8 versions</summary>
 
 - `2023.11.14`
+- `0.4.1`, `0.4.0`
+- `0.3.1`, `0.3.0`
+- `0.2.5`, `0.2.4`, `0.2.3`
 
 </details>
 

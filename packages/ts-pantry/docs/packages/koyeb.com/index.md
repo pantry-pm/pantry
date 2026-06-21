@@ -25,9 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 43 versions</summary>
+<summary>Show all 51 versions</summary>
 
-- `5.10.1`, `5.10.0`
+- `5.10.2`, `5.10.1`, `5.10.0`
 - `5.9.1`, `5.9.0`
 - `5.8.0`
 - `5.7.0`
@@ -54,17 +54,23 @@ This package provides the following executable programs:
 - `3.3.2`, `3.3.1`, `3.3.0`
 - `3.2.0`
 - `3.1.1`, `3.1.0`
-- `3.0.2`, `3.0.1`
+- `3.0.2`, `3.0.1`, `3.0.0`
+- `2.16.0`
+- `2.15.0`
+- `2.14.0`
+- `2.13.0`
+- `2.12.0`
+- `2.11.0`
 
 </details>
 
-**Latest Version**: `5.10.1`
+**Latest Version**: `5.10.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +koyeb.com@5.10.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +koyeb.com@5.10.2 -- $SHELL -i
 ```
 
 ## Usage Examples

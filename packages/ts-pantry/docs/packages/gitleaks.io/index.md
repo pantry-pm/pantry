@@ -25,7 +25,7 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 34 versions</summary>
+<summary>Show all 47 versions</summary>
 
 - `8.30.1`, `8.30.0`
 - `8.29.1`, `8.29.0`
@@ -38,8 +38,11 @@ This package provides the following executable programs:
 - `8.22.1`, `8.22.0`
 - `8.21.4`, `8.21.3`, `8.21.2`, `8.21.1`, `8.21.0`
 - `8.20.1`, `8.20.0`
-- `8.19.3`, `8.19.2`, `8.19.1`
-- `8.18.4`, `8.18.3`, `8.18.2`, `8.18.1`
+- `8.19.3`, `8.19.2`, `8.19.1`, `8.19.0`
+- `8.18.4`, `8.18.3`, `8.18.2`, `8.18.1`, `8.18.0`
+- `8.17.0`
+- `8.16.4`, `8.16.3`, `8.16.2`, `8.16.1`, `8.16.0`
+- `8.15.4`, `8.15.3`, `8.15.2`, `8.15.1`, `8.15.0`
 
 </details>
 

@@ -32,9 +32,14 @@ This package can also be accessed using these aliases:
 ## Available Versions
 
 <details>
-<summary>Show all 81 versions</summary>
+<summary>Show all 89 versions</summary>
 
-- `11.12.0`
+- `11.17.0`
+- `11.16.0`
+- `11.15.0`
+- `11.14.1`, `11.14.0`
+- `11.13.0`
+- `11.12.1`, `11.12.0`
 - `11.11.1`, `11.11.0`
 - `11.10.1`, `11.10.0`
 - `11.9.0`
@@ -47,7 +52,7 @@ This package can also be accessed using these aliases:
 - `11.2.0`
 - `11.1.0`
 - `11.0.0`
-- `10.9.7`, `10.9.6`, `10.9.5`, `10.9.4`, `10.9.3`, `10.9.2`, `10.9.1`, `10.9.0`
+- `10.9.8`, `10.9.7`, `10.9.6`, `10.9.5`, `10.9.4`, `10.9.3`, `10.9.2`, `10.9.1`, `10.9.0`
 - `10.8.3`, `10.8.2`, `10.8.1`, `10.8.0`
 - `10.7.0`
 - `10.6.0`
@@ -71,13 +76,13 @@ This package can also be accessed using these aliases:
 
 </details>
 
-**Latest Version**: `11.12.0`
+**Latest Version**: `11.17.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +npmjs.com@11.12.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +npmjs.com@11.17.0 -- $SHELL -i
 ```
 
 ## Dependencies

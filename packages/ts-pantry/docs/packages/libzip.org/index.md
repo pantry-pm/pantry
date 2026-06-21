@@ -27,11 +27,13 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 7 versions</summary>
+<summary>Show all 14 versions</summary>
 
-- `1.11.4`, `1.11.3`, `1.11.2`, `1.11.1`
+- `1.11.4`, `1.11.3`, `1.11.2`, `1.11.1`, `1.11`
 - `1.10.1`, `1.10.0`
-- `1.9.2`
+- `1.9.2`, `1.9.1`, `1.9.0`
+- `1.8.0`
+- `1.7.3`, `1.7.2`, `1.7.1`
 
 </details>
 

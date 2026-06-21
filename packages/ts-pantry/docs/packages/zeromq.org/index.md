@@ -25,9 +25,10 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 12 versions</summary>
 
-- `4.3.5`, `4.3.4`
+- `4.3.5`, `4.3.4`, `4.3.3`, `4.3.2`, `4.3.1`, `4.3.0`
+- `4.2.5`, `4.2.4`, `4.2.3`, `4.2.2`, `4.2.1`, `4.2.0`
 
 </details>
 

@@ -25,9 +25,10 @@ No programs specified.
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 4 versions</summary>
 
 - `1.1.0`
+- `1.0.2`, `1.0.1`, `1.0.0`
 
 </details>
 

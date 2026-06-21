@@ -25,9 +25,14 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 69 versions</summary>
+<summary>Show all 47 versions</summary>
 
-- `0.74.0`
+- `0.79.0`
+- `0.78.0`
+- `0.77.0`
+- `0.76.0`
+- `0.75.1`, `0.75.0`
+- `0.74.2`, `0.74.1`, `0.74.0`
 - `0.73.1`, `0.73.0`
 - `0.72.0`
 - `0.71.1`, `0.71.0`
@@ -46,40 +51,26 @@ This package provides the following executable programs:
 - `0.58.0`
 - `0.57.0`
 - `0.56.0`
-- `0.55.6`, `0.55.5`, `0.55.4`, `0.55.2`, `0.55.1`
+- `0.55.6`, `0.55.5`, `0.55.4`, `0.55.2`
 - `0.54.0`
 - `0.53.0`
-- `0.52.1`, `0.52.0`
+- `0.52.1`
 - `0.51.0`
 - `0.50.0`
 - `0.49.1`, `0.49.0`
 - `0.48.1`, `0.48.0`
 - `0.47.0`
 - `0.46.0`
-- `0.45.0`
-- `0.44.0`
-- `0.43.1`, `0.43.0`
-- `0.42.2`, `0.42.1`, `0.42.0`
-- `0.41.0`
-- `0.40.1`
-- `0.39.0`
-- `0.38.3`, `0.38.2`, `0.38.1`, `0.38.0`
-- `0.37.0`
-- `0.36.1`, `0.36.0`
-- `0.35.0`
-- `0.34.0`
-- `0.33.2`, `0.33.1`, `0.33.0`
-- `0.32.6`, `0.32.5`, `0.32.4`, `0.32.3`, `0.32.2`, `0.32.1`
 
 </details>
 
-**Latest Version**: `0.74.0`
+**Latest Version**: `0.79.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +zarf.dev@0.74.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +zarf.dev@0.79.0 -- $SHELL -i
 ```
 
 ## Usage Examples

@@ -25,15 +25,18 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 36 versions</summary>
+<summary>Show all 53 versions</summary>
 
+- `2.0.0`, `2.0.0-rc1`
+- `1.8.0`
+- `1.7.1`, `1.7.0`
 - `1.6.1`, `1.6.0`
 - `1.5.0`
 - `1.4.2`, `1.4.1`, `1.4.0`
 - `1.3.0`
 - `1.2.3`, `1.2.2`, `1.2.1`, `1.2.0`
 - `1.1.0`
-- `1.0.0`
+- `1.0.0`, `1.0.0-rc2`, `1.0.0-rc1`
 - `0.59.0`
 - `0.58.0`
 - `0.57.0`
@@ -52,16 +55,23 @@ This package provides the following executable programs:
 - `0.44.1`, `0.44.0`
 - `0.43.1`, `0.43.0`
 - `0.42.0`
+- `0.41.0`
+- `0.40.0`
+- `0.39.0`
+- `0.38.3`, `0.38.2`, `0.38.1`, `0.38.0`
+- `0.37.0`
+- `0.36.0`
+- `0.35.0`
 
 </details>
 
-**Latest Version**: `1.6.1`
+**Latest Version**: `2.0.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +k6.io@1.6.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +k6.io@2.0.0 -- $SHELL -i
 ```
 
 ## Usage Examples

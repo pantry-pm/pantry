@@ -25,8 +25,22 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 73 versions</summary>
+<summary>Show all 65 versions</summary>
 
+- `2.58.0`
+- `2.57.0`
+- `2.56.0`
+- `2.55.0`
+- `2.54.0`
+- `2.53.0`
+- `2.52.1`, `2.52.0`
+- `2.51.0`
+- `2.50.0`
+- `2.49.0`
+- `2.48.0`
+- `2.47.0`
+- `2.46.0`
+- `2.45.0`
 - `2.44.0`
 - `2.43.0`
 - `2.42.0`
@@ -71,29 +85,16 @@ This package provides the following executable programs:
 - `2.3.0`
 - `2.2.0`
 - `2.1.0`
-- `2.0.0`
-- `1.6.1`, `1.6.0`
-- `1.5.5`, `1.5.4`, `1.5.3`, `1.5.2`, `1.5.1`, `1.5.0`
-- `1.4.0`
-- `1.2.0`
-- `1.1.2`, `1.1.1`, `1.1.0`
-- `1.0.0`
-- `0.29.0`
-- `0.28.0`
-- `0.27.0`
-- `0.26.0`
-- `0.25.0`
-- `0.24.2`, `0.24.1`, `0.24.0`
 
 </details>
 
-**Latest Version**: `2.44.0`
+**Latest Version**: `2.58.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +squawkhq.com@2.44.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +squawkhq.com@2.58.0 -- $SHELL -i
 ```
 
 ## Usage Examples

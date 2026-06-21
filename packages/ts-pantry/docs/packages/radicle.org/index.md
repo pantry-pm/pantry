@@ -50,9 +50,15 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 12 versions</summary>
 
-- `0.6.1`
+- `0.6.1`, `0.6.0`
+- `0.5.1`, `0.5.0`
+- `0.4.0`
+- `0.3.1`, `0.3.0`
+- `0.2.1`, `0.2.0`
+- `0.1.2`
+- `0.0.1`, `0.0.0`
 
 </details>
 
@@ -64,12 +70,6 @@ This package provides the following executable programs:
 # Install specific version
 sh <(curl https://pkgx.sh) +radicle.org@0.6.1 -- $SHELL -i
 ```
-
-## Dependencies
-
-This package depends on:
-
-- `openssl.org^1.1.1`
 
 ## Usage Examples
 

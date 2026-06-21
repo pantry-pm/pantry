@@ -1,10 +1,20 @@
 # Databases
 
-14 packages in this category
+16 packages in this category
 
 Database systems and data storage solutions.
 
 ## Packages
+
+### [cassandra.apache.org](../packages/cassandra.apache.org/index.md) (cassandra)
+
+Apache Cassandra wide-column distributed database
+
+**Programs**: cassandra, nodetool, cqlsh
+
+**Install**: `pantry install cassandra.apache.org`
+
+---
 
 ### [dgraph.io](../packages/dgraph.io/index.md) (dgraph)
 
@@ -73,6 +83,16 @@ MySQL Server, the world's most popular open source database, and MySQL Cluster, 
 **Programs**: mysql_client_test, my_print_defaults, myisam_ftdump, myisamchk, myisamlog, myisampack, mysql, mysql_config, mysql_config_editor, mysql_keyring_encryption_test, mysql_migrate_keyring, mysql_secure_installation, mysql_tzinfo_to_sql, mysqladmin, mysqlbinlog, mysqlcheck, mysqld, mysqld_multi, mysqld_safe, mysqldump, mysqldumpslow, mysqlimport, mysqlrouter, mysqlrouter_keyring, mysqlrouter_passwd, mysqlrouter_plugin_info, mysqlshow, mysqlslap, mysqltest, mysqltest_safe_process, mysqlxtest
 
 **Install**: `pantry install mysql.com`
+
+---
+
+### [neo4j.com](../packages/neo4j.com/index.md) (neo4j)
+
+Neo4j graph database (community edition)
+
+**Programs**: neo4j, neo4j-admin, cypher-shell
+
+**Install**: `pantry install neo4j.com`
 
 ---
 

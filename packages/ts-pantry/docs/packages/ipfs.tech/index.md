@@ -25,8 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 36 versions</summary>
+<summary>Show all 24 versions</summary>
 
+- `0.42.0`
+- `0.41.0`
 - `0.40.1`, `0.40.0`
 - `0.39.0`
 - `0.38.2`, `0.38.1`, `0.38.0`
@@ -42,26 +44,16 @@ This package provides the following executable programs:
 - `0.28.0`
 - `0.27.0`
 - `0.26.0`
-- `0.25.0`
-- `0.24.0`
-- `0.23.0`
-- `0.22.0`
-- `0.21.1`, `0.21.0`
-- `0.20.0`
-- `0.19.2`, `0.19.1`, `0.19.0`
-- `0.18.1`, `0.18.0`
-- `0.17.0`
-- `0.16.0`
 
 </details>
 
-**Latest Version**: `0.40.1`
+**Latest Version**: `0.42.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +ipfs.tech@0.40.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +ipfs.tech@0.42.0 -- $SHELL -i
 ```
 
 ## Usage Examples

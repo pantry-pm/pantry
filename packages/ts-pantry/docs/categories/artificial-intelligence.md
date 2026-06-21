@@ -106,13 +106,13 @@ The fundamental package for scientific computing with Python.
 
 ---
 
-### [ollama.ai](../packages/ollama.ai/index.md) (ollama)
+### [ollama.com](../packages/ollama.com/index.md) (Ollama, ollama)
 
-Get up and running with Llama 3.3, DeepSeek-R1, Phi-4, Gemma 2, and other large language models.
+A local LLM runner for running large language models.
 
 **Programs**: ollama
 
-**Install**: `pantry install ollama.ai`
+**Install**: `pantry install ollama.com`
 
 ---
 

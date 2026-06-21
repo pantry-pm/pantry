@@ -25,8 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 37 versions</summary>
+<summary>Show all 39 versions</summary>
 
+- `1.11.1`, `1.11.0`
 - `1.10.2`, `1.10.1`, `1.10.0`
 - `1.9.2`, `1.9.1`, `1.9.0`
 - `1.8.5`, `1.8.4`, `1.8.3`, `1.8.2`, `1.8.1`, `1.8.0`
@@ -43,13 +44,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `1.10.2`
+**Latest Version**: `1.11.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +mesonbuild.com@1.10.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +mesonbuild.com@1.11.1 -- $SHELL -i
 ```
 
 ## Dependencies

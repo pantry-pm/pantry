@@ -46,13 +46,6 @@ This package provides the following executable programs:
 sh <(curl https://pkgx.sh) +crates.io/sccache@0.14.0 -- $SHELL -i
 ```
 
-## Dependencies
-
-This package depends on:
-
-- `openssl.org^1.1`
-- `curl.se/ca-certs`
-
 ## Usage Examples
 
 ```typescript

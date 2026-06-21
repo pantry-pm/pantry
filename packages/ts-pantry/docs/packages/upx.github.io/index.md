@@ -25,21 +25,31 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 6 versions</summary>
+<summary>Show all 22 versions</summary>
 
+- `5.2.0`
 - `5.1.1`, `5.1.0`
 - `5.0.2`, `5.0.1`, `5.0.0`
-- `4.2.4`
+- `4.2.4`, `4.2.3`, `4.2.2`, `4.2.1`, `4.2.0`
+- `4.1.0`
+- `4.0.2`, `4.0.1`, `4.0.0`
+- `3.96`
+- `3.95`
+- `3.94`
+- `3.93`
+- `3.92`
+- `3.91`
+- `3.00`
 
 </details>
 
-**Latest Version**: `5.1.1`
+**Latest Version**: `5.2.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +upx.github.io@5.1.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +upx.github.io@5.2.0 -- $SHELL -i
 ```
 
 ## Dependencies

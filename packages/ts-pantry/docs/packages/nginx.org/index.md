@@ -25,25 +25,27 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 27 versions</summary>
+<summary>Show all 38 versions</summary>
 
-- `1.29.6`, `1.29.5`, `1.29.4`, `1.29.3`, `1.29.2`, `1.29.1`, `1.29.0`
-- `1.28.2`, `1.28.1`, `1.28.0`
+- `1.31.2`, `1.31.1`, `1.31.0`
+- `1.30.3`, `1.30.2`, `1.30.1`, `1.30.0`
+- `1.29.8`, `1.29.7`, `1.29.6`, `1.29.5`, `1.29.4`, `1.29.3`, `1.29.2`, `1.29.1`, `1.29.0`
+- `1.28.3`, `1.28.2`, `1.28.1`, `1.28.0`
 - `1.27.5`, `1.27.4`, `1.27.3`, `1.27.2`, `1.27.1`, `1.27.0`
-- `1.26.2`, `1.26.1`, `1.26.0`
+- `1.26.3`, `1.26.2`, `1.26.1`, `1.26.0`
 - `1.25.5`, `1.25.4`, `1.25.3`, `1.25.2`, `1.25.1`, `1.25.0`
 - `1.24.0`
 - `1.23.3`
 
 </details>
 
-**Latest Version**: `1.29.6`
+**Latest Version**: `1.31.2`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +nginx.org@1.29.6 -- $SHELL -i
+sh <(curl https://pkgx.sh) +nginx.org@1.31.2 -- $SHELL -i
 ```
 
 ## Dependencies

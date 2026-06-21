@@ -25,8 +25,15 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 101 versions</summary>
+<summary>Show all 108 versions</summary>
 
+- `2.95.0`
+- `2.94.0`
+- `2.93.0`
+- `2.92.0`
+- `2.91.0`
+- `2.90.0`
+- `2.89.0`
 - `2.88.1`, `2.88.0`
 - `2.87.3`, `2.87.2`, `2.87.1`, `2.87.0`
 - `2.86.0`
@@ -97,13 +104,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `2.88.1`
+**Latest Version**: `2.95.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +cli.github.com@2.88.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +cli.github.com@2.95.0 -- $SHELL -i
 ```
 
 ## Usage Examples

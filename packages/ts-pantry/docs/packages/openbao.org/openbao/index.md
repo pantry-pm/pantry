@@ -26,24 +26,24 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 17 versions</summary>
+<summary>Show all 22 versions</summary>
 
-- `2.5.1`, `2.5.0`
+- `2.5.5`, `2.5.4`, `2.5.3`, `2.5.2`, `2.5.1`, `2.5.0`
 - `2.4.4`, `2.4.3`, `2.4.1`, `2.4.0`
 - `2.3.2`, `2.3.1`
-- `2.2.2`, `2.2.1`, `2.2.0`
+- `2.2.2`, `2.2.1`, `2.2.0`, `2.2.0-beta20250213`
 - `2.1.1`, `2.1.0`
 - `2.0.3`, `2.0.2`, `2.0.1`, `2.0.0`
 
 </details>
 
-**Latest Version**: `2.5.1`
+**Latest Version**: `2.5.5`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +openbao.org/openbao@2.5.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +openbao.org/openbao@2.5.5 -- $SHELL -i
 ```
 
 ## Usage Examples

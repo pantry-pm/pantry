@@ -1,6 +1,6 @@
 # postgresql
 
-> Mirror of the official PostgreSQL GIT repository. Note that this is just a *mirror* - we don't work with pull requests on github. To contribute, please see <https://wiki.postgresql.org/wiki/Submitting*a*Patch>
+> Mirror of the official PostgreSQL GIT repository. Note that this is just a *mirror* - we don't work with pull requests on github. To contribute, please see <https://wiki.postgresql.org/wiki/Submitting_a_Patch>
 
 ## Package Information
 
@@ -26,22 +26,22 @@ This package provides the following executable programs:
 - `dropuser`
 - `ecpg`
 - `initdb`
-- `pg*archivecleanup`
-- `pg*basebackup`
-- `pg*config`
-- `pg*controldata`
-- `pg*ctl`
-- `pg*dump`
-- `pg*dumpall`
-- `pg*isready`
-- `pg*receivewal`
-- `pg*recvlogical`
-- `pg*resetwal`
-- `pg*restore`
-- `pg*rewind`
-- `pg*test*fsync`
-- `pg*test*timing`
-- `pg*upgrade`
+- `pg_archivecleanup`
+- `pg_basebackup`
+- `pg_config`
+- `pg_controldata`
+- `pg_ctl`
+- `pg_dump`
+- `pg_dumpall`
+- `pg_isready`
+- `pg_receivewal`
+- `pg_recvlogical`
+- `pg_resetwal`
+- `pg_restore`
+- `pg_rewind`
+- `pg_test_fsync`
+- `pg_test_timing`
+- `pg_upgrade`
 - `pg_waldump`
 - `pgbench`
 - `postgres`
@@ -58,13 +58,42 @@ This package can also be accessed using these aliases:
 ## Available Versions
 
 <details>
-<summary>Show all 13 versions</summary>
+<summary>Show all 47 versions</summary>
 
-- `18.0.0`
-- `17.2.0`
-- `17.0.0`
-- `16.1.0`
-- `16.0.0`
+- `18.4`
+- `18.3`
+- `18.2`
+- `18.1`
+- `18.0`, `18.0.0`
+- `17.10`
+- `17.9`
+- `17.8`
+- `17.7`
+- `17.6`
+- `17.5`
+- `17.4`
+- `17.3`
+- `17.2`, `17.2.0`
+- `17.1`
+- `17.0`, `17.0.0`
+- `16.14`
+- `16.13`
+- `16.12`
+- `16.11`
+- `16.10`
+- `16.9`
+- `16.8`
+- `16.7`
+- `16.6`
+- `16.5`
+- `16.4`
+- `16.3`
+- `16.2`
+- `16.1`, `16.1.0`
+- `16.0`, `16.0.0`
+- `15.18`
+- `15.17`
+- `15.16`
 - `15.2.0`
 - `14.7.0`
 - `13.12.0`
@@ -76,13 +105,13 @@ This package can also be accessed using these aliases:
 
 </details>
 
-**Latest Version**: `18.0.0`
+**Latest Version**: `18.4`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +postgresql.org@18.0.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +postgresql.org@18.4 -- $SHELL -i
 ```
 
 ## Dependencies

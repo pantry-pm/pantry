@@ -25,21 +25,30 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 10 versions</summary>
+<summary>Show all 51 versions</summary>
 
-- `2.7.1`, `2.7.0`
+- `2.7.3`, `2.7.1`, `2.7.0`
 - `2.6.6`, `2.6.5`, `2.6.4`, `2.6.3`, `2.6.2`, `2.6.1`, `2.6.0`
-- `2.5.6`
+- `2.5.6`, `2.5.5`, `2.5.4`, `2.5.3`, `2.5.2`, `2.5.1`, `2.5.0`
+- `2.4.6`, `2.4.5`, `2.4.4`, `2.4.3`, `2.4.2`, `2.4.1`, `2.4.0`
+- `2.3.6`, `2.3.5`, `2.3.4`, `2.3.3`, `2.3.2`, `2.3.1`, `2.3.0`
+- `2.2.3`, `2.2.2`, `2.2.1`, `2.2.0`
+- `2.1.2`, `2.1.1`, `2.1.0`
+- `2.0.4`, `2.0.3`, `2.0.2`, `2.0.1`, `2.0.0`
+- `1.2.2`, `1.2.1`, `1.2.0`
+- `1.1.1`, `1.1.0`
+- `1.0.0`
+- `0.9.6`, `0.9.5`
 
 </details>
 
-**Latest Version**: `2.7.1`
+**Latest Version**: `2.7.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +sftpgo.com@2.7.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +sftpgo.com@2.7.3 -- $SHELL -i
 ```
 
 ## Usage Examples

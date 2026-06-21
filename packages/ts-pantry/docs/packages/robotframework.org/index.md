@@ -25,11 +25,16 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 7 versions</summary>
+<summary>Show all 22 versions</summary>
 
-- `7.4.2`, `7.4.1`, `7.4.0`
-- `7.3.2`, `7.3.1`, `7.3.0`
-- `7.2.2`
+- `7.4.2`, `7.4.1`, `7.4`, `7.4.0`
+- `7.3.2`, `7.3.1`, `7.3`, `7.3.0`
+- `7.2.2`, `7.2.1`, `7.2`
+- `7.1.1`, `7.1`
+- `7.0.1`, `7.0`
+- `6.1.1`, `6.1`
+- `6.0.2`, `6.0.1`, `6.0`
+- `5.0.1`, `5.0`
 
 </details>
 

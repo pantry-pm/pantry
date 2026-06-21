@@ -25,7 +25,7 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 13 versions</summary>
+<summary>Show all 47 versions</summary>
 
 - `12.3.2`, `12.3.1`, `12.3.0`
 - `12.2.0`
@@ -35,7 +35,23 @@ This package provides the following executable programs:
 - `11.9.1`, `11.9.0`
 - `11.8.0`
 - `11.7.0`
-- `11.6.4`
+- `11.6.4`, `11.6.3`, `11.6.2`, `11.6.1`
+- `11.5.0`
+- `11.4.0`
+- `11.3.0`
+- `11.2.0`
+- `11.1.1`, `11.1.0`
+- `11.0.0`
+- `release-qpdf-10.6.3`, `release-qpdf-10.6.2`, `release-qpdf-10.6.1`, `release-qpdf-10.6.0`
+- `release-qpdf-10.5.0`
+- `release-qpdf-8.4.2`, `release-qpdf-8.4.1`, `release-qpdf-8.4.0`
+- `release-qpdf-10.4.0`
+- `release-qpdf-10.3.2`, `release-qpdf-10.3.1`, `release-qpdf-10.3.0`
+- `release-qpdf-10.2.0`
+- `release-qpdf-9.1.1`, `release-qpdf-9.1.0`
+- `release-qpdf-10.1.0`
+- `release-qpdf-10.0.4`, `release-qpdf-10.0.3`, `release-qpdf-10.0.2`, `release-qpdf-10.0.1`, `release-qpdf-10.0.0`
+- `release-qpdf-9.0.2`, `release-qpdf-9.0.1`, `release-qpdf-9.0.0`
 
 </details>
 

@@ -26,8 +26,21 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 20 versions</summary>
+<summary>Show all 47 versions</summary>
 
+- `1.44.0`
+- `1.43.1`, `1.43.0`
+- `1.42.0`
+- `1.41.0`
+- `1.40.0`
+- `1.39.1`, `1.39.0`
+- `1.38.1`, `1.38.0`
+- `1.37.0`
+- `1.36.3`, `1.36.2`, `1.36.0`
+- `1.35.0`
+- `1.34.0`
+- `1.33.0`
+- `1.32.0`
 - `1.31.0`
 - `1.30.0`
 - `1.29.0`
@@ -44,17 +57,28 @@ This package provides the following executable programs:
 - `1.18.0`
 - `1.17.0`
 - `1.16.1`
-- `1.15.8`, `1.15.7`, `1.15.6`
+- `1.15.8`
+- `1.14.7`
+- `1.13.13`
+- `1.12.25`
+- `1.11.34`
+- `1.10.17`
+- `1.9.20`
+- `1.8.3`
+- `1.7.17`
+- `1.6.4`
+- `1.4.1`
+- `1.2.0`
 
 </details>
 
-**Latest Version**: `1.31.0`
+**Latest Version**: `1.44.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +github.com/tw93/mole@1.31.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +github.com/tw93/mole@1.44.0 -- $SHELL -i
 ```
 
 ## Usage Examples

@@ -25,8 +25,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 44 versions</summary>
+<summary>Show all 58 versions</summary>
 
+- `1.17.1`, `1.17.0`
+- `1.16.2`, `1.16.1`, `1.16.0`
+- `1.15.2`, `1.15.1`, `1.15.0`
 - `1.14.1`, `1.14.0`
 - `1.13.2`, `1.13.1`, `1.13.0`
 - `1.12.3`, `1.12.2`, `1.12.1`, `1.12.0`
@@ -55,16 +58,21 @@ This package provides the following executable programs:
 - `0.60.0`
 - `0.59.0`
 - `0.58.0`
+- `0.57.1`, `0.57.0`
+- `0.56.0`
+- `0.55.0`
+- `0.54.0`
+- `0.53.1`
 
 </details>
 
-**Latest Version**: `1.14.1`
+**Latest Version**: `1.17.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +openpolicyagent.org@1.14.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +openpolicyagent.org@1.17.1 -- $SHELL -i
 ```
 
 ## Usage Examples

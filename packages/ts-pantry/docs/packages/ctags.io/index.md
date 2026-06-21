@@ -25,10 +25,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 3 versions</summary>
+<summary>Show all 4 versions</summary>
 
 - `6.2.1`, `6.2.0`
 - `6.1.0`
+- `6.0.0`
 
 </details>
 

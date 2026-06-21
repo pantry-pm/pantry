@@ -31,8 +31,10 @@ This package can also be accessed using these aliases:
 ## Available Versions
 
 <details>
-<summary>Show all 20 versions</summary>
+<summary>Show all 51 versions</summary>
 
+- `0.96`
+- `0.95`
 - `0.94`
 - `0.93`
 - `0.92`
@@ -53,16 +55,45 @@ This package can also be accessed using these aliases:
 - `0.76`
 - `0.75`
 - `0.74`
+- `0.73`
+- `0.72`
+- `0.71`
+- `0.70`
+- `0.69`
+- `0.68`
+- `0.67`
+- `0.66`
+- `0.65`
+- `0.64`
+- `0.63`
+- `0.61`
+- `0.60`
+- `0.59`
+- `0.58`
+- `0.57`
+- `0.56`
+- `0.55`
+- `0.54`
+- `0.53`
+- `0.52`
+- `0.51`
+- `0.50`
+- `0.49`
+- `0.48`
+- `0.47`
+- `0.46`
+- `0.45`
+- `0.44`
 
 </details>
 
-**Latest Version**: `0.94`
+**Latest Version**: `0.96`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +rectangle.app@0.94 -- $SHELL -i
+sh <(curl https://pkgx.sh) +rectangle.app@0.96 -- $SHELL -i
 ```
 
 ## Usage Examples

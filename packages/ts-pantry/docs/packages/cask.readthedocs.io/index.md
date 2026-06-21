@@ -25,9 +25,18 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 34 versions</summary>
 
 - `0.9.1`, `0.9.0`
+- `0.8.8`, `0.8.7`, `0.8.6`, `0.8.5`, `0.8.4`, `0.8.3`, `0.8.2`, `0.8.1`, `0.8.0`
+- `0.7.4`, `0.7.3`, `0.7.2`, `0.7.1`, `0.7.0`
+- `0.6.0`
+- `0.5.2`, `0.5.1`, `0.5.0`
+- `0.4.6`, `0.4.5`, `0.4.4`, `0.4.3`, `0.4.2`, `0.4.1`, `0.4.0`
+- `0.3.1`, `0.3.0`
+- `0.2.0`
+- `0.1.2`, `0.1.1`, `0.1.0`
+- `0.0.2`
 
 </details>
 

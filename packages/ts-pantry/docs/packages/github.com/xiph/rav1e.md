@@ -42,12 +42,6 @@ This package provides the following executable programs:
 sh <(curl https://pkgx.sh) +github.com/xiph/rav1e@0.8.1 -- $SHELL -i
 ```
 
-## Dependencies
-
-This package depends on:
-
-- `nasm.us^2.14.02`
-
 ## Usage Examples
 
 ```typescript

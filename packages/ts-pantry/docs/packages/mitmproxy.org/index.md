@@ -25,27 +25,37 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 30 versions</summary>
+<summary>Show all 53 versions</summary>
 
-- `12.2.1`, `12.2.0`
+- `12.2.3`, `12.2.2`, `12.2.1`, `12.2.0`
 - `12.1.2`, `12.1.1`, `12.1.0`
 - `12.0.1`, `12.0.0`
 - `11.1.3`, `11.1.2`, `11.1.1`, `11.1.0`
 - `11.0.2`, `11.0.1`, `11.0.0`
 - `10.4.2`, `10.4.1`, `10.4.0`
-- `10.3.0`
+- `10.3.1`, `10.3.0`
 - `10.2.4`, `10.2.3`, `10.2.2`, `10.2.1`, `10.2.0`
 - `10.1.6`, `10.1.5`, `10.1.4`, `10.1.3`, `10.1.2`, `10.1.1`, `10.1.0`
+- `10.0.0`
+- `9.0.1`, `9.0.0`
+- `8.1.1`, `8.1.0`
+- `8.0.0`
+- `7.0.4`, `7.0.3`, `7.0.2`, `7.0.1`, `7.0.0`
+- `6.0.2`, `6.0.1`, `6.0.0`
+- `5.3.0`
+- `5.2`
+- `5.1.1`, `5.1.0`
+- `5.0.1`, `5.0.0`
 
 </details>
 
-**Latest Version**: `12.2.1`
+**Latest Version**: `12.2.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +mitmproxy.org@12.2.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +mitmproxy.org@12.2.3 -- $SHELL -i
 ```
 
 ## Dependencies

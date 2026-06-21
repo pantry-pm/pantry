@@ -25,8 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 41 versions</summary>
+<summary>Show all 52 versions</summary>
 
+- `1.14.1`, `1.14.0`
+- `1.13.3`, `1.13.2`, `1.13.1`, `1.13.0`
 - `1.12.6`, `1.12.5`, `1.12.4`, `1.12.3`, `1.12.2`, `1.12.1`, `1.12.0`
 - `1.11.5`, `1.11.4`, `1.11.2`, `1.11.1`
 - `1.10.2`, `1.10.1`, `1.10.0`
@@ -36,16 +38,18 @@ This package provides the following executable programs:
 - `1.6.0`
 - `1.5.1`, `1.5.0`
 - `1.4.0`
+- `1.3.2`, `1.3.1`, `1.3.0`
+- `1.2.3`, `1.2.2`
 
 </details>
 
-**Latest Version**: `1.12.6`
+**Latest Version**: `1.14.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +maturin.rs@1.12.6 -- $SHELL -i
+sh <(curl https://pkgx.sh) +maturin.rs@1.14.1 -- $SHELL -i
 ```
 
 ## Usage Examples

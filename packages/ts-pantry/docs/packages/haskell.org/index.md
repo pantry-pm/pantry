@@ -52,12 +52,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 21 versions</summary>
+<summary>Show all 24 versions</summary>
 
 - `9.14.1`
-- `9.12.2`, `9.12.1`
+- `9.12.4`, `9.12.3`, `9.12.2`, `9.12.1`
 - `9.10.3`, `9.10.2`, `9.10.1`
-- `9.8.4`, `9.8.2`, `9.8.1`
+- `9.8.4`, `9.8.3`, `9.8.2`, `9.8.1`
 - `9.6.7`, `9.6.6`, `9.6.5`, `9.6.4`, `9.6.3`, `9.6.2`
 - `9.4.8`, `9.4.7`, `9.4.4`
 - `9.2.8`

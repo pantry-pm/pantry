@@ -25,21 +25,25 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 5 versions</summary>
+<summary>Show all 18 versions</summary>
 
+- `3.5.1`, `3.5.0`
 - `3.4.1`, `3.4.0`
 - `3.3.0`
-- `3.2.2`, `3.2.1`
+- `3.2.2`, `3.2.1`, `3.2.0`
+- `3.1.2`, `3.1.1`, `3.1.0`
+- `3.0.5`, `3.0.4`, `3.0.3`, `3.0.2`, `3.0.1`, `3.0.0`
+- `2.2.0`
 
 </details>
 
-**Latest Version**: `3.4.1`
+**Latest Version**: `3.5.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +htop.dev@3.4.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +htop.dev@3.5.1 -- $SHELL -i
 ```
 
 ## Dependencies

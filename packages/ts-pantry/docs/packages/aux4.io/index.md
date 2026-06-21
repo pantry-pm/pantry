@@ -25,20 +25,20 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 23 versions</summary>
+<summary>Show all 34 versions</summary>
 
-- `5.1.21`, `5.1.20`, `5.1.18`, `5.1.16`, `5.1.14`, `5.1.12`, `5.1.11`, `5.1.10`, `5.1.9`, `5.1.8`, `5.1.7`, `5.1.6`, `5.1.5`, `5.1.4`, `5.1.3`, `5.1.2`, `5.1.0`
-- `5.0.14`, `5.0.11`, `5.0.10`, `5.0.9`, `5.0.8`, `5.0.3`
+- `5.1.29`, `5.1.28`, `5.1.27`, `5.1.26`, `5.1.25`, `5.1.24`, `5.1.23`, `5.1.22`, `5.1.21`, `5.1.20`, `5.1.19`, `5.1.18`, `5.1.16`, `5.1.15`, `5.1.14`, `5.1.12`, `5.1.11`, `5.1.10`, `5.1.9`, `5.1.8`, `5.1.7`, `5.1.6`, `5.1.5`, `5.1.4`, `5.1.3`, `5.1.2`, `5.1.0`
+- `5.0.14`, `5.0.11`, `5.0.10`, `5.0.8`, `5.0.3`, `5.0.2`, `5.0.1`
 
 </details>
 
-**Latest Version**: `5.1.21`
+**Latest Version**: `5.1.29`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +aux4.io@5.1.21 -- $SHELL -i
+sh <(curl https://pkgx.sh) +aux4.io@5.1.29 -- $SHELL -i
 ```
 
 ## Usage Examples

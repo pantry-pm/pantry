@@ -25,9 +25,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 50 versions</summary>
+<summary>Show all 54 versions</summary>
 
-- `1.15.2`, `1.15.1`, `1.15.0`
+- `1.17.0`
+- `1.16.0`
+- `1.15.4`, `1.15.3`, `1.15.2`, `1.15.1`, `1.15.0`
 - `1.14.0`
 - `1.13.0`
 - `1.12.0`
@@ -54,13 +56,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `1.15.2`
+**Latest Version**: `1.17.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +gleam.run@1.15.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +gleam.run@1.17.0 -- $SHELL -i
 ```
 
 ## Usage Examples

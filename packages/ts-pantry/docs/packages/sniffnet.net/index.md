@@ -25,20 +25,25 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 5 versions</summary>
+<summary>Show all 17 versions</summary>
 
+- `1.5.0`
 - `1.4.2`, `1.4.1`, `1.4.0`
-- `1.3.2`, `1.3.1`
+- `1.3.2`, `1.3.1`, `1.3.0`
+- `1.2.2`, `1.2.1`, `1.2.0`
+- `1.1.4`, `1.1.3`, `1.1.2`, `1.1.1`, `1.1.0`
+- `1.0.0`
+- `0.5.0`
 
 </details>
 
-**Latest Version**: `1.4.2`
+**Latest Version**: `1.5.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +sniffnet.net@1.4.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +sniffnet.net@1.5.0 -- $SHELL -i
 ```
 
 ## Dependencies

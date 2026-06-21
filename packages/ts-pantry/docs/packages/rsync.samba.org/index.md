@@ -26,21 +26,21 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 4 versions</summary>
+<summary>Show all 7 versions</summary>
 
-- `3.4.1`, `3.4.0`
+- `3.4.4`, `3.4.3`, `3.4.2`, `3.4.1`, `3.4.0`
 - `3.3.0`
 - `3.2.7`
 
 </details>
 
-**Latest Version**: `3.4.1`
+**Latest Version**: `3.4.4`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +rsync.samba.org@3.4.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +rsync.samba.org@3.4.4 -- $SHELL -i
 ```
 
 ## Dependencies

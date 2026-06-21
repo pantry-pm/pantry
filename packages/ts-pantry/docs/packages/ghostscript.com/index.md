@@ -57,8 +57,34 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 9 versions</summary>
+<summary>Show all 35 versions</summary>
 
+- `10071`
+- `10070`
+- `10060`
+- `10051`
+- `10050`
+- `10040`
+- `10031`
+- `10030`
+- `10021`
+- `10020`
+- `10012`
+- `10011`
+- `10010`
+- `9561`
+- `9560`
+- `9550`
+- `9540`
+- `9533`
+- `9532`
+- `9531`
+- `9530`
+- `1000`
+- `952`
+- `951`
+- `950`
+- `927`
 - `10.7.0`
 - `10.6.0`
 - `10.5.1`
@@ -69,13 +95,13 @@ This package provides the following executable programs:
 
 </details>
 
-**Latest Version**: `10.7.0`
+**Latest Version**: `10071`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +ghostscript.com@10.7.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +ghostscript.com@10071 -- $SHELL -i
 ```
 
 ## Dependencies

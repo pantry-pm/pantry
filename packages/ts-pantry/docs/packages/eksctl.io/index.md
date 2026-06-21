@@ -25,8 +25,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 71 versions</summary>
+<summary>Show all 28 versions</summary>
 
+- `0.227.0`
+- `0.226.0`
+- `0.225.0`
 - `0.224.0`
 - `0.223.0`
 - `0.222.0`
@@ -52,62 +55,16 @@ This package provides the following executable programs:
 - `0.202.0`
 - `0.201.0`
 - `0.200.0`
-- `0.199.0`
-- `0.198.0`
-- `0.197.0`
-- `0.196.0`
-- `0.195.0`
-- `0.194.0`
-- `0.193.0`
-- `0.192.0`
-- `0.191.0`
-- `0.190.0`
-- `0.189.0`
-- `0.188.0`
-- `0.187.0`
-- `0.186.0`
-- `0.185.0`
-- `0.184.0`
-- `0.183.0`
-- `0.182.0`
-- `0.181.0`
-- `0.180.0`
-- `0.179.0`
-- `0.178.0`
-- `0.177.0`
-- `0.176.0`
-- `0.175.0`
-- `0.174.0`
-- `0.173.0`
-- `0.172.0`
-- `0.171.0`
-- `0.170.0`
-- `0.169.0`
-- `0.168.0`
-- `0.167.0`
-- `0.166.0`
-- `0.165.0`
-- `0.164.0`
-- `0.163.0`
-- `0.162.0`
-- `0.161.0`
-- `0.160.0`
-- `0.159.0`
-- `0.158.0`
-- `0.157.0`
-- `0.156.0`
-- `0.155.0`
-- `0.154.0`
 
 </details>
 
-**Latest Version**: `0.224.0`
+**Latest Version**: `0.227.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +eksctl.io@0.224.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +eksctl.io@0.227.0 -- $SHELL -i
 ```
 
 ## Dependencies

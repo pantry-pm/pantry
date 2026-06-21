@@ -27,6 +27,11 @@ This package provides the following executable programs:
 <details>
 <summary>Show all 58 versions</summary>
 
+- `1.71.0`
+- `1.70.0`
+- `1.69.0`
+- `1.68.4`, `1.68.3`, `1.68.2`, `1.68.1`, `1.68.0`
+- `1.67.0`
 - `1.66.1`, `1.66.0`
 - `1.65.0`
 - `1.64.0`
@@ -63,21 +68,16 @@ This package provides the following executable programs:
 - `1.33.0`
 - `1.32.2`, `1.32.1`, `1.32.0`
 - `1.31.0`
-- `1.30.1`, `1.30.0`
-- `1.29.0`
-- `1.28.1`, `1.28.0`
-- `1.27.2`, `1.27.1`, `1.27.0`
-- `1.26.1`
 
 </details>
 
-**Latest Version**: `1.66.1`
+**Latest Version**: `1.71.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +buf.build@1.66.1 -- $SHELL -i
+sh <(curl https://pkgx.sh) +buf.build@1.71.0 -- $SHELL -i
 ```
 
 ## Usage Examples

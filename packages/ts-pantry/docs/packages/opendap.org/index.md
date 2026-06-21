@@ -28,10 +28,16 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 2 versions</summary>
+<summary>Show all 20 versions</summary>
 
 - `3.21.1`
 - `3.20.11`
+- `ersion-3.20.6`, `ersion-3.20.5`, `ersion-3.20.4`, `ersion-3.20.3`, `ersion-3.20.2`, `ersion-3.20.1`, `ersion-3.20.0`
+- `ersion-3.19.1`, `ersion-3.19.0`
+- `ersion-3.18.3`, `ersion-3.18.2`, `ersion-3.18.1`, `ersion-3.18.0`
+- `ersion-3.17.3`, `ersion-3.17.1`, `ersion-3.17.0`
+- `ersion-3.16.0`
+- `ersion-3.15.1`
 
 </details>
 

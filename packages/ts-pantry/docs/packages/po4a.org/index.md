@@ -32,24 +32,41 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 6 versions</summary>
+<summary>Show all 31 versions</summary>
 
-- `0.74.0`
-- `0.73.0`
-- `0.72.0`
-- `0.71.0`
-- `0.70.0`
-- `0.69.0`
+- `0.74`, `0.74.0`
+- `0.73`, `0.73.0`
+- `0.72`, `0.72.0`
+- `0.71`, `0.71.0`
+- `0.70`, `0.70.0`
+- `0.69`, `0.69.0`
+- `0.68`
+- `0.67`
+- `0.66`
+- `0.65`
+- `0.64`
+- `0.63`
+- `0.62`
+- `0.61`
+- `0.60`
+- `0.59.1`, `0.59`
+- `0.58.1`, `0.58`
+- `0.57`
+- `0.56`
+- `0.55`
+- `0.54`
+- `0.53`
+- `0.52`
 
 </details>
 
-**Latest Version**: `0.74.0`
+**Latest Version**: `0.74`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +po4a.org@0.74.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +po4a.org@0.74 -- $SHELL -i
 ```
 
 ## Dependencies

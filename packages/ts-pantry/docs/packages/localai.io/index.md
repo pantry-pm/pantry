@@ -25,8 +25,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 60 versions</summary>
+<summary>Show all 72 versions</summary>
 
+- `4.4.3`, `4.4.2`, `4.4.1`, `4.4.0`
+- `4.3.6`, `4.3.5`, `4.3.4`, `4.3.3`, `4.3.2`, `4.3.1`, `4.3.0`
+- `4.2.6`, `4.2.5`, `4.2.4`, `4.2.3`, `4.2.2`, `4.2.1`, `4.2.0`
+- `4.1.3`, `4.1.2`, `4.1.1`, `4.1.0`
 - `4.0.0`
 - `3.12.1`, `3.12.0`
 - `3.11.0`
@@ -39,6 +43,11 @@ This package provides the following executable programs:
 - `3.4.0`
 - `3.3.2`, `3.3.1`, `3.3.0`
 - `3.2.3`, `3.2.2`, `3.2.1`, `3.2.0`
+- `3.1.1`, `3.1.0`
+- `3.0.0`
+- `2.29.0`
+- `2.28.0`
+- `2.27.0`
 - `2.26.0`
 - `2.25.0`
 - `2.24.2`, `2.24.1`, `2.24.0`
@@ -49,26 +58,16 @@ This package provides the following executable programs:
 - `2.19.4`, `2.19.3`, `2.19.2`, `2.19.1`, `2.19.0`
 - `2.18.1`, `2.18.0`
 - `2.17.1`, `2.17.0`
-- `2.15.0`
-- `2.14.0`
-- `2.13.0`
-- `2.12.4`, `2.12.3`, `2.12.1`, `2.12.0`
-- `2.11.0`
-- `2.10.1`, `2.10.0`
-- `2.9.0`
-- `2.8.2`, `2.8.1`, `2.8.0`
-- `2.7.0`
-- `2.6.1`
 
 </details>
 
-**Latest Version**: `4.0.0`
+**Latest Version**: `4.4.3`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +localai.io@4.0.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +localai.io@4.4.3 -- $SHELL -i
 ```
 
 ## Dependencies

@@ -25,8 +25,14 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 21 versions</summary>
+<summary>Show all 50 versions</summary>
 
+- `0.41.0`
+- `0.40.2`, `0.40.1`, `0.40.0`
+- `0.39.0`
+- `0.38.0`
+- `0.37.1`, `0.37.0`
+- `0.36.1`, `0.36.0`
 - `0.35.0`
 - `0.34.3`, `0.34.2`, `0.34.1`, `0.34.0`
 - `0.33.0`
@@ -42,16 +48,27 @@ This package provides the following executable programs:
 - `0.23.0`
 - `0.22.0`
 - `0.21.0`
+- `0.20.0`
+- `0.19.0`
+- `0.18.1`, `0.18.0`
+- `0.17.0`
+- `0.16.2`, `0.16.1`, `0.16.0`
+- `0.15.1`, `0.15.0`
+- `0.14.2`, `0.14.1`, `0.14.0`
+- `0.13.0`
+- `0.12.1`, `0.12.0`
+- `0.11.1`, `0.11.0`
+- `0.10.1`
 
 </details>
 
-**Latest Version**: `0.35.0`
+**Latest Version**: `0.41.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +dblab.danvergara.com@0.35.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +dblab.danvergara.com@0.41.0 -- $SHELL -i
 ```
 
 ## Usage Examples

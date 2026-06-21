@@ -25,9 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 33 versions</summary>
+<summary>Show all 53 versions</summary>
 
-- `0.53.0`
+- `0.54.0`
+- `0.53.2`, `0.53.1`, `0.53.0`
 - `0.52.0`
 - `0.51.1`, `0.51.0`
 - `0.50.2`, `0.50.1`, `0.50.0`
@@ -40,17 +41,23 @@ This package provides the following executable programs:
 - `0.43.2`, `0.43.1`, `0.43.0`
 - `0.42.5`, `0.42.3`, `0.42.2`, `0.42.1`, `0.42.0`
 - `0.41.0`
-- `0.40.2`
+- `0.40.2`, `0.40.1`, `0.40.0`
+- `0.39.1`, `0.39.0`
+- `0.38.3`, `0.38.2`, `0.38.1`, `0.38.0`
+- `0.37.1`, `0.37.0`
+- `0.36.1`, `0.36.0`
+- `0.35.4`, `0.35.3`, `0.35.1`, `0.35.0`
+- `0.34.5`
 
 </details>
 
-**Latest Version**: `0.53.0`
+**Latest Version**: `0.54.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +dprint.dev@0.53.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +dprint.dev@0.54.0 -- $SHELL -i
 ```
 
 ## Usage Examples

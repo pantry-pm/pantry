@@ -25,21 +25,25 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 6 versions</summary>
+<summary>Show all 21 versions</summary>
 
-- `1.18.0`
+- `1.18.1`, `1.18.0`
 - `1.17.2`, `1.17.1`, `1.17.0`
-- `1.16.2`, `1.16.1`
+- `1.16.2`, `1.16.1`, `1.16.0`
+- `1.15.2`, `1.15.1`, `1.15.0`
+- `1.14.1`, `1.14.0`
+- `1.13.2`, `1.13.1`, `1.13.0`
+- `1.12.4`, `1.12.3`, `1.12.2`, `1.12.1`, `1.12.0`
 
 </details>
 
-**Latest Version**: `1.18.0`
+**Latest Version**: `1.18.1`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +velero.io@1.18.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +velero.io@1.18.1 -- $SHELL -i
 ```
 
 ## Usage Examples

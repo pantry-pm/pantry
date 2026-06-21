@@ -36,24 +36,33 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 6 versions</summary>
+<summary>Show all 15 versions</summary>
 
+- `183`
+- `182`
 - `182.0.0`
+- `181`
 - `181.0.0`
+- `180`
 - `180.0.0`
+- `179`
 - `179.0.0`
+- `178`
 - `178.0.0`
+- `177`
 - `177.0.0`
+- `176`
+- `174`
 
 </details>
 
-**Latest Version**: `182.0.0`
+**Latest Version**: `183`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +macvim.org@182.0.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +macvim.org@183 -- $SHELL -i
 ```
 
 ## Dependencies

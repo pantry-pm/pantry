@@ -25,8 +25,14 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 25 versions</summary>
+<summary>Show all 52 versions</summary>
 
+- `21.1.0`
+- `21.0.0`
+- `20.1.0`
+- `20.0.0`
+- `19.1.0`
+- `19.0.0`
 - `18.0.0`
 - `17.0.0`
 - `16.1.0`
@@ -48,16 +54,34 @@ This package provides the following executable programs:
 - `4.0.0`
 - `3.3.0`
 - `3.2.0`
+- `3.1.1`
+- `3.0.0`
+- `2.2.1`, `2.2.0`
+- `2.1.0`
+- `2.0.0`
+- `1.0.0`
+- `0.138.0`
+- `0.137.0`
+- `0.136.0`
+- `0.135.0`
+- `0.134.0`
+- `0.133.1`
+- `0.132.0`
+- `0.131.1`, `0.131.0`
+- `0.130.0`
+- `0.129.1`, `0.129.0`
+- `0.128.0`
+- `0.127.0`
 
 </details>
 
-**Latest Version**: `18.0.0`
+**Latest Version**: `21.1.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +crates.io/qsv@18.0.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +crates.io/qsv@21.1.0 -- $SHELL -i
 ```
 
 ## Dependencies

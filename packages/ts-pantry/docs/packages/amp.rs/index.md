@@ -25,9 +25,13 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 1 versions</summary>
+<summary>Show all 13 versions</summary>
 
-- `0.7.1`
+- `0.7.1`, `0.7.0`
+- `0.6.2`, `0.6.1`, `0.6.0`
+- `0.5.2`, `0.5.1`, `0.5.0`
+- `0.4.1`, `0.4.0`
+- `0.3.4`, `0.3.3`, `0.3.2`
 
 </details>
 
@@ -39,14 +43,6 @@ This package provides the following executable programs:
 # Install specific version
 sh <(curl https://pkgx.sh) +amp.rs@0.7.1 -- $SHELL -i
 ```
-
-## Dependencies
-
-This package depends on:
-
-- `zlib.net@1`
-- `libgit2.org@1`
-- `linux:openssl.org@1.1`
 
 ## Usage Examples
 

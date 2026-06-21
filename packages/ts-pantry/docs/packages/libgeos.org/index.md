@@ -25,12 +25,12 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 17 versions</summary>
+<summary>Show all 21 versions</summary>
 
 - `3.14.1`, `3.14.0`
 - `3.13.1`, `3.13.0`
-- `3.12.3`, `3.12.2`, `3.12.1`, `3.12.0`
-- `3.11.5`, `3.11.4`, `3.11.3`, `3.11.2`
+- `3.12.3`, `3.12.2`, `3.12.1`, `3.12.0`, `3.12.0beta2`, `3.12.0beta1`
+- `3.11.5`, `3.11.4`, `3.11.3`, `3.11.2`, `3.11.1`, `3.11.0`
 - `3.10.7`, `3.10.6`
 - `3.9.6`, `3.9.5`
 - `3.8.4`

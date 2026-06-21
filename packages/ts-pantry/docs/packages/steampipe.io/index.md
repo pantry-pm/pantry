@@ -25,9 +25,9 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 46 versions</summary>
+<summary>Show all 34 versions</summary>
 
-- `2.4.0`
+- `2.4.4`, `2.4.3`, `2.4.2`, `2.4.1`, `2.4.0`
 - `2.3.6`, `2.3.5`, `2.3.4`, `2.3.3`, `2.3.2`, `2.3.1`, `2.3.0`
 - `2.2.0`
 - `2.1.0`
@@ -36,20 +36,17 @@ This package provides the following executable programs:
 - `1.1.4`, `1.1.3`, `1.1.2`, `1.1.1`, `1.1.0`
 - `1.0.3`, `1.0.2`, `1.0.1`, `1.0.0`
 - `0.24.2`, `0.24.1`, `0.24.0`
-- `0.23.5`, `0.23.4`, `0.23.3`, `0.23.2`, `0.23.1`, `0.23.0`
-- `0.22.2`, `0.22.1`, `0.22.0`
-- `0.21.8`, `0.21.7`, `0.21.6`, `0.21.5`, `0.21.4`, `0.21.3`, `0.21.2`, `0.21.1`, `0.21.0`
-- `0.20.12`, `0.20.11`, `0.20.10`
+- `0.23.5`, `0.23.4`, `0.23.3`, `0.23.2`, `0.23.1`
 
 </details>
 
-**Latest Version**: `2.4.0`
+**Latest Version**: `2.4.4`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +steampipe.io@2.4.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +steampipe.io@2.4.4 -- $SHELL -i
 ```
 
 ## Usage Examples

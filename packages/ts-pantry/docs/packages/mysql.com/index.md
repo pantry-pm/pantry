@@ -85,16 +85,15 @@ sh <(curl https://pkgx.sh) +mysql.com@9.6.0 -- $SHELL -i
 
 This package depends on:
 
-- `unicode.org^71`
 - `libevent.org^2`
 - `lz4.org^1`
-- `openssl.org^1.1`
-- `protobuf.dev^21`
+- `openssl.org^3`
 - `zlib.net^1.2`
 - `facebook.com/zstd^1`
 - `curl.se>=6.0`
 - `thrysoee.dk/editline^3`
 - `developers.yubico.com/libfido2^1`
+- `linux:sourceforge.net/libtirpc`
 - `linux:gnu.org/gcc/libstdcxx@14`
 
 ## Usage Examples

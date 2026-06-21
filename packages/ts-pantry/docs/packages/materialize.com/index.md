@@ -25,8 +25,11 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 45 versions</summary>
+<summary>Show all 53 versions</summary>
 
+- `26.29.0`
+- `26.28.0`
+- `26.27.0`
 - `0.112.2`
 - `0.111.3`
 - `0.110.1`
@@ -72,16 +75,21 @@ This package provides the following executable programs:
 - `0.69.1`
 - `0.68.1`
 - `0.67.3`
+- `0.66.0`
+- `0.65.1`
+- `0.64.0`
+- `0.63.4`
+- `0.62.2`
 
 </details>
 
-**Latest Version**: `0.112.2`
+**Latest Version**: `26.29.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +materialize.com@0.112.2 -- $SHELL -i
+sh <(curl https://pkgx.sh) +materialize.com@26.29.0 -- $SHELL -i
 ```
 
 ## Dependencies

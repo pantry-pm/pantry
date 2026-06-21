@@ -25,8 +25,10 @@ This package provides the following executable programs:
 ## Available Versions
 
 <details>
-<summary>Show all 27 versions</summary>
+<summary>Show all 52 versions</summary>
 
+- `5.6.0`
+- `5.5.0`
 - `5.4.0`
 - `5.3.1`, `5.3.0`
 - `5.2.2`, `5.2.1`
@@ -45,16 +47,38 @@ This package provides the following executable programs:
 - `2.8.0`
 - `2.7.4`, `2.7.3`, `2.7.2`, `2.7.1`, `2.7.0`
 - `2.6.0`
+- `2.5.0`
+- `2.4.0`
+- `2.3.0`
+- `2.2.0`
+- `2.1.1`, `2.1.0`
+- `2.0.0`
+- `1.32.0`
+- `1.31.0`
+- `1.30.0`
+- `1.29.0`
+- `1.28.0`
+- `1.27.0`
+- `1.26.0`
+- `1.25.0`
+- `1.24.0`
+- `1.23.0`
+- `1.22.0`
+- `1.21.0`
+- `1.20.0`
+- `1.19.0`
+- `1.18.0`
+- `1.17.0`
 
 </details>
 
-**Latest Version**: `5.4.0`
+**Latest Version**: `5.6.0`
 
 ### Install Specific Version
 
 ```bash
 # Install specific version
-sh <(curl https://pkgx.sh) +certbot.eff.org@5.4.0 -- $SHELL -i
+sh <(curl https://pkgx.sh) +certbot.eff.org@5.6.0 -- $SHELL -i
 ```
 
 ## Dependencies
