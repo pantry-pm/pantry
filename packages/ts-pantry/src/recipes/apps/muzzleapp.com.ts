@@ -1,4 +1,4 @@
-import type { Recipe } from '../../scripts/recipe-types'
+import type { Recipe } from '../../../scripts/recipe-types'
 
 // Desktop app — installs natively from pantry's registry into /Applications
 // (see zig/src/install/native_apps.zig).

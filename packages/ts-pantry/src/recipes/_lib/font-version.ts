@@ -41,9 +41,18 @@ export async function fontVersionFromTtf(url: string): Promise<string | null> {
         continue
       const bytes = new Uint8Array(data.buffer, strOff + off, len)
       // Windows/Unicode platforms store UTF-16BE; Mac platform (1) stores latin-1.
-      const str = platformId === 1
-        ? String.fromCharCode(...bytes)
-        : new TextDecoder('utf-16be').decode(bytes)
+      let str: string
+      if (platformId === 1) {
+        str = String.fromCharCode(...bytes)
+      }
+      else {
+        // Decode UTF-16BE manually — 'utf-16be' isn't in TextDecoder's typed
+        // label union, and decoding big-endian pairs here avoids the dependency.
+        let out = ''
+        for (let b = 0; b + 1 < bytes.length; b += 2)
+          out += String.fromCharCode((bytes[b] << 8) | bytes[b + 1])
+        str = out
+      }
       const m = str.match(/(\d+\.\d+)/)
       if (m)
         return m[1]

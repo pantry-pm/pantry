@@ -1,4 +1,4 @@
-import type { Recipe } from '../../scripts/recipe-types'
+import type { Recipe } from '../../../scripts/recipe-types'
 import { fontVersionFromTtf } from '../_lib/font-version'
 
 // Auto-authored font recipe. Fonts install natively from pantry's registry into
