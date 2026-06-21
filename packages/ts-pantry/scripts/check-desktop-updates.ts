@@ -278,6 +278,13 @@ async function main(): Promise<void> {
         latest = null
       }
     }
+    // Pinned recipes (no machine-readable upstream feed) declare their version
+    // via `knownVersions` — resolve to that so an unpublished pinned package
+    // still gets built/published. Already-published ones stay no-op (latest ===
+    // published), so this never causes spurious rebuilds.
+    if (!latest && Array.isArray(recipe.versionSource?.knownVersions) && recipe.versionSource.knownVersions.length > 0) {
+      latest = String(recipe.versionSource.knownVersions[0])
+    }
     const published = await publishedVersion(recipe.domain)
     entries.push({
       domain: recipe.domain,
