@@ -67,9 +67,13 @@ async function uploadTarballToS3(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const url = await s3.getSignedUrl({ bucket, key, expiresIn: 3600, operation: 'putObject' })
     try {
+      // No --max-time: large apps on a slow uplink (Dia ~710MB) can legitimately
+      // take well over an hour. --speed-limit/--speed-time already abort a genuine
+      // stall (under 1KB/s for 60s), so a slow-but-steady transfer is allowed to
+      // run to completion rather than being cut off by a wall-clock ceiling.
       execFileSync('curl', [
-        '-fsS', '--connect-timeout', '30', '--max-time', '1800',
-        '--speed-limit', '1024', '--speed-time', '60',
+        '-fsS', '--connect-timeout', '30',
+        '--speed-limit', '1024', '--speed-time', '120',
         '-X', 'PUT', '-T', filePath, url,
       ], { stdio: ['ignore', 'ignore', 'inherit'] })
       return
