@@ -65,8 +65,8 @@ import { lmstudioaiPackage } from './apps/lmstudioai'
 import { maccyappPackage } from './apps/maccyapp'
 import { mediaareanetPackage } from './apps/mediaareanet'
 import { meetingbarappPackage } from './apps/meetingbarapp'
-import { muzzleappcomPackage } from './apps/muzzleappcom'
 import { monitorcontrolappPackage } from './apps/monitorcontrolapp'
+import { muzzleappcomPackage } from './apps/muzzleappcom'
 import { notionsoPackage } from './apps/notionso'
 import { obsidianmdPackage } from './apps/obsidianmd'
 import { ollamacomPackage } from './apps/ollamacom'
@@ -1833,8 +1833,8 @@ export interface Pantry {
   maccyapp: typeof maccyappPackage
   mediaareanet: typeof mediaareanetPackage
   meetingbarapp: typeof meetingbarappPackage
-  muzzleappcom: typeof muzzleappcomPackage
   monitorcontrolapp: typeof monitorcontrolappPackage
+  muzzleappcom: typeof muzzleappcomPackage
   notionso: typeof notionsoPackage
   obsidianmd: typeof obsidianmdPackage
   ollamacom: typeof ollamacomPackage
@@ -2452,8 +2452,10 @@ export interface Pantry {
   jetbrainsmononerdfont: typeof jetbrainsmononerdfontPackage
   lato: typeof latoPackage
   meslolgnerdfont: typeof meslolgnerdfontPackage
+  open_sans: typeof opensansPackage
   opensans: typeof opensansPackage
   roboto: typeof robotoPackage
+  source_code_pro: typeof sourcecodeproPackage
   sourcecodepro: typeof sourcecodeproPackage
 
   fossiesorglibelf: typeof fossiesorglibelfPackage
@@ -3826,7 +3828,7 @@ export interface Pantry {
   localstackcloudcli: typeof localstackcloudcliPackage
   logdydev: typeof logdydevPackage
   logitechcomoptions: typeof logitechcomoptionsPackage
-  'logitech.com/options-plus': typeof logitechcomoptionsplusPackage
+  logitechcomoptionsplus: typeof logitechcomoptionsplusPackage
 
   logologicalorggpp: typeof logologicalorggppPackage
   luajitorg: typeof luajitorgPackage
@@ -4914,6 +4916,7 @@ export interface Pantry {
   dexios: typeof brxken128githubiodexiosPackage
   dgraph: typeof dgraphioPackage
   dhall: typeof dhalllangorgPackage
+  Dia: typeof diabrowsercomPackage
   dialog: typeof invisibleislandnetdialogPackage
   'diff-so-fancy': typeof diffsofancyPackage
   diffoci: typeof diffociPackage
@@ -5373,6 +5376,7 @@ export interface Pantry {
   langchain: typeof langchaincomPackage
   lapack: typeof netliborglapackPackage
   laravel: typeof laravelcomPackage
+  Lato: typeof latoPackage
   lavinmq: typeof lavinmqcomPackage
   lazydocker: typeof lazydockerPackage
   lazygit: typeof lazygitPackage
@@ -5558,6 +5562,7 @@ export interface Pantry {
   mdcat: typeof cratesiomdcatPackage
   mecab: typeof taku910githubiomecabPackage
   'mecab-ipadic': typeof taku910githubiomecabipadicPackage
+  MediaInfo: typeof mediaareanetPackage
   meetingbar: typeof meetingbarappPackage
   MeetingBar: typeof meetingbarappPackage
   meilisearch: typeof meilisearchcomPackage
@@ -5616,6 +5621,7 @@ export interface Pantry {
   musepack: typeof musepacknetPackage
   'musl.libc': typeof musllibcorgPackage
   mutagen: typeof mutagenPackage
+  Muzzle: typeof muzzleappcomPackage
   mvfst: typeof facebookcommvfstPackage
   mvn: typeof mavenPackage
   'mypy-lang': typeof mypylangorgPackage
@@ -5680,6 +5686,7 @@ export interface Pantry {
   onepassword: typeof _1passwordcomPackage
   'onig-config': typeof onigurumaPackage
   opa: typeof openpolicyagentorgPackage
+  'Open Sans': typeof opensansPackage
   'open-interpreter': typeof openinterpretercomPackage
   'open-mpi': typeof openmpiorgPackage
   openai: typeof openaicomopenaipythonPackage
@@ -6006,6 +6013,7 @@ export interface Pantry {
   solr: typeof solrapacheorgPackage
   'sonar-scanner': typeof sonarqubeorgsonarscannerPackage
   sops: typeof getsopsioPackage
+  'Source Code Pro': typeof sourcecodeproPackage
   'source-highlight': typeof gnuorgsourcehighlightPackage
   sourcekitten: typeof sourcekittenPackage
   Sourcery: typeof sourceryPackage
@@ -6458,8 +6466,8 @@ export const pantry: Pantry = {
   maccyapp: maccyappPackage,
   mediaareanet: mediaareanetPackage,
   meetingbarapp: meetingbarappPackage,
-  muzzleappcom: muzzleappcomPackage,
   monitorcontrolapp: monitorcontrolappPackage,
+  muzzleappcom: muzzleappcomPackage,
   notionso: notionsoPackage,
   obsidianmd: obsidianmdPackage,
   ollamacom: ollamacomPackage,
@@ -7077,8 +7085,10 @@ export const pantry: Pantry = {
   jetbrainsmononerdfont: jetbrainsmononerdfontPackage,
   lato: latoPackage,
   meslolgnerdfont: meslolgnerdfontPackage,
+  open_sans: opensansPackage,
   opensans: opensansPackage,
   roboto: robotoPackage,
+  source_code_pro: sourcecodeproPackage,
   sourcecodepro: sourcecodeproPackage,
 
   fossiesorglibelf: fossiesorglibelfPackage,
@@ -8451,7 +8461,7 @@ export const pantry: Pantry = {
   localstackcloudcli: localstackcloudcliPackage,
   logdydev: logdydevPackage,
   logitechcomoptions: logitechcomoptionsPackage,
-  'logitech.com/options-plus': logitechcomoptionsplusPackage,
+  logitechcomoptionsplus: logitechcomoptionsplusPackage,
 
   logologicalorggpp: logologicalorggppPackage,
   luajitorg: luajitorgPackage,
@@ -9539,6 +9549,7 @@ export const pantry: Pantry = {
   dexios: brxken128githubiodexiosPackage,
   dgraph: dgraphioPackage,
   dhall: dhalllangorgPackage,
+  Dia: diabrowsercomPackage,
   dialog: invisibleislandnetdialogPackage,
   'diff-so-fancy': diffsofancyPackage,
   diffoci: diffociPackage,
@@ -9998,6 +10009,7 @@ export const pantry: Pantry = {
   langchain: langchaincomPackage,
   lapack: netliborglapackPackage,
   laravel: laravelcomPackage,
+  Lato: latoPackage,
   lavinmq: lavinmqcomPackage,
   lazydocker: lazydockerPackage,
   lazygit: lazygitPackage,
@@ -10183,6 +10195,7 @@ export const pantry: Pantry = {
   mdcat: cratesiomdcatPackage,
   mecab: taku910githubiomecabPackage,
   'mecab-ipadic': taku910githubiomecabipadicPackage,
+  MediaInfo: mediaareanetPackage,
   meetingbar: meetingbarappPackage,
   MeetingBar: meetingbarappPackage,
   meilisearch: meilisearchcomPackage,
@@ -10241,6 +10254,7 @@ export const pantry: Pantry = {
   musepack: musepacknetPackage,
   'musl.libc': musllibcorgPackage,
   mutagen: mutagenPackage,
+  Muzzle: muzzleappcomPackage,
   mvfst: facebookcommvfstPackage,
   mvn: mavenPackage,
   'mypy-lang': mypylangorgPackage,
@@ -10305,6 +10319,7 @@ export const pantry: Pantry = {
   onepassword: _1passwordcomPackage,
   'onig-config': onigurumaPackage,
   opa: openpolicyagentorgPackage,
+  'Open Sans': opensansPackage,
   'open-interpreter': openinterpretercomPackage,
   'open-mpi': openmpiorgPackage,
   openai: openaicomopenaipythonPackage,
@@ -10631,6 +10646,7 @@ export const pantry: Pantry = {
   solr: solrapacheorgPackage,
   'sonar-scanner': sonarqubeorgsonarscannerPackage,
   sops: getsopsioPackage,
+  'Source Code Pro': sourcecodeproPackage,
   'source-highlight': gnuorgsourcehighlightPackage,
   sourcekitten: sourcekittenPackage,
   Sourcery: sourceryPackage,
