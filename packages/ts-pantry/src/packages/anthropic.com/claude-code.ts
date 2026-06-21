@@ -1,0 +1,71 @@
+/**
+ * **claude-code** - Claude Code, Anthropic's agentic coding CLI
+ *
+ * @domain `anthropic.com/claude-code`
+ * @programs `claude`
+ * @version `2.1.185` (1 version available)
+ * @versions From newest version to oldest.
+ *
+ * @install `pantry install anthropic.com/claude-code`
+ *
+ * @example
+ * ```typescript
+ * import { pantry } from 'ts-pantry'
+ *
+ * const pkg = pantry.anthropiccomclaudecode
+ * console.log(pkg.name)        // "claude-code"
+ * console.log(pkg.programs)    // ["claude"]
+ * console.log(pkg.versions[0]) // "2.1.185" (latest)
+ * ```
+ *
+ * @see https://ts-pantry.netlify.app/packages/anthropic-com/claude-code.md
+ * @see https://ts-pantry.netlify.app/usage
+ */
+export const anthropiccomclaudecodePackage = {
+  /**
+  * The display name of this package.
+  */
+  name: 'claude-code' as const,
+  /**
+  * The canonical domain name for this package.
+  */
+  domain: 'anthropic.com/claude-code' as const,
+  /**
+  * Brief description of what this package does.
+  */
+  description: 'Claude Code — Anthropic\'s agentic coding CLI that lives in your terminal.' as const,
+  packageYmlUrl: '' as const,
+  homepageUrl: 'https://github.com/anthropics/claude-code' as const,
+  githubUrl: 'https://github.com/anthropics/claude-code' as const,
+  /**
+  * Command to install this package using pantry.
+  * @example pantry install package-name
+  */
+  installCommand: 'pantry install anthropic.com/claude-code' as const,
+  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +anthropic.com/claude-code -- $SHELL -i' as const,
+  pantryInstallCommand: 'pantry install anthropic.com/claude-code' as const,
+  /**
+  * Executable programs provided by this package.
+  * These can be run after installation.
+  */
+  programs: [
+    'claude',
+  ] as const,
+  companions: [] as const,
+  /**
+  * Runtime dependencies for this package.
+  * These are required when running the package.
+  */
+  dependencies: [] as const,
+  buildDependencies: [] as const,
+  /**
+  * Available versions from newest to oldest.
+  * @see https://ts-pantry.netlify.app/usage for installation instructions
+  */
+  versions: [
+    '2.1.185',
+  ] as const,
+  aliases: [] as const,
+}
+
+export type AnthropiccomclaudecodePackage = typeof anthropiccomclaudecodePackage

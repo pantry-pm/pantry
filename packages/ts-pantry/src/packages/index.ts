@@ -17,6 +17,7 @@ import { androidcomcmdlinetoolsPackage } from './android.com/cmdline-tools'
 import { angulardevPackage } from './angulardev'
 import { ansiblecomansiblelintPackage } from './ansible.com/ansible-lint'
 import { ansiblecomPackage } from './ansiblecom'
+import { anthropiccomclaudecodePackage } from './anthropic.com/claude-code'
 import { aomediagooglesourcecomaomPackage } from './aomedia.googlesource.com/aom'
 import { apacheorgaprutilPackage } from './apache.org/apr-util'
 import { apacheorgaprPackage } from './apache.org/apr'
@@ -1771,6 +1772,8 @@ export interface Pantry {
   ansible_lint: typeof ansiblecomansiblelintPackage
   ansiblecomansiblelint: typeof ansiblecomansiblelintPackage
   ansiblecom: typeof ansiblecomPackage
+  claude_code: typeof anthropiccomclaudecodePackage
+  anthropiccomclaudecode: typeof anthropiccomclaudecodePackage
 
   aomediagooglesourcecom: typeof aomediagooglesourcecomaomPackage
   apr_util: typeof apacheorgaprutilPackage
@@ -4823,6 +4826,7 @@ export interface Pantry {
   cJSON: typeof cjsonPackage
   'clang-format': typeof llvmorgclangformatPackage
   'classic.yarnpkg': typeof classicYarnPackage
+  'claude-code': typeof anthropiccomclaudecodePackage
   cleanshot: typeof cleanshotcomPackage
   'CleanShot X': typeof cleanshotcomPackage
   click: typeof cratesioclickPackage
@@ -6404,6 +6408,8 @@ export const pantry: Pantry = {
   ansible_lint: ansiblecomansiblelintPackage,
   ansiblecomansiblelint: ansiblecomansiblelintPackage,
   ansiblecom: ansiblecomPackage,
+  claude_code: anthropiccomclaudecodePackage,
+  anthropiccomclaudecode: anthropiccomclaudecodePackage,
 
   aomediagooglesourcecom: aomediagooglesourcecomaomPackage,
   apr_util: apacheorgaprutilPackage,
@@ -9456,6 +9462,7 @@ export const pantry: Pantry = {
   cJSON: cjsonPackage,
   'clang-format': llvmorgclangformatPackage,
   'classic.yarnpkg': classicYarnPackage,
+  'claude-code': anthropiccomclaudecodePackage,
   cleanshot: cleanshotcomPackage,
   'CleanShot X': cleanshotcomPackage,
   click: cratesioclickPackage,
