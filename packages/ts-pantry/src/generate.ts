@@ -1613,9 +1613,18 @@ function isValidPackageDomain(domain: string): boolean {
     return false
   }
 
-  // Domain should have at least one dot (be a valid domain format)
-  // Exception: some single-word domains like 'go' are valid
-  const validSingleWordDomains = ['go', 'rust', 'zig', 'nim', 'dart', 'julia', 'scala', 'kotlin', 'swift', 'node', 'bun']
+  // Domain should have at least one dot (be a valid domain format).
+  // Exception: some packages are legitimately single-word domains — a few
+  // languages, plus the font packages (which have no vendor TLD, e.g. 'lato',
+  // 'open-sans', 'jetbrains-mono'). Without this they'd be silently dropped
+  // from the generated docs.
+  const validSingleWordDomains = [
+    'go', 'rust', 'zig', 'nim', 'dart', 'julia', 'scala', 'kotlin', 'swift', 'node', 'bun',
+    // Fonts (single-word package domains, no vendor TLD):
+    'lato', 'open-sans', 'source-code-pro', 'roboto', 'inter', 'hack',
+    'fira-code', 'cascadia-code', 'jetbrains-mono', 'jetbrains-mono-nerd-font',
+    'meslo-lg-nerd-font',
+  ]
   if (!domain.includes('.') && !validSingleWordDomains.includes(domain.toLowerCase())) {
     return false
   }
@@ -1988,12 +1997,7 @@ Each package can be accessed using \`getPackage(name)\` or directly via \`pantry
             }
             else {
               // Malformed GitHub domain, use flat structure
-              let safeCatalogFilename = domainVarName.toLowerCase()
-              if (/^\d/.test(safeCatalogFilename)) {
-                safeCatalogFilename = `pkg-${safeCatalogFilename}`
-              }
-              safeCatalogFilename = safeCatalogFilename.replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '')
-              catalogLinkPath = `./packages/${safeCatalogFilename}.md`
+              catalogLinkPath = `./packages/${flatPackageFilename(domain, domainVarName)}.md`
             }
           }
           else {
@@ -2002,13 +2006,8 @@ Each package can be accessed using \`getPackage(name)\` or directly via \`pantry
           }
         }
         else {
-          // Simple domains use flat structure
-          let safeCatalogFilename = domainVarName.toLowerCase()
-          if (/^\d/.test(safeCatalogFilename)) {
-            safeCatalogFilename = `pkg-${safeCatalogFilename}`
-          }
-          safeCatalogFilename = safeCatalogFilename.replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '')
-          catalogLinkPath = `./packages/${safeCatalogFilename}.md`
+          // Simple domains use flat structure (domain-derived, matches the page).
+          catalogLinkPath = `./packages/${flatPackageFilename(domain, domainVarName)}.md`
         }
 
         // Build the table row, ensuring no newlines within the row
@@ -2138,13 +2137,24 @@ function calculatePackageFilePath(domain: string, domainVarName: string, package
   }
   else {
     // Simple domains without dots use flat structure
-    let safeFilename = domainVarName.toLowerCase()
-    if (/^\d/.test(safeFilename)) {
-      safeFilename = `pkg-${safeFilename}`
-    }
-    safeFilename = safeFilename.replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '')
-    return path.join(packagesDir, `${safeFilename}.md`)
+    return path.join(packagesDir, `${flatPackageFilename(domain, domainVarName)}.md`)
   }
+}
+
+/**
+ * Filename (no extension) for a no-dot, single-word package domain in the flat
+ * docs/packages/ layout (e.g. fonts: 'open-sans' → 'open-sans').
+ *
+ * Derives from the DOMAIN, not the index var name, so the on-disk page and every
+ * catalog link agree — the domain is stable while a domain can map to several
+ * var names (e.g. 'open-sans' → open_sans / opensans), which previously produced
+ * a page at one name and a catalog link to another.
+ */
+function flatPackageFilename(domain: string, fallbackVar: string): string {
+  let name = (domain || fallbackVar).toLowerCase()
+  if (/^\d/.test(name))
+    name = `pkg-${name}`
+  return name.replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '')
 }
 
 async function generatePackagePages(outputDir: string, sourcePackagesDir?: string): Promise<string[]> {
@@ -2240,14 +2250,8 @@ async function generatePackagePages(outputDir: string, sourcePackagesDir?: strin
         }
       }
       else {
-        // Simple domains without dots use flat structure
-        let safeFilename = domainVarName.toLowerCase()
-        if (/^\d/.test(safeFilename)) {
-          safeFilename = `pkg-${safeFilename}`
-        }
-        safeFilename = safeFilename.replace(/[^\w-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '')
-
-        filepath = path.join(packagesDir, `${safeFilename}.md`)
+        // Simple domains without dots use flat structure (domain-derived name).
+        filepath = path.join(packagesDir, `${flatPackageFilename(domain, domainVarName)}.md`)
       }
       const description = pkg.description || ''
 
