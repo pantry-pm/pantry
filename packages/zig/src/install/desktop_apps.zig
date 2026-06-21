@@ -4,8 +4,10 @@
 //! command-line `dependencies:`, so a single `pantry install` provisions the
 //! whole machine. Apps and fonts are installed NATIVELY (see install/cask.zig:
 //! Homebrew's public cask JSON + hdiutil/ditto/installer — no `brew` needed),
-//! with `brew` used only as a fallback when present; Mac App Store apps use the
-//! standalone `mas` CLI.
+//! with `brew` used only as a fallback when present. Mac App Store apps install
+//! headlessly via the `mas` CLI *if it is present*, but `mas` is never required —
+//! without it, pantry opens the App Store to the app's page (one click to
+//! install) and skips any App Store app already in /Applications.
 //!
 //! deps.yaml shape (all top-level keys, sibling to `dependencies:`):
 //!
@@ -450,6 +452,33 @@ fn runOk(allocator: std.mem.Allocator, argv: []const []const u8) bool {
     };
 }
 
+/// Informational line (neutral, not a success/failure) — e.g. "opened App Store".
+fn printInfo(name: []const u8, label: []const u8) void {
+    style.printForced("{s}→{s} {s}{s}{s} {s}({s}){s}\n", .{
+        style.dim,   style.reset,
+        style.bold,  name,
+        style.reset, style.dim,
+        label,       style.reset,
+    });
+}
+
+/// True if a Mac App Store app with this display name is already in /Applications
+/// — lets us skip it without `mas`.
+fn masAppInstalled(allocator: std.mem.Allocator, name: []const u8) bool {
+    const path = std.fmt.allocPrint(allocator, "/Applications/{s}.app", .{name}) catch return false;
+    defer allocator.free(path);
+    io_helper.accessAbsolute(path, .{}) catch return false;
+    return true;
+}
+
+/// Open the Mac App Store to an app's page so it installs with one click — the
+/// `mas`-free fallback. Best-effort; `open` is always present on macOS.
+fn openAppStore(allocator: std.mem.Allocator, id: []const u8) void {
+    const url = std.fmt.allocPrint(allocator, "macappstore://apps.apple.com/app/id{s}", .{id}) catch return;
+    defer allocator.free(url);
+    _ = io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "/usr/bin/open", url } }) catch {};
+}
+
 /// Parse `apps:`/`fonts:` from the deps file and install anything not already
 /// recorded in the marker. macOS-only; every failure is non-fatal (logged and
 /// skipped) so a missing brew/mas or one bad cask never breaks `pantry install`.
@@ -531,9 +560,11 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     if (pending == 0) return;
 
     // Apps and fonts install NATIVELY from pantry's own registry (see
-    // install/native_apps.zig) — no Homebrew anywhere. Only App Store apps need
-    // the standalone `mas` CLI. Resolve it to an absolute path once —
-    // std.process.spawn does not search $PATH, so argv[0] must be a full path.
+    // install/native_apps.zig) — no Homebrew anywhere. `mas` is used to install
+    // App Store apps headlessly *if it happens to be present*, but it's never
+    // required: without it we open the App Store to the app's page instead. Look
+    // it up once — std.process.spawn does not search $PATH, so argv[0] must be a
+    // full path.
     const mas_path: ?[]const u8 = io_helper.findExecutable(allocator, "mas") catch null;
     defer if (mas_path) |p| allocator.free(p);
 
@@ -562,17 +593,28 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
                 }
             },
             .mas => {
-                const mp = mas_path orelse {
-                    printFail(app.name, "app store", "`mas` not found (try: pantry install mas)");
-                    continue;
-                };
-                if (runOk(allocator, &[_][]const u8{ mp, "install", app.id })) {
-                    printOk(app.name, "app store");
+                // `mas` is OPTIONAL — never required. If the app is already in
+                // /Applications we're done; if `mas` happens to be installed we
+                // install headlessly; otherwise we open the App Store to its page
+                // so it installs with one click (not marked, so it re-surfaces
+                // until the app actually lands in /Applications).
+                if (masAppInstalled(allocator, app.name)) {
+                    printOk(app.name, "app store, already installed");
                     marked.appendSlice(allocator, key) catch {};
                     marked.append(allocator, '\n') catch {};
                     installed_any = true;
+                } else if (mas_path) |mp| {
+                    if (runOk(allocator, &[_][]const u8{ mp, "install", app.id })) {
+                        printOk(app.name, "app store");
+                        marked.appendSlice(allocator, key) catch {};
+                        marked.append(allocator, '\n') catch {};
+                        installed_any = true;
+                    } else {
+                        printFail(app.name, "app store", "mas install failed (is `mas` signed in?)");
+                    }
                 } else {
-                    printFail(app.name, "app store", "mas install failed (is `mas` signed in?)");
+                    openAppStore(allocator, app.id);
+                    printInfo(app.name, "app store — opened, click Get to install");
                 }
             },
         }
