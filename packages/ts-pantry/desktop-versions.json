@@ -337,6 +337,14 @@
       "needsUpdate": false
     },
     {
+      "domain": "pearcleaner.app",
+      "name": "Pearcleaner",
+      "kind": "app",
+      "latest": "5.4.3",
+      "published": null,
+      "needsUpdate": true
+    },
+    {
       "domain": "postman.com",
       "name": "Postman",
       "kind": "app",
@@ -359,6 +367,14 @@
       "latest": "0.96",
       "published": "0.96",
       "needsUpdate": false
+    },
+    {
+      "domain": "roboto",
+      "name": "Roboto",
+      "kind": "font",
+      "latest": "2.138",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "signal.org",
@@ -388,9 +404,9 @@
       "domain": "stats.app",
       "name": "Stats",
       "kind": "app",
-      "latest": "3.0.3",
+      "latest": "3.0.4",
       "published": "3.0.3",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "tableplus.com",
