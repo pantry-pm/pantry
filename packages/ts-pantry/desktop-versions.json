@@ -384,7 +384,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "5.4.3",
-      "published": null,
+      "published": "5.4.3",
       "needsUpdate": true
     },
     {
@@ -420,7 +420,7 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.138",
-      "published": null,
+      "published": "2.138",
       "needsUpdate": true
     },
     {
