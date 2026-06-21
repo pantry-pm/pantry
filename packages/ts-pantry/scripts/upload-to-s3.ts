@@ -9,13 +9,90 @@
  * defaults to AWS S3. Uses ts-cloud for the S3-compatible client.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, openSync, readdirSync, readFileSync, readSync, closeSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import * as crypto from 'node:crypto'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 
 const DYNAMO_TABLE = process.env.DYNAMODB_TABLE || 'pantry-packages'
+
+/**
+ * Tarballs at/above this size are uploaded via S3 multipart upload instead of a
+ * single PutObject. A single PutObject reads the whole file into memory and
+ * issues one request — which hangs / OOMs for large desktop apps (e.g. Dia is
+ * ~710MB). Multipart streams the file in fixed-size chunks from disk so memory
+ * stays flat and each part is an independent, retryable request.
+ */
+const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100 MB
+/** Size of each multipart chunk (must be ≥ 5MB per the S3 spec, except the last). */
+const MULTIPART_PART_SIZE = 64 * 1024 * 1024 // 64 MB
+
+/**
+ * Upload a tarball to S3, transparently using multipart for large files.
+ *
+ * - Small files (< {@link MULTIPART_THRESHOLD}): single PutObject (existing path).
+ * - Large files: createMultipartUpload → uploadPart (read from disk in chunks,
+ *   so we never hold the whole file in memory) → completeMultipartUpload. On any
+ *   error the upload is aborted so no orphaned parts are billed/left behind.
+ */
+async function uploadTarballToS3(
+  s3: ReturnType<typeof createObjectStorageClient>,
+  bucket: string,
+  key: string,
+  filePath: string,
+  size: number,
+  contentType: string,
+): Promise<void> {
+  if (size < MULTIPART_THRESHOLD) {
+    await s3.putObject({ bucket, key, body: readFileSync(filePath), contentType })
+    return
+  }
+
+  console.log(`   ⛓  Large file (${(size / 1024 / 1024).toFixed(0)} MB) — using multipart upload`)
+  const { UploadId } = await s3.createMultipartUpload(bucket, key, { contentType })
+  const parts: Array<{ PartNumber: number, ETag: string }> = []
+  const fd = openSync(filePath, 'r')
+  try {
+    const buffer = Buffer.allocUnsafe(MULTIPART_PART_SIZE)
+    let offset = 0
+    let partNumber = 1
+    const totalParts = Math.ceil(size / MULTIPART_PART_SIZE)
+    while (offset < size) {
+      const toRead = Math.min(MULTIPART_PART_SIZE, size - offset)
+      const bytesRead = readSync(fd, buffer, 0, toRead, offset)
+      // Slice a copy of exactly the bytes read — uploadPart keeps a reference to
+      // the body, so we must not hand it the reused full-size buffer.
+      const part = Buffer.from(buffer.subarray(0, bytesRead))
+      console.log(`   📤 Part ${partNumber}/${totalParts} (${(bytesRead / 1024 / 1024).toFixed(1)} MB)`)
+      const { ETag } = await s3.uploadPart(bucket, key, UploadId, partNumber, part)
+      parts.push({ PartNumber: partNumber, ETag })
+      offset += bytesRead
+      partNumber++
+    }
+    await s3.completeMultipartUpload(bucket, key, UploadId, parts)
+  }
+  catch (err) {
+    try { await s3.abortMultipartUpload(bucket, key, UploadId) }
+    catch { /* best-effort cleanup */ }
+    throw err
+  }
+  finally {
+    closeSync(fd)
+  }
+}
+
+/** SHA256 of a file, streamed from disk (no full read into memory). */
+async function sha256File2(filePath: string): Promise<string> {
+  const hash = crypto.createHash('sha256')
+  await new Promise<void>((resolve, reject) => {
+    const stream = createReadStream(filePath)
+    stream.on('data', chunk => hash.update(chunk))
+    stream.on('end', () => resolve())
+    stream.on('error', reject)
+  })
+  return hash.digest('hex')
+}
 
 export interface UploadOptions {
   package: string
@@ -234,19 +311,20 @@ export async function uploadToS3(options: UploadOptions): Promise<void> {
     }
     const targetPlatforms = platformOverride ?? [`${match![1]}-${match![2]}`]
 
-    // Read tarball once; reuse across all target platform keys.
+    // Stream the tarball from disk (don't slurp the whole file into memory —
+    // large desktop apps like Dia are ~710MB). uploadTarballToS3 reads it in
+    // chunks for multipart, putObject for small files.
     const tarballPath = join(artifactPath, tarball)
-    const tarballContent = readFileSync(tarballPath)
     const tarballSize = statSync(tarballPath).size
 
-    // Calculate SHA256 if not provided
+    // Calculate SHA256 if not provided (stream it; never hold the file in memory).
     let sha256Hash: string
     if (sha256File) {
       const sha256Content = readFileSync(join(artifactPath, sha256File), 'utf-8')
       sha256Hash = sha256Content.split(' ')[0].trim()
     }
 else {
-      sha256Hash = crypto.createHash('sha256').update(tarballContent).digest('hex')
+      sha256Hash = await sha256File2(tarballPath)
     }
 
     for (const platform of targetPlatforms) {
@@ -256,14 +334,9 @@ else {
       const tarballKey = `binaries/${pkgName}/${version}/${platform}/${tarball}`
       const sha256Key = `binaries/${pkgName}/${version}/${platform}/${tarball}.sha256`
 
-      // Upload tarball
+      // Upload tarball (multipart for large files, single PutObject otherwise)
       console.log(`   📁 Uploading ${tarball} (${(tarballSize / 1024 / 1024).toFixed(2)} MB)`)
-      await s3.putObject({
-        bucket,
-        key: tarballKey,
-        body: tarballContent,
-        contentType: 'application/gzip',
-      })
+      await uploadTarballToS3(s3, bucket, tarballKey, tarballPath, tarballSize, 'application/gzip')
       console.log(`   ✓ Uploaded to s3://${bucket}/${tarballKey}`)
 
       // Upload SHA256
