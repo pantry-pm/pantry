@@ -61,8 +61,8 @@
       "name": "Cascadia Code",
       "kind": "font",
       "latest": "2407.24",
-      "published": null,
-      "needsUpdate": true
+      "published": "2407.24",
+      "needsUpdate": false
     },
     {
       "domain": "cleanshot.com",
@@ -125,8 +125,8 @@
       "name": "Fira Code",
       "kind": "font",
       "latest": "6.2",
-      "published": null,
-      "needsUpdate": true
+      "published": "6.2",
+      "needsUpdate": false
     },
     {
       "domain": "firefox.org",
@@ -157,8 +157,8 @@
       "name": "Hack",
       "kind": "font",
       "latest": "3.003",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.003",
+      "needsUpdate": false
     },
     {
       "domain": "handbrake.fr",
@@ -197,8 +197,8 @@
       "name": "Inter",
       "kind": "font",
       "latest": "4.1",
-      "published": null,
-      "needsUpdate": true
+      "published": "4.1",
+      "needsUpdate": false
     },
     {
       "domain": "iterm2.com",
@@ -213,16 +213,16 @@
       "name": "JetBrains Mono",
       "kind": "font",
       "latest": "2.304",
-      "published": null,
-      "needsUpdate": true
+      "published": "2.304",
+      "needsUpdate": false
     },
     {
       "domain": "jetbrains-mono-nerd-font",
       "name": "JetBrainsMono Nerd Font",
       "kind": "font",
       "latest": "3.4.0",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.4.0",
+      "needsUpdate": false
     },
     {
       "domain": "karabiner-elements.pqrs.org",
@@ -293,8 +293,8 @@
       "name": "MesloLG Nerd Font",
       "kind": "font",
       "latest": "3.4.0",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.4.0",
+      "needsUpdate": false
     },
     {
       "domain": "monitorcontrol.app",
