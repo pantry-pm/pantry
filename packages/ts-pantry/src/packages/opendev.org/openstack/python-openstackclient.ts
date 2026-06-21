@@ -44,7 +44,6 @@ export const opendevorgopenstackpythonopenstackclientPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opendev.org/openstack/python-openstackclient' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opendev.org/openstack/python-openstackclient -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opendev.org/openstack/python-openstackclient' as const,
   /**
   * Executable programs provided by this package.

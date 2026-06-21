@@ -44,7 +44,6 @@ export const vanitygenplusplusPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/10gic/vanitygen-plusplus' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/10gic/vanitygen-plusplus -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/10gic/vanitygen-plusplus' as const,
   /**
   * Executable programs provided by this package.

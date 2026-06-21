@@ -42,7 +42,6 @@ export const geuzorggl2psPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install geuz.org/gl2ps' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +geuz.org/gl2ps -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install geuz.org/gl2ps' as const,
   programs: [] as const,
   companions: [] as const,

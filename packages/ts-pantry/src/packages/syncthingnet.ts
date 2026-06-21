@@ -45,7 +45,6 @@ export const syncthingnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install syncthing.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +syncthing.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install syncthing.net' as const,
   /**
   * Executable programs provided by this package.

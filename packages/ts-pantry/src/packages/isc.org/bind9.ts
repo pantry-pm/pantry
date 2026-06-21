@@ -44,7 +44,6 @@ export const iscorgbind9Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install isc.org/bind9' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +isc.org/bind9 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install isc.org/bind9' as const,
   /**
   * Executable programs provided by this package.

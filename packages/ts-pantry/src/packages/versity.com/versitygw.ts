@@ -45,7 +45,6 @@ export const versitycomversitygwPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install versity.com/versitygw' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +versity.com/versitygw -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install versity.com/versitygw' as const,
   /**
   * Executable programs provided by this package.

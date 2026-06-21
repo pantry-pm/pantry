@@ -45,7 +45,6 @@ export const arduinogithubioarduinocliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install arduino.github.io/arduino-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +arduino.github.io/arduino-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install arduino.github.io/arduino-cli' as const,
   /**
   * Executable programs provided by this package.

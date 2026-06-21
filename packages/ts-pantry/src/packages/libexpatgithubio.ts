@@ -44,7 +44,6 @@ export const libexpatgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libexpat.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libexpat.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libexpat.github.io' as const,
   /**
   * Executable programs provided by this package.

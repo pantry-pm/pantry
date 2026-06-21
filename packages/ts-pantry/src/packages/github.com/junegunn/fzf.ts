@@ -45,7 +45,6 @@ export const fzfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/junegunn/fzf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/junegunn/fzf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/junegunn/fzf' as const,
   /**
   * Executable programs provided by this package.

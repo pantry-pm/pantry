@@ -44,7 +44,6 @@ export const nakPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/fiatjaf/nak' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/fiatjaf/nak -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/fiatjaf/nak' as const,
   /**
   * Executable programs provided by this package.

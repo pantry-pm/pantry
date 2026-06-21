@@ -40,11 +40,6 @@ export interface PkgxPackage {
    */
   installCommand: string
   /**
-   * Command to install this package using pkgx
-   * @example sh <(curl https://pkgx.sh) +domain -- $SHELL -i
-   */
-  pkgxInstallCommand: string
-  /**
    * Command to install this package using pantry
    * @example pantry install domain
    */

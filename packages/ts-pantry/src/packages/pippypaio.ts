@@ -46,7 +46,6 @@ export const pippypaioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pip.pypa.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pip.pypa.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pip.pypa.io' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const gnuorglibtasn1Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/libtasn1' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/libtasn1 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/libtasn1' as const,
   /**
   * Executable programs provided by this package.

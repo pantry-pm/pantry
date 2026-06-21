@@ -46,7 +46,6 @@ export const pypaiohatchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pypa.io/hatch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pypa.io/hatch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pypa.io/hatch' as const,
   /**
   * Executable programs provided by this package.

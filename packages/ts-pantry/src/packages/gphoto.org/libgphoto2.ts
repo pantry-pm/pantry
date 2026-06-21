@@ -46,7 +46,6 @@ export const gphotoorglibgphoto2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gphoto.org/libgphoto2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gphoto.org/libgphoto2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gphoto.org/libgphoto2' as const,
   /**
   * Executable programs provided by this package.

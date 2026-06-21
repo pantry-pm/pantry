@@ -46,7 +46,6 @@ export const postgrestorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install postgrest.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +postgrest.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install postgrest.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const stedolangithubiojqPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install stedolan.github.io/jq' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +stedolan.github.io/jq -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install stedolan.github.io/jq' as const,
   /**
   * Executable programs provided by this package.

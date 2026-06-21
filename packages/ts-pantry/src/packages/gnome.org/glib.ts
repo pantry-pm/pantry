@@ -46,7 +46,6 @@ export const gnomeorgglibPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/glib' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/glib -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/glib' as const,
   /**
   * Executable programs provided by this package.

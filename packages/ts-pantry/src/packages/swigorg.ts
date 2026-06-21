@@ -45,7 +45,6 @@ export const swigorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install swig.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +swig.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install swig.org' as const,
   /**
   * Executable programs provided by this package.

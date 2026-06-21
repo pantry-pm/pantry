@@ -41,7 +41,6 @@ export const jugitfzjuelichdemlzlibcerfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jugit.fz-juelich.de/mlz/libcerf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jugit.fz-juelich.de/mlz/libcerf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jugit.fz-juelich.de/mlz/libcerf' as const,
   programs: [] as const,
   companions: [] as const,

@@ -43,7 +43,6 @@ export const markupsafepalletsprojectscomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install markupsafe.palletsprojects.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +markupsafe.palletsprojects.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install markupsafe.palletsprojects.com' as const,
   programs: [] as const,
   companions: [] as const,

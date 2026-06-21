@@ -46,7 +46,6 @@ export const blackPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/psf/black' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/psf/black -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/psf/black' as const,
   /**
   * Executable programs provided by this package.

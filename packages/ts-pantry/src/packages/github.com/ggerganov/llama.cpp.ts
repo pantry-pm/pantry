@@ -44,7 +44,6 @@ export const llamacppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ggerganov/llama.cpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ggerganov/llama.cpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ggerganov/llama.cpp' as const,
   /**
   * Executable programs provided by this package.

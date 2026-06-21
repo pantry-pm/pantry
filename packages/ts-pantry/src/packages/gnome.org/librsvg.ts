@@ -46,7 +46,6 @@ export const gnomeorglibrsvgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/librsvg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/librsvg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/librsvg' as const,
   /**
   * Executable programs provided by this package.

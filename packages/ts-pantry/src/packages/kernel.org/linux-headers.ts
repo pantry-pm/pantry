@@ -40,7 +40,6 @@ export const kernelorglinuxheadersPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kernel.org/linux-headers' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kernel.org/linux-headers -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kernel.org/linux-headers' as const,
   programs: [] as const,
   companions: [] as const,

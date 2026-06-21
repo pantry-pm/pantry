@@ -43,7 +43,6 @@ export const phcwinnerargon2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/P-H-C/phc-winner-argon2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/P-H-C/phc-winner-argon2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/P-H-C/phc-winner-argon2' as const,
   /**
   * Executable programs provided by this package.

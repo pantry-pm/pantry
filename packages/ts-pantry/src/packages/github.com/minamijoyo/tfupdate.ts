@@ -44,7 +44,6 @@ export const tfupdatePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/minamijoyo/tfupdate' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/minamijoyo/tfupdate -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/minamijoyo/tfupdate' as const,
   /**
   * Executable programs provided by this package.

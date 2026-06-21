@@ -42,7 +42,6 @@ export const gnuorggcclibgompPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gcc/libgomp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gcc/libgomp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gcc/libgomp' as const,
   programs: [] as const,
   companions: [] as const,

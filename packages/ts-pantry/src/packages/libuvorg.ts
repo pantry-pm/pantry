@@ -43,7 +43,6 @@ export const libuvorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libuv.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libuv.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libuv.org' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const mcmcjagssourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mcmc-jags.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mcmc-jags.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mcmc-jags.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

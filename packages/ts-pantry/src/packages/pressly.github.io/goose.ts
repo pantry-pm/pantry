@@ -45,7 +45,6 @@ export const presslygithubiogoosePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pressly.github.io/goose' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pressly.github.io/goose -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pressly.github.io/goose' as const,
   /**
   * Executable programs provided by this package.

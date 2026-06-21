@@ -45,7 +45,6 @@ export const streebogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/adegtyarev/streebog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/adegtyarev/streebog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/adegtyarev/streebog' as const,
   /**
   * Executable programs provided by this package.

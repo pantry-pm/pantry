@@ -45,7 +45,6 @@ export const giflibsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install giflib.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +giflib.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install giflib.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

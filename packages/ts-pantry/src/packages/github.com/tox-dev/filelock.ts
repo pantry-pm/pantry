@@ -43,7 +43,6 @@ export const filelockPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/tox-dev/filelock' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/tox-dev/filelock -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/tox-dev/filelock' as const,
   programs: [] as const,
   companions: [] as const,

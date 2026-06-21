@@ -44,7 +44,6 @@ export const dockercleanPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ZZROTDesign/docker-clean' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ZZROTDesign/docker-clean -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ZZROTDesign/docker-clean' as const,
   /**
   * Executable programs provided by this package.

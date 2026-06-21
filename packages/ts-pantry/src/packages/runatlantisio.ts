@@ -45,7 +45,6 @@ export const runatlantisioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install runatlantis.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +runatlantis.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install runatlantis.io' as const,
   /**
   * Executable programs provided by this package.

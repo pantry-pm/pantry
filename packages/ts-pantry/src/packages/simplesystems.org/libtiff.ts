@@ -45,7 +45,6 @@ export const simplesystemsorglibtiffPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install simplesystems.org/libtiff' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +simplesystems.org/libtiff -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install simplesystems.org/libtiff' as const,
   /**
   * Executable programs provided by this package.

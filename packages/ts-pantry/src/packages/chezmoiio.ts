@@ -45,7 +45,6 @@ export const chezmoiioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install chezmoi.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +chezmoi.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install chezmoi.io' as const,
   /**
   * Executable programs provided by this package.

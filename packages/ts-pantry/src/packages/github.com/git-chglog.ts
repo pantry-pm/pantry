@@ -45,7 +45,6 @@ export const gitchglogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/git-chglog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/git-chglog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/git-chglog' as const,
   /**
   * Executable programs provided by this package.

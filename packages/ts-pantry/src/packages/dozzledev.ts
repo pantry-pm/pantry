@@ -45,7 +45,6 @@ export const dozzledevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dozzle.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dozzle.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dozzle.dev' as const,
   /**
   * Executable programs provided by this package.

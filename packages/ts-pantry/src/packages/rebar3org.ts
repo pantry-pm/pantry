@@ -45,7 +45,6 @@ export const rebar3orgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rebar3.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rebar3.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rebar3.org' as const,
   /**
   * Executable programs provided by this package.

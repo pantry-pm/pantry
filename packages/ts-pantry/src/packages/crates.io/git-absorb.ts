@@ -45,7 +45,6 @@ export const cratesiogitabsorbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/git-absorb' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/git-absorb -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/git-absorb' as const,
   /**
   * Executable programs provided by this package.

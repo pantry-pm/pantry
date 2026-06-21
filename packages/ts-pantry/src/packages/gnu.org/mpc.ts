@@ -41,7 +41,6 @@ export const gnuorgmpcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/mpc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/mpc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/mpc' as const,
   programs: [] as const,
   companions: [] as const,

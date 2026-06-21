@@ -50,7 +50,6 @@ export const cmakePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cmake.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cmake.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cmake.org' as const,
   /**
   * Executable programs provided by this package.

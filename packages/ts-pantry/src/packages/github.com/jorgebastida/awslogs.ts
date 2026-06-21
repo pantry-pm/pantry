@@ -45,7 +45,6 @@ export const awslogsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jorgebastida/awslogs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jorgebastida/awslogs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jorgebastida/awslogs' as const,
   /**
   * Executable programs provided by this package.

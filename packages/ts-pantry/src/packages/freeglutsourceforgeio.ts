@@ -44,7 +44,6 @@ export const freeglutsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freeglut.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freeglut.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freeglut.sourceforge.io' as const,
   programs: [] as const,
   companions: [] as const,

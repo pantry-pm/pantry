@@ -45,7 +45,6 @@ export const squawkhqcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install squawkhq.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +squawkhq.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install squawkhq.com' as const,
   /**
   * Executable programs provided by this package.

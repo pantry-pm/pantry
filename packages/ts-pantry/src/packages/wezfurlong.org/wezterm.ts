@@ -45,7 +45,6 @@ export const wezfurlongorgweztermPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wezfurlong.org/wezterm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wezfurlong.org/wezterm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wezfurlong.org/wezterm' as const,
   /**
   * Executable programs provided by this package.

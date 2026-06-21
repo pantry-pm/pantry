@@ -45,7 +45,6 @@ export const precommitcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pre-commit.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pre-commit.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pre-commit.com' as const,
   /**
   * Executable programs provided by this package.

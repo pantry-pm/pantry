@@ -44,7 +44,6 @@ export const saerasoftcomcaesiumPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install saerasoft.com/caesium' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +saerasoft.com/caesium -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install saerasoft.com/caesium' as const,
   /**
   * Executable programs provided by this package.

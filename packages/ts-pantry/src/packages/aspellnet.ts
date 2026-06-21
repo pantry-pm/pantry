@@ -45,7 +45,6 @@ export const aspellnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aspell.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aspell.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aspell.net' as const,
   /**
   * Executable programs provided by this package.

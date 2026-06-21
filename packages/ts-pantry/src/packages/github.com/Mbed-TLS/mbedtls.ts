@@ -45,7 +45,6 @@ export const mbedtlsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Mbed-TLS/mbedtls' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Mbed-TLS/mbedtls -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Mbed-TLS/mbedtls' as const,
   /**
   * Executable programs provided by this package.

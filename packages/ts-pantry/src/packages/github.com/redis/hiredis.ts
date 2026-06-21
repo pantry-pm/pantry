@@ -41,7 +41,6 @@ export const hiredisPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/redis/hiredis' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/redis/hiredis -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/redis/hiredis' as const,
   programs: [] as const,
   companions: [] as const,

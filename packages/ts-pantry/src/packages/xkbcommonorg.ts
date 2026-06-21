@@ -46,7 +46,6 @@ export const xkbcommonorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xkbcommon.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xkbcommon.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xkbcommon.org' as const,
   /**
   * Executable programs provided by this package.

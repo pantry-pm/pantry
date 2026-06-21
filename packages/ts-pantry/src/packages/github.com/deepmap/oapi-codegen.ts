@@ -42,7 +42,6 @@ export const oapicodegenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/deepmap/oapi-codegen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/deepmap/oapi-codegen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/deepmap/oapi-codegen' as const,
   programs: [] as const,
   companions: [] as const,

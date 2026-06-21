@@ -45,7 +45,6 @@ export const flitpypaioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install flit.pypa.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +flit.pypa.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install flit.pypa.io' as const,
   /**
   * Executable programs provided by this package.

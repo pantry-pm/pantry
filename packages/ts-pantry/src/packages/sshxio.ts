@@ -45,7 +45,6 @@ export const sshxioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sshx.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sshx.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sshx.io' as const,
   /**
   * Executable programs provided by this package.

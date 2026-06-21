@@ -43,7 +43,6 @@ export const gflagsgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gflags.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gflags.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gflags.github.io' as const,
   programs: [] as const,
   companions: [] as const,

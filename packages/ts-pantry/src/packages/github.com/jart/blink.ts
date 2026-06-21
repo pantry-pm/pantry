@@ -44,7 +44,6 @@ export const blinkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jart/blink' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jart/blink -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jart/blink' as const,
   /**
   * Executable programs provided by this package.

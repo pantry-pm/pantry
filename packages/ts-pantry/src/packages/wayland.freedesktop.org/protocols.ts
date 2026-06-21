@@ -41,7 +41,6 @@ export const waylandfreedesktoporgprotocolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wayland.freedesktop.org/protocols' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wayland.freedesktop.org/protocols -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wayland.freedesktop.org/protocols' as const,
   programs: [] as const,
   companions: [] as const,

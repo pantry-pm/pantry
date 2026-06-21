@@ -45,7 +45,6 @@ export const sqlcdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sqlc.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sqlc.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sqlc.dev' as const,
   /**
   * Executable programs provided by this package.

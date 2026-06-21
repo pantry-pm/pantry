@@ -45,7 +45,6 @@ export const nushellshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nushell.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nushell.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nushell.sh' as const,
   /**
   * Executable programs provided by this package.

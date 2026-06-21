@@ -44,7 +44,6 @@ export const databrickscomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install databricks.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +databricks.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install databricks.com' as const,
   /**
   * Executable programs provided by this package.

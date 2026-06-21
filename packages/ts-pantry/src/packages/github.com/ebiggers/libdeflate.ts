@@ -44,7 +44,6 @@ export const libdeflatePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ebiggers/libdeflate' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ebiggers/libdeflate -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ebiggers/libdeflate' as const,
   /**
   * Executable programs provided by this package.

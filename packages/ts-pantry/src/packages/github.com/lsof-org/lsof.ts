@@ -43,7 +43,6 @@ export const lsofPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/lsof-org/lsof' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/lsof-org/lsof -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/lsof-org/lsof' as const,
   /**
   * Executable programs provided by this package.

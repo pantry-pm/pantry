@@ -44,7 +44,6 @@ export const gklibPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/KarypisLab/GKlib' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/KarypisLab/GKlib -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/KarypisLab/GKlib' as const,
   /**
   * Executable programs provided by this package.

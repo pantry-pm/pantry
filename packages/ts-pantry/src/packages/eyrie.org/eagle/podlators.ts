@@ -45,7 +45,6 @@ export const eyrieorgeaglepodlatorsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install eyrie.org/eagle/podlators' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +eyrie.org/eagle/podlators -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install eyrie.org/eagle/podlators' as const,
   /**
   * Executable programs provided by this package.

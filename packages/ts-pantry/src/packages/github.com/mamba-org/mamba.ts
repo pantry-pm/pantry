@@ -45,7 +45,6 @@ export const mambaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mamba-org/mamba' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mamba-org/mamba -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mamba-org/mamba' as const,
   /**
   * Executable programs provided by this package.

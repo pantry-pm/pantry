@@ -41,7 +41,6 @@ export const xorgapplewmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/applewm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/applewm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/applewm' as const,
   programs: [] as const,
   companions: [] as const,

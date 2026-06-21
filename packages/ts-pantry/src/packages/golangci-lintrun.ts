@@ -45,7 +45,6 @@ export const golangcilintrunPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install golangci-lint.run' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +golangci-lint.run -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install golangci-lint.run' as const,
   /**
   * Executable programs provided by this package.

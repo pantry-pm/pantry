@@ -44,7 +44,6 @@ export const fnaxnagithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fna-xna.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fna-xna.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fna-xna.github.io' as const,
   programs: [] as const,
   companions: [] as const,

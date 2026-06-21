@@ -44,7 +44,6 @@ export const trezoragentPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/romanz/trezor-agent' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/romanz/trezor-agent -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/romanz/trezor-agent' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const openaicomcodexPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openai.com/codex' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openai.com/codex -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openai.com/codex' as const,
   /**
   * Executable programs provided by this package.

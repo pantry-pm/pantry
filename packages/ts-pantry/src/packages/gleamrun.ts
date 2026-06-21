@@ -44,7 +44,6 @@ export const gleamrunPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gleam.run' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gleam.run -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gleam.run' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const gnuorgautomakePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/automake' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/automake -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/automake' as const,
   /**
   * Executable programs provided by this package.

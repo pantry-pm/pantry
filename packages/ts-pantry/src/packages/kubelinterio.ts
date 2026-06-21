@@ -45,7 +45,6 @@ export const kubelinterioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubelinter.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubelinter.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubelinter.io' as const,
   /**
   * Executable programs provided by this package.

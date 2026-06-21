@@ -44,7 +44,6 @@ export const getmoneroorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install getmonero.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +getmonero.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install getmonero.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const nginxorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nginx.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nginx.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nginx.org' as const,
   /**
   * Executable programs provided by this package.

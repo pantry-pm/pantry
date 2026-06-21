@@ -44,7 +44,6 @@ export const ladderPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/everywall/ladder' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/everywall/ladder -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/everywall/ladder' as const,
   /**
   * Executable programs provided by this package.

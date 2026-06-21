@@ -44,7 +44,6 @@ export const justsystemsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install just.systems' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +just.systems -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install just.systems' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const seaweedfscomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install seaweedfs.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +seaweedfs.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install seaweedfs.com' as const,
   /**
   * Executable programs provided by this package.

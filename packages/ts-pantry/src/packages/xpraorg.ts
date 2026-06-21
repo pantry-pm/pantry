@@ -45,7 +45,6 @@ export const xpraorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xpra.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xpra.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xpra.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const cligithubcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cli.github.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cli.github.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cli.github.com' as const,
   /**
   * Executable programs provided by this package.

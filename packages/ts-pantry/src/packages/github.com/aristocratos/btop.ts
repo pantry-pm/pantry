@@ -45,7 +45,6 @@ export const btopPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/aristocratos/btop' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/aristocratos/btop -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/aristocratos/btop' as const,
   /**
   * Executable programs provided by this package.

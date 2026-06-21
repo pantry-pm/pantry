@@ -44,7 +44,6 @@ export const migratePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/golang-migrate/migrate' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/golang-migrate/migrate -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/golang-migrate/migrate' as const,
   /**
   * Executable programs provided by this package.

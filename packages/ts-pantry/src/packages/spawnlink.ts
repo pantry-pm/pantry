@@ -45,7 +45,6 @@ export const spawnlinkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install spawn.link' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +spawn.link -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install spawn.link' as const,
   /**
   * Executable programs provided by this package.

@@ -41,7 +41,6 @@ export const elixirlangorgotp27Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install elixir-lang.org/otp-27' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +elixir-lang.org/otp-27 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install elixir-lang.org/otp-27' as const,
   programs: [] as const,
   companions: [] as const,

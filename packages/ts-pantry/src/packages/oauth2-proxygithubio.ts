@@ -45,7 +45,6 @@ export const oauth2proxygithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install oauth2-proxy.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +oauth2-proxy.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install oauth2-proxy.github.io' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const googlecomwebpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/webp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/webp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/webp' as const,
   /**
   * Executable programs provided by this package.

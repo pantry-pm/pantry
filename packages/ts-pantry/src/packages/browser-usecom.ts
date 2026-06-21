@@ -43,7 +43,6 @@ export const browserusecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install browser-use.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +browser-use.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install browser-use.com' as const,
   programs: [] as const,
   companions: [] as const,

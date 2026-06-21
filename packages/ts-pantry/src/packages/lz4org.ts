@@ -44,7 +44,6 @@ export const lz4orgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lz4.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lz4.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lz4.org' as const,
   /**
   * Executable programs provided by this package.

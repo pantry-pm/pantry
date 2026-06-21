@@ -45,7 +45,6 @@ export const scryerplPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install scryer.pl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +scryer.pl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install scryer.pl' as const,
   /**
   * Executable programs provided by this package.

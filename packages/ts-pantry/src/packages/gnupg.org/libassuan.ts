@@ -44,7 +44,6 @@ export const gnupgorglibassuanPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnupg.org/libassuan' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnupg.org/libassuan -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnupg.org/libassuan' as const,
   /**
   * Executable programs provided by this package.

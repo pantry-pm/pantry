@@ -45,7 +45,6 @@ export const earthlydevearthlyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install earthly.dev/earthly' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +earthly.dev/earthly -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install earthly.dev/earthly' as const,
   /**
   * Executable programs provided by this package.

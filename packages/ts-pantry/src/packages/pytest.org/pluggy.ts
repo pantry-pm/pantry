@@ -44,7 +44,6 @@ export const pytestorgpluggyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pytest.org/pluggy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pytest.org/pluggy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pytest.org/pluggy' as const,
   programs: [] as const,
   companions: [] as const,

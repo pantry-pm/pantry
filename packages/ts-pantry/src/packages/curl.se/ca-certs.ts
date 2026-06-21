@@ -41,7 +41,6 @@ export const curlsecacertsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install curl.se/ca-certs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +curl.se/ca-certs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install curl.se/ca-certs' as const,
   programs: [] as const,
   companions: [] as const,

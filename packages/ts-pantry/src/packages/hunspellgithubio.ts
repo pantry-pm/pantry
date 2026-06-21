@@ -45,7 +45,6 @@ export const hunspellgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hunspell.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hunspell.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hunspell.github.io' as const,
   /**
   * Executable programs provided by this package.

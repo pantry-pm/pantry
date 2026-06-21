@@ -45,7 +45,6 @@ export const wailsioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wails.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wails.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wails.io' as const,
   /**
   * Executable programs provided by this package.

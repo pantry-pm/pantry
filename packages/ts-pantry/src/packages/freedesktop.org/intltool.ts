@@ -47,7 +47,6 @@ export const freedesktoporgintltoolPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/intltool' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/intltool -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/intltool' as const,
   /**
   * Executable programs provided by this package.

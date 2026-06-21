@@ -46,7 +46,6 @@ export const apacheorghttpdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apache.org/httpd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apache.org/httpd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apache.org/httpd' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const svenstarogithubiogenactPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install svenstaro.github.io/genact' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +svenstaro.github.io/genact -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install svenstaro.github.io/genact' as const,
   /**
   * Executable programs provided by this package.

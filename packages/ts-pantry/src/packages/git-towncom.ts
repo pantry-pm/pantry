@@ -45,7 +45,6 @@ export const gittowncomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git-town.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git-town.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git-town.com' as const,
   /**
   * Executable programs provided by this package.

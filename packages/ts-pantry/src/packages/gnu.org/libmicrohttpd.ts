@@ -42,7 +42,6 @@ export const gnuorglibmicrohttpdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/libmicrohttpd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/libmicrohttpd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/libmicrohttpd' as const,
   programs: [] as const,
   companions: [] as const,

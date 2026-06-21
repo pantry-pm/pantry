@@ -45,7 +45,6 @@ export const savannahnongnuorgattrPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install savannah.nongnu.org/attr' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +savannah.nongnu.org/attr -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install savannah.nongnu.org/attr' as const,
   /**
   * Executable programs provided by this package.

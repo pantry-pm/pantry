@@ -45,7 +45,6 @@ export const atlasgoioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install atlasgo.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +atlasgo.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install atlasgo.io' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const opentofuorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opentofu.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opentofu.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opentofu.org' as const,
   /**
   * Executable programs provided by this package.

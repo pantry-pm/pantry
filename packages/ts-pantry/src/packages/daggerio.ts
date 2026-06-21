@@ -45,7 +45,6 @@ export const daggerioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dagger.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dagger.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dagger.io' as const,
   /**
   * Executable programs provided by this package.

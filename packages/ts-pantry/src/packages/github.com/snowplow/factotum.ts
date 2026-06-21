@@ -45,7 +45,6 @@ export const factotumPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/snowplow/factotum' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/snowplow/factotum -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/snowplow/factotum' as const,
   /**
   * Executable programs provided by this package.

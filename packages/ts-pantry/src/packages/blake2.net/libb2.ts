@@ -42,7 +42,6 @@ export const blake2netlibb2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install blake2.net/libb2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +blake2.net/libb2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install blake2.net/libb2' as const,
   programs: [] as const,
   companions: [] as const,

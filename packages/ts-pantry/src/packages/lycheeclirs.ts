@@ -45,7 +45,6 @@ export const lycheeclirsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lychee.cli.rs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lychee.cli.rs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lychee.cli.rs' as const,
   /**
   * Executable programs provided by this package.

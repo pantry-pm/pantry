@@ -46,7 +46,6 @@ export const projenioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install projen.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +projen.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install projen.io' as const,
   /**
   * Executable programs provided by this package.

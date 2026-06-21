@@ -44,7 +44,6 @@ export const fullstorycomgrpcurlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fullstory.com/grpcurl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fullstory.com/grpcurl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fullstory.com/grpcurl' as const,
   /**
   * Executable programs provided by this package.

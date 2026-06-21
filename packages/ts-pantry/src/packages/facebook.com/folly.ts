@@ -43,7 +43,6 @@ export const facebookcomfollyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install facebook.com/folly' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +facebook.com/folly -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install facebook.com/folly' as const,
   programs: [] as const,
   companions: [] as const,

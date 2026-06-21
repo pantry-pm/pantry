@@ -44,7 +44,6 @@ export const trianglePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/esimov/triangle' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/esimov/triangle -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/esimov/triangle' as const,
   /**
   * Executable programs provided by this package.

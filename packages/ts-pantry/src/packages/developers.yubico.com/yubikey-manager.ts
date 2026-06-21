@@ -46,7 +46,6 @@ export const developersyubicocomyubikeymanagerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install developers.yubico.com/yubikey-manager' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +developers.yubico.com/yubikey-manager -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install developers.yubico.com/yubikey-manager' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const developer1passwordcom1passwordcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install developer.1password.com/1password-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +developer.1password.com/1password-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install developer.1password.com/1password-cli' as const,
   /**
   * Executable programs provided by this package.

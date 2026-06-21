@@ -45,7 +45,6 @@ export const hashicorpcomconsultemplatePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hashicorp.com/consul-template' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hashicorp.com/consul-template -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hashicorp.com/consul-template' as const,
   /**
   * Executable programs provided by this package.

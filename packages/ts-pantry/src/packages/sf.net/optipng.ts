@@ -45,7 +45,6 @@ export const sfnetoptipngPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sf.net/optipng' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sf.net/optipng -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sf.net/optipng' as const,
   /**
   * Executable programs provided by this package.

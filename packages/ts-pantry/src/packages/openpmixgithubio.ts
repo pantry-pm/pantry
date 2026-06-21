@@ -46,7 +46,6 @@ export const openpmixgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openpmix.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openpmix.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openpmix.github.io' as const,
   /**
   * Executable programs provided by this package.

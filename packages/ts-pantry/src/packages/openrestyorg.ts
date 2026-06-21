@@ -46,7 +46,6 @@ export const openrestyorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openresty.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openresty.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openresty.org' as const,
   /**
   * Executable programs provided by this package.

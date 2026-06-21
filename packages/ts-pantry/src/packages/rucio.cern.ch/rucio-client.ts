@@ -46,7 +46,6 @@ export const ruciocernchrucioclientPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rucio.cern.ch/rucio-client' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rucio.cern.ch/rucio-client -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rucio.cern.ch/rucio-client' as const,
   /**
   * Executable programs provided by this package.

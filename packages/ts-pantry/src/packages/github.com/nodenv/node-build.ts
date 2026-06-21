@@ -45,7 +45,6 @@ export const nodebuildPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nodenv/node-build' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nodenv/node-build -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nodenv/node-build' as const,
   /**
   * Executable programs provided by this package.

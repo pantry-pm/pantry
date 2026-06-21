@@ -46,7 +46,6 @@ export const cairographicsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cairographics.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cairographics.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cairographics.org' as const,
   /**
   * Executable programs provided by this package.

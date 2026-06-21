@@ -45,7 +45,6 @@ export const ipfstechPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ipfs.tech' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ipfs.tech -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ipfs.tech' as const,
   /**
   * Executable programs provided by this package.

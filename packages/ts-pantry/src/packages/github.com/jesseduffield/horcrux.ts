@@ -44,7 +44,6 @@ export const horcruxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jesseduffield/horcrux' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jesseduffield/horcrux -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jesseduffield/horcrux' as const,
   /**
   * Executable programs provided by this package.

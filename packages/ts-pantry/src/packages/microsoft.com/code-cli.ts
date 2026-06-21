@@ -45,7 +45,6 @@ export const microsoftcomcodecliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microsoft.com/code-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microsoft.com/code-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microsoft.com/code-cli' as const,
   /**
   * Executable programs provided by this package.

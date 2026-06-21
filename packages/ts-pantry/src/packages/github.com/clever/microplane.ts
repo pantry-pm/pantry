@@ -46,7 +46,6 @@ export const microplanePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/clever/microplane' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/clever/microplane -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/clever/microplane' as const,
   /**
   * Executable programs provided by this package.

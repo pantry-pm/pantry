@@ -44,7 +44,6 @@ export const yjPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/sclevine/yj' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/sclevine/yj -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/sclevine/yj' as const,
   /**
   * Executable programs provided by this package.

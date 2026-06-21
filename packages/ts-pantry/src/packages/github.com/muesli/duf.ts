@@ -44,7 +44,6 @@ export const dufPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/muesli/duf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/muesli/duf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/muesli/duf' as const,
   /**
   * Executable programs provided by this package.

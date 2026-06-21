@@ -45,7 +45,6 @@ export const orhundevgpgtuiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install orhun.dev/gpg-tui' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +orhun.dev/gpg-tui -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install orhun.dev/gpg-tui' as const,
   /**
   * Executable programs provided by this package.

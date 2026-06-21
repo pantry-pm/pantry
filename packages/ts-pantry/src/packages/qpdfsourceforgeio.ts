@@ -46,7 +46,6 @@ export const qpdfsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install qpdf.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +qpdf.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install qpdf.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const pycparserPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/eliben/pycparser' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/eliben/pycparser -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/eliben/pycparser' as const,
   programs: [] as const,
   companions: [] as const,

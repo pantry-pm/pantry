@@ -45,7 +45,6 @@ export const gstreamerfreedesktoporgorcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gstreamer.freedesktop.org/orc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gstreamer.freedesktop.org/orc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gstreamer.freedesktop.org/orc' as const,
   /**
   * Executable programs provided by this package.

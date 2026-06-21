@@ -46,7 +46,6 @@ export const macvimorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install macvim.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +macvim.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install macvim.org' as const,
   /**
   * Executable programs provided by this package.

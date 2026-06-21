@@ -44,7 +44,6 @@ export const snykiodriftctlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install snyk.io/driftctl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +snyk.io/driftctl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install snyk.io/driftctl' as const,
   /**
   * Executable programs provided by this package.

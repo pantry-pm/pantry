@@ -45,7 +45,6 @@ export const kubecmcloudPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubecm.cloud' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubecm.cloud -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubecm.cloud' as const,
   /**
   * Executable programs provided by this package.

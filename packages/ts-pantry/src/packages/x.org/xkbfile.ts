@@ -42,7 +42,6 @@ export const xorgxkbfilePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xkbfile' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xkbfile -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xkbfile' as const,
   programs: [] as const,
   companions: [] as const,

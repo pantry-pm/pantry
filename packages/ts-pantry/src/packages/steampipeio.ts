@@ -45,7 +45,6 @@ export const steampipeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install steampipe.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +steampipe.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install steampipe.io' as const,
   /**
   * Executable programs provided by this package.

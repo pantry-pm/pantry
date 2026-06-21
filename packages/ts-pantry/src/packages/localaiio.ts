@@ -46,7 +46,6 @@ export const localaiioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install localai.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +localai.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install localai.io' as const,
   /**
   * Executable programs provided by this package.

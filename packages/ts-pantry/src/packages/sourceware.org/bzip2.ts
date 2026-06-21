@@ -44,7 +44,6 @@ export const sourcewareorgbzip2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceware.org/bzip2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceware.org/bzip2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceware.org/bzip2' as const,
   /**
   * Executable programs provided by this package.

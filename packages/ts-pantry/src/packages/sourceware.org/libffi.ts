@@ -42,7 +42,6 @@ export const sourcewareorglibffiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceware.org/libffi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceware.org/libffi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceware.org/libffi' as const,
   programs: [] as const,
   companions: [] as const,

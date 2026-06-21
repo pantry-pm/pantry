@@ -46,7 +46,6 @@ export const mariadbcomserverPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mariadb.com/server' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mariadb.com/server -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mariadb.com/server' as const,
   /**
   * Executable programs provided by this package.

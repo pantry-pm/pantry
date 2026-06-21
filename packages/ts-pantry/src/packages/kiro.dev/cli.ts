@@ -43,7 +43,6 @@ export const kirodevcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kiro.dev/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kiro.dev/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kiro.dev/cli' as const,
   /**
   * Executable programs provided by this package.

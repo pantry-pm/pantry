@@ -44,7 +44,6 @@ export const bettercommitsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Everduin94/better-commits' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Everduin94/better-commits -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Everduin94/better-commits' as const,
   /**
   * Executable programs provided by this package.

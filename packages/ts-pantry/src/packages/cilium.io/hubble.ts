@@ -44,7 +44,6 @@ export const ciliumiohubblePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cilium.io/hubble' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cilium.io/hubble -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cilium.io/hubble' as const,
   /**
   * Executable programs provided by this package.

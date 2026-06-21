@@ -46,7 +46,6 @@ export const cythonorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cython.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cython.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cython.org' as const,
   /**
   * Executable programs provided by this package.

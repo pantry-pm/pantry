@@ -45,7 +45,6 @@ export const actPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nektos/act' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nektos/act -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nektos/act' as const,
   /**
   * Executable programs provided by this package.

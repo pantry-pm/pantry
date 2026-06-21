@@ -44,7 +44,6 @@ export const jsonnetorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jsonnet.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jsonnet.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jsonnet.org' as const,
   /**
   * Executable programs provided by this package.

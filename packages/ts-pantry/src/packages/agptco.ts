@@ -45,7 +45,6 @@ export const agptcoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install agpt.co' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +agpt.co -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install agpt.co' as const,
   /**
   * Executable programs provided by this package.

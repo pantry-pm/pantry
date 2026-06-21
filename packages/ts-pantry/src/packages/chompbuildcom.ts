@@ -45,7 +45,6 @@ export const chompbuildcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install chompbuild.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +chompbuild.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install chompbuild.com' as const,
   /**
   * Executable programs provided by this package.

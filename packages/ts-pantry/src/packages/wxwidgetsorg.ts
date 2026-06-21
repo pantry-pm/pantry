@@ -46,7 +46,6 @@ export const wxwidgetsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wxwidgets.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wxwidgets.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wxwidgets.org' as const,
   /**
   * Executable programs provided by this package.

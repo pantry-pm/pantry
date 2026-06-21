@@ -40,7 +40,6 @@ export const xorgpciaccessPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/pciaccess' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/pciaccess -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/pciaccess' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const asciinemaorgaggPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install asciinema.org/agg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +asciinema.org/agg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install asciinema.org/agg' as const,
   /**
   * Executable programs provided by this package.

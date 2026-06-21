@@ -45,7 +45,6 @@ export const filippoioagePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install filippo.io/age' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +filippo.io/age -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install filippo.io/age' as const,
   /**
   * Executable programs provided by this package.

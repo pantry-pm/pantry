@@ -46,7 +46,6 @@ export const tcllangorgexpectPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tcl-lang.org/expect' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tcl-lang.org/expect -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tcl-lang.org/expect' as const,
   /**
   * Executable programs provided by this package.

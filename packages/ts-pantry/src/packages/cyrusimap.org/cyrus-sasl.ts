@@ -41,7 +41,6 @@ export const cyrusimaporgcyrussaslPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cyrusimap.org/cyrus-sasl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cyrusimap.org/cyrus-sasl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cyrusimap.org/cyrus-sasl' as const,
   programs: [] as const,
   companions: [] as const,

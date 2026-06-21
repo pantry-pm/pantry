@@ -43,7 +43,6 @@ export const networkxorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install networkx.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +networkx.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install networkx.org' as const,
   programs: [] as const,
   companions: [] as const,

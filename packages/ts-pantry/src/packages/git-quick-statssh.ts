@@ -45,7 +45,6 @@ export const gitquickstatsshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git-quick-stats.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git-quick-stats.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git-quick-stats.sh' as const,
   /**
   * Executable programs provided by this package.

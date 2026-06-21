@@ -44,7 +44,6 @@ export const gnuorgm4Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/m4' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/m4 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/m4' as const,
   /**
   * Executable programs provided by this package.

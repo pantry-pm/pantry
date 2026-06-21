@@ -43,7 +43,6 @@ export const openexrcomimathPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openexr.com/imath' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openexr.com/imath -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openexr.com/imath' as const,
   programs: [] as const,
   companions: [] as const,

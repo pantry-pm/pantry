@@ -45,7 +45,6 @@ export const microsoftcomdxcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microsoft.com/dxc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microsoft.com/dxc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microsoft.com/dxc' as const,
   /**
   * Executable programs provided by this package.

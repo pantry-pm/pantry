@@ -42,7 +42,6 @@ export const postgresqlorglibpqPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install postgresql.org/libpq' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +postgresql.org/libpq -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install postgresql.org/libpq' as const,
   programs: [] as const,
   companions: [] as const,

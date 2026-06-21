@@ -44,7 +44,6 @@ export const netflixcomvmafPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install netflix.com/vmaf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +netflix.com/vmaf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install netflix.com/vmaf' as const,
   /**
   * Executable programs provided by this package.

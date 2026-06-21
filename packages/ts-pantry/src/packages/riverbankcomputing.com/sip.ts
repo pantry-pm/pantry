@@ -46,7 +46,6 @@ export const riverbankcomputingcomsipPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install riverbankcomputing.com/sip' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +riverbankcomputing.com/sip -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install riverbankcomputing.com/sip' as const,
   /**
   * Executable programs provided by this package.

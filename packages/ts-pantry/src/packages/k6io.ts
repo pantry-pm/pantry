@@ -45,7 +45,6 @@ export const k6ioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install k6.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +k6.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install k6.io' as const,
   /**
   * Executable programs provided by this package.

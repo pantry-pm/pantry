@@ -42,7 +42,6 @@ export const thekelleysorgukdnsmasqPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install thekelleys.org.uk/dnsmasq' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +thekelleys.org.uk/dnsmasq -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install thekelleys.org.uk/dnsmasq' as const,
   /**
   * Executable programs provided by this package.

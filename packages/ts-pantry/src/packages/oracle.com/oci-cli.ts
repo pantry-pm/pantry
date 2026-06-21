@@ -46,7 +46,6 @@ export const oraclecomocicliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install oracle.com/oci-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +oracle.com/oci-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install oracle.com/oci-cli' as const,
   /**
   * Executable programs provided by this package.

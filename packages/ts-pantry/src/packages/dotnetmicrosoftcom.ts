@@ -46,7 +46,6 @@ export const dotnetmicrosoftcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dotnet.microsoft.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dotnet.microsoft.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dotnet.microsoft.com' as const,
   /**
   * Executable programs provided by this package.

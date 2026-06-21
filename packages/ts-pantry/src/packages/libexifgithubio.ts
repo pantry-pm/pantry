@@ -43,7 +43,6 @@ export const libexifgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libexif.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libexif.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libexif.github.io' as const,
   programs: [] as const,
   companions: [] as const,

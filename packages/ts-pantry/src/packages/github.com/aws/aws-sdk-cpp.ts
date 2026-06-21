@@ -43,7 +43,6 @@ export const awssdkcppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/aws/aws-sdk-cpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/aws/aws-sdk-cpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/aws/aws-sdk-cpp' as const,
   programs: [] as const,
   companions: [] as const,

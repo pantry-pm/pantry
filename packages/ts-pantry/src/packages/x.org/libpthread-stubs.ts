@@ -40,7 +40,6 @@ export const xorglibpthreadstubsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/libpthread-stubs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/libpthread-stubs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/libpthread-stubs' as const,
   programs: [] as const,
   companions: [] as const,

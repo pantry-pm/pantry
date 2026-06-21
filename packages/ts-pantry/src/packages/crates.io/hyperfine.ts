@@ -43,7 +43,6 @@ export const cratesiohyperfinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/hyperfine' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/hyperfine -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/hyperfine' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const wilfredmeukdifftasticPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wilfred.me.uk/difftastic' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wilfred.me.uk/difftastic -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wilfred.me.uk/difftastic' as const,
   /**
   * Executable programs provided by this package.

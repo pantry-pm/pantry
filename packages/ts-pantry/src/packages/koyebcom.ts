@@ -44,7 +44,6 @@ export const koyebcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install koyeb.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +koyeb.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install koyeb.com' as const,
   /**
   * Executable programs provided by this package.

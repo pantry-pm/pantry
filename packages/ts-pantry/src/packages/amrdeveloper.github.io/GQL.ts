@@ -46,7 +46,6 @@ export const amrdevelopergithubiogqlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install amrdeveloper.github.io/GQL' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +amrdeveloper.github.io/GQL -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install amrdeveloper.github.io/GQL' as const,
   /**
   * Executable programs provided by this package.

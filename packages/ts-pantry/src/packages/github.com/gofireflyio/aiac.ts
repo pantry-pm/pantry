@@ -44,7 +44,6 @@ export const aiacPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/gofireflyio/aiac' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/gofireflyio/aiac -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/gofireflyio/aiac' as const,
   /**
   * Executable programs provided by this package.

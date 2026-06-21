@@ -46,7 +46,6 @@ export const facebookcomwatchmanPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install facebook.com/watchman' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +facebook.com/watchman -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install facebook.com/watchman' as const,
   /**
   * Executable programs provided by this package.

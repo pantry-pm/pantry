@@ -44,7 +44,6 @@ export const hdfgrouporghdf5Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hdfgroup.org/HDF5' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hdfgroup.org/HDF5 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hdfgroup.org/HDF5' as const,
   /**
   * Executable programs provided by this package.

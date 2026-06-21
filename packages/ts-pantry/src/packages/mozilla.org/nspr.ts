@@ -44,7 +44,6 @@ export const mozillaorgnsprPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mozilla.org/nspr' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mozilla.org/nspr -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mozilla.org/nspr' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const awsamazoncomcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aws.amazon.com/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aws.amazon.com/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aws.amazon.com/cli' as const,
   /**
   * Executable programs provided by this package.

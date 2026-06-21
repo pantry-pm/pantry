@@ -40,7 +40,6 @@ export const gnupgorgnpthPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnupg.org/npth' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnupg.org/npth -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnupg.org/npth' as const,
   programs: [] as const,
   companions: [] as const,

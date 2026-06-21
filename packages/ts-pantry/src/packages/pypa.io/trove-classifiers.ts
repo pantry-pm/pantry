@@ -44,7 +44,6 @@ export const pypaiotroveclassifiersPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pypa.io/trove-classifiers' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pypa.io/trove-classifiers -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pypa.io/trove-classifiers' as const,
   programs: [] as const,
   companions: [] as const,

@@ -40,7 +40,6 @@ export const gnuorglibsigsegvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/libsigsegv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/libsigsegv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/libsigsegv' as const,
   programs: [] as const,
   companions: [] as const,

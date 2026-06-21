@@ -45,7 +45,6 @@ export const circlecicomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install circleci.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +circleci.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install circleci.com' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const sourceforgenetfaacPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceforge.net/faac' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceforge.net/faac -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceforge.net/faac' as const,
   /**
   * Executable programs provided by this package.

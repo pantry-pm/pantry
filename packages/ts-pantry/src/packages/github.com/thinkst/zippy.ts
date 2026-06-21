@@ -44,7 +44,6 @@ export const zippyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/thinkst/zippy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/thinkst/zippy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/thinkst/zippy' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const xtlsgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xtls.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xtls.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xtls.github.io' as const,
   /**
   * Executable programs provided by this package.

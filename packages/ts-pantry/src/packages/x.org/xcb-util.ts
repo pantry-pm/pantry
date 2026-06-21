@@ -41,7 +41,6 @@ export const xorgxcbutilPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xcb-util' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xcb-util -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xcb-util' as const,
   programs: [] as const,
   companions: [] as const,

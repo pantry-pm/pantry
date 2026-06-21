@@ -51,7 +51,6 @@ export const bunPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bun.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bun.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bun.sh' as const,
   /**
   * Executable programs provided by this package.

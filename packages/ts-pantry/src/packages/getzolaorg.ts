@@ -44,7 +44,6 @@ export const getzolaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install getzola.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +getzola.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install getzola.org' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const pyyamlorglibyamlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pyyaml.org/libyaml' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pyyaml.org/libyaml -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pyyaml.org/libyaml' as const,
   programs: [] as const,
   companions: [] as const,

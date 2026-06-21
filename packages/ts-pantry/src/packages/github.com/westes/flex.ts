@@ -44,7 +44,6 @@ export const flexPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/westes/flex' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/westes/flex -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/westes/flex' as const,
   /**
   * Executable programs provided by this package.

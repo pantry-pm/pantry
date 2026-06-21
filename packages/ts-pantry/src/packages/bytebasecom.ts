@@ -46,7 +46,6 @@ export const bytebasecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bytebase.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bytebase.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bytebase.com' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const viaductaiksopsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install viaduct.ai/ksops' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +viaduct.ai/ksops -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install viaduct.ai/ksops' as const,
   /**
   * Executable programs provided by this package.

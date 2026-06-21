@@ -45,7 +45,6 @@ export const langchaincomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install langchain.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +langchain.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install langchain.com' as const,
   /**
   * Executable programs provided by this package.

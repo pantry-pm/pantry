@@ -46,7 +46,6 @@ export const microcksioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microcks.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microcks.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microcks.io' as const,
   /**
   * Executable programs provided by this package.

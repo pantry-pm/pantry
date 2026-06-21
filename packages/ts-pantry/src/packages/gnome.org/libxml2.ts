@@ -46,7 +46,6 @@ export const gnomeorglibxml2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/libxml2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/libxml2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/libxml2' as const,
   /**
   * Executable programs provided by this package.

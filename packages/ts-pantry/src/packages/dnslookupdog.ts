@@ -45,7 +45,6 @@ export const dnslookupdogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dns.lookup.dog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dns.lookup.dog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dns.lookup.dog' as const,
   /**
   * Executable programs provided by this package.

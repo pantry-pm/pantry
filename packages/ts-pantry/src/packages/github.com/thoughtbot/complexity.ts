@@ -44,7 +44,6 @@ export const complexityPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/thoughtbot/complexity' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/thoughtbot/complexity -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/thoughtbot/complexity' as const,
   /**
   * Executable programs provided by this package.

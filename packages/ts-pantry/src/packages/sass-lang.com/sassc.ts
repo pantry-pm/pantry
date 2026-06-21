@@ -45,7 +45,6 @@ export const sasslangcomsasscPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sass-lang.com/sassc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sass-lang.com/sassc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sass-lang.com/sassc' as const,
   /**
   * Executable programs provided by this package.

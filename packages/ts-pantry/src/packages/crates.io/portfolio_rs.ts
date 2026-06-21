@@ -44,7 +44,6 @@ export const cratesioportfolio_rsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/portfolio_rs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/portfolio_rs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/portfolio_rs' as const,
   /**
   * Executable programs provided by this package.

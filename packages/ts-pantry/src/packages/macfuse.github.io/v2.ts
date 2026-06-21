@@ -41,7 +41,6 @@ export const macfusegithubiov2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install macfuse.github.io/v2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +macfuse.github.io/v2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install macfuse.github.io/v2' as const,
   programs: [] as const,
   companions: [] as const,

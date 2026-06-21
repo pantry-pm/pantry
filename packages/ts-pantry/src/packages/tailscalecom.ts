@@ -43,7 +43,6 @@ export const tailscalecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tailscale.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tailscale.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tailscale.com' as const,
   /**
   * Executable programs provided by this package.

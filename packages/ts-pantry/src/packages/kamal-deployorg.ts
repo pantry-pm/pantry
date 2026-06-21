@@ -44,7 +44,6 @@ export const kamaldeployorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kamal-deploy.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kamal-deploy.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kamal-deploy.org' as const,
   /**
   * Executable programs provided by this package.

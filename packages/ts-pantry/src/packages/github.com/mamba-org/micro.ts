@@ -45,7 +45,6 @@ export const microPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mamba-org/micro' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mamba-org/micro -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mamba-org/micro' as const,
   /**
   * Executable programs provided by this package.

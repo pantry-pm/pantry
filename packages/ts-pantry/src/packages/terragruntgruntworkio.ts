@@ -46,7 +46,6 @@ export const terragruntgruntworkioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install terragrunt.gruntwork.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +terragrunt.gruntwork.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install terragrunt.gruntwork.io' as const,
   /**
   * Executable programs provided by this package.

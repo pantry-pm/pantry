@@ -44,7 +44,6 @@ export const sasqwatchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/fabio42/sasqwatch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/fabio42/sasqwatch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/fabio42/sasqwatch' as const,
   /**
   * Executable programs provided by this package.

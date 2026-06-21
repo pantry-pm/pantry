@@ -42,7 +42,6 @@ export const zlibnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install zlib.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +zlib.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install zlib.net' as const,
   programs: [] as const,
   companions: [] as const,

@@ -50,7 +50,6 @@ export const kubectlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubernetes.io/kubectl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubernetes.io/kubectl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubernetes.io/kubectl' as const,
   /**
   * Executable programs provided by this package.

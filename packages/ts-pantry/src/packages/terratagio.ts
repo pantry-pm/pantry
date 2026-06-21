@@ -46,7 +46,6 @@ export const terratagioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install terratag.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +terratag.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install terratag.io' as const,
   /**
   * Executable programs provided by this package.

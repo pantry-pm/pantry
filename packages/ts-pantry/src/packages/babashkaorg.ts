@@ -43,7 +43,6 @@ export const babashkaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install babashka.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +babashka.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install babashka.org' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const skhdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/koekeishiya/skhd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/koekeishiya/skhd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/koekeishiya/skhd' as const,
   /**
   * Executable programs provided by this package.

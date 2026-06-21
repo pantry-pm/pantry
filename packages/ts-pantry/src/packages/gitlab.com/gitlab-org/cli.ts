@@ -45,7 +45,6 @@ export const gitlabcomgitlaborgcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitlab.com/gitlab-org/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitlab.com/gitlab-org/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitlab.com/gitlab-org/cli' as const,
   /**
   * Executable programs provided by this package.

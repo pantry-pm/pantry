@@ -44,7 +44,6 @@ export const opendevorggitreviewPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opendev.org/git-review' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opendev.org/git-review -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opendev.org/git-review' as const,
   /**
   * Executable programs provided by this package.

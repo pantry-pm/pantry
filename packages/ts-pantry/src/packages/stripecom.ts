@@ -45,7 +45,6 @@ export const stripecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install stripe.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +stripe.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install stripe.com' as const,
   /**
   * Executable programs provided by this package.

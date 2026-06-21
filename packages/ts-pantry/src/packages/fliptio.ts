@@ -45,7 +45,6 @@ export const fliptioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install flipt.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +flipt.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install flipt.io' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const argoprojgithubiocdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install argoproj.github.io/cd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +argoproj.github.io/cd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install argoproj.github.io/cd' as const,
   /**
   * Executable programs provided by this package.

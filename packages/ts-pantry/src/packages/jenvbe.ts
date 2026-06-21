@@ -44,7 +44,6 @@ export const jenvbePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jenv.be' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jenv.be -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jenv.be' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const librdkafkaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/confluentinc/librdkafka' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/confluentinc/librdkafka -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/confluentinc/librdkafka' as const,
   programs: [] as const,
   companions: [] as const,

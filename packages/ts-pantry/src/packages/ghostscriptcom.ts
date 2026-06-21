@@ -45,7 +45,6 @@ export const ghostscriptcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ghostscript.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ghostscript.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ghostscript.com' as const,
   /**
   * Executable programs provided by this package.

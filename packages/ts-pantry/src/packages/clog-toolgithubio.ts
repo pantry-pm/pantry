@@ -44,7 +44,6 @@ export const clogtoolgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install clog-tool.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +clog-tool.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install clog-tool.github.io' as const,
   /**
   * Executable programs provided by this package.

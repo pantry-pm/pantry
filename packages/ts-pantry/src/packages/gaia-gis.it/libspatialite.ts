@@ -42,7 +42,6 @@ export const gaiagisitlibspatialitePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gaia-gis.it/libspatialite' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gaia-gis.it/libspatialite -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gaia-gis.it/libspatialite' as const,
   programs: [] as const,
   companions: [] as const,

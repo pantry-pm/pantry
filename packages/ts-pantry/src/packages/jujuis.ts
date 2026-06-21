@@ -45,7 +45,6 @@ export const jujuisPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install juju.is' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +juju.is -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install juju.is' as const,
   /**
   * Executable programs provided by this package.

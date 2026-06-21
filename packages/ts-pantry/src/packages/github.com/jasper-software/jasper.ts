@@ -46,7 +46,6 @@ export const jasperPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jasper-software/jasper' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jasper-software/jasper -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jasper-software/jasper' as const,
   /**
   * Executable programs provided by this package.

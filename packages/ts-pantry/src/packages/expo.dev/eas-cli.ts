@@ -46,7 +46,6 @@ export const expodeveascliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install expo.dev/eas-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +expo.dev/eas-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install expo.dev/eas-cli' as const,
   /**
   * Executable programs provided by this package.

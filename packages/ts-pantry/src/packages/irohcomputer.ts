@@ -45,7 +45,6 @@ export const irohcomputerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install iroh.computer' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +iroh.computer -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install iroh.computer' as const,
   /**
   * Executable programs provided by this package.

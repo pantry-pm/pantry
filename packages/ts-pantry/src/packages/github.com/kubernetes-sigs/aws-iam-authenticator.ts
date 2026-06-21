@@ -44,7 +44,6 @@ export const awsiamauthenticatorPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/kubernetes-sigs/aws-iam-authenticator' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/kubernetes-sigs/aws-iam-authenticator -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/kubernetes-sigs/aws-iam-authenticator' as const,
   /**
   * Executable programs provided by this package.

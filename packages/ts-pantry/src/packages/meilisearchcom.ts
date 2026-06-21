@@ -39,7 +39,6 @@ export const meilisearchcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install meilisearch.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +meilisearch.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install meilisearch.com' as const,
   /**
   * Executable programs provided by this package.

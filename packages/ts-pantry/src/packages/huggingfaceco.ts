@@ -46,7 +46,6 @@ export const huggingfacecoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install huggingface.co' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +huggingface.co -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install huggingface.co' as const,
   /**
   * Executable programs provided by this package.

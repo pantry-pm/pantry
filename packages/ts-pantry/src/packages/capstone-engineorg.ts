@@ -45,7 +45,6 @@ export const capstoneengineorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install capstone-engine.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +capstone-engine.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install capstone-engine.org' as const,
   /**
   * Executable programs provided by this package.

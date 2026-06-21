@@ -46,7 +46,6 @@ export const elizaosgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install elizaOS.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +elizaOS.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install elizaOS.github.io' as const,
   /**
   * Executable programs provided by this package.

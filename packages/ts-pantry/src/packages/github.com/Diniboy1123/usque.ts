@@ -44,7 +44,6 @@ export const usquePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Diniboy1123/usque' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Diniboy1123/usque -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Diniboy1123/usque' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const plantumlcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install plantuml.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +plantuml.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install plantuml.com' as const,
   /**
   * Executable programs provided by this package.

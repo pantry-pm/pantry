@@ -43,7 +43,6 @@ export const savannahnongnuorgaclPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install savannah.nongnu.org/acl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +savannah.nongnu.org/acl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install savannah.nongnu.org/acl' as const,
   /**
   * Executable programs provided by this package.

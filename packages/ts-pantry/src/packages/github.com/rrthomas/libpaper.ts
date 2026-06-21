@@ -44,7 +44,6 @@ export const libpaperPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/rrthomas/libpaper' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/rrthomas/libpaper -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/rrthomas/libpaper' as const,
   /**
   * Executable programs provided by this package.

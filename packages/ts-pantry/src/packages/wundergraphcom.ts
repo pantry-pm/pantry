@@ -45,7 +45,6 @@ export const wundergraphcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wundergraph.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wundergraph.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wundergraph.com' as const,
   /**
   * Executable programs provided by this package.

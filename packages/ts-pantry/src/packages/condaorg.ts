@@ -44,7 +44,6 @@ export const condaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install conda.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +conda.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install conda.org' as const,
   /**
   * Executable programs provided by this package.

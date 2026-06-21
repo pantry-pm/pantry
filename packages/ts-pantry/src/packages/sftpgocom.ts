@@ -45,7 +45,6 @@ export const sftpgocomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sftpgo.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sftpgo.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sftpgo.com' as const,
   /**
   * Executable programs provided by this package.

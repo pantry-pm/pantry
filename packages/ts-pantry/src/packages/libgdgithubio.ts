@@ -46,7 +46,6 @@ export const libgdgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libgd.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libgd.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libgd.github.io' as const,
   /**
   * Executable programs provided by this package.

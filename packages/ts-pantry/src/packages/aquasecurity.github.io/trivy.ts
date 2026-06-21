@@ -46,7 +46,6 @@ export const aquasecuritygithubiotrivyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aquasecurity.github.io/trivy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aquasecurity.github.io/trivy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aquasecurity.github.io/trivy' as const,
   /**
   * Executable programs provided by this package.

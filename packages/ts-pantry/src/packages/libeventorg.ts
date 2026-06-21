@@ -44,7 +44,6 @@ export const libeventorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libevent.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libevent.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libevent.org' as const,
   programs: [] as const,
   companions: [] as const,

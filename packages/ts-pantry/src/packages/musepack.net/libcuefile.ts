@@ -41,7 +41,6 @@ export const musepacknetlibcuefilePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install musepack.net/libcuefile' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +musepack.net/libcuefile -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install musepack.net/libcuefile' as const,
   programs: [] as const,
   companions: [] as const,

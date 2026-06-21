@@ -43,7 +43,6 @@ export const permitiocedaragentPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install permit.io/cedar-agent' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +permit.io/cedar-agent -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install permit.io/cedar-agent' as const,
   /**
   * Executable programs provided by this package.

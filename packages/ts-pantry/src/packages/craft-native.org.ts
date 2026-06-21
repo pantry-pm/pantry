@@ -45,7 +45,6 @@ export const craftPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install craft-native.org' as const,
-  pkgxInstallCommand: '' as const,
   pantryInstallCommand: 'pantry install craft-native.org' as const,
   /**
   * Executable programs provided by this package.

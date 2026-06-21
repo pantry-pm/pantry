@@ -43,7 +43,6 @@ export const hadronsorglibmdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hadrons.org/libmd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hadrons.org/libmd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hadrons.org/libmd' as const,
   programs: [] as const,
   companions: [] as const,

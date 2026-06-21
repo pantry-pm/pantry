@@ -45,7 +45,6 @@ export const nomadprojectioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nomadproject.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nomadproject.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nomadproject.io' as const,
   /**
   * Executable programs provided by this package.

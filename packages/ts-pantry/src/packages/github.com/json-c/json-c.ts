@@ -43,7 +43,6 @@ export const jsoncPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/json-c/json-c' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/json-c/json-c -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/json-c/json-c' as const,
   programs: [] as const,
   companions: [] as const,

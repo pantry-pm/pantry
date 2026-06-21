@@ -43,7 +43,6 @@ export const cratesiocomrakPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/comrak' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/comrak -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/comrak' as const,
   /**
   * Executable programs provided by this package.

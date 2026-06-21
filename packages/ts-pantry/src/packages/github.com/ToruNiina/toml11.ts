@@ -41,7 +41,6 @@ export const toml11Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ToruNiina/toml11' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ToruNiina/toml11 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ToruNiina/toml11' as const,
   programs: [] as const,
   companions: [] as const,

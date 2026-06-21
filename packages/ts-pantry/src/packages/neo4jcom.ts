@@ -16,7 +16,6 @@ export const neo4jcomPackage = {
   homepageUrl: 'https://neo4j.com' as const,
   githubUrl: 'https://github.com/neo4j/neo4j' as const,
   installCommand: 'pantry install neo4j.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +neo4j.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install neo4j.com' as const,
   programs: [
     'neo4j',

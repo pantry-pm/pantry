@@ -46,7 +46,6 @@ export const fishshellcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fishshell.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fishshell.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fishshell.com' as const,
   /**
   * Executable programs provided by this package.

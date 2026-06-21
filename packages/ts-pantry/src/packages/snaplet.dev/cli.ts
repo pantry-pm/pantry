@@ -44,7 +44,6 @@ export const snapletdevcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install snaplet.dev/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +snaplet.dev/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install snaplet.dev/cli' as const,
   /**
   * Executable programs provided by this package.

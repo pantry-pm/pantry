@@ -43,7 +43,6 @@ export const netliborglapackPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install netlib.org/lapack' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +netlib.org/lapack -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install netlib.org/lapack' as const,
   programs: [] as const,
   companions: [] as const,

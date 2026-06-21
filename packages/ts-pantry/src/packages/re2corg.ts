@@ -45,7 +45,6 @@ export const re2corgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install re2c.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +re2c.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install re2c.org' as const,
   /**
   * Executable programs provided by this package.

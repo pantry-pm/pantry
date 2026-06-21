@@ -45,7 +45,6 @@ export const rsyncsambaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rsync.samba.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rsync.samba.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rsync.samba.org' as const,
   /**
   * Executable programs provided by this package.

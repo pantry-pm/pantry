@@ -46,7 +46,6 @@ export const angulardevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install angular.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +angular.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install angular.dev' as const,
   /**
   * Executable programs provided by this package.

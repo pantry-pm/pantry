@@ -44,7 +44,6 @@ export const awswhoamigolangPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/benkehoe/aws-whoami-golang' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/benkehoe/aws-whoami-golang -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/benkehoe/aws-whoami-golang' as const,
   /**
   * Executable programs provided by this package.

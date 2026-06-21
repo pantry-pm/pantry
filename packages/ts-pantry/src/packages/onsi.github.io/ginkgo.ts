@@ -45,7 +45,6 @@ export const onsigithubioginkgoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install onsi.github.io/ginkgo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +onsi.github.io/ginkgo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install onsi.github.io/ginkgo' as const,
   /**
   * Executable programs provided by this package.

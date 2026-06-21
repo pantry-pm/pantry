@@ -46,7 +46,6 @@ export const nanoeditororgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nano-editor.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nano-editor.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nano-editor.org' as const,
   /**
   * Executable programs provided by this package.

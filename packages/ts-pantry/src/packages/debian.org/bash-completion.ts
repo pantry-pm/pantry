@@ -41,7 +41,6 @@ export const debianorgbashcompletionPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install debian.org/bash-completion' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +debian.org/bash-completion -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install debian.org/bash-completion' as const,
   programs: [] as const,
   companions: [] as const,

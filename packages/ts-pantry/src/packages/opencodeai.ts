@@ -44,7 +44,6 @@ export const opencodeaiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opencode.ai' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opencode.ai -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opencode.ai' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const ryeastralshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rye.astral.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rye.astral.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rye.astral.sh' as const,
   /**
   * Executable programs provided by this package.

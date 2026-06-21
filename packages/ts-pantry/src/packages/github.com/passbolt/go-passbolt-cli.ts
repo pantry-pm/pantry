@@ -45,7 +45,6 @@ export const gopassboltcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/passbolt/go-passbolt-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/passbolt/go-passbolt-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/passbolt/go-passbolt-cli' as const,
   /**
   * Executable programs provided by this package.

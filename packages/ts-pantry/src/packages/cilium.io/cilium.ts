@@ -45,7 +45,6 @@ export const ciliumiociliumPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cilium.io/cilium' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cilium.io/cilium -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cilium.io/cilium' as const,
   /**
   * Executable programs provided by this package.

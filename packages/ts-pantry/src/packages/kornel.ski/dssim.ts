@@ -44,7 +44,6 @@ export const kornelskidssimPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kornel.ski/dssim' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kornel.ski/dssim -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kornel.ski/dssim' as const,
   /**
   * Executable programs provided by this package.

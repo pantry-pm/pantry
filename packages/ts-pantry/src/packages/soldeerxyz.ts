@@ -44,7 +44,6 @@ export const soldeerxyzPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install soldeer.xyz' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +soldeer.xyz -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install soldeer.xyz' as const,
   /**
   * Executable programs provided by this package.

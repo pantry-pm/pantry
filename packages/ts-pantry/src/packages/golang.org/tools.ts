@@ -43,7 +43,6 @@ export const golangorgtoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install golang.org/tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +golang.org/tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install golang.org/tools' as const,
   /**
   * Executable programs provided by this package.

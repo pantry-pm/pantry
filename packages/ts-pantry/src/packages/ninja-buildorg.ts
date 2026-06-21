@@ -45,7 +45,6 @@ export const ninjabuildorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ninja-build.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ninja-build.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ninja-build.org' as const,
   /**
   * Executable programs provided by this package.

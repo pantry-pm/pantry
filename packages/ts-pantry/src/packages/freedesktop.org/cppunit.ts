@@ -44,7 +44,6 @@ export const freedesktoporgcppunitPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/cppunit' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/cppunit -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/cppunit' as const,
   /**
   * Executable programs provided by this package.

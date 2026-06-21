@@ -41,7 +41,6 @@ export const musepacknetlibreplaygainPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install musepack.net/libreplaygain' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +musepack.net/libreplaygain -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install musepack.net/libreplaygain' as const,
   programs: [] as const,
   companions: [] as const,

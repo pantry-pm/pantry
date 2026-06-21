@@ -46,7 +46,6 @@ export const mailpitaxllentorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mailpit.axllent.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mailpit.axllent.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mailpit.axllent.org' as const,
   /**
   * Executable programs provided by this package.

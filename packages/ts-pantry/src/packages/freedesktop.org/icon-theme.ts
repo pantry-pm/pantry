@@ -41,7 +41,6 @@ export const freedesktoporgiconthemePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/icon-theme' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/icon-theme -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/icon-theme' as const,
   programs: [] as const,
   companions: [] as const,

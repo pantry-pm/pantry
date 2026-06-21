@@ -42,7 +42,6 @@ export const googlegithubiosnappyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.github.io/snappy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.github.io/snappy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.github.io/snappy' as const,
   programs: [] as const,
   companions: [] as const,

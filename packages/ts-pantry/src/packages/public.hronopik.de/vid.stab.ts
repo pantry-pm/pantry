@@ -43,7 +43,6 @@ export const publichronopikdevidstabPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install public.hronopik.de/vid.stab' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +public.hronopik.de/vid.stab -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install public.hronopik.de/vid.stab' as const,
   programs: [] as const,
   companions: [] as const,

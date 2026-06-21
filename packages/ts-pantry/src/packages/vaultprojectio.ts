@@ -45,7 +45,6 @@ export const vaultprojectioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vaultproject.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vaultproject.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vaultproject.io' as const,
   /**
   * Executable programs provided by this package.

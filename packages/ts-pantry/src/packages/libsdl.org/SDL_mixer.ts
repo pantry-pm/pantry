@@ -41,7 +41,6 @@ export const libsdlorgsdl_mixerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libsdl.org/SDL_mixer' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libsdl.org/SDL_mixer -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libsdl.org/SDL_mixer' as const,
   programs: [] as const,
   companions: [] as const,

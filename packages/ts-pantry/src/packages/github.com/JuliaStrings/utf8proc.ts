@@ -42,7 +42,6 @@ export const utf8procPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/JuliaStrings/utf8proc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/JuliaStrings/utf8proc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/JuliaStrings/utf8proc' as const,
   programs: [] as const,
   companions: [] as const,

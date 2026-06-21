@@ -46,7 +46,6 @@ export const unboundnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install unbound.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +unbound.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install unbound.net' as const,
   /**
   * Executable programs provided by this package.

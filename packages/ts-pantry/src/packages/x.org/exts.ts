@@ -41,7 +41,6 @@ export const xorgextsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/exts' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/exts -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/exts' as const,
   programs: [] as const,
   companions: [] as const,

@@ -46,7 +46,6 @@ export const ollamaaiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ollama.ai' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ollama.ai -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ollama.ai' as const,
   /**
   * Executable programs provided by this package.

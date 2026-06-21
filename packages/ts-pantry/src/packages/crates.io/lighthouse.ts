@@ -46,7 +46,6 @@ export const cratesiolighthousePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/lighthouse' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/lighthouse -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/lighthouse' as const,
   /**
   * Executable programs provided by this package.

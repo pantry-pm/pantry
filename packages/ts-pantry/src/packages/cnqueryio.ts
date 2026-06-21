@@ -45,7 +45,6 @@ export const cnqueryioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cnquery.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cnquery.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cnquery.io' as const,
   /**
   * Executable programs provided by this package.

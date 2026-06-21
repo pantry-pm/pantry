@@ -46,7 +46,6 @@ export const netpbmsourceforgenetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install netpbm.sourceforge.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +netpbm.sourceforge.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install netpbm.sourceforge.net' as const,
   /**
   * Executable programs provided by this package.

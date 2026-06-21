@@ -44,7 +44,6 @@ export const amazonecrcredentialhelperPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/awslabs/amazon-ecr-credential-helper' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/awslabs/amazon-ecr-credential-helper -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/awslabs/amazon-ecr-credential-helper' as const,
   /**
   * Executable programs provided by this package.

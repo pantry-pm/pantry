@@ -43,7 +43,6 @@ export const libsampleratePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/libsndfile/libsamplerate' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/libsndfile/libsamplerate -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/libsndfile/libsamplerate' as const,
   programs: [] as const,
   companions: [] as const,

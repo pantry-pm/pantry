@@ -46,7 +46,6 @@ export const breakfastquaycomrubberbandPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install breakfastquay.com/rubberband' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +breakfastquay.com/rubberband -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install breakfastquay.com/rubberband' as const,
   /**
   * Executable programs provided by this package.

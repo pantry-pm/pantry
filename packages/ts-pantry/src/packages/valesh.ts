@@ -45,7 +45,6 @@ export const valeshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vale.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vale.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vale.sh' as const,
   /**
   * Executable programs provided by this package.

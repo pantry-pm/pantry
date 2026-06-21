@@ -45,7 +45,6 @@ export const practicalschemenetgauchePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install practical-scheme.net/gauche' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +practical-scheme.net/gauche -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install practical-scheme.net/gauche' as const,
   /**
   * Executable programs provided by this package.

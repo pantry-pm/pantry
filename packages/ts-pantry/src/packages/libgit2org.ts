@@ -46,7 +46,6 @@ export const libgit2orgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libgit2.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libgit2.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libgit2.org' as const,
   /**
   * Executable programs provided by this package.

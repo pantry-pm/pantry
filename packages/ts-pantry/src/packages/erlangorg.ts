@@ -46,7 +46,6 @@ export const erlangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install erlang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +erlang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install erlang.org' as const,
   /**
   * Executable programs provided by this package.

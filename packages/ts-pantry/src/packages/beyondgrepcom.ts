@@ -45,7 +45,6 @@ export const beyondgrepcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install beyondgrep.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +beyondgrep.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install beyondgrep.com' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const dhruvkbdevplsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dhruvkb.dev/pls' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dhruvkb.dev/pls -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dhruvkb.dev/pls' as const,
   /**
   * Executable programs provided by this package.

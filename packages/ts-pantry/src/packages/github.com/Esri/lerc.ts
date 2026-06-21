@@ -43,7 +43,6 @@ export const lercPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Esri/lerc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Esri/lerc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Esri/lerc' as const,
   programs: [] as const,
   companions: [] as const,

@@ -43,7 +43,6 @@ export const libsdlorgsdl_imagePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libsdl.org/SDL_image' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libsdl.org/SDL_image -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libsdl.org/SDL_image' as const,
   programs: [] as const,
   companions: [] as const,

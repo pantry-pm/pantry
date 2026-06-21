@@ -45,7 +45,6 @@ export const gnuorgbinutilsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/binutils' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/binutils -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/binutils' as const,
   /**
   * Executable programs provided by this package.

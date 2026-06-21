@@ -45,7 +45,6 @@ export const ladspaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ladspa.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ladspa.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ladspa.org' as const,
   /**
   * Executable programs provided by this package.

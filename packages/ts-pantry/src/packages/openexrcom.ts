@@ -46,7 +46,6 @@ export const openexrcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openexr.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openexr.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openexr.com' as const,
   /**
   * Executable programs provided by this package.

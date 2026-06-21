@@ -41,7 +41,6 @@ export const thrysoeedkeditlinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install thrysoee.dk/editline' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +thrysoee.dk/editline -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install thrysoee.dk/editline' as const,
   programs: [] as const,
   companions: [] as const,

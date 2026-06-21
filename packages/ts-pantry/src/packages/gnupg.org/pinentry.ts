@@ -45,7 +45,6 @@ export const gnupgorgpinentryPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnupg.org/pinentry' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnupg.org/pinentry -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnupg.org/pinentry' as const,
   /**
   * Executable programs provided by this package.

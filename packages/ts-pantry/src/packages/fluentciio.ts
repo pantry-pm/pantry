@@ -45,7 +45,6 @@ export const fluentciioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fluentci.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fluentci.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fluentci.io' as const,
   /**
   * Executable programs provided by this package.

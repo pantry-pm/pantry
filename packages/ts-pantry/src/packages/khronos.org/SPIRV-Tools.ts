@@ -44,7 +44,6 @@ export const khronosorgspirvtoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install khronos.org/SPIRV-Tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +khronos.org/SPIRV-Tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install khronos.org/SPIRV-Tools' as const,
   /**
   * Executable programs provided by this package.

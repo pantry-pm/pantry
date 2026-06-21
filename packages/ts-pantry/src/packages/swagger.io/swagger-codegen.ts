@@ -46,7 +46,6 @@ export const swaggerioswaggercodegenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install swagger.io/swagger-codegen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +swagger.io/swagger-codegen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install swagger.io/swagger-codegen' as const,
   /**
   * Executable programs provided by this package.

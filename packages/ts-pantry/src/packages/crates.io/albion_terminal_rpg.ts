@@ -43,7 +43,6 @@ export const cratesioalbion_terminal_rpgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/albion_terminal_rpg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/albion_terminal_rpg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/albion_terminal_rpg' as const,
   /**
   * Executable programs provided by this package.

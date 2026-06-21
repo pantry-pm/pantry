@@ -46,7 +46,6 @@ export const filippoioyubikeyagentPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install filippo.io/yubikey-agent' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +filippo.io/yubikey-agent -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install filippo.io/yubikey-agent' as const,
   /**
   * Executable programs provided by this package.

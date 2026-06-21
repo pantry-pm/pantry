@@ -44,7 +44,6 @@ export const neofetchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/dylanaraps/neofetch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/dylanaraps/neofetch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/dylanaraps/neofetch' as const,
   /**
   * Executable programs provided by this package.

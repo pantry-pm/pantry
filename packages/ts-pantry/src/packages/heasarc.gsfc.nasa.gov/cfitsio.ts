@@ -42,7 +42,6 @@ export const heasarcgsfcnasagovcfitsioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install heasarc.gsfc.nasa.gov/cfitsio' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +heasarc.gsfc.nasa.gov/cfitsio -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install heasarc.gsfc.nasa.gov/cfitsio' as const,
   programs: [] as const,
   companions: [] as const,

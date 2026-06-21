@@ -46,7 +46,6 @@ export const gnomeorgvalaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/vala' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/vala -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/vala' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const packerioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install packer.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +packer.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install packer.io' as const,
   /**
   * Executable programs provided by this package.

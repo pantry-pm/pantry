@@ -45,7 +45,6 @@ export const pygmentsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pygments.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pygments.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pygments.org' as const,
   /**
   * Executable programs provided by this package.

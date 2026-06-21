@@ -45,7 +45,6 @@ export const protocgenjsonschemaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/chrusty/protoc-gen-jsonschema' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/chrusty/protoc-gen-jsonschema -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/chrusty/protoc-gen-jsonschema' as const,
   /**
   * Executable programs provided by this package.

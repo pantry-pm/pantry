@@ -45,7 +45,6 @@ export const supabasecomcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install supabase.com/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +supabase.com/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install supabase.com/cli' as const,
   /**
   * Executable programs provided by this package.

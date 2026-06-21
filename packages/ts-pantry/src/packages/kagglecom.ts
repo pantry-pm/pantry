@@ -45,7 +45,6 @@ export const kagglecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kaggle.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kaggle.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kaggle.com' as const,
   /**
   * Executable programs provided by this package.

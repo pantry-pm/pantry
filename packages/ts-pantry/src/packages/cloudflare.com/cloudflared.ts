@@ -45,7 +45,6 @@ export const cloudflarecomcloudflaredPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cloudflare.com/cloudflared' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cloudflare.com/cloudflared -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cloudflare.com/cloudflared' as const,
   /**
   * Executable programs provided by this package.

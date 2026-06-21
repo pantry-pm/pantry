@@ -44,7 +44,6 @@ export const divePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/wagoodman/dive' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/wagoodman/dive -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/wagoodman/dive' as const,
   /**
   * Executable programs provided by this package.

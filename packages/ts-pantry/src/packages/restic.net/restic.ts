@@ -45,7 +45,6 @@ export const resticnetresticPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install restic.net/restic' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +restic.net/restic -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install restic.net/restic' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const sqlboilerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/volatiletech/sqlboiler' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/volatiletech/sqlboiler -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/volatiletech/sqlboiler' as const,
   /**
   * Executable programs provided by this package.

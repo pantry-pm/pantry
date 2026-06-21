@@ -46,7 +46,6 @@ export const symfonycomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install symfony.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +symfony.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install symfony.com' as const,
   /**
   * Executable programs provided by this package.

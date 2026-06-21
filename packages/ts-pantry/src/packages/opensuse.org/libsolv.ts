@@ -42,7 +42,6 @@ export const opensuseorglibsolvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opensuse.org/libsolv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opensuse.org/libsolv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opensuse.org/libsolv' as const,
   programs: [] as const,
   companions: [] as const,

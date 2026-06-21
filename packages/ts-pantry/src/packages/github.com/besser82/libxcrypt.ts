@@ -42,7 +42,6 @@ export const libxcryptPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/besser82/libxcrypt' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/besser82/libxcrypt -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/besser82/libxcrypt' as const,
   programs: [] as const,
   companions: [] as const,

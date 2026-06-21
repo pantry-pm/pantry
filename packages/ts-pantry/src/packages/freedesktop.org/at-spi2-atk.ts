@@ -42,7 +42,6 @@ export const freedesktoporgatspi2atkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/at-spi2-atk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/at-spi2-atk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/at-spi2-atk' as const,
   programs: [] as const,
   companions: [] as const,

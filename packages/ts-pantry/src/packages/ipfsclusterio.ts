@@ -43,7 +43,6 @@ export const ipfsclusterioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ipfscluster.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ipfscluster.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ipfscluster.io' as const,
   /**
   * Executable programs provided by this package.

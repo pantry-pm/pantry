@@ -46,7 +46,6 @@ export const mitmproxyorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mitmproxy.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mitmproxy.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mitmproxy.org' as const,
   /**
   * Executable programs provided by this package.

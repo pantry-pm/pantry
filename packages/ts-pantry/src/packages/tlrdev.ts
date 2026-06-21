@@ -45,7 +45,6 @@ export const tlrdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tlr.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tlr.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tlr.dev' as const,
   /**
   * Executable programs provided by this package.

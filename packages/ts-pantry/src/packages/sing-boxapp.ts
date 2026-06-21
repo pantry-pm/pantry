@@ -45,7 +45,6 @@ export const singboxappPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sing-box.app' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sing-box.app -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sing-box.app' as const,
   /**
   * Executable programs provided by this package.

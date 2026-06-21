@@ -43,7 +43,6 @@ export const nullclawPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nullclaw/nullclaw' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nullclaw/nullclaw -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nullclaw/nullclaw' as const,
   /**
   * Executable programs provided by this package.

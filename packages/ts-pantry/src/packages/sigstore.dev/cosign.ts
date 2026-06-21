@@ -44,7 +44,6 @@ export const sigstoredevcosignPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sigstore.dev/cosign' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sigstore.dev/cosign -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sigstore.dev/cosign' as const,
   /**
   * Executable programs provided by this package.

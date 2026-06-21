@@ -45,7 +45,6 @@ export const idleberggithubiokrampusPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install idleberg.github.io/krampus' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +idleberg.github.io/krampus -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install idleberg.github.io/krampus' as const,
   /**
   * Executable programs provided by this package.

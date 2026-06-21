@@ -45,7 +45,6 @@ export const graphitesilorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install graphite.sil.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +graphite.sil.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install graphite.sil.org' as const,
   /**
   * Executable programs provided by this package.

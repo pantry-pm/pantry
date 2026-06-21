@@ -44,7 +44,6 @@ export const gvisortapvsockPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/containers/gvisor-tap-vsock' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/containers/gvisor-tap-vsock -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/containers/gvisor-tap-vsock' as const,
   /**
   * Executable programs provided by this package.

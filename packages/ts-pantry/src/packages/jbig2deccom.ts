@@ -45,7 +45,6 @@ export const jbig2deccomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jbig2dec.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jbig2dec.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jbig2dec.com' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const tickerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/achannarasappa/ticker' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/achannarasappa/ticker -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/achannarasappa/ticker' as const,
   /**
   * Executable programs provided by this package.

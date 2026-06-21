@@ -46,7 +46,6 @@ export const kubectxdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubectx.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubectx.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubectx.dev' as const,
   /**
   * Executable programs provided by this package.

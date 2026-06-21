@@ -46,7 +46,6 @@ export const agwanamegitcryptPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install agwa.name/git-crypt' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +agwa.name/git-crypt -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install agwa.name/git-crypt' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const applecomremote_cmdsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apple.com/remote_cmds' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apple.com/remote_cmds -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apple.com/remote_cmds' as const,
   /**
   * Executable programs provided by this package.

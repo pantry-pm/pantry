@@ -42,7 +42,6 @@ export const awsamazoncomqPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aws.amazon.com/q' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aws.amazon.com/q -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aws.amazon.com/q' as const,
   /**
   * Executable programs provided by this package.

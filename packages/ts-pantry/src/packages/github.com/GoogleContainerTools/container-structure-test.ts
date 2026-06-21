@@ -44,7 +44,6 @@ export const containerstructuretestPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/GoogleContainerTools/container-structure-test' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/GoogleContainerTools/container-structure-test -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/GoogleContainerTools/container-structure-test' as const,
   /**
   * Executable programs provided by this package.

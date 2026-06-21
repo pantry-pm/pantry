@@ -46,7 +46,6 @@ export const laravelcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install laravel.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +laravel.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install laravel.com' as const,
   /**
   * Executable programs provided by this package.

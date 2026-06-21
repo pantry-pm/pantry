@@ -41,7 +41,6 @@ export const rpmorgrpmsequoiaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rpm.org/rpm-sequoia' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rpm.org/rpm-sequoia -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rpm.org/rpm-sequoia' as const,
   programs: [] as const,
   companions: [] as const,

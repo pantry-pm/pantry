@@ -43,7 +43,6 @@ export const cratesiomaskPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/mask' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/mask -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/mask' as const,
   /**
   * Executable programs provided by this package.

@@ -86,7 +86,7 @@ pub fn devFindProjectRootCommand(allocator: std.mem.Allocator, start_dir: []cons
 
 /// GitHub repo we ship releases from — must match `upgrade.zig`'s REPO so the
 /// "update available" notice and `pantry upgrade` agree on the source.
-const UPDATE_REPO = "home-lang/pantry";
+const UPDATE_REPO = "pantry-pm/pantry";
 
 /// Dev: check-updates command — detect a newer pantry release (best-effort,
 /// silent). Fired backgrounded+disowned by the shell integration once per

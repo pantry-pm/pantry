@@ -44,7 +44,6 @@ export const mergiraforgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mergiraf.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mergiraf.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mergiraf.org' as const,
   /**
   * Executable programs provided by this package.

@@ -42,7 +42,6 @@ export const khronosorgopenclheadersPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install khronos.org/opencl-headers' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +khronos.org/opencl-headers -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install khronos.org/opencl-headers' as const,
   programs: [] as const,
   companions: [] as const,

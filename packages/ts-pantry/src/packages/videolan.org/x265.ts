@@ -45,7 +45,6 @@ export const videolanorgx265Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install videolan.org/x265' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +videolan.org/x265 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install videolan.org/x265' as const,
   /**
   * Executable programs provided by this package.

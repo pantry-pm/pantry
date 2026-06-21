@@ -41,7 +41,6 @@ export const apacheorgaprPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apache.org/apr' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apache.org/apr -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apache.org/apr' as const,
   programs: [] as const,
   companions: [] as const,

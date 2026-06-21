@@ -43,7 +43,6 @@ export const cratesiotoastPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/toast' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/toast -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/toast' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const pocketbaseioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pocketbase.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pocketbase.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pocketbase.io' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const otssnipttcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ots.sniptt.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ots.sniptt.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ots.sniptt.com' as const,
   /**
   * Executable programs provided by this package.

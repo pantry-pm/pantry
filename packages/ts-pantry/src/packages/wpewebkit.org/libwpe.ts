@@ -43,7 +43,6 @@ export const wpewebkitorglibwpePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wpewebkit.org/libwpe' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wpewebkit.org/libwpe -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wpewebkit.org/libwpe' as const,
   programs: [] as const,
   companions: [] as const,

@@ -44,7 +44,6 @@ export const buildtoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/bazelbuild/buildtools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/bazelbuild/buildtools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/bazelbuild/buildtools' as const,
   /**
   * Executable programs provided by this package.

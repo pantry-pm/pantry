@@ -44,7 +44,6 @@ export const internetarchivePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jjjake/internetarchive' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jjjake/internetarchive -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jjjake/internetarchive' as const,
   /**
   * Executable programs provided by this package.

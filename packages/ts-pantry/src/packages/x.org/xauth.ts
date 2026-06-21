@@ -46,7 +46,6 @@ export const xorgxauthPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xauth' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xauth -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xauth' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const radicleorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install radicle.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +radicle.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install radicle.org' as const,
   /**
   * Executable programs provided by this package.

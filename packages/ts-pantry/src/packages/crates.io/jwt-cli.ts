@@ -44,7 +44,6 @@ export const cratesiojwtcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/jwt-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/jwt-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/jwt-cli' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const thoughtworksgithubiotalismanPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install thoughtworks.github.io/talisman' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +thoughtworks.github.io/talisman -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install thoughtworks.github.io/talisman' as const,
   /**
   * Executable programs provided by this package.

@@ -42,7 +42,6 @@ export const gnuorgcoreutilsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/coreutils' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/coreutils -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/coreutils' as const,
   /**
   * Executable programs provided by this package.

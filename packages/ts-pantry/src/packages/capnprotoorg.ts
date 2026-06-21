@@ -44,7 +44,6 @@ export const capnprotoorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install capnproto.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +capnproto.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install capnproto.org' as const,
   /**
   * Executable programs provided by this package.

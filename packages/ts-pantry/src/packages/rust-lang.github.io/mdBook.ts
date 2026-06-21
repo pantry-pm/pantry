@@ -44,7 +44,6 @@ export const rustlanggithubiomdbookPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rust-lang.github.io/mdBook' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rust-lang.github.io/mdBook -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rust-lang.github.io/mdBook' as const,
   /**
   * Executable programs provided by this package.

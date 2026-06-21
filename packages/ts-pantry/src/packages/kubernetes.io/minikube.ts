@@ -46,7 +46,6 @@ export const kubernetesiominikubePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubernetes.io/minikube' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubernetes.io/minikube -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubernetes.io/minikube' as const,
   /**
   * Executable programs provided by this package.

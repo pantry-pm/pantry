@@ -42,7 +42,6 @@ export const leethomasongithubiotinyxml2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install leethomason.github.io/tinyxml2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +leethomason.github.io/tinyxml2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install leethomason.github.io/tinyxml2' as const,
   programs: [] as const,
   companions: [] as const,

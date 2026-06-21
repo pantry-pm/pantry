@@ -44,7 +44,6 @@ export const blowfishPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/matoszz/blowfish' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/matoszz/blowfish -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/matoszz/blowfish' as const,
   /**
   * Executable programs provided by this package.

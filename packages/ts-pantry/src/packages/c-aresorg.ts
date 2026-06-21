@@ -41,7 +41,6 @@ export const caresorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install c-ares.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +c-ares.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install c-ares.org' as const,
   programs: [] as const,
   companions: [] as const,

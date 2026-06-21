@@ -45,7 +45,6 @@ export const gitlabcomaomediacodecsvtav1Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitlab.com/AOMediaCodec/SVT-AV1' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitlab.com/AOMediaCodec/SVT-AV1 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitlab.com/AOMediaCodec/SVT-AV1' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const gomd2manPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/cpuguy83/go-md2man' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/cpuguy83/go-md2man -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/cpuguy83/go-md2man' as const,
   /**
   * Executable programs provided by this package.

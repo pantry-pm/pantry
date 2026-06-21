@@ -42,7 +42,6 @@ export const codevideolanorgaribb24Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install code.videolan.org/aribb24' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +code.videolan.org/aribb24 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install code.videolan.org/aribb24' as const,
   programs: [] as const,
   companions: [] as const,

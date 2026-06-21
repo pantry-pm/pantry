@@ -45,7 +45,6 @@ export const jfrogcomjfrogcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jfrog.com/jfrog-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jfrog.com/jfrog-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jfrog.com/jfrog-cli' as const,
   /**
   * Executable programs provided by this package.

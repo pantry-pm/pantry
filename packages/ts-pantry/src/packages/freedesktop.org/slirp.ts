@@ -42,7 +42,6 @@ export const freedesktoporgslirpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/slirp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/slirp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/slirp' as const,
   programs: [] as const,
   companions: [] as const,

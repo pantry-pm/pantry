@@ -45,7 +45,6 @@ export const kerberosorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kerberos.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kerberos.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kerberos.org' as const,
   /**
   * Executable programs provided by this package.

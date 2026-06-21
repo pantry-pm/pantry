@@ -45,7 +45,6 @@ export const arkadedevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install arkade.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +arkade.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install arkade.dev' as const,
   /**
   * Executable programs provided by this package.

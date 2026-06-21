@@ -46,7 +46,6 @@ export const operatorframeworkiooperatorsdkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install operatorframework.io/operator-sdk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +operatorframework.io/operator-sdk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install operatorframework.io/operator-sdk' as const,
   /**
   * Executable programs provided by this package.

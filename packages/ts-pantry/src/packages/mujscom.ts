@@ -46,7 +46,6 @@ export const mujscomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mujs.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mujs.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mujs.com' as const,
   /**
   * Executable programs provided by this package.

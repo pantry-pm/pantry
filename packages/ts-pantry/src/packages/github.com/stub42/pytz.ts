@@ -43,7 +43,6 @@ export const pytzPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/stub42/pytz' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/stub42/pytz -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/stub42/pytz' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const fftworgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fftw.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fftw.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fftw.org' as const,
   /**
   * Executable programs provided by this package.

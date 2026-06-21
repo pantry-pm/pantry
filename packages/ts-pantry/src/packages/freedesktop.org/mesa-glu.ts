@@ -42,7 +42,6 @@ export const freedesktoporgmesagluPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/mesa-glu' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/mesa-glu -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/mesa-glu' as const,
   programs: [] as const,
   companions: [] as const,

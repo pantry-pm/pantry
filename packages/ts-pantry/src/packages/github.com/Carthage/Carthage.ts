@@ -43,7 +43,6 @@ export const carthagePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Carthage/Carthage' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Carthage/Carthage -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Carthage/Carthage' as const,
   /**
   * Executable programs provided by this package.

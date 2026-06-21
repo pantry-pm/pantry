@@ -43,7 +43,6 @@ export const awsamazoncomsessionmanagerpluginPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aws.amazon.com/session-manager-plugin' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aws.amazon.com/session-manager-plugin -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aws.amazon.com/session-manager-plugin' as const,
   /**
   * Executable programs provided by this package.

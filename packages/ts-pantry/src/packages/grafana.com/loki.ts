@@ -45,7 +45,6 @@ export const grafanacomlokiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install grafana.com/loki' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +grafana.com/loki -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install grafana.com/loki' as const,
   /**
   * Executable programs provided by this package.

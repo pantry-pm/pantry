@@ -44,7 +44,6 @@ export const glauthPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/glauth/glauth' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/glauth/glauth -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/glauth/glauth' as const,
   /**
   * Executable programs provided by this package.

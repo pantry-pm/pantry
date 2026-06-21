@@ -44,7 +44,6 @@ export const ifacemakerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/vburenin/ifacemaker' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/vburenin/ifacemaker -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/vburenin/ifacemaker' as const,
   /**
   * Executable programs provided by this package.

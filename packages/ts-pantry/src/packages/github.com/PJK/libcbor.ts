@@ -42,7 +42,6 @@ export const libcborPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/PJK/libcbor' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/PJK/libcbor -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/PJK/libcbor' as const,
   programs: [] as const,
   companions: [] as const,

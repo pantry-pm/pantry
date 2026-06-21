@@ -44,7 +44,6 @@ export const intelcomlibvaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install intel.com/libva' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +intel.com/libva -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install intel.com/libva' as const,
   programs: [] as const,
   companions: [] as const,

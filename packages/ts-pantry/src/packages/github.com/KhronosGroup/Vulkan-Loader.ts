@@ -44,7 +44,6 @@ export const vulkanloaderPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/KhronosGroup/Vulkan-Loader' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/KhronosGroup/Vulkan-Loader -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/KhronosGroup/Vulkan-Loader' as const,
   programs: [] as const,
   companions: [] as const,

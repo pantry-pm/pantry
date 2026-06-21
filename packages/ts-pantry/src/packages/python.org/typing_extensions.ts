@@ -42,7 +42,6 @@ export const pythonorgtyping_extensionsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install python.org/typing_extensions' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +python.org/typing_extensions -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install python.org/typing_extensions' as const,
   programs: [] as const,
   companions: [] as const,

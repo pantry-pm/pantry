@@ -42,7 +42,6 @@ export const xiphorgvorbisPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xiph.org/vorbis' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xiph.org/vorbis -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xiph.org/vorbis' as const,
   programs: [] as const,
   companions: [] as const,

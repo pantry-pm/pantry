@@ -44,7 +44,6 @@ export const qtioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install qt.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +qt.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install qt.io' as const,
   /**
   * Executable programs provided by this package.

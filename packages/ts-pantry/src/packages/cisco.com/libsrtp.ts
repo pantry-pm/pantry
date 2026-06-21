@@ -43,7 +43,6 @@ export const ciscocomlibsrtpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cisco.com/libsrtp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cisco.com/libsrtp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cisco.com/libsrtp' as const,
   programs: [] as const,
   companions: [] as const,

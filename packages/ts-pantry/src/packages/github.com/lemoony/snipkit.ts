@@ -43,7 +43,6 @@ export const snipkitPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/lemoony/snipkit' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/lemoony/snipkit -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/lemoony/snipkit' as const,
   /**
   * Executable programs provided by this package.

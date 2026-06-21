@@ -42,7 +42,6 @@ export const nghttp2orgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nghttp2.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nghttp2.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nghttp2.org' as const,
   programs: [] as const,
   companions: [] as const,

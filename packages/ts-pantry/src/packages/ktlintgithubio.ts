@@ -45,7 +45,6 @@ export const ktlintgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ktlint.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ktlint.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ktlint.github.io' as const,
   /**
   * Executable programs provided by this package.

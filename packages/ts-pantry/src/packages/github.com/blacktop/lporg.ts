@@ -44,7 +44,6 @@ export const lporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/blacktop/lporg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/blacktop/lporg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/blacktop/lporg' as const,
   /**
   * Executable programs provided by this package.

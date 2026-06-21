@@ -45,7 +45,6 @@ export const docbookorgxslPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install docbook.org/xsl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +docbook.org/xsl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install docbook.org/xsl' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const consulioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install consul.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +consul.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install consul.io' as const,
   /**
   * Executable programs provided by this package.

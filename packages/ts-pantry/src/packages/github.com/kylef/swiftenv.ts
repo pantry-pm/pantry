@@ -44,7 +44,6 @@ export const swiftenvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/kylef/swiftenv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/kylef/swiftenv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/kylef/swiftenv' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const cratesiohuniqPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/huniq' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/huniq -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/huniq' as const,
   /**
   * Executable programs provided by this package.

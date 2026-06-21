@@ -44,7 +44,6 @@ export const tuxpaintorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tuxpaint.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tuxpaint.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tuxpaint.org' as const,
   /**
   * Executable programs provided by this package.

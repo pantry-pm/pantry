@@ -45,7 +45,6 @@ export const jbangdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jbang.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jbang.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jbang.dev' as const,
   /**
   * Executable programs provided by this package.

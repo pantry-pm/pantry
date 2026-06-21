@@ -44,7 +44,6 @@ export const cratesiozoxidePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/zoxide' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/zoxide -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/zoxide' as const,
   /**
   * Executable programs provided by this package.

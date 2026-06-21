@@ -44,7 +44,6 @@ export const nvmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nvm-sh/nvm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nvm-sh/nvm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nvm-sh/nvm' as const,
   /**
   * Executable programs provided by this package.

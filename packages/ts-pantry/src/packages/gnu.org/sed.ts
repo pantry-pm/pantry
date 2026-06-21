@@ -42,7 +42,6 @@ export const gnuorgsedPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/sed' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/sed -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/sed' as const,
   /**
   * Executable programs provided by this package.

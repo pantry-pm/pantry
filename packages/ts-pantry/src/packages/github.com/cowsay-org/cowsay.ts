@@ -47,7 +47,6 @@ export const cowsayPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/cowsay-org/cowsay' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/cowsay-org/cowsay -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/cowsay-org/cowsay' as const,
   /**
   * Executable programs provided by this package.

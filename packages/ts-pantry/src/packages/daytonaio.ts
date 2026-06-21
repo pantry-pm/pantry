@@ -45,7 +45,6 @@ export const daytonaioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install daytona.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +daytona.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install daytona.io' as const,
   /**
   * Executable programs provided by this package.

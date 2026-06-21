@@ -45,7 +45,6 @@ export const schollzcomcrocPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install schollz.com/croc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +schollz.com/croc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install schollz.com/croc' as const,
   /**
   * Executable programs provided by this package.

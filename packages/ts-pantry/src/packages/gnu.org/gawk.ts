@@ -42,7 +42,6 @@ export const gnuorggawkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gawk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gawk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gawk' as const,
   /**
   * Executable programs provided by this package.

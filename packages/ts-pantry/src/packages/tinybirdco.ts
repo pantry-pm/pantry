@@ -44,7 +44,6 @@ export const tinybirdcoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tinybird.co' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tinybird.co -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tinybird.co' as const,
   /**
   * Executable programs provided by this package.

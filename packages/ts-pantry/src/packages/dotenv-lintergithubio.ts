@@ -44,7 +44,6 @@ export const dotenvlintergithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dotenv-linter.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dotenv-linter.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dotenv-linter.github.io' as const,
   /**
   * Executable programs provided by this package.

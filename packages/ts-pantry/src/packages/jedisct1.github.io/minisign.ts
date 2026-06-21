@@ -45,7 +45,6 @@ export const jedisct1githubiominisignPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jedisct1.github.io/minisign' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jedisct1.github.io/minisign -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jedisct1.github.io/minisign' as const,
   /**
   * Executable programs provided by this package.

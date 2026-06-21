@@ -43,7 +43,6 @@ export const srhtscdocPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sr.ht/scdoc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sr.ht/scdoc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sr.ht/scdoc' as const,
   /**
   * Executable programs provided by this package.

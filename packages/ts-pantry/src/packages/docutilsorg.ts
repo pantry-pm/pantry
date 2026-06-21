@@ -46,7 +46,6 @@ export const docutilsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install docutils.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +docutils.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install docutils.org' as const,
   /**
   * Executable programs provided by this package.

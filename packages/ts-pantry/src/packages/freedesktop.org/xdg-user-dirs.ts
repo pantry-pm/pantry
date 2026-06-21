@@ -44,7 +44,6 @@ export const freedesktoporgxdguserdirsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/xdg-user-dirs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/xdg-user-dirs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/xdg-user-dirs' as const,
   /**
   * Executable programs provided by this package.

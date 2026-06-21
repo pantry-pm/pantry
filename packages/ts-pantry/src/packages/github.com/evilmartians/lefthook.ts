@@ -45,7 +45,6 @@ export const lefthookPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/evilmartians/lefthook' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/evilmartians/lefthook -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/evilmartians/lefthook' as const,
   /**
   * Executable programs provided by this package.

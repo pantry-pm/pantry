@@ -45,7 +45,6 @@ export const csientuedutwcjlinliblinearPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install csie.ntu.edu.tw/cjlin/liblinear' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +csie.ntu.edu.tw/cjlin/liblinear -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install csie.ntu.edu.tw/cjlin/liblinear' as const,
   /**
   * Executable programs provided by this package.

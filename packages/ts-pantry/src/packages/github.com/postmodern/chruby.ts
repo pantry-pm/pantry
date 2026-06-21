@@ -43,7 +43,6 @@ export const chrubyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/postmodern/chruby' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/postmodern/chruby -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/postmodern/chruby' as const,
   /**
   * Executable programs provided by this package.

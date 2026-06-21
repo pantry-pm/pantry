@@ -40,7 +40,6 @@ export const pagureiolibaioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pagure.io/libaio' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pagure.io/libaio -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pagure.io/libaio' as const,
   programs: [] as const,
   companions: [] as const,

@@ -44,7 +44,6 @@ export const chromedriverchromiumorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install chromedriver.chromium.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +chromedriver.chromium.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install chromedriver.chromium.org' as const,
   /**
   * Executable programs provided by this package.

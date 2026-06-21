@@ -46,7 +46,6 @@ export const deepwisdomaiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install deepwisdom.ai' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +deepwisdom.ai -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install deepwisdom.ai' as const,
   /**
   * Executable programs provided by this package.

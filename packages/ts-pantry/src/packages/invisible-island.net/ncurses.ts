@@ -45,7 +45,6 @@ export const invisibleislandnetncursesPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install invisible-island.net/ncurses' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +invisible-island.net/ncurses -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install invisible-island.net/ncurses' as const,
   /**
   * Executable programs provided by this package.

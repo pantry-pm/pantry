@@ -46,7 +46,6 @@ export const vercelcompkgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vercel.com/pkg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vercel.com/pkg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vercel.com/pkg' as const,
   /**
   * Executable programs provided by this package.

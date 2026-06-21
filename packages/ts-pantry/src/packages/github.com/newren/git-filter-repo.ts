@@ -44,7 +44,6 @@ export const gitfilterrepoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/newren/git-filter-repo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/newren/git-filter-repo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/newren/git-filter-repo' as const,
   /**
   * Executable programs provided by this package.

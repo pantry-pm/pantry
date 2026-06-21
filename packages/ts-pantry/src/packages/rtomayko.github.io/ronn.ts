@@ -46,7 +46,6 @@ export const rtomaykogithubioronnPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rtomayko.github.io/ronn' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rtomayko.github.io/ronn -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rtomayko.github.io/ronn' as const,
   /**
   * Executable programs provided by this package.

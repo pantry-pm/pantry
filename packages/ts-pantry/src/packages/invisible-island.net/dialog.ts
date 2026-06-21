@@ -45,7 +45,6 @@ export const invisibleislandnetdialogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install invisible-island.net/dialog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +invisible-island.net/dialog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install invisible-island.net/dialog' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const marionettePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/skx/marionette' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/skx/marionette -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/skx/marionette' as const,
   /**
   * Executable programs provided by this package.

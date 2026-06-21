@@ -51,7 +51,6 @@ export const javaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openjdk.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openjdk.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openjdk.org' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const gnuorgfribidiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/fribidi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/fribidi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/fribidi' as const,
   /**
   * Executable programs provided by this package.

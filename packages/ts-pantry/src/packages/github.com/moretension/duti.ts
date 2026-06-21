@@ -43,7 +43,6 @@ export const dutiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/moretension/duti' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/moretension/duti -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/moretension/duti' as const,
   /**
   * Executable programs provided by this package.

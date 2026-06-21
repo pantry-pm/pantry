@@ -45,7 +45,6 @@ export const pdmfmingdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pdm.fming.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pdm.fming.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pdm.fming.dev' as const,
   /**
   * Executable programs provided by this package.

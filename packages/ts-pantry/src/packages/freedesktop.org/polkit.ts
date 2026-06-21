@@ -45,7 +45,6 @@ export const freedesktoporgpolkitPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/polkit' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/polkit -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/polkit' as const,
   /**
   * Executable programs provided by this package.

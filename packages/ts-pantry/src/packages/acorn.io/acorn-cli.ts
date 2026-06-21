@@ -45,7 +45,6 @@ export const acornioacorncliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install acorn.io/acorn-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +acorn.io/acorn-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install acorn.io/acorn-cli' as const,
   /**
   * Executable programs provided by this package.

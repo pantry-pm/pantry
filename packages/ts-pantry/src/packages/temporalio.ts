@@ -45,7 +45,6 @@ export const temporalioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install temporal.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +temporal.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install temporal.io' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const libxmlbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/hughsie/libxmlb' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/hughsie/libxmlb -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/hughsie/libxmlb' as const,
   /**
   * Executable programs provided by this package.

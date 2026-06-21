@@ -42,7 +42,6 @@ export const hboehminfogcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hboehm.info/gc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hboehm.info/gc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hboehm.info/gc' as const,
   programs: [] as const,
   companions: [] as const,

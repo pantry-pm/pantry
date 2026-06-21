@@ -44,7 +44,6 @@ export const helixeditorcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install helix-editor.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +helix-editor.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install helix-editor.com' as const,
   /**
   * Executable programs provided by this package.

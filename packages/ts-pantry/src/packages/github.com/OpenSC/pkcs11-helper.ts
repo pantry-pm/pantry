@@ -43,7 +43,6 @@ export const pkcs11helperPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/OpenSC/pkcs11-helper' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/OpenSC/pkcs11-helper -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/OpenSC/pkcs11-helper' as const,
   programs: [] as const,
   companions: [] as const,

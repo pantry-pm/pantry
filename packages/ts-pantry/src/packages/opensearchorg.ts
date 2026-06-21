@@ -46,7 +46,6 @@ export const opensearchorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opensearch.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opensearch.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opensearch.org' as const,
   /**
   * Executable programs provided by this package.

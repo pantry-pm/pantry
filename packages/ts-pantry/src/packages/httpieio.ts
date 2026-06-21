@@ -45,7 +45,6 @@ export const httpieioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install httpie.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +httpie.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install httpie.io' as const,
   /**
   * Executable programs provided by this package.

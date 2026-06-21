@@ -44,7 +44,6 @@ export const dockercombuildxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install docker.com/buildx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +docker.com/buildx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install docker.com/buildx' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const authzedcomspicedbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install authzed.com/spicedb' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +authzed.com/spicedb -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install authzed.com/spicedb' as const,
   /**
   * Executable programs provided by this package.

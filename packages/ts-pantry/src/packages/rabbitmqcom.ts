@@ -45,7 +45,6 @@ export const rabbitmqcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rabbitmq.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rabbitmq.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rabbitmq.com' as const,
   /**
   * Executable programs provided by this package.

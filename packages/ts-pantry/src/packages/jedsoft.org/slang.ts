@@ -45,7 +45,6 @@ export const jedsoftorgslangPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jedsoft.org/slang' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jedsoft.org/slang -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jedsoft.org/slang' as const,
   /**
   * Executable programs provided by this package.

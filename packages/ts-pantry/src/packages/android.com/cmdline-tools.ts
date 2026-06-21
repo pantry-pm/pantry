@@ -44,7 +44,6 @@ export const androidcomcmdlinetoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install android.com/cmdline-tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +android.com/cmdline-tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install android.com/cmdline-tools' as const,
   /**
   * Executable programs provided by this package.

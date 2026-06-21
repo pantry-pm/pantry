@@ -46,7 +46,6 @@ export const xercesapacheorgxercescPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xerces.apache.org/xerces-c' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xerces.apache.org/xerces-c -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xerces.apache.org/xerces-c' as const,
   /**
   * Executable programs provided by this package.

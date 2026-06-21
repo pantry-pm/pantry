@@ -43,7 +43,6 @@ export const openmpllvmorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openmp.llvm.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openmp.llvm.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openmp.llvm.org' as const,
   programs: [] as const,
   companions: [] as const,

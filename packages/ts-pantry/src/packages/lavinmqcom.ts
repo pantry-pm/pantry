@@ -46,7 +46,6 @@ export const lavinmqcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lavinmq.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lavinmq.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lavinmq.com' as const,
   /**
   * Executable programs provided by this package.

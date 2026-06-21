@@ -46,7 +46,6 @@ export const ccachedevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ccache.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ccache.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ccache.dev' as const,
   /**
   * Executable programs provided by this package.

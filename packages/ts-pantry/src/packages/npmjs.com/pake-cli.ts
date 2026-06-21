@@ -44,7 +44,6 @@ export const npmjscompakecliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install npmjs.com/pake-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +npmjs.com/pake-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install npmjs.com/pake-cli' as const,
   /**
   * Executable programs provided by this package.

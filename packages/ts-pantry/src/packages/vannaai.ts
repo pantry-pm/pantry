@@ -43,7 +43,6 @@ export const vannaaiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vanna.ai' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vanna.ai -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vanna.ai' as const,
   programs: [] as const,
   companions: [] as const,

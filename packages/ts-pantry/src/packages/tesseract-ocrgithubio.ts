@@ -46,7 +46,6 @@ export const tesseractocrgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tesseract-ocr.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tesseract-ocr.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tesseract-ocr.github.io' as const,
   /**
   * Executable programs provided by this package.

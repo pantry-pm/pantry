@@ -45,7 +45,6 @@ export const caskreadthedocsioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cask.readthedocs.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cask.readthedocs.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cask.readthedocs.io' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const libgeotiffPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/OSGeo/libgeotiff' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/OSGeo/libgeotiff -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/OSGeo/libgeotiff' as const,
   /**
   * Executable programs provided by this package.

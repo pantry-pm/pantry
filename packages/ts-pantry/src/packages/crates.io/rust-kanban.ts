@@ -45,7 +45,6 @@ export const cratesiorustkanbanPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/rust-kanban' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/rust-kanban -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/rust-kanban' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const watchexecgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install watchexec.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +watchexec.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install watchexec.github.io' as const,
   /**
   * Executable programs provided by this package.

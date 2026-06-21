@@ -45,7 +45,6 @@ export const kubecolorPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/kubecolor/kubecolor' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/kubecolor/kubecolor -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/kubecolor/kubecolor' as const,
   /**
   * Executable programs provided by this package.

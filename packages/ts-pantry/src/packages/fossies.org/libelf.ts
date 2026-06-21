@@ -41,7 +41,6 @@ export const fossiesorglibelfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fossies.org/libelf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fossies.org/libelf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fossies.org/libelf' as const,
   programs: [] as const,
   companions: [] as const,

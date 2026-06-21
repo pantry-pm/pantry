@@ -41,7 +41,6 @@ export const xorglibxresPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/libxres' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/libxres -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/libxres' as const,
   programs: [] as const,
   companions: [] as const,

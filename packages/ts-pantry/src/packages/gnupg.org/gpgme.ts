@@ -45,7 +45,6 @@ export const gnupgorggpgmePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnupg.org/gpgme' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnupg.org/gpgme -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnupg.org/gpgme' as const,
   /**
   * Executable programs provided by this package.

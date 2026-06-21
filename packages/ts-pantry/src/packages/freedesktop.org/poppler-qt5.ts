@@ -46,7 +46,6 @@ export const freedesktoporgpopplerqt5Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/poppler-qt5' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/poppler-qt5 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/poppler-qt5' as const,
   /**
   * Executable programs provided by this package.

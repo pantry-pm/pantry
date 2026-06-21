@@ -44,7 +44,6 @@ export const xplrdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xplr.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xplr.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xplr.dev' as const,
   /**
   * Executable programs provided by this package.

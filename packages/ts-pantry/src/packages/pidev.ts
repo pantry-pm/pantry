@@ -44,7 +44,6 @@ export const pidevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pi.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pi.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pi.dev' as const,
   /**
   * Executable programs provided by this package.

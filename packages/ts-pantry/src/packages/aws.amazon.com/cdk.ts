@@ -52,7 +52,6 @@ export const cdkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aws.amazon.com/cdk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aws.amazon.com/cdk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aws.amazon.com/cdk' as const,
   /**
   * Executable programs provided by this package.

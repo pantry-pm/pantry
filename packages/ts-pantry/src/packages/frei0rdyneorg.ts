@@ -41,7 +41,6 @@ export const frei0rdyneorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install frei0r.dyne.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +frei0r.dyne.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install frei0r.dyne.org' as const,
   programs: [] as const,
   companions: [] as const,

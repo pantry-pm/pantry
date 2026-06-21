@@ -44,7 +44,6 @@ export const k0sctlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/k0sproject/k0sctl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/k0sproject/k0sctl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/k0sproject/k0sctl' as const,
   /**
   * Executable programs provided by this package.

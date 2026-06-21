@@ -44,7 +44,6 @@ export const gnuorggperfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gperf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gperf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gperf' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const openblasnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openblas.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openblas.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openblas.net' as const,
   programs: [] as const,
   companions: [] as const,

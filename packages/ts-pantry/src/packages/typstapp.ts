@@ -45,7 +45,6 @@ export const typstappPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install typst.app' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +typst.app -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install typst.app' as const,
   /**
   * Executable programs provided by this package.

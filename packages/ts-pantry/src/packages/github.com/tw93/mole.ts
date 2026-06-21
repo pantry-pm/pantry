@@ -45,7 +45,6 @@ export const molePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/tw93/mole' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/tw93/mole -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/tw93/mole' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const pstreePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/FredHucht/pstree' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/FredHucht/pstree -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/FredHucht/pstree' as const,
   /**
   * Executable programs provided by this package.

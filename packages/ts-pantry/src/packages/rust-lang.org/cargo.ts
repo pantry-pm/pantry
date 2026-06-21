@@ -46,7 +46,6 @@ export const rustlangorgcargoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rust-lang.org/cargo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rust-lang.org/cargo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rust-lang.org/cargo' as const,
   /**
   * Executable programs provided by this package.

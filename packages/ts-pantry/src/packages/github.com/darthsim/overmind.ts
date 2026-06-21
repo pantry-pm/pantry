@@ -45,7 +45,6 @@ export const overmindPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/darthsim/overmind' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/darthsim/overmind -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/darthsim/overmind' as const,
   /**
   * Executable programs provided by this package.

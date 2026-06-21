@@ -46,7 +46,6 @@ export const freedesktoporgappstreamPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/appstream' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/appstream -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/appstream' as const,
   /**
   * Executable programs provided by this package.

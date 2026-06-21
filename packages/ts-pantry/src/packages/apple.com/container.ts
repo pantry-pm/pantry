@@ -42,7 +42,6 @@ export const applecomcontainerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apple.com/container' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apple.com/container -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apple.com/container' as const,
   /**
   * Executable programs provided by this package.

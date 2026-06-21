@@ -42,7 +42,6 @@ export const rav1ePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/xiph/rav1e' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/xiph/rav1e -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/xiph/rav1e' as const,
   /**
   * Executable programs provided by this package.

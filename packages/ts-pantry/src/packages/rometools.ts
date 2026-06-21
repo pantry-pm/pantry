@@ -44,7 +44,6 @@ export const rometoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rome.tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rome.tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rome.tools' as const,
   /**
   * Executable programs provided by this package.

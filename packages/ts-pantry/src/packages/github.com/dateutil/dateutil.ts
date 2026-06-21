@@ -42,7 +42,6 @@ export const dateutilPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/dateutil/dateutil' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/dateutil/dateutil -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/dateutil/dateutil' as const,
   programs: [] as const,
   companions: [] as const,

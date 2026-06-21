@@ -45,7 +45,6 @@ export const microsoftcomazurecliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microsoft.com/azure-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microsoft.com/azure-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microsoft.com/azure-cli' as const,
   /**
   * Executable programs provided by this package.

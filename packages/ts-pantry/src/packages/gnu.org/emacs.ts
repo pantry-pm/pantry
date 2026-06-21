@@ -45,7 +45,6 @@ export const gnuorgemacsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/emacs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/emacs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/emacs' as const,
   /**
   * Executable programs provided by this package.

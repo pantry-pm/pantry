@@ -45,7 +45,6 @@ export const libarchiveorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libarchive.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libarchive.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libarchive.org' as const,
   /**
   * Executable programs provided by this package.

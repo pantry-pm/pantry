@@ -46,7 +46,6 @@ export const encoredevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install encore.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +encore.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install encore.dev' as const,
   /**
   * Executable programs provided by this package.

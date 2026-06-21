@@ -46,7 +46,6 @@ export const pythonpoetryorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install python-poetry.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +python-poetry.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install python-poetry.org' as const,
   /**
   * Executable programs provided by this package.

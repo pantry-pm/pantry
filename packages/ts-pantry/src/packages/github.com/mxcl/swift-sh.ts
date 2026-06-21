@@ -43,7 +43,6 @@ export const swiftshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mxcl/swift-sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mxcl/swift-sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mxcl/swift-sh' as const,
   /**
   * Executable programs provided by this package.

@@ -50,7 +50,6 @@ export const denoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install deno.land' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +deno.land -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install deno.land' as const,
   /**
   * Executable programs provided by this package.

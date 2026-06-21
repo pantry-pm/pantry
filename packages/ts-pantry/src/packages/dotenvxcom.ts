@@ -43,7 +43,6 @@ export const dotenvxcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dotenvx.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dotenvx.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dotenvx.com' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const cratesioflamegraphPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/flamegraph' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/flamegraph -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/flamegraph' as const,
   /**
   * Executable programs provided by this package.

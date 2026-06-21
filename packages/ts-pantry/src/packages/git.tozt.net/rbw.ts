@@ -44,7 +44,6 @@ export const gittoztnetrbwPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git.tozt.net/rbw' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git.tozt.net/rbw -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git.tozt.net/rbw' as const,
   /**
   * Executable programs provided by this package.

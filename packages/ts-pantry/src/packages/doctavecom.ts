@@ -44,7 +44,6 @@ export const doctavecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install doctave.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +doctave.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install doctave.com' as const,
   /**
   * Executable programs provided by this package.

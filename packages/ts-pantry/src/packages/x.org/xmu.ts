@@ -41,7 +41,6 @@ export const xorgxmuPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xmu' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xmu -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xmu' as const,
   programs: [] as const,
   companions: [] as const,

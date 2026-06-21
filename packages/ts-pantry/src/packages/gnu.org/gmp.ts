@@ -41,7 +41,6 @@ export const gnuorggmpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gmp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gmp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gmp' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const dockercommachinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install docker.com/machine' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +docker.com/machine -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install docker.com/machine' as const,
   /**
   * Executable programs provided by this package.

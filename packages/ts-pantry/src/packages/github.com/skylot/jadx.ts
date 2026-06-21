@@ -45,7 +45,6 @@ export const jadxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/skylot/jadx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/skylot/jadx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/skylot/jadx' as const,
   /**
   * Executable programs provided by this package.

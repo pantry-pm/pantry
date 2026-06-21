@@ -45,7 +45,6 @@ export const corednsioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install coredns.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +coredns.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install coredns.io' as const,
   /**
   * Executable programs provided by this package.

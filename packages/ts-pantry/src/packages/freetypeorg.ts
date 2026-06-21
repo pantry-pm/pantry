@@ -42,7 +42,6 @@ export const freetypeorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freetype.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freetype.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freetype.org' as const,
   programs: [] as const,
   companions: [] as const,

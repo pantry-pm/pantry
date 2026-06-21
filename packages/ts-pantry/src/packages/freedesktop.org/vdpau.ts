@@ -42,7 +42,6 @@ export const freedesktoporgvdpauPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/vdpau' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/vdpau -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/vdpau' as const,
   programs: [] as const,
   companions: [] as const,

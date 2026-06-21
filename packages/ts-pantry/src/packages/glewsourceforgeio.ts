@@ -45,7 +45,6 @@ export const glewsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install glew.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +glew.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install glew.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

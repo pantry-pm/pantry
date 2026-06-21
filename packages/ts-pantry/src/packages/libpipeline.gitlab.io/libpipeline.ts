@@ -41,7 +41,6 @@ export const libpipelinegitlabiolibpipelinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libpipeline.gitlab.io/libpipeline' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libpipeline.gitlab.io/libpipeline -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libpipeline.gitlab.io/libpipeline' as const,
   programs: [] as const,
   companions: [] as const,

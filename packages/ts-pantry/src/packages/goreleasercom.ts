@@ -45,7 +45,6 @@ export const goreleasercomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install goreleaser.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +goreleaser.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install goreleaser.com' as const,
   /**
   * Executable programs provided by this package.

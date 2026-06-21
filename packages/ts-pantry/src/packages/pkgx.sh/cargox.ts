@@ -42,7 +42,6 @@ export const pkgxshcargoxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pkgx.sh/cargox' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pkgx.sh/cargox -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pkgx.sh/cargox' as const,
   /**
   * Executable programs provided by this package.

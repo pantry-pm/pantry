@@ -46,7 +46,6 @@ export const tsl0922githubiottydPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tsl0922.github.io/ttyd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tsl0922.github.io/ttyd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tsl0922.github.io/ttyd' as const,
   /**
   * Executable programs provided by this package.

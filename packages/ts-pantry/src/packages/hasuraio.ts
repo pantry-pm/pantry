@@ -45,7 +45,6 @@ export const hasuraioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hasura.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hasura.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hasura.io' as const,
   /**
   * Executable programs provided by this package.

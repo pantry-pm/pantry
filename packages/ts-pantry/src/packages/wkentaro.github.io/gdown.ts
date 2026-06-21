@@ -44,7 +44,6 @@ export const wkentarogithubiogdownPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wkentaro.github.io/gdown' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wkentaro.github.io/gdown -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wkentaro.github.io/gdown' as const,
   /**
   * Executable programs provided by this package.

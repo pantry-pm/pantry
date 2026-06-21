@@ -46,7 +46,6 @@ export const darwinsyscomfilePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install darwinsys.com/file' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +darwinsys.com/file -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install darwinsys.com/file' as const,
   /**
   * Executable programs provided by this package.

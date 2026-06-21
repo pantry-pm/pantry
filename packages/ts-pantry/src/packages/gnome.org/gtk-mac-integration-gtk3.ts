@@ -42,7 +42,6 @@ export const gnomeorggtkmacintegrationgtk3Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/gtk-mac-integration-gtk3' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/gtk-mac-integration-gtk3 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/gtk-mac-integration-gtk3' as const,
   programs: [] as const,
   companions: [] as const,

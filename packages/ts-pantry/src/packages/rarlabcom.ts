@@ -43,7 +43,6 @@ export const rarlabcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rarlab.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rarlab.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rarlab.com' as const,
   /**
   * Executable programs provided by this package.

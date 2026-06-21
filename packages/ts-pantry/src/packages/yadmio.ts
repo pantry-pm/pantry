@@ -45,7 +45,6 @@ export const yadmioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install yadm.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +yadm.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install yadm.io' as const,
   /**
   * Executable programs provided by this package.

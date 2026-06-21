@@ -43,7 +43,6 @@ export const ruffPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/charliermarsh/ruff' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/charliermarsh/ruff -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/charliermarsh/ruff' as const,
   programs: [] as const,
   companions: [] as const,

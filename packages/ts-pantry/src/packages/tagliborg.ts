@@ -46,7 +46,6 @@ export const tagliborgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install taglib.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +taglib.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install taglib.org' as const,
   /**
   * Executable programs provided by this package.

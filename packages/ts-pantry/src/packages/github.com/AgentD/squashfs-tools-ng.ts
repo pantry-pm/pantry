@@ -44,7 +44,6 @@ export const squashfstoolsngPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/AgentD/squashfs-tools-ng' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/AgentD/squashfs-tools-ng -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/AgentD/squashfs-tools-ng' as const,
   /**
   * Executable programs provided by this package.

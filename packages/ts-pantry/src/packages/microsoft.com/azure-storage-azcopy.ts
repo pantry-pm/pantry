@@ -44,7 +44,6 @@ export const microsoftcomazurestorageazcopyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microsoft.com/azure-storage-azcopy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microsoft.com/azure-storage-azcopy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microsoft.com/azure-storage-azcopy' as const,
   /**
   * Executable programs provided by this package.

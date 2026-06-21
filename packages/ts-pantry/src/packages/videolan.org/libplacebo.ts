@@ -42,7 +42,6 @@ export const videolanorglibplaceboPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install videolan.org/libplacebo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +videolan.org/libplacebo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install videolan.org/libplacebo' as const,
   programs: [] as const,
   companions: [] as const,

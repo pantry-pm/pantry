@@ -44,7 +44,6 @@ export const lazydockerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jesseduffield/lazydocker' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jesseduffield/lazydocker -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jesseduffield/lazydocker' as const,
   /**
   * Executable programs provided by this package.

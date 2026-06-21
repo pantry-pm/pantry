@@ -44,7 +44,6 @@ export const graphqleditorcomgqlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install graphqleditor.com/gql' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +graphqleditor.com/gql -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install graphqleditor.com/gql' as const,
   /**
   * Executable programs provided by this package.

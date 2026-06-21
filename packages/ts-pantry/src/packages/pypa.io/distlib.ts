@@ -43,7 +43,6 @@ export const pypaiodistlibPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pypa.io/distlib' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pypa.io/distlib -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pypa.io/distlib' as const,
   programs: [] as const,
   companions: [] as const,

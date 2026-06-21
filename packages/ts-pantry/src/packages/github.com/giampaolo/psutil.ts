@@ -42,7 +42,6 @@ export const psutilPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/giampaolo/psutil' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/giampaolo/psutil -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/giampaolo/psutil' as const,
   programs: [] as const,
   companions: [] as const,

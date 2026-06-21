@@ -45,7 +45,6 @@ export const miniomcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install min.io/mc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +min.io/mc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install min.io/mc' as const,
   /**
   * Executable programs provided by this package.

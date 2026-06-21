@@ -45,7 +45,6 @@ export const direnvnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install direnv.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +direnv.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install direnv.net' as const,
   /**
   * Executable programs provided by this package.

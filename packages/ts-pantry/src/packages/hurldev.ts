@@ -45,7 +45,6 @@ export const hurldevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hurl.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hurl.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hurl.dev' as const,
   /**
   * Executable programs provided by this package.

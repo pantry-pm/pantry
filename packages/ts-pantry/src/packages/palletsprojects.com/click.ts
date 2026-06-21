@@ -43,7 +43,6 @@ export const palletsprojectscomclickPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install palletsprojects.com/click' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +palletsprojects.com/click -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install palletsprojects.com/click' as const,
   programs: [] as const,
   companions: [] as const,

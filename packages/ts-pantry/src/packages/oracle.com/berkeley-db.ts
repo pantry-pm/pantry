@@ -45,7 +45,6 @@ export const oraclecomberkeleydbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install oracle.com/berkeley-db' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +oracle.com/berkeley-db -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install oracle.com/berkeley-db' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const expectedPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/TartanLlama/expected' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/TartanLlama/expected -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/TartanLlama/expected' as const,
   programs: [] as const,
   companions: [] as const,

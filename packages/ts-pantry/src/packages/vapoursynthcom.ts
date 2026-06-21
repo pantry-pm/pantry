@@ -46,7 +46,6 @@ export const vapoursynthcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vapoursynth.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vapoursynth.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vapoursynth.com' as const,
   /**
   * Executable programs provided by this package.

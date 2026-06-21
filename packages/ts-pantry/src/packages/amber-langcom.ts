@@ -44,7 +44,6 @@ export const amberlangcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install amber-lang.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +amber-lang.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install amber-lang.com' as const,
   /**
   * Executable programs provided by this package.

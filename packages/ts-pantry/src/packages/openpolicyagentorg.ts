@@ -45,7 +45,6 @@ export const openpolicyagentorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openpolicyagent.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openpolicyagent.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openpolicyagent.org' as const,
   /**
   * Executable programs provided by this package.

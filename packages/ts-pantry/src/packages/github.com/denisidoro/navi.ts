@@ -42,7 +42,6 @@ export const naviPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/denisidoro/navi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/denisidoro/navi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/denisidoro/navi' as const,
   /**
   * Executable programs provided by this package.

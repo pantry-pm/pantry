@@ -45,7 +45,6 @@ export const rustlangorgrustbindgenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rust-lang.org/rust-bindgen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rust-lang.org/rust-bindgen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rust-lang.org/rust-bindgen' as const,
   /**
   * Executable programs provided by this package.

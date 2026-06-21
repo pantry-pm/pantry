@@ -45,7 +45,6 @@ export const batscorePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/bats-core/bats-core' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/bats-core/bats-core -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/bats-core/bats-core' as const,
   /**
   * Executable programs provided by this package.

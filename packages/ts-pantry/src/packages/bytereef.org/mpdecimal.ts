@@ -40,7 +40,6 @@ export const bytereeforgmpdecimalPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bytereef.org/mpdecimal' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bytereef.org/mpdecimal -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bytereef.org/mpdecimal' as const,
   programs: [] as const,
   companions: [] as const,

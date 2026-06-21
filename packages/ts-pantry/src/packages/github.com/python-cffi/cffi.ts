@@ -44,7 +44,6 @@ export const cffiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/python-cffi/cffi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/python-cffi/cffi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/python-cffi/cffi' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const werfioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install werf.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +werf.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install werf.io' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const upliftcidevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install upliftci.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +upliftci.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install upliftci.dev' as const,
   /**
   * Executable programs provided by this package.

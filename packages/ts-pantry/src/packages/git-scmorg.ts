@@ -45,7 +45,6 @@ export const gitscmorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git-scm.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git-scm.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git-scm.org' as const,
   /**
   * Executable programs provided by this package.

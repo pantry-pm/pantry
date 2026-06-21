@@ -45,7 +45,6 @@ export const kobuildPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ko.build' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ko.build -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ko.build' as const,
   /**
   * Executable programs provided by this package.

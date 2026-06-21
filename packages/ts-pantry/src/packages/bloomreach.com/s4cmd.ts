@@ -44,7 +44,6 @@ export const bloomreachcoms4cmdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bloomreach.com/s4cmd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bloomreach.com/s4cmd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bloomreach.com/s4cmd' as const,
   /**
   * Executable programs provided by this package.

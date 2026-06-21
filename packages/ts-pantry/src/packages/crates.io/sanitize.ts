@@ -43,7 +43,6 @@ export const cratesiosanitizePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/sanitize' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/sanitize -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/sanitize' as const,
   /**
   * Executable programs provided by this package.

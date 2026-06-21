@@ -50,7 +50,6 @@ export const kotlinPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kotlinlang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kotlinlang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kotlinlang.org' as const,
   /**
   * Executable programs provided by this package.

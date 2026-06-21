@@ -46,7 +46,6 @@ export const rawdogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/abanteai/rawdog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/abanteai/rawdog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/abanteai/rawdog' as const,
   /**
   * Executable programs provided by this package.

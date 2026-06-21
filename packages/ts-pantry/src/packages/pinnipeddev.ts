@@ -45,7 +45,6 @@ export const pinnipeddevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pinniped.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pinniped.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pinniped.dev' as const,
   /**
   * Executable programs provided by this package.

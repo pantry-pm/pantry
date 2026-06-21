@@ -43,7 +43,6 @@ export const digiporgjanssonPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install digip.org/jansson' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +digip.org/jansson -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install digip.org/jansson' as const,
   programs: [] as const,
   companions: [] as const,

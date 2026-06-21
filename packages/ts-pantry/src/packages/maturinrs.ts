@@ -44,7 +44,6 @@ export const maturinrsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install maturin.rs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +maturin.rs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install maturin.rs' as const,
   /**
   * Executable programs provided by this package.

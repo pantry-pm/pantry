@@ -44,7 +44,6 @@ export const dprintdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dprint.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dprint.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dprint.dev' as const,
   /**
   * Executable programs provided by this package.

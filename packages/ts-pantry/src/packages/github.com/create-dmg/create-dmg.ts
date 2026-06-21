@@ -43,7 +43,6 @@ export const createdmgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/create-dmg/create-dmg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/create-dmg/create-dmg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/create-dmg/create-dmg' as const,
   /**
   * Executable programs provided by this package.

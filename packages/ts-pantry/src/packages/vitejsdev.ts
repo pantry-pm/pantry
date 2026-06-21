@@ -46,7 +46,6 @@ export const vitejsdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vitejs.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vitejs.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vitejs.dev' as const,
   /**
   * Executable programs provided by this package.

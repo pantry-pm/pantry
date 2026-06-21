@@ -43,7 +43,6 @@ export const boostorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install boost.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +boost.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install boost.org' as const,
   programs: [] as const,
   companions: [] as const,

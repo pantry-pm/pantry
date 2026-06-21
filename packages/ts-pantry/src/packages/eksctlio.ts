@@ -46,7 +46,6 @@ export const eksctlioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install eksctl.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +eksctl.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install eksctl.io' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const rbenvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/rbenv/rbenv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/rbenv/rbenv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/rbenv/rbenv' as const,
   /**
   * Executable programs provided by this package.

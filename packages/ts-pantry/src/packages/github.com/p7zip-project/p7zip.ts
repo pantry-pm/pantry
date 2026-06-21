@@ -43,7 +43,6 @@ export const p7zipPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/p7zip-project/p7zip' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/p7zip-project/p7zip -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/p7zip-project/p7zip' as const,
   /**
   * Executable programs provided by this package.

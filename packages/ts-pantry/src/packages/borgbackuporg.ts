@@ -46,7 +46,6 @@ export const borgbackuporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install borgbackup.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +borgbackup.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install borgbackup.org' as const,
   /**
   * Executable programs provided by this package.

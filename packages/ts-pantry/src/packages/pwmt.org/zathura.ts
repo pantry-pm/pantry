@@ -46,7 +46,6 @@ export const pwmtorgzathuraPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pwmt.org/zathura' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pwmt.org/zathura -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pwmt.org/zathura' as const,
   /**
   * Executable programs provided by this package.

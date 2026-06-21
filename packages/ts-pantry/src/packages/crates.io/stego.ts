@@ -43,7 +43,6 @@ export const cratesiostegoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/stego' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/stego -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/stego' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const rpmorgdnf5Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rpm.org/dnf5' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rpm.org/dnf5 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rpm.org/dnf5' as const,
   /**
   * Executable programs provided by this package.

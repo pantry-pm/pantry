@@ -43,7 +43,6 @@ export const cratesioteagpgwalletPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/tea-gpg-wallet' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/tea-gpg-wallet -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/tea-gpg-wallet' as const,
   /**
   * Executable programs provided by this package.

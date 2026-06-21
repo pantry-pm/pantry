@@ -46,7 +46,6 @@ export const rbenvorgrubybuildPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rbenv.org/ruby-build' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rbenv.org/ruby-build -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rbenv.org/ruby-build' as const,
   /**
   * Executable programs provided by this package.

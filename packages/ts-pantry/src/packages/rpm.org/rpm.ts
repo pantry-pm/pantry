@@ -44,7 +44,6 @@ export const rpmorgrpmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rpm.org/rpm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rpm.org/rpm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rpm.org/rpm' as const,
   /**
   * Executable programs provided by this package.

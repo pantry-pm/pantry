@@ -40,7 +40,6 @@ export const opencoreamrsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opencore-amr.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opencore-amr.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opencore-amr.sourceforge.io' as const,
   programs: [] as const,
   companions: [] as const,

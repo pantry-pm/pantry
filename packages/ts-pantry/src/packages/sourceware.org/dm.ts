@@ -41,7 +41,6 @@ export const sourcewareorgdmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceware.org/dm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceware.org/dm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceware.org/dm' as const,
   programs: [] as const,
   companions: [] as const,

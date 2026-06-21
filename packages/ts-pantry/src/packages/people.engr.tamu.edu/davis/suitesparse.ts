@@ -46,7 +46,6 @@ export const peopleengrtamuedudavissuitesparsePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install people.engr.tamu.edu/davis/suitesparse' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +people.engr.tamu.edu/davis/suitesparse -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install people.engr.tamu.edu/davis/suitesparse' as const,
   /**
   * Executable programs provided by this package.

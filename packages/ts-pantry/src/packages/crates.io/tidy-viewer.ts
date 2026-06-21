@@ -43,7 +43,6 @@ export const cratesiotidyviewerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/tidy-viewer' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/tidy-viewer -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/tidy-viewer' as const,
   /**
   * Executable programs provided by this package.

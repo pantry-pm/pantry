@@ -44,7 +44,6 @@ export const waylandfreedesktoporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wayland.freedesktop.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wayland.freedesktop.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wayland.freedesktop.org' as const,
   /**
   * Executable programs provided by this package.

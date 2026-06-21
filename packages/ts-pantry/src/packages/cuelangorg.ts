@@ -45,7 +45,6 @@ export const cuelangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cuelang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cuelang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cuelang.org' as const,
   /**
   * Executable programs provided by this package.

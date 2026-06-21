@@ -43,7 +43,6 @@ export const libfyamlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/pantoniou/libfyaml' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/pantoniou/libfyaml -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/pantoniou/libfyaml' as const,
   /**
   * Executable programs provided by this package.

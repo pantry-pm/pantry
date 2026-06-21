@@ -43,7 +43,6 @@ export const whostherePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ramonvermeulen/whosthere' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ramonvermeulen/whosthere -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ramonvermeulen/whosthere' as const,
   /**
   * Executable programs provided by this package.

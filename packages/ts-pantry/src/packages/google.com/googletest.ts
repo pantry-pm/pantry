@@ -43,7 +43,6 @@ export const googlecomgoogletestPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/googletest' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/googletest -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/googletest' as const,
   programs: [] as const,
   companions: [] as const,

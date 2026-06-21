@@ -43,7 +43,6 @@ export const pugixmlorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pugixml.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pugixml.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pugixml.org' as const,
   programs: [] as const,
   companions: [] as const,

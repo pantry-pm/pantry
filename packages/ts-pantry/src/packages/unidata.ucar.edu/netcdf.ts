@@ -46,7 +46,6 @@ export const unidataucaredunetcdfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install unidata.ucar.edu/netcdf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +unidata.ucar.edu/netcdf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install unidata.ucar.edu/netcdf' as const,
   /**
   * Executable programs provided by this package.

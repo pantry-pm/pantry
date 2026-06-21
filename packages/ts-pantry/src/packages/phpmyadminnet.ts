@@ -42,7 +42,6 @@ export const phpmyadminnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install phpmyadmin.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +phpmyadmin.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install phpmyadmin.net' as const,
   programs: [] as const,
   companions: [] as const,

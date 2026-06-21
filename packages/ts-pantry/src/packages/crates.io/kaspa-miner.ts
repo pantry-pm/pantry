@@ -44,7 +44,6 @@ export const cratesiokaspaminerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/kaspa-miner' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/kaspa-miner -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/kaspa-miner' as const,
   /**
   * Executable programs provided by this package.

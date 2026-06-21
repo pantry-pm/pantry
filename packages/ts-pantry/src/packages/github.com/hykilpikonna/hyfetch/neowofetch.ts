@@ -44,7 +44,6 @@ export const neowofetchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/hykilpikonna/hyfetch/neowofetch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/hykilpikonna/hyfetch/neowofetch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/hykilpikonna/hyfetch/neowofetch' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const digitaloceancomdoctlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install digitalocean.com/doctl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +digitalocean.com/doctl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install digitalocean.com/doctl' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const rexiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/royreznik/rexi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/royreznik/rexi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/royreznik/rexi' as const,
   /**
   * Executable programs provided by this package.

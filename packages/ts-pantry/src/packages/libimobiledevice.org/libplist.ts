@@ -44,7 +44,6 @@ export const libimobiledeviceorglibplistPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libimobiledevice.org/libplist' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libimobiledevice.org/libplist -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libimobiledevice.org/libplist' as const,
   /**
   * Executable programs provided by this package.

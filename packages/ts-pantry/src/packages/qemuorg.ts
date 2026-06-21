@@ -46,7 +46,6 @@ export const qemuorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install qemu.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +qemu.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install qemu.org' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const garmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/cloudbase/garm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/cloudbase/garm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/cloudbase/garm' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const iosdeployPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ios-control/ios-deploy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ios-control/ios-deploy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ios-control/ios-deploy' as const,
   /**
   * Executable programs provided by this package.

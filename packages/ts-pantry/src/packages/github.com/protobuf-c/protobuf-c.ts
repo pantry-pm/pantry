@@ -44,7 +44,6 @@ export const protobufcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/protobuf-c/protobuf-c' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/protobuf-c/protobuf-c -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/protobuf-c/protobuf-c' as const,
   /**
   * Executable programs provided by this package.

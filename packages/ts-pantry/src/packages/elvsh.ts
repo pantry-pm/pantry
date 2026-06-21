@@ -45,7 +45,6 @@ export const elvshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install elv.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +elv.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install elv.sh' as const,
   /**
   * Executable programs provided by this package.

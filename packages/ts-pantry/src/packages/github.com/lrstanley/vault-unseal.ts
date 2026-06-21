@@ -44,7 +44,6 @@ export const vaultunsealPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/lrstanley/vault-unseal' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/lrstanley/vault-unseal -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/lrstanley/vault-unseal' as const,
   /**
   * Executable programs provided by this package.

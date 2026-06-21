@@ -42,7 +42,6 @@ export const gitosgeoorggitearttopolibrttopoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git.osgeo.org/gitea/rttopo/librttopo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git.osgeo.org/gitea/rttopo/librttopo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git.osgeo.org/gitea/rttopo/librttopo' as const,
   programs: [] as const,
   companions: [] as const,

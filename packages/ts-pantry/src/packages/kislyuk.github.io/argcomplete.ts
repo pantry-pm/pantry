@@ -46,7 +46,6 @@ export const kislyukgithubioargcompletePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kislyuk.github.io/argcomplete' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kislyuk.github.io/argcomplete -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kislyuk.github.io/argcomplete' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const ryeuvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/lucianosrp/rye-uv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/lucianosrp/rye-uv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/lucianosrp/rye-uv' as const,
   /**
   * Executable programs provided by this package.

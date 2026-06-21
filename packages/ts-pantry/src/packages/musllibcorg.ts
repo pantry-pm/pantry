@@ -43,7 +43,6 @@ export const musllibcorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install musl.libc.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +musl.libc.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install musl.libc.org' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const taplotamasfedevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install taplo.tamasfe.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +taplo.tamasfe.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install taplo.tamasfe.dev' as const,
   /**
   * Executable programs provided by this package.

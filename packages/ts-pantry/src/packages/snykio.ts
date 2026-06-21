@@ -46,7 +46,6 @@ export const snykioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install snyk.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +snyk.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install snyk.io' as const,
   /**
   * Executable programs provided by this package.

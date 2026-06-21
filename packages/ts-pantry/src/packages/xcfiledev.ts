@@ -45,7 +45,6 @@ export const xcfiledevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xcfile.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xcfile.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xcfile.dev' as const,
   /**
   * Executable programs provided by this package.

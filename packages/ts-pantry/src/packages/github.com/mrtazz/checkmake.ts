@@ -44,7 +44,6 @@ export const checkmakePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mrtazz/checkmake' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mrtazz/checkmake -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mrtazz/checkmake' as const,
   /**
   * Executable programs provided by this package.

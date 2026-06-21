@@ -44,7 +44,6 @@ export const hugowangcicadaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hugo.wang/cicada' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hugo.wang/cicada -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hugo.wang/cicada' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const aux4ioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aux4.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aux4.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aux4.io' as const,
   /**
   * Executable programs provided by this package.

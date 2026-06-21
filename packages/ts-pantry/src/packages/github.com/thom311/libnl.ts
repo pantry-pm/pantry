@@ -42,7 +42,6 @@ export const libnlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/thom311/libnl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/thom311/libnl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/thom311/libnl' as const,
   programs: [] as const,
   companions: [] as const,

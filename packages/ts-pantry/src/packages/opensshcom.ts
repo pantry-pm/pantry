@@ -44,7 +44,6 @@ export const opensshcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openssh.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openssh.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openssh.com' as const,
   /**
   * Executable programs provided by this package.

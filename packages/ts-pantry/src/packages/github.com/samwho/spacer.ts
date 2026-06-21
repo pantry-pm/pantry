@@ -43,7 +43,6 @@ export const spacerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/samwho/spacer' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/samwho/spacer -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/samwho/spacer' as const,
   /**
   * Executable programs provided by this package.

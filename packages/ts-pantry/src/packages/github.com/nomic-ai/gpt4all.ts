@@ -43,7 +43,6 @@ export const gpt4allPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nomic-ai/gpt4all' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nomic-ai/gpt4all -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nomic-ai/gpt4all' as const,
   /**
   * Executable programs provided by this package.

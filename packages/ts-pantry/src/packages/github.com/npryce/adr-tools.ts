@@ -44,7 +44,6 @@ export const adrtoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/npryce/adr-tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/npryce/adr-tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/npryce/adr-tools' as const,
   /**
   * Executable programs provided by this package.

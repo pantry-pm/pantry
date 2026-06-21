@@ -43,7 +43,6 @@ export const swiftformatPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nicklockwood/SwiftFormat' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nicklockwood/SwiftFormat -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nicklockwood/SwiftFormat' as const,
   /**
   * Executable programs provided by this package.

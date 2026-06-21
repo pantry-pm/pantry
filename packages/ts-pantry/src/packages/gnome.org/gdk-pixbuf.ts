@@ -46,7 +46,6 @@ export const gnomeorggdkpixbufPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/gdk-pixbuf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/gdk-pixbuf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/gdk-pixbuf' as const,
   /**
   * Executable programs provided by this package.

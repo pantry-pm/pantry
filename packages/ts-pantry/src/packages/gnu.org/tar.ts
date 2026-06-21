@@ -45,7 +45,6 @@ export const gnuorgtarPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/tar' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/tar -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/tar' as const,
   /**
   * Executable programs provided by this package.

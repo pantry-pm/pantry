@@ -46,7 +46,6 @@ export const apacheorgavroPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apache.org/avro' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apache.org/avro -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apache.org/avro' as const,
   /**
   * Executable programs provided by this package.

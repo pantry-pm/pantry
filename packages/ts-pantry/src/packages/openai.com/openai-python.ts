@@ -45,7 +45,6 @@ export const openaicomopenaipythonPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openai.com/openai-python' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openai.com/openai-python -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openai.com/openai-python' as const,
   /**
   * Executable programs provided by this package.

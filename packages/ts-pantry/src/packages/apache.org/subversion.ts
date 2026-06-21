@@ -46,7 +46,6 @@ export const apacheorgsubversionPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apache.org/subversion' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apache.org/subversion -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apache.org/subversion' as const,
   /**
   * Executable programs provided by this package.

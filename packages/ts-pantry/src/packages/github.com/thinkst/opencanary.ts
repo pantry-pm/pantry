@@ -46,7 +46,6 @@ export const opencanaryPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/thinkst/opencanary' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/thinkst/opencanary -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/thinkst/opencanary' as const,
   /**
   * Executable programs provided by this package.

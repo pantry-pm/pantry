@@ -42,7 +42,6 @@ export const gnuorgpatchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/patch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/patch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/patch' as const,
   /**
   * Executable programs provided by this package.

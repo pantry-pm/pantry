@@ -46,7 +46,6 @@ export const gnuplotinfoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnuplot.info' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnuplot.info -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnuplot.info' as const,
   /**
   * Executable programs provided by this package.

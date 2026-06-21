@@ -44,7 +44,6 @@ export const diffociPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/reproducible-containers/diffoci' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/reproducible-containers/diffoci -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/reproducible-containers/diffoci' as const,
   /**
   * Executable programs provided by this package.

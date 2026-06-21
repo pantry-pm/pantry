@@ -46,7 +46,6 @@ export const gitlfscomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git-lfs.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git-lfs.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git-lfs.com' as const,
   /**
   * Executable programs provided by this package.

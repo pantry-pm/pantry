@@ -46,7 +46,6 @@ export const clocPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/AlDanial/cloc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/AlDanial/cloc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/AlDanial/cloc' as const,
   /**
   * Executable programs provided by this package.

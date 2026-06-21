@@ -46,7 +46,6 @@ export const openapigeneratortechPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openapi-generator.tech' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openapi-generator.tech -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openapi-generator.tech' as const,
   /**
   * Executable programs provided by this package.

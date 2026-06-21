@@ -45,7 +45,6 @@ export const fxwtfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fx.wtf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fx.wtf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fx.wtf' as const,
   /**
   * Executable programs provided by this package.

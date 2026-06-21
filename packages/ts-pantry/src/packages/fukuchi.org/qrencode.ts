@@ -46,7 +46,6 @@ export const fukuchiorgqrencodePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fukuchi.org/qrencode' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fukuchi.org/qrencode -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fukuchi.org/qrencode' as const,
   /**
   * Executable programs provided by this package.

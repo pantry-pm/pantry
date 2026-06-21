@@ -44,7 +44,6 @@ export const lamesourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lame.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lame.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lame.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

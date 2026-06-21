@@ -46,7 +46,6 @@ export const tmuxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/tmux/tmux' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/tmux/tmux -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/tmux/tmux' as const,
   /**
   * Executable programs provided by this package.

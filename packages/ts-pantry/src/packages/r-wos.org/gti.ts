@@ -44,7 +44,6 @@ export const rwosorggtiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install r-wos.org/gti' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +r-wos.org/gti -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install r-wos.org/gti' as const,
   /**
   * Executable programs provided by this package.

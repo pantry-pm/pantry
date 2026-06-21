@@ -45,7 +45,6 @@ export const libpngorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libpng.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libpng.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libpng.org' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const libtomnetmathPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libtom.net/math' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libtom.net/math -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libtom.net/math' as const,
   programs: [] as const,
   companions: [] as const,

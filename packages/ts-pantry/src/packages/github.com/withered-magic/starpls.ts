@@ -42,7 +42,6 @@ export const starplsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/withered-magic/starpls' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/withered-magic/starpls -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/withered-magic/starpls' as const,
   /**
   * Executable programs provided by this package.

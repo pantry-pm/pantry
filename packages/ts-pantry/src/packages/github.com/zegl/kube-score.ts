@@ -45,7 +45,6 @@ export const kubescorePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/zegl/kube-score' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/zegl/kube-score -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/zegl/kube-score' as const,
   /**
   * Executable programs provided by this package.

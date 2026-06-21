@@ -45,7 +45,6 @@ export const convcogithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install convco.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +convco.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install convco.github.io' as const,
   /**
   * Executable programs provided by this package.

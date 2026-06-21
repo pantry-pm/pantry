@@ -40,7 +40,6 @@ export const gnupgorglibksbaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnupg.org/libksba' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnupg.org/libksba -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnupg.org/libksba' as const,
   programs: [] as const,
   companions: [] as const,

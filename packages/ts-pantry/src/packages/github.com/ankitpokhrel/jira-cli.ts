@@ -44,7 +44,6 @@ export const jiracliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ankitpokhrel/jira-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ankitpokhrel/jira-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ankitpokhrel/jira-cli' as const,
   /**
   * Executable programs provided by this package.

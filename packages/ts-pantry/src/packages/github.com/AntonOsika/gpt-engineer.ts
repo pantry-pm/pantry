@@ -45,7 +45,6 @@ export const gptengineerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/AntonOsika/gpt-engineer' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/AntonOsika/gpt-engineer -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/AntonOsika/gpt-engineer' as const,
   /**
   * Executable programs provided by this package.

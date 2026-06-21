@@ -43,7 +43,6 @@ export const tuistioxcbeautifyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tuist.io/xcbeautify' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tuist.io/xcbeautify -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tuist.io/xcbeautify' as const,
   /**
   * Executable programs provided by this package.

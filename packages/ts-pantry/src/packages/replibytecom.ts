@@ -44,7 +44,6 @@ export const replibytecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install replibyte.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +replibyte.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install replibyte.com' as const,
   /**
   * Executable programs provided by this package.

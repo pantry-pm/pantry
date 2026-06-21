@@ -44,7 +44,6 @@ export const fermyoncomspinPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fermyon.com/spin' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fermyon.com/spin -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fermyon.com/spin' as const,
   /**
   * Executable programs provided by this package.

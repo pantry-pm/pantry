@@ -44,7 +44,6 @@ export const apkoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/chainguard-dev/apko' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/chainguard-dev/apko -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/chainguard-dev/apko' as const,
   /**
   * Executable programs provided by this package.

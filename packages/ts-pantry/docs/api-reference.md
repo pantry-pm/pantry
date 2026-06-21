@@ -1136,7 +1136,6 @@ interface PantryInstallResult {
     versions: string[]
     resolved: string
   }>
-  pkgxCommand: string             // Ready-to-use pkgx install command (direct deps only)
   pantryCommand: string           // Ready-to-use pantry install command (direct deps only)
 }
 ```

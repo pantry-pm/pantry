@@ -45,7 +45,6 @@ export const depotdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install depot.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +depot.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install depot.dev' as const,
   /**
   * Executable programs provided by this package.

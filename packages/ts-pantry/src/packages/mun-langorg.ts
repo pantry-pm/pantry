@@ -46,7 +46,6 @@ export const munlangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mun-lang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mun-lang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mun-lang.org' as const,
   /**
   * Executable programs provided by this package.

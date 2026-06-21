@@ -45,7 +45,6 @@ export const projectdiscoveryionucleiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install projectdiscovery.io/nuclei' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +projectdiscovery.io/nuclei -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install projectdiscovery.io/nuclei' as const,
   /**
   * Executable programs provided by this package.

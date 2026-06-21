@@ -46,7 +46,6 @@ export const mongodbcomshellPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mongodb.com/shell' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mongodb.com/shell -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mongodb.com/shell' as const,
   /**
   * Executable programs provided by this package.

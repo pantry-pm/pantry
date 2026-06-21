@@ -43,7 +43,6 @@ export const wixcomapplesimutilsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wix.com/applesimutils' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wix.com/applesimutils -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wix.com/applesimutils' as const,
   /**
   * Executable programs provided by this package.

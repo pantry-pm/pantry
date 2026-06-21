@@ -44,7 +44,6 @@ export const cedarpolicycomcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cedarpolicy.com/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cedarpolicy.com/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cedarpolicy.com/cli' as const,
   /**
   * Executable programs provided by this package.

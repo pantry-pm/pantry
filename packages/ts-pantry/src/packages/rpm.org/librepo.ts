@@ -42,7 +42,6 @@ export const rpmorglibrepoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rpm.org/librepo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rpm.org/librepo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rpm.org/librepo' as const,
   programs: [] as const,
   companions: [] as const,

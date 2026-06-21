@@ -45,7 +45,6 @@ export const alacrittyorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install alacritty.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +alacritty.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install alacritty.org' as const,
   /**
   * Executable programs provided by this package.

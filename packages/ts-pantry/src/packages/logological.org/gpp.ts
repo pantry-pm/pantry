@@ -45,7 +45,6 @@ export const logologicalorggppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install logological.org/gpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +logological.org/gpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install logological.org/gpp' as const,
   /**
   * Executable programs provided by this package.

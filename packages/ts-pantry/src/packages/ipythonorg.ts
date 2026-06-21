@@ -46,7 +46,6 @@ export const ipythonorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ipython.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ipython.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ipython.org' as const,
   /**
   * Executable programs provided by this package.

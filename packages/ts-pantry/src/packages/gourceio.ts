@@ -45,7 +45,6 @@ export const gourceioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gource.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gource.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gource.io' as const,
   /**
   * Executable programs provided by this package.

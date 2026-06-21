@@ -46,7 +46,6 @@ export const mpvioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mpv.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mpv.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mpv.io' as const,
   /**
   * Executable programs provided by this package.

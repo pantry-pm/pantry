@@ -43,7 +43,6 @@ export const mutagenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/quodlibet/mutagen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/quodlibet/mutagen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/quodlibet/mutagen' as const,
   programs: [] as const,
   companions: [] as const,

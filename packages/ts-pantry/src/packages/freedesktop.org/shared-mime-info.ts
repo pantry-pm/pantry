@@ -46,7 +46,6 @@ export const freedesktoporgsharedmimeinfoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/shared-mime-info' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/shared-mime-info -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/shared-mime-info' as const,
   /**
   * Executable programs provided by this package.

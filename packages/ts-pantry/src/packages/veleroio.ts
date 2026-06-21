@@ -45,7 +45,6 @@ export const veleroioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install velero.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +velero.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install velero.io' as const,
   /**
   * Executable programs provided by this package.

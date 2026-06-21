@@ -44,7 +44,6 @@ export const gnuorggdbmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gdbm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gdbm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gdbm' as const,
   /**
   * Executable programs provided by this package.

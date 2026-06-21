@@ -45,7 +45,6 @@ export const makotemplatesorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install makotemplates.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +makotemplates.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install makotemplates.org' as const,
   /**
   * Executable programs provided by this package.

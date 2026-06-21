@@ -44,7 +44,6 @@ export const bitcoinorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bitcoin.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bitcoin.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bitcoin.org' as const,
   /**
   * Executable programs provided by this package.

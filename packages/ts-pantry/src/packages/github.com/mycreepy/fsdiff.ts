@@ -43,7 +43,6 @@ export const fsdiffPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mycreepy/fsdiff' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mycreepy/fsdiff -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mycreepy/fsdiff' as const,
   /**
   * Executable programs provided by this package.

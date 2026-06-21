@@ -43,7 +43,6 @@ export const libssh2orgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libssh2.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libssh2.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libssh2.org' as const,
   programs: [] as const,
   companions: [] as const,

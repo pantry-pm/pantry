@@ -41,7 +41,6 @@ export const virtualsquareorgvdePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install virtualsquare.org/vde' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +virtualsquare.org/vde -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install virtualsquare.org/vde' as const,
   programs: [] as const,
   companions: [] as const,

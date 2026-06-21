@@ -45,7 +45,6 @@ export const lmsensorsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/lm-sensors/lm-sensors' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/lm-sensors/lm-sensors -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/lm-sensors/lm-sensors' as const,
   /**
   * Executable programs provided by this package.

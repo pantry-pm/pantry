@@ -46,7 +46,6 @@ export const riverbankcomputingcompyqtbuilderPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install riverbankcomputing.com/pyqt-builder' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +riverbankcomputing.com/pyqt-builder -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install riverbankcomputing.com/pyqt-builder' as const,
   /**
   * Executable programs provided by this package.

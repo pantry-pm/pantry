@@ -46,7 +46,6 @@ export const harfbuzzorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install harfbuzz.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +harfbuzz.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install harfbuzz.org' as const,
   /**
   * Executable programs provided by this package.

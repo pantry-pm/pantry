@@ -41,7 +41,6 @@ export const docbookorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install docbook.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +docbook.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install docbook.org' as const,
   programs: [] as const,
   companions: [] as const,

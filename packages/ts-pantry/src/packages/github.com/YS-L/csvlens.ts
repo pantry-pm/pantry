@@ -43,7 +43,6 @@ export const csvlensPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/YS-L/csvlens' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/YS-L/csvlens -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/YS-L/csvlens' as const,
   /**
   * Executable programs provided by this package.

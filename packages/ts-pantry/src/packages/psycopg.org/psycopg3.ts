@@ -43,7 +43,6 @@ export const psycopgorgpsycopg3Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install psycopg.org/psycopg3' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +psycopg.org/psycopg3 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install psycopg.org/psycopg3' as const,
   programs: [] as const,
   companions: [] as const,

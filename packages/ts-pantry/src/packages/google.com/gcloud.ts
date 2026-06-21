@@ -44,7 +44,6 @@ export const googlecomgcloudPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/gcloud' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/gcloud -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/gcloud' as const,
   /**
   * Executable programs provided by this package.

@@ -42,7 +42,6 @@ export const unibiliumPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/neovim/unibilium' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/neovim/unibilium -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/neovim/unibilium' as const,
   programs: [] as const,
   companions: [] as const,

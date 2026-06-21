@@ -42,7 +42,6 @@ export const kernelorglibcapPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kernel.org/libcap' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kernel.org/libcap -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kernel.org/libcap' as const,
   /**
   * Executable programs provided by this package.

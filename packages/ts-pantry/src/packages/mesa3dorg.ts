@@ -42,7 +42,6 @@ export const mesa3dorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mesa3d.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mesa3d.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mesa3d.org' as const,
   programs: [] as const,
   companions: [] as const,

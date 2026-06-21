@@ -44,7 +44,6 @@ export const pcscliteapdufrPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pcsclite.apdu.fr' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pcsclite.apdu.fr -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pcsclite.apdu.fr' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const mercurerocksPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mercure.rocks' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mercure.rocks -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mercure.rocks' as const,
   /**
   * Executable programs provided by this package.

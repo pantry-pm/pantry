@@ -44,7 +44,6 @@ export const encPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/life4/enc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/life4/enc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/life4/enc' as const,
   /**
   * Executable programs provided by this package.

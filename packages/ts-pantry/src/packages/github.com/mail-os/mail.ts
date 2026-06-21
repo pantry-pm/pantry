@@ -40,7 +40,6 @@ export const mailPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mail-os/mail' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mail-os/mail -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mail-os/mail' as const,
   /**
   * Executable programs provided by this package.

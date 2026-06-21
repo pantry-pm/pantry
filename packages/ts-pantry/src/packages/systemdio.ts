@@ -46,7 +46,6 @@ export const systemdioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install systemd.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +systemd.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install systemd.io' as const,
   /**
   * Executable programs provided by this package.

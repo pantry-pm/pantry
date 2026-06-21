@@ -44,7 +44,6 @@ export const pwmtorggiraraPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pwmt.org/girara' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pwmt.org/girara -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pwmt.org/girara' as const,
   programs: [] as const,
   companions: [] as const,

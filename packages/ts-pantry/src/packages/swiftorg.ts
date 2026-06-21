@@ -46,7 +46,6 @@ export const swiftorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install swift.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +swift.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install swift.org' as const,
   /**
   * Executable programs provided by this package.

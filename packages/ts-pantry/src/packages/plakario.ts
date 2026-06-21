@@ -43,7 +43,6 @@ export const plakarioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install plakar.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +plakar.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install plakar.io' as const,
   /**
   * Executable programs provided by this package.

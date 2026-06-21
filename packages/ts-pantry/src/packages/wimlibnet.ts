@@ -45,7 +45,6 @@ export const wimlibnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wimlib.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wimlib.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wimlib.net' as const,
   /**
   * Executable programs provided by this package.

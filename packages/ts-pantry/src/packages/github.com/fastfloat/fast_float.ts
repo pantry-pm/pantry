@@ -42,7 +42,6 @@ export const fast_floatPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/fastfloat/fast_float' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/fastfloat/fast_float -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/fastfloat/fast_float' as const,
   programs: [] as const,
   companions: [] as const,

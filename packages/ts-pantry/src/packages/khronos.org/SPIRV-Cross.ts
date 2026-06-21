@@ -44,7 +44,6 @@ export const khronosorgspirvcrossPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install khronos.org/SPIRV-Cross' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +khronos.org/SPIRV-Cross -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install khronos.org/SPIRV-Cross' as const,
   /**
   * Executable programs provided by this package.

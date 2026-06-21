@@ -43,7 +43,6 @@ export const libnslPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/thkukuk/libnsl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/thkukuk/libnsl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/thkukuk/libnsl' as const,
   programs: [] as const,
   companions: [] as const,

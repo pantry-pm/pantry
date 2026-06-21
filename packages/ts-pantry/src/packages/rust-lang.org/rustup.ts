@@ -45,7 +45,6 @@ export const rustlangorgrustupPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rust-lang.org/rustup' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rust-lang.org/rustup -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rust-lang.org/rustup' as const,
   /**
   * Executable programs provided by this package.

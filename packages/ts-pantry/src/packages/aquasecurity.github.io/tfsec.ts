@@ -45,7 +45,6 @@ export const aquasecuritygithubiotfsecPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aquasecurity.github.io/tfsec' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aquasecurity.github.io/tfsec -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aquasecurity.github.io/tfsec' as const,
   /**
   * Executable programs provided by this package.

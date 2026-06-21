@@ -44,7 +44,6 @@ export const gnuorggccPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gcc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gcc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gcc' as const,
   /**
   * Executable programs provided by this package.

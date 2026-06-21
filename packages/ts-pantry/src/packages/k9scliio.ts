@@ -45,7 +45,6 @@ export const k9scliioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install k9scli.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +k9scli.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install k9scli.io' as const,
   /**
   * Executable programs provided by this package.

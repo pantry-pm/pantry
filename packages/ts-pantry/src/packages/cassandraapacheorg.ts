@@ -16,7 +16,6 @@ export const cassandraapacheorgPackage = {
   homepageUrl: 'https://cassandra.apache.org' as const,
   githubUrl: 'https://github.com/apache/cassandra' as const,
   installCommand: 'pantry install cassandra.apache.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cassandra.apache.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cassandra.apache.org' as const,
   programs: [
     'cassandra',

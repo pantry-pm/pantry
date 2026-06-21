@@ -45,7 +45,6 @@ export const microsoftcompyrightPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microsoft.com/pyright' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microsoft.com/pyright -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microsoft.com/pyright' as const,
   /**
   * Executable programs provided by this package.

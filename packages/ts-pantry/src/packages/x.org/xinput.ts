@@ -46,7 +46,6 @@ export const xorgxinputPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xinput' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xinput -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xinput' as const,
   /**
   * Executable programs provided by this package.

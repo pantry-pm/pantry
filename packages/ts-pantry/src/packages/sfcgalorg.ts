@@ -46,7 +46,6 @@ export const sfcgalorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sfcgal.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sfcgal.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sfcgal.org' as const,
   /**
   * Executable programs provided by this package.

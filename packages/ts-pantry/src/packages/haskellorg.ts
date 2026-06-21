@@ -46,7 +46,6 @@ export const haskellorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install haskell.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +haskell.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install haskell.org' as const,
   /**
   * Executable programs provided by this package.

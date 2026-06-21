@@ -41,7 +41,6 @@ export const gnuorgautoconfarchivePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/autoconf-archive' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/autoconf-archive -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/autoconf-archive' as const,
   programs: [] as const,
   companions: [] as const,

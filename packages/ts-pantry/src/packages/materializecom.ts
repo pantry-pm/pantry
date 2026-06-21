@@ -46,7 +46,6 @@ export const materializecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install materialize.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +materialize.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install materialize.com' as const,
   /**
   * Executable programs provided by this package.

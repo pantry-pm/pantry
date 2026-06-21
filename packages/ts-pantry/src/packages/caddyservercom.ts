@@ -45,7 +45,6 @@ export const caddyservercomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install caddyserver.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +caddyserver.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install caddyserver.com' as const,
   /**
   * Executable programs provided by this package.

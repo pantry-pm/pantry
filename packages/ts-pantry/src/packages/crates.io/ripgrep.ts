@@ -49,7 +49,6 @@ export const ripgrepPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/ripgrep' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/ripgrep -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/ripgrep' as const,
   /**
   * Executable programs provided by this package.

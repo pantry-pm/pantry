@@ -45,7 +45,6 @@ export const poktnetworkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pokt.network' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pokt.network -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pokt.network' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const quickwitioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install quickwit.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +quickwit.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install quickwit.io' as const,
   /**
   * Executable programs provided by this package.

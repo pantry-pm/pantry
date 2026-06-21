@@ -44,7 +44,6 @@ export const redis_tuiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mat2cc/redis_tui' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mat2cc/redis_tui -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mat2cc/redis_tui' as const,
   /**
   * Executable programs provided by this package.

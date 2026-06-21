@@ -43,7 +43,6 @@ export const julialangorgjuliaupPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install julialang.org/juliaup' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +julialang.org/juliaup -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install julialang.org/juliaup' as const,
   /**
   * Executable programs provided by this package.

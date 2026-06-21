@@ -42,7 +42,6 @@ export const xorgicePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/ice' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/ice -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/ice' as const,
   programs: [] as const,
   companions: [] as const,

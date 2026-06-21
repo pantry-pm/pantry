@@ -45,7 +45,6 @@ export const kubesharkcoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubeshark.co' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubeshark.co -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubeshark.co' as const,
   /**
   * Executable programs provided by this package.

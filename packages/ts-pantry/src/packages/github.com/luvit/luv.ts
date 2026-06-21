@@ -43,7 +43,6 @@ export const luvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/luvit/luv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/luvit/luv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/luvit/luv' as const,
   programs: [] as const,
   companions: [] as const,

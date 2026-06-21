@@ -44,7 +44,6 @@ export const lsdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/peltoche/lsd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/peltoche/lsd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/peltoche/lsd' as const,
   /**
   * Executable programs provided by this package.

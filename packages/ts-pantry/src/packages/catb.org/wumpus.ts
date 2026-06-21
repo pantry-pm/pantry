@@ -44,7 +44,6 @@ export const catborgwumpusPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install catb.org/wumpus' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +catb.org/wumpus -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install catb.org/wumpus' as const,
   /**
   * Executable programs provided by this package.

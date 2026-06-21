@@ -46,7 +46,6 @@ export const libheifPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/strukturag/libheif' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/strukturag/libheif -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/strukturag/libheif' as const,
   /**
   * Executable programs provided by this package.

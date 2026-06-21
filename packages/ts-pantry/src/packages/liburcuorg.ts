@@ -42,7 +42,6 @@ export const liburcuorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install liburcu.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +liburcu.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install liburcu.org' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const astralshtyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install astral.sh/ty' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +astral.sh/ty -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install astral.sh/ty' as const,
   /**
   * Executable programs provided by this package.

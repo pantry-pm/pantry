@@ -46,7 +46,6 @@ export const pantsbuildorgsciepantsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pantsbuild.org/scie-pants' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pantsbuild.org/scie-pants -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pantsbuild.org/scie-pants' as const,
   /**
   * Executable programs provided by this package.

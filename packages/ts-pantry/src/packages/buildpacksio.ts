@@ -45,7 +45,6 @@ export const buildpacksioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install buildpacks.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +buildpacks.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install buildpacks.io' as const,
   /**
   * Executable programs provided by this package.

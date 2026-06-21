@@ -45,7 +45,6 @@ export const planetscalecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install planetscale.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +planetscale.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install planetscale.com' as const,
   /**
   * Executable programs provided by this package.

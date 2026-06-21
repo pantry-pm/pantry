@@ -42,7 +42,6 @@ export const msgpackorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install msgpack.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +msgpack.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install msgpack.org' as const,
   programs: [] as const,
   companions: [] as const,

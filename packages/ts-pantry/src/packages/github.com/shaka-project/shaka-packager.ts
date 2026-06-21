@@ -46,7 +46,6 @@ export const shakapackagerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/shaka-project/shaka-packager' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/shaka-project/shaka-packager -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/shaka-project/shaka-packager' as const,
   /**
   * Executable programs provided by this package.

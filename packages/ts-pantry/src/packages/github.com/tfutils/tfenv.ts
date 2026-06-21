@@ -44,7 +44,6 @@ export const tfenvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/tfutils/tfenv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/tfutils/tfenv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/tfutils/tfenv' as const,
   /**
   * Executable programs provided by this package.

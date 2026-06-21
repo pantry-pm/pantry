@@ -45,7 +45,6 @@ export const tectonictypesettinggithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tectonic-typesetting.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tectonic-typesetting.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tectonic-typesetting.github.io' as const,
   /**
   * Executable programs provided by this package.

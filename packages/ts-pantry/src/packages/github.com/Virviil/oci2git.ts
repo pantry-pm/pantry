@@ -42,7 +42,6 @@ export const oci2gitPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Virviil/oci2git' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Virviil/oci2git -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Virviil/oci2git' as const,
   /**
   * Executable programs provided by this package.

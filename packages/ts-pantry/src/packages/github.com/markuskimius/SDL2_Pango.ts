@@ -41,7 +41,6 @@ export const sdl2_pangoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/markuskimius/SDL2_Pango' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/markuskimius/SDL2_Pango -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/markuskimius/SDL2_Pango' as const,
   programs: [] as const,
   companions: [] as const,

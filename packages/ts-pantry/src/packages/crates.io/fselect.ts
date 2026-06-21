@@ -46,7 +46,6 @@ export const cratesiofselectPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/fselect' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/fselect -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/fselect' as const,
   /**
   * Executable programs provided by this package.

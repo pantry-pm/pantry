@@ -51,7 +51,6 @@ export const phpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install php.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +php.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install php.net' as const,
   /**
   * Executable programs provided by this package.

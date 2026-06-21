@@ -46,7 +46,6 @@ export const ansiblecomansiblelintPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ansible.com/ansible-lint' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ansible.com/ansible-lint -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ansible.com/ansible-lint' as const,
   /**
   * Executable programs provided by this package.

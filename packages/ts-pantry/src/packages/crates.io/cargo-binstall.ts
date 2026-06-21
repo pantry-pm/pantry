@@ -42,7 +42,6 @@ export const cratesiocargobinstallPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/cargo-binstall' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/cargo-binstall -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/cargo-binstall' as const,
   /**
   * Executable programs provided by this package.

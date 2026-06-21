@@ -43,7 +43,6 @@ export const speexdspPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/xiph/speexdsp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/xiph/speexdsp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/xiph/speexdsp' as const,
   programs: [] as const,
   companions: [] as const,

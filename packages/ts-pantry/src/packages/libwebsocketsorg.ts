@@ -44,7 +44,6 @@ export const libwebsocketsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libwebsockets.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libwebsockets.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libwebsockets.org' as const,
   programs: [] as const,
   companions: [] as const,

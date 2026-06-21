@@ -45,7 +45,6 @@ export const flutterdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install flutter.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +flutter.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install flutter.dev' as const,
   /**
   * Executable programs provided by this package.

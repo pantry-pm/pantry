@@ -44,7 +44,6 @@ export const xcresultparserPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/a7ex/xcresultparser' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/a7ex/xcresultparser -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/a7ex/xcresultparser' as const,
   /**
   * Executable programs provided by this package.

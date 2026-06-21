@@ -44,7 +44,6 @@ export const yamllintPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/adrienverge/yamllint' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/adrienverge/yamllint -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/adrienverge/yamllint' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const starshiprsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install starship.rs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +starship.rs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install starship.rs' as const,
   /**
   * Executable programs provided by this package.

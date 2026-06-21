@@ -42,7 +42,6 @@ export const tcltktclPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tcl.tk/tcl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tcl.tk/tcl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tcl.tk/tcl' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const jqpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/noahgorstein/jqp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/noahgorstein/jqp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/noahgorstein/jqp' as const,
   /**
   * Executable programs provided by this package.

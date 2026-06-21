@@ -45,7 +45,6 @@ export const waterlanhomexs4allnldos2unixPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install waterlan.home.xs4all.nl/dos2unix' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +waterlan.home.xs4all.nl/dos2unix -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install waterlan.home.xs4all.nl/dos2unix' as const,
   /**
   * Executable programs provided by this package.

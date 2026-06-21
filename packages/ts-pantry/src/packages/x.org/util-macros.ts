@@ -40,7 +40,6 @@ export const xorgutilmacrosPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/util-macros' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/util-macros -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/util-macros' as const,
   programs: [] as const,
   companions: [] as const,

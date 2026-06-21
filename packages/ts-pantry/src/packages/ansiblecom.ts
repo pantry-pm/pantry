@@ -46,7 +46,6 @@ export const ansiblecomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ansible.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ansible.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ansible.com' as const,
   /**
   * Executable programs provided by this package.

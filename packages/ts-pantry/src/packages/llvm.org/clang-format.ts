@@ -46,7 +46,6 @@ export const llvmorgclangformatPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install llvm.org/clang-format' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +llvm.org/clang-format -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install llvm.org/clang-format' as const,
   /**
   * Executable programs provided by this package.

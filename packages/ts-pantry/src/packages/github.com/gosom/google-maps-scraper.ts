@@ -45,7 +45,6 @@ export const googlemapsscraperPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/gosom/google-maps-scraper' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/gosom/google-maps-scraper -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/gosom/google-maps-scraper' as const,
   /**
   * Executable programs provided by this package.

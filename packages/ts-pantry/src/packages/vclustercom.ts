@@ -46,7 +46,6 @@ export const vclustercomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vcluster.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vcluster.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vcluster.com' as const,
   /**
   * Executable programs provided by this package.

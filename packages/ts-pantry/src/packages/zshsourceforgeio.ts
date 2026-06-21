@@ -45,7 +45,6 @@ export const zshsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install zsh.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +zsh.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install zsh.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

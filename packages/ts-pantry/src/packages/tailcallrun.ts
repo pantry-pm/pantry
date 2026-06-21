@@ -45,7 +45,6 @@ export const tailcallrunPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tailcall.run' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tailcall.run -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tailcall.run' as const,
   /**
   * Executable programs provided by this package.

@@ -41,7 +41,6 @@ export const libunibreakPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/adah1972/libunibreak' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/adah1972/libunibreak -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/adah1972/libunibreak' as const,
   programs: [] as const,
   companions: [] as const,

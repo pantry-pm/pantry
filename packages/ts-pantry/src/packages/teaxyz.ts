@@ -43,7 +43,6 @@ export const teaxyzPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tea.xyz' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tea.xyz -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tea.xyz' as const,
   programs: [] as const,
   companions: [] as const,

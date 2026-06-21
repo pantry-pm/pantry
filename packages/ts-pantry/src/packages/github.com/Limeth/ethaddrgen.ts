@@ -44,7 +44,6 @@ export const ethaddrgenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Limeth/ethaddrgen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Limeth/ethaddrgen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Limeth/ethaddrgen' as const,
   /**
   * Executable programs provided by this package.

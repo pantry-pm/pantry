@@ -46,7 +46,6 @@ export const developersyubicocomlibfido2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install developers.yubico.com/libfido2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +developers.yubico.com/libfido2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install developers.yubico.com/libfido2' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const jetporchcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jetporch.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jetporch.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jetporch.com' as const,
   /**
   * Executable programs provided by this package.

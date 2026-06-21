@@ -45,7 +45,6 @@ export const glarosdtcumnedumetisPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install glaros.dtc.umn.edu/metis' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +glaros.dtc.umn.edu/metis -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install glaros.dtc.umn.edu/metis' as const,
   /**
   * Executable programs provided by this package.

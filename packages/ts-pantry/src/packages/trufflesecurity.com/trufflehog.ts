@@ -45,7 +45,6 @@ export const trufflesecuritycomtrufflehogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install trufflesecurity.com/trufflehog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +trufflesecurity.com/trufflehog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install trufflesecurity.com/trufflehog' as const,
   /**
   * Executable programs provided by this package.

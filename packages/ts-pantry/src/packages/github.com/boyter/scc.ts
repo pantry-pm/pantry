@@ -44,7 +44,6 @@ export const sccPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/boyter/scc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/boyter/scc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/boyter/scc' as const,
   /**
   * Executable programs provided by this package.

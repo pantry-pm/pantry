@@ -43,7 +43,6 @@ export const scriptistoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/igor-petruk/scriptisto' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/igor-petruk/scriptisto -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/igor-petruk/scriptisto' as const,
   /**
   * Executable programs provided by this package.

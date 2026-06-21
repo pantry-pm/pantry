@@ -45,7 +45,6 @@ export const microbreworgmd5sha1sumPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install microbrew.org/md5sha1sum' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +microbrew.org/md5sha1sum -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install microbrew.org/md5sha1sum' as const,
   /**
   * Executable programs provided by this package.

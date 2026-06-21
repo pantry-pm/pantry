@@ -50,7 +50,6 @@ export const helmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install helm.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +helm.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install helm.sh' as const,
   /**
   * Executable programs provided by this package.

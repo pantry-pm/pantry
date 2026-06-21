@@ -45,7 +45,6 @@ export const sphinxdocorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sphinx-doc.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sphinx-doc.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sphinx-doc.org' as const,
   /**
   * Executable programs provided by this package.

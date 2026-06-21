@@ -42,7 +42,6 @@ export const videolanorglibblurayPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install videolan.org/libbluray' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +videolan.org/libbluray -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install videolan.org/libbluray' as const,
   programs: [] as const,
   companions: [] as const,

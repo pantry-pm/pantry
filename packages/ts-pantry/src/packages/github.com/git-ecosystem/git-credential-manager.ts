@@ -45,7 +45,6 @@ export const gitcredentialmanagerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/git-ecosystem/git-credential-manager' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/git-ecosystem/git-credential-manager -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/git-ecosystem/git-credential-manager' as const,
   /**
   * Executable programs provided by this package.

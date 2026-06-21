@@ -46,7 +46,6 @@ export const gnuorggettextPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/gettext' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/gettext -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/gettext' as const,
   /**
   * Executable programs provided by this package.

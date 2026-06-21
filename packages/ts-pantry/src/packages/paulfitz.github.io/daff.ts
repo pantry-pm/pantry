@@ -46,7 +46,6 @@ export const paulfitzgithubiodaffPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install paulfitz.github.io/daff' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +paulfitz.github.io/daff -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install paulfitz.github.io/daff' as const,
   /**
   * Executable programs provided by this package.

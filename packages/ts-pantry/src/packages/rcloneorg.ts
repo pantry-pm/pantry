@@ -45,7 +45,6 @@ export const rcloneorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rclone.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rclone.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rclone.org' as const,
   /**
   * Executable programs provided by this package.

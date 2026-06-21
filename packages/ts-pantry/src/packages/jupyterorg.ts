@@ -45,7 +45,6 @@ export const jupyterorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jupyter.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jupyter.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jupyter.org' as const,
   /**
   * Executable programs provided by this package.

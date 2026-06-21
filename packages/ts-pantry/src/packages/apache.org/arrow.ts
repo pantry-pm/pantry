@@ -46,7 +46,6 @@ export const apacheorgarrowPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apache.org/arrow' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apache.org/arrow -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apache.org/arrow' as const,
   /**
   * Executable programs provided by this package.

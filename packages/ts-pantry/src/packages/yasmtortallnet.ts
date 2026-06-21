@@ -44,7 +44,6 @@ export const yasmtortallnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install yasm.tortall.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +yasm.tortall.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install yasm.tortall.net' as const,
   /**
   * Executable programs provided by this package.

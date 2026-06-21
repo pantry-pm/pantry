@@ -41,7 +41,6 @@ export const zshautosuggestionsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/zsh-users/zsh-autosuggestions' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/zsh-users/zsh-autosuggestions -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/zsh-users/zsh-autosuggestions' as const,
   programs: [] as const,
   companions: [] as const,

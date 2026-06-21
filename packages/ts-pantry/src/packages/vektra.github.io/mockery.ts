@@ -45,7 +45,6 @@ export const vektragithubiomockeryPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install vektra.github.io/mockery' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +vektra.github.io/mockery -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install vektra.github.io/mockery' as const,
   /**
   * Executable programs provided by this package.

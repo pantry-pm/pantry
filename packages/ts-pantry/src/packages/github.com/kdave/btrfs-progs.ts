@@ -46,7 +46,6 @@ export const btrfsprogsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/kdave/btrfs-progs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/kdave/btrfs-progs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/kdave/btrfs-progs' as const,
   /**
   * Executable programs provided by this package.

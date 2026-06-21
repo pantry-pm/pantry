@@ -45,7 +45,6 @@ export const utillinuxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/util-linux/util-linux' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/util-linux/util-linux -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/util-linux/util-linux' as const,
   /**
   * Executable programs provided by this package.

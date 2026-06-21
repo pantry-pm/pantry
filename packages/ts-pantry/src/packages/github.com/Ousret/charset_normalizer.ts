@@ -45,7 +45,6 @@ export const charset_normalizerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Ousret/charset_normalizer' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Ousret/charset_normalizer -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Ousret/charset_normalizer' as const,
   /**
   * Executable programs provided by this package.

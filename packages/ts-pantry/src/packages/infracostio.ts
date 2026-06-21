@@ -45,7 +45,6 @@ export const infracostioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install infracost.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +infracost.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install infracost.io' as const,
   /**
   * Executable programs provided by this package.

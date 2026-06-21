@@ -45,7 +45,6 @@ export const printfngithubiofendPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install printfn.github.io/fend' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +printfn.github.io/fend -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install printfn.github.io/fend' as const,
   /**
   * Executable programs provided by this package.

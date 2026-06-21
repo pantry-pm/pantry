@@ -43,7 +43,6 @@ export const cratesiomdtuiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/md-tui' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/md-tui -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/md-tui' as const,
   /**
   * Executable programs provided by this package.

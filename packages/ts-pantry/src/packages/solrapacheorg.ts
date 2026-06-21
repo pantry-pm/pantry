@@ -16,7 +16,6 @@ export const solrapacheorgPackage = {
   homepageUrl: 'https://solr.apache.org' as const,
   githubUrl: 'https://github.com/apache/solr' as const,
   installCommand: 'pantry install solr.apache.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +solr.apache.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install solr.apache.org' as const,
   programs: [
     'solr',

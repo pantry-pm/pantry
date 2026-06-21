@@ -44,7 +44,6 @@ export const rendercomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install render.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +render.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install render.com' as const,
   /**
   * Executable programs provided by this package.

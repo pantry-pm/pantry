@@ -50,7 +50,6 @@ export const sqlitePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sqlite.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sqlite.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sqlite.org' as const,
   /**
   * Executable programs provided by this package.

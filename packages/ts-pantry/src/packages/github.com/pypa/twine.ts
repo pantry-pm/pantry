@@ -45,7 +45,6 @@ export const twinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/pypa/twine' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/pypa/twine -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/pypa/twine' as const,
   /**
   * Executable programs provided by this package.

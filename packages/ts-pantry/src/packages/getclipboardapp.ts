@@ -46,7 +46,6 @@ export const getclipboardappPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install getclipboard.app' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +getclipboard.app -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install getclipboard.app' as const,
   /**
   * Executable programs provided by this package.

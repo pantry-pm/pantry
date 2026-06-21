@@ -45,7 +45,6 @@ export const mvdanccgofumptPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mvdan.cc/gofumpt' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mvdan.cc/gofumpt -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mvdan.cc/gofumpt' as const,
   /**
   * Executable programs provided by this package.

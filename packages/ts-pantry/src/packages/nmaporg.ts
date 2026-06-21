@@ -46,7 +46,6 @@ export const nmaporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nmap.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nmap.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nmap.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const mvdanccshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mvdan.cc/sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mvdan.cc/sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mvdan.cc/sh' as const,
   /**
   * Executable programs provided by this package.

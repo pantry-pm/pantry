@@ -44,7 +44,6 @@ export const stargazersPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/spencerkimball/stargazers' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/spencerkimball/stargazers -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/spencerkimball/stargazers' as const,
   /**
   * Executable programs provided by this package.

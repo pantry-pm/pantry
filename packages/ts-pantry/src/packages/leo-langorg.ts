@@ -46,7 +46,6 @@ export const leolangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install leo-lang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +leo-lang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install leo-lang.org' as const,
   /**
   * Executable programs provided by this package.

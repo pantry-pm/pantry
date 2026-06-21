@@ -45,7 +45,6 @@ export const voltashPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install volta.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +volta.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install volta.sh' as const,
   /**
   * Executable programs provided by this package.

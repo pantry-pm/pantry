@@ -43,7 +43,6 @@ export const sourcekittenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jpsim/SourceKitten' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jpsim/SourceKitten -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jpsim/SourceKitten' as const,
   /**
   * Executable programs provided by this package.

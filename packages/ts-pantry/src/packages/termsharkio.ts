@@ -44,7 +44,6 @@ export const termsharkioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install termshark.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +termshark.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install termshark.io' as const,
   /**
   * Executable programs provided by this package.

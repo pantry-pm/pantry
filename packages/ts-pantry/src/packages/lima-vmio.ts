@@ -46,7 +46,6 @@ export const limavmioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lima-vm.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lima-vm.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lima-vm.io' as const,
   /**
   * Executable programs provided by this package.

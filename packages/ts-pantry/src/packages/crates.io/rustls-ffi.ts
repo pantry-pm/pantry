@@ -42,7 +42,6 @@ export const cratesiorustlsffiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/rustls-ffi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/rustls-ffi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/rustls-ffi' as const,
   programs: [] as const,
   companions: [] as const,

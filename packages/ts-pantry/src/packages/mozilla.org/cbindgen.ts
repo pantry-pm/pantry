@@ -44,7 +44,6 @@ export const mozillaorgcbindgenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mozilla.org/cbindgen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mozilla.org/cbindgen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mozilla.org/cbindgen' as const,
   /**
   * Executable programs provided by this package.

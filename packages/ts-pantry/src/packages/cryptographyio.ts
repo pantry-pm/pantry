@@ -43,7 +43,6 @@ export const cryptographyioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cryptography.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cryptography.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cryptography.io' as const,
   programs: [] as const,
   companions: [] as const,

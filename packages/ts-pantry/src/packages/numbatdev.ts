@@ -44,7 +44,6 @@ export const numbatdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install numbat.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +numbat.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install numbat.dev' as const,
   /**
   * Executable programs provided by this package.

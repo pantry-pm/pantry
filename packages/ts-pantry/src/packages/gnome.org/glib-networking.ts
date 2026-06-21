@@ -42,7 +42,6 @@ export const gnomeorgglibnetworkingPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/glib-networking' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/glib-networking -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/glib-networking' as const,
   programs: [] as const,
   companions: [] as const,

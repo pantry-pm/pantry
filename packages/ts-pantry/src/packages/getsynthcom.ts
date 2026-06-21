@@ -44,7 +44,6 @@ export const getsynthcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install getsynth.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +getsynth.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install getsynth.com' as const,
   /**
   * Executable programs provided by this package.

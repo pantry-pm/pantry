@@ -46,7 +46,6 @@ export const pluralithcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pluralith.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pluralith.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pluralith.com' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const crystallangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crystal-lang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crystal-lang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crystal-lang.org' as const,
   /**
   * Executable programs provided by this package.

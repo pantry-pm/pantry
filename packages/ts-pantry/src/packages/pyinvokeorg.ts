@@ -46,7 +46,6 @@ export const pyinvokeorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pyinvoke.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pyinvoke.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pyinvoke.org' as const,
   /**
   * Executable programs provided by this package.

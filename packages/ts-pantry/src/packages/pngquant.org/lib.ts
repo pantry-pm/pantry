@@ -42,7 +42,6 @@ export const pngquantorglibPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pngquant.org/lib' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pngquant.org/lib -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pngquant.org/lib' as const,
   programs: [] as const,
   companions: [] as const,

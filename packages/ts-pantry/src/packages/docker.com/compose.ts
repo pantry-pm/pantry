@@ -45,7 +45,6 @@ export const dockercomcomposePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install docker.com/compose' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +docker.com/compose -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install docker.com/compose' as const,
   /**
   * Executable programs provided by this package.

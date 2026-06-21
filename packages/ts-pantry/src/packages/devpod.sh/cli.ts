@@ -45,7 +45,6 @@ export const devpodshcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install devpod.sh/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +devpod.sh/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install devpod.sh/cli' as const,
   /**
   * Executable programs provided by this package.

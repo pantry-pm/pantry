@@ -45,7 +45,6 @@ export const fairwindscomplutoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fairwinds.com/pluto' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fairwinds.com/pluto -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fairwinds.com/pluto' as const,
   /**
   * Executable programs provided by this package.

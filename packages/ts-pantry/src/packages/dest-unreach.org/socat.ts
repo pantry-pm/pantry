@@ -45,7 +45,6 @@ export const destunreachorgsocatPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dest-unreach.org/socat' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dest-unreach.org/socat -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dest-unreach.org/socat' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const ohmyposhdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ohmyposh.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ohmyposh.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ohmyposh.dev' as const,
   /**
   * Executable programs provided by this package.

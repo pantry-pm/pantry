@@ -45,7 +45,6 @@ export const godevtestscriptPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install go.dev/testscript' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +go.dev/testscript -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install go.dev/testscript' as const,
   /**
   * Executable programs provided by this package.

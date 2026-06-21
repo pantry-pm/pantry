@@ -44,7 +44,6 @@ export const hetznercomhcloudPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install hetzner.com/hcloud' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +hetzner.com/hcloud -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install hetzner.com/hcloud' as const,
   /**
   * Executable programs provided by this package.

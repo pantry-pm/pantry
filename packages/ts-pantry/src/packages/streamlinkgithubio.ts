@@ -46,7 +46,6 @@ export const streamlinkgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install streamlink.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +streamlink.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install streamlink.github.io' as const,
   /**
   * Executable programs provided by this package.

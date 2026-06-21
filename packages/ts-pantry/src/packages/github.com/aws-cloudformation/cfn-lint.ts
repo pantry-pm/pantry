@@ -45,7 +45,6 @@ export const cfnlintPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/aws-cloudformation/cfn-lint' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/aws-cloudformation/cfn-lint -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/aws-cloudformation/cfn-lint' as const,
   /**
   * Executable programs provided by this package.

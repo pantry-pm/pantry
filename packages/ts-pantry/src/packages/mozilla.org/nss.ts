@@ -46,7 +46,6 @@ export const mozillaorgnssPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mozilla.org/nss' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mozilla.org/nss -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mozilla.org/nss' as const,
   /**
   * Executable programs provided by this package.

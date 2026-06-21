@@ -45,7 +45,6 @@ export const granteddevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install granted.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +granted.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install granted.dev' as const,
   /**
   * Executable programs provided by this package.

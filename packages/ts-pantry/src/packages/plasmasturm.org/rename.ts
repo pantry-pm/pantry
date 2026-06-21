@@ -45,7 +45,6 @@ export const plasmasturmorgrenamePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install plasmasturm.org/rename' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +plasmasturm.org/rename -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install plasmasturm.org/rename' as const,
   /**
   * Executable programs provided by this package.

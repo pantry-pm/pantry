@@ -43,7 +43,6 @@ export const webmprojectorglibvpxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install webmproject.org/libvpx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +webmproject.org/libvpx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install webmproject.org/libvpx' as const,
   programs: [] as const,
   companions: [] as const,

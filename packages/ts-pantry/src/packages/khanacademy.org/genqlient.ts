@@ -44,7 +44,6 @@ export const khanacademyorggenqlientPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install khanacademy.org/genqlient' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +khanacademy.org/genqlient -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install khanacademy.org/genqlient' as const,
   /**
   * Executable programs provided by this package.

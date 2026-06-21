@@ -44,7 +44,6 @@ export const peopleredhatcomsgrubblibcapngPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install people.redhat.com/sgrubb/libcap-ng' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +people.redhat.com/sgrubb/libcap-ng -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install people.redhat.com/sgrubb/libcap-ng' as const,
   /**
   * Executable programs provided by this package.

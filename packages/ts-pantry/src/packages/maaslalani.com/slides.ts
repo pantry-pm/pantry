@@ -45,7 +45,6 @@ export const maaslalanicomslidesPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install maaslalani.com/slides' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +maaslalani.com/slides -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install maaslalani.com/slides' as const,
   /**
   * Executable programs provided by this package.

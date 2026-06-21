@@ -45,7 +45,6 @@ export const yuigithubioyuicompressorPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install yui.github.io/yuicompressor' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +yui.github.io/yuicompressor -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install yui.github.io/yuicompressor' as const,
   /**
   * Executable programs provided by this package.

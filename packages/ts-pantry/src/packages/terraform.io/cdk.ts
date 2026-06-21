@@ -46,7 +46,6 @@ export const terraformiocdkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install terraform.io/cdk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +terraform.io/cdk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install terraform.io/cdk' as const,
   /**
   * Executable programs provided by this package.

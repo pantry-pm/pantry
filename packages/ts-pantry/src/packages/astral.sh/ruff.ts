@@ -44,7 +44,6 @@ export const astralshruffPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install astral.sh/ruff' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +astral.sh/ruff -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install astral.sh/ruff' as const,
   /**
   * Executable programs provided by this package.

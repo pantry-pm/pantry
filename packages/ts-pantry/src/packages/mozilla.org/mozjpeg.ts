@@ -45,7 +45,6 @@ export const mozillaorgmozjpegPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mozilla.org/mozjpeg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mozilla.org/mozjpeg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mozilla.org/mozjpeg' as const,
   /**
   * Executable programs provided by this package.

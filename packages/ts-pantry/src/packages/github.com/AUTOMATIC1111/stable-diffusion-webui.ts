@@ -45,7 +45,6 @@ export const stablediffusionwebuiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/AUTOMATIC1111/stable-diffusion-webui' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/AUTOMATIC1111/stable-diffusion-webui -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/AUTOMATIC1111/stable-diffusion-webui' as const,
   /**
   * Executable programs provided by this package.

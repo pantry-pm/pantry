@@ -41,7 +41,6 @@ export const libislsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libisl.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libisl.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libisl.sourceforge.io' as const,
   programs: [] as const,
   companions: [] as const,

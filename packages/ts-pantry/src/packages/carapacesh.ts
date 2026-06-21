@@ -45,7 +45,6 @@ export const carapaceshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install carapace.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +carapace.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install carapace.sh' as const,
   /**
   * Executable programs provided by this package.

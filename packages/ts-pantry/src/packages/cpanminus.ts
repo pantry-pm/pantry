@@ -46,7 +46,6 @@ export const cpanminusPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cpanmin.us' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cpanmin.us -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cpanmin.us' as const,
   /**
   * Executable programs provided by this package.

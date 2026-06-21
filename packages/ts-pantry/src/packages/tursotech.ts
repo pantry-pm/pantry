@@ -45,7 +45,6 @@ export const tursotechPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install turso.tech' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +turso.tech -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install turso.tech' as const,
   /**
   * Executable programs provided by this package.

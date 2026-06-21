@@ -46,7 +46,6 @@ export const llvmorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install llvm.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +llvm.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install llvm.org' as const,
   /**
   * Executable programs provided by this package.

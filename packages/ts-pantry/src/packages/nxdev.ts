@@ -44,7 +44,6 @@ export const nxdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nx.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nx.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nx.dev' as const,
   /**
   * Executable programs provided by this package.

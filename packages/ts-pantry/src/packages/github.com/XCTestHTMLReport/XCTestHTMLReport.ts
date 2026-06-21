@@ -44,7 +44,6 @@ export const xctesthtmlreportPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/XCTestHTMLReport/XCTestHTMLReport' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/XCTestHTMLReport/XCTestHTMLReport -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/XCTestHTMLReport/XCTestHTMLReport' as const,
   /**
   * Executable programs provided by this package.

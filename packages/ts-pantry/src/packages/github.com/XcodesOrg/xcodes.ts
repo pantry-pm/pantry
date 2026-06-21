@@ -43,7 +43,6 @@ export const xcodesPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/XcodesOrg/xcodes' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/XcodesOrg/xcodes -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/XcodesOrg/xcodes' as const,
   /**
   * Executable programs provided by this package.

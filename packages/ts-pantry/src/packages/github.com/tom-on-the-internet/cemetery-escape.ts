@@ -44,7 +44,6 @@ export const cemeteryescapePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/tom-on-the-internet/cemetery-escape' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/tom-on-the-internet/cemetery-escape -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/tom-on-the-internet/cemetery-escape' as const,
   /**
   * Executable programs provided by this package.

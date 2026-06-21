@@ -45,7 +45,6 @@ export const mscpPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/upa/mscp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/upa/mscp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/upa/mscp' as const,
   /**
   * Executable programs provided by this package.

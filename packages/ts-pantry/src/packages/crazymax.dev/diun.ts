@@ -45,7 +45,6 @@ export const crazymaxdevdiunPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crazymax.dev/diun' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crazymax.dev/diun -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crazymax.dev/diun' as const,
   /**
   * Executable programs provided by this package.

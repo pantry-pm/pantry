@@ -46,7 +46,6 @@ export const notrojgithubioneonPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install notroj.github.io/neon' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +notroj.github.io/neon -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install notroj.github.io/neon' as const,
   /**
   * Executable programs provided by this package.

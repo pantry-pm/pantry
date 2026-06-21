@@ -51,7 +51,6 @@ export const mysqlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mysql.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mysql.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mysql.com' as const,
   /**
   * Executable programs provided by this package.

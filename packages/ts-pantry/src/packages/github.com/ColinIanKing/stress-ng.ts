@@ -45,7 +45,6 @@ export const stressngPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ColinIanKing/stress-ng' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ColinIanKing/stress-ng -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ColinIanKing/stress-ng' as const,
   /**
   * Executable programs provided by this package.

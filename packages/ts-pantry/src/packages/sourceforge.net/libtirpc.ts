@@ -42,7 +42,6 @@ export const sourceforgenetlibtirpcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceforge.net/libtirpc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceforge.net/libtirpc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceforge.net/libtirpc' as const,
   programs: [] as const,
   companions: [] as const,

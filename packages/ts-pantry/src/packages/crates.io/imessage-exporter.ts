@@ -43,7 +43,6 @@ export const cratesioimessageexporterPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/imessage-exporter' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/imessage-exporter -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/imessage-exporter' as const,
   /**
   * Executable programs provided by this package.

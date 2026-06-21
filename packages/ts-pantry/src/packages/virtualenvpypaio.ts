@@ -46,7 +46,6 @@ export const virtualenvpypaioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install virtualenv.pypa.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +virtualenv.pypa.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install virtualenv.pypa.io' as const,
   /**
   * Executable programs provided by this package.

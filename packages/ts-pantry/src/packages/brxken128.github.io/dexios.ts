@@ -44,7 +44,6 @@ export const brxken128githubiodexiosPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install brxken128.github.io/dexios' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +brxken128.github.io/dexios -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install brxken128.github.io/dexios' as const,
   /**
   * Executable programs provided by this package.

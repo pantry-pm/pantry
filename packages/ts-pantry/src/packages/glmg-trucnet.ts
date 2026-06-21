@@ -43,7 +43,6 @@ export const glmgtrucnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install glm.g-truc.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +glm.g-truc.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install glm.g-truc.net' as const,
   programs: [] as const,
   companions: [] as const,

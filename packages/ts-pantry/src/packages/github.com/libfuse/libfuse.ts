@@ -44,7 +44,6 @@ export const libfusePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/libfuse/libfuse' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/libfuse/libfuse -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/libfuse/libfuse' as const,
   /**
   * Executable programs provided by this package.

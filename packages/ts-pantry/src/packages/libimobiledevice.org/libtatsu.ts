@@ -42,7 +42,6 @@ export const libimobiledeviceorglibtatsuPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libimobiledevice.org/libtatsu' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libimobiledevice.org/libtatsu -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libimobiledevice.org/libtatsu' as const,
   programs: [] as const,
   companions: [] as const,

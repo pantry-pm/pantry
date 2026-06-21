@@ -45,7 +45,6 @@ export const chiarkgreenendorgukputtyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install chiark.greenend.org.uk/putty' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +chiark.greenend.org.uk/putty -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install chiark.greenend.org.uk/putty' as const,
   /**
   * Executable programs provided by this package.

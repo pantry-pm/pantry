@@ -45,7 +45,6 @@ export const gnuorgparallelPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/parallel' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/parallel -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/parallel' as const,
   /**
   * Executable programs provided by this package.

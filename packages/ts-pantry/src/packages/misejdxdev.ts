@@ -46,7 +46,6 @@ export const misejdxdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mise.jdx.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mise.jdx.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mise.jdx.dev' as const,
   /**
   * Executable programs provided by this package.

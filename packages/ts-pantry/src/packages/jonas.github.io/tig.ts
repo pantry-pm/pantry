@@ -45,7 +45,6 @@ export const jonasgithubiotigPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jonas.github.io/tig' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jonas.github.io/tig -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jonas.github.io/tig' as const,
   /**
   * Executable programs provided by this package.

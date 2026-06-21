@@ -42,7 +42,6 @@ export const googlecomfullycapablePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/fullycapable' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/fullycapable -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/fullycapable' as const,
   /**
   * Executable programs provided by this package.

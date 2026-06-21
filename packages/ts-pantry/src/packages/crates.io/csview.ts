@@ -43,7 +43,6 @@ export const cratesiocsviewPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/csview' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/csview -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/csview' as const,
   /**
   * Executable programs provided by this package.

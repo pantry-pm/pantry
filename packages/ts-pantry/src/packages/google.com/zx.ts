@@ -46,7 +46,6 @@ export const googlecomzxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/zx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/zx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/zx' as const,
   /**
   * Executable programs provided by this package.

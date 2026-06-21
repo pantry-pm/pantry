@@ -45,7 +45,6 @@ export const taskfiledevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install taskfile.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +taskfile.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install taskfile.dev' as const,
   /**
   * Executable programs provided by this package.

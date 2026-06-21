@@ -44,7 +44,6 @@ export const rhashsourceforgenetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rhash.sourceforge.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rhash.sourceforge.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rhash.sourceforge.net' as const,
   /**
   * Executable programs provided by this package.

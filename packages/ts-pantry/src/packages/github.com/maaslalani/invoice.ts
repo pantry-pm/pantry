@@ -44,7 +44,6 @@ export const invoicePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/maaslalani/invoice' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/maaslalani/invoice -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/maaslalani/invoice' as const,
   /**
   * Executable programs provided by this package.

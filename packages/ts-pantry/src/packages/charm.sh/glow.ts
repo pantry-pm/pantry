@@ -44,7 +44,6 @@ export const charmshglowPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install charm.sh/glow' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +charm.sh/glow -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install charm.sh/glow' as const,
   /**
   * Executable programs provided by this package.

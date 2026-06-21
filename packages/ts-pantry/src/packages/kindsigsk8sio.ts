@@ -45,7 +45,6 @@ export const kindsigsk8sioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kind.sigs.k8s.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kind.sigs.k8s.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kind.sigs.k8s.io' as const,
   /**
   * Executable programs provided by this package.

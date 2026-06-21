@@ -45,7 +45,6 @@ export const epsilonprojectsourceforgeioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install epsilon-project.sourceforge.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +epsilon-project.sourceforge.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install epsilon-project.sourceforge.io' as const,
   /**
   * Executable programs provided by this package.

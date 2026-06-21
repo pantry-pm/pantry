@@ -42,7 +42,6 @@ export const rpmorgpoptPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rpm.org/popt' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rpm.org/popt -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rpm.org/popt' as const,
   programs: [] as const,
   companions: [] as const,

@@ -46,7 +46,6 @@ export const mesonbuildcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mesonbuild.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mesonbuild.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mesonbuild.com' as const,
   /**
   * Executable programs provided by this package.

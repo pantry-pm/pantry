@@ -1150,15 +1150,8 @@ cli
         })
 
         if (installCommand) {
-          console.log('\n🚀 Install commands:')
-          console.log('\nUsing pkgx:')
-          const pkgxPackages = result.uniquePackages.map(pkg => `+${pkg}`).join(' ')
-          console.log(`sh <(curl https://pkgx.sh) ${pkgxPackages} -- $SHELL -i`)
-
-          console.log('\nOr install individually:')
-          result.uniquePackages.forEach((pkg) => {
-            console.log(`pkgx +${pkg}`)
-          })
+          console.log('\n🚀 Install command:')
+          console.log(`pantry install ${result.uniquePackages.join(' ')}`)
         }
 
         // Show OS-specific dependencies if any

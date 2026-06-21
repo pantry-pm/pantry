@@ -43,7 +43,6 @@ export const fabianlindforssereshapePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fabianlindfors.se/reshape' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fabianlindfors.se/reshape -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fabianlindfors.se/reshape' as const,
   /**
   * Executable programs provided by this package.

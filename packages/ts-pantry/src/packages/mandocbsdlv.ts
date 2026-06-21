@@ -46,7 +46,6 @@ export const mandocbsdlvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mandoc.bsd.lv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mandoc.bsd.lv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mandoc.bsd.lv' as const,
   /**
   * Executable programs provided by this package.

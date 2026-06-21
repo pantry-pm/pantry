@@ -41,7 +41,6 @@ export const oberhumercomuclPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install oberhumer.com/ucl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +oberhumer.com/ucl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install oberhumer.com/ucl' as const,
   programs: [] as const,
   companions: [] as const,

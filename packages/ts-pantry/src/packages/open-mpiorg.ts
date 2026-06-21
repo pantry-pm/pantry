@@ -47,7 +47,6 @@ export const openmpiorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install open-mpi.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +open-mpi.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install open-mpi.org' as const,
   /**
   * Executable programs provided by this package.

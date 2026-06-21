@@ -45,7 +45,6 @@ export const pkllangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pkl-lang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pkl-lang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pkl-lang.org' as const,
   /**
   * Executable programs provided by this package.

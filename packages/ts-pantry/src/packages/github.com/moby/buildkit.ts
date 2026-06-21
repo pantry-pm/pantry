@@ -45,7 +45,6 @@ export const buildkitPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/moby/buildkit' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/moby/buildkit -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/moby/buildkit' as const,
   /**
   * Executable programs provided by this package.

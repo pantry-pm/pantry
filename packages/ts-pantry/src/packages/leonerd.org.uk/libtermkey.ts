@@ -42,7 +42,6 @@ export const leonerdorguklibtermkeyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install leonerd.org.uk/libtermkey' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +leonerd.org.uk/libtermkey -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install leonerd.org.uk/libtermkey' as const,
   programs: [] as const,
   companions: [] as const,

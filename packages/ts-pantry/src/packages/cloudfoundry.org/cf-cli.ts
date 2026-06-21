@@ -45,7 +45,6 @@ export const cloudfoundryorgcfcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cloudfoundry.org/cf-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cloudfoundry.org/cf-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cloudfoundry.org/cf-cli' as const,
   /**
   * Executable programs provided by this package.

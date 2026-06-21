@@ -45,7 +45,6 @@ export const pcreorgv2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pcre.org/v2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pcre.org/v2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pcre.org/v2' as const,
   /**
   * Executable programs provided by this package.

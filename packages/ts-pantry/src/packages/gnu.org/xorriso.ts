@@ -45,7 +45,6 @@ export const gnuorgxorrisoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/xorriso' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/xorriso -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/xorriso' as const,
   /**
   * Executable programs provided by this package.

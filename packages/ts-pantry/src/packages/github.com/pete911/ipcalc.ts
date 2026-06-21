@@ -43,7 +43,6 @@ export const ipcalcPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/pete911/ipcalc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/pete911/ipcalc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/pete911/ipcalc' as const,
   /**
   * Executable programs provided by this package.

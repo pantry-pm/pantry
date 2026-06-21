@@ -43,7 +43,6 @@ export const vulkanheadersPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/KhronosGroup/Vulkan-Headers' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/KhronosGroup/Vulkan-Headers -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/KhronosGroup/Vulkan-Headers' as const,
   programs: [] as const,
   companions: [] as const,

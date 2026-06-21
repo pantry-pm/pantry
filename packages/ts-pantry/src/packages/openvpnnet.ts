@@ -43,7 +43,6 @@ export const openvpnnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openvpn.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openvpn.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openvpn.net' as const,
   /**
   * Executable programs provided by this package.

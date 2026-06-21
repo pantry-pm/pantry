@@ -47,7 +47,6 @@ export const gnuorghelp2manPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/help2man' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/help2man -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/help2man' as const,
   /**
   * Executable programs provided by this package.

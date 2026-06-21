@@ -45,7 +45,6 @@ export const moderncorggoyaccPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install modernc.org/goyacc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +modernc.org/goyacc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install modernc.org/goyacc' as const,
   /**
   * Executable programs provided by this package.

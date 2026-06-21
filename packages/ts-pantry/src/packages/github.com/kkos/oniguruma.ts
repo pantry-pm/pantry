@@ -43,7 +43,6 @@ export const onigurumaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/kkos/oniguruma' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/kkos/oniguruma -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/kkos/oniguruma' as const,
   /**
   * Executable programs provided by this package.

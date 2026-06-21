@@ -46,7 +46,6 @@ export const apktoolorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install apktool.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +apktool.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install apktool.org' as const,
   /**
   * Executable programs provided by this package.

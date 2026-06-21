@@ -45,7 +45,6 @@ export const openmpiorghwlocPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install open-mpi.org/hwloc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +open-mpi.org/hwloc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install open-mpi.org/hwloc' as const,
   /**
   * Executable programs provided by this package.

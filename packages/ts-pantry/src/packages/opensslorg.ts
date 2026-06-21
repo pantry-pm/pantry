@@ -51,7 +51,6 @@ export const opensslPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openssl.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openssl.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openssl.org' as const,
   /**
   * Executable programs provided by this package.

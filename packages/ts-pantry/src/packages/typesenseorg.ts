@@ -39,7 +39,6 @@ export const typesenseorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install typesense.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +typesense.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install typesense.org' as const,
   /**
   * Executable programs provided by this package.

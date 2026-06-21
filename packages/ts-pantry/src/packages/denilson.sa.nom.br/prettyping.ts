@@ -44,7 +44,6 @@ export const denilsonsanombrprettypingPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install denilson.sa.nom.br/prettyping' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +denilson.sa.nom.br/prettyping -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install denilson.sa.nom.br/prettyping' as const,
   /**
   * Executable programs provided by this package.

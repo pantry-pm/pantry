@@ -41,7 +41,6 @@ export const xiphorgoggPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xiph.org/ogg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xiph.org/ogg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xiph.org/ogg' as const,
   programs: [] as const,
   companions: [] as const,

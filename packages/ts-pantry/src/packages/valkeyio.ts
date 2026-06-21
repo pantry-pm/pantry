@@ -45,7 +45,6 @@ export const valkeyioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install valkey.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +valkey.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install valkey.io' as const,
   /**
   * Executable programs provided by this package.

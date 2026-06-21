@@ -45,7 +45,6 @@ export const gnomeorglibgsfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/libgsf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/libgsf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/libgsf' as const,
   /**
   * Executable programs provided by this package.

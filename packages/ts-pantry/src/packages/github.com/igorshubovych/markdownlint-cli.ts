@@ -45,7 +45,6 @@ export const markdownlintcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/igorshubovych/markdownlint-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/igorshubovych/markdownlint-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/igorshubovych/markdownlint-cli' as const,
   /**
   * Executable programs provided by this package.

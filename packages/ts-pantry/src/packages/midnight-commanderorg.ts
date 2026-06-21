@@ -46,7 +46,6 @@ export const midnightcommanderorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install midnight-commander.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +midnight-commander.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install midnight-commander.org' as const,
   /**
   * Executable programs provided by this package.

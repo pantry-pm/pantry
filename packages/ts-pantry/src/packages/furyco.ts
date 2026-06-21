@@ -45,7 +45,6 @@ export const furycoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fury.co' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fury.co -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fury.co' as const,
   /**
   * Executable programs provided by this package.

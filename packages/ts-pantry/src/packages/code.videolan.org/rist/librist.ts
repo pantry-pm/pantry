@@ -45,7 +45,6 @@ export const codevideolanorgristlibristPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install code.videolan.org/rist/librist' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +code.videolan.org/rist/librist -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install code.videolan.org/rist/librist' as const,
   /**
   * Executable programs provided by this package.

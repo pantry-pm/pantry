@@ -44,7 +44,6 @@ export const tokesuraPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/kevinmichaelchen/tokesura' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/kevinmichaelchen/tokesura -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/kevinmichaelchen/tokesura' as const,
   /**
   * Executable programs provided by this package.

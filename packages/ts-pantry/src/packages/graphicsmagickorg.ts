@@ -45,7 +45,6 @@ export const graphicsmagickorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install graphicsmagick.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +graphicsmagick.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install graphicsmagick.org' as const,
   /**
   * Executable programs provided by this package.

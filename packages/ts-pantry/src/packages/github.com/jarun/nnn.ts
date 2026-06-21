@@ -44,7 +44,6 @@ export const nnnPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jarun/nnn' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jarun/nnn -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jarun/nnn' as const,
   /**
   * Executable programs provided by this package.

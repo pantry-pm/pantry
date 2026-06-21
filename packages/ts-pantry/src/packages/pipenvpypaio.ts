@@ -46,7 +46,6 @@ export const pipenvpypaioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pipenv.pypa.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pipenv.pypa.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pipenv.pypa.io' as const,
   /**
   * Executable programs provided by this package.

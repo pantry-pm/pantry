@@ -45,7 +45,6 @@ export const talosdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install talos.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +talos.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install talos.dev' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const codevideolanorgvideolandav1dPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install code.videolan.org/videolan/dav1d' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +code.videolan.org/videolan/dav1d -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install code.videolan.org/videolan/dav1d' as const,
   /**
   * Executable programs provided by this package.

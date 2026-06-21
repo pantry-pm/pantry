@@ -41,7 +41,6 @@ export const soxrsourceforgenetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install soxr.sourceforge.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +soxr.sourceforge.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install soxr.sourceforge.net' as const,
   programs: [] as const,
   companions: [] as const,

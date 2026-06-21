@@ -45,7 +45,6 @@ export const bazeliskPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/bazelbuild/bazelisk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/bazelbuild/bazelisk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/bazelbuild/bazelisk' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const pimalayaorghimalayaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pimalaya.org/himalaya' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pimalaya.org/himalaya -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pimalaya.org/himalaya' as const,
   /**
   * Executable programs provided by this package.

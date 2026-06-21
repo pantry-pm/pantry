@@ -41,7 +41,6 @@ export const xorgprotocolPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/protocol' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/protocol -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/protocol' as const,
   programs: [] as const,
   companions: [] as const,

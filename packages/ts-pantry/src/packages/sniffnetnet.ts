@@ -45,7 +45,6 @@ export const sniffnetnetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sniffnet.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sniffnet.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sniffnet.net' as const,
   /**
   * Executable programs provided by this package.

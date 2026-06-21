@@ -44,7 +44,6 @@ export const cratesioclickPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/click' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/click -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/click' as const,
   /**
   * Executable programs provided by this package.

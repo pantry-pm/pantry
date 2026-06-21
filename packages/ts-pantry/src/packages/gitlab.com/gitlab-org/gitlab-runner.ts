@@ -45,7 +45,6 @@ export const gitlabcomgitlaborggitlabrunnerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitlab.com/gitlab-org/gitlab-runner' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitlab.com/gitlab-org/gitlab-runner -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitlab.com/gitlab-org/gitlab-runner' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const hardingmotdcaautosshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install harding.motd.ca/autossh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +harding.motd.ca/autossh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install harding.motd.ca/autossh' as const,
   /**
   * Executable programs provided by this package.

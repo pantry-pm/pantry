@@ -46,7 +46,6 @@ export const spacetimedbcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install spacetimedb.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +spacetimedb.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install spacetimedb.com' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const dhalllangorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dhall-lang.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dhall-lang.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dhall-lang.org' as const,
   /**
   * Executable programs provided by this package.

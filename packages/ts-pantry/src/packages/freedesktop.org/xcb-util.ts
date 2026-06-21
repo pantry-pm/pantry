@@ -41,7 +41,6 @@ export const freedesktoporgxcbutilPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/xcb-util' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/xcb-util -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/xcb-util' as const,
   programs: [] as const,
   companions: [] as const,

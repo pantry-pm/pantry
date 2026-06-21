@@ -45,7 +45,6 @@ export const ctopshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ctop.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ctop.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ctop.sh' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const leonerdorguklibvtermPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install leonerd.org.uk/libvterm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +leonerd.org.uk/libvterm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install leonerd.org.uk/libvterm' as const,
   /**
   * Executable programs provided by this package.

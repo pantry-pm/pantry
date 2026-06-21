@@ -46,7 +46,6 @@ export const liteclicomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install litecli.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +litecli.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install litecli.com' as const,
   /**
   * Executable programs provided by this package.

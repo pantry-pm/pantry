@@ -42,7 +42,6 @@ export const gnomeorggsettingsdesktopschemasPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/gsettings-desktop-schemas' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/gsettings-desktop-schemas -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/gsettings-desktop-schemas' as const,
   programs: [] as const,
   companions: [] as const,

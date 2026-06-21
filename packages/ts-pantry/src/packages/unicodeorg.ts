@@ -45,7 +45,6 @@ export const unicodeorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install unicode.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +unicode.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install unicode.org' as const,
   /**
   * Executable programs provided by this package.

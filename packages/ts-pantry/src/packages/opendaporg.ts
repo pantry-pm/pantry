@@ -46,7 +46,6 @@ export const opendaporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install opendap.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +opendap.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install opendap.org' as const,
   /**
   * Executable programs provided by this package.

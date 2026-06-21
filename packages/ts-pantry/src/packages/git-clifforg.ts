@@ -45,7 +45,6 @@ export const gitclifforgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install git-cliff.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +git-cliff.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install git-cliff.org' as const,
   /**
   * Executable programs provided by this package.

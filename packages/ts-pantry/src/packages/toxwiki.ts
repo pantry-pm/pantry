@@ -46,7 +46,6 @@ export const toxwikiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tox.wiki' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tox.wiki -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tox.wiki' as const,
   /**
   * Executable programs provided by this package.

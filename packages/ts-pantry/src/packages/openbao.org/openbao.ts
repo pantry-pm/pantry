@@ -45,7 +45,6 @@ export const openbaoorgopenbaoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openbao.org/openbao' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openbao.org/openbao -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openbao.org/openbao' as const,
   /**
   * Executable programs provided by this package.

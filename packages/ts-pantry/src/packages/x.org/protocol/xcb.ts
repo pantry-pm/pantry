@@ -41,7 +41,6 @@ export const xorgprotocolxcbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/protocol/xcb' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/protocol/xcb -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/protocol/xcb' as const,
   programs: [] as const,
   companions: [] as const,

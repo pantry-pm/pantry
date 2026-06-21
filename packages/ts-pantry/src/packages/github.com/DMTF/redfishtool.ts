@@ -45,7 +45,6 @@ export const redfishtoolPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/DMTF/redfishtool' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/DMTF/redfishtool -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/DMTF/redfishtool' as const,
   /**
   * Executable programs provided by this package.

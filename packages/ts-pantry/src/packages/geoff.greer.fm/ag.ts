@@ -46,7 +46,6 @@ export const geoffgreerfmagPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install geoff.greer.fm/ag' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +geoff.greer.fm/ag -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install geoff.greer.fm/ag' as const,
   /**
   * Executable programs provided by this package.

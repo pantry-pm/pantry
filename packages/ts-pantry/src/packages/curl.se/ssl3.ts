@@ -41,7 +41,6 @@ export const curlsessl3Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install curl.se/ssl3' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +curl.se/ssl3 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install curl.se/ssl3' as const,
   programs: [] as const,
   companions: [] as const,

@@ -46,7 +46,6 @@ export const libvipsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libvips.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libvips.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libvips.org' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const numpyorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install numpy.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +numpy.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install numpy.org' as const,
   /**
   * Executable programs provided by this package.

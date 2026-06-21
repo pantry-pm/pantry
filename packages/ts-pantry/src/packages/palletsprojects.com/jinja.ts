@@ -43,7 +43,6 @@ export const palletsprojectscomjinjaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install palletsprojects.com/jinja' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +palletsprojects.com/jinja -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install palletsprojects.com/jinja' as const,
   programs: [] as const,
   companions: [] as const,

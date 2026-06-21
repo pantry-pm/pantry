@@ -46,7 +46,6 @@ export const facebookcomzstdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install facebook.com/zstd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +facebook.com/zstd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install facebook.com/zstd' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const googlecomwoff2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/woff2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/woff2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/woff2' as const,
   /**
   * Executable programs provided by this package.

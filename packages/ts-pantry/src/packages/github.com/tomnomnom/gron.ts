@@ -44,7 +44,6 @@ export const gronPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/tomnomnom/gron' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/tomnomnom/gron -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/tomnomnom/gron' as const,
   /**
   * Executable programs provided by this package.

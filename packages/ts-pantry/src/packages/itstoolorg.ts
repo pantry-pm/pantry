@@ -45,7 +45,6 @@ export const itstoolorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install itstool.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +itstool.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install itstool.org' as const,
   /**
   * Executable programs provided by this package.

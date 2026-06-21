@@ -43,7 +43,6 @@ export const rswiftPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mac-cain13/R.swift' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mac-cain13/R.swift -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mac-cain13/R.swift' as const,
   /**
   * Executable programs provided by this package.

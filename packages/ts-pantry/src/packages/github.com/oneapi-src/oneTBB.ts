@@ -44,7 +44,6 @@ export const onetbbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/oneapi-src/oneTBB' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/oneapi-src/oneTBB -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/oneapi-src/oneTBB' as const,
   programs: [] as const,
   companions: [] as const,

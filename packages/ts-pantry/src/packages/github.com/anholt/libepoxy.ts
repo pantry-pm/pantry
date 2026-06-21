@@ -43,7 +43,6 @@ export const libepoxyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/anholt/libepoxy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/anholt/libepoxy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/anholt/libepoxy' as const,
   programs: [] as const,
   companions: [] as const,

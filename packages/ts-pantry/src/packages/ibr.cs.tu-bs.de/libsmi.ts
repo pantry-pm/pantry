@@ -45,7 +45,6 @@ export const ibrcstubsdelibsmiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ibr.cs.tu-bs.de/libsmi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ibr.cs.tu-bs.de/libsmi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ibr.cs.tu-bs.de/libsmi' as const,
   /**
   * Executable programs provided by this package.

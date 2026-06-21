@@ -46,7 +46,6 @@ export const bitwardencomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bitwarden.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bitwarden.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bitwarden.com' as const,
   /**
   * Executable programs provided by this package.

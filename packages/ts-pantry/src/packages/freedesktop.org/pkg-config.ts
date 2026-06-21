@@ -43,7 +43,6 @@ export const freedesktoporgpkgconfigPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install freedesktop.org/pkg-config' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +freedesktop.org/pkg-config -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install freedesktop.org/pkg-config' as const,
   /**
   * Executable programs provided by this package.

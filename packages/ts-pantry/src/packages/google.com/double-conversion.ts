@@ -42,7 +42,6 @@ export const googlecomdoubleconversionPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/double-conversion' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/double-conversion -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/double-conversion' as const,
   programs: [] as const,
   companions: [] as const,

@@ -43,7 +43,6 @@ export const lxmldePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lxml.de' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lxml.de -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lxml.de' as const,
   programs: [] as const,
   companions: [] as const,

@@ -44,7 +44,6 @@ export const libde265Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/strukturag/libde265' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/strukturag/libde265 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/strukturag/libde265' as const,
   /**
   * Executable programs provided by this package.

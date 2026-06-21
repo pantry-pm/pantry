@@ -44,7 +44,6 @@ export const rockdabootgithubiolibpslPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rockdaboot.github.io/libpsl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rockdaboot.github.io/libpsl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rockdaboot.github.io/libpsl' as const,
   programs: [] as const,
   companions: [] as const,

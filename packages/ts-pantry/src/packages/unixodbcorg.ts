@@ -45,7 +45,6 @@ export const unixodbcorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install unixodbc.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +unixodbc.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install unixodbc.org' as const,
   /**
   * Executable programs provided by this package.

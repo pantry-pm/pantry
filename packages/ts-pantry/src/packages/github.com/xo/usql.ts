@@ -44,7 +44,6 @@ export const usqlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/xo/usql' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/xo/usql -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/xo/usql' as const,
   /**
   * Executable programs provided by this package.

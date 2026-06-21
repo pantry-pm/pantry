@@ -42,7 +42,6 @@ export const zeromqorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install zeromq.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +zeromq.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install zeromq.org' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const htsliborgsamtoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install htslib.org/samtools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +htslib.org/samtools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install htslib.org/samtools' as const,
   /**
   * Executable programs provided by this package.

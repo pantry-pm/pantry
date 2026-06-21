@@ -43,7 +43,6 @@ export const veracodecomgenirPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install veracode.com/gen-ir' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +veracode.com/gen-ir -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install veracode.com/gen-ir' as const,
   /**
   * Executable programs provided by this package.

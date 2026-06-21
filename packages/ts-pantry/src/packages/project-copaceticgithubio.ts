@@ -45,7 +45,6 @@ export const projectcopaceticgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install project-copacetic.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +project-copacetic.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install project-copacetic.github.io' as const,
   /**
   * Executable programs provided by this package.

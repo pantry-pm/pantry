@@ -45,7 +45,6 @@ export const f1bonacc1githubioprocesscomposePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install f1bonacc1.github.io/process-compose' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +f1bonacc1.github.io/process-compose -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install f1bonacc1.github.io/process-compose' as const,
   /**
   * Executable programs provided by this package.

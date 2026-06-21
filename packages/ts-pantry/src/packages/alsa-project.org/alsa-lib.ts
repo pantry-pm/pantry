@@ -44,7 +44,6 @@ export const alsaprojectorgalsalibPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install alsa-project.org/alsa-lib' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +alsa-project.org/alsa-lib -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install alsa-project.org/alsa-lib' as const,
   /**
   * Executable programs provided by this package.

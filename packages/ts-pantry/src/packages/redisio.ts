@@ -50,7 +50,6 @@ export const redisPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install redis.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +redis.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install redis.io' as const,
   /**
   * Executable programs provided by this package.

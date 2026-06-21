@@ -44,7 +44,6 @@ export const nongnuorglzipPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nongnu.org/lzip' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nongnu.org/lzip -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nongnu.org/lzip' as const,
   /**
   * Executable programs provided by this package.

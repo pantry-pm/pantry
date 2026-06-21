@@ -44,7 +44,6 @@ export const tflintPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/terraform-linters/tflint' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/terraform-linters/tflint -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/terraform-linters/tflint' as const,
   /**
   * Executable programs provided by this package.

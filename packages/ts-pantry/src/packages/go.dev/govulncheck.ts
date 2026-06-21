@@ -44,7 +44,6 @@ export const godevgovulncheckPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install go.dev/govulncheck' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +go.dev/govulncheck -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install go.dev/govulncheck' as const,
   /**
   * Executable programs provided by this package.

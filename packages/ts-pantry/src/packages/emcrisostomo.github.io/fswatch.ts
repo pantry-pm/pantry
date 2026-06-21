@@ -42,7 +42,6 @@ export const emcrisostomogithubiofswatchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install emcrisostomo.github.io/fswatch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +emcrisostomo.github.io/fswatch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install emcrisostomo.github.io/fswatch' as const,
   /**
   * Executable programs provided by this package.

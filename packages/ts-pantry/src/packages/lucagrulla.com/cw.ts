@@ -45,7 +45,6 @@ export const lucagrullacomcwPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lucagrulla.com/cw' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lucagrulla.com/cw -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lucagrulla.com/cw' as const,
   /**
   * Executable programs provided by this package.

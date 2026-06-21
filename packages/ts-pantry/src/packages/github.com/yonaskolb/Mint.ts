@@ -43,7 +43,6 @@ export const mintPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/yonaskolb/Mint' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/yonaskolb/Mint -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/yonaskolb/Mint' as const,
   /**
   * Executable programs provided by this package.

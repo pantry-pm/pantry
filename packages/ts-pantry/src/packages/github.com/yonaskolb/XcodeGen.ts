@@ -43,7 +43,6 @@ export const xcodegenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/yonaskolb/XcodeGen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/yonaskolb/XcodeGen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/yonaskolb/XcodeGen' as const,
   /**
   * Executable programs provided by this package.

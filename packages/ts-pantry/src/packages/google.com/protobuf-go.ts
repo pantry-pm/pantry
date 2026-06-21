@@ -45,7 +45,6 @@ export const googlecomprotobufgoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/protobuf-go' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/protobuf-go -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/protobuf-go' as const,
   /**
   * Executable programs provided by this package.

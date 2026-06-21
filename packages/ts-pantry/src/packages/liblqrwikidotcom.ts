@@ -42,7 +42,6 @@ export const liblqrwikidotcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install liblqr.wikidot.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +liblqr.wikidot.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install liblqr.wikidot.com' as const,
   programs: [] as const,
   companions: [] as const,

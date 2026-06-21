@@ -46,7 +46,6 @@ export const groongaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install groonga.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +groonga.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install groonga.org' as const,
   /**
   * Executable programs provided by this package.

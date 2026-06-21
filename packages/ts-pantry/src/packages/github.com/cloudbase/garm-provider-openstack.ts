@@ -44,7 +44,6 @@ export const garmprovideropenstackPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/cloudbase/garm-provider-openstack' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/cloudbase/garm-provider-openstack -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/cloudbase/garm-provider-openstack' as const,
   /**
   * Executable programs provided by this package.

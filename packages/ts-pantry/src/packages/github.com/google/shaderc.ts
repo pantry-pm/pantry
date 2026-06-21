@@ -44,7 +44,6 @@ export const shadercPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/google/shaderc' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/google/shaderc -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/google/shaderc' as const,
   /**
   * Executable programs provided by this package.

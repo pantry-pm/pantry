@@ -41,7 +41,6 @@ export const xorgxftPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xft' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xft -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xft' as const,
   programs: [] as const,
   companions: [] as const,

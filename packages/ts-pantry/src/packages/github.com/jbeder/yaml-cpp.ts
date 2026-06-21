@@ -42,7 +42,6 @@ export const yamlcppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jbeder/yaml-cpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jbeder/yaml-cpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jbeder/yaml-cpp' as const,
   programs: [] as const,
   companions: [] as const,

@@ -51,7 +51,6 @@ export const zipPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install info-zip.org/zip' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +info-zip.org/zip -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install info-zip.org/zip' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const conftestdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install conftest.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +conftest.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install conftest.dev' as const,
   /**
   * Executable programs provided by this package.

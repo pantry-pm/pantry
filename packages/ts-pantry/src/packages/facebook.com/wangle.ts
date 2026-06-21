@@ -43,7 +43,6 @@ export const facebookcomwanglePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install facebook.com/wangle' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +facebook.com/wangle -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install facebook.com/wangle' as const,
   programs: [] as const,
   companions: [] as const,

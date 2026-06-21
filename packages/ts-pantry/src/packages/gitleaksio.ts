@@ -45,7 +45,6 @@ export const gitleaksioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitleaks.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitleaks.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitleaks.io' as const,
   /**
   * Executable programs provided by this package.

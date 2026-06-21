@@ -44,7 +44,6 @@ export const glfworgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install glfw.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +glfw.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install glfw.org' as const,
   programs: [] as const,
   companions: [] as const,

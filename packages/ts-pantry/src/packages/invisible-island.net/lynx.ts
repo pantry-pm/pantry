@@ -45,7 +45,6 @@ export const invisibleislandnetlynxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install invisible-island.net/lynx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +invisible-island.net/lynx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install invisible-island.net/lynx' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const chiarkgreenendorgukpuzzlesPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install chiark.greenend.org.uk/puzzles' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +chiark.greenend.org.uk/puzzles -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install chiark.greenend.org.uk/puzzles' as const,
   /**
   * Executable programs provided by this package.

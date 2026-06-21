@@ -45,7 +45,6 @@ export const cruftgithubioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cruft.github.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cruft.github.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cruft.github.io' as const,
   /**
   * Executable programs provided by this package.

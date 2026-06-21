@@ -46,7 +46,6 @@ export const jlessioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jless.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jless.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jless.io' as const,
   /**
   * Executable programs provided by this package.

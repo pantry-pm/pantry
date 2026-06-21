@@ -43,7 +43,6 @@ export const gitlabcomgreuteclintPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitlab.com/greut/eclint' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitlab.com/greut/eclint -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitlab.com/greut/eclint' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const budimanjojogithubiotalhelperPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install budimanjojo.github.io/talhelper' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +budimanjojo.github.io/talhelper -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install budimanjojo.github.io/talhelper' as const,
   /**
   * Executable programs provided by this package.

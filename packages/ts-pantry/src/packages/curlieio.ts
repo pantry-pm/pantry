@@ -45,7 +45,6 @@ export const curlieioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install curlie.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +curlie.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install curlie.io' as const,
   /**
   * Executable programs provided by this package.

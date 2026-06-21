@@ -46,7 +46,6 @@ export const libproxygithubiolibproxyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libproxy.github.io/libproxy' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libproxy.github.io/libproxy -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libproxy.github.io/libproxy' as const,
   /**
   * Executable programs provided by this package.

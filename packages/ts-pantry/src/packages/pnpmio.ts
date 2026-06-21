@@ -45,7 +45,6 @@ export const pnpmioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pnpm.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pnpm.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pnpm.io' as const,
   /**
   * Executable programs provided by this package.

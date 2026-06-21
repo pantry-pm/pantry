@@ -41,7 +41,6 @@ export const taku910githubiomecabipadicPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install taku910.github.io/mecab-ipadic' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +taku910.github.io/mecab-ipadic -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install taku910.github.io/mecab-ipadic' as const,
   programs: [] as const,
   companions: [] as const,

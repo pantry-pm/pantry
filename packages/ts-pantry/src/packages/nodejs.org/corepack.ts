@@ -46,7 +46,6 @@ export const nodejsorgcorepackPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nodejs.org/corepack' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nodejs.org/corepack -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nodejs.org/corepack' as const,
   /**
   * Executable programs provided by this package.

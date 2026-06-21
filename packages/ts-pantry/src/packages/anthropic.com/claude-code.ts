@@ -42,7 +42,6 @@ export const anthropiccomclaudecodePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install anthropic.com/claude-code' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +anthropic.com/claude-code -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install anthropic.com/claude-code' as const,
   /**
   * Executable programs provided by this package.

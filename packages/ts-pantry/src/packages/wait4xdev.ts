@@ -45,7 +45,6 @@ export const wait4xdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wait4x.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wait4x.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wait4x.dev' as const,
   /**
   * Executable programs provided by this package.

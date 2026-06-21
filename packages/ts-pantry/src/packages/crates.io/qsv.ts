@@ -46,7 +46,6 @@ export const cratesioqsvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/qsv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/qsv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/qsv' as const,
   /**
   * Executable programs provided by this package.

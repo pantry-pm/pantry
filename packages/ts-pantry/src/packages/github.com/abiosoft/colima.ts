@@ -45,7 +45,6 @@ export const colimaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/abiosoft/colima' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/abiosoft/colima -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/abiosoft/colima' as const,
   /**
   * Executable programs provided by this package.

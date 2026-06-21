@@ -46,7 +46,6 @@ export const ttsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/coqui-ai/TTS' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/coqui-ai/TTS -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/coqui-ai/TTS' as const,
   /**
   * Executable programs provided by this package.

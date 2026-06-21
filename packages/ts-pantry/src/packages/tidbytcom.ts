@@ -46,7 +46,6 @@ export const tidbytcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tidbyt.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tidbyt.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tidbyt.com' as const,
   /**
   * Executable programs provided by this package.

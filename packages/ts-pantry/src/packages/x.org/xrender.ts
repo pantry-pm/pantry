@@ -41,7 +41,6 @@ export const xorgxrenderPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/xrender' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/xrender -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/xrender' as const,
   programs: [] as const,
   companions: [] as const,

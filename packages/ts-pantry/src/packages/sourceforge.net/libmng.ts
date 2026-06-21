@@ -41,7 +41,6 @@ export const sourceforgenetlibmngPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceforge.net/libmng' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceforge.net/libmng -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceforge.net/libmng' as const,
   programs: [] as const,
   companions: [] as const,

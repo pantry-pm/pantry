@@ -42,7 +42,6 @@ export const googlecomhighwayPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/highway' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/highway -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/highway' as const,
   programs: [] as const,
   companions: [] as const,

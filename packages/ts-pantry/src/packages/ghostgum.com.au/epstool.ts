@@ -45,7 +45,6 @@ export const ghostgumcomauepstoolPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ghostgum.com.au/epstool' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ghostgum.com.au/epstool -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ghostgum.com.au/epstool' as const,
   /**
   * Executable programs provided by this package.

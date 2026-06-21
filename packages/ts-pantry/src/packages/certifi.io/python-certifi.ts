@@ -42,7 +42,6 @@ export const certifiiopythoncertifiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install certifi.io/python-certifi' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +certifi.io/python-certifi -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install certifi.io/python-certifi' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const goxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mitchellh/gox' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mitchellh/gox -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mitchellh/gox' as const,
   /**
   * Executable programs provided by this package.

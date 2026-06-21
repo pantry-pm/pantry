@@ -41,7 +41,6 @@ export const xorglibxfont2Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/libxfont2' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/libxfont2 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/libxfont2' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const devyorhelnlncduPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dev.yorhel.nl/ncdu' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dev.yorhel.nl/ncdu -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dev.yorhel.nl/ncdu' as const,
   /**
   * Executable programs provided by this package.

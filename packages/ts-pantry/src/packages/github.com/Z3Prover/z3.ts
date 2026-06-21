@@ -45,7 +45,6 @@ export const z3Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Z3Prover/z3' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Z3Prover/z3 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Z3Prover/z3' as const,
   /**
   * Executable programs provided by this package.

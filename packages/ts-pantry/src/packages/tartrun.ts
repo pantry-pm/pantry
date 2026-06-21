@@ -45,7 +45,6 @@ export const tartrunPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tart.run' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tart.run -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tart.run' as const,
   /**
   * Executable programs provided by this package.

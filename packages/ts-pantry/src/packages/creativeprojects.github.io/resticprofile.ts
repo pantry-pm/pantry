@@ -45,7 +45,6 @@ export const creativeprojectsgithubioresticprofilePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install creativeprojects.github.io/resticprofile' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +creativeprojects.github.io/resticprofile -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install creativeprojects.github.io/resticprofile' as const,
   /**
   * Executable programs provided by this package.

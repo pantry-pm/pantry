@@ -46,7 +46,6 @@ export const rigauxorghexeditPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rigaux.org/hexedit' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rigaux.org/hexedit -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rigaux.org/hexedit' as const,
   /**
   * Executable programs provided by this package.

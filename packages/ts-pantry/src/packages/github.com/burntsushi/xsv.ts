@@ -43,7 +43,6 @@ export const xsvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/burntsushi/xsv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/burntsushi/xsv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/burntsushi/xsv' as const,
   /**
   * Executable programs provided by this package.

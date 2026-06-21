@@ -43,7 +43,6 @@ export const libusbinfoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libusb.info' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libusb.info -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libusb.info' as const,
   programs: [] as const,
   companions: [] as const,

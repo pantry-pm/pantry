@@ -42,7 +42,6 @@ export const utfcppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/nemtrif/utfcpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/nemtrif/utfcpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/nemtrif/utfcpp' as const,
   programs: [] as const,
   companions: [] as const,

@@ -45,7 +45,6 @@ export const facebookcomfbthriftPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install facebook.com/fbthrift' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +facebook.com/fbthrift -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install facebook.com/fbthrift' as const,
   /**
   * Executable programs provided by this package.

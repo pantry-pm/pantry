@@ -45,7 +45,6 @@ export const keephqdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install keephq.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +keephq.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install keephq.dev' as const,
   /**
   * Executable programs provided by this package.

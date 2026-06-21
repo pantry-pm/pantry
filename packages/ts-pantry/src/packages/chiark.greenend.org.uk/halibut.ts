@@ -45,7 +45,6 @@ export const chiarkgreenendorgukhalibutPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install chiark.greenend.org.uk/halibut' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +chiark.greenend.org.uk/halibut -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install chiark.greenend.org.uk/halibut' as const,
   /**
   * Executable programs provided by this package.

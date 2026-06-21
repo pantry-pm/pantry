@@ -45,7 +45,6 @@ export const luajitorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install luajit.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +luajit.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install luajit.org' as const,
   /**
   * Executable programs provided by this package.

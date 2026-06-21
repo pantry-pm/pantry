@@ -45,7 +45,6 @@ export const legoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/go-acme/lego' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/go-acme/lego -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/go-acme/lego' as const,
   /**
   * Executable programs provided by this package.

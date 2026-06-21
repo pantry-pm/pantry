@@ -45,7 +45,6 @@ export const whispercppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ggerganov/whisper.cpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ggerganov/whisper.cpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ggerganov/whisper.cpp' as const,
   /**
   * Executable programs provided by this package.

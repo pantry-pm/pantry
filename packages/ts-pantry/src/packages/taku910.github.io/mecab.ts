@@ -42,7 +42,6 @@ export const taku910githubiomecabPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install taku910.github.io/mecab' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +taku910.github.io/mecab -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install taku910.github.io/mecab' as const,
   /**
   * Executable programs provided by this package.

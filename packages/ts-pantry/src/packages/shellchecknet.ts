@@ -46,7 +46,6 @@ export const shellchecknetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install shellcheck.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +shellcheck.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install shellcheck.net' as const,
   /**
   * Executable programs provided by this package.

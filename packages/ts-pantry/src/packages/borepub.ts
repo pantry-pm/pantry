@@ -44,7 +44,6 @@ export const borepubPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bore.pub' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bore.pub -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bore.pub' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const moonrepodevmoonPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install moonrepo.dev/moon' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +moonrepo.dev/moon -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install moonrepo.dev/moon' as const,
   /**
   * Executable programs provided by this package.

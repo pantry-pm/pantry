@@ -43,7 +43,6 @@ export const cratesiofsrxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/fsrx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/fsrx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/fsrx' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const dartdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install dart.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +dart.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install dart.dev' as const,
   /**
   * Executable programs provided by this package.

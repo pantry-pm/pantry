@@ -42,7 +42,6 @@ export const gnomeorgpygobjectPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/PyGObject' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/PyGObject -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/PyGObject' as const,
   programs: [] as const,
   companions: [] as const,

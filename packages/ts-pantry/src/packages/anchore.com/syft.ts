@@ -44,7 +44,6 @@ export const anchorecomsyftPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install anchore.com/syft' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +anchore.com/syft -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install anchore.com/syft' as const,
   /**
   * Executable programs provided by this package.

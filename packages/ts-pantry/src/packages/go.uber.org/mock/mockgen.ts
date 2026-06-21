@@ -45,7 +45,6 @@ export const gouberorgmockmockgenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install go.uber.org/mock/mockgen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +go.uber.org/mock/mockgen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install go.uber.org/mock/mockgen' as const,
   /**
   * Executable programs provided by this package.

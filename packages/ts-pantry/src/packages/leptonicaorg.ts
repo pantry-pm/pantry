@@ -46,7 +46,6 @@ export const leptonicaorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install leptonica.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +leptonica.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install leptonica.org' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const kubeconformPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/yannh/kubeconform' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/yannh/kubeconform -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/yannh/kubeconform' as const,
   /**
   * Executable programs provided by this package.

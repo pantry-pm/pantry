@@ -50,7 +50,6 @@ export const nodePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pkgx nodejs.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) nodejs.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nodejs.org' as const,
   /**
   * Executable programs provided by this package.

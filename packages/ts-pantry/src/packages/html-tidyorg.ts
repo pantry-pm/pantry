@@ -45,7 +45,6 @@ export const htmltidyorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install html-tidy.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +html-tidy.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install html-tidy.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const regsyncPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/regclient/regclient/regsync' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/regclient/regclient/regsync -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/regclient/regclient/regsync' as const,
   /**
   * Executable programs provided by this package.

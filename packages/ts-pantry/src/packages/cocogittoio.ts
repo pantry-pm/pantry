@@ -45,7 +45,6 @@ export const cocogittoioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cocogitto.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cocogitto.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cocogitto.io' as const,
   /**
   * Executable programs provided by this package.

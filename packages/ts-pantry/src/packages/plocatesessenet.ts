@@ -44,7 +44,6 @@ export const plocatesessenetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install plocate.sesse.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +plocate.sesse.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install plocate.sesse.net' as const,
   /**
   * Executable programs provided by this package.

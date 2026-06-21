@@ -45,7 +45,6 @@ export const libgeosorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libgeos.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libgeos.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libgeos.org' as const,
   /**
   * Executable programs provided by this package.

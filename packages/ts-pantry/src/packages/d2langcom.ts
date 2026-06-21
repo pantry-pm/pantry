@@ -45,7 +45,6 @@ export const d2langcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install d2lang.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +d2lang.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install d2lang.com' as const,
   /**
   * Executable programs provided by this package.

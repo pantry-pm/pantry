@@ -46,7 +46,6 @@ export const codercomcodeserverPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install coder.com/code-server' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +coder.com/code-server -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install coder.com/code-server' as const,
   /**
   * Executable programs provided by this package.

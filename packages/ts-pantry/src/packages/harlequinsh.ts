@@ -44,7 +44,6 @@ export const harlequinshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install harlequin.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +harlequin.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install harlequin.sh' as const,
   /**
   * Executable programs provided by this package.

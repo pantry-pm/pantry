@@ -46,7 +46,6 @@ export const grpcioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install grpc.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +grpc.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install grpc.io' as const,
   /**
   * Executable programs provided by this package.

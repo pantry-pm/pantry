@@ -42,7 +42,6 @@ export const xorgsmPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install x.org/sm' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +x.org/sm -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install x.org/sm' as const,
   programs: [] as const,
   companions: [] as const,

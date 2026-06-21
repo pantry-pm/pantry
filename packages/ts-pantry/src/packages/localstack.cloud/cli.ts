@@ -46,7 +46,6 @@ export const localstackcloudcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install localstack.cloud/cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +localstack.cloud/cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install localstack.cloud/cli' as const,
   /**
   * Executable programs provided by this package.

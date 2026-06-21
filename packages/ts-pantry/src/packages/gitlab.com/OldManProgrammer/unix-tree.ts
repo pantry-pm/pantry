@@ -45,7 +45,6 @@ export const gitlabcomoldmanprogrammerunixtreePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitlab.com/OldManProgrammer/unix-tree' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitlab.com/OldManProgrammer/unix-tree -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitlab.com/OldManProgrammer/unix-tree' as const,
   /**
   * Executable programs provided by this package.

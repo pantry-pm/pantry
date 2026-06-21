@@ -45,7 +45,6 @@ export const mupdfcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mupdf.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mupdf.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mupdf.com' as const,
   /**
   * Executable programs provided by this package.

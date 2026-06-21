@@ -45,7 +45,6 @@ export const changiedevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install changie.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +changie.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install changie.dev' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const openjpegorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openjpeg.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openjpeg.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openjpeg.org' as const,
   /**
   * Executable programs provided by this package.

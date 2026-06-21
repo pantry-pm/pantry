@@ -45,7 +45,6 @@ export const cratesiogitopolisPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/gitopolis' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/gitopolis -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/gitopolis' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const ebassigithubiographenePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ebassi.github.io/graphene' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ebassi.github.io/graphene -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ebassi.github.io/graphene' as const,
   programs: [] as const,
   companions: [] as const,

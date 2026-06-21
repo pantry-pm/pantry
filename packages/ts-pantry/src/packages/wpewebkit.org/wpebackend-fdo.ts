@@ -42,7 +42,6 @@ export const wpewebkitorgwpebackendfdoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install wpewebkit.org/wpebackend-fdo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +wpewebkit.org/wpebackend-fdo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install wpewebkit.org/wpebackend-fdo' as const,
   programs: [] as const,
   companions: [] as const,

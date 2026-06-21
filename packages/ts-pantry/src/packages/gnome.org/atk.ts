@@ -42,7 +42,6 @@ export const gnomeorgatkPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/atk' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/atk -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/atk' as const,
   programs: [] as const,
   companions: [] as const,

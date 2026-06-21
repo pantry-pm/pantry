@@ -46,7 +46,6 @@ export const gnomeorggobjectintrospectionPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/gobject-introspection' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/gobject-introspection -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/gobject-introspection' as const,
   /**
   * Executable programs provided by this package.

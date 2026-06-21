@@ -44,7 +44,6 @@ export const charmshpopPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install charm.sh/pop' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +charm.sh/pop -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install charm.sh/pop' as const,
   /**
   * Executable programs provided by this package.

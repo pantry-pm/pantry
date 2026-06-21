@@ -44,7 +44,6 @@ export const alpacacppPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/antimatter15/alpaca.cpp' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/antimatter15/alpaca.cpp -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/antimatter15/alpaca.cpp' as const,
   /**
   * Executable programs provided by this package.

@@ -42,7 +42,6 @@ export const numactlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/numactl/numactl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/numactl/numactl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/numactl/numactl' as const,
   programs: [] as const,
   companions: [] as const,

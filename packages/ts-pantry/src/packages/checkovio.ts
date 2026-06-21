@@ -46,7 +46,6 @@ export const checkovioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install checkov.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +checkov.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install checkov.io' as const,
   /**
   * Executable programs provided by this package.

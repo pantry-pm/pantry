@@ -45,7 +45,6 @@ export const certbotefforgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install certbot.eff.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +certbot.eff.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install certbot.eff.org' as const,
   /**
   * Executable programs provided by this package.

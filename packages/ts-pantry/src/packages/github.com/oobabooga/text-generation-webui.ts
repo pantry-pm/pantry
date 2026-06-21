@@ -45,7 +45,6 @@ export const textgenerationwebuiPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/oobabooga/text-generation-webui' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/oobabooga/text-generation-webui -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/oobabooga/text-generation-webui' as const,
   /**
   * Executable programs provided by this package.

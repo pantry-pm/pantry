@@ -45,7 +45,6 @@ export const terraformdocsioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install terraform-docs.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +terraform-docs.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install terraform-docs.io' as const,
   /**
   * Executable programs provided by this package.

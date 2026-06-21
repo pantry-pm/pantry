@@ -45,7 +45,6 @@ export const imagemagickorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install imagemagick.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +imagemagick.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install imagemagick.org' as const,
   /**
   * Executable programs provided by this package.

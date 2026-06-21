@@ -46,7 +46,6 @@ export const sourceforgenetpotracePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceforge.net/potrace' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceforge.net/potrace -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceforge.net/potrace' as const,
   /**
   * Executable programs provided by this package.

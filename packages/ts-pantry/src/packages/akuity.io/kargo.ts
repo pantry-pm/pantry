@@ -45,7 +45,6 @@ export const akuityiokargoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install akuity.io/kargo' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +akuity.io/kargo -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install akuity.io/kargo' as const,
   /**
   * Executable programs provided by this package.

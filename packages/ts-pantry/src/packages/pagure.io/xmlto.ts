@@ -46,7 +46,6 @@ export const pagureioxmltoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pagure.io/xmlto' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pagure.io/xmlto -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pagure.io/xmlto' as const,
   /**
   * Executable programs provided by this package.

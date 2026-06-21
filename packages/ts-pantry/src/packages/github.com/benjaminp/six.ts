@@ -43,7 +43,6 @@ export const sixPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/benjaminp/six' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/benjaminp/six -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/benjaminp/six' as const,
   programs: [] as const,
   companions: [] as const,

@@ -42,7 +42,6 @@ export const gnomeorglibsecretPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/libsecret' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/libsecret -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/libsecret' as const,
   programs: [] as const,
   companions: [] as const,

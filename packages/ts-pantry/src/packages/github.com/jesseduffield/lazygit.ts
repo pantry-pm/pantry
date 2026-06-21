@@ -45,7 +45,6 @@ export const lazygitPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jesseduffield/lazygit' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jesseduffield/lazygit -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jesseduffield/lazygit' as const,
   /**
   * Executable programs provided by this package.

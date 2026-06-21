@@ -46,7 +46,6 @@ export const musepacknetPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install musepack.net' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +musepack.net -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install musepack.net' as const,
   /**
   * Executable programs provided by this package.

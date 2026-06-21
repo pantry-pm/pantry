@@ -41,7 +41,6 @@ export const zPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/rupa/z' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/rupa/z -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/rupa/z' as const,
   programs: [] as const,
   companions: [] as const,

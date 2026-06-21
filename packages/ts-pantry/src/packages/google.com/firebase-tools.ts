@@ -46,7 +46,6 @@ export const googlecomfirebasetoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/firebase-tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/firebase-tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/firebase-tools' as const,
   /**
   * Executable programs provided by this package.

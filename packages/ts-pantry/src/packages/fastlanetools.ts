@@ -45,7 +45,6 @@ export const fastlanetoolsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fastlane.tools' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fastlane.tools -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fastlane.tools' as const,
   /**
   * Executable programs provided by this package.

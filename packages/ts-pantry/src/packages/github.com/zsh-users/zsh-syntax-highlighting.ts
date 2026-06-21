@@ -42,7 +42,6 @@ export const zshsyntaxhighlightingPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/zsh-users/zsh-syntax-highlighting' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/zsh-users/zsh-syntax-highlighting -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/zsh-users/zsh-syntax-highlighting' as const,
   programs: [] as const,
   companions: [] as const,

@@ -46,7 +46,6 @@ export const reacheremailcheckifemailexistscliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install reacher.email/check-if-email-exists-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +reacher.email/check-if-email-exists-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install reacher.email/check-if-email-exists-cli' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const krewsigsk8sioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install krew.sigs.k8s.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +krew.sigs.k8s.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install krew.sigs.k8s.io' as const,
   /**
   * Executable programs provided by this package.

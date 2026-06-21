@@ -43,7 +43,6 @@ export const facebookcommvfstPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install facebook.com/mvfst' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +facebook.com/mvfst -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install facebook.com/mvfst' as const,
   programs: [] as const,
   companions: [] as const,

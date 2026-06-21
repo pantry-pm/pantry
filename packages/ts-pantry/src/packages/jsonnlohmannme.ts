@@ -41,7 +41,6 @@ export const jsonnlohmannmePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install json.nlohmann.me' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +json.nlohmann.me -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install json.nlohmann.me' as const,
   programs: [] as const,
   companions: [] as const,

@@ -44,7 +44,6 @@ export const gitlabcomprocpsngwatchPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gitlab.com/procps-ng/watch' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gitlab.com/procps-ng/watch -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gitlab.com/procps-ng/watch' as const,
   /**
   * Executable programs provided by this package.

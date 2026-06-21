@@ -45,7 +45,6 @@ export const linuxpamorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install linux-pam.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +linux-pam.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install linux-pam.org' as const,
   /**
   * Executable programs provided by this package.

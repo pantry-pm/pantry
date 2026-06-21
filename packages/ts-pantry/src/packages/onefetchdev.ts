@@ -46,7 +46,6 @@ export const onefetchdevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install onefetch.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +onefetch.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install onefetch.dev' as const,
   /**
   * Executable programs provided by this package.

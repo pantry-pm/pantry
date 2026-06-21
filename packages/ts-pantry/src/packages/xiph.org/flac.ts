@@ -46,7 +46,6 @@ export const xiphorgflacPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xiph.org/flac' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xiph.org/flac -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xiph.org/flac' as const,
   /**
   * Executable programs provided by this package.

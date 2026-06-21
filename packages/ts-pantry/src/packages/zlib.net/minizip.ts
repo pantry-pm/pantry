@@ -43,7 +43,6 @@ export const zlibnetminizipPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install zlib.net/minizip' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +zlib.net/minizip -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install zlib.net/minizip' as const,
   programs: [] as const,
   companions: [] as const,

@@ -41,7 +41,6 @@ export const mpmathorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mpmath.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mpmath.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mpmath.org' as const,
   programs: [] as const,
   companions: [] as const,

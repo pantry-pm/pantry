@@ -44,7 +44,6 @@ export const speedtestcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/sivel/speedtest-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/sivel/speedtest-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/sivel/speedtest-cli' as const,
   /**
   * Executable programs provided by this package.

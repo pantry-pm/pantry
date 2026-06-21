@@ -44,7 +44,6 @@ export const cratesiogitbranchlessPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/git-branchless' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/git-branchless -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/git-branchless' as const,
   /**
   * Executable programs provided by this package.

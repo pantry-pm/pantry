@@ -46,7 +46,6 @@ export const openldaporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openldap.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openldap.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openldap.org' as const,
   /**
   * Executable programs provided by this package.

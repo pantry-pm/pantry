@@ -43,7 +43,6 @@ export const cratesiormzPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/rmz' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/rmz -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/rmz' as const,
   /**
   * Executable programs provided by this package.

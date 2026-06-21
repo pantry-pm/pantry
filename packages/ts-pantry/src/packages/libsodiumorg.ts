@@ -40,7 +40,6 @@ export const libsodiumorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libsodium.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libsodium.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libsodium.org' as const,
   programs: [] as const,
   companions: [] as const,

@@ -43,7 +43,6 @@ export const nixosorgpatchelfPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install nixos.org/patchelf' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +nixos.org/patchelf -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install nixos.org/patchelf' as const,
   /**
   * Executable programs provided by this package.

@@ -42,7 +42,6 @@ export const debianorgisocodesPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install debian.org/iso-codes' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +debian.org/iso-codes -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install debian.org/iso-codes' as const,
   programs: [] as const,
   companions: [] as const,

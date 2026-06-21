@@ -45,7 +45,6 @@ export const cloudnativepgioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cloudnative-pg.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cloudnative-pg.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cloudnative-pg.io' as const,
   /**
   * Executable programs provided by this package.

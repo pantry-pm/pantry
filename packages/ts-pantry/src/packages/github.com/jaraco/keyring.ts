@@ -45,7 +45,6 @@ export const keyringPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/jaraco/keyring' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/jaraco/keyring -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/jaraco/keyring' as const,
   /**
   * Executable programs provided by this package.

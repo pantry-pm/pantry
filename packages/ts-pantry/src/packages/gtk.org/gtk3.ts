@@ -46,7 +46,6 @@ export const gtkorggtk3Package = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gtk.org/gtk3' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gtk.org/gtk3 -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gtk.org/gtk3' as const,
   /**
   * Executable programs provided by this package.

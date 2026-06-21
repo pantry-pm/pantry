@@ -45,7 +45,6 @@ export const openinterpretercomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openinterpreter.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openinterpreter.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openinterpreter.com' as const,
   /**
   * Executable programs provided by this package.

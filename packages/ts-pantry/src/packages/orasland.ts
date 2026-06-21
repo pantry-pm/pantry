@@ -45,7 +45,6 @@ export const oraslandPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install oras.land' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +oras.land -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install oras.land' as const,
   /**
   * Executable programs provided by this package.

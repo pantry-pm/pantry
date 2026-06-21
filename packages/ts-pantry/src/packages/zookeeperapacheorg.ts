@@ -26,7 +26,6 @@ export const zookeeperapacheorgPackage = {
   homepageUrl: 'https://zookeeper.apache.org' as const,
   githubUrl: 'https://github.com/apache/zookeeper' as const,
   installCommand: 'pantry install zookeeper.apache.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +zookeeper.apache.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install zookeeper.apache.org' as const,
   programs: [
     'zkServer.sh',

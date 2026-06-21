@@ -45,7 +45,6 @@ export const speexorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install speex.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +speex.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install speex.org' as const,
   /**
   * Executable programs provided by this package.

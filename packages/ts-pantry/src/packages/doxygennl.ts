@@ -45,7 +45,6 @@ export const doxygennlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install doxygen.nl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +doxygen.nl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install doxygen.nl' as const,
   /**
   * Executable programs provided by this package.

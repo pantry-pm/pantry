@@ -45,7 +45,6 @@ export const gnomeextensionscliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/essembeh/gnome-extensions-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/essembeh/gnome-extensions-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/essembeh/gnome-extensions-cli' as const,
   /**
   * Executable programs provided by this package.

@@ -5,7 +5,7 @@ const style = lib.style;
 const downloader = lib.install.downloader;
 const CommandResult = lib.commands.common.CommandResult;
 
-const REPO = "home-lang/pantry";
+const REPO = "pantry-pm/pantry";
 
 pub const UpgradeOptions = struct {
     canary: bool = false,

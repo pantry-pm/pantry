@@ -45,7 +45,6 @@ export const ffmpegorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ffmpeg.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ffmpeg.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ffmpeg.org' as const,
   /**
   * Executable programs provided by this package.

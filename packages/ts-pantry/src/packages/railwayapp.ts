@@ -45,7 +45,6 @@ export const railwayappPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install railway.app' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +railway.app -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install railway.app' as const,
   /**
   * Executable programs provided by this package.

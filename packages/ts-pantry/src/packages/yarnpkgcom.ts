@@ -46,7 +46,6 @@ export const yarnPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install yarnpkg.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +yarnpkg.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install yarnpkg.com' as const,
   /**
   * Executable programs provided by this package.

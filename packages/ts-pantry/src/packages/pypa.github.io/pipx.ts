@@ -46,7 +46,6 @@ export const pypagithubiopipxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pypa.github.io/pipx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pypa.github.io/pipx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pypa.github.io/pipx' as const,
   /**
   * Executable programs provided by this package.

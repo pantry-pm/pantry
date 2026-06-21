@@ -44,7 +44,6 @@ export const tukaaniorgxzPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install tukaani.org/xz' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +tukaani.org/xz -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install tukaani.org/xz' as const,
   /**
   * Executable programs provided by this package.

@@ -43,7 +43,6 @@ export const cratesiowordlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/wordl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/wordl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/wordl' as const,
   /**
   * Executable programs provided by this package.

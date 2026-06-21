@@ -46,7 +46,6 @@ export const s3toolsorgs3cmdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install s3tools.org/s3cmd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +s3tools.org/s3cmd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install s3tools.org/s3cmd' as const,
   /**
   * Executable programs provided by this package.

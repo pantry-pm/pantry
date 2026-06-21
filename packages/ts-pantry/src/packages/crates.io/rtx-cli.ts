@@ -45,7 +45,6 @@ export const cratesiortxcliPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/rtx-cli' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/rtx-cli -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/rtx-cli' as const,
   programs: [
     'mise',

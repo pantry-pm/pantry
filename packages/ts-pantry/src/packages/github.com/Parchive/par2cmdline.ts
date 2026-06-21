@@ -44,7 +44,6 @@ export const par2cmdlinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/Parchive/par2cmdline' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/Parchive/par2cmdline -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/Parchive/par2cmdline' as const,
   /**
   * Executable programs provided by this package.

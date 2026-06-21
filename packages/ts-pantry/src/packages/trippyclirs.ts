@@ -44,7 +44,6 @@ export const trippyclirsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install trippy.cli.rs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +trippy.cli.rs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install trippy.cli.rs' as const,
   /**
   * Executable programs provided by this package.

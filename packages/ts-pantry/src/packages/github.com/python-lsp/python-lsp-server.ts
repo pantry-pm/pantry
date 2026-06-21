@@ -45,7 +45,6 @@ export const pythonlspserverPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/python-lsp/python-lsp-server' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/python-lsp/python-lsp-server -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/python-lsp/python-lsp-server' as const,
   /**
   * Executable programs provided by this package.

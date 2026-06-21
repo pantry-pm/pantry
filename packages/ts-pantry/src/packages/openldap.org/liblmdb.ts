@@ -45,7 +45,6 @@ export const openldaporgliblmdbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openldap.org/liblmdb' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openldap.org/liblmdb -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openldap.org/liblmdb' as const,
   /**
   * Executable programs provided by this package.

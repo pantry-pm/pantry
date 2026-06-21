@@ -44,7 +44,6 @@ export const ntporgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ntp.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ntp.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ntp.org' as const,
   /**
   * Executable programs provided by this package.

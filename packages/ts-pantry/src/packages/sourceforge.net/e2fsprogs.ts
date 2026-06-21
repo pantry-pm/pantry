@@ -45,7 +45,6 @@ export const sourceforgenete2fsprogsPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sourceforge.net/e2fsprogs' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sourceforge.net/e2fsprogs -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sourceforge.net/e2fsprogs' as const,
   /**
   * Executable programs provided by this package.

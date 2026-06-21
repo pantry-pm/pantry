@@ -44,7 +44,6 @@ export const googlecomglogPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install google.com/glog' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +google.com/glog -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install google.com/glog' as const,
   programs: [] as const,
   companions: [] as const,

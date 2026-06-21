@@ -45,7 +45,6 @@ export const khronosorgglslangPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install khronos.org/glslang' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +khronos.org/glslang -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install khronos.org/glslang' as const,
   /**
   * Executable programs provided by this package.

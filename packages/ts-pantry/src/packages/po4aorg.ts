@@ -47,7 +47,6 @@ export const po4aorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install po4a.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +po4a.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install po4a.org' as const,
   /**
   * Executable programs provided by this package.

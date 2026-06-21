@@ -42,7 +42,6 @@ export const cpptomlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/skystrife/cpptoml' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/skystrife/cpptoml -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/skystrife/cpptoml' as const,
   programs: [] as const,
   companions: [] as const,

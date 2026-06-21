@@ -44,7 +44,6 @@ export const goredfishapiidracPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/greenpau/go-redfish-api-idrac' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/greenpau/go-redfish-api-idrac -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/greenpau/go-redfish-api-idrac' as const,
   /**
   * Executable programs provided by this package.

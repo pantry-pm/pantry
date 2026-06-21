@@ -40,7 +40,6 @@ export const xvidcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install xvid.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +xvid.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install xvid.com' as const,
   programs: [] as const,
   companions: [] as const,

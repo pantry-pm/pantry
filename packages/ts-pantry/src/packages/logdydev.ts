@@ -45,7 +45,6 @@ export const logdydevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install logdy.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +logdy.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install logdy.dev' as const,
   /**
   * Executable programs provided by this package.

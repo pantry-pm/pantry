@@ -46,7 +46,6 @@ export const pulumiioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pulumi.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pulumi.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pulumi.io' as const,
   /**
   * Executable programs provided by this package.

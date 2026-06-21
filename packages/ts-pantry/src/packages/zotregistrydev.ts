@@ -43,7 +43,6 @@ export const zotregistrydevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install zotregistry.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +zotregistry.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install zotregistry.dev' as const,
   /**
   * Executable programs provided by this package.

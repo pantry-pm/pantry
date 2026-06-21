@@ -44,7 +44,6 @@ export const tmuxmacosxpasteboardPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/ChrisJohnsen/tmux-MacOSX-pasteboard' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/ChrisJohnsen/tmux-MacOSX-pasteboard -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/ChrisJohnsen/tmux-MacOSX-pasteboard' as const,
   /**
   * Executable programs provided by this package.

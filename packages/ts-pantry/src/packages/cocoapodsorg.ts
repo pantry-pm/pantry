@@ -45,7 +45,6 @@ export const cocoapodsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cocoapods.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cocoapods.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cocoapods.org' as const,
   /**
   * Executable programs provided by this package.

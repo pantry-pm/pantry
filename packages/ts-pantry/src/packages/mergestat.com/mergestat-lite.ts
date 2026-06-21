@@ -45,7 +45,6 @@ export const mergestatcommergestatlitePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mergestat.com/mergestat-lite' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mergestat.com/mergestat-lite -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mergestat.com/mergestat-lite' as const,
   /**
   * Executable programs provided by this package.

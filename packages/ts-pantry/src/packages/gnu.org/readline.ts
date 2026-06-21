@@ -41,7 +41,6 @@ export const gnuorgreadlinePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/readline' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/readline -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/readline' as const,
   programs: [] as const,
   companions: [] as const,

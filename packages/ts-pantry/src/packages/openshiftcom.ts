@@ -46,7 +46,6 @@ export const openshiftcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install openshift.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +openshift.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install openshift.com' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const mkdocsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mkdocs.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mkdocs.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mkdocs.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const templguidePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install templ.guide' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +templ.guide -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install templ.guide' as const,
   /**
   * Executable programs provided by this package.

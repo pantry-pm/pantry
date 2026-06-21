@@ -45,7 +45,6 @@ export const counterfeiterPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/maxbrunsfeld/counterfeiter' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/maxbrunsfeld/counterfeiter -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/maxbrunsfeld/counterfeiter' as const,
   /**
   * Executable programs provided by this package.

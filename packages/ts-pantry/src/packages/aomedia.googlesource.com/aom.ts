@@ -45,7 +45,6 @@ export const aomediagooglesourcecomaomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install aomedia.googlesource.com/aom' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +aomedia.googlesource.com/aom -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install aomedia.googlesource.com/aom' as const,
   /**
   * Executable programs provided by this package.

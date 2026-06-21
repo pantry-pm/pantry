@@ -46,7 +46,6 @@ export const rtmpdumpmplayerhqhuPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install rtmpdump.mplayerhq.hu' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +rtmpdump.mplayerhq.hu -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install rtmpdump.mplayerhq.hu' as const,
   /**
   * Executable programs provided by this package.

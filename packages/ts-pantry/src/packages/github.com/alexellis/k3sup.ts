@@ -45,7 +45,6 @@ export const k3supPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/alexellis/k3sup' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/alexellis/k3sup -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/alexellis/k3sup' as const,
   /**
   * Executable programs provided by this package.

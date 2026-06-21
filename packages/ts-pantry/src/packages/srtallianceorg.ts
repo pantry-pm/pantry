@@ -46,7 +46,6 @@ export const srtallianceorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install srtalliance.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +srtalliance.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install srtalliance.org' as const,
   /**
   * Executable programs provided by this package.

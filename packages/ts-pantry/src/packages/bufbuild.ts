@@ -45,7 +45,6 @@ export const bufbuildPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install buf.build' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +buf.build -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install buf.build' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const haskellorgcabalPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install haskell.org/cabal' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +haskell.org/cabal -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install haskell.org/cabal' as const,
   /**
   * Executable programs provided by this package.

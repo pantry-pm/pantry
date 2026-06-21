@@ -41,7 +41,6 @@ export const portaudiocomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install portaudio.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +portaudio.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install portaudio.com' as const,
   programs: [] as const,
   companions: [] as const,

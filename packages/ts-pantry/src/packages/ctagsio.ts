@@ -46,7 +46,6 @@ export const ctagsioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ctags.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ctags.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ctags.io' as const,
   /**
   * Executable programs provided by this package.

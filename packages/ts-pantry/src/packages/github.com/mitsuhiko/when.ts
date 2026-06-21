@@ -44,7 +44,6 @@ export const whenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mitsuhiko/when' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mitsuhiko/when -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mitsuhiko/when' as const,
   /**
   * Executable programs provided by this package.

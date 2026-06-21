@@ -45,7 +45,6 @@ export const sonarqubeorgsonarscannerPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install sonarqube.org/sonarscanner' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +sonarqube.org/sonarscanner -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install sonarqube.org/sonarscanner' as const,
   /**
   * Executable programs provided by this package.

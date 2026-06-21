@@ -40,7 +40,6 @@ export const pixmanorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install pixman.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +pixman.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install pixman.org' as const,
   programs: [] as const,
   companions: [] as const,

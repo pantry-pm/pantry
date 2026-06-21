@@ -45,7 +45,6 @@ export const peripheryPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/peripheryapp/periphery' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/peripheryapp/periphery -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/peripheryapp/periphery' as const,
   /**
   * Executable programs provided by this package.

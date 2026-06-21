@@ -45,7 +45,6 @@ export const cratesiosccachePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install crates.io/sccache' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +crates.io/sccache -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install crates.io/sccache' as const,
   /**
   * Executable programs provided by this package.

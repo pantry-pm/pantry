@@ -46,7 +46,6 @@ export const imageflowioimageflow_toolPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install imageflow.io/imageflow_tool' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +imageflow.io/imageflow_tool -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install imageflow.io/imageflow_tool' as const,
   /**
   * Executable programs provided by this package.

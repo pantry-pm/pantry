@@ -46,7 +46,6 @@ export const flywaydborgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install flywaydb.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +flywaydb.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install flywaydb.org' as const,
   /**
   * Executable programs provided by this package.

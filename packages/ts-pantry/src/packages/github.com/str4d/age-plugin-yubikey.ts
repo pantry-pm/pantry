@@ -44,7 +44,6 @@ export const agepluginyubikeyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/str4d/age-plugin-yubikey' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/str4d/age-plugin-yubikey -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/str4d/age-plugin-yubikey' as const,
   /**
   * Executable programs provided by this package.

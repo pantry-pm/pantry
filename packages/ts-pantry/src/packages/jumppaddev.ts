@@ -45,7 +45,6 @@ export const jumppaddevPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jumppad.dev' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jumppad.dev -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jumppad.dev' as const,
   /**
   * Executable programs provided by this package.

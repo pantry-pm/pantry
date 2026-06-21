@@ -43,7 +43,6 @@ export const ijgorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ijg.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ijg.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ijg.org' as const,
   /**
   * Executable programs provided by this package.

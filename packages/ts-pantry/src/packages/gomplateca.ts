@@ -45,7 +45,6 @@ export const gomplatecaPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gomplate.ca' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gomplate.ca -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gomplate.ca' as const,
   /**
   * Executable programs provided by this package.

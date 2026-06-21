@@ -45,7 +45,6 @@ export const asciidocpyPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/asciidoc-py/asciidoc-py' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/asciidoc-py/asciidoc-py -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/asciidoc-py/asciidoc-py' as const,
   /**
   * Executable programs provided by this package.

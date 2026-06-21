@@ -45,7 +45,6 @@ export const kubernetesiokustomizePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install kubernetes.io/kustomize' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +kubernetes.io/kustomize -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install kubernetes.io/kustomize' as const,
   /**
   * Executable programs provided by this package.

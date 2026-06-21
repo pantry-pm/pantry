@@ -45,7 +45,6 @@ export const gnuorgbisonPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnu.org/bison' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnu.org/bison -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnu.org/bison' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const ivarchcompvPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ivarch.com/pv' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ivarch.com/pv -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ivarch.com/pv' as const,
   /**
   * Executable programs provided by this package.

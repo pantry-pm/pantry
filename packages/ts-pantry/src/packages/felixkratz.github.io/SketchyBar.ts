@@ -45,7 +45,6 @@ export const felixkratzgithubiosketchybarPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install felixkratz.github.io/SketchyBar' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +felixkratz.github.io/SketchyBar -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install felixkratz.github.io/SketchyBar' as const,
   /**
   * Executable programs provided by this package.

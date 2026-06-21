@@ -45,7 +45,6 @@ export const connectrpcorgprotocgenconnectgoPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install connectrpc.org/protoc-gen-connect-go' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +connectrpc.org/protoc-gen-connect-go -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install connectrpc.org/protoc-gen-connect-go' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const scalasbtorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install scala-sbt.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +scala-sbt.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install scala-sbt.org' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const lftpyarruPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lftp.yar.ru' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lftp.yar.ru -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lftp.yar.ru' as const,
   /**
   * Executable programs provided by this package.

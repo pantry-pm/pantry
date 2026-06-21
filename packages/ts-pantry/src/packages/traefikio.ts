@@ -45,7 +45,6 @@ export const traefikioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install traefik.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +traefik.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install traefik.io' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const indexsupplycomshovelPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install indexsupply.com/shovel' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +indexsupply.com/shovel -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install indexsupply.com/shovel' as const,
   /**
   * Executable programs provided by this package.

@@ -46,7 +46,6 @@ export const jpegorgjpegxlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install jpeg.org/jpegxl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +jpeg.org/jpegxl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install jpeg.org/jpegxl' as const,
   /**
   * Executable programs provided by this package.

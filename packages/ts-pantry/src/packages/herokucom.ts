@@ -46,7 +46,6 @@ export const herokucomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install heroku.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +heroku.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install heroku.com' as const,
   /**
   * Executable programs provided by this package.

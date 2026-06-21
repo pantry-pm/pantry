@@ -42,7 +42,6 @@ export const ferzkoppnetsdl2_gfxPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ferzkopp.net/SDL2_gfx' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ferzkopp.net/SDL2_gfx -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ferzkopp.net/SDL2_gfx' as const,
   programs: [] as const,
   companions: [] as const,

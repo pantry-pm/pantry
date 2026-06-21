@@ -42,7 +42,6 @@ export const ceressolverorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install ceres-solver.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +ceres-solver.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install ceres-solver.org' as const,
   programs: [] as const,
   companions: [] as const,

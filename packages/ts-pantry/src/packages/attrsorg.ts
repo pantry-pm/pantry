@@ -43,7 +43,6 @@ export const attrsorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install attrs.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +attrs.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install attrs.org' as const,
   programs: [] as const,
   companions: [] as const,

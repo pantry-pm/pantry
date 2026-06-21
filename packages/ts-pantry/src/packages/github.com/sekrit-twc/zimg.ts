@@ -42,7 +42,6 @@ export const zimgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/sekrit-twc/zimg' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/sekrit-twc/zimg -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/sekrit-twc/zimg' as const,
   programs: [] as const,
   companions: [] as const,

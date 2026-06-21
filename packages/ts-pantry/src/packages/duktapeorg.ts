@@ -44,7 +44,6 @@ export const duktapeorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install duktape.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +duktape.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install duktape.org' as const,
   /**
   * Executable programs provided by this package.

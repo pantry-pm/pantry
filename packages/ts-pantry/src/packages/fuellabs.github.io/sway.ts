@@ -46,7 +46,6 @@ export const fuellabsgithubioswayPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install fuellabs.github.io/sway' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +fuellabs.github.io/sway -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install fuellabs.github.io/sway' as const,
   /**
   * Executable programs provided by this package.

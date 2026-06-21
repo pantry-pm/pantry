@@ -46,7 +46,6 @@ export const cointopshPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cointop.sh' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cointop.sh -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cointop.sh' as const,
   /**
   * Executable programs provided by this package.

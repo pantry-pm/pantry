@@ -46,7 +46,6 @@ export const exiftoolorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install exiftool.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +exiftool.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install exiftool.org' as const,
   /**
   * Executable programs provided by this package.

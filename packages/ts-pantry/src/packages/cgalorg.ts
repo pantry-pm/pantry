@@ -46,7 +46,6 @@ export const cgalorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install cgal.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +cgal.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install cgal.org' as const,
   /**
   * Executable programs provided by this package.

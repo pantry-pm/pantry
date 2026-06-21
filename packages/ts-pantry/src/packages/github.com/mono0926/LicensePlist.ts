@@ -45,7 +45,6 @@ export const licenseplistPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install github.com/mono0926/LicensePlist' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +github.com/mono0926/LicensePlist -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install github.com/mono0926/LicensePlist' as const,
   /**
   * Executable programs provided by this package.

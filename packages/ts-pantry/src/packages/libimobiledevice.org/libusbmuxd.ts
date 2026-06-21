@@ -46,7 +46,6 @@ export const libimobiledeviceorglibusbmuxdPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install libimobiledevice.org/libusbmuxd' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +libimobiledevice.org/libusbmuxd -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install libimobiledevice.org/libusbmuxd' as const,
   /**
   * Executable programs provided by this package.

@@ -44,7 +44,6 @@ export const mpg123dePackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install mpg123.de' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +mpg123.de -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install mpg123.de' as const,
   /**
   * Executable programs provided by this package.

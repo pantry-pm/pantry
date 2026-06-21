@@ -44,7 +44,6 @@ export const mandbgitlabiomandbPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install man-db.gitlab.io/man-db' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +man-db.gitlab.io/man-db -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install man-db.gitlab.io/man-db' as const,
   /**
   * Executable programs provided by this package.

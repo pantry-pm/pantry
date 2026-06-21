@@ -45,7 +45,6 @@ export const gnupgorglibgcryptPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnupg.org/libgcrypt' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnupg.org/libgcrypt -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnupg.org/libgcrypt' as const,
   /**
   * Executable programs provided by this package.

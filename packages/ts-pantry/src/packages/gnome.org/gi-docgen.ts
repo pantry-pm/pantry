@@ -42,7 +42,6 @@ export const gnomeorggidocgenPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install gnome.org/gi-docgen' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +gnome.org/gi-docgen -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install gnome.org/gi-docgen' as const,
   programs: [] as const,
   companions: [] as const,

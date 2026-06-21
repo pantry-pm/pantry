@@ -46,7 +46,6 @@ export const lunarvimorgPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lunarvim.org' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lunarvim.org -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lunarvim.org' as const,
   /**
   * Executable programs provided by this package.

@@ -45,7 +45,6 @@ export const lloydgithubioyajlPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install lloyd.github.io/yajl' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +lloyd.github.io/yajl -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install lloyd.github.io/yajl' as const,
   /**
   * Executable programs provided by this package.

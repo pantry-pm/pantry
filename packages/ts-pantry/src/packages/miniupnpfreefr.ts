@@ -42,7 +42,6 @@ export const miniupnpfreefrPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install miniupnp.free.fr' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +miniupnp.free.fr -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install miniupnp.free.fr' as const,
   /**
   * Executable programs provided by this package.

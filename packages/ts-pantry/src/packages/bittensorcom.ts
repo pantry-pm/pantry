@@ -44,7 +44,6 @@ export const bittensorcomPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install bittensor.com' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +bittensor.com -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install bittensor.com' as const,
   programs: [] as const,
   companions: [] as const,

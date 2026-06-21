@@ -46,7 +46,6 @@ export const neovimioPackage = {
   * @example pantry install package-name
   */
   installCommand: 'pantry install neovim.io' as const,
-  pkgxInstallCommand: 'sh <(curl https://pkgx.sh) +neovim.io -- $SHELL -i' as const,
   pantryInstallCommand: 'pantry install neovim.io' as const,
   /**
   * Executable programs provided by this package.
