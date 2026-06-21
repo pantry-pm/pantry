@@ -103,6 +103,26 @@ function listFontRecipes(dir: string): string[] {
   return out
 }
 
+/** List app recipes (every `.ts` under recipes/apps/) so a newly-added desktop
+ * app publishes from its local recipe — no wait on the server-side catalogue. */
+function listAppRecipes(dir: string): string[] {
+  const appsDir = join(dir, 'apps')
+  if (!existsSync(appsDir))
+    return []
+  const out: string[] = []
+  const walk = (d: string): void => {
+    for (const name of readdirSync(d)) {
+      const full = join(d, name)
+      if (statSync(full).isDirectory())
+        walk(full)
+      else if (name.endsWith('.ts'))
+        out.push(full)
+    }
+  }
+  walk(appsDir)
+  return out
+}
+
 /** Locate `<domain>.ts` anywhere under recipes/ (recipes are organised into
  * fonts/ and apps/ subfolders). */
 function findRecipeFile(dir: string, filename: string): string | null {
@@ -139,14 +159,25 @@ async function main(): Promise<void> {
   // Build the candidate (file, kind) set: every font recipe + the app recipes
   // that back the registry's desktop-app catalogue.
   const candidates: Array<{ file: string, kind: 'app' | 'font' }> = []
+  const seen = new Set<string>()
+  const add = (file: string, kind: 'app' | 'font'): void => {
+    if (file && !seen.has(file)) {
+      seen.add(file)
+      candidates.push({ file, kind })
+    }
+  }
   for (const file of listFontRecipes(RECIPES_DIR))
-    candidates.push({ file, kind: 'font' })
+    add(file, 'font')
+  // Every local app recipe — lets a freshly-added app publish from its file
+  // without first appearing in the live server-side desktop-app catalogue.
+  for (const file of listAppRecipes(RECIPES_DIR))
+    add(file, 'app')
+  // Plus any app domains the registry catalogues (covers slash-domains and any
+  // recipe that lives outside recipes/apps/).
   for (const domain of await appDomains()) {
     if (domain.includes('/'))
       continue // slash-domains stay in their own nested path; skip here
-    const file = findRecipeFile(RECIPES_DIR, `${domain}.ts`)
-    if (file)
-      candidates.push({ file, kind: 'app' })
+    add(findRecipeFile(RECIPES_DIR, `${domain}.ts`), 'app')
   }
 
   const entries: Entry[] = []
