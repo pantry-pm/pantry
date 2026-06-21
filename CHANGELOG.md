@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.0...v0.10.1)
+
+### 🚀 Features
+
+- **install**: make mas optional for Mac App Store apps ([367e967](https://github.com/pantry-pm/pantry/commit/367e967)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: honor apps: and fonts: keys in either sibling file ([7513bed](https://github.com/pantry-pm/pantry/commit/7513bed)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### ♻️ Code Refactoring
+
+- **install**: install App Store apps without mas at all ([d40f5f3](https://github.com/pantry-pm/pantry/commit/d40f5f3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.10.1 ([8db3efd](https://github.com/pantry-pm/pantry/commit/8db3efd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, gqlgen.com, projen.io ([6f7e8a3](https://github.com/pantry-pm/pantry/commit/6f7e8a3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9745 ([be1870f](https://github.com/pantry-pm/pantry/commit/be1870f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dblab.danvergara.com to 0.41.0 ([c6d3107](https://github.com/pantry-pm/pantry/commit/c6d3107)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump app code.visualstudio.com 1.96.4 → 1.125.0 ([2546d81](https://github.com/pantry-pm/pantry/commit/2546d81)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/tw93/mole, projen.io ([243a053](https://github.com/pantry-pm/pantry/commit/243a053)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.60...v0.10.0)
 
 ### 🚀 Features
