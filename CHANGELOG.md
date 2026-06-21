@@ -1,3 +1,67 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.60...v0.10.0)
+
+### 🚀 Features
+
+- **install**: merge sibling apps.yaml/fonts.yaml into desktop install ([ed0463d](https://github.com/pantry-pm/pantry/commit/ed0463d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: accept `deps:` as a synonym for `dependencies:` ([d657f14](https://github.com/pantry-pm/pantry/commit/d657f14)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: precise desktop update commit messages ([8806afc](https://github.com/pantry-pm/pantry/commit/8806afc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **packages**: register desktop font packages (metadata) ([2d96dc5](https://github.com/pantry-pm/pantry/commit/2d96dc5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: auto version-check for desktop apps & fonts ([5fcd110](https://github.com/pantry-pm/pantry/commit/5fcd110)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: desktop font recipes + publish-fonts populate script ([0725305](https://github.com/pantry-pm/pantry/commit/0725305)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: add fonts catalogue and /fonts endpoint ([914091a](https://github.com/pantry-pm/pantry/commit/914091a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: native desktop-app install from pantry's own registry ([e23c9ac](https://github.com/pantry-pm/pantry/commit/e23c9ac)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **php-fpm**: include pool.d/*.conf for per-site pools (site isolation) ([7df8b4e](https://github.com/pantry-pm/pantry/commit/7df8b4e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🐛 Bug Fixes
+
+- **generate**: drop volatile timestamp from generated.zig header ([8e44d23](https://github.com/pantry-pm/pantry/commit/8e44d23)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: author automated commits as github-actions bot, not the runner ([714e2be](https://github.com/pantry-pm/pantry/commit/714e2be)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### ♻️ Code Refactoring
+
+- **fonts**: drop redundant .font suffix (now under fonts/ folder) ([71680f7](https://github.com/pantry-pm/pantry/commit/71680f7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: organize desktop apps & fonts into apps/ and fonts/ ([c44469c](https://github.com/pantry-pm/pantry/commit/c44469c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: resolve fonts by pantry domain (drop font- prefix) ([d39dd8b](https://github.com/pantry-pm/pantry/commit/d39dd8b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🤖 Continuous Integration
+
+- schedule daily desktop app/font update check + publish ([5e370d7](https://github.com/pantry-pm/pantry/commit/5e370d7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.10.0 ([fca0c4a](https://github.com/pantry-pm/pantry/commit/fca0c4a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- add release:minor script ([7b5e59d](https://github.com/pantry-pm/pantry/commit/7b5e59d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, opencode.ai ([7515173](https://github.com/pantry-pm/pantry/commit/7515173)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9742 ([7dcdbb7](https://github.com/pantry-pm/pantry/commit/7dcdbb7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([cf02508](https://github.com/pantry-pm/pantry/commit/cf02508)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update carapace.sh, github.com/ggerganov/llama.cpp, jbang.dev ([dc30fd1](https://github.com/pantry-pm/pantry/commit/dc30fd1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([59bf2f8](https://github.com/pantry-pm/pantry/commit/59bf2f8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: 1 app/font version update(s) ([c7b094a](https://github.com/pantry-pm/pantry/commit/c7b094a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: 7 app/font version update(s) ([e71e994](https://github.com/pantry-pm/pantry/commit/e71e994)) _(by Anka <runner@sat12-dp151-57657cb4-4dc1-4b4a-815c-095f883819df-2AA4E0768203.local>)_
+- **packages**: regenerate index with desktop fonts ([2d228fc](https://github.com/pantry-pm/pantry/commit/2d228fc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, mupdf.com ([b38196d](https://github.com/pantry-pm/pantry/commit/b38196d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/ggerganov/llama.cpp, sourceware.org/libffi ([4e1edfc](https://github.com/pantry-pm/pantry/commit/4e1edfc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, railway.app ([68a0492](https://github.com/pantry-pm/pantry/commit/68a0492)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update jbang.dev to 0.139.2 ([69cb38f](https://github.com/pantry-pm/pantry/commit/69cb38f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([01f0aaa](https://github.com/pantry-pm/pantry/commit/01f0aaa)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, railway.app ([0ebbb05](https://github.com/pantry-pm/pantry/commit/0ebbb05)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([d760500](https://github.com/pantry-pm/pantry/commit/d760500)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9731 ([0d5fef9](https://github.com/pantry-pm/pantry/commit/0d5fef9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dgraph.io, github.com/ggerganov/llama.cpp ([0ee04ab](https://github.com/pantry-pm/pantry/commit/0ee04ab)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update vcluster.com to 0.35.1 ([899f201](https://github.com/pantry-pm/pantry/commit/899f201)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mupdf.com, openexr.com, railway.app, systemd.io ([178d73f](https://github.com/pantry-pm/pantry/commit/178d73f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9728 ([711256b](https://github.com/pantry-pm/pantry/commit/711256b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update daytona.io, github.com/ggerganov/llama.cpp, projen.io, railway.app ([02d1437](https://github.com/pantry-pm/pantry/commit/02d1437)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update consul.io, github.com/ggerganov/llama.cpp, openshift.com ([e3f18e8](https://github.com/pantry-pm/pantry/commit/e3f18e8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, maturin.rs ([8a69d1a](https://github.com/pantry-pm/pantry/commit/8a69d1a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update moonrepo.dev/moon to 2.3.4 ([b0aca97](https://github.com/pantry-pm/pantry/commit/b0aca97)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stripe.com, turso.tech ([4b9eb8b](https://github.com/pantry-pm/pantry/commit/4b9eb8b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Anka <runner@sat12-dp151-57657cb4-4dc1-4b4a-815c-095f883819df-2AA4E0768203.local>_
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.9.59...v0.9.60)
 
 ### 🐛 Bug Fixes
