@@ -98,7 +98,7 @@ Or if you installed globally or are using the binary:
 ts-pantry fetch node
 ```
 
-This should fetch information about the Node.js package from pkgx.dev.
+This should fetch information about the Node.js package from Pantry.
 
 ## Requirements
 

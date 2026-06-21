@@ -122,7 +122,6 @@ interface PantryInstallResult {
     versions: string[]
     resolved: string
   }>
-  pkgxCommand: string // Ready-to-use pkgx install command (direct deps only)
   pantryCommand: string // Ready-to-use pantry install command (direct deps only)
 }
 
@@ -181,7 +180,7 @@ export class PantryInstaller {
   private async install(packageName: string, version: string) {
     // Your Pantry installation logic here
     // Note: Pantry should auto-resolve transitive dependencies
-    console.log(`pkgx ${packageName}@${version}`)
+    console.log(`pantry install ${packageName}@${version}`)
   }
 }
 ```
@@ -253,7 +252,7 @@ export async function ciInstall() {
 
   // Set output for next steps
   console.log(`::set-output name=packages::${result.packages.map(p => p.name).join(' ')}`)
-  console.log(`::set-output name=install-command::${result.pkgxCommand}`)
+  console.log(`::set-output name=install-command::${result.pantryCommand}`)
 
   return result
 }
@@ -373,24 +372,14 @@ The resolver will:
 - All resolved packages with exact versions
 - Version conflict resolutions
 - Ready-to-use install commands:
-  - `pkgxCommand`: Installs only 7 direct dependencies (transitive deps auto-resolved)
+  - `pantryCommand`: Installs only 7 direct dependencies (transitive deps auto-resolved)
   - `pantryCommand`: Installs only 7 direct dependencies (transitive deps auto-resolved)
 - OS-specific dependency handling
 - Comprehensive error reporting
 
-## Install Commands
+## Install Command
 
-Both install commands are optimized for modern package managers that auto-resolve transitive dependencies:
-
-### `pkgxCommand` - pkgx Installation
-
-```bash
-pkgx install bun.sh gnu.org/bash gnu.org/grep crates.io/eza ffmpeg.org cli.github.com starship.rs
-```
-
-- Includes **only the 7 direct dependencies** from your deps file
-- pkgx auto-resolves and installs all transitive dependencies
-- Fast and efficient installation
+The install command is optimized for modern package managers that auto-resolve transitive dependencies:
 
 ### `pantryCommand` - Pantry Installation
 
@@ -400,7 +389,6 @@ pantry install bun.sh gnu.org/bash gnu.org/grep crates.io/eza ffmpeg.org cli.git
 
 - Includes **only the 7 direct dependencies** from your deps file
 - Pantry auto-resolves and installs all transitive dependencies
-- **Recommended for Pantry integrations**
 
 ### Benefits of Direct Dependencies Only
 
@@ -417,7 +405,7 @@ While the install commands only include direct dependencies, the full resolved d
 const result = await resolveDependencies('./deps.yaml')
 
 // Install commands use direct deps only
-console.log(result.pkgxCommand) // "pkgx install bun.sh gnu.org/bash gnu.org/grep"
+console.log(result.pantryCommand) // "pantry install bun.sh gnu.org/bash gnu.org/grep"
 
 // But full dependency tree is available for analysis
 console.log(`Resolved ${result.totalCount} total packages:`)

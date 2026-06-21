@@ -1,6 +1,6 @@
 # TypeScript Types
 
-ts-pantry provides comprehensive TypeScript types that enable you to work in a fully typed environment with all packages from the pkgx.dev pantry. This page documents the available types and how to use them effectively.
+ts-pantry provides comprehensive TypeScript types that enable you to work in a fully typed environment with all packages from the Pantry pantry. This page documents the available types and how to use them effectively.
 
 ## New Type Safety Features
 
@@ -45,7 +45,7 @@ import type {
 
 ### Pantry Interface
 
-The `Pantry` interface is the main type that represents all available packages. It provides type-safe access to every package in the pkgx.dev ecosystem.
+The `Pantry` interface is the main type that represents all available packages. It provides type-safe access to every package in the Pantry ecosystem.
 
 ```typescript
 import type { Pantry } from 'ts-pantry'
@@ -362,12 +362,12 @@ function createInstallCommand(input: string): string {
   }
 
   const pkg = pantry[packageKey]
-  return `pkgx install ${pkg.name}`
+  return `pantry install ${pkg.name}`
 }
 
 // Usage
-console.log(createInstallCommand('node')) // pkgx install nodejs.org
-console.log(createInstallCommand('python')) // pkgx install python.org
+console.log(createInstallCommand('node')) // pantry install nodejs.org
+console.log(createInstallCommand('python')) // pantry install python.org
 ```
 
 ## Best Practices

@@ -2,17 +2,17 @@
 
 # Introduction to ts-pantry
 
-> A TypeScript library for fetching and working with pkgx.dev package information
+> A TypeScript library for fetching and working with Pantry package information
 
-ts-pantry is a specialized library that provides tools for fetching, storing, and accessing package data from [pkgx.dev](https://pkgx.dev). It offers both programmatic APIs and CLI tools for developers who want to work with pkgx packages in their TypeScript applications.
+ts-pantry is a specialized library that provides tools for fetching, storing, and accessing package data from Pantry. It offers both programmatic APIs and CLI tools for developers who want to work with Pantry packages in their TypeScript applications.
 
-## What is pkgx
+## What is Pantry
 
-[pkgx.dev](https://pkgx.dev) is a package manager that simplifies the installation of development tools and dependencies. It provides a central repository of packages that can be easily installed and managed.
+Pantry is a package manager that simplifies the installation of development tools and dependencies. It provides a central repository of packages that can be easily installed and managed.
 
 ## Core Features
 
-- **Package Fetching**: Retrieve detailed package information from pkgx.dev
+- **Package Fetching**: Retrieve detailed package information from Pantry
 - **TypeScript Integration**: Fully typed interfaces for all package data (see [TypeScript Types](./typescript-types.md))
 - **Multiple Package Fetching**: Fetch multiple specific packages at once with the `--pkg` option
 - **Optimized Batch Processing**: Efficiently process hundreds of packages with configurable concurrency
@@ -28,7 +28,7 @@ ts-pantry is a specialized library that provides tools for fetching, storing, an
 
 ## Why ts-pantry
 
-ts-pantry simplifies the process of working with pkgx.dev package data in TypeScript projects. Instead of manually scraping the pkgx.dev website or trying to parse package information yourself, ts-pantry provides a clean, type-safe interface for accessing this data.
+ts-pantry simplifies the process of working with Pantry package data in TypeScript projects. Instead of manually scraping the Pantry website or trying to parse package information yourself, ts-pantry provides a clean, type-safe interface for accessing this data.
 
 ## Get Started
 

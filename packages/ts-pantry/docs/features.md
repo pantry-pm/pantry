@@ -1,6 +1,6 @@
 # Features
 
-ts-pantry provides a comprehensive set of features for working with pkgx.dev packages. Here's a detailed look at the main features:
+ts-pantry provides a comprehensive set of features for working with Pantry packages. Here's a detailed look at the main features:
 
 ## Package Discovery
 
@@ -52,7 +52,7 @@ This will retrieve information about all packages listed in the local pantry and
 ts-pantry includes comprehensive pantry management capabilities:
 
 ```bash
-# Download and extract the latest pantry from pkgx distribution
+# Download and extract the latest pantry from Pantry distribution
 ts-pantry update-pantry
 
 # Generate constants file from local pantry

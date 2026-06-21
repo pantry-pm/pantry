@@ -48,7 +48,7 @@ bun bin/cli.ts generate-docs
 - **📱 BunPress Compatible**: Optimized for BunPress static site generation
 - **🔗 Cross-Referenced**: Links between related packages and categories
 - **💻 Code Examples**: TypeScript usage examples for each package
-- **📦 Installation Commands**: Ready-to-use pkgx installation commands
+- **📦 Installation Commands**: Ready-to-use pantry installation commands
 
 ## 🌐 Viewing Documentation
 

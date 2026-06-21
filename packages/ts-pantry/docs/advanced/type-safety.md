@@ -4,7 +4,7 @@ ts-pantry provides comprehensive TypeScript type safety features that enable com
 
 ## Type System Overview
 
-ts-pantry's type system is built around the actual package data from pkgx.dev, providing:
+ts-pantry's type system is built around the actual package data from Pantry, providing:
 
 - **Compile-time validation** of package names and versions
 - **IntelliSense support** for all package operations

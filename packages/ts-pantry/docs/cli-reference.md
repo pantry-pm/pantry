@@ -1,6 +1,6 @@
 # CLI Reference
 
-ts-pantry provides a powerful command-line interface for working with pkgx.dev packages. This page documents all the available commands and their options.
+ts-pantry provides a powerful command-line interface for working with Pantry packages. This page documents all the available commands and their options.
 
 ## Installation
 
@@ -26,7 +26,7 @@ bun install ts-pantry
 
 ## fetch Command
 
-The `fetch` command retrieves package information from pkgx.dev for one or more packages using the pantry-based approach.
+The `fetch` command retrieves package information from Pantry for one or more packages using the pantry-based approach.
 
 ### Usage
 

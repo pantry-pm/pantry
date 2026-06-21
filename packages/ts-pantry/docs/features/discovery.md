@@ -1,10 +1,10 @@
 # Package Discovery
 
-ts-pantry provides robust features for discovering and fetching package information from pkgx.dev.
+ts-pantry provides robust features for discovering and fetching package information from Pantry.
 
 ## Package Fetching
 
-ts-pantry can fetch detailed information about packages from pkgx.dev, including:
+ts-pantry can fetch detailed information about packages from Pantry, including:
 
 - Basic metadata (name, domain, description)
 - Available versions
@@ -61,7 +61,7 @@ const savedPackages = await fetchAndSaveAllPackages()
 bun run pkgx:fetch-all
 ```
 
-This will retrieve information about all packages listed on pkgx.dev and save them to your specified output directory.
+This will retrieve information about all packages listed on Pantry and save them to your specified output directory.
 
 ## Smart Caching
 

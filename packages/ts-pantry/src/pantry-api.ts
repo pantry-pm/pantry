@@ -37,8 +37,6 @@ export interface PantryInstallResult {
     versions: string[]
     resolved: string
   }>
-  /** Install command for pkgx */
-  pkgxCommand: string
   /** Install command for pantry */
   pantryCommand: string
 }
@@ -113,10 +111,9 @@ export async function resolveDependencies(
     os: dep.os as 'linux' | 'darwin' | 'windows' | undefined,
   }))
 
-  // Generate install commands
-  // Both pkgx and pantry auto-resolve transitive dependencies, so only install direct deps
+  // Generate install command. pantry auto-resolves transitive dependencies, so
+  // only the direct deps need to be listed.
   const directPackageNames = directDeps.map(dep => dep.name)
-  const pkgxCommand = `pkgx install ${directPackageNames.join(' ')}`
   const pantryCommand = `pantry install ${directPackageNames.join(' ')}`
 
   // Format conflicts with resolution info
@@ -134,7 +131,6 @@ export async function resolveDependencies(
     directCount: directDeps.length,
     totalCount: packages.length,
     conflicts,
-    pkgxCommand,
     pantryCommand,
   }
 }

@@ -11,7 +11,7 @@ Batch processing in ts-pantry allows you to efficiently process large numbers of
 3. Skipping unchanged packages
 4. Providing progress feedback
 
-This approach is particularly valuable when working with the pkgx.dev pantry, which contains around 1,000 packages.
+This approach is particularly valuable when working with the Pantry pantry, which contains around 1,000 packages.
 
 ## Automatic Batching
 

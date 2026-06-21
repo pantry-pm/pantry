@@ -1,6 +1,6 @@
 # Usage
 
-ts-pantry provides both a TypeScript library and CLI tools for working with pkgx packages.
+ts-pantry provides both a TypeScript library and CLI tools for working with Pantry packages.
 
 ## CLI Usage
 
@@ -332,7 +332,7 @@ const packages = await fetchAndSaveAllPackages({
 ts-pantry now includes powerful pantry management features:
 
 ```bash
-# Update local pantry from pkgx distribution
+# Update local pantry from Pantry distribution
 ts-pantry update-pantry
 
 # Generate constants file from local pantry

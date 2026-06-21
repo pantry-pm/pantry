@@ -1,6 +1,6 @@
 # CLI Tools
 
-ts-pantry provides a comprehensive set of command-line tools for working with pkgx packages using a pantry-based approach.
+ts-pantry provides a comprehensive set of command-line tools for working with Pantry packages using a pantry-based approach.
 
 ## Command Overview
 

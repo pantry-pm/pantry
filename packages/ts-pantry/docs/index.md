@@ -18,7 +18,7 @@ hero:
 features:
   - title: "Package Discovery"
     icon: "🔍"
-    details: "Discover and fetch package information from the pkgx.dev Pantry."
+    details: "Discover and fetch package information from the Pantry registry."
   - title: "Type-Safe Access"
     icon: "🛡️"
     details: "Fully typed TypeScript interfaces for all package data with IntelliSense support."
@@ -30,7 +30,7 @@ features:
     details: "Comprehensive command line tools for fetching package info and generating files."
   - title: "Extensive Package Catalog"
     icon: "📚"
-    details: "Access information on approximately 1,000 packages from the pkgx ecosystem."
+    details: "Access information on 1,400+ packages from the Pantry ecosystem."
   - title: "Compiled Binaries"
     icon: "⚙️"
     details: "Use pre-compiled binaries for faster execution without needing a JavaScript runtime."

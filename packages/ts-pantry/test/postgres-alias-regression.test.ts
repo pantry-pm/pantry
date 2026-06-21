@@ -48,7 +48,6 @@ describe('PostgreSQL Alias Resolution - Regression Test', () => {
       expect(zlibPkg).toBeDefined()
 
       // Verify that we get a valid command for installation
-      expect(result.pkgxCommand).toContain('postgresql.org')
       expect(result.pantryCommand).toContain('postgresql.org')
     }
     finally {
