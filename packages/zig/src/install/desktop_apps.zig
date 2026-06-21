@@ -16,6 +16,17 @@
 //!     - inter.font                          # pantry font domain
 //!     - meslo-lg-nerd-font.font
 //!
+//! The `apps:` and `fonts:` lists can also be hoisted into sibling `apps.yaml`
+//! and `fonts.yaml` files next to the deps file, for projects that would rather
+//! keep GUI apps and fonts out of deps.yaml. Each dedicated file is a YAML list,
+//! either bare or wrapped under its `apps:` / `fonts:` key:
+//!
+//!   # apps.yaml
+//!   - ghostty.org
+//!   - { mas: "1147396723", name: WhatsApp }
+//!
+//! Entries from the deps file and the sibling file are merged.
+//!
 //! This is a no-op on non-macOS targets. Installs are idempotent: a per-project
 //! marker file records what has already been installed so repeat runs (and the
 //! auto-install triggered on `cd`) don't re-invoke brew/mas for every entry.
@@ -147,14 +158,46 @@ fn collectSequenceItems(
     return items.toOwnedSlice(allocator);
 }
 
-/// Parse the `apps:` section. Caller owns the returned slice and each App.
-pub fn parseApps(allocator: std.mem.Allocator, content: []const u8) ![]App {
-    const raw = try collectSequenceItems(allocator, content, "apps");
-    defer {
-        for (raw) |it| allocator.free(it);
-        allocator.free(raw);
+/// Collect every top-level `- ...` list item in a document, ignoring section
+/// headers and indentation. Used for a dedicated apps.yaml / fonts.yaml that is
+/// a bare YAML list rather than a keyed section.
+fn collectBareSequence(allocator: std.mem.Allocator, content: []const u8) ![][]const u8 {
+    var items = try std.ArrayList([]const u8).initCapacity(allocator, 8);
+    errdefer {
+        for (items.items) |it| allocator.free(it);
+        items.deinit(allocator);
     }
 
+    var lines = std.mem.tokenizeScalar(u8, content, '\n');
+    while (lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r");
+        if (trimmed.len == 0 or trimmed[0] == '#') continue;
+        if (trimmed[0] != '-') continue; // skip a leading `apps:`/`fonts:` header etc.
+        const body = scalar(std.mem.trim(u8, trimmed[1..], " \t"));
+        if (body.len == 0) continue;
+        try items.append(allocator, try allocator.dupe(u8, body));
+    }
+
+    return items.toOwnedSlice(allocator);
+}
+
+/// Collect raw item bodies for a named section, or — if that section is absent —
+/// fall back to treating the whole document as a bare list. For dedicated
+/// apps.yaml / fonts.yaml files that may use either shape.
+fn collectSectionOrBare(
+    allocator: std.mem.Allocator,
+    content: []const u8,
+    section: []const u8,
+) ![][]const u8 {
+    const raw = try collectSequenceItems(allocator, content, section);
+    if (raw.len > 0) return raw;
+    allocator.free(raw);
+    return collectBareSequence(allocator, content);
+}
+
+/// Build App values from already-collected raw item bodies. Caller owns the
+/// returned slice and each App; `raw` is borrowed (not freed here).
+fn appsFromRaw(allocator: std.mem.Allocator, raw: []const []const u8) ![]App {
     var apps = try std.ArrayList(App).initCapacity(allocator, raw.len);
     errdefer {
         for (apps.items) |*a| a.deinit(allocator);
@@ -193,14 +236,29 @@ pub fn parseApps(allocator: std.mem.Allocator, content: []const u8) ![]App {
     return apps.toOwnedSlice(allocator);
 }
 
-/// Parse the `fonts:` section. Caller owns the returned slice and each Font.
-pub fn parseFonts(allocator: std.mem.Allocator, content: []const u8) ![]Font {
-    const raw = try collectSequenceItems(allocator, content, "fonts");
+/// Parse the `apps:` section of a deps file. Caller owns the returned slice.
+pub fn parseApps(allocator: std.mem.Allocator, content: []const u8) ![]App {
+    const raw = try collectSequenceItems(allocator, content, "apps");
     defer {
         for (raw) |it| allocator.free(it);
         allocator.free(raw);
     }
+    return appsFromRaw(allocator, raw);
+}
 
+/// Parse a dedicated apps.yaml (bare list, or wrapped under an `apps:` key).
+pub fn parseAppsFile(allocator: std.mem.Allocator, content: []const u8) ![]App {
+    const raw = try collectSectionOrBare(allocator, content, "apps");
+    defer {
+        for (raw) |it| allocator.free(it);
+        allocator.free(raw);
+    }
+    return appsFromRaw(allocator, raw);
+}
+
+/// Build Font values from already-collected raw item bodies. Caller owns the
+/// returned slice and each Font; `raw` is borrowed (not freed here).
+fn fontsFromRaw(allocator: std.mem.Allocator, raw: []const []const u8) ![]Font {
     var fonts = try std.ArrayList(Font).initCapacity(allocator, raw.len);
     errdefer {
         for (fonts.items) |*f| f.deinit(allocator);
@@ -222,6 +280,52 @@ pub fn parseFonts(allocator: std.mem.Allocator, content: []const u8) ![]Font {
     }
 
     return fonts.toOwnedSlice(allocator);
+}
+
+/// Parse the `fonts:` section of a deps file. Caller owns the returned slice.
+pub fn parseFonts(allocator: std.mem.Allocator, content: []const u8) ![]Font {
+    const raw = try collectSequenceItems(allocator, content, "fonts");
+    defer {
+        for (raw) |it| allocator.free(it);
+        allocator.free(raw);
+    }
+    return fontsFromRaw(allocator, raw);
+}
+
+/// Parse a dedicated fonts.yaml (bare list, or wrapped under a `fonts:` key).
+pub fn parseFontsFile(allocator: std.mem.Allocator, content: []const u8) ![]Font {
+    const raw = try collectSectionOrBare(allocator, content, "fonts");
+    defer {
+        for (raw) |it| allocator.free(it);
+        allocator.free(raw);
+    }
+    return fontsFromRaw(allocator, raw);
+}
+
+// ── Merge helpers ──────────────────────────────────────────────────────────────
+
+/// Move every parsed App into `list` (ownership transfers), then free the
+/// container slice. On append failure the parsed Apps are freed, not leaked.
+fn addApps(allocator: std.mem.Allocator, list: *std.ArrayList(App), parsed: []App) void {
+    if (list.appendSlice(allocator, parsed)) |_| {} else |_| {
+        for (parsed) |*a| {
+            var m = a.*;
+            m.deinit(allocator);
+        }
+    }
+    allocator.free(parsed);
+}
+
+/// Move every parsed Font into `list` (ownership transfers), then free the
+/// container slice. On append failure the parsed Fonts are freed, not leaked.
+fn addFonts(allocator: std.mem.Allocator, list: *std.ArrayList(Font), parsed: []Font) void {
+    if (list.appendSlice(allocator, parsed)) |_| {} else |_| {
+        for (parsed) |*f| {
+            var m = f.*;
+            m.deinit(allocator);
+        }
+    }
+    allocator.free(parsed);
 }
 
 // ── Idempotency marker ───────────────────────────────────────────────────────
@@ -299,22 +403,41 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     const content = io_helper.readFileAlloc(allocator, deps_file_path, 10 * 1024 * 1024) catch return;
     defer allocator.free(content);
 
-    const apps = parseApps(allocator, content) catch return;
+    var apps_list = std.ArrayList(App).initCapacity(allocator, 8) catch return;
     defer {
-        for (apps) |*a| {
-            var m = a.*;
-            m.deinit(allocator);
-        }
-        allocator.free(apps);
+        for (apps_list.items) |*a| a.deinit(allocator);
+        apps_list.deinit(allocator);
     }
-    const fonts = parseFonts(allocator, content) catch return;
+    var fonts_list = std.ArrayList(Font).initCapacity(allocator, 8) catch return;
     defer {
-        for (fonts) |*f| {
-            var m = f.*;
-            m.deinit(allocator);
-        }
-        allocator.free(fonts);
+        for (fonts_list.items) |*f| f.deinit(allocator);
+        fonts_list.deinit(allocator);
     }
+
+    // 1. apps:/fonts: declared inline in the deps file itself.
+    if (parseApps(allocator, content)) |a| addApps(allocator, &apps_list, a) else |_| {}
+    if (parseFonts(allocator, content)) |f| addFonts(allocator, &fonts_list, f) else |_| {}
+
+    // 2. Sibling apps.yaml / fonts.yaml next to the deps file, letting a project
+    //    keep its GUI apps and fonts out of deps.yaml. Merged with the above.
+    const dir = std.fs.path.dirname(deps_file_path) orelse ".";
+    for ([_][]const u8{ "apps.yaml", "apps.yml" }) |fname| {
+        const p = std.fs.path.join(allocator, &[_][]const u8{ dir, fname }) catch continue;
+        defer allocator.free(p);
+        const c = io_helper.readFileAlloc(allocator, p, 10 * 1024 * 1024) catch continue;
+        defer allocator.free(c);
+        if (parseAppsFile(allocator, c)) |a| addApps(allocator, &apps_list, a) else |_| {}
+    }
+    for ([_][]const u8{ "fonts.yaml", "fonts.yml" }) |fname| {
+        const p = std.fs.path.join(allocator, &[_][]const u8{ dir, fname }) catch continue;
+        defer allocator.free(p);
+        const c = io_helper.readFileAlloc(allocator, p, 10 * 1024 * 1024) catch continue;
+        defer allocator.free(c);
+        if (parseFontsFile(allocator, c)) |f| addFonts(allocator, &fonts_list, f) else |_| {}
+    }
+
+    const apps = apps_list.items;
+    const fonts = fonts_list.items;
 
     if (apps.len == 0 and fonts.len == 0) return;
 
@@ -339,7 +462,7 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     {
         var kbuf: [512]u8 = undefined;
         for (apps) |app| {
-            const prefix = if (app.source == .cask) "cask:" else "mas:";
+            const prefix = if (app.source == .cask) "app:" else "mas:";
             const key = std.fmt.bufPrint(&kbuf, "{s}{s}", .{ prefix, app.id }) catch continue;
             if (!markerHas(marked.items, key)) pending += 1;
         }
@@ -486,6 +609,71 @@ test "parseApps: no apps section yields empty" {
     const apps = try parseApps(a, content);
     defer a.free(apps);
     try std.testing.expectEqual(@as(usize, 0), apps.len);
+}
+
+test "parseAppsFile: bare list (no section header)" {
+    const a = std.testing.allocator;
+    const content =
+        \\# apps.yaml — GUI apps, kept out of deps.yaml
+        \\- 1password
+        \\- { cask: ghostty }
+        \\- { mas: "1147396723", name: WhatsApp }
+    ;
+    const apps = try parseAppsFile(a, content);
+    defer {
+        for (apps) |*x| {
+            var m = x.*;
+            m.deinit(a);
+        }
+        a.free(apps);
+    }
+
+    try std.testing.expectEqual(@as(usize, 3), apps.len);
+    try std.testing.expectEqualStrings("1password", apps[0].id);
+    try std.testing.expectEqual(AppSource.cask, apps[1].source);
+    try std.testing.expectEqualStrings("ghostty", apps[1].id);
+    try std.testing.expectEqual(AppSource.mas, apps[2].source);
+    try std.testing.expectEqualStrings("WhatsApp", apps[2].name);
+}
+
+test "parseAppsFile: wrapped under apps: key still works" {
+    const a = std.testing.allocator;
+    const content =
+        \\apps:
+        \\  - 1password
+        \\  - arc
+    ;
+    const apps = try parseAppsFile(a, content);
+    defer {
+        for (apps) |*x| {
+            var m = x.*;
+            m.deinit(a);
+        }
+        a.free(apps);
+    }
+    try std.testing.expectEqual(@as(usize, 2), apps.len);
+    try std.testing.expectEqualStrings("1password", apps[0].id);
+    try std.testing.expectEqualStrings("arc", apps[1].id);
+}
+
+test "parseFontsFile: bare list of font domains" {
+    const a = std.testing.allocator;
+    const content =
+        \\- inter.font
+        \\- meslo-lg-nerd-font.font
+        \\
+    ;
+    const fonts = try parseFontsFile(a, content);
+    defer {
+        for (fonts) |*x| {
+            var m = x.*;
+            m.deinit(a);
+        }
+        a.free(fonts);
+    }
+    try std.testing.expectEqual(@as(usize, 2), fonts.len);
+    try std.testing.expectEqualStrings("inter.font", fonts[0].cask);
+    try std.testing.expectEqualStrings("meslo-lg-nerd-font.font", fonts[1].cask);
 }
 
 test "markerHas matches whole lines only" {
