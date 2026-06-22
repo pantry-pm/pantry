@@ -88,6 +88,20 @@ pub fn createBinarySymlinkFromPath(
     // Remove existing symlink if present (same package or stale)
     io_helper.deleteFile(symlink_path) catch {};
 
+    // Shell-script wrappers (e.g. git's, which resolves its libexec via
+    // `$(dirname "$0")/../libexec`) break when symlinked into a flat bin dir:
+    // `$0` becomes the symlink path, so the relative lookup points at a
+    // nonexistent sibling. Emit a tiny forwarding shim that `exec`s the real
+    // path, so the wrapper sees its true location. Real Mach-O/ELF binaries are
+    // still plain symlinks.
+    if (isShebangScript(bin_path)) {
+        if (writeForwardingShim(symlink_path, bin_path)) {
+            if (!style.isCI()) style.print("  ✓ Created shim: {s} -> {s}\n", .{ bin_name, bin_path });
+            return;
+        }
+        // Fall through to a plain symlink if the shim couldn't be written.
+    }
+
     // Create symlink (cross-platform)
     createSymlinkCrossPlatform(bin_path, symlink_path) catch |err| {
         if (!style.isCI()) style.print("  ✗ Failed to create symlink: {}\n", .{err});
@@ -95,6 +109,41 @@ pub fn createBinarySymlinkFromPath(
     };
 
     if (!style.isCI()) style.print("  ✓ Created symlink: {s} -> {s}\n", .{ bin_name, bin_path });
+}
+
+/// True if the file at `path` begins with a `#!` shebang (i.e. it's a script
+/// wrapper, not a Mach-O/ELF binary). Reads only the first two bytes.
+pub fn isShebangScript(path: []const u8) bool {
+    if (builtin.os.tag == .windows) return false;
+    const fd = std.posix.openat(std.posix.AT.FDCWD, path, .{ .ACCMODE = .RDONLY }, 0) catch return false;
+    defer _ = std.c.close(fd);
+
+    var magic: [2]u8 = undefined;
+    const n = std.posix.read(fd, &magic) catch return false;
+    if (n != 2) return false;
+    return magic[0] == '#' and magic[1] == '!';
+}
+
+/// Write a tiny `#!/bin/sh` shim at `shim_path` that `exec`s `target_path "$@"`.
+/// Used instead of a symlink for script wrappers so the wrapped script sees its
+/// real location via `$0`. Returns true on success.
+pub fn writeForwardingShim(shim_path: []const u8, target_path: []const u8) bool {
+    var buf: [std.fs.max_path_bytes + 64]u8 = undefined;
+    const content = std.fmt.bufPrint(&buf, "#!/bin/sh\nexec \"{s}\" \"$@\"\n", .{target_path}) catch return false;
+
+    const file = io_helper.createFileAbsolute(shim_path, .{ .truncate = true }) catch return false;
+    io_helper.writeAllToFile(file, content) catch {
+        io_helper.closeFile(file);
+        return false;
+    };
+    io_helper.closeFile(file);
+
+    var pbuf: [std.fs.max_path_bytes:0]u8 = undefined;
+    if (shim_path.len >= pbuf.len) return false;
+    @memcpy(pbuf[0..shim_path.len], shim_path);
+    pbuf[shim_path.len] = 0;
+    _ = std.c.chmod(&pbuf, 0o755);
+    return true;
 }
 
 /// Check if an existing symlink points to a different package than the one we're installing.

@@ -3155,6 +3155,12 @@ pub const Installer = struct {
             // Remove existing symlink if it exists
             io_helper.deleteFile(link) catch {};
 
+            // Script wrappers (e.g. git's libexec resolver) must be shimmed, not
+            // symlinked, so the wrapper's `$0` resolves to its real path. See
+            // symlink.zig for why a flat symlink breaks them.
+            const symlink_module = @import("symlink.zig");
+            if (symlink_module.isShebangScript(source) and symlink_module.writeForwardingShim(link, source)) continue;
+
             // Create symlink
             io_helper.symLink(source, link) catch |err| {
                 if (!style.isCI()) style.print("Warning: Failed to create symlink for {s}: {}\n", .{ program, err });
