@@ -41,6 +41,7 @@ const style = @import("../cli/style.zig");
 
 const deps_parser = @import("../deps/parser.zig");
 const native_apps = @import("native_apps.zig");
+const mas = @import("mas.zig");
 
 pub const AppSource = enum { cask, mas };
 
@@ -581,17 +582,26 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
             },
             .mas => {
                 // A Mac App Store app. If it's already in /Applications we're
-                // done; otherwise we open the App Store to its page so it installs
-                // with one click. Not marked when only opened, so it re-surfaces
+                // done. Otherwise install it natively via StoreFoundation/
+                // CommerceKit (the same mechanism the `mas` CLI uses), exactly
+                // like a Get/Install click but without opening the App Store. If
+                // the native install can't start (not signed in, app not in the
+                // account's purchase history, or an OS change), fall back to
+                // opening the App Store — and don't mark it, so it re-surfaces
                 // until the app actually lands in /Applications.
                 if (appStoreAppInstalled(allocator, app.name)) {
                     printOk(app.name, "app store, already installed");
                     marked.appendSlice(allocator, key) catch {};
                     marked.append(allocator, '\n') catch {};
                     installed_any = true;
+                } else if (mas.install(app.id)) {
+                    printOk(app.name, "app store");
+                    marked.appendSlice(allocator, key) catch {};
+                    marked.append(allocator, '\n') catch {};
+                    installed_any = true;
                 } else {
                     openAppStore(allocator, app.id);
-                    printInfo(app.name, "app store — opened, click Get to install");
+                    printInfo(app.name, "app store — could not install directly, opened App Store");
                 }
             },
         }
