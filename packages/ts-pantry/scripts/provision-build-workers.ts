@@ -276,6 +276,73 @@ const SYSTEM_DEV_LIBS = 'libudev-dev libglib2.0-dev libpcsclite-dev libsystemd-d
   + 'g++-14 gcc-14 '
   + 'python3-dev libcairo2-dev libffi-dev'
 
+// Builds the two userspace FUSE readers for macOS .dmg images — darling-dmg
+// (HFS+ DMGs) and apfs-fuse (APFS DMGs, used by modern Electron apps) — plus
+// dmg2img (UDIF→raw, needed by the APFS path). No kernel module. ~1min once per
+// box; idempotent. Both extract a byte-faithful .app whose code signature still
+// validates (verified against hdiutil for HFS+ and APFS apps).
+const DMG_TOOLING_SETUP = `#!/bin/bash
+set -e
+need_build=0
+command -v darling-dmg >/dev/null 2>&1 || need_build=1
+command -v apfs-fuse  >/dev/null 2>&1 || need_build=1
+command -v dmg2img    >/dev/null 2>&1 || need_build=1
+if [ "$need_build" = 1 ]; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -q -o DPkg::Lock::Timeout=120 cmake g++ git dmg2img fuse libfuse-dev libfuse3-dev libfuse2 zlib1g-dev libbz2-dev libssl-dev libicu-dev liblzma-dev libxml2-dev libattr1-dev pkg-config >/dev/null 2>&1 || true
+fi
+if ! command -v darling-dmg >/dev/null 2>&1; then
+  rm -rf /tmp/darling-dmg
+  if git clone -q --depth 1 https://github.com/darlinghq/darling-dmg.git /tmp/darling-dmg 2>/dev/null; then
+    mkdir -p /tmp/darling-dmg/build
+    # make install puts darling-dmg in /usr/local/bin AND libdmg.so in
+    # /usr/local/lib, stripping the build-dir RUNPATH (a plain cp leaves the
+    # binary pointing at the deleted build dir → "libdmg.so not found").
+    ( cd /tmp/darling-dmg/build && cmake .. >/dev/null 2>&1 && make -j"$(nproc)" >/dev/null 2>&1 && make install >/dev/null 2>&1 ) || true
+  fi
+  rm -rf /tmp/darling-dmg
+fi
+if ! command -v apfs-fuse >/dev/null 2>&1; then
+  rm -rf /tmp/apfs-fuse
+  if git clone -q --recursive https://github.com/sgan81/apfs-fuse.git /tmp/apfs-fuse 2>/dev/null; then
+    mkdir -p /tmp/apfs-fuse/build
+    ( cd /tmp/apfs-fuse/build && cmake .. >/dev/null 2>&1 && make -j"$(nproc)" >/dev/null 2>&1 && cp apfs-fuse apfsutil /usr/local/bin/ && find . -maxdepth 2 -name 'lib*.so*' -exec cp {} /usr/local/lib/ \\; ) || true
+  fi
+  rm -rf /tmp/apfs-fuse
+fi
+ldconfig 2>/dev/null || true
+echo "dmg tooling: darling-dmg=$(command -v darling-dmg || echo MISSING) apfs-fuse=$(command -v apfs-fuse || echo MISSING) dmg2img=$(command -v dmg2img || echo MISSING)"
+`
+
+// Linux \`hdiutil\` shim. Every app recipe calls \`hdiutil attach <dmg> -mountpoint
+// <dir>\` then \`hdiutil detach <dir>\` (verified: no other subcommands are used).
+// We translate attach to a FUSE mount: darling-dmg for HFS+ DMGs, falling back to
+// dmg2img+apfs-fuse for APFS DMGs (bind-mounting the volume root so the recipe's
+// "<mnt>/<App>.app" path resolves identically to macOS). detach tears it all down.
+const HDIUTIL_SHIM = `#!/bin/bash
+set -e
+cmd="$1"; shift || true
+case "$cmd" in
+  attach)
+    dmg="$1"; shift || true; mnt=""
+    while [ "$#" -gt 0 ]; do case "$1" in -mountpoint) mnt="$2"; shift 2 ;; *) shift ;; esac; done
+    if [ -z "$dmg" ] || [ -z "$mnt" ]; then echo "hdiutil-shim: attach needs <dmg> -mountpoint <dir>" >&2; exit 1; fi
+    mkdir -p "$mnt"
+    if darling-dmg "$dmg" "$mnt" >/dev/null 2>&1; then exit 0; fi
+    img="$mnt.img"; apfsmnt="$mnt.apfs"; rm -f "$img"; mkdir -p "$apfsmnt"
+    if dmg2img "$dmg" "$img" >/dev/null 2>&1 && apfs-fuse -o ro "$img" "$apfsmnt" >/dev/null 2>&1; then
+      src="$apfsmnt/root"; [ -d "$src" ] || src="$apfsmnt"
+      ( mount --bind "$src" "$mnt" 2>/dev/null || sudo mount --bind "$src" "$mnt" ) && exit 0
+    fi
+    echo "hdiutil-shim: could not mount $dmg (neither HFS+ nor APFS)" >&2; exit 1 ;;
+  detach)
+    mnt="$1"
+    umount "$mnt" 2>/dev/null || sudo umount "$mnt" 2>/dev/null || fusermount -u "$mnt" 2>/dev/null || true
+    fusermount -u "$mnt.apfs" 2>/dev/null || true
+    rm -f "$mnt.img" 2>/dev/null || true; rmdir "$mnt.apfs" 2>/dev/null || true ;;
+  *) echo "hdiutil-shim: unsupported subcommand $cmd" >&2; exit 1 ;;
+esac
+`
+
 function configureBox(ip: string, boxIndex: number, boxCount: number): void {
   log(`  ${ip}: configuring as box ${boxIndex}/${boxCount}`)
   // clear any build cruft inherited from the snapshot, refresh repo
@@ -283,6 +350,16 @@ function configureBox(ip: string, boxIndex: number, boxCount: number): void {
   // ensure system-fallback dev libs are present (idempotent; best-effort)
   try { ssh(ip, `DEBIAN_FRONTEND=noninteractive apt-get install -y -q -o DPkg::Lock::Timeout=120 ${SYSTEM_DEV_LIBS} >/dev/null 2>&1 || true`) }
   catch { /* non-fatal */ }
+  // DMG → Linux: install darling-dmg + an hdiutil shim so the 40+ macOS app
+  // recipes that mount a .dmg build on THIS Linux box (the XDL fanout) instead of
+  // a paid GitHub macOS runner. Faithful HFS+ read — the extracted .app keeps its
+  // code signature (verified against hdiutil). Idempotent; best-effort.
+  try {
+    sshWrite(ip, '/root/setup-dmg-tooling.sh', DMG_TOOLING_SETUP)
+    sshWrite(ip, '/usr/local/bin/hdiutil', HDIUTIL_SHIM)
+    ssh(ip, 'chmod +x /usr/local/bin/hdiutil && bash /root/setup-dmg-tooling.sh >/dev/null 2>&1 || true')
+  }
+  catch { /* non-fatal: DMG apps just stay on the macOS runner if this fails */ }
   // Ensure the build-status reporting token is present in the box env. The
   // snapshot predates the token, so without this every report-build POST 401s and
   // the box builds INVISIBLY (no `hetzner` on the dashboard). Inject it from the

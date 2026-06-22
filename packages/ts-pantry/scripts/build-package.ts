@@ -2118,7 +2118,7 @@ function normalizePlatform(platform: string): [string, string] {
 function verifyForeignArtifact(prefix: string, platform: string): void {
   const candidates = foreignArtifactCandidates(prefix)
   if (candidates.length === 0)
-    throw new Error(`verifyForeignArtifact: no non-empty binaries found under ${prefix}/bin or ${prefix}/sbin — the download/extract for ${platform} produced nothing`)
+    throw new Error(`verifyForeignArtifact: no non-empty binaries found under ${prefix}/bin, ${prefix}/sbin, or a *.app bundle — the download/extract for ${platform} produced nothing`)
 
   const [os, arch] = normalizePlatform(platform)
 
@@ -2178,6 +2178,31 @@ function foreignArtifactCandidates(prefix: string): string[] {
 catch {
         // Skip dangling symlinks / unreadable entries.
       }
+    }
+  }
+
+  // GUI .app bundles ship no bin/ of their own — accept the app's main Mach-O
+  // executable so a signed/notarized desktop app (DMG or zip recipe) passes the
+  // foreign-artifact check without needing a synthetic bin shim. Scan the prefix
+  // for top-level *.app bundles and add their Contents/MacOS/* executables.
+  let appEntries: string[] = []
+  try { appEntries = readdirSync(prefix) }
+  catch { appEntries = [] }
+  for (const name of appEntries) {
+    if (!name.endsWith('.app'))
+      continue
+    const macosDir = join(prefix, name, 'Contents', 'MacOS')
+    let exes: string[] = []
+    try { exes = readdirSync(macosDir) }
+    catch { continue }
+    for (const exe of exes) {
+      const p = join(macosDir, exe)
+      try {
+        const st = statSync(p)
+        if (st.isFile() && st.size > 0)
+          candidates.push(p)
+      }
+      catch { /* skip non-files / unreadable entries */ }
     }
   }
 

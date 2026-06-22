@@ -7,7 +7,7 @@
  * Ensures built binaries work when installed to any prefix.
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync, unlinkSync, renameSync, mkdirSync, symlinkSync, statSync, lstatSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync, unlinkSync, renameSync, mkdirSync, symlinkSync, statSync, lstatSync, realpathSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { join, relative, dirname, extname, basename } from 'node:path'
 
@@ -63,8 +63,12 @@ else if (osName === 'linux' && !skips.includes('fix-patchelf')) {
 function stripBuildRpaths(prefix: string): void {
   let files: string[]
   try {
+    // Exclude *.app bundle contents: those are pre-signed/notarized downloads
+    // (DMG/zip app recipes). Rewriting their Mach-O rpaths + ad-hoc re-signing
+    // INVALIDATES the original signature → Gatekeeper rejects the app. fix-machos
+    // is only for the binaries/libs WE build from source, never vendored apps.
     files = execSync(
-      `find "${prefix}" -type f \\( -perm -u+x -o -name '*.dylib' -o -name '*.so' \\) 2>/dev/null`,
+      `find "${prefix}" -type f -not -path '*.app/*' \\( -perm -u+x -o -name '*.dylib' -o -name '*.so' \\) 2>/dev/null`,
       { encoding: 'utf-8' },
     ).split('\n').filter(Boolean)
   }
@@ -119,6 +123,11 @@ function fixMachoRpaths(prefix: string): void {
     const dirPath = join(prefix, dir)
     walkFiles(dirPath, (filePath) => {
       if (!isMachO(filePath)) return
+      // Never rewrite a file that resolves into a signed .app bundle (e.g. a
+      // bin/<prog> symlink pointing at ../Foo.app/Contents/MacOS/Foo) — doing so
+      // breaks the app's code signature. See stripBuildRpaths.
+      try { if (realpathSync(filePath).includes('.app/')) return }
+      catch { /* unresolved symlink — fall through to the normal guards */ }
 
       try {
         // Get full load commands
