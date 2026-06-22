@@ -100,6 +100,15 @@
       "needsUpdate": true
     },
     {
+      "domain": "codex.openai.com",
+      "name": "Codex",
+      "kind": "app",
+      "host": "macos",
+      "latest": "26.616.51431",
+      "published": "26.616.51431",
+      "needsUpdate": true
+    },
+    {
       "domain": "dbeaver.io",
       "name": "DBeaver",
       "kind": "app",

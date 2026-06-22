@@ -43,6 +43,7 @@ import { bravecomPackage } from './apps/bravecom'
 import { brunoappPackage } from './apps/brunoapp'
 import { cleanshotcomPackage } from './apps/cleanshotcom'
 import { codevisualstudiocomPackage } from './apps/codevisualstudiocom'
+import { codexopenaicomPackage } from './apps/codexopenaicom'
 import { cursorcomPackage } from './apps/cursorcom'
 import { dbeaverioPackage } from './apps/dbeaverio'
 import { diabrowsercomPackage } from './apps/diabrowsercom'
@@ -1813,6 +1814,7 @@ export interface Pantry {
   brunoapp: typeof brunoappPackage
   cleanshotcom: typeof cleanshotcomPackage
   codevisualstudiocom: typeof codevisualstudiocomPackage
+  codexopenaicom: typeof codexopenaicomPackage
   cursorcom: typeof cursorcomPackage
   dbeaverio: typeof dbeaverioPackage
   diabrowsercom: typeof diabrowsercomPackage
@@ -4844,6 +4846,7 @@ export interface Pantry {
   'code-server': typeof codercomcodeserverPackage
   coder: typeof codercomPackage
   codex: typeof openaicomcodexPackage
+  Codex: typeof codexopenaicomPackage
   cog: typeof cocogittoioPackage
   cointop: typeof cointopshPackage
   colima: typeof colimaPackage
@@ -6449,6 +6452,7 @@ export const pantry: Pantry = {
   brunoapp: brunoappPackage,
   cleanshotcom: cleanshotcomPackage,
   codevisualstudiocom: codevisualstudiocomPackage,
+  codexopenaicom: codexopenaicomPackage,
   cursorcom: cursorcomPackage,
   dbeaverio: dbeaverioPackage,
   diabrowsercom: diabrowsercomPackage,
@@ -9480,6 +9484,7 @@ export const pantry: Pantry = {
   'code-server': codercomcodeserverPackage,
   coder: codercomPackage,
   codex: openaicomcodexPackage,
+  Codex: codexopenaicomPackage,
   cog: cocogittoioPackage,
   cointop: cointopshPackage,
   colima: colimaPackage,

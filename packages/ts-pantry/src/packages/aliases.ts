@@ -211,6 +211,7 @@ export const aliases: Record<string, string> = {
   'code-server': 'coder.com/code-server',
   'coder': 'coder.com',
   'codex': 'openai.com/codex',
+  'Codex': 'codex.openai.com',
   'cog': 'cocogitto.io',
   'cointop': 'cointop.sh',
   'colima': 'github.com/abiosoft/colima',
