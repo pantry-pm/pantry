@@ -2528,6 +2528,15 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
     const args = io_helper.argsAlloc(allocator) catch return;
     // No argsFree on the exit paths: the process terminates immediately.
 
+    // Internal: perform a single native Mac App Store install in an isolated
+    // process. Driving Apple's private frameworks can raise an uncaught
+    // NSException (e.g. a selector that changed across macOS versions); running
+    // it in this short-lived child means such a crash never takes down the
+    // parent `pantry install`. See install/mas.zig (installIsolated).
+    if (args.len == 3 and std.mem.eql(u8, args[1], "__mas-install")) {
+        std.process.exit(if (lib.install.mas.install(args[2])) 0 else 1);
+    }
+
     if (args.len == 3 and std.mem.eql(u8, args[1], "shell:lookup") and
         args[2].len > 0 and args[2][0] != '-')
     {

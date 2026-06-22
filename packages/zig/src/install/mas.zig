@@ -18,11 +18,13 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
+const io_helper = @import("../io_helper.zig");
 
 const id = ?*anyopaque;
 const SEL = ?*anyopaque;
 const Class = ?*anyopaque;
 
+extern fn _NSGetExecutablePath(buf: [*]u8, bufsize: *u32) c_int;
 extern fn dlopen(path: ?[*:0]const u8, mode: c_int) ?*anyopaque;
 extern fn dlsym(handle: ?*anyopaque, symbol: [*:0]const u8) ?*anyopaque;
 extern fn dispatch_semaphore_create(value: isize) ?*anyopaque;
@@ -86,6 +88,13 @@ fn call1(obj: id, sel_name: [*:0]const u8, arg: id) id {
     return f(obj, sel_registerName(sel_name), arg);
 }
 
+/// `[obj respondsToSelector:sel]` (works for both class and instance receivers).
+fn responds(obj: id, sel_name: [*:0]const u8) bool {
+    if (obj == null) return false;
+    const f = msg(*const fn (id, SEL, SEL) callconv(.c) bool);
+    return f(obj, sel_registerName("respondsToSelector:"), sel_registerName(sel_name));
+}
+
 /// Block layout matching the Objective-C ABI (Block_literal_1).
 const Block = extern struct {
     isa: *const anyopaque,
@@ -108,9 +117,31 @@ fn purchaseDone(block: *Block, _: id, completed: bool, err: id, _: id) callconv(
     if (block.sema) |s| _ = dispatch_semaphore_signal(s);
 }
 
+/// Crash-isolated entry point used by callers. Re-invokes this same pantry
+/// binary as `pantry __mas-install <adam_id>` so the actual Objective-C work
+/// (which can raise an uncaught NSException on an OS change) runs in a
+/// short-lived child. A child crash surfaces as a non-zero exit, which we treat
+/// as "couldn't install" — it can never take down the parent `pantry install`.
+pub fn installIsolated(allocator: std.mem.Allocator, adam_id: []const u8) bool {
+    if (builtin.os.tag != .macos) return false;
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var size: u32 = path_buf.len;
+    if (_NSGetExecutablePath(&path_buf, &size) != 0) return false;
+    const self = std.mem.sliceTo(&path_buf, 0);
+    const res = io_helper.childRun(allocator, &[_][]const u8{ self, "__mas-install", adam_id }) catch return false;
+    defer allocator.free(res.stdout);
+    defer allocator.free(res.stderr);
+    return switch (res.term) {
+        .exited => |c| c == 0,
+        else => false,
+    };
+}
+
 /// Install the App Store app with the given numeric adam id (the `mas:` id).
 /// Returns true once CommerceKit reports the purchase/download started
-/// successfully. Best-effort and fully guarded — see the file header.
+/// successfully. Best-effort and fully guarded — see the file header. Prefer
+/// `installIsolated` from normal code so a private-framework crash can't abort
+/// the surrounding install.
 pub fn install(adam_id: []const u8) bool {
     if (builtin.os.tag != .macos) return false;
     if (!resolve()) return false;
@@ -128,6 +159,11 @@ pub fn install(adam_id: []const u8) bool {
     const purchase = call0(call0(SSPurchase, "alloc"), "init");
     if (purchase == null) return false;
 
+    // Bail (rather than crash with an unrecognized-selector NSException) if this
+    // macOS build doesn't expose the private API shape we drive. These selectors
+    // have shifted across releases, so probe before sending.
+    if (!responds(purchase, "setBuyParameters:") or !responds(purchase, "setItemIdentifier:")) return false;
+
     // Buy parameters for installing an already-owned app (mas's "STDRDL").
     var buf: [192]u8 = undefined;
     const params = std.fmt.bufPrint(
@@ -141,13 +177,20 @@ pub fn install(adam_id: []const u8) bool {
     _ = call1(purchase, "setBuyParameters:", nsString(params_z));
     _ = call1(purchase, "setItemIdentifier:", nsNumber(n));
     // isRedownload = YES (installing something already owned)
-    {
+    if (responds(purchase, "setIsRedownload:")) {
         const f = msg(*const fn (id, SEL, bool) callconv(.c) void);
         f(purchase, sel_registerName("setIsRedownload:"), true);
     }
 
-    // controller = [CKPurchaseController sharedController]
-    const controller = call0(CKPurchaseController, "sharedController") orelse return false;
+    // controller = [CKPurchaseController sharedController], or a fresh instance
+    // on builds that don't vend the singleton. Guarded so an OS that renamed
+    // these returns false (→ caller opens the App Store) instead of crashing.
+    const controller = blk: {
+        if (responds(CKPurchaseController, "sharedController")) break :blk call0(CKPurchaseController, "sharedController");
+        if (responds(CKPurchaseController, "alloc")) break :blk call0(call0(CKPurchaseController, "alloc"), "init");
+        break :blk null;
+    } orelse return false;
+    if (!responds(controller, "performPurchase:withOptions:completionHandler:")) return false;
 
     const sema = dispatch_semaphore_create(0);
     var ok = false;

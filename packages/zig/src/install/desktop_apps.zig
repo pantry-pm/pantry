@@ -594,7 +594,7 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
                     marked.appendSlice(allocator, key) catch {};
                     marked.append(allocator, '\n') catch {};
                     installed_any = true;
-                } else if (mas.install(app.id)) {
+                } else if (mas.installIsolated(allocator, app.id)) {
                     printOk(app.name, "app store");
                     marked.appendSlice(allocator, key) catch {};
                     marked.append(allocator, '\n') catch {};
