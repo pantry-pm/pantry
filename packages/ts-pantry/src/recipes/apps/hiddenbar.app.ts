@@ -7,6 +7,13 @@ export const recipe: Recipe = {
   homepage: 'https://github.com/dwarvesf/hidden',
   programs: ['hiddenbar'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+  // Needed so the desktop updater can resolve a "latest" (without it the
+  // package is skipped, even with --force) — see cursor.com.ts.
+  versionSource: {
+    type: 'homebrew-cask',
+    cask: 'hiddenbar',
+    versionField: 'marketing',
+  },
 
   build: {
     script: [

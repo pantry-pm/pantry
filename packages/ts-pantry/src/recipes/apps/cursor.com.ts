@@ -7,6 +7,14 @@ export const recipe: Recipe = {
   homepage: 'https://cursor.com',
   programs: ['cursor'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+  // Without a versionSource the desktop updater can't resolve a "latest" and
+  // skips the package entirely (even with --force), which is why this stayed a
+  // stub. Track the Homebrew cask's marketing version.
+  versionSource: {
+    type: 'homebrew-cask',
+    cask: 'cursor',
+    versionField: 'marketing',
+  },
 
   build: {
     script: [

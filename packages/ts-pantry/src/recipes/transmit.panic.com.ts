@@ -7,6 +7,13 @@ export const recipe: Recipe = {
   homepage: 'https://panic.com/transmit',
   programs: ['transmit'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+  // Needed so the desktop updater can resolve a "latest" (without it the
+  // package is skipped, even with --force) — see cursor.com.ts.
+  versionSource: {
+    type: 'homebrew-cask',
+    cask: 'transmit',
+    versionField: 'marketing',
+  },
 
   build: {
     script: [
