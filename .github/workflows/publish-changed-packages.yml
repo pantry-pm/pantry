@@ -210,37 +210,6 @@ jobs:
             libtirpc-dev \
             doxygen xsltproc docbook-xsl xmlto
 
-      - name: Install DMG cross-build tooling (Linux)
-        if: runner.os == 'Linux'
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          # darling-dmg (HFS+ DMGs) + apfs-fuse (APFS DMGs, used by modern Electron
-          # apps) + dmg2img + an `hdiutil` shim let the FREE Linux runners cross-build
-          # every macOS DMG app recipe — the extracted .app keeps its code signature
-          # (verified) — so the 10x-billed macOS runners never touch download/app
-          # recipes. Same tooling the Hetzner fleet uses (provision-build-workers.ts).
-          sudo -E apt-get install -y --no-install-recommends dmg2img fuse libfuse-dev libfuse3-dev libicu-dev libattr1-dev || true
-          if ! command -v darling-dmg >/dev/null 2>&1; then
-            git clone -q --depth 1 https://github.com/darlinghq/darling-dmg.git /tmp/ddmg \
-              && cmake -S /tmp/ddmg -B /tmp/ddmg/build >/dev/null 2>&1 \
-              && make -C /tmp/ddmg/build -j"$(nproc)" >/dev/null 2>&1 \
-              && sudo make -C /tmp/ddmg/build install >/dev/null 2>&1 || echo "warn: darling-dmg build failed"
-          fi
-          if ! command -v apfs-fuse >/dev/null 2>&1; then
-            git clone -q --recursive https://github.com/sgan81/apfs-fuse.git /tmp/afuse \
-              && cmake -S /tmp/afuse -B /tmp/afuse/build >/dev/null 2>&1 \
-              && make -C /tmp/afuse/build -j"$(nproc)" >/dev/null 2>&1 \
-              && sudo cp /tmp/afuse/build/apfs-fuse /tmp/afuse/build/apfsutil /usr/local/bin/ \
-              && sudo find /tmp/afuse/build -maxdepth 2 -name 'lib*.so*' -exec cp {} /usr/local/lib/ \; || echo "warn: apfs-fuse build failed"
-          fi
-          sudo ldconfig || true
-          # hdiutil shim (base64 of the verified script; avoids YAML heredoc pitfalls)
-          echo 'IyEvYmluL2Jhc2gKc2V0IC1lCmNtZD0iJDEiOyBzaGlmdCB8fCB0cnVlCmNhc2UgIiRjbWQiIGluCiAgYXR0YWNoKQogICAgZG1nPSIkMSI7IHNoaWZ0IHx8IHRydWU7IG1udD0iIgogICAgd2hpbGUgWyAiJCMiIC1ndCAwIF07IGRvIGNhc2UgIiQxIiBpbiAtbW91bnRwb2ludCkgbW50PSIkMiI7IHNoaWZ0IDIgOzsgKikgc2hpZnQgOzsgZXNhYzsgZG9uZQogICAgWyAtbiAiJGRtZyIgXSAmJiBbIC1uICIkbW50IiBdIHx8IHsgZWNobyAiaGRpdXRpbC1zaGltOiBhdHRhY2ggbmVlZHMgPGRtZz4gLW1vdW50cG9pbnQgPGRpcj4iID4mMjsgZXhpdCAxOyB9CiAgICBta2RpciAtcCAiJG1udCIKICAgIGlmIGRhcmxpbmctZG1nICIkZG1nIiAiJG1udCIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuIGV4aXQgMDsgZmkKICAgIGltZz0iJG1udC5pbWciOyBhcGZzbW50PSIkbW50LmFwZnMiOyBybSAtZiAiJGltZyI7IG1rZGlyIC1wICIkYXBmc21udCIKICAgIGlmIGRtZzJpbWcgIiRkbWciICIkaW1nIiA+L2Rldi9udWxsIDI+JjEgJiYgYXBmcy1mdXNlIC1vIHJvICIkaW1nIiAiJGFwZnNtbnQiID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBzcmM9IiRhcGZzbW50L3Jvb3QiOyBbIC1kICIkc3JjIiBdIHx8IHNyYz0iJGFwZnNtbnQiCiAgICAgICggbW91bnQgLS1iaW5kICIkc3JjIiAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyBtb3VudCAtLWJpbmQgIiRzcmMiICIkbW50IiApICYmIGV4aXQgMAogICAgZmkKICAgIGVjaG8gImhkaXV0aWwtc2hpbTogY291bGQgbm90IG1vdW50ICRkbWcgKG5laXRoZXIgSEZTKyBub3IgQVBGUykiID4mMjsgZXhpdCAxIDs7CiAgZGV0YWNoKQogICAgbW50PSIkMSIKICAgIHVtb3VudCAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyB1bW91bnQgIiRtbnQiIDI+L2Rldi9udWxsIHx8IGZ1c2VybW91bnQgLXUgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUKICAgIGZ1c2VybW91bnQgLXUgIiRtbnQuYXBmcyIgMj4vZGV2L251bGwgfHwgdHJ1ZQogICAgcm0gLWYgIiRtbnQuaW1nIiAyPi9kZXYvbnVsbCB8fCB0cnVlOyBybWRpciAiJG1udC5hcGZzIiAyPi9kZXYvbnVsbCB8fCB0cnVlIDs7CiAgKikgZWNobyAiaGRpdXRpbC1zaGltOiB1bnN1cHBvcnRlZCBzdWJjb21tYW5kICRjbWQiID4mMjsgZXhpdCAxIDs7CmVzYWMK' \
-            | base64 -d | sudo tee /usr/local/bin/hdiutil >/dev/null
-          sudo chmod +x /usr/local/bin/hdiutil
-          echo "DMG tooling: darling-dmg=$(command -v darling-dmg || echo MISSING) apfs-fuse=$(command -v apfs-fuse || echo MISSING) dmg2img=$(command -v dmg2img || echo MISSING)"
-
       - name: Source-build + publish changed packages
         working-directory: packages/ts-pantry
         shell: bash
@@ -249,31 +218,10 @@ jobs:
           DOMAINS="${{ needs.detect.outputs.domains }}"
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
-          PLAT="${{ matrix.platform.name }}"
+          echo "Source-building (NO pkgx-mirror) and publishing: $PKGS"
           # No --pkgx-mirror ⇒ compile from the recipe so binaries link current
           # libs. --force re-uploads even if a (stale, mirrored) artifact exists.
-          BASE=(scripts/build-all-packages.ts -b "$S3_BUCKET" -r "$S3_REGION" -p "$PKGS" --multi-version --max-versions "$MAXV" --force)
-          case "$PLAT" in
-            darwin-*)
-              # Paid macOS runners bill ~10x. Build only genuine native SOURCE
-              # compiles here; download/app recipes (incl. DMG apps) are cross-built
-              # for FREE on the linux-x86-64 runner below (darling-dmg/apfs-fuse +
-              # the hdiutil shim keep the .app's signature intact).
-              echo "macOS $PLAT: source-only build of $PKGS"
-              bun "${BASE[@]}" --platform "$PLAT" --source-only
-              ;;
-            linux-x86-64)
-              # Native linux-x86-64, then cross-build the darwin DOWNLOAD recipes
-              # (curl + repackage — DMG apps go through the hdiutil shim). This is
-              # what retires the macOS-runner cost for the 40+ app recipes.
-              echo "Linux $PLAT: native build + darwin download cross-build of $PKGS"
-              bun "${BASE[@]}" --platform linux-x86-64
-              for XP in darwin-arm64 darwin-x86-64; do
-                bun "${BASE[@]}" --platform "$XP" --download-only || echo "warn: darwin cross-build ($XP) had failures"
-              done
-              ;;
-            *)
-              echo "Linux $PLAT: native build of $PKGS"
-              bun "${BASE[@]}" --platform "$PLAT"
-              ;;
-          esac
+          bun scripts/build-all-packages.ts \
+            -b "$S3_BUCKET" -r "$S3_REGION" \
+            --platform "${{ matrix.platform.name }}" \
+            -p "$PKGS" --multi-version --max-versions "$MAXV" --force

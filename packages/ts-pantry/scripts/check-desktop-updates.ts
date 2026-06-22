@@ -71,9 +71,16 @@ const platform: Platform = (() => {
   return 'all'
 })()
 
-/** Tokens in a build script that genuinely require a macOS runner: mounting a
- * disk image, the macOS-only copy/resize tools, or the .pkg installer chain. */
-const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\.dmg\b/
+/** Tokens in a build script that genuinely require a macOS runner: the
+ * macOS-only copy/resize tools or the .pkg installer chain.
+ *
+ * NOTE: hdiutil / .dmg are deliberately NOT here. DMG mounting now works on
+ * Linux via the hdiutil shim (darling-dmg for HFS+, apfs-fuse for APFS), which
+ * the ubuntu-safe CI job installs — so the 40 DMG app recipes publish on the
+ * fast, ~10x-cheaper ubuntu runner instead of macOS. The extracted .app keeps
+ * its code signature (verified). Re-add a token here only if a recipe needs a
+ * macOS tool with no Linux equivalent. */
+const MACOS_BUILD = /\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b/
 
 /** Flatten a recipe's build script (strings + { run } step objects) to one
  * blob so we can scan it for macOS-only tooling. */

@@ -45,12 +45,14 @@ permissions:
   contents: write
 
 jobs:
-  # Zip-only recipes (most fonts + apps like maccy/pearcleaner that just
-  # curl + unzip a .zip) don't need macOS, so they publish on the fast
-  # ubuntu-latest runner instead of waiting 10–15 min in the scarce macOS
-  # runner queue. This job does NOT commit the manifest — the macos job below
-  # is the single committer to avoid a push race.
-  ubuntu-safe:
+  # Every desktop app + font now publishes on the fast, ~10x-cheaper ubuntu
+  # runner — including the 40 DMG apps, which build via the darling-dmg /
+  # apfs-fuse hdiutil shim installed below (the extracted .app keeps its code
+  # signature). Only a recipe using a macOS-only tool with no Linux equivalent
+  # (ditto/sips/pkgutil/installer — none currently do) would still need macOS;
+  # MACOS_BUILD in check-desktop-updates.ts is the gate. Single committer of
+  # desktop-versions.json.
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,42 +61,39 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Publish ubuntu-safe desktop updates
-        working-directory: packages/ts-pantry
+      - name: Install DMG tooling (darling-dmg + apfs-fuse + hdiutil shim)
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          PUBLISH_FLAG=""
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then
-            PUBLISH_FLAG="--publish"
+          sudo -E apt-get update -y || true
+          sudo -E apt-get install -y --no-install-recommends cmake g++ git dmg2img fuse libfuse-dev libfuse3-dev libicu-dev libattr1-dev libbz2-dev zlib1g-dev libssl-dev libxml2-dev liblzma-dev || true
+          if ! command -v darling-dmg >/dev/null 2>&1; then
+            git clone -q --depth 1 https://github.com/darlinghq/darling-dmg.git /tmp/ddmg \
+              && cmake -S /tmp/ddmg -B /tmp/ddmg/build >/dev/null 2>&1 \
+              && make -C /tmp/ddmg/build -j"$(nproc)" >/dev/null 2>&1 \
+              && sudo make -C /tmp/ddmg/build install >/dev/null 2>&1 || echo "warn: darling-dmg build failed"
           fi
-          FORCE_FLAG=""
-          if [ -n "${{ inputs.force }}" ]; then
-            FORCE_FLAG="--force=${{ inputs.force }}"
+          if ! command -v apfs-fuse >/dev/null 2>&1; then
+            git clone -q --recursive https://github.com/sgan81/apfs-fuse.git /tmp/afuse \
+              && cmake -S /tmp/afuse -B /tmp/afuse/build >/dev/null 2>&1 \
+              && make -C /tmp/afuse/build -j"$(nproc)" >/dev/null 2>&1 \
+              && sudo cp /tmp/afuse/build/apfs-fuse /tmp/afuse/build/apfsutil /usr/local/bin/ || echo "warn: apfs-fuse build failed"
           fi
-          bun scripts/check-desktop-updates.ts --platform=ubuntu $PUBLISH_FLAG $FORCE_FLAG
+          sudo ldconfig || true
+          # hdiutil shim (base64 of the verified script; HFS+ via darling-dmg,
+          # APFS via dmg2img+apfs-fuse). Avoids YAML heredoc pitfalls.
+          echo 'IyEvYmluL2Jhc2gKc2V0IC1lCmNtZD0iJDEiOyBzaGlmdCB8fCB0cnVlCmNhc2UgIiRjbWQiIGluCiAgYXR0YWNoKQogICAgZG1nPSIkMSI7IHNoaWZ0IHx8IHRydWU7IG1udD0iIgogICAgd2hpbGUgWyAiJCMiIC1ndCAwIF07IGRvIGNhc2UgIiQxIiBpbiAtbW91bnRwb2ludCkgbW50PSIkMiI7IHNoaWZ0IDIgOzsgKikgc2hpZnQgOzsgZXNhYzsgZG9uZQogICAgWyAtbiAiJGRtZyIgXSAmJiBbIC1uICIkbW50IiBdIHx8IHsgZWNobyAiaGRpdXRpbC1zaGltOiBhdHRhY2ggbmVlZHMgPGRtZz4gLW1vdW50cG9pbnQgPGRpcj4iID4mMjsgZXhpdCAxOyB9CiAgICBta2RpciAtcCAiJG1udCIKICAgIGlmIGRhcmxpbmctZG1nICIkZG1nIiAiJG1udCIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuIGV4aXQgMDsgZmkKICAgIGltZz0iJG1udC5pbWciOyBhcGZzbW50PSIkbW50LmFwZnMiOyBybSAtZiAiJGltZyI7IG1rZGlyIC1wICIkYXBmc21udCIKICAgIGlmIGRtZzJpbWcgIiRkbWciICIkaW1nIiA+L2Rldi9udWxsIDI+JjEgJiYgYXBmcy1mdXNlIC1vIHJvICIkaW1nIiAiJGFwZnNtbnQiID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBzcmM9IiRhcGZzbW50L3Jvb3QiOyBbIC1kICIkc3JjIiBdIHx8IHNyYz0iJGFwZnNtbnQiCiAgICAgICggbW91bnQgLS1iaW5kICIkc3JjIiAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyBtb3VudCAtLWJpbmQgIiRzcmMiICIkbW50IiApICYmIGV4aXQgMAogICAgZmkKICAgIGVjaG8gImhkaXV0aWwtc2hpbTogY291bGQgbm90IG1vdW50ICRkbWcgKG5laXRoZXIgSEZTKyBub3IgQVBGUykiID4mMjsgZXhpdCAxIDs7CiAgZGV0YWNoKQogICAgbW50PSIkMSIKICAgIHVtb3VudCAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyB1bW91bnQgIiRtbnQiIDI+L2Rldi9udWxsIHx8IGZ1c2VybW91bnQgLXUgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUKICAgIGZ1c2VybW91bnQgLXUgIiRtbnQuYXBmcyIgMj4vZGV2L251bGwgfHwgdHJ1ZQogICAgcm0gLWYgIiRtbnQuaW1nIiAyPi9kZXYvbnVsbCB8fCB0cnVlOyBybWRpciAiJG1udC5hcGZzIiAyPi9kZXYvbnVsbCB8fCB0cnVlIDs7CiAgKikgZWNobyAiaGRpdXRpbC1zaGltOiB1bnN1cHBvcnRlZCBzdWJjb21tYW5kICRjbWQiID4mMjsgZXhpdCAxIDs7CmVzYWMK' \
+            | base64 -d | sudo tee /usr/local/bin/hdiutil >/dev/null
+          sudo chmod +x /usr/local/bin/hdiutil
+          echo "DMG tooling: darling-dmg=$(command -v darling-dmg || echo MISSING) apfs-fuse=$(command -v apfs-fuse || echo MISSING) dmg2img=$(command -v dmg2img || echo MISSING)"
 
-  # macOS-only recipes (mount a .dmg via hdiutil, or use ditto/sips/installer/
-  # pkgutil) must build on macOS. This runs AFTER the ubuntu job so that by the
-  # time it scans + records the manifest, the ubuntu publishes are already
-  # reflected in the registry — making it the single, race-free committer of
-  # desktop-versions.json.
-  macos:
-    needs: ubuntu-safe
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      # Author automated commits as the standard github-actions bot (never the
-      # runner's default "Anka" identity).
+      # Author automated commits as the standard github-actions bot.
       - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Publish macOS desktop updates & commit manifest
+      - name: Publish desktop updates & commit manifest
         working-directory: packages/ts-pantry
         run: |
           PUBLISH_FLAG=""
@@ -105,7 +104,7 @@ jobs:
           if [ -n "${{ inputs.force }}" ]; then
             FORCE_FLAG="--force=${{ inputs.force }}"
           fi
-          bun scripts/check-desktop-updates.ts --platform=macos $PUBLISH_FLAG $FORCE_FLAG --commit
+          bun scripts/check-desktop-updates.ts --platform=ubuntu $PUBLISH_FLAG $FORCE_FLAG --commit
 
       - name: Push manifest commit
         working-directory: packages/ts-pantry
