@@ -115,6 +115,12 @@ jobs:
         platform:
           - { name: linux-x86-64, os: ubuntu-latest }
           - { name: linux-arm64, os: ubuntu-24.04-arm }
+          # Build + publish the macOS artifacts too — without these, recipe
+          # changes only refreshed Linux, so darwin-arm64 CLI tools (e.g. eza)
+          # and desktop apps (cursor/hiddenbar/transmit, which need hdiutil)
+          # never got rebuilt and kept shipping stale/stub artifacts.
+          - { name: darwin-arm64, os: macos-14 }
+          - { name: darwin-x86-64, os: macos-13 }
     steps:
       - uses: actions/checkout@v6
 
