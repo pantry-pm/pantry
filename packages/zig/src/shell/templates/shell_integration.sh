@@ -297,9 +297,13 @@ __pantry_switch_environment() {
                 return 0
             fi
         else
-            # Left the project - instant deactivation (no subprocess!)
+            # Left the old project — deactivate, then FALL THROUGH to detect and
+            # activate whatever project the new PWD belongs to. Do NOT return
+            # here: zsh only hooks `chpwd` (fires once per `cd`), so a direct
+            # project→project `cd` would otherwise land in NO env until the next
+            # `cd`. The fall-through stays cheap for non-project targets — the
+            # pure-shell guard below short-circuits before any subprocess.
             __pantry_deactivate
-            return 0
         fi
     fi
 
