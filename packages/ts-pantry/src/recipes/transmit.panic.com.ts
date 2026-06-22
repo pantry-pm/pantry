@@ -19,7 +19,7 @@ export const recipe: Recipe = {
     script: [
       'set -e',
       'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(brew info --cask --json=v2 transmit 2>/dev/null | bun -e "const d=JSON.parse(await Bun.stdin.text()); console.log(d.casks[0].url)" 2>/dev/null || true)',
+      'BREW_URL=$(curl -fsSL "https://formulae.brew.sh/api/cask/transmit.json" | sed -nE \'s/.*"url":"([^"]+\\.(zip|dmg))".*/\\1/p\' | head -1)',
       'URL="${BREW_URL:-https://download.panic.com/transmit/Transmit%205.zip}"',
       'echo "Downloading Transmit from $URL"',
       'curl -fSL -L --retry 3 -H "User-Agent: $UA" "$URL" -o /tmp/transmit.zip',
