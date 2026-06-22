@@ -345,9 +345,14 @@ pub fn fixDirectoryLibraryPaths(
         }
     }
 
-    // Fix binaries in bin/ directory
-    {
-        var dir = io_helper.openDirAbsoluteForIteration(bin_dir) catch return;
+    // Fix binaries in bin/ directory. A missing bin/ (library-only packages like
+    // zlib.net, openssl.org, libexpat) must NOT abort: the rpath rewrites above
+    // already invalidated the dylib signatures, so we have to fall through to the
+    // re-sign step below. Using `catch return` here meant those dylibs were left
+    // with broken ad-hoc signatures, and on Apple Silicon dyld then SIGKILLs any
+    // binary that loads them (git, codex, …).
+    if (io_helper.openDirAbsoluteForIteration(bin_dir)) |*dir_ptr| {
+        var dir = dir_ptr.*;
         defer dir.close();
 
         var it = dir.iterate();
@@ -363,9 +368,10 @@ pub fn fixDirectoryLibraryPaths(
             // Fix library paths (both @rpath/ and hardcoded absolute paths)
             fixMacOSLibraryPaths(allocator, binary_path, lib_dir) catch {};
         }
-    }
+    } else |_| {}
 
-    // Re-sign all modified binaries and dylibs
+    // Re-sign all modified binaries and dylibs. This MUST run even when bin/ is
+    // absent — see the note above.
     codesignDirectory(allocator, bin_dir);
     codesignDirectory(allocator, lib_dir);
 }
