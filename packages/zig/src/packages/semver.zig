@@ -104,12 +104,48 @@ pub fn parseConstraint(constraint_str: []const u8) !Constraint {
 
     const version = try parseVersion(version_str);
 
+    // Normalize partial / loose specifiers to ranges, matching npm/bun semantics.
+    // Without this a bare major like "1" parses as exact 1.0.0 and never matches
+    // the published 1.3.2, so deps such as `zlib.net@1`, `sourceware.org/bzip2@1`
+    // and `libexpat.github.io@~2` resolve to "not found in registry".
+    //   "1"     -> ^1    (>=1.0.0 <2.0.0)
+    //   "1.2"   -> ~1.2  (>=1.2.0 <1.3.0)
+    //   "1.2.3" -> exact
+    //   "~2"    -> ^2    (a tilde with only a major behaves like caret: 2.x)
+    const components = versionComponentCount(version_str);
+    if (constraint_type == .exact) {
+        if (components == 1) {
+            constraint_type = .caret;
+        } else if (components == 2) {
+            constraint_type = .tilde;
+        }
+    } else if (constraint_type == .tilde and components == 1) {
+        constraint_type = .caret;
+    }
+
     return Constraint{
         .type = constraint_type,
         .major = version.major,
         .minor = version.minor,
         .patch = version.patch,
     };
+}
+
+/// Number of dot-separated numeric components in a version string, ignoring a
+/// leading `v` and any `-prerelease`/`+build` suffix. "1" -> 1, "1.2" -> 2,
+/// "1.2.3-dev" -> 3.
+fn versionComponentCount(version_str: []const u8) usize {
+    var s = version_str;
+    if (std.mem.startsWith(u8, s, "v")) s = s[1..];
+    var core_len: usize = 0;
+    while (core_len < s.len and (std.ascii.isDigit(s[core_len]) or s[core_len] == '.')) : (core_len += 1) {}
+    const core = s[0..core_len];
+    if (core.len == 0) return 0;
+    var count: usize = 1;
+    for (core) |c| {
+        if (c == '.') count += 1;
+    }
+    return count;
 }
 
 /// True if a version string carries a pre-release tag (e.g. "2.10.0-RC1",
@@ -331,6 +367,32 @@ test "satisfies constraint - tilde" {
 
     // Should NOT allow 1.3.0
     try std.testing.expect(!satisfiesConstraint("1.3.0", c));
+}
+
+test "parse constraint - loose/partial specifiers resolve to ranges" {
+    // Bare major "1" behaves like ^1 (1.x), so 1.3.2 satisfies it.
+    const c1 = try parseConstraint("1");
+    try std.testing.expectEqual(ConstraintType.caret, c1.type);
+    try std.testing.expect(satisfiesConstraint("1.3.2", c1));
+    try std.testing.expect(satisfiesConstraint("1.0.8", c1));
+    try std.testing.expect(!satisfiesConstraint("2.0.0", c1));
+
+    // "1.2" behaves like ~1.2 (1.2.x).
+    const c2 = try parseConstraint("1.2");
+    try std.testing.expectEqual(ConstraintType.tilde, c2.type);
+    try std.testing.expect(satisfiesConstraint("1.2.13", c2));
+    try std.testing.expect(!satisfiesConstraint("1.3.0", c2));
+
+    // "~2" (tilde, major only) behaves like ^2 (2.x), so 2.7.5 satisfies it.
+    const c3 = try parseConstraint("~2");
+    try std.testing.expectEqual(ConstraintType.caret, c3.type);
+    try std.testing.expect(satisfiesConstraint("2.7.5", c3));
+    try std.testing.expect(!satisfiesConstraint("3.0.0", c3));
+
+    // A full "1.2.3" stays exact.
+    const c4 = try parseConstraint("1.2.3");
+    try std.testing.expectEqual(ConstraintType.exact, c4.type);
+    try std.testing.expect(!satisfiesConstraint("1.2.4", c4));
 }
 
 test "resolve version - bun ^1.2.16" {
