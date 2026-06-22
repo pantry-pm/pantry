@@ -102,14 +102,15 @@ __pantry_find_dep_up() {
     return 1
 }
 
-# OPT-IN gate for auto-activation. Returns 0 only if the nearest deps file
-# (walking up from $1) sets `autoActivate: true` — matched across YAML
-# (`autoActivate: true`), JSON/JSONC (`"autoActivate": true`) and TS configs.
-# Projects that don't opt in are ignored by the cd hook entirely.
+# OPT-OUT gate for auto-activation. Returns 0 (activate) whenever the nearest
+# deps file (walking up from $1) exists — having a deps file IS what makes this a
+# pantry project — UNLESS it explicitly sets `autoActivate: false` (matched across
+# YAML, JSON/JSONC `"autoActivate": false` and TS configs). So `cd` into any
+# project with a deps file activates by default; opt out with `autoActivate: false`.
 #
 # The grep verdict is memoized per (dep file, mtime): cd-ing around inside the
 # same project re-uses it instead of forking grep every time, while an edit to
-# the deps file (e.g. flipping autoActivate on) invalidates it immediately.
+# the deps file (e.g. flipping autoActivate off) invalidates it immediately.
 __pantry_autocd_enabled() {
     local dir="$1" depth=0 fname found=""
     while (( depth < 16 )); do
@@ -131,8 +132,9 @@ __pantry_autocd_enabled() {
         return "${__PANTRY_AUTOCD_RESULT:-1}"
     fi
 
-    grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?true"?' "$found" 2>/dev/null
-    local rc=$?
+    # A deps file exists → pantry project → activate, unless it opts out.
+    local rc=0
+    grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?false"?' "$found" 2>/dev/null && rc=1
     __PANTRY_AUTOCD_FILE="$found"
     __PANTRY_AUTOCD_MTIME="$m"
     __PANTRY_AUTOCD_RESULT=$rc
@@ -301,9 +303,9 @@ __pantry_switch_environment() {
         fi
     fi
 
-    # OPT-IN GATE: only auto-activate projects that explicitly enable it with
-    # `autoActivate: true` in their deps file. Without it, plain `cd` never
-    # activates uninvited — ensure we're deactivated and stop here.
+    # OPT-OUT GATE: auto-activate any project that has a deps file, unless it
+    # sets `autoActivate: false`. No deps file (or an explicit opt-out) means
+    # nothing to activate — ensure we're deactivated and stop here.
     if ! __pantry_autocd_enabled "$PWD"; then
         [[ -n "${PANTRY_CURRENT_PROJECT:-}" ]] && __pantry_deactivate
         __PANTRY_LAST_NO_ENV="$PWD"

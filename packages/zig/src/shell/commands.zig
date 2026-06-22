@@ -23,17 +23,18 @@ pub const ShellCommands = struct {
         self.allocator.destroy(self.env_cache);
     }
 
-    /// Opt-in gate shared by every shell hook: true when the deps file sets
-    /// `autoActivate: true` — matched case-insensitively across YAML
-    /// (`autoActivate: true`), JSON/JSONC (`"autoActivate": true`) and TS
-    /// configs. Mirrors the bash/zsh template's __pantry_autocd_enabled grep
-    /// (`^\s*"?autoActivate"?\s*:\s*"?true"?`). The bash/zsh template gates
-    /// before ever invoking the binary, so for those shells this is a no-op;
-    /// it makes fish/nushell/powershell (whose hooks call `shell:lookup`
-    /// directly) honor the same opt-in.
+    /// Opt-OUT gate shared by every shell hook: a deps file present makes this a
+    /// pantry project, so activate by DEFAULT — return false only when the deps
+    /// file explicitly sets `autoActivate: false` (matched case-insensitively
+    /// across YAML, JSON/JSONC `"autoActivate": false` and TS configs). Mirrors
+    /// the bash/zsh template's __pantry_autocd_enabled. The bash/zsh template
+    /// gates before ever invoking the binary, so for those shells this is a
+    /// no-op; it makes fish/nushell/powershell (whose hooks call `shell:lookup`
+    /// directly) honor the same opt-out.
     fn depFileAutoActivates(self: *ShellCommands, dep_file: []const u8) bool {
         if (dep_file.len == 0) return false;
-        const content = io_helper.readFileAlloc(self.allocator, dep_file, 1024 * 1024) catch return false;
+        // Unreadable deps file → still a project → default to activating.
+        const content = io_helper.readFileAlloc(self.allocator, dep_file, 1024 * 1024) catch return true;
         defer self.allocator.free(content);
 
         var lines = std.mem.splitScalar(u8, content, '\n');
@@ -47,9 +48,9 @@ pub const ShellCommands = struct {
             if (s.len == 0 or s[0] != ':') continue;
             s = std.mem.trimStart(u8, s[1..], " \t");
             if (s.len > 0 and s[0] == '"') s = s[1..];
-            if (std.ascii.startsWithIgnoreCase(s, "true")) return true;
+            if (std.ascii.startsWithIgnoreCase(s, "false")) return false;
         }
-        return false;
+        return true;
     }
 
     /// shell:lookup - Fast cache lookup (called by shell on every cd)

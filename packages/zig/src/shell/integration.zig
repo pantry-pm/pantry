@@ -174,15 +174,15 @@ fn generatePowershellHook(allocator: std.mem.Allocator) ![]const u8 {
         \\    Invoke-PantryDeactivate
         \\    if ($env:PANTRY_NO_AUTO_INSTALL) { return }
         \\
-        \\    # Auto-install: only for projects that opt in with autoActivate: true,
-        \\    # and only once per (deps file, mtime) — never on every cd.
+        \\    # Auto-install: any project with a deps file, unless it opts out with
+        \\    # autoActivate: false. Only once per (deps file, mtime) — never every cd.
         \\    $dep = $null
         \\    foreach ($f in $global:__PantryDepFiles) {
         \\        $p = Join-Path $pwdPath $f
         \\        if (Test-Path $p -PathType Leaf) { $dep = $p; break }
         \\    }
         \\    if (-not $dep) { return }
-        \\    if (-not (Select-String -Path $dep -Quiet -Pattern '^\s*"?autoActivate"?\s*:\s*"?true"?')) { return }
+        \\    if (Select-String -Path $dep -Quiet -Pattern '^\s*"?autoActivate"?\s*:\s*"?false"?') { return }
         \\    $stamp = "$dep|$((Get-Item $dep).LastWriteTimeUtc.Ticks)"
         \\    if ($global:__PantryNoInstall -eq $stamp) { return }
         \\    Write-Host "pantry: setting up $(Split-Path $pwdPath -Leaf)..."
@@ -283,11 +283,11 @@ fn generateFishHook(allocator: std.mem.Allocator) ![]const u8 {
         \\    return
         \\  end
         \\  __pantry_deactivate
-        \\  # Auto-install: only for projects that opt in with autoActivate: true,
-        \\  # and only once per (deps file, mtime) — never on every cd.
+        \\  # Auto-install: any project with a deps file, unless it opts out with
+        \\  # autoActivate: false. Only once per (deps file, mtime) — never every cd.
         \\  set -q PANTRY_NO_AUTO_INSTALL; and return
         \\  set -l dep (__pantry_dep_here "$PWD"); or return
-        \\  grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?true"?' "$dep" 2>/dev/null; or return
+        \\  grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?false"?' "$dep" 2>/dev/null; and return
         \\  set -l m (command stat -f %m "$dep" 2>/dev/null; or command stat -c %Y "$dep" 2>/dev/null)
         \\  test "$__pantry_noinstall" = "$dep|$m"; and return
         \\  echo "pantry: setting up "(basename "$PWD")"…" >&2
