@@ -72,6 +72,100 @@ fn scanLocations(allocator: std.mem.Allocator, home: []const u8) ![]parser.Packa
     return all_global_deps.toOwnedSlice(allocator);
 }
 
+/// Scan the same well-known locations as `scanForGlobalDeps`, but return the
+/// PATHS of deps files that declare at least one `global: true` package. The
+/// global-install command uses these to install GUI apps/fonts (declared inline
+/// or in sibling apps.yaml/fonts.yaml) the same way a project-local install does.
+/// Caller owns the returned slice and each path.
+pub fn scanForGlobalDepsFiles(allocator: std.mem.Allocator) ![][]const u8 {
+    const home = io_helper.getEnvVarOwned(allocator, "HOME") catch return &[_][]const u8{};
+    defer allocator.free(home);
+
+    const search_locations = [_][]const u8{
+        "", ".dotfiles", ".config", "Code", "Projects", "Development", "dev",
+    };
+
+    var paths = try std.ArrayList([]const u8).initCapacity(allocator, 8);
+    errdefer {
+        for (paths.items) |p| allocator.free(p);
+        paths.deinit(allocator);
+    }
+
+    for (search_locations) |location| {
+        const search_path = if (location.len == 0)
+            try allocator.dupe(u8, home)
+        else
+            try std.fmt.allocPrint(allocator, "{s}/{s}", .{ home, location });
+        defer allocator.free(search_path);
+
+        io_helper.accessAbsolute(search_path, .{}) catch continue;
+        const depth: usize = if (location.len == 0) 0 else 3;
+        collectGlobalDepsFilePaths(allocator, search_path, &paths, depth, 0) catch {};
+    }
+
+    return paths.toOwnedSlice(allocator);
+}
+
+/// Recursively collect deps-file paths that contain a `global: true` dependency.
+fn collectGlobalDepsFilePaths(
+    allocator: std.mem.Allocator,
+    dir_path: []const u8,
+    paths: *std.ArrayList([]const u8),
+    max_depth: usize,
+    current_depth: usize,
+) !void {
+    if (current_depth > max_depth) return;
+
+    var dir = io_helper.openDirAbsoluteForIteration(dir_path) catch return;
+    defer dir.close();
+    var iterator = dir.iterate();
+
+    while (iterator.next() catch null) |entry| {
+        if (entry.name[0] == '.' and current_depth > 0) continue;
+        if (shouldSkipDirectory(entry.name)) continue;
+
+        const entry_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ dir_path, entry.name });
+        defer allocator.free(entry_path);
+
+        switch (entry.kind) {
+            .file => {
+                if (!detector.isDepsFile(entry.name)) continue;
+                const deps_file = detector.DepsFile{
+                    .path = entry_path,
+                    .format = detector.inferFormat(entry.name) orelse continue,
+                };
+                const deps = parser.inferDependencies(allocator, deps_file) catch continue;
+                defer {
+                    for (deps) |*dep| {
+                        var d = dep.*;
+                        d.deinit(allocator);
+                    }
+                    allocator.free(deps);
+                }
+                var has_global = false;
+                for (deps) |dep| {
+                    if (dep.global) {
+                        has_global = true;
+                        break;
+                    }
+                }
+                if (!has_global) continue;
+                // Dedup before keeping the path.
+                var dup = false;
+                for (paths.items) |p| {
+                    if (std.mem.eql(u8, p, entry_path)) {
+                        dup = true;
+                        break;
+                    }
+                }
+                if (!dup) try paths.append(allocator, try allocator.dupe(u8, entry_path));
+            },
+            .directory => try collectGlobalDepsFilePaths(allocator, entry_path, paths, max_depth, current_depth + 1),
+            else => {},
+        }
+    }
+}
+
 /// Recursively scan a directory for deps files with global packages
 fn scanDirectoryForGlobalDeps(
     allocator: std.mem.Allocator,

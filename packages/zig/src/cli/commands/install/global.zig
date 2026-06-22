@@ -188,6 +188,22 @@ fn installGlobalDepsCommandWithOptions(allocator: std.mem.Allocator, user_local:
         }
     }
 
+    // Install GUI apps & fonts declared (inline or in sibling apps.yaml/
+    // fonts.yaml) by the same deps files that provided the global packages.
+    // Mirrors the project-local install path so `pantry install --user` is a
+    // complete setup. macOS-only and fully non-fatal — see desktop_apps.
+    const desktop_apps = @import("../../../install/desktop_apps.zig");
+    const scanner = @import("../../../deps/global_scanner.zig");
+    if (scanner.scanForGlobalDepsFiles(allocator)) |deps_files| {
+        defer {
+            for (deps_files) |p| allocator.free(p);
+            allocator.free(deps_files);
+        }
+        for (deps_files) |deps_file| {
+            desktop_apps.installFromDepsFile(allocator, deps_file, false);
+        }
+    } else |_| {}
+
     style.printGlobalComplete(global_dir);
 
     return .{ .exit_code = 0 };
