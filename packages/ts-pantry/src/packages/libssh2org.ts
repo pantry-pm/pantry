@@ -7,7 +7,7 @@
  *
  * @install `pantry install libssh2.org`
  * @homepage https://libssh2.org/
- * @dependencies `openssl.org^1.1`, `zlib.net^1.2`
+ * @dependencies `openssl.org^3`, `zlib.net^1.2`
  *
  * @example
  * ```typescript
@@ -51,7 +51,7 @@ export const libssh2orgPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1.1',
+    'openssl.org^3',
     'zlib.net^1.2',
   ] as const,
   buildDependencies: [] as const,

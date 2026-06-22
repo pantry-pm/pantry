@@ -9,7 +9,7 @@
  * @install `pantry install curl.se`
  * @aliases `curl`
  * @homepage https://curl.se
- * @dependencies `openssl.org^1.1`, `curl.se/ca-certs`, `zlib.net^1.2.11`, ... (+1 more)
+ * @dependencies `openssl.org^3`, `curl.se/ca-certs`, `zlib.net^1.2.11`, ... (+1 more)
  *
  * @example
  * ```typescript
@@ -65,7 +65,7 @@ export const curlPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1.1',
+    'openssl.org^3',
     'curl.se/ca-certs',
     'zlib.net^1.2.11',
     'nghttp2.org',
