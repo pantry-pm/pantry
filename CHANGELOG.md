@@ -1,3 +1,67 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.1...v0.10.2)
+
+### 🚀 Features
+
+- **desktop**: auto-resolve versions for all pinned apps & fonts ([6b6ddb5](https://github.com/pantry-pm/pantry/commit/6b6ddb5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: add anthropic.com/claude-code (prebuilt npm binary) ([f56dc55](https://github.com/pantry-pm/pantry/commit/f56dc55)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: add mediaarea.net, muzzleapp.com, logitech.com/options-plus, diabrowser.com, lato, open-sans, source-code-pro ([c5648cd](https://github.com/pantry-pm/pantry/commit/c5648cd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: resolve custom versionSource in daily updater ([908a2de](https://github.com/pantry-pm/pantry/commit/908a2de)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: register roboto + pearcleaner.app packages, fix __MACOSX zip extraction ([ca226a4](https://github.com/pantry-pm/pantry/commit/ca226a4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: add roboto font + pearcleaner app, publish apps from local recipes ([674148a](https://github.com/pantry-pm/pantry/commit/674148a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🐛 Bug Fixes
+
+- **types**: correct recipe-types import depth in nested recipes + font-version decode ([a694c67](https://github.com/pantry-pm/pantry/commit/a694c67)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **docs**: generate pages for single-word font packages + stable flat names ([db9f374](https://github.com/pantry-pm/pantry/commit/db9f374)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: resolve pinned recipes via knownVersions so they publish ([05a73df](https://github.com/pantry-pm/pantry/commit/05a73df)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **upload**: drop wall-clock cap on large presigned PUTs ([c920252](https://github.com/pantry-pm/pantry/commit/c920252)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **upload**: abort+retry stalled presigned PUTs ([d0cc67c](https://github.com/pantry-pm/pantry/commit/d0cc67c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **upload**: stream large files via presigned PUT, not ts-cloud multipart ([cae6bea](https://github.com/pantry-pm/pantry/commit/cae6bea)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: repair linear.app — new download host + custom versionSource ([7741cfb](https://github.com/pantry-pm/pantry/commit/7741cfb)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: support slash-domain recipes (logitech.com/options-plus) ([9affe82](https://github.com/pantry-pm/pantry/commit/9affe82)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **upload**: multipart upload for large tarballs (>100MB) ([8467345](https://github.com/pantry-pm/pantry/commit/8467345)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: publish zip apps/fonts under recipe-declared platform keys ([e9e408d](https://github.com/pantry-pm/pantry/commit/e9e408d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### ♻️ Code Refactoring
+
+- remove pkgxInstallCommand generation everywhere; finish org rename ([0331373](https://github.com/pantry-pm/pantry/commit/0331373)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **api**: drop pkgxCommand from the resolver result; rebrand pkgx prose ([4f25d2b](https://github.com/pantry-pm/pantry/commit/4f25d2b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **docs**: rebrand ts-pkgx -> ts-pantry, home-lang -> pantry-pm; drop pkgx install-command generation ([dacf69d](https://github.com/pantry-pm/pantry/commit/dacf69d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 📚 Documentation
+
+- **packages**: regenerate with pantry install commands + ts-pantry imports ([4b481c5](https://github.com/pantry-pm/pantry/commit/4b481c5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **packages**: regenerate package docs incl. new desktop apps & fonts ([bf6807f](https://github.com/pantry-pm/pantry/commit/bf6807f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: correct desktop_apps header — apps come from pantry's registry, not Homebrew ([9c953c2](https://github.com/pantry-pm/pantry/commit/9c953c2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 💅 Styles
+
+- **docs**: fix markdown lint errors in generated pages + changelog ([b04711f](https://github.com/pantry-pm/pantry/commit/b04711f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🤖 Continuous Integration
+
+- **publish**: only rebuild on recipe or version changes, not cosmetic metadata ([fca9369](https://github.com/pantry-pm/pantry/commit/fca9369)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: split publish across ubuntu + macos runners ([590ed37](https://github.com/pantry-pm/pantry/commit/590ed37)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+### 🧹 Chores
+
+- release v0.10.2 ([65b2769](https://github.com/pantry-pm/pantry/commit/65b2769)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update dblab.danvergara.com to 0.42.0 ([3462bba](https://github.com/pantry-pm/pantry/commit/3462bba)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, numpy.org ([e2e7986](https://github.com/pantry-pm/pantry/commit/e2e7986)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **docs**: standardize on BunPress, drop VitePress everywhere ([6a5e167](https://github.com/pantry-pm/pantry/commit/6a5e167)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp to 9753 ([fbf9e06](https://github.com/pantry-pm/pantry/commit/fbf9e06)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 2 apps (code.visualstudio.com, linear.app) ([e0a900c](https://github.com/pantry-pm/pantry/commit/e0a900c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9752 ([c4c3991](https://github.com/pantry-pm/pantry/commit/c4c3991)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 2 apps & 1 font ([c368b67](https://github.com/pantry-pm/pantry/commit/c368b67)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9748 ([a8d1010](https://github.com/pantry-pm/pantry/commit/a8d1010)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 2 apps & 1 font ([37ead0d](https://github.com/pantry-pm/pantry/commit/37ead0d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([0ee11dd](https://github.com/pantry-pm/pantry/commit/0ee11dd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update keephq.dev to 0.54.0 ([dffcf47](https://github.com/pantry-pm/pantry/commit/dffcf47)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+### Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.0...v0.10.1)
 
 ### 🚀 Features
