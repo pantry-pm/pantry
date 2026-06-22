@@ -106,9 +106,19 @@ pub fn fixMacOSLibraryPaths(
         var abs_buf: [std.fs.max_path_bytes]u8 = undefined;
         const absolute_lib_path = std.fmt.bufPrint(&abs_buf, "{s}/{s}", .{ lib_dir, dep.lib_name }) catch continue;
 
-        // Check if the library exists in our lib directory
-        io_helper.accessAbsolute(absolute_lib_path, .{}) catch {
-            // Library doesn't exist in our package - skip it
+        // Resolve the rewrite target. Prefer a copy in our own lib dir; if it's
+        // not there (e.g. a binary built on a Homebrew box that hardcodes
+        // /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib, which lives in a
+        // SEPARATE pantry package), search the other installed packages for a
+        // dylib of the same name. Without this, eza's bundled libssh2 keeps the
+        // Homebrew path and dyld can't load it.
+        var xpkg_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const target = blk: {
+            if (io_helper.accessAbsolute(absolute_lib_path, .{})) |_| {
+                break :blk @as([]const u8, absolute_lib_path);
+            } else |_| {}
+            if (findDylibInPackages(allocator, lib_dir, dep.lib_name, &xpkg_buf)) |p| break :blk p;
+            // Nowhere to point it — leave the reference as-is.
             continue;
         };
 
@@ -117,7 +127,7 @@ pub fn fixMacOSLibraryPaths(
             "install_name_tool",
             "-change",
             dep.original_ref,
-            absolute_lib_path,
+            target,
             binary_path,
         }) catch {
             continue;
@@ -125,6 +135,45 @@ pub fn fixMacOSLibraryPaths(
         defer allocator.free(fix_result.stdout);
         defer allocator.free(fix_result.stderr);
     }
+}
+
+/// Given a package's lib dir (`<...>/packages/<domain>/v<ver>/lib`), locate a
+/// dylib named `basename` provided by ANY other installed package, returning its
+/// absolute path written into `out`. Used to repoint hardcoded Homebrew/abs
+/// references (e.g. libssl.3.dylib) at the matching pantry package. Searches
+/// `<packages-root>/**/lib/<basename>` to a bounded depth.
+fn findDylibInPackages(allocator: std.mem.Allocator, lib_dir: []const u8, basename: []const u8, out: []u8) ?[]const u8 {
+    const marker = "/packages/";
+    const idx = std.mem.indexOf(u8, lib_dir, marker) orelse return null;
+    const packages_root = lib_dir[0 .. idx + marker.len - 1]; // includes "/packages"
+    return searchLibDirs(allocator, packages_root, basename, out, 0);
+}
+
+fn searchLibDirs(allocator: std.mem.Allocator, dir_path: []const u8, basename: []const u8, out: []u8, depth: usize) ?[]const u8 {
+    if (depth > 4) return null;
+    var dir = io_helper.openDirAbsoluteForIteration(dir_path) catch return null;
+    defer dir.close();
+    var it = dir.iterate();
+    while (it.next() catch null) |entry| {
+        if (entry.name.len > 0 and entry.name[0] == '.') continue;
+        const child = std.fmt.allocPrint(allocator, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
+        defer allocator.free(child);
+        if (entry.kind == .directory) {
+            // When we reach a `lib` dir, check for the basename directly.
+            if (std.mem.eql(u8, entry.name, "lib")) {
+                const candidate = std.fmt.allocPrint(allocator, "{s}/{s}", .{ child, basename }) catch continue;
+                defer allocator.free(candidate);
+                if (io_helper.accessAbsolute(candidate, .{})) |_| {
+                    if (candidate.len <= out.len) {
+                        @memcpy(out[0..candidate.len], candidate);
+                        return out[0..candidate.len];
+                    }
+                } else |_| {}
+            }
+            if (searchLibDirs(allocator, child, basename, out, depth + 1)) |p| return p;
+        }
+    }
+    return null;
 }
 
 /// Add rpath entries to a binary for finding dependencies

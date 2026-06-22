@@ -889,6 +889,16 @@ pub const Installer = struct {
         if (pkg_info) |info| {
             if (options.verbose) std.debug.print("[verbose:installer] installing sub-dependencies for {s} (count={d})\n", .{ resolved_spec.name, info.dependencies.len });
             try self.installDependencies(info.dependencies, options);
+
+            // Re-fix this package's libraries now that its dependencies are on
+            // disk: cross-package references (e.g. a Homebrew-built libssh2 that
+            // hardcodes openssl's path) can only be repointed once the providing
+            // package — openssl.org here — is installed. The first pass ran
+            // before deps existed. Idempotent: rpath re-adds are refused and
+            // install-name -change is a no-op when already correct.
+            if (install_path.len > 0) {
+                libfixer.fixDirectoryLibraryPaths(self.allocator, install_path) catch {};
+            }
         }
 
         const end_ts_ = io_helper.clockGettime();
