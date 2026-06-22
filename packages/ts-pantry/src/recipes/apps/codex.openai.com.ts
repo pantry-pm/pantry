@@ -42,6 +42,13 @@ export const recipe: Recipe = {
       'mv "$APP" "{{prefix}}/Codex.app"',
       // Fail loudly instead of publishing a stub artifact.
       '[ -d "{{prefix}}/Codex.app" ] || { echo "ERROR: Codex.app missing after move"; exit 1; }',
+      // Expose the app binary under bin/ so the build pipeline's foreign-artifact
+      // verification passes (a GUI app otherwise ships no bin/). Named `codex-app`
+      // to NOT collide with the `codex` CLI (the openai.com/codex package). The
+      // native /Applications install ignores bin/, so this only matters for the
+      // build check and project-style installs.
+      'mkdir -p {{prefix}}/bin',
+      'ln -sf "../Codex.app/Contents/MacOS/Codex" {{prefix}}/bin/codex-app',
       'rm -f /tmp/codex-app.zip',
     ],
     // Codex.app is notarized & signed by OpenAI. The default post-build
