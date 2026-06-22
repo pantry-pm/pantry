@@ -124,6 +124,23 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
         }
     }
 
+    // After a successful project-level install (no explicit packages — the
+    // `cd` auto-install path the shell integration runs), bring the project
+    // fully online: start its `services.autoStart` services, wait for them,
+    // auto-create the app database, and run one-time `postSetup`. This is the
+    // same sequence `shell:activate` performs, run here so a bare `pantry
+    // install` yields a ready-to-use project instead of just installed
+    // binaries. Idempotent: services skip if already running, the DB skips if
+    // it exists, and postSetup is guarded by a per-project marker so it never
+    // re-seeds. `--force` re-runs postSetup.
+    if (result.exit_code == 0 and packages.items.len == 0 and !dry_run) {
+        if (lib.shell.ShellCommands.init(allocator)) |sc_val| {
+            var sc = sc_val;
+            defer sc.deinit();
+            sc.runProjectPostInstall(cwd_buf, force);
+        } else |_| {}
+    }
+
     std.process.exit(result.exit_code);
 }
 

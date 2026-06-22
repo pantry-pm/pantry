@@ -279,17 +279,9 @@ pub const ShellCommands = struct {
             // Install global dependencies (global: true in deps.yaml)
             try self.installGlobalDeps(project_root);
 
-            // Auto-start services if configured
-            try self.autoStartServices(project_root);
-
-            // Wait for services to be ready before proceeding
-            self.waitForServices(project_root) catch {};
-
-            // Auto-create database if postgres is a dependency and .env has DB_DATABASE
-            self.autoCreateDatabase(project_root) catch {};
-
-            // Execute postSetup commands from pantry.config.ts
-            self.executePostSetupCommands(project_root) catch {};
+            // Bring the project online: start autoStart services, wait for them,
+            // auto-create the app database, and run one-time postSetup.
+            self.postInstallSteps(project_root, false);
         } else if (env_exists and dep_file != null) {
             // Environment exists but dep file may have changed
             // Check if we need to update (only when cache was invalidated)
@@ -952,6 +944,29 @@ pub const ShellCommands = struct {
             };
             defer result.deinit(self.allocator);
         }
+    }
+
+    /// Bring a freshly-installed project fully online from a working directory:
+    /// resolve the project root, then run the post-install sequence. This is the
+    /// same work `shell:activate` does after a cache-miss install, exposed so a
+    /// plain `pantry install` (what the shell integration runs on `cd`) yields a
+    /// ready-to-use project — services started and database seeded — instead of
+    /// just installed binaries. Best-effort and fully idempotent.
+    pub fn runProjectPostInstall(self: *ShellCommands, pwd: []const u8, force: bool) void {
+        const project_root = (self.detectProjectRoot(pwd) catch null) orelse return;
+        defer self.allocator.free(project_root);
+        self.postInstallSteps(project_root, force);
+    }
+
+    /// The post-install sequence, given an already-resolved project root: start
+    /// the `autoStart` services, wait for them to come up, auto-create the app
+    /// database, and run one-time postSetup. Each step is independently
+    /// fault-tolerant so a failure in one never blocks the rest.
+    fn postInstallSteps(self: *ShellCommands, project_root: []const u8, force: bool) void {
+        self.autoStartServices(project_root) catch {};
+        self.waitForServices(project_root) catch {};
+        self.autoCreateDatabase(project_root) catch {};
+        self.executePostSetupCommands(project_root, force) catch {};
     }
 
     /// Auto-start services configured in pantry.json or deps.yaml
@@ -2341,7 +2356,58 @@ pub const ShellCommands = struct {
     }
 
     /// Execute postSetup commands from pantry.config.ts / pantry.config.js
-    fn executePostSetupCommands(self: *ShellCommands, project_root: []const u8) !void {
+    /// True if the project declares a JS/TS pantry config (the only place a
+    /// `postSetup` block can live). Cheap existence check — used to decide
+    /// whether postSetup is even applicable before touching the run-once marker.
+    fn projectHasPantryConfig(self: *ShellCommands, project_root: []const u8) bool {
+        const config_names = [_][]const u8{
+            "config/deps.ts",
+            "pantry.config.ts",
+            "pantry.config.js",
+            ".pantry.config.ts",
+            ".pantry.config.js",
+        };
+        for (config_names) |name| {
+            const candidate = std.fs.path.join(self.allocator, &[_][]const u8{ project_root, name }) catch continue;
+            defer self.allocator.free(candidate);
+            if (io_helper.accessAbsolute(candidate, .{})) |_| {
+                return true;
+            } else |_| {}
+        }
+        return false;
+    }
+
+    /// Run a project's one-time `postSetup` (and `postDatabaseSetup`) commands
+    /// from pantry.config.ts. Idempotent across `cd`s and repeated `pantry
+    /// install`s: once they have run for a project a marker
+    /// (`pantry/.postsetup-done`) suppresses re-runs, so destructive-ish steps
+    /// like `migrate --seed` don't repeat (and re-seed) every time. `force`
+    /// (e.g. `pantry install --force`) re-runs regardless; deleting `pantry/`
+    /// (a clean rebuild) also re-arms it.
+    fn executePostSetupCommands(self: *ShellCommands, project_root: []const u8, force: bool) !void {
+        // No JS/TS config → no postSetup possible. Skip without writing a marker
+        // so a project that later adds a config still runs on the next install.
+        if (!self.projectHasPantryConfig(project_root)) return;
+
+        const marker_path = std.fmt.allocPrint(self.allocator, "{s}/pantry/.postsetup-done", .{project_root}) catch return;
+        defer self.allocator.free(marker_path);
+
+        if (!force) {
+            if (io_helper.accessAbsolute(marker_path, .{})) |_| {
+                return; // already completed for this project
+            } else |_| {}
+        }
+
+        try self.runPostSetupCommandsInner(project_root);
+
+        // Touch the marker so subsequent installs/cds skip postSetup. Best-effort:
+        // pantry/ exists after install; if the write fails postSetup just retries.
+        if (io_helper.createFile(marker_path, .{})) |f| {
+            f.close(io_helper.io);
+        } else |_| {}
+    }
+
+    fn runPostSetupCommandsInner(self: *ShellCommands, project_root: []const u8) !void {
         // Look for pantry.config.ts or pantry.config.js
         const config_names = [_][]const u8{
             "config/deps.ts",
@@ -2903,7 +2969,7 @@ test "ShellCommands executePostSetupCommands runs config deps hooks" {
     chmod_buf[bun_path.len] = 0;
     try std.testing.expect(std.c.chmod(&chmod_buf, 0o755) == 0);
 
-    try commands.executePostSetupCommands(test_dir);
+    try commands.executePostSetupCommands(test_dir, true);
 
     const marker_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "post-setup.txt" });
     defer allocator.free(marker_path);
