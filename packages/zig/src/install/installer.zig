@@ -879,13 +879,16 @@ pub const Installer = struct {
 
         if (options.verbose) std.debug.print("[verbose:installer] installed {s} @ {s} -> {s} (cached={})\n", .{ resolved_spec.name, resolved_spec.version, install_path, used_cache });
 
-        // Install dependencies after the main package is installed
-        // Skip for S3-sourced packages since they are self-contained with all libs bundled
-        if (!from_s3) {
-            if (pkg_info) |info| {
-                if (options.verbose) std.debug.print("[verbose:installer] installing sub-dependencies for {s} (count={d})\n", .{ resolved_spec.name, info.dependencies.len });
-                try self.installDependencies(info.dependencies, options);
-            }
+        // Install dependencies after the main package is installed. This must
+        // run for S3-sourced packages too: registry tarballs are NOT
+        // self-contained — e.g. git links @rpath/zlib.net/v1/lib/libz.dylib and
+        // expects the separate zlib.net package alongside it. Skipping this for
+        // S3 packages left git/codex/etc. with dangling @rpath libs (dyld then
+        // fails to load them). installDependencies is idempotent, so re-running
+        // for already-present deps is cheap.
+        if (pkg_info) |info| {
+            if (options.verbose) std.debug.print("[verbose:installer] installing sub-dependencies for {s} (count={d})\n", .{ resolved_spec.name, info.dependencies.len });
+            try self.installDependencies(info.dependencies, options);
         }
 
         const end_ts_ = io_helper.clockGettime();
