@@ -112,9 +112,9 @@
       "domain": "diabrowser.com",
       "name": "Dia",
       "kind": "app",
-      "host": "ubuntu",
-      "latest": null,
-      "published": null,
+      "host": "macos",
+      "latest": "1.36.0",
+      "published": "1.36.0",
       "needsUpdate": false
     },
     {
@@ -293,9 +293,9 @@
       "name": "Lato",
       "kind": "font",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "2.015",
       "published": "2.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "libreoffice.org",
@@ -312,8 +312,8 @@
       "kind": "app",
       "host": "macos",
       "latest": "1.31.0",
-      "published": null,
-      "needsUpdate": true
+      "published": "1.31.0",
+      "needsUpdate": false
     },
     {
       "domain": "lmstudio.ai",
@@ -329,9 +329,9 @@
       "name": "Logi Options+",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "2.1.854976",
       "published": "2.3.879545",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "maccy.app",
@@ -383,7 +383,7 @@
       "name": "Muzzle",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.9",
       "published": "1.9",
       "needsUpdate": false
     },
@@ -419,7 +419,7 @@
       "name": "Open Sans",
       "kind": "font",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "3.003",
       "published": "3.003",
       "needsUpdate": false
     },
