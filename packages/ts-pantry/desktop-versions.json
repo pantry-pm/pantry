@@ -95,9 +95,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "3.8.11",
       "published": "0.45.11",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -203,9 +203,9 @@
       "name": "Hidden Bar",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.10",
       "published": "1.10",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "iina.io",
