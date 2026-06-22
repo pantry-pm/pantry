@@ -9,7 +9,8 @@
  * defaults to AWS S3. Uses ts-cloud for the S3-compatible client.
  */
 
-import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { execFileSync } from 'node:child_process'
@@ -49,12 +50,14 @@ async function uploadTarballToS3(
   size: number,
   contentType: string,
 ): Promise<void> {
-  if (size < LARGE_FILE_THRESHOLD) {
-    await s3.putObject({ bucket, key, body: readFileSync(filePath), contentType })
-    return
-  }
-
-  console.log(`   ⛓  Large file (${(size / 1024 / 1024).toFixed(0)} MB) — streaming via presigned PUT`)
+  // Always upload via a presigned PUT + curl. The plain `s3.putObject` SigV4 PUT
+  // silently fails on GitHub's macOS runners (no error, object not written), so
+  // a small macOS-built app would otherwise log success while publishing
+  // nothing. curl `-fsS` fails loudly on any 4xx/5xx. (contentType is unused —
+  // the presigned signature covers host only; serving sets the type.)
+  void contentType
+  if (size >= LARGE_FILE_THRESHOLD)
+    console.log(`   ⛓  Large file (${(size / 1024 / 1024).toFixed(0)} MB) — streaming via presigned PUT`)
   // -T streams the file from disk; -f fails on any HTTP 4xx/5xx so the caller's
   // try/catch sees it. No Content-Type header: the presigned signature covers
   // host only, and an unsigned header can break the sig.
@@ -83,6 +86,36 @@ async function uploadTarballToS3(
         throw err
       console.log(`   ↻ upload attempt ${attempt} failed/stalled — retrying (${attempt + 1}/${maxAttempts})`)
     }
+  }
+}
+
+/**
+ * PUT a small in-memory object (e.g. metadata.json) via a presigned URL + curl,
+ * the same path large tarballs use. The plain `s3.putObject` SigV4 PUT silently
+ * fails on GitHub's macOS runners (no error thrown, but the object isn't
+ * written), which left macOS-built apps like cursor/transmit with an uploaded
+ * tarball but a stale metadata.json. `curl -fsS` fails loudly on any 4xx/5xx so
+ * a real failure surfaces. Returns true on success.
+ */
+async function putBufferViaPresigned(
+  s3: ReturnType<typeof createObjectStorageClient>,
+  bucket: string,
+  key: string,
+  body: string,
+): Promise<void> {
+  const tmp = join(tmpdir(), `pantry-put-${process.pid}-${key.replace(/[^a-z0-9]+/gi, '-')}`)
+  writeFileSync(tmp, body)
+  try {
+    const url = await s3.getSignedUrl({ bucket, key, expiresIn: 3600, operation: 'putObject' })
+    // No Content-Type header — the presigned signature covers host only, and an
+    // unsigned header can break the signature (same as the tarball path).
+    execFileSync('curl', ['-fsS', '--connect-timeout', '30', '-X', 'PUT', '-T', tmp, url], {
+      stdio: ['ignore', 'ignore', 'inherit'],
+    })
+  }
+  finally {
+    try { rmSync(tmp) }
+    catch {}
   }
 }
 
@@ -343,13 +376,8 @@ else {
       await uploadTarballToS3(s3, bucket, tarballKey, tarballPath, tarballSize, 'application/gzip')
       console.log(`   ✓ Uploaded to s3://${bucket}/${tarballKey}`)
 
-      // Upload SHA256
-      await s3.putObject({
-        bucket,
-        key: sha256Key,
-        body: `${sha256Hash}  ${tarball}\n`,
-        contentType: 'text/plain',
-      })
+      // Upload SHA256 (presigned PUT — plain putObject is unreliable on macOS).
+      await putBufferViaPresigned(s3, bucket, sha256Key, `${sha256Hash}  ${tarball}\n`)
       console.log(`   ✓ Uploaded SHA256`)
 
       uploadedPlatforms[platform] = {
@@ -406,13 +434,9 @@ catch {
   }
   metadata.updatedAt = new Date().toISOString()
 
-  // Upload metadata JSON
-  await s3.putObject({
-    bucket,
-    key: metadataKey,
-    body: JSON.stringify(metadata, null, 2),
-    contentType: 'application/json',
-  })
+  // Upload metadata JSON via the presigned-PUT path (plain putObject silently
+  // fails on macOS runners — see putBufferViaPresigned).
+  await putBufferViaPresigned(s3, bucket, metadataKey, JSON.stringify(metadata, null, 2))
   console.log(`   ✓ Updated metadata at s3://${bucket}/${metadataKey}`)
 
   // Sync to DynamoDB so the Zig CLI can discover this package. DynamoDB is
