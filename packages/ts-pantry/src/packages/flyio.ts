@@ -68,6 +68,7 @@ export const flyioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.4.60',
     '0.4.59',
     '0.4.58',
     '0.4.57',
