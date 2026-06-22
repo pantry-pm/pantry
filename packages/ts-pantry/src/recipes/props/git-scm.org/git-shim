@@ -53,7 +53,16 @@ find_git_subcommand() {
   done
 }
 
-libexec="$(cd "$(dirname "$0")/.." && pwd)"/libexec
+prefix="$(cd "$(dirname "$0")/.." && pwd)"
+libexec="$prefix/libexec"
+
+# git's compiled-in template path is the build prefix (e.g. /opt/git-scm.org/
+# v*+brewing/share/git-core/templates), which doesn't exist once the package is
+# relocated — so `git init`/`clone` warns "templates not found". Point it at the
+# templates that ship inside this package instead.
+if [ -z "$GIT_TEMPLATE_DIR" ] && [ -d "$prefix/share/git-core/templates" ]; then
+  export GIT_TEMPLATE_DIR="$prefix/share/git-core/templates"
+fi
 
 # extract the git subcommand
 cmd=$(find_git_subcommand "$@")
