@@ -86,6 +86,7 @@ export const openpmixgithubioPackage = {
   versions: [
     '6.1.0',
     '6.0.0',
+    '5.0.11',
     '5.0.10',
     '5.0.9',
     '5.0.8',
