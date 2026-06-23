@@ -2543,7 +2543,11 @@ fn warnIfInvokedAsLaunchpad() void {
 /// behavior there is unchanged. Exits the process when it handles the call.
 fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
     const args = io_helper.argsAlloc(allocator) catch return;
-    // No argsFree on the exit paths: the process terminates immediately.
+    // Free args on the fall-through path. defers do NOT run on std.process.exit,
+    // so the exit paths below still skip the free (the process terminates) — but
+    // when no fast-path matches and we return into the full CLI, this prevents
+    // leaking the argv allocation (DebugAllocator flagged it under ReleaseSafe).
+    defer io_helper.argsFree(allocator, args);
 
     // Internal: perform a single native Mac App Store install in an isolated
     // process. Driving Apple's private frameworks can raise an uncaught

@@ -1296,6 +1296,16 @@ pub fn argsAlloc(allocator: std.mem.Allocator) ![]const [:0]const u8 {
     }
 }
 
+/// Free the result of argsAlloc. Mirrors its per-platform allocation: on
+/// macOS/iOS the arg strings are borrowed from the OS argv (free only the
+/// array); on Linux/FreeBSD each string was dup'd (free strings + array).
+pub fn argsFree(allocator: std.mem.Allocator, args: []const [:0]const u8) void {
+    if (builtin.os.tag == .linux or builtin.os.tag == .freebsd) {
+        for (args) |a| allocator.free(a);
+    }
+    allocator.free(args);
+}
+
 /// Fill buffer with random bytes
 /// Replacement for std.crypto.random.bytes which was removed
 pub fn randomBytes(buf: []u8) void {
