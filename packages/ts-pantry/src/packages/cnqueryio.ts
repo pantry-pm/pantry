@@ -67,6 +67,7 @@ export const cnqueryioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '13.24.0',
     '13.23.0',
     '13.22.1',
     '13.22.0',
