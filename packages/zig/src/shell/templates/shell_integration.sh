@@ -132,9 +132,19 @@ __pantry_autocd_enabled() {
         return "${__PANTRY_AUTOCD_RESULT:-1}"
     fi
 
-    # A deps file exists → pantry project → activate, unless it opts out.
-    local rc=0
-    grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?false"?' "$found" 2>/dev/null && rc=1
+    # AUTO-CD MODE — set via PANTRY_AUTOCD (default "optout"):
+    #   optout: a deps file makes this a pantry project, so `cd` activates
+    #           unless the file sets `autoActivate: false`.
+    #   optin:  require an explicit `autoActivate: true`, so plain `cd` never
+    #           activates a project uninvited.
+    local rc
+    if [[ "${PANTRY_AUTOCD:-optout}" == "optin" ]]; then
+        rc=1
+        grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?true"?' "$found" 2>/dev/null && rc=0
+    else
+        rc=0
+        grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?false"?' "$found" 2>/dev/null && rc=1
+    fi
     __PANTRY_AUTOCD_FILE="$found"
     __PANTRY_AUTOCD_MTIME="$m"
     __PANTRY_AUTOCD_RESULT=$rc
@@ -195,6 +205,13 @@ __pantry_activate() {
     fi
 
     export PATH
+
+    # Visible activation banner — the auto-cd path is otherwise silent. This
+    # function runs in the user's interactive shell (not a captured subshell),
+    # so printing here is safe. Suppress with PANTRY_QUIET=1.
+    if [[ "${PANTRY_QUIET:-}" != "1" ]]; then
+        printf '\033[36m⚡ pantry\033[0m env activated → \033[1m%s\033[0m\n' "${project_dir##*/}" >&2
+    fi
 }
 
 __pantry_project_dir_from_dep_file() {
