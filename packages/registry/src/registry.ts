@@ -189,9 +189,15 @@ export class Registry {
         // Increment download count
         await this.metadataStorage.incrementDownloads(name, version)
 
-        // If it's a local URL, download from our storage
+        // If it's a local URL, download from our storage. Derive the
+        // canonical storage key from name+version rather than parsing it
+        // out of `tarballUrl`: the URL is now the public `/tarball` proxy
+        // route, not a storage key. This yields the identical key for
+        // legacy records (whose tarballUrl was the raw key path), so
+        // existing downloads are unaffected.
         if (metadata.tarballUrl.startsWith(this.config.baseUrl)) {
-          const key = metadata.tarballUrl.replace(`${this.config.baseUrl}/`, '')
+          const safeName = sanitizePackageName(name)
+          const key = `packages/pantry/${safeName}/${version}/${safeName}-${version}.tgz`
           return this.tarballStorage.download(key)
         }
 
@@ -228,8 +234,15 @@ export class Registry {
     }
     const key = `packages/pantry/${safeName}/${metadata.version}/${safeName}-${metadata.version}.tgz`
 
-    // Upload tarball
-    const tarballUrl = await this.tarballStorage.upload(key, tarball)
+    // Upload tarball. The storage-returned URL points at the raw key
+    // path, which is NOT a public route — only the
+    // `/packages/{name}/{version}/tarball` proxy is served. Record that
+    // proxy route as the tarball URL so install clients (which fetch
+    // `tarballUrl` directly) can download it. `downloadTarball`
+    // re-derives the storage key from name+version, staying decoupled
+    // from this URL.
+    await this.tarballStorage.upload(key, tarball)
+    const tarballUrl = `${this.config.baseUrl}/packages/${encodeURIComponent(metadata.name)}/${metadata.version}/tarball`
 
     // Calculate checksum
     const hashBuffer = await crypto.subtle.digest('SHA-256', tarball)
