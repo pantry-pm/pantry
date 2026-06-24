@@ -78,6 +78,7 @@ export const fishshellcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.8.0',
     '4.7.1',
     '4.7.0',
     '4.6.0',
