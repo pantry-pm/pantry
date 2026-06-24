@@ -21,7 +21,7 @@ export const recipe: Recipe = {
       'curl -fSL "https://update.code.visualstudio.com/{{version}}/${ARCH}/stable" -o /tmp/vscode.zip',
       'mkdir -p {{prefix}}',
       'cd /tmp && unzip -qo vscode.zip',
-      'mv "/tmp/Visual Studio Code.app" {{prefix}}/Visual Studio Code.app',
+      'mv "/tmp/Visual Studio Code.app" "{{prefix}}/Visual Studio Code.app"',
       'mkdir -p {{prefix}}/bin',
       'ln -sf "../Visual Studio Code.app/Contents/Resources/app/bin/code" {{prefix}}/bin/code',
     ],

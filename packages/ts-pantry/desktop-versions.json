@@ -22,7 +22,7 @@
       "domain": "arc.net",
       "name": "Arc",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.76.0",
       "needsUpdate": false
@@ -40,7 +40,7 @@
       "domain": "blender.org",
       "name": "Blender",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.3.2",
       "needsUpdate": false
@@ -49,7 +49,7 @@
       "domain": "brave.com",
       "name": "Brave Browser",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.74.48",
       "needsUpdate": false
@@ -58,7 +58,7 @@
       "domain": "bruno.app",
       "name": "Bruno",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.38.1",
       "needsUpdate": false
@@ -76,7 +76,7 @@
       "domain": "cleanshot.com",
       "name": "CleanShot X",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.7.4",
       "needsUpdate": false
@@ -91,28 +91,28 @@
       "needsUpdate": true
     },
     {
-      "domain": "cursor.com",
-      "name": "Cursor",
-      "kind": "app",
-      "host": "macos",
-      "latest": "3.8.11",
-      "published": "3.8.11",
-      "needsUpdate": true
-    },
-    {
       "domain": "codex.openai.com",
       "name": "Codex",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "26.616.51431",
       "published": "26.616.51431",
-      "needsUpdate": true
+      "needsUpdate": false
+    },
+    {
+      "domain": "cursor.com",
+      "name": "Cursor",
+      "kind": "app",
+      "host": "ubuntu",
+      "latest": "3.8.11",
+      "published": "3.8.11",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
       "name": "DBeaver",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "24.3.4",
       "needsUpdate": false
@@ -121,7 +121,7 @@
       "domain": "diabrowser.com",
       "name": "Dia",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "1.36.0",
       "published": "1.36.0",
       "needsUpdate": false
@@ -130,7 +130,7 @@
       "domain": "discord.com",
       "name": "Discord",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "0.0.337",
       "needsUpdate": false
@@ -166,7 +166,7 @@
       "domain": "firefox.org",
       "name": "Firefox",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "134.0.2",
       "needsUpdate": false
@@ -175,7 +175,7 @@
       "domain": "ghostty.org",
       "name": "Ghostty",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.1.0",
       "needsUpdate": false
@@ -184,7 +184,7 @@
       "domain": "gimp.org",
       "name": "GIMP",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "2.10.38",
       "needsUpdate": false
@@ -202,7 +202,7 @@
       "domain": "handbrake.fr",
       "name": "HandBrake",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "1.11.2",
       "published": "1.11.2",
       "needsUpdate": false
@@ -220,7 +220,7 @@
       "domain": "iina.io",
       "name": "IINA",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.3.5",
       "needsUpdate": false
@@ -229,7 +229,7 @@
       "domain": "inkscape.org",
       "name": "Inkscape",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.4.1",
       "needsUpdate": false
@@ -274,7 +274,7 @@
       "domain": "karabiner-elements.pqrs.org",
       "name": "Karabiner-Elements",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "16.0.0",
       "published": "16.0.0",
       "needsUpdate": false
@@ -283,7 +283,7 @@
       "domain": "keepassxc.org",
       "name": "KeePassXC",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "2.7.9",
       "needsUpdate": false
@@ -292,7 +292,7 @@
       "domain": "keka.io",
       "name": "Keka",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.4.7",
       "needsUpdate": false
@@ -310,7 +310,7 @@
       "domain": "libreoffice.org",
       "name": "LibreOffice",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "24.8.5",
       "needsUpdate": false
@@ -319,7 +319,7 @@
       "domain": "linear.app",
       "name": "Linear",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "1.31.0",
       "published": "1.31.0",
       "needsUpdate": false
@@ -328,7 +328,7 @@
       "domain": "lmstudio.ai",
       "name": "LM Studio",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "0.3.8",
       "needsUpdate": false
@@ -355,7 +355,7 @@
       "domain": "mediaarea.net",
       "name": "MediaInfo",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "26.05",
       "published": "26.05",
       "needsUpdate": false
@@ -364,7 +364,7 @@
       "domain": "meetingbar.app",
       "name": "MeetingBar",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.10.0",
       "needsUpdate": false
@@ -382,7 +382,7 @@
       "domain": "monitorcontrol.app",
       "name": "MonitorControl",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.3.3",
       "needsUpdate": false
@@ -400,7 +400,7 @@
       "domain": "notion.so",
       "name": "Notion",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.5.0",
       "needsUpdate": false
@@ -409,7 +409,7 @@
       "domain": "obsidian.md",
       "name": "Obsidian",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "1.12.7",
       "published": "1.12.7",
       "needsUpdate": false
@@ -436,7 +436,7 @@
       "domain": "orbstack.dev",
       "name": "OrbStack",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.9.2",
       "needsUpdate": false
@@ -463,7 +463,7 @@
       "domain": "raycast.com",
       "name": "Raycast",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.89.0",
       "needsUpdate": false
@@ -472,7 +472,7 @@
       "domain": "rectangle.app",
       "name": "Rectangle",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "0.96",
       "published": "0.96",
       "needsUpdate": false
@@ -490,7 +490,7 @@
       "domain": "signal.org",
       "name": "Signal",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "7.36.0",
       "needsUpdate": false
@@ -499,7 +499,7 @@
       "domain": "slack.com",
       "name": "Slack",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.41.105",
       "needsUpdate": false
@@ -517,7 +517,7 @@
       "domain": "spotify.com",
       "name": "Spotify",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "1.2.52",
       "needsUpdate": false
@@ -526,7 +526,7 @@
       "domain": "stats.app",
       "name": "Stats",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "3.0.4",
       "published": "3.0.4",
       "needsUpdate": false
@@ -535,7 +535,7 @@
       "domain": "tableplus.com",
       "name": "TablePlus",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "6.2.6",
       "needsUpdate": false
@@ -544,7 +544,7 @@
       "domain": "telegram.org",
       "name": "Telegram",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "5.8.0",
       "needsUpdate": false
@@ -556,13 +556,13 @@
       "host": "ubuntu",
       "latest": "5.11.6",
       "published": "5.11.6",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "tunnelblick.net",
       "name": "Tunnelblick",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "4.0.1",
       "needsUpdate": false
@@ -571,7 +571,7 @@
       "domain": "vlc.app",
       "name": "VLC",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "3.0.21",
       "needsUpdate": false
@@ -580,7 +580,7 @@
       "domain": "warp.dev",
       "name": "Warp",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": null,
       "published": "0.2025.01.21",
       "needsUpdate": false
@@ -598,7 +598,7 @@
       "domain": "zed.dev",
       "name": "Zed",
       "kind": "app",
-      "host": "macos",
+      "host": "ubuntu",
       "latest": "1.7.2",
       "published": "1.7.2",
       "needsUpdate": false
