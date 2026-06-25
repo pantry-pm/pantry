@@ -8,16 +8,29 @@ export const recipe: Recipe = {
   github: 'https://github.com/ghostty-org/ghostty',
   programs: ['ghostty'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Ghostty's GitHub releases are published as pre-releases, so the API's
-  // `releases/latest` endpoint 404s and the github-releases source resolved to
-  // null — the desktop updater then skipped the package and it went stale (same
-  // failure mode raycast.com had). Track the Homebrew cask's marketing version
-  // instead (kept current by Homebrew's livecheck/autobump); the .dmg download
-  // URL is versioned by {{version}}, which the cask version feeds.
+  // Ghostty's GitHub releases are marked pre-release, so `releases/latest` 404s
+  // (the github-releases source resolves to null). Read the Git TAGS instead and
+  // take the highest stable v<semver> — Ghostty's own repo, no Homebrew. The
+  // .dmg download URL below is versioned by {{version}}.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'ghostty',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const headers: Record<string, string> = { 'User-Agent': 'pantry-desktop' }
+      if (process.env.GITHUB_TOKEN)
+        headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+      const res = await fetch('https://api.github.com/repos/ghostty-org/ghostty/tags?per_page=30', { headers })
+      const tags = await res.json() as Array<{ name: string }>
+      const vs = tags
+        .map(t => t.name.match(/^v(\d+\.\d+\.\d+)$/)?.[1])
+        .filter((v): v is string => !!v)
+      vs.sort((a, b) => {
+        const pa = a.split('.').map(Number)
+        const pb = b.split('.').map(Number)
+        for (let i = 0; i < 3; i++) { if (pa[i] !== pb[i]) return pb[i] - pa[i] }
+        return 0
+      })
+      return vs.length ? [vs[0]] : []
+    },
   },
 
   build: {

@@ -4,11 +4,12 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 // (see zig/src/install/native_apps.zig).
 //
 // Logi Options+ ships a rolling installer zip with NO version in the URL
-// (logioptionsplus_installer.zip is always "latest"), but it IS a Homebrew cask
-// (`logi-options+`). Homebrew tracks the current version (e.g. 2.1.854976), kept
-// fresh by its livecheck/autobump — so we resolve the latest version from the
-// Cask API and the daily updater auto-republishes new releases. The download URL
-// is rolling, so the build keeps using it directly.
+// (logioptionsplus_installer.zip is always "latest"). Logitech publishes no
+// public version manifest (probed: all 404) and the zip carries no version in
+// its filename/headers, so there is no official feed to auto-resolve from.
+// We therefore PIN the version (no Homebrew); the rolling installer keeps the
+// binary itself current on any rebuild. Bump this string manually on a notable
+// Options+ release (it updates infrequently).
 export const recipe: Recipe = {
   domain: 'logitech.com/options-plus',
   name: 'Logi Options+',
@@ -16,10 +17,9 @@ export const recipe: Recipe = {
   homepage: 'https://www.logitech.com/software/logi-options-plus.html',
   programs: [],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Auto-update via the Homebrew cask's tracked version.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'logi-options+',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => ['2.3.879545'],
   },
   distributable: null,
 

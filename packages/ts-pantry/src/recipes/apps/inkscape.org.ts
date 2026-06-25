@@ -6,18 +6,23 @@ export const recipe: Recipe = {
   description: 'A professional vector graphics editor.',
   homepage: 'https://inkscape.org',
   programs: ['inkscape'],
-  platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+  // Inkscape ships separate per-arch dmgs (no universal). The pipeline builds
+  // once and registers under both darwin keys, so we ship the Apple-Silicon dmg.
+  platforms: ['darwin/aarch64'],
+  // Resolve the version from inkscape.org's own release page (no Homebrew): the
+  // /release/ URL redirects to /release/inkscape-<version>/.
+  versionSource: {
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://inkscape.org/release/', { redirect: 'follow' })
+      const m = res.url.match(/inkscape-([\d.]+)/i)
+      return m ? [m[1]] : []
+    },
+  },
 
   build: {
     script: [
-      'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(brew info --cask --json=v2 inkscape 2>/dev/null | bun -e "const d=JSON.parse(await Bun.stdin.text()); console.log(d.casks[0].url)" 2>/dev/null || true)',
-      'if [ -n "$BREW_URL" ]; then',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "$BREW_URL" -o /tmp/inkscape.dmg',
-      'else',
-      '  echo "brew cask info unavailable for inkscape, using fallback"',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "https://media.inkscape.org/dl/resources/file/Inkscape-{{version}}_arm64.dmg" -o /tmp/inkscape.dmg',
-      'fi',
+      'curl -fSL -L --retry 3 "https://media.inkscape.org/dl/resources/file/Inkscape-{{version}}_arm64.dmg" -o /tmp/inkscape.dmg',
       'hdiutil attach /tmp/inkscape.dmg -mountpoint /tmp/inkscape-mount -nobrowse -noverify -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/inkscape-mount/Inkscape.app" {{prefix}}/Inkscape.app 2>/dev/null || \\',
