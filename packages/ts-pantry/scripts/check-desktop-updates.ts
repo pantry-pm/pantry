@@ -177,36 +177,6 @@ async function latestGithub(repo: string, tagPattern?: RegExp): Promise<string |
   }
 }
 
-/**
- * Resolve a cask's latest version from Homebrew's Cask JSON API — the same
- * registry `brew` uses, kept current by Homebrew's livecheck/autobump. Homebrew
- * encodes the version as `marketing` or `marketing,build`; `field` picks which
- * slice we publish (see HomebrewCaskSource). Returns null on any error so a
- * transient API hiccup just leaves the package tracked at its published version.
- */
-async function latestHomebrewCask(
-  cask: string,
-  field: 'marketing' | 'build' | 'full' = 'marketing',
-): Promise<string | null> {
-  try {
-    const res = await fetch(`https://formulae.brew.sh/api/cask/${cask}.json`)
-    if (!res.ok)
-      return null
-    const version = (await res.json() as any).version as string
-    if (!version || version === 'latest')
-      return null // 'latest' casks have no real version to track
-    const [marketing, build] = version.split(',')
-    if (field === 'build')
-      return build || null
-    if (field === 'full')
-      return version.replace(',', '.')
-    return marketing || null
-  }
-  catch {
-    return null
-  }
-}
-
 async function publishedVersion(domain: string): Promise<string | null> {
   try {
     const res = await fetch(`${REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`)
@@ -339,9 +309,6 @@ async function main(): Promise<void> {
     // (`github-tags`, `url-pattern`) and pinned recipes resolve to null and are
     // simply tracked at their published version (no auto-bump).
     let latest: string | null = repo ? await latestGithub(repo, tagPattern) : null
-    if (!latest && recipe.versionSource?.type === 'homebrew-cask') {
-      latest = await latestHomebrewCask(recipe.versionSource.cask, recipe.versionSource.versionField)
-    }
     if (!latest && recipe.versionSource?.type === 'custom' && typeof recipe.versionSource.fetch === 'function') {
       try {
         const versions = await recipe.versionSource.fetch()
