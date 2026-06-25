@@ -249,6 +249,15 @@ pub fn printWarning(name: []const u8, version: []const u8, reason: []const u8) v
 
 // ── Headers & Summaries ─────────────────────────────────────────────────────
 
+/// Format an elapsed duration human-friendly into `buf`: "2.9s" past a second,
+/// "850ms" below it — the way bun/pnpm/yarn report timing. Never fails loudly.
+fn formatDuration(buf: []u8, ms: f64) []const u8 {
+    if (ms >= 1000.0) {
+        return std.fmt.bufPrint(buf, "{d:.1}s", .{ms / 1000.0}) catch "?";
+    }
+    return std.fmt.bufPrint(buf, "{d:.0}ms", .{ms}) catch "?";
+}
+
 /// Print the command header: "pantry install v0.x.x (hash)"
 pub fn printHeader(command: []const u8, version: []const u8, hash: []const u8) void {
     print("\n{s}pantry {s}{s} {s}v{s} ({s}){s}\n\n", .{
@@ -258,53 +267,50 @@ pub fn printHeader(command: []const u8, version: []const u8, hash: []const u8) v
     });
 }
 
-/// Print the "all up to date" summary (bun-style)
+/// Print the "all up to date" summary (bun-style): "✓ N packages up to date (120ms)"
 pub fn printUpToDate(pkg_count: usize, workspace_count: usize, elapsed_ms: f64) void {
     const pkg_label = if (pkg_count == 1) "package" else "packages";
+    var buf: [32]u8 = undefined;
+    const took = formatDuration(&buf, elapsed_ms);
     if (workspace_count > 0) {
         const ws_label = if (workspace_count == 1) "workspace member" else "workspace members";
-        print("\n{s}{d}{s} {s} + {s}{d}{s} {s} up to date {s}(no changes) [{s}{d:.0}{s}ms]{s}\n", .{
-            green_bold, pkg_count,       reset,      pkg_label,
-            green_bold, workspace_count, reset,      ws_label,
-            dim,        bold,            elapsed_ms, dim,
-            reset,
+        print("\n{s}✓{s} {s}{d}{s} {s} + {s}{d}{s} {s} up to date {s}({s}){s}\n", .{
+            green, reset, bold, pkg_count,       reset, pkg_label,
+            bold,  workspace_count, reset, ws_label,
+            dim,   took,  reset,
         });
     } else {
-        print("\n{s}{d}{s} {s} up to date {s}(no changes) [{s}{d:.0}{s}ms]{s}\n", .{
-            green_bold, pkg_count, reset,      pkg_label,
-            dim,        bold,      elapsed_ms, dim,
-            reset,
+        print("\n{s}✓{s} {s}{d}{s} {s} up to date {s}({s}){s}\n", .{
+            green, reset, bold, pkg_count, reset, pkg_label,
+            dim,   took,  reset,
         });
     }
 }
 
-/// Print the install summary line: "N packages installed [Xms]"
+/// Print the install summary line (bun-style): "✓ N packages installed in 2.9s"
 pub fn printSummary(success_count: usize, total_count: usize, elapsed_ms: f64) void {
     const label = if (success_count == 1) "package" else "packages";
+    var buf: [32]u8 = undefined;
+    const took = formatDuration(&buf, elapsed_ms);
     if (success_count == total_count) {
-        print("{s}{d}{s} {s} installed {s}[{s}{d:.0}ms{s}]{s}\n", .{
-            green, success_count, reset,      label,
-            dim,   bold,          elapsed_ms, reset,
-            reset,
+        print("\n{s}✓{s} {s}{d}{s} {s} installed {s}in {s}{s}\n", .{
+            green, reset, bold, success_count, reset, label, dim, took, reset,
         });
     } else {
-        print("{s}{d}{s}/{s}{d}{s} {s} installed {s}[{s}{d:.0}ms{s}]{s}\n", .{
-            green,      success_count, reset,
-            green,      total_count,   reset,
-            label,      dim,           bold,
-            elapsed_ms, reset,         reset,
+        print("\n{s}{d}{s}/{d} {s} installed {s}in {s}{s}\n", .{
+            yellow, success_count, reset, total_count, label, dim, took, reset,
         });
     }
 }
 
-/// Print checked summary (no changes)
+/// Print checked summary (no changes): "✓ N packages up to date (120ms)"
 pub fn printCheckedSummary(success_count: usize, total_count: usize, elapsed_ms: f64) void {
     _ = success_count;
     const label = if (total_count == 1) "package" else "packages";
-    print("{s}{d}{s} {s} up to date {s}[{s}{d:.0}ms{s}]{s}\n", .{
-        green, total_count, reset,      label,
-        dim,   bold,        elapsed_ms, reset,
-        reset,
+    var buf: [32]u8 = undefined;
+    const took = formatDuration(&buf, elapsed_ms);
+    print("\n{s}✓{s} {s}{d}{s} {s} up to date {s}({s}){s}\n", .{
+        green, reset, bold, total_count, reset, label, dim, took, reset,
     });
 }
 
@@ -355,15 +361,12 @@ pub fn printPipelineProgress(done: usize, total: usize, frame: usize) void {
 
 // ── Indicators ──────────────────────────────────────────────────────────────
 
-/// Print "Saving lockfile..." indicator
-pub fn printLockfileSaving() void {
-    print("{s}Saving lockfile...{s}", .{ dim, reset });
-}
+/// Lockfile save is fast and uninteresting; bun/pnpm don't announce it, and the
+/// old transient "Saving lockfile..." line collided with the summary when output
+/// was piped (no TTY to clear it). Kept as no-ops so call sites stay unchanged.
+pub fn printLockfileSaving() void {}
 
-/// Clear saving indicator and print done
-pub fn printLockfileSaved() void {
-    clearLine();
-}
+pub fn printLockfileSaved() void {}
 
 /// Print installing message. If `resuming_count > 0`, annotates the line to
 /// indicate this is a continuation of a prior interrupted install.
@@ -372,14 +375,13 @@ pub fn printInstalling(count: usize) void {
 }
 
 pub fn printInstallingEx(count: usize, resuming_count: usize) void {
-    const label = if (count == 1) "package" else "packages";
+    // bun-style: no upfront "Installing N packages" line — the header, the live
+    // spinner during downloads, and the final summary already convey scope. The
+    // resuming case still gets a one-line note so an interrupted install reads
+    // clearly.
+    _ = count;
     if (resuming_count > 0) {
-        print("{s}{s}{s} Installing {d} {s} {s}(resuming, {d} previously completed){s}...\n", .{
-            green, arrow,          reset, count, label,
-            dim,   resuming_count, reset,
-        });
-    } else {
-        print("{s}{s}{s} Installing {d} {s}...\n", .{ green, arrow, reset, count, label });
+        print("{s}resuming — {d} already completed{s}\n", .{ dim, resuming_count, reset });
     }
 }
 

@@ -353,6 +353,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     } else |_| {}
     style.setQuiet(opts.quiet);
 
+    // Header (bun-style): "pantry install v0.10.3 (hash)" once at the top of
+    // every install — including the auto-install fired on `cd`. print() is
+    // quiet-aware, so `pantry env`/shell:activate (quiet=true) emit nothing.
+    const build_version = @import("version");
+    style.printHeader("install", build_version.version, build_version.commit_hash);
+
     // If -g flag is set with no packages, scan for global dependencies
     if (is_global and package_args.items.len == 0) {
         return try global.installGlobalDepsCommand(allocator);

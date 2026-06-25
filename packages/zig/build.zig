@@ -169,6 +169,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "zig_config", .module = zig_config_mod },
             .{ .name = "zig-test-framework", .module = test_framework_mod },
+            .{ .name = "version", .module = version_mod },
         },
     });
     const lib_tests = b.addTest(.{
