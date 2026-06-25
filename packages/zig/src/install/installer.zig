@@ -3190,6 +3190,41 @@ pub const Installer = struct {
     }
 
     /// Create symlinks in project's pantry/.bin directory
+    /// Create one version-alias symlink (e.g. `vMAJOR` or `vMAJOR.MINOR`) next
+    /// to a concrete install dir. Best effort — never fatal, and never clobbers
+    /// a real directory (deleteFile only unlinks symlinks; on a real dir it
+    /// fails and we leave it).
+    fn linkVersionAlias(self: *Installer, parent: []const u8, target_dir: []const u8, full_version: []const u8, alias_version: []const u8) void {
+        // Don't alias a version onto itself (e.g. a bare "1" install).
+        if (std.mem.eql(u8, alias_version, full_version)) return;
+        const link = std.fmt.allocPrint(self.allocator, "{s}/v{s}", .{ parent, alias_version }) catch return;
+        defer self.allocator.free(link);
+        io_helper.deleteFile(link) catch {};
+        io_helper.symLink(target_dir, link) catch {};
+    }
+
+    /// Create `vMAJOR` and `vMAJOR.MINOR` compat symlinks pointing at the
+    /// concrete `vVERSION` install dir, so a dependent binary whose dylib rpath
+    /// references a truncated version (e.g. `@rpath/zlib.net/v1/lib/libz.dylib`)
+    /// resolves to `zlib.net/v1.3.2`. Without these, packages like git fail to
+    /// load their shared libs at runtime ("Library not loaded: @rpath/…").
+    fn createVersionCompatSymlinks(self: *Installer, version: []const u8, package_dir: []const u8) void {
+        const parent = std.fs.path.dirname(package_dir) orelse return;
+        var it = std.mem.splitScalar(u8, version, '.');
+        const major = it.next() orelse return;
+        if (major.len == 0) return;
+        const minor = it.next();
+
+        self.linkVersionAlias(parent, package_dir, version, major);
+        if (minor) |m| {
+            if (m.len > 0) {
+                const mm = std.fmt.allocPrint(self.allocator, "{s}.{s}", .{ major, m }) catch return;
+                defer self.allocator.free(mm);
+                self.linkVersionAlias(parent, package_dir, version, mm);
+            }
+        }
+    }
+
     fn createProjectSymlinks(self: *Installer, project_root: []const u8, domain: []const u8, version: []const u8, package_dir: []const u8) !void {
         // Project bin directory (pantry/.bin)
         const project_bin_dir = try std.fmt.allocPrint(
@@ -3200,6 +3235,10 @@ pub const Installer = struct {
         defer self.allocator.free(project_bin_dir);
 
         try io_helper.makePath(project_bin_dir);
+
+        // Major/minor version compat symlinks (vMAJOR, vMAJOR.MINOR → vVERSION)
+        // so dependents' dylib rpaths that use a truncated version resolve.
+        self.createVersionCompatSymlinks(version, package_dir);
 
         // First, try to load bin paths from package configuration (pantry.json or package.json)
         var custom_bins_created = false;
@@ -3330,7 +3369,6 @@ pub const Installer = struct {
             }
         }
 
-        _ = version; // not used in current implementation
         _ = domain; // not used with new discovery method
     }
 
