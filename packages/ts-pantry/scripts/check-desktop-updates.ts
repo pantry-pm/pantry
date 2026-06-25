@@ -103,6 +103,39 @@ function needsMacos(recipe: any): boolean {
   return MACOS_BUILD.test(buildScriptText(recipe))
 }
 
+/** True when version `a` is strictly newer than `b` by dotted-numeric order.
+ * Mirrors the guard in scripts/upload-to-s3.ts so the updater never *attempts*
+ * a downgrade: some upstream feeds lag the registry (e.g. the logi-options+
+ * Homebrew cask reports an older version than we've already published from its
+ * rolling installer), and without this we'd rebuild + re-tag an OLDER version
+ * every run — overwriting latestVersion in DynamoDB. Non-numeric segments parse
+ * as 0, so font-style versions ("2.015", "26.05") order the same way they do at
+ * publish time. A release (no `-suffix`) outranks a prerelease at equal numerics. */
+function isNewerVersion(a: string, b: string): boolean {
+  const parse = (v: string) => {
+    const dashIdx = v.indexOf('-')
+    const numeric = (dashIdx === -1 ? v : v.slice(0, dashIdx)).split('.').map((s) => {
+      const n = Number.parseInt(s, 10)
+      return Number.isNaN(n) ? 0 : n
+    })
+    const prerelease = dashIdx === -1 ? null : v.slice(dashIdx + 1)
+    return { numeric, prerelease }
+  }
+  const pa = parse(a)
+  const pb = parse(b)
+  const len = Math.max(pa.numeric.length, pb.numeric.length)
+  for (let i = 0; i < len; i++) {
+    const av = pa.numeric[i] ?? 0
+    const bv = pb.numeric[i] ?? 0
+    if (av !== bv)
+      return av > bv
+  }
+  // Equal numerics: a release outranks a prerelease; two prereleases are not "newer".
+  if (pa.prerelease === pb.prerelease)
+    return false
+  return pa.prerelease === null
+}
+
 interface Entry {
   domain: string
   name: string
@@ -333,7 +366,12 @@ async function main(): Promise<void> {
       repo,
       latest,
       published,
-      needsUpdate: !!latest && (latest !== published || forceDomains.has(recipe.domain)),
+      // Update only when we have a resolved upstream version that is genuinely
+      // NEWER than what's published (or nothing is published yet) — never on a
+      // mere string difference, which would let an upstream feed that lags the
+      // registry trigger an endless downgrade. `--force` still re-publishes the
+      // resolved latest regardless, for re-runs after a pipeline fix.
+      needsUpdate: !!latest && (forceDomains.has(recipe.domain) || !published || isNewerVersion(latest, published)),
       host: needsMacos(recipe) ? 'macos' : 'ubuntu',
     })
   }

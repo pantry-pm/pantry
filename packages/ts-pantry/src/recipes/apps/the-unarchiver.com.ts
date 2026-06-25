@@ -1,4 +1,4 @@
-import type { Recipe } from '../../scripts/recipe-types'
+import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
   domain: 'the-unarchiver.com',
@@ -7,6 +7,15 @@ export const recipe: Recipe = {
   homepage: 'https://theunarchiver.com',
   programs: ['unar', 'lsar'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+  // The download URL (TheUnarchiver.zip) is rolling with no version in it, so
+  // the package had no versionSource and never auto-updated. Track the Homebrew
+  // cask's marketing version so the daily desktop updater republishes new
+  // releases; the build keeps using the rolling URL (always the latest binary).
+  versionSource: {
+    type: 'homebrew-cask',
+    cask: 'the-unarchiver',
+    versionField: 'marketing',
+  },
 
   build: {
     script: [

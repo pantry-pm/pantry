@@ -1,4 +1,4 @@
-import type { Recipe } from '../../scripts/recipe-types'
+import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
   domain: 'imageoptim.com',
@@ -7,6 +7,15 @@ export const recipe: Recipe = {
   homepage: 'https://imageoptim.com',
   programs: ['imageoptim'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+  // The download URL (ImageOptim.tbz2) is rolling with no version in it, so the
+  // package had no versionSource and never auto-updated. Track the Homebrew
+  // cask's marketing version so the daily desktop updater republishes new
+  // releases; the build keeps using the rolling URL (always the latest binary).
+  versionSource: {
+    type: 'homebrew-cask',
+    cask: 'imageoptim',
+    versionField: 'marketing',
+  },
 
   build: {
     script: [
