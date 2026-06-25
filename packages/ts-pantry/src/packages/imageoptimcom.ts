@@ -21,7 +21,11 @@ export const imageoptimcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.9.1', '1.9.0'] as const,
+  versions: [
+    '1.9.3',
+    '1.9.1',
+    '1.9.0',
+  ] as const,
   aliases: ['imageoptim'] as const,
 }
 export type ImageoptimcomPackage = typeof imageoptimcomPackage

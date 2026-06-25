@@ -21,7 +21,11 @@ export const transmitpaniccomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['5.10.7', '5.10.6'] as const,
+  versions: [
+    '5.11.6',
+    '5.10.7',
+    '5.10.6',
+  ] as const,
   aliases: ['transmit'] as const,
 }
 export type TransmitpaniccomPackage = typeof transmitpaniccomPackage

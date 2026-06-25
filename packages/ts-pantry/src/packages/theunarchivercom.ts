@@ -21,7 +21,11 @@ export const theunarchivercomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['5.7.3', '5.7.2'] as const,
+  versions: [
+    '5.7.3',
+    '5.7.2',
+    '4.3.9',
+  ] as const,
   aliases: ['the-unarchiver', 'unar'] as const,
 }
 export type TheunarchivercomPackage = typeof theunarchivercomPackage
