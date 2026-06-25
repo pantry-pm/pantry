@@ -7,13 +7,15 @@ export const recipe: Recipe = {
   homepage: 'https://discord.com',
   programs: ['discord'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
-  // Without a versionSource the desktop updater can't resolve a "latest" and
-  // skips the package entirely (even with --force), so it silently went stale.
-  // Track the Homebrew cask's marketing version (the same one upstream ships).
+  // Resolve the version from Discord's own official update feed (no Homebrew).
+  // The build downloads the matching versioned dmg below.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'discord',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://discord.com/api/updates/stable?platform=osx')
+      const data = await res.json() as any
+      return data?.name ? [String(data.name)] : []
+    },
   },
 
   build: {

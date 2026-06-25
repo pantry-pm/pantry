@@ -7,13 +7,15 @@ export const recipe: Recipe = {
   homepage: 'https://raycast.com',
   programs: ['raycast'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Without a versionSource the desktop updater can't resolve a "latest" and
-  // skips the package entirely (even with --force), so it silently went stale.
-  // Track the Homebrew cask's marketing version (the same one upstream ships).
+  // Resolve the version from Raycast's own official releases feed (no Homebrew).
+  // The build downloads the matching versioned dmg below.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'raycast',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://releases.raycast.com/releases/latest?build=universal')
+      const data = await res.json() as any
+      return data?.version ? [String(data.version)] : []
+    },
   },
 
   build: {
