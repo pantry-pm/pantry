@@ -66,7 +66,16 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo -E apt-get update -y || true
-          sudo -E apt-get install -y --no-install-recommends cmake g++ git dmg2img fuse libfuse-dev libfuse3-dev libicu-dev libattr1-dev libbz2-dev zlib1g-dev libssl-dev libxml2-dev liblzma-dev || true
+          # `7zip` provides /usr/bin/7zz (7-Zip ≥23), which the hdiutil shim uses
+          # to extract LZFSE/LZVN-compressed DMGs that dmg2img can't decode
+          # (Ghostty, Zed, …). dmg2img stays as the APFS path for the rest.
+          sudo -E apt-get install -y --no-install-recommends cmake g++ git dmg2img 7zip fuse libfuse-dev libfuse3-dev libicu-dev libattr1-dev libbz2-dev zlib1g-dev libssl-dev libxml2-dev liblzma-dev || true
+          # Fallback: if the distro had no 7zip package, grab the official static 7zz.
+          if ! command -v 7zz >/dev/null 2>&1; then
+            curl -fsSL https://www.7-zip.org/a/7z2301-linux-x64.tar.xz -o /tmp/7z.tar.xz \
+              && tar xf /tmp/7z.tar.xz -C /tmp 7zz \
+              && sudo install -m755 /tmp/7zz /usr/local/bin/7zz || echo "warn: 7zz install failed"
+          fi
           if ! command -v darling-dmg >/dev/null 2>&1; then
             git clone -q --depth 1 https://github.com/darlinghq/darling-dmg.git /tmp/ddmg \
               && cmake -S /tmp/ddmg -B /tmp/ddmg/build >/dev/null 2>&1 \
@@ -80,12 +89,13 @@ jobs:
               && sudo cp /tmp/afuse/build/apfs-fuse /tmp/afuse/build/apfsutil /usr/local/bin/ || echo "warn: apfs-fuse build failed"
           fi
           sudo ldconfig || true
-          # hdiutil shim (base64 of the verified script; HFS+ via darling-dmg,
-          # APFS via dmg2img+apfs-fuse). Avoids YAML heredoc pitfalls.
-          echo 'IyEvYmluL2Jhc2gKc2V0IC1lCmNtZD0iJDEiOyBzaGlmdCB8fCB0cnVlCmNhc2UgIiRjbWQiIGluCiAgYXR0YWNoKQogICAgZG1nPSIkMSI7IHNoaWZ0IHx8IHRydWU7IG1udD0iIgogICAgd2hpbGUgWyAiJCMiIC1ndCAwIF07IGRvIGNhc2UgIiQxIiBpbiAtbW91bnRwb2ludCkgbW50PSIkMiI7IHNoaWZ0IDIgOzsgKikgc2hpZnQgOzsgZXNhYzsgZG9uZQogICAgWyAtbiAiJGRtZyIgXSAmJiBbIC1uICIkbW50IiBdIHx8IHsgZWNobyAiaGRpdXRpbC1zaGltOiBhdHRhY2ggbmVlZHMgPGRtZz4gLW1vdW50cG9pbnQgPGRpcj4iID4mMjsgZXhpdCAxOyB9CiAgICBta2RpciAtcCAiJG1udCIKICAgIGlmIGRhcmxpbmctZG1nICIkZG1nIiAiJG1udCIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuIGV4aXQgMDsgZmkKICAgIGltZz0iJG1udC5pbWciOyBhcGZzbW50PSIkbW50LmFwZnMiOyBybSAtZiAiJGltZyI7IG1rZGlyIC1wICIkYXBmc21udCIKICAgIGlmIGRtZzJpbWcgIiRkbWciICIkaW1nIiA+L2Rldi9udWxsIDI+JjEgJiYgYXBmcy1mdXNlIC1vIHJvICIkaW1nIiAiJGFwZnNtbnQiID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBzcmM9IiRhcGZzbW50L3Jvb3QiOyBbIC1kICIkc3JjIiBdIHx8IHNyYz0iJGFwZnNtbnQiCiAgICAgICggbW91bnQgLS1iaW5kICIkc3JjIiAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyBtb3VudCAtLWJpbmQgIiRzcmMiICIkbW50IiApICYmIGV4aXQgMAogICAgZmkKICAgIGVjaG8gImhkaXV0aWwtc2hpbTogY291bGQgbm90IG1vdW50ICRkbWcgKG5laXRoZXIgSEZTKyBub3IgQVBGUykiID4mMjsgZXhpdCAxIDs7CiAgZGV0YWNoKQogICAgbW50PSIkMSIKICAgIHVtb3VudCAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyB1bW91bnQgIiRtbnQiIDI+L2Rldi9udWxsIHx8IGZ1c2VybW91bnQgLXUgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUKICAgIGZ1c2VybW91bnQgLXUgIiRtbnQuYXBmcyIgMj4vZGV2L251bGwgfHwgdHJ1ZQogICAgcm0gLWYgIiRtbnQuaW1nIiAyPi9kZXYvbnVsbCB8fCB0cnVlOyBybWRpciAiJG1udC5hcGZzIiAyPi9kZXYvbnVsbCB8fCB0cnVlIDs7CiAgKikgZWNobyAiaGRpdXRpbC1zaGltOiB1bnN1cHBvcnRlZCBzdWJjb21tYW5kICRjbWQiID4mMjsgZXhpdCAxIDs7CmVzYWMK' \
+          # hdiutil shim (base64 of the verified script): HFS+ via darling-dmg,
+          # APFS via dmg2img+apfs-fuse, and a 7zz fallback for LZFSE/LZVN DMGs
+          # (Ghostty, Zed) the others can't read. Base64 avoids YAML heredoc pitfalls.
+          echo 'IyEvYmluL2Jhc2gKc2V0IC1lCmNtZD0iJDEiOyBzaGlmdCB8fCB0cnVlCmNhc2UgIiRjbWQiIGluCiAgYXR0YWNoKQogICAgZG1nPSIkMSI7IHNoaWZ0IHx8IHRydWU7IG1udD0iIgogICAgd2hpbGUgWyAiJCMiIC1ndCAwIF07IGRvIGNhc2UgIiQxIiBpbiAtbW91bnRwb2ludCkgbW50PSIkMiI7IHNoaWZ0IDIgOzsgKikgc2hpZnQgOzsgZXNhYzsgZG9uZQogICAgWyAtbiAiJGRtZyIgXSAmJiBbIC1uICIkbW50IiBdIHx8IHsgZWNobyAiaGRpdXRpbC1zaGltOiBhdHRhY2ggbmVlZHMgPGRtZz4gLW1vdW50cG9pbnQgPGRpcj4iID4mMjsgZXhpdCAxOyB9CiAgICBta2RpciAtcCAiJG1udCIKICAgIGlmIGRhcmxpbmctZG1nICIkZG1nIiAiJG1udCIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuIGV4aXQgMDsgZmkKICAgIGltZz0iJG1udC5pbWciOyBhcGZzbW50PSIkbW50LmFwZnMiOyBybSAtZiAiJGltZyI7IG1rZGlyIC1wICIkYXBmc21udCIKICAgIGlmIGRtZzJpbWcgIiRkbWciICIkaW1nIiA+L2Rldi9udWxsIDI+JjEgJiYgYXBmcy1mdXNlIC1vIHJvICIkaW1nIiAiJGFwZnNtbnQiID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBzcmM9IiRhcGZzbW50L3Jvb3QiOyBbIC1kICIkc3JjIiBdIHx8IHNyYz0iJGFwZnNtbnQiCiAgICAgICggbW91bnQgLS1iaW5kICIkc3JjIiAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyBtb3VudCAtLWJpbmQgIiRzcmMiICIkbW50IiApICYmIGV4aXQgMAogICAgZmkKICAgICMgRmluYWwgZmFsbGJhY2s6IDctWmlwICg3enopIHJlYWRzIFVESUYgRE1HcyB3aG9zZSBibG9ja3MgdXNlIExaRlNFL0xaVk4KICAgICMgY29tcHJlc3Npb24gdGhhdCBkbWcyaW1nIGNhbm5vdCBkZWNvZGUgKGUuZy4gR2hvc3R0eSwgWmVkKS4gSXQgZXh0cmFjdHMgdGhlCiAgICAjIHBheWxvYWQgZGlyZWN0bHkg4oCUIG5vIEZVU0UgbW91bnQg4oCUIHNvIGRyb3AgdGhlIGZpbGVzIGludG8gJG1udCBhbmQgbGV0IHRoZQogICAgIyByZWNpcGUgY29weSB0aGUgLmFwcCBvdXQuIFNvbWUgRE1HcyBuZXN0IHRoZSBwYXlsb2FkIHVuZGVyIGEgdm9sdW1lLW5hbWUKICAgICMgZGlyLCBzbyBpZiBubyAuYXBwIGxhbmRzIGF0IHRoZSByb290LCBob2lzdCBvbmUgdXAgZnJvbSBhIHN1YmRpci4KICAgIGlmIGNvbW1hbmQgLXYgN3p6ID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBmdXNlcm1vdW50IC11ICIkbW50IiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICAgIHJtIC1yZiAiJG1udCI7IG1rZGlyIC1wICIkbW50IgogICAgICBpZiA3enogeCAteSAtbyIkbW50IiAiJGRtZyIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICAgICAgaWYgISBscyAtZCAiJG1udCIvKi5hcHAgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICAgICAgICBhcHBkaXI9IiQoZmluZCAiJG1udCIgLW1heGRlcHRoIDMgLW5hbWUgJyouYXBwJyAtdHlwZSBkIDI+L2Rldi9udWxsIHwgaGVhZCAtMSkiCiAgICAgICAgICBbIC1uICIkYXBwZGlyIiBdICYmIFsgIiQoZGlybmFtZSAiJGFwcGRpciIpIiAhPSAiJG1udCIgXSAmJiBtdiAiJGFwcGRpciIgIiRtbnQiLyAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICAgICAgZmkKICAgICAgICBscyAtZCAiJG1udCIvKi5hcHAgPi9kZXYvbnVsbCAyPiYxICYmIGV4aXQgMAogICAgICBmaQogICAgZmkKICAgIGVjaG8gImhkaXV0aWwtc2hpbTogY291bGQgbm90IG1vdW50ICRkbWcgKHRyaWVkIEhGUyssIEFQRlMsIDd6eikiID4mMjsgZXhpdCAxIDs7CiAgZGV0YWNoKQogICAgbW50PSIkMSIKICAgIHVtb3VudCAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyB1bW91bnQgIiRtbnQiIDI+L2Rldi9udWxsIHx8IGZ1c2VybW91bnQgLXUgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUKICAgIGZ1c2VybW91bnQgLXUgIiRtbnQuYXBmcyIgMj4vZGV2L251bGwgfHwgdHJ1ZQogICAgcm0gLWYgIiRtbnQuaW1nIiAyPi9kZXYvbnVsbCB8fCB0cnVlOyBybWRpciAiJG1udC5hcGZzIiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBybSAtcmYgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUgOzsKICAqKSBlY2hvICJoZGl1dGlsLXNoaW06IHVuc3VwcG9ydGVkIHN1YmNvbW1hbmQgJGNtZCIgPiYyOyBleGl0IDEgOzsKZXNhYwo=' \
             | base64 -d | sudo tee /usr/local/bin/hdiutil >/dev/null
           sudo chmod +x /usr/local/bin/hdiutil
-          echo "DMG tooling: darling-dmg=$(command -v darling-dmg || echo MISSING) apfs-fuse=$(command -v apfs-fuse || echo MISSING) dmg2img=$(command -v dmg2img || echo MISSING)"
+          echo "DMG tooling: darling-dmg=$(command -v darling-dmg || echo MISSING) apfs-fuse=$(command -v apfs-fuse || echo MISSING) dmg2img=$(command -v dmg2img || echo MISSING) 7zz=$(command -v 7zz || echo MISSING)"
 
       # Author automated commits as the standard github-actions bot.
       - name: Configure git identity
