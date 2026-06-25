@@ -288,12 +288,20 @@ pub fn resolveVersion(domain: []const u8, constraint_str: []const u8) ?[]const u
     // Get package by domain
     const pkg = generated.getPackageByDomain(domain) orelse return null;
 
-    // Handle "latest" as a special case - return the newest version
+    // Handle "latest" as a special case - return the newest *stable* version.
+    // `latest` must never resolve to a dev/prerelease build (npm semantics; this
+    // also matches the TS resolver's latestFromPackageMetadata). Versions are
+    // sorted newest-first, so the first non-prerelease is the latest stable.
+    // e.g. for zig — whose catalog leads with 0.17.0-dev.956 — `latest` resolves
+    // to 0.16.0, while `0.17.0-dev` still explicitly opts into the dev channel.
     if (std.mem.eql(u8, constraint_str, "latest")) {
-        if (pkg.versions.len > 0) {
-            return pkg.versions[0]; // Already sorted newest to oldest
+        if (pkg.versions.len == 0) return null;
+        for (pkg.versions) |version| {
+            if (!isPrerelease(version)) return version;
         }
-        return null;
+        // Package only ships prereleases — fall back to the newest so `latest`
+        // still resolves to something.
+        return pkg.versions[0];
     }
 
     // Parse constraint
@@ -308,6 +316,16 @@ pub fn resolveVersion(domain: []const u8, constraint_str: []const u8) ?[]const u
     }
 
     return null;
+}
+
+test "latest resolves to newest stable, not a prerelease" {
+    // ziglang.org's catalog leads with dev builds (0.17.0-dev.*) followed by
+    // stable 0.16.0 — `latest` must skip the dev builds (npm semantics).
+    const latest = resolveVersion("ziglang.org", "latest") orelse return error.NoLatest;
+    try std.testing.expect(!isPrerelease(latest));
+    // …while the dev channel stays reachable when explicitly requested.
+    const dev = resolveVersion("ziglang.org", "0.17.0-dev") orelse return error.NoDev;
+    try std.testing.expect(isPrerelease(dev));
 }
 
 test "parse version" {

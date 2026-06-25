@@ -1138,7 +1138,13 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             };
         }
 
-        const total_deps = deps.len;
+        // Total = everything we actually acted on (top-level + transitive +
+        // local links), so the summary is consistent with success_count. Using
+        // deps.len (top-level only) produced nonsense like "9/3 packages
+        // installed" when transitive deps pushed success_count past the
+        // top-level count. With this, an all-success run reads "9 packages
+        // installed" and a partial run reads e.g. "7/9 packages installed".
+        const total_deps = success_count + failed_count;
         const end_ts = io_helper.clockGettime();
         const end_time = @as(i64, @intCast(end_ts.sec)) * 1000 + @as(i64, @intCast(@divFloor(end_ts.nsec, 1_000_000)));
         const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time));
