@@ -3,14 +3,10 @@ import type { Recipe } from '../../../scripts/recipe-types'
 // Desktop app — installs natively from pantry's registry into /Applications
 // (see zig/src/install/native_apps.zig).
 //
-// Muzzle has no GitHub repo and no public Sparkle appcast, but it IS a Homebrew
-// cask (`muzzle`). Homebrew tracks its version+build (`1.9,426`) and the matching
-// download URL, kept current by Homebrew's livecheck/autobump — so we resolve the
-// latest version from the Cask API and auto-republish new releases.
-//
-// The download URL is build-numbered (muzzle-<build>.zip), so the build script
-// reads the cask's resolved `url` straight from the Homebrew API at build time
-// rather than hardcoding a build number that would drift.
+// Muzzle publishes a Sparkle appcast at https://muzzleapp.com/api/1/appcast.xml
+// (no Homebrew needed). It gives the marketing version (1.9) and the
+// build-numbered download URL (muzzle-<build>.zip), so both the versionSource
+// and the build read straight from that official feed.
 export const recipe: Recipe = {
   domain: 'muzzleapp.com',
   name: 'Muzzle',
@@ -19,16 +15,21 @@ export const recipe: Recipe = {
   programs: [],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'muzzle',
-    versionField: 'marketing', // publish the marketing version (1.9), not the build (426)
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const xml = await (await fetch('https://muzzleapp.com/api/1/appcast.xml')).text()
+      const m = xml.match(/sparkle:shortVersionString="([^"]+)"/)
+      return m ? [m[1]] : []
+    },
   },
   distributable: null,
 
   build: {
     script: [
-      // Resolve the current download URL from the Homebrew cask (build-numbered).
-      'url="$(curl -fsSL https://formulae.brew.sh/api/cask/muzzle.json | python3 -c "import sys,json;print(json.load(sys.stdin)[\\"url\\"])")"',
+      'set -e',
+      // Resolve the build-numbered download URL from the official appcast.
+      'url=$(curl -fsSL "https://muzzleapp.com/api/1/appcast.xml" | grep -oE "https://muzzleapp\\.com/binaries/muzzle-[0-9]+\\.zip" | head -1)',
+      '[ -n "$url" ] || { echo "could not resolve Muzzle download URL from appcast"; exit 1; }',
       'curl -fSL -L "$url" -o /tmp/muzzle.zip',
       'cd /tmp && rm -rf muzzle-x && mkdir -p muzzle-x && unzip -qo muzzle.zip -d muzzle-x',
       'mkdir -p {{prefix}}',

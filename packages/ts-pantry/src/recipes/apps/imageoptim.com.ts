@@ -7,14 +7,16 @@ export const recipe: Recipe = {
   homepage: 'https://imageoptim.com',
   programs: ['imageoptim'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // The download URL (ImageOptim.tbz2) is rolling with no version in it, so the
-  // package had no versionSource and never auto-updated. Track the Homebrew
-  // cask's marketing version so the daily desktop updater republishes new
-  // releases; the build keeps using the rolling URL (always the latest binary).
+  // Resolve the version from ImageOptim's own Sparkle appcast (no Homebrew). The
+  // build uses the rolling .tbz2, which currently ships the same version; the
+  // appcast is the authoritative version signal (GitHub releases are stale).
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'imageoptim',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const xml = await (await fetch('https://imageoptim.com/appcast.xml')).text()
+      const m = xml.match(/sparkle:shortVersionString="([^"]+)"/) || xml.match(/sparkle:version="([^"]+)"/)
+      return m ? [m[1]] : []
+    },
   },
 
   build: {

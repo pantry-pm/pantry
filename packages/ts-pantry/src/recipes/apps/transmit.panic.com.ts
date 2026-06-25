@@ -7,22 +7,27 @@ export const recipe: Recipe = {
   homepage: 'https://panic.com/transmit',
   programs: ['transmit'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Needed so the desktop updater can resolve a "latest" (without it the
-  // package is skipped, even with --force) — see cursor.com.ts.
+  // Resolve the version from Panic's own Sparkle appcast (no Homebrew). NOTE:
+  // appName MUST be `Transmit 5` — `appName=Transmit` returns the stale
+  // Transmit 4 feed. The build downloads the matching versioned zip below.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'transmit',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const url = 'https://www.panic.com/updates/update.php?osVersion=14.6.0&appName=Transmit%205&appVersion=5.0.0'
+      const xml = await (await fetch(url)).text()
+      // Appcast is newest-first; take the first enclosure's short version string.
+      const m = xml.match(/sparkle:shortVersionString="([^"]+)"/)
+      return m ? [m[1]] : []
+    },
   },
 
   build: {
     script: [
       'set -e',
-      'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(curl -fsSL "https://formulae.brew.sh/api/cask/transmit.json" | sed -nE \'s/.*"url":"([^"]+\\.(zip|dmg))".*/\\1/p\' | head -1)',
-      'URL="${BREW_URL:-https://download.panic.com/transmit/Transmit%205.zip}"',
+      // Official Panic download, templated by version (the appcast enclosure URL).
+      'URL="https://download.panic.com/transmit/Transmit%20{{version}}.zip"',
       'echo "Downloading Transmit from $URL"',
-      'curl -fSL -L --retry 3 -H "User-Agent: $UA" "$URL" -o /tmp/transmit.zip',
+      'curl -fSL -L --retry 3 "$URL" -o /tmp/transmit.zip',
       'cd /tmp && unzip -qo transmit.zip',
       'mkdir -p {{prefix}}',
       '# Glob in the physical CWD; `find /tmp` is unreliable (macOS /tmp symlink).',
