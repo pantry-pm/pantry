@@ -424,12 +424,17 @@ async function main(): Promise<void> {
     }
   }
 
-  // Commit the manifest when it changed. In the split CI pipeline the ubuntu
-  // job runs first and publishes its slice; the macos job runs after and is the
-  // single committer — by then its fresh scan already reflects the ubuntu
-  // publishes, so the one manifest commit is complete and the two jobs never
-  // race on the commit/push. (`--platform=ubuntu` therefore skips committing.)
-  if (doCommit && platform !== 'ubuntu') {
+  // Commit the manifest when it changed. The committer is chosen by the
+  // WORKFLOW, not by this script: whichever job is passed `--commit` commits.
+  // The desktop pipeline is now a single ubuntu-latest job (every app/font
+  // builds on ubuntu via the hdiutil shim), so that job commits. If a macOS
+  // job is ever re-added for a macOS-only recipe, pass `--commit` to ONLY the
+  // final job so the two never race on the commit/push.
+  //
+  // (Previously this skipped committing on `--platform=ubuntu`, assuming a
+  // later macOS job would be the committer — but that job was removed, so the
+  // manifest silently stopped being committed. Gate on `--commit` alone.)
+  if (doCommit) {
     const status = await $`git status --porcelain ${MANIFEST}`.cwd(ROOT).text()
     if (status.trim()) {
       const subject = commitSubject(outdated)
