@@ -1450,7 +1450,12 @@ pub fn run(
     // quiet, or verbose (verbose prints its own detail). Computing it here on
     // the main thread also warms style's cached TTY/CI checks so the progress
     // thread reads them race-free.
-    const show_progress = !verbose and !style.isCI() and style.colorsEnabled() and !style.isQuiet();
+    //
+    // Multi-package only: the spinner's value is the X/N completion count. For a
+    // single package it would just sit at 0/1 for the whole download while
+    // suppressing the installer's own byte-level progress (e.g. zig's "MB / MB"),
+    // which is far more useful — so leave single-package installs to that.
+    const show_progress = !verbose and !style.isCI() and style.colorsEnabled() and !style.isQuiet() and resolved.items.len > 1;
 
     var next_idx = std.atomic.Value(usize).init(0);
     var completed = std.atomic.Value(usize).init(0);
