@@ -66,6 +66,7 @@ export const zarfdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.80.0',
     '0.79.0',
     '0.78.0',
     '0.77.0',
