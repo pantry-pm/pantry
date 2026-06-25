@@ -108,4 +108,22 @@ jobs:
 
       - name: Push manifest commit
         working-directory: packages/ts-pantry
-        run: git push || echo "nothing to push"
+        # Retry with rebase: other workflows (e.g. CLI build-versions) commit to
+        # main frequently, so a plain `git push` can be rejected as non-fast-
+        # forward. The old `|| echo "nothing to push"` swallowed that rejection,
+        # silently dropping the manifest commit. Rebase onto the latest main and
+        # retry so the commit reliably lands; a genuine no-op push exits 0 on the
+        # first try ("Everything up-to-date").
+        # A no-op push (nothing committed this run) exits 0 immediately with
+        # "Everything up-to-date", so the loop ends on attempt 1. Only a real
+        # new commit that loses the fast-forward race triggers a rebase + retry.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              echo "push ok (attempt $attempt)"; exit 0
+            fi
+            echo "push rejected (attempt $attempt) — rebasing onto latest main…"
+            git fetch origin main && git rebase origin/main || { echo "rebase failed"; exit 1; }
+          done
+          echo "ERROR: could not push manifest after 5 attempts" >&2
+          exit 1
