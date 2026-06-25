@@ -496,7 +496,7 @@ catch {
       try {
         if (serviceName === 'postgres' || serviceName === 'postgresql') {
           if (platform() === 'darwin') {
-            execSync('brew services start postgresql@17 2>/dev/null || pg_ctl start 2>/dev/null || true', { stdio: 'pipe' })
+            execSync('pg_ctl start 2>/dev/null || true', { stdio: 'pipe' })
           }
 else {
             execSync('sudo systemctl start postgresql 2>/dev/null || true', { stdio: 'pipe' })
@@ -506,7 +506,7 @@ else {
         }
 else if (serviceName === 'redis') {
           if (platform() === 'darwin') {
-            execSync('brew services start redis 2>/dev/null || redis-server --daemonize yes 2>/dev/null || true', { stdio: 'pipe' })
+            execSync('redis-server --daemonize yes 2>/dev/null || true', { stdio: 'pipe' })
           }
 else {
             execSync('sudo systemctl start redis-server 2>/dev/null || redis-server --daemonize yes 2>/dev/null || true', { stdio: 'pipe' })

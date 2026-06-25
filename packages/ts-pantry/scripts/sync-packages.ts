@@ -13,7 +13,7 @@
  * - redis: quick compile
  * - postgres: pre-built binary (from EDB)
  * - mysql: pre-built binary (from Oracle)
- * - php: already handled by quick-php-poc.ts
+ * - php: built by its own recipe (src/recipes/php.net.ts)
  */
 
 import { existsSync, mkdirSync, rmSync, writeFileSync, chmodSync, readFileSync } from 'node:fs'
@@ -636,16 +636,12 @@ exec node "$(dirname "$0")/yarn.js" "$@"
         try { execSync('sudo apt-get install -y libevent-dev 2>/dev/null || true', { stdio: 'pipe' }) }
 catch {}
       }
-else {
-        try { execSync('brew install libevent 2>/dev/null || true', { stdio: 'pipe' }) }
-catch {}
-      }
 
       console.log('   Compiling Memcached...')
       const { cpus } = await import('node:os')
-      const configureFlags = os === 'darwin'
-        ? `--prefix="${destDir}" --with-libevent=$(brew --prefix libevent)`
-        : `--prefix="${destDir}"`
+      // No Homebrew: let configure auto-detect libevent (apt on Linux, system /
+      // pantry-provided lib on macOS).
+      const configureFlags = `--prefix="${destDir}"`
       execSync(`cd "${buildDir}" && ./configure ${configureFlags}`, { stdio: 'inherit' })
       execSync(`cd "${buildDir}" && make -j${cpus().length}`, { stdio: 'inherit' })
       execSync(`cd "${buildDir}" && make install`, { stdio: 'inherit' })
@@ -1006,7 +1002,7 @@ Examples:
     for (const [key, config] of Object.entries(packages)) {
       console.log(`  - ${config.domain} (${config.name})${config.needsCompile ? ' [compiles]' : ' [pre-built]'}`)
     }
-    console.log('\n  - php.net (use quick-php-poc.ts)')
+    console.log('\n  - php.net (built by src/recipes/php.net.ts)')
     process.exit(0)
   }
 

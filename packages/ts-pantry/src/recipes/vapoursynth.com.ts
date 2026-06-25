@@ -31,16 +31,11 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'if ! command -v glibtool &>/dev/null; then',
-      '  BREW_LIBTOOL="$(brew --prefix libtool 2>/dev/null)/bin"',
-      '  if [ -f "$BREW_LIBTOOL/glibtool" ]; then',
-      '    export PATH="$BREW_LIBTOOL:$PATH"',
-      '  fi',
-      'fi',
-      '# Ensure aclocal can find libtool M4 macros (needed for autoreconf)',
-      'BREW_LT_SHARE="$(brew --prefix libtool 2>/dev/null)/share/aclocal"',
-      'if [ -d "$BREW_LT_SHARE" ]; then',
-      '  export ACLOCAL_PATH="${BREW_LT_SHARE}${ACLOCAL_PATH:+:$ACLOCAL_PATH}"',
+      '# Ensure aclocal can find libtool M4 macros (needed for autoreconf), from',
+      '# the pantry gnu.org/libtool buildDep — no Homebrew.',
+      'LT_SHARE="{{deps.gnu.org/libtool.prefix}}/share/aclocal"',
+      'if [ -d "$LT_SHARE" ]; then',
+      '  export ACLOCAL_PATH="${LT_SHARE}${ACLOCAL_PATH:+:$ACLOCAL_PATH}"',
       'fi',
       'export MACOSX_DEPLOYMENT_TARGET=13.3',
       'export MACOSX_DEPLOYMENT_TARGET=13.4',

@@ -88,19 +88,7 @@ catch { /* binary not found */ }
 catch { /* pkg-config failed */ }
   }
 
-  // 3. On macOS, try brew --prefix
-  if (process.platform === 'darwin') {
-    const brewNames = [lastPart, domain.replace(/\//g, '-'), binaryName]
-    for (const name of brewNames) {
-      try {
-        const prefix = execSync(`brew --prefix ${name} 2>/dev/null`, { encoding: 'utf-8' }).trim()
-        if (prefix && existsSync(prefix)) return prefix
-      }
-catch { /* not installed via brew */ }
-    }
-  }
-
-  // 4. Default: /usr on Linux (where apt installs), /usr/local on macOS
+  // 3. Default: /usr on Linux (where apt installs), /usr/local on macOS
   if (process.platform === 'darwin') {
     return existsSync('/usr/local/include') ? '/usr/local' : '/usr'
   }
@@ -1210,10 +1198,10 @@ else {
         try {
           const mesonBin = join(depPaths[domain], 'bin', 'meson')
           if (existsSync(mesonBin)) {
-            // Check if system meson exists (installed via apt/brew in CI)
+            // Check if system meson exists (installed via apt/pip in CI)
             let systemMeson = ''
             try {
-              systemMeson = execSync('which meson', { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:/usr/bin:${process.env.PATH}` } }).trim()
+              systemMeson = execSync('which meson', { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, PATH: `/usr/local/bin:/usr/bin:${process.env.PATH}` } }).trim()
               // Don't use our own S3 meson as "system" meson
               if (systemMeson.includes('buildkit-deps')) systemMeson = ''
             }

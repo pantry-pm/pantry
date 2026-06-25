@@ -41,10 +41,9 @@ export const recipe: Recipe = {
       // epsilon's configure.in uses the obsolete AM_PROG_LIBTOOL macro, so
       // aclocal (invoked by autoreconf) must be able to find libtool's M4
       // macros (libtool.m4 / ltsugar.m4). Collect every plausible aclocal dir
-      // from the pantry libtool dep and from brew, and prepend them to
-      // ACLOCAL_PATH so the macro resolves on both Linux and macOS.
+      // from the pantry libtool/automake deps and prepend them to ACLOCAL_PATH
+      // so the macro resolves on both Linux and macOS (no Homebrew).
       'for _lt_share in \\',
-      '  "$(brew --prefix libtool 2>/dev/null)/share/aclocal" \\',
       '  {{deps.gnu.org/libtool.prefix}}/share/aclocal \\',
       '  {{deps.gnu.org/automake.prefix}}/share/aclocal \\',
       '  /usr/share/aclocal \\',
