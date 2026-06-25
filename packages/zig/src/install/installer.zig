@@ -747,8 +747,14 @@ pub const Installer = struct {
             return try self.installFromUrl(spec, options);
         }
 
-        // Check if this is a Zig from ziglang.org (dev or stable)
-        if (spec.source == .ziglang) {
+        // Check if this is a Zig from ziglang.org (dev or stable). Match by
+        // domain too, not just source: the parallel pipeline tags every system
+        // dep as `.pantry`, so a *project* install of zig would otherwise skip
+        // this direct-from-ziglang.org path and fall through to the registry —
+        // which carries no zig build, failing with "not found in registry" even
+        // though ziglang.org serves the tarball. Zig is fetched straight from
+        // upstream (not S3) precisely so new stables / nightlies always resolve.
+        if (spec.source == .ziglang or std.mem.eql(u8, spec.name, "ziglang.org")) {
             if (options.verbose) std.debug.print("[verbose:installer] -> ziglang source: {s}\n", .{spec.name});
             return try self.installFromZiglang(spec, options);
         }
@@ -3294,7 +3300,7 @@ pub const Installer = struct {
 
         if (binaries.len == 0) return;
 
-        // Create symlinks for each discovered binary
+        // Link each discovered binary into the project .bin dir.
         for (binaries) |bin_info| {
             const link = try std.fmt.allocPrint(
                 self.allocator,
@@ -3303,13 +3309,25 @@ pub const Installer = struct {
             );
             defer self.allocator.free(link);
 
-            // Remove existing symlink if it exists
+            // Remove existing link/shim if it exists
             io_helper.deleteFile(link) catch {};
 
-            // Create symlink using absolute paths
-            io_helper.symLink(bin_info.path, link) catch |err| {
-                if (!style.isCI()) style.print("Warning: Failed to create symlink for {s}: {}\n", .{ bin_info.name, err });
-            };
+            // Script wrappers (e.g. the pkgx-style `git` wrapper) compute their
+            // own libexec dir from $0. A bare symlink leaves $0 = this .bin path,
+            // so the wrapper looks for libexec next to .bin, never finds it, and
+            // recurses (`git config` → itself) into a fork bomb that freezes the
+            // shell on every prompt render. Give scripts a forwarding shim that
+            // execs the real path (so $0 is correct); real binaries keep the
+            // cheaper symlink.
+            if (symlink.isShebangScript(bin_info.path)) {
+                if (!symlink.writeForwardingShim(link, bin_info.path)) {
+                    io_helper.symLink(bin_info.path, link) catch {};
+                }
+            } else {
+                io_helper.symLink(bin_info.path, link) catch |err| {
+                    if (!style.isCI()) style.print("Warning: Failed to create symlink for {s}: {}\n", .{ bin_info.name, err });
+                };
+            }
         }
 
         _ = version; // not used in current implementation
