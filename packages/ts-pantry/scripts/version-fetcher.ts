@@ -149,6 +149,37 @@ function domainToKey(domain: string): string {
   return domain.replace(/[.\-/]/g, '').toLowerCase()
 }
 
+// Semver-style prerelease comparison (SemVer §11). Returns <0 if `a` has lower
+// precedence than `b`, >0 if higher, 0 if equal. Build metadata (everything
+// after `+`) carries no precedence and is ignored. Dotted identifiers are
+// compared one at a time: numeric identifiers numerically (so `dev.1000`
+// outranks `dev.956`, which a plain string compare gets backwards), and a
+// numeric identifier always ranks below a non-numeric one.
+function comparePrerelease(a: string, b: string): number {
+  const ida = a.split('+')[0].split('.')
+  const idb = b.split('+')[0].split('.')
+  const len = Math.max(ida.length, idb.length)
+  for (let i = 0; i < len; i++) {
+    const x = ida[i]
+    const y = idb[i]
+    if (x === undefined) return -1 // fewer identifiers ⇒ lower precedence
+    if (y === undefined) return 1
+    const nx = /^\d+$/.test(x)
+    const ny = /^\d+$/.test(y)
+    if (nx && ny) {
+      const d = Number.parseInt(x, 10) - Number.parseInt(y, 10)
+      if (d !== 0) return d
+    }
+    else if (nx !== ny) {
+      return nx ? -1 : 1 // numeric identifier < non-numeric identifier
+    }
+    else if (x !== y) {
+      return x < y ? -1 : 1
+    }
+  }
+  return 0
+}
+
 function updatePackageVersions(domain: string, newVersions: string[]): boolean {
   const key = domainToKey(domain)
   const filePath = [
@@ -192,11 +223,13 @@ function updatePackageVersions(domain: string, newVersions: string[]): boolean {
       const diff = (pb.numeric[i] ?? 0) - (pa.numeric[i] ?? 0)
       if (diff !== 0) return diff
     }
-    // Same numeric: release (no prerelease) sorts before prerelease (newest first)
+    // Same numeric core: a release (no prerelease) outranks any prerelease, and
+    // among prereleases compare identifier-by-identifier so newer dev builds
+    // sort first (newest-first ⇒ negate the ascending-precedence comparison).
     if (pa.prerelease === null && pb.prerelease !== null) return -1
     if (pa.prerelease !== null && pb.prerelease === null) return 1
     if (pa.prerelease !== null && pb.prerelease !== null) {
-      return pa.prerelease < pb.prerelease ? 1 : pa.prerelease > pb.prerelease ? -1 : 0
+      return -comparePrerelease(pa.prerelease, pb.prerelease)
     }
     return 0
   })
