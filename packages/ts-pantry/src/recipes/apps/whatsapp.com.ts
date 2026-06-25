@@ -7,18 +7,22 @@ export const recipe: Recipe = {
   homepage: 'https://whatsapp.com',
   programs: ['whatsapp'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+  // Resolve the version from WhatsApp's own official download (no Homebrew): the
+  // stable rolling URL redirects to a CDN filename WhatsApp-<version>.zip. The
+  // build downloads that same rolling URL below.
+  versionSource: {
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://web.whatsapp.com/desktop/mac_native/release/?extension=zip', { method: 'HEAD', redirect: 'follow' })
+      const m = res.url.match(/WhatsApp-([\d.]+)\.zip/i)
+      return m ? [m[1]] : []
+    },
+  },
 
   build: {
     script: [
-      '# WhatsApp downloads as ZIP',
-      'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(brew info --cask --json=v2 whatsapp 2>/dev/null | bun -e "const d=JSON.parse(await Bun.stdin.text()); console.log(d.casks[0].url)" 2>/dev/null || true)',
-      'if [ -n "$BREW_URL" ]; then',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "$BREW_URL" -o /tmp/whatsapp.zip',
-      'else',
-      '  echo "brew cask info unavailable for whatsapp, using fallback"',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "https://web.whatsapp.com/desktop/mac_native/release/?extension=zip&configuration=Release" -o /tmp/whatsapp.zip',
-      'fi',
+      '# WhatsApp downloads as ZIP from the official stable rolling endpoint',
+      'curl -fSL -L --retry 3 "https://web.whatsapp.com/desktop/mac_native/release/?extension=zip&configuration=Release" -o /tmp/whatsapp.zip',
       'cd /tmp && unzip -qo whatsapp.zip',
       'mkdir -p "{{prefix}}"',
       'find /tmp -maxdepth 1 -name "WhatsApp.app" -exec mv {} "{{prefix}}/WhatsApp.app" \\;',

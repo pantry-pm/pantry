@@ -7,13 +7,16 @@ export const recipe: Recipe = {
   homepage: 'https://orbstack.dev',
   programs: ['orbstack'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Without a versionSource the desktop updater can't resolve a "latest" and
-  // skips the package entirely (even with --force), so it silently went stale.
-  // Track the Homebrew cask's marketing version (the same one upstream ships).
+  // Resolve the version from OrbStack's own official download redirect (no
+  // Homebrew): the stable "latest" URL 307-redirects to OrbStack_v<version>_
+  // <build>_arm64.dmg. The build downloads that same rolling URL below.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'orbstack',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://orbstack.dev/download/stable/latest/arm64', { method: 'HEAD', redirect: 'follow' })
+      const m = res.url.match(/OrbStack_v([\d.]+)_/)
+      return m ? [m[1]] : []
+    },
   },
 
   build: {

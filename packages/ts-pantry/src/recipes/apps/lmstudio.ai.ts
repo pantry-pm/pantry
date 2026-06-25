@@ -6,18 +6,24 @@ export const recipe: Recipe = {
   description: 'A desktop app for discovering, downloading, and running local LLMs.',
   homepage: 'https://lmstudio.ai',
   programs: ['lm-studio'],
-  platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+  // LM Studio's macOS build is Apple-Silicon only (the x64 download endpoint
+  // 400s), so we ship darwin/aarch64 only.
+  platforms: ['darwin/aarch64'],
+  // Resolve the version from LM Studio's own official download redirect (no
+  // Homebrew): the latest URL redirects to LM-Studio-<version>-arm64.dmg. The
+  // build downloads that same rolling URL below.
+  versionSource: {
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://lmstudio.ai/download/latest/darwin/arm64', { method: 'HEAD', redirect: 'follow' })
+      const m = res.url.match(/LM-Studio-([\d.\-]+)-arm64\.dmg/i)
+      return m ? [m[1]] : []
+    },
+  },
 
   build: {
     script: [
-      'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(brew info --cask --json=v2 lm-studio 2>/dev/null | bun -e "const d=JSON.parse(await Bun.stdin.text()); console.log(d.casks[0].url)" 2>/dev/null || true)',
-      'if [ -n "$BREW_URL" ]; then',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "$BREW_URL" -o /tmp/lmstudio.dmg',
-      'else',
-      '  echo "brew cask info unavailable for lm-studio, using fallback"',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "https://releases.lmstudio.ai/latest/mac/arm64" -o /tmp/lmstudio.dmg',
-      'fi',
+      'curl -fSL -L --retry 3 "https://lmstudio.ai/download/latest/darwin/arm64" -o /tmp/lmstudio.dmg',
       'hdiutil attach /tmp/lmstudio.dmg -mountpoint /tmp/lm-studio-mount -nobrowse -noverify -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/lm-studio-mount/LM Studio.app" {{prefix}}/LM Studio.app 2>/dev/null || \\',

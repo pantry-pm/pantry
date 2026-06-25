@@ -7,13 +7,17 @@ export const recipe: Recipe = {
   homepage: 'https://slack.com',
   programs: ['slack'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
-  // Without a versionSource the desktop updater can't resolve a "latest" and
-  // skips the package entirely (even with --force), so it silently went stale.
-  // Track the Homebrew cask's marketing version (the same one upstream ships).
+  // Resolve the version from Slack's own official download redirect (no
+  // Homebrew): the universal installer redirect's final URL embeds the version
+  // (.../mac/universal/<version>/Slack-<version>-macOS.dmg). The build downloads
+  // that same versioned dmg below.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'slack',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const res = await fetch('https://slack.com/ssb/download-osx-universal', { method: 'HEAD', redirect: 'follow' })
+      const m = res.url.match(/\/universal\/([\d.]+)\//)
+      return m ? [m[1]] : []
+    },
   },
 
   build: {

@@ -7,19 +7,22 @@ export const recipe: Recipe = {
   homepage: 'https://videolan.org',
   programs: ['vlc'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
-  // Without a versionSource the desktop updater can't resolve a "latest" and
-  // skips the package entirely (even with --force), so it silently went stale.
-  // Track the Homebrew cask's marketing version (the same one upstream ships).
+  // Resolve the version from VideoLAN's own official "last" directory listing
+  // (no Homebrew). The build downloads the UNIVERSAL dmg so a single artifact is
+  // native on both Apple Silicon and Intel (the pipeline builds once on the
+  // Linux runner and registers it under both darwin platforms).
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'vlc',
-    versionField: 'marketing',
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const html = await (await fetch('https://get.videolan.org/vlc/last/macosx/')).text()
+      const m = html.match(/vlc-([\d.]+)-universal\.dmg/)
+      return m ? [m[1]] : []
+    },
   },
 
   build: {
     script: [
-      'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="intel64"; fi',
-      'curl -fSL "https://get.videolan.org/vlc/{{version}}/macosx/vlc-{{version}}-${ARCH}.dmg" -o /tmp/vlc.dmg',
+      'curl -fSL -L --retry 3 "https://get.videolan.org/vlc/{{version}}/macosx/vlc-{{version}}-universal.dmg" -o /tmp/vlc.dmg',
       'hdiutil attach /tmp/vlc.dmg -mountpoint /tmp/vlc-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/vlc-mount/VLC.app" {{prefix}}/VLC.app',
