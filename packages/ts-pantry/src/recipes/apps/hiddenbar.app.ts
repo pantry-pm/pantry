@@ -7,22 +7,19 @@ export const recipe: Recipe = {
   homepage: 'https://github.com/dwarvesf/hidden',
   programs: ['hiddenbar'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Needed so the desktop updater can resolve a "latest" (without it the
-  // package is skipped, even with --force) — see cursor.com.ts.
+  github: 'https://github.com/dwarvesf/hidden',
+  // Track Hidden Bar's own GitHub releases (no Homebrew). Asset is
+  // `Hidden-Bar-v<version>-macos.zip`.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'hiddenbar',
-    versionField: 'marketing',
+    type: 'github-releases',
+    repo: 'dwarvesf/hidden',
+    tagPattern: /^v(.+)$/,
   },
 
   build: {
     script: [
       'set -e',
-      'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(curl -fsSL "https://formulae.brew.sh/api/cask/hiddenbar.json" | sed -nE \'s/.*"url":"([^"]+\\.zip)".*/\\1/p\' | head -1)',
-      'URL="${BREW_URL:-https://github.com/dwarvesf/hidden/releases/latest/download/Hidden.Bar.zip}"',
-      'echo "Downloading Hidden Bar from $URL"',
-      'curl -fSL -L --retry 3 -H "User-Agent: $UA" "$URL" -o /tmp/hiddenbar.zip',
+      'curl -fSL -L --retry 3 "https://github.com/dwarvesf/hidden/releases/download/v{{version}}/Hidden-Bar-v{{version}}-macos.zip" -o /tmp/hiddenbar.zip',
       'cd /tmp && unzip -qo hiddenbar.zip',
       'mkdir -p {{prefix}}',
       '# Locate the produced .app via a glob in the physical CWD. `find /tmp` is',

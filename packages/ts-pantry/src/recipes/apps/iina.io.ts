@@ -7,13 +7,13 @@ export const recipe: Recipe = {
   homepage: 'https://iina.io',
   programs: ['iina'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  // Without a versionSource the desktop updater can't resolve a "latest" and
-  // skips the package entirely (even with --force), so it silently went stale.
-  // Track the Homebrew cask's marketing version (the same one upstream ships).
+  github: 'https://github.com/iina/iina',
+  // Track IINA's own GitHub releases (no Homebrew). The build downloads the
+  // matching release asset directly.
   versionSource: {
-    type: 'homebrew-cask',
-    cask: 'iina',
-    versionField: 'marketing',
+    type: 'github-releases',
+    repo: 'iina/iina',
+    tagPattern: /^v(.+)$/,
   },
 
   build: {

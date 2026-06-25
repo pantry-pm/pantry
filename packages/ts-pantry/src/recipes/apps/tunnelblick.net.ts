@@ -7,17 +7,24 @@ export const recipe: Recipe = {
   homepage: 'https://tunnelblick.net',
   programs: ['tunnelblick'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+  github: 'https://github.com/Tunnelblick/Tunnelblick',
+  // Track Tunnelblick's own GitHub releases (no Homebrew). `releases/latest`
+  // excludes the separate beta releases, giving the current stable.
+  versionSource: {
+    type: 'github-releases',
+    repo: 'Tunnelblick/Tunnelblick',
+    tagPattern: /^v(.+)$/,
+  },
 
   build: {
     script: [
-      'UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"',
-      'BREW_URL=$(brew info --cask --json=v2 tunnelblick 2>/dev/null | bun -e "const d=JSON.parse(await Bun.stdin.text()); console.log(d.casks[0].url)" 2>/dev/null || true)',
-      'if [ -n "$BREW_URL" ]; then',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "$BREW_URL" -o /tmp/tunnelblick.dmg',
-      'else',
-      '  echo "brew cask info unavailable for tunnelblick, using fallback"',
-      '  curl -fSL -L --retry 3 -H "User-Agent: $UA" "https://github.com/Tunnelblick/Tunnelblick/releases/latest/download/Tunnelblick.dmg" -o /tmp/tunnelblick.dmg',
-      'fi',
+      // The dmg filename carries a build number (Tunnelblick_<ver>_build_<n>.dmg)
+      // that isn't derivable from the version, so resolve the exact asset URL
+      // from the GitHub release for this tag. No Homebrew, no brew binary.
+      'API="https://api.github.com/repos/Tunnelblick/Tunnelblick/releases/tags/v{{version}}"',
+      'DMG_URL=$(curl -fsSL ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} "$API" | grep -oE "https://[^\\"]+/Tunnelblick_[^\\"]+\\.dmg" | head -1)',
+      '[ -n "$DMG_URL" ] || { echo "could not resolve Tunnelblick dmg asset for v{{version}}"; exit 1; }',
+      'curl -fSL -L --retry 3 "$DMG_URL" -o /tmp/tunnelblick.dmg',
       'hdiutil attach /tmp/tunnelblick.dmg -mountpoint /tmp/tunnelblick-mount -nobrowse -noverify -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/tunnelblick-mount/Tunnelblick.app" {{prefix}}/Tunnelblick.app 2>/dev/null || \\',
