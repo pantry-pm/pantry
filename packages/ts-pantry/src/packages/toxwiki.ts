@@ -74,6 +74,7 @@ export const toxwikiPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.56.1',
     '4.56.0',
     '4.55.1',
     '4.55.0',
