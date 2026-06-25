@@ -241,56 +241,45 @@ __pantry_deactivate() {
 
 # Auto-install dependencies for a freshly-entered project.
 #
-# Clean by default: prints a single transient status line while installing and
-# a one-line confirmation on success — never the full installer log. The full
-# output is captured to ~/.pantry/last-install.log and only surfaced (tail) on
-# failure, so the prompt stays quiet when things just work.
+# Streams the installer's progress live to the terminal — exactly like
+# `bun install`, `pnpm install`, or `yarn` — so a multi-second `cd` never looks
+# like a frozen shell. `pantry install` prints its own progress (`> Installing
+# N packages…`, per-package `+ name@version` lines, and a `[Xms]` summary); we
+# just add a one-line header and otherwise stay out of its way. Nothing is
+# hidden behind a log file: the old "setting up …" spinner with everything
+# redirected to ~/.pantry/last-install.log read as a hang and is gone.
 #
 # Escape hatches:
-#   PANTRY_VERBOSE=1 / __PANTRY_VERBOSE="true"  stream the full install log
-#   PANTRY_INSTALL_TIMEOUT=<seconds>            cap install time (needs `timeout`)
-#   PANTRY_NO_AUTO_INSTALL=1                     skip auto-install entirely (caller-checked)
+#   PANTRY_QUIET=1                   suppress the decorative pantry header line
+#   PANTRY_INSTALL_TIMEOUT=<seconds> cap install time (needs `timeout`)
+#   PANTRY_NO_AUTO_INSTALL=1         skip auto-install entirely (caller-checked)
 __pantry_auto_install() {
     local dep_file="$1"
-    local project_dir name rc=0 tty=0
+    local project_dir name rc=0
     project_dir=$(__pantry_project_dir_from_dep_file "$dep_file") || project_dir="$PWD"
     name="${project_dir##*/}"
-    [[ -t 2 ]] && tty=1
 
-    # Verbose: stream everything straight through, unchanged.
-    if [[ "${__PANTRY_VERBOSE:-}" == "true" || -n "${PANTRY_VERBOSE:-}" ]]; then
-        pantry install 2>&1
-        return $?
+    # bun/pnpm/yarn-style header, then hand the terminal to the installer so its
+    # progress streams live. Header on stderr so it never mixes into anything
+    # capturing the activation's stdout.
+    if [[ "${PANTRY_QUIET:-}" != "1" ]]; then
+        printf '\033[36m⚡ pantry\033[0m installing dependencies for \033[1m%s\033[0m\n' "$name" >&2
     fi
-
-    local log="${HOME}/.pantry/last-install.log"
-    mkdir -p "${HOME}/.pantry" 2>/dev/null
-
-    # Transient "setting up" line (cleared before any result is printed).
-    [[ $tty -eq 1 ]] && printf '\r\033[Kpantry: setting up %s…' "$name" >&2
 
     if [[ -n "${PANTRY_INSTALL_TIMEOUT:-}" ]] && command -v timeout >/dev/null 2>&1; then
-        timeout "$PANTRY_INSTALL_TIMEOUT" pantry install >"$log" 2>&1; rc=$?
+        timeout "$PANTRY_INSTALL_TIMEOUT" pantry install; rc=$?
     else
-        pantry install >"$log" 2>&1; rc=$?
+        pantry install; rc=$?
     fi
 
-    # Clear the transient status line.
-    [[ $tty -eq 1 ]] && printf '\r\033[K' >&2
-
-    if [[ $rc -eq 0 ]]; then
-        printf 'pantry: %s ready\n' "$name" >&2
-        return 0
-    fi
+    # Success: `pantry install`'s own summary line is the confirmation.
+    [[ $rc -eq 0 ]] && return 0
 
     if [[ $rc -eq 124 ]]; then
-        printf 'pantry: setup of %s timed out after %ss\n' "$name" "${PANTRY_INSTALL_TIMEOUT:-?}" >&2
+        printf '\033[31mpantry:\033[0m setup of %s timed out after %ss — re-run `pantry install`\n' "$name" "${PANTRY_INSTALL_TIMEOUT:-?}" >&2
     else
-        printf 'pantry: setup of %s failed (exit %d)\n' "$name" "$rc" >&2
+        printf '\033[31mpantry:\033[0m setup of %s failed (exit %d) — re-run `pantry install` to retry\n' "$name" "$rc" >&2
     fi
-    # Brief context, not a wall of text — full log stays on disk.
-    [[ -s "$log" ]] && tail -n 12 "$log" >&2
-    printf 'pantry: full log %s — re-run with PANTRY_VERBOSE=1 or `pantry install`\n' "$log" >&2
     return $rc
 }
 

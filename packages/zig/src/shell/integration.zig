@@ -185,8 +185,8 @@ fn generatePowershellHook(allocator: std.mem.Allocator) ![]const u8 {
         \\    if (Select-String -Path $dep -Quiet -Pattern '^\s*"?autoActivate"?\s*:\s*"?false"?') { return }
         \\    $stamp = "$dep|$((Get-Item $dep).LastWriteTimeUtc.Ticks)"
         \\    if ($global:__PantryNoInstall -eq $stamp) { return }
-        \\    Write-Host "pantry: setting up $(Split-Path $pwdPath -Leaf)..."
-        \\    & pantry install *> $null
+        \\    Write-Host "pantry: installing dependencies for $(Split-Path $pwdPath -Leaf)" -ForegroundColor Cyan
+        \\    & pantry install
         \\    try { $lookup = & pantry shell:lookup $pwdPath 2>$null } catch { $lookup = $null }
         \\    if ($lookup -and (Invoke-PantryActivate $lookup $pwdPath)) {
         \\        Write-Host "pantry: $(Split-Path $pwdPath -Leaf) ready"
@@ -290,8 +290,8 @@ fn generateFishHook(allocator: std.mem.Allocator) ![]const u8 {
         \\  grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?false"?' "$dep" 2>/dev/null; and return
         \\  set -l m (command stat -f %m "$dep" 2>/dev/null; or command stat -c %Y "$dep" 2>/dev/null)
         \\  test "$__pantry_noinstall" = "$dep|$m"; and return
-        \\  echo "pantry: setting up "(basename "$PWD")"…" >&2
-        \\  pantry install >/dev/null 2>&1
+        \\  printf '\033[36m⚡ pantry\033[0m installing dependencies for \033[1m%s\033[0m\n' (basename "$PWD") >&2
+        \\  pantry install
         \\  set -l lookup (pantry shell:lookup "$PWD" 2>/dev/null)
         \\  if test -n "$lookup"; and __pantry_activate_from $lookup
         \\    echo "pantry: "(basename "$PWD")" ready" >&2
