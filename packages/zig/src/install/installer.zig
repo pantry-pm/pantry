@@ -4020,7 +4020,7 @@ pub const Installer = struct {
                 .version = resolved_version,
             };
 
-            if (!style.isCI()) style.print("    → Installing dependency: {s}@{s}\n", .{ name, resolved_version });
+            if (self.verbose) style.print("    → Installing dependency: {s}@{s}\n", .{ name, resolved_version });
 
             // Install the dependency (this will recursively install its dependencies)
             const result = self.install(spec, options) catch |e| {
@@ -4034,7 +4034,7 @@ pub const Installer = struct {
         check_dir.close(io_helper.io);
 
         // Already installed, skip
-        if (!style.isCI()) style.print("    ✓ Dependency already installed: {s}@{s}\n", .{ name, resolved_version });
+        if (self.verbose) style.print("    ✓ Dependency already installed: {s}@{s}\n", .{ name, resolved_version });
     }
 };
 

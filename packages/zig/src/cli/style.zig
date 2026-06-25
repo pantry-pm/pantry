@@ -336,6 +336,23 @@ pub fn clearProgress() void {
     clearLine();
 }
 
+/// Live single-line progress for the parallel download/extract phase:
+/// `⠹ installing 4/9 packages`, redrawn in place each frame. TTY-only — skipped
+/// in CI, when output is redirected (no colors), or under quiet — so logs and
+/// pipes never collect carriage-return spam. This is what keeps a multi-second
+/// install visibly alive instead of looking hung.
+pub fn printPipelineProgress(done: usize, total: usize, frame: usize) void {
+    if (isCI() or !colorsEnabled() or quiet_mode) return;
+    const spinner = spinner_frames[frame % spinner_frames.len];
+    const label = if (total == 1) "package" else "packages";
+    print("\r\x1b[K{s}{s}{s} {s}installing{s} {s}{d}{s}{s}/{d} {s}{s}", .{
+        cyan,  spinner, reset,
+        dim,   reset,   bold,
+        done,  reset,   dim,
+        total, label,   reset,
+    });
+}
+
 // ── Indicators ──────────────────────────────────────────────────────────────
 
 /// Print "Saving lockfile..." indicator

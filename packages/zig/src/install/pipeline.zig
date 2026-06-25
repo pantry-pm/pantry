@@ -619,13 +619,22 @@ const DownloadThreadCtx = struct {
     project_root: []const u8,
     modules_dir: []const u8,
     next: *std.atomic.Value(usize),
+    completed: *std.atomic.Value(usize),
     verbose: bool,
+    show_progress: bool,
 
     fn worker(ctx: *DownloadThreadCtx) void {
         const alloc = ctx.installer.allocator;
         while (true) {
             const i = ctx.next.fetchAdd(1, .monotonic);
             if (i >= ctx.packages.len) break;
+
+            // Bump the finished-package count on every exit from this iteration
+            // — success, failure, or any early `continue` in the body — so the
+            // live progress line advances exactly once per package. The inner
+            // download-retry loop's `continue` targets that loop, not this one,
+            // so it never trips this defer early.
+            defer _ = ctx.completed.fetchAdd(1, .release);
 
             const pkg = ctx.packages[i];
             // Dupe name+version so results outlive the resolved list
@@ -644,6 +653,9 @@ const DownloadThreadCtx = struct {
                 const opts = installer_mod.InstallOptions{
                     .verbose = ctx.verbose,
                     .project_root = ctx.project_root,
+                    // Silence the installer's own per-package download/extract
+                    // lines while the live spinner owns the terminal line.
+                    .quiet = ctx.show_progress,
                 };
                 if (ctx.installer.install(spec, opts)) |install_result_| {
                     var ir = install_result_;
@@ -1310,6 +1322,29 @@ fn cleanupStalePartials(
 
 /// Run the 3-phase parallel install pipeline.
 /// Returns results for each package (success/fail, for reporting and lockfile generation).
+/// Drives the live install progress line on its own thread. The download
+/// workers (the main thread included) are busy doing I/O, so a dedicated thread
+/// is what keeps the spinner animating during long downloads — the whole point
+/// being that a multi-second install never looks frozen.
+const ProgressCtx = struct {
+    completed: *std.atomic.Value(usize),
+    total: usize,
+    stop: *std.atomic.Value(bool),
+
+    fn run(ctx: *ProgressCtx) void {
+        var frame: usize = 0;
+        // Brief grace period so cached/instant installs finish before the
+        // spinner ever paints — they stay completely clean.
+        io_helper.nanosleep(0, 120 * std.time.ns_per_ms);
+        while (!ctx.stop.load(.acquire)) {
+            const done = ctx.completed.load(.acquire);
+            style.printPipelineProgress(done, ctx.total, frame);
+            frame +%= 1;
+            io_helper.nanosleep(0, 90 * std.time.ns_per_ms);
+        }
+    }
+};
+
 pub fn run(
     allocator: std.mem.Allocator,
     inst: *Installer,
@@ -1410,7 +1445,15 @@ pub fn run(
     const results = try allocator.alloc(PackageResult, resolved.items.len);
     for (results) |*r| r.* = .{ .name = "", .version = "", .success = false };
 
+    // Live progress: animate a single "installing X/N" line while the workers
+    // download+extract. Interactive TTY only — never CI, redirected output,
+    // quiet, or verbose (verbose prints its own detail). Computing it here on
+    // the main thread also warms style's cached TTY/CI checks so the progress
+    // thread reads them race-free.
+    const show_progress = !verbose and !style.isCI() and style.colorsEnabled() and !style.isQuiet();
+
     var next_idx = std.atomic.Value(usize).init(0);
+    var completed = std.atomic.Value(usize).init(0);
     var dl_ctx = DownloadThreadCtx{
         .installer = inst,
         .packages = resolved.items,
@@ -1418,8 +1461,17 @@ pub fn run(
         .project_root = project_root,
         .modules_dir = inst.modules_dir,
         .next = &next_idx,
+        .completed = &completed,
         .verbose = verbose,
+        .show_progress = show_progress,
     };
+
+    var stop_progress = std.atomic.Value(bool).init(false);
+    var progress_ctx = ProgressCtx{ .completed = &completed, .total = resolved.items.len, .stop = &stop_progress };
+    const progress_thread: ?std.Thread = if (show_progress)
+        (std.Thread.spawn(.{}, ProgressCtx.run, .{&progress_ctx}) catch null)
+    else
+        null;
 
     // Use up to 16 threads for download + extract
     const cpu_count = std.Thread.getCpuCount() catch 4;
@@ -1445,6 +1497,13 @@ pub fn run(
                 t.* = null;
             }
         }
+    }
+
+    // Stop the progress animation and wipe its line before any result output.
+    if (progress_thread) |pt| {
+        stop_progress.store(true, .release);
+        pt.join();
+        style.clearLine();
     }
 
     const phase2_ts = io_helper.clockGettime();
