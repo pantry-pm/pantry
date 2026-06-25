@@ -1,13 +1,19 @@
 /**
  * Desktop App Management for macOS
  *
- * Scans /Applications for installed apps, maps them to Homebrew cask tokens,
- * checks for available updates, and provides update functionality.
- * This gives pantry "app store" capabilities for desktop applications.
+ * Scans /Applications for installed apps and checks them for updates against
+ * pantry's OWN registry (the same desktop-app catalogue we publish) — NO
+ * Homebrew. Updating an app re-installs its bundle straight from the registry
+ * tarball, mirroring the Zig native-app installer (download → extract → ditto
+ * into /Applications → clear quarantine).
  */
 
 import { execSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+
+const REGISTRY = process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -23,284 +29,49 @@ export interface AppUpdateInfo {
   currentVersion: string
   latestVersion: string | null
   updateAvailable: boolean
-  source: 'brew-cask' | 'mas' | 'system' | 'self-updating' | 'unknown'
-  caskToken: string | null
-  autoUpdates: boolean
+  /** Where the "latest" came from: our registry, the Mac App Store, an Apple
+   *  system app, or unknown (not a pantry-published app). */
+  source: 'pantry' | 'mas' | 'system' | 'unknown'
+  /** pantry domain backing this app, if we publish it. */
+  domain: string | null
 }
 
-export interface BrewCaskInfo {
-  token: string
-  version: string
-  autoUpdates: boolean
-  appNames: string[]
+/** One entry of pantry's published desktop-app catalogue. */
+export interface DesktopCatalogueEntry {
+  domain: string
+  label: string
+  version: string | null
+  platforms?: string[]
 }
 
-// ── App → Cask Token Mapping ─────────────────────────────────────
-// Key: app name as it appears in /Applications (without .app)
-// Value: Homebrew cask token
-
-export const APP_CASK_MAP: Record<string, string> = {
-  // Browsers
-  'Arc': 'arc',
-  'Brave Browser': 'brave-browser',
-  'Firefox': 'firefox',
-  'Google Chrome': 'google-chrome',
-  'Microsoft Edge': 'microsoft-edge',
-  'Opera': 'opera',
-  'Vivaldi': 'vivaldi',
-  'Zen Browser': 'zen-browser',
-  'Orion': 'orion',
-  'Chromium': 'chromium',
-  'Tor Browser': 'tor-browser',
-
-  // Development - Editors & IDEs
-  'Visual Studio Code': 'visual-studio-code',
-  'Cursor': 'cursor',
-  'Zed': 'zed',
-  'Sublime Text': 'sublime-text',
-  'Sublime Merge': 'sublime-merge',
-  'Nova': 'nova',
-  'BBEdit': 'bbedit',
-  'CotEditor': 'coteditor',
-  'IntelliJ IDEA': 'intellij-idea',
-  'IntelliJ IDEA CE': 'intellij-idea-ce',
-  'PhpStorm': 'phpstorm',
-  'WebStorm': 'webstorm',
-  'PyCharm': 'pycharm',
-  'PyCharm CE': 'pycharm-ce',
-  'RubyMine': 'rubymine',
-  'CLion': 'clion',
-  'GoLand': 'goland',
-  'DataGrip': 'datagrip',
-  'Rider': 'rider',
-  'Android Studio': 'android-studio',
-  'Fleet': 'jetbrains-fleet',
-
-  // Development - Terminals
-  'iTerm': 'iterm2',
-  'Ghostty': 'ghostty',
-  'Warp': 'warp',
-  'Alacritty': 'alacritty',
-  'Kitty': 'kitty',
-  'Hyper': 'hyper',
-
-  // Development - Tools
-  'GitHub Desktop': 'github',
-  'GitKraken': 'gitkraken',
-  'Tower': 'tower',
-  'Fork': 'fork',
-  'Tinkerwell': 'tinkerwell',
-  'TablePlus': 'tableplus',
-  'Sequel Pro': 'sequel-pro',
-  'Sequel Ace': 'sequel-ace',
-  'Postman': 'postman',
-  'Insomnia': 'insomnia',
-  'Proxyman': 'proxyman',
-  'Docker': 'docker',
-  'OrbStack': 'orbstack',
-  'Dynobase': 'dynobase',
-  'HTTPie': 'httpie',
-  'Charles': 'charles',
-  'Paw': 'paw',
-  'Dash': 'dash',
-  'SourceTree': 'sourcetree',
-
-  // Communication
-  'WhatsApp': 'whatsapp',
-  'Slack': 'slack',
-  'Discord': 'discord',
-  'Telegram': 'telegram',
-  'Microsoft Teams': 'microsoft-teams',
-  'Zoom': 'zoom',
-  'Signal': 'signal',
-  'Skype': 'skype',
-  'Lark': 'lark',
-
-  // AI
-  'Claude': 'claude',
-  'ChatGPT': 'chatgpt',
-
-  // Productivity - Notes & Knowledge
-  'Obsidian': 'obsidian',
-  'Notion': 'notion',
-  'Bear': 'bear',
-  'Craft': 'craft',
-  'Logseq': 'logseq',
-  'Typora': 'typora',
-  'Joplin': 'joplin',
-
-  // Productivity - Tasks & Calendar
-  'Things3': 'things',
-  'Things': 'things',
-  'Todoist': 'todoist',
-  'TickTick': 'ticktick',
-  'Fantastical': 'fantastical',
-  'Spark': 'readdle-spark',
-
-  // Productivity - Utilities
-  '1Password': '1password',
-  '1Password 7': '1password',
-  'Raycast': 'raycast',
-  'Alfred': 'alfred',
-  'BetterTouchTool': 'bettertouchtool',
-  'Bartender': 'bartender',
-  'Setapp': 'setapp',
-  'Grammarly Desktop': 'grammarly-desktop',
-
-  // Media
-  'Spotify': 'spotify',
-  'IINA': 'iina',
-  'VLC': 'vlc',
-  'HandBrake': 'handbrake',
-  'Kap': 'kap',
-  'OBS': 'obs',
-  'DaVinci Resolve': 'davinci-resolve',
-  'Plex': 'plex',
-  'Audacity': 'audacity',
-  'Elmedia Player': 'elmedia-player',
-
-  // Design
-  'Figma': 'figma',
-  'Sketch': 'sketch',
-  'Affinity Designer': 'affinity-designer',
-  'Affinity Designer 2': 'affinity-designer',
-  'Affinity Photo': 'affinity-photo',
-  'Affinity Photo 2': 'affinity-photo',
-  'Affinity Publisher': 'affinity-publisher',
-  'Affinity Publisher 2': 'affinity-publisher',
-  'ImageOptim': 'imageoptim',
-  'Pixelmator Pro': 'pixelmator-pro',
-  'Canva': 'canva',
-
-  // Utilities - System
-  'AppCleaner': 'appcleaner',
-  'Pearcleaner': 'pearcleaner',
-  'CleanMyMac': 'cleanmymac',
-  'CleanMyMac X': 'cleanmymac',
-  'Caffeine': 'caffeine',
-  'KeepingYouAwake': 'keepingyouawake',
-  'Muzzle': 'muzzle',
-  'Rectangle': 'rectangle',
-  'Magnet': 'magnet',
-  'MonitorControl': 'monitorcontrol',
-  'iStat Menus': 'istat-menus',
-  'CleanShot X': 'cleanshot',
-  'Shottr': 'shottr',
-  'Karabiner-Elements': 'karabiner-elements',
-  'Logi Options+': 'logi-options-plus',
-  'logioptionsplus': 'logi-options-plus',
-  'Logi Options Plus': 'logi-options-plus',
-
-  // Utilities - Files & Transfer
-  'Transmit': 'transmit',
-  'Cyberduck': 'cyberduck',
-  'The Unarchiver': 'the-unarchiver',
-  'Keka': 'keka',
-  'ForkLift': 'forklift',
-  'Mountain Duck': 'mountain-duck',
-
-  // Virtualization
-  'Parallels Desktop': 'parallels',
-  'VMware Fusion': 'vmware-fusion',
-  'UTM': 'utm',
-
-  // Gaming
-  'Steam': 'steam',
-  'Epic Games Launcher': 'epic-games',
-
-  // VPN & Security
-  'Tailscale': 'tailscale',
-  'WireGuard': 'wireguard-go',
-  'NordVPN': 'nordvpn',
-  'Mullvad VPN': 'mullvad-vpn',
-
-  // Database
-  'MongoDB Compass': 'mongodb-compass',
-  'Redis Insight': 'redisinsight',
-  'Robo 3T': 'robo-3t',
-
-  // Other
-  'Numi': 'numi',
-  'Maccy': 'maccy',
-  'Camo': 'camo',
-  'Linear': 'linear-linear',
-  'Loom': 'loom',
-  'Dropbox': 'dropbox',
-  'Google Drive': 'google-drive',
-  'OneDrive': 'onedrive',
-  'MediaInfo': 'mediainfo',
+// ── App name → pantry domain ─────────────────────────────────────
+// The catalogue's `label` usually equals the installed `.app` name, but a few
+// bundles are named differently than their catalogue label — map those here.
+// Key: app name in /Applications (without `.app`). Value: pantry domain.
+const NAME_DOMAIN_OVERRIDES: Record<string, string> = {
+  'Logi Options+': 'logitech.com/options-plus',
+  'logioptionsplus': 'logitech.com/options-plus',
+  'Logi Options Plus': 'logitech.com/options-plus',
+  'logioptionsplus_installer': 'logitech.com/options-plus',
 }
 
-// Known system/Apple apps that have no cask
+// Known system/Apple apps that pantry doesn't manage.
 export const SYSTEM_APPS: Set<string> = new Set([
-  'Safari',
-  'Numbers',
-  'Pages',
-  'Keynote',
-  'GarageBand',
-  'iMovie',
-  'Color Picker',
-  'Simulator',
-  'Simulator (Watch)',
-  'Preview',
-  'TextEdit',
-  'Automator',
-  'Font Book',
-  'Migration Assistant',
-  'Photo Booth',
-  'System Preferences',
-  'System Settings',
-  'Disk Utility',
-  'Terminal',
-  'Activity Monitor',
-  'Console',
-  'Grapher',
-  'Script Editor',
-  'Time Machine',
-  'Photos',
-  'Mail',
-  'Calendar',
-  'Contacts',
-  'Reminders',
-  'Notes',
-  'Maps',
-  'Messages',
-  'FaceTime',
-  'Books',
-  'News',
-  'Stocks',
-  'Weather',
-  'Home',
-  'Podcasts',
-  'Music',
-  'TV',
-  'Voice Memos',
-  'Freeform',
-  'Shortcuts',
-  'Chess',
-  'Dictionary',
-  'Stickies',
-  'Image Capture',
-  'Xcode',
+  'Safari', 'Numbers', 'Pages', 'Keynote', 'GarageBand', 'iMovie', 'Color Picker',
+  'Simulator', 'Simulator (Watch)', 'Preview', 'TextEdit', 'Automator', 'Font Book',
+  'Migration Assistant', 'Photo Booth', 'System Preferences', 'System Settings',
+  'Disk Utility', 'Terminal', 'Activity Monitor', 'Console', 'Grapher', 'Script Editor',
+  'Time Machine', 'Photos', 'Mail', 'Calendar', 'Contacts', 'Reminders', 'Notes', 'Maps',
+  'Messages', 'FaceTime', 'Books', 'News', 'Stocks', 'Weather', 'Home', 'Podcasts',
+  'Music', 'TV', 'Voice Memos', 'Freeform', 'Shortcuts', 'Chess', 'Dictionary',
+  'Stickies', 'Image Capture', 'Xcode',
 ])
 
-// Known MAS-only apps (available on Mac App Store but not as brew cask)
+// Known Mac App Store apps (updated through the App Store, not pantry).
 export const MAS_APPS: Set<string> = new Set([
-  'Xcode',
-  'Numbers',
-  'Pages',
-  'Keynote',
-  'GarageBand',
-  'iMovie',
-  'Things3',
-  'Grammarly for Safari',
-  'AdBlock',
-  'HP Smart',
-  'Audible',
-  'CleanMyMac_5_MAS',
-  'Mini Motorways',
-  'Snake.io+',
-  'Numbers Creator Studio',
+  'Xcode', 'Numbers', 'Pages', 'Keynote', 'GarageBand', 'iMovie', 'Things3',
+  'Grammarly for Safari', 'AdBlock', 'HP Smart', 'Audible', 'Mini Motorways',
+  'Snake.io+', 'WhatsApp Messenger', 'Honey', 'Wappalyzer',
 ])
 
 // ── Utility Functions ────────────────────────────────────────────
@@ -329,32 +100,9 @@ export function isNewerVersion(latest: string, current: string): boolean {
   return false
 }
 
-/**
- * Derive a potential cask token from an app name.
- * Returns null if the name is clearly not a cask candidate.
- */
-export function guessCaskToken(appName: string): string | null {
-  // Skip names with problematic characters
-  if (/[+()_]/.test(appName)) return null
-  // Skip very short names
-  if (appName.length < 2) return null
-
-  const token = appName
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .trim()
-
-  return token || null
-}
-
-/**
- * Look up the cask token for an app. Uses the static map first,
- * then falls back to algorithmic derivation.
- */
-export function getCaskToken(appName: string): string | null {
-  if (APP_CASK_MAP[appName]) return APP_CASK_MAP[appName]
-  return guessCaskToken(appName)
+/** Normalize a name for loose matching (lowercase, strip non-alphanumerics). */
+function normName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
 // ── Core Functions ───────────────────────────────────────────────
@@ -403,143 +151,65 @@ export function scanInstalledApps(applicationsDir = '/Applications'): InstalledA
 }
 
 /**
- * Query Homebrew for latest cask versions in batch.
- * Pass an array of cask tokens, returns a map of token → info.
+ * Fetch pantry's published desktop-app catalogue (domain → label + version).
+ * This is the registry's own list — the same one the publish pipeline feeds.
  */
-// eslint-disable-next-line pickier/no-unused-vars
-export function queryBrewCaskVersions(tokens: string[]): Map<string, BrewCaskInfo> {
-  const result = new Map<string, BrewCaskInfo>()
-  if (tokens.length === 0) return result
-
-  // Query in batches of 20 to avoid command-line length limits
-  const batchSize = 20
-  for (let i = 0; i < tokens.length; i += batchSize) {
-    const batch = tokens.slice(i, i + batchSize)
-    try {
-      const raw = execSync(
-        ['brew', 'info', '--cask', '--json=v2', ...batch].map(s => `'${s.replace(/'/g, `'\\''`)}'`).join(' '),
-        { timeout: 60000, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024, shell: '/bin/sh' },
-      )
-
-      if (!raw) continue
-
-      const data = JSON.parse(raw)
-      for (const cask of (data.casks || [])) {
-        const appNames: string[] = []
-        for (const artifact of (cask.artifacts || [])) {
-          if (artifact.app) {
-            for (const app of artifact.app) {
-              if (typeof app === 'string') {
-                appNames.push(app.replace(/\.app$/, ''))
-              }
-            }
-          }
-        }
-
-        result.set(cask.token, {
-          token: cask.token,
-          version: (cask.version || '').split(',')[0],
-          autoUpdates: cask.auto_updates || false,
-          appNames,
-        })
-      }
-    }
-    catch {
-      // If batch fails, try individual tokens
-      for (const token of batch) {
-        try {
-          const raw = execSync(
-            `brew info --cask --json=v2 ${token} 2>/dev/null`,
-            { timeout: 15000, encoding: 'utf-8' },
-          )
-          if (!raw) continue
-          const data = JSON.parse(raw)
-          const cask = data.casks?.[0]
-          if (cask) {
-            const appNames: string[] = []
-            for (const artifact of (cask.artifacts || [])) {
-              if (artifact.app) {
-                for (const app of artifact.app) {
-                  if (typeof app === 'string') {
-                    appNames.push(app.replace(/\.app$/, ''))
-                  }
-                }
-              }
-            }
-            result.set(cask.token, {
-              token: cask.token,
-              version: (cask.version || '').split(',')[0],
-              autoUpdates: cask.auto_updates || false,
-              appNames,
-            })
-          }
-        }
-        catch {}
-      }
-    }
+export async function fetchDesktopCatalogue(): Promise<DesktopCatalogueEntry[]> {
+  try {
+    const res = await fetch(`${REGISTRY}/desktop-apps`)
+    if (!res.ok) return []
+    const data = await res.json() as any
+    const apps = (data.apps ?? data ?? []) as any[]
+    return apps
+      .filter(a => a && a.domain)
+      .map(a => ({ domain: a.domain, label: a.label ?? a.name ?? a.domain, version: a.version ?? null, platforms: a.platforms }))
   }
+  catch {
+    return []
+  }
+}
 
-  return result
+/** Map an installed app name to a pantry domain (override map first, then the
+ *  registry catalogue by loose name match). */
+function resolveDomain(appName: string, catalogue: DesktopCatalogueEntry[]): DesktopCatalogueEntry | null {
+  const override = NAME_DOMAIN_OVERRIDES[appName]
+  if (override) {
+    const hit = catalogue.find(e => e.domain === override)
+    if (hit) return hit
+  }
+  const n = normName(appName)
+  return catalogue.find(e => normName(e.label) === n || normName(e.domain.replace(/\.(com|app|io|net|dev|org|ai|so|rest|fr)$/, '')) === n) ?? null
 }
 
 /**
- * Check for available updates for installed desktop apps.
- * This is the main function — scans apps, queries brew, compares versions.
+ * Check installed desktop apps for updates against pantry's registry.
+ * Scans /Applications, matches each app to a published pantry domain, and
+ * compares the installed version with the registry's latest. No Homebrew.
  */
-export function checkAppUpdates(apps?: InstalledApp[]): AppUpdateInfo[] {
+export async function checkAppUpdates(apps?: InstalledApp[]): Promise<AppUpdateInfo[]> {
   const installedApps = apps || scanInstalledApps()
+  const catalogue = await fetchDesktopCatalogue()
   const results: AppUpdateInfo[] = []
 
-  // Collect cask tokens for known apps
-  const tokenToApps = new Map<string, InstalledApp[]>()
-  const appTokenMap = new Map<string, string>() // app name → token
-
   for (const app of installedApps) {
-    if (SYSTEM_APPS.has(app.name)) continue
-
-    const token = getCaskToken(app.name)
-    if (token) {
-      appTokenMap.set(app.name, token)
-      const existing = tokenToApps.get(token) || []
-      existing.push(app)
-      tokenToApps.set(token, existing)
-    }
-  }
-
-  // Batch query brew for all known tokens
-  const allTokens = Array.from(tokenToApps.keys())
-  const caskVersions = queryBrewCaskVersions(allTokens)
-
-  // Build results
-  for (const app of installedApps) {
-    const isSystem = SYSTEM_APPS.has(app.name)
-    const isMAS = MAS_APPS.has(app.name)
-    const token = appTokenMap.get(app.name) || null
-    const caskInfo = token ? caskVersions.get(token) : null
-
     let source: AppUpdateInfo['source'] = 'unknown'
     let latestVersion: string | null = null
     let updateAvailable = false
-    let autoUpdates = false
+    let domain: string | null = null
 
-    if (isSystem) {
+    if (SYSTEM_APPS.has(app.name)) {
       source = 'system'
     }
-    else if (isMAS) {
-      source = 'mas'
-    }
-    else if (caskInfo) {
-      latestVersion = caskInfo.version
-      autoUpdates = caskInfo.autoUpdates
-
-      if (autoUpdates) {
-        source = 'self-updating'
-        // Still check if there's a newer version, even for auto-updating apps
-        updateAvailable = isNewerVersion(latestVersion, app.version)
+    else {
+      const entry = resolveDomain(app.name, catalogue)
+      if (entry) {
+        source = 'pantry'
+        domain = entry.domain
+        latestVersion = entry.version
+        updateAvailable = !!latestVersion && isNewerVersion(latestVersion, app.version)
       }
-      else {
-        source = 'brew-cask'
-        updateAvailable = isNewerVersion(latestVersion, app.version)
+      else if (MAS_APPS.has(app.name)) {
+        source = 'mas'
       }
     }
 
@@ -549,8 +219,7 @@ export function checkAppUpdates(apps?: InstalledApp[]): AppUpdateInfo[] {
       latestVersion,
       updateAvailable,
       source,
-      caskToken: token,
-      autoUpdates,
+      domain,
     })
   }
 
@@ -565,62 +234,80 @@ export function checkAppUpdates(apps?: InstalledApp[]): AppUpdateInfo[] {
 }
 
 /**
- * Update a desktop app via Homebrew cask.
+ * Update a desktop app by re-installing it from pantry's registry — NO
+ * Homebrew. Mirrors the Zig native-app installer: resolve the latest tarball
+ * for this arch, download + extract it, then `ditto` the .app into
+ * /Applications and clear the quarantine flag.
  */
-// eslint-disable-next-line pickier/no-unused-vars
-export async function updateApp(caskToken: string): Promise<{
+export async function updateApp(appName: string): Promise<{
   success: boolean
   version?: string
   error?: string
 }> {
-  try {
-    // Try upgrade first (for brew-managed casks)
-    try {
-      execSync(
-        `brew upgrade --cask '${caskToken.replace(/'/g, `'\\''`)}' 2>&1`,
-        { timeout: 120000, encoding: 'utf-8' },
-      )
+  if (process.platform !== 'darwin')
+    return { success: false, error: 'Desktop app updates are macOS-only' }
 
-      // Get new version
-      const safeCaskToken = caskToken.replace(/'/g, `'\\''`)
-      const verOutput = execSync(
-        `brew info --cask --json=v2 '${safeCaskToken}' 2>/dev/null`,
-        { timeout: 15000, encoding: 'utf-8' },
-      )
-      const data = JSON.parse(verOutput)
-      const version = data.casks?.[0]?.version?.split(',')?.[0] || 'latest'
+  try {
+    const catalogue = await fetchDesktopCatalogue()
+    const entry = resolveDomain(appName, catalogue)
+    if (!entry)
+      return { success: false, error: `"${appName}" is not a pantry-published desktop app` }
+
+    const domain = entry.domain
+    const metaRes = await fetch(`${REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`)
+    if (!metaRes.ok)
+      return { success: false, error: `no registry metadata for ${domain}` }
+    const meta = await metaRes.json() as any
+    const version: string = meta.latestVersion
+    const arch = os.arch() === 'arm64' ? 'darwin-arm64' : 'darwin-x86-64'
+    const platforms = meta.versions?.[version]?.platforms ?? {}
+    const pm = platforms[arch] ?? platforms['darwin-arm64'] ?? platforms['darwin-x86-64']
+    if (!pm?.tarball)
+      return { success: false, error: `no ${arch} build published for ${domain}@${version}` }
+
+    const tarballUrl = `${REGISTRY}/${String(pm.tarball).replace(/^\/?/, '')}`
+    const work = fs.mkdtempSync(path.join(os.tmpdir(), 'pantry-app-'))
+    try {
+      const archive = path.join(work, 'pkg.tar.gz')
+      const dl = await fetch(tarballUrl)
+      if (!dl.ok)
+        return { success: false, error: `failed to download ${tarballUrl} (${dl.status})` }
+      fs.writeFileSync(archive, Buffer.from(await dl.arrayBuffer()))
+
+      const extract = path.join(work, 'x')
+      fs.mkdirSync(extract, { recursive: true })
+      execSync(`tar -xzf "${archive}" -C "${extract}"`, { timeout: 120000 })
+
+      // Find the .app bundle (shallow) and ditto it into /Applications.
+      const findApp = (dir: string, depth: number): string | null => {
+        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (!e.isDirectory()) continue
+          const full = path.join(dir, e.name)
+          if (e.name.endsWith('.app')) return full
+          if (depth > 0) {
+            const hit = findApp(full, depth - 1)
+            if (hit) return hit
+          }
+        }
+        return null
+      }
+      const srcApp = findApp(extract, 3)
+      if (!srcApp)
+        return { success: false, error: `tarball for ${domain} contained no .app bundle` }
+
+      const dst = `/Applications/${path.basename(srcApp)}`
+      execSync(`rm -rf "${dst}"`, { timeout: 30000 })
+      execSync(`ditto "${srcApp}" "${dst}"`, { timeout: 120000 })
+      execSync(`xattr -dr com.apple.quarantine "${dst}" 2>/dev/null || true`, { timeout: 30000 })
 
       return { success: true, version }
     }
-    catch (upgradeErr: any) {
-      const errMsg = upgradeErr.stderr?.toString() || upgradeErr.message || ''
-
-      // If not installed via brew, try fresh install
-      const safeCaskToken = caskToken.replace(/'/g, `'\\''`)
-      if (errMsg.includes('not installed') || errMsg.includes('No available')) {
-        execSync(
-          `brew install --cask '${safeCaskToken}' 2>&1`,
-          { timeout: 120000, encoding: 'utf-8' },
-        )
-
-        const verOutput = execSync(
-          `brew info --cask --json=v2 '${safeCaskToken}' 2>/dev/null`,
-          { timeout: 15000, encoding: 'utf-8' },
-        )
-        const data = JSON.parse(verOutput)
-        const version = data.casks?.[0]?.version?.split(',')?.[0] || 'latest'
-
-        return { success: true, version }
-      }
-
-      throw upgradeErr
+    finally {
+      try { fs.rmSync(work, { recursive: true, force: true }) }
+      catch {}
     }
   }
   catch (err: any) {
-    const errMsg = err.stderr?.toString() || err.stdout?.toString() || err.message || 'Update failed'
-    return {
-      success: false,
-      error: errMsg.trim().split('\n').pop() || 'Update failed',
-    }
+    return { success: false, error: (err?.message || 'Update failed').toString().trim().split('\n').pop() }
   }
 }

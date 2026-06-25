@@ -1339,7 +1339,7 @@ cli
         console.log('Checking desktop apps for updates...')
       }
 
-      const results = checkAppUpdates()
+      const results = await checkAppUpdates()
       const outdated = results.filter(r => r.updateAvailable)
 
       if (options.json) {
@@ -1389,20 +1389,13 @@ cli
   })
 
 cli
-  .command('apps-update <name>', 'Update a desktop application via Homebrew')
+  .command('apps-update <name>', 'Update a desktop application from the pantry registry')
   .action(async (name: string) => {
     try {
-      const { APP_CASK_MAP, getCaskToken, updateApp } = await import('../src/desktop-apps')
+      const { updateApp } = await import('../src/desktop-apps')
 
-      // Resolve app name to cask token
-      const token = APP_CASK_MAP[name] || getCaskToken(name)
-      if (!token) {
-        console.error(`No Homebrew cask found for "${name}"`)
-        process.exit(1)
-      }
-
-      console.log(`Updating ${name} (cask: ${token})...`)
-      const result = await updateApp(token)
+      console.log(`Updating ${name} from the pantry registry...`)
+      const result = await updateApp(name)
 
       if (result.success) {
         console.log(`Successfully updated ${name} to ${result.version}`)
