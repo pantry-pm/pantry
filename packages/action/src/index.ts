@@ -736,7 +736,14 @@ export async function run(): Promise<void> {
     // — the symlink exists so the check passes, and the stale version stays.
     if (cacheHit) {
       const installEnv = { ...process.env, CI: 'true', NO_COLOR: '1' }
-      const systemDeps = extractSystemDeps()
+      // Honour the explicit `packages:` input here too, not just deps files.
+      // The cache key is constant for a rolling spec like `zig@0.17.0-dev`, so
+      // without this a cache hit would serve whatever dev build was first cached
+      // and never pick up a newer master — the reconcile re-resolves the spec
+      // (installPackage is a no-op when the resolved version is already on disk).
+      const systemDeps = inputs.packages
+        ? inputs.packages.split(/\s+/).filter(Boolean)
+        : extractSystemDeps()
       if (systemDeps.length > 0) {
         core.info(`Cache hit — reconciling system deps against lock/spec: ${systemDeps.join(', ')}`)
         for (const dep of systemDeps) {
