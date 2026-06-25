@@ -82,6 +82,7 @@ export const lavinmqcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.9.0',
     '2.8.2',
     '2.8.1',
     '2.8.0',
