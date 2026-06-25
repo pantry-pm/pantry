@@ -33,8 +33,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2026.6.0",
-      "published": "2026.5.0",
-      "needsUpdate": true
+      "published": "2026.6.0",
+      "needsUpdate": false
     },
     {
       "domain": "blender.org",
@@ -96,8 +96,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.623.30605",
-      "published": "26.616.81150",
-      "needsUpdate": true
+      "published": "26.623.30605",
+      "needsUpdate": false
     },
     {
       "domain": "cursor.com",
@@ -140,9 +140,9 @@
       "name": "Element",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.12.22",
       "published": "1.11.86",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "figma.com",
@@ -178,7 +178,7 @@
       "host": "ubuntu",
       "latest": "1.3.1",
       "published": "1.3.1",
-      "needsUpdate": true
+      "needsUpdate": false
     },
     {
       "domain": "gimp.org",
@@ -239,9 +239,9 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.1",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "insomnia.rest",
@@ -329,9 +329,9 @@
       "name": "LibreOffice",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "26.2.4",
       "published": "24.8.5",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "linear.app",
@@ -347,16 +347,16 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "0.4.16-2",
       "published": "0.3.8",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "logitech.com/options-plus",
       "name": "Logi Options+",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.1.854976",
+      "latest": "2.3.879545",
       "published": "2.3.879545",
       "needsUpdate": false
     },
@@ -383,9 +383,9 @@
       "name": "MeetingBar",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "4.11.6",
       "published": "4.10.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "meslo-lg-nerd-font",
@@ -401,7 +401,7 @@
       "name": "MonitorControl",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "4.3.3",
       "published": "4.3.3",
       "needsUpdate": false
     },
@@ -590,9 +590,9 @@
       "name": "Tunnelblick",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "8.0.2",
       "published": "4.0.1",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "vlc.app",
@@ -617,9 +617,9 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "2.26.25.20",
       "published": "2.24.25.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "zed.dev",
