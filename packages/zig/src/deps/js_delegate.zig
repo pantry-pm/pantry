@@ -120,7 +120,18 @@ fn hasJsDeps(obj: std.json.ObjectMap) bool {
     const sections = [_][]const u8{ "dependencies", "devDependencies", "optionalDependencies" };
     for (sections) |section| {
         if (obj.get(section)) |val| {
-            if (val == .object and val.object.count() > 0) return true;
+            if (val != .object) continue;
+            var it = val.object.iterator();
+            while (it.next()) |entry| {
+                // Domain-style names (ziglang.org, bun.sh, nodejs.org) are pantry
+                // *system* deps, not npm packages — they live in package.json only
+                // so one file can express both. They must NOT reach `bun install`:
+                // bun tries to npm-resolve `ziglang.org` and 404s. A package.json
+                // whose deps are ALL system deps has no real JS work, so we must
+                // not spawn a package manager at all. (Same '.'-means-domain rule
+                // the rest of pantry uses to route system vs. JS deps.)
+                if (std.mem.indexOfScalar(u8, entry.key_ptr.*, '.') == null) return true;
+            }
         }
     }
     return false;
