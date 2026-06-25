@@ -1150,9 +1150,13 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time));
         if (success_count > 0) {
             style.printSummary(success_count, total_deps, elapsed_ms);
-        } else {
+        } else if (failed_count == 0) {
+            // Genuinely nothing to do — everything already present.
             style.printCheckedSummary(success_count, total_deps, elapsed_ms);
         }
+        // else: success_count == 0 AND something failed — don't print a green
+        // "N packages up to date" line that contradicts the red failure summary
+        // printed just below. The failure count is the only honest summary here.
 
         if (options.verbose) {
             std.debug.print("[verbose:timer] total install time: {d}ms\n", .{@as(i64, @intFromFloat(elapsed_ms))});
