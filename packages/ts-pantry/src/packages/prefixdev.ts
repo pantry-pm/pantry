@@ -68,6 +68,7 @@ export const prefixdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.71.1',
     '0.71.0',
     '0.70.2',
     '0.70.1',
