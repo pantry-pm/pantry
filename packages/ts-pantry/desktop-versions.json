@@ -95,18 +95,18 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.623.30605",
+      "latest": "26.623.31921",
       "published": "26.623.30605",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "cursor.com",
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.8.24",
+      "latest": "3.9.8",
       "published": "3.8.24",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -141,8 +141,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.12.22",
-      "published": "1.11.86",
-      "needsUpdate": true
+      "published": "1.12.22",
+      "needsUpdate": false
     },
     {
       "domain": "figma.com",
@@ -240,8 +240,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.4.4",
-      "published": "1.4.1",
-      "needsUpdate": true
+      "published": "1.4.4",
+      "needsUpdate": false
     },
     {
       "domain": "insomnia.rest",
@@ -347,8 +347,8 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.4.16-2",
-      "published": "0.3.8",
+      "latest": "0.4.17-4",
+      "published": "0.4.16-2",
       "needsUpdate": true
     },
     {
@@ -384,8 +384,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "4.11.6",
-      "published": "4.10.0",
-      "needsUpdate": true
+      "published": "4.11.6",
+      "needsUpdate": false
     },
     {
       "domain": "meslo-lg-nerd-font",
@@ -591,8 +591,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "8.0.2",
-      "published": "4.0.1",
-      "needsUpdate": true
+      "published": "8.0.2",
+      "needsUpdate": false
     },
     {
       "domain": "vlc.app",
@@ -618,8 +618,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.26.25.20",
-      "published": "2.24.25.0",
-      "needsUpdate": true
+      "published": "2.26.25.20",
+      "needsUpdate": false
     },
     {
       "domain": "zed.dev",
