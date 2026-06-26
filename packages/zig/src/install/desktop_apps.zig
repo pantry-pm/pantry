@@ -6,8 +6,10 @@
 //! install/native_apps.zig): each is a pantry package keyed by domain
 //! (ghostty.org, 1password.com, …), downloaded and installed with ditto/xattr.
 //! There is NO Homebrew and no `brew` anywhere. Mac App Store apps need no extra
-//! tooling either: pantry opens the App Store to the app's page (one click to
-//! install) and skips any App Store app already in /Applications.
+//! tooling either: pantry installs them natively via CommerceKit (see
+//! install/mas.zig — no `mas`, no App Store window), skips any already in
+//! /Applications, and only opens the App Store as a fallback when the silent
+//! install can't run (e.g. not signed in, or a paid app the account doesn't own).
 //!
 //! deps.yaml shape (all top-level keys, sibling to `dependencies:`):
 //!

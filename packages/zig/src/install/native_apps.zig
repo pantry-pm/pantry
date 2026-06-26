@@ -9,7 +9,8 @@
 //! (when published the same way) drop their files into ~/Library/Fonts.
 //!
 //! Everything here uses pantry's registry + macOS's own `ditto`/`xattr`; there
-//! is no dependency on Homebrew. macOS-only; App Store apps still use `mas`.
+//! is no dependency on Homebrew. macOS-only; App Store apps install natively via
+//! CommerceKit (see install/mas.zig), not `mas`.
 
 const std = @import("std");
 const builtin = @import("builtin");
