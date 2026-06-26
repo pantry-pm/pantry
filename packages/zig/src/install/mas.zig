@@ -477,7 +477,8 @@ fn installPackage(allocator: std.mem.Allocator, pkg: []const u8, receipt: []cons
 
     // Place the receipt (best-effort). installer's -dumplog output names the
     // registered bundle as a file:// URL: "PackageKit: Registered bundle <url> for uid 0".
-    if (appPathFromLog(res.stderr)) |app| {
+    if (appPathFromLog(allocator, res.stderr)) |app| {
+        defer allocator.free(app);
         const masdir = std.fmt.allocPrint(allocator, "{s}/Contents/_MASReceipt", .{app}) catch return installed;
         defer allocator.free(masdir);
         const dest = std.fmt.allocPrint(allocator, "{s}/receipt", .{masdir}) catch return installed;
@@ -522,17 +523,46 @@ fn runPriv(allocator: std.mem.Allocator, is_root: bool, base_argv: []const []con
 }
 
 /// Extract the installed bundle path from installer's -dumplog output, parsing
-/// the `PackageKit: Registered bundle file:///… for uid 0` line. Returns a slice
-/// into `log` (no allocation), or null.
-fn appPathFromLog(log: []const u8) ?[]const u8 {
+/// the `PackageKit: Registered bundle file:///… for uid 0` line. The URL is
+/// percent-encoded (e.g. spaces as %20), so we decode it — otherwise a later
+/// `mkdir -p` would create a bogus "App%20Name.app" directory. Returns an
+/// allocator-owned absolute path (caller frees), or null.
+fn appPathFromLog(allocator: std.mem.Allocator, log: []const u8) ?[]u8 {
     const marker = "Registered bundle ";
     const start = std.mem.indexOf(u8, log, marker) orelse return null;
-    var rest = log[start + marker.len ..];
+    const rest = log[start + marker.len ..];
     const end = std.mem.indexOf(u8, rest, " for uid") orelse return null;
     var url = rest[0..end];
     if (std.mem.startsWith(u8, url, "file://")) url = url["file://".len..];
     // Trim a trailing slash so callers can append "/Contents/...".
     if (std.mem.endsWith(u8, url, "/")) url = url[0 .. url.len - 1];
     if (url.len == 0 or url[0] != '/') return null;
-    return url;
+
+    var out = allocator.alloc(u8, url.len) catch return null;
+    var w: usize = 0;
+    var i: usize = 0;
+    while (i < url.len) {
+        if (url[i] == '%' and i + 2 < url.len) {
+            const hi = std.fmt.charToDigit(url[i + 1], 16) catch {
+                out[w] = url[i];
+                w += 1;
+                i += 1;
+                continue;
+            };
+            const lo = std.fmt.charToDigit(url[i + 2], 16) catch {
+                out[w] = url[i];
+                w += 1;
+                i += 1;
+                continue;
+            };
+            out[w] = @intCast(hi * 16 + lo);
+            w += 1;
+            i += 3;
+        } else {
+            out[w] = url[i];
+            w += 1;
+            i += 1;
+        }
+    }
+    return out[0..w];
 }
