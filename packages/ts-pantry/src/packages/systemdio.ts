@@ -152,6 +152,7 @@ export const systemdioPackage = {
   versions: [
     '261.1',
     '261',
+    '260.3',
     '260.2',
     '260.1',
     '260',
