@@ -11,13 +11,18 @@
 //!   2. Build an `SSPurchase` for the adam id and hand it to
 //!      `[CKPurchaseController sharedPurchaseController]`, which enqueues the same
 //!      download `storedownloadd` performs for a Get/Install click. Two routes:
-//!        • redownload — an app already in this Apple ID's purchase history
-//!          (mas `install`: pricingParameters=STDRDL, isRedownload=YES).
-//!        • acquire    — obtain a *free* app the account doesn't own yet
-//!          (mas `get`: STDQ + macappinstalledconfirmed=1).
-//!      We try redownload first, then acquire, so a never-obtained free app still
-//!      installs without opening the App Store. A paid app the account doesn't
-//!      own can't be bought head-less and just fails this step.
+//!        • acquire    — Get the app (mas `get`: STDQ + macappinstalledconfirmed=1,
+//!          isRedownload=NO). This is the universal route: it starts the download
+//!          whether or not the account already owns the (free) app.
+//!        • redownload — re-download an owned app (mas `install`: STDRDL,
+//!          isRedownload=YES).
+//!      We try acquire first, then redownload only as a fallback. Acquire works
+//!      for both owned and not-yet-owned free apps; redownload covers owned *paid*
+//!      apps (whose acquire-at-price-0 is rejected). Crucially, STDRDL *hangs with
+//!      no completion* for an app the account doesn't own, so acquire-first also
+//!      avoids a ~30s stall (and a stale pending purchase) on every new app. A
+//!      paid app the account doesn't own can't be bought head-less, so both routes
+//!      fail and the caller opens the App Store.
 //!   3. Pump the main run loop (CommerceKit delivers on it) and poll
 //!      `CKDownloadQueue` while hard-linking the downloaded installer `.pkg` (and
 //!      its `_MASReceipt`) out of `CKDownloadDirectory` — storedownloadd deletes
@@ -248,12 +253,16 @@ pub fn install(adam_id: []const u8) bool {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    // Redownload first (already-owned app), then acquire (free app the account
-    // doesn't own yet). Both start the same silent storedownloadd download; the
-    // second route is what lets a never-obtained free app install without
-    // opening the App Store. See the file header for the parameter differences.
-    if (attempt(allocator, n, .redownload)) return true;
-    return attempt(allocator, n, .acquire);
+    // Acquire (STDQ) first: it's the universal route — it starts a silent
+    // download for a free app whether or not the account already owns it. Only
+    // fall back to redownload (STDRDL) if acquire fails, which happens for an
+    // *owned paid* app (acquire's price=0 is rejected, but a redownload works).
+    //
+    // Order matters: STDRDL *hangs with no completion* for an app the account
+    // doesn't own, so doing it first would stall ~30s on every new app and leave
+    // a pending purchase that then makes acquire fail. Acquire-first avoids both.
+    if (attempt(allocator, n, .acquire)) return true;
+    return attempt(allocator, n, .redownload);
 }
 
 const Route = enum { redownload, acquire };
