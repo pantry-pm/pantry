@@ -67,6 +67,7 @@ export const runatlantisioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.44.1',
     '0.44.0',
     '0.43.0',
     '0.42.0',
