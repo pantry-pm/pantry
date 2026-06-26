@@ -67,6 +67,7 @@ export const kobuildPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.19.0',
     '0.18.1',
     '0.18.0',
     '0.17.1',
