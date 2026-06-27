@@ -68,6 +68,7 @@ export const sftpgocomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.7.4',
     '2.7.3',
     '2.7.1',
     '2.7.0',
