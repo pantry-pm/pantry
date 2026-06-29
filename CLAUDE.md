@@ -31,7 +31,7 @@ There are two distinct publish targets:
 
 ## Registry Token Management
 
-The pantry registry (`registry.pantry.dev`) runs on EC2 instance `i-012d45877ad44d64b` (`54.243.196.101`).
+The pantry registry (`registry.pantry.dev`) runs on a Hetzner Cloud box (`178.105.248.188`, SSH as `root` with `~/.ssh/stacks-production.pem`). It's a shared box — it also serves other sites (e.g. `mail.stacksjs.com`) — so the registry sits behind a reverse proxy that must route `registry.pantry.dev` to the registry process on `localhost:3000`.
 
 ### Token architecture
 
@@ -47,7 +47,7 @@ The registry validates tokens via simple string equality (`zig-routes.ts:validat
 | Location | Purpose |
 |----------|---------|
 | AWS SSM `/pantry/registry-token` (us-east-1, SecureString) | Source of truth |
-| EC2 systemd service `/etc/systemd/system/pantry-registry.service` | Runtime config |
+| Hetzner box systemd service `/etc/systemd/system/pantry-registry.service` | Runtime config |
 | GitHub secret `PANTRY_TOKEN` on `pickier/pickier` | CI publish |
 | GitHub secret `PANTRY_TOKEN` on `pantry-pm/pantry` | CI publish |
 
@@ -99,25 +99,22 @@ If `flex rule present: false`, crosswind isn't loading — investigate before de
 
 ### Site deployment secrets
 
-The `deploy-registry.yml` workflow SSHes from a GitHub runner into the registry EC2 box. It needs **two** repo secrets on `pantry-pm/pantry`:
+The `deploy-registry.yml` workflow SSHes from a GitHub runner into the registry box as `root@registry.pantry.dev`, `git reset --hard`s `/opt/pantry-registry/repo` to `origin/main`, and restarts `pantry-registry`. It needs **one** repo secret on `pantry-pm/pantry`:
 
 | Secret | Source of truth | Value |
 |--------|-----------------|-------|
-| `REGISTRY_SSH_KEY` | `~/.ssh/stacks-production.pem` | private key for `ec2-user@` |
-| `REGISTRY_HOST` | AWS SSM `/pantry/registry-host` (String) | `54.243.196.101` (instance `i-012d45877ad44d64b`) |
+| `REGISTRY_SSH_KEY` | `~/.ssh/stacks-production.pem` | private key for `root@` on the Hetzner box |
 
-If `REGISTRY_HOST` is missing the deploy silently SSHes to `ec2-user@` (empty host) and fails with exit 1 — the site keeps running on whatever was last deployed and slowly rots. Restore with:
+The host is **not** a secret: the workflow targets `registry.pantry.dev` by DNS (always resolves to the current Hetzner box), so there's nothing to drift. (The old `REGISTRY_HOST` secret pointed at the decommissioned EC2 IP and is intentionally no longer referenced.) Re-run a deploy with:
 
 ```bash
-HOST=$(aws ssm get-parameter --name /pantry/registry-host --region us-east-1 --query Parameter.Value --output text)
-echo -n "$HOST" | gh secret set REGISTRY_HOST --repo pantry-pm/pantry
 gh workflow run deploy-registry.yml --repo pantry-pm/pantry --ref main
 ```
 
 ### Prerequisites
 
-- AWS CLI configured (account `923076644019`, region `us-east-1`)
-- SSH key `~/.ssh/stacks-production.pem` (user `ec2-user`)
+- SSH key `~/.ssh/stacks-production.pem` (user `root` on the Hetzner box)
+- AWS CLI configured (region `us-east-1`) — only for the optional AWS SSM token mirror
 - `gh` CLI authenticated with access to target repos
 
 ### Using in external repos
@@ -184,11 +181,11 @@ The live build dashboard at **pantry.dev/packages** is fed by builders POSTing `
 
 ## Object storage provider (Hetzner / Backblaze / S3)
 
-Registry object storage is **provider-agnostic** (AWS S3, Hetzner Object Storage, Backblaze B2 — all S3-compatible, SigV4). **Hetzner is the chosen low-cost target.** Selection is via `STORAGE_PROVIDER` (`aws` default). Resolution lives in `packages/registry/src/storage/provider.ts` (which builds the vendored `S3Client`) and ts-cloud's `createObjectStorageClient` (used by the `ts-pantry` upload/download scripts). On a non-AWS provider, registry metadata is stored as a JSON object in the bucket (`ObjectMetadataStorage`, `metadata/registry-index.json`) instead of DynamoDB — so the registry runs fully off AWS while the **server stays on EC2**.
+Registry object storage is **provider-agnostic** (AWS S3, Hetzner Object Storage, Backblaze B2 — all S3-compatible, SigV4). **Hetzner is the chosen low-cost target.** Selection is via `STORAGE_PROVIDER` (`aws` default). Resolution lives in `packages/registry/src/storage/provider.ts` (which builds the vendored `S3Client`) and ts-cloud's `createObjectStorageClient` (used by the `ts-pantry` upload/download scripts). On a non-AWS provider, registry metadata is stored as a JSON object in the bucket (`ObjectMetadataStorage`, `metadata/registry-index.json`) instead of DynamoDB — so the registry runs fully off AWS. The **server now runs on a Hetzner box** (`registry.pantry.dev`), not EC2.
 
 - Env: `STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (auto-derived if unset), `S3_FORCE_PATH_STYLE`, `METADATA_BACKEND` (`object`|`dynamodb`|`file`), creds `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` (provider-agnostic; `HETZNER_S3_*` / `B2_*` are checked first if set).
 - Workflows `build.yml` / `sync-binaries.yml` read repo **variables** (`STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`) + **secrets** (`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`). Unset ⇒ stays on S3.
-- Point the EC2 server at the provider: `scripts/configure-registry-storage.sh` (writes the storage env into the systemd unit, mirrors to SSM `/pantry/storage-*`, restarts).
+- Point the registry server (Hetzner) at the provider: `scripts/configure-registry-storage.sh` (SSHes to `root@registry.pantry.dev`, writes the storage env into the systemd unit, optionally mirrors to SSM `/pantry/storage-*`, restarts).
 - Full setup + how to obtain credentials: `docs/object-storage.md`.
 - Buckets stay **private**; the registry server proxies `registry.pantry.dev/binaries/...`.
 - **Analytics** also persist off-AWS on non-AWS providers: `ObjectAnalytics` (`analytics/registry-analytics.json`) replaces the previously **ephemeral in-memory** prod analytics and DynamoDB analytics, so download tracking survives restarts. Per-package download counts persist via the object metadata store (`incrementDownloads`). On AWS the prior behavior (DynamoDB if `DYNAMODB_ANALYTICS_TABLE` set, else in-memory) is unchanged.
@@ -205,7 +202,7 @@ Production site infrastructure uses **ts-cloud** from `~/Code/Libraries/ts-cloud
 |----------|------|--------|
 | Site CloudFormation stack | `pantry-production-main-site` | `cloud deploy --env production --skip-security-scan --yes` |
 | S3 install assets | `pantry-production-site` | same (site deploy path) |
-| Registry EC2 | `54.243.196.101` | `.github/workflows/deploy-registry.yml` |
+| Registry server (Hetzner) | `registry.pantry.dev` (`178.105.248.188`) | `.github/workflows/deploy-registry.yml` |
 | Binaries S3 | `pantry-binaries` | manual |
 
 Naming conventions: `{slug}-{environment}-{siteKey}-site` for stacks, `{slug}-{environment}-site` for the main site bucket. `infrastructure.deployStack: false` skips the unused `pantry-production` VPC stack.

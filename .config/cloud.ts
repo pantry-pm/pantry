@@ -1,27 +1,44 @@
 import type { CloudConfig } from '@ts-cloud/core'
 
 /**
- * Pantry AWS layout (production):
+ * Pantry production infrastructure — Hetzner Cloud (no AWS, no CloudFront).
  *
- * | Resource        | Name                         | Managed by              |
- * |-----------------|------------------------------|-------------------------|
- * | Site stack      | pantry-production-main-site  | cloud deploy (ts-cloud) |
- * | S3 install      | pantry-production-site       | site stack              |
- * | CloudFront      | E35L7VG3GQG66J (pantry.dev)  | site stack              |
- * | Registry EC2    | 54.243.196.101               | deploy-registry.yml     |
- * | Binaries bucket | pantry-binaries              | manual                  |
+ * Everything runs on a single Hetzner box in `fsn1` that both `registry.pantry.dev`
+ * and `pantry.dev`/`www` resolve to (DNS via Porkbun). The box serves the registry
+ * API and the static site (`./public`) behind a reverse proxy that terminates TLS
+ * (Let's Encrypt). Tarballs/binaries live in Hetzner Object Storage, pointed at by
+ * `scripts/configure-registry-storage.sh` (STORAGE_PROVIDER=hetzner) — not in S3.
+ *
+ * NOTE: the registry box already exists and is (re)deployed by
+ * `.github/workflows/deploy-registry.yml` (SSH to `root@registry.pantry.dev`).
+ * This config drives the static-site deploy via ts-cloud's Hetzner driver. Before
+ * running `cloud deploy`, confirm it ADOPTS the existing box rather than
+ * provisioning a new one (set HCLOUD_TOKEN and check the plan first).
  */
 const config: CloudConfig = {
   project: {
     name: 'pantry',
     slug: 'pantry',
-    region: 'us-east-1',
+    region: 'fsn1', // Hetzner location (Falkenstein) — not an AWS region
+  },
+
+  // Deploy to Hetzner, not AWS. (resolveCloudProvider also auto-detects Hetzner
+  // when hetzner.apiToken is set, but be explicit.)
+  cloud: { provider: 'hetzner' },
+
+  hetzner: {
+    // Falls back to HCLOUD_TOKEN / HETZNER_API_TOKEN if unset.
+    apiToken: process.env.HCLOUD_TOKEN,
+    location: 'fsn1',
+    image: 'ubuntu-24.04',
+    sshPrivateKeyPath: '~/.ssh/stacks-production.pem',
+    sshUser: 'root',
   },
 
   environments: {
     production: {
       type: 'production',
-      region: 'us-east-1',
+      domain: 'pantry.dev',
       variables: {
         NODE_ENV: 'production',
       },
@@ -29,66 +46,14 @@ const config: CloudConfig = {
   },
 
   infrastructure: {
-    /** Registry EC2 is deployed via GitHub Actions, not the project infrastructure stack. */
-    deployStack: false,
-
     dns: {
       domain: 'pantry.dev',
       provider: 'porkbun',
     },
 
     compute: {
-      cloudFrontOriginDomain: 'ec2-54-243-196-101.compute-1.amazonaws.com',
-      cloudFrontOriginPort: 3000,
-      cloudFrontOriginId: 'pantry-site-ec2',
-      mode: 'server',
-      size: 'small',
-
-      server: {
-        instanceType: 't3.small',
-        keyPair: 'pantry-registry',
-        autoScaling: {
-          min: 1,
-          max: 1,
-          desired: 1,
-        },
-        loadBalancer: {
-          type: 'application',
-          healthCheck: {
-            path: '/health',
-            interval: 30,
-            timeout: 5,
-            healthyThreshold: 2,
-            unhealthyThreshold: 3,
-          },
-        },
-        userData: {
-          packages: ['bun', 'git'],
-          commands: [
-            'mkdir -p /opt/pantry-registry',
-            'cd /opt/pantry-registry && git clone --depth 1 https://github.com/pantry-pm/pantry.git repo || true',
-          ],
-        },
-      },
-
-      disk: {
-        size: 20,
-        type: 'ssd',
-        encrypted: true,
-      },
-    },
-
-    storage: {
-      binaries: {
-        bucket: 'pantry-binaries',
-        public: true,
-        encryption: true,
-        versioning: false,
-      },
-    },
-
-    ssl: {
-      enabled: true,
+      size: 'small', // Hetzner cx23 (2 vCPU, 4 GB)
+      runtime: 'bun',
     },
   },
 
@@ -96,6 +61,7 @@ const config: CloudConfig = {
     main: {
       root: './public',
       domain: 'pantry.dev',
+      deploy: 'server', // serve straight from the Hetzner box (no S3 + CloudFront)
       installScript: './public/install.sh',
     },
   },

@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Point the running Pantry registry (EC2) at an S3-compatible object storage
-# provider — Hetzner Object Storage or Backblaze B2 — for tarballs, binaries and
-# the object metadata snapshot. The server stays on EC2; only storage moves.
+# Point the running Pantry registry at an S3-compatible object storage provider
+# — Hetzner Object Storage or Backblaze B2 — for tarballs, binaries and the
+# object metadata snapshot. The registry runs on the Hetzner box
+# (registry.pantry.dev, login as root); this only changes where it stores data.
 #
 # This writes the storage configuration into the server's systemd unit and
-# restarts it, and mirrors the values into AWS SSM (/pantry/storage-*) so they
-# can be reapplied on a fresh box.
+# restarts it, and optionally mirrors the values into AWS SSM (/pantry/storage-*)
+# so they can be reapplied on a fresh box (SKIP_SSM=1 to skip the AWS mirror).
 #
 # Prerequisites:
 #   - A bucket on the provider + S3 credentials (access key id + secret).
 #       Hetzner:   Cloud Console → Object Storage → bucket → credentials.
 #       Backblaze: create a bucket + an Application Key (keyID + applicationKey).
-#   - AWS CLI configured (us-east-1) — the registry box is still on EC2.
-#   - SSH key at ~/.ssh/stacks-production.pem
+#   - SSH key at ~/.ssh/stacks-production.pem (root@registry.pantry.dev).
+#   - AWS CLI configured (us-east-1) — only for the optional SSM mirror.
 #
 # Usage (env vars):
 #   STORAGE_PROVIDER=hetzner \
@@ -29,9 +30,11 @@ set -euo pipefail
 #   METADATA_BACKEND=object                    (default: object)
 #   SKIP_SSM=1                                  (don't write to AWS SSM)
 
-REGISTRY_HOST="${REGISTRY_HOST:-54.243.196.101}"
+# registry.pantry.dev always resolves to the current Hetzner box, which (like
+# every Hetzner Cloud image) logs in as root.
+REGISTRY_HOST="${REGISTRY_HOST:-registry.pantry.dev}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/stacks-production.pem}"
-SSH_USER="${SSH_USER:-ec2-user}"
+SSH_USER="${SSH_USER:-root}"
 SERVICE_FILE="/etc/systemd/system/pantry-registry.service"
 AWS_SSM_REGION="us-east-1"
 
@@ -72,16 +75,18 @@ fi
 
 echo "==> Updating registry server ($REGISTRY_HOST)…"
 # shellcheck disable=SC2087
+# We log in as root on the Hetzner box, so no sudo is needed (minimal Hetzner
+# images don't ship sudo at all).
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$REGISTRY_HOST" "
   set -e
   # Drop any prior storage env lines so re-running is idempotent.
-  sudo sed -i '/^Environment=STORAGE_PROVIDER/d;/^Environment=S3_BUCKET/d;/^Environment=S3_REGION/d;/^Environment=S3_ENDPOINT/d;/^Environment=METADATA_BACKEND/d;/^Environment=S3_ACCESS_KEY_ID/d;/^Environment=S3_SECRET_ACCESS_KEY/d' $SERVICE_FILE
+  sed -i '/^Environment=STORAGE_PROVIDER/d;/^Environment=S3_BUCKET/d;/^Environment=S3_REGION/d;/^Environment=S3_ENDPOINT/d;/^Environment=METADATA_BACKEND/d;/^Environment=S3_ACCESS_KEY_ID/d;/^Environment=S3_SECRET_ACCESS_KEY/d' $SERVICE_FILE
   # Append the storage configuration to the [Service] section.
-  sudo sed -i '/^\[Service\]/a Environment=STORAGE_PROVIDER=$STORAGE_PROVIDER\nEnvironment=S3_BUCKET=$S3_BUCKET\nEnvironment=S3_REGION=$S3_REGION\nEnvironment=S3_ENDPOINT=$S3_ENDPOINT\nEnvironment=METADATA_BACKEND=$METADATA_BACKEND\nEnvironment=S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID\nEnvironment=S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY' $SERVICE_FILE
-  sudo systemctl daemon-reload
-  sudo systemctl restart pantry-registry
+  sed -i '/^\[Service\]/a Environment=STORAGE_PROVIDER=$STORAGE_PROVIDER\nEnvironment=S3_BUCKET=$S3_BUCKET\nEnvironment=S3_REGION=$S3_REGION\nEnvironment=S3_ENDPOINT=$S3_ENDPOINT\nEnvironment=METADATA_BACKEND=$METADATA_BACKEND\nEnvironment=S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID\nEnvironment=S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY' $SERVICE_FILE
+  systemctl daemon-reload
+  systemctl restart pantry-registry
   sleep 2
-  sudo systemctl is-active pantry-registry
+  systemctl is-active pantry-registry
 " 2>/dev/null
 echo "    Registry restarted."
 

@@ -19,9 +19,10 @@ set -euo pipefail
 #   ./scripts/rotate-registry-token.sh
 #   ./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry"
 
-REGISTRY_HOST="54.243.196.101"
+# registry.pantry.dev resolves to the current Hetzner box; log in as root.
+REGISTRY_HOST="registry.pantry.dev"
 SSH_KEY="$HOME/.ssh/stacks-production.pem"
-SSH_USER="ec2-user"
+SSH_USER="root"
 SSM_PARAM="/pantry/registry-token"
 AWS_REGION="us-east-1"
 SERVICE_FILE="/etc/systemd/system/pantry-registry.service"
@@ -54,13 +55,15 @@ aws ssm put-parameter \
 echo "    Stored."
 
 echo "==> Updating registry server ($REGISTRY_HOST)..."
+# We log in as root on the Hetzner box, so no sudo is needed (minimal Hetzner
+# images don't ship sudo at all).
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$REGISTRY_HOST" "
   # Remove any existing PANTRY_REGISTRY_TOKEN line
-  sudo sed -i '/PANTRY_REGISTRY_TOKEN/d' $SERVICE_FILE
+  sed -i '/PANTRY_REGISTRY_TOKEN/d' $SERVICE_FILE
   # Add the new token after the NPM_FALLBACK line
-  sudo sed -i '/^Environment=NPM_FALLBACK/a Environment=PANTRY_REGISTRY_TOKEN=$TOKEN' $SERVICE_FILE
-  sudo systemctl daemon-reload
-  sudo systemctl restart pantry-registry
+  sed -i '/^Environment=NPM_FALLBACK/a Environment=PANTRY_REGISTRY_TOKEN=$TOKEN' $SERVICE_FILE
+  systemctl daemon-reload
+  systemctl restart pantry-registry
 " 2>/dev/null
 echo "    Registry restarted."
 
