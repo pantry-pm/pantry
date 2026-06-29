@@ -180,12 +180,27 @@ function comparePrerelease(a: string, b: string): number {
   return 0
 }
 
+// Locate a package's metadata file. Most CLI packages are flat at
+// src/packages/<key>.ts, but apps and fonts live one level down
+// (src/packages/apps/<key>.ts, src/packages/fonts/<key>.ts). Without the
+// subdirectory search this returned undefined for every app and font, so
+// version-fetcher silently never bumped them — leaving the CLI's baked
+// `@latest` (generated.zig) permanently stale (e.g. raycast stuck at 1.89.0).
+function findPackageFile(key: string, domain: string): string | undefined {
+  for (const p of [join(packagesDir, `${key}.ts`), join(packagesDir, `${domain}.ts`)]) {
+    if (existsSync(p)) return p
+  }
+  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const p = join(packagesDir, entry.name, `${key}.ts`)
+    if (existsSync(p)) return p
+  }
+  return undefined
+}
+
 function updatePackageVersions(domain: string, newVersions: string[]): boolean {
   const key = domainToKey(domain)
-  const filePath = [
-    join(packagesDir, `${key}.ts`),
-    join(packagesDir, `${domain}.ts`),
-  ].find(path => existsSync(path))
+  const filePath = findPackageFile(key, domain)
   if (!filePath) return false
 
   const content = readFileSync(filePath, 'utf-8')
