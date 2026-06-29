@@ -61,6 +61,7 @@ export const nasmusPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.02',
     '3.01',
     '3.1.0',
     '3.00',
