@@ -67,6 +67,7 @@ export const seaweedfscomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.37',
     '4.36',
     '4.35',
     '4.34',
