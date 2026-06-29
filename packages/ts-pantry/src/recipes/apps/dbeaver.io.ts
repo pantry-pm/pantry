@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL -L "https://dbeaver.io/files/{{version}}/dbeaver-ce-{{version}}-macos-aarch64.dmg" -o /tmp/dbeaver.dmg',
+      'if test {{hw.arch}} = "aarch64"; then ARCH="aarch64"; else ARCH="x86_64"; fi',
+      'curl -fSL -L "https://dbeaver.io/files/{{version}}/dbeaver-ce-{{version}}-macos-${ARCH}.dmg" -o /tmp/dbeaver.dmg',
       'hdiutil attach /tmp/dbeaver.dmg -mountpoint /tmp/dbeaver-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/dbeaver-mount/DBeaver.app" {{prefix}}/DBeaver.app',

@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL -L "https://download.blender.org/release/Blender{{version.marketing}}/blender-{{version}}-macos-arm64.dmg" -o /tmp/blender.dmg',
+      'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="x64"; fi',
+      'curl -fSL -L "https://download.blender.org/release/Blender{{version.marketing}}/blender-{{version}}-macos-${ARCH}.dmg" -o /tmp/blender.dmg',
       'hdiutil attach /tmp/blender.dmg -mountpoint /tmp/blender-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/blender-mount/Blender.app" {{prefix}}/Blender.app',

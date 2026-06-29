@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL -L "https://download.gimp.org/gimp/v2.10/osx/gimp-{{version}}-arm64.dmg" -o /tmp/gimp.dmg',
+      'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="x86_64"; fi',
+      'curl -fSL -L "https://download.gimp.org/gimp/v2.10/osx/gimp-{{version}}-${ARCH}.dmg" -o /tmp/gimp.dmg',
       'hdiutil attach /tmp/gimp.dmg -mountpoint /tmp/gimp-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/gimp-mount/GIMP-{{version.marketing}}.app" {{prefix}}/GIMP.app || cp -R /tmp/gimp-mount/GIMP*.app {{prefix}}/GIMP.app',

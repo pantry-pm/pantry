@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL "https://download.scdn.co/SpotifyARM64.dmg" -o /tmp/spotify.dmg',
+      'if test {{hw.arch}} = "aarch64"; then DMG="SpotifyARM64.dmg"; else DMG="Spotify.dmg"; fi',
+      'curl -fSL "https://download.scdn.co/${DMG}" -o /tmp/spotify.dmg',
       'hdiutil attach /tmp/spotify.dmg -mountpoint /tmp/spotify-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/spotify-mount/Spotify.app" {{prefix}}/Spotify.app',

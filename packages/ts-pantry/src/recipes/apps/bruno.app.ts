@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL -L "https://github.com/usebruno/bruno/releases/download/v{{version}}/bruno_{{version}}_arm64_mac.dmg" -o /tmp/bruno.dmg',
+      'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="x64"; fi',
+      'curl -fSL -L "https://github.com/usebruno/bruno/releases/download/v{{version}}/bruno_{{version}}_${ARCH}_mac.dmg" -o /tmp/bruno.dmg',
       'hdiutil attach /tmp/bruno.dmg -mountpoint /tmp/bruno-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/bruno-mount/Bruno.app" {{prefix}}/Bruno.app',

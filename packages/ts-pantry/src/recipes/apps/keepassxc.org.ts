@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL -L "https://github.com/keepassxreboot/keepassxc/releases/download/{{version}}/KeePassXC-{{version}}-arm64.dmg" -o /tmp/keepassxc.dmg',
+      'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="x86_64"; fi',
+      'curl -fSL -L "https://github.com/keepassxreboot/keepassxc/releases/download/{{version}}/KeePassXC-{{version}}-${ARCH}.dmg" -o /tmp/keepassxc.dmg',
       'hdiutil attach /tmp/keepassxc.dmg -mountpoint /tmp/keepassxc-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/keepassxc-mount/KeePassXC.app" {{prefix}}/KeePassXC.app',

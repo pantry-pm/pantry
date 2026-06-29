@@ -10,7 +10,8 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL "https://desktop.figma.com/mac-arm/Figma-{{version}}.zip" -o /tmp/figma.zip',
+      'if test {{hw.arch}} = "aarch64"; then ARCH="mac-arm"; else ARCH="mac"; fi',
+      'curl -fSL "https://desktop.figma.com/${ARCH}/Figma-{{version}}.zip" -o /tmp/figma.zip',
       'cd /tmp && unzip -qo figma.zip',
       'mkdir -p {{prefix}}',
       'mv "/tmp/Figma.app" {{prefix}}/Figma.app',
