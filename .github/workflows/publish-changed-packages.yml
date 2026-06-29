@@ -84,6 +84,14 @@ jobs:
                   d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//")
                   [ -n "$d" ] || d=$(echo "$f" | sed -E 's#.*/recipes/##; s#\.ts$##')
                   ;;
+                # App/font version metadata is (re)built on the cheap ubuntu runner
+                # by check-desktop-updates.yml (it checks each app's upstream vs the
+                # registry and publishes out-of-date ones). Don't ALSO rebuild them
+                # here on 10x-pricier macOS runners — every auto version bump would
+                # double-build. App recipe LOGIC changes (src/recipes/apps/**) still
+                # build here; those are version-independent so the desktop checker
+                # won't catch them.
+                */packages/apps/*.ts|*/packages/fonts/*.ts) d="" ;;
                 # Metadata files (e.g. redisio.ts) carry an explicit `domain:` field.
                 # Only (re)build when the published artifact would actually differ —
                 # i.e. the `versions:` line changed (a new version to build). Skip
