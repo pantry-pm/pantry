@@ -267,7 +267,17 @@ catch {
         findRecipes(join(dir, entry.name), prefix ? `${prefix}/${entry.name}` : entry.name)
       }
       else if (entry.name.endsWith('.ts') && !entry.name.startsWith('index')) {
-        const domain = prefix ? `${prefix}/${entry.name.replace('.ts', '')}` : entry.name.replace('.ts', '')
+        // Use the recipe's DECLARED `domain:` field, NOT the file path. App
+        // recipes live under recipes/apps/<domain>.ts, so a path-derived name is
+        // `apps/<domain>` — which never matches the pantry package, so the recipe
+        // was silently skipped and never built (also broke `-p <domain>` and
+        // publish-changed-packages.yml for every GUI app). Fall back to the path
+        // only when the file declares no domain.
+        const recipeSrc = readFileSync(join(dir, entry.name), 'utf-8')
+        const domainMatch = recipeSrc.match(/domain\s*:\s*['"]([^'"]+)['"]/)
+        const domain = domainMatch
+          ? domainMatch[1]
+          : (prefix ? `${prefix}/${entry.name.replace('.ts', '')}` : entry.name.replace('.ts', ''))
         if (discoveredDomains.has(domain)) continue // Already found via YAML
 
         const pkg = lookupPantryPackage(domain)
@@ -277,7 +287,6 @@ catch {
         // Respect the recipe's own `platforms:` field — overrides win, but if the
         // recipe declares platforms (e.g. darwin/windows-only GUI apps) we must NOT
         // attempt to source-build it on an unsupported OS (it 404s / fails).
-        const recipeSrc = readFileSync(join(dir, entry.name), 'utf-8')
         const platformsMatch = recipeSrc.match(/platforms\s*:\s*\[([^\]]*)\]/)
         const recipePlatforms = platformsMatch
           ? platformsMatch[1].split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean)

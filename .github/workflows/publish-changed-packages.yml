@@ -73,12 +73,17 @@ jobs:
             DOMAINS=""
             for f in $FILES; do
               case "$f" in
-                # Recipe path under recipes/ IS the domain — including nested
-                # ones (recipes/redis.io.ts → redis.io;
-                # recipes/mariadb.com/server.ts → mariadb.com/server;
-                # recipes/gnu.org/readline.ts → gnu.org/readline). A recipe change
-                # alters build logic, so always (re)build it.
-                */recipes/*.ts) d=$(echo "$f" | sed -E 's#.*/recipes/##; s#\.ts$##') ;;
+                # Use the recipe's declared `domain:` field — NOT the path. GUI
+                # app recipes live at recipes/apps/<domain>.ts, so a path-derived
+                # name is `apps/<domain>` (e.g. apps/raycast.com), which never
+                # matches the package — so app recipe changes were silently never
+                # rebuilt. The domain field also carries nested domains correctly
+                # (recipes/mariadb.com/server.ts declares mariadb.com/server). A
+                # recipe change alters build logic, so always (re)build it.
+                */recipes/*.ts)
+                  d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//")
+                  [ -n "$d" ] || d=$(echo "$f" | sed -E 's#.*/recipes/##; s#\.ts$##')
+                  ;;
                 # Metadata files (e.g. redisio.ts) carry an explicit `domain:` field.
                 # Only (re)build when the published artifact would actually differ —
                 # i.e. the `versions:` line changed (a new version to build). Skip
