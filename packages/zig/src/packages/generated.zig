@@ -14467,7 +14467,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{"raycast"},
-    .versions = &[_][]const u8{ "1.89.0", "1.88.0", "1.87.0" },
+    .versions = &[_][]const u8{ "1.104.20", "1.89.0", "1.88.0", "1.87.0" },
 }, .{
     .name = "ruby-build",
     .domain = "rbenv.org/ruby-build",

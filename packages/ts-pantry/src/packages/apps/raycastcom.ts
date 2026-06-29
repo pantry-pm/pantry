@@ -3,7 +3,7 @@
  *
  * @domain `raycast.com`
  * @programs `raycast`
- * @version `1.89.0` (3 versions available)
+ * @version `1.104.20` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install raycast.com`
@@ -21,7 +21,7 @@ export const raycastcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.89.0', '1.88.0', '1.87.0'] as const,
+  versions: ['1.104.20', '1.89.0', '1.88.0', '1.87.0'] as const,
   aliases: ['raycast'] as const,
 }
 export type RaycastcomPackage = typeof raycastcomPackage
