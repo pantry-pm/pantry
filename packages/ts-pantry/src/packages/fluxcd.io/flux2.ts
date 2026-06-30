@@ -60,6 +60,7 @@ export const fluxcdioflux2Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.9.0',
     '2.8.8',
     '2.8.7',
     '2.8.6',

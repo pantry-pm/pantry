@@ -66,6 +66,7 @@ export const tailscalecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.98.8',
     '1.98.5',
     '1.98.3',
     '1.98.2',

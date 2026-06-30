@@ -75,6 +75,7 @@ export const endoflifedatePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.25.0',
     '0.24.1',
     '0.24.0',
     '0.23.0',
