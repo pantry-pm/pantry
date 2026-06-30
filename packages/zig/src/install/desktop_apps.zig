@@ -7,9 +7,13 @@
 //! (ghostty.org, 1password.com, …), downloaded and installed with ditto/xattr.
 //! There is NO Homebrew and no `brew` anywhere. Mac App Store apps need no extra
 //! tooling either: pantry installs them natively via CommerceKit (see
-//! install/mas.zig — no `mas`, no App Store window), skips any already in
-//! /Applications, and only opens the App Store as a fallback when the silent
-//! install can't run (e.g. not signed in, or a paid app the account doesn't own).
+//! install/mas.zig — no `mas`, no App Store window) and skips any already in
+//! /Applications. The silent installer's final `installer` step needs root, so
+//! an interactive `pantry install` primes sudo once up front (a single password
+//! prompt) and then installs every App Store app in the background. When the
+//! silent install genuinely can't run (not signed in, an unowned paid app, or
+//! sudo declined), pantry prints guidance instead of opening the App Store — set
+//! PANTRY_OPEN_APP_STORE=1 to restore the old one-click App Store GUI fallback.
 //!
 //! deps.yaml shape (all top-level keys, sibling to `dependencies:`):
 //!
@@ -44,6 +48,8 @@ const style = @import("../cli/style.zig");
 const deps_parser = @import("../deps/parser.zig");
 const native_apps = @import("native_apps.zig");
 const mas = @import("mas.zig");
+
+extern fn geteuid() u32;
 
 pub const AppSource = enum { cask, mas };
 
@@ -464,13 +470,42 @@ fn appStoreAppInstalled(allocator: std.mem.Allocator, name: []const u8) bool {
     return true;
 }
 
-/// Open the Mac App Store to an app's page so it installs with one click. This
-/// is how pantry provisions App Store apps — best-effort; `open` is always
-/// present on macOS.
+/// Open the Mac App Store to an app's page so it installs with one click. Only
+/// used as the opt-in fallback (PANTRY_OPEN_APP_STORE=1) when the silent
+/// background install can't run — best-effort; `open` is always present on macOS.
 fn openAppStore(allocator: std.mem.Allocator, id: []const u8) void {
     const url = std.fmt.allocPrint(allocator, "macappstore://apps.apple.com/app/id{s}", .{id}) catch return;
     defer allocator.free(url);
     _ = io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "/usr/bin/open", url } }) catch {};
+}
+
+/// Whether to fall back to opening the App Store GUI when a silent background
+/// install can't run. Off by default — pantry installs App Store apps silently
+/// (see install/mas.zig); set PANTRY_OPEN_APP_STORE=1 to restore the old
+/// one-click App Store window fallback.
+fn openAppStoreFallbackEnabled() bool {
+    const v = io_helper.getenv("PANTRY_OPEN_APP_STORE") orelse return false;
+    return !(v.len == 0 or std.mem.eql(u8, v, "0") or
+        std.mem.eql(u8, v, "false") or std.mem.eql(u8, v, "no"));
+}
+
+/// True when stdin is an interactive terminal — gates the one-time sudo prompt
+/// so a non-interactive run (CI, the `cd` auto-install) is never blocked on it.
+fn interactiveTerminal() bool {
+    return io_helper.File.stdin().isTty(io_helper.io) catch false;
+}
+
+/// Prime sudo (`sudo -v`) so the silent App Store installer's later `sudo -n`
+/// (install/mas.zig step 4) runs non-interactively. Inherits the terminal for
+/// the single password prompt. Returns true if sudo is usable afterwards; the
+/// cached credential is shared with the isolated `__mas-install` child via the
+/// controlling tty, so its `sudo -n` then succeeds without re-prompting.
+fn primeSudoForMas() bool {
+    const term = io_helper.spawnAndWait(.{ .argv = &[_][]const u8{ "sudo", "-v" } }) catch return false;
+    return switch (term) {
+        .exited => |c| c == 0,
+        else => false,
+    };
 }
 
 /// Parse `apps:`/`fonts:` from the deps file and install anything not already
@@ -538,13 +573,19 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
     }
 
     // Count pending work so we only print a header when there's something to do.
+    // `mas_pending` separately tracks Mac App Store apps that still need a silent
+    // background install (not marked AND not already in /Applications) — used to
+    // decide whether to prime sudo once for the installer step below.
     var pending: usize = 0;
+    var mas_pending: usize = 0;
     {
         var kbuf: [512]u8 = undefined;
         for (apps) |app| {
             const prefix = if (app.source == .cask) "app:" else "mas:";
             const key = std.fmt.bufPrint(&kbuf, "{s}{s}", .{ prefix, app.id }) catch continue;
-            if (!markerHas(marked.items, key)) pending += 1;
+            if (markerHas(marked.items, key)) continue;
+            pending += 1;
+            if (app.source == .mas and !appStoreAppInstalled(allocator, app.name)) mas_pending += 1;
         }
         for (fonts) |font| {
             const key = std.fmt.bufPrint(&kbuf, "font:{s}", .{font.cask}) catch continue;
@@ -560,6 +601,19 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
 
     if (!quiet) {
         style.print("{s}>{s} Installing {d} desktop app(s)/font(s)\n", .{ style.dim, style.reset, pending });
+    }
+
+    // The silent App Store installer (install/mas.zig step 4) runs
+    // `/usr/sbin/installer` as root via `sudo -n`. Prime sudo once here — only on
+    // an interactive, non-quiet `pantry install` that still has App Store apps to
+    // install — so that step is non-interactive and every app installs in the
+    // background without ever opening the App Store. Skipped when already root,
+    // under quiet/auto-install (shell:activate, `pantry env`), or with no TTY, so
+    // a `cd` is never surprised by a password prompt. Best-effort: a declined
+    // prompt just falls through to the per-app guidance below.
+    if (mas_pending > 0 and geteuid() != 0 and !quiet and interactiveTerminal()) {
+        style.print("{s}>{s} Installing {d} Mac App Store app(s) in the background — may ask for your password once\n", .{ style.dim, style.reset, mas_pending });
+        _ = primeSudoForMas();
     }
 
     var installed_any = false;
@@ -601,9 +655,19 @@ pub fn installFromDepsFile(allocator: std.mem.Allocator, deps_file_path: []const
                     marked.appendSlice(allocator, key) catch {};
                     marked.append(allocator, '\n') catch {};
                     installed_any = true;
-                } else {
+                } else if (openAppStoreFallbackEnabled()) {
+                    // Opt-in (PANTRY_OPEN_APP_STORE=1): pop the App Store to the
+                    // app's page for a one-click install. Don't mark it, so it
+                    // re-surfaces until the app actually lands in /Applications.
                     openAppStore(allocator, app.id);
-                    printInfo(app.name, "app store — could not install directly, opened App Store");
+                    printInfo(app.name, "app store — opened App Store (PANTRY_OPEN_APP_STORE)");
+                } else {
+                    // Default: never open the App Store. The silent background
+                    // install couldn't run (not signed in, an unowned paid app,
+                    // or no sudo for the installer step). Leave it unmarked so a
+                    // later run retries, and print guidance unless quiet.
+                    if (!quiet)
+                        printInfo(app.name, "app store — couldn't install in the background; sign in to the App Store (set PANTRY_OPEN_APP_STORE=1 to open it instead)");
                 }
             },
         }
