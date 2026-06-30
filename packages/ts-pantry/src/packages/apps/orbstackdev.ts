@@ -21,7 +21,12 @@ export const orbstackdevPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.9.2', '1.9.1', '1.9.0'] as const,
+  versions: [
+    '2.2.1',
+    '1.9.2',
+    '1.9.1',
+    '1.9.0',
+  ] as const,
   aliases: ['orbstack'] as const,
 }
 export type OrbstackdevPackage = typeof orbstackdevPackage

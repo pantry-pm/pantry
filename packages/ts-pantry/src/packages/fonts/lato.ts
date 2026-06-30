@@ -19,7 +19,10 @@ export const latoPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['2.0'] as const,
+  versions: [
+    '2.015',
+    '2.0',
+  ] as const,
   aliases: [] as const,
 }
 export type LatoPackage = typeof latoPackage

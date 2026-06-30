@@ -21,7 +21,12 @@ export const ghosttyorgPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.1.0', '1.0.1', '1.0.0'] as const,
+  versions: [
+    '1.3.1',
+    '1.1.0',
+    '1.0.1',
+    '1.0.0',
+  ] as const,
   aliases: ['ghostty'] as const,
 }
 export type GhosttyorgPackage = typeof ghosttyorgPackage

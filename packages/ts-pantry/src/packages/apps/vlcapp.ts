@@ -21,7 +21,12 @@ export const vlcappPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['3.0.21', '3.0.20', '3.0.18'] as const,
+  versions: [
+    '3.0.23',
+    '3.0.21',
+    '3.0.20',
+    '3.0.18',
+  ] as const,
   aliases: ['vlc'] as const,
 }
 export type VlcappPackage = typeof vlcappPackage

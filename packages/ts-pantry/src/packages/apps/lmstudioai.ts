@@ -21,7 +21,11 @@ export const lmstudioaiPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['0.3.8', '0.3.7'] as const,
+  versions: [
+    '0.4.18-1',
+    '0.3.8',
+    '0.3.7',
+  ] as const,
   aliases: ['lm-studio', 'lmstudio'] as const,
 }
 export type LmstudioaiPackage = typeof lmstudioaiPackage

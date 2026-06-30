@@ -19,7 +19,10 @@ export const diabrowsercomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.36.0'] as const,
+  versions: [
+    '1.37.1',
+    '1.36.0',
+  ] as const,
   aliases: [] as const,
 }
 export type DiabrowsercomPackage = typeof diabrowsercomPackage

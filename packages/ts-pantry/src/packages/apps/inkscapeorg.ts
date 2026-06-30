@@ -21,7 +21,11 @@ export const inkscapeorgPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.4.1', '1.4'] as const,
+  versions: [
+    '1.4.4',
+    '1.4.1',
+    '1.4',
+  ] as const,
   aliases: ['inkscape'] as const,
 }
 export type InkscapeorgPackage = typeof inkscapeorgPackage

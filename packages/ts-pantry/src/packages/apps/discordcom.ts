@@ -21,7 +21,12 @@ export const discordcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['0.0.337', '0.0.336', '0.0.335'] as const,
+  versions: [
+    '0.0.397',
+    '0.0.337',
+    '0.0.336',
+    '0.0.335',
+  ] as const,
   aliases: ['discord'] as const,
 }
 export type DiscordcomPackage = typeof discordcomPackage

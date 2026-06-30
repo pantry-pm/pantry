@@ -21,7 +21,12 @@ export const linearappPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.53.0', '1.52.0', '1.51.0'] as const,
+  versions: [
+    '1.53.0',
+    '1.52.0',
+    '1.51.0',
+    '1.31.1',
+  ] as const,
   aliases: ['linear'] as const,
 }
 export type LinearappPackage = typeof linearappPackage

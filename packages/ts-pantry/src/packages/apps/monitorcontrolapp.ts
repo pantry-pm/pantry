@@ -42,6 +42,11 @@ export const monitorcontrolappPackage = {
     '1.5.2',
     '1.5.0',
     '1.4.0',
+    '1.3.0',
+    '1.2.1',
+    '1.2',
+    '1.1',
+    '1.0',
   ] as const,
   aliases: ['monitorcontrol', 'monitor-control'] as const,
 }

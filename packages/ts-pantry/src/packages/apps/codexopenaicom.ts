@@ -21,7 +21,14 @@ export const codexopenaicomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['26.616.51431'] as const,
+  versions: [
+    '26.623.70822',
+    '26.623.61825',
+    '26.623.42026',
+    '26.623.41415',
+    '26.623.31921',
+    '26.616.51431',
+  ] as const,
   aliases: [] as const,
 }
 export type CodexopenaicomPackage = typeof codexopenaicomPackage

@@ -19,7 +19,16 @@ export const robotoPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['2.138'] as const,
+  versions: [
+    '2.138',
+    '2.136',
+    '2.135',
+    '2.134',
+    '2.133',
+    '2.132',
+    '2.131',
+    '2.129',
+  ] as const,
   aliases: [] as const,
 }
 export type RobotoPackage = typeof robotoPackage

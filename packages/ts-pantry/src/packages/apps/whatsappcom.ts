@@ -21,7 +21,11 @@ export const whatsappcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['2.24.25.0', '2.24.24.0'] as const,
+  versions: [
+    '2.26.26.12',
+    '2.24.25.0',
+    '2.24.24.0',
+  ] as const,
   aliases: ['whatsapp'] as const,
 }
 export type WhatsappcomPackage = typeof whatsappcomPackage

@@ -21,7 +21,11 @@ export const libreofficeorgPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['24.8.5', '24.8.4'] as const,
+  versions: [
+    '26.2.4',
+    '24.8.5',
+    '24.8.4',
+  ] as const,
   aliases: ['libreoffice', 'soffice'] as const,
 }
 export type LibreofficeorgPackage = typeof libreofficeorgPackage

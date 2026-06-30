@@ -21,7 +21,11 @@ export const elementioPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.11.86', '1.11.85'] as const,
+  versions: [
+    '1.12.22',
+    '1.11.86',
+    '1.11.85',
+  ] as const,
   aliases: ['element'] as const,
 }
 export type ElementioPackage = typeof elementioPackage

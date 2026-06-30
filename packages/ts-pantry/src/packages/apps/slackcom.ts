@@ -21,7 +21,12 @@ export const slackcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['4.41.105', '4.41.104', '4.41.103'] as const,
+  versions: [
+    '4.50.143',
+    '4.41.105',
+    '4.41.104',
+    '4.41.103',
+  ] as const,
   aliases: ['slack'] as const,
 }
 export type SlackcomPackage = typeof slackcomPackage
