@@ -68,6 +68,8 @@ export const libeventorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.2.2-alpha',
+    '2.1.13',
     '2.1.12',
     '2.1.11',
     '2.1.10',

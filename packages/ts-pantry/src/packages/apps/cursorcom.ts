@@ -21,7 +21,12 @@ export const cursorcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['0.45.11', '0.45.10', '0.45.9'] as const,
+  versions: [
+    '3.9.16',
+    '0.45.11',
+    '0.45.10',
+    '0.45.9',
+  ] as const,
   aliases: ['cursor'] as const,
 }
 export type CursorcomPackage = typeof cursorcomPackage
