@@ -67,6 +67,7 @@ export const cligithubcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.96.0',
     '2.95.0',
     '2.94.0',
     '2.93.0',
