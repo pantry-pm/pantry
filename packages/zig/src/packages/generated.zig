@@ -9887,7 +9887,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "abseil.io^20250127", "c-ares.org", "openssl.org^1.1", "github.com/google/re2", "zlib.net", "linux:gnu.org/gcc/libstdcxx", "linux:protobuf.dev^30.0.0 # as of 1.72.0" },
     .build_dependencies = &[_][]const u8{ "gnu.org/autoconf", "gnu.org/automake", "gnu.org/libtool", "darwin:gnu.org/patch", "cmake.org@^3" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.81.1", "1.81.0", "1.80.0", "1.78.1", "1.78.0", "1.76.0", "1.75.1", "1.75.0", "1.74.1", "1.74.0", "1.73.1", "1.73.0", "1.72.2", "1.72.1", "1.72.0", "1.71.2", "1.71.1", "1.71.0", "1.70.2", "1.70.1", "1.70.0", "1.69.0", "1.68.2", "1.68.1", "1.68.0", "1.67.1", "1.67.0", "1.66.2", "1.66.1", "1.66.0", "1.65.5", "1.65.4", "1.58.3" },
+    .versions = &[_][]const u8{ "1.82.0", "1.81.1", "1.81.0", "1.80.0", "1.78.1", "1.78.0", "1.76.0", "1.75.1", "1.75.0", "1.74.1", "1.74.0", "1.73.1", "1.73.0", "1.72.2", "1.72.1", "1.72.0", "1.71.2", "1.71.1", "1.71.0", "1.70.2", "1.70.1", "1.70.0", "1.69.0", "1.68.2", "1.68.1", "1.68.0", "1.67.1", "1.67.0", "1.66.2", "1.66.1", "1.66.0", "1.65.5", "1.65.4", "1.58.3" },
 }, .{
     .name = "protoc-gen-go-grpc",
     .domain = "grpc.io/grpc-go",
@@ -16697,7 +16697,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{"whatsapp"},
-    .versions = &[_][]const u8{ "2.26.26.17", "2.26.26.15", "2.26.26.12", "2.24.25.0", "2.24.24.0" },
+    .versions = &[_][]const u8{ "2.26.26.19", "2.26.26.17", "2.26.26.15", "2.26.26.12", "2.24.25.0", "2.24.24.0" },
 }, .{
     .name = "difft",
     .domain = "wilfred.me.uk/difftastic",
