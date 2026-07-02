@@ -21,7 +21,13 @@ export const raycastcomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.104.20', '1.89.0', '1.88.0', '1.87.0'] as const,
+  versions: [
+    '1.104.21',
+    '1.104.20',
+    '1.89.0',
+    '1.88.0',
+    '1.87.0',
+  ] as const,
   aliases: ['raycast'] as const,
 }
 export type RaycastcomPackage = typeof raycastcomPackage
