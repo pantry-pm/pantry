@@ -77,6 +77,7 @@ export const spacetimedbcomPackage = {
   versions: [
     '2023.12.8',
     '2023.8.12',
+    '2.6.1',
     '2.6.0',
     '2.5.0',
     '2.4.1',

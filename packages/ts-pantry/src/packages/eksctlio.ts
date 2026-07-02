@@ -77,6 +77,7 @@ export const eksctlioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.229.0',
     '0.228.0',
     '0.227.0',
     '0.226.0',
