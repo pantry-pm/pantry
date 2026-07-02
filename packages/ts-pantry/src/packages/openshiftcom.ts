@@ -77,10 +77,12 @@ export const openshiftcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.22.4',
     '4.22.3',
     '4.22.2',
     '4.22.1',
     '4.22.0',
+    '4.21.23',
     '4.21.22',
     '4.21.21',
     '4.21.20',
