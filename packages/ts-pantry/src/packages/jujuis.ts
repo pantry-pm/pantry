@@ -67,6 +67,7 @@ export const jujuisPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.0.12',
     '4.0.11',
     '4.0.5',
     '4.0.3',
