@@ -6,7 +6,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "8.10.56",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -14,9 +14,9 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.3.1",
-      "published": "11.3.1",
-      "needsUpdate": false
+      "latest": "11.4.0",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "arc.net",
@@ -24,7 +24,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "1.76.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -33,8 +33,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2026.6.0",
-      "published": "2026.6.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "blender.org",
@@ -42,7 +42,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "4.3.2",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -51,7 +51,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "1.74.48",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -60,7 +60,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "1.38.1",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -69,8 +69,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2407.24",
-      "published": "2407.24",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "cleanshot.com",
@@ -78,7 +78,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "4.7.4",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -87,7 +87,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.127.0",
-      "published": "1.126.0",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -95,9 +95,9 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.623.81905",
-      "published": "26.623.81905",
-      "needsUpdate": false
+      "latest": "26.623.101652",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "cursor.com",
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.9.16",
-      "published": "3.9.16",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -114,7 +114,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "24.3.4",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -122,9 +122,9 @@
       "name": "Dia",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.37.1",
-      "published": "1.37.1",
-      "needsUpdate": false
+      "latest": "1.38.0",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "discord.com",
@@ -132,8 +132,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.0.397",
-      "published": "0.0.397",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "element.io",
@@ -141,8 +141,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.12.22",
-      "published": "1.12.22",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "figma.com",
@@ -150,7 +150,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "124.7.4",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -159,8 +159,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "6.2",
-      "published": "6.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "firefox.org",
@@ -168,7 +168,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "134.0.2",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -177,8 +177,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.3.1",
-      "published": "1.3.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "gimp.org",
@@ -186,7 +186,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "2.10.38",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -195,8 +195,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": "3.003",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "handbrake.fr",
@@ -204,8 +204,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.11.2",
-      "published": "1.11.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "hiddenbar.app",
@@ -213,8 +213,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.10",
-      "published": "1.10",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "iina.io",
@@ -222,8 +222,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.4.4",
-      "published": "1.4.4",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "imageoptim.com",
@@ -231,16 +231,16 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.9.3",
-      "published": "1.9.3",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "inkscape.org",
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.4.4",
-      "published": "1.4.4",
+      "latest": null,
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -249,8 +249,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "13.0.2",
-      "published": "13.0.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "inter",
@@ -258,8 +258,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "4.1",
-      "published": "4.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "iterm2.com",
@@ -267,7 +267,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "3.5.6",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -276,8 +276,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.304",
-      "published": "2.304",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "jetbrains-mono-nerd-font",
@@ -285,8 +285,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.4.0",
-      "published": "3.4.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "karabiner-elements.pqrs.org",
@@ -294,8 +294,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "16.0.0",
-      "published": "16.0.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "keepassxc.org",
@@ -303,7 +303,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "2.7.9",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -312,7 +312,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "1.4.7",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -321,7 +321,7 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.015",
-      "published": "2.0",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -330,7 +330,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.2.4",
-      "published": "24.8.5",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -339,8 +339,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.31.1",
-      "published": "1.31.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "lmstudio.ai",
@@ -348,8 +348,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.4.18-1",
-      "published": "0.4.18-1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "logitech.com/options-plus",
@@ -357,8 +357,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.3.879545",
-      "published": "2.3.879545",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "maccy.app",
@@ -366,8 +366,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.6.1",
-      "published": "2.6.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "mediaarea.net",
@@ -375,8 +375,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.05",
-      "published": "26.05",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "meetingbar.app",
@@ -384,8 +384,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "4.11.6",
-      "published": "4.11.6",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "meslo-lg-nerd-font",
@@ -393,8 +393,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.4.0",
-      "published": "3.4.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "monitorcontrol.app",
@@ -402,8 +402,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "4.3.3",
-      "published": "4.3.3",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "muzzleapp.com",
@@ -411,8 +411,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.9",
-      "published": "1.9",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "notion.so",
@@ -420,7 +420,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "4.5.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -429,8 +429,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.12.7",
-      "published": "1.12.7",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "ollama.com",
@@ -438,7 +438,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "0.5.7",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -447,8 +447,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": "3.003",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "orbstack.dev",
@@ -456,8 +456,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.2.1",
-      "published": "2.2.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "pearcleaner.app",
@@ -465,8 +465,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "5.4.3",
-      "published": "5.4.3",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "postman.com",
@@ -474,7 +474,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "11.27.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -482,9 +482,9 @@
       "name": "Raycast",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.104.20",
-      "published": "1.104.20",
-      "needsUpdate": false
+      "latest": "1.104.21",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "rectangle.app",
@@ -492,8 +492,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.96",
-      "published": "0.96",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "roboto",
@@ -501,8 +501,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.138",
-      "published": "2.138",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "signal.org",
@@ -510,7 +510,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "7.36.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -519,8 +519,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "4.50.143",
-      "published": "4.50.143",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "source-code-pro",
@@ -528,8 +528,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.042",
-      "published": "2.042",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "spotify.com",
@@ -537,7 +537,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "1.2.52",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -546,8 +546,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.0.5",
-      "published": "3.0.5",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "tableplus.com",
@@ -555,7 +555,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "6.2.6",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -564,7 +564,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "5.8.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -573,8 +573,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "4.3.9",
-      "published": "4.3.9",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "transmit.panic.com",
@@ -582,8 +582,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "5.11.6",
-      "published": "5.11.6",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "tunnelblick.net",
@@ -591,8 +591,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "8.0.2",
-      "published": "8.0.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "vlc.app",
@@ -600,8 +600,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.0.23",
-      "published": "3.0.23",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "warp.dev",
@@ -609,7 +609,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "0.2025.01.21",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.26.17",
-      "published": "2.26.26.12",
+      "latest": "2.26.26.19",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -627,7 +627,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.9.0",
-      "published": "1.8.2",
+      "published": null,
       "needsUpdate": true
     }
   ]
