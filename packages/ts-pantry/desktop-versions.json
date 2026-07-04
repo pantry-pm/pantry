@@ -14,7 +14,7 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.4.0",
+      "latest": "11.4.2",
       "published": null,
       "needsUpdate": true
     },
@@ -239,9 +239,9 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.4.4",
       "published": null,
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "insomnia.rest",
