@@ -293,7 +293,7 @@
       "name": "Karabiner-Elements",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "16.0.0",
+      "latest": "16.1.0",
       "published": null,
       "needsUpdate": true
     },
