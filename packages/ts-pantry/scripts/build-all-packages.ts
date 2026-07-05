@@ -1702,6 +1702,12 @@ async function main() {
       'popular-max-versions': { type: 'string', default: '20' },
       'count-only': { type: 'boolean', default: false },
       'needs-build': { type: 'boolean', default: false },
+      // Print the domains that WOULD be built for this platform under the
+      // current -p / --source-only / --download-only filters, then exit. Unlike
+      // --count-only (which counts pre -p-filter), this runs AFTER the -p filter,
+      // so it answers "which of THESE domains need a build on THIS platform" —
+      // used to gate the darwin-native macOS job in publish-changed-packages.
+      'print-selected': { type: 'boolean', default: false },
       list: { type: 'boolean', short: 'l', default: false },
       'dry-run': { type: 'boolean', default: false },
       'apps-only': { type: 'boolean', default: false },
@@ -1753,7 +1759,7 @@ Options:
   // Discover all buildable packages (pass platform for filtering)
   const { platform: detectedPlatformForDiscovery } = detectPlatform()
   const discoveryPlatform = values.platform || detectedPlatformForDiscovery
-  const logDiscovery = values['count-only'] || values['needs-build'] ? console.error : console.log
+  const logDiscovery = values['count-only'] || values['needs-build'] || values['print-selected'] ? console.error : console.log
   logDiscovery(`Discovering buildable packages for ${discoveryPlatform}...`)
   let allPackages = discoverPackages(discoveryPlatform)
 
@@ -2381,7 +2387,9 @@ Options:
     process.exit(0)
   }
 
-  if (!values.bucket) {
+  // --print-selected only inspects the recipe set and exits — no S3 access, so
+  // it doesn't need a bucket. Every real build path below does.
+  if (!values.bucket && !values['print-selected']) {
     console.error('Error: --bucket is required')
     process.exit(1)
   }
@@ -2451,6 +2459,23 @@ Options:
     }
     packagesToBuild = allPackages.filter((_, idx) => idx % n === i)
     console.log(`Stripe ${i}/${n}: ${packagesToBuild.length} of ${allPackages.length} packages (interleaved)`)
+  }
+
+  // --print-selected: emit the resolved domain set (post -p / --source-only /
+  // --download-only / platform filtering) and exit. One space-separated line on
+  // stdout; empty when nothing matches. Lets a caller cheaply decide whether a
+  // native macOS build is even needed before allocating a (10x) mac runner.
+  if (values['print-selected']) {
+    console.log(packagesToBuild.map(p => p.domain).join(' '))
+    process.exit(0)
+  }
+
+  // Past here every path performs a real build and uploads, so the bucket is
+  // mandatory (the print-selected fast-path above already returned). This also
+  // re-narrows `bucket` to a defined string for the build/upload calls below.
+  if (!bucket) {
+    console.error('Error: --bucket is required')
+    process.exit(1)
   }
 
   if (packagesToBuild.length === 0 && values['needs-build']) {
