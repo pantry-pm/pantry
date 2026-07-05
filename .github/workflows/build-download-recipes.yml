@@ -15,7 +15,6 @@ on:
         options:
           - all
           - darwin-arm64
-          - darwin-x86-64
           - linux-x86-64
           - linux-arm64
       force:
@@ -53,11 +52,9 @@ jobs:
         run: |
           PLATFORMS="${{ github.event.inputs.platforms }}"
           if [ "$PLATFORMS" = "all" ]; then
-            MATRIX='{"include":[{"platform":"darwin-arm64"},{"platform":"darwin-x86-64"},{"platform":"linux-x86-64"},{"platform":"linux-arm64"}]}'
+            MATRIX='{"include":[{"platform":"darwin-arm64"},{"platform":"linux-x86-64"},{"platform":"linux-arm64"}]}'
           elif [ "$PLATFORMS" = "darwin-arm64" ]; then
             MATRIX='{"include":[{"platform":"darwin-arm64"}]}'
-          elif [ "$PLATFORMS" = "darwin-x86-64" ]; then
-            MATRIX='{"include":[{"platform":"darwin-x86-64"}]}'
           elif [ "$PLATFORMS" = "linux-x86-64" ]; then
             MATRIX='{"include":[{"platform":"linux-x86-64"}]}'
           elif [ "$PLATFORMS" = "linux-arm64" ]; then

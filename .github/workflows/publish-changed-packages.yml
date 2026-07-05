@@ -133,7 +133,6 @@ jobs:
           # and desktop apps (cursor/hiddenbar/transmit, which need hdiutil)
           # never got rebuilt and kept shipping stale/stub artifacts.
           - { name: darwin-arm64, os: macos-14 }
-          - { name: darwin-x86-64, os: macos-13 }
     steps:
       - uses: actions/checkout@v6
 

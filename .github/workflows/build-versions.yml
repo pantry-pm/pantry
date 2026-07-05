@@ -91,8 +91,6 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: macos-15-intel
-            name: darwin-x86-64
           - os: ubuntu-latest
             name: linux-x86-64
           - os: ubuntu-24.04-arm
@@ -298,6 +296,10 @@ jobs:
           MAX_VERSIONS="${{ github.event.inputs.max-versions || '5' }}"
           FORCE="${{ github.event.inputs.force || 'false' }}"
           ARGS="-b $S3_BUCKET -r $AWS_REGION --platform ${{ matrix.platform.name }} --multi-version --max-versions $MAX_VERSIONS"
+          # Download-first: mirror pkgx's official prebuilt instead of compiling.
+          # Source build only happens for custom-build domains (php/postgres/...)
+          # or when pkgx has no artifact — keeps macOS runner time minimal.
+          ARGS="$ARGS --pkgx-mirror"
 
           if [ "$FORCE" = "true" ]; then
             ARGS="$ARGS --force"
@@ -324,8 +326,6 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: macos-15-intel
-            name: darwin-x86-64
           - os: ubuntu-latest
             name: linux-x86-64
           - os: ubuntu-24.04-arm
@@ -529,6 +529,10 @@ jobs:
           MAX_VERSIONS="${{ github.event.inputs.max-versions || '5' }}"
           FORCE="${{ github.event.inputs.force || 'false' }}"
           ARGS="-b $S3_BUCKET -r $AWS_REGION --batch ${{ matrix.batch }} --batch-size 25 --platform ${{ matrix.platform.name }} --multi-version --max-versions $MAX_VERSIONS"
+          # Download-first: mirror pkgx's official prebuilt instead of compiling.
+          # Source build only happens for custom-build domains (php/postgres/...)
+          # or when pkgx has no artifact — keeps macOS runner time minimal.
+          ARGS="$ARGS --pkgx-mirror"
 
           if [ "$FORCE" = "true" ]; then
             ARGS="$ARGS --force"

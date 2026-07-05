@@ -8,7 +8,8 @@
 // Division of labour (see CLAUDE.md "Cross-platform download fanout"):
 //   - linux-x86-64        -> owned by the Hetzner fleet, NOT dispatched here.
 //   - linux-arm64         -> ubuntu-24.04-arm runners (cheap/free on public repos).
-//   - darwin-arm64/x86-64 -> macos-15 / macos-15-intel (bill 10x — guarded).
+//   - darwin-arm64        -> macos-15 (bills 10x — guarded).
+//   - darwin-x86-64       -> RETIRED: no new Intel builds; published artifacts stay served.
 //
 // Guards that bound macOS spend:
 //   - Anti-pileup: if >= RUNNING_CAP `Build` runs are already in_progress, skip
@@ -31,7 +32,7 @@ const RUNNING_CAP = Number(process.env.ORCH_RUNNING_CAP || 3)
 const STALL_LIMIT = Number(process.env.ORCH_STALL_LIMIT || 3)
 const DRY_RUN = process.env.ORCH_DRY_RUN === '1'
 
-const ALL_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64'] as const
+const ALL_PLATFORMS = ['darwin-arm64', 'linux-x86-64', 'linux-arm64'] as const
 type Platform = (typeof ALL_PLATFORMS)[number]
 
 // Per-platform fan-out: [stripes, parallel-workers-per-runner]. linux-arm64 is
@@ -39,10 +40,9 @@ type Platform = (typeof ALL_PLATFORMS)[number]
 const FANOUT: Record<string, { stripes: number, parallel: number }> = {
   'linux-arm64': { stripes: 4, parallel: 3 },
   'darwin-arm64': { stripes: 3, parallel: 2 },
-  'darwin-x86-64': { stripes: 3, parallel: 2 },
 }
 // Platforms this orchestrator drives (linux-x86-64 is the fleet's job).
-const DRIVEN = ['linux-arm64', 'darwin-arm64', 'darwin-x86-64']
+const DRIVEN = ['linux-arm64', 'darwin-arm64']
 
 interface PkgState { missing: number, stall: number }
 type OrchState = Record<string, PkgState>
@@ -63,7 +63,7 @@ async function fetchGap(): Promise<Record<string, number>> {
   if (!res.ok)
     throw new Error(`packages API ${res.status}`)
   const data = await res.json() as { packages: Array<{ platforms: Record<string, boolean>, supportedPlatforms?: string[] }> }
-  const missing: Record<string, number> = { 'linux-arm64': 0, 'darwin-arm64': 0, 'darwin-x86-64': 0 }
+  const missing: Record<string, number> = { 'linux-arm64': 0, 'darwin-arm64': 0 }
   for (const p of data.packages) {
     const sup = p.supportedPlatforms?.length ? p.supportedPlatforms : ALL_PLATFORMS
     for (const plat of DRIVEN) {

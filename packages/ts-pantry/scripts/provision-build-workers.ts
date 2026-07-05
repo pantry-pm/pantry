@@ -224,10 +224,11 @@ WantedBy=multi-user.target
 // foreign asset and uploads it under that platform's key. build-package skips the
 // execution health-check for a foreign target (you can't run a Mach-O on Linux)
 // and instead sanity-checks the binary's `file` magic (ELF/Mach-O + arch). This
-// lets the x86-64 Linux fleet fill darwin-arm64 / darwin-x86-64 / linux-arm64 for
-// every download recipe with no macOS or ARM hardware. Each box is assigned ONE
-// foreign platform (partitioned by box index) to avoid redundant racing.
-const XDL_PLATFORMS = ['darwin-arm64', 'linux-arm64', 'darwin-x86-64']
+// lets the x86-64 Linux fleet fill darwin-arm64 / linux-arm64 for every download
+// recipe with no macOS or ARM hardware. Each box is assigned ONE foreign
+// platform (partitioned by box index) to avoid redundant racing.
+// darwin-x86-64 is retired: no new Intel artifacts (published ones stay served).
+const XDL_PLATFORMS = ['darwin-arm64', 'linux-arm64']
 const XDL_DAEMON_SCRIPT = `#!/bin/bash
 # Cross-platform pkgx-mirror fanout: fills prebuilt artifacts for one FOREIGN
 # target platform from this Linux box by downloading pkgx's official prebuilt for

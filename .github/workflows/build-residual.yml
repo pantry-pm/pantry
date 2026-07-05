@@ -44,7 +44,6 @@ jobs:
           - { name: linux-x86-64, os: ubuntu-latest }
           - { name: linux-arm64, os: ubuntu-24.04-arm }
           - { name: darwin-arm64, os: macos-15 }
-          - { name: darwin-x86-64, os: macos-15-intel }
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: ${{ contains(matrix.platform.os, 'macos') && 70 || 120 }}
     permissions:

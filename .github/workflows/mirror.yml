@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       platform:
-        description: 'Single platform to mirror (darwin-arm64 / darwin-x86-64 / linux-x86-64 / linux-arm64). Empty = all four.'
+        description: 'Single platform to mirror (darwin-arm64 / linux-x86-64 / linux-arm64). Empty = all three.'
         required: false
         type: string
       max-versions:
@@ -66,7 +66,7 @@ jobs:
           PLATFORM: ${{ github.event.inputs.platform }}
           STRIPES: ${{ github.event.inputs.stripes }}
         run: |
-          BASE='[{"name":"linux-x86-64","os":"ubuntu-latest","stripes":4},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2},{"name":"darwin-arm64","os":"ubuntu-latest","stripes":2},{"name":"darwin-x86-64","os":"ubuntu-latest","stripes":2}]'
+          BASE='[{"name":"linux-x86-64","os":"ubuntu-latest","stripes":4},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2},{"name":"darwin-arm64","os":"ubuntu-latest","stripes":2}]'
           if [ -n "$PLATFORM" ]; then
             BASE=$(echo "$BASE" | jq -c --arg p "$PLATFORM" '[.[] | select(.name == $p)]')
           fi
@@ -139,7 +139,6 @@ jobs:
           - { name: linux-x86-64, os: ubuntu-latest }
           - { name: linux-arm64, os: ubuntu-24.04-arm }
           - { name: darwin-arm64, os: ubuntu-latest }
-          - { name: darwin-x86-64, os: ubuntu-latest }
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 120
     concurrency:

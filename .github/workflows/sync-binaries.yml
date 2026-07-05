@@ -77,8 +77,6 @@ jobs:
         include:
           - os: macos-15
             platform: darwin-arm64
-          - os: macos-15-intel
-            platform: darwin-x86-64
           - os: ubuntu-latest
             platform: linux-x86-64
           - os: ubuntu-24.04-arm
@@ -242,8 +240,6 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: macos-15-intel
-            name: darwin-x86-64
           - os: ubuntu-latest
             name: linux-x86-64
           - os: ubuntu-24.04-arm
@@ -460,6 +456,9 @@ jobs:
           # Validate package input (only allow safe characters)
           VALIDATED_PKGS=$(echo "${{ github.event.inputs.packages }}" | tr -cd 'a-zA-Z0-9._\-/,')
           ARGS="-b $S3_BUCKET -r $AWS_REGION --platform ${{ matrix.platform.name }} -p $VALIDATED_PKGS"
+          # Download-first: mirror pkgx's official prebuilt instead of compiling;
+          # source build only for custom-build domains or a pkgx miss.
+          ARGS="$ARGS --pkgx-mirror"
 
           if [ "$FORCE" = "true" ]; then
             ARGS="$ARGS --force"
@@ -482,8 +481,6 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: macos-15-intel
-            name: darwin-x86-64
           - os: ubuntu-latest
             name: linux-x86-64
           - os: ubuntu-24.04-arm
@@ -723,6 +720,9 @@ jobs:
 
           FORCE="${{ github.event.inputs.force || 'false' }}"
           ARGS="-b $S3_BUCKET -r $AWS_REGION --batch ${{ matrix.batch }} --batch-size 50 --platform ${{ matrix.platform.name }}"
+          # Download-first: mirror pkgx's official prebuilt instead of compiling;
+          # source build only for custom-build domains or a pkgx miss.
+          ARGS="$ARGS --pkgx-mirror"
 
           if [ "$FORCE" = "true" ]; then
             ARGS="$ARGS --force"
