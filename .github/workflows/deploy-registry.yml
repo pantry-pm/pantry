@@ -99,13 +99,22 @@ jobs:
 
       - name: Verify deployment
         run: |
-          sleep 5
-          HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
-            'https://registry.pantry.dev/health' \
-            --max-time 15 2>/dev/null) || true
+          # Poll /health for up to ~60s instead of a single shot: `systemctl
+          # restart pantry-registry` returns before the new process is accepting
+          # connections, so a single curl races the restart and 404s/000s even
+          # though the deploy is fine (this failed the v0.10.4 deploy at 04:54).
+          HTTP_CODE=000
+          for attempt in $(seq 1 12); do
+            HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+              'https://registry.pantry.dev/health' \
+              --max-time 15 2>/dev/null) || true
+            [ "$HTTP_CODE" = "200" ] && break
+            echo "Health check attempt $attempt: HTTP $HTTP_CODE — retrying in 5s…"
+            sleep 5
+          done
           echo "Health check: HTTP $HTTP_CODE"
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::Health check returned $HTTP_CODE — deployment may have failed"
+            echo "::error::Health check returned $HTTP_CODE after retries — deployment may have failed"
             exit 1
           fi
 
