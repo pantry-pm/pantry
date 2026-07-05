@@ -9,8 +9,10 @@ name: Build Residual (non-pkgx recipes)
 # each recipe's `platforms:` constraint routes it to the right ones. Weekly — these
 # change rarely. (grub / xorriso / mail-os-mail have NO recipe and are skipped.)
 on:
-  schedule:
-    - cron: '0 4 * * 1' # Mondays 04:00 UTC
+  # No `schedule:` — the matrix includes macos-15 (10x billing) for the darwin
+  # apps and must not run unsupervised. These residual recipes change rarely;
+  # the darwin apps also stay fresh via check-desktop-updates.yml (ubuntu). Run
+  # manually (workflow_dispatch) for a supervised residual sweep.
   workflow_dispatch:
     inputs:
       packages:

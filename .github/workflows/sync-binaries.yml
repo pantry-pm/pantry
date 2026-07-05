@@ -1,10 +1,12 @@
 name: Sync Pre-Built Binaries
 
 on:
-  schedule:
-    # Daily. A full build/sync can exceed 6h, and the serial `sync-binaries`
-    # concurrency group means a more frequent schedule just cancels/queues runs.
-    - cron: '0 6 * * *'
+  # No `schedule:` — this matrix includes macos-15 (10x billing) and must not run
+  # unsupervised. Prebuilt binaries are mirrored cheaply on ubuntu by mirror.yml
+  # (every 6h, download-only, ALL platforms incl darwin-arm64) and the Hetzner
+  # xdl fleet (continuous); new versions publish immediately via
+  # publish-changed-packages (ubuntu). Run manually (workflow_dispatch) for a
+  # supervised full sync that includes the macOS legs.
   workflow_dispatch:
     inputs:
       packages:

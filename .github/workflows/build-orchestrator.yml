@@ -12,8 +12,12 @@ name: Build Orchestrator
 # the still-missing slice. Disable from the Actions tab if you want to pause spend.
 
 on:
-  schedule:
-    - cron: '*/30 * * * *'
+  # No `schedule:` — this orchestrator's whole job was re-dispatching the `Build`
+  # workflow onto macos-15 (10x billing) every 30 min, i.e. exactly the
+  # unsupervised Mac spend we're eliminating. darwin-arm64 DOWNLOAD recipes are
+  # filled cheaply on ubuntu by mirror.yml + the Hetzner xdl fleet; darwin-arm64
+  # SOURCE builds are now supervised-only (manual `Build` dispatch). Run this by
+  # hand (workflow_dispatch) only when you want to drive a supervised Mac wave.
   workflow_dispatch:
     inputs:
       dry_run:

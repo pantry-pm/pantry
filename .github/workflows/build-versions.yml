@@ -1,9 +1,11 @@
 name: Build Multi-Version Packages
 
 on:
-  schedule:
-    # Run weekly on Sunday at 2am UTC
-    - cron: '0 2 * * 0'
+  # No `schedule:` — this matrix includes macos-15 (10x billing) and must not run
+  # unsupervised. Multi-version backfill is a growth job, not a freshness job:
+  # darwin-arm64 downloads are filled on ubuntu by mirror.yml + the Hetzner fleet,
+  # and new versions publish immediately via publish-changed-packages (ubuntu).
+  # Run manually (workflow_dispatch) for a supervised multi-version macOS sweep.
   workflow_dispatch:
     inputs:
       packages:

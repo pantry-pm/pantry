@@ -126,13 +126,17 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: linux-x86-64, os: ubuntu-latest }
-          - { name: linux-arm64, os: ubuntu-24.04-arm }
-          # Build + publish the macOS artifacts too — without these, recipe
-          # changes only refreshed Linux, so darwin-arm64 CLI tools (e.g. eza)
-          # and desktop apps (cursor/hiddenbar/transmit, which need hdiutil)
-          # never got rebuilt and kept shipping stale/stub artifacts.
-          - { name: darwin-arm64, os: macos-14 }
+          - { name: linux-x86-64, os: ubuntu-latest, download_only: false }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, download_only: false }
+          # darwin-arm64 is produced FROM UBUNTU via the cross-platform download
+          # fanout (--download-only): a download recipe just curls the darwin
+          # asset and verifies its Mach-O/arm64 magic — no Mac runner, ~10x
+          # cheaper. darwin-arm64 SOURCE recipes (e.g. eza, or hdiutil desktop
+          # apps) are NOT auto-built here anymore — apps stay fresh via
+          # check-desktop-updates.yml (ubuntu), and CLI source tools get a
+          # supervised macOS `Build` dispatch. This keeps every auto-publish on
+          # the cheap ubuntu runners; macOS is never spun up unsupervised.
+          - { name: darwin-arm64, os: ubuntu-latest, download_only: true }
     steps:
       - uses: actions/checkout@v6
 
@@ -145,7 +149,9 @@ jobs:
         run: bun install
 
       - name: Install build tools (Linux)
-        if: runner.os == 'Linux'
+        # Skip the heavy apt install for the darwin-arm64 download-only leg — it
+        # just curls the prebuilt darwin asset and needs no compiler toolchain.
+        if: runner.os == 'Linux' && !matrix.platform.download_only
         env:
           # Without this a transitively-pulled package (tzdata, x11, …) opens an
           # interactive debconf prompt and apt hangs forever — which is what
@@ -230,10 +236,19 @@ jobs:
           DOMAINS="${{ needs.detect.outputs.domains }}"
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
-          echo "Source-building (NO pkgx-mirror) and publishing: $PKGS"
-          # No --pkgx-mirror ⇒ compile from the recipe so binaries link current
-          # libs. --force re-uploads even if a (stale, mirrored) artifact exists.
+          # darwin-arm64 runs on ubuntu with --download-only: only the download
+          # recipes among the changed set are produced (curl the darwin asset +
+          # verify Mach-O/arm64), so source recipes are safely skipped there.
+          DL_ONLY=""
+          if [ "${{ matrix.platform.download_only }}" = "true" ]; then
+            DL_ONLY="--download-only"
+            echo "Download-only publish (cross-platform fanout): $PKGS -> ${{ matrix.platform.name }}"
+          else
+            # No --pkgx-mirror ⇒ compile from the recipe so binaries link current
+            # libs. --force re-uploads even if a (stale, mirrored) artifact exists.
+            echo "Source-building (NO pkgx-mirror) and publishing: $PKGS"
+          fi
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$S3_REGION" \
             --platform "${{ matrix.platform.name }}" \
-            -p "$PKGS" --multi-version --max-versions "$MAXV" --force
+            -p "$PKGS" --multi-version --max-versions "$MAXV" --force $DL_ONLY

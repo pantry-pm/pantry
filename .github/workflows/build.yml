@@ -1,10 +1,11 @@
 name: Build
 
 on:
-  schedule:
-    # Build apps daily at 6am UTC
-    - cron: '0 6 * * *'
-
+  # No `schedule:` — macOS runners bill 10x and must not run unsupervised.
+  # Desktop apps/fonts stay fresh via check-desktop-updates.yml (daily, on the
+  # ~10x-cheaper ubuntu runner using the darling-dmg/apfs-fuse hdiutil shim), so
+  # the old daily apps-only macOS build here was redundant Mac spend. Run this
+  # workflow manually (workflow_dispatch) when you want a supervised macOS build.
   workflow_dispatch:
     inputs:
       packages:

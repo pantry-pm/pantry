@@ -129,11 +129,22 @@ jobs:
 
           echo "committed=true" >> $GITHUB_OUTPUT
 
-      - name: Trigger builds for updated packages
+      - name: Publish updated packages to the registry
         if: steps.commit.outputs.committed == 'true'
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
+          # Publish version bumps to the registry AS THEY LAND — on the cheap
+          # ubuntu runners ONLY. publish-changed-packages builds linux-x86-64 +
+          # linux-arm64 from source and produces darwin-arm64 via the download
+          # fanout; it never spins up a macOS runner (which bill 10x). This
+          # replaces the old dispatch to `build.yml -f platform=unix`, which
+          # source-compiled every bump on a macOS-15 runner unsupervised.
+          #
+          # We dispatch explicitly rather than rely on publish-changed's `push`
+          # trigger: this bot commit is pushed with GITHUB_TOKEN (no PAT_TOKEN
+          # secret is set), and GITHUB_TOKEN pushes do NOT fire other workflows'
+          # push triggers — which is exactly why updates never published before.
           CHANGED=$(git diff --name-only HEAD~1 -- packages/ts-pantry/src/packages/ 2>/dev/null)
           [ -z "$CHANGED" ] && exit 0
 
@@ -148,18 +159,8 @@ jobs:
           done <<< "$CHANGED"
 
           [ -z "$DOMAINS" ] && exit 0
-          BINARY_DOMAINS=$(bun packages/ts-pantry/scripts/classify-packages.ts "$DOMAINS" --field=binary)
-          SOURCE_DOMAINS=$(bun packages/ts-pantry/scripts/classify-packages.ts "$DOMAINS" --field=source)
-
-          if [ -n "$BINARY_DOMAINS" ]; then
-            echo "Triggering binary sync for: $BINARY_DOMAINS"
-            gh workflow run sync-binaries.yml -f packages="$BINARY_DOMAINS" -f force=false -f multi-version=true
-          fi
-          if [ -n "$SOURCE_DOMAINS" ]; then
-            echo "Triggering source build for: $SOURCE_DOMAINS"
-            # Use unix (darwin+linux) — system packages have Unix build scripts
-            gh workflow run build.yml -f packages="$SOURCE_DOMAINS" -f force=false -f platform=unix
-          fi
+          echo "Dispatching publish-changed-packages (ubuntu-only) for: $DOMAINS"
+          gh workflow run publish-changed-packages.yml -f packages="$DOMAINS"
         timeout-minutes: 2
 
       - name: discord-failure-alert
