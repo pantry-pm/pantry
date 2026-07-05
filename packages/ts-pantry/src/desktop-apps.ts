@@ -239,6 +239,7 @@ export async function checkAppUpdates(apps?: InstalledApp[]): Promise<AppUpdateI
  * for this arch, download + extract it, then `ditto` the .app into
  * /Applications and clear the quarantine flag.
  */
+// eslint-disable-next-line pickier/no-unused-vars -- false positive: appName is used below
 export async function updateApp(appName: string): Promise<{
   success: boolean
   version?: string

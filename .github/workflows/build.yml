@@ -347,6 +347,10 @@ jobs:
           cd packages/ts-pantry
 
           FORCE="${{ github.event.inputs.force || 'true' }}"
+          # Initialize here: the apps-only/schedule branch below never sets it,
+          # and this script runs under set -u ("STRIPE: unbound variable" killed
+          # every scheduled apps run otherwise).
+          STRIPE=""
           ARGS="-b $S3_BUCKET -r $AWS_REGION --platform ${{ matrix.platform.name }}"
           # Download-first: mirror pkgx's official prebuilt (seconds) instead of
           # compiling; falls back to source build when pkgx lacks it or it's a
