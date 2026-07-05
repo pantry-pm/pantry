@@ -2,9 +2,11 @@ name: Publish Changed Packages
 
 # Auto-publish to the pantry registry whenever a commit changes a package's
 # recipe or metadata — including the automated version bumps pushed by
-# `update-packages.yml`. Builds FROM SOURCE (no --pkgx-mirror) so the published
-# binaries are linked against current libraries and actually run on modern
-# distros, rather than re-mirroring stale pkgx prebuilts.
+# `update-packages.yml` (which dispatches this workflow explicitly). Runs
+# UBUNTU-ONLY and DOWNLOAD-FIRST: --pkgx-mirror mirrors pkgx's official prebuilt
+# and only source-builds packages pkgx lacks or that we deliberately customize
+# (php/postgres, on the native linux legs). macOS runners are never spun up
+# here — darwin-arm64 is produced from ubuntu via --mirror-only.
 on:
   push:
     branches: [main]
@@ -114,29 +116,31 @@ jobs:
           echo "domains=$DOMAINS" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Source-build + publish (${{ matrix.platform.name }})
+    name: Publish (${{ matrix.platform.name }})
     needs: detect
     if: needs.detect.outputs.domains != ''
     runs-on: ${{ matrix.platform.os }}
-    # Heavy source builds (mysql/mariadb compile the full server + bundled libs)
-    # need well over the old 120 min once queue + apt + dep builds are included —
-    # mysql 8.0.43 reached 64% in ~60 min of compile, so give big builds headroom.
+    # Download-first (--pkgx-mirror) is seconds per package; the headroom is for
+    # the CUSTOM source fallbacks (php/mysql/postgres) that DO compile on the
+    # native linux legs (mysql 8.0.43 reached 64% in ~60 min of compile).
     timeout-minutes: 350
     strategy:
       fail-fast: false
       matrix:
+        # Download-first, ubuntu-only (macOS never spun up unsupervised):
+        #  - linux legs: --pkgx-mirror ⇒ mirror pkgx's official prebuilt, and
+        #    fall back to a SOURCE build only for packages pkgx lacks or that we
+        #    deliberately customize (php/postgres). Those compile natively here,
+        #    so the legs need the build toolchain.
+        #  - darwin-arm64 FROM UBUNTU: --pkgx-mirror --mirror-only ⇒ download the
+        #    pkgx darwin prebuilt and NEVER source-build on a miss (a darwin
+        #    source build can't cross-compile on linux). No toolchain, no Mac.
+        #    darwin-arm64 packages pkgx doesn't prebuild are filled by mirror.yml
+        #    / the fleet, or a supervised macOS `Build` dispatch.
         platform:
-          - { name: linux-x86-64, os: ubuntu-latest, download_only: false }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, download_only: false }
-          # darwin-arm64 is produced FROM UBUNTU via the cross-platform download
-          # fanout (--download-only): a download recipe just curls the darwin
-          # asset and verifies its Mach-O/arm64 magic — no Mac runner, ~10x
-          # cheaper. darwin-arm64 SOURCE recipes (e.g. eza, or hdiutil desktop
-          # apps) are NOT auto-built here anymore — apps stay fresh via
-          # check-desktop-updates.yml (ubuntu), and CLI source tools get a
-          # supervised macOS `Build` dispatch. This keeps every auto-publish on
-          # the cheap ubuntu runners; macOS is never spun up unsupervised.
-          - { name: darwin-arm64, os: ubuntu-latest, download_only: true }
+          - { name: linux-x86-64, os: ubuntu-latest, mirror_flags: '--pkgx-mirror', needs_toolchain: true }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, mirror_flags: '--pkgx-mirror', needs_toolchain: true }
+          - { name: darwin-arm64, os: ubuntu-latest, mirror_flags: '--pkgx-mirror --mirror-only', needs_toolchain: false }
     steps:
       - uses: actions/checkout@v6
 
@@ -149,9 +153,10 @@ jobs:
         run: bun install
 
       - name: Install build tools (Linux)
-        # Skip the heavy apt install for the darwin-arm64 download-only leg — it
-        # just curls the prebuilt darwin asset and needs no compiler toolchain.
-        if: runner.os == 'Linux' && !matrix.platform.download_only
+        # Only the linux legs need the toolchain (for the custom source fallbacks
+        # under --pkgx-mirror). The darwin-arm64 --mirror-only leg just downloads
+        # the pkgx prebuilt, so skip the ~5-min apt install there.
+        if: runner.os == 'Linux' && matrix.platform.needs_toolchain
         env:
           # Without this a transitively-pulled package (tzdata, x11, …) opens an
           # interactive debconf prompt and apt hangs forever — which is what
@@ -236,19 +241,12 @@ jobs:
           DOMAINS="${{ needs.detect.outputs.domains }}"
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
-          # darwin-arm64 runs on ubuntu with --download-only: only the download
-          # recipes among the changed set are produced (curl the darwin asset +
-          # verify Mach-O/arm64), so source recipes are safely skipped there.
-          DL_ONLY=""
-          if [ "${{ matrix.platform.download_only }}" = "true" ]; then
-            DL_ONLY="--download-only"
-            echo "Download-only publish (cross-platform fanout): $PKGS -> ${{ matrix.platform.name }}"
-          else
-            # No --pkgx-mirror ⇒ compile from the recipe so binaries link current
-            # libs. --force re-uploads even if a (stale, mirrored) artifact exists.
-            echo "Source-building (NO pkgx-mirror) and publishing: $PKGS"
-          fi
+          # Download-first: --pkgx-mirror mirrors pkgx's official prebuilt and only
+          # source-builds packages pkgx lacks or that we deliberately customize
+          # (php/postgres). --force re-uploads even if an artifact already exists.
+          # The darwin leg adds --mirror-only (download only; no cross-compile).
+          echo "Publishing (download-first) $PKGS -> ${{ matrix.platform.name }} [${{ matrix.platform.mirror_flags }}]"
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$S3_REGION" \
             --platform "${{ matrix.platform.name }}" \
-            -p "$PKGS" --multi-version --max-versions "$MAXV" --force $DL_ONLY
+            -p "$PKGS" --multi-version --max-versions "$MAXV" --force ${{ matrix.platform.mirror_flags }}
