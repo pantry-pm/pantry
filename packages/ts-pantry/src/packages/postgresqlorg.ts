@@ -93,7 +93,7 @@ export const postgresPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1.0.1',
+    'openssl.org^3',
     'gnu.org/readline',
     'zlib.net',
     'lz4.org',

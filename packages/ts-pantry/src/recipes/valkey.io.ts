@@ -16,7 +16,7 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   dependencies: {
-    'openssl.org': '^1',
+    'openssl.org': '^3',
   },
 
   build: {

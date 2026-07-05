@@ -20,7 +20,7 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   dependencies: {
-    'openssl.org': '^1.0.1',
+    'openssl.org': '^3',
     'gnu.org/readline': '*',
     'zlib.net': '*',
     'lz4.org': '*',

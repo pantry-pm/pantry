@@ -61,7 +61,7 @@ export const valkeyioPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1',
+    'openssl.org^3',
   ] as const,
   buildDependencies: [] as const,
   /**
