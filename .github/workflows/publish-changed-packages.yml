@@ -26,7 +26,14 @@ on:
         type: string
 
 concurrency:
-  group: publish-changed-${{ github.ref }}
+  # Per-RUN group (not per-ref): update-packages.yml dispatches this once per
+  # version-bump commit — often several times an hour. A shared `github.ref`
+  # group collapses them all into ONE queue slot, and each new dispatch cancels
+  # the previously-pending one, so intermediate updates get silently dropped and
+  # never publish. Giving every run its own group lets each version bump publish
+  # independently (each targets a specific, small package set). Re-uploads are
+  # idempotent (--force, last-write-wins), so concurrent runs are safe.
+  group: publish-changed-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
