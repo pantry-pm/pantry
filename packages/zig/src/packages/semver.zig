@@ -45,17 +45,26 @@ pub fn parseVersion(version: []const u8) !Version {
     const minor_str_opt = parts.next();
     const patch_str_opt = parts.next();
 
-    const major = std.fmt.parseInt(u32, major_str, 10) catch return error.InvalidVersion;
-    const minor: u32 = if (minor_str_opt) |s|
-        (std.fmt.parseInt(u32, s, 10) catch return error.InvalidVersion)
-    else
-        0;
-    const patch: u32 = if (patch_str_opt) |s|
-        (std.fmt.parseInt(u32, s, 10) catch return error.InvalidVersion)
-    else
-        0;
+    const major = try parseComponent(major_str);
+    const minor: u32 = if (minor_str_opt) |s| try parseComponent(s) else 0;
+    const patch: u32 = if (patch_str_opt) |s| try parseComponent(s) else 0;
 
     return .{ .major = major, .minor = minor, .patch = patch };
+}
+
+/// Parse the numeric part of a single version component, tolerating a trailing
+/// non-numeric suffix. openssl ships letter-suffixed patch releases like
+/// "1.1.1w" (patch component "1w"); without this, `parseInt("1w")` fails and
+/// every openssl 1.x version is treated as unparseable, so `^1` matches
+/// nothing even though 1.1.1w is in the registry. Takes the leading ASCII
+/// digits ("1w" -> 1) and ignores the suffix — but a component with NO leading
+/// digit ("foo", "invalid") is still a genuine error, so real typos and corrupt
+/// lockfiles are not silently rewritten to 0.
+fn parseComponent(s: []const u8) !u32 {
+    var end: usize = 0;
+    while (end < s.len and s[end] >= '0' and s[end] <= '9') : (end += 1) {}
+    if (end == 0) return error.InvalidVersion;
+    return std.fmt.parseInt(u32, s[0..end], 10) catch error.InvalidVersion;
 }
 
 test "parseVersion rejects non-numeric components" {
@@ -71,6 +80,17 @@ test "parseVersion rejects non-numeric components" {
     try std.testing.expectEqual(@as(u32, 1), prefixed.major);
     try std.testing.expectEqual(@as(u32, 2), prefixed.minor);
     try std.testing.expectEqual(@as(u32, 3), prefixed.patch);
+}
+
+test "parseVersion accepts openssl-style letter-suffixed patch (1.1.1w)" {
+    // openssl ships "1.1.1w"; the trailing letter must not make the whole
+    // version unparseable, or `^1` matches none of the 1.x line.
+    const v = try parseVersion("1.1.1w");
+    try std.testing.expectEqual(@as(u32, 1), v.major);
+    try std.testing.expectEqual(@as(u32, 1), v.minor);
+    try std.testing.expectEqual(@as(u32, 1), v.patch);
+    // But a component with no leading digit is still rejected.
+    try std.testing.expectError(error.InvalidVersion, parseVersion("1.2.foo"));
 }
 
 /// Parse a version constraint string like "^1.2.3" or ">=1.0.0"
