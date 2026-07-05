@@ -22,6 +22,7 @@ export const tunnelblicknetPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '8.0.3',
     '8.0.2',
     '8.0.1',
     '8.0',
