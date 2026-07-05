@@ -275,13 +275,13 @@ pub fn printUpToDate(pkg_count: usize, workspace_count: usize, elapsed_ms: f64) 
     if (workspace_count > 0) {
         const ws_label = if (workspace_count == 1) "workspace member" else "workspace members";
         print("\n{s}✓{s} {s}{d}{s} {s} + {s}{d}{s} {s} up to date {s}({s}){s}\n", .{
-            green, reset, bold, pkg_count,       reset, pkg_label,
-            bold,  workspace_count, reset, ws_label,
-            dim,   took,  reset,
+            green, reset,           bold,  pkg_count, reset, pkg_label,
+            bold,  workspace_count, reset, ws_label,  dim,   took,
+            reset,
         });
     } else {
         print("\n{s}✓{s} {s}{d}{s} {s} up to date {s}({s}){s}\n", .{
-            green, reset, bold, pkg_count, reset, pkg_label,
+            green, reset, bold,  pkg_count, reset, pkg_label,
             dim,   took,  reset,
         });
     }
