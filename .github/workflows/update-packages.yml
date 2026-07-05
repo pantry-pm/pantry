@@ -152,7 +152,13 @@ jobs:
           while IFS= read -r filepath; do
             [ -z "$filepath" ] && continue
             [ -f "$filepath" ] || continue
-            case "$filepath" in */aliases.ts|*/generated-*|*/index.ts) continue ;; esac
+            # Skip index/alias artifacts, and — crucially — desktop apps + fonts:
+            # those are macOS/DMG packages that publish-changed can't build on its
+            # ubuntu legs. They're published on ubuntu by check-desktop-updates.yml
+            # (via its hdiutil shim) instead; routing them here would fail the run.
+            case "$filepath" in
+              */aliases.ts|*/generated-*|*/index.ts|*/packages/apps/*|*/packages/fonts/*) continue ;;
+            esac
             DOMAIN=$(grep -m 1 "domain:" "$filepath" 2>/dev/null | sed "s/.*domain: '//" | sed "s/' as const.*//" | tr -d ' \n\r')
             [ -z "$DOMAIN" ] && continue
             DOMAINS="${DOMAINS:+$DOMAINS,}$DOMAIN"
