@@ -75,6 +75,7 @@ export const surrealdbcomPackage = {
   */
   versions: [
     '2023.9.1',
+    '3.2.0',
     '3.1.5',
     '3.1.4',
     '3.1.3',
