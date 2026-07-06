@@ -104,9 +104,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.9.16",
+      "latest": "3.10.11",
       "published": "3.9.16",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -546,8 +546,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.0.6",
-      "published": "3.0.5",
-      "needsUpdate": true
+      "published": "3.0.6",
+      "needsUpdate": false
     },
     {
       "domain": "tableplus.com",
@@ -591,8 +591,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "8.0.3",
-      "published": "8.0.2",
-      "needsUpdate": true
+      "published": "8.0.3",
+      "needsUpdate": false
     },
     {
       "domain": "vlc.app",
