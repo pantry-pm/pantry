@@ -83,6 +83,7 @@ export const localaiioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.6.1',
     '4.6.0',
     '4.5.6',
     '4.5.5',
