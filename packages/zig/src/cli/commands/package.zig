@@ -892,7 +892,9 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
 
         style.print("\nPublished {d}/{d} packages", .{ succeeded, pkgs.len });
         if (skipped > 0) {
-            style.print(" ({d} skipped — already on registry)", .{skipped});
+            // Skips cover both "already on the registry" and native/Zig
+            // packages that don't publish to npm — keep the wording general.
+            style.print(" ({d} skipped)", .{skipped});
         }
         if (failed > 0) {
             style.print(" ({d} failed)", .{failed});
@@ -936,13 +938,51 @@ fn isTransientNetworkError(err: anyerror) bool {
     };
 }
 
-/// Publish a single package directory to npm.
+/// Reason a package should be skipped when publishing to npm, or null to publish.
+///
+/// Native (Zig) packages live on the Pantry registry, not npm: their source is
+/// Zig + a prebuilt binary with no JavaScript entry, so pushing them to npm
+/// ships a broken package. We auto-detect them by the presence of a `build.zig`
+/// in the package directory. A package can override the auto-detection with
+/// `"pantry": { "npm": true | false }` in its package.json (true forces an npm
+/// publish even with a build.zig; false skips npm regardless).
+pub fn npmSkipReason(allocator: std.mem.Allocator, package_dir: []const u8, config_path: []const u8) ?[]const u8 {
+    // Explicit override: package.json "pantry": { "npm": bool }.
+    if (io_helper.readFileAlloc(allocator, config_path, 10 * 1024 * 1024)) |content| {
+        defer allocator.free(content);
+        if (std.json.parseFromSlice(std.json.Value, allocator, content, .{})) |parsed| {
+            defer parsed.deinit();
+            if (parsed.value == .object) {
+                if (parsed.value.object.get("pantry")) |p| {
+                    if (p == .object) {
+                        if (p.object.get("npm")) |n| {
+                            if (n == .bool) return if (n.bool) null else "pantry.npm=false";
+                        }
+                    }
+                }
+            }
+        } else |_| {}
+    } else |_| {}
+
+    // Auto-detect native Zig packages by the presence of build.zig.
+    const build_zig = std.fs.path.join(allocator, &[_][]const u8{ package_dir, "build.zig" }) catch return null;
+    defer allocator.free(build_zig);
+    io_helper.accessAbsolute(build_zig, .{}) catch return null;
+    return "native Zig package — publishes to the Pantry registry, not npm";
+}
+
 fn publishSingleToNpm(
     allocator: std.mem.Allocator,
     package_dir: []const u8,
     config_path: []const u8,
     options: PublishOptions,
 ) !CommandResult {
+    // Native/Zig packages don't belong on npm — skip before doing any work.
+    if (npmSkipReason(allocator, package_dir, config_path)) |reason| {
+        style.print("\n{s}↷{s} skipping npm publish — {s}\n", .{ style.dim, style.reset, reason });
+        return .{ .exit_code = 0, .skipped = true };
+    }
+
     // Import auth modules
     const registry = @import("../../auth/registry.zig");
     const publish_lib = @import("../../packages/publish.zig");

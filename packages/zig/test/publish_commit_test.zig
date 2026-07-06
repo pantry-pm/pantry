@@ -277,3 +277,50 @@ test "detectMonorepoPackages respects skip flag" {
     try testing.expectEqual(@as(usize, 1), result.?.len);
     try testing.expectEqualStrings("keep-me", result.?[0].name);
 }
+
+// ============================================================================
+// npm publish target selection (native vs JS packages)
+// ============================================================================
+
+test "npmSkipReason: native packages skip npm, explicit pantry.npm overrides" {
+    const io_helper = lib.io_helper;
+    const npmSkipReason = lib.commands.package_commands.npmSkipReason;
+    const allocator = testing.allocator;
+
+    const ts = io_helper.clockGettime();
+    const dir = try std.fmt.allocPrint(allocator, "/tmp/pantry-npmskip-{d}", .{@as(u64, @intCast(ts.sec)) * 1_000_000 + @as(u64, @intCast(@divFloor(ts.nsec, 1000)))});
+    defer allocator.free(dir);
+    try io_helper.makePath(dir);
+    defer io_helper.deleteTree(dir) catch {};
+
+    const cfg = try std.fs.path.join(allocator, &[_][]const u8{ dir, "package.json" });
+    defer allocator.free(cfg);
+    const build_zig = try std.fs.path.join(allocator, &[_][]const u8{ dir, "build.zig" });
+    defer allocator.free(build_zig);
+
+    const write = struct {
+        fn f(path: []const u8, data: []const u8) !void {
+            const io_h = lib.io_helper;
+            const file = try io_h.cwd().createFile(io_h.io, path, .{});
+            defer file.close(io_h.io);
+            try io_h.writeAllToFile(file, data);
+        }
+    }.f;
+
+    // Plain JS package → publishes to npm (no skip reason).
+    try write(cfg, "{\"name\":\"js\",\"version\":\"1.0.0\"}");
+    try testing.expect(npmSkipReason(allocator, dir, cfg) == null);
+
+    // A build.zig makes it a native package → skipped.
+    try write(build_zig, "pub fn build() void {}");
+    try testing.expect(npmSkipReason(allocator, dir, cfg) != null);
+
+    // Explicit opt-in overrides the native auto-detection.
+    try write(cfg, "{\"name\":\"z\",\"version\":\"1.0.0\",\"pantry\":{\"npm\":true}}");
+    try testing.expect(npmSkipReason(allocator, dir, cfg) == null);
+
+    // Explicit opt-out skips even a plain JS package.
+    io_helper.deleteFile(build_zig) catch {};
+    try write(cfg, "{\"name\":\"j\",\"version\":\"1.0.0\",\"pantry\":{\"npm\":false}}");
+    try testing.expect(npmSkipReason(allocator, dir, cfg) != null);
+}
