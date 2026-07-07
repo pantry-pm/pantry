@@ -95,17 +95,17 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.623.101652",
+      "latest": "26.623.141536",
       "published": "26.623.101652",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "cursor.com",
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.10.11",
-      "published": "3.9.16",
+      "latest": "3.10.17",
+      "published": "3.10.11",
       "needsUpdate": true
     },
     {
@@ -131,9 +131,9 @@
       "name": "Discord",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.0.397",
+      "latest": "0.0.398",
       "published": "0.0.397",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "element.io",
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -617,9 +617,9 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.26.19",
+      "latest": "2.26.27.12",
       "published": "2.26.26.19",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "zed.dev",
