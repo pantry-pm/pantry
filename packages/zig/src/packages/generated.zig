@@ -3307,7 +3307,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{"discord"},
-    .versions = &[_][]const u8{ "0.0.397", "0.0.337", "0.0.336", "0.0.335" },
+    .versions = &[_][]const u8{ "0.0.398", "0.0.397", "0.0.337", "0.0.336", "0.0.335" },
 }, .{
     .name = "libaec",
     .domain = "dkrz.de/libaec",
