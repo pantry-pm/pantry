@@ -22,6 +22,7 @@ export const lmstudioaiPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '0.4.19-2',
     '0.4.18-1',
     '0.3.8',
     '0.3.7',
