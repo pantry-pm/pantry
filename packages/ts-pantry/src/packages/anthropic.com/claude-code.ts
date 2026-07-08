@@ -62,6 +62,7 @@ export const anthropiccomclaudecodePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.204',
     '2.1.203',
     '2.1.202',
     '2.1.201',

@@ -70,6 +70,7 @@ export const chezmoiioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.71.0',
     '2.70.5',
     '2.70.4',
     '2.70.3',
