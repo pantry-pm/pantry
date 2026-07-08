@@ -96,16 +96,16 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.623.141536",
-      "published": "26.623.101652",
-      "needsUpdate": true
+      "published": "26.623.141536",
+      "needsUpdate": false
     },
     {
       "domain": "cursor.com",
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.10.17",
-      "published": "3.10.11",
+      "latest": "3.10.20",
+      "published": "3.10.17",
       "needsUpdate": true
     },
     {
@@ -132,17 +132,17 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.0.398",
-      "published": "0.0.397",
-      "needsUpdate": true
+      "published": "0.0.398",
+      "needsUpdate": false
     },
     {
       "domain": "element.io",
       "name": "Element",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.12.22",
+      "latest": "1.12.23",
       "published": "1.12.22",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "figma.com",
@@ -347,9 +347,9 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.4.18-1",
+      "latest": "0.4.19-2",
       "published": "0.4.18-1",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "logitech.com/options-plus",
@@ -545,9 +545,9 @@
       "name": "Stats",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.0.6",
+      "latest": "3.0.7",
       "published": "3.0.6",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "tableplus.com",
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.27.12",
-      "published": "2.26.26.19",
+      "latest": "2.26.27.15",
+      "published": "2.26.27.12",
       "needsUpdate": true
     },
     {
