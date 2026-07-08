@@ -81,6 +81,7 @@ export const podmanioPackage = {
   */
   versions: [
     '6.0.0',
+    '5.8.5',
     '5.8.4',
     '5.8.3',
     '5.8.2',
