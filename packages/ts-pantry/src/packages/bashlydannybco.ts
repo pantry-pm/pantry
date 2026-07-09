@@ -75,6 +75,7 @@ export const bashlydannybcoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.0',
     '1.3.8',
     '1.3.7',
     '1.3.6',
