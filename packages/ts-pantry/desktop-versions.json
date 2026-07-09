@@ -86,9 +86,9 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.127.0",
+      "latest": "1.128.0",
       "published": "1.127.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "codex.openai.com",
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.10.20",
-      "published": "3.10.17",
-      "needsUpdate": true
+      "published": "3.10.20",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
@@ -141,8 +141,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.12.23",
-      "published": "1.12.22",
-      "needsUpdate": true
+      "published": "1.12.23",
+      "needsUpdate": false
     },
     {
       "domain": "figma.com",
@@ -348,8 +348,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.4.19-2",
-      "published": "0.4.18-1",
-      "needsUpdate": true
+      "published": "0.4.19-2",
+      "needsUpdate": false
     },
     {
       "domain": "logitech.com/options-plus",
@@ -546,8 +546,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.0.7",
-      "published": "3.0.6",
-      "needsUpdate": true
+      "published": "3.0.7",
+      "needsUpdate": false
     },
     {
       "domain": "tableplus.com",
@@ -618,17 +618,17 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.26.27.15",
-      "published": "2.26.27.12",
-      "needsUpdate": true
+      "published": "2.26.27.15",
+      "needsUpdate": false
     },
     {
       "domain": "zed.dev",
       "name": "Zed",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.9.0",
+      "latest": "1.10.0",
       "published": "1.9.0",
-      "needsUpdate": false
+      "needsUpdate": true
     }
   ]
 }
