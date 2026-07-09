@@ -329,8 +329,12 @@ export async function uploadToS3(options: UploadOptions): Promise<void> {
     // `73.2` -> kept), so compare canonically — replacing `.` and `/` with `-` on
     // BOTH sides — otherwise every dotted domain (unicode.org, postgresql.org, …)
     // fails to match its own tarball.
+    // The build names the tarball `<domain-dashed>-<version>-<platform>.tar.gz`
+    // (e.g. `unicode-org-73.2-linux-x86-64.tar.gz`), so match on the canonical
+    // `<domain>-<version>-` prefix (dots + slashes collapsed to dashes on both
+    // sides) rather than an exact name that omits the platform suffix.
     const canon = (s: string) => s.replace(/[/.]/g, '-')
-    const expectedTarball = `${pkgName.replace(/\//g, '-')}-${version}.tar.gz`
+    const expectedPrefix = `${canon(`${pkgName}-${version}`)}-`
     const tarball = files.find(f => f.endsWith('.tar.gz'))
     const sha256File = files.find(f => f.endsWith('.sha256'))
 
@@ -338,8 +342,8 @@ export async function uploadToS3(options: UploadOptions): Promise<void> {
       console.log(`⚠️  No tarball found in ${artifactDir}, skipping`)
       continue
     }
-    if (canon(tarball) !== canon(expectedTarball)) {
-      console.log(`⚠️  Expected ${expectedTarball} in ${artifactDir}, found ${tarball}; skipping stale artifact`)
+    if (!canon(tarball).startsWith(expectedPrefix)) {
+      console.log(`⚠️  Expected a ${expectedPrefix}*.tar.gz in ${artifactDir}, found ${tarball}; skipping stale artifact`)
       continue
     }
 
