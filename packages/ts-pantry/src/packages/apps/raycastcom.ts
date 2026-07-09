@@ -22,6 +22,7 @@ export const raycastcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.104.22',
     '1.104.21',
     '1.104.20',
     '1.89.0',
