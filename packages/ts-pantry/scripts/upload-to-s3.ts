@@ -324,16 +324,21 @@ export async function uploadToS3(options: UploadOptions): Promise<void> {
     const artifactPath = join(artifactsDir, artifactDir)
     const files = readdirSync(artifactPath)
 
-    // Find tarball and sha256 files
+    // Find tarball and sha256 files. The build names artifacts with the domain's
+    // dots (and slashes) collapsed to dashes (e.g. `unicode.org` -> `unicode-org`,
+    // `73.2` -> kept), so compare canonically — replacing `.` and `/` with `-` on
+    // BOTH sides — otherwise every dotted domain (unicode.org, postgresql.org, …)
+    // fails to match its own tarball.
+    const canon = (s: string) => s.replace(/[/.]/g, '-')
     const expectedTarball = `${pkgName.replace(/\//g, '-')}-${version}.tar.gz`
     const tarball = files.find(f => f.endsWith('.tar.gz'))
-    const sha256File = files.find(f => f === `${expectedTarball}.sha256`)
+    const sha256File = files.find(f => f.endsWith('.sha256'))
 
     if (!tarball) {
       console.log(`⚠️  No tarball found in ${artifactDir}, skipping`)
       continue
     }
-    if (tarball !== expectedTarball) {
+    if (canon(tarball) !== canon(expectedTarball)) {
       console.log(`⚠️  Expected ${expectedTarball} in ${artifactDir}, found ${tarball}; skipping stale artifact`)
       continue
     }
