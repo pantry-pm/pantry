@@ -77,6 +77,7 @@ export const mailpitaxllentorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.30.4',
     '1.30.3',
     '1.30.2',
     '1.30.1',
