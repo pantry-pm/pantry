@@ -67,6 +67,7 @@ export const gqlgencomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.17.94',
     '0.17.93',
     '0.17.92',
     '0.17.91',

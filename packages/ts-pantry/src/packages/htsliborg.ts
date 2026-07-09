@@ -81,13 +81,17 @@ export const htsliborgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.24',
+    '1.23.2',
     '1.23.1',
     '1.23',
     '1.23.0',
+    '1.22.3',
     '1.22.2',
     '1.22.1',
     '1.22',
     '1.22.0',
+    '1.21.2',
     '1.21.1',
     '1.21',
     '1.21.0',

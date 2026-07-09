@@ -74,6 +74,7 @@ export const huggingfacecoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.23.0',
     '1.22.0',
     '1.21.0',
     '1.20.1',
