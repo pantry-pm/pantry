@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.6...v0.10.7)
+
+## 🐛 Bug Fixes
+
+- **publish**: retry on error.NameServerFailure (transient DNS) ([41aae67](https://github.com/pantry-pm/pantry/commit/41aae67)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.7 ([9605440](https://github.com/pantry-pm/pantry/commit/9605440)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update coredns.io to 1.14.5 ([27654ab](https://github.com/pantry-pm/pantry/commit/27654ab)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.3...v0.10.4)
 
 ## 🚀 Features
