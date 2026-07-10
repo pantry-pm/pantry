@@ -950,8 +950,16 @@ fn isTransientNetworkError(err: anyerror) bool {
         error.ConnectionTimedOut,
         error.EndOfStream,
         error.NetworkUnreachable,
+        // DNS hiccups on shared CI runners: getAddrInfo surfaces these when
+        // resolving registry.npmjs.org mid-run. `NameServerFailure` (SERVFAIL)
+        // and `TemporaryNameServerFailure` (TRY_AGAIN) are both retryable — a
+        // single flaky lookup shouldn't fail one package out of a 74-pkg
+        // release. We've observed `error.NameServerFailure` alone knocking out
+        // exactly one package per publish.
+        error.NameServerFailure,
         error.TemporaryNameServerFailure,
         error.UnknownHostName,
+        error.HostLacksNetworkAddresses,
         => true,
         else => false,
     };
