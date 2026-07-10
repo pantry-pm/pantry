@@ -732,21 +732,30 @@ pub const PublishOptions = struct {
     /// and re-publishing them just wastes time and risks 429s. Currently
     /// honored for npm only (`--npm`).
     skip_existing: bool = true,
+    /// Skip the package's own npm lifecycle scripts (prepublish, prepare,
+    /// prepublishOnly, prepack, postpack, publish, postpublish). Mirrors
+    /// `bun/npm publish --ignore-scripts`: use when dist is already built by a
+    /// separate step and the packages' prepublishOnly (e.g. `tsc`) would fail
+    /// or is redundant. npm path only.
+    ignore_scripts: bool = false,
 };
 
 /// Publish a package to the registry (npm).
 /// Auto-detects monorepos (packages/ directory) and publishes all non-private packages.
 pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, options: PublishOptions) !CommandResult {
-    _ = args;
-
     const cwd = io_helper.realpathAlloc(allocator, ".") catch {
         return CommandResult.err(allocator, "Error: Could not determine current directory");
     };
     defer allocator.free(cwd);
 
-    // Check for monorepo (packages/ directory with package.json files)
+    // When explicit path/glob args are given, those are the packages to
+    // publish (they need not live under packages/). Otherwise auto-detect a
+    // monorepo (packages/ directory with package.json files).
     const registry_cmds = @import("registry.zig");
-    const monorepo_packages = registry_cmds.detectMonorepoPackages(allocator, cwd, options.skip) catch null;
+    const monorepo_packages = if (args.len > 0)
+        registry_cmds.detectPackagesFromArgs(allocator, cwd, args, options.skip) catch null
+    else
+        registry_cmds.detectMonorepoPackages(allocator, cwd, options.skip) catch null;
     defer if (monorepo_packages) |pkgs| {
         for (pkgs) |*pkg| {
             var p = pkg.*;
@@ -764,7 +773,11 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
         // would fail because the dependency hasn't been built yet.
         sortPackagesByDependencyOrder(allocator, pkgs);
 
-        style.print("Monorepo detected: {d} publishable package(s) in packages/\n", .{pkgs.len});
+        if (args.len > 0) {
+            style.print("{d} package(s) selected\n", .{pkgs.len});
+        } else {
+            style.print("Monorepo detected: {d} publishable package(s) in packages/\n", .{pkgs.len});
+        }
         for (pkgs, 0..) |pkg, i| {
             style.print("  {d}. {s}\n", .{ i + 1, pkg.name });
         }
@@ -906,6 +919,12 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
         }
 
         return .{ .exit_code = if (failed > 0) 1 else 0 };
+    }
+
+    // Explicit args were given but matched no publishable packages — error
+    // rather than silently falling back to publishing the CWD.
+    if (args.len > 0) {
+        return CommandResult.err(allocator, "Error: No publishable packages matched the given path(s)/glob(s)");
     }
 
     // Single package mode — publish CWD
@@ -1062,9 +1081,11 @@ fn publishSingleToNpm(
     } else null;
 
     // Run pre-publish lifecycle scripts: prepublish → prepare → prepublishOnly → prepack
-    if (scripts_obj) |scripts| {
-        if (!lib.lifecycle.runPrePublishScripts(allocator, scripts, package_dir)) {
-            return CommandResult.err(allocator, "Pre-publish lifecycle script failed");
+    if (!options.ignore_scripts) {
+        if (scripts_obj) |scripts| {
+            if (!lib.lifecycle.runPrePublishScripts(allocator, scripts, package_dir)) {
+                return CommandResult.err(allocator, "Pre-publish lifecycle script failed");
+            }
         }
     }
 
@@ -1083,9 +1104,11 @@ fn publishSingleToNpm(
     style.print("Packed size: {s}\n", .{formatSize(&packed_buf, tarball_info.packed_size)});
 
     // Run postpack script (after tarball creation)
-    if (scripts_obj) |scripts| {
-        if (!lib.lifecycle.runPostPackScripts(allocator, scripts, package_dir)) {
-            return CommandResult.err(allocator, "postpack lifecycle script failed");
+    if (!options.ignore_scripts) {
+        if (scripts_obj) |scripts| {
+            if (!lib.lifecycle.runPostPackScripts(allocator, scripts, package_dir)) {
+                return CommandResult.err(allocator, "postpack lifecycle script failed");
+            }
         }
     }
 
@@ -1148,8 +1171,10 @@ fn publishSingleToNpm(
                 style.print("\n✓ Published {s}@{s}\n", .{ metadata.name, metadata.version });
             }
             // Run post-publish scripts: publish → postpublish
-            if (scripts_obj) |scripts| {
-                _ = lib.lifecycle.runPostPublishScripts(allocator, scripts, package_dir);
+            if (!options.ignore_scripts) {
+                if (scripts_obj) |scripts| {
+                    _ = lib.lifecycle.runPostPublishScripts(allocator, scripts, package_dir);
+                }
             }
             if (options.github_release) {
                 createGitHubRelease(allocator, options);
@@ -1299,8 +1324,10 @@ fn publishSingleToNpm(
     if (response.success) {
         style.print("\n✓ Published {s}@{s}\n", .{ metadata.name, metadata.version });
         // Run post-publish scripts: publish → postpublish
-        if (scripts_obj) |scripts| {
-            _ = lib.lifecycle.runPostPublishScripts(allocator, scripts, package_dir);
+        if (!options.ignore_scripts) {
+            if (scripts_obj) |scripts| {
+                _ = lib.lifecycle.runPostPublishScripts(allocator, scripts, package_dir);
+            }
         }
         if (options.github_release) {
             createGitHubRelease(allocator, options);

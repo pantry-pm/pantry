@@ -11,6 +11,7 @@ const io_helper = @import("../../io_helper.zig");
 const lib = @import("../../lib.zig");
 const common = @import("common.zig");
 const style = @import("../style.zig");
+const advanced_glob = @import("../../packages/advanced_glob.zig");
 const http = std.http;
 
 const CommandResult = common.CommandResult;
@@ -472,9 +473,10 @@ fn scanForPackages(allocator: std.mem.Allocator, dir_path: []const u8, packages:
         }
 
         const entry_path = try std.fs.path.join(allocator, &[_][]const u8{ dir_path, entry.name });
-        errdefer allocator.free(entry_path);
+        defer allocator.free(entry_path);
 
         const config_path = try std.fs.path.join(allocator, &[_][]const u8{ entry_path, "package.json" });
+        defer allocator.free(config_path);
 
         // Check if this directory has a package.json
         const has_pkg_json = blk: {
@@ -486,58 +488,163 @@ fn scanForPackages(allocator: std.mem.Allocator, dir_path: []const u8, packages:
 
         if (has_pkg_json) {
             // This is a package — check if private and add if not
-            const content = io_helper.readFileAlloc(allocator, config_path, 10 * 1024 * 1024) catch {
-                allocator.free(config_path);
-                allocator.free(entry_path);
-                continue;
-            };
-            defer allocator.free(content);
-
-            const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch {
-                allocator.free(config_path);
-                allocator.free(entry_path);
-                continue;
-            };
-            defer parsed.deinit();
-
-            const root = parsed.value;
-            if (root != .object) {
-                allocator.free(config_path);
-                allocator.free(entry_path);
-                continue;
-            }
-
-            // Check if private
-            const is_private = if (root.object.get("private")) |p|
-                if (p == .bool) p.bool else false
-            else
-                false;
-
-            if (is_private) {
-                style.print("  Skipping {s} (private)\n", .{entry.name});
-                allocator.free(config_path);
-                allocator.free(entry_path);
-                continue;
-            }
-
-            // Get package name from package.json
-            const pkg_name = if (root.object.get("name")) |n|
-                if (n == .string) n.string else entry.name
-            else
-                entry.name;
-
-            try packages.append(allocator, .{
-                .name = try allocator.dupe(u8, pkg_name),
-                .path = entry_path,
-                .config_path = config_path,
-            });
+            try appendPackageFromDir(allocator, entry_path, packages, skip);
         } else {
             // No package.json — recurse into subdirectories
-            allocator.free(config_path);
             try scanForPackages(allocator, entry_path, packages, skip);
-            allocator.free(entry_path);
         }
     }
+}
+
+/// Build a MonorepoPackage from a single package directory and append it to
+/// `packages`. Returns without appending if the directory has no package.json,
+/// is marked `private: true`, or its directory name matches the `--skip` list.
+/// The appended package's name/path/config_path are all allocator-owned.
+pub fn appendPackageFromDir(
+    allocator: std.mem.Allocator,
+    dir_path: []const u8,
+    packages: *std.ArrayList(MonorepoPackage),
+    skip: ?[]const u8,
+) !void {
+    const dir_name = std.fs.path.basename(dir_path);
+
+    // Skip directories matching the --skip flag
+    if (skip) |skip_list| {
+        var skip_iter = std.mem.splitScalar(u8, skip_list, ',');
+        while (skip_iter.next()) |skip_name| {
+            const trimmed = std.mem.trim(u8, skip_name, " ");
+            if (trimmed.len > 0 and std.mem.eql(u8, dir_name, trimmed)) {
+                style.print("{s}⚠{s} Skipping {s}{s}{s} directory (--skip)\n", .{ style.yellow, style.reset, style.bold, dir_name, style.reset });
+                return;
+            }
+        }
+    }
+
+    const config_path = try std.fs.path.join(allocator, &[_][]const u8{ dir_path, "package.json" });
+    errdefer allocator.free(config_path);
+
+    // Must have a package.json to be a package.
+    io_helper.accessAbsolute(config_path, .{}) catch {
+        allocator.free(config_path);
+        return;
+    };
+
+    const content = io_helper.readFileAlloc(allocator, config_path, 10 * 1024 * 1024) catch {
+        allocator.free(config_path);
+        return;
+    };
+    defer allocator.free(content);
+
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch {
+        allocator.free(config_path);
+        return;
+    };
+    defer parsed.deinit();
+
+    const root = parsed.value;
+    if (root != .object) {
+        allocator.free(config_path);
+        return;
+    }
+
+    // Check if private
+    const is_private = if (root.object.get("private")) |p|
+        if (p == .bool) p.bool else false
+    else
+        false;
+
+    if (is_private) {
+        style.print("  Skipping {s} (private)\n", .{dir_name});
+        allocator.free(config_path);
+        return;
+    }
+
+    // Get package name from package.json
+    const pkg_name = if (root.object.get("name")) |n|
+        if (n == .string) n.string else dir_name
+    else
+        dir_name;
+
+    const name_dup = try allocator.dupe(u8, pkg_name);
+    errdefer allocator.free(name_dup);
+    const path_dup = try allocator.dupe(u8, dir_path);
+    errdefer allocator.free(path_dup);
+
+    try packages.append(allocator, .{
+        .name = name_dup,
+        .path = path_dup,
+        .config_path = config_path,
+    });
+}
+
+/// Whether a package with the given (joined) path has already been collected.
+fn pathAlreadyAdded(packages: *const std.ArrayList(MonorepoPackage), path: []const u8) bool {
+    for (packages.items) |pkg| {
+        if (std.mem.eql(u8, pkg.path, path)) return true;
+    }
+    return false;
+}
+
+/// Detect the packages to publish from explicit path/glob arguments, relative
+/// to `project_root`. Each arg is either a plain package directory or a glob
+/// whose last path segment contains `*` (e.g. `storage/framework/core/*`).
+/// Returns null if nothing matched, so the caller can error cleanly. Otherwise
+/// returns an owned slice matching detectMonorepoPackages' ownership contract
+/// (each MonorepoPackage's fields are allocator-owned and freed by deinit).
+pub fn detectPackagesFromArgs(
+    allocator: std.mem.Allocator,
+    project_root: []const u8,
+    args: []const []const u8,
+    skip: ?[]const u8,
+) !?[]MonorepoPackage {
+    var packages = std.ArrayList(MonorepoPackage).empty;
+    errdefer {
+        for (packages.items) |*pkg| {
+            pkg.deinit(allocator);
+        }
+        packages.deinit(allocator);
+    }
+
+    for (args) |arg| {
+        if (std.mem.indexOfScalar(u8, arg, '*') != null) {
+            // Glob: split into the parent dir and the last-segment pattern.
+            const last_slash = std.mem.lastIndexOfScalar(u8, arg, '/');
+            const parent_rel = if (last_slash) |i| arg[0..i] else "";
+            const pattern = if (last_slash) |i| arg[i + 1 ..] else arg;
+
+            const parent_dir = try std.fs.path.join(allocator, &[_][]const u8{ project_root, parent_rel });
+            defer allocator.free(parent_dir);
+
+            var dir = io_helper.openDirForIteration(parent_dir) catch continue;
+            defer dir.close();
+
+            var iter = dir.iterate();
+            while (iter.next() catch null) |entry| {
+                if (entry.kind != .directory) continue;
+                if (!advanced_glob.matchGlob(pattern, entry.name)) continue;
+
+                const child = try std.fs.path.join(allocator, &[_][]const u8{ parent_dir, entry.name });
+                defer allocator.free(child);
+
+                if (pathAlreadyAdded(&packages, child)) continue;
+                try appendPackageFromDir(allocator, child, &packages, skip);
+            }
+        } else {
+            // Plain path: treat the arg as a single package directory.
+            const dir_path = try std.fs.path.join(allocator, &[_][]const u8{ project_root, arg });
+            defer allocator.free(dir_path);
+
+            if (pathAlreadyAdded(&packages, dir_path)) continue;
+            try appendPackageFromDir(allocator, dir_path, &packages, skip);
+        }
+    }
+
+    if (packages.items.len == 0) {
+        packages.deinit(allocator);
+        return null;
+    }
+
+    return try packages.toOwnedSlice(allocator);
 }
 
 // ============================================================================

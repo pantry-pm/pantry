@@ -752,6 +752,7 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const github_release = ctx.hasOption("github-release");
     const release_files = ctx.getOption("files");
     const force_republish = ctx.hasOption("force-republish");
+    const ignore_scripts = ctx.hasOption("ignore-scripts");
 
     const options = lib.commands.PublishOptions{
         .access = access_val,
@@ -762,6 +763,7 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .github_release = github_release,
         .release_files = release_files,
         .skip_existing = !force_republish,
+        .ignore_scripts = ignore_scripts,
     };
 
     const result = try lib.commands.publishCommand(allocator, &[_][]const u8{}, options);
@@ -898,6 +900,18 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const github_release = ctx.hasOption("github-release");
     const release_files = ctx.getOption("files");
     const force_republish = ctx.hasOption("force-republish");
+    const ignore_scripts = ctx.hasOption("ignore-scripts");
+
+    // Collect explicit path/glob positional args. When present, these are the
+    // packages to publish (they need not live under packages/).
+    var paths = std.ArrayList([]const u8).empty;
+    defer paths.deinit(allocator);
+    {
+        var i: usize = 0;
+        while (ctx.getArgument(i)) |arg| : (i += 1) {
+            try paths.append(allocator, arg);
+        }
+    }
 
     // Route --npm or --registry npm to the npm publish flow
     if (use_npm or std.mem.eql(u8, registry, "npm")) {
@@ -910,9 +924,10 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
             .github_release = github_release,
             .release_files = release_files,
             .skip_existing = !force_republish,
+            .ignore_scripts = ignore_scripts,
         };
 
-        const result = try lib.commands.publishCommand(allocator, &[_][]const u8{}, npm_options);
+        const result = try lib.commands.publishCommand(allocator, paths.items, npm_options);
         defer {
             var r = result;
             r.deinit(allocator);
@@ -2946,6 +2961,9 @@ pub fn main() !void {
     const npm_force_republish_opt = cli.Option.init("force-republish", "force-republish", "Re-publish even if (name@version) is already on the registry (default: skip)", .bool);
     _ = try npm_publish_cmd.addOption(npm_force_republish_opt);
 
+    const npm_ignore_scripts_opt = cli.Option.init("ignore-scripts", "ignore-scripts", "Don't run package lifecycle scripts (prepublishOnly/prepack/etc.); use with a separate build step", .bool);
+    _ = try npm_publish_cmd.addOption(npm_ignore_scripts_opt);
+
     _ = npm_publish_cmd.setAction(publishAction);
     _ = try root.addCommand(npm_publish_cmd);
 
@@ -3698,6 +3716,14 @@ pub fn main() !void {
 
     const pub_force_republish_opt = cli.Option.init("force-republish", "force-republish", "Re-publish even if (name@version) is already on the registry (default: skip)", .bool);
     _ = try publish_cmd.addOption(pub_force_republish_opt);
+
+    const pub_ignore_scripts_opt = cli.Option.init("ignore-scripts", "ignore-scripts", "Don't run package lifecycle scripts (prepublishOnly/prepack/etc.); use with a separate build step", .bool);
+    _ = try publish_cmd.addOption(pub_ignore_scripts_opt);
+
+    const pub_paths_arg = cli.Argument.init("paths", "Package directories or globs to publish (e.g., './packages/*'); defaults to auto-detecting packages/", .string)
+        .withRequired(false)
+        .withVariadic(true);
+    _ = try publish_cmd.addArgument(pub_paths_arg);
 
     _ = publish_cmd.setAction(registryPublishAction);
     _ = try root.addCommand(publish_cmd);
