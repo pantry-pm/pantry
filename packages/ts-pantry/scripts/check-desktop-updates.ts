@@ -265,7 +265,7 @@ async function main(): Promise<void> {
   // that back the registry's desktop-app catalogue.
   const candidates: Array<{ file: string, kind: 'app' | 'font' }> = []
   const seen = new Set<string>()
-  const add = (file: string, kind: 'app' | 'font'): void => {
+  const add = (file: string | null, kind: 'app' | 'font'): void => {
     if (file && !seen.has(file)) {
       seen.add(file)
       candidates.push({ file, kind })

@@ -271,11 +271,9 @@ export function isPackageInCategory(packageName: string, category: keyof typeof 
  * Extract available versions for a specific package
  * Uses pre-generated version mappings for domains to avoid TypeScript performance issues
  */
-export type PackageVersions<T extends PackageName> = T extends keyof Packages
-  ? Packages[T] extends { versions: readonly (infer V)[] }
-    ? V extends string
-      ? V
-      : never
+export type PackageVersions<T extends PackageName> = Packages[T & keyof Packages] extends { versions: readonly (infer V)[] }
+  ? V extends string
+    ? V
     : never
   : T extends keyof GeneratedPackageVersions
     ? GeneratedPackageVersions[T]

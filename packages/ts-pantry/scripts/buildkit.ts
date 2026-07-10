@@ -92,6 +92,7 @@ export type RecipeTest = string | string[] | {
 export interface PackageRecipe {
   distributable?: RecipeDistributable
   dependencies?: RecipeDependencyMap
+  buildDependencies?: RecipeDependencyMap
   build?: RecipeBuildConfig | string | RecipeScriptStep[]
   versions?: {
     github?: string
@@ -562,7 +563,7 @@ export function generateBuildScript(
   // tools have to win. Headers/libs (LIBRARY_PATH/CPATH/pkgconfig) are
   // arch-independent enough to keep; only executable bins are gated.
   const hostOsName = process.platform === 'darwin' ? 'darwin' : 'linux'
-  const hostArchName = (process.arch === 'arm64' || process.arch === 'aarch64') ? 'aarch64' : 'x86-64'
+  const hostArchName = process.arch === 'arm64' ? 'aarch64' : 'x86-64'
   const isForeignTarget = osName !== hostOsName || archName !== hostArchName
 
   // Narrow build to object form (or undefined) for property access throughout this function

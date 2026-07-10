@@ -42,7 +42,7 @@ const FANOUT: Record<string, { stripes: number, parallel: number }> = {
   'darwin-arm64': { stripes: 3, parallel: 2 },
 }
 // Platforms this orchestrator drives (linux-x86-64 is the fleet's job).
-const DRIVEN = ['linux-arm64', 'darwin-arm64']
+const DRIVEN: readonly Platform[] = ['linux-arm64', 'darwin-arm64']
 
 interface PkgState { missing: number, stall: number }
 type OrchState = Record<string, PkgState>
@@ -85,7 +85,7 @@ function runningBuilds(): number {
   catch { return 0 }
 }
 
-function dispatch(platform: Platform | string, stripe: string, parallel: number): void {
+function dispatch(platform: Platform, stripe: string, parallel: number): void {
   const args = [
     'workflow', 'run', 'Build', '--repo', REPO,
     '-f', `platform=${platform}`, '-f', `stripe=${stripe}`,
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   const running = runningBuilds()
   console.log(`\nBuild runs in_progress: ${running} (cap ${RUNNING_CAP})`)
 
-  const willDispatch: string[] = []
+  const willDispatch: Platform[] = []
   for (const plat of DRIVEN) {
     const m = missing[plat]
     const prevM = prev[plat]?.missing
