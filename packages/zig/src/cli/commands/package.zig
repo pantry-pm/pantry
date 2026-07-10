@@ -1191,9 +1191,13 @@ fn publishSingleToNpm(
                 return CommandResult.err(allocator, err_msg);
             }
 
-            // Registry rejections (403, 404, 409, 422) are definitive — a different auth method won't help.
-            // e.g. 403 "Package name too similar to existing package", 409 version conflict, etc.
-            if (result.status_code == 403 or result.status_code == 404 or result.status_code == 409 or result.status_code == 422) {
+            // Registry rejections that a different auth method won't fix are definitive:
+            // 403 "Package name too similar", 409 version conflict, 422 validation.
+            // A 404 during OIDC is NOT definitive — it means trusted publishing is
+            // not configured for this package (the OIDC identity isn't a registered
+            // publisher), so a token WITH publish access can still succeed. Fall
+            // through to token auth for 404 instead of hard-failing.
+            if (result.status_code == 403 or result.status_code == 409 or result.status_code == 422) {
                 const err_msg = result.error_message orelse "Publish rejected by registry";
                 style.print("\n{d} {s}\n", .{
                     result.status_code,
