@@ -14,9 +14,9 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.4.2",
+      "latest": "11.4.3",
       "published": "11.4.2",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "arc.net",
@@ -87,17 +87,17 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.128.0",
-      "published": "1.127.0",
-      "needsUpdate": true
+      "published": "1.128.0",
+      "needsUpdate": false
     },
     {
       "domain": "codex.openai.com",
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.623.141536",
+      "latest": "26.707.31428",
       "published": "26.623.141536",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "cursor.com",
@@ -122,9 +122,9 @@
       "name": "Dia",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.38.0",
+      "latest": "1.39.2",
       "published": "1.38.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "discord.com",
@@ -482,9 +482,9 @@
       "name": "Raycast",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.104.21",
+      "latest": "1.104.22",
       "published": "1.104.21",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "rectangle.app",
@@ -617,17 +617,17 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.27.15",
+      "latest": "2.26.27.19",
       "published": "2.26.27.15",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "zed.dev",
       "name": "Zed",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.10.0",
-      "published": "1.9.0",
+      "latest": "1.10.1",
+      "published": "1.10.0",
       "needsUpdate": true
     }
   ]
