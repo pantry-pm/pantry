@@ -69,6 +69,7 @@ export const openaicomcodexPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.144.1',
     '0.144.0',
     '0.143.0',
     '0.142.5',
