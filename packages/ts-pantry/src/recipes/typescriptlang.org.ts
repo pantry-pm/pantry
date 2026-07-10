@@ -7,10 +7,18 @@ export const recipe: Recipe = {
   homepage: 'https://www.typescriptlang.org/',
   github: 'https://github.com/Microsoft/TypeScript',
   programs: ['tsc'],
+  // TypeScript 7 stable releases are published to npm before GitHub's release
+  // feed is updated. Resolve the canonical npm dist-tag so Pantry can install
+  // the same current version that JavaScript package managers resolve.
   versionSource: {
-    type: 'github-releases',
-    repo: 'Microsoft/TypeScript',
-    tagPattern: /^v(.+)$/,
+    type: 'custom',
+    fetch: async (): Promise<string[]> => {
+      const response = await fetch('https://registry.npmjs.org/typescript/latest')
+      if (!response.ok)
+        return []
+      const metadata = await response.json() as { version?: string }
+      return metadata.version ? [metadata.version] : []
+    },
   },
   distributable: {
     url: 'https://registry.npmjs.org/typescript/-/typescript-{{version}}.tgz',
