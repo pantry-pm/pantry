@@ -67,6 +67,8 @@ export const arkadedevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.11.113',
+    '0.11.112',
     '0.11.111',
     '0.11.110',
     '0.11.109',
