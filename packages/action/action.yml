@@ -83,6 +83,10 @@ inputs:
     description: Path to CHANGELOG.md to extract release notes from
     required: false
     default: CHANGELOG.md
+  release-checksums:
+    description: Generate a checksums.txt manifest over the release files and attach it. Set to "true" (sha256) or a named algorithm (e.g. "sha512").
+    required: false
+    default: ''
   release-token:
     description: GitHub token for creating releases. Defaults to GITHUB_TOKEN.
     required: false

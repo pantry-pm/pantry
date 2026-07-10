@@ -592,6 +592,7 @@ export async function run(): Promise<void> {
       releasePrerelease: core.getBooleanInput('release-prerelease'),
       releaseNotes: core.getInput('release-notes') || '',
       releaseChangelog: core.getInput('release-changelog') || 'CHANGELOG.md',
+      releaseChecksums: core.getInput('release-checksums') || '',
       releaseToken: core.getInput('release-token') || process.env.GITHUB_TOKEN || '',
     }
 
@@ -1239,6 +1240,27 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     files.push(...await globber.glob())
   }
   core.info(`Matched ${files.length} file(s) from ${filePatterns.length} pattern(s)`)
+
+  // Optionally generate a checksums manifest over the resolved assets and upload
+  // it alongside them, so releases are verifiable without a manual sha256sum
+  // step. `release-checksums: true` defaults to sha256; a named algorithm
+  // (sha256/sha512/…) is honoured as-is.
+  if (inputs.releaseChecksums && inputs.releaseChecksums !== 'false' && files.length) {
+    const algorithm = inputs.releaseChecksums === 'true' ? 'sha256' : inputs.releaseChecksums
+    try {
+      const lines = files.map((file) => {
+        const digest = crypto.createHash(algorithm).update(fs.readFileSync(file)).digest('hex')
+        return `${digest}  ${path.basename(file)}`
+      })
+      const checksumPath = path.join(process.cwd(), 'checksums.txt')
+      fs.writeFileSync(checksumPath, `${lines.join('\n')}\n`)
+      files.push(checksumPath)
+      core.info(`Generated checksums.txt (${algorithm}) for ${lines.length} asset(s)`)
+    }
+    catch (err) {
+      core.warning(`Checksum generation failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
 
   // Get or create release
   let releaseId: number

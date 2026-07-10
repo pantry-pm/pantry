@@ -18,6 +18,7 @@ export interface ActionInputs {
   releasePrerelease: boolean
   releaseNotes: string
   releaseChangelog: string
+  releaseChecksums: string
   releaseToken: string
 }
 
