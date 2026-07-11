@@ -1098,6 +1098,50 @@ async function publishZigPackage(registryUrl: string, token: string, cwd: string
   core.endGroup()
 }
 
+/**
+ * Generate this release's notes from git history with logsmith — bounded to the
+ * previous tag → this tag — so a release always has proper, grouped notes
+ * without a pre-committed CHANGELOG.md. Run through `bun x` (this action already
+ * provisions bun) rather than bundled, since logsmith ships top-level await; it
+ * writes the markdown to a temp file which we read back.
+ */
+async function generateReleaseNotes(tag: string): Promise<string> {
+  try {
+    const from = await previousTag(tag)
+    const notesPath = path.join(os.tmpdir(), `release-notes-${tag.replace(/[^\w.-]/g, '_')}.md`)
+    const args = ['x', '@stacksjs/logsmith', '--to', tag, '--output', notesPath, '--theme', 'github']
+    if (from)
+      args.push('--from', from)
+
+    const code = await exec.exec('bun', args, { cwd: process.cwd(), ignoreReturnCode: true, silent: true })
+    if (code !== 0 || !fs.existsSync(notesPath)) {
+      core.warning(`logsmith did not produce notes for ${tag} (exit ${code})`)
+      return ''
+    }
+
+    const content = fs.readFileSync(notesPath, 'utf-8').trim()
+    core.info(content
+      ? `Generated release notes via logsmith (${from || 'start'}..${tag})`
+      : `logsmith produced no notes for ${tag}`)
+    return content
+  }
+  catch (err) {
+    core.warning(`logsmith changelog generation failed: ${err instanceof Error ? err.message : String(err)}`)
+    return ''
+  }
+}
+
+/** The most recent tag before `tag` (empty for the first release). */
+async function previousTag(tag: string): Promise<string> {
+  let out = ''
+  await exec.exec('git', ['describe', '--tags', '--abbrev=0', `${tag}^`], {
+    listeners: { stdout: (d: Buffer) => { out += d.toString() } },
+    silent: true,
+    ignoreReturnCode: true,
+  }).catch(() => {})
+  return out.trim()
+}
+
 /** Extract changelog content for a specific version from CHANGELOG.md */
 function extractChangelogForVersion(changelogPath: string, tag: string): string {
   try {
@@ -1265,7 +1309,12 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   // Get or create release
   let releaseId: number
   let releaseUrl = ''
-  const body = extractChangelogForVersion(inputs.releaseChangelog, tag) || inputs.releaseNotes
+  // `release-changelog: auto` generates this release's notes from git history
+  // with logsmith (no pre-committed CHANGELOG.md needed); any other value is a
+  // path to extract the tag's section from. Both fall back to `release-notes`.
+  const body = (inputs.releaseChangelog === 'auto'
+    ? await generateReleaseNotes(tag)
+    : extractChangelogForVersion(inputs.releaseChangelog, tag)) || inputs.releaseNotes
   try {
     const { data: existing } = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag })
     releaseId = existing.id

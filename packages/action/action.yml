@@ -80,7 +80,7 @@ inputs:
     required: false
     default: ''
   release-changelog:
-    description: Path to CHANGELOG.md to extract release notes from
+    description: 'Release notes source. A file path extracts the tag''s section from it (default CHANGELOG.md); "auto" generates the notes from git history with logsmith (previous tag → this tag).'
     required: false
     default: CHANGELOG.md
   release-checksums:
