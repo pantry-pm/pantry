@@ -58,6 +58,7 @@ export const macfusegithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.3.3',
     '5.2.0',
     '5.1.3',
     '5.1.2',
