@@ -15,5 +15,8 @@ describe('Package surface regression', () => {
     expect(registry.mail.domain).toBe('github.com/mail-os/mail')
     expect(registry.mail.name).toBe('mail')
     expect(registry.mail.buildDependencies).toContain('ziglang.org@0.16.0-dev')
+
+    expect(registry.craft.domain).toBe('craft-native.org')
+    expect(registry.craft.name).toBe('craft')
   })
 })
