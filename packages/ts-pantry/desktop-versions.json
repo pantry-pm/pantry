@@ -15,8 +15,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "11.4.3",
-      "published": "11.4.2",
-      "needsUpdate": true
+      "published": "11.4.3",
+      "needsUpdate": false
     },
     {
       "domain": "arc.net",
@@ -95,7 +95,7 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.707.31428",
+      "latest": "26.707.41301",
       "published": "26.623.141536",
       "needsUpdate": true
     },
@@ -104,9 +104,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.10.20",
+      "latest": "3.11.13",
       "published": "3.10.20",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -123,8 +123,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.39.2",
-      "published": "1.38.0",
-      "needsUpdate": true
+      "published": "1.39.2",
+      "needsUpdate": false
     },
     {
       "domain": "discord.com",
@@ -483,8 +483,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.104.22",
-      "published": "1.104.21",
-      "needsUpdate": true
+      "published": "1.104.22",
+      "needsUpdate": false
     },
     {
       "domain": "rectangle.app",
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.27.19",
-      "published": "2.26.27.15",
+      "latest": "2.26.27.21",
+      "published": "2.26.27.19",
       "needsUpdate": true
     },
     {
@@ -626,8 +626,8 @@
       "name": "Zed",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.10.1",
-      "published": "1.10.0",
+      "latest": "1.10.2",
+      "published": "1.10.1",
       "needsUpdate": true
     }
   ]
