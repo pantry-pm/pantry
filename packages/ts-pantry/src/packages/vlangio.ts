@@ -59,8 +59,6 @@ export const vlangioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
-    '0.5.1',
-    '0.5',
     'weekly.2026.08',
     'weekly.2026.07',
     'weekly.2026.06',
@@ -107,6 +105,7 @@ export const vlangioPackage = {
     'weekly.2025.16',
     'weekly.2025.15',
     'weekly.2025.01',
+    '0.5.2',
     '0.5.1',
     '0.5',
     '0.4.12',
