@@ -95,7 +95,7 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.707.41301",
+      "latest": "26.707.51957",
       "published": "26.623.141536",
       "needsUpdate": true
     },
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.11.13",
-      "published": "3.10.20",
-      "needsUpdate": true
+      "published": "3.11.13",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
@@ -618,8 +618,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.26.27.21",
-      "published": "2.26.27.19",
-      "needsUpdate": true
+      "published": "2.26.27.21",
+      "needsUpdate": false
     },
     {
       "domain": "zed.dev",
@@ -627,8 +627,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.10.2",
-      "published": "1.10.1",
-      "needsUpdate": true
+      "published": "1.10.2",
+      "needsUpdate": false
     }
   ]
 }
