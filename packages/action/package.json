@@ -23,7 +23,7 @@
   "scripts": {
     "build": "bun run build.ts",
     "prepare": "bun run build",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "bun test src"
   },
   "dependencies": {
     "@actions/cache": "^6.0.0",

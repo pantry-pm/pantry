@@ -1,4 +1,5 @@
 import type { ActionInputs, Platform } from './types'
+import { preferArchivedReleaseAssets } from './release-assets'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -1105,7 +1106,7 @@ async function publishZigPackage(registryUrl: string, token: string, cwd: string
  * provisions bun) rather than bundled, since logsmith ships top-level await; it
  * writes the markdown to a temp file which we read back.
  */
-async function generateReleaseNotes(tag: string): Promise<string> {
+async function generateReleaseNotes(tag: string, required = false): Promise<string> {
   try {
     const from = await previousTag(tag)
     const notesPath = path.join(os.tmpdir(), `release-notes-${tag.replace(/[^\w.-]/g, '_')}.md`)
@@ -1115,18 +1116,26 @@ async function generateReleaseNotes(tag: string): Promise<string> {
 
     const code = await exec.exec('bun', args, { cwd: process.cwd(), ignoreReturnCode: true, silent: true })
     if (code !== 0 || !fs.existsSync(notesPath)) {
-      core.warning(`logsmith did not produce notes for ${tag} (exit ${code})`)
+      const message = `logsmith did not produce notes for ${tag} (exit ${code})`
+      if (required)
+        throw new Error(message)
+      core.warning(message)
       return ''
     }
 
     const content = fs.readFileSync(notesPath, 'utf-8').trim()
+    if (!content && required)
+      throw new Error(`logsmith produced empty release notes for ${tag}`)
     core.info(content
       ? `Generated release notes via logsmith (${from || 'start'}..${tag})`
       : `logsmith produced no notes for ${tag}`)
     return content
   }
   catch (err) {
-    core.warning(`logsmith changelog generation failed: ${err instanceof Error ? err.message : String(err)}`)
+    const message = `logsmith changelog generation failed: ${err instanceof Error ? err.message : String(err)}`
+    if (required)
+      throw new Error(message)
+    core.warning(message)
     return ''
   }
 }
@@ -1278,12 +1287,16 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     const packaged = await packageBuildArtifacts(process.cwd())
     filePatterns = packaged.length > 0 ? ['dist/*.zip'] : []
   }
-  const files: string[] = []
+  const matchedFiles: string[] = []
   for (const pattern of filePatterns) {
     const globber = await glob.create(pattern)
-    files.push(...await globber.glob())
+    matchedFiles.push(...await globber.glob())
   }
+  const files = preferArchivedReleaseAssets(matchedFiles)
+  const omittedRawAssets = matchedFiles.length - files.length
   core.info(`Matched ${files.length} file(s) from ${filePatterns.length} pattern(s)`)
+  if (omittedRawAssets > 0)
+    core.info(`Omitted ${omittedRawAssets} raw or duplicate asset(s) with packaged equivalents`)
 
   // Optionally generate a checksums manifest over the resolved assets and upload
   // it alongside them, so releases are verifiable without a manual sha256sum
@@ -1302,7 +1315,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
       core.info(`Generated checksums.txt (${algorithm}) for ${lines.length} asset(s)`)
     }
     catch (err) {
-      core.warning(`Checksum generation failed: ${err instanceof Error ? err.message : String(err)}`)
+      throw new Error(`Checksum generation failed: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -1313,21 +1326,32 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   // with logsmith (no pre-committed CHANGELOG.md needed); any other value is a
   // path to extract the tag's section from. Both fall back to `release-notes`.
   const body = (inputs.releaseChangelog === 'auto'
-    ? await generateReleaseNotes(tag)
+    ? await generateReleaseNotes(tag, true)
     : extractChangelogForVersion(inputs.releaseChangelog, tag)) || inputs.releaseNotes
+  let existingRelease: Awaited<ReturnType<typeof octokit.rest.repos.getReleaseByTag>>['data'] | undefined
   try {
-    const { data: existing } = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag })
+    const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag })
+    existingRelease = response.data
+  }
+  catch (err) {
+    const status = (err as { status?: number }).status
+    if (status !== 404)
+      throw err
+  }
+
+  if (existingRelease) {
+    const existing = existingRelease
     releaseId = existing.id
     releaseUrl = existing.html_url
     core.info(`Found existing release: ${tag} (${releaseId})`)
 
-    // Update body with changelog if the existing release has no body
-    if (body && !existing.body) {
+    // Keep an existing release synchronized with the current Logsmith output.
+    if (body && body !== existing.body) {
       await octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, body })
       core.info('Updated release body with changelog')
     }
   }
-  catch {
+  else {
     const { data: created } = await octokit.rest.repos.createRelease({
       owner,
       repo,
@@ -1343,6 +1367,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   }
 
   // Upload assets
+  const uploadFailures: string[] = []
   for (const file of files) {
     const name = path.basename(file)
     try {
@@ -1383,9 +1408,13 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
         }
         catch { /* retry failed, fall through to warning */ }
       }
-      core.warning(`Failed to upload ${name}: ${msg}`)
+      uploadFailures.push(`${name}: ${msg}`)
+      core.error(`Failed to upload ${name}: ${msg}`)
     }
   }
+
+  if (uploadFailures.length > 0)
+    throw new Error(`Failed to upload ${uploadFailures.length} release asset(s): ${uploadFailures.join('; ')}`)
 
   if (releaseUrl)
     core.setOutput('release-url', releaseUrl)
