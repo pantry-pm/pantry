@@ -1,5 +1,5 @@
 import type { ActionInputs, Platform } from './types'
-import { preferArchivedReleaseAssets } from './release-assets'
+import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -1364,6 +1364,24 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     releaseId = created.id
     releaseUrl = created.html_url
     core.info(`Created release: ${tag} (${releaseId})`)
+  }
+
+  // Re-running a migrated workflow must also clean up raw binaries uploaded by
+  // an older release job, leaving the release in the same archive-only state.
+  const supersededNames = rawAssetNamesForArchives(files)
+  if (supersededNames.size > 0) {
+    const releaseAssets = await octokit.paginate(octokit.rest.repos.listReleaseAssets, {
+      owner,
+      repo,
+      release_id: releaseId,
+      per_page: 100,
+    })
+    for (const asset of releaseAssets) {
+      if (!supersededNames.has(asset.name))
+        continue
+      await octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id })
+      core.info(`Removed superseded raw asset: ${asset.name}`)
+    }
   }
 
   // Upload assets

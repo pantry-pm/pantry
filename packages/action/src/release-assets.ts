@@ -29,3 +29,18 @@ export function preferArchivedReleaseAssets(files: string[]): string[] {
 
   return uniqueFiles.filter(file => archiveKey(file) !== undefined || !archivedKeys.has(binaryKey(file)))
 }
+
+/** Raw release asset names superseded by the supplied archives. */
+export function rawAssetNamesForArchives(files: string[]): Set<string> {
+  const names = new Set<string>()
+  for (const file of files) {
+    const key = archiveKey(file)
+    if (!key)
+      continue
+
+    const stem = path.basename(key)
+    names.add(stem)
+    names.add(`${stem}.exe`)
+  }
+  return names
+}

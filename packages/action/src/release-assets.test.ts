@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { preferArchivedReleaseAssets } from './release-assets'
+import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
 
 describe('preferArchivedReleaseAssets', () => {
   test('keeps only archives when matching raw binaries are present', () => {
@@ -34,6 +34,21 @@ describe('preferArchivedReleaseAssets', () => {
     ])).toEqual([
       'debug/tool',
       'release/tool.zip',
+    ])
+  })
+})
+
+describe('rawAssetNamesForArchives', () => {
+  test('identifies Unix and Windows binaries superseded by archives', () => {
+    expect([...rawAssetNamesForArchives([
+      'dist/buddy-linux-x64.zip',
+      'dist/buddy-windows-x64.tar.gz',
+      'dist/checksums.txt',
+    ])]).toEqual([
+      'buddy-linux-x64',
+      'buddy-linux-x64.exe',
+      'buddy-windows-x64',
+      'buddy-windows-x64.exe',
     ])
   })
 })
