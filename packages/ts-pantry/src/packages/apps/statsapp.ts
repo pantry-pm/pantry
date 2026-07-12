@@ -22,6 +22,7 @@ export const statsappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.0.8',
     '3.0.7',
     '3.0.6',
     '3.0.5',
