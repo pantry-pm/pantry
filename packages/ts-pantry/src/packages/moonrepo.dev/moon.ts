@@ -60,6 +60,7 @@ export const moonrepodevmoonPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.4.3',
     '2.4.2',
     '2.4.1',
     '2.4.0',
