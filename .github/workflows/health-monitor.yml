@@ -32,18 +32,40 @@ jobs:
             echo "status=unhealthy" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check S3 bucket accessibility
+      - name: Check object storage accessibility
         id: s3
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-1
+          STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
+          S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}
+          S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          # The AWS CLI requires AWS_* names even for S3-compatible providers.
+          # Prefer the provider-agnostic credentials used by every build workflow,
+          # while retaining the AWS fallback for an AWS-backed deployment.
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
         run: |
-          if aws s3api head-bucket --bucket pantry-registry 2>/dev/null; then
+          ENDPOINT_ARGS=()
+          if [ -n "$S3_ENDPOINT" ]; then
+            case "$S3_ENDPOINT" in
+              http://*|https://*) ENDPOINT_URL="$S3_ENDPOINT" ;;
+              *) ENDPOINT_URL="https://$S3_ENDPOINT" ;;
+            esac
+            ENDPOINT_ARGS=(--endpoint-url "$ENDPOINT_URL")
+          fi
+
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "::error::Object-storage credentials are not configured for $STORAGE_PROVIDER"
+            echo "status=misconfigured" >> "$GITHUB_OUTPUT"
+          elif aws s3api head-bucket --bucket "$S3_BUCKET" "${ENDPOINT_ARGS[@]}" 2>/dev/null; then
             echo "status=accessible" >> "$GITHUB_OUTPUT"
           else
+            echo "::error::Cannot access $STORAGE_PROVIDER bucket $S3_BUCKET"
             echo "status=inaccessible" >> "$GITHUB_OUTPUT"
           fi
+          echo "provider=$STORAGE_PROVIDER" >> "$GITHUB_OUTPUT"
+          echo "bucket=$S3_BUCKET" >> "$GITHUB_OUTPUT"
 
       - name: Check recent workflow failures
         id: failures
@@ -74,37 +96,68 @@ jobs:
             fi
           fi
 
-      - name: Check stale syncs
-        id: stale
+      - name: Check registry update pipelines
+        id: pipelines
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          STALE_ITEMS=""
+          ISSUES=""
           NOW=$(date -u +%s)
 
-          # Check sync-binaries — runs every 6h, alert if >12h stale (any run, not just success)
-          LAST_SYNC=$(gh api \
-            "repos/${{ github.repository }}/actions/workflows/sync-binaries.yml/runs?per_page=1" \
-            --jq '.workflow_runs[0].updated_at // empty' 2>/dev/null || echo "")
-          if [ -n "$LAST_SYNC" ] && [ "$LAST_SYNC" != "null" ]; then
-            SYNC_TS=$(date -u -d "$LAST_SYNC" +%s 2>/dev/null || echo "")
-            if [ -n "$SYNC_TS" ] && [ "$SYNC_TS" -gt 0 ] 2>/dev/null; then
-              SYNC_AGE=$(( (NOW - SYNC_TS) / 3600 ))
-              if [ "$SYNC_AGE" -gt 12 ]; then
-                if [ -n "$STALE_ITEMS" ]; then
-                  STALE_ITEMS="$STALE_ITEMS, sync-binaries (${SYNC_AGE}h ago)"
-                else
-                  STALE_ITEMS="sync-binaries (${SYNC_AGE}h ago)"
-                fi
-              fi
+          add_issue() {
+            if [ -n "$ISSUES" ]; then
+              ISSUES="$ISSUES; $1"
+            else
+              ISSUES="$1"
             fi
-          fi
+          }
 
-          if [ -n "$STALE_ITEMS" ]; then
-            echo "status=stale" >> "$GITHUB_OUTPUT"
-            echo "items=$STALE_ITEMS" >> "$GITHUB_OUTPUT"
+          check_pipeline() {
+            WORKFLOW="$1"
+            LABEL="$2"
+            MAX_AGE_HOURS="$3"
+
+            RUN=$(gh api \
+              "repos/${{ github.repository }}/actions/workflows/$WORKFLOW/runs?per_page=1" \
+              --jq '.workflow_runs[0] | [.updated_at, .status, (.conclusion // "")] | @tsv' \
+              2>/dev/null || true)
+
+            if [ -z "$RUN" ]; then
+              add_issue "$LABEL status unavailable"
+              return
+            fi
+
+            IFS=$'\t' read -r UPDATED STATUS CONCLUSION <<< "$RUN"
+            UPDATED_TS=$(date -u -d "$UPDATED" +%s 2>/dev/null || true)
+            if [ -z "$UPDATED_TS" ]; then
+              add_issue "$LABEL has invalid timestamp"
+              return
+            fi
+
+            AGE_HOURS=$(( (NOW - UPDATED_TS) / 3600 ))
+            if [ "$MAX_AGE_HOURS" -gt 0 ] && [ "$AGE_HOURS" -gt "$MAX_AGE_HOURS" ]; then
+              add_issue "$LABEL stale (${AGE_HOURS}h ago)"
+            elif [ "$STATUS" = "completed" ] && [ "$CONCLUSION" != "success" ]; then
+              add_issue "$LABEL $CONCLUSION (${AGE_HOURS}h ago)"
+            fi
+          }
+
+          # Monitor the workflows that actually keep the registry current. The old
+          # sync-binaries workflow is intentionally manual-only and is not a health
+          # signal anymore.
+          check_pipeline update-packages.yml "Package discovery" 3
+          # Publishing is event-driven, so only its latest conclusion matters;
+          # there is no meaningful staleness threshold when no versions changed.
+          check_pipeline publish-changed-packages.yml "Package publishing" 0
+          check_pipeline mirror.yml "Binary mirror" 10
+          check_pipeline registry-integrity.yml "Metadata integrity" 36
+          check_pipeline check-desktop-updates.yml "Desktop updates" 6
+
+          if [ -n "$ISSUES" ]; then
+            echo "status=unhealthy" >> "$GITHUB_OUTPUT"
+            echo "items=$ISSUES" >> "$GITHUB_OUTPUT"
           else
-            echo "status=fresh" >> "$GITHUB_OUTPUT"
+            echo "status=healthy" >> "$GITHUB_OUTPUT"
             echo "items=" >> "$GITHUB_OUTPUT"
           fi
 
@@ -117,15 +170,19 @@ jobs:
           fi
           if [ "${{ steps.s3.outputs.status }}" != "accessible" ]; then
             [ -n "$ISSUES" ] && ISSUES="$ISSUES; "
-            ISSUES="${ISSUES}S3 bucket inaccessible"
+            ISSUES="${ISSUES}Object storage ${{ steps.s3.outputs.status }}"
+          fi
+          if [ "${{ steps.failures.outputs.status }}" = "unknown" ]; then
+            [ -n "$ISSUES" ] && ISSUES="$ISSUES; "
+            ISSUES="${ISSUES}Workflow failure status unavailable"
           fi
           if [ "${{ steps.failures.outputs.status }}" = "elevated" ]; then
             [ -n "$ISSUES" ] && ISSUES="$ISSUES; "
             ISSUES="${ISSUES}${{ steps.failures.outputs.count }} workflow failures in last 2h"
           fi
-          if [ "${{ steps.stale.outputs.status }}" = "stale" ]; then
+          if [ "${{ steps.pipelines.outputs.status }}" != "healthy" ]; then
             [ -n "$ISSUES" ] && ISSUES="$ISSUES; "
-            ISSUES="${ISSUES}Stale: ${{ steps.stale.outputs.items }}"
+            ISSUES="${ISSUES}${{ steps.pipelines.outputs.items }}"
           fi
 
           if [ -n "$ISSUES" ]; then
@@ -137,37 +194,18 @@ jobs:
       - name: Rate-limit failure alerts
         id: ratelimit
         if: steps.overall.outputs.healthy == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Only send unhealthy alerts at most once per 2 hours to avoid alert fatigue.
-          # Check if we already sent an alert recently by looking at recent health-monitor
-          # runs that were successful (meaning they completed, including the alert step).
-          # We use a simple heuristic: check the run annotations/titles for "Health Alert"
-          # by looking at the last few runs' timing.
-          ONE_HOUR_AGO=$(date -u -d '2 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
-
-          # Count recent health monitor runs - if this is the first failure after a healthy
-          # period, always send. Otherwise, only send every 2h.
-          RECENT_HEALTHY=$(gh api \
-            "repos/${{ github.repository }}/actions/workflows/health-monitor.yml/runs?created=>=$ONE_HOUR_AGO&per_page=10" \
-            --jq '[.workflow_runs[1:] | .[] | select(.conclusion == "success")] | length' 2>/dev/null || echo "0")
-
-          # If there was a healthy run in the last 2h, this is a new incident — always alert
-          if [ "$RECENT_HEALTHY" -gt 0 ]; then
+          # The workflow intentionally completes successfully after reporting an
+          # incident, so previous run conclusions cannot distinguish healthy runs
+          # from alerts. Emit once every four scheduled checks (~2h) instead of
+          # incorrectly treating every check as a new incident.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
+             [ $(( ${{ github.run_number }} % 4 )) -eq 0 ]; then
             echo "send=true" >> "$GITHUB_OUTPUT"
-            echo "New incident detected (was healthy recently), sending alert"
+            echo "Sending scheduled incident reminder"
           else
-            # Ongoing incident — only alert on the hour mark (minute 0-29 of even hours)
-            HOUR=$(date -u +%-H)
-            MIN=$(date -u +%-M)
-            if [ "$MIN" -lt 30 ] && [ $((HOUR % 2)) -eq 0 ]; then
-              echo "send=true" >> "$GITHUB_OUTPUT"
-              echo "Ongoing incident, sending periodic alert"
-            else
-              echo "send=false" >> "$GITHUB_OUTPUT"
-              echo "Ongoing incident, suppressing duplicate alert (last alert was recent)"
-            fi
+            echo "send=false" >> "$GITHUB_OUTPUT"
+            echo "Suppressing duplicate incident reminder"
           fi
 
       - name: Send failure alert
@@ -180,9 +218,9 @@ jobs:
           fields: |
             [
               {"name": "Registry", "value": "${{ steps.registry.outputs.status || 'unknown' }} (HTTP ${{ steps.registry.outputs.http_code || '?' }})", "inline": true},
-              {"name": "S3 Bucket", "value": "${{ steps.s3.outputs.status || 'unknown' }}", "inline": true},
+              {"name": "Object Storage", "value": "${{ steps.s3.outputs.provider || 'unknown' }} / ${{ steps.s3.outputs.bucket || 'unknown' }}: ${{ steps.s3.outputs.status || 'unknown' }}", "inline": true},
               {"name": "Failures (2h)", "value": "${{ steps.failures.outputs.count || '?' }}", "inline": true},
-              {"name": "Stale Syncs", "value": "${{ steps.stale.outputs.items || 'none' }}", "inline": false}
+              {"name": "Update Pipelines", "value": "${{ steps.pipelines.outputs.items || 'healthy' }}", "inline": false}
             ]
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -210,7 +248,8 @@ jobs:
           fields: |
             [
               {"name": "Registry", "value": "${{ steps.registry.outputs.status || 'unknown' }}", "inline": true},
-              {"name": "S3 Bucket", "value": "${{ steps.s3.outputs.status || 'unknown' }}", "inline": true},
-              {"name": "Failures (2h)", "value": "${{ steps.failures.outputs.count || '0' }}", "inline": true}
+              {"name": "Object Storage", "value": "${{ steps.s3.outputs.status || 'unknown' }}", "inline": true},
+              {"name": "Failures (2h)", "value": "${{ steps.failures.outputs.count || '0' }}", "inline": true},
+              {"name": "Update Pipelines", "value": "${{ steps.pipelines.outputs.status || 'unknown' }}", "inline": true}
             ]
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}

@@ -6,8 +6,10 @@ name: Check Desktop App & Font Updates
 
 on:
   schedule:
-    # Daily at 5am UTC
-    - cron: '0 5 * * *'
+    # Every 2 hours. A publish can occasionally take close to an hour when a
+    # large app update needs DMG extraction, so this keeps updates prompt while
+    # leaving enough headroom to avoid a queue of overlapping runs.
+    - cron: '17 */2 * * *'
   workflow_dispatch:
     inputs:
       publish:
