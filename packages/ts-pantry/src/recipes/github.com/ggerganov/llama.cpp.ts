@@ -31,7 +31,12 @@ export const recipe: Recipe = {
       '  linux+aarch64) ASSET="llama-b${BASE}-bin-ubuntu-arm64.tar.gz" ;;',
       '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
       'esac',
-      'curl -Lfo "$ASSET" "https://github.com/ggml-org/llama.cpp/releases/download/b${BASE}/$ASSET"',
+      // Build dependencies prepend their libraries to LD_LIBRARY_PATH. Invoking
+      // the dependency-provided curl under that environment can load a libcurl
+      // built for a newer OpenSSL than the runner has (notably on linux/arm64).
+      // Artifact download is a host operation, so use the host curl in its host
+      // library environment instead of coupling it to package runtime deps.
+      'env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH /usr/bin/curl -Lfo "$ASSET" "https://github.com/ggml-org/llama.cpp/releases/download/b${BASE}/$ASSET"',
       'tar -xzf "$ASSET"',
       'mkdir -p {{prefix}}/bin',
       'cp -R "llama-b${BASE}/." {{prefix}}/bin/',

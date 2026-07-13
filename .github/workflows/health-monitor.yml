@@ -19,12 +19,18 @@ jobs:
       - name: Check registry health
         id: registry
         run: |
-          # Use a temp file to isolate the HTTP code from error output
-          HTTP_CODE=$(curl -sS -o /tmp/health-response -w '%{http_code}' \
-            --max-time 15 \
-            'https://registry.pantry.dev/health' 2>/dev/null) || true
-          # Extract only the last 3 chars (the HTTP code) in case of any prefix noise
-          HTTP_CODE="${HTTP_CODE: -3}"
+          # The gateway can briefly return 502 while the registry is restarting.
+          # Require a sustained failure rather than paging on one transient sample.
+          HTTP_CODE=000
+          for attempt in 1 2 3 4 5; do
+            HTTP_CODE=$(curl -sS -o /tmp/health-response -w '%{http_code}' \
+              --max-time 15 \
+              'https://registry.pantry.dev/health' 2>/dev/null) || true
+            HTTP_CODE="${HTTP_CODE: -3}"
+            [ "$HTTP_CODE" = "200" ] && break
+            echo "Registry health attempt $attempt returned HTTP $HTTP_CODE"
+            [ "$attempt" -lt 5 ] && sleep 3
+          done
           echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
           if [ "$HTTP_CODE" = "200" ]; then
             echo "status=healthy" >> "$GITHUB_OUTPUT"
