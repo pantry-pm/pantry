@@ -69,8 +69,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2407.24",
-      "published": "2407.24",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "cleanshot.com",
@@ -104,9 +104,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.11.13",
+      "latest": "3.11.19",
       "published": "3.11.13",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -618,8 +618,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.26.28.12",
-      "published": "2.26.27.21",
-      "needsUpdate": true
+      "published": "2.26.28.12",
+      "needsUpdate": false
     },
     {
       "domain": "zed.dev",
