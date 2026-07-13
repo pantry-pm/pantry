@@ -24,7 +24,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "1.76.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -87,16 +87,16 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.128.0",
-      "published": "1.128.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "codex.openai.com",
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.707.51957",
-      "published": "26.623.141536",
+      "latest": "26.707.61608",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.11.13",
-      "published": "3.11.13",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -123,8 +123,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.39.2",
-      "published": "1.39.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "discord.com",
@@ -159,8 +159,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "6.2",
-      "published": "6.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "firefox.org",
@@ -195,8 +195,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": "3.003",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "handbrake.fr",
@@ -204,8 +204,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.11.2",
-      "published": "1.11.2",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "hiddenbar.app",
@@ -258,8 +258,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "4.1",
-      "published": "4.1",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "iterm2.com",
@@ -267,7 +267,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "3.5.6",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -276,8 +276,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.304",
-      "published": "2.304",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "jetbrains-mono-nerd-font",
@@ -285,8 +285,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.4.0",
-      "published": "3.4.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "karabiner-elements.pqrs.org",
@@ -321,7 +321,7 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.015",
-      "published": "2.0",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -330,7 +330,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.2.4",
-      "published": "24.8.5",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -375,8 +375,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.05",
-      "published": "26.05",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "meetingbar.app",
@@ -393,8 +393,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.4.0",
-      "published": "3.4.0",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "monitorcontrol.app",
@@ -420,7 +420,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "4.5.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -438,7 +438,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "0.5.7",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -447,8 +447,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": "3.003",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "orbstack.dev",
@@ -501,8 +501,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.138",
-      "published": "2.138",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "signal.org",
@@ -528,8 +528,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.042",
-      "published": "2.042",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "spotify.com",
@@ -545,9 +545,9 @@
       "name": "Stats",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.0.7",
-      "published": "3.0.7",
-      "needsUpdate": false
+      "latest": "3.0.8",
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "tableplus.com",
@@ -555,7 +555,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "6.2.6",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -564,7 +564,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "5.8.0",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -626,9 +626,9 @@
       "name": "Zed",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.10.2",
-      "published": "1.10.2",
-      "needsUpdate": false
+      "latest": "1.10.3",
+      "published": null,
+      "needsUpdate": true
     }
   ]
 }
