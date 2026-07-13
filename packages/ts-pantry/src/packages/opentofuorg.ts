@@ -75,10 +75,12 @@ export const opentofuorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.12.4',
     '1.12.3',
     '1.12.2',
     '1.12.1',
     '1.12.0',
+    '1.11.12',
     '1.11.11',
     '1.11.10',
     '1.11.9',
