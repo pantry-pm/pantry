@@ -2318,8 +2318,11 @@ pub const ShellCommands = struct {
             self.allocator,
             &[_][]const u8{ "sh", "-c", wrapped_cmd },
         ) catch |err| {
+            if (!required) {
+                style.print("  ⚠️  {s} failed: {s} (optional, continuing)\n", .{ cmd_name, @errorName(err) });
+                return;
+            }
             style.print("  ✗ {s} failed: {s}\n", .{ cmd_name, @errorName(err) });
-            if (!required) return;
             return err;
         };
         defer self.allocator.free(result.stdout);
@@ -2328,7 +2331,11 @@ pub const ShellCommands = struct {
         const cmd_failed = result.term != .exited or result.term.exited != 0;
         if (cmd_failed) {
             const exit_code: u32 = if (result.term == .exited) result.term.exited else 0;
-            style.print("  ✗ {s} failed (exit {d})\n", .{ cmd_name, exit_code });
+            if (required) {
+                style.print("  ✗ {s} failed (exit {d})\n", .{ cmd_name, exit_code });
+            } else {
+                style.print("  ⚠️  {s} failed (exit {d}) (optional, continuing)\n", .{ cmd_name, exit_code });
+            }
             const output = if (result.stderr.len > 0) result.stderr else result.stdout;
             if (output.len > 0) {
                 var total_lines: u32 = 0;
@@ -2977,4 +2984,118 @@ test "ShellCommands executePostSetupCommands runs config deps hooks" {
     defer allocator.free(marker);
 
     try std.testing.expectEqualStrings("seeded", marker);
+}
+
+// Regression: a failing `required: false` postSetup command must not abort the
+// setup — later commands still run and executePostSetupCommands succeeds.
+// (Observed in CI: an optional "Generate model files" step exiting 1 killed
+// the whole deploy.)
+test "ShellCommands executePostSetupCommands continues past optional failures" {
+    const allocator = std.testing.allocator;
+
+    var commands = try ShellCommands.init(allocator);
+    defer commands.deinit();
+
+    const test_dir = "test_project_post_setup_optional_failure";
+    io_helper.deleteTree(test_dir) catch {};
+    io_helper.makePath(test_dir) catch {};
+    defer io_helper.deleteTree(test_dir) catch {};
+
+    const config_dir = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "config" });
+    defer allocator.free(config_dir);
+    try io_helper.makePath(config_dir);
+
+    const config_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "config", "deps.ts" });
+    defer allocator.free(config_path);
+    {
+        const file = try io_helper.cwd().createFile(io_helper.io, config_path, .{});
+        defer file.close(io_helper.io);
+        try io_helper.writeAllToFile(file, "export default {}\n");
+    }
+
+    const runtime_dir = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "pantry", ".bin" });
+    defer allocator.free(runtime_dir);
+    try io_helper.makePath(runtime_dir);
+
+    const bun_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "pantry", ".bin", "bun" });
+    defer allocator.free(bun_path);
+    {
+        const file = try io_helper.cwd().createFile(io_helper.io, bun_path, .{});
+        defer file.close(io_helper.io);
+        try io_helper.writeAllToFile(
+            file,
+            "#!/bin/sh\nprintf '%s' '{\"postSetup\":{\"commands\":[{\"name\":\"Generate model files\",\"command\":\"exit 1\",\"required\":false},{\"name\":\"after\",\"command\":\"printf ok > after-optional.txt\"}]}}'\n",
+        );
+    }
+
+    var chmod_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    @memcpy(chmod_buf[0..bun_path.len], bun_path);
+    chmod_buf[bun_path.len] = 0;
+    try std.testing.expect(std.c.chmod(&chmod_buf, 0o755) == 0);
+
+    // Must not error even though the first (optional) command exits 1.
+    try commands.executePostSetupCommands(test_dir, true);
+
+    // The command after the optional failure still ran.
+    const after_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "after-optional.txt" });
+    defer allocator.free(after_path);
+    const after = try io_helper.readFileAlloc(allocator, after_path, 1024);
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings("ok", after);
+}
+
+// Contract: a failing `required: true` (or unspecified) command aborts the
+// remaining postSetup commands and surfaces an error to the caller.
+test "ShellCommands executePostSetupCommands aborts on required failures" {
+    const allocator = std.testing.allocator;
+
+    var commands = try ShellCommands.init(allocator);
+    defer commands.deinit();
+
+    const test_dir = "test_project_post_setup_required_failure";
+    io_helper.deleteTree(test_dir) catch {};
+    io_helper.makePath(test_dir) catch {};
+    defer io_helper.deleteTree(test_dir) catch {};
+
+    const config_dir = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "config" });
+    defer allocator.free(config_dir);
+    try io_helper.makePath(config_dir);
+
+    const config_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "config", "deps.ts" });
+    defer allocator.free(config_path);
+    {
+        const file = try io_helper.cwd().createFile(io_helper.io, config_path, .{});
+        defer file.close(io_helper.io);
+        try io_helper.writeAllToFile(file, "export default {}\n");
+    }
+
+    const runtime_dir = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "pantry", ".bin" });
+    defer allocator.free(runtime_dir);
+    try io_helper.makePath(runtime_dir);
+
+    const bun_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "pantry", ".bin", "bun" });
+    defer allocator.free(bun_path);
+    {
+        const file = try io_helper.cwd().createFile(io_helper.io, bun_path, .{});
+        defer file.close(io_helper.io);
+        try io_helper.writeAllToFile(
+            file,
+            "#!/bin/sh\nprintf '%s' '{\"postSetup\":{\"commands\":[{\"name\":\"broken\",\"command\":\"exit 1\",\"required\":true},{\"name\":\"after\",\"command\":\"printf ok > after-required.txt\"}]}}'\n",
+        );
+    }
+
+    var chmod_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    @memcpy(chmod_buf[0..bun_path.len], bun_path);
+    chmod_buf[bun_path.len] = 0;
+    try std.testing.expect(std.c.chmod(&chmod_buf, 0o755) == 0);
+
+    try std.testing.expectError(
+        error.PostSetupCommandFailed,
+        commands.executePostSetupCommands(test_dir, true),
+    );
+
+    // Commands after the required failure must not have run.
+    const after_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "after-required.txt" });
+    defer allocator.free(after_path);
+    try std.testing.expectError(error.FileNotFound, io_helper.readFileAlloc(allocator, after_path, 1024));
 }
