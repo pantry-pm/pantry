@@ -24,7 +24,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "1.76.0",
       "needsUpdate": false
     },
     {
@@ -87,8 +87,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.128.0",
-      "published": null,
-      "needsUpdate": true
+      "published": "1.128.0",
+      "needsUpdate": false
     },
     {
       "domain": "codex.openai.com",
@@ -96,7 +96,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.707.62119",
-      "published": null,
+      "published": "26.623.141536",
       "needsUpdate": true
     },
     {
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.11.19",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.11.19",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.0.398",
-      "published": "0.0.398",
+      "latest": "0.0.399",
+      "published": "0.0.399",
       "needsUpdate": false
     },
     {
@@ -195,8 +195,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.003",
+      "needsUpdate": false
     },
     {
       "domain": "handbrake.fr",
@@ -204,8 +204,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.11.2",
-      "published": null,
-      "needsUpdate": true
+      "published": "1.11.2",
+      "needsUpdate": false
     },
     {
       "domain": "hiddenbar.app",
@@ -258,8 +258,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "4.1",
-      "published": null,
-      "needsUpdate": true
+      "published": "4.1",
+      "needsUpdate": false
     },
     {
       "domain": "iterm2.com",
@@ -267,7 +267,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "3.5.6",
       "needsUpdate": false
     },
     {
@@ -276,8 +276,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.304",
-      "published": null,
-      "needsUpdate": true
+      "published": "2.304",
+      "needsUpdate": false
     },
     {
       "domain": "jetbrains-mono-nerd-font",
@@ -321,7 +321,7 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.015",
-      "published": null,
+      "published": "2.0",
       "needsUpdate": true
     },
     {
@@ -330,7 +330,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.2.4",
-      "published": null,
+      "published": "24.8.5",
       "needsUpdate": true
     },
     {
@@ -393,8 +393,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.4.0",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.4.0",
+      "needsUpdate": false
     },
     {
       "domain": "monitorcontrol.app",
@@ -420,7 +420,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "4.5.0",
       "needsUpdate": false
     },
     {
@@ -438,7 +438,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "0.5.7",
       "needsUpdate": false
     },
     {
@@ -447,8 +447,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": null,
-      "needsUpdate": true
+      "published": "3.003",
+      "needsUpdate": false
     },
     {
       "domain": "orbstack.dev",
@@ -501,8 +501,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.138",
-      "published": null,
-      "needsUpdate": true
+      "published": "2.138",
+      "needsUpdate": false
     },
     {
       "domain": "signal.org",
@@ -555,7 +555,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "6.2.6",
       "needsUpdate": false
     },
     {
@@ -564,7 +564,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "5.8.0",
       "needsUpdate": false
     },
     {
@@ -627,8 +627,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.10.3",
-      "published": null,
-      "needsUpdate": true
+      "published": "1.10.3",
+      "needsUpdate": false
     }
   ]
 }
