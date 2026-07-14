@@ -1,3 +1,41 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.9...v0.10.10)
+
+## 🐛 Bug Fixes
+
+- **ci**: stabilize registry health and llama publishing ([78e854a](https://github.com/pantry-pm/pantry/commit/78e854a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **shell**: warn and continue when an optional postSetup command fails ([ce69e3d](https://github.com/pantry-pm/pantry/commit/ce69e3d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: reconcile archived release assets ([49ec5ea](https://github.com/pantry-pm/pantry/commit/49ec5ea)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: publish complete packaged releases ([62c68b5](https://github.com/pantry-pm/pantry/commit/62c68b5)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🤖 Continuous Integration
+
+- serialize package releases ([b652bc7](https://github.com/pantry-pm/pantry/commit/b652bc7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.10 ([8710120](https://github.com/pantry-pm/pantry/commit/8710120)) _(by Chris <chrisbreuer93@gmail.com>)_
+- wip ([fd6ad63](https://github.com/pantry-pm/pantry/commit/fd6ad63)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp to 9980 ([4385ca2](https://github.com/pantry-pm/pantry/commit/4385ca2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update vlang.io to weekly.2026.08 ([a100b85](https://github.com/pantry-pm/pantry/commit/a100b85)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9978 ([64a93e2](https://github.com/pantry-pm/pantry/commit/64a93e2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ziglang.org to 0.17.0-dev.1387+01b60634c ([1ceb5b2](https://github.com/pantry-pm/pantry/commit/1ceb5b2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update gomplate.ca to 5.2.0 ([78824e1](https://github.com/pantry-pm/pantry/commit/78824e1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stats.app to 3.0.8 ([8959513](https://github.com/pantry-pm/pantry/commit/8959513)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9977 ([88802ae](https://github.com/pantry-pm/pantry/commit/88802ae)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9976 ([719e65e](https://github.com/pantry-pm/pantry/commit/719e65e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9974 ([98511a0](https://github.com/pantry-pm/pantry/commit/98511a0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/ggerganov/llama.cpp ([51978a2](https://github.com/pantry-pm/pantry/commit/51978a2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([2beaf62](https://github.com/pantry-pm/pantry/commit/2beaf62)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp, moonrepo.dev/moon ([2f882a7](https://github.com/pantry-pm/pantry/commit/2f882a7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9968 ([b9a6ade](https://github.com/pantry-pm/pantry/commit/b9a6ade)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 9967 ([b740653](https://github.com/pantry-pm/pantry/commit/b740653)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pnpm.io to 11.12.0 ([b826e6e](https://github.com/pantry-pm/pantry/commit/b826e6e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com/code-server, macfuse.github.io ([4ca4ca7](https://github.com/pantry-pm/pantry/commit/4ca4ca7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.6...v0.10.7)
 
 ## 🐛 Bug Fixes
