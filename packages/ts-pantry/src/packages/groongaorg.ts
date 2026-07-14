@@ -83,6 +83,7 @@ export const groongaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '16.0.8',
     '16.0.5',
     '16.0.4',
     '16.0.2',
