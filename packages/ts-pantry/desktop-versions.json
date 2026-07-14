@@ -420,7 +420,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "4.5.0",
+      "published": null,
       "needsUpdate": false
     },
     {
