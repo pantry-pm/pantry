@@ -558,18 +558,25 @@ pub fn build(b: *std.Build) void {
             }),
         });
 
+        const target_name = b.fmt("{s}-{s}", .{ @tagName(t.os_tag.?), @tagName(t.cpu_arch.?) });
+
         const install = b.addInstallArtifact(cross_exe, .{
             .dest_dir = .{
                 .override = .{
-                    .custom = b.fmt("bin/{s}-{s}", .{
-                        @tagName(t.os_tag.?),
-                        @tagName(t.cpu_arch.?),
-                    }),
+                    .custom = b.fmt("bin/{s}", .{target_name}),
                 },
             },
         });
 
-        compile_all_step.dependOn(&install.step);
+        // `zig build` hides its progress bar in a non-TTY (CI), so a plain
+        // `compile-all` runs 5+ minutes with zero output. Print a line as each
+        // target finishes — under the build's default parallelism these land as
+        // real progress, so the log shows which platforms are done and which
+        // are still cooking instead of dead air.
+        const done = b.addSystemCommand(&.{ "echo", b.fmt("[compile-all] ✓ {s}", .{target_name}) });
+        done.step.dependOn(&install.step);
+
+        compile_all_step.dependOn(&done.step);
     }
 }
 

@@ -48,7 +48,8 @@ jobs:
         run: |
           set -e
           cd packages/zig
-          zig build compile-all
+          echo "→ Compiling pantry for all platforms (ReleaseFast, ~5-15 min)…"
+          zig build compile-all --summary all
 
       - name: Package Binaries
         run: |
