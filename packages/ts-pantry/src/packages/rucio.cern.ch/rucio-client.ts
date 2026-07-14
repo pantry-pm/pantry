@@ -119,6 +119,7 @@ export const ruciocernchrucioclientPackage = {
     '36.3.0',
     '36.2.0',
     '36.1.0',
+    '35.9.0',
     '35.8.5',
     '35.8.4',
     '35.8.3',
