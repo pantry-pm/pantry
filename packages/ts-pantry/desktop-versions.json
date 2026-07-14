@@ -366,8 +366,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.6.1",
-      "published": null,
-      "needsUpdate": true
+      "published": "2.6.1",
+      "needsUpdate": false
     },
     {
       "domain": "mediaarea.net",
