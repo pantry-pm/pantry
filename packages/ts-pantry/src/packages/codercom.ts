@@ -69,6 +69,7 @@ export const codercomPackage = {
   versions: [
     '2.35.2',
     '2.35.1',
+    '2.34.6',
     '2.34.5',
     '2.34.4',
     '2.34.3',
