@@ -87,8 +87,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.128.1",
-      "published": "1.128.0",
-      "needsUpdate": true
+      "published": "1.128.1",
+      "needsUpdate": false
     },
     {
       "domain": "codex.openai.com",
@@ -492,8 +492,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.97",
-      "published": "0.96",
-      "needsUpdate": true
+      "published": "0.97",
+      "needsUpdate": false
     },
     {
       "domain": "roboto",
