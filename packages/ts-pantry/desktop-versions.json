@@ -86,9 +86,9 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.128.0",
+      "latest": "1.128.1",
       "published": "1.128.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "codex.openai.com",
@@ -420,7 +420,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": null,
+      "published": "4.5.0",
       "needsUpdate": false
     },
     {
@@ -491,9 +491,9 @@
       "name": "Rectangle",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.96",
+      "latest": "0.97",
       "published": "0.96",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "roboto",
