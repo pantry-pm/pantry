@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -617,9 +617,9 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.28.12",
+      "latest": "2.26.28.15",
       "published": "2.26.28.12",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "zed.dev",
