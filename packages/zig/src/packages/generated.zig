@@ -2987,7 +2987,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{"cursor"},
-    .versions = &[_][]const u8{ "3.11.19", "3.11.13", "3.10.20", "3.10.17", "3.10.11", "3.9.16", "0.45.11", "0.45.10", "0.45.9" },
+    .versions = &[_][]const u8{ "3.11.25", "3.11.19", "3.11.13", "3.10.20", "3.10.17", "3.10.11", "3.9.16", "0.45.11", "0.45.10", "0.45.9" },
 }, .{
     .name = "cyrus-sasl",
     .domain = "cyrusimap.org/cyrus-sasl",
