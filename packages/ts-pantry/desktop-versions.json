@@ -321,7 +321,7 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.015",
-      "published": "2.0",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -483,17 +483,17 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.104.23",
-      "published": "1.104.22",
-      "needsUpdate": true
+      "published": "1.104.23",
+      "needsUpdate": false
     },
     {
       "domain": "rectangle.app",
       "name": "Rectangle",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.97",
+      "latest": "0.98",
       "published": "0.97",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "roboto",
