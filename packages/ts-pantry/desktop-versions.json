@@ -482,9 +482,9 @@
       "name": "Raycast",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.104.22",
+      "latest": "1.104.23",
       "published": "1.104.22",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "rectangle.app",
