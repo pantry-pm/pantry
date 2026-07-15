@@ -150,7 +150,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": null,
-      "published": "124.7.4",
+      "published": null,
       "needsUpdate": false
     },
     {
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
