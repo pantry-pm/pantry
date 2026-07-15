@@ -321,7 +321,7 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "2.015",
-      "published": null,
+      "published": "2.0",
       "needsUpdate": true
     },
     {
@@ -492,8 +492,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.98",
-      "published": "0.97",
-      "needsUpdate": true
+      "published": "0.98",
+      "needsUpdate": false
     },
     {
       "domain": "roboto",
