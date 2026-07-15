@@ -1,6 +1,7 @@
 {
   "name": "ts-pantry",
   "type": "module",
+  "sideEffects": false,
   "version": "0.10.11",
   "description": "A library & CLI for managing packages",
   "author": "Chris Breuer <chris@stacksjs.com>",
@@ -8,7 +9,7 @@
   "homepage": "https://github.com/pantry-pm/pantry/tree/main/packages/ts-pantry#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pantry-pm/pantry.git",
+    "url": "git+https://github.com/pantry-pm/pantry.git",
     "directory": "packages/ts-pantry"
   },
   "bugs": {
@@ -29,7 +30,7 @@
       "import": "./dist/src/index.js"
     },
     "./testing": {
-      "types": "./dist/src/testing/index.d.ts",
+      "types": "./dist/testing/index.d.ts",
       "import": "./dist/src/testing/index.js"
     },
     "./*": {

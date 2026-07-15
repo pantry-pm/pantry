@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import type { DependencyResolverOptions } from '../src/dependency-resolver'
 import type { PackageFetchOptions } from '../src/types'
 import fs from 'node:fs'

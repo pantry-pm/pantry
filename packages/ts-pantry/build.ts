@@ -6,7 +6,7 @@ import { dts } from 'bun-plugin-dtsx'
 async function build() {
   console.log('Building...')
   const result = await Bun.build({
-    entrypoints: ['src/index.ts', 'bin/cli.ts'],
+    entrypoints: ['src/index.ts', 'bin/cli.ts', 'src/testing/index.ts'],
     outdir: './dist',
     target: 'node',
     splitting: true,
