@@ -627,8 +627,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.11.3",
-      "published": "1.10.3",
-      "needsUpdate": true
+      "published": "1.11.3",
+      "needsUpdate": false
     }
   ]
 }
