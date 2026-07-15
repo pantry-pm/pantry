@@ -1,3 +1,26 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.11...v0.10.12)
+
+## 🤖 Continuous Integration
+
+- **zig**: log per-target progress + build summary for compile-all ([1852ae9](https://github.com/pantry-pm/pantry/commit/1852ae9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.12 ([eba5561](https://github.com/pantry-pm/pantry/commit/eba5561)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ts-pantry**: publint clean — bin shebang, sideEffects, fix testing export ([6b35d8f](https://github.com/pantry-pm/pantry/commit/6b35d8f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp to 10015 ([ad413c3](https://github.com/pantry-pm/pantry/commit/ad413c3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([0d180a0](https://github.com/pantry-pm/pantry/commit/0d180a0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code to 2.1.210 ([e61f31d](https://github.com/pantry-pm/pantry/commit/e61f31d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([f39bbb6](https://github.com/pantry-pm/pantry/commit/f39bbb6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, opencode.ai ([2ce7d4f](https://github.com/pantry-pm/pantry/commit/2ce7d4f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 5 apps & 1 font ([f516ca3](https://github.com/pantry-pm/pantry/commit/f516ca3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, libgeos.org, rectangle.app ([c384f8a](https://github.com/pantry-pm/pantry/commit/c384f8a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dprint.dev, fly.io, github.com/ggerganov/llama.cpp, opencode.ai, werf.io ([12473b5](https://github.com/pantry-pm/pantry/commit/12473b5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.10...v0.10.11)
 
 ## 🧹 Chores
