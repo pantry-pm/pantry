@@ -73,6 +73,7 @@ export const shakapackagerPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.9.1',
     '3.9.0',
     '3.8.0',
     '3.7.2',
