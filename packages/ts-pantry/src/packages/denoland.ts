@@ -78,6 +78,7 @@ export const denoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.9.3',
     '2.9.2',
     '2.9.1',
     '2.9.0',
