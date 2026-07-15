@@ -626,9 +626,9 @@
       "name": "Zed",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.10.3",
+      "latest": "1.11.3",
       "published": "1.10.3",
-      "needsUpdate": false
+      "needsUpdate": true
     }
   ]
 }
