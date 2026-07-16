@@ -1,3 +1,37 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.14...v0.10.15)
+
+## 🐛 Bug Fixes
+
+- **deps**: preserve direct release URLs ([b06b901](https://github.com/pantry-pm/pantry/commit/b06b901)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: suppress stale warning for rolling versions ([ad6d1e3](https://github.com/pantry-pm/pantry/commit/ad6d1e3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: refresh rolling Zig development channels ([83bf4aa](https://github.com/pantry-pm/pantry/commit/83bf4aa)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: support GitHub workspace dependencies ([ee2aa33](https://github.com/pantry-pm/pantry/commit/ee2aa33)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: refresh workspace lockfiles reliably ([ba246e9](https://github.com/pantry-pm/pantry/commit/ba246e9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.15 ([6495835](https://github.com/pantry-pm/pantry/commit/6495835)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, openblas.net, planetscale.com ([2ab344b](https://github.com/pantry-pm/pantry/commit/2ab344b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([55f89a6](https://github.com/pantry-pm/pantry/commit/55f89a6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **deps**: refresh pantry lockfile ([d943cb7](https://github.com/pantry-pm/pantry/commit/d943cb7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, ollama.ai ([c421bef](https://github.com/pantry-pm/pantry/commit/c421bef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **deps**: bump @stacksjs/ts-cloud to ^0.7.26 ([8a11db9](https://github.com/pantry-pm/pantry/commit/8a11db9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: bump 5 apps & 1 font ([1853108](https://github.com/pantry-pm/pantry/commit/1853108)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, discord.com, github.com/ggerganov/llama.cpp, istio.io ([4df98fe](https://github.com/pantry-pm/pantry/commit/4df98fe)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bytebase.com, encore.dev, github.com/ggerganov/llama.cpp, laravel.com, opencode.ai ([6ca6924](https://github.com/pantry-pm/pantry/commit/6ca6924)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, planetscale.com ([87daa38](https://github.com/pantry-pm/pantry/commit/87daa38)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([f219924](https://github.com/pantry-pm/pantry/commit/f219924)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, tailwindcss.com ([1ad8ee7](https://github.com/pantry-pm/pantry/commit/1ad8ee7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, cuelang.org, github.com/ggerganov/llama.cpp, railway.app ([5a5e9a0](https://github.com/pantry-pm/pantry/commit/5a5e9a0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, pocketbase.io ([91b6ad3](https://github.com/pantry-pm/pantry/commit/91b6ad3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp, github.com/yonaskolb/XcodeGen, ohmyposh.dev, projen.io ([df622c8](https://github.com/pantry-pm/pantry/commit/df622c8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([8e6cc24](https://github.com/pantry-pm/pantry/commit/8e6cc24)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update openai.com/codex to 0.144.5 ([bc887c7](https://github.com/pantry-pm/pantry/commit/bc887c7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.13...v0.10.14)
 
 ## 📦 Build System

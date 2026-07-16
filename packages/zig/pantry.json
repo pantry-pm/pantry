@@ -1,11 +1,23 @@
 {
   "name": "pantry-zig",
-  "version": "0.10.14",
+  "version": "0.10.15",
   "description": "Pantry package manager - Zig implementation",
   "dependencies": {
-    "zig-config": { "version": "f2feb1fdc262be4b8dc14d63113024ce0ab89927", "source": "github", "repo": "zig-utils/zig-config" },
-    "zig-cli": { "version": "4629d10a7e8aa6de9c26996109138683235a2273", "source": "github", "repo": "zig-utils/zig-cli" },
-    "zig-test-framework": { "version": "c149e957e3989bdb8f9148a161f6eef4ae63d75e", "source": "github", "repo": "zig-utils/zig-test-framework" }
+    "zig-config": {
+      "version": "f2feb1fdc262be4b8dc14d63113024ce0ab89927",
+      "source": "github",
+      "repo": "zig-utils/zig-config"
+    },
+    "zig-cli": {
+      "version": "4629d10a7e8aa6de9c26996109138683235a2273",
+      "source": "github",
+      "repo": "zig-utils/zig-cli"
+    },
+    "zig-test-framework": {
+      "version": "c149e957e3989bdb8f9148a161f6eef4ae63d75e",
+      "source": "github",
+      "repo": "zig-utils/zig-test-framework"
+    }
   },
   "bin": {
     "pantry": "zig-out/bin/pantry"
