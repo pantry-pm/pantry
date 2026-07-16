@@ -539,8 +539,12 @@ fn resolveFullTree(
                     if (!seen.contains(dep.name)) {
                         try seen.put(try allocator.dupe(u8, dep.name), {});
                         if (dep.source == .pantry) {
-                            if (resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
-                                try resolved.append(allocator, pantry_pkg);
+                            const pantry_pkg = if (packages.isRollingZigDevChannel(dep.name, dep.version))
+                                null
+                            else
+                                resolvePantryRegistryTarball(allocator, dep.name, dep.version);
+                            if (pantry_pkg) |resolved_pkg| {
+                                try resolved.append(allocator, resolved_pkg);
                             } else {
                                 try resolved.append(allocator, .{
                                     .name = try allocator.dupe(u8, dep.name),
@@ -1095,7 +1099,7 @@ fn resolveViaRegistry(
     // Add non-npm top-level deps (pantry/github/etc) that weren't sent to the server
     for (top_level_deps) |dep| {
         if (dep.source == .npm) continue;
-        if (dep.source == .pantry) {
+        if (dep.source == .pantry and !packages.isRollingZigDevChannel(dep.name, dep.version)) {
             if (resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
                 try resolved.append(allocator, pantry_pkg);
                 continue;

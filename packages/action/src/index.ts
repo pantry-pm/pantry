@@ -1,5 +1,6 @@
 import type { ActionInputs, Platform } from './types'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
+import { shouldUseLockedVersion } from './lock-version'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -163,51 +164,6 @@ function getBinName(dep: string): string {
 }
 
 /**
- * Lightweight "does this concrete version satisfy this spec?" check. Covers
- * the operators deps files actually use in the wild (`^`, `~`, `>=`, `>`,
- * `<=`, `<`, exact), plus sentinels (`*`, `latest`, empty). Good enough for
- * the lock-compatibility check in `installSystemPackage`; we deliberately
- * don't depend on a full semver library inside a small action bundle.
- */
-function versionSatisfiesSpec(version: string, spec: string): boolean {
-  if (!spec || spec === 'latest' || spec === '*')
-    return true
-  const parse = (v: string) => v.replace(/^v/, '').split('.').map(n => Number.parseInt(n, 10) || 0)
-  const cmp = (a: number[], b: number[]) => {
-    for (let i = 0; i < 3; i++) {
-      if ((a[i] ?? 0) !== (b[i] ?? 0))
-        return (a[i] ?? 0) - (b[i] ?? 0)
-    }
-    return 0
-  }
-  const v = parse(version)
-  const match = spec.match(/^([~^>=<]+)?(\d[\d.]*)/)
-  if (!match) return false
-  const op = match[1] || ''
-  const t = parse(match[2])
-
-  if (!op || op === '=' || op === '==') return cmp(v, t) === 0
-  if (op === '>=') return cmp(v, t) >= 0
-  if (op === '>') return cmp(v, t) > 0
-  if (op === '<=') return cmp(v, t) <= 0
-  if (op === '<') return cmp(v, t) < 0
-  if (op === '~')
-    // ~1.2.3 → >=1.2.3 <1.3.0
-    return v[0] === t[0] && v[1] === t[1] && (v[2] ?? 0) >= (t[2] ?? 0)
-  if (op === '^') {
-    // ^1.2.3 → >=1.2.3 <2.0.0
-    // ^0.2.3 → >=0.2.3 <0.3.0 (npm semantics: zero major pins minor)
-    // ^0.0.3 → =0.0.3 (zero major+minor pins patch)
-    if (t[0] === 0 && t[1] === 0)
-      return cmp(v, t) === 0
-    if (t[0] === 0)
-      return v[0] === 0 && v[1] === t[1] && (v[2] ?? 0) >= (t[2] ?? 0)
-    return v[0] === t[0] && cmp(v, t) >= 0
-  }
-  return false
-}
-
-/**
  * Install a system package using the pantry TS installer SDK.
  * Works cross-platform (macOS, Linux, Windows) using Node.js APIs.
  * Supports: ziglang.org, bun.sh, nodejs.org (and all 1700+ aliases from ts-pantry)
@@ -240,7 +196,7 @@ async function installSystemPackage(spec: string, pantryDir: string, lockedVersi
   const pinned = lockedVersions.get(domain)
   let version: string
   let source: string
-  if (pinned && versionSatisfiesSpec(pinned, rawVersion)) {
+  if (pinned && shouldUseLockedVersion(domain, pinned, rawVersion)) {
     version = pinned
     source = ' (from pantry.lock)'
   }

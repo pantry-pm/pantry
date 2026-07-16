@@ -357,9 +357,9 @@
       "version": "c149e957e3989bdb8f9148a161f6eef4ae63d75e",
       "source": "github"
     },
-    "ziglang.org@0.17.0-dev.131+73c51c142": {
+    "ziglang.org@0.17.0-dev.1413+addc3c3b8": {
       "name": "ziglang.org",
-      "version": "0.17.0-dev.131+73c51c142",
+      "version": "0.17.0-dev.1413+addc3c3b8",
       "source": "pantry"
     }
   }

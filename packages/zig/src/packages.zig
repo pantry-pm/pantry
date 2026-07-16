@@ -20,6 +20,7 @@ pub const Lockfile = types.Lockfile;
 pub const LockfileEntry = types.LockfileEntry;
 pub const WorkspaceIsolation = types.WorkspaceIsolation;
 pub const WorkspaceLockEntry = types.WorkspaceLockEntry;
+pub const isRollingZigDevChannel = types.isRollingZigDevChannel;
 
 // Re-export lockfile functions
 pub const writeLockfile = lockfile.writeLockfile;

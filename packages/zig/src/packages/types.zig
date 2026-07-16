@@ -1,6 +1,23 @@
 const std = @import("std");
 const io_helper = @import("../io_helper.zig");
 
+/// A short Zig dev specifier names a rolling upstream channel rather than an
+/// immutable artifact. Concrete versions such as `0.17.0-dev.1413+hash` are
+/// deliberately excluded.
+pub fn isRollingZigDevChannel(name: []const u8, version: []const u8) bool {
+    const is_zig = std.mem.eql(u8, name, "zig") or
+        std.mem.eql(u8, name, "ziglang") or
+        std.mem.eql(u8, name, "ziglang.org");
+    return is_zig and std.mem.endsWith(u8, version, "-dev");
+}
+
+test "short Zig dev versions are rolling channels" {
+    try std.testing.expect(isRollingZigDevChannel("ziglang.org", "0.17.0-dev"));
+    try std.testing.expect(isRollingZigDevChannel("zig", "0.17.0-dev"));
+    try std.testing.expect(!isRollingZigDevChannel("ziglang.org", "0.17.0-dev.1413+addc3c3b8"));
+    try std.testing.expect(!isRollingZigDevChannel("bun.sh", "0.17.0-dev"));
+}
+
 /// Package source types
 pub const PackageSource = enum {
     pantry, // Pantry registry (system packages)

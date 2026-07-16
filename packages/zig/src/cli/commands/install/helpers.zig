@@ -541,6 +541,11 @@ pub fn canSkipCanonicalFromLockfileWithNameSet(
     proj_dir: []const u8,
     modules_dir: []const u8,
 ) bool {
+    // A short Zig dev version is a rolling channel. Upstream removes old dev
+    // archives, so an existing concrete lock/install must be refreshed through
+    // download/index.json instead of being treated as permanently up to date.
+    if (lib.packages.isRollingZigDevChannel(clean_name, dep_version)) return false;
+
     if (!name_set.contains(clean_name)) return false;
 
     // Check if version constraint has changed since lockfile was written

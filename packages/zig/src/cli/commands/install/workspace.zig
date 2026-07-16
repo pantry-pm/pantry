@@ -693,9 +693,23 @@ pub fn installWorkspaceCommandWithOptions(
         shared_installer.setRegistryUrl(custom_registry);
     }
 
+    const lockfile_reader = @import("../../../packages/lockfile.zig");
+    const ws_lockfile_path = try std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{workspace_root});
+    defer allocator.free(ws_lockfile_path);
+
+    // --force must take effect before any lock-driven restore or resolution.
+    // Loading the lock first meant a force install still restored and selected
+    // its old versions, then merely rewrote the same lock at the end.
+    if (options.force) {
+        io_helper.deleteFile(ws_lockfile_path) catch {};
+    }
+
     // Wire up resolution lockfile for lockfile-first resolution (avoids npm registry queries for locked packages)
     const lockfile_hooks = @import("lockfile_hooks.zig");
-    var ws_resolution_lockfile = lockfile_hooks.loadOrCreateLockfile(allocator, workspace_root) catch null;
+    var ws_resolution_lockfile = if (options.force)
+        null
+    else
+        lockfile_hooks.loadOrCreateLockfile(allocator, workspace_root) catch null;
     defer if (ws_resolution_lockfile) |*lf| lf.deinit();
     if (ws_resolution_lockfile) |*lf| {
         shared_installer.setLockfile(lf);
@@ -718,16 +732,7 @@ pub fn installWorkspaceCommandWithOptions(
     var failed_count: usize = 0;
     var cached_count: usize = 0;
 
-    // Read existing lockfile for incremental install skipping
-    const lockfile_reader = @import("../../../packages/lockfile.zig");
-    const ws_lockfile_path = try std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{workspace_root});
-    defer allocator.free(ws_lockfile_path);
-
-    // --force: delete existing lockfile to force full re-resolution from registry
-    if (options.force) {
-        io_helper.deleteFile(ws_lockfile_path) catch {};
-    }
-
+    // Read existing lockfile for incremental install skipping.
     var existing_lockfile: ?lib.packages.Lockfile = if (options.force)
         null
     else
