@@ -87,8 +87,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.129.0",
-      "published": "1.128.1",
-      "needsUpdate": true
+      "published": "1.129.0",
+      "needsUpdate": false
     },
     {
       "domain": "codex.openai.com",
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.11.25",
-      "published": "3.11.19",
-      "needsUpdate": true
+      "published": "3.11.25",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
@@ -131,9 +131,9 @@
       "name": "Discord",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.0.399",
+      "latest": "0.0.400",
       "published": "0.0.399",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "element.io",
