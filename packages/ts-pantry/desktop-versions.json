@@ -122,9 +122,9 @@
       "name": "Dia",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.39.2",
+      "latest": "1.40.1",
       "published": "1.39.2",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "discord.com",
