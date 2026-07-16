@@ -104,9 +104,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.11.25",
+      "latest": "3.12.10",
       "published": "3.11.25",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -131,9 +131,9 @@
       "name": "Discord",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "0.0.400",
+      "latest": "0.0.401",
       "published": "0.0.400",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "element.io",
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
