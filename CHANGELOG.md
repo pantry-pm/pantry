@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.16...v0.10.17)
+
+## 🐛 Bug Fixes
+
+- **lockfile**: validate frozen installs accurately ([82c42dd](https://github.com/pantry-pm/pantry/commit/82c42dd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **lockfile**: replace stale package versions ([560b55b](https://github.com/pantry-pm/pantry/commit/560b55b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.17 ([452fbe9](https://github.com/pantry-pm/pantry/commit/452fbe9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: bump 4 apps & 1 font ([4492190](https://github.com/pantry-pm/pantry/commit/4492190)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.15...v0.10.16)
 
 ## 🐛 Bug Fixes
