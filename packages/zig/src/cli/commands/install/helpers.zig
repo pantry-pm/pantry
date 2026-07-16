@@ -418,6 +418,10 @@ pub fn normalizePackageName(name: []const u8) []const u8 {
         return name[6..];
     } else if (std.mem.startsWith(u8, name, "github:")) {
         return name[7..];
+    } else if (std.mem.startsWith(u8, name, "http:")) {
+        return name[5..];
+    } else if (std.mem.startsWith(u8, name, "git:")) {
+        return name[4..];
     }
     return name;
 }
@@ -431,6 +435,10 @@ pub fn stripDisplayPrefix(name: []const u8) []const u8 {
         return name[6..];
     } else if (std.mem.startsWith(u8, name, "github:")) {
         return name[7..];
+    } else if (std.mem.startsWith(u8, name, "http:")) {
+        return name[5..];
+    } else if (std.mem.startsWith(u8, name, "git:")) {
+        return name[4..];
     }
     return name;
 }
@@ -2146,6 +2154,8 @@ test "stripDisplayPrefix" {
     try std.testing.expectEqualStrings("foo", stripDisplayPrefix("auto:foo"));
     try std.testing.expectEqualStrings("bar", stripDisplayPrefix("local:bar"));
     try std.testing.expectEqualStrings("qux", stripDisplayPrefix("github:qux"));
+    try std.testing.expectEqualStrings("archive", stripDisplayPrefix("http:archive"));
+    try std.testing.expectEqualStrings("repo", stripDisplayPrefix("git:repo"));
     try std.testing.expectEqualStrings("baz", stripDisplayPrefix("baz"));
     try std.testing.expectEqualStrings("npm:lodash", stripDisplayPrefix("npm:lodash"));
 }

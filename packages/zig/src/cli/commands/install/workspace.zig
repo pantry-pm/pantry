@@ -266,6 +266,7 @@ fn installSingleWorkspaceDep(
             .name = clean_name,
             .version = dep.version,
             .source = pkg_source,
+            .url = if (pkg_source == .http) dep.version else null,
         };
     };
     defer if (repo_owned) |r| allocator.free(r);
@@ -1540,6 +1541,7 @@ test "workspace dependency names preserve npm packages and strip explicit prefix
     try std.testing.expectEqualStrings("bun.sh", workspaceDependencyName("bun.sh"));
     try std.testing.expectEqualStrings("bunfig", workspaceDependencyName("npm:bunfig"));
     try std.testing.expectEqualStrings("zig-config", workspaceDependencyName("github:zig-config"));
+    try std.testing.expectEqualStrings("archive", workspaceDependencyName("http:archive"));
 }
 
 test "workspace dependency source distinguishes npm names from system domains" {
@@ -1548,12 +1550,14 @@ test "workspace dependency source distinguishes npm names from system domains" {
     const system_dep = lib.deps.parser.PackageDependency{ .name = "nodejs.org", .version = "^20" };
     const explicit_npm_dep = lib.deps.parser.PackageDependency{ .name = "npm:bunfig", .version = "^0.15" };
     const explicit_pantry_dep = lib.deps.parser.PackageDependency{ .name = "zig-config", .version = "^0.1", .source = .pantry };
+    const url_dep = lib.deps.parser.PackageDependency{ .name = "http:archive", .version = "https://example.com/archive.tgz", .source = .url };
 
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(npm_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(typescript_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.pantry, workspaceDependencySource(system_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(explicit_npm_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.pantry, workspaceDependencySource(explicit_pantry_dep));
+    try std.testing.expectEqual(lib.packages.PackageSource.http, workspaceDependencySource(url_dep));
 }
 
 test "workspace command fails when any package installation failed" {

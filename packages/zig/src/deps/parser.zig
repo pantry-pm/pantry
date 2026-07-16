@@ -146,6 +146,11 @@ pub fn parseGitHubUrl(allocator: std.mem.Allocator, version: []const u8) !?GitHu
             owner_repo = after_github[0..hash_pos];
         }
 
+        // A GitHub repository spec has exactly two path segments. Release
+        // assets, archive downloads, and other paths below a repository are
+        // ordinary HTTP URLs and must not be rewritten to a `main` git ref.
+        owner_repo = std.mem.trimEnd(u8, owner_repo, "/");
+
         // Remove .git suffix if present
         if (std.mem.endsWith(u8, owner_repo, ".git")) {
             owner_repo = owner_repo[0 .. owner_repo.len - 4];
@@ -155,6 +160,9 @@ pub fn parseGitHubUrl(allocator: std.mem.Allocator, version: []const u8) !?GitHu
         if (std.mem.indexOf(u8, owner_repo, "/")) |slash_pos| {
             owner = owner_repo[0..slash_pos];
             repo = owner_repo[slash_pos + 1 ..];
+            if (owner.len == 0 or repo.len == 0 or std.mem.indexOfScalar(u8, repo, '/') != null) {
+                return null;
+            }
         } else {
             return null; // Invalid format
         }
@@ -245,6 +253,15 @@ test "parseGitHubUrl with non-GitHub URL" {
 
     const result3 = try parseGitHubUrl(allocator, "1.2.3");
     try std.testing.expect(result3 == null);
+
+    const release_asset = try parseGitHubUrl(
+        allocator,
+        "https://github.com/stacksjs/very-happy-dom/releases/download/v0.1.6/very-happy-dom-0.1.6.tgz",
+    );
+    try std.testing.expect(release_asset == null);
+
+    const archive = try parseGitHubUrl(allocator, "https://github.com/owner/repo/archive/refs/tags/v1.0.0.tar.gz");
+    try std.testing.expect(archive == null);
 }
 
 /// Escape single quotes in a string for safe embedding in JS single-quoted strings.
@@ -1048,12 +1065,26 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                 if (pkg_spec == .string) {
                     version = pkg_spec.string;
 
-                    // First, check if the version string itself is a GitHub URL
+                    // Repository shorthand is distinct from a direct download
+                    // hosted by GitHub. parseGitHubUrl deliberately accepts only
+                    // owner/repository paths, so release assets fall through to
+                    // the HTTP handling below with their full URL preserved.
                     if (try parseGitHubUrl(allocator, version)) |github_ref| {
                         source = "github";
                         repo = pkg_name;
                         version = github_ref.ref;
                         parsed_github_ref = github_ref;
+                    } else if (std.mem.startsWith(u8, version, "git+") or
+                        std.mem.startsWith(u8, version, "git://") or
+                        std.mem.startsWith(u8, version, "git@"))
+                    {
+                        source = "git";
+                        url = version;
+                    } else if (std.mem.startsWith(u8, version, "https://") or
+                        std.mem.startsWith(u8, version, "http://"))
+                    {
+                        source = "http";
+                        url = version;
                     } else {
                         // Auto-detect source from package name
                         const detection = SourceDetection.fromPackageName(pkg_name);
@@ -1092,6 +1123,15 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                     if (pkg_spec.object.get("global")) |g| {
                         if (g == .bool) global = g.bool;
                     }
+
+                    // Direct URL dependencies use the URL itself as their
+                    // immutable package constraint throughout resolution and
+                    // lockfile comparison. PackageDependency intentionally has
+                    // one source-spec field (`version`), so normalize the object
+                    // form to the same representation as the string shorthand.
+                    if ((std.mem.eql(u8, source, "url") or std.mem.eql(u8, source, "http")) and url != null) {
+                        version = url.?;
+                    }
                 }
 
                 if (std.mem.eql(u8, source, "github") and parsed_github_ref == null) {
@@ -1115,9 +1155,9 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                         else if (std.mem.eql(u8, source, "npm"))
                             .{ .p = "npm:", .v = pkg_name }
                         else if (std.mem.eql(u8, source, "http"))
-                            .{ .p = "http:", .v = url orelse pkg_name }
+                            .{ .p = "http:", .v = pkg_name }
                         else if (std.mem.eql(u8, source, "git"))
-                            .{ .p = "git:", .v = url orelse pkg_name }
+                            .{ .p = "git:", .v = pkg_name }
                         else if (std.mem.eql(u8, source, "local"))
                             .{ .p = "local:", .v = url orelse pkg_name }
                         else if (std.mem.eql(u8, source, "pantry") or std.mem.eql(u8, source, "pkgx"))
@@ -1362,17 +1402,37 @@ test "parseZigPackageJson with simplified npm-style syntax" {
     const test_content =
         \\{
         \\  "dependencies": {
-        \\    "stacksjs/bunpress": "^1.0.0",
-        \\    "nodejs.org": "20.11.0",
-        \\    "typescript": "^5.0.0",
-        \\    "@types/node": "^20.0.0"
+        \\    "very-happy-dom": "https://github.com/stacksjs/very-happy-dom/releases/download/v0.1.6/very-happy-dom-0.1.6.tgz",
+        \\    "bunpress": "https://github.com/stacksjs/bunpress#v1.2.3"
         \\  }
         \\}
     ;
 
-    // NOTE: Test disabled because Zig 0.16 Io.Dir doesn't have realpath.
-    _ = test_content;
-    _ = allocator;
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+    try tmp_dir.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data = test_content });
+
+    const tmp_path = try std.fmt.allocPrint(allocator, ".zig-cache/tmp/{s}/package.json", .{tmp_dir.sub_path});
+    defer allocator.free(tmp_path);
+    const deps = try parseZigPackageJson(allocator, tmp_path);
+    defer {
+        for (deps) |*dep| dep.deinit(allocator);
+        allocator.free(deps);
+    }
+
+    try std.testing.expectEqual(@as(usize, 2), deps.len);
+    try std.testing.expectEqual(DependencySource.url, deps[0].source);
+    try std.testing.expectEqualStrings("http:very-happy-dom", deps[0].name);
+    try std.testing.expectEqualStrings(
+        "https://github.com/stacksjs/very-happy-dom/releases/download/v0.1.6/very-happy-dom-0.1.6.tgz",
+        deps[0].version,
+    );
+    try std.testing.expect(deps[0].github_ref == null);
+
+    try std.testing.expectEqual(DependencySource.github, deps[1].source);
+    try std.testing.expectEqualStrings("github:bunpress", deps[1].name);
+    try std.testing.expectEqualStrings("v1.2.3", deps[1].version);
+    try std.testing.expect(deps[1].github_ref != null);
 }
 
 test "parseZigPackageJson with mixed explicit and simplified syntax" {
