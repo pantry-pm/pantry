@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.12.10",
-      "published": "3.11.25",
-      "needsUpdate": true
+      "published": "3.12.10",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
@@ -132,8 +132,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.0.401",
-      "published": "0.0.400",
-      "needsUpdate": true
+      "published": "0.0.401",
+      "needsUpdate": false
     },
     {
       "domain": "element.io",
