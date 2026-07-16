@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Modern dependency manager for system and project environments - Like Homebrew but faster",
   "dependencies": {
-    "zig-config": "^0.1.0",
-    "zig-cli": "^0.1.0",
-    "zig-test-framework": "^0.1.0",
-    "zig-bump": "^0.1.1",
+    "zig-config": { "version": "f2feb1fdc262be4b8dc14d63113024ce0ab89927", "source": "github", "repo": "zig-utils/zig-config" },
+    "zig-cli": { "version": "4629d10a7e8aa6de9c26996109138683235a2273", "source": "github", "repo": "zig-utils/zig-cli" },
+    "zig-test-framework": { "version": "c149e957e3989bdb8f9148a161f6eef4ae63d75e", "source": "github", "repo": "zig-utils/zig-test-framework" },
+    "zig-bump": { "version": "15ddba7d124d32dbb7884dd74ec942baced2d6bf", "source": "github", "repo": "zig-utils/zig-bump" },
     "bun.sh": "^1.3.10",
     "ziglang.org": "*"
   },

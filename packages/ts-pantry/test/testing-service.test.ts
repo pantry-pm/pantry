@@ -4,6 +4,9 @@ import { PantryService } from '../src/testing/service'
 
 /** Check whether `pantry start` can work (needs launchd/systemd) */
 function canManageServices(): boolean {
+  // These tests mutate host services and require the backing service binaries,
+  // so keep them opt-in even on developer machines with launchd/systemd.
+  if (process.env.PANTRY_SERVICE_TESTS !== '1') return false
   // CI environments (GitHub Actions, etc.) lack a service manager bus
   if (process.env.CI || process.env.GITHUB_ACTIONS) return false
   try {

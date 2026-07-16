@@ -10,7 +10,9 @@ pub const DependencyType = enum {
 };
 
 pub const DependencySource = enum {
-    registry, // pkgx registry
+    registry, // Auto-detect between Pantry and npm registries
+    pantry, // Pantry registry
+    npm, // npm registry
     github, // GitHub repository
     git, // Generic git repository
     url, // Direct URL download
@@ -949,7 +951,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                             .version = try allocator.dupe(u8, version),
                             .global = false,
                             .dep_type = section.dep_type,
-                            .source = .registry,
+                            .source = .pantry,
                             .github_ref = null,
                         });
                     }
@@ -1017,7 +1019,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                     .version = try allocator.dupe(u8, version),
                     .global = false,
                     .dep_type = .normal,
-                    .source = .registry,
+                    .source = .pantry,
                     .github_ref = null,
                 });
             }
@@ -1049,7 +1051,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                     // First, check if the version string itself is a GitHub URL
                     if (try parseGitHubUrl(allocator, version)) |github_ref| {
                         source = "github";
-                        repo = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ github_ref.owner, github_ref.repo });
+                        repo = pkg_name;
                         version = github_ref.ref;
                         parsed_github_ref = github_ref;
                     } else {
@@ -1066,6 +1068,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                         }
                     }
                 }
+
                 // Handle explicit object format: "package": { ... }
                 else if (pkg_spec == .object) {
                     if (pkg_spec.object.get("version")) |v| {
@@ -1091,13 +1094,24 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                     }
                 }
 
+                if (std.mem.eql(u8, source, "github") and parsed_github_ref == null) {
+                    const repo_name = repo orelse pkg_name;
+                    const slash = std.mem.indexOfScalar(u8, repo_name, '/') orelse return error.InvalidGitHubRepository;
+                    const ref = tag orelse branch orelse version;
+                    parsed_github_ref = .{
+                        .owner = try allocator.dupe(u8, repo_name[0..slash]),
+                        .repo = try allocator.dupe(u8, repo_name[slash + 1 ..]),
+                        .ref = try allocator.dupe(u8, ref),
+                    };
+                }
+
                 // Build full name with source prefix for tracking
                 // Perf: Use stack buffer for name formatting (avoids allocPrint per dep)
                 const full_name = blk: {
                     var name_buf: [512]u8 = undefined;
                     if (!std.mem.eql(u8, source, "auto")) {
                         const prefix_and_value: struct { p: []const u8, v: []const u8 } = if (std.mem.eql(u8, source, "github"))
-                            .{ .p = "github:", .v = repo orelse pkg_name }
+                            .{ .p = "github:", .v = pkg_name }
                         else if (std.mem.eql(u8, source, "npm"))
                             .{ .p = "npm:", .v = pkg_name }
                         else if (std.mem.eql(u8, source, "http"))
@@ -1128,6 +1142,10 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                     .git
                 else if (std.mem.eql(u8, source, "url") or std.mem.eql(u8, source, "http"))
                     .url
+                else if (std.mem.eql(u8, source, "pantry") or std.mem.eql(u8, source, "pkgx"))
+                    .pantry
+                else if (std.mem.eql(u8, source, "npm"))
+                    .npm
                 else
                     .registry;
 

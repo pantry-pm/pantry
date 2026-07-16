@@ -416,6 +416,8 @@ pub fn normalizePackageName(name: []const u8) []const u8 {
         return name[4..];
     } else if (std.mem.startsWith(u8, name, "local:")) {
         return name[6..];
+    } else if (std.mem.startsWith(u8, name, "github:")) {
+        return name[7..];
     }
     return name;
 }
@@ -427,6 +429,8 @@ pub fn stripDisplayPrefix(name: []const u8) []const u8 {
         return name[5..];
     } else if (std.mem.startsWith(u8, name, "local:")) {
         return name[6..];
+    } else if (std.mem.startsWith(u8, name, "github:")) {
+        return name[7..];
     }
     return name;
 }
@@ -2136,6 +2140,7 @@ test "isLinkDependency" {
 test "stripDisplayPrefix" {
     try std.testing.expectEqualStrings("foo", stripDisplayPrefix("auto:foo"));
     try std.testing.expectEqualStrings("bar", stripDisplayPrefix("local:bar"));
+    try std.testing.expectEqualStrings("qux", stripDisplayPrefix("github:qux"));
     try std.testing.expectEqualStrings("baz", stripDisplayPrefix("baz"));
     try std.testing.expectEqualStrings("npm:lodash", stripDisplayPrefix("npm:lodash"));
 }
@@ -2144,6 +2149,7 @@ test "normalizePackageName" {
     try std.testing.expectEqualStrings("foo", normalizePackageName("auto:foo"));
     try std.testing.expectEqualStrings("bar", normalizePackageName("local:bar"));
     try std.testing.expectEqualStrings("lodash", normalizePackageName("npm:lodash"));
+    try std.testing.expectEqualStrings("qux", normalizePackageName("github:qux"));
     try std.testing.expectEqualStrings("baz", normalizePackageName("baz"));
 }
 

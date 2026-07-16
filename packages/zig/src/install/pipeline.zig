@@ -142,6 +142,8 @@ pub const ResolvedPackage = struct {
     tarball_url: []const u8,
     integrity: ?[]const u8,
     source: packages.PackageSource,
+    github_owner: ?[]const u8 = null,
+    github_repo: ?[]const u8 = null,
 };
 
 pub const PackageResult = struct {
@@ -173,6 +175,8 @@ pub const PipelineDep = struct {
     name: []const u8,
     version: []const u8,
     source: packages.PackageSource,
+    github_owner: ?[]const u8 = null,
+    github_repo: ?[]const u8 = null,
 };
 
 // ============================================================================
@@ -556,6 +560,8 @@ fn resolveFullTree(
                                 .tarball_url = try allocator.dupe(u8, ""),
                                 .integrity = null,
                                 .source = dep.source,
+                                .github_owner = dep.github_owner,
+                                .github_repo = dep.github_repo,
                             });
                         }
                     }
@@ -680,6 +686,51 @@ const DownloadThreadCtx = struct {
                     if (ctx.verbose) {
                         std.debug.print("[verbose:pipeline:download] pantry-source FAILED: {s} @ {s}: {s}\n", .{ pkg.name, pkg.version, @errorName(err) });
                     }
+                }
+                continue;
+            }
+
+            if (pkg.source == .github) {
+                const owner = pkg.github_owner orelse {
+                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "missing GitHub owner") catch null };
+                    continue;
+                };
+                const repo_name = pkg.github_repo orelse {
+                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "missing GitHub repository") catch null };
+                    continue;
+                };
+                var repo_buf: [512]u8 = undefined;
+                const repo = std.fmt.bufPrint(&repo_buf, "{s}/{s}", .{ owner, repo_name }) catch {
+                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "GitHub repository name is too long") catch null };
+                    continue;
+                };
+                const spec = PackageSpec{
+                    .name = pkg.name,
+                    .version = pkg.version,
+                    .source = .github,
+                    .repo = repo,
+                };
+                const opts = installer_mod.InstallOptions{
+                    .verbose = ctx.verbose,
+                    .project_root = ctx.project_root,
+                    .quiet = ctx.show_progress,
+                };
+                if (ctx.installer.install(spec, opts)) |install_result_| {
+                    var ir = install_result_;
+                    defer ir.deinit(alloc);
+                    ctx.results[i] = .{
+                        .name = owned_name,
+                        .version = alloc.dupe(u8, ir.version) catch owned_version,
+                        .success = true,
+                        .from_cache = ir.from_cache,
+                    };
+                } else |err| {
+                    ctx.results[i] = .{
+                        .name = owned_name,
+                        .version = owned_version,
+                        .success = false,
+                        .error_msg = std.fmt.allocPrint(alloc, "{s}", .{@errorName(err)}) catch null,
+                    };
                 }
                 continue;
             }
@@ -1056,6 +1107,8 @@ fn resolveViaRegistry(
             .tarball_url = try allocator.dupe(u8, ""),
             .integrity = null,
             .source = dep.source,
+            .github_owner = dep.github_owner,
+            .github_repo = dep.github_repo,
         });
     }
 

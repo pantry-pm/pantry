@@ -730,10 +730,14 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 .version = dep.version,
                 .source = if (is_domain) .pantry else switch (dep.source) {
                     .registry => .npm,
+                    .pantry => .pantry,
+                    .npm => .npm,
                     .github => .github,
                     .git => .git,
                     .url => .http,
                 },
+                .github_owner = if (dep.github_ref) |ref| ref.owner else null,
+                .github_repo = if (dep.github_ref) |ref| ref.repo else null,
             };
         }
 
@@ -1618,10 +1622,14 @@ fn installCompanionDepsFile(
             .version = dep.version,
             .source = if (is_domain) .pantry else switch (dep.source) {
                 .registry => .npm,
+                .pantry => .pantry,
+                .npm => .npm,
                 .github => .github,
                 .git => .git,
                 .url => .http,
             },
+            .github_owner = if (dep.github_ref) |ref| ref.owner else null,
+            .github_repo = if (dep.github_ref) |ref| ref.repo else null,
         };
     }
 

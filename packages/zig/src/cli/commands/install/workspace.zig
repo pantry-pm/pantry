@@ -30,6 +30,8 @@ fn workspaceDependencySource(dep: lib.deps.parser.PackageDependency) lib.package
         .github => .github,
         .git => .git,
         .url => .http,
+        .pantry => .pantry,
+        .npm => .npm,
         .registry => if (std.mem.indexOfScalar(u8, workspaceDependencyName(dep.name), '.') != null) .pantry else .npm,
     };
 }
@@ -857,6 +859,16 @@ pub fn installWorkspaceCommandWithOptions(
         success_count += 1;
     }
 
+    var installed_versions = std.StringHashMap([]const u8).init(allocator);
+    defer {
+        var version_it = installed_versions.iterator();
+        while (version_it.next()) |entry| {
+            allocator.free(entry.key_ptr.*);
+            allocator.free(entry.value_ptr.*);
+        }
+        installed_versions.deinit();
+    }
+
     // ---- Pass 2: Install remote deps via parallel pipeline ----
     // Count remote deps
     var remote_count: usize = 0;
@@ -880,6 +892,8 @@ pub fn installWorkspaceCommandWithOptions(
                     .name = clean_name,
                     .version = dep.version,
                     .source = workspaceDependencySource(dep),
+                    .github_owner = if (dep.github_ref) |ref| ref.owner else null,
+                    .github_repo = if (dep.github_ref) |ref| ref.repo else null,
                 };
                 ri += 1;
             }
@@ -899,6 +913,12 @@ pub fn installWorkspaceCommandWithOptions(
         for (pipeline_result.results) |result| {
             if (result.name.len == 0) continue;
             if (result.success) {
+                if (!installed_versions.contains(result.name)) {
+                    try installed_versions.put(
+                        try allocator.dupe(u8, result.name),
+                        try allocator.dupe(u8, result.version),
+                    );
+                }
                 style.printInstalled(result.name, result.version);
                 success_count += 1;
                 if (result.from_cache) cached_count += 1;
@@ -1250,6 +1270,10 @@ pub fn installWorkspaceCommandWithOptions(
             findLockfileEntryByName(existing, clean_dep_name)
         else
             null;
+        const compatible_existing_entry: ?*const lib.packages.LockfileEntry = if (existing_entry) |entry|
+            if (entry.source == lock_source) entry else null
+        else
+            null;
 
         // Reuse exact metadata captured by the bulk/per-package resolver. If
         // the package was already installed, the pipeline may legitimately do
@@ -1261,7 +1285,7 @@ pub fn installWorkspaceCommandWithOptions(
             null;
         if (lock_source == .npm and resolution == null) {
             const desired_version = installed_version orelse dep.version;
-            const existing_is_complete = if (existing_entry) |entry|
+            const existing_is_complete = if (compatible_existing_entry) |entry|
                 std.mem.eql(u8, entry.version, desired_version) and entry.resolved != null and entry.integrity != null
             else
                 false;
@@ -1275,21 +1299,21 @@ pub fn installWorkspaceCommandWithOptions(
         };
         const resolved_version = if (resolution) |r| r.version else null;
 
-        const entry_version = resolved_version orelse installed_version orelse if (existing_entry) |entry| entry.version else dep.version;
-        const can_reuse_existing = if (existing_entry) |entry|
+        const entry_version = resolved_version orelse installed_versions.get(clean_dep_name) orelse installed_version orelse if (compatible_existing_entry) |entry| entry.version else dep.version;
+        const can_reuse_existing = if (compatible_existing_entry) |entry|
             std.mem.eql(u8, entry.version, entry_version)
         else
             false;
         const resolved_url = if (resolution) |r|
             r.tarball_url
         else if (can_reuse_existing)
-            existing_entry.?.resolved
+            compatible_existing_entry.?.resolved
         else
             null;
         const resolved_integrity = if (resolution) |r|
             r.integrity
         else if (can_reuse_existing)
-            existing_entry.?.integrity
+            compatible_existing_entry.?.integrity
         else
             null;
 
@@ -1510,6 +1534,7 @@ test "workspace dependency names preserve npm packages and strip explicit prefix
     try std.testing.expectEqualStrings("node", workspaceDependencyName("node"));
     try std.testing.expectEqualStrings("bun.sh", workspaceDependencyName("bun.sh"));
     try std.testing.expectEqualStrings("bunfig", workspaceDependencyName("npm:bunfig"));
+    try std.testing.expectEqualStrings("zig-config", workspaceDependencyName("github:zig-config"));
 }
 
 test "workspace dependency source distinguishes npm names from system domains" {
@@ -1517,11 +1542,13 @@ test "workspace dependency source distinguishes npm names from system domains" {
     const typescript_dep = lib.deps.parser.PackageDependency{ .name = "typescript", .version = "^7" };
     const system_dep = lib.deps.parser.PackageDependency{ .name = "nodejs.org", .version = "^20" };
     const explicit_npm_dep = lib.deps.parser.PackageDependency{ .name = "npm:bunfig", .version = "^0.15" };
+    const explicit_pantry_dep = lib.deps.parser.PackageDependency{ .name = "zig-config", .version = "^0.1", .source = .pantry };
 
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(npm_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(typescript_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.pantry, workspaceDependencySource(system_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(explicit_npm_dep));
+    try std.testing.expectEqual(lib.packages.PackageSource.pantry, workspaceDependencySource(explicit_pantry_dep));
 }
 
 test "workspace command fails when any package installation failed" {
