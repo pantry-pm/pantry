@@ -19,6 +19,17 @@ const cache = lib.cache;
 const string = lib.string;
 const install = lib.install;
 
+fn resolutionLockMatches(
+    lock_file: *lib.deps.resolution.LockFile,
+    name: []const u8,
+    version: []const u8,
+    resolved: []const u8,
+) bool {
+    const locked = lockfile_hooks.getLockedVersionForPackage(lock_file, name) orelse return false;
+    return std.mem.eql(u8, locked.version, version) and
+        std.mem.eql(u8, locked.resolved, resolved);
+}
+
 /// Fast path: check if all packages are already installed without doing expensive
 /// workspace detection, config loading, hook execution, etc.
 /// Returns a CommandResult if everything is up-to-date, null otherwise.
@@ -963,73 +974,26 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             helpers.ensureBinSymlinks(allocator, proj_dir, opts.modules_dir);
         }
 
-        // Generate lockfile (skip entirely when --no-save to avoid unnecessary work)
-        if (!opts.no_save) {
-            const lockfile_path = try std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{proj_dir});
-            defer allocator.free(lockfile_path);
+        // The resolution lock is the canonical file for this install path.
+        // A second v2 writer used to emit a constraint-only lock here, only for
+        // the resolution writer below to overwrite it moments later. Besides
+        // format churn, that branch rejected every frozen install regardless
+        // of whether its lock was current.
+        var frozen_lockfile_changed = false;
 
-            var lockfile = try lib.packages.Lockfile.init(allocator, "1.0.0");
-            defer lockfile.deinit(allocator);
-
-            // Add entries for all installed packages
-            for (deps) |dep| {
-                const source = if (helpers.isLocalDependency(dep))
-                    lib.packages.PackageSource.local
-                else if (std.mem.startsWith(u8, dep.name, "github:"))
-                    lib.packages.PackageSource.github
-                else if (std.mem.startsWith(u8, dep.name, "npm:"))
-                    lib.packages.PackageSource.npm
-                else
-                    lib.packages.PackageSource.pantry;
-
-                const clean_name = if (std.mem.indexOf(u8, dep.name, ":")) |colon_pos|
-                    dep.name[colon_pos + 1 ..]
-                else
-                    dep.name;
-
-                // Use dep.version for lockfile (pipeline resolves versions internally)
-                const resolved_version = dep.version;
-                const integrity: ?[]const u8 = null;
-
-                const entry = lib.packages.LockfileEntry{
-                    .name = try allocator.dupe(u8, clean_name),
-                    .version = try allocator.dupe(u8, resolved_version),
-                    .source = source,
-                    .url = if (source == .local) try allocator.dupe(u8, dep.version) else null,
-                    .resolved = null,
-                    .integrity = integrity,
-                    .dependencies = null,
-                };
-
-                const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, resolved_version });
-                defer allocator.free(key);
-                try lockfile.addEntry(allocator, key, entry);
-            }
-
-            // Write lockfile (unless --frozen-lockfile or --no-save)
-            if (opts.frozen_lockfile) {
-                style.printWarn("Lockfile would be modified but --frozen-lockfile is set\n", .{});
-                return .{
-                    .exit_code = 1,
-                    .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),
-                };
-            } else if (!opts.no_save) {
-                style.printLockfileSaving();
-                const lockfile_writer = @import("../../../packages/lockfile.zig");
-                lockfile_writer.writeLockfile(allocator, &lockfile, lockfile_path) catch |err| {
-                    style.printWarn("Failed to write lockfile: {}\n", .{err});
-                };
-                style.printLockfileSaved();
-            }
-        } // if (!opts.no_save) — skip lockfile generation entirely
-
-        // Add successful packages to pantry.lock and record in checkpoint
+        // Add successful packages to pantry.lock and record in checkpoint.
         for (pipeline_result.results) |result| {
             if (result.success and result.name.len > 0) {
                 const clean_name = helpers.normalizePackageName(result.name);
                 const resolved_url = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version });
                 defer allocator.free(resolved_url);
-                try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
+
+                if (opts.frozen_lockfile) {
+                    if (!resolutionLockMatches(&lock_file, clean_name, result.version, resolved_url))
+                        frozen_lockfile_changed = true;
+                } else if (!opts.no_save) {
+                    try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
+                }
 
                 // Record successful package installation in checkpoint
                 checkpoint.recordPackage(clean_name) catch |err| {
@@ -1049,8 +1013,16 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             }
         }
 
-        // Save pantry.lock
-        try lockfile_hooks.saveLockfile(&lock_file, cwd);
+        if (frozen_lockfile_changed) {
+            style.printWarn("Lockfile would be modified but --frozen-lockfile is set\n", .{});
+            return .{
+                .exit_code = 1,
+                .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),
+            };
+        }
+
+        if (!opts.frozen_lockfile and !opts.no_save)
+            try lockfile_hooks.saveLockfile(&lock_file, cwd);
 
         // Apply patches from patchedDependencies in package.json
         {
@@ -1810,6 +1782,35 @@ test "depDomainFromSpec keeps the version constraint its parent declares" {
 
     // Platform-tagged pseudo-domains are not installable packages.
     try t.expect(depDomainFromSpec("darwin/x86-64") == null);
+}
+
+test "frozen resolution locks accept only the current resolved package" {
+    const t = std.testing;
+    const allocator = t.allocator;
+
+    var lockfile = lib.deps.resolution.LockFile.init(allocator);
+    defer lockfile.deinit();
+
+    try lockfile.addPackage("bun.sh", "1.3.14", "registry:bun.sh@1.3.14", null);
+
+    try t.expect(resolutionLockMatches(
+        &lockfile,
+        "bun.sh",
+        "1.3.14",
+        "registry:bun.sh@1.3.14",
+    ));
+    try t.expect(!resolutionLockMatches(
+        &lockfile,
+        "bun.sh",
+        "1.3.15",
+        "registry:bun.sh@1.3.15",
+    ));
+    try t.expect(!resolutionLockMatches(
+        &lockfile,
+        "nodejs.org",
+        "24.0.0",
+        "registry:nodejs.org@24.0.0",
+    ));
 }
 
 test "companion deps replace stale system pins without dropping workspace packages" {
