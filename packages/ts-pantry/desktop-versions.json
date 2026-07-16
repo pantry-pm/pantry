@@ -95,7 +95,7 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.707.72221",
+      "latest": "26.707.91948",
       "published": "26.623.141536",
       "needsUpdate": true
     },
@@ -132,8 +132,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "0.0.400",
-      "published": "0.0.399",
-      "needsUpdate": true
+      "published": "0.0.400",
+      "needsUpdate": false
     },
     {
       "domain": "element.io",
