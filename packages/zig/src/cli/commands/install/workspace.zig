@@ -9,6 +9,38 @@ const types = @import("types.zig");
 
 const cache = lib.cache;
 const install = lib.install;
+
+fn findLockfileEntryByName(lockfile: *lib.packages.Lockfile, name: []const u8) ?*const lib.packages.LockfileEntry {
+    var iterator = lockfile.packages.iterator();
+    while (iterator.next()) |entry| {
+        if (std.mem.eql(u8, entry.value_ptr.name, name)) return entry.value_ptr;
+    }
+    return null;
+}
+
+/// Names parsed from a workspace manifest are already unambiguous: regular
+/// dependency sections contain npm package names, while `system` entries have
+/// already been canonicalized to Pantry domains by the dependency parser.
+fn workspaceDependencyName(name: []const u8) []const u8 {
+    return helpers.normalizePackageName(name);
+}
+
+fn workspaceDependencySource(dep: lib.deps.parser.PackageDependency) lib.packages.PackageSource {
+    return switch (dep.source) {
+        .github => .github,
+        .git => .git,
+        .url => .http,
+        .registry => if (std.mem.indexOfScalar(u8, workspaceDependencyName(dep.name), '.') != null) .pantry else .npm,
+    };
+}
+
+fn workspaceCommandResult(allocator: std.mem.Allocator, failed_count: usize) !types.CommandResult {
+    if (failed_count == 0) return .{ .exit_code = 0 };
+    return .{
+        .exit_code = 1,
+        .message = try std.fmt.allocPrint(allocator, "{d} workspace package(s) failed to install", .{failed_count}),
+    };
+}
 const helpers = @import("helpers.zig");
 const style = @import("../../style.zig");
 
@@ -43,17 +75,12 @@ fn installSingleWorkspaceDep(
     const pkg_registry = @import("../../../packages/generated.zig");
 
     // Resolve aliases (e.g. "bun" -> "bun.sh", "zig" -> "ziglang.org")
-    const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
+    const clean_name = workspaceDependencyName(dep.name);
 
     const is_npm_package = std.mem.startsWith(u8, dep.name, "npm:") or
         std.mem.startsWith(u8, dep.name, "auto:");
 
-    const pkg_source: lib.packages.PackageSource = switch (dep.source) {
-        .registry => .pantry,
-        .github => .github,
-        .git => .git,
-        .url => .http,
-    };
+    const pkg_source = workspaceDependencySource(dep);
 
     // For npm/auto packages, try Pantry registry then npm registry.
     // Domain-style: full DynamoDB + S3 lookup. Non-domain: S3-only (lightweight).
@@ -68,7 +95,7 @@ fn installSingleWorkspaceDep(
             dep.version[0] == '=' or dep.version[0] == '*' or
             (dep.version[0] >= '0' and dep.version[0] <= '9'));
     const bulk_resolved = shared_installer.hasNpmResolution(clean_name, dep.version);
-    if (is_npm_package or (pkg_source == .pantry and
+    if (pkg_source == .npm or is_npm_package or (pkg_source == .pantry and
         pkg_registry.getPackageByName(clean_name) == null))
     {
         // Try Pantry registry first — but skip if bulk resolver already has this package,
@@ -309,7 +336,8 @@ const WorkspaceThreadContext = struct {
 
             // Skip packages that match lockfile and exist at destination (O(1) via name set)
             if (ctx.lockfile_name_set) |ns| {
-                if (helpers.canSkipFromLockfileWithNameSet(ns, ctx.deps[i].name, ctx.deps[i].version, ctx.constraint_map, ctx.workspace_root, ctx.shared_installer.modules_dir)) {
+                const clean_name = workspaceDependencyName(ctx.deps[i].name);
+                if (helpers.canSkipCanonicalFromLockfileWithNameSet(ns, clean_name, ctx.deps[i].version, ctx.constraint_map, ctx.workspace_root, ctx.shared_installer.modules_dir)) {
                     const clean = helpers.stripDisplayPrefix(ctx.deps[i].name);
                     if (ctx.verbose) {
                         std.debug.print("[verbose:ws] [{d}/{d}] skipped (lockfile match): {s}\n", .{ i + 1, ctx.deps.len, ctx.deps[i].name });
@@ -368,53 +396,6 @@ pub fn installWorkspaceCommandWithOptions(
     const parser = @import("../../../deps/parser.zig");
     const offline = @import("../../../install/offline.zig");
     const recovery = @import("../../../install/recovery.zig");
-
-    // ── Fast path: if pantry.lock exists and pantry/ dir is populated, skip everything ──
-    if (!options.force) {
-        const lockfile_path = std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{workspace_root}) catch null;
-        defer if (lockfile_path) |p| allocator.free(p);
-
-        const pantry_dir = std.fmt.allocPrint(allocator, "{s}/{s}", .{ workspace_root, options.modules_dir }) catch null;
-        defer if (pantry_dir) |p| allocator.free(p);
-
-        if (lockfile_path != null and pantry_dir != null) {
-            const has_lockfile = blk: {
-                io_helper.accessAbsolute(lockfile_path.?, .{}) catch break :blk false;
-                break :blk true;
-            };
-            const has_pantry = blk: {
-                io_helper.accessAbsolute(pantry_dir.?, .{}) catch break :blk false;
-                break :blk true;
-            };
-
-            if (has_lockfile and has_pantry) {
-                // Quick check: count entries in pantry/ dir — if it has packages, assume up-to-date
-                const entry_count = count_blk: {
-                    var dir = io_helper.openDirAbsoluteForIteration(pantry_dir.?) catch break :count_blk @as(usize, 0);
-                    defer dir.close();
-                    var count: usize = 0;
-                    var iter = dir.iterate();
-                    while (iter.next() catch null) |entry| {
-                        if (entry.kind == .directory and entry.name.len > 0 and entry.name[0] != '.') {
-                            count += 1;
-                            if (count >= 10) break;
-                        }
-                    }
-                    break :count_blk count;
-                };
-
-                if (entry_count >= 10) {
-                    if (options.verbose) {
-                        std.debug.print("[verbose:ws] fast path: pantry.lock exists, {s}/ has {d}+ packages — skipping\n", .{ options.modules_dir, entry_count });
-                    }
-
-                    helpers.ensureBinSymlinks(allocator, workspace_root, options.modules_dir);
-
-                    return .{ .exit_code = 0 };
-                }
-            }
-        }
-    }
 
     // Offline mode detection
     const is_offline = offline.isOfflineMode();
@@ -527,7 +508,7 @@ pub fn installWorkspaceCommandWithOptions(
             for (deps) |dep| {
                 if (std.mem.startsWith(u8, dep.version, "workspace:")) continue;
 
-                const clean_dep_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
+                const clean_dep_name = workspaceDependencyName(dep.name);
                 if (!deps_seen.contains(clean_dep_name)) {
                     try deps_seen.put(try allocator.dupe(u8, clean_dep_name), {});
                     if (all_deps_count < all_deps_buffer.len) {
@@ -624,7 +605,7 @@ pub fn installWorkspaceCommandWithOptions(
 
                 // Dedup by clean package name only — flat pantry/ install resolves
                 // each package to a single version.
-                const clean_dep_name = helpers.resolvePackageAlias(helpers.normalizePackageName(resolved_dep.name));
+                const clean_dep_name = workspaceDependencyName(resolved_dep.name);
                 if (!deps_seen.contains(clean_dep_name)) {
                     try deps_seen.put(try allocator.dupe(u8, clean_dep_name), {});
                     if (all_deps_count >= all_deps_buffer.len) {
@@ -761,25 +742,6 @@ pub fn installWorkspaceCommandWithOptions(
 
     const all_deps = all_deps_buffer[0..all_deps_count];
 
-    // Resolution data map: package name -> (resolved_version, tarball_url, integrity)
-    // Populated from install results, used when generating the lockfile
-    const ResolutionData = struct {
-        resolved_version: ?[]const u8 = null,
-        tarball_url: ?[]const u8 = null,
-        integrity: ?[]const u8 = null,
-    };
-    var resolution_map = std.StringHashMap(ResolutionData).init(allocator);
-    defer {
-        var rmap_it = resolution_map.iterator();
-        while (rmap_it.next()) |entry| {
-            allocator.free(entry.key_ptr.*);
-            if (entry.value_ptr.resolved_version) |v| allocator.free(v);
-            if (entry.value_ptr.tarball_url) |u| allocator.free(u);
-            if (entry.value_ptr.integrity) |i| allocator.free(i);
-        }
-        resolution_map.deinit();
-    }
-
     // Check if all packages can be skipped (lockfile + destination match + version constraint match)
     // Build name set once for O(1) lookups instead of O(n) iteration per dep
     var ws_skipped_count: usize = 0;
@@ -793,7 +755,8 @@ pub fn installWorkspaceCommandWithOptions(
         if (ws_name_set) |*ns| {
             const cm_ptr: ?*const helpers.LockfileConstraintMap = if (ws_constraint_map) |*cm| cm else null;
             for (all_deps) |dep| {
-                if (helpers.canSkipFromLockfileWithNameSet(ns, dep.name, dep.version, cm_ptr, workspace_root, options.modules_dir)) {
+                const clean_name = workspaceDependencyName(dep.name);
+                if (helpers.canSkipCanonicalFromLockfileWithNameSet(ns, clean_name, dep.version, cm_ptr, workspace_root, options.modules_dir)) {
                     ws_skipped_count += 1;
                 }
             }
@@ -911,18 +874,12 @@ pub fn installWorkspaceCommandWithOptions(
             var ri: usize = 0;
             for (all_deps) |dep| {
                 if (helpers.isLocalDependency(dep)) continue;
-                const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
+                const clean_name = workspaceDependencyName(dep.name);
                 // Domain-style names (containing '.') are pantry/system packages, not npm
-                const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
                 pipeline_deps[ri] = .{
                     .name = clean_name,
                     .version = dep.version,
-                    .source = if (is_domain) .pantry else switch (dep.source) {
-                        .registry => .npm,
-                        .github => .github,
-                        .git => .git,
-                        .url => .http,
-                    },
+                    .source = workspaceDependencySource(dep),
                 };
                 ri += 1;
             }
@@ -1168,34 +1125,15 @@ pub fn installWorkspaceCommandWithOptions(
     }
 
     // --- Add package entries with resolved data ---
-    const pkg_registry = @import("../../../packages/generated.zig");
     for (all_deps_buffer[0..all_deps_count]) |dep| {
-        const clean_dep_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
+        const clean_dep_name = workspaceDependencyName(dep.name);
 
         // Determine the correct source
-        const lock_source: lib.packages.PackageSource = if (dep.source != .registry)
-            switch (dep.source) {
-                .github => .github,
-                .git => .git,
-                .url => .http,
-                .registry => unreachable,
-            }
-        else if (std.mem.startsWith(u8, dep.name, "npm:") or
-            std.mem.startsWith(u8, dep.name, "auto:"))
-            .npm
-        else if (pkg_registry.getPackageByName(clean_dep_name) != null)
-            .pantry
-        else
-            .npm;
-
-        // Look up resolution data captured during installation
-        const resolution = resolution_map.get(clean_dep_name);
-        const resolved_version = if (resolution) |r| r.resolved_version else null;
-        const entry_version = resolved_version orelse dep.version;
-        const resolved_url = if (resolution) |r| r.tarball_url else null;
-        const resolved_integrity = if (resolution) |r| r.integrity else null;
+        const lock_source = workspaceDependencySource(dep);
 
         // Read installed package.json for dependencies and bin entries
+        var installed_version: ?[]const u8 = null;
+        defer if (installed_version) |version| allocator.free(version);
         var pkg_deps: ?std.StringHashMap([]const u8) = null;
         var pkg_peer_deps: ?std.StringHashMap([]const u8) = null;
         var pkg_bin: ?std.StringHashMap([]const u8) = null;
@@ -1215,6 +1153,11 @@ pub fn installWorkspaceCommandWithOptions(
                 if (std.json.parseFromSlice(std.json.Value, allocator, pkg_content, .{})) |pkg_parsed| {
                     defer pkg_parsed.deinit();
                     if (pkg_parsed.value == .object) {
+                        if (pkg_parsed.value.object.get("version")) |version_val| {
+                            if (version_val == .string)
+                                installed_version = try allocator.dupe(u8, version_val.string);
+                        }
+
                         // Extract dependencies
                         if (pkg_parsed.value.object.get("dependencies")) |deps_val| {
                             if (deps_val == .object and deps_val.object.count() > 0) {
@@ -1302,6 +1245,53 @@ pub fn installWorkspaceCommandWithOptions(
                 } else |_| {}
             } else |_| {}
         }
+
+        const existing_entry: ?*const lib.packages.LockfileEntry = if (existing_lockfile) |*existing|
+            findLockfileEntryByName(existing, clean_dep_name)
+        else
+            null;
+
+        // Reuse exact metadata captured by the bulk/per-package resolver. If
+        // the package was already installed, the pipeline may legitimately do
+        // no resolution work; resolve that installed exact version only when
+        // the old lock entry cannot supply complete matching metadata.
+        var resolution = if (lock_source == .npm)
+            shared_installer.getCachedNpmResolution(clean_dep_name, dep.version)
+        else
+            null;
+        if (lock_source == .npm and resolution == null) {
+            const desired_version = installed_version orelse dep.version;
+            const existing_is_complete = if (existing_entry) |entry|
+                std.mem.eql(u8, entry.version, desired_version) and entry.resolved != null and entry.integrity != null
+            else
+                false;
+            if (!existing_is_complete)
+                resolution = shared_installer.resolveNpmPackage(clean_dep_name, desired_version) catch null;
+        }
+        defer if (resolution) |*r| {
+            allocator.free(r.version);
+            allocator.free(r.tarball_url);
+            if (r.integrity) |integrity| allocator.free(integrity);
+        };
+        const resolved_version = if (resolution) |r| r.version else null;
+
+        const entry_version = resolved_version orelse installed_version orelse if (existing_entry) |entry| entry.version else dep.version;
+        const can_reuse_existing = if (existing_entry) |entry|
+            std.mem.eql(u8, entry.version, entry_version)
+        else
+            false;
+        const resolved_url = if (resolution) |r|
+            r.tarball_url
+        else if (can_reuse_existing)
+            existing_entry.?.resolved
+        else
+            null;
+        const resolved_integrity = if (resolution) |r|
+            r.integrity
+        else if (can_reuse_existing)
+            existing_entry.?.integrity
+        else
+            null;
 
         const entry = lib.packages.LockfileEntry{
             .name = try allocator.dupe(u8, clean_dep_name),
@@ -1497,5 +1487,53 @@ pub fn installWorkspaceCommandWithOptions(
         std.debug.print("[verbose:timer] total install time: {d}ms\n", .{elapsed_ms});
     }
 
-    return .{ .exit_code = 0 };
+    return workspaceCommandResult(allocator, failed_count);
+}
+
+test "findLockfileEntryByName finds resolved entries independent of key spelling" {
+    const allocator = std.testing.allocator;
+    var lockfile = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+
+    try lockfile.addEntry(allocator, "bunfig@0.15.15", .{
+        .name = try allocator.dupe(u8, "bunfig"),
+        .version = try allocator.dupe(u8, "0.15.15"),
+        .source = .npm,
+    });
+
+    try std.testing.expectEqualStrings("0.15.15", findLockfileEntryByName(&lockfile, "bunfig").?.version);
+    try std.testing.expect(findLockfileEntryByName(&lockfile, "missing") == null);
+}
+
+test "workspace dependency names preserve npm packages and strip explicit prefixes" {
+    try std.testing.expectEqualStrings("typescript", workspaceDependencyName("typescript"));
+    try std.testing.expectEqualStrings("node", workspaceDependencyName("node"));
+    try std.testing.expectEqualStrings("bun.sh", workspaceDependencyName("bun.sh"));
+    try std.testing.expectEqualStrings("bunfig", workspaceDependencyName("npm:bunfig"));
+}
+
+test "workspace dependency source distinguishes npm names from system domains" {
+    const npm_dep = lib.deps.parser.PackageDependency{ .name = "node", .version = "^23.11.1" };
+    const typescript_dep = lib.deps.parser.PackageDependency{ .name = "typescript", .version = "^7" };
+    const system_dep = lib.deps.parser.PackageDependency{ .name = "nodejs.org", .version = "^20" };
+    const explicit_npm_dep = lib.deps.parser.PackageDependency{ .name = "npm:bunfig", .version = "^0.15" };
+
+    try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(npm_dep));
+    try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(typescript_dep));
+    try std.testing.expectEqual(lib.packages.PackageSource.pantry, workspaceDependencySource(system_dep));
+    try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(explicit_npm_dep));
+}
+
+test "workspace command fails when any package installation failed" {
+    const allocator = std.testing.allocator;
+
+    var success = try workspaceCommandResult(allocator, 0);
+    defer success.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 0), success.exit_code);
+    try std.testing.expect(success.message == null);
+
+    var failure = try workspaceCommandResult(allocator, 2);
+    defer failure.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 1), failure.exit_code);
+    try std.testing.expectEqualStrings("2 workspace package(s) failed to install", failure.message.?);
 }

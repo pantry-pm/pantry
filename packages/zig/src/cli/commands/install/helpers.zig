@@ -498,7 +498,7 @@ pub fn buildConstraintMapFromWorkspaces(
     var map = LockfileConstraintMap.init(allocator);
     var ws_it = lockfile_workspaces.iterator();
     while (ws_it.next()) |ws_entry| {
-        inline for (.{ "dependencies", "dev_dependencies" }) |field_name| {
+        inline for (.{ "dependencies", "dev_dependencies", "system" }) |field_name| {
             if (@field(ws_entry.value_ptr.*, field_name)) |deps| {
                 var dep_it = deps.iterator();
                 while (dep_it.next()) |dep| {
@@ -522,6 +522,21 @@ pub fn canSkipFromLockfileWithNameSet(
     modules_dir: []const u8,
 ) bool {
     const clean_name = resolvePackageAlias(normalizePackageName(dep_name));
+    return canSkipCanonicalFromLockfileWithNameSet(name_set, clean_name, dep_version, constraint_map, proj_dir, modules_dir);
+}
+
+/// Workspace manifests already distinguish npm dependencies from `system`
+/// dependencies. The parser canonicalizes the latter, so callers must not run
+/// ordinary npm names (for example `typescript` or `node`) through the system
+/// alias table while checking the lockfile.
+pub fn canSkipCanonicalFromLockfileWithNameSet(
+    name_set: *const LockfileNameSet,
+    clean_name: []const u8,
+    dep_version: []const u8,
+    constraint_map: ?*const LockfileConstraintMap,
+    proj_dir: []const u8,
+    modules_dir: []const u8,
+) bool {
     if (!name_set.contains(clean_name)) return false;
 
     // Check if version constraint has changed since lockfile was written
@@ -2130,6 +2145,28 @@ test "normalizePackageName" {
     try std.testing.expectEqualStrings("bar", normalizePackageName("local:bar"));
     try std.testing.expectEqualStrings("lodash", normalizePackageName("npm:lodash"));
     try std.testing.expectEqualStrings("baz", normalizePackageName("baz"));
+}
+
+test "workspace constraint map includes system dependencies" {
+    const allocator = std.testing.allocator;
+    var lockfile = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+
+    var dependencies = std.StringHashMap([]const u8).init(allocator);
+    try dependencies.put(try allocator.dupe(u8, "bunfig"), try allocator.dupe(u8, "^0.15.15"));
+    var system = std.StringHashMap([]const u8).init(allocator);
+    try system.put(try allocator.dupe(u8, "bun.sh"), try allocator.dupe(u8, "^1.3.14"));
+    try lockfile.addWorkspace(allocator, "", .{
+        .name = try allocator.dupe(u8, "fixture"),
+        .dependencies = dependencies,
+        .system = system,
+    });
+
+    var constraints = buildConstraintMapFromWorkspaces(&lockfile.workspaces, allocator);
+    defer constraints.deinit();
+
+    try std.testing.expectEqualStrings("^0.15.15", constraints.get("bunfig").?);
+    try std.testing.expectEqualStrings("^1.3.14", constraints.get("bun.sh").?);
 }
 
 test "canSkipFromLockfile - no matching entry" {

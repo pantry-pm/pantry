@@ -360,8 +360,10 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
     const content = try io_helper.readFileAlloc(allocator, file_path, 5 * 1024 * 1024);
     defer allocator.free(content);
 
-    // Perf: Quick sanity check — lockfile must contain "packages" to be useful
-    if (content.len < 20 or std.mem.indexOf(u8, content[0..@min(content.len, 200)], "\"packages\"") == null) {
+    // Quick sanity check — lockfile must contain "packages" to be useful.
+    // Monorepo lockfiles place their complete "workspaces" object first, so
+    // the packages key can legitimately occur tens of kilobytes into the file.
+    if (!hasPackagesSection(content)) {
         return error.InvalidLockfile;
     }
 
@@ -576,6 +578,19 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
     }
 
     return lockfile;
+}
+
+fn hasPackagesSection(content: []const u8) bool {
+    return content.len >= 20 and std.mem.indexOf(u8, content, "\"packages\"") != null;
+}
+
+test "lockfile sanity check accepts packages after large workspace metadata" {
+    var content: [600]u8 = undefined;
+    @memset(&content, ' ');
+    @memcpy(content[550..560], "\"packages\"");
+
+    try std.testing.expect(hasPackagesSection(&content));
+    try std.testing.expect(!hasPackagesSection("{\"workspaces\": {}}"));
 }
 
 test "lockfile write and read" {

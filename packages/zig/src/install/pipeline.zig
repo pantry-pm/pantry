@@ -695,17 +695,17 @@ const DownloadThreadCtx = struct {
                 continue;
             }
 
-            // Check if already installed on disk
-            var exist_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const install_dir = std.fmt.bufPrint(&exist_buf, "{s}/{s}/{s}", .{ ctx.project_root, ctx.modules_dir, pkg.name }) catch {
-                ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = null };
-                continue;
-            };
-
-            const already_installed = blk: {
-                io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
-                break :blk true;
-            };
+            // Check if the exact resolved version is already installed on disk.
+            // A name-only directory check retained stale packages after a
+            // manifest constraint was bumped.
+            const already_installed = installedNpmPackageMatches(
+                ctx.installer.allocator,
+                ctx.project_root,
+                ctx.modules_dir,
+                pkg.name,
+                pkg.version,
+                false,
+            );
 
             if (already_installed) {
                 ctx.results[i] = .{
@@ -720,6 +720,12 @@ const DownloadThreadCtx = struct {
             if (ctx.verbose) {
                 std.debug.print("[verbose:pipeline:download] downloading: {s} @ {s}\n", .{ pkg.name, pkg.version });
             }
+
+            var exist_buf: [std.fs.max_path_bytes]u8 = undefined;
+            const install_dir = std.fmt.bufPrint(&exist_buf, "{s}/{s}/{s}", .{ ctx.project_root, ctx.modules_dir, pkg.name }) catch {
+                ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = null };
+                continue;
+            };
 
             // Check content-addressed cache
             const cached_tarball = ctx.installer.cache.get(pkg.name, pkg.version) catch null;
@@ -1096,7 +1102,73 @@ fn isInstalledOrCached(
         const cached = inst.cache.get(pkg.name, pkg.version) catch null;
         return cached != null;
     };
-    return true;
+
+    // A directory with the right package name is not enough: constraints can
+    // resolve to a newer release while an older package is still on disk. The
+    // previous name-only check silently retained that stale version and then
+    // rewrote pantry.lock with the new constraint as though it were resolved.
+    if (pkg.source == .npm) {
+        return installedNpmPackageMatches(inst.allocator, project_root, modules_dir, pkg.name, pkg.version, false);
+    }
+
+    if (pkg.source == .pantry) {
+        var version_dir_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const version_dir = std.fmt.bufPrint(&version_dir_buf, "{s}/v{s}", .{ install_dir, pkg.version }) catch return false;
+        io_helper.accessAbsolute(version_dir, .{}) catch return false;
+        return true;
+    }
+
+    return false;
+}
+
+fn packageManifestHasVersion(allocator: std.mem.Allocator, manifest: []const u8, expected_version: []const u8) bool {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, manifest, .{}) catch return false;
+    defer parsed.deinit();
+    if (parsed.value != .object) return false;
+    const version = parsed.value.object.get("version") orelse return false;
+    return version == .string and std.mem.eql(u8, version.string, expected_version);
+}
+
+fn packageManifestSatisfiesConstraint(allocator: std.mem.Allocator, manifest: []const u8, version_constraint: []const u8) bool {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, manifest, .{}) catch return false;
+    defer parsed.deinit();
+    if (parsed.value != .object) return false;
+    const version = parsed.value.object.get("version") orelse return false;
+    if (version != .string) return false;
+    if (std.mem.eql(u8, version.string, version_constraint)) return true;
+
+    const semver = @import("../packages/semver.zig");
+    const constraint = semver.parseConstraint(version_constraint) catch return false;
+    return semver.satisfiesConstraint(version.string, constraint);
+}
+
+fn installedNpmPackageMatches(
+    allocator: std.mem.Allocator,
+    project_root: []const u8,
+    modules_dir: []const u8,
+    name: []const u8,
+    expected_version: []const u8,
+    accept_constraint: bool,
+) bool {
+    var manifest_path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const manifest_path = std.fmt.bufPrint(&manifest_path_buf, "{s}/{s}/{s}/package.json", .{ project_root, modules_dir, name }) catch return false;
+    const manifest = io_helper.readFileAlloc(allocator, manifest_path, 2 * 1024 * 1024) catch return false;
+    defer allocator.free(manifest);
+    return if (accept_constraint)
+        packageManifestSatisfiesConstraint(allocator, manifest, expected_version)
+    else
+        packageManifestHasVersion(allocator, manifest, expected_version);
+}
+
+test "installed package manifest must match the resolved version" {
+    const allocator = std.testing.allocator;
+    const manifest = "{\"name\":\"bunfig\",\"version\":\"0.15.6\"}";
+
+    try std.testing.expect(packageManifestHasVersion(allocator, manifest, "0.15.6"));
+    try std.testing.expect(!packageManifestHasVersion(allocator, manifest, "0.15.15"));
+    try std.testing.expect(!packageManifestHasVersion(allocator, "{\"name\":\"bunfig\"}", "0.15.15"));
+    try std.testing.expect(packageManifestSatisfiesConstraint(allocator, manifest, "^0.15.0"));
+    try std.testing.expect(!packageManifestSatisfiesConstraint(allocator, manifest, "^0.15.15"));
 }
 
 fn buildNpmBulkDownloadBody(
@@ -1369,10 +1441,14 @@ pub fn run(
             // Only check npm packages — system/pantry packages aren't in ./pantry/
             if (dep.source != .npm) continue;
             npm_count += 1;
-            var buf: [std.fs.max_path_bytes]u8 = undefined;
-            const dir = std.fmt.bufPrint(&buf, "{s}/{s}/{s}", .{ project_root, inst.modules_dir, dep.name }) catch continue;
-            io_helper.accessAbsolute(dir, .{}) catch continue;
-            present_count += 1;
+            if (installedNpmPackageMatches(
+                allocator,
+                project_root,
+                inst.modules_dir,
+                dep.name,
+                dep.version,
+                true,
+            )) present_count += 1;
         }
 
         // Skip only when every top-level npm dep is present on disk. Missing

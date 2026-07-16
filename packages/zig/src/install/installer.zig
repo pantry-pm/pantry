@@ -15,6 +15,19 @@ const Paths = core.Paths;
 const PackageCache = cache.PackageCache;
 const PackageSpec = packages.PackageSpec;
 
+/// The lockfile extraction fast path is only safe for entries that carry an
+/// immutable HTTP tarball URL and an exact resolved version. Registry markers
+/// and legacy constraint-only entries must go through their source-aware
+/// resolver instead of being fabricated into npm tarball URLs.
+fn canRestoreLockTarball(version: []const u8, resolved: []const u8) bool {
+    if (!std.mem.startsWith(u8, resolved, "https://") and !std.mem.startsWith(u8, resolved, "http://")) return false;
+    if (version.len == 0) return false;
+    return switch (version[0]) {
+        '^', '~', '>', '<', '=', '*', '|' => false,
+        else => true,
+    };
+}
+
 /// Installation options
 pub const InstallOptions = struct {
     /// Force reinstall even if cached
@@ -542,6 +555,15 @@ pub const Installer = struct {
         return self.npm_cache.containsResolution(cache_key);
     }
 
+    /// Return caller-owned resolution metadata already obtained by the bulk or
+    /// per-package npm resolver. Lockfile writers use this to persist the exact
+    /// tarball and integrity without issuing a duplicate registry request.
+    pub fn getCachedNpmResolution(self: *Installer, name: []const u8, version: []const u8) ?NpmResolution {
+        var cache_key_buf: [512]u8 = undefined;
+        const cache_key = std.fmt.bufPrint(&cache_key_buf, "{s}@{s}", .{ name, version }) catch return null;
+        return self.npm_cache.getResolution(cache_key, self.allocator);
+    }
+
     /// Batch install all packages from lockfile in parallel.
     /// This is the fast path when lockfile exists but modules are missing:
     /// 1. Flatten lockfile → list of {name, version, tarball_url}
@@ -567,7 +589,7 @@ pub const Installer = struct {
         var lf_iter = lf.packages.iterator();
         while (lf_iter.next()) |entry| {
             const pkg = entry.value_ptr.*;
-            if (pkg.name.len == 0 or pkg.version.len == 0) continue;
+            if (pkg.name.len == 0 or !canRestoreLockTarball(pkg.version, pkg.resolved)) continue;
 
             // Check if already installed on disk
             var dir_buf: [std.fs.max_path_bytes]u8 = undefined;
@@ -577,27 +599,10 @@ pub const Installer = struct {
             io_helper.accessAbsolute(install_dir, .{}) catch {
                 // Not installed — need to extract
 
-                // Build tarball URL from lockfile resolved field or npm convention
-                const url = if (pkg.resolved.len > 0 and !std.mem.startsWith(u8, pkg.resolved, "registry:"))
-                    pkg.resolved
-                else blk: {
-                    // Construct npm tarball URL from name+version
-                    const base_name = if (std.mem.indexOf(u8, pkg.name, "/")) |slash|
-                        pkg.name[slash + 1 ..]
-                    else
-                        pkg.name;
-                    // Perf: Use stack buffer for URL construction, then dupe only once
-                    var url_buf: [1024]u8 = undefined;
-                    const url_str = std.fmt.bufPrint(&url_buf, "https://registry.npmjs.org/{s}/-/{s}-{s}.tgz", .{
-                        pkg.name, base_name, pkg.version,
-                    }) catch continue;
-                    break :blk self.allocator.dupe(u8, url_str) catch continue;
-                };
-
                 to_install.append(self.allocator, .{
                     .name = pkg.name,
                     .version = pkg.version,
-                    .tarball_url = url,
+                    .tarball_url = pkg.resolved,
                 }) catch continue;
                 continue;
             };
@@ -683,8 +688,7 @@ pub const Installer = struct {
             }
         }
 
-        // Note: tarball_url strings point into lockfile-owned memory (for lockfile resolved fields)
-        // or are constructed URLs. Constructed URLs are short-lived and freed by ArrayList deinit.
+        // Tarball URL strings point into lockfile-owned memory.
 
         return installed;
     }
@@ -4111,6 +4115,40 @@ test "Installer basic operations" {
 
     // Unknown packages should fail cleanly without creating partial state.
     try std.testing.expectError(error.PackageNotFound, installer.install(spec, .{}));
+}
+
+test "lockfile restore fast path accepts only immutable npm tarballs" {
+    const tarball = "https://registry.npmjs.org/bunfig/-/bunfig-0.15.15.tgz";
+    try std.testing.expect(canRestoreLockTarball("0.15.15", tarball));
+    try std.testing.expect(!canRestoreLockTarball("^0.15.15", tarball));
+    try std.testing.expect(!canRestoreLockTarball("", tarball));
+    try std.testing.expect(!canRestoreLockTarball("0.15.15", ""));
+    try std.testing.expect(!canRestoreLockTarball("0.15.15", "registry:bunfig@0.15.15"));
+}
+
+test "cached npm resolution exposes caller-owned lockfile metadata" {
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    installer.npm_cache.putResolution(
+        "bunfig@^0.15.15",
+        "0.15.15",
+        "https://registry.npmjs.org/bunfig/-/bunfig-0.15.15.tgz",
+        "sha512-fixture",
+    );
+
+    const resolution = installer.getCachedNpmResolution("bunfig", "^0.15.15").?;
+    defer {
+        allocator.free(resolution.version);
+        allocator.free(resolution.tarball_url);
+        if (resolution.integrity) |integrity| allocator.free(integrity);
+    }
+    try std.testing.expectEqualStrings("0.15.15", resolution.version);
+    try std.testing.expectEqualStrings("sha512-fixture", resolution.integrity.?);
+    try std.testing.expect(installer.getCachedNpmResolution("bunfig", "^1") == null);
 }
 
 test "HoisteVersionCache tryReserve is single-winner" {

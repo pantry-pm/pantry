@@ -70,79 +70,12 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
 
     if (lockfile.packages.count() == 0) return null;
 
-    if (is_workspace) {
-        // Workspace fast path: verify all lockfile packages exist on disk
-        var all_exist = true;
-        var ws_iter = lockfile.packages.iterator();
-        while (ws_iter.next()) |entry| {
-            var dest_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const dest = std.fmt.bufPrint(&dest_buf, "{s}/{s}/{s}", .{ effective_dir, modules_dir, entry.value_ptr.name }) catch {
-                all_exist = false;
-                break;
-            };
-            io_helper.accessAbsolute(dest, .{}) catch {
-                all_exist = false;
-                break;
-            };
-        }
-
-        if (all_exist) {
-            // Also check if any workspace member's package.json was modified after the lockfile.
-            // This detects bumped dependency versions, added/removed deps, etc.
-            //
-            // Important: we stat the *lockfile file itself* rather than reading
-            // `lockfile.generated_at`, because the lockfile is written with the
-            // generatedAt field elided so it's byte-for-byte deterministic —
-            // the in-memory `generated_at` is just the time this process loaded
-            // it, which would false-invalidate every run.
-            const lockfile_stat = io_helper.statFile(lockfile_path_stack) catch {
-                return null;
-            };
-            const lockfile_mtime_ns: i128 = lockfile_stat.mtime;
-            var ws_dep_it = lockfile.workspaces.iterator();
-            while (ws_dep_it.next()) |ws_entry| {
-                const ws_rel_path = ws_entry.key_ptr.*;
-                var pkg_path_buf: [std.fs.max_path_bytes]u8 = undefined;
-                const pkg_path = if (ws_rel_path.len == 0)
-                    std.fmt.bufPrint(&pkg_path_buf, "{s}/package.json", .{effective_dir}) catch continue
-                else
-                    std.fmt.bufPrint(&pkg_path_buf, "{s}/{s}/package.json", .{ effective_dir, ws_rel_path }) catch continue;
-                const stat = io_helper.statFile(pkg_path) catch continue;
-                if (stat.mtime > lockfile_mtime_ns) {
-                    return null; // package.json modified after lockfile — fall through to slow path
-                }
-            }
-
-            // Also check the root workspace file itself (may not be key "" in workspaces)
-            if (ws_path_alloc) |ws_file| {
-                const ws_stat = io_helper.statFile(ws_file) catch null;
-                if (ws_stat) |s| {
-                    if (s.mtime > lockfile_mtime_ns) {
-                        return null;
-                    }
-                }
-            }
-
-            // Workspace fast path: same JS staleness check as non-workspace.
-            // The mtime check at the top of this block already invalidates
-            // the fast path when a member's package.json was touched, but a
-            // user can also leave node_modules untouched (e.g., manual rm)
-            // — the delegate's own no-op check keeps the cost bounded.
-            {
-                const js_delegate = @import("../../../deps/js_delegate.zig");
-                _ = js_delegate.installJsDeps(allocator, effective_dir, false) catch {};
-            }
-
-            helpers.ensureBinSymlinks(allocator, effective_dir, modules_dir);
-
-            const end_ts = io_helper.clockGettime();
-            const end_time = @as(i64, @intCast(end_ts.sec)) * 1000 + @as(i64, @intCast(@divFloor(end_ts.nsec, 1_000_000)));
-            const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time));
-            style.printUpToDate(lockfile.packages.count(), lockfile.workspaces.count(), elapsed_ms);
-            return .{ .exit_code = 0 };
-        }
-        return null; // Not up to date, fall through to slow path
-    }
+    // Workspace manifests and companion deps.yaml files must be compared by
+    // declared constraints, not directory counts or mtimes. The workspace
+    // installer below performs that authoritative check after parsing every
+    // member; bypassing it allowed pulled/checked-out manifests with older
+    // mtimes to leave pantry.lock permanently stale.
+    if (is_workspace) return null;
 
     // Non-workspace path: check deps against lockfile
     const found_path = dep_path orelse return null;
@@ -1622,7 +1555,13 @@ fn installCompanionDepsFile(
     const pipeline = @import("../../../install/pipeline.zig");
 
     const deps = parser.inferDependencies(allocator, df) catch return .{ .exit_code = 0 };
-    defer allocator.free(deps);
+    defer {
+        for (deps) |*dep| {
+            var owned_dep = dep.*;
+            owned_dep.deinit(allocator);
+        }
+        allocator.free(deps);
+    }
     if (deps.len == 0) return .{ .exit_code = 0 };
 
     const proj_basename = std.fs.path.basename(project_root);
@@ -1707,7 +1646,133 @@ fn installCompanionDepsFile(
         };
     }
 
+    // The workspace installer writes pantry.lock before this companion
+    // deps.yaml pass. Merge the resolved system packages back into that same
+    // lockfile so `pantry install` actually refreshes stale runtime pins while
+    // preserving every workspace and npm entry.
+    if (!options.no_save) {
+        const lockfile_changed = try syncCompanionLockfile(
+            allocator,
+            project_root,
+            deps,
+            pipeline_result.results,
+            options.frozen_lockfile,
+        );
+        if (options.frozen_lockfile and lockfile_changed) {
+            return .{
+                .exit_code = 1,
+                .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),
+            };
+        }
+    }
+
     return .{ .exit_code = 0 };
+}
+
+/// Merge packages installed from a workspace's companion deps file into the
+/// comprehensive v2 lockfile. Returns true when the lockfile content changed.
+fn syncCompanionLockfile(
+    allocator: std.mem.Allocator,
+    project_root: []const u8,
+    deps: []const @import("../../../deps/parser.zig").PackageDependency,
+    results: []const @import("../../../install/pipeline.zig").PackageResult,
+    frozen: bool,
+) !bool {
+    const lockfile_writer = @import("../../../packages/lockfile.zig");
+    const lockfile_path = try std.fs.path.join(allocator, &.{ project_root, "pantry.lock" });
+    defer allocator.free(lockfile_path);
+
+    var original: ?lib.packages.Lockfile = lockfile_writer.readLockfile(allocator, lockfile_path) catch null;
+    defer if (original) |*lockfile| lockfile.deinit(allocator);
+
+    var lockfile = if (original != null)
+        try lockfile_writer.readLockfile(allocator, lockfile_path)
+    else
+        try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+
+    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results);
+
+    const changed = if (original) |*existing|
+        !lockfile_writer.lockfilesEqual(existing, &lockfile)
+    else
+        true;
+
+    if (changed and !frozen) {
+        style.printLockfileSaving();
+        try lockfile_writer.writeLockfile(allocator, &lockfile, lockfile_path);
+        style.printLockfileSaved();
+    }
+
+    return changed;
+}
+
+/// Update the in-memory lockfile while retaining unrelated workspace/package
+/// data. Kept separate from disk I/O so the merge behavior is regression tested.
+fn mergeCompanionLockfileEntries(
+    allocator: std.mem.Allocator,
+    lockfile: *lib.packages.Lockfile,
+    deps: []const @import("../../../deps/parser.zig").PackageDependency,
+    results: []const @import("../../../install/pipeline.zig").PackageResult,
+) !void {
+    // Record the requested constraints on the root workspace. This gives the
+    // fast path a stable source-of-truth without discarding system deps declared
+    // directly in package.json.
+    if (lockfile.workspaces.getPtr("")) |root_workspace| {
+        if (root_workspace.system == null)
+            root_workspace.system = std.StringHashMap([]const u8).init(allocator);
+
+        var system = &root_workspace.system.?;
+        for (deps) |dep| {
+            const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
+            if (std.mem.indexOfScalar(u8, clean_name, '.') == null) continue;
+
+            const owned_version = try allocator.dupe(u8, dep.version);
+            if (system.getPtr(clean_name)) |existing_version| {
+                allocator.free(existing_version.*);
+                existing_version.* = owned_version;
+            } else {
+                try system.put(try allocator.dupe(u8, clean_name), owned_version);
+            }
+        }
+    }
+
+    for (results) |result| {
+        if (!result.success or result.name.len == 0) continue;
+        const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(result.name));
+
+        // Replace every older pin for this package, regardless of its key's
+        // version spelling (constraint or resolved version).
+        var keys_to_remove = std.ArrayList([]const u8).empty;
+        defer {
+            for (keys_to_remove.items) |key| allocator.free(key);
+            keys_to_remove.deinit(allocator);
+        }
+
+        var package_it = lockfile.packages.iterator();
+        while (package_it.next()) |entry| {
+            if (std.mem.eql(u8, entry.value_ptr.name, clean_name))
+                try keys_to_remove.append(allocator, try allocator.dupe(u8, entry.key_ptr.*));
+        }
+
+        for (keys_to_remove.items) |key| {
+            if (lockfile.packages.fetchRemove(key)) |removed| {
+                allocator.free(removed.key);
+                var old_entry = removed.value;
+                old_entry.deinit(allocator);
+            }
+        }
+
+        const entry = lib.packages.LockfileEntry{
+            .name = try allocator.dupe(u8, clean_name),
+            .version = try allocator.dupe(u8, result.version),
+            .source = if (std.mem.indexOfScalar(u8, clean_name, '.') != null) .pantry else .npm,
+            .resolved = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version }),
+        };
+        const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, result.version });
+        defer allocator.free(key);
+        try lockfile.addEntry(allocator, key, entry);
+    }
 }
 
 test "depDomainFromSpec keeps the version constraint its parent declares" {
@@ -1737,4 +1802,54 @@ test "depDomainFromSpec keeps the version constraint its parent declares" {
 
     // Platform-tagged pseudo-domains are not installable packages.
     try t.expect(depDomainFromSpec("darwin/x86-64") == null);
+}
+
+test "companion deps replace stale system pins without dropping workspace packages" {
+    const t = std.testing;
+    const allocator = t.allocator;
+    const parser = @import("../../../deps/parser.zig");
+    const pipeline = @import("../../../install/pipeline.zig");
+
+    var lockfile = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+
+    try lockfile.addWorkspace(allocator, "", .{
+        .name = try allocator.dupe(u8, "fixture"),
+        .system = blk: {
+            var system = std.StringHashMap([]const u8).init(allocator);
+            try system.put(try allocator.dupe(u8, "bun.sh"), try allocator.dupe(u8, "^1.3.4"));
+            break :blk system;
+        },
+    });
+    try lockfile.addWorkspace(allocator, "packages/ui", .{
+        .name = try allocator.dupe(u8, "@fixture/ui"),
+    });
+    try lockfile.addEntry(allocator, "bun.sh@^1.3.4", .{
+        .name = try allocator.dupe(u8, "bun.sh"),
+        .version = try allocator.dupe(u8, "^1.3.4"),
+        .source = .pantry,
+    });
+    try lockfile.addEntry(allocator, "lit@3.3.1", .{
+        .name = try allocator.dupe(u8, "lit"),
+        .version = try allocator.dupe(u8, "3.3.1"),
+        .source = .npm,
+    });
+
+    const deps = [_]parser.PackageDependency{.{
+        .name = "bun.sh",
+        .version = "^1.3.14",
+    }};
+    const results = [_]pipeline.PackageResult{.{
+        .name = "bun.sh",
+        .version = "1.3.14",
+        .success = true,
+    }};
+
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results);
+
+    try t.expectEqualStrings("^1.3.14", lockfile.workspaces.get("").?.system.?.get("bun.sh").?);
+    try t.expect(lockfile.packages.get("bun.sh@^1.3.4") == null);
+    try t.expectEqualStrings("1.3.14", lockfile.packages.get("bun.sh@1.3.14").?.version);
+    try t.expect(lockfile.packages.get("lit@3.3.1") != null);
+    try t.expect(lockfile.workspaces.get("packages/ui") != null);
 }
