@@ -513,63 +513,115 @@ async function resolveZigShortDevVersion(shortVersion: string): Promise<string |
   return null
 }
 
+/** Does `version` satisfy `op` + `target`? Shared by the bundled and live scans. */
+function satisfiesConstraint(version: string, op: string, target: number[], targetRaw: string): boolean {
+  // Skip dev/pre-release versions for stable constraints
+  if (version.includes('-') && !targetRaw.includes('-')) return false
+  const parts = version.split('.').map(Number)
+  if (parts.some(Number.isNaN)) return false
+
+  // A partial constraint omits components ("^26", "~1.3"), so read every slot
+  // through a 0 default on BOTH sides. Comparing against a bare target[1] made
+  // each test `x > undefined` — always false — so "^26" matched nothing and the
+  // caller silently installed "latest" instead of a node 26.
+  const [vMaj, vMin, vPat] = [parts[0] || 0, parts[1] || 0, parts[2] || 0]
+  const [tMaj, tMin, tPat] = [target[0] || 0, target[1] || 0, target[2] || 0]
+
+  if (op === '^') {
+    // ^0.15.1 means >=0.15.1 and <0.16.0 (major 0 pins the minor too)
+    if (tMaj === 0) return vMaj === 0 && vMin === tMin && vPat >= tPat
+    // ^x.y.z: same major, minor.patch >= target
+    return vMaj === tMaj && (vMin > tMin || (vMin === tMin && vPat >= tPat))
+  }
+  if (op === '~') {
+    // ~0.15.1 means >=0.15.1 and <0.16.0
+    return vMaj === tMaj && vMin === tMin && vPat >= tPat
+  }
+  if (op === '>=') {
+    return vMaj > tMaj || (vMaj === tMaj && vMin > tMin) || (vMaj === tMaj && vMin === tMin && vPat >= tPat)
+  }
+  return false
+}
+
+/**
+ * Live version list for the domains that publish one, newest-first.
+ *
+ * The bundled catalog in `packages/index.js` is a point-in-time snapshot: it
+ * goes stale the moment upstream cuts a release (bun.sh tops out at 1.3.0
+ * there while 1.3.14 is current), so a constraint like `^1.3.14` matched
+ * nothing and we silently installed "latest" instead. Consulting upstream
+ * keeps a correct `deps.yaml` pin from depending on when this package was
+ * last published. Returns [] for domains with no live source — the bundled
+ * list is then the only answer.
+ */
+async function fetchLiveVersions(domain: string): Promise<string[]> {
+  if (domain === 'bun.sh') {
+    const resp = await fetchJSON('https://api.github.com/repos/oven-sh/bun/releases?per_page=100').catch(() => null)
+    const releases = (resp as Array<{ tag_name?: string }> | null) || []
+    return releases.map(r => (r.tag_name || '').replace(/^bun-v/, '')).filter(Boolean)
+  }
+  if (domain === 'nodejs.org') {
+    const resp = await fetchJSON('https://nodejs.org/dist/index.json').catch(() => null)
+    const versions = (resp as Array<{ version?: string }> | null) || []
+    return versions.map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
+  }
+  return []
+}
+
+/** Newest-first semver sort, so the first match found is always the highest. */
+function compareVersionsDesc(a: string, b: string): number {
+  const pa = a.split('.').map(Number)
+  const pb = b.split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pb[i] || 0) - (pa[i] || 0)
+    if (d) return d
+  }
+  return 0
+}
+
 /**
  * Resolve a semver constraint (^1.0.0, ~1.2.0, >=1.0.0, etc.) to the best matching concrete version.
  */
 async function resolveVersionConstraint(domain: string, constraint: string): Promise<string> {
-  // Get available versions from package metadata
-  let availableVersions: readonly string[]
-  try {
-    const pkgKey = domain.replace(/[^a-z0-9]/gi, '').toLowerCase()
-    const { packages } = await import('./packages/index.js').catch(() => import('./index.js'))
-    const pkg = (packages as any)[pkgKey]
-    availableVersions = pkg?.versions || []
-  }
-  catch {
-    availableVersions = []
-  }
-
-  if (availableVersions.length === 0) {
-    // Fallback to latest if no package metadata available
-    return resolveLatestVersion(domain)
-  }
-
   // Parse constraint: ^0.15.1, ~0.15.1, >=0.15.1, etc.
   // eslint-disable-next-line no-super-linear-backtracking
   const match = constraint.match(/^([~^>=<]+)(\d+(?:\.\d+){0,10})/)
   if (!match) return resolveLatestVersion(domain)
 
   const op = match[1]
-  const target = match[2].split('.').map(Number)
+  const targetRaw = match[2]
+  const target = targetRaw.split('.').map(Number)
 
-  for (const ver of availableVersions) {
-    // Skip dev/pre-release versions for stable constraints
-    if (ver.includes('-') && !match[2].includes('-')) continue
-    const parts = ver.split('.').map(Number)
-
-    if (op === '^') {
-      // ^0.15.1 means >=0.15.1 and <0.16.0 (or <1.0.0 if major is 0 and minor is the "major")
-      if (target[0] === 0) {
-        // ^0.x.y: same major AND minor, patch >= target patch
-        if (parts[0] === target[0] && parts[1] === target[1] && (parts[2] || 0) >= (target[2] || 0)) return ver
-      }
-      else {
-        // ^x.y.z: same major, minor.patch >= target
-        if (parts[0] === target[0] && (parts[1] > target[1] || (parts[1] === target[1] && (parts[2] || 0) >= (target[2] || 0)))) return ver
-      }
-    }
-    else if (op === '~') {
-      // ~0.15.1 means >=0.15.1 and <0.16.0
-      if (parts[0] === target[0] && parts[1] === target[1] && (parts[2] || 0) >= (target[2] || 0)) return ver
-    }
-    else if (op === '>=') {
-      if (parts[0] > target[0] || (parts[0] === target[0] && parts[1] > target[1]) || (parts[0] === target[0] && parts[1] === target[1] && (parts[2] || 0) >= (target[2] || 0))) return ver
-    }
+  // Get available versions from package metadata
+  let bundledVersions: readonly string[]
+  try {
+    const pkgKey = domain.replace(/[^a-z0-9]/gi, '').toLowerCase()
+    const { packages } = await import('./packages/index.js').catch(() => import('./index.js'))
+    const pkg = (packages as any)[pkgKey]
+    bundledVersions = pkg?.versions || []
+  }
+  catch {
+    bundledVersions = []
   }
 
-  // No match found — fall back to latest
-  console.warn(`No version matching ${constraint} found for ${domain}, falling back to latest`)
-  return resolveLatestVersion(domain)
+  // Union of upstream + bundled, sorted so the first match is the highest one.
+  // Merging rather than preferring either list keeps resolution working when
+  // upstream is unreachable (bundled-only) and when it's ahead (live-only).
+  const live = await fetchLiveVersions(domain)
+  const candidates = [...new Set([...live, ...bundledVersions])].sort(compareVersionsDesc)
+
+  for (const ver of candidates) {
+    if (satisfiesConstraint(ver, op, target, targetRaw)) return ver
+  }
+
+  // Nothing upstream or bundled satisfies the pin. Installing "latest" here
+  // would hand back a version the caller explicitly did not ask for, which is
+  // worse than stopping: a `^1.2` pin quietly became 1.3.x.
+  throw new Error(
+    `No version of ${domain} satisfies "${constraint}" `
+    + `(checked ${candidates.length} version${candidates.length === 1 ? '' : 's'}`
+    + `${candidates.length > 0 ? `, newest ${candidates[0]}` : ''}).`,
+  )
 }
 
 // ── Helpers ──

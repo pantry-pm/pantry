@@ -233,7 +233,11 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
 /// constraint and ` # comment`. e.g. `linux:gnu.org/gcc^14 # note` → `gnu.org/gcc`
 /// (on Linux), `apache.org/apr^1` → `apache.org/apr`. Returned slice points into
 /// `spec_in` (a static catalog string).
-fn depDomainFromSpec(spec_in: []const u8) ?[]const u8 {
+/// A catalog dependency spec split into its parts:
+/// `unicode.org^73 # v25` → domain `unicode.org`, constraint `^73`.
+const DepSpec = struct { domain: []const u8, constraint: []const u8 };
+
+fn depDomainFromSpec(spec_in: []const u8) ?DepSpec {
     var spec = spec_in;
     if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
     spec = std.mem.trim(u8, spec, " \t");
@@ -264,14 +268,19 @@ fn depDomainFromSpec(spec_in: []const u8) ?[]const u8 {
     // Skip malformed platform-tag pseudo-domains (e.g. `darwin/x86-64`) some
     // catalog entries carry — not installable packages.
     if (std.mem.startsWith(u8, domain, "darwin/") or std.mem.startsWith(u8, domain, "linux/") or std.mem.startsWith(u8, domain, "windows/")) return null;
-    return domain;
+
+    var constraint = std.mem.trim(u8, spec[vend..], " \t");
+    // The catalog spells an exact pin `@1.1`; everything downstream speaks
+    // `name@version`, so drop the redundant leading `@`.
+    if (constraint.len > 0 and constraint[0] == '@') constraint = constraint[1..];
+    return .{ .domain = domain, .constraint = constraint };
 }
 
 /// Append the transitive system-dependency closure of the explicitly-requested
 /// packages to `package_args` (deduped) so a package's shared-library deps
 /// (php → libpq/libonig/libxml2/icu/libsodium, nginx → libpcre) are installed
-/// alongside it. Deps are read from the embedded catalog and installed at
-/// `latest` (packages are built against current dep versions). Best-effort.
+/// alongside it. Deps are read from the embedded catalog and installed at the
+/// version each parent declares. Best-effort.
 fn appendTransitiveDeps(allocator: std.mem.Allocator, package_args: *std.ArrayList([]const u8)) void {
     const generated = @import("../../../packages/generated.zig");
     var seen = std.StringHashMap(void).init(allocator);
@@ -295,10 +304,20 @@ fn appendTransitiveDeps(allocator: std.mem.Allocator, package_args: *std.ArrayLi
         const info = generated.getPackageByDomain(queue.items[i]) orelse continue;
         for (info.dependencies) |spec| {
             const dep = depDomainFromSpec(spec) orelse continue;
-            if (seen.contains(dep)) continue;
-            seen.put(dep, {}) catch {};
-            queue.append(allocator, dep) catch {};
-            const owned = allocator.dupe(u8, dep) catch continue;
+            if (seen.contains(dep.domain)) continue;
+            seen.put(dep.domain, {}) catch {};
+            queue.append(allocator, dep.domain) catch {};
+
+            // Install each dep at the version its parent declares, not `latest`.
+            // A package links the library it was BUILT against: node v26 wants
+            // unicode.org v73 and openssl v1.1 (the catalog pins both), so
+            // resolving them to latest installed icu 78 / openssl 3.6 and left
+            // node unable to start at all — `dyld: Library not loaded:
+            // @rpath/unicode.org/v73/lib/libicui18n.dylib`.
+            const owned = if (dep.constraint.len > 0)
+                std.fmt.allocPrint(allocator, "{s}@{s}", .{ dep.domain, dep.constraint }) catch continue
+            else
+                allocator.dupe(u8, dep.domain) catch continue;
             package_args.append(allocator, owned) catch {
                 allocator.free(owned);
             };
@@ -1475,11 +1494,28 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             if (tracked_integrity) |ti| allocator.free(ti);
         };
 
-        // Update package.json with the new dependency (skip when --no-save)
-        if (!opts.no_save) {
-            helpers.addDependencyToPackageJson(allocator, project_root, name, result.version, options.dev_only) catch |err| {
-                style.printWarn("Failed to update package.json: {}\n", .{err});
-            };
+        // Record the new dependency in the manifest (skip when --no-save).
+        //
+        // Only what the user actually asked for: `is_transitive_dep` entries are
+        // the system-library closure we expanded above (node pulls in unicode.org,
+        // openssl.org, zlib.net, curl.se/ca-certs), and listing those as direct
+        // dependencies claims the project depends on them directly. Worse, they
+        // were recorded at the *closure's* resolved version rather than the one
+        // actually installed, so the manifest contradicted what was on disk.
+        //
+        // And route by source: system packages are declared in deps.yaml, npm
+        // packages in package.json. Writing a domain like `curl.se/ca-certs` into
+        // package.json left pnpm unable to install the project at all.
+        if (!opts.no_save and !is_transitive_dep) {
+            if (spec.source == .pantry) {
+                helpers.addDependencyToDepsYaml(allocator, project_root, name, result.version) catch |err| {
+                    style.printWarn("Failed to update deps.yaml: {}\n", .{err});
+                };
+            } else {
+                helpers.addDependencyToPackageJson(allocator, project_root, name, result.version, options.dev_only) catch |err| {
+                    style.printWarn("Failed to update package.json: {}\n", .{err});
+                };
+            }
         }
     }
 
@@ -1672,4 +1708,33 @@ fn installCompanionDepsFile(
     }
 
     return .{ .exit_code = 0 };
+}
+
+test "depDomainFromSpec keeps the version constraint its parent declares" {
+    const t = std.testing;
+
+    // A package links the library it was built against, so the closure must
+    // install the declared version — resolving these to `latest` gave node v26
+    // icu 78 / openssl 3.6 instead of the v73 / v1.1 it links, and node then
+    // died on startup with a dyld "Library not loaded" error.
+    const icu = depDomainFromSpec("unicode.org^73 # v25").?;
+    try t.expectEqualStrings("unicode.org", icu.domain);
+    try t.expectEqualStrings("^73", icu.constraint);
+
+    // `@1.1` is the catalog's exact-pin spelling; the `@` is dropped so the
+    // spec round-trips through the installer's `name@version` parsing.
+    const ssl = depDomainFromSpec("openssl.org@1.1").?;
+    try t.expectEqualStrings("openssl.org", ssl.domain);
+    try t.expectEqualStrings("1.1", ssl.constraint);
+
+    // An unconstrained dep stays unconstrained (resolves to latest).
+    const pnpm = depDomainFromSpec("pnpm.io").?;
+    try t.expectEqualStrings("pnpm.io", pnpm.domain);
+    try t.expectEqualStrings("", pnpm.constraint);
+
+    try t.expectEqualStrings(">=2.7", depDomainFromSpec("python.org>=2.7").?.constraint);
+    try t.expectEqualStrings("~23.3", depDomainFromSpec("nodejs.org~23.3").?.constraint);
+
+    // Platform-tagged pseudo-domains are not installable packages.
+    try t.expect(depDomainFromSpec("darwin/x86-64") == null);
 }

@@ -1376,6 +1376,86 @@ fn ensureConfiguredZigSymlink(allocator: std.mem.Allocator, proj_dir: []const u8
     io_helper.symLink(zig_bin, link_path) catch {};
 }
 
+/// Record a system (pantry-source) dependency in deps.yaml.
+///
+/// System packages belong here rather than in package.json: several of their
+/// domains are not legal npm package names — `curl.se/ca-certs` has a slash
+/// without an `@scope` — and pnpm refuses to install a project whose manifest
+/// contains one at all (ERR_PNPM_INVALID_DEPENDENCY_NAME), so saving them to
+/// package.json broke the very project we had just installed into.
+///
+/// Writes the flat, two-space-indented `dependencies:` map that
+/// readRequestedZigVersion and config/dependencies.zig parse.
+pub fn addDependencyToDepsYaml(
+    allocator: std.mem.Allocator,
+    project_root: []const u8,
+    pkg_name: []const u8,
+    pkg_version: []const u8,
+) !void {
+    const deps_path = try std.fs.path.join(allocator, &[_][]const u8{ project_root, "deps.yaml" });
+    defer allocator.free(deps_path);
+
+    const entry = try std.fmt.allocPrint(allocator, "  {s}: ^{s}", .{ pkg_name, pkg_version });
+    defer allocator.free(entry);
+
+    var out = try std.ArrayList(u8).initCapacity(allocator, 256);
+    defer out.deinit(allocator);
+
+    if (io_helper.readFileAlloc(allocator, deps_path, 1024 * 1024)) |content| {
+        defer allocator.free(content);
+
+        const key_prefix = try std.fmt.allocPrint(allocator, "{s}:", .{pkg_name});
+        defer allocator.free(key_prefix);
+
+        var wrote = false;
+        var saw_deps_key = false;
+        var lines = std.mem.splitScalar(u8, content, '\n');
+        var first = true;
+        while (lines.next()) |raw_line| {
+            const trimmed = std.mem.trim(u8, raw_line, " \t\r\n");
+
+            // Re-pin an existing entry in place, preserving the rest of the file.
+            if (!wrote and std.mem.startsWith(u8, trimmed, key_prefix)) {
+                if (!first) try out.append(allocator, '\n');
+                try out.appendSlice(allocator, entry);
+                wrote = true;
+                first = false;
+                continue;
+            }
+
+            if (!first) try out.append(allocator, '\n');
+            try out.appendSlice(allocator, raw_line);
+            first = false;
+
+            // New entry goes directly under the existing `dependencies:` key.
+            if (!wrote and !saw_deps_key and std.mem.eql(u8, trimmed, "dependencies:")) {
+                saw_deps_key = true;
+                try out.append(allocator, '\n');
+                try out.appendSlice(allocator, entry);
+                wrote = true;
+            }
+        }
+
+        // No `dependencies:` map yet — start one.
+        if (!wrote) {
+            if (out.items.len > 0 and out.items[out.items.len - 1] != '\n') try out.append(allocator, '\n');
+            try out.appendSlice(allocator, "dependencies:\n");
+            try out.appendSlice(allocator, entry);
+            try out.append(allocator, '\n');
+        }
+    } else |_| {
+        try out.appendSlice(allocator, "dependencies:\n");
+        try out.appendSlice(allocator, entry);
+        try out.append(allocator, '\n');
+    }
+
+    if (out.items.len > 0 and out.items[out.items.len - 1] != '\n') try out.append(allocator, '\n');
+
+    const file = try io_helper.cwd().createFile(io_helper.io, deps_path, .{});
+    defer file.close(io_helper.io);
+    try io_helper.writeAllToFile(file, out.items);
+}
+
 fn readRequestedZigVersion(allocator: std.mem.Allocator, proj_dir: []const u8) ?[]u8 {
     const deps_path = std.fmt.allocPrint(allocator, "{s}/deps.yaml", .{proj_dir}) catch return null;
     defer allocator.free(deps_path);
