@@ -40,6 +40,10 @@ export function versionSatisfiesSpec(version: string, spec: string): boolean {
   return false
 }
 
+export function isRollingVersionSpec(domain: string, spec: string): boolean {
+  return domain === 'ziglang.org' && spec.endsWith('-dev')
+}
+
 /**
  * Decide whether the action may reuse a concrete lock entry.
  *
@@ -50,7 +54,7 @@ export function versionSatisfiesSpec(version: string, spec: string): boolean {
  * cold setup; exact full development versions remain lockable.
  */
 export function shouldUseLockedVersion(domain: string, pinned: string, spec: string): boolean {
-  if (domain === 'ziglang.org' && spec.endsWith('-dev'))
+  if (isRollingVersionSpec(domain, spec))
     return false
   return versionSatisfiesSpec(pinned, spec)
 }

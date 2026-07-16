@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { shouldUseLockedVersion, versionSatisfiesSpec } from './lock-version'
+import { isRollingVersionSpec, shouldUseLockedVersion, versionSatisfiesSpec } from './lock-version'
 
 describe('versionSatisfiesSpec', () => {
   test('supports sentinels, exact versions, and common ranges', () => {
@@ -31,5 +31,13 @@ describe('shouldUseLockedVersion', () => {
       '0.17.0-dev.956+2dca73595',
     )).toBe(true)
     expect(shouldUseLockedVersion('bun.sh', '1.3.14', '^1.3.10')).toBe(true)
+  })
+})
+
+describe('isRollingVersionSpec', () => {
+  test('only classifies short Zig development channels as rolling', () => {
+    expect(isRollingVersionSpec('ziglang.org', '0.17.0-dev')).toBe(true)
+    expect(isRollingVersionSpec('ziglang.org', '0.17.0-dev.1413+addc3c3b8')).toBe(false)
+    expect(isRollingVersionSpec('bun.sh', '0.17.0-dev')).toBe(false)
   })
 })

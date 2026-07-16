@@ -1,6 +1,6 @@
 import type { ActionInputs, Platform } from './types'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
-import { shouldUseLockedVersion } from './lock-version'
+import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -201,7 +201,7 @@ async function installSystemPackage(spec: string, pantryDir: string, lockedVersi
     source = ' (from pantry.lock)'
   }
   else {
-    if (pinned && rawVersion) {
+    if (pinned && rawVersion && !isRollingVersionSpec(domain, rawVersion)) {
       core.warning(
         `${domain}: pantry.lock pins ${pinned} but deps spec is ${rawVersion} — `
         + `lockfile is stale, resolving spec instead. Run \`pantry install\` locally to refresh.`,
