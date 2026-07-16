@@ -1067,14 +1067,12 @@ fn resolveViaRegistry(
             }
         }
         if (!found) {
-            if (resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
-                try resolved.append(allocator, pantry_pkg);
-                inst.hoisted_versions.put(pantry_pkg.name, pantry_pkg.version);
-                missing_count += 1;
-                continue;
-            }
-
-            // Try individual resolution
+            // This dependency entered the bulk request explicitly as npm. If
+            // the server has not observed a just-published version yet, resolve
+            // it directly against npm instead of reclassifying it through the
+            // Pantry registry. Reclassification can return Pantry metadata for
+            // a same-named package and then route the npm tarball through the
+            // system-package installer, ending in PackageNotFound.
             const npm_info = inst.resolveNpmPackage(dep.name, dep.version) catch continue;
             defer allocator.free(npm_info.version);
             defer allocator.free(npm_info.tarball_url);
