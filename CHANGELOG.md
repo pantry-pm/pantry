@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.15...v0.10.16)
+
+## 🐛 Bug Fixes
+
+- **deps**: keep npm fallback source ([9929514](https://github.com/pantry-pm/pantry/commit/9929514)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.16 ([b748f87](https://github.com/pantry-pm/pantry/commit/b748f87)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update diabrowser.com, github.com/ggerganov/llama.cpp, planetscale.com ([63e7b7e](https://github.com/pantry-pm/pantry/commit/63e7b7e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.14...v0.10.15)
 
 ## 🐛 Bug Fixes
