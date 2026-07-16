@@ -1,3 +1,37 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.12...v0.10.13)
+
+## 🐛 Bug Fixes
+
+- **install**: honor declared versions instead of silently installing latest ([cbc661a](https://github.com/pantry-pm/pantry/commit/cbc661a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.13 ([429022d](https://github.com/pantry-pm/pantry/commit/429022d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update discord.com, materialize.com, pnpm.io ([66774cb](https://github.com/pantry-pm/pantry/commit/66774cb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 5 apps & 1 font ([1057991](https://github.com/pantry-pm/pantry/commit/1057991)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code to 2.1.211 ([77c5c44](https://github.com/pantry-pm/pantry/commit/77c5c44)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com to 3.11.25 ([bdc8fce](https://github.com/pantry-pm/pantry/commit/bdc8fce)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([f8ae6f4](https://github.com/pantry-pm/pantry/commit/f8ae6f4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, ziglang.org ([151da87](https://github.com/pantry-pm/pantry/commit/151da87)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, mise.jdx.dev, zed.dev ([63e67ee](https://github.com/pantry-pm/pantry/commit/63e67ee)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 4 apps & 1 font ([04240db](https://github.com/pantry-pm/pantry/commit/04240db)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, depot.dev, nginx.org ([f559f64](https://github.com/pantry-pm/pantry/commit/f559f64)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, opencode.ai, turso.tech ([3afc19f](https://github.com/pantry-pm/pantry/commit/3afc19f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([8479946](https://github.com/pantry-pm/pantry/commit/8479946)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update deno.land, dozzle.dev, github.com/ggerganov/llama.cpp ([d000735](https://github.com/pantry-pm/pantry/commit/d000735)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 4 apps & 1 font ([8b19183](https://github.com/pantry-pm/pantry/commit/8b19183)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, rectangle.app, traefik.io ([8c9f951](https://github.com/pantry-pm/pantry/commit/8c9f951)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10017 ([c8e4f28](https://github.com/pantry-pm/pantry/commit/c8e4f28)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 4 apps & 1 font ([20e8830](https://github.com/pantry-pm/pantry/commit/20e8830)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, prefix.dev, raycast.com ([1ce4f23](https://github.com/pantry-pm/pantry/commit/1ce4f23)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev, projen.io ([a48bfe1](https://github.com/pantry-pm/pantry/commit/a48bfe1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([95e4b7e](https://github.com/pantry-pm/pantry/commit/95e4b7e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, certbot.eff.org, github.com/shaka-project/shaka-packager, ohmyposh.dev ([9c12e43](https://github.com/pantry-pm/pantry/commit/9c12e43)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.11...v0.10.12)
 
 ## 🤖 Continuous Integration
