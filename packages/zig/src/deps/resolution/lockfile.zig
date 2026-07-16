@@ -94,7 +94,12 @@ pub const LockFile = struct {
         }
     }
 
-    /// Add a package to the lock file
+    /// Add or replace a package in the lock file.
+    ///
+    /// This lock format resolves one version per package name: its lookup
+    /// index is name-based and installed packages are likewise keyed by name.
+    /// Keeping an older version beside an updated one therefore makes lookup
+    /// order-dependent and leaves stale pins in pantry.lock.
     pub fn addPackage(
         self: *LockFile,
         name: []const u8,
@@ -102,10 +107,35 @@ pub const LockFile = struct {
         resolved: []const u8,
         integrity: ?[]const u8,
     ) !void {
+        // Remove every previous key for this name before inserting the new
+        // resolved version. Older lockfiles can already contain duplicates,
+        // so do not assume there is only one entry to replace.
+        _ = self.name_index.remove(name);
+        var stale_keys: std.ArrayList([]const u8) = .empty;
+        defer {
+            for (stale_keys.items) |key| self.allocator.free(key);
+            stale_keys.deinit(self.allocator);
+        }
+
+        var package_it = self.packages.iterator();
+        while (package_it.next()) |entry| {
+            if (std.mem.eql(u8, entry.value_ptr.name, name))
+                try stale_keys.append(self.allocator, try self.allocator.dupe(u8, entry.key_ptr.*));
+        }
+
+        for (stale_keys.items) |stale_key| {
+            if (self.packages.fetchRemove(stale_key)) |removed| {
+                self.allocator.free(removed.key);
+                var stale_package = removed.value;
+                stale_package.deinit();
+            }
+        }
+
         const key = try self.createKey(name, version);
         errdefer self.allocator.free(key);
 
         var pkg = LockedPackage.init(self.allocator);
+        errdefer pkg.deinit();
         pkg.name = try self.allocator.dupe(u8, name);
         pkg.version = try self.allocator.dupe(u8, version);
         pkg.resolved = try self.allocator.dupe(u8, resolved);
@@ -114,6 +144,9 @@ pub const LockFile = struct {
         }
 
         try self.packages.put(key, pkg);
+        // The index is an optimization; linear lookup remains a safe fallback
+        // if allocation fails while updating it.
+        self.name_index.put(pkg.name, key) catch {};
     }
 
     /// Get a locked package

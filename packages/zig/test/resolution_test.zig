@@ -312,6 +312,26 @@ test "LockFile - create and add package" {
     try testing.expectEqualStrings("4.17.21", pkg.?.version);
 }
 
+test "LockFile - replacing a package removes every stale version" {
+    const allocator = testing.allocator;
+
+    var lock_file = LockFile.init(allocator);
+    defer lock_file.deinit();
+
+    try lock_file.addPackage("bun.sh", "1.3.12", "registry:bun.sh@1.3.12", null);
+    try lock_file.addPackage("bun.sh", "1.3.13", "registry:bun.sh@1.3.13", null);
+    try lock_file.addPackage("bun.sh", "1.3.14", "registry:bun.sh@1.3.14", "sha512-current");
+
+    try testing.expectEqual(@as(usize, 1), lock_file.packages.count());
+    try testing.expect(lock_file.getPackage("bun.sh", "1.3.12") == null);
+    try testing.expect(lock_file.getPackage("bun.sh", "1.3.13") == null);
+
+    const current = resolution.lockfile.getLockedVersion(&lock_file, "bun.sh").?;
+    try testing.expectEqualStrings("1.3.14", current.version);
+    try testing.expectEqualStrings("registry:bun.sh@1.3.14", current.resolved);
+    try testing.expectEqualStrings("sha512-current", current.integrity.?);
+}
+
 test "LockFile - write and read" {
     const allocator = testing.allocator;
 
