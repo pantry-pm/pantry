@@ -86,9 +86,9 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.128.1",
+      "latest": "1.129.0",
       "published": "1.128.1",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "codex.openai.com",
@@ -104,9 +104,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.11.19",
+      "latest": "3.11.25",
       "published": "3.11.19",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
