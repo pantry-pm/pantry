@@ -59,6 +59,7 @@ export const xcodegenPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.46.0',
     '2.45.4',
     '2.45.3',
     '2.45.2',
