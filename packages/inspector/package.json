@@ -1,6 +1,6 @@
 {
   "name": "@stacksjs/pantry-inspector",
-  "version": "0.10.13",
+  "version": "0.10.14",
   "type": "module",
   "private": true,
   "description": "Pantry Package Inspector - Explore, inspect, and analyze pantry packages",

@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.13...v0.10.14)
+
+## 📦 Build System
+
+- **action**: rebuild dist with the version-resolution fix ([b51c81a](https://github.com/pantry-pm/pantry/commit/b51c81a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.14 ([fba419e](https://github.com/pantry-pm/pantry/commit/fba419e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.12...v0.10.13)
 
 ## 🐛 Bug Fixes
