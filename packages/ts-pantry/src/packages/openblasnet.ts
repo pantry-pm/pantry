@@ -59,6 +59,7 @@ export const openblasnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.3.34',
     '0.3.33',
     '0.3.32',
     '0.3.31',
