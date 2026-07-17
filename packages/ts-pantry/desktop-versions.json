@@ -86,16 +86,16 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.129.0",
+      "latest": "1.129.1",
       "published": "1.129.0",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "codex.openai.com",
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.715.21425",
+      "latest": "26.715.31251",
       "published": "26.623.141536",
       "needsUpdate": true
     },
