@@ -52,7 +52,13 @@ fn resolveDependencyPath(b: *std.Build, package_name: []const u8, entry_point: [
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseFast });
+    // Default local builds to ReleaseFast: startup time dominates the
+    // shell-integration path, and the strip default below keys off this.
+    // NOTE: standardOptimizeOption(.{ .preferred_optimize_mode = ... }) is
+    // avoided on purpose — on zig 0.17 it drops the -Doptimize flag entirely
+    // and silently falls back to Debug unless --release is passed, which also
+    // broke scripts that pass -Doptimize=Debug (e.g. scripts/coverage.sh).
+    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseFast)") orelse .ReleaseFast;
 
     // Option to strip debug symbols for smaller binaries
     // Strip debug symbols by default in release builds: it cut `pantry`'s
