@@ -96,7 +96,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.715.21425",
-      "published": null,
+      "published": "26.623.141536",
       "needsUpdate": true
     },
     {
@@ -105,8 +105,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.12.17",
-      "published": "3.12.10",
-      "needsUpdate": true
+      "published": "3.12.17",
+      "needsUpdate": false
     },
     {
       "domain": "dbeaver.io",
@@ -618,8 +618,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "2.26.28.22",
-      "published": "2.26.28.15",
-      "needsUpdate": true
+      "published": "2.26.28.22",
+      "needsUpdate": false
     },
     {
       "domain": "zed.dev",
