@@ -59,7 +59,12 @@ export const recipe: Recipe = {
   // craft ships official prebuilt per-platform binaries on its GitHub releases
   // (craft-{os}-{arch}.zip). This is a zig-style download recipe: case on
   // {{hw.platform}}/{{hw.arch}}, curl the official asset, and install `craft`.
-  // No linux-arm64 asset is published upstream, so it is omitted below.
+  // Current releases (v0.0.23+) ship darwin-arm64, darwin-x64, and linux-x64
+  // assets; a linux-arm64 asset existed only for v0.0.19/v0.0.20, and since
+  // every catalog version must build on every listed platform, linux/aarch64
+  // stays omitted. v0.0.37 also ships windows-x64, but Pantry's CLI build
+  // pipeline targets unix only (windows platforms appear on desktop-app
+  // recipes), so windows stays out as well.
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'linux/x86-64'],
 
   build: {
