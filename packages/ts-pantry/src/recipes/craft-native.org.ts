@@ -7,10 +7,53 @@ export const recipe: Recipe = {
   homepage: 'https://craft-native.org',
   github: 'https://github.com/home-lang/craft',
   programs: ['craft'],
+  // Many craft GitHub releases (v0.0.16 and everything older) ship NO binary
+  // assets at all — they predate upstream's binary publishing. The scheduled
+  // version-fetcher merges discovered versions into the package catalog
+  // additively and never prunes, so a plain `github-releases` source keeps
+  // re-adding releases Pantry cannot install (`pantry install
+  // craft-native.org@0.0.16` fails: the registry only serves binaries built
+  // from asset-bearing releases). Only surface releases that publish the full
+  // prebuilt set this recipe downloads below.
   versionSource: {
-    type: 'github-releases',
-    repo: 'home-lang/craft',
-    tagPattern: /^v(.+)$/,
+    type: 'custom',
+    async fetch() {
+      const headers: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'pantry-version-fetcher',
+      }
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+      if (token)
+        headers.Authorization = `token ${token}`
+      const resp = await fetch('https://api.github.com/repos/home-lang/craft/releases?per_page=50', {
+        headers,
+        signal: AbortSignal.timeout(30000),
+      })
+      if (!resp.ok)
+        return []
+      const releases = await resp.json() as Array<{
+        tag_name: string
+        prerelease: boolean
+        draft: boolean
+        assets: Array<{ name: string }>
+      }>
+      const versions: string[] = []
+      for (const release of releases) {
+        if (release.draft || release.prerelease)
+          continue
+        const match = release.tag_name.match(/^v(.+)$/)
+        if (!match)
+          continue
+        // A version is installable only when its release carries every
+        // prebuilt binary the platform map below downloads.
+        const required = ['craft-darwin-arm64.zip', 'craft-darwin-x64.zip', 'craft-linux-x64.zip']
+        const assets = new Set(release.assets.map(asset => asset.name))
+        if (!required.every(asset => assets.has(asset)))
+          continue
+        versions.push(match[1])
+      }
+      return versions
+    },
   },
 
   // craft ships official prebuilt per-platform binaries on its GitHub releases
