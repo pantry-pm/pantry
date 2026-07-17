@@ -568,7 +568,7 @@ pub fn enableCommand(allocator: std.mem.Allocator, args: []const []const u8) !Co
 
     style.print("Enabling {s} (auto-start on boot)...\n", .{service_name});
 
-    manager.controller.enable(canonical_name) catch |err| {
+    manager.controller.enable(canonical_name, null) catch |err| {
         const msg = try std.fmt.allocPrint(allocator, "Failed to enable {s}: {}", .{ service_name, err });
         return .{ .exit_code = 1, .message = msg };
     };
@@ -597,7 +597,7 @@ pub fn disableCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
 
     style.print("Disabling {s} (won't auto-start on boot)...\n", .{service_name});
 
-    manager.controller.disable(canonical_name) catch |err| {
+    manager.controller.disable(canonical_name, null) catch |err| {
         const msg = try std.fmt.allocPrint(allocator, "Failed to disable {s}: {}", .{ service_name, err });
         return .{ .exit_code = 1, .message = msg };
     };

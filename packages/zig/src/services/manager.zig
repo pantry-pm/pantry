@@ -176,31 +176,33 @@ pub const ServiceManager = struct {
         // both need a daemon-reload; no-op on platforms without systemctl).
         if (platform.Platform.detect() == .linux) self.controller.systemdDaemonReload();
 
-        // Start the service
-        try self.controller.start(service_name);
+        // Start the service under the same label/unit the file was generated
+        // with (project-scoped when the config carries a project_id).
+        try self.controller.start(service_name, service.project_id);
     }
 
     /// Stop a service
     pub fn stop(self: *ServiceManager, service_name: []const u8) !void {
-        _ = self.services.get(service_name) orelse return error.ServiceNotFound;
-        try self.controller.stop(service_name);
+        const service = self.services.get(service_name) orelse return error.ServiceNotFound;
+        try self.controller.stop(service_name, service.project_id);
     }
 
     /// Restart a service
     pub fn restart(self: *ServiceManager, service_name: []const u8) !void {
-        _ = self.services.get(service_name) orelse return error.ServiceNotFound;
-        try self.controller.restart(service_name);
+        const service = self.services.get(service_name) orelse return error.ServiceNotFound;
+        try self.controller.restart(service_name, service.project_id);
     }
 
     /// Get service status
     pub fn status(self: *ServiceManager, service_name: []const u8) !definitions.ServiceStatus {
-        _ = self.services.get(service_name) orelse return error.ServiceNotFound;
-        return try self.controller.status(service_name);
+        const service = self.services.get(service_name) orelse return error.ServiceNotFound;
+        return try self.controller.status(service_name, service.project_id);
     }
 
     /// Check if service is running
     pub fn isRunning(self: *ServiceManager, service_name: []const u8) !bool {
-        return try self.controller.isRunning(service_name);
+        const service = self.services.get(service_name) orelse return error.ServiceNotFound;
+        return try self.controller.isRunning(service_name, service.project_id);
     }
 
     /// Generate service file for the current platform

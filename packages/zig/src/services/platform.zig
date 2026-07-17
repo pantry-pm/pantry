@@ -116,11 +116,13 @@ pub const ServiceController = struct {
         };
     }
 
-    /// Start a service (load and start)
-    pub fn start(self: *ServiceController, service_name: []const u8) !void {
+    /// Start a service (load and start). `project_id` must match the id used
+    /// when the unit file was generated (see ServiceManager) — project-scoped
+    /// services live under a project-prefixed label/unit name.
+    pub fn start(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
         switch (self.platform) {
-            .macos => try self.launchdStart(service_name),
-            .linux => try self.systemdStart(service_name),
+            .macos => try self.launchdStart(service_name, project_id),
+            .linux => try self.systemdStart(service_name, project_id),
             .freebsd => try self.rcdStart(service_name),
             .windows => return error.UnsupportedPlatform,
             .unknown => return error.UnsupportedPlatform,
@@ -128,10 +130,10 @@ pub const ServiceController = struct {
     }
 
     /// Enable a service (auto-start on boot)
-    pub fn enable(self: *ServiceController, service_name: []const u8) !void {
+    pub fn enable(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
         switch (self.platform) {
             .macos => {}, // launchd handles this via RunAtLoad in plist
-            .linux => try self.systemdEnable(service_name),
+            .linux => try self.systemdEnable(service_name, project_id),
             .freebsd => try self.rcdEnable(service_name),
             .windows => return error.UnsupportedPlatform,
             .unknown => return error.UnsupportedPlatform,
@@ -139,10 +141,10 @@ pub const ServiceController = struct {
     }
 
     /// Disable a service (don't auto-start on boot)
-    pub fn disable(self: *ServiceController, service_name: []const u8) !void {
+    pub fn disable(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
         switch (self.platform) {
             .macos => {}, // launchd handles this via plist modification
-            .linux => try self.systemdDisable(service_name),
+            .linux => try self.systemdDisable(service_name, project_id),
             .freebsd => try self.rcdDisable(service_name),
             .windows => return error.UnsupportedPlatform,
             .unknown => return error.UnsupportedPlatform,
@@ -150,10 +152,10 @@ pub const ServiceController = struct {
     }
 
     /// Stop a service
-    pub fn stop(self: *ServiceController, service_name: []const u8) !void {
+    pub fn stop(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
         switch (self.platform) {
-            .macos => try self.launchdStop(service_name),
-            .linux => try self.systemdStop(service_name),
+            .macos => try self.launchdStop(service_name, project_id),
+            .linux => try self.systemdStop(service_name, project_id),
             .freebsd => try self.rcdStop(service_name),
             .windows => return error.UnsupportedPlatform,
             .unknown => return error.UnsupportedPlatform,
@@ -161,19 +163,19 @@ pub const ServiceController = struct {
     }
 
     /// Restart a service
-    pub fn restart(self: *ServiceController, service_name: []const u8) !void {
-        try self.stop(service_name);
+    pub fn restart(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        try self.stop(service_name, project_id);
         // Small delay to ensure service fully stops (500ms)
         const delay_ns: u64 = std.time.ns_per_s / 2;
         io_helper.nanosleep(delay_ns / std.time.ns_per_s, delay_ns % std.time.ns_per_s);
-        try self.start(service_name);
+        try self.start(service_name, project_id);
     }
 
     /// Get service status
-    pub fn status(self: *ServiceController, service_name: []const u8) !definitions.ServiceStatus {
+    pub fn status(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !definitions.ServiceStatus {
         return switch (self.platform) {
-            .macos => try self.launchdStatus(service_name),
-            .linux => try self.systemdStatus(service_name),
+            .macos => try self.launchdStatus(service_name, project_id),
+            .linux => try self.systemdStatus(service_name, project_id),
             .freebsd => try self.rcdStatus(service_name),
             .windows => error.UnsupportedPlatform,
             .unknown => error.UnsupportedPlatform,
@@ -181,8 +183,8 @@ pub const ServiceController = struct {
     }
 
     /// Check if service is running
-    pub fn isRunning(self: *ServiceController, service_name: []const u8) !bool {
-        const st = try self.status(service_name);
+    pub fn isRunning(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !bool {
+        const st = try self.status(service_name, project_id);
         return st == .running;
     }
 
@@ -190,8 +192,8 @@ pub const ServiceController = struct {
     // macOS launchd implementation
     // ========================================================================
 
-    fn launchdStart(self: *ServiceController, service_name: []const u8) !void {
-        const service_file = try self.getLaunchdServiceFile(service_name);
+    fn launchdStart(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        const service_file = try self.getLaunchdServiceFile(service_name, project_id);
         defer self.allocator.free(service_file);
 
         // Capture launchctl's stdio rather than inheriting it. If inherited, its
@@ -209,8 +211,12 @@ pub const ServiceController = struct {
         if (!ok) return error.ServiceStartFailed;
     }
 
-    fn launchdStop(self: *ServiceController, service_name: []const u8) !void {
-        const service_file = try self.getLaunchdServiceFile(service_name);
+    fn launchdStop(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        // Resolve the plist the service was actually started from. A scoped
+        // query (project_id set) prefers the project plist but falls back to
+        // the unscoped one, so a service started globally can still be stopped
+        // from inside a project directory.
+        const service_file = try self.resolveLaunchdServiceFile(service_name, project_id);
         defer self.allocator.free(service_file);
 
         // Capture launchctl's stdio (see launchdStart) so it can't contaminate
@@ -227,12 +233,49 @@ pub const ServiceController = struct {
         if (!ok) return error.ServiceStopFailed;
     }
 
-    fn launchdStatus(self: *ServiceController, service_name: []const u8) !definitions.ServiceStatus {
-        const label = try self.getLaunchdLabel(service_name);
+    /// Pick the launchd plist to control for `service_name`: the project-scoped
+    /// file when it exists, otherwise the unscoped file (which is also the
+    /// answer for unscoped queries). When neither exists the scoped/unscoped
+    /// path matching `project_id` is returned so launchctl's error still
+    /// surfaces to the caller.
+    fn resolveLaunchdServiceFile(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) ![]const u8 {
+        const preferred = try self.getLaunchdServiceFile(service_name, project_id);
+        if (project_id == null) return preferred;
+
+        errdefer self.allocator.free(preferred);
+        if (io_helper.accessAbsolute(preferred, .{})) {
+            return preferred;
+        } else |_| {
+            const fallback = try self.getLaunchdServiceFile(service_name, null);
+            if (io_helper.accessAbsolute(fallback, .{})) {
+                self.allocator.free(preferred);
+                return fallback;
+            } else |_| {
+                self.allocator.free(fallback);
+                return preferred;
+            }
+        }
+    }
+
+    fn launchdStatus(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !definitions.ServiceStatus {
+        // Project-scoped query: check the scoped label first, then fall back
+        // to the unscoped label so services started globally (or before
+        // project isolation existed) still report correctly from a project dir.
+        const scoped = try self.launchdLabelStatus(service_name, project_id);
+        if (scoped) |st| return st;
+        if (project_id != null) {
+            if (try self.launchdLabelStatus(service_name, null)) |st| return st;
+        }
+        return .stopped;
+    }
+
+    /// Status of one launchd label, or null when the label is not loaded at all.
+    fn launchdLabelStatus(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !?definitions.ServiceStatus {
+        const label = try self.getLaunchdLabel(service_name, project_id);
         defer self.allocator.free(label);
 
         const argv = [_][]const u8{ "launchctl", "list", label };
-        const result = io_helper.childRun(self.allocator, &argv) catch return .stopped;
+        const result = io_helper.childRun(self.allocator, &argv) catch return null;
         defer self.allocator.free(result.stdout);
         defer self.allocator.free(result.stderr);
 
@@ -241,7 +284,7 @@ pub const ServiceController = struct {
             .exited => |code| code == 0,
             else => false,
         };
-        if (!loaded) return .stopped;
+        if (!loaded) return null;
 
         // The job is registered, but that does NOT mean it's running — a unit
         // that exits immediately (e.g. a bad config, exit 78) stays registered.
@@ -273,8 +316,8 @@ pub const ServiceController = struct {
         return saw_digit and value != 0;
     }
 
-    fn getLaunchdServiceFile(self: *ServiceController, service_name: []const u8) ![]const u8 {
-        const label = try self.getLaunchdLabel(service_name);
+    fn getLaunchdServiceFile(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) ![]const u8 {
+        const label = try self.getLaunchdLabel(service_name, project_id);
         defer self.allocator.free(label);
 
         const service_dir = try self.platform.userServiceDirectory(self.allocator);
@@ -287,7 +330,17 @@ pub const ServiceController = struct {
         );
     }
 
-    fn getLaunchdLabel(self: *ServiceController, service_name: []const u8) ![]const u8 {
+    /// launchd label for a service. Must match the label ServiceManager writes
+    /// into the generated plist: project-scoped services are labeled
+    /// `com.pantry.<project_id>.<name>`, global ones `com.pantry.<name>`.
+    fn getLaunchdLabel(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) ![]const u8 {
+        if (project_id) |pid| {
+            return try std.fmt.allocPrint(
+                self.allocator,
+                "com.pantry.{s}.{s}",
+                .{ pid, service_name },
+            );
+        }
         return try std.fmt.allocPrint(
             self.allocator,
             "com.pantry.{s}",
@@ -322,33 +375,53 @@ pub const ServiceController = struct {
         } catch return;
     }
 
-    fn systemdStart(self: *ServiceController, service_name: []const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name);
+    fn systemdStart(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        const service_unit = try self.getSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
         if (!try self.runSystemctl("start", service_unit)) return error.ServiceStartFailed;
     }
 
-    fn systemdStop(self: *ServiceController, service_name: []const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name);
+    fn systemdStop(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        // A scoped query stops the project unit when it exists, but falls back
+        // to the unscoped unit so a globally-started service can still be
+        // stopped from inside a project directory.
+        const service_unit = try self.resolveSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
         if (!try self.runSystemctl("stop", service_unit)) return error.ServiceStopFailed;
     }
 
-    fn systemdEnable(self: *ServiceController, service_name: []const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name);
+    fn systemdEnable(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        const service_unit = try self.getSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
         if (!try self.runSystemctl("enable", service_unit)) return error.ServiceEnableFailed;
     }
 
-    fn systemdDisable(self: *ServiceController, service_name: []const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name);
+    fn systemdDisable(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
+        const service_unit = try self.getSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
         if (!try self.runSystemctl("disable", service_unit)) return error.ServiceDisableFailed;
     }
 
-    fn systemdStatus(self: *ServiceController, service_name: []const u8) !definitions.ServiceStatus {
-        const service_unit = try self.getSystemdUnit(service_name);
+    fn systemdStatus(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !definitions.ServiceStatus {
+        // Project-scoped query: check the project unit first, then fall back
+        // to the unscoped unit (services started globally or before project
+        // isolation existed) so status is truthful from a project directory.
+        if (try self.systemdUnitStatus(service_name, project_id)) |st| return st;
+        if (project_id != null) {
+            if (try self.systemdUnitStatus(service_name, null)) |st| return st;
+        }
+        return .stopped;
+    }
+
+    /// `is-active` status of one unit, or null when the unit does not exist.
+    fn systemdUnitStatus(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !?definitions.ServiceStatus {
+        const service_unit = try self.getSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
+
+        // `systemctl cat` exits non-zero when the unit is unknown — that is the
+        // only reliable way to tell "no such unit" apart from "inactive",
+        // because is-active prints "inactive" for both.
+        if (!try self.runSystemctl("cat", service_unit)) return null;
 
         const result = switch (self.scope) {
             .user => try io_helper.childRun(self.allocator, &[_][]const u8{ "systemctl", "--user", "is-active", service_unit }),
@@ -370,7 +443,36 @@ pub const ServiceController = struct {
         return .unknown;
     }
 
-    fn getSystemdUnit(self: *ServiceController, service_name: []const u8) ![]const u8 {
+    /// Pick the systemd unit to control for `service_name`: the project-scoped
+    /// unit when it exists, otherwise the unscoped unit (also the answer for
+    /// unscoped queries). When neither exists the name matching `project_id`
+    /// is returned so systemctl's error still surfaces to the caller.
+    fn resolveSystemdUnit(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) ![]const u8 {
+        const preferred = try self.getSystemdUnit(service_name, project_id);
+        if (project_id == null) return preferred;
+
+        if (try self.runSystemctl("cat", preferred)) return preferred;
+
+        const fallback = try self.getSystemdUnit(service_name, null);
+        if (try self.runSystemctl("cat", fallback)) {
+            self.allocator.free(preferred);
+            return fallback;
+        }
+        self.allocator.free(fallback);
+        return preferred;
+    }
+
+    /// systemd unit name for a service. Must match the unit ServiceManager
+    /// generates: project-scoped services are `pantry-<project_id>-<name>.service`,
+    /// global ones `pantry-<name>.service`.
+    fn getSystemdUnit(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) ![]const u8 {
+        if (project_id) |pid| {
+            return try std.fmt.allocPrint(
+                self.allocator,
+                "pantry-{s}-{s}.service",
+                .{ pid, service_name },
+            );
+        }
         return try std.fmt.allocPrint(
             self.allocator,
             "pantry-{s}.service",
@@ -506,4 +608,57 @@ test "ServiceController init" {
 
     const controller = ServiceController.init(allocator);
     try std.testing.expect(controller.platform != .unknown);
+}
+
+test "launchd label is unscoped without project_id" {
+    const allocator = std.testing.allocator;
+    var controller = ServiceController.init(allocator);
+
+    const label = try controller.getLaunchdLabel("postgres", null);
+    defer allocator.free(label);
+
+    try std.testing.expectEqualStrings("com.pantry.postgres", label);
+}
+
+test "launchd label is project-scoped with project_id" {
+    const allocator = std.testing.allocator;
+    var controller = ServiceController.init(allocator);
+
+    const label = try controller.getLaunchdLabel("postgres", "830f2f2e");
+    defer allocator.free(label);
+
+    try std.testing.expectEqualStrings("com.pantry.830f2f2e.postgres", label);
+}
+
+test "launchd service file path follows the label scope" {
+    const allocator = std.testing.allocator;
+    var controller = ServiceController.init(allocator);
+
+    const scoped = try controller.getLaunchdServiceFile("redis", "abc12345");
+    defer allocator.free(scoped);
+    try std.testing.expect(std.mem.endsWith(u8, scoped, "com.pantry.abc12345.redis.plist"));
+
+    const unscoped = try controller.getLaunchdServiceFile("redis", null);
+    defer allocator.free(unscoped);
+    try std.testing.expect(std.mem.endsWith(u8, unscoped, "com.pantry.redis.plist"));
+}
+
+test "systemd unit is unscoped without project_id" {
+    const allocator = std.testing.allocator;
+    var controller = ServiceController.init(allocator);
+
+    const unit = try controller.getSystemdUnit("postgres", null);
+    defer allocator.free(unit);
+
+    try std.testing.expectEqualStrings("pantry-postgres.service", unit);
+}
+
+test "systemd unit is project-scoped with project_id" {
+    const allocator = std.testing.allocator;
+    var controller = ServiceController.init(allocator);
+
+    const unit = try controller.getSystemdUnit("postgres", "830f2f2e");
+    defer allocator.free(unit);
+
+    try std.testing.expectEqualStrings("pantry-830f2f2e-postgres.service", unit);
 }
