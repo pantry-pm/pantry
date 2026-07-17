@@ -442,7 +442,7 @@ pub const Services = struct {
         const start_cmd = try std.fmt.allocPrint(
             allocator,
             "/bin/sh -c 'D=\"{s}\"; " ++
-                "L=\"$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr \"\\n\" \":\")\"; " ++
+                "L=\"$(find {s} -maxdepth 6 -type d -path \"*/v*/lib\" 2>/dev/null | tr \"\\n\" \":\")\"; " ++
                 "if [ -f \"$D/PG_VERSION\" ]; then " ++
                 "DV=$(cat \"$D/PG_VERSION\" 2>/dev/null); " ++
                 "SV=$(env LD_LIBRARY_PATH=$L {s} -V 2>/dev/null | sed -E \"s/[^0-9]*([0-9]+).*/\\1/\"); " ++
@@ -455,7 +455,7 @@ pub const Services = struct {
                 "else R=\"env LD_LIBRARY_PATH=$L\"; fi; " ++
                 "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
                 "exec $R {s} -D \"$D\" -p {d}'",
-            .{ pgdata, pantry_root, pantry_root, postgres_bin, initdb_bin, postgres_bin, port },
+            .{ pgdata, pantry_root, postgres_bin, initdb_bin, postgres_bin, port },
         );
 
         return ServiceConfig{
@@ -548,7 +548,7 @@ pub const Services = struct {
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
             \\DATADIR="{s}"
-            \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
+            \\L="$(find {s} -maxdepth 6 -type d -path "*/v*/lib" 2>/dev/null | tr "\n" ":")"
             \\MYSQLD="$(ls -d {s}/mysql.com/v*/bin/mysqld 2>/dev/null | sort -V | tail -1)"
             \\[ -n "$MYSQLD" ] || MYSQLD="$(readlink -f "{s}")"
             \\BASE="$(dirname "$(dirname "$MYSQLD")")"
@@ -565,7 +565,7 @@ pub const Services = struct {
             \\fi
             \\exec $R "$MYSQLD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
             \\
-        , .{ data_dir, pantry_root, pantry_root, pantry_root, mysqld, port });
+        , .{ data_dir, pantry_root, pantry_root, mysqld, port });
         defer allocator.free(script);
         // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
         // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
@@ -1382,7 +1382,7 @@ pub const Services = struct {
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
             \\DATADIR="{s}"
-            \\L="$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr "\n" ":")"
+            \\L="$(find {s} -maxdepth 6 -type d -path "*/v*/lib" 2>/dev/null | tr "\n" ":")"
             \\# Resolve the .bin symlink to the REAL binary so we can derive the
             \\# package base ($BASE = .../mariadb.com/server/v<ver>): mariadb-install-db
             \\# lives in $BASE/scripts (NOT symlinked into .bin), and mariadbd needs
@@ -1403,7 +1403,7 @@ pub const Services = struct {
             \\fi
             \\exec $R "$MDBD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
-        , .{ data_dir, pantry_root, pantry_root, mariadbd, port });
+        , .{ data_dir, pantry_root, mariadbd, port });
         defer allocator.free(script);
         // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
         // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
