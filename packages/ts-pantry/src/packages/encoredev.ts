@@ -75,6 +75,7 @@ export const encoredevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.57.11',
     '1.57.10',
     '1.57.9',
     '1.57.8',
