@@ -431,17 +431,31 @@ pub const Services = struct {
         // run directly. `exec` keeps the server as the tracked PID for KeepAlive.
         // LD_LIBRARY_PATH is exported in-shell (runuser drops it on uid change,
         // so it's passed through `env`) from the globbed package lib dirs.
+        //
+        // Version guard: an existing cluster whose PG_VERSION major differs from
+        // the server binary's major is incompatible — starting postgres against
+        // it fails instantly with "database files are incompatible with server"
+        // (common after a PostgreSQL major upgrade, e.g. v17 → v18). Before the
+        // init/exec flow, detect that and move the stale cluster aside (timestamped
+        // backup) so the `test -f PG_VERSION || initdb` below re-initializes a
+        // fresh, compatible cluster instead of the service silently failing.
         const start_cmd = try std.fmt.allocPrint(
             allocator,
             "/bin/sh -c 'D=\"{s}\"; " ++
                 "L=\"$(ls -d {s}/*/v*/lib {s}/*/*/v*/lib 2>/dev/null | tr \"\\n\" \":\")\"; " ++
+                "if [ -f \"$D/PG_VERSION\" ]; then " ++
+                "DV=$(cat \"$D/PG_VERSION\" 2>/dev/null); " ++
+                "SV=$(env LD_LIBRARY_PATH=$L {s} -V 2>/dev/null | sed -E \"s/[^0-9]*([0-9]+).*/\\1/\"); " ++
+                "if [ -n \"$DV\" ] && [ -n \"$SV\" ] && [ \"$DV\" != \"$SV\" ]; then " ++
+                "echo \"pantry: PostgreSQL data dir $D is v$DV but the server is v$SV; backing it up and re-initializing.\" >&2; " ++
+                "mv \"$D\" \"$D.bak.v$DV.$(date +%s)\"; fi; fi; " ++
                 "if [ \"$(id -u)\" = 0 ]; then " ++
                 "id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry; " ++
                 "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env LD_LIBRARY_PATH=$L\"; " ++
                 "else R=\"env LD_LIBRARY_PATH=$L\"; fi; " ++
                 "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
                 "exec $R {s} -D \"$D\" -p {d}'",
-            .{ pgdata, pantry_root, pantry_root, initdb_bin, postgres_bin, port },
+            .{ pgdata, pantry_root, pantry_root, postgres_bin, initdb_bin, postgres_bin, port },
         );
 
         return ServiceConfig{
