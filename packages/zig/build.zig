@@ -609,6 +609,11 @@ fn getGitCommitHash(b: *std.Build) ![]const u8 {
     // Resolve HEAD by reading .git directly instead of b.run("git rev-parse"):
     // Run-step results are cached in .zig-cache keyed by argv, so the commit
     // stamp silently went stale on incremental builds after new commits.
+    //
+    // Caveat: the configurer's output is itself cached in .zig-cache (keyed
+    // on build.zig), so on a no-op rebuild the stamp can still lag one commit.
+    // It is always correct on clean builds (CI/release) and after build.zig
+    // changes — git availability is no longer required either way.
     const head = readBuildRootFileAlloc(b, "../../.git/HEAD", 512) catch
         (readBuildRootFileAlloc(b, ".git/HEAD", 512) catch return "unknown");
     const trimmed = std.mem.trim(u8, head, &std.ascii.whitespace);
