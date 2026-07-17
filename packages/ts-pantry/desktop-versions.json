@@ -95,7 +95,7 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.707.91948",
+      "latest": "26.715.21425",
       "published": "26.623.141536",
       "needsUpdate": true
     },
@@ -123,8 +123,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.40.1",
-      "published": "1.39.2",
-      "needsUpdate": true
+      "published": "1.40.1",
+      "needsUpdate": false
     },
     {
       "domain": "discord.com",
