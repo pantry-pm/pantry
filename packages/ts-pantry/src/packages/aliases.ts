@@ -197,6 +197,7 @@ export const aliases: Record<string, string> = {
   'cleanshot': 'cleanshot.com',
   'CleanShot X': 'cleanshot.com',
   'click': 'crates.io/click',
+  'CLIProxyAPI': 'github.com/router-for-me/CLIProxyAPI',
   'clisp': 'clisp.org',
   'cloc': 'github.com/AlDanial/cloc',
   'clog': 'clog-tool.github.io',

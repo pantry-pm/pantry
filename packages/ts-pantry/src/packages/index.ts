@@ -830,6 +830,7 @@ import { regsyncPackage } from './github.com/regclient/regclient/regsync'
 import { diffociPackage } from './github.com/reproducible-containers/diffoci'
 import { kubecapacityPackage } from './github.com/robscott/kube-capacity'
 import { trezoragentPackage } from './github.com/romanz/trezor-agent'
+import { cliproxyapiPackage } from './github.com/router-for-me/CLIProxyAPI'
 import { rexiPackage } from './github.com/royreznik/rexi'
 import { libpaperPackage } from './github.com/rrthomas/libpaper'
 import { psutilsPackage } from './github.com/rrthomas/psutils'
@@ -3202,6 +3203,8 @@ export interface Pantry {
   trezor_agent: typeof trezoragentPackage
   githubcomromanz: typeof trezoragentPackage
 
+  githubcomrouterforme: typeof cliproxyapiPackage
+
   githubcomroyreznik: typeof rexiPackage
   libpaper: typeof libpaperPackage
   githubcomrrthomas: typeof libpaperPackage
@@ -4832,6 +4835,7 @@ export interface Pantry {
   cleanshot: typeof cleanshotcomPackage
   'CleanShot X': typeof cleanshotcomPackage
   click: typeof cratesioclickPackage
+  CLIProxyAPI: typeof cliproxyapiPackage
   clisp: typeof clisporgPackage
   cloc: typeof clocPackage
   clog: typeof clogtoolgithubioPackage
@@ -7840,6 +7844,8 @@ export const pantry: Pantry = {
   trezor_agent: trezoragentPackage,
   githubcomromanz: trezoragentPackage,
 
+  githubcomrouterforme: cliproxyapiPackage,
+
   githubcomroyreznik: rexiPackage,
   libpaper: libpaperPackage,
   githubcomrrthomas: libpaperPackage,
@@ -9470,6 +9476,7 @@ export const pantry: Pantry = {
   cleanshot: cleanshotcomPackage,
   'CleanShot X': cleanshotcomPackage,
   click: cratesioclickPackage,
+  CLIProxyAPI: cliproxyapiPackage,
   clisp: clisporgPackage,
   cloc: clocPackage,
   clog: clogtoolgithubioPackage,

@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1745
+//! Total packages: 1746
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1745 total)
+/// All known packages (1746 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -7748,6 +7748,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "0.15.0", "0.14.8" },
+}, .{
+    .name = "CLIProxyAPI",
+    .domain = "github.com/router-for-me/CLIProxyAPI",
+    .description = "CLI Proxy API — use your Gemini CLI, Claude Code, Codex, Kimi, Qwen, iFlow and Grok CLI subscriptions through OpenAI/Gemini/Claude/Codex-compatible API endpoints.",
+    .homepage_url = "https://help.router-for.me/",
+    .programs = &[_][]const u8{"cli-proxy-api"},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{ "7.2.81", "7.2.80", "7.2.79", "7.2.78", "7.2.77", "7.2.76", "7.2.75", "7.2.74", "7.2.73", "7.2.72", "7.2.71", "7.2.70" },
 }, .{
     .name = "rexi",
     .domain = "github.com/royreznik/rexi",
