@@ -96,7 +96,7 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "26.715.21425",
-      "published": "26.623.141536",
+      "published": null,
       "needsUpdate": true
     },
     {
@@ -104,9 +104,9 @@
       "name": "Cursor",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.12.10",
+      "latest": "3.12.17",
       "published": "3.12.10",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "dbeaver.io",
@@ -617,9 +617,9 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.28.15",
+      "latest": "2.26.28.22",
       "published": "2.26.28.15",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "zed.dev",
