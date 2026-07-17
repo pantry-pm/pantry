@@ -606,11 +606,39 @@ fn getPackageVersion(b: *std.Build) ![]const u8 {
 
 /// Get git commit hash (short)
 fn getGitCommitHash(b: *std.Build) ![]const u8 {
-    const result = b.run(&.{ "git", "rev-parse", "--short", "HEAD" });
-    // Trim whitespace/newline
-    const trimmed = std.mem.trim(u8, result, &std.ascii.whitespace);
-    if (trimmed.len > 0) {
-        return b.allocator.dupe(u8, trimmed) catch return "unknown";
+    // Resolve HEAD by reading .git directly instead of b.run("git rev-parse"):
+    // Run-step results are cached in .zig-cache keyed by argv, so the commit
+    // stamp silently went stale on incremental builds after new commits.
+    const head = readBuildRootFileAlloc(b, "../../.git/HEAD", 512) catch
+        (readBuildRootFileAlloc(b, ".git/HEAD", 512) catch return "unknown");
+    const trimmed = std.mem.trim(u8, head, &std.ascii.whitespace);
+    if (trimmed.len == 0) {
+        return "unknown";
+    }
+
+    // Detached HEAD: the file already holds the commit hash.
+    if (!std.mem.startsWith(u8, trimmed, "ref:")) {
+        return if (trimmed.len >= 7) trimmed[0..@min(9, trimmed.len)] else "unknown";
+    }
+
+    // "ref: refs/heads/<branch>" — resolve the loose ref first.
+    const ref = std.mem.trim(u8, trimmed["ref:".len..], &std.ascii.whitespace);
+    const loose_path = std.fmt.allocPrint(b.allocator, "../../.git/{s}", .{ref}) catch return "unknown";
+    if (readBuildRootFileAlloc(b, loose_path, 512)) |content| {
+        const hash = std.mem.trim(u8, content, &std.ascii.whitespace);
+        if (hash.len >= 7) return hash[0..@min(9, hash.len)];
+    } else |_| {}
+
+    // Fresh clones and gc'd repos keep refs only in packed-refs.
+    const packed_refs = readBuildRootFileAlloc(b, "../../.git/packed-refs", 4 * 1024 * 1024) catch return "unknown";
+    var lines = std.mem.splitScalar(u8, packed_refs, '\n');
+    while (lines.next()) |line| {
+        if (line.len == 0 or line[0] == '#' or line[0] == '^') continue;
+        const sp = std.mem.indexOfScalar(u8, line, ' ') orelse continue;
+        if (std.mem.eql(u8, std.mem.trim(u8, line[sp + 1 ..], &std.ascii.whitespace), ref)) {
+            const hash = line[0..sp];
+            if (hash.len >= 7) return hash[0..@min(9, hash.len)];
+        }
     }
     return "unknown";
 }
