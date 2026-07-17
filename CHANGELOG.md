@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.17...v0.10.18)
+
+## 🐛 Bug Fixes
+
+- **services**: glob package lib dirs at any depth for LD_LIBRARY_PATH ([0864a20](https://github.com/pantry-pm/pantry/commit/0864a20)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: re-init postgres data dir on major-version mismatch ([df66070](https://github.com/pantry-pm/pantry/commit/df66070)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.18 ([741753a](https://github.com/pantry-pm/pantry/commit/741753a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.16...v0.10.17)
 
 ## 🐛 Bug Fixes
