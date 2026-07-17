@@ -2504,6 +2504,30 @@ fn helpAction(_: *cli.BaseCommand.ParseContext) !void {
     printHelp();
 }
 
+/// Resolve which command a `--help`/`-h` flag refers to by walking the
+/// subcommand path from the non-flag args (e.g. `install --help` → the install
+/// command). Returns null when no help flag is present; falls back to the root
+/// command when the flag is present but no subcommand matches.
+fn helpTarget(root: *cli.BaseCommand, args: []const []const u8) ?*cli.BaseCommand {
+    var wants_help = false;
+    for (args) |arg| {
+        if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
+            wants_help = true;
+            break;
+        }
+    }
+    if (!wants_help) return null;
+
+    var current = root;
+    for (args) |arg| {
+        if (arg.len == 0 or arg[0] == '-') continue;
+        if (current.findSubcommand(arg)) |sub| {
+            current = sub;
+        }
+    }
+    return current;
+}
+
 /// Version command action
 fn versionAction(_: *cli.BaseCommand.ParseContext) !void {
     printVersion();
@@ -4020,6 +4044,16 @@ pub fn main() !void {
             printVersion();
             return;
         }
+    }
+
+    // Subcommand help (`pantry install --help`, `pantry --help install`, ...).
+    // The parser records --help/-h into the parse context but nothing ever
+    // rendered it — the flag used to be a silent no-op. Resolve the (sub)command
+    // the flag refers to and generate its help here instead.
+    if (helpTarget(root, args[1..])) |target| {
+        var help = cli.Help.init(allocator);
+        try help.generate(target, "pantry", version_options.version);
+        return;
     }
 
     var parser = cli.Parser.init(allocator);
