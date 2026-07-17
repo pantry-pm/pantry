@@ -454,10 +454,15 @@ fn stopSingleService(allocator: std.mem.Allocator, service_name: []const u8) !Co
     var manager = ServiceManager.init(allocator);
     defer manager.deinit();
 
-    const service_config = getServiceConfig(allocator, service_name, null) catch {
+    var service_config = getServiceConfig(allocator, service_name, null) catch {
         const msg = try std.fmt.allocPrint(allocator, "Unknown service: {s}", .{service_name});
         return .{ .exit_code = 1, .message = msg };
     };
+    // From a project directory, target the project-scoped service first; the
+    // controller falls back to the global unit when no scoped one exists.
+    if (detectCwdProjectHash(allocator)) |ph| {
+        service_config.project_id = ph;
+    }
     const canonical_name = try allocator.dupe(u8, service_config.name);
     defer allocator.free(canonical_name);
     try manager.register(service_config);
@@ -529,10 +534,15 @@ pub fn statusCommand(allocator: std.mem.Allocator, args: []const []const u8) !Co
     var manager = ServiceManager.init(allocator);
     defer manager.deinit();
 
-    const service_config = getServiceConfig(allocator, service_name, null) catch {
+    var service_config = getServiceConfig(allocator, service_name, null) catch {
         const msg = try std.fmt.allocPrint(allocator, "Unknown service: {s}", .{service_name});
         return .{ .exit_code = 1, .message = msg };
     };
+    // Report the project-scoped service when invoked from a project directory
+    // (falls back to the global unit when no scoped one exists).
+    if (detectCwdProjectHash(allocator)) |ph| {
+        service_config.project_id = ph;
+    }
     const canonical_name = try allocator.dupe(u8, service_config.name);
     defer allocator.free(canonical_name);
     try manager.register(service_config);
@@ -1119,23 +1129,13 @@ pub fn inspectCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
     const platform_mod = services.platform;
     const plat = platform_mod.Platform.detect();
 
-    // Detect project context (check for deps.yaml in cwd)
+    // cwd is used for project-relative binary resolution
     const cwd = io_helper.getCwdAlloc(allocator) catch null;
     defer if (cwd) |c| allocator.free(c);
 
-    var project_hash: ?[]const u8 = null;
+    // Detect project context (deps file in cwd) for scoped paths/labels
+    const project_hash: ?[]const u8 = detectCwdProjectHash(allocator);
     defer if (project_hash) |ph| allocator.free(ph);
-
-    if (cwd) |c| {
-        const yaml_files = [_][]const u8{ "deps.yaml", "deps.yml", "dependencies.yaml" };
-        for (yaml_files) |yaml_name| {
-            const candidate = std.fs.path.join(allocator, &[_][]const u8{ c, yaml_name }) catch continue;
-            defer allocator.free(candidate);
-            io_helper.accessAbsolute(candidate, .{}) catch continue;
-            project_hash = computeProjectHash(allocator, c) catch null;
-            break;
-        }
-    }
 
     // Get service configuration
     var config = getServiceConfig(allocator, service_name, cwd) catch {
@@ -1205,10 +1205,16 @@ pub fn inspectCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
     var manager = ServiceManager.init(allocator);
     defer manager.deinit();
 
-    const svc_config = getServiceConfig(allocator, service_name, null) catch {
+    var svc_config = getServiceConfig(allocator, service_name, null) catch {
         const msg = try std.fmt.allocPrint(allocator, "Unknown service: {s}", .{service_name});
         return .{ .exit_code = 1, .message = msg };
     };
+    // Query the project-scoped service first when in a project directory; the
+    // controller falls back to the global unit when no scoped one exists, so
+    // the reported status matches whichever instance is actually running.
+    if (project_hash) |ph| {
+        svc_config.project_id = allocator.dupe(u8, ph) catch null;
+    }
     const canonical_name = try allocator.dupe(u8, svc_config.name);
     defer allocator.free(canonical_name);
     try manager.register(svc_config);
@@ -1223,54 +1229,68 @@ pub fn inspectCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
     if (status == .running) {
         switch (plat) {
             .macos => {
-                const label = if (project_hash) |ph|
-                    try std.fmt.allocPrint(allocator, "com.pantry.{s}.{s}", .{ ph, config.name })
-                else
-                    try std.fmt.allocPrint(allocator, "com.pantry.{s}", .{config.name});
-                defer allocator.free(label);
+                // Try the scoped label first, then the unscoped one — the
+                // status above may have come from either.
+                const labels = [_]?[]const u8{ project_hash, null };
+                for (labels) |ph| {
+                    const label = if (ph) |p|
+                        try std.fmt.allocPrint(allocator, "com.pantry.{s}.{s}", .{ p, config.name })
+                    else
+                        try std.fmt.allocPrint(allocator, "com.pantry.{s}", .{config.name});
+                    defer allocator.free(label);
 
-                const result = io_helper.childRun(allocator, &[_][]const u8{
-                    "launchctl", "list", label,
-                }) catch null;
+                    const result = io_helper.childRun(allocator, &[_][]const u8{
+                        "launchctl", "list", label,
+                    }) catch null;
 
-                if (result) |r| {
-                    defer allocator.free(r.stdout);
-                    defer allocator.free(r.stderr);
-                    if (r.stdout.len > 0) {
-                        // Parse PID from launchctl list output (first line usually has PID)
-                        var line_iter = std.mem.splitScalar(u8, r.stdout, '\n');
-                        while (line_iter.next()) |line| {
-                            const trimmed = std.mem.trim(u8, line, " \t\r");
-                            if (std.mem.startsWith(u8, trimmed, "\"PID\"")) {
-                                if (std.mem.indexOf(u8, trimmed, "=")) |eq_pos| {
-                                    const pid_val = std.mem.trim(u8, trimmed[eq_pos + 1 ..], " \t\r;");
-                                    allocator.free(pid_str);
-                                    pid_str = try allocator.dupe(u8, pid_val);
+                    if (result) |r| {
+                        defer allocator.free(r.stdout);
+                        defer allocator.free(r.stderr);
+                        if (r.stdout.len > 0) {
+                            // Parse PID from launchctl list output (first line usually has PID)
+                            var line_iter = std.mem.splitScalar(u8, r.stdout, '\n');
+                            while (line_iter.next()) |line| {
+                                const trimmed = std.mem.trim(u8, line, " \t\r");
+                                if (std.mem.startsWith(u8, trimmed, "\"PID\"")) {
+                                    if (std.mem.indexOf(u8, trimmed, "=")) |eq_pos| {
+                                        const pid_val = std.mem.trim(u8, trimmed[eq_pos + 1 ..], " \t\r;");
+                                        allocator.free(pid_str);
+                                        pid_str = try allocator.dupe(u8, pid_val);
+                                    }
                                 }
                             }
                         }
                     }
+                    // Stop at the first label that produced a PID
+                    if (!std.mem.eql(u8, pid_str, "(not running)")) break;
+                    // No point retrying unscoped twice when there is no hash
+                    if (ph == null) break;
                 }
             },
             .linux => {
-                const unit = if (project_hash) |ph|
-                    try std.fmt.allocPrint(allocator, "pantry-{s}-{s}.service", .{ ph, config.name })
-                else
-                    try std.fmt.allocPrint(allocator, "pantry-{s}.service", .{config.name});
-                defer allocator.free(unit);
+                const units = [_]?[]const u8{ project_hash, null };
+                for (units) |ph| {
+                    const unit = if (ph) |p|
+                        try std.fmt.allocPrint(allocator, "pantry-{s}-{s}.service", .{ p, config.name })
+                    else
+                        try std.fmt.allocPrint(allocator, "pantry-{s}.service", .{config.name});
+                    defer allocator.free(unit);
 
-                const result = io_helper.childRun(allocator, &[_][]const u8{
-                    "systemctl", "--user", "show", unit, "-p", "MainPID", "--value",
-                }) catch null;
+                    const result = io_helper.childRun(allocator, &[_][]const u8{
+                        "systemctl", "--user", "show", unit, "-p", "MainPID", "--value",
+                    }) catch null;
 
-                if (result) |r| {
-                    defer allocator.free(r.stdout);
-                    defer allocator.free(r.stderr);
-                    const trimmed_pid = std.mem.trim(u8, r.stdout, " \t\r\n");
-                    if (trimmed_pid.len > 0 and !std.mem.eql(u8, trimmed_pid, "0")) {
-                        allocator.free(pid_str);
-                        pid_str = try allocator.dupe(u8, trimmed_pid);
+                    if (result) |r| {
+                        defer allocator.free(r.stdout);
+                        defer allocator.free(r.stderr);
+                        const trimmed_pid = std.mem.trim(u8, r.stdout, " \t\r\n");
+                        if (trimmed_pid.len > 0 and !std.mem.eql(u8, trimmed_pid, "0")) {
+                            allocator.free(pid_str);
+                            pid_str = try allocator.dupe(u8, trimmed_pid);
+                        }
                     }
+                    if (!std.mem.eql(u8, pid_str, "(not running)")) break;
+                    if (ph == null) break;
                 }
             },
             else => {},
@@ -1817,4 +1837,34 @@ pub fn computeProjectHash(allocator: std.mem.Allocator, path: []const u8) ![]con
     }
 
     return try std.fmt.allocPrint(allocator, "{x:0>8}", .{@as(u32, @truncate(hash))});
+}
+
+/// Detect the calling project's isolation hash from the cwd by walking up to
+/// the project root — the same resolution `pantry start` uses — so the hash
+/// matches the one env activation stamps on auto-started services. Returns
+/// null outside project directories. Caller owns the returned slice.
+fn detectCwdProjectHash(allocator: std.mem.Allocator) ?[]const u8 {
+    const io_helper = @import("../../io_helper.zig");
+    const detector = @import("../../deps/detector.zig");
+
+    const cwd = io_helper.getCwdAlloc(allocator) catch return null;
+    defer allocator.free(cwd);
+
+    const lookup = detector.findDepsAndWorkspaceFile(allocator, cwd) catch return null;
+    defer {
+        if (lookup.workspace_file) |ws| {
+            allocator.free(ws.path);
+            allocator.free(ws.root_dir);
+        }
+        if (lookup.deps_file) |df| allocator.free(df.path);
+    }
+
+    const project_root = if (lookup.workspace_file) |ws|
+        ws.root_dir
+    else if (lookup.deps_file) |df|
+        std.fs.path.dirname(df.path) orelse return null
+    else
+        return null;
+
+    return computeProjectHash(allocator, project_root) catch null;
 }
