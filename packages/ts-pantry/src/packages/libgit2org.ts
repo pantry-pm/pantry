@@ -74,11 +74,14 @@ export const libgit2orgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.9.6',
+    '1.9.5',
     '1.9.4',
     '1.9.3',
     '1.9.2',
     '1.9.1',
     '1.9.0',
+    '1.8.6',
     '1.8.5',
     '1.8.4',
     '1.8.3',
