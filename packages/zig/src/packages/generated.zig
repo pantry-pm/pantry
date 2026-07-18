@@ -797,7 +797,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "pkgx.sh>=1", "github.com/Cyan4973/xxHash^0.8" },
     .build_dependencies = &[_][]const u8{ "python.org@^3.10", "openssl.org@^1.1", "facebook.com/zstd", "lz4.org", "linux:savannah.nongnu.org/acl@^2.3.1" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0", "1.2.9", "1.2.8", "1.2.7", "1.2.6", "1.2.5", "1.2.4", "1.2.3", "1.2.2", "1.2.1", "1.2.0", "1.1.18", "1.1.17", "1.1.16" },
+    .versions = &[_][]const u8{ "1.4.5", "1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0", "1.2.9", "1.2.8", "1.2.7", "1.2.6", "1.2.5", "1.2.4", "1.2.3", "1.2.2", "1.2.1", "1.2.0", "1.1.18", "1.1.17", "1.1.16" },
 }, .{
     .name = "Brave Browser",
     .domain = "brave.com",
