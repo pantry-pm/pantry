@@ -67,6 +67,7 @@ export const fliptioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.0',
     '2.10.0',
     '2.9.0',
     '2.8.0',
