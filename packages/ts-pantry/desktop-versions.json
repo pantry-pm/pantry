@@ -195,8 +195,8 @@
       "kind": "font",
       "host": "ubuntu",
       "latest": "3.003",
-      "published": "3.003",
-      "needsUpdate": false
+      "published": null,
+      "needsUpdate": true
     },
     {
       "domain": "handbrake.fr",
