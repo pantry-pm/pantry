@@ -87,8 +87,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "1.129.1",
-      "published": "1.129.0",
-      "needsUpdate": true
+      "published": "1.129.1",
+      "needsUpdate": false
     },
     {
       "domain": "codex.openai.com",
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
