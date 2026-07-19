@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.21...v0.10.22)
+
+## 🐛 Bug Fixes
+
+- **publish**: resolve protocols in npm metadata ([f76dcc0](https://github.com/pantry-pm/pantry/commit/f76dcc0)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.22 ([6af66ab](https://github.com/pantry-pm/pantry/commit/6af66ab)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.20...v0.10.21)
 
 ## 🐛 Bug Fixes
