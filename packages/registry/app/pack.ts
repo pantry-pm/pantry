@@ -5,8 +5,8 @@
  * Usage: bun run pack.ts [directory]
  */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, readdirSync, writeFileSync } from 'node:fs'
-import { join, basename, relative } from 'node:path'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, readdirSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join, relative } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawn } from 'node:child_process'
 import { rewritePackageJsonContent } from '../src/workspace-protocol'
@@ -121,6 +121,12 @@ else {
     }
     console.log()
     manifestStagingDir = mkdtempSync(join(tmpdir(), 'pantry-pack-manifest-'))
+    for (const file of filesToInclude) {
+      if (file === 'package.json') continue
+      const stagedPath = join(manifestStagingDir, file)
+      mkdirSync(dirname(stagedPath), { recursive: true })
+      copyFileSync(join(targetDir, file), stagedPath)
+    }
     writeFileSync(join(manifestStagingDir, 'package.json'), rewrite.content)
   }
 
@@ -130,9 +136,9 @@ else {
 
   try {
     if (manifestStagingDir) {
-      // Staged rewritten manifest replaces the on-disk package.json inside
-      // the tarball; the on-disk file itself stays untouched.
-      await createTarball(targetDir, tarballPath, filesToInclude.filter(f => f !== 'package.json'), manifestStagingDir)
+      // Pack a complete staged tree so tar receives all -C options before
+      // file operands. GNU tar rejects a later -C, while BSD tar accepts it.
+      await createTarball(manifestStagingDir, tarballPath, filesToInclude)
     }
     else {
       await createTarball(targetDir, tarballPath, filesToInclude)
@@ -316,16 +322,9 @@ function shouldIgnore(name: string, relativePath: string): boolean {
   return false
 }
 
-function createTarball(baseDir: string, outputPath: string, files: string[], manifestDir?: string): Promise<void> {
+function createTarball(baseDir: string, outputPath: string, files: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Use tar command to create gzipped tarball. When the packed manifest was
-    // rewritten (workspace: ranges), the staged copy is swapped in for the
-    // on-disk package.json via ordered -C switches.
-    const args = ['-czf', outputPath]
-    if (manifestDir) {
-      args.push('-C', manifestDir, 'package.json')
-    }
-    args.push('-C', baseDir, ...files)
+    const args = ['-czf', outputPath, '-C', baseDir, ...files]
 
     const tar = spawn('tar', args, { stdio: 'inherit' })
 
