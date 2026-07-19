@@ -183,29 +183,59 @@ async function publishedVersion(domain: string, fresh = false): Promise<string |
       cache: fresh ? 'no-store' : 'default',
       signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
     })
-    if (!res.ok)
+    if (res.status === 404)
       return null
+    if (!res.ok)
+      throw new Error(`HTTP ${res.status}`)
     return (await res.json() as any)?.latestVersion || null
   }
-  catch {
-    return null
+  catch (err) {
+    throw new Error(`registry metadata unavailable for ${domain}: ${err}`)
   }
+}
+
+async function ensureRegistryAvailable(): Promise<void> {
+  let lastStatus = 'unreachable'
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(`${REGISTRY}/health?verify=${Date.now()}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
+      })
+      lastStatus = `HTTP ${res.status}`
+      if (res.ok)
+        return
+    }
+    catch (err) {
+      lastStatus = String(err)
+    }
+    if (attempt < 3)
+      await Bun.sleep(attempt * 1000)
+  }
+  throw new Error(`registry health check failed (${lastStatus}); refusing to infer package state`)
 }
 
 /** Confirm that the registry exposes the version before allowing the workflow
  * to record it. The cache-busting query avoids briefly stale CDN responses. */
 async function verifyPublishedVersion(domain: string, version: string): Promise<void> {
   const attempts = 6
+  let lastObserved = 'unreachable'
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    const published = await publishedVersion(domain, true)
-    if (published === version) {
-      console.warn(`  ✓ registry verified ${domain} @ ${version}`)
-      return
+    try {
+      const published = await publishedVersion(domain, true)
+      lastObserved = published ?? 'not published'
+      if (published === version) {
+        console.warn(`  ✓ registry verified ${domain} @ ${version}`)
+        return
+      }
+    }
+    catch (err) {
+      lastObserved = String(err)
     }
     if (attempt < attempts)
       await Bun.sleep(attempt * 1000)
   }
-  throw new Error(`registry did not expose ${domain} @ ${version} after upload`)
+  throw new Error(`registry did not expose ${domain} @ ${version} after upload (last result: ${lastObserved})`)
 }
 
 /** List font recipes (every `.ts` under recipes/fonts/). */
@@ -272,12 +302,12 @@ async function appDomains(): Promise<string[]> {
       signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
     })
     if (!res.ok)
-      return []
+      throw new Error(`HTTP ${res.status}`)
     const data = await res.json() as any
     return (data.apps ?? []).map((a: any) => a.domain).filter(Boolean)
   }
-  catch {
-    return []
+  catch (err) {
+    throw new Error(`desktop app catalogue unavailable: ${err}`)
   }
 }
 
@@ -285,6 +315,8 @@ async function main(): Promise<void> {
   if (doPublish && doCommit) {
     throw new Error('publish and commit must be separate invocations so the commit re-reads verified registry state')
   }
+
+  await ensureRegistryAvailable()
 
   const previouslyPublished = new Map<string, string | null>()
   if (existsSync(MANIFEST)) {
