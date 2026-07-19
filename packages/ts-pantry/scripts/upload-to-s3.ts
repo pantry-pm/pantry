@@ -16,6 +16,7 @@ import { parseArgs } from 'node:util'
 import { execFileSync } from 'node:child_process'
 import * as crypto from 'node:crypto'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
+import { compareVersions } from '../src/generate-zig'
 
 const DYNAMO_TABLE = process.env.DYNAMODB_TABLE || 'pantry-packages'
 
@@ -250,29 +251,7 @@ async function syncToDynamoDB(pkgName: string, version: string, availableVersion
 }
 
 function isNewerVersion(a: string, b: string): boolean {
-  const parse = (v: string) => {
-    const dashIdx = v.indexOf('-')
-    const numeric = (dashIdx === -1 ? v : v.slice(0, dashIdx)).split('.').map(s => {
-      const n = Number.parseInt(s, 10)
-      return Number.isNaN(n) ? 0 : n
-    })
-    const prerelease = dashIdx === -1 ? null : v.slice(dashIdx + 1)
-    return { numeric, prerelease }
-  }
-  const pa = parse(a)
-  const pb = parse(b)
-  const len = Math.max(pa.numeric.length, pb.numeric.length)
-  for (let i = 0; i < len; i++) {
-    const av = pa.numeric[i] ?? 0
-    const bv = pb.numeric[i] ?? 0
-    if (av !== bv) return av > bv
-  }
-  // Same numeric: release (no prerelease) is newer than prerelease
-  if (pa.prerelease === null && pb.prerelease !== null) return true
-  if (pa.prerelease !== null && pb.prerelease === null) return false
-  // Both have prerelease: compare lexicographically
-  if (pa.prerelease !== null && pb.prerelease !== null) return pa.prerelease > pb.prerelease
-  return false
+  return compareVersions(a, b) < 0
 }
 
 function compareSemverDesc(a: string, b: string): number {

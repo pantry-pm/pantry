@@ -454,6 +454,15 @@ pub const S3PackageResult = struct {
     version: []const u8,
 };
 
+fn zigDevBuildNumber(version: []const u8) ?u64 {
+    const marker = "-dev.";
+    const start = (std.mem.indexOf(u8, version, marker) orelse return null) + marker.len;
+    var end = start;
+    while (end < version.len and std.ascii.isDigit(version[end])) : (end += 1) {}
+    if (end == start) return null;
+    return std.fmt.parseInt(u64, version[start..end], 10) catch null;
+}
+
 /// Try to find a package tarball in the pantry S3 registry.
 /// Fetches metadata.json, resolves version constraint, returns download URL.
 /// Returns null if not found or on any error.
@@ -571,7 +580,11 @@ pub fn lookupS3Registry(
         const parsed_ver = semver.parseVersion(ver) catch continue;
         if (best_parsed) |best| {
             // Compare: pick the newer version
-            if (parsed_ver.major > best.major or
+            const newer_dev = parsed_ver.major == best.major and
+                parsed_ver.minor == best.minor and
+                parsed_ver.patch == best.patch and
+                (zigDevBuildNumber(ver) orelse 0) > (zigDevBuildNumber(best_version.?) orelse 0);
+            if (newer_dev or parsed_ver.major > best.major or
                 (parsed_ver.major == best.major and parsed_ver.minor > best.minor) or
                 (parsed_ver.major == best.major and parsed_ver.minor == best.minor and parsed_ver.patch > best.patch))
             {
@@ -612,6 +625,12 @@ pub fn lookupS3Registry(
         .tarball_url = tarball_url,
         .version = version_dupe,
     };
+}
+
+test "zig dev build numbers compare numerically" {
+    try std.testing.expectEqual(@as(?u64, 1422), zigDevBuildNumber("0.17.0-dev.1422+e863bf3be"));
+    try std.testing.expectEqual(@as(?u64, 986), zigDevBuildNumber("0.17.0-dev.986_f3544a707"));
+    try std.testing.expectEqual(@as(?u64, null), zigDevBuildNumber("0.17.0"));
 }
 
 /// Try to find a package tarball published via `pantry publish` (packages/pantry/ prefix).

@@ -34,6 +34,11 @@ describe('compareVersions (newest-first)', () => {
     expect(compareVersions('0.17.0-dev.2471+aaaa', '0.17.0-dev.263+bbbb')).toBeLessThan(0)
   })
 
+  test('orders storage-safe Zig dev build metadata numerically', () => {
+    expect(compareVersions('0.17.0-dev.1422_e863bf3be', '0.17.0-dev.986_f3544a707')).toBeLessThan(0)
+    expect(compareVersions('0.17.0-dev.986_f3544a707', '0.17.0-dev.1422_e863bf3be')).toBeGreaterThan(0)
+  })
+
   test('handles a leading v prefix', () => {
     expect(compareVersions('v0.17.0-dev.263+0add2dfc4', '0.17.0-dev.263')).toBe(0)
     expect(compareVersions('v0.17.0', 'v0.16.0')).toBeLessThan(0)

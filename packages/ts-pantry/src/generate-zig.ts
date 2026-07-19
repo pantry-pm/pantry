@@ -93,8 +93,8 @@ function comparePrerelease(a: string, b: string): number {
 export function compareVersions(a: string, b: string): number {
   // Remove 'v' prefix if present, then drop SemVer build metadata (`+sha`),
   // which carries no precedence and must not leak into the prerelease compare.
-  const cleanA = (a.startsWith('v') ? a.slice(1) : a).split('+')[0]
-  const cleanB = (b.startsWith('v') ? b.slice(1) : b).split('+')[0]
+  const cleanA = (a.startsWith('v') ? a.slice(1) : a).replace(/_(?=[0-9a-f]+$)/i, '+').split('+')[0]
+  const cleanB = (b.startsWith('v') ? b.slice(1) : b).replace(/_(?=[0-9a-f]+$)/i, '+').split('+')[0]
 
   // Separate numeric portion from prerelease suffix
   const dashA = cleanA.indexOf('-')
