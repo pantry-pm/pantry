@@ -1,7 +1,7 @@
-//! Workspace protocol rewriting for published package manifests.
+//! Workspace and catalog protocol rewriting for published package manifests.
 //!
-//! A literal `workspace:` range must never reach a registry — npm and bun
-//! cannot install it, so a package published with one is uninstallable.
+//! Literal `workspace:` and `catalog:` ranges must never reach a registry —
+//! npm and bun cannot install them outside their source workspace.
 //! `pantry publish` and `pantry publish:commit` rewrite those ranges in the
 //! staged manifest that goes into the tarball, exactly like `bun publish`:
 //!
@@ -34,7 +34,7 @@ const dep_sections = [_][]const u8{ "dependencies", "devDependencies", "peerDepe
 /// Cap on workspace-root search depth and member-package scan depth.
 const max_search_depth = 12;
 
-const WorkspaceRef = struct {
+const ProtocolRef = struct {
     name: []const u8,
     section: []const u8,
     range: []const u8,
@@ -69,23 +69,31 @@ pub fn rewriteManifestContent(
     content: []const u8,
     package_dir: []const u8,
 ) ![]const u8 {
-    // Cheap pre-check: no workspace refs anywhere → untouched.
-    if (std.mem.indexOf(u8, content, "\"workspace:") == null) return content;
+    // Cheap pre-check: no workspace/catalog refs anywhere → untouched.
+    if (std.mem.indexOf(u8, content, "\"workspace:") == null and
+        std.mem.indexOf(u8, content, "\"catalog:") == null) return content;
 
     var parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch return content;
     defer parsed.deinit();
     if (parsed.value != .object) return content;
 
-    if (firstWorkspaceRef(parsed.value) == null) return content;
+    if (firstProtocolRef(parsed.value) == null) return content;
 
     const root = findWorkspaceRoot(allocator, package_dir) orelse {
-        const ref = firstWorkspaceRef(parsed.value).?;
+        const ref = firstProtocolRef(parsed.value).?;
         return failUnresolvable(ref, "no workspace root (a package.json with \"workspaces\") was found at or above the package directory");
     };
     defer allocator.free(root);
 
     var packages = try resolveWorkspacePackages(allocator, root);
     defer freeWorkspacePackages(allocator, &packages);
+
+    const root_pkg_path = try std.fs.path.join(allocator, &[_][]const u8{ root, "package.json" });
+    defer allocator.free(root_pkg_path);
+    const root_content = io_helper.readFileAlloc(allocator, root_pkg_path, 10 * 1024 * 1024) catch return content;
+    defer allocator.free(root_content);
+    var root_parsed = std.json.parseFromSlice(std.json.Value, allocator, root_content, .{}) catch return content;
+    defer root_parsed.deinit();
 
     // Allocated replacement ranges — freed after serialization.
     var replacements = std.ArrayList([]const u8).empty;
@@ -103,24 +111,32 @@ pub fn rewriteManifestContent(
             const range_val = entry.value_ptr;
             if (range_val.* != .string) continue;
             const range = range_val.string;
-            if (!std.mem.startsWith(u8, range, "workspace:")) continue;
             const dep_name = entry.key_ptr.*;
-            const spec = range["workspace:".len..];
-
-            const version = packages.get(dep_name) orelse {
-                return failUnresolvable(
-                    .{ .name = dep_name, .section = section, .range = range },
-                    "no workspace package with that name exists below the workspace root",
-                );
-            };
-            if (version.len == 0) {
-                return failUnresolvable(
-                    .{ .name = dep_name, .section = section, .range = range },
-                    "the workspace package has no \"version\" field",
-                );
-            }
-
-            const resolved = try resolveSpec(allocator, spec, version);
+            const resolved = if (std.mem.startsWith(u8, range, "workspace:")) blk: {
+                const spec = range["workspace:".len..];
+                const version = packages.get(dep_name) orelse {
+                    return failUnresolvable(
+                        .{ .name = dep_name, .section = section, .range = range },
+                        "no workspace package with that name exists below the workspace root",
+                    );
+                };
+                if (version.len == 0) {
+                    return failUnresolvable(
+                        .{ .name = dep_name, .section = section, .range = range },
+                        "the workspace package has no \"version\" field",
+                    );
+                }
+                break :blk try resolveSpec(allocator, spec, version);
+            } else if (std.mem.startsWith(u8, range, "catalog:")) blk: {
+                const catalog_name = range["catalog:".len..];
+                const version = catalogVersion(root_parsed.value, catalog_name, dep_name) orelse {
+                    return failUnresolvable(
+                        .{ .name = dep_name, .section = section, .range = range },
+                        "the workspace root does not define that dependency in the selected catalog",
+                    );
+                };
+                break :blk try allocator.dupe(u8, version);
+            } else continue;
             try replacements.append(allocator, resolved);
             // In-place value replacement keeps the map iterator valid.
             range_val.* = .{ .string = resolved };
@@ -147,27 +163,47 @@ fn resolveSpec(allocator: std.mem.Allocator, spec: []const u8, version: []const 
     return try allocator.dupe(u8, spec);
 }
 
-fn failUnresolvable(ref: WorkspaceRef, reason: []const u8) error{UnresolvableWorkspaceDependency} {
+fn failUnresolvable(ref: ProtocolRef, reason: []const u8) error{UnresolvableWorkspaceDependency} {
     style.printError(
-        "Cannot publish: dependency \"{s}\" ({s}) uses \"{s}\" but {s}.\nRefusing to publish an unresolvable workspace: range — the published package would be uninstallable.\n",
+        "Cannot publish: dependency \"{s}\" ({s}) uses \"{s}\" but {s}.\nRefusing to publish an unresolvable workspace/catalog range — the published package would be uninstallable.\n",
         .{ ref.name, ref.section, ref.range, reason },
     );
     return error.UnresolvableWorkspaceDependency;
 }
 
-fn firstWorkspaceRef(root: std.json.Value) ?WorkspaceRef {
+fn firstProtocolRef(root: std.json.Value) ?ProtocolRef {
     if (root != .object) return null;
     for (dep_sections) |section| {
         const deps = root.object.get(section) orelse continue;
         if (deps != .object) continue;
         for (deps.object.keys(), deps.object.values()) |name, range_val| {
             if (range_val != .string) continue;
-            if (std.mem.startsWith(u8, range_val.string, "workspace:")) {
+            if (std.mem.startsWith(u8, range_val.string, "workspace:") or
+                std.mem.startsWith(u8, range_val.string, "catalog:"))
+            {
                 return .{ .name = name, .section = section, .range = range_val.string };
             }
         }
     }
     return null;
+}
+
+fn catalogVersion(root: std.json.Value, catalog_name: []const u8, dependency: []const u8) ?[]const u8 {
+    if (root != .object) return null;
+    const container = if (catalog_name.len == 0) "catalog" else "catalogs";
+    const catalogs = root.object.get(container) orelse blk: {
+        const workspaces = root.object.get("workspaces") orelse return null;
+        if (workspaces != .object) return null;
+        break :blk workspaces.object.get(container) orelse return null;
+    };
+    if (catalogs != .object) return null;
+    const catalog = if (catalog_name.len == 0)
+        catalogs
+    else
+        catalogs.object.get(catalog_name) orelse return null;
+    if (catalog != .object) return null;
+    const version = catalog.object.get(dependency) orelse return null;
+    return if (version == .string) version.string else null;
 }
 
 /// Extract the workspace glob array from a parsed root package.json —
@@ -359,4 +395,32 @@ fn tryAddPackageDir(
         "";
 
     try packages.put(try allocator.dupe(u8, name_val.string), try allocator.dupe(u8, version));
+}
+
+test "catalogVersion resolves default and named catalogs" {
+    const source =
+        \\{
+        \\  "catalog": { "react": "^19.0.0" },
+        \\  "catalogs": { "testing": { "vitest": "^3.0.0" } }
+        \\}
+    ;
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, source, .{});
+    defer parsed.deinit();
+    try std.testing.expectEqualStrings("^19.0.0", catalogVersion(parsed.value, "", "react").?);
+    try std.testing.expectEqualStrings("^3.0.0", catalogVersion(parsed.value, "testing", "vitest").?);
+    try std.testing.expect(catalogVersion(parsed.value, "", "missing") == null);
+}
+
+test "catalogVersion supports catalogs nested under workspaces" {
+    const source =
+        \\{
+        \\  "workspaces": {
+        \\    "packages": ["packages/*"],
+        \\    "catalog": { "typescript": "^6.0.0" }
+        \\  }
+        \\}
+    ;
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, source, .{});
+    defer parsed.deinit();
+    try std.testing.expectEqualStrings("^6.0.0", catalogVersion(parsed.value, "", "typescript").?);
 }

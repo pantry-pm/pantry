@@ -362,7 +362,9 @@ fn makeWorkspaceFixture(allocator: std.mem.Allocator) ![]const u8 {
         \\{
         \\  "name": "ws-root",
         \\  "private": true,
-        \\  "workspaces": ["packages/*"]
+        \\  "workspaces": ["packages/*"],
+        \\  "catalog": { "better-dx": "^0.2.15" },
+        \\  "catalogs": { "testing": { "vitest": "^3.2.0" } }
         \\}
     );
 
@@ -534,6 +536,48 @@ test "workspace protocol rewrite - non-workspace ranges stay untouched" {
     try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "0.2.9");
     try expectDepRange(allocator, rewritten, "dependencies", "left-pad", "^1.3.0");
     try expectDepRange(allocator, rewritten, "dependencies", "local-thing", "file:../local-thing");
+}
+
+test "catalog protocol rewrite - default and named catalogs resolve" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "better-dx": "catalog:" },
+        \\  "devDependencies": { "vitest": "catalog:testing" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "better-dx", "^0.2.15");
+    try expectDepRange(allocator, rewritten, "devDependencies", "vitest", "^3.2.0");
+}
+
+test "catalog protocol rewrite - missing catalog entry fails loudly" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "missing": "catalog:" }
+        \\}
+    ;
+
+    try testing.expectError(
+        error.UnresolvableWorkspaceDependency,
+        workspace_publish.rewriteManifestContent(allocator, content, app_dir),
+    );
 }
 
 test "workspace protocol rewrite - manifest without workspace refs is returned as-is" {
