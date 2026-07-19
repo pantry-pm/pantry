@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.24...v0.10.25)
+
+## 🐛 Bug Fixes
+
+- **publish**: support new scoped packages ([c1fb477](https://github.com/pantry-pm/pantry/commit/c1fb477)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.25 ([a0b6e3e](https://github.com/pantry-pm/pantry/commit/a0b6e3e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update ziglang.org to 0.17.0-dev.1426+58a94eaae ([28a2521](https://github.com/pantry-pm/pantry/commit/28a2521)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([c51bd6d](https://github.com/pantry-pm/pantry/commit/c51bd6d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.23...v0.10.24)
 
 ## 🐛 Bug Fixes
