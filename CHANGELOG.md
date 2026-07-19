@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.19...v0.10.20)
+
+## 🐛 Bug Fixes
+
+- **registry**: resolve catalog ranges in packed manifests ([499f425](https://github.com/pantry-pm/pantry/commit/499f425)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.20 ([e0527d2](https://github.com/pantry-pm/pantry/commit/e0527d2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.18...v0.10.19)
 
 ## 🚀 Features
