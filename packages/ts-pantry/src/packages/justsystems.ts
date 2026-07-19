@@ -60,6 +60,7 @@ export const justsystemsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.57.0',
     '1.56.0',
     '1.55.1',
     '1.55.0',
