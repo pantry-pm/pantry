@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.22...v0.10.23)
+
+## 🐛 Bug Fixes
+
+- **install**: source Zig exclusively from Pantry ([1d3f9f9](https://github.com/pantry-pm/pantry/commit/1d3f9f9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: order Zig dev builds numerically ([1b5d3ad](https://github.com/pantry-pm/pantry/commit/1b5d3ad)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🤖 Continuous Integration
+
+- **registry**: mirror Zig development builds hourly ([f5c583b](https://github.com/pantry-pm/pantry/commit/f5c583b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.23 ([ce963d1](https://github.com/pantry-pm/pantry/commit/ce963d1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update moonrepo.dev/moon to 2.4.5 ([effb837](https://github.com/pantry-pm/pantry/commit/effb837)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.21...v0.10.22)
 
 ## 🐛 Bug Fixes
