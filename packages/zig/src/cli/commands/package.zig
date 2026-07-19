@@ -1154,11 +1154,12 @@ fn publishSingleToNpm(
 
     // Set package.json content so npm metadata includes all fields
     // (types, exports, module, dependencies, bin, etc.)
-    // Resolve workspace: protocol deps so npm metadata has real versions
+    // Resolve workspace and catalog protocol deps so npm metadata matches the
+    // staged tarball and contains only registry-installable ranges.
     const resolved_pkg_json = if (config_content) |content|
-        resolveWorkspaceProtocol(allocator, content, package_dir) catch |err| {
+        workspace_publish.rewriteManifestContent(allocator, content, package_dir) catch |err| {
             if (err == error.UnresolvableWorkspaceDependency) {
-                return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
+                return CommandResult.err(allocator, "Error: Could not resolve workspace/catalog protocol ranges (see details above).");
             }
             return err;
         }
