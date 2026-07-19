@@ -2,17 +2,21 @@ name: Health Monitor
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
+concurrency:
+  group: health-monitor
+  cancel-in-progress: false
+
 permissions:
-  actions: read
+  actions: write
   contents: read
 
 jobs:
   health-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
 
@@ -38,19 +42,48 @@ jobs:
             echo "status=unhealthy" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Recover registry through Hetzner deploy
+        id: recovery
+        if: steps.registry.outputs.status == 'unhealthy'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Registry remained unhealthy; dispatching the canonical Hetzner deploy workflow"
+          gh workflow run deploy-registry.yml -R "${{ github.repository }}" --ref main
+
+          HTTP_CODE=000
+          for attempt in $(seq 1 18); do
+            HTTP_CODE=$(curl -sS -o /tmp/recovery-response -w '%{http_code}' \
+              --max-time 15 \
+              'https://registry.pantry.dev/health' 2>/dev/null) || true
+            HTTP_CODE="${HTTP_CODE: -3}"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Registry recovered after deploy dispatch"
+              break
+            fi
+            echo "Recovery attempt $attempt returned HTTP $HTTP_CODE"
+            [ "$attempt" -lt 18 ] && sleep 10
+          done
+
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "status=healthy" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=unhealthy" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check object storage accessibility
         id: s3
         env:
-          STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
+          STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'hetzner' }}
           S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}
-          S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+          S3_REGION: ${{ vars.S3_REGION || 'fsn1' }}
           S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
           # The AWS CLI requires AWS_* names even for S3-compatible providers.
-          # Prefer the provider-agnostic credentials used by every build workflow,
-          # while retaining the AWS fallback for an AWS-backed deployment.
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
+          # Pantry uses only the Hetzner object-storage credentials.
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ vars.S3_REGION || 'fsn1' }}
         run: |
           ENDPOINT_ARGS=()
           if [ -n "$S3_ENDPOINT" ]; then
@@ -171,8 +204,10 @@ jobs:
         id: overall
         run: |
           ISSUES=""
-          if [ "${{ steps.registry.outputs.status }}" != "healthy" ]; then
-            ISSUES="Registry unhealthy (HTTP ${{ steps.registry.outputs.http_code }})"
+          REGISTRY_STATUS="${{ steps.recovery.outputs.status || steps.registry.outputs.status }}"
+          REGISTRY_CODE="${{ steps.recovery.outputs.http_code || steps.registry.outputs.http_code }}"
+          if [ "$REGISTRY_STATUS" != "healthy" ]; then
+            ISSUES="Registry unhealthy (HTTP $REGISTRY_CODE)"
           fi
           if [ "${{ steps.s3.outputs.status }}" != "accessible" ]; then
             [ -n "$ISSUES" ] && ISSUES="$ISSUES; "
@@ -203,10 +238,10 @@ jobs:
         run: |
           # The workflow intentionally completes successfully after reporting an
           # incident, so previous run conclusions cannot distinguish healthy runs
-          # from alerts. Emit once every four scheduled checks (~2h) instead of
+          # from alerts. Emit once every 24 scheduled checks (~2h) instead of
           # incorrectly treating every check as a new incident.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
-             [ $(( ${{ github.run_number }} % 4 )) -eq 0 ]; then
+             [ $(( ${{ github.run_number }} % 24 )) -eq 0 ]; then
             echo "send=true" >> "$GITHUB_OUTPUT"
             echo "Sending scheduled incident reminder"
           else
@@ -223,7 +258,7 @@ jobs:
           status: failure
           fields: |
             [
-              {"name": "Registry", "value": "${{ steps.registry.outputs.status || 'unknown' }} (HTTP ${{ steps.registry.outputs.http_code || '?' }})", "inline": true},
+              {"name": "Registry", "value": "${{ steps.recovery.outputs.status || steps.registry.outputs.status || 'unknown' }} (HTTP ${{ steps.recovery.outputs.http_code || steps.registry.outputs.http_code || '?' }})", "inline": true},
               {"name": "Object Storage", "value": "${{ steps.s3.outputs.provider || 'unknown' }} / ${{ steps.s3.outputs.bucket || 'unknown' }}: ${{ steps.s3.outputs.status || 'unknown' }}", "inline": true},
               {"name": "Failures (2h)", "value": "${{ steps.failures.outputs.count || '?' }}", "inline": true},
               {"name": "Update Pipelines", "value": "${{ steps.pipelines.outputs.items || 'healthy' }}", "inline": false}
@@ -253,7 +288,7 @@ jobs:
           status: success
           fields: |
             [
-              {"name": "Registry", "value": "${{ steps.registry.outputs.status || 'unknown' }}", "inline": true},
+              {"name": "Registry", "value": "${{ steps.recovery.outputs.status || steps.registry.outputs.status || 'unknown' }}", "inline": true},
               {"name": "Object Storage", "value": "${{ steps.s3.outputs.status || 'unknown' }}", "inline": true},
               {"name": "Failures (2h)", "value": "${{ steps.failures.outputs.count || '0' }}", "inline": true},
               {"name": "Update Pipelines", "value": "${{ steps.pipelines.outputs.status || 'unknown' }}", "inline": true}
