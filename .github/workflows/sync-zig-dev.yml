@@ -1,14 +1,12 @@
 name: Sync Zig Dev
 
-# Daily dispatch of build-versions.yml targeted at ziglang.org so the latest
-# 0.16-dev master build from ziglang.org/download/index.json lands in S3
-# within ~24h of upstream publishing it, instead of waiting for the weekly
-# multi-version run.
+# Hourly dispatch of build-versions.yml targeted at ziglang.org so the latest
+# 0.17-dev master build from ziglang.org/download/index.json is mirrored into
+# Pantry before framework and application workflows request the rolling channel.
 
 on:
   schedule:
-    # Daily at 5am UTC — upstream typically cuts new dev builds overnight.
-    - cron: '0 5 * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 
 concurrency:

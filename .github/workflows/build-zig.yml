@@ -25,26 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Pantry & install deps (zig from deps.yaml)
+      - name: Setup Pantry and Zig from the registry
         uses: ./packages/action
+        with:
+          packages: ziglang.org@0.17.0-dev
 
-      - name: Clone zig deps
-        run: |
-          # Pantry install may create empty `pantry/$repo` directories
-          # without populating their sources (when the registry copy is
-          # stale or unavailable). A bare directory check skips the clone
-          # in that case and the build then fails with `file_hash
-          # FileNotFound`. Probe for an actual source file instead.
-          mkdir -p pantry
-          for repo in zig-cli zig-config zig-test-framework; do
-            if [ ! -f "pantry/$repo/src/root.zig" ] && [ ! -f "pantry/$repo/src/lib.zig" ] && [ ! -f "pantry/$repo/src/zig-config.zig" ]; then
-              echo "Cloning $repo ..."
-              rm -rf "pantry/$repo"
-              git clone --depth 1 "https://github.com/zig-utils/$repo.git" "pantry/$repo"
-            else
-              echo "$repo already present"
-            fi
-          done
+      - name: Install Zig package dependencies
+        working-directory: packages/zig
+        run: pantry install --no-save
 
       - name: Build for All Platforms
         run: |
