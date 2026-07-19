@@ -639,6 +639,7 @@ export function createHandler(
   binaryStorage?: BinaryStorage,
   phpPackageStorage?: PhpPackageStorage,
   authService?: AuthService,
+  internalBaseUrl = baseUrl,
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
@@ -1138,10 +1139,10 @@ export function createHandler(
 
       // npm/registry bulk operations
       if (path === '/registry/download' && req.method === 'POST') {
-        return handleRegistryDownload(req, corsHeaders)
+        return handleRegistryDownload(req, corsHeaders, internalBaseUrl)
       }
       if (path === '/npm/download' && req.method === 'POST') {
-        return handleRegistryDownload(req, corsHeaders)
+        return handleRegistryDownload(req, corsHeaders, internalBaseUrl)
       }
       if (path === '/npm/resolve' && req.method === 'POST') {
         return handleNpmResolve(req, corsHeaders)
@@ -1517,7 +1518,8 @@ export function createServer(
   const authSvc = new AuthService(auth)
   _authService = authSvc
   const baseUrl = process.env.BASE_URL || `http://localhost:${port}`
-  const handler = createHandler(registry, analyticsStorage, zigPackageStorage, baseUrl, binaryStorage, phpPackageStorage, authSvc)
+  const internalBaseUrl = process.env.REGISTRY_INTERNAL_URL || `http://127.0.0.1:${port}`
+  const handler = createHandler(registry, analyticsStorage, zigPackageStorage, baseUrl, binaryStorage, phpPackageStorage, authSvc, internalBaseUrl)
 
   const start = () => {
     server = Bun.serve({
@@ -2946,12 +2948,25 @@ function isAllowedBulkTarballUrl(value: string): boolean {
   }
 }
 
-async function fetchRegistryTarballBytes(pkg: RegistryDownloadPackage): Promise<Uint8Array | null> {
+function internalBulkTarballUrl(value: string, internalBaseUrl: string): string {
+  const url = new URL(value)
+  if (url.hostname !== 'registry.pantry.dev')
+    return value
+
+  return new URL(`${url.pathname}${url.search}`, `${internalBaseUrl.replace(/\/$/, '')}/`).href
+}
+
+async function fetchRegistryTarballBytes(pkg: RegistryDownloadPackage, internalBaseUrl: string): Promise<Uint8Array | null> {
   if (!isAllowedBulkTarballUrl(pkg.tarball)) {
     return null
   }
 
-  const res = await fetch(pkg.tarball, {
+  // Never send the registry's own tarballs back through its public rpx route.
+  // A bulk request can contain hundreds of self-hosted binaries; proxying each
+  // one registry -> rpx -> registry recursively exhausts the gateway's
+  // connection pool and wedges every Pantry install. Loop back directly to the
+  // Bun listener while preserving the public URL in the response manifest.
+  const res = await fetch(internalBulkTarballUrl(pkg.tarball, internalBaseUrl), {
     headers: { 'Accept': 'application/octet-stream' },
   })
   if (!res.ok) return null
@@ -2980,7 +2995,7 @@ function appendTarEntry(controller: ReadableStreamDefaultController<Uint8Array>,
   if (padding) controller.enqueue(padding)
 }
 
-async function handleRegistryDownload(req: Request, corsHeaders: Record<string, string>): Promise<Response> {
+async function handleRegistryDownload(req: Request, corsHeaders: Record<string, string>, internalBaseUrl: string): Promise<Response> {
   try {
     const body = await req.json() as { packages?: unknown[] }
     if (!Array.isArray(body?.packages) || body.packages.length === 0) {
@@ -3017,7 +3032,7 @@ async function handleRegistryDownload(req: Request, corsHeaders: Record<string, 
             const fetched = await Promise.all(batch.map(async (pkg, batchIndex) => ({
               pkg,
               index: i + batchIndex,
-              bytes: await fetchRegistryTarballBytes(pkg),
+              bytes: await fetchRegistryTarballBytes(pkg, internalBaseUrl),
             })))
 
             for (const item of fetched) {

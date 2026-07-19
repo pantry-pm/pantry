@@ -214,13 +214,15 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
   describe('registry bulk download stream', () => {
     it('POST /registry/download returns one tar stream containing npm and Pantry tarballs plus a manifest', async () => {
       const realFetch = globalThis.fetch
+      const internalBaseUrl = `http://127.0.0.1:${port}`
       const tarballs = new Map<string, Uint8Array>([
         ['https://registry.npmjs.org/a/-/a-1.0.0.tgz', new Uint8Array([1, 2, 3])],
         ['https://registry.npmjs.org/b/-/b-2.0.0.tgz', new Uint8Array([4, 5, 6, 7])],
-        ['https://registry.pantry.dev/packages/tool/3.0.0/tarball', new Uint8Array([8, 9])],
+        [`${internalBaseUrl}/packages/tool/3.0.0/tarball`, new Uint8Array([8, 9])],
         ['https://pantry-registry.s3.amazonaws.com/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz', new Uint8Array([10, 11, 12])],
       ])
       let upstreamRequests = 0
+      const requestedUrls: string[] = []
 
       globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
         const href = typeof input === 'string'
@@ -228,6 +230,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
           : input instanceof URL
             ? input.href
             : input.url
+        requestedUrls.push(href)
         const data = tarballs.get(href)
         if (data) {
           upstreamRequests += 1
@@ -270,6 +273,8 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
         expect(manifest.packages[2]).toMatchObject({ name: 'tool', version: '3.0.0', file: 'packages/2.tgz' })
         expect(manifest.packages[3]).toMatchObject({ name: 'curl.se', version: '8.12.0', file: 'packages/3.tgz' })
         expect(upstreamRequests).toBe(4)
+        expect(requestedUrls).toContain(`${internalBaseUrl}/packages/tool/3.0.0/tarball`)
+        expect(requestedUrls).not.toContain('https://registry.pantry.dev/packages/tool/3.0.0/tarball')
       }
       finally {
         globalThis.fetch = realFetch
