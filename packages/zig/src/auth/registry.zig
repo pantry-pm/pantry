@@ -31,14 +31,17 @@ fn maybeDecompressGzip(allocator: std.mem.Allocator, data: []const u8) ![]const 
 
 /// URL-encode a package name for use in registry URLs
 /// Scoped packages like "@scope/name" need special handling
-/// npm expects the / to be encoded as %2F in the URL path
+/// npm's registry path keeps the leading @ literal and escapes the slash:
+/// `@scope/name` -> `@scope%2fname` (npm-package-arg's `escapedName`).
 fn urlEncodePackageName(allocator: std.mem.Allocator, package_name: []const u8) ![]u8 {
     // npm registry expects scoped packages with special chars percent-encoded
-    // e.g., @scope/name -> %40scope%2Fname
+    // e.g., @scope/name -> @scope%2fname. Encoding the @ as %40 works for
+    // some existing-package routes but first-time publishes are rejected with
+    // `invalid path: package/`.
     var encoded_len: usize = 0;
     for (package_name) |c| {
         encoded_len += switch (c) {
-            '/', '@', ' ', '#', '?', '&', '=', '+', '%' => @as(usize, 3),
+            '/', ' ', '#', '?', '&', '=', '+', '%' => @as(usize, 3),
             else => @as(usize, 1),
         };
     }
@@ -59,12 +62,6 @@ fn urlEncodePackageName(allocator: std.mem.Allocator, package_name: []const u8) 
                 result[i] = '%';
                 result[i + 1] = '2';
                 result[i + 2] = 'F';
-                i += 3;
-            },
-            '@' => {
-                result[i] = '%';
-                result[i + 1] = '4';
-                result[i + 2] = '0';
                 i += 3;
             },
             ' ' => {
@@ -117,6 +114,18 @@ fn urlEncodePackageName(allocator: std.mem.Allocator, package_name: []const u8) 
     }
 
     return result;
+}
+
+test "npm registry path encoding preserves scoped package at-sign" {
+    const encoded = try urlEncodePackageName(std.testing.allocator, "@ts-charts/graph");
+    defer std.testing.allocator.free(encoded);
+    try std.testing.expectEqualStrings("@ts-charts%2Fgraph", encoded);
+}
+
+test "npm registry path encoding escapes unscoped reserved characters" {
+    const encoded = try urlEncodePackageName(std.testing.allocator, "package name");
+    defer std.testing.allocator.free(encoded);
+    try std.testing.expectEqualStrings("package%20name", encoded);
 }
 
 /// Escape a string for embedding inside a JSON string value.
