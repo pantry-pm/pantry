@@ -1,3 +1,80 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.18...v0.10.19)
+
+## 🚀 Features
+
+- **zig**: rewrite workspace protocol ranges in publish and publish:commit tarballs ([9a3f3d0](https://github.com/pantry-pm/pantry/commit/9a3f3d0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: rewrite workspace protocol ranges at publish time ([c66b2d6](https://github.com/pantry-pm/pantry/commit/c66b2d6)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **packages**: add github.com/router-for-me/CLIProxyAPI ([33fe23a](https://github.com/pantry-pm/pantry/commit/33fe23a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **publish**: resolve catalog dependency ranges ([7b0f012](https://github.com/pantry-pm/pantry/commit/7b0f012)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **packages**: list only installable craft-native.org versions ([616d8aa](https://github.com/pantry-pm/pantry/commit/616d8aa)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: scope stop/status/inspect to the calling project ([489600c](https://github.com/pantry-pm/pantry/commit/489600c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: control launchd/systemd services under project-scoped labels ([762d759](https://github.com/pantry-pm/pantry/commit/762d759)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: resolve git commit stamp from .git instead of cached b.run ([d441b14](https://github.com/pantry-pm/pantry/commit/d441b14)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: render help for subcommands instead of silently ignoring --help ([f8cc4a7](https://github.com/pantry-pm/pantry/commit/f8cc4a7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **test**: make benchmarkHash tolerant of zero elapsed time ([1afb920](https://github.com/pantry-pm/pantry/commit/1afb920)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **zig**: default local builds to ReleaseFast and restore -Doptimize flag ([f9abd2c](https://github.com/pantry-pm/pantry/commit/f9abd2c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: glob package lib dirs at any depth for LD_LIBRARY_PATH ([8e9c866](https://github.com/pantry-pm/pantry/commit/8e9c866)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: re-init postgres data dir on major-version mismatch ([08aa7be](https://github.com/pantry-pm/pantry/commit/08aa7be)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- **packages**: correct craft-native.org recipe platform note ([95109d4](https://github.com/pantry-pm/pantry/commit/95109d4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: note configurer-cache caveat on commit stamp freshness ([0483571](https://github.com/pantry-pm/pantry/commit/0483571)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.19 ([664a59f](https://github.com/pantry-pm/pantry/commit/664a59f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: bump 3 apps & 1 font ([b081d94](https://github.com/pantry-pm/pantry/commit/b081d94)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([402868a](https://github.com/pantry-pm/pantry/commit/402868a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, pocketbase.io ([76f311a](https://github.com/pantry-pm/pantry/commit/76f311a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 4 apps & 1 font ([27dcf65](https://github.com/pantry-pm/pantry/commit/27dcf65)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stats.app to 3.0.9 ([5ed1b93](https://github.com/pantry-pm/pantry/commit/5ed1b93)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([4d2d94e](https://github.com/pantry-pm/pantry/commit/4d2d94e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.89 ([f592d20](https://github.com/pantry-pm/pantry/commit/f592d20)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, just.systems ([917b35d](https://github.com/pantry-pm/pantry/commit/917b35d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update squawkhq.com to 2.60.0 ([19a8b27](https://github.com/pantry-pm/pantry/commit/19a8b27)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([5b3363d](https://github.com/pantry-pm/pantry/commit/5b3363d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update borgbackup.org to 1.4.5 ([425101b](https://github.com/pantry-pm/pantry/commit/425101b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev to 29.33.0 ([2fffb63](https://github.com/pantry-pm/pantry/commit/2fffb63)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ziglang.org to 0.17.0-dev.1422+e863bf3be ([90f6f11](https://github.com/pantry-pm/pantry/commit/90f6f11)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, htop.dev ([794529a](https://github.com/pantry-pm/pantry/commit/794529a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/tw93/mole, libgit2.org, openai.com/codex, pnpm.io ([c79b9db](https://github.com/pantry-pm/pantry/commit/c79b9db)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/tw93/mole to 1.47.0 ([abd378a](https://github.com/pantry-pm/pantry/commit/abd378a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([e2b6b0f](https://github.com/pantry-pm/pantry/commit/e2b6b0f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 2 fonts ([1b2b9a8](https://github.com/pantry-pm/pantry/commit/1b2b9a8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com to 26.715.31925 ([446e992](https://github.com/pantry-pm/pantry/commit/446e992)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([95a5285](https://github.com/pantry-pm/pantry/commit/95a5285)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([0f617d4](https://github.com/pantry-pm/pantry/commit/0f617d4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, flipt.io ([0c6b486](https://github.com/pantry-pm/pantry/commit/0c6b486)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp ([b5c6364](https://github.com/pantry-pm/pantry/commit/b5c6364)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 4 apps & 1 font ([5dbd3b4](https://github.com/pantry-pm/pantry/commit/5dbd3b4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pnpm.io to 11.14.0 ([1a811a4](https://github.com/pantry-pm/pantry/commit/1a811a4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update moonrepo.dev/moon, tox.wiki, ziglang.org ([df33d72](https://github.com/pantry-pm/pantry/commit/df33d72)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update buf.build, github.com/router-for-me/CLIProxyAPI, railway.app ([4771893](https://github.com/pantry-pm/pantry/commit/4771893)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/mail-os/mail, github.com/shaka-project/shaka-packager ([6712dd1](https://github.com/pantry-pm/pantry/commit/6712dd1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/mail-os/mail, github.com/router-for-me/CLIProxyAPI ([3d96237](https://github.com/pantry-pm/pantry/commit/3d96237)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/router-for-me/CLIProxyAPI, sftpgo.com ([2144f70](https://github.com/pantry-pm/pantry/commit/2144f70)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update encore.dev, github.com/ggerganov/llama.cpp, railway.app, zarf.dev ([c77751e](https://github.com/pantry-pm/pantry/commit/c77751e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([056cd73](https://github.com/pantry-pm/pantry/commit/056cd73)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp, railway.app, whatsapp.com ([854e211](https://github.com/pantry-pm/pantry/commit/854e211)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 5 apps & 1 font ([fa3912a](https://github.com/pantry-pm/pantry/commit/fa3912a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, ohmyposh.dev ([bd23960](https://github.com/pantry-pm/pantry/commit/bd23960)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, typst.app ([684571f](https://github.com/pantry-pm/pantry/commit/684571f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com/code-server, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, huggingface.co ([301eb68](https://github.com/pantry-pm/pantry/commit/301eb68)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, openshift.com ([8aea09d](https://github.com/pantry-pm/pantry/commit/8aea09d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: bump 3 apps & 1 font ([a16e115](https://github.com/pantry-pm/pantry/commit/a16e115)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, codex.openai.com, github.com/ggerganov/llama.cpp, tart.run ([b0ded6b](https://github.com/pantry-pm/pantry/commit/b0ded6b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- release v0.10.18 ([66e0aad](https://github.com/pantry-pm/pantry/commit/66e0aad)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update ziglang.org to 0.17.0-dev.1415+64dfaa568 ([8d0f57d](https://github.com/pantry-pm/pantry/commit/8d0f57d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10052 ([508c96a](https://github.com/pantry-pm/pantry/commit/508c96a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.17...v0.10.18)
 
 ## 🐛 Bug Fixes
