@@ -545,9 +545,9 @@
       "name": "Stats",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "3.0.8",
+      "latest": "3.0.9",
       "published": "3.0.8",
-      "needsUpdate": false
+      "needsUpdate": true
     },
     {
       "domain": "tableplus.com",
