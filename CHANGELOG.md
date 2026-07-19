@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.23...v0.10.24)
+
+## 🐛 Bug Fixes
+
+- **registry**: refresh augmented binary metadata ([04f14a8](https://github.com/pantry-pm/pantry/commit/04f14a8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **pack**: stage rewritten workspace manifests portably ([4a1f057](https://github.com/pantry-pm/pantry/commit/4a1f057)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: resolve shared recipe types ([ddec89b](https://github.com/pantry-pm/pantry/commit/ddec89b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🤖 Continuous Integration
+
+- **registry**: repair mirrored package metadata ([9260827](https://github.com/pantry-pm/pantry/commit/9260827)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.24 ([d85b7f7](https://github.com/pantry-pm/pantry/commit/d85b7f7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.22...v0.10.23)
 
 ## 🐛 Bug Fixes
