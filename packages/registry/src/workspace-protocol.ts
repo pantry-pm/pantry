@@ -73,6 +73,18 @@ export class UnresolvableWorkspaceDependencyError extends Error {
   }
 }
 
+export class UnresolvableCatalogDependencyError extends Error {
+  readonly dependency: string
+  readonly section: string
+
+  constructor(message: string, dependency: string, section: string) {
+    super(message)
+    this.name = 'UnresolvableCatalogDependencyError'
+    this.dependency = dependency
+    this.section = section
+  }
+}
+
 /** Compute the published range for a `workspace:` spec given the resolved version. */
 export function resolveWorkspaceSpec(spec: string, version: string): string {
   // "workspace:*" and bare "workspace:" pin the exact current version.
@@ -193,6 +205,54 @@ export function manifestUsesWorkspaceProtocol(manifest: Record<string, any>): bo
   return firstWorkspaceRange(manifest) !== null
 }
 
+function firstCatalogRange(manifest: Record<string, any>): { name: string, section: DependencySection, range: string } | null {
+  for (const section of WORKSPACE_RANGE_SECTIONS) {
+    const deps = manifest[section]
+    if (!deps || typeof deps !== 'object' || Array.isArray(deps)) continue
+    for (const [name, range] of Object.entries(deps)) {
+      if (typeof range === 'string' && range.startsWith('catalog:'))
+        return { name, section, range }
+    }
+  }
+  return null
+}
+
+export function manifestUsesCatalogProtocol(manifest: Record<string, any>): boolean {
+  return firstCatalogRange(manifest) !== null
+}
+
+function catalogMap(root: Record<string, any>, name: string): Record<string, string> | undefined {
+  const source = root[name ? 'catalogs' : 'catalog'] ?? (root.workspaces && !Array.isArray(root.workspaces) ? root.workspaces[name ? 'catalogs' : 'catalog'] : undefined)
+  const catalog = name ? source?.[name] : source
+  return catalog && typeof catalog === 'object' && !Array.isArray(catalog) ? catalog : undefined
+}
+
+export function rewriteCatalogRanges(manifest: Record<string, any>, root: Record<string, any>): RewriteResult {
+  const resolutions: WorkspaceRangeResolution[] = []
+  let result = manifest
+  for (const section of WORKSPACE_RANGE_SECTIONS) {
+    const deps = manifest[section]
+    if (!deps || typeof deps !== 'object' || Array.isArray(deps)) continue
+    for (const [dep, range] of Object.entries(deps)) {
+      if (typeof range !== 'string' || !range.startsWith('catalog:')) continue
+      const name = range.slice('catalog:'.length)
+      const version = catalogMap(root, name)?.[dep]
+      if (typeof version !== 'string' || !version) {
+        throw new UnresolvableCatalogDependencyError(
+          `Cannot publish "${String(manifest.name ?? 'package')}" - dependency "${dep}" (${section}) uses "${range}" but the workspace root does not define it in that catalog.`,
+          dep,
+          section,
+        )
+      }
+      if (result === manifest) result = { ...manifest }
+      if (result[section] === deps) result[section] = { ...deps }
+      result[section][dep] = version
+      resolutions.push({ name: dep, section, from: range, to: version })
+    }
+  }
+  return { manifest: result, resolutions }
+}
+
 /**
  * Rewrite workspace: ranges in a parsed package.json manifest against an
  * already-resolved package map. Never mutates the input — returns a copy
@@ -253,7 +313,9 @@ export function rewriteManifestForPublish(
   manifest: Record<string, any>,
   packageDir: string,
 ): RewriteResult {
-  if (!manifestUsesWorkspaceProtocol(manifest)) return { manifest, resolutions: [] }
+  const usesWorkspace = manifestUsesWorkspaceProtocol(manifest)
+  const usesCatalog = manifestUsesCatalogProtocol(manifest)
+  if (!usesWorkspace && !usesCatalog) return { manifest, resolutions: [] }
 
   const packageName = typeof manifest.name === 'string' ? manifest.name : undefined
   const root = findWorkspaceRoot(packageDir)
@@ -266,8 +328,14 @@ export function rewriteManifestForPublish(
     )
   }
 
-  const packages = resolveWorkspacePackages(root)
-  return rewriteWorkspaceRanges(manifest, packages, { packageName, workspaceRoot: root })
+  const workspaceResult = usesWorkspace
+    ? rewriteWorkspaceRanges(manifest, resolveWorkspacePackages(root), { packageName, workspaceRoot: root })
+    : { manifest, resolutions: [] }
+  if (!usesCatalog) return workspaceResult
+
+  const rootManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'))
+  const catalogResult = rewriteCatalogRanges(workspaceResult.manifest, rootManifest)
+  return { manifest: catalogResult.manifest, resolutions: [...workspaceResult.resolutions, ...catalogResult.resolutions] }
 }
 
 /**

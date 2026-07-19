@@ -5,11 +5,14 @@ import { join } from 'node:path'
 import {
   findWorkspaceRoot,
   manifestUsesWorkspaceProtocol,
+  manifestUsesCatalogProtocol,
   resolveWorkspacePackages,
   resolveWorkspaceSpec,
   rewriteManifestForPublish,
   rewritePackageJsonContent,
   rewriteWorkspaceRanges,
+  rewriteCatalogRanges,
+  UnresolvableCatalogDependencyError,
   UnresolvableWorkspaceDependencyError,
 } from './workspace-protocol'
 import type { WorkspacePackage } from './workspace-protocol'
@@ -196,6 +199,27 @@ describe('rewriteWorkspaceRanges', () => {
   })
 })
 
+describe('rewriteCatalogRanges', () => {
+  const root = {
+    catalog: { 'better-dx': '^0.2.15' },
+    catalogs: { testing: { vitest: '^3.2.0' } },
+  }
+
+  it('rewrites default and named catalog ranges', () => {
+    const { manifest } = rewriteCatalogRanges({
+      dependencies: { 'better-dx': 'catalog:' },
+      devDependencies: { vitest: 'catalog:testing' },
+    }, root)
+    expect(manifest.dependencies['better-dx']).toBe('^0.2.15')
+    expect(manifest.devDependencies.vitest).toBe('^3.2.0')
+  })
+
+  it('fails when the selected catalog has no dependency', () => {
+    expect(() => rewriteCatalogRanges({ dependencies: { missing: 'catalog:' } }, root))
+      .toThrow(UnresolvableCatalogDependencyError)
+  })
+})
+
 // ============================================================================
 // Workspace discovery from the repo being published
 // ============================================================================
@@ -290,6 +314,21 @@ describe('rewriteManifestForPublish', () => {
       expect((err as Error).message).toContain('@ws/external')
     }
   })
+
+  it('resolves catalog ranges from the workspace root', () => {
+    const { root, pkgDir } = makeWorkspace({ app: { name: '@ws/app', version: '1.0.0' } })
+    writeManifest(root, {
+      name: 'ws-root',
+      private: true,
+      workspaces: ['packages/*'],
+      catalog: { 'better-dx': '^0.2.15' },
+    })
+    const { manifest } = rewriteManifestForPublish({
+      name: '@ws/app',
+      dependencies: { 'better-dx': 'catalog:' },
+    }, pkgDir('app'))
+    expect(manifest.dependencies['better-dx']).toBe('^0.2.15')
+  })
 })
 
 // ============================================================================
@@ -340,5 +379,13 @@ describe('manifestUsesWorkspaceProtocol', () => {
     expect(manifestUsesWorkspaceProtocol({ dependencies: { a: '^1.0.0' } })).toBe(false)
     expect(manifestUsesWorkspaceProtocol({})).toBe(false)
     expect(manifestUsesWorkspaceProtocol({ dependencies: 'not-an-object' })).toBe(false)
+  })
+})
+
+describe('manifestUsesCatalogProtocol', () => {
+  it('detects default and named catalog refs', () => {
+    expect(manifestUsesCatalogProtocol({ dependencies: { a: 'catalog:' } })).toBe(true)
+    expect(manifestUsesCatalogProtocol({ devDependencies: { a: 'catalog:testing' } })).toBe(true)
+    expect(manifestUsesCatalogProtocol({ dependencies: { a: '^1.0.0' } })).toBe(false)
   })
 })

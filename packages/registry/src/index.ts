@@ -110,6 +110,7 @@ export {
 // Workspace protocol rewriting for published manifests
 export {
   WORKSPACE_RANGE_SECTIONS,
+  UnresolvableCatalogDependencyError,
   UnresolvableWorkspaceDependencyError,
   resolveWorkspaceSpec,
   readWorkspaceGlobs,
@@ -117,6 +118,8 @@ export {
   findWorkspaceRoot,
   resolveWorkspacePackages,
   manifestUsesWorkspaceProtocol,
+  manifestUsesCatalogProtocol,
+  rewriteCatalogRanges,
   rewriteWorkspaceRanges,
   rewriteManifestForPublish,
   rewritePackageJsonContent,
