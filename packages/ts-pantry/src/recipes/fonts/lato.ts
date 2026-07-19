@@ -5,11 +5,10 @@ import { fontVersionFromTtf } from '../_lib/font-version'
 // ~/Library/Fonts (see zig/src/install/native_apps.zig) — no Homebrew.
 //
 // Lato has no GitHub releases/appcast, but the font version is recorded in the
-// TTF nametable. The latofonts.com OFL zip only serves the whole archive, so we
-// read the version from Google Fonts' canonical Lato-Regular.ttf (a lightweight
-// ~640KB file that ships the same release, e.g. 2.015) and the daily updater
-// auto-republishes when it bumps. The actual download stays the latofonts.com
-// OFL zip (the full upstream family).
+// TTF nametable. We read the version from Google Fonts' canonical
+// Lato-Regular.ttf (a lightweight ~640KB file, e.g. 2.015) and publish the full
+// family from the same repository. Using one canonical source prevents the
+// version probe and artifact download from drifting apart.
 export const recipe: Recipe = {
   domain: 'lato',
   name: 'Lato',
@@ -30,11 +29,11 @@ export const recipe: Recipe = {
   build: {
     script: [
       'mkdir -p {{prefix}}/share/fonts',
-      'curl -fSL "https://www.latofonts.com/files/Lato2OFL.zip" -o /tmp/pantry-font.archive',
-      'rm -rf /tmp/pantry-font-x && mkdir -p /tmp/pantry-font-x',
-      'unzip -q -o /tmp/pantry-font.archive -d /tmp/pantry-font-x',
-      // Exclude __MACOSX AppleDouble (._*) shadow files that ship inside the zip.
-      "find /tmp/pantry-font-x -type f \\( -iname '*.ttf' -o -iname '*.otf' \\) -not -name '._*' -not -path '*/__MACOSX/*' -exec cp -f {} {{prefix}}/share/fonts/ \\;",
+      'rm -rf /tmp/pantry-google-fonts',
+      'git clone -q --depth 1 --filter=blob:none --sparse https://github.com/google/fonts.git /tmp/pantry-google-fonts',
+      'git -C /tmp/pantry-google-fonts sparse-checkout set ofl/lato',
+      'find /tmp/pantry-google-fonts/ofl/lato -type f \\( -iname \\*.ttf -o -iname \\*.otf \\) -exec cp -f {} {{prefix}}/share/fonts/ \\;',
+      'test -n "$(find {{prefix}}/share/fonts -type f -print -quit)"',
     ],
   },
 }

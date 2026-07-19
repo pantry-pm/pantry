@@ -1,14 +1,12 @@
 name: Check Desktop App & Font Updates
 
-# Keeps the desktop-app and font recipes fresh: checks each one's latest
-# upstream release against what's published in the registry, publishes the
-# out-of-date ones, and commits the updated desktop-versions.json manifest.
+# Detect updates, publish each package on its native build host, then record the
+# registry state only after every publication succeeds and is externally visible.
 
 on:
   schedule:
-    # Every 2 hours. A publish can occasionally take close to an hour when a
-    # large app update needs DMG extraction, so this keeps updates prompt while
-    # leaving enough headroom to avoid a queue of overlapping runs.
+    # Every 2 hours. Runs cannot overlap, so a slow desktop upload never races a
+    # second updater or its manifest commit.
     - cron: '17 */2 * * *'
   workflow_dispatch:
     inputs:
@@ -18,7 +16,7 @@ on:
         type: boolean
         default: true
       force:
-        description: 'Comma-separated domains to (re)publish even if already current (e.g. roboto,pearcleaner.app)'
+        description: 'Comma-separated domains to republish even if already current'
         required: false
         type: string
         default: ''
@@ -28,12 +26,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Avoid the 60-req/h unauthenticated GitHub API rate limit when resolving
-  # upstream versions across ~50 packages.
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # Object storage provider — set repo var STORAGE_PROVIDER=hetzner plus the S3_*
-  # vars and S3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY secrets to publish to Hetzner
-  # Object Storage. Defaults to AWS S3 (unchanged) when unset.
   STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
   S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}
   S3_REGION: ${{ vars.S3_REGION || 'us-east-1' }}
@@ -47,95 +40,96 @@ permissions:
   contents: write
 
 jobs:
-  # Every desktop app + font now publishes on the fast, ~10x-cheaper ubuntu
-  # runner — including the 40 DMG apps, which build via the darling-dmg /
-  # apfs-fuse hdiutil shim installed below (the extracted .app keeps its code
-  # signature). Only a recipe using a macOS-only tool with no Linux equivalent
-  # (ditto/sips/pkgutil/installer — none currently do) would still need macOS;
-  # MACOS_BUILD in check-desktop-updates.ts is the gate. Single committer of
-  # desktop-versions.json.
-  publish:
+  # Always run a credential-free discovery pass. A manual run with publish=false
+  # is therefore a genuine check and cannot create a misleading manifest commit.
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Check desktop app and font versions
+        working-directory: packages/ts-pantry
+        run: bun scripts/check-desktop-updates.ts
 
-      - name: Install DMG tooling (darling-dmg + apfs-fuse + hdiutil shim)
+  # ZIP/archive recipes are portable and stay on the fast Linux runner.
+  publish-ubuntu:
+    needs: check
+    if: github.event_name == 'schedule' || inputs.publish == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Publish portable desktop updates
+        working-directory: packages/ts-pantry
         env:
-          DEBIAN_FRONTEND: noninteractive
+          FORCE_DOMAINS: ${{ inputs.force }}
         run: |
-          sudo -E apt-get update -y || true
-          # `7zip` provides /usr/bin/7zz (7-Zip ≥23), which the hdiutil shim uses
-          # to extract LZFSE/LZVN-compressed DMGs that dmg2img can't decode
-          # (Ghostty, Zed, …). dmg2img stays as the APFS path for the rest.
-          sudo -E apt-get install -y --no-install-recommends cmake g++ git dmg2img 7zip fuse libfuse-dev libfuse3-dev libicu-dev libattr1-dev libbz2-dev zlib1g-dev libssl-dev libxml2-dev liblzma-dev || true
-          # Fallback: if the distro had no 7zip package, grab the official static 7zz.
-          if ! command -v 7zz >/dev/null 2>&1; then
-            curl -fsSL https://www.7-zip.org/a/7z2301-linux-x64.tar.xz -o /tmp/7z.tar.xz \
-              && tar xf /tmp/7z.tar.xz -C /tmp 7zz \
-              && sudo install -m755 /tmp/7zz /usr/local/bin/7zz || echo "warn: 7zz install failed"
+          args=(--platform=ubuntu --publish)
+          if [[ -n "$FORCE_DOMAINS" ]]; then
+            args+=("--force=$FORCE_DOMAINS")
           fi
-          if ! command -v darling-dmg >/dev/null 2>&1; then
-            git clone -q --depth 1 https://github.com/darlinghq/darling-dmg.git /tmp/ddmg \
-              && cmake -S /tmp/ddmg -B /tmp/ddmg/build >/dev/null 2>&1 \
-              && make -C /tmp/ddmg/build -j"$(nproc)" >/dev/null 2>&1 \
-              && sudo make -C /tmp/ddmg/build install >/dev/null 2>&1 || echo "warn: darling-dmg build failed"
-          fi
-          if ! command -v apfs-fuse >/dev/null 2>&1; then
-            git clone -q --recursive https://github.com/sgan81/apfs-fuse.git /tmp/afuse \
-              && cmake -S /tmp/afuse -B /tmp/afuse/build >/dev/null 2>&1 \
-              && make -C /tmp/afuse/build -j"$(nproc)" >/dev/null 2>&1 \
-              && sudo cp /tmp/afuse/build/apfs-fuse /tmp/afuse/build/apfsutil /usr/local/bin/ || echo "warn: apfs-fuse build failed"
-          fi
-          sudo ldconfig || true
-          # hdiutil shim (base64 of the verified script): HFS+ via darling-dmg,
-          # APFS via dmg2img+apfs-fuse, and a 7zz fallback for LZFSE/LZVN DMGs
-          # (Ghostty, Zed) the others can't read. Base64 avoids YAML heredoc pitfalls.
-          echo 'IyEvYmluL2Jhc2gKc2V0IC1lCmNtZD0iJDEiOyBzaGlmdCB8fCB0cnVlCmNhc2UgIiRjbWQiIGluCiAgYXR0YWNoKQogICAgZG1nPSIkMSI7IHNoaWZ0IHx8IHRydWU7IG1udD0iIgogICAgd2hpbGUgWyAiJCMiIC1ndCAwIF07IGRvIGNhc2UgIiQxIiBpbiAtbW91bnRwb2ludCkgbW50PSIkMiI7IHNoaWZ0IDIgOzsgKikgc2hpZnQgOzsgZXNhYzsgZG9uZQogICAgWyAtbiAiJGRtZyIgXSAmJiBbIC1uICIkbW50IiBdIHx8IHsgZWNobyAiaGRpdXRpbC1zaGltOiBhdHRhY2ggbmVlZHMgPGRtZz4gLW1vdW50cG9pbnQgPGRpcj4iID4mMjsgZXhpdCAxOyB9CiAgICBta2RpciAtcCAiJG1udCIKICAgIGlmIGRhcmxpbmctZG1nICIkZG1nIiAiJG1udCIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuIGV4aXQgMDsgZmkKICAgIGltZz0iJG1udC5pbWciOyBhcGZzbW50PSIkbW50LmFwZnMiOyBybSAtZiAiJGltZyI7IG1rZGlyIC1wICIkYXBmc21udCIKICAgIGlmIGRtZzJpbWcgIiRkbWciICIkaW1nIiA+L2Rldi9udWxsIDI+JjEgJiYgYXBmcy1mdXNlIC1vIHJvICIkaW1nIiAiJGFwZnNtbnQiID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBzcmM9IiRhcGZzbW50L3Jvb3QiOyBbIC1kICIkc3JjIiBdIHx8IHNyYz0iJGFwZnNtbnQiCiAgICAgICggbW91bnQgLS1iaW5kICIkc3JjIiAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyBtb3VudCAtLWJpbmQgIiRzcmMiICIkbW50IiApICYmIGV4aXQgMAogICAgZmkKICAgICMgRmluYWwgZmFsbGJhY2s6IDctWmlwICg3enopIHJlYWRzIFVESUYgRE1HcyB3aG9zZSBibG9ja3MgdXNlIExaRlNFL0xaVk4KICAgICMgY29tcHJlc3Npb24gdGhhdCBkbWcyaW1nIGNhbm5vdCBkZWNvZGUgKGUuZy4gR2hvc3R0eSwgWmVkKS4gSXQgZXh0cmFjdHMgdGhlCiAgICAjIHBheWxvYWQgZGlyZWN0bHkg4oCUIG5vIEZVU0UgbW91bnQg4oCUIHNvIGRyb3AgdGhlIGZpbGVzIGludG8gJG1udCBhbmQgbGV0IHRoZQogICAgIyByZWNpcGUgY29weSB0aGUgLmFwcCBvdXQuIFNvbWUgRE1HcyBuZXN0IHRoZSBwYXlsb2FkIHVuZGVyIGEgdm9sdW1lLW5hbWUKICAgICMgZGlyLCBzbyBpZiBubyAuYXBwIGxhbmRzIGF0IHRoZSByb290LCBob2lzdCBvbmUgdXAgZnJvbSBhIHN1YmRpci4KICAgIGlmIGNvbW1hbmQgLXYgN3p6ID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgICBmdXNlcm1vdW50IC11ICIkbW50IiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICAgIHJtIC1yZiAiJG1udCI7IG1rZGlyIC1wICIkbW50IgogICAgICBpZiA3enogeCAteSAtbyIkbW50IiAiJGRtZyIgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICAgICAgaWYgISBscyAtZCAiJG1udCIvKi5hcHAgPi9kZXYvbnVsbCAyPiYxOyB0aGVuCiAgICAgICAgICBhcHBkaXI9IiQoZmluZCAiJG1udCIgLW1heGRlcHRoIDMgLW5hbWUgJyouYXBwJyAtdHlwZSBkIDI+L2Rldi9udWxsIHwgaGVhZCAtMSkiCiAgICAgICAgICBbIC1uICIkYXBwZGlyIiBdICYmIFsgIiQoZGlybmFtZSAiJGFwcGRpciIpIiAhPSAiJG1udCIgXSAmJiBtdiAiJGFwcGRpciIgIiRtbnQiLyAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICAgICAgZmkKICAgICAgICBscyAtZCAiJG1udCIvKi5hcHAgPi9kZXYvbnVsbCAyPiYxICYmIGV4aXQgMAogICAgICBmaQogICAgZmkKICAgIGVjaG8gImhkaXV0aWwtc2hpbTogY291bGQgbm90IG1vdW50ICRkbWcgKHRyaWVkIEhGUyssIEFQRlMsIDd6eikiID4mMjsgZXhpdCAxIDs7CiAgZGV0YWNoKQogICAgbW50PSIkMSIKICAgIHVtb3VudCAiJG1udCIgMj4vZGV2L251bGwgfHwgc3VkbyB1bW91bnQgIiRtbnQiIDI+L2Rldi9udWxsIHx8IGZ1c2VybW91bnQgLXUgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUKICAgIGZ1c2VybW91bnQgLXUgIiRtbnQuYXBmcyIgMj4vZGV2L251bGwgfHwgdHJ1ZQogICAgcm0gLWYgIiRtbnQuaW1nIiAyPi9kZXYvbnVsbCB8fCB0cnVlOyBybWRpciAiJG1udC5hcGZzIiAyPi9kZXYvbnVsbCB8fCB0cnVlCiAgICBybSAtcmYgIiRtbnQiIDI+L2Rldi9udWxsIHx8IHRydWUgOzsKICAqKSBlY2hvICJoZGl1dGlsLXNoaW06IHVuc3VwcG9ydGVkIHN1YmNvbW1hbmQgJGNtZCIgPiYyOyBleGl0IDEgOzsKZXNhYwo=' \
-            | base64 -d | sudo tee /usr/local/bin/hdiutil >/dev/null
-          sudo chmod +x /usr/local/bin/hdiutil
-          echo "DMG tooling: darling-dmg=$(command -v darling-dmg || echo MISSING) apfs-fuse=$(command -v apfs-fuse || echo MISSING) dmg2img=$(command -v dmg2img || echo MISSING) 7zz=$(command -v 7zz || echo MISSING)"
+          bun scripts/check-desktop-updates.ts "${args[@]}"
 
-      # Author automated commits as the standard github-actions bot.
+  # DMG/pkg recipes use Apple's native tools. Unsupported Linux extraction was
+  # the reason Karabiner and LibreOffice repeatedly failed without surfacing it.
+  publish-macos:
+    needs: check
+    if: github.event_name == 'schedule' || inputs.publish == true
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Publish native macOS desktop updates
+        working-directory: packages/ts-pantry
+        env:
+          FORCE_DOMAINS: ${{ inputs.force }}
+        run: |
+          args=(--platform=macos --publish)
+          if [[ -n "$FORCE_DOMAINS" ]]; then
+            args+=("--force=$FORCE_DOMAINS")
+          fi
+          bun scripts/check-desktop-updates.ts "${args[@]}"
+
+  # This is the only writer. It gets a fresh checkout and re-reads the public
+  # registry after both publish jobs finish. --require-current makes the step
+  # fail before commit if even one upstream version lacks a published artifact.
+  record:
+    needs: [publish-ubuntu, publish-macos]
+    if: >-
+      always() &&
+      needs.publish-ubuntu.result == 'success' &&
+      needs.publish-macos.result == 'success' &&
+      (github.event_name == 'schedule' || inputs.publish == true)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Publish desktop updates & commit manifest
+      - name: Record verified registry state
         working-directory: packages/ts-pantry
-        run: |
-          PUBLISH_FLAG=""
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.publish }}" = "true" ]; then
-            PUBLISH_FLAG="--publish"
-          fi
-          FORCE_FLAG=""
-          if [ -n "${{ inputs.force }}" ]; then
-            FORCE_FLAG="--force=${{ inputs.force }}"
-          fi
-          bun scripts/check-desktop-updates.ts --platform=ubuntu $PUBLISH_FLAG $FORCE_FLAG --commit
-
-      - name: Push manifest commit
+        run: bun scripts/check-desktop-updates.ts --require-current --commit
+      - name: Push verified manifest commit
         working-directory: packages/ts-pantry
-        # Retry with rebase: other workflows (e.g. CLI build-versions) commit to
-        # main frequently, so a plain `git push` can be rejected as non-fast-
-        # forward. The old `|| echo "nothing to push"` swallowed that rejection,
-        # silently dropping the manifest commit. Rebase onto the latest main and
-        # retry so the commit reliably lands; a genuine no-op push exits 0 on the
-        # first try ("Everything up-to-date").
-        # A no-op push (nothing committed this run) exits 0 immediately with
-        # "Everything up-to-date", so the loop ends on attempt 1. Only a real
-        # new commit that loses the fast-forward race triggers a rebase + retry.
         run: |
           for attempt in 1 2 3 4 5; do
             if git push; then
-              echo "push ok (attempt $attempt)"; exit 0
+              echo "push ok (attempt $attempt)"
+              exit 0
             fi
-            echo "push rejected (attempt $attempt) — rebasing onto latest main…"
-            git fetch origin main && git rebase origin/main || { echo "rebase failed"; exit 1; }
+            echo "push rejected (attempt $attempt); rebasing onto latest main"
+            git fetch origin main
+            git rebase origin/main
           done
           echo "ERROR: could not push manifest after 5 attempts" >&2
           exit 1

@@ -3,7 +3,7 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'codex.openai.com',
   name: 'Codex',
-  description: "OpenAI's Codex desktop app — a command center for the Codex coding agent.",
+  description: 'OpenAI\'s Codex desktop app — a command center for the Codex coding agent.',
   homepage: 'https://developers.openai.com/codex/app',
   // The `codex` CLI ships separately as the `openai.com/codex` package; this
   // recipe installs the GUI app only, so it declares no `programs` — no bin
@@ -29,7 +29,9 @@ export const recipe: Recipe = {
       'set -e',
       // The appcast exposes a per-version, signed ZIP enclosure that contains
       // Codex.app at the archive root (no DMG / hdiutil needed).
-      'URL="https://persistent.oaistatic.com/codex-app-prod/Codex-darwin-arm64-{{version}}.zip"',
+      // The bundle is Codex.app, but the Sparkle enclosure filename retains the
+      // product family's ChatGPT prefix. Keep this aligned with appcast.xml.
+      'URL="https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-{{version}}.zip"',
       'echo "Downloading Codex from $URL"',
       'curl -fSL -L --retry 3 "$URL" -o /tmp/codex-app.zip',
       'rm -rf /tmp/codex-extract && mkdir -p /tmp/codex-extract',

@@ -11,8 +11,8 @@ name: Build Residual (non-pkgx recipes)
 on:
   # No `schedule:` — the matrix includes macos-15 (10x billing) for the darwin
   # apps and must not run unsupervised. These residual recipes change rarely;
-  # the darwin apps also stay fresh via check-desktop-updates.yml (ubuntu). Run
-  # manually (workflow_dispatch) for a supervised residual sweep.
+  # the darwin apps also stay fresh via check-desktop-updates.yml on native
+  # macOS runners. Run manually (workflow_dispatch) for a residual sweep.
   workflow_dispatch:
     inputs:
       packages:

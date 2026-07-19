@@ -7,13 +7,15 @@
  * version currently published in the pantry registry. It then:
  *   - writes a `desktop-versions.json` manifest (the committed record),
  *   - with `--commit`, commits that manifest when it changed,
+ *   - with `--require-current`, refuses to commit while any package is stale,
  *   - with `--publish`, builds + uploads any out-of-date package via
  *     build-and-upload.sh (needs S3/registry creds in the env — Hetzner Object
  *     Storage: STORAGE_PROVIDER=hetzner + S3_* + S3_ACCESS_KEY_ID/SECRET).
  *
  *   bun scripts/check-desktop-updates.ts                 # report only
  *   bun scripts/check-desktop-updates.ts --commit        # + commit manifest
- *   bun scripts/check-desktop-updates.ts --publish --commit
+ *   bun scripts/check-desktop-updates.ts --publish        # publish only
+ *   bun scripts/check-desktop-updates.ts --require-current --commit
  *
  * Build-host selection: each recipe is classified by its build script as
  * needing macOS (mounts a .dmg / uses hdiutil/ditto/sips/installer/pkgutil)
@@ -31,7 +33,7 @@
  * with a github-releases source (desktop apps). CLI packages are untouched —
  * they have their own version pipeline (build-versions.yml).
  */
-import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
 import { $ } from 'bun'
@@ -45,6 +47,7 @@ const args = process.argv.slice(2)
 const flags = new Set(args)
 const doCommit = flags.has('--commit')
 const doPublish = flags.has('--publish')
+const requireCurrent = flags.has('--require-current')
 
 /** Domains to (re)publish even when already at the latest published version —
  * `--force=roboto,pearcleaner.app`. Lets an operator re-run a publish after a
@@ -71,16 +74,11 @@ const platform: Platform = (() => {
   return 'all'
 })()
 
-/** Tokens in a build script that genuinely require a macOS runner: the
- * macOS-only copy/resize tools or the .pkg installer chain.
- *
- * NOTE: hdiutil / .dmg are deliberately NOT here. DMG mounting now works on
- * Linux via the hdiutil shim (darling-dmg for HFS+, apfs-fuse for APFS), which
- * the ubuntu-safe CI job installs — so the 40 DMG app recipes publish on the
- * fast, ~10x-cheaper ubuntu runner instead of macOS. The extracted .app keeps
- * its code signature (verified). Re-add a token here only if a recipe needs a
- * macOS tool with no Linux equivalent. */
-const MACOS_BUILD = /\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b/
+/** Tokens in a build script that require a native macOS runner. Disk images
+ * are intentionally mounted with Apple's hdiutil: third-party Linux extractors
+ * do not support every DMG filesystem/compression combination and had allowed
+ * the updater to report success while publishing no artifact. */
+const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\.dmg\b/
 
 /** Flatten a recipe's build script (strings + { run } step objects) to one
  * blob so we can scan it for macOS-only tooling. */
@@ -99,7 +97,7 @@ function buildScriptText(recipe: any): string {
 /** True when a recipe must build on macOS (mounts a .dmg or uses a macOS-only
  * tool). Zip-only recipes (most fonts, apps like maccy/pearcleaner) are false
  * and publish fine on the fast ubuntu-latest runner. */
-function needsMacos(recipe: any): boolean {
+export function needsMacos(recipe: any): boolean {
   return MACOS_BUILD.test(buildScriptText(recipe))
 }
 
@@ -177,9 +175,12 @@ async function latestGithub(repo: string, tagPattern?: RegExp): Promise<string |
   }
 }
 
-async function publishedVersion(domain: string): Promise<string | null> {
+async function publishedVersion(domain: string, fresh = false): Promise<string | null> {
   try {
-    const res = await fetch(`${REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`)
+    const suffix = fresh ? `?verify=${Date.now()}` : ''
+    const res = await fetch(`${REGISTRY}/binaries/${encodeURI(domain)}/metadata.json${suffix}`, {
+      cache: fresh ? 'no-store' : 'default',
+    })
     if (!res.ok)
       return null
     return (await res.json() as any)?.latestVersion || null
@@ -187,6 +188,22 @@ async function publishedVersion(domain: string): Promise<string | null> {
   catch {
     return null
   }
+}
+
+/** Confirm that the registry exposes the version before allowing the workflow
+ * to record it. The cache-busting query avoids briefly stale CDN responses. */
+async function verifyPublishedVersion(domain: string, version: string): Promise<void> {
+  const attempts = 6
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const published = await publishedVersion(domain, true)
+    if (published === version) {
+      console.warn(`  ✓ registry verified ${domain} @ ${version}`)
+      return
+    }
+    if (attempt < attempts)
+      await Bun.sleep(attempt * 1000)
+  }
+  throw new Error(`registry did not expose ${domain} @ ${version} after upload`)
 }
 
 /** List font recipes (every `.ts` under recipes/fonts/). */
@@ -261,6 +278,25 @@ async function appDomains(): Promise<string[]> {
 }
 
 async function main(): Promise<void> {
+  if (doPublish && doCommit) {
+    throw new Error('publish and commit must be separate invocations so the commit re-reads verified registry state')
+  }
+
+  const previouslyPublished = new Map<string, string | null>()
+  if (existsSync(MANIFEST)) {
+    try {
+      const previous = JSON.parse(readFileSync(MANIFEST, 'utf8')) as { packages?: Array<{ domain?: string, published?: string | null }> }
+      for (const pkg of previous.packages ?? []) {
+        if (pkg.domain)
+          previouslyPublished.set(pkg.domain, pkg.published ?? null)
+      }
+    }
+    catch {
+      // A malformed manifest will be replaced below; git still preserves the
+      // before/after diff, but there is no safe prior version to put in the body.
+    }
+  }
+
   // Build the candidate (file, kind) set: every font recipe + the app recipes
   // that back the registry's desktop-app catalogue.
   const candidates: Array<{ file: string, kind: 'app' | 'font' }> = []
@@ -325,7 +361,9 @@ async function main(): Promise<void> {
     if (!latest && Array.isArray(recipe.versionSource?.knownVersions) && recipe.versionSource.knownVersions.length > 0) {
       latest = String(recipe.versionSource.knownVersions[0])
     }
-    const published = await publishedVersion(recipe.domain)
+    // The final record pass must bypass any stale CDN entry left from the
+    // preceding uploads; ordinary discovery can use the cache-friendly URL.
+    const published = await publishedVersion(recipe.domain, requireCurrent)
     entries.push({
       domain: recipe.domain,
       name: recipe.name ?? recipe.domain,
@@ -355,6 +393,33 @@ async function main(): Promise<void> {
   const macosOut = outdated.length - ubuntuOut
   console.warn(`\n${entries.length} desktop package(s), ${outdated.length} out of date (${ubuntuOut} ubuntu-safe, ${macosOut} macos).`)
 
+  // Publish out-of-date packages (requires storage creds in the env). Only the
+  // packages for this run's build host — so the ubuntu-latest job publishes the
+  // zip-only ones and the macos-latest job publishes the .dmg/macOS-tool ones.
+  const toPublish = platform === 'all'
+    ? outdated
+    : outdated.filter(e => e.host === platform)
+  if (doPublish && toPublish.length > 0) {
+    console.warn(`\nPublishing ${toPublish.length} package(s) for host=${platform}.`)
+    const failures: string[] = []
+    for (const e of toPublish) {
+      if (!e.latest)
+        continue
+      console.warn(`\n==> Publishing ${e.domain} @ ${e.latest}`)
+      try {
+        await $`./scripts/build-and-upload.sh ${e.domain} ${e.latest}`.cwd(ROOT)
+        await verifyPublishedVersion(e.domain, e.latest)
+      }
+      catch (err) {
+        console.error(`  ! failed to publish ${e.domain}: ${err}`)
+        failures.push(`${e.domain}@${e.latest}`)
+      }
+    }
+    if (failures.length > 0) {
+      throw new Error(`desktop publication failed for ${failures.join(', ')}; manifest will not be committed`)
+    }
+  }
+
   const manifest = {
     generatedFromUpstreamAt: undefined as string | undefined, // stamped by CI, not here (keeps diffs clean)
     packages: entries.map(({ domain, name, kind, host, latest, published, needsUpdate }) => ({
@@ -370,43 +435,23 @@ async function main(): Promise<void> {
   writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`)
   console.warn(`Wrote ${MANIFEST}`)
 
-  // Publish out-of-date packages (requires storage creds in the env). Only the
-  // packages for this run's build host — so the ubuntu-latest job publishes the
-  // zip-only ones and the macos-latest job publishes the .dmg/macOS-tool ones.
-  const toPublish = platform === 'all'
-    ? outdated
-    : outdated.filter(e => e.host === platform)
-  if (doPublish && toPublish.length > 0) {
-    console.warn(`\nPublishing ${toPublish.length} package(s) for host=${platform}.`)
-    for (const e of toPublish) {
-      if (!e.latest)
-        continue
-      console.warn(`\n==> Publishing ${e.domain} @ ${e.latest}`)
-      try {
-        await $`./scripts/build-and-upload.sh ${e.domain} ${e.latest}`.cwd(ROOT)
-      }
-      catch (err) {
-        console.error(`  ! failed to publish ${e.domain}: ${err}`)
-      }
-    }
+  if (requireCurrent && outdated.length > 0) {
+    const stale = outdated.map(e => `${e.domain} (${e.published ?? '—'} → ${e.latest})`).join(', ')
+    throw new Error(`refusing to commit a stale desktop manifest: ${stale}`)
   }
 
   // Commit the manifest when it changed. The committer is chosen by the
-  // WORKFLOW, not by this script: whichever job is passed `--commit` commits.
-  // The desktop pipeline is now a single ubuntu-latest job (every app/font
-  // builds on ubuntu via the hdiutil shim), so that job commits. If a macOS
-  // job is ever re-added for a macOS-only recipe, pass `--commit` to ONLY the
-  // final job so the two never race on the commit/push.
-  //
-  // (Previously this skipped committing on `--platform=ubuntu`, assuming a
-  // later macOS job would be the committer — but that job was removed, so the
-  // manifest silently stopped being committed. Gate on `--commit` alone.)
+  // WORKFLOW, not by this script. The final record job is the sole committer and
+  // runs only after both native publish jobs succeed.
   if (doCommit) {
     const status = await $`git status --porcelain ${MANIFEST}`.cwd(ROOT).text()
     if (status.trim()) {
-      const subject = commitSubject(outdated)
-      const body = outdated.map(e =>
-        `- ${e.kind} ${e.domain}: ${e.published ? `${e.published} → ${e.latest}` : `added at ${e.latest}`}`,
+      const publishedChanges = entries
+        .map(e => ({ ...e, previousPublished: previouslyPublished.get(e.domain) ?? null }))
+        .filter(e => e.published && e.published !== e.previousPublished)
+      const subject = commitSubject(publishedChanges)
+      const body = publishedChanges.map(e =>
+        `- ${e.kind} ${e.domain}: ${e.previousPublished ? `${e.previousPublished} → ${e.published}` : `published at ${e.published}`}`,
       ).join('\n')
       await $`git add ${MANIFEST}`.cwd(ROOT)
       await $`git commit -m ${subject} -m ${body || 'no version changes'}`.cwd(ROOT)
@@ -419,32 +464,34 @@ async function main(): Promise<void> {
 }
 
 /** A precise, readable commit subject (no "(s)" hedging). */
-function commitSubject(outdated: Entry[]): string {
-  if (outdated.length === 0)
+export function commitSubject(published: Array<Entry & { previousPublished: string | null }>): string {
+  if (published.length === 0)
     return 'chore(desktop): refresh version manifest'
 
   // Single update: name it exactly.
-  if (outdated.length === 1) {
-    const e = outdated[0]
-    return e.published
-      ? `chore(desktop): bump ${e.kind} ${e.domain} ${e.published} → ${e.latest}`
-      : `chore(desktop): add ${e.kind} ${e.domain} ${e.latest}`
+  if (published.length === 1) {
+    const e = published[0]
+    return e.previousPublished
+      ? `chore(desktop): publish ${e.kind} ${e.domain} ${e.previousPublished} → ${e.published}`
+      : `chore(desktop): publish ${e.kind} ${e.domain} ${e.published}`
   }
 
   // Several: count per kind ("2 apps & 1 font"), append names if they fit.
   const n = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
-  const apps = outdated.filter(e => e.kind === 'app').length
-  const fonts = outdated.filter(e => e.kind === 'font').length
+  const apps = published.filter(e => e.kind === 'app').length
+  const fonts = published.filter(e => e.kind === 'font').length
   const what = [apps && n(apps, 'app'), fonts && n(fonts, 'font')].filter(Boolean).join(' & ')
 
-  let subject = `chore(desktop): bump ${what}`
-  const names = outdated.map(e => e.domain).join(', ')
+  let subject = `chore(desktop): publish ${what}`
+  const names = published.map(e => e.domain).join(', ')
   if (`${subject} (${names})`.length <= 72)
     subject += ` (${names})`
   return subject
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}

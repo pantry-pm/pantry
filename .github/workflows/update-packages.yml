@@ -153,9 +153,9 @@ jobs:
             [ -z "$filepath" ] && continue
             [ -f "$filepath" ] || continue
             # Skip index/alias artifacts, and — crucially — desktop apps + fonts:
-            # those are macOS/DMG packages that publish-changed can't build on its
-            # ubuntu legs. They're published on ubuntu by check-desktop-updates.yml
-            # (via its hdiutil shim) instead; routing them here would fail the run.
+            # those include macOS/DMG packages that publish-changed cannot build on
+            # its ubuntu legs. check-desktop-updates.yml routes them to the correct
+            # native host instead; routing them here would fail the run.
             case "$filepath" in
               */aliases.ts|*/generated-*|*/index.ts|*/packages/apps/*|*/packages/fonts/*) continue ;;
             esac
