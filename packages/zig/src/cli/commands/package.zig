@@ -5,6 +5,7 @@ const io_helper = @import("../../io_helper.zig");
 const lib = @import("../../lib.zig");
 const common = @import("common.zig");
 const style = @import("../style.zig");
+const workspace_publish = @import("workspace_publish.zig");
 
 const CommandResult = common.CommandResult;
 
@@ -2180,32 +2181,13 @@ fn createTarball(
         }
     }
 
-    // Resolve workspace: protocol dependencies in the staged package.json.
-    // e.g., "workspace:*" → "0.2.9", "workspace:^" → "^0.2.9", "workspace:~" → "~0.2.9"
-    // npm doesn't understand workspace: protocol — the published package.json must have real versions.
+    // Resolve workspace and catalog protocol dependencies in the staged
+    // package.json. npm and Bun cannot install either protocol outside the
+    // source monorepo, so publishing an unresolved range must fail loudly.
     {
         const staged_pkg_json = try std.fs.path.join(allocator, &[_][]const u8{ staging_pkg, "package.json" });
         defer allocator.free(staged_pkg_json);
-
-        const pkg_content = io_helper.readFileAlloc(allocator, staged_pkg_json, 1024 * 1024) catch null;
-        if (pkg_content) |content| {
-            defer allocator.free(content);
-            // Fails loudly (error.UnresolvableWorkspaceDependency) when a
-            // workspace: range cannot be resolved.
-            const resolved_content = try resolveWorkspaceProtocol(allocator, content, package_dir);
-            defer if (resolved_content.ptr != content.ptr) allocator.free(resolved_content);
-
-            if (resolved_content.ptr != content.ptr) {
-                if (io_helper.createFile(staged_pkg_json, .{ .truncate = true })) |file| {
-                    defer file.close(io_helper.io);
-                    io_helper.writeAllToFile(file, resolved_content) catch |err| {
-                        style.print("  Warning: Failed to write resolved package.json: {}\n", .{err});
-                    };
-                } else |err| {
-                    style.print("  Warning: Failed to create resolved package.json: {}\n", .{err});
-                }
-            }
-        }
+        try workspace_publish.rewriteStagedManifest(allocator, staged_pkg_json, package_dir);
     }
 
     // Compute unpacked size and file count from staging directory before tarball creation
