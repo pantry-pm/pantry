@@ -16,6 +16,9 @@ import * as os from 'node:os'
 import * as https from 'node:https'
 import * as http from 'node:http'
 import { execFileSync } from 'node:child_process'
+import { compareVersions } from './generate-zig'
+
+const PANTRY_REGISTRY = (process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev').replace(/\/$/, '')
 
 // ── Types ──
 
@@ -116,27 +119,15 @@ const resolvers: Record<string, PackageResolver> = {
 
   'ziglang.org': {
     getDownloadUrl(version: string, platform: Platform): string {
-      const archMap: Record<string, string> = { x86_64: 'x86_64', aarch64: 'aarch64' }
-      const osMap: Record<string, string> = { darwin: 'macos', linux: 'linux', windows: 'windows' }
-      const arch = archMap[platform.arch]
-      const osName = osMap[platform.os]
-      const ext = platform.os === 'windows' ? 'zip' : 'tar.xz'
-
-      if (version.includes('-dev')) {
-        return `https://ziglang.org/builds/zig-${arch}-${osName}-${version}.${ext}`
-      }
-      return `https://ziglang.org/download/${version}/zig-${arch}-${osName}-${version}.${ext}`
+      const platformKey = `${platform.os}-${platform.arch === 'aarch64' ? 'arm64' : 'x86-64'}`
+      const archive = `ziglang.org-${version}.${platform.os === 'windows' ? 'zip' : 'tar.gz'}`
+      return `${PANTRY_REGISTRY}/binaries/ziglang.org/${version}/${platformKey}/${archive}`
     },
     getArchiveFormat(platform: Platform) {
-      return platform.os === 'windows' ? 'zip' : 'tar.xz'
+      return platform.os === 'windows' ? 'zip' : 'tar.gz'
     },
     getBinaries(platform: Platform) {
       return platform.os === 'windows' ? ['zig.exe'] : ['zig']
-    },
-    getArchivePrefix(version: string, platform: Platform) {
-      const archMap: Record<string, string> = { x86_64: 'x86_64', aarch64: 'aarch64' }
-      const osMap: Record<string, string> = { darwin: 'macos', linux: 'linux', windows: 'windows' }
-      return `zig-${archMap[platform.arch]}-${osMap[platform.os]}-${version}`
     },
   },
 
@@ -446,12 +437,11 @@ export async function resolveLatestVersion(domain: string): Promise<string> {
     throw new Error('Failed to resolve latest bun.sh version (GitHub API unreachable, no bundled metadata)')
   }
   if (domain === 'ziglang.org') {
-    const resp = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null)
-    const v = (resp as { master?: { version?: string } } | null)?.master?.version
-    if (v) return v
+    const versions = await registryVersions(domain)
+    if (versions.length > 0) return versions.sort(compareVersions)[0]
     const fallback = await latestFromPackageMetadata(domain)
     if (fallback) return fallback
-    throw new Error('Failed to resolve latest ziglang.org version')
+    throw new Error('Failed to resolve latest ziglang.org version from the Pantry registry')
   }
   if (domain === 'nodejs.org') {
     const resp = await fetchJSON('https://nodejs.org/dist/index.json').catch(() => null)
@@ -499,18 +489,17 @@ async function latestFromPackageMetadata(domain: string): Promise<string> {
 }
 
 /**
- * Resolve a short zig dev version like "0.16.0-dev" to the full version from ziglang.org
+ * Resolve a short Zig dev version like "0.17.0-dev" from the Pantry registry.
  */
 async function resolveZigShortDevVersion(shortVersion: string): Promise<string | null> {
-  try {
-    const resp = await fetchJSON('https://ziglang.org/download/index.json')
-    const masterVersion = (resp as { master?: { version?: string } }).master?.version
-    if (masterVersion && masterVersion.startsWith(shortVersion)) {
-      return masterVersion
-    }
-  }
-  catch { /* fall through */ }
-  return null
+  const versions = await registryVersions('ziglang.org')
+  return versions.filter(version => version.startsWith(`${shortVersion}.`)).sort(compareVersions)[0] || null
+}
+
+async function registryVersions(domain: string): Promise<string[]> {
+  const metadata = await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`)
+    .catch(() => null) as { versions?: Record<string, unknown> } | null
+  return Object.keys(metadata?.versions || {})
 }
 
 /** Does `version` satisfy `op` + `target`? Shared by the bundled and live scans. */

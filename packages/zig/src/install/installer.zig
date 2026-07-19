@@ -751,16 +751,16 @@ pub const Installer = struct {
             return try self.installFromUrl(spec, options);
         }
 
-        // Check if this is a Zig from ziglang.org (dev or stable). Match by
-        // domain too, not just source: the parallel pipeline tags every system
-        // dep as `.pantry`, so a *project* install of zig would otherwise skip
-        // this direct-from-ziglang.org path and fall through to the registry —
-        // which carries no zig build, failing with "not found in registry" even
-        // though ziglang.org serves the tarball. Zig is fetched straight from
-        // upstream (not S3) precisely so new stables / nightlies always resolve.
-        if (spec.source == .ziglang or std.mem.eql(u8, spec.name, "ziglang.org")) {
-            if (options.verbose) std.debug.print("[verbose:installer] -> ziglang source: {s}\n", .{spec.name});
-            return try self.installFromZiglang(spec, options);
+        // Zig artifacts are mirrored into Pantry by sync-zig-dev.yml. Even an
+        // explicit ziglang source must install from our registry so builds do
+        // not depend on a slow or disappearing upstream development archive.
+        if (spec.source == .ziglang) {
+            if (options.verbose) std.debug.print("[verbose:installer] -> mirrored zig package: {s}\n", .{spec.name});
+            return try self.install(.{
+                .name = "ziglang.org",
+                .version = spec.version,
+                .source = .pantry,
+            }, options);
         }
 
         // Check if this is an npm package
