@@ -54,6 +54,7 @@ pub const shim_commands = @import("commands/shim.zig");
 pub const oidc_cmd = @import("commands/oidc.zig");
 pub const pm_cmd = @import("commands/pm.zig");
 pub const patch_cmd = @import("commands/patch.zig");
+pub const workspace_publish = @import("commands/workspace_publish.zig");
 
 // ============================================================================
 // Re-export Package Commands

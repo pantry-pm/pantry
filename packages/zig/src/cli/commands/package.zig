@@ -1098,7 +1098,12 @@ fn publishSingleToNpm(
     }
 
     // Create tarball
-    const tarball_info = try createTarball(allocator, package_dir, metadata.name, metadata.version);
+    const tarball_info = createTarball(allocator, package_dir, metadata.name, metadata.version) catch |err| {
+        if (err == error.UnresolvableWorkspaceDependency) {
+            return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
+        }
+        return err;
+    };
     defer allocator.free(tarball_info.path);
     defer io_helper.deleteFile(tarball_info.path) catch {};
 
@@ -1150,7 +1155,12 @@ fn publishSingleToNpm(
     // (types, exports, module, dependencies, bin, etc.)
     // Resolve workspace: protocol deps so npm metadata has real versions
     const resolved_pkg_json = if (config_content) |content|
-        resolveWorkspaceProtocol(allocator, content, package_dir) catch content
+        resolveWorkspaceProtocol(allocator, content, package_dir) catch |err| {
+            if (err == error.UnresolvableWorkspaceDependency) {
+                return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
+            }
+            return err;
+        }
     else
         null;
     defer if (resolved_pkg_json) |r| {
@@ -2180,7 +2190,9 @@ fn createTarball(
         const pkg_content = io_helper.readFileAlloc(allocator, staged_pkg_json, 1024 * 1024) catch null;
         if (pkg_content) |content| {
             defer allocator.free(content);
-            const resolved_content = resolveWorkspaceProtocol(allocator, content, package_dir) catch content;
+            // Fails loudly (error.UnresolvableWorkspaceDependency) when a
+            // workspace: range cannot be resolved.
+            const resolved_content = try resolveWorkspaceProtocol(allocator, content, package_dir);
             defer if (resolved_content.ptr != content.ptr) allocator.free(resolved_content);
 
             if (resolved_content.ptr != content.ptr) {
@@ -2515,6 +2527,9 @@ fn findSiblingVersion(allocator: std.mem.Allocator, root: []const u8, dep_name: 
 /// Resolve workspace: protocol dependencies in package.json content.
 /// Returns a new allocation with resolved versions, or the original content if nothing to resolve.
 /// Caller must free the result if it differs from the input (check ptr equality).
+/// Fails loudly with error.UnresolvableWorkspaceDependency when a workspace:
+/// range cannot be resolved — publishing it verbatim would produce an
+/// uninstallable package.
 fn resolveWorkspaceProtocol(allocator: std.mem.Allocator, content: []const u8, package_dir: []const u8) ![]const u8 {
     // Quick check: if no workspace: refs, return original content
     if (std.mem.indexOf(u8, content, "\"workspace:") == null) return content;
@@ -2559,6 +2574,15 @@ fn resolveWorkspaceProtocol(allocator: std.mem.Allocator, content: []const u8, p
             // Look up the actual version from a sibling package — recursively
             // scan the workspace root so deeply nested layouts resolve too.
             const found = findSiblingVersion(allocator, workspace_root, dep_name) catch null;
+            if (found == null) {
+                // Fail loudly: shipping a literal workspace: range to npm
+                // would produce an uninstallable package.
+                style.printError(
+                    "Cannot publish: dependency \"{s}\" ({s}) uses \"workspace:{s}\" but no workspace package with that name was found below the workspace root.\nRefusing to publish an unresolvable workspace: range — the published package would be uninstallable.\n",
+                    .{ dep_name, section, ws_spec },
+                );
+                return error.UnresolvableWorkspaceDependency;
+            }
             if (found) |sib_version| {
                 defer allocator.free(sib_version);
                 // Determine version prefix based on workspace spec

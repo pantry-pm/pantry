@@ -12,6 +12,7 @@ const lib = @import("../../lib.zig");
 const common = @import("common.zig");
 const style = @import("../style.zig");
 const advanced_glob = @import("../../packages/advanced_glob.zig");
+const workspace_publish = @import("workspace_publish.zig");
 const http = std.http;
 
 const CommandResult = common.CommandResult;
@@ -862,6 +863,17 @@ fn publishSingleToRegistry(
         );
     }
 
+    // Rewrite workspace: protocol ranges in the published manifest (same
+    // semantics as `bun publish`) BEFORE anything is packed or uploaded —
+    // both the tarball's staged package.json and the registry metadata must
+    // carry real versions. The on-disk package.json is never modified. Fails
+    // loudly when a workspace: range cannot be resolved from the workspace's
+    // own packages.
+    const publish_content = workspace_publish.rewriteManifestContent(allocator, config_content, package_dir) catch {
+        return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
+    };
+    defer if (publish_content.ptr != config_content.ptr) allocator.free(publish_content);
+
     // Check if version already exists or is lower than published
     style.print("Checking existing versions...\n", .{});
     const version_check: ?VersionCheckResult = checkExistingVersion(allocator, options.registry, name, version) catch |err| blk: {
@@ -941,7 +953,12 @@ fn publishSingleToRegistry(
 
     // Create tarball
     style.print("Creating tarball...\n", .{});
-    const tarball_path = try createTarball(allocator, package_dir, name, version, config_content);
+    const tarball_path = createTarball(allocator, package_dir, name, version, publish_content) catch |err| {
+        if (err == error.UnresolvableWorkspaceDependency) {
+            return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
+        }
+        return err;
+    };
     defer allocator.free(tarball_path);
     defer io_helper.deleteFile(tarball_path) catch {};
 
@@ -973,7 +990,7 @@ fn publishSingleToRegistry(
     // Upload to registry
     style.print("Uploading to registry...\n", .{});
 
-    const result = uploadToRegistry(allocator, options.registry, name, version, tarball_data, token orelse "", config_content) catch |err| {
+    const result = uploadToRegistry(allocator, options.registry, name, version, tarball_data, token orelse "", publish_content) catch |err| {
         const err_msg = try std.fmt.allocPrint(allocator, "Error: Failed to upload to registry: {any}", .{err});
         return CommandResult.err(allocator, err_msg);
     };
@@ -1164,6 +1181,19 @@ pub fn createTarball(
     } else {
         // No "files" field - use default behavior (exclude common non-publishable files)
         return createTarballDefault(allocator, package_dir, staging_pkg, staging_base, tarball_path);
+    }
+
+    // Rewrite workspace: protocol ranges in the staged package.json (same
+    // semantics as `bun publish`). Only the staged copy is modified — the
+    // repo's own package.json stays untouched. Fails loudly when a
+    // workspace: range cannot be resolved from the workspace's own packages.
+    {
+        const staged_manifest = try std.fs.path.join(allocator, &[_][]const u8{ staging_pkg, "package.json" });
+        defer allocator.free(staged_manifest);
+        workspace_publish.rewriteStagedManifest(allocator, staged_manifest, package_dir) catch |err| {
+            io_helper.deleteTree(staging_base) catch {};
+            return err;
+        };
     }
 
     // Create tarball with "package" directory at root
@@ -1362,6 +1392,19 @@ fn createTarballDefault(
         const include_result = io_helper.childRun(allocator, &[_][]const u8{ "sh", "-c", cp_cmd }) catch continue;
         allocator.free(include_result.stdout);
         allocator.free(include_result.stderr);
+    }
+
+    // Rewrite workspace: protocol ranges in the staged package.json (same
+    // semantics as `bun publish`). Only the staged copy is modified — the
+    // repo's own package.json stays untouched. Fails loudly when a
+    // workspace: range cannot be resolved from the workspace's own packages.
+    {
+        const staged_manifest = try std.fs.path.join(allocator, &[_][]const u8{ staging_pkg, "package.json" });
+        defer allocator.free(staged_manifest);
+        workspace_publish.rewriteStagedManifest(allocator, staged_manifest, package_dir) catch |err| {
+            io_helper.deleteTree(staging_base) catch {};
+            return err;
+        };
     }
 
     // Create tarball with "package" directory at root

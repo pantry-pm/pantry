@@ -324,3 +324,366 @@ test "npmSkipReason: native packages skip npm, explicit pantry.npm overrides" {
     try write(cfg, "{\"name\":\"j\",\"version\":\"1.0.0\",\"pantry\":{\"npm\":false}}");
     try testing.expect(npmSkipReason(allocator, dir, cfg) != null);
 }
+
+// ============================================================================
+// Workspace Protocol Rewrite Tests
+//
+// `pantry publish` / `pantry publish:commit` must rewrite workspace: ranges
+// in the staged manifest (bun publish semantics) and fail loudly when a
+// range cannot be resolved from the workspace's own packages.
+// ============================================================================
+
+const workspace_publish = lib.commands.workspace_publish;
+
+const ws_io = lib.io_helper;
+
+fn writeTestFile(path: []const u8, content: []const u8) !void {
+    const file = try ws_io.createFile(path, .{});
+    defer file.close(ws_io.io);
+    try ws_io.writeAllToFile(file, content);
+}
+
+fn makeTestDir(allocator: std.mem.Allocator, comptime prefix: []const u8) ![]const u8 {
+    const ts = ws_io.clockGettime();
+    const dir = try std.fmt.allocPrint(allocator, "/tmp/" ++ prefix ++ "-{d}", .{@as(u64, @intCast(ts.sec)) * 1_000_000 + @as(u64, @intCast(@divFloor(ts.nsec, 1000)))});
+    try ws_io.makePath(dir);
+    return dir;
+}
+
+/// Build a workspace fixture: root package.json with `workspaces: ["packages/*"]`,
+/// `packages/core` (@ws/core@0.2.9) and `packages/app`.
+fn makeWorkspaceFixture(allocator: std.mem.Allocator) ![]const u8 {
+    const root = try makeTestDir(allocator, "pantry-wsproto");
+    errdefer ws_io.deleteTree(root) catch {};
+
+    const root_pkg = try std.fs.path.join(allocator, &[_][]const u8{ root, "package.json" });
+    defer allocator.free(root_pkg);
+    try writeTestFile(root_pkg,
+        \\{
+        \\  "name": "ws-root",
+        \\  "private": true,
+        \\  "workspaces": ["packages/*"]
+        \\}
+    );
+
+    const core_dir = try std.fs.path.join(allocator, &[_][]const u8{ root, "packages", "core" });
+    defer allocator.free(core_dir);
+    try ws_io.makePath(core_dir);
+    const core_pkg = try std.fs.path.join(allocator, &[_][]const u8{ core_dir, "package.json" });
+    defer allocator.free(core_pkg);
+    try writeTestFile(core_pkg,
+        \\{
+        \\  "name": "@ws/core",
+        \\  "version": "0.2.9"
+        \\}
+    );
+
+    const app_dir = try std.fs.path.join(allocator, &[_][]const u8{ root, "packages", "app" });
+    defer allocator.free(app_dir);
+    try ws_io.makePath(app_dir);
+
+    return root;
+}
+
+fn appDir(allocator: std.mem.Allocator, root: []const u8) ![]const u8 {
+    return std.fs.path.join(allocator, &[_][]const u8{ root, "packages", "app" });
+}
+
+fn expectDepRange(allocator: std.mem.Allocator, content: []const u8, section: []const u8, dep: []const u8, expected: []const u8) !void {
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, content, .{});
+    defer parsed.deinit();
+    const deps = parsed.value.object.get(section) orelse return error.TestExpectedSection;
+    const range = deps.object.get(dep) orelse return error.TestExpectedDep;
+    try testing.expectEqualStrings(expected, range.string);
+}
+
+test "workspace protocol rewrite - workspace:* resolves to exact version" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "name": "@ws/app",
+        \\  "version": "1.0.0",
+        \\  "dependencies": { "@ws/core": "workspace:*" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    try testing.expect(rewritten.ptr != content.ptr);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "0.2.9");
+}
+
+test "workspace protocol rewrite - caret and tilde variants" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "name": "@ws/app",
+        \\  "version": "1.0.0",
+        \\  "dependencies": { "@ws/core": "workspace:^" },
+        \\  "devDependencies": { "@ws/core": "workspace:~" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "^0.2.9");
+    try expectDepRange(allocator, rewritten, "devDependencies", "@ws/core", "~0.2.9");
+}
+
+test "workspace protocol rewrite - bare workspace: resolves to exact version" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "@ws/core": "workspace:" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "0.2.9");
+}
+
+test "workspace protocol rewrite - explicit range keeps range, drops prefix" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "@ws/core": "workspace:^1.0.0" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "^1.0.0");
+}
+
+test "workspace protocol rewrite - all dependency sections are covered" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "@ws/core": "workspace:*" },
+        \\  "devDependencies": { "@ws/core": "workspace:*" },
+        \\  "peerDependencies": { "@ws/core": "workspace:^" },
+        \\  "optionalDependencies": { "@ws/core": "workspace:~" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "0.2.9");
+    try expectDepRange(allocator, rewritten, "devDependencies", "@ws/core", "0.2.9");
+    try expectDepRange(allocator, rewritten, "peerDependencies", "@ws/core", "^0.2.9");
+    try expectDepRange(allocator, rewritten, "optionalDependencies", "@ws/core", "~0.2.9");
+}
+
+test "workspace protocol rewrite - non-workspace ranges stay untouched" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": {
+        \\    "@ws/core": "workspace:*",
+        \\    "left-pad": "^1.3.0",
+        \\    "local-thing": "file:../local-thing"
+        \\  }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, app_dir);
+    defer allocator.free(rewritten);
+
+    try expectDepRange(allocator, rewritten, "dependencies", "@ws/core", "0.2.9");
+    try expectDepRange(allocator, rewritten, "dependencies", "left-pad", "^1.3.0");
+    try expectDepRange(allocator, rewritten, "dependencies", "local-thing", "file:../local-thing");
+}
+
+test "workspace protocol rewrite - manifest without workspace refs is returned as-is" {
+    const allocator = testing.allocator;
+
+    const content =
+        \\{
+        \\  "dependencies": { "left-pad": "^1.3.0" }
+        \\}
+    ;
+
+    const rewritten = try workspace_publish.rewriteManifestContent(allocator, content, "/tmp");
+    try testing.expect(rewritten.ptr == content.ptr);
+}
+
+test "workspace protocol rewrite - unresolvable dependency fails loudly" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "@ws/missing": "workspace:*" }
+        \\}
+    ;
+
+    try testing.expectError(
+        error.UnresolvableWorkspaceDependency,
+        workspace_publish.rewriteManifestContent(allocator, content, app_dir),
+    );
+}
+
+test "workspace protocol rewrite - workspace package without version fails loudly" {
+    const allocator = testing.allocator;
+    const root = try makeTestDir(allocator, "pantry-wsproto-nover");
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+
+    const root_pkg = try std.fs.path.join(allocator, &[_][]const u8{ root, "package.json" });
+    defer allocator.free(root_pkg);
+    try writeTestFile(root_pkg,
+        \\{
+        \\  "name": "ws-root",
+        \\  "private": true,
+        \\  "workspaces": ["packages/*"]
+        \\}
+    );
+
+    const core_dir = try std.fs.path.join(allocator, &[_][]const u8{ root, "packages", "core" });
+    defer allocator.free(core_dir);
+    try ws_io.makePath(core_dir);
+    const core_pkg = try std.fs.path.join(allocator, &[_][]const u8{ core_dir, "package.json" });
+    defer allocator.free(core_pkg);
+    try writeTestFile(core_pkg,
+        \\{
+        \\  "name": "@ws/core"
+        \\}
+    );
+
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+    try ws_io.makePath(app_dir);
+
+    const content =
+        \\{
+        \\  "dependencies": { "@ws/core": "workspace:*" }
+        \\}
+    ;
+
+    try testing.expectError(
+        error.UnresolvableWorkspaceDependency,
+        workspace_publish.rewriteManifestContent(allocator, content, app_dir),
+    );
+}
+
+test "workspace protocol rewrite - no workspace root fails loudly" {
+    const allocator = testing.allocator;
+    const dir = try makeTestDir(allocator, "pantry-wsproto-noroot");
+    defer allocator.free(dir);
+    defer ws_io.deleteTree(dir) catch {};
+
+    const content =
+        \\{
+        \\  "dependencies": { "@ws/core": "workspace:*" }
+        \\}
+    ;
+
+    try testing.expectError(
+        error.UnresolvableWorkspaceDependency,
+        workspace_publish.rewriteManifestContent(allocator, content, dir),
+    );
+}
+
+test "workspace discovery - findWorkspaceRoot and resolveWorkspacePackages" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    const found_root = workspace_publish.findWorkspaceRoot(allocator, app_dir) orelse return error.TestExpectedWorkspaceRoot;
+    defer allocator.free(found_root);
+    try testing.expectEqualStrings(root, found_root);
+
+    var packages = try workspace_publish.resolveWorkspacePackages(allocator, root);
+    defer workspace_publish.freeWorkspacePackages(allocator, &packages);
+
+    try testing.expectEqualStrings("0.2.9", packages.get("@ws/core").?);
+}
+
+test "workspace protocol rewrite - staged manifest rewritten, on-disk source untouched" {
+    const allocator = testing.allocator;
+    const root = try makeWorkspaceFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+    const app_dir = try appDir(allocator, root);
+    defer allocator.free(app_dir);
+
+    // The app's on-disk package.json carries the workspace: range.
+    const app_pkg = try std.fs.path.join(allocator, &[_][]const u8{ app_dir, "package.json" });
+    defer allocator.free(app_pkg);
+    const original =
+        \\{
+        \\  "name": "@ws/app",
+        \\  "version": "1.0.0",
+        \\  "dependencies": { "@ws/core": "workspace:*" }
+        \\}
+    ;
+    try writeTestFile(app_pkg, original);
+
+    // A staged copy elsewhere, like createTarball's staging directory.
+    const staging = try makeTestDir(allocator, "pantry-wsproto-staging");
+    defer allocator.free(staging);
+    defer ws_io.deleteTree(staging) catch {};
+    const staged_pkg = try std.fs.path.join(allocator, &[_][]const u8{ staging, "package.json" });
+    defer allocator.free(staged_pkg);
+    try writeTestFile(staged_pkg, original);
+
+    try workspace_publish.rewriteStagedManifest(allocator, staged_pkg, app_dir);
+
+    const staged_content = try ws_io.readFileAlloc(allocator, staged_pkg, 1024 * 1024);
+    defer allocator.free(staged_content);
+    try expectDepRange(allocator, staged_content, "dependencies", "@ws/core", "0.2.9");
+
+    // The on-disk source manifest is byte-for-byte untouched.
+    const source_content = try ws_io.readFileAlloc(allocator, app_pkg, 1024 * 1024);
+    defer allocator.free(source_content);
+    try testing.expectEqualStrings(original, source_content);
+}
