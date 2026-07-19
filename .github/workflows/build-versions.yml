@@ -315,6 +315,37 @@ jobs:
           bun scripts/build-all-packages.ts $ARGS
         timeout-minutes: 180
 
+  repair-targeted-metadata:
+    name: Repair targeted package metadata
+    needs: build-targeted
+    if: always() && github.event.inputs.packages != '' && github.event.inputs.packages != null
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Pantry
+        uses: ./packages/action
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Rebuild metadata from registry objects
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          packages="${{ github.event.inputs.packages }}"
+          packages="${packages// /,}"
+          cd packages/ts-pantry
+          bun scripts/verify-binary-metadata.ts \
+            --bucket "$S3_BUCKET" \
+            --region "$AWS_REGION" \
+            --package "$packages" \
+            --repair
+
   # Batch multi-version builds (full run)
   build:
     name: Build batch ${{ matrix.batch }} (${{ matrix.platform.name }})

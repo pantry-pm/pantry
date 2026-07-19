@@ -34,5 +34,5 @@ jobs:
           gh workflow run build-versions.yml \
             -R ${{ github.repository }} \
             -f packages=ziglang.org \
-            -f max-versions=5 \
+            -f max-versions=1 \
             -f force=false
