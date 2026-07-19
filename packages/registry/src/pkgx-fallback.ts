@@ -116,7 +116,7 @@ export function isPendingMaterialize(domain: string, version: string, platform: 
 }
 
 // ── metadata augmentation ────────────────────────────────────────────────────
-const _augCache = new Map<string, { at: number, data: PackageMetadata }>()
+const _augCache = new Map<string, { at: number, sourceFingerprint: string, data: PackageMetadata }>()
 const AUG_TTL_MS = 30 * 60 * 1000
 // How many of the most-recent tracked-but-unpublished versions to probe on pkgx.
 const MAX_AUGMENT_VERSIONS = 20
@@ -135,8 +135,11 @@ export async function augmentMetadataWithPkgx(
 ): Promise<PackageMetadata | null> {
   if (CUSTOM_BUILD_DOMAINS.has(domain))
     return published
+  const sourceFingerprint = published
+    ? `${published.updatedAt || ''}:${published.latestVersion || ''}:${Object.keys(published.versions || {}).length}`
+    : 'unpublished'
   const cached = _augCache.get(domain)
-  if (cached && Date.now() - cached.at < AUG_TTL_MS)
+  if (cached && cached.sourceFingerprint === sourceFingerprint && Date.now() - cached.at < AUG_TTL_MS)
     return cached.data
 
   const base: PackageMetadata = published
@@ -177,7 +180,7 @@ export async function augmentMetadataWithPkgx(
     }
   }))
 
-  _augCache.set(domain, { at: Date.now(), data: base })
+  _augCache.set(domain, { at: Date.now(), sourceFingerprint, data: base })
   return base
 }
 
