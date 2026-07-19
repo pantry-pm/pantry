@@ -5,9 +5,11 @@
  * Usage: bun run pack.ts [directory]
  */
 
-import { existsSync, readFileSync, statSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, basename, relative } from 'node:path'
+import { tmpdir } from 'node:os'
 import { spawn } from 'node:child_process'
+import { rewritePackageJsonContent } from '../src/workspace-protocol'
 
 interface PackageJson {
   name: string
@@ -42,7 +44,7 @@ const DEFAULT_IGNORES = [
   'pnpm-lock.yaml',
 ]
 
-async function pack(targetDir: string = process.cwd()): Promise<string> {
+export async function pack(targetDir: string = process.cwd()): Promise<string> {
   console.log('📦 Pantry Pack')
   console.log('='.repeat(40))
   console.log()
@@ -56,9 +58,10 @@ async function pack(targetDir: string = process.cwd()): Promise<string> {
   }
 
   // Read package.json
+  const packageJsonContent = readFileSync(packageJsonPath, 'utf-8')
   let packageJson: PackageJson
   try {
-    packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+    packageJson = JSON.parse(packageJsonContent)
   }
   catch {
     throw new Error(`Failed to parse ${packageJsonPath}: invalid JSON`)
@@ -105,11 +108,41 @@ else {
   }
   console.log()
 
+  // Rewrite workspace: protocol ranges in the packed manifest (same
+  // semantics as `bun publish`). The repo's package.json is never modified —
+  // the rewritten manifest is staged to a temp dir and swapped in only
+  // inside the tarball. Throws — failing the pack loudly — when a
+  // workspace: range cannot be resolved from the workspace's own packages.
+  const rewrite = rewritePackageJsonContent(packageJsonContent, targetDir)
+  let manifestStagingDir: string | null = null
+  if (rewrite.rewritten) {
+    for (const r of rewrite.resolutions) {
+      console.log(`   ↔ ${r.name}: ${r.from} → ${r.to} (${r.section})`)
+    }
+    console.log()
+    manifestStagingDir = mkdtempSync(join(tmpdir(), 'pantry-pack-manifest-'))
+    writeFileSync(join(manifestStagingDir, 'package.json'), rewrite.content)
+  }
+
   // Create tarball using tar command
   console.log('🗜️  Creating tarball...')
   const tarballPath = join(targetDir, tarballName)
 
-  await createTarball(targetDir, tarballPath, filesToInclude)
+  try {
+    if (manifestStagingDir) {
+      // Staged rewritten manifest replaces the on-disk package.json inside
+      // the tarball; the on-disk file itself stays untouched.
+      await createTarball(targetDir, tarballPath, filesToInclude.filter(f => f !== 'package.json'), manifestStagingDir)
+    }
+    else {
+      await createTarball(targetDir, tarballPath, filesToInclude)
+    }
+  }
+  finally {
+    if (manifestStagingDir) {
+      rmSync(manifestStagingDir, { recursive: true, force: true })
+    }
+  }
 
   // Get tarball size
   const stats = statSync(tarballPath)
@@ -283,16 +316,16 @@ function shouldIgnore(name: string, relativePath: string): boolean {
   return false
 }
 
-function createTarball(baseDir: string, outputPath: string, files: string[]): Promise<void> {
+function createTarball(baseDir: string, outputPath: string, files: string[], manifestDir?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Use tar command to create gzipped tarball
-    const args = [
-      '-czf',
-      outputPath,
-      '-C',
-      baseDir,
-      ...files,
-    ]
+    // Use tar command to create gzipped tarball. When the packed manifest was
+    // rewritten (workspace: ranges), the staged copy is swapped in for the
+    // on-disk package.json via ordered -C switches.
+    const args = ['-czf', outputPath]
+    if (manifestDir) {
+      args.push('-C', manifestDir, 'package.json')
+    }
+    args.push('-C', baseDir, ...files)
 
     const tar = spawn('tar', args, { stdio: 'inherit' })
 
@@ -310,8 +343,10 @@ else {
 }
 
 // Run if called directly
-const targetDir = process.argv[2] || process.cwd()
-pack(targetDir).catch((err) => {
-  console.error('Failed to pack:', err)
-  process.exit(1)
-})
+if (import.meta.main) {
+  const targetDir = process.argv[2] || process.cwd()
+  pack(targetDir).catch((err) => {
+    console.error('Failed to pack:', err)
+    process.exit(1)
+  })
+}

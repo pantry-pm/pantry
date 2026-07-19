@@ -107,6 +107,27 @@ export {
   isUserApiToken,
 } from './auth'
 
+// Workspace protocol rewriting for published manifests
+export {
+  WORKSPACE_RANGE_SECTIONS,
+  UnresolvableWorkspaceDependencyError,
+  resolveWorkspaceSpec,
+  readWorkspaceGlobs,
+  readWorkspaceGlobsFromManifest,
+  findWorkspaceRoot,
+  resolveWorkspacePackages,
+  manifestUsesWorkspaceProtocol,
+  rewriteWorkspaceRanges,
+  rewriteManifestForPublish,
+  rewritePackageJsonContent,
+} from './workspace-protocol'
+export type {
+  DependencySection,
+  WorkspacePackage,
+  WorkspaceRangeResolution,
+  RewriteResult,
+} from './workspace-protocol'
+
 // Types
 export type {
   PackageMetadata,
