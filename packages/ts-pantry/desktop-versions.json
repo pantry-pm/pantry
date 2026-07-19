@@ -230,7 +230,7 @@
       "name": "ImageOptim",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.9.3",
+      "latest": null,
       "published": "1.9.3",
       "needsUpdate": false
     },
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -546,8 +546,8 @@
       "kind": "app",
       "host": "ubuntu",
       "latest": "3.0.9",
-      "published": "3.0.8",
-      "needsUpdate": true
+      "published": "3.0.9",
+      "needsUpdate": false
     },
     {
       "domain": "tableplus.com",
