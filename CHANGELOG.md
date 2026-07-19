@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.20...v0.10.21)
+
+## 🐛 Bug Fixes
+
+- **publish**: resolve catalogs in npm tarballs ([4a297d4](https://github.com/pantry-pm/pantry/commit/4a297d4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.21 ([384ab20](https://github.com/pantry-pm/pantry/commit/384ab20)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.91 ([3ed4505](https://github.com/pantry-pm/pantry/commit/3ed4505)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.19...v0.10.20)
 
 ## 🐛 Bug Fixes
