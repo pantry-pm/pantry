@@ -42,6 +42,7 @@ const ROOT = join(import.meta.dir, '..')
 const RECIPES_DIR = join(ROOT, 'src', 'recipes')
 const MANIFEST = join(ROOT, 'desktop-versions.json')
 const REGISTRY = process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev'
+const REGISTRY_TIMEOUT_MS = 10_000
 
 const args = process.argv.slice(2)
 const flags = new Set(args)
@@ -180,6 +181,7 @@ async function publishedVersion(domain: string, fresh = false): Promise<string |
     const suffix = fresh ? `?verify=${Date.now()}` : ''
     const res = await fetch(`${REGISTRY}/binaries/${encodeURI(domain)}/metadata.json${suffix}`, {
       cache: fresh ? 'no-store' : 'default',
+      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
     })
     if (!res.ok)
       return null
@@ -266,7 +268,9 @@ function findRecipeFile(dir: string, filename: string): string | null {
  * recipes, not the thousands of CLI ones). Empty on network failure. */
 async function appDomains(): Promise<string[]> {
   try {
-    const res = await fetch(`${REGISTRY}/desktop-apps`)
+    const res = await fetch(`${REGISTRY}/desktop-apps`, {
+      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
+    })
     if (!res.ok)
       return []
     const data = await res.json() as any
