@@ -76,9 +76,11 @@ export const rabbitmqcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.3.3',
     '4.3.2',
     '4.3.1',
     '4.3.0',
+    '4.2.9',
     '4.2.8',
     '4.2.7',
     '4.2.6',
