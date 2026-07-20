@@ -1,5 +1,5 @@
 import type { ActionInputs, Platform } from './types'
-import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
+import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFilePatterns } from './release-assets'
 import { uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import * as fs from 'node:fs'
@@ -1237,12 +1237,16 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   }
 
   // Resolve file patterns — auto-discover if no explicit files given
-  let filePatterns = inputs.releaseFiles.split('\n').map(p => p.trim()).filter(Boolean)
-  if (filePatterns.length === 0 || (filePatterns.length === 1 && filePatterns[0] === 'auto')) {
+  const requestedFilePatterns = resolveReleaseFilePatterns(inputs.releaseFiles)
+  let filePatterns: string[]
+  if (requestedFilePatterns === null) {
     // Auto-package build artifacts
     core.info('Auto-packaging build artifacts...')
     const packaged = await packageBuildArtifacts(process.cwd())
     filePatterns = packaged.length > 0 ? ['dist/*.zip'] : []
+  }
+  else {
+    filePatterns = requestedFilePatterns
   }
   const matchedFiles: string[] = []
   for (const pattern of filePatterns) {

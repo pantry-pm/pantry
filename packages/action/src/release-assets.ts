@@ -2,6 +2,22 @@ import path from 'node:path'
 
 const archiveExtensions = ['.tar.gz', '.zip', '.tgz'] as const
 
+/**
+ * Resolve the release-files input. `null` means auto-package build output,
+ * while an empty array explicitly requests a notes-only release.
+ */
+export function resolveReleaseFilePatterns(input: string): string[] | null {
+  const patterns = input.split('\n').map(pattern => pattern.trim()).filter(Boolean)
+
+  if (patterns.length === 0 || (patterns.length === 1 && patterns[0] === 'auto'))
+    return null
+
+  if (patterns.length === 1 && patterns[0] === 'none')
+    return []
+
+  return patterns
+}
+
 function archiveKey(file: string): string | undefined {
   const name = path.basename(file)
   const extension = archiveExtensions.find(candidate => name.endsWith(candidate))

@@ -1,5 +1,23 @@
 import { describe, expect, test } from 'bun:test'
-import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
+import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFilePatterns } from './release-assets'
+
+describe('resolveReleaseFilePatterns', () => {
+  test('auto-packages when the input is empty or auto', () => {
+    expect(resolveReleaseFilePatterns('')).toBeNull()
+    expect(resolveReleaseFilePatterns('auto')).toBeNull()
+  })
+
+  test('supports notes-only releases', () => {
+    expect(resolveReleaseFilePatterns('none')).toEqual([])
+  })
+
+  test('returns explicit newline-separated patterns', () => {
+    expect(resolveReleaseFilePatterns('dist/*.zip\n checksums.txt ')).toEqual([
+      'dist/*.zip',
+      'checksums.txt',
+    ])
+  })
+})
 
 describe('preferArchivedReleaseAssets', () => {
   test('keeps only archives when matching raw binaries are present', () => {

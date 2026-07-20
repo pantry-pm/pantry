@@ -60,7 +60,7 @@ inputs:
     required: false
     default: 'false'
   release-files:
-    description: 'Newline-separated glob patterns of files to attach to the release (e.g. "dist/*.zip\ndist/checksums.sha256")'
+    description: 'Newline-separated glob patterns of files to attach. Use "auto" to package build output or "none" for a notes-only release.'
     required: false
     default: ''
   release-tag:
