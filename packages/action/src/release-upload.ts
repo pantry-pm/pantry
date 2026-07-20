@@ -38,7 +38,7 @@ function isRetryableUploadError(error: unknown): boolean {
 }
 
 export async function uploadReleaseAssetReliably(options: ReliableReleaseUploadOptions): Promise<ReliableReleaseUploadResult> {
-  const maxAttempts = options.maxAttempts ?? 4
+  const maxAttempts = options.maxAttempts ?? 8
   const retryDelayMs = options.retryDelayMs ?? 2000
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
 
@@ -66,7 +66,7 @@ export async function uploadReleaseAssetReliably(options: ReliableReleaseUploadO
       if (!isRetryableUploadError(error) || attempt === maxAttempts)
         throw error
 
-      const delay = retryDelayMs * 2 ** (attempt - 1)
+      const delay = Math.min(retryDelayMs * 2 ** (attempt - 1), 30000)
       options.onRetry?.(`Upload of ${options.name} failed (${errorMessage(error)}); retrying in ${delay}ms`)
       await sleep(delay)
     }

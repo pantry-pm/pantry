@@ -75,4 +75,21 @@ describe('uploadReleaseAssetReliably', () => {
 
     expect(uploads).toBe(1)
   })
+
+  it('caps backoff while keeping a multi-minute transient retry window', async () => {
+    const delays: number[] = []
+
+    await expect(uploadReleaseAssetReliably({
+      name: 'buddy.zip',
+      size: 42,
+      maxAttempts: 6,
+      retryDelayMs: 10000,
+      upload: async () => { throw Object.assign(new Error('Service Unavailable'), { status: 503 }) },
+      listAssets: async () => [],
+      deleteAsset: async () => {},
+      sleep: async delay => delays.push(delay),
+    })).rejects.toThrow('Service Unavailable')
+
+    expect(delays).toEqual([10000, 20000, 30000, 30000, 30000])
+  })
 })
