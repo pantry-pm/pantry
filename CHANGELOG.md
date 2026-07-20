@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.26...v0.10.27)
+
+## 🐛 Bug Fixes
+
+- **action**: retry GitHub release operations ([63fe9c9](https://github.com/pantry-pm/pantry/commit/63fe9c9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.27 ([f1d40da](https://github.com/pantry-pm/pantry/commit/f1d40da)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.25...v0.10.26)
 
 ## 🚀 Features
