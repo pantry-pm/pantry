@@ -122,8 +122,8 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.40.1",
-      "published": "1.40.1",
+      "latest": "1.40.2",
+      "published": "1.40.2",
       "needsUpdate": false
     },
     {
