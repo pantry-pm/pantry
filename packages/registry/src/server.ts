@@ -639,7 +639,7 @@ export function createHandler(
   binaryStorage?: BinaryStorage,
   phpPackageStorage?: PhpPackageStorage,
   authService?: AuthService,
-  internalBaseUrl = baseUrl,
+  internalBaseUrl: string = baseUrl,
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)

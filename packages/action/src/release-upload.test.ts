@@ -16,7 +16,7 @@ describe('uploadReleaseAssetReliably', () => {
       },
       listAssets: async () => [],
       deleteAsset: async () => {},
-      sleep: async delay => delays.push(delay),
+      sleep: async (delay) => { delays.push(delay) },
     })
 
     expect(result).toBe('uploaded')
@@ -87,7 +87,7 @@ describe('uploadReleaseAssetReliably', () => {
       upload: async () => { throw Object.assign(new Error('Service Unavailable'), { status: 503 }) },
       listAssets: async () => [],
       deleteAsset: async () => {},
-      sleep: async delay => delays.push(delay),
+      sleep: async (delay) => { delays.push(delay) },
     })).rejects.toThrow('Service Unavailable')
 
     expect(delays).toEqual([10000, 20000, 30000, 30000, 30000])
