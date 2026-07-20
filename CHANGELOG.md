@@ -1,3 +1,30 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.25...v0.10.26)
+
+## 🚀 Features
+
+- **action**: support notes-only releases ([9d2d3bc](https://github.com/pantry-pm/pantry/commit/9d2d3bc)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **zig**: enforce registry-only installs ([5ae9be4](https://github.com/pantry-pm/pantry/commit/5ae9be4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: satisfy isolated declaration checks ([8e1209f](https://github.com/pantry-pm/pantry/commit/8e1209f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: tolerate extended GitHub release outages ([84a8462](https://github.com/pantry-pm/pantry/commit/84a8462)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: publish release assets reliably ([4b34614](https://github.com/pantry-pm/pantry/commit/4b34614)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: bypass proxy for self-hosted tarballs ([4fb3494](https://github.com/pantry-pm/pantry/commit/4fb3494)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **infra**: self-heal registry outages ([0737fb4](https://github.com/pantry-pm/pantry/commit/0737fb4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: fail closed when registry is unavailable ([e530c92](https://github.com/pantry-pm/pantry/commit/e530c92)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: bound registry verification requests ([67d6885](https://github.com/pantry-pm/pantry/commit/67d6885)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: publish artifacts before recording updates ([dda53fd](https://github.com/pantry-pm/pantry/commit/dda53fd)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.26 ([6d9fb5f](https://github.com/pantry-pm/pantry/commit/6d9fb5f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update pnpm.io to 11.15.1 ([f3a7383](https://github.com/pantry-pm/pantry/commit/f3a7383)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.24...v0.10.25)
 
 ## 🐛 Bug Fixes
