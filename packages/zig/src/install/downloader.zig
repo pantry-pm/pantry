@@ -259,7 +259,7 @@ fn isShortDevVersion(version: []const u8) bool {
     return std.mem.endsWith(u8, version, "-dev");
 }
 
-/// Resolve a zig version specifier to a concrete version via ziglang.org/download/index.json.
+/// Resolve a Zig version specifier to a concrete Pantry registry version.
 /// Handles:
 ///   - "*" / "latest" → latest stable release (e.g. "0.15.2")
 ///   - Short dev like "0.16.0-dev" → full dev version (e.g. "0.16.0-dev.1484+d0ba6642b")
@@ -270,57 +270,9 @@ pub fn resolveZigDevVersion(allocator: std.mem.Allocator, version: []const u8) !
 
     if (!is_wildcard and !is_short_dev) return allocator.dupe(u8, version);
 
-    const result = io_helper.childRun(allocator, &[_][]const u8{
-        "curl", "-sfL", "--connect-timeout", "10", "https://ziglang.org/download/index.json",
-    }) catch return allocator.dupe(u8, version);
-    defer allocator.free(result.stdout);
-    defer allocator.free(result.stderr);
-
-    switch (result.term) {
-        .exited => |code| if (code != 0) return allocator.dupe(u8, version),
-        else => return allocator.dupe(u8, version),
-    }
-
-    if (result.stdout.len == 0) return allocator.dupe(u8, version);
-
-    const parsed = std.json.parseFromSlice(std.json.Value, allocator, result.stdout, .{
-        .ignore_unknown_fields = true,
-        .allocate = .alloc_always,
-    }) catch return allocator.dupe(u8, version);
-    defer parsed.deinit();
-
-    if (parsed.value != .object) return allocator.dupe(u8, version);
-
-    // For short dev versions, resolve from master
-    if (is_short_dev) {
-        const master = parsed.value.object.get("master") orelse return allocator.dupe(u8, version);
-        if (master != .object) return allocator.dupe(u8, version);
-        const master_version = master.object.get("version") orelse return allocator.dupe(u8, version);
-        if (master_version != .string) return allocator.dupe(u8, version);
-        if (std.mem.startsWith(u8, master_version.string, version)) {
-            return allocator.dupe(u8, master_version.string);
-        }
-        return allocator.dupe(u8, version);
-    }
-
-    // For "*" / "latest", find the highest stable version key (skip "master")
-    var best: ?[]const u8 = null;
-    var best_parts: [3]u32 = .{ 0, 0, 0 };
-    var iter = parsed.value.object.iterator();
-    while (iter.next()) |entry| {
-        const key = entry.key_ptr.*;
-        if (std.mem.eql(u8, key, "master")) continue;
-        if (std.mem.indexOf(u8, key, "-dev") != null) continue;
-        // Parse "major.minor.patch" for proper numeric comparison
-        const parts = parseVersionParts(key);
-        if (best == null or compareParts(parts, best_parts) == .gt) {
-            best = key;
-            best_parts = parts;
-        }
-    }
-
-    if (best) |v| {
-        return allocator.dupe(u8, v);
+    if (lookupS3Registry(allocator, "ziglang.org", version)) |result| {
+        allocator.free(result.tarball_url);
+        return result.version;
     }
 
     return allocator.dupe(u8, version);
@@ -346,16 +298,14 @@ fn compareParts(a: [3]u32, b: [3]u32) std.math.Order {
     return .eq;
 }
 
-/// Build download URL for ziglang.org
-/// For dev versions: https://ziglang.org/builds/zig-{platform}-{arch}-{version}.tar.xz
-/// For stable versions: https://ziglang.org/download/{version}/zig-{platform}-{arch}-{version}.tar.xz
+/// Build the canonical Pantry registry URL for a mirrored Zig archive.
 pub fn buildZiglangUrl(
     allocator: std.mem.Allocator,
     version: []const u8,
 ) ![]const u8 {
     const platform = lib.Platform.current();
     const platform_str = switch (platform) {
-        .darwin => "macos",
+        .darwin => "darwin",
         .linux => "linux",
         .windows => "windows",
         .freebsd => "freebsd",
@@ -363,28 +313,16 @@ pub fn buildZiglangUrl(
 
     const arch = lib.Architecture.current();
     const arch_str = switch (arch) {
-        .x86_64 => "x86_64",
-        .aarch64 => "aarch64",
+        .x86_64 => "x86-64",
+        .aarch64 => "arm64",
     };
 
-    // Windows uses .zip, all other platforms use .tar.xz
-    const ext = if (platform == .windows) "zip" else "tar.xz";
-
-    // Dev versions use /builds/ endpoint, stable use /download/{version}/
-    // Note: ziglang.org uses format zig-{arch}-{platform}-{version}.{ext}
-    if (isZigDevVersion(version)) {
-        return std.fmt.allocPrint(
-            allocator,
-            "https://ziglang.org/builds/zig-{s}-{s}-{s}.{s}",
-            .{ arch_str, platform_str, version, ext },
-        );
-    } else {
-        return std.fmt.allocPrint(
-            allocator,
-            "https://ziglang.org/download/{s}/zig-{s}-{s}-{s}.{s}",
-            .{ version, arch_str, platform_str, version, ext },
-        );
-    }
+    const ext = if (platform == .windows) "zip" else "tar.gz";
+    return std.fmt.allocPrint(
+        allocator,
+        "https://registry.pantry.dev/binaries/ziglang.org/{s}/{s}-{s}/ziglang.org-{s}.{s}",
+        .{ version, platform_str, arch_str, version, ext },
+    );
 }
 
 /// Build package download URL
@@ -846,4 +784,14 @@ test "isZigDevVersion" {
     try std.testing.expect(!isZigDevVersion("0.15.2"));
     try std.testing.expect(!isZigDevVersion("1.0.0"));
     try std.testing.expect(!isZigDevVersion("0.16.0"));
+}
+
+test "Zig download URL always uses the Pantry registry" {
+    const allocator = std.testing.allocator;
+    const url = try buildZiglangUrl(allocator, "0.17.0-dev.1422+e863bf3be");
+    defer allocator.free(url);
+
+    try std.testing.expect(std.mem.startsWith(u8, url, "https://registry.pantry.dev/binaries/ziglang.org/"));
+    try std.testing.expect(std.mem.indexOf(u8, url, "ziglang.org/builds") == null);
+    try std.testing.expect(std.mem.indexOf(u8, url, "ziglang.org/download") == null);
 }

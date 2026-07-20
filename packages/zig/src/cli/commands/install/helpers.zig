@@ -733,7 +733,7 @@ pub fn installSinglePackage(
         std.debug.print("[verbose:helper] resolved: {s} -> stripped={s} -> lookup={s} (in_registry={})\n", .{ dep.name, stripped_name, lookup_name, pkg_info != null });
     }
 
-    // Check if this is a zig dev version (should use ziglang.org instead of pkgx)
+    // Keep every Zig spelling on the mirrored Pantry registry path.
     const is_zig_package = std.mem.eql(u8, lookup_name, "zig") or
         std.mem.eql(u8, lookup_name, "ziglang") or
         std.mem.eql(u8, lookup_name, "ziglang.org");
@@ -787,11 +787,11 @@ pub fn installSinglePackage(
             .repo = try allocator.dupe(u8, repo_str),
         };
     } else if (is_zig_package) blk: {
-        // Zig packages: always use direct ziglang.org download (handles stable + dev versions)
+        // Zig packages are always resolved and downloaded from Pantry's mirror.
         break :blk lib.packages.PackageSpec{
-            .name = "zig",
+            .name = "ziglang.org",
             .version = dep.version,
-            .source = .ziglang,
+            .source = .pantry,
         };
     } else blk: {
         // Regular registry package - check pantry built-in, then Pantry S3 registry, then npm
@@ -953,15 +953,15 @@ pub fn installSinglePackage(
         if (options.verbose) {
             std.debug.print("[verbose:helper] installer.install FAILED for {s}: {}\n", .{ spec.name, err });
         }
-        // For zig packages not found in registry, fall back to direct ziglang.org download
+        // Retry Zig through the canonical mirrored package spelling.
         if (is_zig_package) {
             if (options.verbose) {
                 std.debug.print("[verbose:helper] trying zig fallback for {s}\n", .{dep.version});
             }
             const zig_fallback_spec = lib.packages.PackageSpec{
-                .name = "zig",
+                .name = "ziglang.org",
                 .version = dep.version,
-                .source = .ziglang,
+                .source = .pantry,
             };
             var fallback_result = shared_installer.install(zig_fallback_spec, .{
                 .project_root = proj_dir,

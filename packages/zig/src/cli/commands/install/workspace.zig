@@ -254,14 +254,14 @@ fn installSingleWorkspaceDep(
             .repo = repo_owned,
         };
     } else blk: {
-        // For zig packages, always use direct ziglang.org download
+        // For Zig aliases, always use Pantry's mirrored ziglang.org package.
         const is_zig_ws = std.mem.eql(u8, clean_name, "zig") or
             std.mem.eql(u8, clean_name, "ziglang") or
             std.mem.eql(u8, clean_name, "ziglang.org");
         break :blk if (is_zig_ws) lib.packages.PackageSpec{
-            .name = "zig",
+            .name = "ziglang.org",
             .version = dep.version,
-            .source = .ziglang,
+            .source = .pantry,
         } else lib.packages.PackageSpec{
             .name = clean_name,
             .version = dep.version,
@@ -275,15 +275,15 @@ fn installSingleWorkspaceDep(
         .project_root = workspace_root,
         .quiet = true,
     }) catch |err| {
-        // For zig packages not found in registry, fall back to direct ziglang.org download
+        // Retry Zig through the canonical mirrored package spelling.
         const is_zig_package = std.mem.eql(u8, clean_name, "zig") or
             std.mem.eql(u8, clean_name, "ziglang") or
             std.mem.eql(u8, clean_name, "ziglang.org");
         if (is_zig_package) {
             const zig_spec = lib.packages.PackageSpec{
-                .name = "zig",
+                .name = "ziglang.org",
                 .version = dep.version,
-                .source = .ziglang,
+                .source = .pantry,
             };
             var fallback = shared_installer.install(zig_spec, .{
                 .project_root = workspace_root,

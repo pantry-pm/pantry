@@ -2552,7 +2552,7 @@ pub const Installer = struct {
         return 0;
     }
 
-    /// Install Zig from ziglang.org (handles both stable and dev versions)
+    /// Install a Zig archive mirrored by the Pantry registry.
     fn installFromZiglang(
         self: *Installer,
         spec: PackageSpec,
@@ -2625,9 +2625,9 @@ pub const Installer = struct {
                 if (!std.mem.eql(u8, resolved_version, spec.version)) {
                     style.print("  → Resolved {s} to {s}\n", .{ spec.version, resolved_version });
                 }
-                style.print("  → Downloading Zig dev from ziglang.org: {s}\n", .{resolved_version});
+                style.print("  → Downloading mirrored Zig dev from registry.pantry.dev: {s}\n", .{resolved_version});
             } else {
-                style.print("  → Downloading Zig from ziglang.org: {s}\n", .{resolved_version});
+                style.print("  → Downloading mirrored Zig from registry.pantry.dev: {s}\n", .{resolved_version});
             }
         }
 
@@ -2651,9 +2651,9 @@ pub const Installer = struct {
 
         try io_helper.makePath(temp_dir);
 
-        // Download the archive (Windows uses .zip, others use .tar.xz)
+        // Download the mirrored archive (Windows uses .zip, others use .tar.gz)
         const is_windows = comptime @import("builtin").os.tag == .windows;
-        const archive_ext = if (is_windows) "zip" else "tar.xz";
+        const archive_ext = if (is_windows) "zip" else "tar.gz";
         const archive_path = try std.fmt.allocPrint(
             self.allocator,
             "{s}/zig.{s}",
