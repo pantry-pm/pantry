@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.401",
-      "published": "0.0.401",
+      "latest": "0.0.402",
+      "published": "0.0.402",
       "needsUpdate": false
     },
     {
@@ -518,8 +518,8 @@
       "name": "Slack",
       "kind": "app",
       "host": "macos",
-      "latest": "4.50.143",
-      "published": "4.50.143",
+      "latest": "4.51.180",
+      "published": "4.51.180",
       "needsUpdate": false
     },
     {
