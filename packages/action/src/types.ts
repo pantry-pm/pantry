@@ -14,6 +14,7 @@ export interface ActionInputs {
   release: boolean
   releaseFiles: string
   releaseTag: string
+  releaseMakeLatest: string
   releaseDraft: boolean
   releasePrerelease: boolean
   releaseNotes: string

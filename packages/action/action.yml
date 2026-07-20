@@ -67,6 +67,10 @@ inputs:
     description: Tag name for the release. Defaults to github.ref_name.
     required: false
     default: ''
+  release-make-latest:
+    description: 'Whether GitHub marks this release as latest: auto uses the highest stable semantic-version tag; true, false, and legacy map directly to GitHub.'
+    required: false
+    default: auto
   release-draft:
     description: Create a draft release
     required: false

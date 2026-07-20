@@ -1,5 +1,6 @@
 import type { ActionInputs, Platform } from './types'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFilePatterns } from './release-assets'
+import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release-latest'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import * as fs from 'node:fs'
@@ -546,6 +547,7 @@ export async function run(): Promise<void> {
       release: core.getBooleanInput('release'),
       releaseFiles: core.getInput('release-files') || '',
       releaseTag: core.getInput('release-tag') || process.env.GITHUB_REF_NAME || '',
+      releaseMakeLatest: core.getInput('release-make-latest') || 'auto',
       releaseDraft: core.getBooleanInput('release-draft'),
       releasePrerelease: core.getBooleanInput('release-prerelease'),
       releaseNotes: core.getInput('release-notes') || '',
@@ -1235,6 +1237,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   if (!tag) {
     throw new Error('Release tag is required (set release-tag input or push a tag)')
   }
+  const makeLatestMode = normalizeReleaseMakeLatest(inputs.releaseMakeLatest)
 
   // Resolve file patterns — auto-discover if no explicit files given
   const requestedFilePatterns = resolveReleaseFilePatterns(inputs.releaseFiles)
@@ -1437,13 +1440,39 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   if (uploadFailures.length > 0)
     throw new Error(`Failed to upload ${uploadFailures.length} release asset(s): ${uploadFailures.join('; ')}`)
 
+  const repositoryTags = await retryGitHubReleaseOperation(
+    'Repository tag listing',
+    () => octokit.paginate(octokit.rest.repos.listTags, { owner, repo, per_page: 100 }),
+    { onRetry: message => core.warning(message) },
+  )
+  const makeLatest = resolveSemanticMakeLatest(
+    tag,
+    repositoryTags.map(repositoryTag => repositoryTag.name),
+    makeLatestMode,
+    inputs.releasePrerelease,
+  )
+
   if (publishCreatedDraft) {
     await retryGitHubReleaseOperation(
       `Publication of release ${tag}`,
-      () => octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, draft: false }),
+      () => octokit.rest.repos.updateRelease({
+        owner,
+        repo,
+        release_id: releaseId,
+        draft: false,
+        make_latest: makeLatest,
+      }),
       { onRetry: message => core.warning(message) },
     )
     core.info(`Published release: ${tag}`)
+  }
+  else if (!inputs.releaseDraft) {
+    await retryGitHubReleaseOperation(
+      `Latest release reconciliation for ${tag}`,
+      () => octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, make_latest: makeLatest }),
+      { onRetry: message => core.warning(message) },
+    )
+    core.info(`Reconciled latest release setting for ${tag}: ${makeLatest}`)
   }
 
   if (releaseUrl)
