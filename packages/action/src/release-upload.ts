@@ -29,12 +29,47 @@ function errorStatus(error: unknown): number | undefined {
     : undefined
 }
 
-function isRetryableUploadError(error: unknown): boolean {
+export function isRetryableGitHubReleaseError(error: unknown): boolean {
   const status = errorStatus(error)
   if (status !== undefined && (status === 408 || status === 409 || status === 422 || status === 429 || status >= 500))
     return true
 
   return /already exists|already_exists|bad gateway|creating policy|updating policy|rate limit|timed? ?out|temporar/i.test(errorMessage(error))
+}
+
+export interface GitHubReleaseRetryOptions {
+  maxAttempts?: number
+  retryDelayMs?: number
+  sleep?: (milliseconds: number) => Promise<void>
+  onRetry?: (message: string) => void
+}
+
+export async function retryGitHubReleaseOperation<T>(
+  label: string,
+  operation: () => Promise<T>,
+  options: GitHubReleaseRetryOptions = {},
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? 8
+  const retryDelayMs = options.retryDelayMs ?? 2000
+  const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
+
+  let lastError: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation()
+    }
+    catch (error) {
+      lastError = error
+      if (!isRetryableGitHubReleaseError(error) || attempt === maxAttempts)
+        throw error
+
+      const delay = Math.min(retryDelayMs * 2 ** (attempt - 1), 30000)
+      options.onRetry?.(`${label} failed (${errorMessage(error)}); retrying in ${delay}ms`)
+      await sleep(delay)
+    }
+  }
+
+  throw lastError
 }
 
 export async function uploadReleaseAssetReliably(options: ReliableReleaseUploadOptions): Promise<ReliableReleaseUploadResult> {
@@ -63,7 +98,7 @@ export async function uploadReleaseAssetReliably(options: ReliableReleaseUploadO
         await options.deleteAsset(existing.id).catch(() => undefined)
       }
 
-      if (!isRetryableUploadError(error) || attempt === maxAttempts)
+      if (!isRetryableGitHubReleaseError(error) || attempt === maxAttempts)
         throw error
 
       const delay = Math.min(retryDelayMs * 2 ** (attempt - 1), 30000)

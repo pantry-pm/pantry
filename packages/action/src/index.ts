@@ -1,6 +1,6 @@
 import type { ActionInputs, Platform } from './types'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFilePatterns } from './release-assets'
-import { uploadReleaseAssetReliably } from './release-upload'
+import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -1292,7 +1292,11 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     : extractChangelogForVersion(inputs.releaseChangelog, tag)) || inputs.releaseNotes
   let existingRelease: Awaited<ReturnType<typeof octokit.rest.repos.getReleaseByTag>>['data'] | undefined
   try {
-    const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag })
+    const response = await retryGitHubReleaseOperation(
+      `Lookup of release ${tag}`,
+      () => octokit.rest.repos.getReleaseByTag({ owner, repo, tag }),
+      { onRetry: message => core.warning(message) },
+    )
     existingRelease = response.data
   }
   catch (err) {
@@ -1310,23 +1314,43 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     // Keep an existing release synchronized with the current Logsmith output.
     const immutable = (existing as typeof existing & { immutable?: boolean }).immutable === true
     if (body && body !== existing.body && !immutable) {
-      await octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, body })
+      await retryGitHubReleaseOperation(
+        `Update of release ${tag}`,
+        () => octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, body }),
+        { onRetry: message => core.warning(message) },
+      )
       core.info('Updated release body with changelog')
     }
   }
   else {
-    const { data: created } = await octokit.rest.repos.createRelease({
-      owner,
-      repo,
-      tag_name: tag,
-      name: tag,
-      body,
-      // Attach every asset before publication. This is required when release
-      // immutability is enabled and avoids GitHub's release-policy race while
-      // attestations are being generated for a newly published release.
-      draft: true,
-      prerelease: inputs.releasePrerelease,
-    })
+    const created = await retryGitHubReleaseOperation(`Creation of release ${tag}`, async () => {
+      try {
+        const response = await octokit.rest.repos.createRelease({
+          owner,
+          repo,
+          tag_name: tag,
+          name: tag,
+          body,
+          // Attach every asset before publication. This is required when release
+          // immutability is enabled and avoids GitHub's release-policy race while
+          // attestations are being generated for a newly published release.
+          draft: true,
+          prerelease: inputs.releasePrerelease,
+        })
+        return response.data
+      }
+      catch (error) {
+        if (!isRetryableGitHubReleaseError(error))
+          throw error
+
+        // A request can reach GitHub successfully even when its response is a
+        // transient error. Reconcile by tag before issuing another create.
+        const reconciled = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag }).catch(() => undefined)
+        if (reconciled)
+          return reconciled.data
+        throw error
+      }
+    }, { onRetry: message => core.warning(message) })
     releaseId = created.id
     releaseUrl = created.html_url
     publishCreatedDraft = !inputs.releaseDraft
@@ -1337,16 +1361,24 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   // an older release job, leaving the release in the same archive-only state.
   const supersededNames = rawAssetNamesForArchives(files)
   if (supersededNames.size > 0) {
-    const releaseAssets = await octokit.paginate(octokit.rest.repos.listReleaseAssets, {
-      owner,
-      repo,
-      release_id: releaseId,
-      per_page: 100,
-    })
+    const releaseAssets = await retryGitHubReleaseOperation(
+      `Asset listing for release ${tag}`,
+      () => octokit.paginate(octokit.rest.repos.listReleaseAssets, {
+        owner,
+        repo,
+        release_id: releaseId,
+        per_page: 100,
+      }),
+      { onRetry: message => core.warning(message) },
+    )
     for (const asset of releaseAssets) {
       if (!supersededNames.has(asset.name))
         continue
-      await octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id })
+      await retryGitHubReleaseOperation(
+        `Removal of superseded asset ${asset.name}`,
+        () => octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: asset.id }),
+        { onRetry: message => core.warning(message) },
+      )
       core.info(`Removed superseded raw asset: ${asset.name}`)
     }
   }
@@ -1375,15 +1407,21 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
           })
         },
         listAssets: async () => {
-          return await octokit.paginate(octokit.rest.repos.listReleaseAssets, {
-            owner,
-            repo,
-            release_id: releaseId,
-            per_page: 100,
-          })
+          return await retryGitHubReleaseOperation(
+            `Asset reconciliation for release ${tag}`,
+            () => octokit.paginate(octokit.rest.repos.listReleaseAssets, {
+              owner,
+              repo,
+              release_id: releaseId,
+              per_page: 100,
+            }),
+          )
         },
         deleteAsset: async (assetId) => {
-          await octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: assetId })
+          await retryGitHubReleaseOperation(
+            `Removal of stale asset ${name}`,
+            () => octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: assetId }),
+          )
         },
         onRetry: message => core.warning(message),
       })
@@ -1400,7 +1438,11 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     throw new Error(`Failed to upload ${uploadFailures.length} release asset(s): ${uploadFailures.join('; ')}`)
 
   if (publishCreatedDraft) {
-    await octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, draft: false })
+    await retryGitHubReleaseOperation(
+      `Publication of release ${tag}`,
+      () => octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, draft: false }),
+      { onRetry: message => core.warning(message) },
+    )
     core.info(`Published release: ${tag}`)
   }
 

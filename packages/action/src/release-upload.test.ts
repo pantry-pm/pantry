@@ -1,5 +1,36 @@
 import { describe, expect, it } from 'bun:test'
-import { uploadReleaseAssetReliably } from './release-upload'
+import { retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
+
+describe('retryGitHubReleaseOperation', () => {
+  it('retries transient GitHub control-plane failures', async () => {
+    let attempts = 0
+    const warnings: string[] = []
+
+    const result = await retryGitHubReleaseOperation('Create release', async () => {
+      attempts += 1
+      if (attempts < 3)
+        throw Object.assign(new Error('Service Unavailable'), { status: 503 })
+      return 'created'
+    }, {
+      sleep: async () => {},
+      onRetry: warning => warnings.push(warning),
+    })
+
+    expect(result).toBe('created')
+    expect(attempts).toBe(3)
+    expect(warnings).toHaveLength(2)
+  })
+
+  it('does not retry permanent failures', async () => {
+    let attempts = 0
+    await expect(retryGitHubReleaseOperation('Create release', async () => {
+      attempts += 1
+      throw Object.assign(new Error('Resource not accessible'), { status: 403 })
+    }, { sleep: async () => {} })).rejects.toThrow('Resource not accessible')
+
+    expect(attempts).toBe(1)
+  })
+})
 
 describe('uploadReleaseAssetReliably', () => {
   it('retries transient GitHub release policy failures', async () => {
