@@ -30,6 +30,19 @@ describe('retryGitHubReleaseOperation', () => {
 
     expect(attempts).toBe(1)
   })
+
+  it('outlasts extended GitHub release outages by default', async () => {
+    let attempts = 0
+    const result = await retryGitHubReleaseOperation('Create release', async () => {
+      attempts += 1
+      if (attempts <= 12)
+        throw Object.assign(new Error('Service Unavailable'), { status: 503 })
+      return 'created'
+    }, { sleep: async () => {} })
+
+    expect(result).toBe('created')
+    expect(attempts).toBe(13)
+  })
 })
 
 describe('uploadReleaseAssetReliably', () => {
@@ -122,5 +135,24 @@ describe('uploadReleaseAssetReliably', () => {
     })).rejects.toThrow('Service Unavailable')
 
     expect(delays).toEqual([10000, 20000, 30000, 30000, 30000])
+  })
+
+  it('outlasts extended upload outages by default', async () => {
+    let uploads = 0
+    const result = await uploadReleaseAssetReliably({
+      name: 'buddy.zip',
+      size: 42,
+      upload: async () => {
+        uploads += 1
+        if (uploads <= 12)
+          throw Object.assign(new Error('Service Unavailable'), { status: 503 })
+      },
+      listAssets: async () => [],
+      deleteAsset: async () => {},
+      sleep: async () => {},
+    })
+
+    expect(result).toBe('uploaded')
+    expect(uploads).toBe(13)
   })
 })

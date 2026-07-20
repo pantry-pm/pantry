@@ -19,6 +19,11 @@ export interface ReliableReleaseUploadOptions {
 
 export type ReliableReleaseUploadResult = 'uploaded' | 'already-present' | 'reconciled'
 
+// GitHub release endpoints can remain unavailable long after the rest of
+// Actions recovers. At the 30-second backoff cap this keeps retrying for almost
+// two hours, while permanent 4xx failures still fail immediately.
+export const DEFAULT_GITHUB_RELEASE_MAX_ATTEMPTS = 240
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
@@ -49,7 +54,7 @@ export async function retryGitHubReleaseOperation<T>(
   operation: () => Promise<T>,
   options: GitHubReleaseRetryOptions = {},
 ): Promise<T> {
-  const maxAttempts = options.maxAttempts ?? 8
+  const maxAttempts = options.maxAttempts ?? DEFAULT_GITHUB_RELEASE_MAX_ATTEMPTS
   const retryDelayMs = options.retryDelayMs ?? 2000
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
 
@@ -73,7 +78,7 @@ export async function retryGitHubReleaseOperation<T>(
 }
 
 export async function uploadReleaseAssetReliably(options: ReliableReleaseUploadOptions): Promise<ReliableReleaseUploadResult> {
-  const maxAttempts = options.maxAttempts ?? 8
+  const maxAttempts = options.maxAttempts ?? DEFAULT_GITHUB_RELEASE_MAX_ATTEMPTS
   const retryDelayMs = options.retryDelayMs ?? 2000
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
 
