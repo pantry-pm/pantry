@@ -22,6 +22,7 @@ export const slackcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '4.51.180',
     '4.50.143',
     '4.41.105',
     '4.41.104',
