@@ -1,5 +1,6 @@
 import type { ActionInputs, Platform } from './types'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives } from './release-assets'
+import { uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -1278,6 +1279,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   // Get or create release
   let releaseId: number
   let releaseUrl = ''
+  let publishCreatedDraft = false
   // `release-changelog: auto` generates this release's notes from git history
   // with logsmith (no pre-committed CHANGELOG.md needed); any other value is a
   // path to extract the tag's section from. Both fall back to `release-notes`.
@@ -1302,7 +1304,8 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     core.info(`Found existing release: ${tag} (${releaseId})`)
 
     // Keep an existing release synchronized with the current Logsmith output.
-    if (body && body !== existing.body) {
+    const immutable = (existing as typeof existing & { immutable?: boolean }).immutable === true
+    if (body && body !== existing.body && !immutable) {
       await octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, body })
       core.info('Updated release body with changelog')
     }
@@ -1314,12 +1317,16 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
       tag_name: tag,
       name: tag,
       body,
-      draft: inputs.releaseDraft,
+      // Attach every asset before publication. This is required when release
+      // immutability is enabled and avoids GitHub's release-policy race while
+      // attestations are being generated for a newly published release.
+      draft: true,
       prerelease: inputs.releasePrerelease,
     })
     releaseId = created.id
     releaseUrl = created.html_url
-    core.info(`Created release: ${tag} (${releaseId})`)
+    publishCreatedDraft = !inputs.releaseDraft
+    core.info(`Created draft release: ${tag} (${releaseId})`)
   }
 
   // Re-running a migrated workflow must also clean up raw binaries uploaded by
@@ -1347,41 +1354,39 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     try {
       const data = fs.readFileSync(file)
       const size = fs.statSync(file).size
-      await octokit.rest.repos.uploadReleaseAsset({
-        owner,
-        repo,
-        release_id: releaseId,
+      const result = await uploadReleaseAssetReliably({
         name,
-        data: data as unknown as string,
-        headers: {
-          'content-type': 'application/octet-stream',
-          'content-length': size,
+        size,
+        upload: async () => {
+          await octokit.rest.repos.uploadReleaseAsset({
+            owner,
+            repo,
+            release_id: releaseId,
+            name,
+            data: data as unknown as string,
+            headers: {
+              'content-type': 'application/octet-stream',
+              'content-length': size,
+            },
+          })
         },
+        listAssets: async () => {
+          return await octokit.paginate(octokit.rest.repos.listReleaseAssets, {
+            owner,
+            repo,
+            release_id: releaseId,
+            per_page: 100,
+          })
+        },
+        deleteAsset: async (assetId) => {
+          await octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: assetId })
+        },
+        onRetry: message => core.warning(message),
       })
-      core.info(`Uploaded: ${name} (${(size / 1024).toFixed(1)} KB)`)
+      core.info(`${result === 'uploaded' ? 'Uploaded' : 'Verified'}: ${name} (${(size / 1024).toFixed(1)} KB)`)
     }
     catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      // Asset already exists (409/422) — delete and retry once
-      if (msg.includes('already_exists') || msg.includes('already exists')) {
-        try {
-          const { data: assets } = await octokit.rest.repos.listReleaseAssets({ owner, repo, release_id: releaseId })
-          const existing = assets.find(a => a.name === name)
-          if (existing) {
-            await octokit.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id })
-            const data = fs.readFileSync(file)
-            const size = fs.statSync(file).size
-            await octokit.rest.repos.uploadReleaseAsset({
-              owner, repo, release_id: releaseId, name,
-              data: data as unknown as string,
-              headers: { 'content-type': 'application/octet-stream', 'content-length': size },
-            })
-            core.info(`Replaced: ${name} (${(size / 1024).toFixed(1)} KB)`)
-            continue
-          }
-        }
-        catch { /* retry failed, fall through to warning */ }
-      }
       uploadFailures.push(`${name}: ${msg}`)
       core.error(`Failed to upload ${name}: ${msg}`)
     }
@@ -1389,6 +1394,11 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
 
   if (uploadFailures.length > 0)
     throw new Error(`Failed to upload ${uploadFailures.length} release asset(s): ${uploadFailures.join('; ')}`)
+
+  if (publishCreatedDraft) {
+    await octokit.rest.repos.updateRelease({ owner, repo, release_id: releaseId, draft: false })
+    core.info(`Published release: ${tag}`)
+  }
 
   if (releaseUrl)
     core.setOutput('release-url', releaseUrl)
