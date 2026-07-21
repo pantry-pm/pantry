@@ -7,6 +7,7 @@ import { buildImage } from './builder'
 import { collectBuildContext } from './context'
 import { parseDockerfile, parseExecForm, resolveBuildStages } from './dockerfile'
 import { createMatcher, parseFreezer } from './freezerignore'
+import { renderDockerfile } from './generate'
 import { digest, digestHex } from './oci'
 import { parseImageRef } from './registry'
 
@@ -85,6 +86,24 @@ FROM c AS three`
     const parsed = parseDockerfile(df)
     expect(resolveBuildStages(parsed, 'two').map(s => s.name)).toEqual(['one', 'two'])
     expect(resolveBuildStages(parsed).map(s => s.name)).toEqual(['one', 'two', 'three'])
+  })
+})
+
+describe('renderDockerfile', () => {
+  it('uses a small runtime base, production dependencies, and non-root ownership', () => {
+    const dockerfile = renderDockerfile({ outDir: '/tmp/app' })
+
+    expect(dockerfile).toContain('FROM oven/bun:1.3.14-alpine AS base')
+    expect(dockerfile).toContain('COPY --chown=bun:bun . .')
+    expect(dockerfile).toContain('RUN bun install --frozen-lockfile --production')
+    expect(dockerfile).not.toContain('chown -R')
+    expect(dockerfile).toContain('USER bun')
+  })
+
+  it('installs build dependencies before pruning them from a built image', () => {
+    const dockerfile = renderDockerfile({ outDir: '/tmp/app', buildCommand: 'bun run build' })
+
+    expect(dockerfile).toContain('RUN bun install --frozen-lockfile\nRUN bun run build\nRUN bun install --frozen-lockfile --production')
   })
 })
 

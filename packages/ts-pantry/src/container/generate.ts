@@ -4,11 +4,11 @@ import path from 'node:path'
 export interface GenerateOptions {
   /** Directory to write the Dockerfile + .freezer into. */
   outDir: string
-  /** Base image (default: oven/bun:1.3.10). */
+  /** Base image (default: oven/bun:1.3.14-alpine). */
   baseImage?: string
   /** Working directory inside the image (default: /app). */
   workdir?: string
-  /** Dependency install command run at build (default: bun install --frozen-lockfile). */
+  /** Dependency install command run at build. Production-only unless a build command needs dev dependencies. */
   installCommand?: string
   /** Optional build command (e.g. `bun run build`). */
   buildCommand?: string
@@ -61,9 +61,11 @@ coverage
 
 /** Render a production Dockerfile for a Bun/Stacks-style app. */
 export function renderDockerfile(opts: GenerateOptions): string {
-  const base = opts.baseImage ?? 'oven/bun:1.3.10'
+  const base = opts.baseImage ?? 'oven/bun:1.3.14-alpine'
   const workdir = opts.workdir ?? '/app'
-  const install = opts.installCommand ?? 'bun install --frozen-lockfile'
+  const install = opts.installCommand ?? (opts.buildCommand
+    ? 'bun install --frozen-lockfile'
+    : 'bun install --frozen-lockfile --production')
   const port = opts.port ?? 3000
   const start = opts.startCommand ?? ['bun', 'start']
   const env = { APP_ENV: 'production', NODE_ENV: 'production', PORT: String(port), ...(opts.env ?? {}) }
@@ -76,14 +78,15 @@ export function renderDockerfile(opts: GenerateOptions): string {
   lines.push('')
   lines.push('# Bring in the source (filtered by .freezer) and install deps in-image so')
   lines.push('# the build context / release stays small.')
-  lines.push('COPY . .')
+  lines.push('COPY --chown=bun:bun . .')
   lines.push(`RUN ${install}`)
-  if (opts.buildCommand)
+  if (opts.buildCommand) {
     lines.push(`RUN ${opts.buildCommand}`)
+    if (!opts.installCommand)
+      lines.push('RUN bun install --frozen-lockfile --production')
+  }
   lines.push('')
-  lines.push('# Many base images run as a non-root user but COPY lands as root; hand')
-  lines.push('# ownership over so the app can write caches/manifests/logs at boot.')
-  lines.push(`RUN chown -R bun:bun ${workdir} || true`)
+  lines.push('# Source and runtime dependencies are owned by the non-root runtime user.')
   lines.push('USER bun')
   lines.push('')
   for (const [k, v] of Object.entries(env))
