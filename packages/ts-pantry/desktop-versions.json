@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.715.61943",
-      "published": "26.715.61943",
+      "latest": "26.715.70719",
+      "published": "26.715.70719",
       "needsUpdate": false
     },
     {
@@ -105,7 +105,7 @@
       "kind": "app",
       "host": "macos",
       "latest": "3.12.17",
-      "published": "3.12.17",
+      "published": "3.12.29",
       "needsUpdate": false
     },
     {
@@ -140,8 +140,8 @@
       "name": "Element",
       "kind": "app",
       "host": "macos",
-      "latest": "1.12.23",
-      "published": "1.12.23",
+      "latest": "1.12.24",
+      "published": "1.12.24",
       "needsUpdate": false
     },
     {
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.28.22",
-      "published": "2.26.28.22",
+      "latest": "2.26.29.16",
+      "published": "2.26.29.16",
       "needsUpdate": false
     },
     {
