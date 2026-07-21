@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.35...v0.10.36)
+
+## 🐛 Bug Fixes
+
+- **install**: reject unverifiable integrity claims ([c5e7329](https://github.com/pantry-pm/pantry/commit/c5e7329)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: honor rotated Zig publish tokens ([981e89d](https://github.com/pantry-pm/pantry/commit/981e89d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- specify package manager and registry contracts ([056725e](https://github.com/pantry-pm/pantry/commit/056725e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.36 ([ece859d](https://github.com/pantry-pm/pantry/commit/ece859d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update valkey.io to 9.1.1 ([4e81b10](https://github.com/pantry-pm/pantry/commit/4e81b10)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 4 apps ([ce03158](https://github.com/pantry-pm/pantry/commit/ce03158)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update depot.dev, github.com/ggerganov/llama.cpp ([42dcea3](https://github.com/pantry-pm/pantry/commit/42dcea3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, tart.run ([49741bb](https://github.com/pantry-pm/pantry/commit/49741bb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update apptainer.org, fly.io, github.com/canonical/charmcraft, github.com/router-for-me/CLIProxyAPI ([933cea3](https://github.com/pantry-pm/pantry/commit/933cea3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.34...v0.10.35)
 
 ## 🐛 Bug Fixes
