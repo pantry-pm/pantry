@@ -13,6 +13,27 @@ pub const UpgradeOptions = struct {
     dry_run: bool = false,
 };
 
+fn ensurePackageExecutorAliases(allocator: std.mem.Allocator, home: []const u8, pantry_path: []const u8) void {
+    const is_windows = comptime @import("builtin").os.tag == .windows;
+    const aliases = [_][]const u8{ "panx", "pnx" };
+
+    if (is_windows) {
+        for (aliases) |alias| {
+            const alias_path = std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}.exe", .{ home, alias }) catch continue;
+            defer allocator.free(alias_path);
+            io_helper.deleteFile(alias_path) catch {};
+            io_helper.copyFile(pantry_path, alias_path) catch {};
+        }
+    } else {
+        for (aliases) |alias| {
+            const alias_path = std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, alias }) catch continue;
+            defer allocator.free(alias_path);
+            io_helper.deleteFile(alias_path) catch {};
+            io_helper.symLink("pantry", alias_path) catch {};
+        }
+    }
+}
+
 /// Self-update pantry to the latest (or canary) version.
 ///
 /// Usage:
@@ -258,6 +279,8 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
         );
         return CommandResult.err(allocator, msg);
     };
+
+    ensurePackageExecutorAliases(allocator, home, install_path);
 
     // Cleanup
     io_helper.deleteTree(tmp_dir) catch {};

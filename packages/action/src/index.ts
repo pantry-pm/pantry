@@ -3,6 +3,7 @@ import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFi
 import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release-latest'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
+import { ensurePackageExecutorAliases } from './executor-aliases'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -88,8 +89,10 @@ async function resolveVersion(version: string): Promise<string> {
 async function downloadAndInstall(version: string, platform: Platform): Promise<string> {
   if (version !== 'latest') {
     const cached = tc.find('pantry', version, platform.arch)
-    if (cached)
+    if (cached) {
+      ensurePackageExecutorAliases(cached, platform)
       return cached
+    }
   }
 
   // Use /releases/latest/download for non-semver versions (like 'main', 'latest')
@@ -104,7 +107,9 @@ async function downloadAndInstall(version: string, platform: Platform): Promise<
   if (platform.os !== 'windows')
     await exec.exec('chmod', ['+x', path.join(dir, platform.binaryName)])
 
-  return version !== 'latest' ? await tc.cacheDir(dir, 'pantry', version, platform.arch) : dir
+  const installDir = version !== 'latest' ? await tc.cacheDir(dir, 'pantry', version, platform.arch) : dir
+  ensurePackageExecutorAliases(installDir, platform)
+  return installDir
 }
 
 /** Hash a file's contents for cache key */

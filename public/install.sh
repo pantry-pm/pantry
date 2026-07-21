@@ -97,6 +97,17 @@ main() {
   cp "${TMP_DIR}/${bin_name}" "${PANTRY_INSTALL_DIR}/${bin_name}"
   chmod +x "${PANTRY_INSTALL_DIR}/${bin_name}"
 
+  # Install package-executor aliases next to pantry so `panx` works anywhere
+  # the main CLI is available. Windows environments use copies because native
+  # symlink creation is not consistently available without elevated access.
+  if [ "$platform" = "windows-x64" ]; then
+    cp "${PANTRY_INSTALL_DIR}/${bin_name}" "${PANTRY_INSTALL_DIR}/panx.exe"
+    cp "${PANTRY_INSTALL_DIR}/${bin_name}" "${PANTRY_INSTALL_DIR}/pnx.exe"
+  else
+    ln -sfn "pantry" "${PANTRY_INSTALL_DIR}/panx"
+    ln -sfn "pantry" "${PANTRY_INSTALL_DIR}/pnx"
+  fi
+
   # Verify
   if ! "${PANTRY_INSTALL_DIR}/${bin_name}" --version >/dev/null 2>&1; then
     error "Installation verification failed"
