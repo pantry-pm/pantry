@@ -2234,7 +2234,7 @@ fn printHelp() void {
     style.print("      " ++ style.cyan ++ "dev" ++ style.reset ++ "                 Run development script (alias for 'run dev')\n", .{});
     style.print("      " ++ style.cyan ++ "build" ++ style.reset ++ "               Run build script (alias for 'run build')\n", .{});
     style.print("      " ++ style.cyan ++ "test" ++ style.reset ++ "                Run test script (alias for 'run test')\n", .{});
-    style.print("      " ++ style.cyan ++ "px" ++ style.reset ++ "                  Execute a package binary\n", .{});
+    style.print("      " ++ style.cyan ++ "panx" ++ style.reset ++ "                Execute a package binary\n", .{});
     style.print("      " ++ style.cyan ++ "scripts" ++ style.reset ++ "             List available scripts\n\n", .{});
 
     // Publishing
@@ -4012,7 +4012,7 @@ pub fn main() !void {
     if (args.len >= 1) {
         const exe_basename = std.fs.path.basename(args[0]);
         if (std.mem.eql(u8, exe_basename, "panx") or std.mem.eql(u8, exe_basename, "pnx")) {
-            // Auto-route to px command: "panx foo bar" -> "pantry px foo bar"
+            // Route the panx/pnx executables through the internal package executor.
             if (args.len <= 1 or (args.len == 2 and (std.mem.eql(u8, args[1], "--help") or std.mem.eql(u8, args[1], "-h")))) {
                 style.print("Usage: {s} <executable> [args...]\n\nRun packages from npm (like npx/bunx)\n", .{exe_basename});
                 return;
@@ -4021,7 +4021,7 @@ pub fn main() !void {
                 printVersion();
                 return;
             }
-            // Build px args: skip argv[0], pass rest directly to px command
+            // Skip argv[0] and pass the remaining arguments to the executor.
             const px_args = args[1..];
             const result = try lib.commands.pxCommand(allocator, px_args, .{});
             if (result.exit_code != 0) {

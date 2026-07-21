@@ -18,7 +18,7 @@ pub const PxOptions = struct {
 /// Run packages from npm (like npx/bunx)
 pub fn pxCommand(allocator: std.mem.Allocator, args: []const []const u8, options: PxOptions) !CommandResult {
     if (args.len == 0) {
-        return CommandResult.err(allocator, "Error: No executable specified\nUsage: pantry px <executable> [args...]");
+        return CommandResult.err(allocator, "Error: No executable specified\nUsage: panx <executable> [args...]");
     }
 
     const executable_name = args[0];
