@@ -274,6 +274,51 @@ pub fn installCommand(allocator: std.mem.Allocator, args: []const []const u8) !t
     return installCommandWithOptions(allocator, args, .{});
 }
 
+fn previewInstall(allocator: std.mem.Allocator, package_args: []const []const u8) !types.CommandResult {
+    style.print("Dry run: no changes will be made.\n", .{});
+
+    if (package_args.len > 0) {
+        for (package_args) |package| {
+            style.print("  Would install {s}\n", .{package});
+        }
+        return .{ .exit_code = 0 };
+    }
+
+    const detector = @import("../../../deps/detector.zig");
+    const cwd = try io_helper.getCwdAlloc(allocator);
+    defer allocator.free(cwd);
+
+    const lookup = try detector.findDepsAndWorkspaceFile(allocator, cwd);
+    defer {
+        if (lookup.deps_file) |deps_file| allocator.free(deps_file.path);
+        if (lookup.workspace_file) |workspace_file| {
+            allocator.free(workspace_file.path);
+            allocator.free(workspace_file.root_dir);
+        }
+    }
+
+    var found = false;
+    if (lookup.workspace_file) |workspace_file| {
+        style.print("  Would install workspace dependencies from {s}\n", .{workspace_file.path});
+        found = true;
+    }
+    if (lookup.deps_file) |deps_file| {
+        if (lookup.workspace_file == null or !std.mem.eql(u8, deps_file.path, lookup.workspace_file.?.path)) {
+            style.print("  Would install project dependencies from {s}\n", .{deps_file.path});
+        }
+        found = true;
+    }
+
+    if (!found) {
+        return .{
+            .exit_code = 1,
+            .message = try allocator.dupe(u8, "No dependency manifest found"),
+        };
+    }
+
+    return .{ .exit_code = 0 };
+}
+
 /// Install packages with options
 pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []const u8, options: types.InstallOptions) !types.CommandResult {
     // Parse flags and filter out non-package arguments
@@ -321,6 +366,10 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     // quiet-aware, so `pantry env`/shell:activate (quiet=true) emit nothing.
     const build_version = @import("version");
     style.printHeader("install", build_version.version, build_version.commit_hash);
+
+    if (opts.dry_run) {
+        return previewInstall(allocator, package_args.items);
+    }
 
     // If -g flag is set with no packages, scan for global dependencies
     if (is_global and package_args.items.len == 0) {
