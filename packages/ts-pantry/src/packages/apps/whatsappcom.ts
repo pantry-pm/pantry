@@ -22,6 +22,7 @@ export const whatsappcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '2.26.29.16',
     '2.26.28.22',
     '2.26.28.15',
     '2.26.28.12',
