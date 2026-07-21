@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.32...v0.10.33)
+
+## 🐛 Bug Fixes
+
+- **cli**: present panx as package executor ([806da91](https://github.com/pantry-pm/pantry/commit/806da91)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.33 ([d789c76](https://github.com/pantry-pm/pantry/commit/d789c76)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.31...v0.10.32)
 
 ## 🐛 Bug Fixes
