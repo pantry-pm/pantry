@@ -75,6 +75,7 @@ export const charmcraftPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.4.0',
     '4.3.1',
     '4.3.0',
     '4.2.2',
