@@ -1,3 +1,43 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.28...v0.10.29)
+
+## 🐛 Bug Fixes
+
+- **cli**: install panx executor alias ([c60b0e5](https://github.com/pantry-pm/pantry/commit/c60b0e5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **aliases**: resolve core tool short names ([d42a5a3](https://github.com/pantry-pm/pantry/commit/d42a5a3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **container**: generate smaller production images ([f13a7aa](https://github.com/pantry-pm/pantry/commit/f13a7aa)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: preserve semantic latest releases ([d2e86b2](https://github.com/pantry-pm/pantry/commit/d2e86b2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.29 ([3c84aff](https://github.com/pantry-pm/pantry/commit/3c84aff)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update cursor.com, element.io, github.com/ggerganov/llama.cpp, odigos.io ([17ac576](https://github.com/pantry-pm/pantry/commit/17ac576)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update jupyter.org, odigos.io, talos.dev, tart.run, tox.wiki ([4823278](https://github.com/pantry-pm/pantry/commit/4823278)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opentofu.org, whatsapp.com ([0c256c7](https://github.com/pantry-pm/pantry/commit/0c256c7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app codex.openai.com 26.715.52143 → 26.715.61943 ([97aeeb0](https://github.com/pantry-pm/pantry/commit/97aeeb0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, railway.app, werf.io ([2a99751](https://github.com/pantry-pm/pantry/commit/2a99751)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, codex.openai.com, github.com/router-for-me/CLIProxyAPI, ohmyposh.dev ([3bfbb05](https://github.com/pantry-pm/pantry/commit/3bfbb05)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update digger.dev to 0.6.148 ([d70a59b](https://github.com/pantry-pm/pantry/commit/d70a59b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update hasura.io, tox.wiki, ziglang.org ([9786e3c](https://github.com/pantry-pm/pantry/commit/9786e3c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (discord.com, slack.com) ([6a24403](https://github.com/pantry-pm/pantry/commit/6a24403)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10075 ([f243a97](https://github.com/pantry-pm/pantry/commit/f243a97)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, planetscale.com ([af177f0](https://github.com/pantry-pm/pantry/commit/af177f0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mise.jdx.dev, rioterm.com ([298f644](https://github.com/pantry-pm/pantry/commit/298f644)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update chezmoi.io, fly.io, iroh.computer ([b0d80cb](https://github.com/pantry-pm/pantry/commit/b0d80cb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, dblab.danvergara.com, discord.com, slack.com, stripe.com ([a393532](https://github.com/pantry-pm/pantry/commit/a393532)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai, tailscale.com ([2fe1272](https://github.com/pantry-pm/pantry/commit/2fe1272)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update diabrowser.com, projen.io, rabbitmq.com, sentry.io, srtalliance.org, tox.wiki ([c3da832](https://github.com/pantry-pm/pantry/commit/c3da832)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app diabrowser.com 1.40.1 → 1.40.2 ([351675f](https://github.com/pantry-pm/pantry/commit/351675f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update rucio.cern.ch/rucio-client to 41.0.0 ([7942fe3](https://github.com/pantry-pm/pantry/commit/7942fe3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update apktool.org, changie.dev, meilisearch.com, railway.app, vcluster.com ([4dc168b](https://github.com/pantry-pm/pantry/commit/4dc168b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app codex.openai.com 26.715.31925 → 26.715.52143 ([cec744d](https://github.com/pantry-pm/pantry/commit/cec744d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI ([31e7db0](https://github.com/pantry-pm/pantry/commit/31e7db0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dozzle.dev, github.com/chainguard-dev/apko, mailpit.axllent.org, seaweedfs.com, taglib.org ([3c08d0c](https://github.com/pantry-pm/pantry/commit/3c08d0c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 3 apps & 1 font ([f89b4f9](https://github.com/pantry-pm/pantry/commit/f89b4f9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.27...v0.10.28)
 
 ## 🐛 Bug Fixes
