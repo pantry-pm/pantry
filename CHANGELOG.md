@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.33...v0.10.34)
+
+## 🐛 Bug Fixes
+
+- **packages**: make Python CLI wrappers relocatable ([b450992](https://github.com/pantry-pm/pantry/commit/b450992)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.34 ([aa86f0c](https://github.com/pantry-pm/pantry/commit/aa86f0c)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.32...v0.10.33)
 
 ## 🐛 Bug Fixes
