@@ -82,7 +82,7 @@ export const ALIAS_OVERRIDES: AliasOverride[] = [
     aliases: ['curl'],
   },
   {
-    domain: 'git-scm.com',
+    domain: 'git-scm.org',
     aliases: ['git'],
   },
   {

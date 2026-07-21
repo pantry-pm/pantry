@@ -25,6 +25,8 @@ describe('Constants Module', () => {
       expect(PACKAGE_ALIASES.perl).toBe('perl.org')
       expect(PACKAGE_ALIASES.deno).toBe('deno.land')
       expect(PACKAGE_ALIASES.bun).toBe('bun.sh')
+      expect(PACKAGE_ALIASES.git).toBe('git-scm.org')
+      expect(PACKAGE_ALIASES.sqlite).toBe('sqlite.org')
     })
 
     test('should have valid domain names as values', () => {

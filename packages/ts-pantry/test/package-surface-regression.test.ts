@@ -3,11 +3,14 @@ import { aliases } from '../src/packages/aliases'
 import { packages } from '../src/packages/index'
 
 describe('Package surface regression', () => {
-  test('exposes memcached and mail through generated aliases and package index', () => {
+  test('exposes stable aliases and generated packages', () => {
     const registry = packages as Record<string, any>
 
     expect(aliases.memcached).toBe('memcached.org')
     expect(aliases.mail).toBe('github.com/mail-os/mail')
+    expect(aliases.bun).toBe('bun.sh')
+    expect(aliases.git).toBe('git-scm.org')
+    expect(aliases.sqlite).toBe('sqlite.org')
 
     expect(registry.memcached.domain).toBe('memcached.org')
     expect(registry.memcached.name).toBe('memcached')

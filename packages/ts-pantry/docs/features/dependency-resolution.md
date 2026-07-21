@@ -30,7 +30,7 @@ dependencies:
   bun.sh: ^1.2.16
   nodejs.org: ^20.0.0
   python.org: 3.9.0
-  git-scm.com: latest
+  git-scm.org: latest
   gnu.org/bash: ~5.2.0
 ```
 
@@ -194,13 +194,13 @@ ts-pantry resolve-deps deps.yaml --verbose --install-command
   1. bun.sh (1.2.16)
   2. nodejs.org (20.0.0)
   3. python.org (3.12.0)
-  4. git-scm.com (2.43.0)
+  4. git-scm.org (2.43.0)
 
 ⚠️  Conflicts found:
   nodejs.org: 20.0.0, 18.0.0 → resolved to 20.0.0
 
 💾 Install command:
-pantry install bun.sh nodejs.org python.org git-scm.com
+pantry install bun.sh nodejs.org python.org git-scm.org
 ```
 
 ### JSON Output

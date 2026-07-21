@@ -33,7 +33,7 @@ export const PACKAGE_ALIASES: Record<string, string> = {
   'deno': 'deno.land',
   'bun': 'bun.sh',
   'bun.com': 'bun.sh',
-  'git': 'git-scm.com',
+  'git': 'git-scm.org',
   'docker': 'docker.com/cli',
   'kubectl': 'kubernetes.io',
   'terraform': 'terraform.io',
@@ -41,6 +41,7 @@ export const PACKAGE_ALIASES: Record<string, string> = {
   'nvim': 'neovim.io',
   'vim': 'vim.org',
   'curl': 'curl.se',
+  'sqlite': 'sqlite.org',
 } as const
 
 /**

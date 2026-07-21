@@ -474,7 +474,7 @@ export const aliases: Record<string, string> = {
   'ginkgo': 'onsi.github.io/ginkgo',
   'girara': 'pwmt.org/girara',
   'gist': 'rubygems.org/gist',
-  'git': 'git-scm.com',
+  'git': 'git-scm.org',
   'git-absorb': 'crates.io/git-absorb',
   'git-branchless': 'crates.io/git-branchless',
   'git-chglog': 'github.com/git-chglog',

@@ -237,7 +237,7 @@ export const PACKAGE_ALIASES: Record<string, string> = {
   'deno': 'deno.land',
   'bun': 'bun.sh',
   'bun.com': 'bun.sh',
-  'git': 'git-scm.com',
+  'git': 'git-scm.org',
   'docker': 'docker.com',
   'kubectl': 'kubernetes.io',
   'terraform': 'terraform.io',

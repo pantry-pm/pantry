@@ -165,7 +165,7 @@ dependencies:
   bun.sh: ^1.2.16
   nodejs.org: ^20.0.0
   python.org: 3.9.0
-  git-scm.com: latest
+  git-scm.org: latest
 ```
 
 ### Output Format
