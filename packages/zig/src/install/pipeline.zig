@@ -1121,6 +1121,28 @@ fn resolveViaRegistry(
     return resolved;
 }
 
+/// The Pantry registry bulk endpoints are an optional acceleration layer, not
+/// an authoritative dependency source. Keep npm installs independent from
+/// registry availability unless a caller explicitly opts into the accelerator.
+fn registryAccelerationValueEnabled(value: ?[]const u8) bool {
+    const raw = value orelse return false;
+    return std.ascii.eqlIgnoreCase(raw, "true") or std.mem.eql(u8, raw, "1");
+}
+
+fn registryAccelerationEnabled(allocator: std.mem.Allocator) bool {
+    const value = io_helper.getEnvVarOwned(allocator, "PANTRY_REGISTRY_ACCELERATION") catch return false;
+    defer allocator.free(value);
+    return registryAccelerationValueEnabled(value);
+}
+
+test "registry acceleration is opt-in" {
+    try std.testing.expect(!registryAccelerationValueEnabled(null));
+    try std.testing.expect(!registryAccelerationValueEnabled(""));
+    try std.testing.expect(!registryAccelerationValueEnabled("false"));
+    try std.testing.expect(registryAccelerationValueEnabled("1"));
+    try std.testing.expect(registryAccelerationValueEnabled("TRUE"));
+}
+
 fn appendJsonString(allocator: std.mem.Allocator, out: *std.ArrayList(u8), value: []const u8) !void {
     try out.append(allocator, '"');
     for (value) |c| {
@@ -1527,11 +1549,17 @@ pub fn run(
     }
 
     // ── Phase 1: Resolve full dependency tree ──
-    // First try server-side bulk resolution (1 HTTP request for the entire tree).
-    // Falls back to client-side BFS only for packages the server didn't resolve.
-    if (verbose) std.debug.print("[verbose:pipeline] Phase 1: resolving dependency tree via registry...\n", .{});
-
-    var resolved = try resolveViaRegistry(allocator, inst, top_level_deps, verbose);
+    // Resolve from npm by default. The Pantry server-side bulk resolver and
+    // tarball stream remain an explicit acceleration mode, never a dependency.
+    const use_registry_acceleration = registryAccelerationEnabled(allocator);
+    if (verbose) {
+        const source = if (use_registry_acceleration) "Pantry registry accelerator" else "npm registry";
+        std.debug.print("[verbose:pipeline] Phase 1: resolving dependency tree via {s}...\n", .{source});
+    }
+    var resolved = if (use_registry_acceleration)
+        try resolveViaRegistry(allocator, inst, top_level_deps, verbose)
+    else
+        try resolveFullTree(allocator, inst, top_level_deps, verbose);
     defer {
         for (resolved.items) |pkg| {
             allocator.free(pkg.name);
@@ -1566,7 +1594,9 @@ pub fn run(
     // registry response stream. The normal worker phase still handles cache
     // hits, extraction, integrity checks, and fallback if the stream is
     // unavailable or skips a tarball.
-    prefetchNpmTarballsViaRegistry(allocator, inst, resolved.items, project_root, inst.modules_dir, verbose);
+    if (use_registry_acceleration) {
+        prefetchNpmTarballsViaRegistry(allocator, inst, resolved.items, project_root, inst.modules_dir, verbose);
+    }
 
     // ── Phase 2+3: Download + Extract in parallel ──
     // Combined into one phase since downloading and extracting per-package
