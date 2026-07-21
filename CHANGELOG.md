@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.29...v0.10.30)
+
+## 🐛 Bug Fixes
+
+- **types**: expose canonical tool aliases ([c72e3aa](https://github.com/pantry-pm/pantry/commit/c72e3aa)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.30 ([c8d5f15](https://github.com/pantry-pm/pantry/commit/c8d5f15)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.28...v0.10.29)
 
 ## 🐛 Bug Fixes
