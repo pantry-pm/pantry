@@ -587,7 +587,8 @@ pub fn installWorkspaceCommandWithOptions(
                 var resolved_dep = dep;
 
                 if (lib.deps.catalogs.CatalogManager.isCatalogReference(dep.version)) {
-                    if (catalog_manager.resolveCatalogReference(dep.name, dep.version)) |resolved_version| {
+                    const catalog_package_name = workspaceDependencyName(dep.name);
+                    if (helpers.resolveWorkspaceCatalogReference(&catalog_manager, dep.name, dep.version)) |resolved_version| {
                         // Replace catalog reference with actual version
                         allocator.free(resolved_dep.version);
                         resolved_dep.version = try allocator.dupe(u8, resolved_version);
@@ -596,9 +597,9 @@ pub fn installWorkspaceCommandWithOptions(
                         const catalog_name = lib.deps.catalogs.CatalogManager.getCatalogName(dep.version);
                         if (catalog_name) |cat_name| {
                             if (cat_name.len == 0) {
-                                style.printWarn("Package '{s}' references default catalog but no version found\n", .{dep.name});
+                                style.printWarn("Package '{s}' references default catalog but no version found\n", .{catalog_package_name});
                             } else {
-                                style.printWarn("Package '{s}' references catalog '{s}' but no version found\n", .{ dep.name, cat_name });
+                                style.printWarn("Package '{s}' references catalog '{s}' but no version found\n", .{ catalog_package_name, cat_name });
                             }
                         }
                         // Skip this dependency

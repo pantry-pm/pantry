@@ -426,6 +426,16 @@ pub fn normalizePackageName(name: []const u8) []const u8 {
     return name;
 }
 
+/// Resolve a workspace catalog reference after stripping Pantry's internal
+/// source-routing prefix from the package name.
+pub fn resolveWorkspaceCatalogReference(
+    manager: *lib.deps.catalogs.CatalogManager,
+    package_name: []const u8,
+    catalog_ref: []const u8,
+) ?[]const u8 {
+    return manager.resolveCatalogReference(normalizePackageName(package_name), catalog_ref);
+}
+
 /// Strip internal routing prefixes ("auto:", "local:") from package names for display.
 /// "npm:" is preserved because it conveys the source to the user.
 pub fn stripDisplayPrefix(name: []const u8) []const u8 {

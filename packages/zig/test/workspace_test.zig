@@ -146,20 +146,20 @@ test "detector.findDepsAndWorkspaceFile - format enum mapping is correct" {
     const FileFormat = lib.deps.detector.DepsFile.FileFormat;
 
     // These are the critical mappings that must be correct
-    try testing.expectEqual(@as(u32, 0), @intFromEnum(FileFormat.pantry_json));
-    try testing.expectEqual(@as(u32, 1), @intFromEnum(FileFormat.pantry_jsonc));
-    try testing.expectEqual(@as(u32, 2), @intFromEnum(FileFormat.pantry_yaml));
-    try testing.expectEqual(@as(u32, 3), @intFromEnum(FileFormat.pantry_yml));
-    try testing.expectEqual(@as(u32, 4), @intFromEnum(FileFormat.deps_yaml));
-    try testing.expectEqual(@as(u32, 5), @intFromEnum(FileFormat.deps_yml));
-    try testing.expectEqual(@as(u32, 6), @intFromEnum(FileFormat.dependencies_yaml));
-    try testing.expectEqual(@as(u32, 7), @intFromEnum(FileFormat.pkgx_yaml));
-    try testing.expectEqual(@as(u32, 8), @intFromEnum(FileFormat.config_deps_ts));
-    try testing.expectEqual(@as(u32, 9), @intFromEnum(FileFormat.dotconfig_deps_ts));
-    try testing.expectEqual(@as(u32, 10), @intFromEnum(FileFormat.pantry_config_ts));
-    try testing.expectEqual(@as(u32, 11), @intFromEnum(FileFormat.dotconfig_pantry_ts));
-    try testing.expectEqual(@as(u32, 12), @intFromEnum(FileFormat.package_json));
-    try testing.expectEqual(@as(u32, 13), @intFromEnum(FileFormat.package_jsonc));
+    try testing.expectEqual(@as(u32, 0), @backingInt(FileFormat.pantry_json));
+    try testing.expectEqual(@as(u32, 1), @backingInt(FileFormat.pantry_jsonc));
+    try testing.expectEqual(@as(u32, 2), @backingInt(FileFormat.pantry_yaml));
+    try testing.expectEqual(@as(u32, 3), @backingInt(FileFormat.pantry_yml));
+    try testing.expectEqual(@as(u32, 4), @backingInt(FileFormat.deps_yaml));
+    try testing.expectEqual(@as(u32, 5), @backingInt(FileFormat.deps_yml));
+    try testing.expectEqual(@as(u32, 6), @backingInt(FileFormat.dependencies_yaml));
+    try testing.expectEqual(@as(u32, 7), @backingInt(FileFormat.pkgx_yaml));
+    try testing.expectEqual(@as(u32, 8), @backingInt(FileFormat.config_deps_ts));
+    try testing.expectEqual(@as(u32, 9), @backingInt(FileFormat.dotconfig_deps_ts));
+    try testing.expectEqual(@as(u32, 10), @backingInt(FileFormat.pantry_config_ts));
+    try testing.expectEqual(@as(u32, 11), @backingInt(FileFormat.dotconfig_pantry_ts));
+    try testing.expectEqual(@as(u32, 12), @backingInt(FileFormat.package_json));
+    try testing.expectEqual(@as(u32, 13), @backingInt(FileFormat.package_jsonc));
 }
 
 test "detector.inferFormat - all formats map correctly" {
@@ -679,6 +679,28 @@ test "catalog references - catalog: prefix is detected" {
     try testing.expect(lib.deps.catalogs.CatalogManager.isCatalogReference("catalog:react"));
     try testing.expect(!lib.deps.catalogs.CatalogManager.isCatalogReference("^1.0.0"));
     try testing.expect(!lib.deps.catalogs.CatalogManager.isCatalogReference("workspace:*"));
+}
+
+test "workspace catalog references resolve source-prefixed package names" {
+    const allocator = testing.allocator;
+    const helpers = lib.commands.install_commands.helpers;
+
+    var manager = lib.deps.catalogs.CatalogManager.init(allocator);
+    defer manager.deinit();
+
+    var catalog = lib.deps.catalogs.Catalog.init(allocator, try allocator.dupe(u8, ""));
+    try catalog.addVersion("better-dx", "^0.2.17");
+    try catalog.addVersion("@stacksjs/stx", "^0.2.99");
+    manager.setDefaultCatalog(catalog);
+
+    try testing.expectEqualStrings(
+        "^0.2.17",
+        helpers.resolveWorkspaceCatalogReference(&manager, "auto:better-dx", "catalog:").?,
+    );
+    try testing.expectEqualStrings(
+        "^0.2.99",
+        helpers.resolveWorkspaceCatalogReference(&manager, "npm:@stacksjs/stx", "catalog:").?,
+    );
 }
 
 // ============================================================================
