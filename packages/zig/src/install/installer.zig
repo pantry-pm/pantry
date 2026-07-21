@@ -465,9 +465,10 @@ pub const Installer = struct {
         }
         body_buf.appendSlice(self.allocator, "}}") catch return;
 
-        // POST to our registry's bulk resolver (uses shared HTTP client for connection pooling)
+        // Keep bulk resolution isolated from the installer's download pool so
+        // a timed-out registry connection cannot poison later npm downloads.
         const registry_url = "https://registry.pantry.dev/npm/resolve";
-        const response = io_helper.httpPostJsonWithClient(self.http_client, self.allocator, registry_url, body_buf.items) catch return;
+        const response = io_helper.httpPostJsonTimeout(self.allocator, registry_url, body_buf.items, 5000) catch return;
         defer self.allocator.free(response);
 
         if (response.len == 0) return;
@@ -2232,7 +2233,7 @@ pub const Installer = struct {
             var response_body: ?[]const u8 = null;
             var attempt: u32 = 0;
             while (attempt < 3) : (attempt += 1) {
-                response_body = io_helper.httpGetWithClient(self.http_client, self.allocator, npm_url) catch {
+                response_body = io_helper.httpGetTimeout(self.allocator, npm_url, &.{}, 10000) catch {
                     if (attempt < 2) {
                         io_helper.nanosleep(0, (attempt + 1) * 50 * std.time.ns_per_ms);
                         continue;
@@ -2370,7 +2371,7 @@ pub const Installer = struct {
             var response_body: ?[]const u8 = null;
             var attempt: u32 = 0;
             while (attempt < 3) : (attempt += 1) {
-                response_body = io_helper.httpGetWithClientAndHeaders(self.http_client, self.allocator, npm_url, &npm_accept_header) catch {
+                response_body = io_helper.httpGetTimeout(self.allocator, npm_url, &npm_accept_header, 10000) catch {
                     if (attempt < 2) {
                         io_helper.nanosleep(0, (attempt + 1) * 50 * std.time.ns_per_ms);
                         continue;

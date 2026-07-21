@@ -2619,6 +2619,9 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
 }
 
 pub fn main() !void {
+    io_helper.initializeIo();
+    defer io_helper.deinitializeIo();
+
     // Release builds use the fast SMP allocator — building the full command
     // tree (~50 commands, hundreds of small allocations) runs on every single
     // invocation, including the hot `shell:lookup` fired on each `cd`. The

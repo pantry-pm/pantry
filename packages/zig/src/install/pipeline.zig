@@ -990,11 +990,11 @@ fn resolveViaRegistry(
     }
 
     // Single HTTP POST to resolve entire tree server-side
-    const response = io_helper.httpPostJsonWithClient(
-        inst.http_client,
+    const response = io_helper.httpPostJsonTimeout(
         allocator,
         "https://registry.pantry.dev/npm/resolve",
         body_buf.items,
+        5000,
     ) catch {
         if (verbose) std.debug.print("[verbose:pipeline:registry] server unreachable, falling back to client-side resolution\n", .{});
         return resolveFullTree(allocator, inst, top_level_deps, verbose);

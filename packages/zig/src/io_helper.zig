@@ -85,16 +85,16 @@ fn platformWrite(handle: std.posix.fd_t, buf: []const u8) !usize {
     return @intCast(result);
 }
 
-/// Global Threaded I/O backend for single-threaded blocking I/O
-/// For production code that needs an Io instance
-/// NOTE: We override .allocator from .failing to page_allocator because
-/// std.process.run -> spawn -> spawnPosix creates an ArenaAllocator backed
-/// by this allocator. With .failing, every child process spawn OOMs.
+/// Global Threaded I/O backend for production I/O.
+///
+/// The static value only provides a stable address for `io`. `initializeIo`
+/// replaces it with the real concurrent backend before command dispatch.
 var io_instance: Threaded = blk: {
     var inst: Threaded = .init_single_threaded;
     inst.allocator = std.heap.page_allocator;
     break :blk inst;
 };
+var io_initialized = false;
 
 /// One-time flag: have we pointed the global Io's child-process environment at
 /// the real OS environment yet?
@@ -122,6 +122,25 @@ fn ensureEnvironInitialized() void {
     io_instance.environ.process_environ = .{ .block = .{ .slice = std.mem.span(c.environ) } };
 }
 
+/// Initialize Pantry's cancelable, concurrent I/O backend.
+///
+/// `Threaded.init_single_threaded` rejects concurrent tasks and ignores
+/// cancellation. Pantry resolves npm metadata on worker threads and relies on
+/// cancellation for network deadlines, so production commands must initialize
+/// the full backend before using any I/O helper.
+pub fn initializeIo() void {
+    if (@import("builtin").is_test or io_initialized) return;
+    io_instance = Threaded.init(std.heap.page_allocator, .{});
+    io_initialized = true;
+    ensureEnvironInitialized();
+}
+
+pub fn deinitializeIo() void {
+    if (@import("builtin").is_test or !io_initialized) return;
+    io_instance.deinit();
+    io_initialized = false;
+}
+
 /// Get the global Io instance for blocking operations
 /// This can be used anywhere an Io is needed for synchronous file operations
 pub fn getIo() Io {
@@ -129,6 +148,7 @@ pub fn getIo() Io {
     if (@import("builtin").is_test) {
         return std.testing.io;
     }
+    if (!io_initialized) initializeIo();
     ensureEnvironInitialized();
     return io_instance.io();
 }
@@ -1706,6 +1726,76 @@ pub fn httpGetWithClientAndHeaders(client: *std.http.Client, allocator: std.mem.
     return owned;
 }
 
+const HttpGetResult = anyerror![]u8;
+
+fn httpGetTask(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header) HttpGetResult {
+    if (extra_headers.len > 0) {
+        return httpGetWithClientAndHeaders(client, allocator, url, extra_headers);
+    }
+    return httpGetWithClient(client, allocator, url);
+}
+
+/// HTTP GET with a bounded end-to-end timeout and optional request headers.
+pub fn httpGetWithClientTimeout(
+    client: *std.http.Client,
+    allocator: std.mem.Allocator,
+    url: []const u8,
+    extra_headers: []const std.http.Header,
+    timeout_ms: u64,
+) ![]u8 {
+    if (timeout_ms == 0) return httpGetTask(client, allocator, url, extra_headers);
+
+    const Selection = union(enum) {
+        response: HttpGetResult,
+        timeout: void,
+    };
+    var result_buffer: [2]Selection = undefined;
+    var select = std.Io.Select(Selection).init(getIo(), &result_buffer);
+
+    try select.concurrent(.response, httpGetTask, .{ client, allocator, url, extra_headers });
+    select.concurrent(.timeout, httpTimeoutTask, .{timeout_ms}) catch |err| {
+        while (select.cancel()) |result| {
+            if (result == .response) {
+                if (result.response) |response| allocator.free(response) else |_| {}
+            }
+        }
+        return err;
+    };
+
+    const first = try select.await();
+    switch (first) {
+        .response => |response| {
+            while (select.cancel()) |_| {}
+            return response;
+        },
+        .timeout => {
+            while (select.cancel()) |result| {
+                if (result == .response) {
+                    if (result.response) |response| allocator.free(response) else |_| {}
+                }
+            }
+            return error.Timeout;
+        },
+    }
+}
+
+/// HTTP GET with an isolated client and a bounded end-to-end timeout.
+/// Use this for requests that execute concurrently on multiple OS threads so
+/// cancellation cannot contend on a shared connection pool.
+pub fn httpGetTimeout(
+    allocator: std.mem.Allocator,
+    url: []const u8,
+    extra_headers: []const std.http.Header,
+    timeout_ms: u64,
+) ![]u8 {
+    var client: std.http.Client = .{
+        .allocator = allocator,
+        .io = io,
+    };
+    defer client.deinit();
+    return httpGetWithClientTimeout(&client, allocator, url, extra_headers, timeout_ms);
+}
+
 /// HTTP POST with JSON body. Returns response body as owned slice.
 pub fn httpPostJson(allocator: std.mem.Allocator, url: []const u8, json_body: []const u8) ![]u8 {
     var client: std.http.Client = .{
@@ -1745,4 +1835,73 @@ pub fn httpPostJsonWithClient(client: *std.http.Client, allocator: std.mem.Alloc
     const owned = try allocator.dupe(u8, data);
     alloc_writer.deinit();
     return owned;
+}
+
+const HttpPostResult = anyerror![]u8;
+
+fn httpPostJsonTask(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, json_body: []const u8) HttpPostResult {
+    return httpPostJsonWithClient(client, allocator, url, json_body);
+}
+
+fn httpTimeoutTask(timeout_ms: u64) void {
+    const ns: i96 = @intCast(@as(u128, timeout_ms) * @as(u128, std.time.ns_per_ms));
+    getIo().sleep(.{ .nanoseconds = ns }, .awake) catch {};
+}
+
+/// HTTP POST with a bounded end-to-end timeout.
+///
+/// The request runs as a cancelable I/O task. If the deadline wins, cancellation
+/// closes the pending socket operation before returning, so the shared HTTP
+/// client and caller-owned request data remain safe to reuse.
+pub fn httpPostJsonWithClientTimeout(
+    client: *std.http.Client,
+    allocator: std.mem.Allocator,
+    url: []const u8,
+    json_body: []const u8,
+    timeout_ms: u64,
+) ![]u8 {
+    if (timeout_ms == 0) return httpPostJsonWithClient(client, allocator, url, json_body);
+
+    const Selection = union(enum) {
+        response: HttpPostResult,
+        timeout: void,
+    };
+    var result_buffer: [2]Selection = undefined;
+    var select = std.Io.Select(Selection).init(getIo(), &result_buffer);
+
+    try select.concurrent(.response, httpPostJsonTask, .{ client, allocator, url, json_body });
+    select.concurrent(.timeout, httpTimeoutTask, .{timeout_ms}) catch |err| {
+        while (select.cancel()) |result| {
+            if (result == .response) {
+                if (result.response) |response| allocator.free(response) else |_| {}
+            }
+        }
+        return err;
+    };
+
+    const first = try select.await();
+    switch (first) {
+        .response => |response| {
+            while (select.cancel()) |_| {}
+            return response;
+        },
+        .timeout => {
+            while (select.cancel()) |result| {
+                if (result == .response) {
+                    if (result.response) |response| allocator.free(response) else |_| {}
+                }
+            }
+            return error.Timeout;
+        },
+    }
+}
+
+/// HTTP POST with an isolated client and a bounded end-to-end timeout.
+pub fn httpPostJsonTimeout(allocator: std.mem.Allocator, url: []const u8, json_body: []const u8, timeout_ms: u64) ![]u8 {
+    var client: std.http.Client = .{
+        .allocator = allocator,
+        .io = io,
+    };
+    defer client.deinit();
+    return httpPostJsonWithClientTimeout(&client, allocator, url, json_body, timeout_ms);
 }
