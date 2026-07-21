@@ -15,7 +15,7 @@
     },
     "packages/action": {
       "name": "pantry-setup",
-      "version": "0.10.14",
+      "version": "0.10.30",
       "dependencies": {
         "@actions/cache": "^6.0.0",
         "@actions/core": "^1.11.1",
@@ -30,14 +30,14 @@
     },
     "packages/benchmark": {
       "name": "@pantry/benchmark",
-      "version": "0.10.14",
+      "version": "0.10.30",
       "devDependencies": {
         "mitata": "^1.0.34"
       }
     },
     "packages/inspector": {
       "name": "@stacksjs/pantry-inspector",
-      "version": "0.10.14",
+      "version": "0.10.30",
       "devDependencies": {
         "bun-types": "latest",
         "typescript": "^7.0.2"
@@ -45,7 +45,7 @@
     },
     "packages/registry": {
       "name": "@stacksjs/registry",
-      "version": "0.10.14",
+      "version": "0.10.30",
       "dependencies": {
         "@stacksjs/stx": "^0.2.82",
         "@ts-charts/array": "^0.2.0",
@@ -61,7 +61,7 @@
     },
     "packages/ts-pantry": {
       "name": "ts-pantry",
-      "version": "0.10.14",
+      "version": "0.10.30",
       "dependencies": {
         "@stacksjs/ts-cloud": "^0.7.26",
         "bunfig": "^0.15.6",
@@ -154,15 +154,15 @@
         "semver": "^6.1.0"
       }
     },
-    "@stacksjs/bunpress@0.1.13": {
+    "@stacksjs/bunpress@0.1.18": {
       "name": "@stacksjs/bunpress",
-      "version": "0.1.13",
+      "version": "0.1.18",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@stacksjs/bunpress/-/bunpress-0.1.13.tgz",
-      "integrity": "sha512-zkD6uKiENQL0yk7rWK5+VuUD0J4rRBXUvmuyIQlq65PCzvCjdZfnD8k+L4a01Vy5Dbml+jwS/3a4hviOgxcBaQ==",
+      "resolved": "https://registry.npmjs.org/@stacksjs/bunpress/-/bunpress-0.1.18.tgz",
+      "integrity": "sha512-b64A9OvbIklYTP8PObP0ZMVO83+WA1Rsp2wBlFIWbq1qdpwfnnPsT1ZtYPyBcC8j40MMyqk1UhRGDS7Lxm8UDg==",
       "dependencies": {
         "@stacksjs/stx": "^0.2.82",
-        "@stacksjs/ts-cloud": "^0.7.10",
+        "@stacksjs/ts-cloud": "^0.7.26",
         "@stacksjs/ts-md": "^0.1.1",
         "bunfig": "^0.15.6"
       },
@@ -170,20 +170,20 @@
         "bunpress": "./dist/bin/cli.js"
       }
     },
-    "@stacksjs/stx@0.2.97": {
+    "@stacksjs/stx@0.2.99": {
       "name": "@stacksjs/stx",
-      "version": "0.2.97",
+      "version": "0.2.99",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@stacksjs/stx/-/stx-0.2.97.tgz",
-      "integrity": "sha512-fUddH0BU6rBV+wpW4FlVpFa6PkSab81IRC7sCBMBR9XAbgffIlDS3HfduKiZ6fiwrwAIDXlO5oXd4qoHCTI4uw==",
+      "resolved": "https://registry.npmjs.org/@stacksjs/stx/-/stx-0.2.99.tgz",
+      "integrity": "sha512-F4GuF4XXRLC7QEUQvcZkzj9yc27wDS0k44GQ7TAZzbu0Dxd4KxJsGw2PM4fgVc5Fi+C/v/tXXf9Dp9AnP7QV/w==",
       "dependencies": {
         "@cwcss/crosswind": "^0.2.6",
         "@stacksjs/clapp": "^0.2.0",
-        "@stacksjs/sanitizer": "0.2.97",
+        "@stacksjs/sanitizer": "0.2.99",
         "@stacksjs/ts-i18n": "^0.1.11",
-        "bun-plugin-stx": "0.2.97",
-        "bunfig": "^0.15.14",
-        "stx-router": "0.2.97",
+        "bun-plugin-stx": "0.2.99",
+        "bunfig": "^0.15.15",
+        "stx-router": "0.2.99",
         "ts-broadcasting": "^0.0.8",
         "ts-images": "^0.1.9",
         "ts-syntax-highlighter": "^0.2.1"
@@ -192,67 +192,67 @@
         "stx": "./dist/cli.js"
       }
     },
-    "@stacksjs/ts-cloud@0.7.26": {
+    "@stacksjs/ts-cloud@0.7.49": {
       "name": "@stacksjs/ts-cloud",
-      "version": "0.7.26",
+      "version": "0.7.49",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@stacksjs/ts-cloud/-/ts-cloud-0.7.26.tgz",
-      "integrity": "sha512-gE8yYcQuJQQiAmkeyerXP8Xkww/MduuwN+jYLa4/TQc4Xa77L7WE+lrRee8U2aMKpAtthZ5KTD/boOeq4X4hEA==",
+      "resolved": "https://registry.npmjs.org/@stacksjs/ts-cloud/-/ts-cloud-0.7.49.tgz",
+      "integrity": "sha512-b4KARdt9HDRmh7sy8gwLO+yLm379gv9Goe9SI29+Rpgx9hPFcooWK9gbwowQCZmRzmOBzajotyDt1/Bjrtotuw==",
       "dependencies": {
         "@stacksjs/ts-xml": "^0.1.0",
-        "@ts-cloud/aws-types": "0.7.26",
-        "@ts-cloud/core": "0.7.26"
+        "@ts-cloud/aws-types": "0.7.49",
+        "@ts-cloud/core": "0.7.49"
       },
       "bin": {
         "cloud": "./dist/bin/cli.js"
       }
     },
-    "@ts-charts/array@0.2.2": {
+    "@ts-charts/array@0.2.3": {
       "name": "@ts-charts/array",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@ts-charts/array/-/array-0.2.2.tgz",
-      "integrity": "sha512-N5sisuAJ/y9tasGSHkPTVbgBt0ys/XFIvB5gwnvNbX0xFdkE2+TCJ25oaebAZcYRe5KXyjQVDbubakIZ3+Sg0w==",
+      "resolved": "https://registry.npmjs.org/@ts-charts/array/-/array-0.2.3.tgz",
+      "integrity": "sha512-k50XO6jpEDmyjH0ois48hD9wqIrmiOm64GwlmjGHw69kof9E48VUYAxsKvTWRiMFPZMTcWtWFNmZoN/TqxPCNg==",
       "dependencies": {
-        "@ts-charts/internmap": "0.2.2"
+        "@ts-charts/internmap": "0.2.3"
       }
     },
-    "@ts-charts/format@0.2.2": {
+    "@ts-charts/format@0.2.3": {
       "name": "@ts-charts/format",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@ts-charts/format/-/format-0.2.2.tgz",
-      "integrity": "sha512-GI+cdSo7eR+gOW68Rr6EuO7IYJqvawaRKs8oP52m7mk08kSVDm3qOoCmtfYq9zH+9eZfO/1vWHW5Lt/mruXX4w=="
+      "resolved": "https://registry.npmjs.org/@ts-charts/format/-/format-0.2.3.tgz",
+      "integrity": "sha512-mC0vNpWcljUC710UrVW0QuPHcw4mqoIEjYaRmTkKZLP340s2O4V8nrmOg97B0WHrG5IMnCT1jsZNCrRvTINPmA=="
     },
-    "@ts-charts/path@0.2.2": {
+    "@ts-charts/path@0.2.3": {
       "name": "@ts-charts/path",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@ts-charts/path/-/path-0.2.2.tgz",
-      "integrity": "sha512-496+fVb9PTJRfSa2trZOHKcSE+RaqmpeRGGH7GkBUJ40FjBKNoeGhDt2TV2KPNwD+8aGVBJnU0JzVUbbikpg8w=="
+      "resolved": "https://registry.npmjs.org/@ts-charts/path/-/path-0.2.3.tgz",
+      "integrity": "sha512-gISOLggc56uVo4JzKyOWrt3VSoejgNdbDT4qduCpShlF2fMH65CCfi96xV6COiOmja6hS0Jz4wzreotF1LH5dw=="
     },
-    "@ts-charts/scale@0.2.2": {
+    "@ts-charts/scale@0.2.3": {
       "name": "@ts-charts/scale",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@ts-charts/scale/-/scale-0.2.2.tgz",
-      "integrity": "sha512-EzMSXJ0rMNCDlQUtmW84XiYn2xgQN6dDKmpPz+ezBQcktmRL/2jAJUpiJtGdEzzZ1xggsIix4myROUTzd/FC/Q==",
+      "resolved": "https://registry.npmjs.org/@ts-charts/scale/-/scale-0.2.3.tgz",
+      "integrity": "sha512-NCkbbEFuZHqTK0Wv706ohVFt5l+Ra6XClbUH7VX3w8OAfLspl9lPZDjqcPz0SMCQyoczm2HAYgF1TvKxpQr93A==",
       "dependencies": {
-        "@ts-charts/array": "0.2.2",
-        "@ts-charts/format": "0.2.2",
-        "@ts-charts/interpolate": "0.2.2",
-        "@ts-charts/time": "0.2.2",
-        "@ts-charts/time-format": "0.2.2"
+        "@ts-charts/array": "0.2.3",
+        "@ts-charts/format": "0.2.3",
+        "@ts-charts/interpolate": "0.2.3",
+        "@ts-charts/time": "0.2.3",
+        "@ts-charts/time-format": "0.2.3"
       }
     },
-    "@ts-charts/shape@0.2.2": {
+    "@ts-charts/shape@0.2.3": {
       "name": "@ts-charts/shape",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "npm",
-      "resolved": "https://registry.npmjs.org/@ts-charts/shape/-/shape-0.2.2.tgz",
-      "integrity": "sha512-5S0Iz3LSCDqMCQMM5ctO813F3FJQfBau21DGmVJW0+iT5zQjgyX5tTR6SDq8VOhfM0ridd6b03wPfiCrAIVFjQ==",
+      "resolved": "https://registry.npmjs.org/@ts-charts/shape/-/shape-0.2.3.tgz",
+      "integrity": "sha512-lMtARuicxbShTjuw5HClYEIj7SzH5gQCmZOPy+dT1nWYbiQXMJHCYZgoN78bYYuf23YZzvME8yOzwUogh3WnGw==",
       "dependencies": {
-        "@ts-charts/path": "0.2.2"
+        "@ts-charts/path": "0.2.3"
       }
     },
     "better-dx@0.2.19": {
@@ -357,9 +357,9 @@
       "version": "c149e957e3989bdb8f9148a161f6eef4ae63d75e",
       "source": "github"
     },
-    "ziglang.org@0.17.0-dev.1413+addc3c3b8": {
+    "ziglang.org@0.17.0-dev.1441_d5181a9c9": {
       "name": "ziglang.org",
-      "version": "0.17.0-dev.1413+addc3c3b8",
+      "version": "0.17.0-dev.1441_d5181a9c9",
       "source": "pantry"
     }
   }
