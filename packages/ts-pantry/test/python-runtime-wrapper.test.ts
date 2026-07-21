@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import type { PackageRecipe } from '../scripts/buildkit'
 import { generateBuildScript } from '../scripts/buildkit'
 import { recipe as awsCliRecipe } from '../src/recipes/aws.amazon.com/cli'
 
@@ -8,8 +9,13 @@ describe('Python-backed package runtime wrappers', () => {
   })
 
   test('bkpyvenv wrappers resolve Pantry-managed Python at runtime', () => {
+    const buildRecipe: PackageRecipe = {
+      build: awsCliRecipe.build,
+      buildDependencies: awsCliRecipe.buildDependencies,
+      dependencies: awsCliRecipe.dependencies,
+    }
     const script = generateBuildScript(
-      awsCliRecipe,
+      buildRecipe,
       'aws.amazon.com/cli',
       '2.34.15',
       'darwin-aarch64',
