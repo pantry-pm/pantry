@@ -505,7 +505,7 @@ fn httpExists(allocator: std.mem.Allocator, url: []const u8) !bool {
         .location = .{ .url = url },
         .response_writer = &sink.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
     }) catch {
         return error.HttpRequestFailed;
     };

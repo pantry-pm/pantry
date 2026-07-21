@@ -779,7 +779,7 @@ fn uploadCommitViaHttp(
         .payload = body,
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(5),
+        .redirect_behavior = @fromBackingInt(@intCast(5)),
         .headers = .{
             .content_type = .{ .override = content_type },
             .authorization = .{ .override = auth_value },

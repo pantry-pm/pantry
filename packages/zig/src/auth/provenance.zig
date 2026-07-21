@@ -231,7 +231,7 @@ fn formatTimestamp(allocator: std.mem.Allocator, timestamp: i64) ![]const u8 {
         "{d:0>4}-{d:0>2}-{d:0>2}T{d:0>2}:{d:0>2}:{d:0>2}Z",
         .{
             year_day.year,
-            @as(u8, @intFromEnum(month_day.month)),
+            @as(u8, @backingInt(month_day.month)),
             month_day.day_index + 1,
             day_seconds.getHoursIntoDay(),
             day_seconds.getMinutesIntoHour(),

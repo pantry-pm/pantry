@@ -157,7 +157,7 @@ fn registryGet(allocator: std.mem.Allocator, url: []const u8) ![]const u8 {
         },
     });
 
-    const status_int: u16 = @intFromEnum(result.status);
+    const status_int: u16 = @backingInt(result.status);
     if (status_int < 200 or status_int >= 300) {
         alloc_writer.deinit();
         return error.NotFound;
@@ -1520,7 +1520,7 @@ fn uploadViaHttp(
         .payload = body,
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(5),
+        .redirect_behavior = @fromBackingInt(@intCast(5)),
         .headers = .{
             .content_type = .{ .override = "multipart/form-data; boundary=" ++ boundary },
             .authorization = .{ .override = auth_value },

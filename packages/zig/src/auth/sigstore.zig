@@ -215,7 +215,7 @@ pub const FulcioClient = struct {
         defer self.allocator.free(body);
 
         if (response.head.status != .ok and response.head.status != .created) {
-            style.print("Fulcio request failed with status {d}: {s}\n", .{ @intFromEnum(response.head.status), body });
+            style.print("Fulcio request failed with status {d}: {s}\n", .{ @backingInt(response.head.status), body });
             return error.FulcioCertificateRequestFailed;
         }
 
@@ -440,7 +440,7 @@ pub const RekorClient = struct {
         defer self.allocator.free(body);
 
         if (response.head.status != .ok and response.head.status != .created) {
-            style.print("Rekor submission failed with status {d}: {s}\n", .{ @intFromEnum(response.head.status), body });
+            style.print("Rekor submission failed with status {d}: {s}\n", .{ @backingInt(response.head.status), body });
             return error.RekorSubmissionFailed;
         }
 

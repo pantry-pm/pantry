@@ -41,7 +41,7 @@ const win32 = struct {
     const DWORD = std.os.windows.DWORD;
     const BOOL = std.os.windows.BOOL;
     const LARGE_INTEGER = std.os.windows.LARGE_INTEGER;
-    const FALSE: BOOL = if (@typeInfo(BOOL) == .@"enum") @enumFromInt(0) else 0;
+    const FALSE: BOOL = if (@typeInfo(BOOL) == .@"enum") @fromBackingInt(@intCast(0)) else 0;
     const FILETIME = extern struct { dwLowDateTime: u32, dwHighDateTime: u32 };
 
     const ReadFile = if (is_windows) @extern(*const fn (HANDLE, [*]u8, DWORD, *DWORD, ?*anyopaque) callconv(.winapi) BOOL, .{ .name = "ReadFile" }) else {};
@@ -1469,7 +1469,7 @@ pub fn httpGet(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
         .location = .{ .url = url },
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
     }) catch {
         return error.HttpRequestFailed;
     };
@@ -1540,7 +1540,7 @@ pub fn httpDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path
         .location = .{ .url = url },
         .response_writer = &file_writer.interface,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
     }) catch return error.HttpRequestFailed;
 
     // Flush any remaining buffered data to disk
@@ -1598,7 +1598,7 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
     const uri = std.Uri.parse(url) catch return error.InvalidUrl;
 
     stream.req = stream.client.request(.GET, uri, .{
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
         .keep_alive = false,
         .headers = .{
             // Don't request compression for file downloads — we want raw bytes
@@ -1612,7 +1612,7 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
     stream.response = stream.req.receiveHead(&stream.redirect_buf) catch return error.HttpRequestFailed;
 
     if (stream.response.head.status != .ok) {
-        const status_code = @intFromEnum(stream.response.head.status);
+        const status_code = @backingInt(stream.response.head.status);
         // 402 Payment Required — package has a paywall
         if (status_code == 402) {
             return error.PaymentRequired;
@@ -1642,7 +1642,7 @@ pub fn httpGetWithClient(client: *std.http.Client, allocator: std.mem.Allocator,
         .location = .{ .url = url },
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
     }) catch {
         return error.HttpRequestFailed;
     };
@@ -1669,7 +1669,7 @@ pub fn httpGetWithClientAndHeaders(client: *std.http.Client, allocator: std.mem.
         .location = .{ .url = url },
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
         .extra_headers = extra_headers,
     }) catch {
         return error.HttpRequestFailed;
@@ -1708,7 +1708,7 @@ pub fn httpPostJsonWithClient(client: *std.http.Client, allocator: std.mem.Alloc
         .payload = json_body,
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
-        .redirect_behavior = @enumFromInt(10),
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
         .headers = .{
             .content_type = .{ .override = "application/json" },
         },

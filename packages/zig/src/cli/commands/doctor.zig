@@ -437,7 +437,7 @@ fn checkNetwork(allocator: std.mem.Allocator) !CheckResult {
     const message = try std.fmt.allocPrint(
         allocator,
         "npm registry returned status {d}",
-        .{@intFromEnum(response.head.status)},
+        .{@backingInt(response.head.status)},
     );
     return .{
         .name = name,

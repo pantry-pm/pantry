@@ -256,7 +256,7 @@ pub fn findDepsAndWorkspaceFile(allocator: std.mem.Allocator, start_dir: []const
                 const full_path = try std.fs.path.join(allocator, &[_][]const u8{ dir_path, file_name });
                 defer allocator.free(full_path);
                 io_helper.accessAbsolute(full_path, .{}) catch continue;
-                const format: DepsFile.FileFormat = @enumFromInt(i);
+                const format: DepsFile.FileFormat = @fromBackingInt(@intCast(i));
                 result.deps_file = DepsFile{
                     .path = try allocator.dupe(u8, full_path),
                     .format = format,

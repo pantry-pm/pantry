@@ -338,7 +338,7 @@ pub const RegistryClient = struct {
         defer self.allocator.free(body);
 
         const success = response.head.status == .ok or response.head.status == .created;
-        const status_code = @intFromEnum(response.head.status);
+        const status_code = @backingInt(response.head.status);
 
         const message = if (body.len > 0)
             try self.allocator.dupe(u8, body)
@@ -540,7 +540,7 @@ pub const RegistryClient = struct {
         defer self.allocator.free(body);
 
         const success = response.head.status == .ok or response.head.status == .created;
-        const status_code = @intFromEnum(response.head.status);
+        const status_code = @backingInt(response.head.status);
 
         const message = if (body.len > 0)
             try self.allocator.dupe(u8, body)
@@ -656,7 +656,7 @@ pub const RegistryClient = struct {
         defer self.allocator.free(body);
 
         const success = response.head.status == .ok or response.head.status == .created;
-        const status_code = @intFromEnum(response.head.status);
+        const status_code = @backingInt(response.head.status);
 
         const message = if (body.len > 0)
             try self.allocator.dupe(u8, body)
@@ -892,7 +892,7 @@ pub const RegistryClient = struct {
             self.allocator.free(raw_body);
         } else |_| {}
 
-        const status = @intFromEnum(response.head.status);
+        const status = @backingInt(response.head.status);
         if (status == 200) return true;
         if (status == 404) return false;
         // Treat other statuses as "unknown" — caller will fall through to a
