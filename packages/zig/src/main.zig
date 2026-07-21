@@ -4010,8 +4010,12 @@ pub fn main() !void {
         const exe_basename = std.fs.path.basename(args[0]);
         if (std.mem.eql(u8, exe_basename, "panx") or std.mem.eql(u8, exe_basename, "pnx")) {
             // Auto-route to px command: "panx foo bar" -> "pantry px foo bar"
-            if (args.len <= 1) {
+            if (args.len <= 1 or (args.len == 2 and (std.mem.eql(u8, args[1], "--help") or std.mem.eql(u8, args[1], "-h")))) {
                 style.print("Usage: {s} <executable> [args...]\n\nRun packages from npm (like npx/bunx)\n", .{exe_basename});
+                return;
+            }
+            if (args.len == 2 and (std.mem.eql(u8, args[1], "--version") or std.mem.eql(u8, args[1], "-V"))) {
+                printVersion();
                 return;
             }
             // Build px args: skip argv[0], pass rest directly to px command

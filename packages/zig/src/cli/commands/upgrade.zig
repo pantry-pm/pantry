@@ -13,7 +13,7 @@ pub const UpgradeOptions = struct {
     dry_run: bool = false,
 };
 
-fn ensurePackageExecutorAliases(allocator: std.mem.Allocator, home: []const u8, pantry_path: []const u8) void {
+pub fn ensurePackageExecutorAliases(allocator: std.mem.Allocator, home: []const u8, pantry_path: []const u8) !void {
     const is_windows = comptime @import("builtin").os.tag == .windows;
     const aliases = [_][]const u8{ "panx", "pnx" };
 
@@ -22,14 +22,14 @@ fn ensurePackageExecutorAliases(allocator: std.mem.Allocator, home: []const u8, 
             const alias_path = std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}.exe", .{ home, alias }) catch continue;
             defer allocator.free(alias_path);
             io_helper.deleteFile(alias_path) catch {};
-            io_helper.copyFile(pantry_path, alias_path) catch {};
+            try io_helper.copyFile(pantry_path, alias_path);
         }
     } else {
         for (aliases) |alias| {
             const alias_path = std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, alias }) catch continue;
             defer allocator.free(alias_path);
             io_helper.deleteFile(alias_path) catch {};
-            io_helper.symLink("pantry", alias_path) catch {};
+            try io_helper.symLink("pantry", alias_path);
         }
     }
 }
@@ -61,6 +61,9 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
     const zip_name = comptime "pantry-" ++ os_str ++ "-" ++ arch_str ++ ".zip";
     const is_windows = comptime @import("builtin").os.tag == .windows;
     const bin_name = if (is_windows) "pantry.exe" else "pantry";
+    const home = io_helper.getenv("HOME") orelse "/tmp";
+    const install_path = try std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, bin_name });
+    defer allocator.free(install_path);
 
     style.print("  Current version: {s}\n", .{current_version});
     style.print("  Platform: " ++ os_str ++ "-" ++ arch_str ++ "\n", .{});
@@ -127,6 +130,10 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
 
     // Check if already up to date
     if (std.mem.eql(u8, latest_version, current_version)) {
+        ensurePackageExecutorAliases(allocator, home, install_path) catch |err| {
+            const msg = try std.fmt.allocPrint(allocator, "Pantry is current, but its panx aliases could not be repaired ({s}).", .{@errorName(err)});
+            return CommandResult.err(allocator, msg);
+        };
         style.print("\n  {s}Already up to date!{s} ({s})\n", .{ style.green, style.reset, current_version });
         return .{ .exit_code = 0 };
     }
@@ -163,7 +170,6 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
     // Download and extract
     style.print("  Downloading {s}...\n", .{zip_name});
 
-    const home = io_helper.getenv("HOME") orelse "/tmp";
     const tmp_zip = try std.fmt.allocPrint(allocator, "{s}/.pantry/.tmp/pantry-upgrade.zip", .{home});
     defer allocator.free(tmp_zip);
     const tmp_dir = try std.fmt.allocPrint(allocator, "{s}/.pantry/.tmp/pantry-upgrade", .{home});
@@ -199,8 +205,6 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
     };
 
     // Install path + staged binary path
-    const install_path = try std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, bin_name });
-    defer allocator.free(install_path);
     const new_binary = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ tmp_dir, bin_name });
     defer allocator.free(new_binary);
 
@@ -280,7 +284,10 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
         return CommandResult.err(allocator, msg);
     };
 
-    ensurePackageExecutorAliases(allocator, home, install_path);
+    ensurePackageExecutorAliases(allocator, home, install_path) catch |err| {
+        const msg = try std.fmt.allocPrint(allocator, "Pantry was upgraded, but its panx aliases could not be installed ({s}).", .{@errorName(err)});
+        return CommandResult.err(allocator, msg);
+    };
 
     // Cleanup
     io_helper.deleteTree(tmp_dir) catch {};

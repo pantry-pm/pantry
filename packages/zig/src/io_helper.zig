@@ -961,6 +961,27 @@ pub fn symLink(target: []const u8, link_path: []const u8) !void {
     }
 }
 
+test "symLink creates a relative executable alias at an absolute path" {
+    if (comptime is_windows) return;
+
+    const allocator = std.testing.allocator;
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    try tmp_dir.dir.writeFile(io, .{ .sub_path = "pantry", .data = "binary" });
+
+    const working_directory = try getCwdAlloc(allocator);
+    defer allocator.free(working_directory);
+    const alias_path = try std.fs.path.join(allocator, &.{ working_directory, ".zig-cache", "tmp", tmp_dir.sub_path[0..], "panx" });
+    defer allocator.free(alias_path);
+
+    try symLink("pantry", alias_path);
+
+    var target_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const target = try readLink(alias_path, &target_buf);
+    try std.testing.expectEqualStrings("pantry", target);
+}
+
 /// Read a symbolic link target
 pub fn readLink(path: []const u8, buf: []u8) ![]const u8 {
     if (comptime is_windows) {
