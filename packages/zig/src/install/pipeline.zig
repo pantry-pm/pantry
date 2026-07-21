@@ -28,8 +28,9 @@ const PackageSpec = packages.PackageSpec;
 ///   * an npm-style SRI value like "sha512-BASE64..." / "sha256-BASE64..."
 ///   * a raw lowercase hex SHA256 (64 chars)
 ///
-/// Unknown / unrecognised formats are accepted (we have no way to verify,
-/// so we fall back to trusting the transport).
+/// Unknown, malformed, or unsupported formats fail closed. Callers only invoke
+/// this function when the registry supplied an integrity value, so treating an
+/// uncheckable claim as valid would silently bypass the package contract.
 pub fn verifyIntegrity(allocator: std.mem.Allocator, bytes: []const u8, integrity: []const u8) bool {
     // Raw hex SHA256
     if (integrity.len == 64) {
@@ -55,7 +56,7 @@ pub fn verifyIntegrity(allocator: std.mem.Allocator, bytes: []const u8, integrit
     }
 
     // SRI form: "<algo>-<base64>"
-    const dash = std.mem.indexOfScalar(u8, integrity, '-') orelse return true; // unknown → trust
+    const dash = std.mem.indexOfScalar(u8, integrity, '-') orelse return false;
     const algo = integrity[0..dash];
     const b64 = integrity[dash + 1 ..];
 
@@ -63,32 +64,31 @@ pub fn verifyIntegrity(allocator: std.mem.Allocator, bytes: []const u8, integrit
         var digest: [32]u8 = undefined;
         std.crypto.hash.sha2.Sha256.hash(bytes, &digest, .{});
         var expected: [32]u8 = undefined;
-        const decoded = std.base64.standard.Decoder.calcSizeForSlice(b64) catch return true;
-        if (decoded != 32) return true;
-        std.base64.standard.Decoder.decode(&expected, b64) catch return true;
+        const decoded = std.base64.standard.Decoder.calcSizeForSlice(b64) catch return false;
+        if (decoded != 32) return false;
+        std.base64.standard.Decoder.decode(&expected, b64) catch return false;
         return std.mem.eql(u8, &digest, &expected);
     } else if (std.mem.eql(u8, algo, "sha512")) {
         var digest: [64]u8 = undefined;
         std.crypto.hash.sha2.Sha512.hash(bytes, &digest, .{});
         var expected: [64]u8 = undefined;
-        const decoded = std.base64.standard.Decoder.calcSizeForSlice(b64) catch return true;
-        if (decoded != 64) return true;
-        std.base64.standard.Decoder.decode(&expected, b64) catch return true;
+        const decoded = std.base64.standard.Decoder.calcSizeForSlice(b64) catch return false;
+        if (decoded != 64) return false;
+        std.base64.standard.Decoder.decode(&expected, b64) catch return false;
         return std.mem.eql(u8, &digest, &expected);
     } else if (std.mem.eql(u8, algo, "sha1")) {
         // sha1 still shows up on npm; verify for completeness
         var digest: [20]u8 = undefined;
         std.crypto.hash.Sha1.hash(bytes, &digest, .{});
         var expected: [20]u8 = undefined;
-        const decoded = std.base64.standard.Decoder.calcSizeForSlice(b64) catch return true;
-        if (decoded != 20) return true;
-        std.base64.standard.Decoder.decode(&expected, b64) catch return true;
+        const decoded = std.base64.standard.Decoder.calcSizeForSlice(b64) catch return false;
+        if (decoded != 20) return false;
+        std.base64.standard.Decoder.decode(&expected, b64) catch return false;
         return std.mem.eql(u8, &digest, &expected);
     }
 
     _ = allocator;
-    // Unknown algorithm — don't reject (avoid bricking installs on weird algos)
-    return true;
+    return false;
 }
 
 test "verifyIntegrity sha256 hex happy path" {
@@ -101,9 +101,11 @@ test "verifyIntegrity sha256 hex happy path" {
     try std.testing.expect(!verifyIntegrity(allocator, body, bad));
 }
 
-test "verifyIntegrity unknown algorithm is accepted" {
+test "verifyIntegrity rejects unknown and malformed claims" {
     const allocator = std.testing.allocator;
-    try std.testing.expect(verifyIntegrity(allocator, "x", "frobnitz-abc"));
+    try std.testing.expect(!verifyIntegrity(allocator, "x", "frobnitz-abc"));
+    try std.testing.expect(!verifyIntegrity(allocator, "x", "missing-separator"[0..7]));
+    try std.testing.expect(!verifyIntegrity(allocator, "x", "sha256-not-base64!"));
 }
 
 test "verifyIntegrity sha512 SRI happy path" {
