@@ -2,6 +2,10 @@
 
 Pantry package registry backend. A simple, fast package registry that works with the Pantry CLI.
 
+The authoritative route, authentication, integrity, storage, failure, operations,
+and test contract is [docs/registry.md](../../docs/registry.md). CI verifies its
+critical claims directly against the route handlers.
+
 ## Features
 
 - **npm-compatible API** - Works with the Pantry CLI out of the box
@@ -9,7 +13,7 @@ Pantry package registry backend. A simple, fast package registry that works with
 - **Zig package support** - Host Zig packages with content-addressed hashing
 - **S3 storage** - Tarball storage via S3 (or local filesystem for development)
 - **Analytics** - Track download counts and package statistics
-- **Simple metadata** - JSON file or DynamoDB for package metadata
+- **Portable metadata** - Local/in-memory stores for development and an object-storage snapshot for production
 - **Zero config** - Works out of the box for local development
 
 ## Quick Start

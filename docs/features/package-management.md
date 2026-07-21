@@ -2,6 +2,9 @@
 
 pantry provides comprehensive package management capabilities with support for multiple installation strategies and intelligent path handling. This guide covers all aspects of package management.
 
+For the source-linked resolution, lockfile, integrity, lifecycle, publication,
+failure, and test contract, see the [Pantry package manager contract](../package-manager.md).
+
 ## Basic Installation
 
 Install packages using the `install` command:
@@ -164,10 +167,12 @@ pantry install --force node@22
 
 ### Package Registry
 
-pantry uses the pkgx registry through ts-pantry for package installation:
+pantry uses its generated package catalog and `registry.pantry.dev` for Pantry
+system packages and user-published Pantry packages. JavaScript dependency
+resolution uses npm-compatible metadata as a separate source:
 
 ```bash
-# Install from the pkgx registry
+# Install from Pantry's catalog and registry
 pantry install node@22 python@3.12
 
 # Search for available packages

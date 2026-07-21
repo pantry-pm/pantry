@@ -38,6 +38,7 @@
     "publish:dry-run": "./scripts/publish-oidc.sh --dry-run",
     "dev:docs": "bun bunpress dev docs",
     "build:docs": "bun bunpress build docs",
+    "docs:contracts:check": "bun scripts/docs-contracts.ts",
     "preview:docs": "bun bunpress preview docs",
     "typecheck": "bun --bun tsc --noEmit"
   },

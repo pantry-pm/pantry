@@ -275,7 +275,11 @@ pantry info node --versions
 
 ### Can I install packages not available in pkgx
 
-Currently, pantry uses the pkgx registry through ts-pantry. If a package isn't available, you can:
+Pantry resolves system packages from its generated package catalog and the
+Pantry registry. npm dependencies use the separate npm resolution path. See the
+[package-manager contract](package-manager.md#source-classes-and-resolution-order)
+for the exact precedence rules. If a system package is not in the catalog or
+registry, you can:
 
 ```bash
 # Check what packages are available

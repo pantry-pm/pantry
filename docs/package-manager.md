@@ -1,0 +1,212 @@
+# Pantry package manager contract
+
+This document describes the package-manager behavior implemented by the native
+Zig CLI in `packages/zig`. It is a contract and operations reference, not a list
+of intended features. `bun run docs:contracts:check` links every critical claim
+below to its command registration or implementation source and fails CI when the
+documentation drifts.
+
+## Scope and source of truth
+
+Pantry manages three related dependency classes:
+
+| Class | Resolution source | Installation shape | Primary implementation |
+| --- | --- | --- | --- |
+| System tools and runtimes | Pantry's generated recipe catalog and binary metadata at `registry.pantry.dev` | Versioned native archives, binaries, shims, and environment links | `packages/zig/src/packages`, `packages/zig/src/install` |
+| JavaScript packages | npm-compatible metadata, with the resolved URL and integrity claim retained in `pantry.lock` | Extracted package tree under the configured modules directory | `packages/zig/src/install/installer.zig`, `packages/zig/src/install/pipeline.zig` |
+| Workspace and local packages | Workspace manifests, `workspace:` ranges, and Pantry's local-link registry | Linked or copied workspace package with resolved external dependencies | `packages/zig/src/cli/commands/install/workspace.zig`, `packages/zig/src/cli/commands/link.zig` |
+
+The generated system catalog is local to the CLI, so normal search and package
+classification do not require an online third-party catalog. Live Pantry-registry
+search supplements the generated catalog for newly published packages. npm is a
+separate compatibility and JavaScript dependency source; it is not Pantry's
+system-package registry.
+
+## Manifest discovery and precedence
+
+Pantry recognizes project manifests including `pantry.json`, `package.json`, and
+the YAML dependency files documented in the quick start. A workspace root owns a
+single `pantry.lock`; workspace package constraints are recorded separately from
+their resolved package entries. Explicit CLI package arguments narrow or extend
+the manifest operation depending on the command.
+
+Configuration precedence is:
+
+1. explicit command options;
+2. project configuration (`pantry.toml` and supported dependency manifests);
+3. environment settings;
+4. compiled defaults.
+
+`--no-save` prevents both manifest and lockfile writes. `--force` intentionally
+bypasses the normal lockfile/cache fast paths and resolves again. These options
+are not equivalent: forcing a refresh does not imply that state must be saved.
+
+## Install and resolution commands
+
+| Command | Contract |
+| --- | --- |
+| `pantry install [packages...]` | Resolve and install manifest dependencies or explicit package specs. Alias: `pantry i`. |
+| `pantry ci` | Perform a strict install with frozen-lockfile behavior; missing or divergent lock state is an error. |
+| `pantry add <packages...>` | Add constraints to the selected dependency section, install them, and update lock state unless saving is disabled. |
+| `pantry remove <packages...>` | Remove dependency declarations and corresponding project content. Supports preview and global selection. |
+| `pantry uninstall <packages...>` | Remove installed package content from Pantry-managed locations. |
+| `pantry update [packages...]` | Re-resolve selected or all dependencies subject to constraints; `--latest` may ignore the current constraint. |
+| `pantry outdated [patterns...]` | Compare installed/declared versions with the appropriate Pantry or npm registry source. |
+| `pantry list` / `pantry ls` | List installed packages with table, simple, or JSON output where registered. |
+| `pantry why <package>` | Explain the dependency path that caused a package to be installed. |
+| `pantry tree` | Display the dependency graph with depth, production, peer, and version controls. |
+| `pantry dedupe` | Reduce duplicate compatible resolutions while preserving dependency constraints. |
+| `pantry link` / `pantry unlink` | Register or consume a local package without publishing it. |
+| `pantry search <query>` | Search the generated Pantry catalog, then supplement it from the live Pantry registry. |
+| `pantry info <package>` | Show catalog metadata, or query the live Pantry registry for a user-published package. |
+| `pantry audit` | Query vulnerability data for JavaScript dependencies with severity, production, and ignore controls. |
+
+### Install option semantics
+
+| Option | Effect and failure behavior |
+| --- | --- |
+| `--global` | Install into the system/global prefix rather than a project environment. |
+| `--user` | Install globally for the current user under Pantry's user data directory. |
+| `--force` | Fetch current metadata and reinstall; ignore the normal cache and lockfile preference. |
+| `--production` | Install production dependencies and omit development dependencies. |
+| `--dev` | Install only development dependencies. |
+| `--peer` | Include peer dependencies when they are not enabled by project configuration. |
+| `--ignore-scripts` | Do not execute package lifecycle scripts. This reduces behavior, not integrity verification. |
+| `--offline` | Make no registry request; a missing resolution or tarball in local state is an error. |
+| `--filter <pattern>` | Restrict a workspace operation to matching packages. |
+| `--frozen-lockfile` | Reject a missing lockfile or any install result that would change it. |
+| `--no-cache` | Ignore the manifest cache; this is distinct from `--force` and deleting the content cache. |
+| `--dry-run` | Compute and report the plan without installing or persisting it. |
+| `--no-save` | Do not change the dependency manifest or `pantry.lock`. |
+| `--quiet` | Suppress progress output, but never suppress the reason for a failed install. |
+| `--verbose` | Emit resolution, cache, download, environment, and install diagnostics. |
+
+## Resolution and install pipeline
+
+The normal project operation follows this order:
+
+1. Discover the effective project/workspace root and dependency manifest.
+2. Read `pantry.lock` and determine whether recorded constraints still match.
+3. Use the lockfile fast path when every package is resolvable and destination
+   content exists; otherwise resolve missing or changed packages.
+4. Classify each spec as a Pantry system package, npm package, workspace package,
+   local link, Git source, or another supported source.
+5. Resolve exact versions and tarball URLs, retaining integrity metadata when the
+   upstream registry supplies it.
+6. Download in parallel unless offline or satisfied by cache.
+7. Verify any supplied integrity claim before extraction.
+8. Extract into managed content, create executable shims/links, and run permitted
+   lifecycle hooks.
+9. Update the lockfile only after successful results and only when writes are
+   allowed.
+
+Partial failures return a non-zero command result. Quiet mode may remove progress
+noise but cannot convert a failure into success or hide its final reason.
+
+## Lockfile contract
+
+`pantry.lock` is the reproducibility boundary. It records exact package versions,
+resolved locations, integrity when available, dependency relationships, and
+workspace constraint state. It supports lockfile-first restore, which avoids
+redundant registry resolution, and frozen validation, which compares the computed
+result to committed state and rejects a missing or changed lockfile.
+
+The lockfile does not create integrity evidence when an upstream package supplies
+none. Such an entry is reproducible by version and URL but has weaker content
+authentication and must not be described as cryptographically verified.
+
+## Integrity, cache, and extraction
+
+For npm-style tarballs, Pantry verifies a supplied raw SHA-256 digest or SRI
+`sha256`, `sha512`, or legacy `sha1` value. A mismatch, malformed base64 value,
+missing algorithm separator, or unsupported algorithm fails closed. When no
+integrity claim exists, the installer can still validate archive structure and
+uses the content cache's SHA-256 bookkeeping, but that is not equivalent to an
+upstream-authenticated digest.
+
+Downloaded content is cached by package, version, source, and checksum. A
+poisoned cache entry that fails verification or extraction is evicted and may be
+fetched again when networking is allowed. `--offline` never silently crosses the
+network; if verified content is unavailable locally, the install fails.
+
+Native archives are validated for expected archive structure. When a valid
+sidecar checksum is available, it is checked before extraction. Absence of a
+sidecar is explicitly weaker than a verified sidecar and is not a signature.
+
+## Lifecycle scripts and trust
+
+Lifecycle scripts execute dependency code and are therefore a separate trust
+decision from checksum validation. Pantry supports `pantry trust`,
+`pantry untrusted`, and `pantry default-trusted` for managing that decision.
+`--ignore-scripts` is the deterministic opt-out for CI or security-sensitive
+installs. An integrity match proves bytes match the declared digest; it does not
+prove that running those bytes is safe.
+
+## Workspaces and local development
+
+Workspace installs use the workspace root for `pantry.lock`, resolve `workspace:`
+ranges before publication, deduplicate shared external packages where compatible,
+and retain per-workspace declared constraints. `--filter` limits the selected
+workspace set. Local links are recorded in Pantry's link registry and avoid a
+publish round trip; they are mutable development inputs and do not carry normal
+immutable-registry guarantees.
+
+## Publication channels
+
+| Command | Destination and contract |
+| --- | --- |
+| `pantry publish` | Publish archives to the Pantry registry. The default is `https://registry.pantry.dev`; a bearer token is required. |
+| `pantry npm:publish` | Publish npm-compatible packages to npm or an explicitly selected compatible registry, with token or OIDC authentication. |
+| `pantry publish:check` | Validate names and registry collisions without publishing; offline mode performs syntactic checks only. |
+| `pantry publish:commit` | Publish temporary, commit-addressed monorepo packages and return installable URLs. Existing names can be skipped unless forced. |
+| `pantry publish:binary` | Publish a platform-specific native binary and metadata to Pantry object storage. |
+| `pantry publisher:add`, `publisher:list`, `publisher:remove` | Manage npm-style trusted publisher configuration for OIDC flows. |
+| `pantry sign` / `pantry verify` | Create or verify package signatures with configured Ed25519 key material. |
+
+Pantry-registry publication and npm publication are intentionally different
+surfaces. The command and selected registry determine the protocol; Pantry does
+not transparently republish every npm dependency.
+
+## Environment and installation locations
+
+Project installs live in Pantry-managed project environments. Global installs
+select the system prefix when writable, while `--user` selects the user-owned
+global data directory. Custom paths are explicit and should be treated as an
+operator choice because ownership, PATH behavior, and cleanup boundaries change.
+
+Shell integration performs environment lookup on directory changes. The
+environment identity incorporates project location and dependency state so two
+projects, or two dependency revisions of one project, do not accidentally share
+an incompatible active toolchain. Leaving the project restores the previous
+environment instead of copying packages into the global shell.
+
+## Failure modes operators should preserve
+
+- Unknown package, impossible version, invalid manifest, or malformed lockfile:
+  fail with the package/config cause.
+- Frozen lockfile missing or divergent: fail without modifying it.
+- Offline cache miss: fail without a network fallback.
+- Integrity mismatch or unsupported integrity algorithm: fail before extraction.
+- Untrusted lifecycle script: require trust or an explicit script policy.
+- Registry authentication failure: fail without uploading.
+- Duplicate immutable version: registry returns conflict; do not overwrite it.
+- Partial workspace failure: return non-zero and do not claim complete success.
+
+## Test and evidence map
+
+| Contract | Evidence |
+| --- | --- |
+| Integrity algorithms and tamper rejection | `packages/zig/src/install/pipeline.zig` unit tests |
+| Frozen, missing, and stale lockfile behavior | install/workspace/lockfile tests under `packages/zig` |
+| Registry resolution and install integration | `packages/zig/test/registry_integration_test.zig` and install tests |
+| Workspace lock and publication behavior | workspace and catalog tests under `packages/zig/test` |
+| Ed25519 signing and wrong-content rejection | `packages/zig/src/auth/signing_test.zig` |
+| Documentation/source freshness | `scripts/docs-contracts.test.ts` and `bun run docs:contracts:check` |
+
+Run the focused checks with:
+
+```bash
+bun run docs:contracts:check
+bun test scripts/docs-contracts.test.ts
+cd packages/zig && zig build test
+```

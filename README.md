@@ -32,6 +32,8 @@ At its core, pantry hosts its own package registry with 1700+ system packages, 5
 
 Learn more in the docs: [Why pantry](https://pantry.dev/why), [Quick Start](https://pantry.dev/quickstart).
 
+Implementation contracts: [Package Manager](docs/package-manager.md) · [Registry](docs/registry.md)
+
 ## Features
 
 pantry transforms how you manage dependencies across your entire development workflow:
