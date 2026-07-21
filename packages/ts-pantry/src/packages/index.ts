@@ -5112,6 +5112,7 @@ export interface Pantry {
   ginkgo: typeof onsigithubioginkgoPackage
   girara: typeof pwmtorggiraraPackage
   gist: typeof rubygemsorggistPackage
+  git: typeof gitscmorgPackage
   'git-absorb': typeof cratesiogitabsorbPackage
   'git-branchless': typeof cratesiogitbranchlessPackage
   'git-chglog': typeof gitchglogPackage
@@ -9753,6 +9754,7 @@ export const pantry: Pantry = {
   ginkgo: onsigithubioginkgoPackage,
   girara: pwmtorggiraraPackage,
   gist: rubygemsorggistPackage,
+  git: gitscmorgPackage,
   'git-absorb': cratesiogitabsorbPackage,
   'git-branchless': cratesiogitbranchlessPackage,
   'git-chglog': gitchglogPackage,

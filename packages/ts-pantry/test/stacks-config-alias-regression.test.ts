@@ -2,7 +2,14 @@ import { describe, expect, it } from 'bun:test'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import type { Dependencies } from '../src/package-types'
 import { resolveDependencies } from '../src/pantry-api'
+
+const stacksToolchain: Dependencies = {
+  bun: '^1.3.0',
+  git: '^2.47.0',
+  sqlite: '^3.47.2',
+}
 
 const stacksFixture = path.resolve(import.meta.dir, '../../zig/test-envs/stacks-config/dependencies.yaml')
 
@@ -17,6 +24,14 @@ const aliasToDomain: Record<string, string> = {
 }
 
 describe('Stacks config alias regression', () => {
+  it('types canonical tool aliases with their package versions', () => {
+    expect(stacksToolchain).toEqual({
+      bun: '^1.3.0',
+      git: '^2.47.0',
+      sqlite: '^3.47.2',
+    })
+  })
+
   it('resolves the shipped Stacks fixture equivalently to canonical domains', async () => {
     const canonicalYaml = `dependencies:\n  aws.amazon.com/cli: ^2.22.26\n  bun.sh: ^1.2.13\n  cli.github.com: ^2.69.0\n  info-zip.org/zip: ^3.0\n  info-zip.org/unzip: ^6.0\n  sqlite.org: ^3.47.2\n  nodejs.org: ^22.12.0\n`
     const canonicalFile = path.join(os.tmpdir(), `stacks-config-canonical-${Date.now()}.yaml`)
