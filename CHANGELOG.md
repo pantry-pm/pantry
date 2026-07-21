@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.31...v0.10.32)
+
+## 🐛 Bug Fixes
+
+- **install**: keep dry runs read-only ([0a49191](https://github.com/pantry-pm/pantry/commit/0a49191)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: bound dependency resolution requests ([e4743bb](https://github.com/pantry-pm/pantry/commit/e4743bb)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **workspaces**: resolve prefixed catalog dependencies ([4e4496f](https://github.com/pantry-pm/pantry/commit/4e4496f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.32 ([baf1aa9](https://github.com/pantry-pm/pantry/commit/baf1aa9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.30...v0.10.31)
 
 ## 🐛 Bug Fixes
