@@ -180,14 +180,17 @@ export async function handleZigRoutes(
   return null
 }
 
-// Token for authentication — must be set via environment variable
-const REGISTRY_TOKEN = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+// Read lazily so token rotation takes effect without importing this module again.
+function getRegistryToken(): string | undefined {
+  return process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+}
 
 /**
  * Validate authorization token
  */
 function validateToken(authHeader: string | null): { valid: boolean, error?: string } {
-  if (!REGISTRY_TOKEN) {
+  const registryToken = getRegistryToken()
+  if (!registryToken) {
     return { valid: false, error: 'Server misconfigured — no registry token set' }
   }
 
@@ -200,13 +203,13 @@ function validateToken(authHeader: string | null): { valid: boolean, error?: str
     : authHeader
 
   // Pad both to same length to prevent length-based timing leaks
-  const maxLen = Math.max(token.length, REGISTRY_TOKEN.length)
+  const maxLen = Math.max(token.length, registryToken.length)
   const tokenBuf = Buffer.alloc(maxLen)
   const legacyBuf = Buffer.alloc(maxLen)
   Buffer.from(token).copy(tokenBuf)
-  Buffer.from(REGISTRY_TOKEN).copy(legacyBuf)
+  Buffer.from(registryToken).copy(legacyBuf)
   const crypto = require('node:crypto')
-  if (!crypto.timingSafeEqual(tokenBuf, legacyBuf) || token.length !== REGISTRY_TOKEN.length) {
+  if (!crypto.timingSafeEqual(tokenBuf, legacyBuf) || token.length !== registryToken.length) {
     return { valid: false, error: 'Invalid token' }
   }
 
