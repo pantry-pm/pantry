@@ -70,6 +70,7 @@ export const hasuraioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.49.5',
     '2.49.4',
     '2.49.3',
     '2.49.2',
