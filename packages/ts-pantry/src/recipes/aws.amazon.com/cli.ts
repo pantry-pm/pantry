@@ -7,13 +7,14 @@ export const recipe: Recipe = {
     'aws',
   ],
   dependencies: {
+    'python.org': '>=3.11<3.15',
     'sourceware.org/libffi': '^3',
     'pkgx.sh': '>=1',
   },
   buildDependencies: {
     'rust-lang.org': '>=1.48.0',
     'rust-lang.org/cargo': '*',
-    'python.org': '>=3.7<3.12',
+    'python.org': '>=3.11<3.15',
   },
   distributable: {
     url: 'https://github.com/aws/aws-cli/archive/{{version}}.tar.gz',

@@ -912,7 +912,7 @@ else if (osName === 'linux') {
   sections.push('      mkdir -p "$prefix/bin"')
   sections.push('      for cmd_name in "$@"; do')
   sections.push('        if [ -f "$prefix/venv/bin/$cmd_name" ]; then')
-  sections.push('          printf \'#!/bin/sh\\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\\nexec "$SCRIPT_DIR/../venv/bin/%s" "$@"\\n\' "$cmd_name" > "$prefix/bin/$cmd_name"')
+  sections.push('          printf \'#!/bin/sh\\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\\nVENV_DIR="$SCRIPT_DIR/../venv"\\nSEARCH_DIR="$SCRIPT_DIR"\\nPYTHON_BIN=""\\nwhile [ "$SEARCH_DIR" != "/" ]; do\\n  if [ -x "$SEARCH_DIR/.bin/python3" ]; then PYTHON_BIN="$SEARCH_DIR/.bin/python3"; break; fi\\n  if [ -x "$SEARCH_DIR/bin/python3" ] && [ "$SEARCH_DIR/bin/python3" != "$VENV_DIR/bin/python3" ]; then PYTHON_BIN="$SEARCH_DIR/bin/python3"; break; fi\\n  SEARCH_DIR="$(dirname "$SEARCH_DIR")"\\ndone\\nif [ -z "$PYTHON_BIN" ]; then PYTHON_BIN="$(command -v python3 2>/dev/null || true)"; fi\\nif [ -z "$PYTHON_BIN" ]; then echo "pantry: Python runtime is required for %s" >&2; exit 127; fi\\nexec "$PYTHON_BIN" "$VENV_DIR/bin/%s" "$@"\\n\' "$cmd_name" "$cmd_name" > "$prefix/bin/$cmd_name"')
   sections.push('          chmod +x "$prefix/bin/$cmd_name"')
   sections.push('        fi')
   sections.push('      done')
@@ -1387,20 +1387,20 @@ import os, shutil, sys
 # Only override libraries known to have ABI mismatches between system and buildkit
 # glog: Ubuntu has 0.6.0, buildkit has 0.7.1 (google::logging::internal namespace changes)
 # gflags: Ubuntu has 2.2.2, buildkit has 2.3.0
-ALLOW_OVERRIDE = {"libglog", "libgflags"}
-SYS_LIB = "/usr/lib/${archName === 'aarch64' ? 'aarch64-linux-gnu' : 'x86_64-linux-gnu'}"
+ALLOW_OVERRIDE = {'libglog', 'libgflags'}
+SYS_LIB = '/usr/lib/${archName === 'aarch64' ? 'aarch64-linux-gnu' : 'x86_64-linux-gnu'}'
 if not os.path.isdir(SYS_LIB):
     sys.exit(0)
 deps = [${depPrefixes.map(p => `"${p}"`).join(', ')}]
 overwritten = 0
 for d in deps:
-    if not d.startswith("/tmp"): continue
-    lib_dir = os.path.join(d, "lib")
+    if not d.startswith('/tmp'): continue
+    lib_dir = os.path.join(d, 'lib')
     if not os.path.isdir(lib_dir): continue
     for f in os.listdir(lib_dir):
-        if not (f.endswith(".so") or ".so." in f): continue
+        if not (f.endswith('.so') or '.so.' in f): continue
         # Check if this library basename matches any in the allow list
-        base = f.split(".so")[0]
+        base = f.split('.so')[0]
         if base not in ALLOW_OVERRIDE: continue
         dep_lib = os.path.join(lib_dir, f)
         sys_lib = os.path.join(SYS_LIB, f)
@@ -1408,10 +1408,10 @@ for d in deps:
             try:
                 shutil.copy2(dep_lib, sys_lib)
                 overwritten += 1
-                print(f"[syslib-override] {f}: {dep_lib} -> {sys_lib}", file=sys.stderr)
+                print(f'[syslib-override] {f}: {dep_lib} -> {sys_lib}', file=sys.stderr)
             except: pass
 if overwritten:
-    os.system("ldconfig 2>/dev/null")
+    os.system('ldconfig 2>/dev/null')
 SYSLIB_OVERRIDE_EOF`)
       sections.push('')
     }
