@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.30...v0.10.31)
+
+## 🐛 Bug Fixes
+
+- **cli**: repair panx aliases during upgrades ([1525e8d](https://github.com/pantry-pm/pantry/commit/1525e8d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💅 Styles
+
+- **zig**: format with locked toolchain ([2c0f1b7](https://github.com/pantry-pm/pantry/commit/2c0f1b7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.31 ([41220a8](https://github.com/pantry-pm/pantry/commit/41220a8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: sync workspace lockfiles ([30774ab](https://github.com/pantry-pm/pantry/commit/30774ab)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.29...v0.10.30)
 
 ## 🐛 Bug Fixes
