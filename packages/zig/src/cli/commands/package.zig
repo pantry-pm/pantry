@@ -716,8 +716,9 @@ fn updateLockfileAfterUninstall(allocator: std.mem.Allocator, lockfile_path: []c
 // ============================================================================
 
 pub const PublishOptions = struct {
-    access: []const u8 = "public",
-    tag: []const u8 = "latest",
+    /// Explicit CLI overrides. Null preserves publishConfig and registry defaults.
+    access: ?[]const u8 = null,
+    tag: ?[]const u8 = null,
     otp: ?[]const u8 = null,
     registry: []const u8 = "https://registry.pantry.dev", // Pantry registry (default)
     dry_run: bool = false,
@@ -740,6 +741,24 @@ pub const PublishOptions = struct {
     /// or is redundant. npm path only.
     ignore_scripts: bool = false,
 };
+
+fn resolveNpmAccess(explicit: ?[]const u8, configured: ?[]const u8, package_name: []const u8) []const u8 {
+    return explicit orelse configured orelse if (package_name.len > 0 and package_name[0] == '@') "restricted" else "public";
+}
+
+fn resolveNpmTag(explicit: ?[]const u8, configured: ?[]const u8) []const u8 {
+    return explicit orelse configured orelse "latest";
+}
+
+test "npm publish settings prefer CLI then publishConfig then defaults" {
+    try std.testing.expectEqualStrings("public", resolveNpmAccess("public", "restricted", "@example/pkg"));
+    try std.testing.expectEqualStrings("restricted", resolveNpmAccess(null, "restricted", "plain-pkg"));
+    try std.testing.expectEqualStrings("restricted", resolveNpmAccess(null, null, "@example/pkg"));
+    try std.testing.expectEqualStrings("public", resolveNpmAccess(null, null, "plain-pkg"));
+    try std.testing.expectEqualStrings("next", resolveNpmTag("next", "beta"));
+    try std.testing.expectEqualStrings("beta", resolveNpmTag(null, "beta"));
+    try std.testing.expectEqualStrings("latest", resolveNpmTag(null, null));
+}
 
 /// Publish a package to the registry (npm).
 /// Auto-detects monorepos (packages/ directory) and publishes all non-private packages.
@@ -1127,19 +1146,19 @@ fn publishSingleToNpm(
     }
 
     // Print publish config
-    const tag_str: []const u8 = if (metadata.publish_config) |pc|
-        if (pc.tag) |t| t else "latest"
-    else
-        "latest";
+    const configured_tag = if (metadata.publish_config) |pc| pc.tag else null;
+    const tag_str = resolveNpmTag(options.tag, configured_tag);
     style.print("\nTag: {s}\n", .{tag_str});
 
     // Determine access level
-    const access_str: []const u8 = if (metadata.publish_config) |pc|
-        if (pc.access) |a| a else if (metadata.name[0] == '@') "restricted" else "public"
-    else if (metadata.name[0] == '@')
-        "restricted"
-    else
-        "public";
+    const configured_access = if (metadata.publish_config) |pc| pc.access else null;
+    const access_str = resolveNpmAccess(options.access, configured_access, metadata.name);
+    if (!std.mem.eql(u8, access_str, "public") and !std.mem.eql(u8, access_str, "restricted")) {
+        return CommandResult.err(allocator, "Error: npm access must be 'public' or 'restricted'");
+    }
+    if (tag_str.len == 0) {
+        return CommandResult.err(allocator, "Error: npm dist-tag cannot be empty");
+    }
     style.print("Access: {s}\n", .{access_str});
     style.print("Registry: {s}\n", .{registry_url});
 
@@ -1151,6 +1170,8 @@ fn publishSingleToNpm(
     // Initialize registry client
     var registry_client = try registry.RegistryClient.init(allocator, registry_url);
     defer registry_client.deinit();
+    registry_client.publish_access = access_str;
+    registry_client.publish_tag = tag_str;
 
     // Set package.json content so npm metadata includes all fields
     // (types, exports, module, dependencies, bin, etc.)

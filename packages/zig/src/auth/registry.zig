@@ -200,6 +200,9 @@ pub const RegistryClient = struct {
     /// Raw package.json content — set before publishing so npm metadata
     /// includes all fields (types, exports, module, dependencies, etc.)
     package_json: ?[]const u8 = null,
+    /// Resolved publish settings used in the npm registry document.
+    publish_access: []const u8 = "public",
+    publish_tag: []const u8 = "latest",
 
     io: *std.Io.Threaded,
 
@@ -1036,18 +1039,22 @@ pub const RegistryClient = struct {
 
         // Create JSON metadata (NPM registry format)
         // The version object contains the full package.json + _id + dist
+        const escaped_publish_tag = try jsonEscapeAlloc(self.allocator, self.publish_tag);
+        defer self.allocator.free(escaped_publish_tag);
+        const escaped_publish_access = try jsonEscapeAlloc(self.allocator, self.publish_access);
+        defer self.allocator.free(escaped_publish_access);
         const metadata = try std.fmt.allocPrint(
             self.allocator,
             \\{{
             \\  "_id": "{s}",
             \\  "name": "{s}",
             \\  "dist-tags": {{
-            \\    "latest": "{s}"
+            \\    "{s}": "{s}"
             \\  }},
             \\  "versions": {{
             \\    "{s}": {s}
             \\  }},
-            \\  "access": "public",
+            \\  "access": "{s}",
             \\  "_attachments": {{
             \\    "{s}-{s}.tgz": {{
             \\      "content_type": "application/octet-stream",
@@ -1060,9 +1067,11 @@ pub const RegistryClient = struct {
             .{
                 package_name, // _id
                 package_name, // name
+                escaped_publish_tag, // dist-tag name
                 version, // dist-tags.latest
                 version, // versions key
                 version_obj.items, // full version object (package.json + _id + dist)
+                escaped_publish_access, // npm package access
                 package_name, version, // _attachments key (tgz) — must use full scoped name like npm CLI
                 encoded_tarball, // _attachments data (tgz)
                 tarball.len, // _attachments length (tgz)
@@ -1175,6 +1184,24 @@ pub const RegistryClient = struct {
         return publishers.toOwnedSlice(self.allocator);
     }
 };
+
+test "npm publish metadata applies resolved access and dist-tag" {
+    var client = try RegistryClient.init(std.testing.allocator, "https://registry.npmjs.org");
+    defer client.deinit();
+    client.publish_access = "restricted";
+    client.publish_tag = "next";
+
+    const metadata = try client.createPackageMetadata("@example/pkg", "1.2.3", "tgz");
+    defer std.testing.allocator.free(metadata);
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, metadata, .{});
+    defer parsed.deinit();
+
+    try std.testing.expectEqualStrings("restricted", parsed.value.object.get("access").?.string);
+    const dist_tags = parsed.value.object.get("dist-tags").?.object;
+    try std.testing.expectEqualStrings("1.2.3", dist_tags.get("next").?.string);
+    try std.testing.expect(dist_tags.get("latest") == null);
+}
 
 /// Response from registry publish operation
 pub const PublishResponse = struct {

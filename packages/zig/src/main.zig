@@ -744,8 +744,8 @@ fn whoamiAction(ctx: *cli.BaseCommand.ParseContext) !void {
 fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
-    const access_val = ctx.getOption("access") orelse "public";
-    const tag = ctx.getOption("tag") orelse "latest";
+    const access_val = ctx.getOption("access");
+    const tag = ctx.getOption("tag");
     const registry_val = ctx.getOption("registry") orelse "https://registry.npmjs.org";
     const dry_run = ctx.hasOption("dry-run");
     const skip_val = ctx.getOption("skip");
@@ -890,8 +890,8 @@ fn publisherRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
 fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
-    const access = ctx.getOption("access") orelse "public";
-    const tag = ctx.getOption("tag") orelse "latest";
+    const access = ctx.getOption("access");
+    const tag = ctx.getOption("tag");
     const registry = ctx.getOption("registry") orelse "https://registry.pantry.dev";
     const token = ctx.getOption("token");
     const dry_run = ctx.hasOption("dry-run");
@@ -943,8 +943,8 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const options = lib.commands.RegistryPublishOptions{
         .registry = registry,
         .token = token,
-        .access = access,
-        .tag = tag,
+        .access = access orelse "public",
+        .tag = tag orelse "latest",
         .dry_run = dry_run,
     };
 
@@ -2962,12 +2962,10 @@ pub fn main() !void {
     // ========================================================================
     var npm_publish_cmd = try cli.BaseCommand.init(allocator, "npm:publish", "Publish package to npm (supports OIDC)");
 
-    const npm_access_opt = cli.Option.init("access", "access", "Package access level (public/restricted)", .string)
-        .withDefault("public");
+    const npm_access_opt = cli.Option.init("access", "access", "Package access level (public/restricted)", .string);
     _ = try npm_publish_cmd.addOption(npm_access_opt);
 
-    const npm_tag_opt = cli.Option.init("tag", "tag", "Publish with a tag", .string)
-        .withDefault("latest");
+    const npm_tag_opt = cli.Option.init("tag", "tag", "Publish with a tag", .string);
     _ = try npm_publish_cmd.addOption(npm_tag_opt);
 
     const npm_registry_opt = cli.Option.init("registry", "registry", "Custom registry URL", .string);
@@ -3711,12 +3709,10 @@ pub fn main() !void {
     // ========================================================================
     var publish_cmd = try cli.BaseCommand.init(allocator, "publish", "Publish package to Pantry registry (S3)");
 
-    const pub_access_opt = cli.Option.init("access", "access", "Package access level (public/restricted)", .string)
-        .withDefault("public");
+    const pub_access_opt = cli.Option.init("access", "access", "Package access level (public/restricted)", .string);
     _ = try publish_cmd.addOption(pub_access_opt);
 
-    const pub_tag_opt = cli.Option.init("tag", "tag", "Publish with a tag", .string)
-        .withDefault("latest");
+    const pub_tag_opt = cli.Option.init("tag", "tag", "Publish with a tag", .string);
     _ = try publish_cmd.addOption(pub_tag_opt);
 
     const pub_registry_opt = cli.Option.init("registry", "registry", "Registry URL", .string)
