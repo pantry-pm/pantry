@@ -15,6 +15,10 @@ inputs:
     description: Space-separated list of packages to install after setup
     required: false
     default: ''
+  services:
+    description: Space-separated health-checked CI services to install and start (currently supports redis or redis@X.Y.Z)
+    required: false
+    default: ''
   config-path:
     description: Path to pantry config file
     required: false
@@ -103,7 +107,13 @@ outputs:
     description: The version of pantry that was installed
   release-url:
     description: URL of the created GitHub release (when release is enabled)
+  redis-url:
+    description: Loopback Redis URL when the redis service is requested
+  redis-version:
+    description: Running Redis version when the redis service is requested
 
 runs:
   using: node24
   main: dist/index.js
+  post: dist/post.js
+  post-if: always()

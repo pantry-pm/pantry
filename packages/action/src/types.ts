@@ -1,6 +1,7 @@
 export interface ActionInputs {
   version: string
   packages: string
+  services: string
   configPath: string
   setupOnly: boolean
   publish: string

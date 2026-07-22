@@ -4,6 +4,7 @@ import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
+import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readRedisPid, redisLaunchArgs } from './services'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -21,6 +22,56 @@ import { isKnownAlias, resolvePackageDomain } from '../../ts-pantry/src/utils'
 export * from './types'
 
 const REPO = 'pantry-pm/pantry'
+
+async function startRequestedServices(input: string, pantryBinDir: string, platform: Platform): Promise<void> {
+  const services = parseServiceSpecs(input)
+  if (!services.length) return
+  if (platform.os === 'windows') throw new Error('Pantry Action services are not yet supported on Windows runners')
+
+  for (const service of services) {
+    if (service.name !== 'redis') continue
+    const serviceDir = path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'pantry-services', 'redis')
+    fs.mkdirSync(serviceDir, { recursive: true })
+    const server = path.join(pantryBinDir, 'redis-server')
+    const client = path.join(pantryBinDir, 'redis-cli')
+    const pidfile = path.join(serviceDir, 'redis.pid')
+    if (!fs.existsSync(server) || !fs.existsSync(client))
+      throw new Error('Redis service binaries were not installed into pantry/.bin')
+
+    core.startGroup('Starting Pantry Redis service')
+    await exec.exec(server, redisLaunchArgs(process.env.RUNNER_TEMP || os.tmpdir()))
+    const pid = readRedisPid(pidfile)
+    core.saveState('redis-cli', client)
+    core.saveState('redis-started', 'true')
+
+    let ready = false
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const exitCode = await exec.exec(client, ['-h', '127.0.0.1', '-p', '6379', 'ping'], { silent: true }).catch(() => 1)
+      if (exitCode === 0) {
+        ready = true
+        break
+      }
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    if (!ready) throw new Error(`Redis did not become healthy; inspect ${path.join(serviceDir, 'redis.log')}`)
+
+    let versionOutput = ''
+    await exec.exec(server, ['--version'], {
+      listeners: { stdout: (data: Buffer) => { versionOutput += data.toString() } },
+      silent: true,
+    })
+    const version = parseRedisVersion(versionOutput)
+    if (service.expectedVersion && service.expectedVersion !== version)
+      throw new Error(`Redis service requested ${service.expectedVersion} but installed ${version}`)
+    const url = 'redis://127.0.0.1:6379/0'
+    core.exportVariable('REDIS_URL', url)
+    core.exportVariable('REDIS_SERVICE_VERSION', version)
+    core.setOutput('redis-url', url)
+    core.setOutput('redis-version', version)
+    core.info(`Redis ${version} (pid ${pid}) is healthy at ${url}`)
+    core.endGroup()
+  }
+}
 
 function detectPlatform(): Platform {
   const platform = os.platform()
@@ -539,6 +590,7 @@ export async function run(): Promise<void> {
     const inputs: ActionInputs = {
       version: core.getInput('version') || 'latest',
       packages: core.getInput('packages') || '',
+      services: core.getInput('services') || '',
       configPath: core.getInput('config-path') || 'pantry.config.ts',
       setupOnly: !core.getBooleanInput('install'),
       publish: core.getInput('publish') || '',
@@ -578,6 +630,8 @@ export async function run(): Promise<void> {
     }
 
     const platform = detectPlatform()
+    const requestedServices = parseServiceSpecs(inputs.services)
+    inputs.packages = mergeServicePackages(inputs.packages, requestedServices)
     const cwd = process.cwd()
     const homeDir = os.homedir()
     const pantryDir = path.join(cwd, 'pantry')
@@ -604,7 +658,7 @@ export async function run(): Promise<void> {
     core.endGroup()
 
     // If setup-only with no packages, skip to publish/release (if any)
-    if (inputs.setupOnly && !inputs.packages) {
+    if (inputs.setupOnly && !inputs.packages && !inputs.services) {
       // `install: false` skips `pantry install` of *project* deps, but the
       // action's core contract is to provide the bun runtime — always install
       // it so downstream steps can run `bun …` without a separate setup-bun.
@@ -678,6 +732,11 @@ export async function run(): Promise<void> {
     // before falling back to the deps file / "latest" when installing system
     // packages, so the action stays in lockstep with `pantry install`.
     const lockedVersions = readLockedVersions()
+
+    // Bun is part of the action's baseline runtime contract even when callers
+    // provide an explicit package/service list. Keep downstream `bun` steps
+    // working without requiring every workflow to repeat `bun.sh`.
+    await installSystemPackage('bun.sh', pantryDir, lockedVersions)
 
     // Put `pantry/.bin` (and `~/.pantry/bin`) on PATH *before* any install
     // branch runs. `core.addPath` mutates `process.env.PATH` in-process in
@@ -869,6 +928,11 @@ export async function run(): Promise<void> {
       }
     }
     catch { /* bun not in deps */ }
+
+    // Services are installed through the same versioned package path as every
+    // other dependency, then launched loopback-only and health-checked before
+    // downstream workflow steps begin.
+    await startRequestedServices(inputs.services, pantryBinDir, platform)
 
     // ── Publish ──
     if (inputs.publish) {

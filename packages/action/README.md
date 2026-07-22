@@ -31,6 +31,7 @@ This action allows you to easily install dependencies with pantry in your GitHub
 | Name       | Description                           | Required | Default              |
 |------------|---------------------------------------|----------|----------------------|
 | packages   | Space-separated list of packages to install (overrides auto-detection) | No  | (empty) - auto-detects from project files |
+| services   | Space-separated CI services to install, start, health-check, and stop; Redis accepts an exact `redis@X.Y.Z` pin | No | (empty) |
 | config-path | Path to pantry config file        | No       | `pantry.config.ts` |
 | package-dir | Directory to publish from for monorepo packages | No | (empty) - repository root |
 
@@ -43,6 +44,27 @@ This action allows you to easily install dependencies with pantry in your GitHub
 - 🔧 **Bun-powered**: Uses Bun for faster installation
 - 📦 **Global flag support**: Handles global installation flags in dependency files
 - 💬 **Comment-aware**: Properly parses YAML files with inline comments
+
+### Health-checked Redis
+
+Use the service input when tests need Redis. Pantry installs the exact requested
+Redis package, binds it only to loopback, disables persistence for the ephemeral
+runner, waits for `PONG`, exports `REDIS_URL` and `REDIS_SERVICE_VERSION`, and
+stops the process after the job.
+
+```yaml
+- name: Setup Pantry and Redis
+  uses: pantry-pm/pantry/packages/action@main
+  with:
+    install: 'false'
+    services: redis@8.8.0
+
+- run: bun test
+```
+
+The action fails before tests when the installed version differs from the exact
+service pin or Redis does not become ready. `redis-url` and `redis-version` are
+also available as action outputs.
 
 ## Supported Dependency Files
 

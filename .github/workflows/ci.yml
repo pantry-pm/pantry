@@ -89,8 +89,36 @@ jobs:
           cd packages/zig
           zig build test
 
+  action-redis-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Pantry and pinned Redis
+        id: pantry
+        uses: ./packages/action
+        with:
+          install: 'false'
+          services: redis@8.8.0
+
+      - name: Verify exported runtime and live service contract
+        env:
+          ACTION_REDIS_URL: ${{ steps.pantry.outputs.redis-url }}
+          ACTION_REDIS_VERSION: ${{ steps.pantry.outputs.redis-version }}
+        run: |
+          test "$REDIS_URL" = "redis://127.0.0.1:6379/0"
+          test "$ACTION_REDIS_URL" = "$REDIS_URL"
+          test "$ACTION_REDIS_VERSION" = "8.8.0"
+          test "$REDIS_SERVICE_VERSION" = "$ACTION_REDIS_VERSION"
+          bun --version
+          test "$(redis-cli -u "$REDIS_URL" ping)" = "PONG"
+          redis-cli -u "$REDIS_URL" set pantry-action-contract ready
+          test "$(redis-cli -u "$REDIS_URL" get pantry-action-contract)" = "ready"
+
   continuous-release:
-    needs: [lint, typecheck, test]
+    needs: [lint, typecheck, test, action-redis-service]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Best-effort commit-preview publishing. Don't fail the whole workflow
@@ -126,9 +154,9 @@ jobs:
 
   notify:
     name: discord-failure-alert
-    needs: [lint, typecheck, test, continuous-release]
+    needs: [lint, typecheck, test, action-redis-service, continuous-release]
     # continuous-release is best-effort; only alert on gating job failures.
-    if: always() && (needs.lint.result == 'failure' || needs.typecheck.result == 'failure' || needs.test.result == 'failure')
+    if: always() && (needs.lint.result == 'failure' || needs.typecheck.result == 'failure' || needs.test.result == 'failure' || needs.action-redis-service.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -143,6 +171,7 @@ jobs:
               {"name": "Lint", "value": "${{ needs.lint.result }}", "inline": true},
               {"name": "Typecheck", "value": "${{ needs.typecheck.result }}", "inline": true},
               {"name": "Test", "value": "${{ needs.test.result }}", "inline": true},
+              {"name": "Redis service", "value": "${{ needs.action-redis-service.result }}", "inline": true},
               {"name": "Release", "value": "${{ needs.continuous-release.result }}", "inline": true},
               {"name": "Branch", "value": "${{ github.ref_name }}", "inline": true},
               {"name": "Author", "value": "${{ github.actor }}", "inline": true}

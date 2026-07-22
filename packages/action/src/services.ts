@@ -1,0 +1,68 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+
+export interface ServiceSpec {
+  name: 'redis'
+  packageSpec: string
+  expectedVersion?: string
+}
+
+export function parseServiceSpecs(input: string): ServiceSpec[] {
+  const services: ServiceSpec[] = []
+  const seen = new Set<string>()
+  for (const raw of input.split(/[\s,]+/).filter(Boolean)) {
+    const [name, version] = raw.split('@')
+    if (name !== 'redis') throw new Error(`Unsupported Pantry Action service: ${name}`)
+    if (seen.has(name)) throw new Error(`Duplicate Pantry Action service: ${name}`)
+    if (version !== undefined && !/^\d+\.\d+\.\d+$/.test(version))
+      throw new Error(`Redis service versions must be exact semantic versions: ${raw}`)
+    seen.add(name)
+    services.push({ name, packageSpec: version ? `redis@${version}` : 'redis', expectedVersion: version })
+  }
+  return services
+}
+
+export function mergeServicePackages(packages: string, services: ServiceSpec[]): string {
+  const requested = packages.split(/\s+/).filter(Boolean)
+  for (const service of services) {
+    const existing = requested.find(spec => spec.split('@')[0] === service.name)
+    if (existing && existing !== service.packageSpec)
+      throw new Error(`Conflicting package and service versions for ${service.name}: ${existing} vs ${service.packageSpec}`)
+    if (!existing) requested.push(service.packageSpec)
+  }
+  return requested.join(' ')
+}
+
+export function redisLaunchArgs(tempDir: string, port = 6379): string[] {
+  const serviceDir = path.join(tempDir, 'pantry-services', 'redis')
+  return [
+    '--bind', '127.0.0.1',
+    '--port', String(port),
+    '--protected-mode', 'yes',
+    '--save', '',
+    '--appendonly', 'no',
+    '--daemonize', 'yes',
+    '--dir', serviceDir,
+    '--pidfile', path.join(serviceDir, 'redis.pid'),
+    '--logfile', path.join(serviceDir, 'redis.log'),
+  ]
+}
+
+export function readRedisPid(pidfile: string): number {
+  if (!fs.existsSync(pidfile)) throw new Error(`Redis did not create its pidfile: ${pidfile}`)
+  const pid = Number.parseInt(fs.readFileSync(pidfile, 'utf8').trim(), 10)
+  if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error(`Redis wrote an invalid pidfile: ${pidfile}`)
+  try {
+    process.kill(pid, 0)
+  }
+  catch {
+    throw new Error(`Redis process ${pid} is not running`)
+  }
+  return pid
+}
+
+export function parseRedisVersion(output: string): string {
+  const match = output.match(/\bv=(\d+\.\d+\.\d+)\b/)
+  if (!match) throw new Error(`Could not determine Redis version from: ${output.trim()}`)
+  return match[1]
+}

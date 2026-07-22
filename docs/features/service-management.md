@@ -317,6 +317,25 @@ pantry start db
 # MySQL: Initializes database with mysql_install_db
 ```
 
+`start` and `restart` return success only after the service's declared health
+check passes. Redis must answer `PONG`; merely creating a launchd or systemd
+process is not treated as readiness. Pantry polls for up to 30 seconds and
+stops the failed service before returning a non-zero status.
+
+For GitHub Actions, use the action's first-class service input instead of relying
+on a runner's system service manager:
+
+```yaml
+- uses: pantry-pm/pantry/packages/action@main
+  with:
+    install: 'false'
+    services: redis@8.8.0
+```
+
+This installs the exact Redis version, starts an ephemeral loopback-only server,
+exports `REDIS_URL` and `REDIS_SERVICE_VERSION`, verifies readiness, and shuts
+the service down after the job.
+
 ### Stopping Services
 
 Stop running services:
