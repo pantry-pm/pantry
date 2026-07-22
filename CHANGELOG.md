@@ -1,3 +1,30 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.47...v0.10.48)
+
+## 🐛 Bug Fixes
+
+- support commit hooks in worktrees ([8065b0e](https://github.com/pantry-pm/pantry/commit/8065b0e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **installer**: repair corrupt project executables ([39fe5ec](https://github.com/pantry-pm/pantry/commit/39fe5ec)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.48 ([a0bce71](https://github.com/pantry-pm/pantry/commit/a0bce71)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update fly.io, github.com/ggerganov/llama.cpp, ziglang.org ([235c95b](https://github.com/pantry-pm/pantry/commit/235c95b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (code.visualstudio.com, cursor.com) ([4e7a967](https://github.com/pantry-pm/pantry/commit/4e7a967)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update planetscale.com to 0.305.0 ([821f5d6](https://github.com/pantry-pm/pantry/commit/821f5d6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update gflags.github.io, github.com/ggerganov/llama.cpp, pocketbase.io, sentry.io ([dc87810](https://github.com/pantry-pm/pantry/commit/dc87810)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/router-for-me/CLIProxyAPI, ohmyposh.dev, openbao.org/openbao ([f34af9e](https://github.com/pantry-pm/pantry/commit/f34af9e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, cursor.com, gdal.org ([87b3117](https://github.com/pantry-pm/pantry/commit/87b3117)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update duckdb.org, github.com/ggerganov/llama.cpp, odigos.io, whatsapp.com, xkbcommon.org ([09184f7](https://github.com/pantry-pm/pantry/commit/09184f7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (codex.openai.com, whatsapp.com) ([dfb5409](https://github.com/pantry-pm/pantry/commit/dfb5409)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update argoproj.github.io/workflows, codex.openai.com, github.com/ggerganov/llama.cpp, grpc.io, sniffnet.net, unbound.net ([2bac441](https://github.com/pantry-pm/pantry/commit/2bac441)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, codex.openai.com, github.com/ggerganov/llama.cpp ([70fd615](https://github.com/pantry-pm/pantry/commit/70fd615)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (codex.openai.com, lmstudio.ai) ([a2abdaf](https://github.com/pantry-pm/pantry/commit/a2abdaf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp, podman.io, rubygems.org ([14b7c3b](https://github.com/pantry-pm/pantry/commit/14b7c3b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.46...v0.10.47)
 
 ## 🧹 Chores
