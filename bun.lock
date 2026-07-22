@@ -10,12 +10,13 @@
         "@stacksjs/ts-cloud": "^0.7.26",
       },
       "devDependencies": {
+        "@stacksjs/bumpx": "^0.2.7",
         "better-dx": "^0.2.15",
       },
     },
     "packages/action": {
       "name": "pantry-setup",
-      "version": "0.10.30",
+      "version": "0.10.41",
       "dependencies": {
         "@actions/cache": "^6.0.0",
         "@actions/core": "^1.11.1",
@@ -30,14 +31,14 @@
     },
     "packages/benchmark": {
       "name": "@pantry/benchmark",
-      "version": "0.10.30",
+      "version": "0.10.41",
       "devDependencies": {
         "mitata": "^1.0.34",
       },
     },
     "packages/inspector": {
       "name": "@stacksjs/pantry-inspector",
-      "version": "0.10.30",
+      "version": "0.10.41",
       "devDependencies": {
         "bun-types": "latest",
         "typescript": "^7.0.2",
@@ -45,7 +46,7 @@
     },
     "packages/registry": {
       "name": "@stacksjs/registry",
-      "version": "0.10.30",
+      "version": "0.10.41",
       "dependencies": {
         "@stacksjs/stx": "^0.2.82",
         "@ts-charts/array": "^0.2.0",
@@ -61,7 +62,7 @@
     },
     "packages/ts-pantry": {
       "name": "ts-pantry",
-      "version": "0.10.30",
+      "version": "0.10.41",
       "bin": {
         "ts-pantry": "./dist/bin/cli.js",
       },
@@ -155,7 +156,7 @@
 
     "@protobuf-ts/runtime-rpc": ["@protobuf-ts/runtime-rpc@2.11.1", "", { "dependencies": { "@protobuf-ts/runtime": "^2.11.1" } }, "sha512-4CqqUmNA+/uMz00+d3CYKgElXO9VrEbucjnBFEjqI4GuDrEQ32MaI3q+9qPBvIGOlL4PmHXrzM32vBPWRhQKWQ=="],
 
-    "@stacksjs/bumpx": ["@stacksjs/bumpx@0.2.6", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0", "@stacksjs/logsmith": "^0.2.1", "bunfig": "^0.15.6" }, "bin": { "bumpx": "./dist/bin/cli.js" } }, "sha512-y4Jz8WKTJtes6/o1vsIbOeuIoqKItfnbeel94qrJKNKsY2CBzU3FT3YwKjs8K52JFfyACCdQa1tGx+lQWtpyTA=="],
+    "@stacksjs/bumpx": ["@stacksjs/bumpx@0.2.7", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0", "@stacksjs/logsmith": "^0.2.1", "bunfig": "^0.15.6" }, "bin": { "bumpx": "./dist/bin/cli.js" } }, "sha512-IgLvfv2NnBAVXEefVuN96v9Mzd7ofx8kuErKwd5H3SxUKfwbxJUb5Xe9DopR4uZEYwEUZpUf4N13H6/RhZYDpQ=="],
 
     "@stacksjs/bunpress": ["@stacksjs/bunpress@0.1.11", "", { "dependencies": { "@stacksjs/stx": "^0.2.72", "@stacksjs/ts-cloud": "^0.5.17", "@stacksjs/ts-md": "^0.1.1", "bunfig": "^0.15.6" }, "bin": { "bunpress": "./dist/bin/cli.js" } }, "sha512-nXWQxlBcEU9RmjZC1Wn+DSiQyNyHWUPsxAl+xuf2F/Vqk/FCfpCBueZCO1sP87dYFguWDIig8TQVB1DEBk+CTA=="],
 
@@ -526,6 +527,8 @@
     "@actions/tool-cache/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
     "@stacksjs/bunpress/@stacksjs/ts-cloud": ["@stacksjs/ts-cloud@0.5.35", "", { "dependencies": { "@stacksjs/ts-xml": "^0.1.0", "@ts-cloud/aws-types": "0.5.35", "@ts-cloud/core": "0.5.35" }, "bin": { "cloud": "./dist/bin/cli.js" } }, "sha512-yzUGTCCSDBr5AD5FEmQqcLz6RyYj68LLitE4HvmKFmom4nVVNn4L2ll9HI8Wdjs9CG6mu8NoFd3gTnryP0EXWQ=="],
+
+    "better-dx/@stacksjs/bumpx": ["@stacksjs/bumpx@0.2.6", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0", "@stacksjs/logsmith": "^0.2.1", "bunfig": "^0.15.6" }, "bin": { "bumpx": "./dist/bin/cli.js" } }, "sha512-y4Jz8WKTJtes6/o1vsIbOeuIoqKItfnbeel94qrJKNKsY2CBzU3FT3YwKjs8K52JFfyACCdQa1tGx+lQWtpyTA=="],
 
     "better-dx/typescript": ["typescript@6.0.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw=="],
 
