@@ -1,3 +1,14 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.46...v0.10.47)
+
+## 🧹 Chores
+
+- release v0.10.47 ([d542e24](https://github.com/pantry-pm/pantry/commit/d542e24)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **release**: synchronize workspace locks ([eb40b9a](https://github.com/pantry-pm/pantry/commit/eb40b9a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.45...v0.10.46)
 
 ## 🧹 Chores
