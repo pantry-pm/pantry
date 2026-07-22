@@ -1,3 +1,14 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.45...v0.10.46)
+
+## 🧹 Chores
+
+- release v0.10.46 ([2be1508](https://github.com/pantry-pm/pantry/commit/2be1508)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **release**: adopt lock-aware Bumpx ([1614ca0](https://github.com/pantry-pm/pantry/commit/1614ca0)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.44...v0.10.45)
 
 ## 🐛 Bug Fixes
