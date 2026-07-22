@@ -1,0 +1,29 @@
+{
+  "slug": "pantry",
+  "proxies": [
+    {
+      "to": "registry.pantry.dev",
+      "from": "localhost:3001",
+      "id": "registry.pantry.dev"
+    },
+    {
+      "to": "pantry.dev",
+      "from": "localhost:3001",
+      "id": "pantry.dev"
+    },
+    {
+      "to": "www.pantry.dev",
+      "from": "localhost:3001",
+      "id": "www.pantry.dev"
+    }
+  ],
+  "productionCerts": {
+    "certsDir": "/etc/rpx/certs"
+  },
+  "https": true,
+  "hostsManagement": false,
+  "cleanup": {
+    "hosts": false,
+    "certs": false
+  }
+}
