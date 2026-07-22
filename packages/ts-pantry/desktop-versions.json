@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.715.72028",
-      "published": "26.715.72028",
+      "latest": "26.715.72359",
+      "published": "26.715.72359",
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.29.16",
-      "published": "2.26.29.16",
+      "latest": "2.26.29.18",
+      "published": "2.26.29.18",
       "needsUpdate": false
     },
     {
