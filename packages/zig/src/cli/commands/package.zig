@@ -1272,6 +1272,7 @@ fn publishSingleToNpm(
                     \\  gh secret set NPM_TOKEN
                     \\
                     \\Pantry also accepts NODE_AUTH_TOKEN and BUN_AUTH_TOKEN.
+                    \\Standard project and user npmrc tokens are also supported.
                     \\Or configure OIDC trusted publishing on npm.
                     ,
                 );
@@ -1282,9 +1283,10 @@ fn publishSingleToNpm(
                 \\
                 \\To fix this, you can either:
                 \\  1. Set NPM_TOKEN, NODE_AUTH_TOKEN, or BUN_AUTH_TOKEN
-                \\  2. Create ~/.pantry/credentials with your npm token:
+                \\  2. Configure a project or user npmrc auth token
+                \\  3. Create ~/.pantry/credentials with your npm token:
                 \\     NPM_TOKEN=npm_xxxxxxxxxxxx
-                \\  3. Use OIDC trusted publishing in GitHub Actions
+                \\  4. Use OIDC trusted publishing in GitHub Actions
                 \\
                 \\Get your npm token from: https://www.npmjs.com/settings/tokens
                 ,
