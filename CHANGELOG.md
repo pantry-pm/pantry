@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.38...v0.10.39)
+
+## 🐛 Bug Fixes
+
+- **action**: install Redis through Pantry resolver ([1ed1e4d](https://github.com/pantry-pm/pantry/commit/1ed1e4d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.39 ([26ac31d](https://github.com/pantry-pm/pantry/commit/26ac31d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.37...v0.10.38)
 
 ## 🐛 Bug Fixes
