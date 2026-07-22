@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.44...v0.10.45)
+
+## 🐛 Bug Fixes
+
+- **installer**: resolve native Zig prereleases ([7cccf0d](https://github.com/pantry-pm/pantry/commit/7cccf0d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.45 ([bdd4fb1](https://github.com/pantry-pm/pantry/commit/bdd4fb1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.43...v0.10.44)
 
 ## 🐛 Bug Fixes
