@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.42...v0.10.43)
+
+## 🐛 Bug Fixes
+
+- **action**: retry pending release assets ([9218391](https://github.com/pantry-pm/pantry/commit/9218391)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.43 ([7aed4aa](https://github.com/pantry-pm/pantry/commit/7aed4aa)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.41...v0.10.42)
 
 ## 🚀 Features
