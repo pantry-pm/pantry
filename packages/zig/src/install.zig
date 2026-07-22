@@ -37,6 +37,7 @@ pub const ValidationResult = validator.ValidationResult;
 pub const validateInstallation = validator.validateInstallation;
 pub const validateBinary = validator.validateBinary;
 pub const validateDirectoryStructure = validator.validateDirectoryStructure;
+pub const hasUsableDeclaredPrograms = validator.hasUsableDeclaredPrograms;
 
 // Re-export symlink types
 pub const createBinarySymlink = symlink.createBinarySymlink;

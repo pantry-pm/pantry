@@ -7,6 +7,7 @@ const errors = @import("../core/error.zig");
 const downloader = @import("downloader.zig");
 const extractor = @import("extractor.zig");
 const libfixer = @import("libfixer.zig");
+const validator = @import("validator.zig");
 const semver = @import("../packages/semver.zig");
 const style = @import("../cli/style.zig");
 
@@ -2812,7 +2813,9 @@ pub const Installer = struct {
         if (self.verbose) std.debug.print("[verbose:project] installToProject: {s} @ {s} -> {s}\n", .{ spec.name, spec.version, project_pkg_dir });
 
         // Check if already installed in project (verify actual package structure, not just dir existence)
-        const already_installed = !options.force and self.hasPackageStructure(project_pkg_dir);
+        const already_installed = !options.force and
+            self.hasPackageStructure(project_pkg_dir) and
+            validator.hasUsableDeclaredPrograms(self.allocator, domain, project_pkg_dir);
 
         if (already_installed) {
             if (self.verbose) std.debug.print("[verbose:project] already installed in project: {s}\n", .{project_pkg_dir});
@@ -2830,10 +2833,8 @@ pub const Installer = struct {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
 
-        const has_global = blk: {
-            io_helper.accessAbsolute(global_pkg_dir, .{}) catch break :blk false;
-            break :blk true;
-        };
+        const has_global = self.hasPackageStructure(global_pkg_dir) and
+            validator.hasUsableDeclaredPrograms(self.allocator, domain, global_pkg_dir);
 
         if (has_global) {
             // Copy from global cache - free unused S3 URL
@@ -2842,8 +2843,7 @@ pub const Installer = struct {
                 owned_url = null;
             }
             used_cache.* = true;
-            try io_helper.makePath(project_pkg_dir);
-            try self.copyDirectoryStructure(global_pkg_dir, project_pkg_dir);
+            try self.materializeVerifiedProjectPackage(global_pkg_dir, project_pkg_dir, domain);
             try self.createProjectSymlinks(project_root, domain, spec.version, project_pkg_dir);
             return project_pkg_dir;
         }
@@ -3869,6 +3869,34 @@ pub const Installer = struct {
                 }
             }
         }
+    }
+
+    /// Materialize a project package from a verified global package without
+    /// allowing an interrupted copy to masquerade as an installed package.
+    fn materializeVerifiedProjectPackage(self: *Installer, source: []const u8, dest: []const u8, domain: []const u8) !void {
+        if (!self.hasPackageStructure(source) or
+            !validator.hasUsableDeclaredPrograms(self.allocator, domain, source))
+        {
+            return error.InvalidPackageSource;
+        }
+
+        const partial = try std.fmt.allocPrint(self.allocator, "{s}.partial", .{dest});
+        defer self.allocator.free(partial);
+        io_helper.deleteTree(partial) catch {};
+        errdefer io_helper.deleteTree(partial) catch {};
+
+        try self.copyDirectoryStructure(source, partial);
+        if (!self.hasPackageStructure(partial) or
+            !validator.hasUsableDeclaredPrograms(self.allocator, domain, partial))
+        {
+            return error.InvalidPackageMaterialization;
+        }
+
+        // The destination is removed only after the replacement has been fully
+        // copied and validated. A failed copy leaves the old destination in place;
+        // a failed rename leaves no path that can pass the installed checks.
+        io_helper.deleteTree(dest) catch {};
+        try io_helper.rename(partial, dest);
     }
 
     /// Make a file executable (chmod +x) using native syscall

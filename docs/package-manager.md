@@ -87,16 +87,17 @@ The normal project operation follows this order:
 
 1. Discover the effective project/workspace root and dependency manifest.
 2. Read `pantry.lock` and determine whether recorded constraints still match.
-3. Use the lockfile fast path when every package is resolvable and destination
-   content exists; otherwise resolve missing or changed packages.
+3. Use the lockfile fast path only when every package is resolvable, destination
+   content exists, and every concrete catalog-declared program is a regular,
+   non-empty executable; otherwise repair or resolve the package.
 4. Classify each spec as a Pantry system package, npm package, workspace package,
    local link, Git source, or another supported source.
 5. Resolve exact versions and tarball URLs, retaining integrity metadata when the
    upstream registry supplies it.
 6. Download in parallel unless offline or satisfied by cache.
 7. Verify any supplied integrity claim before extraction.
-8. Extract into managed content, create executable shims/links, and run permitted
-   lifecycle hooks.
+8. Extract into managed content, validate declared programs, create executable
+   shims/links, and run permitted lifecycle hooks.
 9. Update the lockfile only after successful results and only when writes are
    allowed.
 
@@ -150,6 +151,15 @@ network; if verified content is unavailable locally, the install fails.
 Native archives are validated for expected archive structure. When a valid
 sidecar checksum is available, it is checked before extraction. Absence of a
 sidecar is explicitly weaker than a verified sidecar and is not a signature.
+
+Project materialization is transactional at the package-directory boundary.
+Pantry copies a verified global package into a sibling `.partial` directory,
+checks its package structure and every concrete catalog-declared program, then
+replaces the project copy. A zero-byte, non-regular, missing, or non-executable
+program never satisfies the lockfile fast path. When the global package is
+usable, rerunning `pantry install` repairs the project copy from it without a
+network request. A failed or canceled copy leaves `.partial` state that cannot
+count as installed and is removed on the next attempt.
 
 ## Lifecycle scripts and trust
 
@@ -254,6 +264,8 @@ environment instead of copying packages into the global shell.
 - Frozen lockfile missing or divergent: fail without modifying it.
 - Offline cache miss: fail without a network fallback.
 - Integrity mismatch or unsupported integrity algorithm: fail before extraction.
+- Missing, empty, non-regular, or non-executable declared program: repair from a
+  verified global package or fail installation; never report the package as current.
 - Untrusted lifecycle script: require trust or an explicit script policy.
 - Registry authentication failure: fail without uploading.
 - Duplicate immutable version: registry returns conflict; do not overwrite it.
@@ -264,6 +276,7 @@ environment instead of copying packages into the global shell.
 | Contract | Evidence |
 | --- | --- |
 | Integrity algorithms and tamper rejection | `packages/zig/src/install/pipeline.zig` unit tests |
+| Native program validation and zero-byte repair gating | `packages/zig/src/install/validator.zig` and installer tests |
 | Frozen, missing, and stale lockfile behavior | install/workspace/lockfile tests under `packages/zig` |
 | Registry resolution and install integration | `packages/zig/test/registry_integration_test.zig` and install tests |
 | Workspace lock and publication behavior | workspace and catalog tests under `packages/zig/test` |

@@ -577,8 +577,7 @@ pub fn canSkipCanonicalFromLockfileWithNameSet(
     var dest_buf: [std.fs.max_path_bytes]u8 = undefined;
     const dest_dir = std.fmt.bufPrint(&dest_buf, "{s}/{s}/{s}", .{ proj_dir, modules_dir, clean_name }) catch return false;
     io_helper.accessAbsolute(dest_dir, .{}) catch return false;
-
-    return true;
+    return install.hasUsableDeclaredPrograms(std.heap.page_allocator, clean_name, dest_dir);
 }
 
 /// Check if a package can be skipped based on the lockfile.
@@ -614,8 +613,7 @@ pub fn canSkipFromLockfile(
     var dest_buf: [std.fs.max_path_bytes]u8 = undefined;
     const dest_dir = std.fmt.bufPrint(&dest_buf, "{s}/{s}/{s}", .{ proj_dir, modules_dir, clean_name }) catch return false;
     io_helper.accessAbsolute(dest_dir, .{}) catch return false;
-
-    return true;
+    return install.hasUsableDeclaredPrograms(std.heap.page_allocator, clean_name, dest_dir);
 }
 
 /// Worker function for concurrent package installation

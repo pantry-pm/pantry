@@ -785,7 +785,7 @@ pub fn findExecutable(allocator: std.mem.Allocator, name: []const u8) !?[]const 
 
 /// Check if `path` exists and is regular-or-symlink with at least one
 /// execute bit set. Uses libc `access(path, X_OK)` for portability.
-fn isExecutable(path: []const u8) bool {
+pub fn isExecutable(path: []const u8) bool {
     if (comptime is_windows) return true; // On Windows, lookup is by extension; defer to spawn.
     var path_buf: [std.fs.max_path_bytes:0]u8 = undefined;
     if (path.len >= path_buf.len) return false;
