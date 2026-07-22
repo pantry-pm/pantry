@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.43...v0.10.44)
+
+## 🐛 Bug Fixes
+
+- **installer**: resolve Zig prerelease ranges ([a2ad06b](https://github.com/pantry-pm/pantry/commit/a2ad06b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.44 ([8db7505](https://github.com/pantry-pm/pantry/commit/8db7505)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.42...v0.10.43)
 
 ## 🐛 Bug Fixes
