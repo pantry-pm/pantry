@@ -93,6 +93,7 @@ export const grpcioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.83.0',
     '1.82.1',
     '1.82.0',
     '1.81.1',
