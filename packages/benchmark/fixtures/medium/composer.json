@@ -1,7 +1,7 @@
 {
   "name": "benchmark/medium",
   "require": {
-    "laravel/framework": "^11.0",
+    "laravel/framework": "^12.61.1",
     "guzzlehttp/guzzle": "^7.0",
     "monolog/monolog": "^3.0",
     "symfony/console": "^7.0",
