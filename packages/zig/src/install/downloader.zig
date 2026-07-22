@@ -265,10 +265,12 @@ fn isShortDevVersion(version: []const u8) bool {
 ///   - Short dev like "0.16.0-dev" → full dev version (e.g. "0.16.0-dev.1484+d0ba6642b")
 ///   - Anything else → returned as-is
 pub fn resolveZigDevVersion(allocator: std.mem.Allocator, version: []const u8) ![]const u8 {
+    const semver = @import("../packages/semver.zig");
     const is_wildcard = std.mem.eql(u8, version, "*") or std.mem.eql(u8, version, "latest");
     const is_short_dev = isShortDevVersion(version);
+    const is_range = semver.isSemverRange(version);
 
-    if (!is_wildcard and !is_short_dev) return allocator.dupe(u8, version);
+    if (!is_wildcard and !is_short_dev and !is_range) return allocator.dupe(u8, version);
 
     if (lookupS3Registry(allocator, "ziglang.org", version)) |result| {
         allocator.free(result.tarball_url);
@@ -569,6 +571,14 @@ test "zig dev build numbers compare numerically" {
     try std.testing.expectEqual(@as(?u64, 1422), zigDevBuildNumber("0.17.0-dev.1422+e863bf3be"));
     try std.testing.expectEqual(@as(?u64, 986), zigDevBuildNumber("0.17.0-dev.986_f3544a707"));
     try std.testing.expectEqual(@as(?u64, null), zigDevBuildNumber("0.17.0"));
+}
+
+test "Zig prerelease ranges are resolved through registry metadata" {
+    const allocator = std.testing.allocator;
+    const resolved = try resolveZigDevVersion(allocator, "^0.17.0-dev");
+    defer allocator.free(resolved);
+    try std.testing.expect(std.mem.startsWith(u8, resolved, "0.17.0-dev."));
+    try std.testing.expect(!std.mem.eql(u8, resolved, "^0.17.0-dev"));
 }
 
 /// Try to find a package tarball published via `pantry publish` (packages/pantry/ prefix).

@@ -2562,27 +2562,14 @@ pub const Installer = struct {
         const start_ts_ = io_helper.clockGettime();
         const start_time = @as(i64, @intCast(start_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(start_ts_.nsec)), 1_000_000);
 
-        // Resolve semver constraints (^, ~, >=, etc.) against known versions first.
-        const effective_version = blk: {
-            if (spec.version.len > 0 and (spec.version[0] == '^' or spec.version[0] == '~' or spec.version[0] == '>' or spec.version[0] == '<')) {
-                if (semver.resolveVersion("ziglang.org", spec.version)) |resolved| {
-                    if (!options.quiet) {
-                        style.print("  → Resolved {s} to {s}\n", .{ spec.version, resolved });
-                    }
-                    break :blk resolved;
-                }
-                if (!options.quiet) {
-                    style.print("  → No match for {s}, resolving latest\n", .{spec.version});
-                }
-                break :blk spec.version;
-            }
-            break :blk spec.version;
-        };
-
-        // Resolve short dev versions like "0.17.0-dev" before choosing the install path,
-        // so the on-disk package and .bin shim point at the concrete dev build.
-        const resolved_version = try downloader.resolveZigDevVersion(self.allocator, effective_version);
-        defer if (!std.mem.eql(u8, resolved_version, effective_version)) self.allocator.free(resolved_version);
+        // Resolve wildcard, short development, and range requests from the live
+        // binary registry before choosing the install path. The generated catalog
+        // is intentionally not allowed to freeze a rolling Zig development range.
+        const resolved_version = try downloader.resolveZigDevVersion(self.allocator, spec.version);
+        defer self.allocator.free(resolved_version);
+        if (!options.quiet and !std.mem.eql(u8, resolved_version, spec.version)) {
+            style.print("  → Resolved {s} to {s}\n", .{ spec.version, resolved_version });
+        }
 
         // Use standard install path — same as every other package: {modules_dir}/{domain}/v{version}
         const install_dir = if (options.project_root) |project_root|

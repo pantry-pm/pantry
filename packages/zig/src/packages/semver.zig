@@ -24,6 +24,9 @@ pub const Constraint = struct {
     major: u32,
     minor: u32,
     patch: u32,
+    allows_prerelease: bool = false,
+    prerelease_number: ?u64 = null,
+    raw_version: ?[]const u8 = null,
 };
 
 /// Parse a semver version string into major.minor.patch
@@ -148,6 +151,9 @@ pub fn parseConstraint(constraint_str: []const u8) !Constraint {
         .major = version.major,
         .minor = version.minor,
         .patch = version.patch,
+        .allows_prerelease = isPrerelease(version_str),
+        .prerelease_number = prereleaseNumber(version_str),
+        .raw_version = version_str,
     };
 }
 
@@ -177,24 +183,60 @@ pub fn isPrerelease(version_str: []const u8) bool {
     return std.mem.indexOfScalar(u8, v, '-') != null;
 }
 
+fn prereleaseNumber(version_str: []const u8) ?u64 {
+    const marker = "-dev.";
+    const start = (std.mem.indexOf(u8, version_str, marker) orelse return null) + marker.len;
+    var end = start;
+    while (end < version_str.len and std.ascii.isDigit(version_str[end])) : (end += 1) {}
+    if (end == start) return null;
+    return std.fmt.parseInt(u64, version_str[start..end], 10) catch null;
+}
+
+fn versionOrderAgainstConstraint(version_str: []const u8, version: Version, constraint: Constraint) std.math.Order {
+    if (version.major != constraint.major) return std.math.order(version.major, constraint.major);
+    if (version.minor != constraint.minor) return std.math.order(version.minor, constraint.minor);
+    if (version.patch != constraint.patch) return std.math.order(version.patch, constraint.patch);
+
+    if (!constraint.allows_prerelease) return .eq;
+    if (!isPrerelease(version_str)) return .gt;
+    return std.math.order(prereleaseNumber(version_str) orelse 0, constraint.prerelease_number orelse 0);
+}
+
+fn sameRegistryVersion(a: []const u8, b: []const u8) bool {
+    const left = if (std.mem.startsWith(u8, a, "v")) a[1..] else a;
+    const right = if (std.mem.startsWith(u8, b, "v")) b[1..] else b;
+    if (left.len != right.len) return false;
+    for (left, right) |l, r| {
+        if (l == r) continue;
+        if ((l == '+' or l == '_') and (r == '+' or r == '_')) continue;
+        return false;
+    }
+    return true;
+}
+
 /// Check if a version satisfies a constraint
 pub fn satisfiesConstraint(version_str: []const u8, constraint: Constraint) bool {
     const version = parseVersion(version_str) catch return false;
 
-    // Pre-releases never satisfy a range constraint (^, ~, >=, …) — npm/semver
-    // semantics. Without this, parseVersion drops the "-RC1" tag and a range like
-    // "^2.8.10" wrongly matches "2.10.0-RC1" over the published final "2.10.0".
-    // Exact pins are left alone (the tag is already dropped, so "=2.10.0" matching
-    // both is pre-existing behaviour and harmless).
-    if (constraint.type != .exact and isPrerelease(version_str)) return false;
+    // Stable constraints never opt into prereleases. A constraint which names a
+    // prerelease channel, such as ^0.17.0-dev, may select matching builds.
+    if (isPrerelease(version_str) and !constraint.allows_prerelease) return false;
+
+    const order = versionOrderAgainstConstraint(version_str, version, constraint);
 
     return switch (constraint.type) {
-        .exact => version.major == constraint.major and
-            version.minor == constraint.minor and
-            version.patch == constraint.patch,
+        .exact => if (constraint.raw_version) |raw|
+            if (std.mem.endsWith(u8, raw, "-dev"))
+                version.major == constraint.major and version.minor == constraint.minor and version.patch == constraint.patch and
+                    std.mem.startsWith(u8, version_str, raw) and version_str.len > raw.len and version_str[raw.len] == '.'
+            else
+                sameRegistryVersion(version_str, raw)
+        else
+            version.major == constraint.major and version.minor == constraint.minor and version.patch == constraint.patch,
 
         // ^1.2.3 := >=1.2.3 <2.0.0
         .caret => {
+            if (order == .lt) return false;
             if (constraint.major == 0) {
                 if (constraint.minor == 0) {
                     // ^0.0.x: only exact patch match (>=0.0.x <0.0.(x+1))
@@ -214,25 +256,17 @@ pub fn satisfiesConstraint(version_str: []const u8, constraint: Constraint) bool
         },
 
         // ~1.2.3 := >=1.2.3 <1.3.0
-        .tilde => version.major == constraint.major and
+        .tilde => order != .lt and version.major == constraint.major and
             version.minor == constraint.minor and
             version.patch >= constraint.patch,
 
-        .gte => version.major > constraint.major or
-            (version.major == constraint.major and version.minor > constraint.minor) or
-            (version.major == constraint.major and version.minor == constraint.minor and version.patch >= constraint.patch),
+        .gte => order != .lt,
 
-        .lte => version.major < constraint.major or
-            (version.major == constraint.major and version.minor < constraint.minor) or
-            (version.major == constraint.major and version.minor == constraint.minor and version.patch <= constraint.patch),
+        .lte => order != .gt,
 
-        .gt => version.major > constraint.major or
-            (version.major == constraint.major and version.minor > constraint.minor) or
-            (version.major == constraint.major and version.minor == constraint.minor and version.patch > constraint.patch),
+        .gt => order == .gt,
 
-        .lt => version.major < constraint.major or
-            (version.major == constraint.major and version.minor < constraint.minor) or
-            (version.major == constraint.major and version.minor == constraint.minor and version.patch < constraint.patch),
+        .lt => order == .lt,
     };
 }
 
@@ -346,6 +380,27 @@ test "latest resolves to newest stable, not a prerelease" {
     // …while the dev channel stays reachable when explicitly requested.
     const dev = resolveVersion("ziglang.org", "0.17.0-dev") orelse return error.NoDev;
     try std.testing.expect(isPrerelease(dev));
+}
+
+test "prerelease ranges select only the requested development line" {
+    const development = try parseConstraint("^0.17.0-dev");
+    try std.testing.expect(development.allows_prerelease);
+    try std.testing.expect(satisfiesConstraint("0.17.0-dev.131+73c51c142", development));
+    try std.testing.expect(satisfiesConstraint("0.17.0-dev.1441_d5181a9c9", development));
+    try std.testing.expect(!satisfiesConstraint("0.18.0-dev.1_deadbeef", development));
+
+    const bounded = try parseConstraint(">=0.17.0-dev.1417+20befa4e6");
+    try std.testing.expect(!satisfiesConstraint("0.17.0-dev.131+73c51c142", bounded));
+    try std.testing.expect(satisfiesConstraint("0.17.0-dev.1441_d5181a9c9", bounded));
+
+    const stable = try parseConstraint("^0.17.0");
+    try std.testing.expect(!satisfiesConstraint("0.17.0-dev.1441_d5181a9c9", stable));
+}
+
+test "exact prerelease keys retain build identity" {
+    const exact = try parseConstraint("0.17.0-dev.1441+d5181a9c9");
+    try std.testing.expect(satisfiesConstraint("0.17.0-dev.1441_d5181a9c9", exact));
+    try std.testing.expect(!satisfiesConstraint("0.17.0-dev.1417_20befa4e6", exact));
 }
 
 test "parse version" {
