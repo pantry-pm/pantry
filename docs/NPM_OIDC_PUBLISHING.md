@@ -89,7 +89,7 @@ jobs:
 
       - name: Publish to npm
 
-        run: pantry publish
+        run: pantry publish --npm --access public
 ```
 
 **Important Notes:**
@@ -103,11 +103,11 @@ jobs:
 ### Basic Publishing
 
 ```bash
-# Publish with OIDC (default behavior in CI/CD)
-pantry publish
+# Publish with OIDC when the workflow is an npm trusted publisher
+pantry publish --npm
 
 # Publish with dry-run to test
-pantry publish --dry-run
+pantry publish --npm --dry-run
 
 # Publish to a specific registry
 pantry publish --registry https://registry.npmjs.org
@@ -115,11 +115,21 @@ pantry publish --registry https://registry.npmjs.org
 
 ### Configuration Priority
 
-Pantry determines the registry to use in this order:
+For every package in a workspace, Pantry resolves the upload settings in this
+order:
 
-1. **CLI flag**: `--registry` option takes highest priority
-2. **publishConfig**: Registry from `package.json` or `pantry.json`
-3. **Default**: `<https://registry.npmjs.org>`
+1. An explicit CLI option such as `--access public` or `--tag next`.
+2. The matching `publishConfig` field in that package's manifest.
+3. npm defaults: `latest` for the dist-tag, `restricted` for scoped packages,
+   and `public` for unscoped packages.
+
+The resolved access and tag are not cosmetic. Pantry serializes access into the
+top-level npm registry document and uses the resolved tag as the `dist-tags` key.
+`--access` accepts only `public` or `restricted`, and an empty tag is rejected.
+
+The `--npm` switch is significant: without it, the `publish` command targets the
+Pantry registry. Use `--registry <url>` only when targeting another compatible
+registry intentionally.
 
 ### Examples
 
@@ -136,7 +146,7 @@ Pantry determines the registry to use in this order:
 ```
 
 ```bash
-pantry publish
+pantry publish --npm
 ```
 
 #### Publish to custom registry
@@ -153,7 +163,7 @@ pantry publish
 ```
 
 ```bash
-pantry publish
+pantry publish --npm
 ```
 
 #### Publish to multiple registries
@@ -225,7 +235,7 @@ Or on the npm website under "Provenance" section of your package page.
 - First publish must use traditional npm token authentication:
 
   ```bash
-  NPM_TOKEN=your_token pantry publish --no-oidc
+  NPM_TOKEN=your_token pantry publish --npm --no-oidc
   ```
 
 - After first publish, configure trusted publisher on npm
@@ -238,7 +248,7 @@ If OIDC fails, Pantry automatically falls back to token authentication:
 ```bash
 # Set NPM_TOKEN as fallback
 export NPM_TOKEN="npm_xxxxxxxxxxxxx"
-pantry publish
+pantry publish --npm
 ```
 
 ### Testing OIDC Locally
@@ -247,11 +257,11 @@ OIDC only works in CI/CD environments. To test locally:
 
 ```bash
 # Use dry-run to test configuration
-pantry publish --dry-run
+pantry publish --npm --dry-run
 
 # Use token auth for local testing
 export NPM_TOKEN="your_token"
-pantry publish --no-oidc
+pantry publish --npm --no-oidc
 ```
 
 ## Security Best Practices
@@ -319,14 +329,14 @@ If using a custom OIDC provider:
 ```bash
 # Set custom OIDC token
 export CUSTOM_OIDC_TOKEN="eyJ..."
-pantry publish
+pantry publish --npm
 ```
 
 ### Disable Provenance
 
 ```bash
 # Publish without generating provenance
-pantry publish --no-provenance
+pantry publish --npm --no-provenance
 ```
 
 ### Custom Provenance Format
@@ -343,7 +353,7 @@ publish:
 
     - apk add --no-cache curl bash
     - curl -fsSL https://pantry.sh/install.sh | bash
-    - pantry publish
+    - pantry publish --npm
 
   only:
 
@@ -376,7 +386,7 @@ steps:
 
   - name: Publish
 
-    run: pantry publish
+    run: pantry publish --npm
 # No secrets needed
 ```
 
@@ -394,7 +404,7 @@ steps:
 ### Publish Command Options
 
 ```bash
-pantry publish [options]
+pantry publish --npm [options]
 
 Options:
   --registry <url>      Registry URL

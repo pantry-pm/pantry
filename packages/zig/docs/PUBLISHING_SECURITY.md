@@ -17,11 +17,21 @@ This guide covers pantry's comprehensive publishing and security features, inclu
 
 ### Basic Publishing
 
-Publish a package to the registry:
+Publish to Pantry's native registry:
 
 ```bash
 pantry publish
 ```
+
+Publish to npm:
+
+```bash
+pantry publish --npm
+```
+
+The registry choice is explicit. `pantry publish` uses the Pantry registry;
+`pantry publish --npm` uses `https://registry.npmjs.org` and npm's document
+format, authentication, dist-tags, access rules, and immutable-version checks.
 
 ### Publishing Options
 
@@ -29,12 +39,14 @@ pantry publish
 pantry publish [options]
 
 Options:
+  --npm              Publish to npm instead of the Pantry registry
   --dry-run          Perform dry run without publishing
   --access <level>   Package access level (public/restricted)
-  --tag <tag>        Publish with tag (default: latest)
+  --tag <tag>        Distribution tag (default: latest)
   --otp <code>       One-time password for 2FA
   --registry <url>   Registry URL
-  --provenance       Generate provenance (default: true)
+  --no-oidc          Skip OIDC and use token authentication directly
+  --no-provenance    Disable Sigstore provenance for OIDC publishing
 ```
 
 ### Examples
@@ -46,21 +58,46 @@ pantry publish
 # Dry run to preview what will be published
 pantry publish --dry-run
 
-# Publish as restricted (private) package
-pantry publish --access restricted
+# Publish a public scoped package to npm
+pantry publish --npm --access public
+
+# Publish as a restricted package to npm
+pantry publish --npm --access restricted
 
 # Publish with specific tag
-pantry publish --tag beta
+pantry publish --npm --tag beta
 
-# Publish with 2FA
-pantry publish --otp 123456
+# Publish to npm with token authentication and 2FA
+pantry publish --npm --no-oidc --otp 123456
 
 # Publish to custom registry
 pantry publish --registry https://my-registry.com
 
 # Publish without provenance
-pantry publish --provenance false
+pantry publish --npm --no-provenance
 ```
+
+### npm setting resolution
+
+Pantry resolves npm publishing settings independently for every package in a
+workspace. The precedence is deterministic:
+
+| Setting | First | Second | Default |
+|---|---|---|---|
+| access | `--access` | `publishConfig.access` | `restricted` for scoped packages, otherwise `public` |
+| dist-tag | `--tag` | `publishConfig.tag` | `latest` |
+| registry | explicit npm/custom registry selection | `publishConfig.registry` | npm for `--npm` |
+
+`--access` accepts only `public` or `restricted`. An empty dist-tag is rejected.
+The resolved values shown in the publish summary are the same values serialized
+into the npm registry document. The selected tag becomes the key in `dist-tags`,
+and access becomes the top-level `access` value. This prevents a dry-run from
+describing one release while the upload submits another.
+
+Use `--dry-run` to exercise package selection, workspace rewriting, lifecycle
+scripts, tarball construction, integrity calculation, and setting resolution
+without requesting credentials or uploading. A successful dry-run does not prove
+that npm trusted publishing or a fallback token is configured.
 
 ---
 
@@ -112,7 +149,7 @@ jobs:
 
       - name: Publish
 
-        run: pantry publish
+        run: pantry publish --npm
 ```
 
 ### GitLab CI Setup
@@ -126,7 +163,7 @@ publish:
   script:
 
     - curl -fsSL https://pantry.sh/install.sh | sh
-    - pantry publish
+    - pantry publish --npm
 
   only:
 
@@ -156,7 +193,7 @@ steps:
       scriptLocation: 'inlineScript'
       inlineScript: |
         curl -fsSL https://pantry.sh/install.sh | sh
-        pantry publish
+        pantry publish --npm
 ```
 
 ### Environment Variables
@@ -179,7 +216,7 @@ If OIDC is not available, pantry falls back to token authentication:
 
 ```bash
 export NPM_TOKEN=your-npm-token
-pantry publish
+pantry publish --npm
 ```
 
 ---
@@ -479,13 +516,13 @@ env:
 ✅ **Do**: Always generate provenance
 
 ```bash
-pantry publish  # Provenance enabled by default
+pantry publish --npm  # Provenance enabled by default
 ```
 
 ❌ **Don't**: Disable provenance without good reason
 
 ```bash
-pantry publish --provenance false  # Only if absolutely necessary
+pantry publish --npm --no-provenance  # Only if absolutely necessary
 ```
 
 ### 4. Sign Your Packages
@@ -538,7 +575,7 @@ pantry audit my-package --provenance
 ✅ **Do**: Enable 2FA on registry account
 
 ```bash
-pantry publish --otp 123456
+pantry publish --npm --no-oidc --otp 123456
 ```
 
 ### 10. Minimal Permissions
