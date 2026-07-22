@@ -1,3 +1,21 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.36...v0.10.37)
+
+## 🚀 Features
+
+- **action**: provision health-checked Redis ([37ffc35](https://github.com/pantry-pm/pantry/commit/37ffc35)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **services**: wait for scoped Redis readiness ([2d8e69f](https://github.com/pantry-pm/pantry/commit/2d8e69f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.37 ([b25e268](https://github.com/pantry-pm/pantry/commit/b25e268)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.35...v0.10.36)
 
 ## 🐛 Bug Fixes
