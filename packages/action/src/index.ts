@@ -1,6 +1,7 @@
 import type { ActionInputs, Platform } from './types'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFilePatterns } from './release-assets'
 import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release-latest'
+import { downloadReleaseAssetReliably } from './release-download'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
@@ -182,7 +183,11 @@ async function downloadAndInstall(version: string, platform: Platform): Promise<
     ? `https://github.com/${REPO}/releases/latest/download/${platform.assetName}`
     : `https://github.com/${REPO}/releases/download/v${version}/${platform.assetName}`
 
-  const zipPath = await tc.downloadTool(url)
+  const zipPath = await downloadReleaseAssetReliably(
+    `Pantry ${version} ${platform.os}-${platform.arch} release asset`,
+    () => tc.downloadTool(url),
+    { onRetry: message => core.warning(message) },
+  )
   const dir = await tc.extractZip(zipPath)
 
   if (platform.os !== 'windows')

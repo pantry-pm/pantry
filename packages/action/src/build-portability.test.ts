@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
 import { assertPortableActionBundle, makeCrc64SourcePortable } from './build-portability'
 
 describe('GitHub Action build portability', () => {
@@ -14,5 +15,10 @@ describe('GitHub Action build portability', () => {
     expect(() => assertPortableActionBundle('const p = "file:///workspace/pantry/node_modules"', '/workspace/pantry')).toThrow('build-host file URL')
     expect(() => assertPortableActionBundle('const p = "file:///Users/chris/repo"', '/workspace/pantry')).toThrow('macOS build-time file URL')
     expect(() => assertPortableActionBundle('const p = "file:///D:/a/repo"', '/workspace/pantry')).toThrow('Windows build-time file URL')
+  })
+
+  test('ships release asset publication retries in the committed bundle', () => {
+    const bundle = readFileSync(new URL('../dist/index.js', import.meta.url), 'utf8')
+    expect(bundle).toContain('remained unavailable after')
   })
 })
