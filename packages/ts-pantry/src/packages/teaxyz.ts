@@ -59,6 +59,7 @@ export const teaxyzPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.0',
     '2.10.3',
     '2.10.2',
     '2.10.1',
