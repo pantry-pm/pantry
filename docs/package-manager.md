@@ -167,6 +167,55 @@ Pantry-registry publication and npm publication are intentionally different
 surfaces. The command and selected registry determine the protocol; Pantry does
 not transparently republish every npm dependency.
 
+## npm publication semantics
+
+`pantry npm:publish` and `pantry publish --npm` enter the same npm publication
+pipeline. The package is staged according to npm's `files` and lifecycle rules,
+workspace and catalog ranges are rewritten to registry-installable versions, and
+the tarball summary is computed before authentication. `--dry-run` stops after
+that preparation boundary: it does not request OIDC credentials, read a token,
+or upload bytes.
+
+The effective dist-tag and access level use explicit precedence:
+
+1. `--tag` and `--access` command options;
+2. `publishConfig.tag` and `publishConfig.access` in `package.json`;
+3. npm defaults: `latest` for the tag, `restricted` for scoped packages, and
+   `public` for unscoped packages.
+
+An empty tag or access other than `public` or `restricted` fails before
+authentication. Pantry serializes the resolved tag into `dist-tags` and the
+resolved access into the npm registry payload; printing those values without
+including them in the upload is not considered a successful implementation.
+
+OIDC trusted publishing is attempted first by default. On success, provenance is
+attached unless `--no-provenance` is set. `--no-oidc` skips the exchange and uses
+token authentication directly. A missing trusted-publisher relationship may
+fall back to a token, while immutable-version conflicts and registry validation
+errors fail without retrying through another identity. `--otp <code>` adds npm's
+`npm-otp` header to token publication; Pantry never writes or prints the code.
+
+Token discovery is deterministic:
+
+1. `NPM_TOKEN`, `NODE_AUTH_TOKEN`, or `BUN_AUTH_TOKEN`;
+2. project `.npmrc`;
+3. `NPM_CONFIG_USERCONFIG`, when set, otherwise `~/.npmrc`;
+4. `NPM_TOKEN` or `npm_token` in `~/.pantry/credentials`;
+5. an interactive prompt when the process is not running in CI.
+
+npmrc parsing accepts `_authToken`, registry-scoped keys such as
+`//registry.npmjs.org/:_authToken`, matching single or double quotes, and a
+whole-value `${ENV_VAR}` reference. Project configuration takes priority over
+user configuration. Missing referenced environment variables do not expose the
+placeholder or silently select a lower-precedence credential. Tokens and OTPs
+are excluded from diagnostics.
+
+Package/version conflicts remain immutable. Rate-limit and transient server
+responses may be retried with bounded exponential backoff; authentication,
+validation, and version-conflict responses are returned as failures. Lifecycle
+scripts remain subject to the explicit script policy, and publication success is
+reported only after the registry accepts the package.
+
 ## Environment and installation locations
 
 Project installs live in Pantry-managed project environments. Global installs

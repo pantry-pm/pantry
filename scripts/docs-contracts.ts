@@ -8,6 +8,7 @@ export interface DocumentationContractSources {
   faqDoc: string
   registryReadme: string
   mainSource: string
+  packageCommandSource: string
   installPipelineSource: string
   registryServerSource: string
   zigRoutesSource: string
@@ -44,6 +45,20 @@ const markers: ContractMarker[] = [
     document: 'packageManagerDoc',
     documentMarker: 'unsupported algorithm fails closed',
   },
+  ...[
+    ['npm publish access precedence', 'resolveNpmAccess(options.access, configured_access, metadata.name)', '`--tag` and `--access` command options'],
+    ['npm publish tag precedence', 'resolveNpmTag(options.tag, configured_tag)', '`publishConfig.tag` and `publishConfig.access`'],
+    ['npm publish payload access', 'registry_client.publish_access = access_str', 'resolved access into the npm registry payload'],
+    ['npm publish payload tag', 'registry_client.publish_tag = tag_str', 'resolved tag into `dist-tags`'],
+    ['npm publish OTP', 'registry_client.publish_otp = options.otp', '`npm-otp` header'],
+    ['npmrc token discovery', 'readNpmrcAuthToken(allocator)', 'project `.npmrc`'],
+  ].map(([label, sourceMarker, documentMarker]) => ({
+    label,
+    source: 'packageCommandSource' as const,
+    sourceMarker,
+    document: 'packageManagerDoc' as const,
+    documentMarker,
+  })),
   ...[
     ['health', `path === '/health'`, '/health'],
     ['search', `path === '/search'`, '/search?q={query}'],
@@ -87,7 +102,7 @@ export function validateDocumentationContracts(sources: DocumentationContractSou
       errors.push(`legacy pkgx-registry claim remains in the ${name}`)
   }
 
-  for (const heading of ['Lockfile contract', 'Integrity, cache, and extraction', 'Lifecycle scripts and trust', 'Publication channels', 'Failure modes operators should preserve', 'Test and evidence map']) {
+  for (const heading of ['Lockfile contract', 'Integrity, cache, and extraction', 'Lifecycle scripts and trust', 'Publication channels', 'npm publication semantics', 'Failure modes operators should preserve', 'Test and evidence map']) {
     if (!sources.packageManagerDoc.includes(`## ${heading}`))
       errors.push(`package-manager contract is missing section: ${heading}`)
   }
@@ -107,6 +122,7 @@ export function loadDocumentationContractSources(root: string): DocumentationCon
     faqDoc: read('docs/faq.md'),
     registryReadme: read('packages/registry/README.md'),
     mainSource: read('packages/zig/src/main.zig'),
+    packageCommandSource: read('packages/zig/src/cli/commands/package.zig'),
     installPipelineSource: read('packages/zig/src/install/pipeline.zig'),
     registryServerSource: read('packages/registry/src/server.ts'),
     zigRoutesSource: read('packages/registry/src/zig-routes.ts'),

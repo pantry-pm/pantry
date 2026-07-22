@@ -14,6 +14,14 @@ describe('documentation contracts', () => {
     expect(validateDocumentationContracts(changed)).toContain('package command install: source marker is missing from mainSource')
   })
 
+  it('detects npm publication contract drift', () => {
+    const changed = {
+      ...sources,
+      packageCommandSource: sources.packageCommandSource.replace('registry_client.publish_otp = options.otp', 'removed-otp-payload'),
+    }
+    expect(validateDocumentationContracts(changed)).toContain('npm publish OTP: source marker is missing from packageCommandSource')
+  })
+
   it('detects missing documentation and legacy claims', () => {
     const changed = {
       ...sources,
