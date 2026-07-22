@@ -52,6 +52,11 @@ Redis package, binds it only to loopback, disables persistence for the ephemeral
 runner, waits for `PONG`, exports `REDIS_URL` and `REDIS_SERVICE_VERSION`, and
 stops the process after the job.
 
+Daemon startup is bounded in two phases: the action first waits up to 10 seconds
+for a live process ID, then up to 30 seconds for `redis-cli ping`. A startup
+failure includes the Redis logfile in the Actions error so port collisions,
+binary linkage failures, and invalid configuration are directly diagnosable.
+
 ```yaml
 - name: Setup Pantry and Redis
   uses: pantry-pm/pantry/packages/action@main
@@ -64,7 +69,9 @@ stops the process after the job.
 
 The action fails before tests when the installed version differs from the exact
 service pin or Redis does not become ready. `redis-url` and `redis-version` are
-also available as action outputs.
+also available as action outputs. Pin both the action revision and the Pantry
+binary `version` in release-sensitive workflows so source and CLI behavior are
+independently reproducible.
 
 ## Supported Dependency Files
 

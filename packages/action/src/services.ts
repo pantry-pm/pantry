@@ -61,6 +61,35 @@ export function readRedisPid(pidfile: string): number {
   return pid
 }
 
+export async function waitForRedisPid(
+  pidfile: string,
+  options: { timeoutMs?: number, intervalMs?: number } = {},
+): Promise<number> {
+  const timeoutMs = options.timeoutMs ?? 10_000
+  const intervalMs = options.intervalMs ?? 100
+  const deadline = Date.now() + timeoutMs
+  let lastError: unknown
+
+  do {
+    try {
+      return readRedisPid(pidfile)
+    }
+    catch (error) {
+      lastError = error
+    }
+    await new Promise(resolve => setTimeout(resolve, intervalMs))
+  } while (Date.now() < deadline)
+
+  const detail = lastError instanceof Error ? lastError.message : String(lastError)
+  throw new Error(`Redis pid did not become ready within ${timeoutMs}ms: ${detail}`)
+}
+
+export function readServiceLog(logfile: string): string {
+  if (!fs.existsSync(logfile)) return 'Redis did not create a logfile'
+  const content = fs.readFileSync(logfile, 'utf8').trim()
+  return content || 'Redis logfile was empty'
+}
+
 export function parseRedisVersion(output: string): string {
   const match = output.match(/\bv=(\d+\.\d+\.\d+)\b/)
   if (!match) throw new Error(`Could not determine Redis version from: ${output.trim()}`)

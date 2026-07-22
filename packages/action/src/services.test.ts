@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readRedisPid, redisLaunchArgs } from './services'
+import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readRedisPid, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 
 describe('GitHub Actions services', () => {
   test('parses an exact Redis service and rejects ambiguous declarations', () => {
@@ -37,6 +37,33 @@ describe('GitHub Actions services', () => {
       expect(() => readRedisPid(pidfile)).toThrow('invalid')
       writeFileSync(pidfile, String(process.pid))
       expect(readRedisPid(pidfile)).toBe(process.pid)
+    }
+    finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  test('waits for a daemonized Redis pidfile instead of racing startup', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-action-redis-wait-'))
+    const pidfile = join(directory, 'redis.pid')
+    try {
+      setTimeout(() => writeFileSync(pidfile, String(process.pid)), 25)
+      expect(await waitForRedisPid(pidfile, { timeoutMs: 500, intervalMs: 5 })).toBe(process.pid)
+    }
+    finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  test('reports bounded pid readiness failures and startup logs', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-action-redis-log-'))
+    const pidfile = join(directory, 'redis.pid')
+    const logfile = join(directory, 'redis.log')
+    try {
+      await expect(waitForRedisPid(pidfile, { timeoutMs: 10, intervalMs: 2 })).rejects.toThrow('within 10ms')
+      expect(readServiceLog(logfile)).toBe('Redis did not create a logfile')
+      writeFileSync(logfile, 'Could not create server TCP listening socket')
+      expect(readServiceLog(logfile)).toContain('TCP listening socket')
     }
     finally {
       rmSync(directory, { recursive: true, force: true })

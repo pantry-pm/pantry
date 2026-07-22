@@ -6,7 +6,7 @@ import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
-import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readRedisPid, redisLaunchArgs } from './services'
+import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -54,41 +54,52 @@ async function startRequestedServices(services: ServiceSpec[], pantryBinDir: str
     const server = path.join(pantryBinDir, 'redis-server')
     const client = path.join(pantryBinDir, 'redis-cli')
     const pidfile = path.join(serviceDir, 'redis.pid')
+    const logfile = path.join(serviceDir, 'redis.log')
     if (!fs.existsSync(server) || !fs.existsSync(client))
       throw new Error('Redis service binaries were not installed into pantry/.bin')
 
     core.startGroup('Starting Pantry Redis service')
-    await exec.exec(server, redisLaunchArgs(process.env.RUNNER_TEMP || os.tmpdir()))
-    const pid = readRedisPid(pidfile)
-    core.saveState('redis-cli', client)
-    core.saveState('redis-started', 'true')
-
-    let ready = false
-    for (let attempt = 0; attempt < 60; attempt++) {
-      const exitCode = await exec.exec(client, ['-h', '127.0.0.1', '-p', '6379', 'ping'], { silent: true }).catch(() => 1)
-      if (exitCode === 0) {
-        ready = true
-        break
+    try {
+      await exec.exec(server, redisLaunchArgs(process.env.RUNNER_TEMP || os.tmpdir()))
+      let pid: number
+      try {
+        pid = await waitForRedisPid(pidfile)
       }
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    if (!ready) throw new Error(`Redis did not become healthy; inspect ${path.join(serviceDir, 'redis.log')}`)
+      catch (error) {
+        throw new Error(`${error instanceof Error ? error.message : String(error)}\nRedis startup log:\n${readServiceLog(logfile)}`)
+      }
+      core.saveState('redis-cli', client)
+      core.saveState('redis-started', 'true')
 
-    let versionOutput = ''
-    await exec.exec(server, ['--version'], {
-      listeners: { stdout: (data: Buffer) => { versionOutput += data.toString() } },
-      silent: true,
-    })
-    const version = parseRedisVersion(versionOutput)
-    if (service.expectedVersion && service.expectedVersion !== version)
-      throw new Error(`Redis service requested ${service.expectedVersion} but installed ${version}`)
-    const url = 'redis://127.0.0.1:6379/0'
-    core.exportVariable('REDIS_URL', url)
-    core.exportVariable('REDIS_SERVICE_VERSION', version)
-    core.setOutput('redis-url', url)
-    core.setOutput('redis-version', version)
-    core.info(`Redis ${version} (pid ${pid}) is healthy at ${url}`)
-    core.endGroup()
+      let ready = false
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const exitCode = await exec.exec(client, ['-h', '127.0.0.1', '-p', '6379', 'ping'], { silent: true }).catch(() => 1)
+        if (exitCode === 0) {
+          ready = true
+          break
+        }
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      if (!ready) throw new Error(`Redis did not become healthy. Startup log:\n${readServiceLog(logfile)}`)
+
+      let versionOutput = ''
+      await exec.exec(server, ['--version'], {
+        listeners: { stdout: (data: Buffer) => { versionOutput += data.toString() } },
+        silent: true,
+      })
+      const version = parseRedisVersion(versionOutput)
+      if (service.expectedVersion && service.expectedVersion !== version)
+        throw new Error(`Redis service requested ${service.expectedVersion} but installed ${version}`)
+      const url = 'redis://127.0.0.1:6379/0'
+      core.exportVariable('REDIS_URL', url)
+      core.exportVariable('REDIS_SERVICE_VERSION', version)
+      core.setOutput('redis-url', url)
+      core.setOutput('redis-version', version)
+      core.info(`Redis ${version} (pid ${pid}) is healthy at ${url}`)
+    }
+    finally {
+      core.endGroup()
+    }
   }
 }
 
