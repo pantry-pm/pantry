@@ -1,3 +1,34 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.41...v0.10.42)
+
+## 🚀 Features
+
+- **registry**: expose npm auth controls ([bbebf33](https://github.com/pantry-pm/pantry/commit/bbebf33)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **registry**: surface npmrc auth guidance ([f445abb](https://github.com/pantry-pm/pantry/commit/f445abb)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: read standard npmrc tokens ([c157d69](https://github.com/pantry-pm/pantry/commit/c157d69)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: honor npm publish settings ([7e7910d](https://github.com/pantry-pm/pantry/commit/7e7910d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: remove build-host file URLs ([a7907f8](https://github.com/pantry-pm/pantry/commit/a7907f8)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- **registry**: specify npm publish contracts ([7d088dd](https://github.com/pantry-pm/pantry/commit/7d088dd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: document npmrc token precedence ([f6cf854](https://github.com/pantry-pm/pantry/commit/f6cf854)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: define npm publish precedence ([60e9a85](https://github.com/pantry-pm/pantry/commit/60e9a85)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.42 ([a76094b](https://github.com/pantry-pm/pantry/commit/a76094b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **release**: pin atomic bumpx publisher ([c78188c](https://github.com/pantry-pm/pantry/commit/c78188c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: patch Laravel benchmark fixtures ([56c35b7](https://github.com/pantry-pm/pantry/commit/56c35b7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- release v0.10.41 ([0485cdf](https://github.com/pantry-pm/pantry/commit/0485cdf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update lmstudio.ai to 0.4.20-1 ([2d03fca](https://github.com/pantry-pm/pantry/commit/2d03fca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.40...v0.10.41)
 
 ## 🐛 Bug Fixes
