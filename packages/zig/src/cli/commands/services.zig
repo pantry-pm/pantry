@@ -5,6 +5,7 @@ const lib = @import("../../lib.zig");
 const common = @import("common.zig");
 const style = @import("../style.zig");
 const services = lib.services;
+const service_io = @import("../../io_helper.zig");
 
 const CommandResult = common.CommandResult;
 const ServiceManager = services.ServiceManager;
@@ -377,6 +378,43 @@ pub fn startCommandWithContext(allocator: std.mem.Allocator, args: []const []con
     return startSingleService(allocator, service_name, project_root);
 }
 
+/// Resolve service health-check executables through the project-local Pantry
+/// bin directory while preserving system tools on PATH.
+pub fn buildHealthCheckCommand(allocator: std.mem.Allocator, health_command: []const u8, project_root: ?[]const u8) ![]u8 {
+    if (project_root) |root| {
+        return std.fmt.allocPrint(allocator, "PATH=\"{s}/pantry/.bin:$PATH\" {s}", .{ root, health_command });
+    }
+    return allocator.dupe(u8, health_command);
+}
+
+/// Wait until a started service accepts its declared health check. A process
+/// manager reporting "running" is not a readiness guarantee for Redis or a
+/// freshly initialized database.
+pub fn waitForServiceHealth(
+    allocator: std.mem.Allocator,
+    config: *const ServiceConfig,
+    project_root: ?[]const u8,
+    max_attempts: u32,
+    delay_ms: u64,
+) !bool {
+    const health_command = config.health_check orelse return true;
+    const command = try buildHealthCheckCommand(allocator, health_command, project_root);
+    defer allocator.free(command);
+
+    var attempt: u32 = 0;
+    while (attempt < max_attempts) : (attempt += 1) {
+        const result = service_io.childRun(allocator, &[_][]const u8{ "sh", "-c", command }) catch {
+            if (delay_ms > 0) service_io.nanosleep(delay_ms / 1000, (delay_ms % 1000) * std.time.ns_per_ms);
+            continue;
+        };
+        defer allocator.free(result.stdout);
+        defer allocator.free(result.stderr);
+        if (result.term == .exited and result.term.exited == 0) return true;
+        if (delay_ms > 0) service_io.nanosleep(delay_ms / 1000, (delay_ms % 1000) * std.time.ns_per_ms);
+    }
+    return false;
+}
+
 /// Start a single service (no group resolution — avoids recursive error set)
 fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, project_root: ?[]const u8) !CommandResult {
     // For PostgreSQL, ensure data directory is initialized and version-compatible
@@ -389,10 +427,11 @@ fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, pr
     defer manager.deinit();
 
     // Register the service based on its name (with project context for path resolution)
-    const service_config = getServiceConfig(allocator, service_name, project_root) catch {
+    var service_config = getServiceConfig(allocator, service_name, project_root) catch {
         const msg = try std.fmt.allocPrint(allocator, "Unknown service: {s}", .{service_name});
         return .{ .exit_code = 1, .message = msg };
     };
+    if (project_root) |root| service_config.project_id = try computeProjectHash(allocator, root);
     const canonical_name = try allocator.dupe(u8, service_config.name);
     defer allocator.free(canonical_name);
     try manager.register(service_config);
@@ -409,7 +448,20 @@ fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, pr
         return .{ .exit_code = 1, .message = msg };
     };
 
-    style.print("✓ Started {s}\n", .{service_name});
+    const registered = manager.getService(canonical_name) orelse unreachable;
+    const healthy = waitForServiceHealth(allocator, registered, project_root, 60, 500) catch false;
+    if (!healthy) {
+        manager.stop(canonical_name) catch {};
+        const health_command = registered.health_check orelse "(none)";
+        const msg = try std.fmt.allocPrint(
+            allocator,
+            "{s} started but did not become healthy within 30 seconds (check: {s})",
+            .{ service_name, health_command },
+        );
+        return .{ .exit_code = 1, .message = msg };
+    }
+
+    style.print("✓ Started {s} (healthy)\n", .{service_name});
     return .{ .exit_code = 0 };
 }
 
@@ -502,7 +554,7 @@ pub fn restartCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
     // Check if this is a group name
     if (resolveBuiltinGroup(service_name)) |members| {
         _ = try stopGroup(allocator, members);
-        return startGroup(allocator, members, null);
+        return startCommand(allocator, args);
     }
     if (resolveUserGroup(allocator, service_name)) |members| {
         defer {
@@ -510,12 +562,12 @@ pub fn restartCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
             allocator.free(members);
         }
         _ = try stopGroup(allocator, members);
-        return startGroup(allocator, members, null);
+        return startCommand(allocator, args);
     }
 
     style.print("Restarting {s}...\n", .{service_name});
     _ = try stopSingleService(allocator, service_name);
-    return try startSingleService(allocator, service_name, null);
+    return try startCommand(allocator, args);
 }
 
 // ============================================================================
@@ -1867,4 +1919,18 @@ fn detectCwdProjectHash(allocator: std.mem.Allocator) ?[]const u8 {
         return null;
 
     return computeProjectHash(allocator, project_root) catch null;
+}
+
+test "health checks resolve project-local Pantry binaries" {
+    const allocator = std.testing.allocator;
+    const local = try buildHealthCheckCommand(allocator, "redis-cli -p 6379 ping", "/workspace/app");
+    defer allocator.free(local);
+    try std.testing.expectEqualStrings(
+        "PATH=\"/workspace/app/pantry/.bin:$PATH\" redis-cli -p 6379 ping",
+        local,
+    );
+
+    const global = try buildHealthCheckCommand(allocator, "redis-cli ping", null);
+    defer allocator.free(global);
+    try std.testing.expectEqualStrings("redis-cli ping", global);
 }

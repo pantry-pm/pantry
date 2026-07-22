@@ -63,6 +63,15 @@ pub const ServiceStatus = enum {
     }
 };
 
+fn projectScopeId(allocator: std.mem.Allocator, project_root: []const u8) ![]const u8 {
+    var hash: u64 = 0xcbf29ce484222325;
+    for (project_root) |byte| {
+        hash ^= byte;
+        hash *%= 0x100000001b3;
+    }
+    return std.fmt.allocPrint(allocator, "{x:0>8}", .{@as(u32, @truncate(hash))});
+}
+
 /// Search a directory for the first subdirectory starting with 'v' (version directory).
 /// Returns the full path (caller-owned) or null if none found.
 fn findVersionDirIn(allocator: std.mem.Allocator, base_dir: []const u8) !?[]const u8 {
@@ -485,10 +494,14 @@ pub const Services = struct {
         defer if (home) |h| allocator.free(h);
 
         // Redis data directory (so RDB/AOF persistence doesn't default to / which is read-only on macOS)
-        const data_dir = if (home) |h|
-            try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/redis", .{h})
-        else
-            try allocator.dupe(u8, "/tmp/redis-data");
+        const data_dir = if (home) |h| blk: {
+            if (project_root) |root| {
+                const scope = try projectScopeId(allocator, root);
+                defer allocator.free(scope);
+                break :blk try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/{s}/redis", .{ h, scope });
+            }
+            break :blk try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/redis", .{h});
+        } else try allocator.dupe(u8, "/tmp/redis-data");
         defer allocator.free(data_dir);
 
         // Ensure data directory exists
@@ -498,11 +511,14 @@ pub const Services = struct {
         const start_cmd = try std.fmt.allocPrint(allocator, "{s} --port {d} --dir {s}", .{ redis_bin, port, data_dir });
         allocator.free(redis_bin);
 
+        // Resolve the health-check client through the same Pantry package
+        // installation as the server. A bare redis-cli is not guaranteed to
+        // be on PATH for launchd, systemd, or direct CLI invocations.
+        const redis_cli = try resolveServiceBinary(allocator, "redis-cli", project_root, home);
+        defer allocator.free(redis_cli);
+
         // Set working directory to data dir so launchd doesn't use / (read-only on macOS)
-        const working_dir = if (home) |h|
-            try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/redis", .{h})
-        else
-            try allocator.dupe(u8, "/tmp/redis-data");
+        const working_dir = try allocator.dupe(u8, data_dir);
 
         return ServiceConfig{
             .name = try allocator.dupe(u8, "redis"),
@@ -514,7 +530,7 @@ pub const Services = struct {
             .auto_start = false,
             .keep_alive = true,
             .working_directory = working_dir,
-            .health_check = try std.fmt.allocPrint(allocator, "redis-cli -p {d} ping", .{port}),
+            .health_check = try std.fmt.allocPrint(allocator, "{s} -h 127.0.0.1 -p {d} ping", .{ redis_cli, port }),
         };
     }
 
@@ -2629,4 +2645,18 @@ test "Service definitions" {
 test "Service status" {
     const status = ServiceStatus.running;
     try std.testing.expectEqualStrings("running", status.toString());
+}
+
+test "project service scopes are stable and isolated" {
+    const allocator = std.testing.allocator;
+    const first = try projectScopeId(allocator, "/workspace/first");
+    defer allocator.free(first);
+    const repeated = try projectScopeId(allocator, "/workspace/first");
+    defer allocator.free(repeated);
+    const second = try projectScopeId(allocator, "/workspace/second");
+    defer allocator.free(second);
+
+    try std.testing.expectEqual(@as(usize, 8), first.len);
+    try std.testing.expectEqualStrings(first, repeated);
+    try std.testing.expect(!std.mem.eql(u8, first, second));
 }
