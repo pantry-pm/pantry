@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.37...v0.10.38)
+
+## 🐛 Bug Fixes
+
+- **deploy**: publish additive Pantry gateway routes ([7396fb7](https://github.com/pantry-pm/pantry/commit/7396fb7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.38 ([7700e2f](https://github.com/pantry-pm/pantry/commit/7700e2f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.36...v0.10.37)
 
 ## 🚀 Features
