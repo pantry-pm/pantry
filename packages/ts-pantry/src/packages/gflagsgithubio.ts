@@ -59,6 +59,7 @@ export const gflagsgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.1',
     '2.3.0',
     '2.2.2',
     '2.2.1',
