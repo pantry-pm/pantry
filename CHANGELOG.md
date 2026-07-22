@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.40...v0.10.41)
+
+## 🐛 Bug Fixes
+
+- **action**: remove build-host file URLs ([7c95c0e](https://github.com/pantry-pm/pantry/commit/7c95c0e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.41 ([71f5fe3](https://github.com/pantry-pm/pantry/commit/71f5fe3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.39...v0.10.40)
 
 ## 🐛 Bug Fixes
