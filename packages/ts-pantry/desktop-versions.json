@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.129.1",
-      "published": "1.129.1",
+      "latest": "1.130.0",
+      "published": "1.130.0",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.12.17",
-      "published": "3.12.29",
+      "latest": "3.12.30",
+      "published": "3.12.30",
       "needsUpdate": false
     },
     {
