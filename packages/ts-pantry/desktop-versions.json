@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.715.70719",
-      "published": "26.715.70719",
+      "latest": "26.715.72028",
+      "published": "26.715.72028",
       "needsUpdate": false
     },
     {
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -347,8 +347,8 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "macos",
-      "latest": "0.4.19-2",
-      "published": "0.4.19-2",
+      "latest": "0.4.20-1",
+      "published": "0.4.20-1",
       "needsUpdate": false
     },
     {
