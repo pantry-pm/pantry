@@ -216,8 +216,21 @@ If OIDC is not available, pantry falls back to token authentication:
 
 ```bash
 export NPM_TOKEN=your-npm-token
-pantry publish --npm
+pantry publish --npm --no-oidc
 ```
+
+Token discovery follows npm-compatible precedence without printing the secret:
+
+1. `NPM_TOKEN`, `NODE_AUTH_TOKEN`, or `BUN_AUTH_TOKEN`.
+2. The project `.npmrc`.
+3. `NPM_CONFIG_USERCONFIG`, when set, otherwise `~/.npmrc`.
+4. `NPM_TOKEN` or `npm_token` in `~/.pantry/credentials`.
+5. An interactive prompt outside CI.
+
+Both `_authToken=value` and registry-scoped keys such as
+`//registry.npmjs.org/:_authToken=${NPM_TOKEN}` are supported. Environment
+references in npmrc are resolved at publish time. Project npmrc takes precedence
+over user npmrc, matching npm's local-configuration behavior.
 
 ---
 

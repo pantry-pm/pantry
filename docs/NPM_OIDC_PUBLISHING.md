@@ -251,6 +251,13 @@ export NPM_TOKEN="npm_xxxxxxxxxxxxx"
 pantry publish --npm
 ```
 
+Pantry also reads npm's standard configuration. Token lookup order is
+`NPM_TOKEN`/`NODE_AUTH_TOKEN`/`BUN_AUTH_TOKEN`, project `.npmrc`,
+`NPM_CONFIG_USERCONFIG` or `~/.npmrc`, then `~/.pantry/credentials`. Registry
+keys such as `//registry.npmjs.org/:_authToken=...`, unscoped `_authToken`,
+matching quotes, and `${ENV_VAR}` references are supported. Tokens are never
+included in publish diagnostics.
+
 ### Testing OIDC Locally
 
 OIDC only works in CI/CD environments. To test locally:
