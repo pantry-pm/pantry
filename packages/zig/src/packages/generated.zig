@@ -11747,7 +11747,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{ "lm-studio", "lmstudio" },
-    .versions = &[_][]const u8{ "0.4.19-2", "0.4.18-1", "0.3.8", "0.3.7" },
+    .versions = &[_][]const u8{ "0.4.20-1", "0.4.19-2", "0.4.18-1", "0.3.8", "0.3.7" },
 }, .{
     .name = "LocalAI",
     .domain = "localai.io",
