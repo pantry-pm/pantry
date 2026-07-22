@@ -3272,17 +3272,81 @@ fn readNpmAuthToken(allocator: std.mem.Allocator, allow_prompt: bool) ![]u8 {
     return io_helper.getEnvVarOwned(allocator, "NPM_TOKEN") catch blk: {
         break :blk io_helper.getEnvVarOwned(allocator, "NODE_AUTH_TOKEN") catch blk2: {
             break :blk2 io_helper.getEnvVarOwned(allocator, "BUN_AUTH_TOKEN") catch blk3: {
-                break :blk3 readPantryCredential(allocator, "NPM_TOKEN") catch blk4: {
-                    break :blk4 readPantryCredential(allocator, "npm_token") catch {
-                        if (allow_prompt) {
-                            return promptAndSaveToken(allocator);
-                        }
-                        return error.EnvironmentVariableNotFound;
+                break :blk3 readNpmrcAuthToken(allocator) catch blk4: {
+                    break :blk4 readPantryCredential(allocator, "NPM_TOKEN") catch blk5: {
+                        break :blk5 readPantryCredential(allocator, "npm_token") catch {
+                            if (allow_prompt) {
+                                return promptAndSaveToken(allocator);
+                            }
+                            return error.EnvironmentVariableNotFound;
+                        };
                     };
                 };
             };
         };
     };
+}
+
+fn parseNpmrcAuthToken(allocator: std.mem.Allocator, content: []const u8) ![]u8 {
+    var lines = std.mem.splitScalar(u8, content, '\n');
+    while (lines.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, &std.ascii.whitespace);
+        if (trimmed.len == 0 or trimmed[0] == '#' or trimmed[0] == ';') continue;
+        const eq_pos = std.mem.indexOfScalar(u8, trimmed, '=') orelse continue;
+        const key = std.mem.trim(u8, trimmed[0..eq_pos], &std.ascii.whitespace);
+        if (!std.mem.eql(u8, key, "_authToken") and !std.mem.endsWith(u8, key, ":_authToken")) continue;
+
+        var value = std.mem.trim(u8, trimmed[eq_pos + 1 ..], &std.ascii.whitespace);
+        if (value.len >= 2 and ((value[0] == '"' and value[value.len - 1] == '"') or (value[0] == '\'' and value[value.len - 1] == '\''))) {
+            value = value[1 .. value.len - 1];
+        }
+        if (value.len == 0) continue;
+
+        // npmrc commonly delegates the secret to an environment variable.
+        if (value.len > 3 and std.mem.startsWith(u8, value, "${") and value[value.len - 1] == '}') {
+            return io_helper.getEnvVarOwned(allocator, value[2 .. value.len - 1]);
+        }
+        return allocator.dupe(u8, value);
+    }
+    return error.EnvironmentVariableNotFound;
+}
+
+fn readNpmrcTokenAtPath(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    const content = try io_helper.readFileAlloc(allocator, path, 1024 * 1024);
+    defer allocator.free(content);
+    return parseNpmrcAuthToken(allocator, content);
+}
+
+fn readNpmrcAuthToken(allocator: std.mem.Allocator) ![]u8 {
+    // npm precedence gives the project file priority over the user config.
+    if (readNpmrcTokenAtPath(allocator, ".npmrc")) |token| return token else |_| {}
+
+    if (io_helper.getEnvVarOwned(allocator, "NPM_CONFIG_USERCONFIG")) |user_config| {
+        defer allocator.free(user_config);
+        return readNpmrcTokenAtPath(allocator, user_config);
+    } else |_| {}
+
+    const home = io_helper.getenv("HOME") orelse return error.EnvironmentVariableNotFound;
+    const user_path = try std.fs.path.join(allocator, &.{ home, ".npmrc" });
+    defer allocator.free(user_path);
+    return readNpmrcTokenAtPath(allocator, user_path);
+}
+
+test "npmrc token parser supports registry keys quotes and comments" {
+    const content =
+        \\# npm authentication
+        \\registry=https://registry.npmjs.org/
+        \\//registry.npmjs.org/:_authToken="npm_secret_value"
+    ;
+    const token = try parseNpmrcAuthToken(std.testing.allocator, content);
+    defer std.testing.allocator.free(token);
+    try std.testing.expectEqualStrings("npm_secret_value", token);
+}
+
+test "npmrc token parser supports unscoped auth token" {
+    const token = try parseNpmrcAuthToken(std.testing.allocator, "_authToken='local-token'\n");
+    defer std.testing.allocator.free(token);
+    try std.testing.expectEqualStrings("local-token", token);
 }
 
 /// Save a credential to ~/.pantry/credentials file
