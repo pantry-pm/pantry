@@ -748,6 +748,9 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const tag = ctx.getOption("tag");
     const registry_val = ctx.getOption("registry") orelse "https://registry.npmjs.org";
     const dry_run = ctx.hasOption("dry-run");
+    const otp = ctx.getOption("otp");
+    const use_oidc = !ctx.hasOption("no-oidc");
+    const provenance = !ctx.hasOption("no-provenance");
     const skip_val = ctx.getOption("skip");
     const github_release = ctx.hasOption("github-release");
     const release_files = ctx.getOption("files");
@@ -759,6 +762,9 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .tag = tag,
         .registry = registry_val,
         .dry_run = dry_run,
+        .otp = otp,
+        .use_oidc = use_oidc,
+        .provenance = provenance,
         .skip = skip_val,
         .github_release = github_release,
         .release_files = release_files,
@@ -895,6 +901,9 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const registry = ctx.getOption("registry") orelse "https://registry.pantry.dev";
     const token = ctx.getOption("token");
     const dry_run = ctx.hasOption("dry-run");
+    const otp = ctx.getOption("otp");
+    const use_oidc = !ctx.hasOption("no-oidc");
+    const provenance = !ctx.hasOption("no-provenance");
     const use_npm = ctx.hasOption("npm");
     const skip_val = ctx.getOption("skip");
     const github_release = ctx.hasOption("github-release");
@@ -920,6 +929,9 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
             .tag = tag,
             .registry = "https://registry.npmjs.org",
             .dry_run = dry_run,
+            .otp = otp,
+            .use_oidc = use_oidc,
+            .provenance = provenance,
             .skip = skip_val,
             .github_release = github_release,
             .release_files = release_files,
@@ -2974,6 +2986,15 @@ pub fn main() !void {
     const npm_dry_run_opt = cli.Option.init("dry-run", "dry-run", "Prepare package without authenticating or uploading", .bool);
     _ = try npm_publish_cmd.addOption(npm_dry_run_opt);
 
+    const npm_otp_opt = cli.Option.init("otp", "otp", "One-time password for npm token authentication", .string);
+    _ = try npm_publish_cmd.addOption(npm_otp_opt);
+
+    const npm_no_oidc_opt = cli.Option.init("no-oidc", "no-oidc", "Skip OIDC and use token authentication directly", .bool);
+    _ = try npm_publish_cmd.addOption(npm_no_oidc_opt);
+
+    const npm_no_provenance_opt = cli.Option.init("no-provenance", "no-provenance", "Disable Sigstore provenance for OIDC publishing", .bool);
+    _ = try npm_publish_cmd.addOption(npm_no_provenance_opt);
+
     const npm_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package names or directory names to skip", .string);
     _ = try npm_publish_cmd.addOption(npm_skip_opt);
 
@@ -3727,6 +3748,15 @@ pub fn main() !void {
 
     const pub_npm_opt = cli.Option.init("npm", "npm", "Publish to npm registry instead of Pantry registry", .bool);
     _ = try publish_cmd.addOption(pub_npm_opt);
+
+    const pub_otp_opt = cli.Option.init("otp", "otp", "One-time password for npm token authentication", .string);
+    _ = try publish_cmd.addOption(pub_otp_opt);
+
+    const pub_no_oidc_opt = cli.Option.init("no-oidc", "no-oidc", "Skip npm OIDC and use token authentication directly", .bool);
+    _ = try publish_cmd.addOption(pub_no_oidc_opt);
+
+    const pub_no_provenance_opt = cli.Option.init("no-provenance", "no-provenance", "Disable Sigstore provenance for npm OIDC publishing", .bool);
+    _ = try publish_cmd.addOption(pub_no_provenance_opt);
 
     const pub_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package names or directory names to skip", .string);
     _ = try publish_cmd.addOption(pub_skip_opt);

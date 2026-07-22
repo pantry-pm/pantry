@@ -1172,6 +1172,7 @@ fn publishSingleToNpm(
     defer registry_client.deinit();
     registry_client.publish_access = access_str;
     registry_client.publish_tag = tag_str;
+    registry_client.publish_otp = options.otp;
 
     // Set package.json content so npm metadata includes all fields
     // (types, exports, module, dependencies, bin, etc.)

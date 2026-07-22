@@ -203,6 +203,7 @@ pub const RegistryClient = struct {
     /// Resolved publish settings used in the npm registry document.
     publish_access: []const u8 = "public",
     publish_tag: []const u8 = "latest",
+    publish_otp: ?[]const u8 = null,
 
     io: *std.Io.Threaded,
 
@@ -623,7 +624,7 @@ pub const RegistryClient = struct {
         // npm-auth-type: legacy — tells npm this is token auth (vs OIDC/web)
         // npm-scope — helps npm's CDN route requests for scoped packages
         // Accept-Encoding: identity prevents gzip responses we can't decode
-        const extra_headers = [_]http.Header{
+        const base_headers = [_]http.Header{
             .{ .name = "Authorization", .value = auth_header },
             .{ .name = "Content-Type", .value = "application/json" },
             .{ .name = "Accept", .value = "application/json" },
@@ -633,10 +634,16 @@ pub const RegistryClient = struct {
             .{ .name = "npm-auth-type", .value = "legacy" },
             .{ .name = "npm-scope", .value = npm_scope },
         };
+        var extra_headers = std.ArrayList(http.Header).empty;
+        defer extra_headers.deinit(self.allocator);
+        try extra_headers.appendSlice(self.allocator, &base_headers);
+        if (self.publish_otp) |otp| {
+            try extra_headers.append(self.allocator, .{ .name = "npm-otp", .value = otp });
+        }
 
         // Make HTTP request
         var req = try self.http_client.request(.PUT, uri, .{
-            .extra_headers = &extra_headers,
+            .extra_headers = extra_headers.items,
         });
         defer req.deinit();
 
