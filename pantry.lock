@@ -10,7 +10,7 @@
         "@stacksjs/ts-cloud": "^0.7.26"
       },
       "devDependencies": {
-        "@stacksjs/bumpx": "^0.2.9",
+        "@stacksjs/bumpx": "^0.2.10",
         "better-dx": "^0.2.15"
       }
     },
