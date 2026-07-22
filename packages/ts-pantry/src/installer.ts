@@ -503,11 +503,45 @@ async function registryVersions(domain: string): Promise<string[]> {
 }
 
 /** Does `version` satisfy `op` + `target`? Shared by the bundled and live scans. */
-function satisfiesConstraint(version: string, op: string, target: number[], targetRaw: string): boolean {
+export interface InstallerConstraint {
+  operator: '^' | '~' | '>=' | '<=' | '>' | '<' | '='
+  target: string
+}
+
+export function parseInstallerConstraint(constraint: string): InstallerConstraint | null {
+  const match = constraint.match(/^([~^]|>=|<=|>|<|=)(\d+(?:\.\d+){0,10}(?:-[0-9A-Za-z.-]+)?(?:[+_][0-9A-Za-z.-]+)?)/)
+  if (!match) return null
+  return { operator: match[1] as InstallerConstraint['operator'], target: match[2] }
+}
+
+function numericCore(version: string): number[] {
+  return version.split(/[+_-]/, 1)[0].split('.').map(part => Number.parseInt(part, 10))
+}
+
+function compareInstallerVersions(a: string, b: string): number {
+  const left = numericCore(a)
+  const right = numericCore(b)
+  for (let i = 0; i < Math.max(left.length, right.length, 3); i++) {
+    const difference = (left[i] || 0) - (right[i] || 0)
+    if (difference) return difference
+  }
+
+  const leftPrerelease = a.includes('-')
+  const rightPrerelease = b.includes('-')
+  if (leftPrerelease !== rightPrerelease) return leftPrerelease ? -1 : 1
+
+  const leftDev = Number.parseInt(a.match(/-dev\.(\d+)/)?.[1] || '0', 10)
+  const rightDev = Number.parseInt(b.match(/-dev\.(\d+)/)?.[1] || '0', 10)
+  return leftDev - rightDev
+}
+
+export function satisfiesInstallerConstraint(version: string, constraint: InstallerConstraint): boolean {
+  const { operator: op, target: targetRaw } = constraint
   // Skip dev/pre-release versions for stable constraints
   if (version.includes('-') && !targetRaw.includes('-')) return false
-  const parts = version.split('.').map(Number)
-  if (parts.some(Number.isNaN)) return false
+  const parts = numericCore(version)
+  const target = numericCore(targetRaw)
+  if (parts.some(Number.isNaN) || target.some(Number.isNaN)) return false
 
   // A partial constraint omits components ("^26", "~1.3"), so read every slot
   // through a 0 default on BOTH sides. Comparing against a bare target[1] made
@@ -515,20 +549,25 @@ function satisfiesConstraint(version: string, op: string, target: number[], targ
   // caller silently installed "latest" instead of a node 26.
   const [vMaj, vMin, vPat] = [parts[0] || 0, parts[1] || 0, parts[2] || 0]
   const [tMaj, tMin, tPat] = [target[0] || 0, target[1] || 0, target[2] || 0]
+  const order = compareInstallerVersions(version, targetRaw)
 
   if (op === '^') {
-    // ^0.15.1 means >=0.15.1 and <0.16.0 (major 0 pins the minor too)
-    if (tMaj === 0) return vMaj === 0 && vMin === tMin && vPat >= tPat
+    if (order < 0) return false
+    // ^0.0.3 pins the patch; ^0.15.1 pins the minor; ^1.2.3 pins the major.
+    if (tMaj === 0 && tMin === 0) return vMaj === 0 && vMin === 0 && vPat === tPat
+    if (tMaj === 0) return vMaj === 0 && vMin === tMin
     // ^x.y.z: same major, minor.patch >= target
-    return vMaj === tMaj && (vMin > tMin || (vMin === tMin && vPat >= tPat))
+    return vMaj === tMaj
   }
   if (op === '~') {
-    // ~0.15.1 means >=0.15.1 and <0.16.0
-    return vMaj === tMaj && vMin === tMin && vPat >= tPat
+    if (order < 0) return false
+    return target.length === 1 ? vMaj === tMaj : vMaj === tMaj && vMin === tMin
   }
-  if (op === '>=') {
-    return vMaj > tMaj || (vMaj === tMaj && vMin > tMin) || (vMaj === tMaj && vMin === tMin && vPat >= tPat)
-  }
+  if (op === '>=') return order >= 0
+  if (op === '<=') return order <= 0
+  if (op === '>') return order > 0
+  if (op === '<') return order < 0
+  if (op === '=') return order === 0
   return false
 }
 
@@ -554,32 +593,26 @@ async function fetchLiveVersions(domain: string): Promise<string[]> {
     const versions = (resp as Array<{ version?: string }> | null) || []
     return versions.map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
   }
+  if (domain === 'ziglang.org') return registryVersions(domain)
   return []
 }
 
 /** Newest-first semver sort, so the first match found is always the highest. */
-function compareVersionsDesc(a: string, b: string): number {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pb[i] || 0) - (pa[i] || 0)
-    if (d) return d
-  }
-  return 0
+export function compareInstallerVersionsDesc(a: string, b: string): number {
+  return compareInstallerVersions(b, a)
+}
+
+export function resolveInstallerConstraintFromCandidates(constraint: string, candidates: readonly string[]): string | null {
+  const parsed = parseInstallerConstraint(constraint)
+  if (!parsed) return null
+  return [...new Set(candidates)].sort(compareInstallerVersionsDesc).find(version => satisfiesInstallerConstraint(version, parsed)) || null
 }
 
 /**
  * Resolve a semver constraint (^1.0.0, ~1.2.0, >=1.0.0, etc.) to the best matching concrete version.
  */
 async function resolveVersionConstraint(domain: string, constraint: string): Promise<string> {
-  // Parse constraint: ^0.15.1, ~0.15.1, >=0.15.1, etc.
-  // eslint-disable-next-line no-super-linear-backtracking
-  const match = constraint.match(/^([~^>=<]+)(\d+(?:\.\d+){0,10})/)
-  if (!match) return resolveLatestVersion(domain)
-
-  const op = match[1]
-  const targetRaw = match[2]
-  const target = targetRaw.split('.').map(Number)
+  if (!parseInstallerConstraint(constraint)) return resolveLatestVersion(domain)
 
   // Get available versions from package metadata
   let bundledVersions: readonly string[]
@@ -597,11 +630,9 @@ async function resolveVersionConstraint(domain: string, constraint: string): Pro
   // Merging rather than preferring either list keeps resolution working when
   // upstream is unreachable (bundled-only) and when it's ahead (live-only).
   const live = await fetchLiveVersions(domain)
-  const candidates = [...new Set([...live, ...bundledVersions])].sort(compareVersionsDesc)
-
-  for (const ver of candidates) {
-    if (satisfiesConstraint(ver, op, target, targetRaw)) return ver
-  }
+  const candidates = [...new Set([...live, ...bundledVersions])].sort(compareInstallerVersionsDesc)
+  const resolved = resolveInstallerConstraintFromCandidates(constraint, candidates)
+  if (resolved) return resolved
 
   // Nothing upstream or bundled satisfies the pin. Installing "latest" here
   // would hand back a version the caller explicitly did not ask for, which is

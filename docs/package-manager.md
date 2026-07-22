@@ -103,6 +103,24 @@ The normal project operation follows this order:
 Partial failures return a non-zero command result. Quiet mode may remove progress
 noise but cannot convert a failure into success or hide its final reason.
 
+### Version-constraint semantics
+
+Exact versions remain exact. Caret ranges keep the first non-zero component
+stable (`^1.2.3` stays below 2.0.0, `^0.15.1` stays below 0.16.0, and
+`^0.0.3` stays on 0.0.3). Tilde ranges keep the minor component when one is
+present. `>=`, `<=`, `>`, `<`, and `=` compare the complete ordered version.
+If no available version satisfies a declared range, installation fails instead
+of substituting `latest`.
+
+Prerelease intent is explicit. A stable range does not select development
+builds. A range containing prerelease metadata, such as
+`ziglang.org: ^0.17.0-dev`, may select the newest matching development build.
+Pantry retains the complete prerelease/build identifier, consults live Pantry
+binary metadata for Zig, orders its numbered development builds numerically,
+and records the selected concrete version in `pantry.lock`. Registry-safe
+underscores and upstream `+` build separators are treated as equivalent version
+metadata for ordering, but the exact registry key is preserved for download.
+
 ## Lockfile contract
 
 `pantry.lock` is the reproducibility boundary. It records exact package versions,
