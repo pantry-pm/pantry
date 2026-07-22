@@ -4,6 +4,8 @@ import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
+import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
+import type { ServiceSpec } from './services'
 import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readRedisPid, redisLaunchArgs } from './services'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -23,8 +25,25 @@ export * from './types'
 
 const REPO = 'pantry-pm/pantry'
 
-async function startRequestedServices(input: string, pantryBinDir: string, platform: Platform): Promise<void> {
-  const services = parseServiceSpecs(input)
+async function installRequestedServicePackages(services: ServiceSpec[], pantryExecutable: string, platform: Platform): Promise<void> {
+  if (!services.length) return
+  if (platform.os === 'windows') throw new Error('Pantry Action services are not yet supported on Windows runners')
+
+  core.startGroup(`Installing service packages through Pantry: ${services.map(service => service.packageSpec).join(', ')}`)
+  try {
+    for (const service of services) {
+      const exitCode = await exec.exec(pantryExecutable, ['install', service.packageSpec, '--no-save'], {
+        env: { ...process.env, CI: 'true', NO_COLOR: '1' } as { [key: string]: string },
+      })
+      if (exitCode !== 0) throw new Error(`Pantry could not install service package ${service.packageSpec}`)
+    }
+  }
+  finally {
+    core.endGroup()
+  }
+}
+
+async function startRequestedServices(services: ServiceSpec[], pantryBinDir: string, platform: Platform): Promise<void> {
   if (!services.length) return
   if (platform.os === 'windows') throw new Error('Pantry Action services are not yet supported on Windows runners')
 
@@ -631,7 +650,7 @@ export async function run(): Promise<void> {
 
     const platform = detectPlatform()
     const requestedServices = parseServiceSpecs(inputs.services)
-    inputs.packages = mergeServicePackages(inputs.packages, requestedServices)
+    const cachePackages = mergeServicePackages(inputs.packages, requestedServices)
     const cwd = process.cwd()
     const homeDir = os.homedir()
     const pantryDir = path.join(cwd, 'pantry')
@@ -701,7 +720,7 @@ export async function run(): Promise<void> {
     const lockHash = lockfile ? hashFile(lockfile) : 'no-lock'
     // Avoid hashing the same file twice when lockfile == depsFile
     const depsHash = (depsFileForKey && depsFileForKey !== lockfile) ? hashFile(depsFileForKey) : 'none'
-    const cacheKey = `pantry-v2-${resolvedVer}-${platform.os}-${platform.arch}-${lockHash}-${depsHash}-${inputs.packages || 'all'}`
+    const cacheKey = `pantry-v2-${resolvedVer}-${platform.os}-${platform.arch}-${lockHash}-${depsHash}-${cachePackages || 'all'}`
     // Restore keys: try same OS/arch with any lock hash
     const restoreKeys = [
       `pantry-v2-${resolvedVer}-${platform.os}-${platform.arch}-`,
@@ -716,8 +735,8 @@ export async function run(): Promise<void> {
         const binDirExists = fs.existsSync(pantryBinDir)
         const hasEntries = binDirExists && fs.readdirSync(pantryBinDir).length > 0
         if (hasEntries) {
-          cacheHit = true
-          core.info(`Cache hit: ${hit}`)
+          cacheHit = hit === cacheKey
+          core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
         }
         else {
           core.info('Cache restored but incomplete — reinstalling')
@@ -748,6 +767,16 @@ export async function run(): Promise<void> {
     core.addPath(pantryBinDir)
     core.addPath(path.join(homeDir, '.pantry', 'bin'))
 
+    // Service packages use Pantry's native resolver so their dependency graph,
+    // integrity checks, registry platform mapping, and binary links stay
+    // identical to `pantry install` outside GitHub Actions. The TypeScript SDK
+    // intentionally covers only self-contained bootstrap tools.
+    await installRequestedServicePackages(
+      requestedServices,
+      path.join(installDir, platform.binaryName),
+      platform,
+    )
+
     // Even on cache hit, reconcile critical deps. A stale cache may lack
     // system binaries (zig, bun) OR workspace source deps (e.g.
     // pantry/zig-cli/src/root.zig) needed by `zig build`. Validate both.
@@ -766,9 +795,7 @@ export async function run(): Promise<void> {
       // without this a cache hit would serve whatever dev build was first cached
       // and never pick up a newer master — the reconcile re-resolves the spec
       // (installPackage is a no-op when the resolved version is already on disk).
-      const systemDeps = inputs.packages
-        ? inputs.packages.split(/\s+/).filter(Boolean)
-        : extractSystemDeps()
+      const systemDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
       if (systemDeps.length > 0) {
         core.info(`Cache hit — reconciling system deps against lock/spec: ${systemDeps.join(', ')}`)
         for (const dep of systemDeps) {
@@ -784,18 +811,20 @@ export async function run(): Promise<void> {
       // Validate workspace deps: pantry/<name>/ dirs exist for every non-system
       // dep declared in package.json. A missing dir (e.g. zig-cli) means the
       // cache was saved before `pantry install` completed; re-run to heal it.
-      const workspaceDeps = extractWorkspaceDeps()
-      const missingWorkspace = workspaceDeps.filter(dep => {
-        const depDir = path.join(pantryDir, dep)
-        return !fs.existsSync(depDir)
-      })
-      if (missingWorkspace.length > 0) {
-        core.info(`Cache hit but missing workspace deps: ${missingWorkspace.join(', ')} — running pantry install`)
-        await exec.exec('pantry', ['install', '--no-save'], {
-          env: installEnv as { [key: string]: string },
-        }).catch(() => {
-          core.warning('pantry workspace install failed')
+      if (shouldInstallWorkspace(inputs.packages, inputs.setupOnly)) {
+        const workspaceDeps = extractWorkspaceDeps()
+        const missingWorkspace = workspaceDeps.filter(dep => {
+          const depDir = path.join(pantryDir, dep)
+          return !fs.existsSync(depDir)
         })
+        if (missingWorkspace.length > 0) {
+          core.info(`Cache hit but missing workspace deps: ${missingWorkspace.join(', ')} — running pantry install`)
+          await exec.exec('pantry', ['install', '--no-save'], {
+            env: installEnv as { [key: string]: string },
+          }).catch(() => {
+            core.warning('pantry workspace install failed')
+          })
+        }
       }
     }
 
@@ -803,9 +832,7 @@ export async function run(): Promise<void> {
       const installEnv = { ...process.env, CI: 'true', NO_COLOR: '1' }
 
       // Collect all system packages to install (from explicit input + deps files)
-      const systemDeps = inputs.packages
-        ? inputs.packages.split(/\s+/).filter(Boolean)
-        : extractSystemDeps()
+      const systemDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
 
       if (systemDeps.length > 0) {
         core.startGroup(`Installing system packages: ${systemDeps.join(', ')}`)
@@ -822,7 +849,7 @@ export async function run(): Promise<void> {
         core.endGroup()
       }
 
-      if (!inputs.packages) {
+      if (shouldInstallWorkspace(inputs.packages, inputs.setupOnly)) {
         // Also run workspace install for JS deps (package.json)
         core.startGroup('Installing workspace dependencies')
         await exec.exec('pantry', ['install', '--no-save'], {
@@ -854,9 +881,7 @@ export async function run(): Promise<void> {
     // binary, so the stub never wins. Fixes the Intel-macOS bootstrap without
     // any per-workflow workaround.
     {
-      const reassertDeps = inputs.packages
-        ? inputs.packages.split(/\s+/).filter(Boolean)
-        : extractSystemDeps()
+      const reassertDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
       for (const dep of reassertDeps) {
         try {
           await installSystemPackage(dep, pantryDir, lockedVersions)
@@ -929,10 +954,9 @@ export async function run(): Promise<void> {
     }
     catch { /* bun not in deps */ }
 
-    // Services are installed through the same versioned package path as every
-    // other dependency, then launched loopback-only and health-checked before
-    // downstream workflow steps begin.
-    await startRequestedServices(inputs.services, pantryBinDir, platform)
+    // Launch only after Pantry has installed the complete service dependency
+    // graph and all executable-link reconciliation has finished.
+    await startRequestedServices(requestedServices, pantryBinDir, platform)
 
     // ── Publish ──
     if (inputs.publish) {
