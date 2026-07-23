@@ -32,8 +32,8 @@
       "name": "bw",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2026.6.0",
-      "published": "2026.6.0",
+      "latest": "2026.7.0",
+      "published": "2026.7.0",
       "needsUpdate": false
     },
     {
