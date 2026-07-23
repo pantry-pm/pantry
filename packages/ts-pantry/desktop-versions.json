@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -626,8 +626,8 @@
       "name": "Zed",
       "kind": "app",
       "host": "macos",
-      "latest": "1.11.3",
-      "published": "1.11.3",
+      "latest": "1.12.0",
+      "published": "1.12.0",
       "needsUpdate": false
     }
   ]
