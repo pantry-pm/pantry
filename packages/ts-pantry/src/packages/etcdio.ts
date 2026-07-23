@@ -68,7 +68,9 @@ export const etcdioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.7.1',
     '3.7.0',
+    '3.6.14',
     '3.6.13',
     '3.6.12',
     '3.6.11',
@@ -83,6 +85,7 @@ export const etcdioPackage = {
     '3.6.2',
     '3.6.1',
     '3.6.0',
+    '3.5.33',
     '3.5.32',
     '3.5.31',
     '3.5.30',
