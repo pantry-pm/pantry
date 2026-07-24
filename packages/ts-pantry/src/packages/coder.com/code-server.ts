@@ -80,6 +80,7 @@ export const codercomcodeserverPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.130.0',
     '4.129.0',
     '4.128.0',
     '4.127.0',
