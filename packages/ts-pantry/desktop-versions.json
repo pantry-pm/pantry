@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.12.30",
-      "published": "3.12.30",
+      "latest": "3.13.10",
+      "published": "3.13.10",
       "needsUpdate": false
     },
     {
@@ -329,8 +329,8 @@
       "name": "LibreOffice",
       "kind": "app",
       "host": "macos",
-      "latest": "26.2.4",
-      "published": "26.2.4",
+      "latest": "26.2.5",
+      "published": "26.2.5",
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.29.20",
-      "published": "2.26.29.20",
+      "latest": "2.26.29.22",
+      "published": "2.26.29.22",
       "needsUpdate": false
     },
     {
