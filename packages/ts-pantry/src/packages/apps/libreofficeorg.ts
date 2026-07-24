@@ -22,6 +22,7 @@ export const libreofficeorgPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '26.2.5',
     '26.2.4',
     '24.8.5',
     '24.8.4',
