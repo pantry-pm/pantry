@@ -258,16 +258,109 @@ fn workingTreeClean(allocator: std.mem.Allocator) bool {
     return true;
 }
 
-pub fn releaseCommand(allocator: std.mem.Allocator, options: ReleaseOptions) !CommandResult {
-    // Find the bump binary
-    const bump_path = findBinary(allocator, "bump") orelse {
-        style.print("{s}error:{s} `bump` binary not found.\n", .{ style.red, style.reset });
-        style.print("\nInstall it with:\n", .{});
-        style.print("  {s}pantry install zig-bump{s}\n\n", .{ style.green_bold, style.reset });
-        return .{ .exit_code = 1, .message = null };
-    };
-    defer allocator.free(bump_path);
+/// Compute the next version from `current` and the release `type`. Caller owns
+/// the returned slice.
+fn computeNewVersion(allocator: std.mem.Allocator, current: SemVer, release_type: []const u8, preid: ?[]const u8) ?[]const u8 {
+    const id = preid orelse "alpha";
+    if (std.mem.eql(u8, release_type, "patch")) {
+        return std.fmt.allocPrint(allocator, "{d}.{d}.{d}", .{ current.major, current.minor, current.patch + 1 }) catch null;
+    } else if (std.mem.eql(u8, release_type, "minor")) {
+        return std.fmt.allocPrint(allocator, "{d}.{d}.0", .{ current.major, current.minor + 1 }) catch null;
+    } else if (std.mem.eql(u8, release_type, "major")) {
+        return std.fmt.allocPrint(allocator, "{d}.0.0", .{current.major + 1}) catch null;
+    } else if (std.mem.eql(u8, release_type, "premajor")) {
+        return std.fmt.allocPrint(allocator, "{d}.0.0-{s}.0", .{ current.major + 1, id }) catch null;
+    } else if (std.mem.eql(u8, release_type, "preminor")) {
+        return std.fmt.allocPrint(allocator, "{d}.{d}.0-{s}.0", .{ current.major, current.minor + 1, id }) catch null;
+    } else if (std.mem.eql(u8, release_type, "prepatch")) {
+        return std.fmt.allocPrint(allocator, "{d}.{d}.{d}-{s}.0", .{ current.major, current.minor, current.patch + 1, id }) catch null;
+    }
+    // Treat anything else as an explicit version string (strip a leading 'v').
+    const v = if (release_type.len > 0 and (release_type[0] == 'v' or release_type[0] == 'V')) release_type[1..] else release_type;
+    if (SemVer.parse(v) == null) return null;
+    return allocator.dupe(u8, v) catch null;
+}
 
+/// Rewrite the `"version": "..."` value in package.json if present.
+fn writePackageJsonVersion(allocator: std.mem.Allocator, new_version: []const u8) void {
+    const content = io_helper.readFileAlloc(allocator, "package.json", 1 << 20) catch return;
+    defer allocator.free(content);
+    const key = "\"version\"";
+    const key_pos = std.mem.indexOf(u8, content, key) orelse return;
+    var i = key_pos + key.len;
+    while (i < content.len and content[i] != '"') : (i += 1) {
+        if (content[i] == '{') return;
+    }
+    if (i >= content.len) return;
+    const val_start = i + 1;
+    var j = val_start;
+    while (j < content.len and content[j] != '"') : (j += 1) {}
+    if (j >= content.len) return;
+    const out = std.fmt.allocPrint(allocator, "{s}{s}{s}", .{ content[0..val_start], new_version, content[j..] }) catch return;
+    defer allocator.free(out);
+    const file = io_helper.createFile("package.json", .{}) catch return;
+    defer io_helper.closeFile(file);
+    io_helper.writeAllToFile(file, out) catch return;
+}
+
+fn gitRun(allocator: std.mem.Allocator, args: []const []const u8) bool {
+    const result = io_helper.childRun(allocator, args) catch return false;
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+    if (!(result.term == .exited and result.term.exited == 0)) {
+        if (result.stderr.len > 0) style.print("{s}", .{result.stderr});
+        return false;
+    }
+    return true;
+}
+
+/// Regenerate CHANGELOG.md with a new section for `new_version` built from the
+/// git commit subjects since the previous tag. Self-contained — no external
+/// changelog binary required.
+fn generateChangelog(allocator: std.mem.Allocator, new_version: []const u8) void {
+    const prev = latestTagVersion(allocator);
+    const range: ?[]const u8 = if (prev) |p| std.fmt.allocPrint(allocator, "v{d}.{d}.{d}..HEAD", .{ p.major, p.minor, p.patch }) catch null else null;
+    defer if (range) |r| allocator.free(r);
+
+    const log = if (range) |r|
+        gitCapture(allocator, &.{ "git", "log", r, "--no-merges", "--pretty=format:- %s (%h)" })
+    else
+        gitCapture(allocator, &.{ "git", "log", "--no-merges", "--pretty=format:- %s (%h)" });
+    defer if (log) |l| allocator.free(l);
+
+    const date = gitCapture(allocator, &.{ "git", "log", "-1", "--pretty=format:%cs" }) orelse allocator.dupe(u8, "") catch return;
+    defer allocator.free(date);
+
+    const body = if (log) |l| (if (l.len > 0) l else "- No notable changes") else "- No notable changes";
+
+    const existing = io_helper.readFileAlloc(allocator, "CHANGELOG.md", 1 << 22) catch allocator.dupe(u8, "") catch return;
+    defer allocator.free(existing);
+    const tail = if (std.mem.startsWith(u8, existing, "# Changelog")) blk: {
+        const nl = std.mem.indexOfScalar(u8, existing, '\n') orelse existing.len;
+        break :blk existing[nl..];
+    } else existing;
+
+    var tail_trimmed = tail;
+    while (tail_trimmed.len > 0 and tail_trimmed[0] == '\n') tail_trimmed = tail_trimmed[1..];
+
+    const out = std.fmt.allocPrint(allocator,
+        \\# Changelog
+        \\
+        \\## v{s} - {s}
+        \\
+        \\{s}
+        \\
+        \\{s}
+    , .{ new_version, date, body, tail_trimmed }) catch return;
+    defer allocator.free(out);
+
+    const file = io_helper.createFile("CHANGELOG.md", .{}) catch return;
+    defer io_helper.closeFile(file);
+    io_helper.writeAllToFile(file, out) catch return;
+    style.print("  {s}CHANGELOG.md updated{s}\n", .{ style.green, style.reset });
+}
+
+pub fn releaseCommand(allocator: std.mem.Allocator, options: ReleaseOptions) !CommandResult {
     // Guard: refuse to release from a dirty tree (would sweep unrelated changes
     // into the `chore: release` commit). Skipped for dry-run.
     if (!options.dry_run and !workingTreeClean(allocator)) {
@@ -278,101 +371,74 @@ pub fn releaseCommand(allocator: std.mem.Allocator, options: ReleaseOptions) !Co
 
     // Reconcile version drift (zon behind latest git tag) so the bump is always
     // monotonic and never clashes with an existing tag. Skipped for dry-run.
-    if (!options.dry_run) {
-        reconcileVersionDrift(allocator);
-    }
+    if (!options.dry_run) reconcileVersionDrift(allocator);
 
-    // Step 1: Generate changelog (if changelog binary is available and not skipped)
-    if (!options.no_changelog) {
-        generateChangelog(allocator);
-    }
-
-    // Step 2: Build bump command args (fixed buffer, max 16 args)
-    var argv_buf: [16][]const u8 = undefined;
-    var argc: usize = 0;
-
-    argv_buf[argc] = bump_path;
-    argc += 1;
-    argv_buf[argc] = options.release_type;
-    argc += 1;
-    argv_buf[argc] = "--changelog";
-    argc += 1;
-
-    if (options.yes or style.isCI()) {
-        argv_buf[argc] = if (style.isCI()) "--ci" else "--yes";
-        argc += 1;
-    }
-    if (options.dry_run) {
-        argv_buf[argc] = "--dry-run";
-        argc += 1;
-    }
-    if (options.no_push) {
-        argv_buf[argc] = "--no-push";
-        argc += 1;
-    }
-    if (options.preid) |preid| {
-        argv_buf[argc] = "--preid";
-        argc += 1;
-        argv_buf[argc] = preid;
-        argc += 1;
-    }
-    if (options.tag_name) |tag| {
-        argv_buf[argc] = "--tag-name";
-        argc += 1;
-        argv_buf[argc] = tag;
-        argc += 1;
-    }
-
-    style.print("{s}>{s} bumping version ({s}{s}{s})...\n", .{
-        style.dim,        style.reset,
-        style.green_bold, options.release_type,
-        style.reset,
-    });
-
-    // Run bump
-    const result = io_helper.childRun(allocator, argv_buf[0..argc]) catch {
-        return CommandResult.err(allocator, "Failed to run bump command");
+    const current_str = readZonVersion(allocator) orelse getPackageVersion(allocator) orelse {
+        return CommandResult.err(allocator, "No version found in build.zig.zon or package.json");
     };
-    defer allocator.free(result.stdout);
-    defer allocator.free(result.stderr);
+    defer allocator.free(current_str);
+    const current = SemVer.parse(current_str) orelse {
+        return CommandResult.err(allocator, "Current version is not valid semver");
+    };
 
-    // Print bump output
-    if (result.stdout.len > 0) {
-        style.print("{s}", .{result.stdout});
-    }
-    if (result.stderr.len > 0 and !(result.term == .exited and result.term.exited == 0)) {
-        style.print("{s}", .{result.stderr});
-    }
+    const new_version = computeNewVersion(allocator, current, options.release_type, options.preid) orelse {
+        return CommandResult.err(allocator, "Invalid release type or version");
+    };
+    defer allocator.free(new_version);
 
-    if (result.term == .exited and result.term.exited == 0) {
-        if (!options.dry_run) {
-            style.print("\n{s}{s}{s} release complete\n", .{ style.green, style.check, style.reset });
-            if (!options.no_push) {
-                style.print("  {s}GitHub Action will create the release and publish to the registry{s}\n", .{ style.dim, style.reset });
-            }
-        }
+    style.print("{s}>{s} {s} -> {s}{s}{s}\n", .{ style.dim, style.reset, current_str, style.green_bold, new_version, style.reset });
+
+    if (options.dry_run) {
+        style.print("  {s}(dry run — no changes applied){s}\n", .{ style.dim, style.reset });
         return .{ .exit_code = 0, .message = null };
     }
 
-    return .{ .exit_code = 1, .message = try allocator.dupe(u8, "Release failed") };
+    // Apply the version to the config files.
+    _ = writeZonVersion(allocator, new_version);
+    writePackageJsonVersion(allocator, new_version);
+
+    // Regenerate the changelog from git history.
+    if (!options.no_changelog) generateChangelog(allocator, new_version);
+
+    // Stage only the release-owned files.
+    _ = gitRun(allocator, &.{ "git", "add", "build.zig.zon", "package.json", "CHANGELOG.md" });
+
+    const commit_msg = try std.fmt.allocPrint(allocator, "chore: release v{s}", .{new_version});
+    defer allocator.free(commit_msg);
+    if (!gitRun(allocator, &.{ "git", "commit", "-m", commit_msg })) {
+        return CommandResult.err(allocator, "git commit failed");
+    }
+
+    const tag = if (options.tag_name) |t| try allocator.dupe(u8, t) else try std.fmt.allocPrint(allocator, "v{s}", .{new_version});
+    defer allocator.free(tag);
+    if (!gitRun(allocator, &.{ "git", "tag", tag })) {
+        return CommandResult.err(allocator, "git tag failed");
+    }
+
+    if (!options.no_push) {
+        _ = gitRun(allocator, &.{ "git", "push" });
+        _ = gitRun(allocator, &.{ "git", "push", "origin", tag });
+    }
+
+    style.print("\n{s}{s}{s} released {s}\n", .{ style.green, style.check, style.reset, tag });
+    if (!options.no_push) {
+        style.print("  {s}GitHub Action will create the release and publish to the registry{s}\n", .{ style.dim, style.reset });
+    }
+    return .{ .exit_code = 0, .message = null };
 }
 
-fn generateChangelog(allocator: std.mem.Allocator) void {
-    const changelog_path = findBinary(allocator, "changelog") orelse return;
-    defer allocator.free(changelog_path);
-
-    style.print("{s}>{s} generating changelog...\n", .{ style.dim, style.reset });
-
-    const cl_result = io_helper.childRun(allocator, &.{ changelog_path, "-o", "CHANGELOG.md" }) catch {
-        style.print("  {s}(changelog generation skipped — command failed){s}\n", .{ style.dim, style.reset });
-        return;
-    };
-    defer allocator.free(cl_result.stdout);
-    defer allocator.free(cl_result.stderr);
-
-    if (cl_result.term == .exited and cl_result.term.exited == 0) {
-        style.print("  {s}CHANGELOG.md updated{s}\n", .{ style.green, style.reset });
-    } else {
-        style.print("  {s}(changelog generation skipped){s}\n", .{ style.dim, style.reset });
-    }
+/// Read the `"version"` field from package.json in CWD. Caller owns the result.
+fn getPackageVersion(allocator: std.mem.Allocator) ?[]const u8 {
+    const content = io_helper.readFileAlloc(allocator, "package.json", 1 << 20) catch return null;
+    defer allocator.free(content);
+    const key = "\"version\"";
+    const key_pos = std.mem.indexOf(u8, content, key) orelse return null;
+    var i = key_pos + key.len;
+    while (i < content.len and content[i] != '"') : (i += 1) {}
+    if (i >= content.len) return null;
+    i += 1;
+    const start = i;
+    while (i < content.len and content[i] != '"') : (i += 1) {}
+    if (i >= content.len) return null;
+    return allocator.dupe(u8, content[start..i]) catch null;
 }
