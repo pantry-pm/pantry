@@ -11,6 +11,7 @@ export interface ReliableReleaseUploadOptions {
   upload: () => Promise<void>
   listAssets: () => Promise<ReleaseAsset[]>
   deleteAsset: (assetId: number) => Promise<void>
+  replaceExisting?: boolean
   onRetry?: (message: string) => void
   sleep?: (milliseconds: number) => Promise<void>
   maxAttempts?: number
@@ -81,6 +82,17 @@ export async function uploadReleaseAssetReliably(options: ReliableReleaseUploadO
   const maxAttempts = options.maxAttempts ?? DEFAULT_GITHUB_RELEASE_MAX_ATTEMPTS
   const retryDelayMs = options.retryDelayMs ?? 2000
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
+
+  // An existing asset with the same name and byte length is not necessarily
+  // the same artifact (archives and checksum manifests commonly retain their
+  // size across rebuilds). Explicit release updates must replace it before the
+  // first upload instead of treating size equality as content equality.
+  if (options.replaceExisting) {
+    const assets = await options.listAssets()
+    const existing = assets.find(asset => asset.name === options.name)
+    if (existing)
+      await options.deleteAsset(existing.id)
+  }
 
   let lastError: unknown
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {

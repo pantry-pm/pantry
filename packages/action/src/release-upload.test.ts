@@ -80,6 +80,22 @@ describe('uploadReleaseAssetReliably', () => {
     expect(result).toBe('reconciled')
   })
 
+  it('replaces same-sized assets when updating an existing release', async () => {
+    const operations: string[] = []
+
+    const result = await uploadReleaseAssetReliably({
+      name: 'checksums.txt',
+      size: 756,
+      replaceExisting: true,
+      upload: async () => { operations.push('upload') },
+      listAssets: async () => [{ id: 9, name: 'checksums.txt', size: 756, state: 'uploaded' }],
+      deleteAsset: async id => { operations.push(`delete:${id}`) },
+    })
+
+    expect(result).toBe('uploaded')
+    expect(operations).toEqual(['delete:9', 'upload'])
+  })
+
   it('deletes a stale duplicate before retrying', async () => {
     let uploads = 0
     const deleted: number[] = []

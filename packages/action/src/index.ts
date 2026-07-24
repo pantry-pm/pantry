@@ -1505,6 +1505,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
       const result = await uploadReleaseAssetReliably({
         name,
         size,
+        replaceExisting: existingRelease !== undefined,
         upload: async () => {
           await octokit.rest.repos.uploadReleaseAsset({
             owner,
