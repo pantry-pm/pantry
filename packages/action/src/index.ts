@@ -24,6 +24,24 @@ import { isKnownAlias, resolvePackageDomain } from '../../ts-pantry/src/utils'
 
 export * from './types'
 
+/**
+ * Lenient boolean input parser. GitHub Actions passes every input as a string,
+ * and `core.getBooleanInput` throws on anything but `true`/`false` (any case).
+ * Accept the common forms — true/false, 1/0, yes/no, on/off — so both quoted
+ * (`release: 'true'`) and bare YAML booleans (`release: true`) work, and fall
+ * back to `fallback` when the input is empty.
+ */
+export function boolInput(name: string, fallback: boolean): boolean {
+  const raw = core.getInput(name).trim().toLowerCase()
+  if (raw === '')
+    return fallback
+  if (raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on')
+    return true
+  if (raw === 'false' || raw === '0' || raw === 'no' || raw === 'off')
+    return false
+  throw new Error(`Input "${name}" must be a boolean (true/false), got: ${raw}`)
+}
+
 const REPO = 'pantry-pm/pantry'
 
 async function installRequestedServicePackages(services: ServiceSpec[], pantryExecutable: string, platform: Platform): Promise<void> {
@@ -627,7 +645,7 @@ export async function run(): Promise<void> {
       packages: core.getInput('packages') || '',
       services: core.getInput('services') || '',
       configPath: core.getInput('config-path') || 'pantry.config.ts',
-      setupOnly: !core.getBooleanInput('install'),
+      setupOnly: !boolInput('install', true),
       publish: core.getInput('publish') || '',
       packageDir: core.getInput('package-dir') || '',
       registryUrl: core.getInput('registry-url') || 'https://registry.pantry.dev',
@@ -636,12 +654,12 @@ export async function run(): Promise<void> {
       slackWebhook: core.getInput('slack-webhook') || '',
       notificationTitle: core.getInput('notification-title') || '',
       notificationMentions: core.getInput('notification-mentions') || '',
-      release: core.getBooleanInput('release'),
+      release: boolInput('release', false),
       releaseFiles: core.getInput('release-files') || '',
       releaseTag: core.getInput('release-tag') || process.env.GITHUB_REF_NAME || '',
       releaseMakeLatest: core.getInput('release-make-latest') || 'auto',
-      releaseDraft: core.getBooleanInput('release-draft'),
-      releasePrerelease: core.getBooleanInput('release-prerelease'),
+      releaseDraft: boolInput('release-draft', false),
+      releasePrerelease: boolInput('release-prerelease', false),
       releaseNotes: core.getInput('release-notes') || '',
       releaseChangelog: core.getInput('release-changelog') || 'CHANGELOG.md',
       releaseChecksums: core.getInput('release-checksums') || '',
@@ -1323,7 +1341,9 @@ async function packageBuildArtifacts(cwd: string): Promise<string[]> {
 
       const entries = fs.readdirSync(targetDir).filter(f => !f.startsWith('.'))
       if (entries.length > 0) {
-        await exec.exec('zip', ['-j', zipPath, ...entries.map(e => path.join(targetDir, e))])
+        // Recurse so a library layout (lib/, include/) is preserved rather than
+        // flattened away; a flat single-binary target still zips cleanly.
+        await exec.exec('zip', ['-r', zipPath, ...entries], { cwd: targetDir })
         packaged.push(zipPath)
         core.info(`Packaged: ${zipName}`)
       }
