@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.721.30844",
-      "published": "26.721.30844",
+      "latest": "26.721.31836",
+      "published": "26.721.31836",
       "needsUpdate": false
     },
     {
@@ -248,8 +248,8 @@
       "name": "Insomnia",
       "kind": "app",
       "host": "macos",
-      "latest": "13.0.2",
-      "published": "13.0.2",
+      "latest": "13.1.0",
+      "published": "13.1.0",
       "needsUpdate": false
     },
     {
