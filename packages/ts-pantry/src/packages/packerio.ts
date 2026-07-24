@@ -67,6 +67,7 @@ export const packerioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.16.0',
     '1.15.4',
     '1.15.3',
     '1.15.2',
