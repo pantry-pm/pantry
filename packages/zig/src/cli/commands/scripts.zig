@@ -12,6 +12,54 @@ pub const RunScriptOptions = struct {
     timeout_ms: u64 = 0,
 };
 
+const pantry_run_options = [_][]const u8{
+    "--filter",
+    "-F",
+    "--parallel",
+    "--sequential",
+    "--changed",
+    "--watch",
+    "-w",
+    "--timeout",
+};
+
+/// Return true when `pantry run` must bypass zig-cli's option parser so an
+/// option belongs to the child script. Known Pantry runner options continue
+/// through the normal parser; `--` and unknown options are forwarded.
+pub fn needsRawArgumentForwarding(args: []const []const u8) bool {
+    if (args.len < 2) return false;
+
+    for (args[1..]) |arg| {
+        if (std.mem.eql(u8, arg, "--")) return true;
+        if (arg.len == 0 or arg[0] != '-') continue;
+
+        var is_pantry_option = false;
+        for (pantry_run_options) |option| {
+            if (std.mem.eql(u8, arg, option) or
+                (std.mem.startsWith(u8, arg, option) and arg.len > option.len and arg[option.len] == '='))
+            {
+                is_pantry_option = true;
+                break;
+            }
+        }
+        if (!is_pantry_option) return true;
+    }
+    return false;
+}
+
+/// Strip the conventional `--` separator while retaining every child argument.
+/// The returned slice and its backing storage are owned by `allocator`.
+pub fn rawScriptArguments(allocator: std.mem.Allocator, args: []const []const u8) ![][]const u8 {
+    var forwarded = try std.ArrayList([]const u8).initCapacity(allocator, args.len);
+    errdefer forwarded.deinit(allocator);
+
+    for (args) |arg| {
+        if (std.mem.eql(u8, arg, "--")) continue;
+        try forwarded.append(allocator, arg);
+    }
+    return forwarded.toOwnedSlice(allocator);
+}
+
 // ============================================================================
 // Run Script Command
 // ============================================================================
@@ -19,6 +67,23 @@ pub const RunScriptOptions = struct {
 /// Run a script from pantry.json
 pub fn runScriptCommand(allocator: std.mem.Allocator, args: []const []const u8) !CommandResult {
     return runScriptCommandWithOptions(allocator, args, .{});
+}
+
+test "run forwards unknown child options" {
+    try std.testing.expect(needsRawArgumentForwarding(&.{ "release:minor", "--dry-run" }));
+    try std.testing.expect(needsRawArgumentForwarding(&.{ "test", "--", "--watch" }));
+    try std.testing.expect(!needsRawArgumentForwarding(&.{ "build", "--filter", "*" }));
+    try std.testing.expect(!needsRawArgumentForwarding(&.{ "build", "--parallel" }));
+}
+
+test "run strips the child argument separator" {
+    const allocator = std.testing.allocator;
+    const args = try rawScriptArguments(allocator, &.{ "test", "--", "--watch" });
+    defer allocator.free(args);
+
+    try std.testing.expectEqual(@as(usize, 2), args.len);
+    try std.testing.expectEqualStrings("test", args[0]);
+    try std.testing.expectEqualStrings("--watch", args[1]);
 }
 
 /// Run a script from pantry.json with advanced options

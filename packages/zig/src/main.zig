@@ -4090,6 +4090,23 @@ pub fn main() !void {
     }
 
     var parser = cli.Parser.init(allocator);
+
+    // Script flags belong to the script, not Pantry. zig-cli rejects unknown
+    // options before runAction can see them, so bypass it for child options
+    // (and for the conventional `--` separator) while retaining the normal
+    // parser for Pantry's own --filter/--parallel/etc. runner options.
+    if (args.len >= 3 and std.mem.eql(u8, args[1], "run") and
+        lib.commands.scripts_commands.needsRawArgumentForwarding(args[2..]))
+    {
+        const forwarded = try lib.commands.scripts_commands.rawScriptArguments(allocator, args[2..]);
+        defer allocator.free(forwarded);
+
+        var result = try lib.commands.runScriptCommand(allocator, forwarded);
+        defer result.deinit(allocator);
+        if (result.message) |msg| style.print("{s}\n", .{msg});
+        std.process.exit(result.exit_code);
+    }
+
     parser.parse(root, args[1..]) catch |err| {
         if (err == error.UnknownOption or err == error.TooManyArguments) {
             style.print("Error: {}\n\n", .{err});
