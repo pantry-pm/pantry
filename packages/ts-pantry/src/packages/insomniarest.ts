@@ -22,6 +22,7 @@ export const insomniarestPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '13.1.0',
     '13.0.2',
     '13.0.1',
     '13.0.0',
