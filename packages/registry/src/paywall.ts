@@ -400,8 +400,11 @@ export async function createCheckoutSession(
     'line_items[0][price]': paywall.stripePriceId,
     'line_items[0][quantity]': '1',
     'customer_email': email,
-    // Stripe dedupes on this key, so a buyer who double-clicks Buy doesn't get
-    // charged twice for the same package.
+    // Reconciliation only — Stripe does not dedupe on this, so it prevents
+    // nothing; what prevents a second charge is the entitlement check before
+    // this function is called, which short-circuits once the first payment has
+    // landed. Two sessions opened before either completes can both be paid,
+    // the same as any Checkout integration.
     'client_reference_id': `${packageName}:${email}`,
     'success_url': `${baseUrl}/packages/${encoded}/checkout/success`,
     'cancel_url': `${baseUrl}/pkg/${encoded}`,
