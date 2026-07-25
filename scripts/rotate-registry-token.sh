@@ -19,12 +19,13 @@ set -euo pipefail
 #   ./scripts/rotate-registry-token.sh
 #   ./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry"
 
-# registry.pantry.dev resolves to the current Hetzner box; log in as root.
-REGISTRY_HOST="registry.pantry.dev"
-SSH_KEY="$HOME/.ssh/stacks-production.pem"
-SSH_USER="root"
-SSM_PARAM="/pantry/registry-token"
-AWS_REGION="us-east-1"
+# Defaults describe our deployment; every one is overridable so the script is
+# usable against any registry host rather than only ours.
+REGISTRY_HOST="${REGISTRY_HOST:-registry.pantry.dev}"
+SSH_KEY="${SSH_KEY:-$HOME/.ssh/stacks-production.pem}"
+SSH_USER="${SSH_USER:-root}"
+SSM_PARAM="${SSM_PARAM:-/pantry/registry-token}"
+AWS_REGION="${AWS_REGION:-us-east-1}"
 SERVICE_FILE="/etc/systemd/system/pantry-registry.service"
 # The unit reads its environment from this file (EnvironmentFile=), not from
 # Environment= lines in the unit itself. The token has to be written here or the
