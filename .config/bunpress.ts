@@ -64,6 +64,13 @@ const config = {
           ],
         },
         {
+          text: 'Publishing',
+          items: [
+            { text: 'Paid Packages', link: '/paid-packages' },
+            { text: 'Commit Publishing', link: '/features/commit-publishing' },
+          ],
+        },
+        {
           text: 'Self-Hosting',
           items: [
             { text: 'Run Your Own Registry', link: '/self-hosting' },

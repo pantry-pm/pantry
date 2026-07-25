@@ -69,6 +69,13 @@ pantry transforms how you manage dependencies across your entire development wor
 - 🔗 **Instant Install URLs** — Get shareable install URLs for every published commit
 - 🤖 **CI/CD Ready** — Drop-in replacement for `pkg-pr-new` in GitHub Actions
 
+### Paid Packages
+
+- 💳 **Charge for What You Publish** — `pantry price set my-package 9.00`; metadata stays public, the tarball is gated
+- 🧾 **Purchases Belong to Accounts** — buy once, install on every machine; rotating a token doesn't cost you what you bought
+- 🆓 **Free Versions** — keep a 1.x free while charging for 2.x, with `--free-versions`
+- 🏦 **Direct Payouts** — Stripe Connect payouts to the publisher, with a configurable platform fee
+
 ### Private Registries
 
 - 🔒 **Private by Default** — `pantry registry setup` stands up your own registry where nothing — metadata, tarballs, binaries, search, the UI — is served without a credential
@@ -502,6 +509,7 @@ See [GitHub Action Documentation](https://github.com/pantry-pm/pantry/tree/main/
 
 Explore advanced dependency management topics:
 
+- [Paid Packages](https://pantry.dev/paid-packages) _(price a package, get paid, buyers install with their account)_
 - [Run Your Own Registry](https://pantry.dev/self-hosting) _(one command, and it's private by default — only authenticated members can download)_
 - [Extending the Registry](https://pantry.dev/registry-extensions) _(custom routes and access policies without forking server.ts)_
 - [Commit Publishing](https://pantry.dev/features/commit-publishing) _(pkg-pr-new alternative)_
