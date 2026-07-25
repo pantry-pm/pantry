@@ -542,7 +542,7 @@ Please see [CONTRIBUTING](https://github.com/pantry-pm/pantry/blob/main/.github/
 For help or discussion:
 
 - [Discussions on GitHub](https://github.com/pantry-pm/pantry/discussions)
-- [Join the Stacks Discord Server](https://discord.gg/stacksjs)
+- [Join the Stacks Discord Server](https://stacksjs.com/discord)
 
 ## Postcardware
 

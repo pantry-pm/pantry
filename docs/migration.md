@@ -541,7 +541,7 @@ pip install numpy pandas jupyter
 ## Getting Help During Migration
 
 - **GitHub Discussions**: [Ask migration questions](https://github.com/pantry-pm/pantry/discussions)
-- **Discord**: [Real-time help](https://discord.gg/stacksjs)
+- **Discord**: [Real-time help](https://stacksjs.com/discord)
 - **Examples**: Check the [Examples](./examples.md) page for migration patterns
 - **Troubleshooting**: See [Troubleshooting](./troubleshooting.md) for common issues
 

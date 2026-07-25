@@ -1,6 +1,6 @@
 # Frequently Asked Questions (FAQ)
 
-This page answers the most commonly asked questions about pantry. If you don't find your answer here, check the [Troubleshooting](./troubleshooting.md) guide or join our [Discord community](https://discord.gg/stacksjs).
+This page answers the most commonly asked questions about pantry. If you don't find your answer here, check the [Troubleshooting](./troubleshooting.md) guide or join our [Discord community](https://stacksjs.com/discord).
 
 ## General Questions
 
@@ -659,7 +659,7 @@ python --version
 
 - **Documentation**: [https://pantry.sh](https://pantry.sh)
 - **GitHub Discussions**: [Ask questions](https://github.com/pantry-pm/pantry/discussions)
-- **Discord**: [Real-time chat](https://discord.gg/stacksjs)
+- **Discord**: [Real-time chat](https://stacksjs.com/discord)
 - **Issues**: [Report bugs](https://github.com/pantry-pm/pantry/issues)
 
 ### How do I report a bug

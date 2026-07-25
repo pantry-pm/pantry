@@ -640,7 +640,7 @@ journalctl | grep -i pantry         # Linux systemd
 ### Community Support
 
 - **GitHub Discussions**: [pantry-pm/pantry discussions](https://github.com/pantry-pm/pantry/discussions)
-- **Discord**: [Join Stacks Discord](https://discord.gg/stacksjs)
+- **Discord**: [Join Stacks Discord](https://stacksjs.com/discord)
 - **Issues**: [Report bugs](https://github.com/pantry-pm/pantry/issues)
 
 ### Reporting Bugs
