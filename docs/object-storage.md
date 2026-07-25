@@ -48,19 +48,25 @@ gh secret   set S3_SECRET_ACCESS_KEY --repo pantry-pm/pantry --body '<secret-key
 
 Leaving `STORAGE_PROVIDER` unset (or `aws`) keeps everything on S3 — fully reversible.
 
-### Registry server (EC2)
+### Registry server
 
-Point the running registry at Hetzner (writes the storage env into the systemd
-unit, mirrors values into SSM, restarts the service):
+Point a running registry at the provider. The script writes the storage
+configuration into the service's environment file, restarts it, and waits for
+`/health`:
 
 ```bash
+PANTRY_REGISTRY_HOST=registry.example.com \
 STORAGE_PROVIDER=hetzner \
-S3_BUCKET=pantry-registry \
+S3_BUCKET=my-registry \
 S3_REGION=fsn1 \
 S3_ACCESS_KEY_ID='<access-key>' \
 S3_SECRET_ACCESS_KEY='<secret-key>' \
 ./scripts/configure-registry-storage.sh
 ```
+
+Set `PANTRY_REGISTRY_SSH_KEY` if the host needs a specific identity file, and
+`PANTRY_SSM_MIRROR=1` to also mirror the values into AWS SSM. Running your own
+registry from a fork is covered in [self-hosting](self-hosting.md).
 
 ### Local development / `.env`
 

@@ -495,6 +495,7 @@ See [GitHub Action Documentation](https://github.com/pantry-pm/pantry/tree/main/
 
 Explore advanced dependency management topics:
 
+- [Run Your Own Registry](https://pantry.dev/self-hosting) _(fork it and self-host)_
 - [Commit Publishing](https://pantry.dev/features/commit-publishing) _(pkg-pr-new alternative)_
 - [Service Management](https://pantry.dev/features/service-management)
 - [Project Environment Configuration](https://pantry.dev/features/package-management)
