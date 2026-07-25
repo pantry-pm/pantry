@@ -75,6 +75,33 @@
           <input type="text" id="deprecation-message" placeholder="Deprecation message" class="mt-2 w-full bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" style="color: var(--fg); display: none;" />
         </div>
 
+        <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-5">
+          <h2 class="text-xs uppercase tracking-widest font-medium mb-4" style="color: var(--fg-subtle);">Pricing</h2>
+          <p class="text-xs mb-4" style="color: var(--fg-subtle);">
+            Charge for this package. Its metadata stays public — that is how people find it
+            and decide to buy — but the tarball is refused until an account has paid.
+            Purchases are recorded against the buyer's account, so they survive rotating a
+            token and work on every machine they sign in from.
+          </p>
+          <div class="flex flex-col gap-2 font-mono text-xs">
+            <div class="bg-[var(--bg)] rounded-md px-3 py-2 border border-[var(--border)]">
+              <code style="color: var(--accent);">pantry price set &lt;package&gt; 9.00</code>
+            </div>
+            <div class="bg-[var(--bg)] rounded-md px-3 py-2 border border-[var(--border)]">
+              <code style="color: var(--fg-muted);">pantry price show &lt;package&gt;</code>
+            </div>
+            <div class="bg-[var(--bg)] rounded-md px-3 py-2 border border-[var(--border)]">
+              <code style="color: var(--fg-muted);">pantry price rm &lt;package&gt;</code>
+            </div>
+          </div>
+          <p class="text-xs mt-4" style="color: var(--fg-subtle);">
+            Only the account that published a package can price it. To be paid out directly,
+            pass <code class="font-mono">--payout-account acct_…</code> with your Stripe
+            Connect account; otherwise sales settle on the registry's account.
+            <a href="/paid-packages" class="hvr-accent transition-colors" style="color: var(--accent);">How paid packages work</a>
+          </p>
+        </div>
+
         <div id="save-status" class="text-sm" style="display: none;"></div>
 
         <button type="submit" class="rounded-lg px-4 py-2.5 font-medium text-sm transition-colors" style="background: var(--accent); color: var(--bg); cursor: pointer;">

@@ -105,6 +105,33 @@
       })()
     </script>
 
+    <!-- Paid package: price and how to buy it -->
+    @if (isPaid)
+    <div class="border rounded-lg p-5 mb-6 animate-fade-in-delay" style="background: var(--bg-subtle); border-color: var(--accent);">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="uppercase tracking-widest mb-1" style="font-size: 0.6875rem; color: var(--fg-subtle);">Paid package</p>
+          <p class="text-2xl font-semibold" style="color: var(--accent);">{{ priceLabel }}</p>
+          <p class="mt-1" style="font-size: 0.8125rem; color: var(--fg-muted);">
+            One payment, tied to your account — install it on every machine you sign in from.
+          </p>
+          @if (hasFreeVersions)
+          <p class="mt-1" style="font-size: 0.8125rem; color: var(--fg-subtle);">Free versions: {{ freeVersionList }}</p>
+          @endif
+        </div>
+        <div class="flex flex-col gap-2 items-stretch">
+          <a href="{{ buyUrl }}" class="rounded-lg px-5 py-2.5 font-medium text-sm text-center transition-colors" style="background: var(--accent); color: var(--bg);">
+            Buy for {{ priceLabel }}
+          </a>
+          <div class="flex items-center justify-between gap-3 bg-[var(--bg)] rounded-md px-3 py-2 border border-[var(--border)]">
+            <code class="text-xs" style="color: var(--fg-muted);">pantry buy {{ name }}</code>
+            <button class="copy-btn" data-copy="pantry buy {{ name }}">copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    @endif
+
     <!-- Install commands -->
     <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-5 mb-8 animate-fade-in-delay">
       <p class="uppercase tracking-widest mb-3" style="font-size: 0.6875rem; color: var(--fg-subtle);">Install</p>
