@@ -479,8 +479,8 @@ pub fn listCommand(allocator: std.mem.Allocator) !CommandResult {
             if (!found_any) style.print("Credentials:\n", .{});
             found_any = true;
             style.print("  {s}{s}{s}  {s}  {s}(environment){s}\n", .{
-                style.cyan, name,       style.reset,
-                masked,     style.dim,  style.reset,
+                style.cyan, name,      style.reset,
+                masked,     style.dim, style.reset,
             });
         } else |_| {}
     }
@@ -492,8 +492,8 @@ pub fn listCommand(allocator: std.mem.Allocator) !CommandResult {
         found_any = true;
         if (entry.registry) |registry| {
             style.print("  {s}{s}{s}  {s}  {s}({s}){s}\n", .{
-                style.cyan, entry.key, style.reset,
-                masked,     style.dim, registry,
+                style.cyan,  entry.key, style.reset,
+                masked,      style.dim, registry,
                 style.reset,
             });
         } else {
