@@ -61,7 +61,7 @@ S3_BUCKET=my-registry \
 S3_REGION=fsn1 \
 S3_ACCESS_KEY_ID='<access-key>' \
 S3_SECRET_ACCESS_KEY='<secret-key>' \
-./scripts/configure-registry-storage.sh
+pantry registry storage
 ```
 
 Set `PANTRY_REGISTRY_SSH_KEY` if the host needs a specific identity file, and

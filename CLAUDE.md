@@ -139,7 +139,7 @@ Registry object storage is **provider-agnostic** (AWS S3, Hetzner Object Storage
 
 - Env: `STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (auto-derived if unset), `S3_FORCE_PATH_STYLE`, `METADATA_BACKEND` (`object`|`dynamodb`|`file`), creds `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` (provider-agnostic; `HETZNER_S3_*` / `B2_*` are checked first if set).
 - Workflows `build.yml` / `sync-binaries.yml` read repo **variables** (`STORAGE_PROVIDER`, `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`) + **secrets** (`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`). Unset ⇒ stays on S3.
-- Point the registry server (Hetzner) at the provider: `scripts/configure-registry-storage.sh` (SSHes to `root@registry.pantry.dev`, writes the storage env into the systemd unit, optionally mirrors to SSM `/pantry/storage-*`, restarts).
+- Point the registry server (Hetzner) at the provider: `pantry registry storage --host registry.pantry.dev …` (SSHes in, writes the storage env into the unit's EnvironmentFile, restarts). The registry-operations shell scripts were replaced by the `pantry registry` command group (`packages/zig/src/cli/commands/registry_ops.zig`) — do not re-add scripts for this.
 - Full setup + how to obtain credentials: `docs/object-storage.md`.
 - Buckets stay **private**; the registry server proxies `registry.pantry.dev/binaries/...`.
 - **Analytics** also persist off-AWS on non-AWS providers: `ObjectAnalytics` (`analytics/registry-analytics.json`) replaces the previously **ephemeral in-memory** prod analytics and DynamoDB analytics, so download tracking survives restarts. Per-package download counts persist via the object metadata store (`incrementDownloads`). On AWS the prior behavior (DynamoDB if `DYNAMODB_ANALYTICS_TABLE` set, else in-memory) is unchanged.

@@ -1,8 +1,9 @@
 # Run your own registry
 
-Everything the public registry runs on is in this repo. Fork it, point the
-scripts at your own box, and you have a registry for your own packages — no
-part of the deployment depends on the maintainers' infrastructure.
+Everything the public registry runs on is in this repo. Fork it, point
+`pantry registry` at your own box, and you have a registry for your own
+packages — no part of the deployment depends on the maintainers'
+infrastructure.
 
 Two shapes, one process:
 
@@ -20,14 +21,11 @@ For the API surface and storage guarantees, see
 One command, from your workstation, against a fresh Linux box you can SSH into:
 
 ```bash
-PANTRY_REGISTRY_HOST=registry.example.com \
-PANTRY_REGISTRY_REPO=https://github.com/you/your-fork \
-STORAGE_PROVIDER=hetzner \
-S3_BUCKET=my-registry \
-S3_REGION=fsn1 \
-S3_ACCESS_KEY_ID=… \
-S3_SECRET_ACCESS_KEY=… \
-  ./scripts/setup-private-registry.sh
+pantry registry setup \
+  --host registry.example.com \
+  --repo https://github.com/you/your-fork \
+  --provider hetzner --bucket my-registry --region fsn1 \
+  --access-key-id … --secret-access-key …
 ```
 
 That installs Bun, clones your fork, writes the service environment, installs
@@ -36,20 +34,26 @@ token, and then proves the result from the outside: an anonymous read must come
 back `401`, an authenticated one must not. It finishes by printing your token
 and the exact commands to publish, install, and add a teammate.
 
+Every flag also reads from the environment (`PANTRY_REGISTRY_HOST`,
+`S3_BUCKET`, `S3_ACCESS_KEY_ID`, …), which is usually how you'd drive it from
+CI. `--user`, `--key`, `--service` and `--env-file` cover boxes that don't
+match the defaults (`root`, your SSH agent, `pantry-registry`,
+`/opt/pantry-registry/registry.env`).
+
 It is idempotent. Re-run it to upgrade the checkout, change storage, or move
-between public and private (`--public` / `--private`). Your token is kept unless
-you pass `--rotate-token`.
+between public and private (`--public`). Your token is kept unless you pass
+`--rotate-token`.
 
 You still need two things it deliberately doesn't do:
 
-- **TLS.** Put Caddy, nginx or rpx in front of the port. The script prints a
-  two-line Caddyfile that does it.
+- **TLS.** Put Caddy, nginx or rpx in front of the port. It prints a two-line
+  Caddyfile that does it.
 - **A private bucket.** Keep object storage private; the registry proxies
   `…/binaries/…` itself, so the bucket never needs to be public.
 
 Prefer to do it by hand, or deploying somewhere systemd isn't? See
 [Manual setup](#manual-setup) — the registry is a Bun process reading an
-environment file, and nothing about it requires this script.
+environment file, and nothing about it requires this command.
 
 ## What "private" means
 
@@ -99,51 +103,49 @@ curl https://registry.example.com/api/registry-info
 
 ## Members and tokens
 
-Open signup is off, so onboarding goes through the admin endpoints. They accept
-the shared registry token (what your provisioning scripts and CI already have)
-or an admin session — a plain publish token can't mint access.
-
-Create an account:
+Open signup is off, so onboarding goes through `pantry registry`. It
+authenticates with the registry token you already stored for this registry
+(`pantry token set --registry …`), or an admin session — a plain publish token
+can't mint access.
 
 ```bash
-curl -X POST https://registry.example.com/admin/users \
-  -H "Authorization: Bearer $PANTRY_REGISTRY_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"dev@yourco.com","name":"Dev","password":"a-long-password"}'
+export PANTRY_REGISTRY_URL=https://registry.example.com
+
+pantry registry member add dev@yourco.com --name Dev --password 'a-long-password'
 ```
 
-Pass `"role":"admin"` to make them an operator. Re-running with a new password
-resets it.
+Pass `--admin` to make them an operator. Re-running with a new password resets
+it.
 
 Members can then log in at `https://registry.example.com/login` and manage their
 own tokens from `/account`. For machines — CI, a build box, a container image —
-mint the token directly and hand over only what it needs:
+issue the token directly and hand over only what it needs:
 
 ```bash
-curl -X POST https://registry.example.com/admin/tokens \
-  -H "Authorization: Bearer $PANTRY_REGISTRY_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"dev@yourco.com","name":"ci","permissions":["read"],"expiresInDays":90}'
-# → {"token":"ptry_…","info":{"id":"ptry_abc…wxyz",…}}
+pantry registry token issue dev@yourco.com --name ci --expires-in-days 90
 ```
 
-The raw token is shown once; only its SHA-256 is stored. Revoke it by id:
+Tokens are read-only unless you pass `--publish`. The raw value is shown once;
+only its SHA-256 is stored. Revoke it by the id printed alongside it:
 
 ```bash
-curl -X POST https://registry.example.com/admin/tokens/revoke \
-  -H "Authorization: Bearer $PANTRY_REGISTRY_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"dev@yourco.com","id":"ptry_abc…wxyz"}'
+pantry registry token revoke dev@yourco.com --id ptry_abc…wxyz
 ```
 
 Revocation takes effect immediately — the next download with that token is
 `401`.
 
-Rotate the shared registry token with
-[`./scripts/rotate-registry-token.sh`](../scripts/rotate-registry-token.sh),
-which updates the server first and only touches GitHub secrets once the live
-registry accepts the new value, so a failed server update can't leave CI holding
-a token the server rejects.
+All of these are ordinary HTTPS calls to `/admin/users`, `/admin/tokens` and
+`/admin/tokens/revoke` if you'd rather drive them from your own tooling.
+
+Rotate the shared registry token with `pantry registry rotate-token`, which
+updates the server first and only touches CI secrets once the live registry
+accepts the new value — a failed server update can't leave CI holding a token
+the server rejects:
+
+```bash
+pantry registry rotate-token --host registry.example.com --repos "you/app,you/lib"
+```
 
 ## Installing from your registry
 
@@ -268,7 +270,7 @@ EOF
 ```
 
 Then a systemd unit. Note it loads the environment from that file rather than
-carrying `Environment=` lines — the scripts below write to the file, and mixing
+carrying `Environment=` lines — `pantry registry` writes to the file, and mixing
 the two means whichever systemd applies last silently wins:
 
 ```ini
@@ -302,15 +304,10 @@ Point your proxy at `localhost:3000` and confirm
 From your workstation:
 
 ```bash
-export PANTRY_REGISTRY_HOST=registry.example.com
-export PANTRY_REGISTRY_SSH_KEY=~/.ssh/your-key.pem   # omit to use your agent
-
-STORAGE_PROVIDER=hetzner \
-S3_BUCKET=my-registry \
-S3_REGION=fsn1 \
-S3_ACCESS_KEY_ID=… \
-S3_SECRET_ACCESS_KEY=… \
-  ./scripts/configure-registry-storage.sh
+pantry registry storage \
+  --host registry.example.com \
+  --provider hetzner --bucket my-registry --region fsn1 \
+  --access-key-id … --secret-access-key …
 ```
 
 `STORAGE_PROVIDER` accepts `hetzner`, `backblaze` and `aws`; the endpoint is
@@ -319,22 +316,19 @@ MinIO or any other S3-compatible service, set it explicitly). On a non-AWS
 provider the registry keeps its metadata, auth and analytics as JSON objects in
 the bucket, so nothing needs DynamoDB — see [object storage](object-storage.md).
 
-The script writes to the environment file, restarts the service and waits for
+This writes to the environment file, restarts the service and waits for
 `/health`. It is idempotent — re-run it to change providers.
 
 ### 3. Set a registry token
 
 ```bash
-PANTRY_REGISTRY_HOST=registry.example.com ./scripts/rotate-registry-token.sh
+pantry registry rotate-token --host registry.example.com
 ```
 
 That prints the token, writes it to the box, restarts the service and verifies
-the registry accepts it before reporting success. To also push it to the
-repositories that publish from CI:
-
-```bash
-./scripts/rotate-registry-token.sh --repos "you/app,you/lib"
-```
+the registry accepts it before reporting success. Add
+`--repos "you/app,you/lib"` to push it to the repositories that publish from
+CI once the server has accepted it.
 
 ## Deploying updates
 
@@ -373,6 +367,21 @@ Everything below lives in the registry's environment file.
 
 On the client side: `PANTRY_REGISTRY_URL` names the registry to talk to, and
 `pantry token set --registry <url>` stores the credential for it.
+
+## Command reference
+
+| Command | What it does |
+|---------|--------------|
+| `pantry registry setup` | Provision a box and start the service (private by default) |
+| `pantry registry storage` | Point the registry at an S3-compatible bucket |
+| `pantry registry rotate-token` | Replace the shared registry token, then update CI |
+| `pantry registry member add` | Create an account |
+| `pantry registry token issue` | Mint a read-only (or `--publish`) token for a member |
+| `pantry registry token revoke` | Revoke one |
+| `pantry registry info` | What a registry says about itself |
+
+`setup`, `storage` and `rotate-token` drive the box over SSH; the rest are
+HTTPS calls to the registry's admin API.
 
 ## Verifying end to end
 

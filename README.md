@@ -71,7 +71,7 @@ pantry transforms how you manage dependencies across your entire development wor
 
 ### Private Registries
 
-- 🔒 **Private by Default** — `./scripts/setup-private-registry.sh` stands up your own registry where nothing — metadata, tarballs, binaries, search, the UI — is served without a credential
+- 🔒 **Private by Default** — `pantry registry setup` stands up your own registry where nothing — metadata, tarballs, binaries, search, the UI — is served without a credential
 - 🎟️ **Read-Only Tokens** — Mint per-person and per-machine tokens, scoped to `read` or `publish`, revocable instantly
 - 🧩 **Extensible** — Add routes and access policies (SSO, IP allowlists, per-team packages) as [plugins](https://pantry.dev/registry-extensions), no fork of the server required
 - 🏠 **Runs Anywhere** — One Bun process plus any S3-compatible bucket (Hetzner, Backblaze, MinIO, AWS); no AWS account needed

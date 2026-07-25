@@ -7,7 +7,7 @@ import type { CloudConfig } from '@ts-cloud/core'
  * and `pantry.dev`/`www` resolve to (DNS via Porkbun). The box serves the registry
  * API and the static site (`./public`) behind a reverse proxy that terminates TLS
  * (Let's Encrypt). Tarballs/binaries live in Hetzner Object Storage, pointed at by
- * `scripts/configure-registry-storage.sh` (STORAGE_PROVIDER=hetzner) — not in S3.
+ * `pantry registry storage` (STORAGE_PROVIDER=hetzner) — not in S3.
  *
  * NOTE: the registry box already exists and is (re)deployed by
  * `.github/workflows/deploy-registry.yml` (SSH to `root@registry.pantry.dev`).
