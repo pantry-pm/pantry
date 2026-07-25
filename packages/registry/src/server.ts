@@ -23,6 +23,15 @@ import {
   formatCount as chartFormatCount,
 } from './charts'
 import { AuthService, AuthError, createAuthStorage, isUserApiToken } from './auth'
+import {
+  enforceReadAccess,
+  isSignupEmailAllowed,
+  registryInfo,
+  resolveVisibility,
+  signupsEnabled,
+  type ReaderIdentity,
+} from './access'
+import { pluginResponse } from './plugins'
 
 // Build domain→versions lookup from ts-pantry package metadata for version
 // validation. Exposed via reloadKnownVersions() so an operator can refresh
@@ -658,6 +667,28 @@ export function createHandler(
     }
 
     try {
+      // What this registry is, and whether callers need a credential. Public
+      // even on a private registry: a client that gets a 401 needs somewhere to
+      // find out why, and `curl <registry>/api/registry-info` is that place.
+      if (path === '/api/registry-info' && req.method === 'GET') {
+        return Response.json(registryInfo(process.env, baseUrl), {
+          headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+        })
+      }
+
+      // Visibility gate. On a private registry every path that isn't explicitly
+      // public requires a credential — metadata, tarballs, binaries, search and
+      // the web UI alike. On a public one this only runs plugin access policies.
+      // It is deliberately the first thing after CORS: a route added below is
+      // covered by default rather than by remembering to gate it.
+      const denied = await enforceReadAccess(req, url, { identify: identifyReader, corsHeaders })
+      if (denied) return denied
+
+      // Plugins get first refusal on every request, so a fork can add or
+      // override routes without editing this file.
+      const fromPlugin = await pluginResponse(req, { url, path, method: req.method, visibility: resolveVisibility() })
+      if (fromPlugin) return fromPlugin
+
       // CLI user-agent detection — serve install script for curl/wget/etc.
       const ua = req.headers.get('user-agent') || ''
       const isCLI = /^(curl|wget|httpie|fetch|libfetch|powershell)/i.test(ua) || !ua
@@ -837,6 +868,12 @@ export function createHandler(
       if (path.startsWith('/auth/') && authService) {
         const authResponse = await handleAuthRoutes(path, req, authService, corsHeaders)
         if (authResponse) return authResponse
+      }
+
+      // Member + token administration (private registries onboard people here)
+      if (path.startsWith('/admin/') && authService) {
+        const adminResponse = await handleAdminRoutes(path, req, authService, corsHeaders)
+        if (adminResponse) return adminResponse
       }
 
       // Site auth pages (login, signup, account)
@@ -1527,7 +1564,15 @@ export function createServer(
       fetch: handler,
     })
 
+    const visibility = resolveVisibility()
     console.log(`Pantry Registry running at http://localhost:${port}`)
+    console.log(
+      visibility === 'private'
+        ? '  Visibility: PRIVATE — every read requires a token or a logged-in session'
+        : '  Visibility: public — reads are unauthenticated (set REGISTRY_VISIBILITY=private to close it)',
+    )
+    if (visibility === 'private' && signupsEnabled())
+      console.warn('  WARNING: REGISTRY_ALLOW_SIGNUP is on — anyone can create an account and read every package')
     console.log('Endpoints:')
     console.log('  GET  /packages/{name}           - Get package metadata')
     console.log('  GET  /packages/{name}/{version} - Get specific version')
@@ -1799,6 +1844,161 @@ async function isAuthorizedRequest(req: Request): Promise<boolean> {
     // fall through to unauthorized
   }
   return false
+}
+
+/**
+ * Resolve who is making a request, for the private-registry read gate.
+ *
+ * Accepts the same credentials as publishing — the shared registry token or a
+ * user `ptry_` token — plus a logged-in browser session, and additionally
+ * accepts read-only tokens, which are the ones you hand to consumers of a
+ * private registry. Never throws: an unidentifiable caller is simply anonymous.
+ */
+async function identifyReader(req: Request): Promise<ReaderIdentity> {
+  try {
+    const authHeader = req.headers.get('authorization')
+    const token = extractBearerToken(authHeader)
+    if (token && _authService) {
+      const result = await _authService.validateAccessToken(token, getRegistryToken() ?? '', 'read')
+      if (result.valid)
+        return { authenticated: true, userId: result.userId ?? null }
+    }
+    else if (token) {
+      // No AuthService (in-memory dev server): the shared token is all there is.
+      const result = await validateToken(authHeader)
+      if (result.valid)
+        return { authenticated: true, userId: result.userId ?? null }
+    }
+
+    if (_authService) {
+      const sessionToken = extractSessionToken(req)
+      if (sessionToken) {
+        const user = await _authService.validateSession(sessionToken)
+        if (user)
+          return { authenticated: true, userId: user.email }
+      }
+    }
+  }
+  catch {
+    // fall through to anonymous
+  }
+  return { authenticated: false, userId: null }
+}
+
+/**
+ * Authorize an admin-only operation: the shared registry token, or a session
+ * belonging to a user with the `admin` role. Member and token management go
+ * through here — a publish token must not be able to mint new access.
+ */
+async function isAdminRequest(req: Request): Promise<boolean> {
+  try {
+    const authHeader = req.headers.get('authorization')
+    const token = extractBearerToken(authHeader)
+    if (token) {
+      const registryToken = getRegistryToken()
+      // Only the shared registry token confers admin; user API tokens do not.
+      if (registryToken && token.length === registryToken.length) {
+        const maxLen = Math.max(token.length, registryToken.length)
+        const a = Buffer.alloc(maxLen)
+        const b = Buffer.alloc(maxLen)
+        Buffer.from(token).copy(a)
+        Buffer.from(registryToken).copy(b)
+        if (require('node:crypto').timingSafeEqual(a, b))
+          return true
+      }
+    }
+
+    if (_authService) {
+      const sessionToken = extractSessionToken(req)
+      if (sessionToken) {
+        const user = await _authService.validateSession(sessionToken)
+        if (user?.role === 'admin')
+          return true
+      }
+    }
+  }
+  catch {
+    // fall through to unauthorized
+  }
+  return false
+}
+
+/**
+ * Member and token administration for a private registry.
+ *
+ * Open signup is off on a private registry, so an operator needs another way to
+ * onboard people and machines. These endpoints are it:
+ *
+ *   POST /admin/users          {email, name, password, role}  — create a member
+ *   POST /admin/tokens         {email, name, permissions[]}   — mint a token
+ *   POST /admin/tokens/revoke  {email, id}                    — revoke one
+ *
+ * Authenticated with the shared registry token (what CI and provisioning
+ * scripts have) or an admin session. Returns null when the path isn't ours.
+ */
+async function handleAdminRoutes(
+  path: string,
+  req: Request,
+  auth: AuthService,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (!path.startsWith('/admin/')) return null
+
+  const known = path === '/admin/users' || path === '/admin/tokens' || path === '/admin/tokens/revoke'
+  if (!known || req.method !== 'POST') return null
+
+  if (!(await isAdminRequest(req))) {
+    return Response.json(
+      { error: 'Admin authentication required', hint: 'Send the registry token: Authorization: Bearer $PANTRY_REGISTRY_TOKEN' },
+      { status: 401, headers: corsHeaders },
+    )
+  }
+
+  const body = await req.json().catch(() => null) as Record<string, any> | null
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  const email = typeof body.email === 'string' ? body.email : ''
+
+  try {
+    if (path === '/admin/users') {
+      const user = await auth.upsertUserAccount(
+        email,
+        typeof body.name === 'string' ? body.name : '',
+        typeof body.password === 'string' ? body.password : '',
+        body.role === 'admin' ? 'admin' : 'user',
+      )
+      return Response.json({ success: true, user }, { status: 201, headers: corsHeaders })
+    }
+
+    if (path === '/admin/tokens') {
+      const user = await auth.findUser(email)
+      if (!user)
+        return Response.json({ error: `No such user: ${email}` }, { status: 404, headers: corsHeaders })
+
+      const valid = ['publish', 'read'] as const
+      const permissions = Array.isArray(body.permissions)
+        ? body.permissions.filter((p: unknown): p is 'publish' | 'read' => valid.includes(p as any))
+        : ['read' as const]
+
+      const result = await auth.createApiToken(user.email, typeof body.name === 'string' ? body.name : 'admin-issued', {
+        permissions: permissions.length > 0 ? permissions : ['read'],
+        expiresInDays: typeof body.expiresInDays === 'number' ? body.expiresInDays : undefined,
+      })
+      return Response.json({ success: true, ...result }, { status: 201, headers: corsHeaders })
+    }
+
+    // /admin/tokens/revoke
+    const id = typeof body.id === 'string' ? body.id : ''
+    if (!email || !id)
+      return Response.json({ error: 'email and id are required' }, { status: 400, headers: corsHeaders })
+    await auth.deleteApiToken(email.toLowerCase().trim(), id)
+    return Response.json({ success: true }, { headers: corsHeaders })
+  }
+  catch (err: any) {
+    const status = err instanceof AuthError ? err.status : 400
+    return Response.json({ error: err.message }, { status, headers: corsHeaders })
+  }
 }
 
 /**
@@ -2155,6 +2355,31 @@ function extractSessionToken(req: Request): string | null {
 /**
  * Handle auth API routes (/auth/*)
  */
+/**
+ * Why a signup must be refused, or null when it may proceed.
+ *
+ * A private registry with open signup isn't private, so signups default off
+ * there (`REGISTRY_ALLOW_SIGNUP=true` re-opens them, usually alongside
+ * `REGISTRY_SIGNUP_DOMAINS=yourcompany.com` for self-serve onboarding).
+ */
+/**
+ * A post-login redirect target we're willing to honour: same-origin, absolute
+ * path only. `//evil.example` and `https://evil.example` are paths a browser
+ * would happily follow off-site, so they're rejected.
+ */
+function safeRedirectTarget(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null
+  return value
+}
+
+function signupRejection(email: string): string | null {
+  if (!signupsEnabled())
+    return 'Signups are closed on this registry — ask an operator for an account'
+  if (!isSignupEmailAllowed(email))
+    return 'That email domain is not allowed to sign up on this registry'
+  return null
+}
+
 async function handleAuthRoutes(
   path: string,
   req: Request,
@@ -2165,6 +2390,9 @@ async function handleAuthRoutes(
   if (path === '/auth/signup' && req.method === 'POST') {
     try {
       const body = await req.json() as { email?: string, name?: string, password?: string }
+      const rejection = signupRejection(body.email || '')
+      if (rejection)
+        return Response.json({ error: rejection }, { status: 403, headers: corsHeaders })
       await auth.signup(body.email || '', body.name || '', body.password || '')
       const { sessionToken, user: loggedInUser } = await auth.login(body.email || '', body.password || '')
 
@@ -2329,11 +2557,14 @@ async function handleSiteAuth(
         const email = formData.get('email') as string || ''
         const password = formData.get('password') as string || ''
         const { sessionToken } = await auth.login(email, password)
+        // The private-registry gate bounces browsers here with ?next=… — send
+        // them back where they were headed instead of dumping them on /account.
+        const next = safeRedirectTarget(formData.get('next') as string || new URL(req.url).searchParams.get('next'))
         return new Response(null, {
           status: 302,
           headers: {
             ...htmlHeaders,
-            'Location': '/account',
+            'Location': next || '/account',
             'Set-Cookie': `pantry_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
           },
         })
@@ -2358,12 +2589,22 @@ async function handleSiteAuth(
 
   // Signup page
   if (path === '/signup') {
+    // Closed signups: don't render a form that can only fail. Send people to
+    // the login page, where an operator-provisioned account works.
+    if (!signupsEnabled()) {
+      return new Response(null, { status: 302, headers: { ...htmlHeaders, Location: '/login' } })
+    }
     if (req.method === 'POST') {
       try {
         const formData = await req.formData()
         const email = formData.get('email') as string || ''
         const name = formData.get('name') as string || ''
         const password = formData.get('password') as string || ''
+        const rejection = signupRejection(email)
+        if (rejection) {
+          const html = await renderSitePage('signup.stx', { error: escapeHtml(rejection), title: 'Sign Up' })
+          return new Response(html, { status: 403, headers: htmlHeaders })
+        }
         await auth.signup(email, name, password)
         const { sessionToken } = await auth.login(email, password)
         return new Response(null, {

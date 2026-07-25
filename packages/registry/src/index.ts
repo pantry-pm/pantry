@@ -107,6 +107,39 @@ export {
   isUserApiToken,
 } from './auth'
 
+// Visibility / access control (public vs. private registry)
+export {
+  allowedSignupDomains,
+  enforceReadAccess,
+  extraPublicPaths,
+  isPublicPath,
+  isSignupEmailAllowed,
+  registryInfo,
+  resolveVisibility,
+  signupsEnabled,
+} from './access'
+export type { ReaderIdentity, ReadAccessOptions, RegistryVisibility } from './access'
+
+// Plugins — the extension seam for self-hosted registries
+export {
+  emitPluginEvent,
+  loadPlugin,
+  loadPlugins,
+  pluginAccessVerdict,
+  pluginResponse,
+  pluginsAuthorize,
+  pluginSpecifiers,
+  resetPlugins,
+  setPlugins,
+} from './plugins'
+export type {
+  AccessRequest,
+  AccessVerdict,
+  PluginContext,
+  RegistryEvent,
+  RegistryPlugin,
+} from './plugins'
+
 // Workspace protocol rewriting for published manifests
 export {
   WORKSPACE_RANGE_SECTIONS,
