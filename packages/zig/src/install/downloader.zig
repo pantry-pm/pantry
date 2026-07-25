@@ -245,7 +245,38 @@ fn downloadFileWithCurl(allocator: std.mem.Allocator, url: []const u8, dest_path
         }
     }
 
+    // curl reports "it failed", not "it costs $9". Ask the registry what it
+    // actually said before reporting a network problem that isn't one —
+    // otherwise a paid package looks like an outage.
+    if (paymentRequired(allocator, url)) return error.PaymentRequired;
+
     return error.NetworkError;
+}
+
+/// Re-request the URL to see whether the refusal was a price rather than a
+/// failure, and print what the registry said. Only runs after a download has
+/// already failed, so it costs nothing on the happy path.
+fn paymentRequired(allocator: std.mem.Allocator, url: []const u8) bool {
+    const res = io_helper.httpRequest(allocator, .GET, url, null, &.{}) catch return false;
+    defer allocator.free(res.body);
+    if (res.status != 402) return false;
+
+    var parsed = std.json.parseFromSlice(std.json.Value, allocator, res.body, .{ .ignore_unknown_fields = true }) catch {
+        style.print("  This package requires payment.\n", .{});
+        return true;
+    };
+    defer parsed.deinit();
+
+    const message = blk: {
+        if (parsed.value == .object) {
+            if (parsed.value.object.get("message")) |m| {
+                if (m == .string) break :blk m.string;
+            }
+        }
+        break :blk "This package requires payment.";
+    };
+    style.print("  {s}\n", .{message});
+    return true;
 }
 
 /// Check if a version string looks like a Zig dev version
