@@ -331,7 +331,7 @@ pub fn whoamiCommand(allocator: std.mem.Allocator, _: []const []const u8) !Comma
             style.print("Not logged in (no .pantryrc found)\n", .{});
             style.print("\nTo authenticate:\n", .{});
             style.print("  1. Get an authentication token from the Pantry registry\n", .{});
-            style.print("  2. Add it to ~/.pantry/credentials as: PANTRY_TOKEN=your_token\n", .{});
+            style.print("  2. Store it: pantry token set\n", .{});
             style.print("\nOr use OIDC for tokenless publishing from CI/CD:\n", .{});
             style.print("  pantry publisher add --help\n", .{});
             return .{ .exit_code = 1 };
@@ -375,7 +375,7 @@ pub fn whoamiCommand(allocator: std.mem.Allocator, _: []const []const u8) !Comma
         style.print("Not logged in\n", .{});
         style.print("\nTo authenticate:\n", .{});
         style.print("  1. Get an authentication token from the Pantry registry\n", .{});
-        style.print("  2. Add it to ~/.pantry/credentials as: PANTRY_TOKEN=your_token\n", .{});
+        style.print("  2. Store it: pantry token set\n", .{});
         style.print("  3. Optionally add: username=YOUR_USERNAME\n", .{});
         style.print("\nOr use OIDC for tokenless publishing from CI/CD:\n", .{});
         style.print("  pantry publisher add --help\n", .{});

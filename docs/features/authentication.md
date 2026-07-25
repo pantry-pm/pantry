@@ -71,6 +71,60 @@ curl -X POST https://registry.pantry.dev/publish \
   -F 'tarball=@my-package-1.0.0.tgz'
 ```
 
+## Storing Your Token
+
+Rather than exporting the token in every shell, store it once. `pantry token
+set` reads the value from stdin, so it never lands in your shell history:
+
+```bash
+pantry token set                    # paste the token, then Ctrl-D
+pantry token set < token.txt        # or read it from a file
+op read op://vault/pantry/token | pantry token set   # or a secret manager
+```
+
+It's written to `~/.pantry/credentials` with `0600` permissions, and every
+publish path picks it up from there.
+
+### Per-Registry Tokens
+
+Scope a credential to one registry when you publish to more than one:
+
+```bash
+pantry token set --registry https://registry.internal.example
+```
+
+Scoped entries win over unscoped ones for that registry; an unscoped token is
+the fallback for everything else. Inspect what's configured with:
+
+```bash
+pantry token list
+```
+
+Values are masked, and each line says whether it came from the environment or
+the file — worth checking when a publish authenticates as someone unexpected,
+because the environment takes precedence over stored credentials.
+
+### Publishing From CI
+
+Copy the credential into a repository's Actions secrets:
+
+```bash
+pantry token sync --repo owner/name
+```
+
+That sets a `PANTRY_TOKEN` secret (override the name with `--secret`) using the
+GitHub CLI, which encrypts it before upload. The value is passed to `gh` on
+stdin, so it isn't visible in the process table.
+
+### Resolution Order
+
+When publishing, the token is resolved in this order:
+
+1. `--token` on the command line
+2. `PANTRY_REGISTRY_TOKEN`, then `PANTRY_TOKEN`, from the environment
+3. A `~/.pantry/credentials` entry scoped to the target registry
+4. An unscoped `~/.pantry/credentials` entry
+
 ## Token Permissions
 
 Tokens can have the following permissions:
