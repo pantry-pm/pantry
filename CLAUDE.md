@@ -29,69 +29,21 @@ There are two distinct publish targets:
 - **`pantry publish --npm --access public`**— publishes JS/TS packages to**npm** (npmjs.org). Used by monorepo release workflows for public packages (skips `"private": true`). Requires `NPM_TOKEN` env var.
 - **`pantry publish:commit './packages/*'`**— publishes packages to the**pantry registry** (registry.pantry.dev) under a commit SHA. Used in CI continuous-release for commit-based installs (like pkg-pr-new). Auth: AWS credentials (direct S3 upload) or `PANTRY_REGISTRY_TOKEN` (HTTP upload to registry API).
 
-## Registry Token Management
+## Registry Operations
 
-The pantry registry (`registry.pantry.dev`) runs on a Hetzner Cloud box (`178.105.248.188`, SSH as `root` with `~/.ssh/stacks-production.pem`). It's a shared box — it also serves other sites (e.g. `mail.stacksjs.com`) — so the registry sits behind a reverse proxy that must route `registry.pantry.dev` to the registry process on `localhost:3000`.
+The registry token, the box it runs on, deploy secrets and the site stacks are
+documented in the private [pantry-pm/ops](https://github.com/pantry-pm/ops)
+repo. They describe our particular deployment rather than this tool, so they
+don't belong in the open-source repo.
 
-### Token architecture
-
-`pantry publish:commit` supports two auth paths:
-
-1. **AWS credentials** (preferred for pantry's own CI) — direct S3 upload, no registry involved
-2. **Registry token** (for external repos like pickier) — HTTP upload to registry, validated by `PANTRY_REGISTRY_TOKEN` env var on the server
-
-The registry validates tokens via simple string equality (`zig-routes.ts:validateToken`). The token value must match between the client (`PANTRY_REGISTRY_TOKEN` env var) and the server (systemd service environment).
-
-### Where the token lives
-
-| Location | Purpose |
-|----------|---------|
-| AWS SSM `/pantry/registry-token` (us-east-1, SecureString) | Source of truth |
-| Hetzner box `/opt/pantry-registry/registry.env` | Runtime config — the unit's `EnvironmentFile`, *not* `Environment=` lines in `/etc/systemd/system/pantry-registry.service` |
-| GitHub secret `PANTRY_TOKEN` on `pickier/pickier` | CI publish |
-| GitHub secret `PANTRY_TOKEN` on `pantry-pm/pantry` | CI publish |
-| GitHub secret `PANTRY_TOKEN` on `cwcss/crosswind` | CI publish |
-| GitHub secret `PANTRY_TOKEN` on `den-shell/den` | CI publish |
-
-### Rotating the token
+To publish from a new repo's CI, no infrastructure access is needed:
 
 ```bash
-./scripts/rotate-registry-token.sh
+pantry token set          # store the registry token locally, from stdin
+pantry token sync --repo owner/name
 ```
 
-This script:
-
-1. Generates a new `ptry_` token
-2. Stores it in AWS SSM (`/pantry/registry-token`)
-3. Writes it into the registry box's `EnvironmentFile` (backing up the old one)
-4. Restarts the registry service
-5. Verifies the live registry accepts the new token — and stops before touching
-   any GitHub secret if it doesn't, so a failed server update can't leave CI
-   holding a token the server rejects
-6. Updates the `PANTRY_TOKEN` GitHub secret on all repos
-
-To add more repos: `./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry,other/repo"`
-
-Adding a *new* repo to the list doesn't require rotating. Read the current token
-out of the registry box and set it directly:
-
-```bash
-ssh -i ~/.ssh/stacks-production.pem root@registry.pantry.dev \
-  'grep -oP "^PANTRY_REGISTRY_TOKEN=\K.*" /opt/pantry-registry/registry.env' \
-  | gh secret set PANTRY_TOKEN --repo <owner>/<repo>
-```
-
-Then add the repo to `DEFAULT_REPOS` in the script so the next rotation keeps it
-working.
-
-### Manual retrieval
-
-```bash
-# Read current token from SSM
-aws ssm get-parameter --name "/pantry/registry-token" --with-decryption --region us-east-1 --query "Parameter.Value" --output text
-```
-
-### Site CSS validation (`@cwcss/crosswind`)
+## Site CSS validation (`@cwcss/crosswind`)
 
 The site relies on `@stacksjs/stx`'s `injectCSS: true` to scan templates and inject crosswind utility CSS at render time. **`@cwcss/crosswind@0.2.0` and `0.2.1` ship a broken `package.json` exports map** — they declare `./dist/index.js` but the tarball ships JS at `./dist/src/index.js`, so `import('@cwcss/crosswind')` fails. stx swallows the error in a `try/catch`, the page renders with no utility CSS, and the layout collapses (header in a column, no `max-w` container, etc.).
 
@@ -114,27 +66,7 @@ console.log('flex rule present:', /\.flex\s*\{/.test(html));
 
 If `flex rule present: false`, crosswind isn't loading — investigate before deploying.
 
-### Site deployment secrets
-
-The `deploy-registry.yml` workflow SSHes from a GitHub runner into the registry box as `root@registry.pantry.dev`, `git reset --hard`s `/opt/pantry-registry/repo` to `origin/main`, and restarts `pantry-registry`. It needs **one** repo secret on `pantry-pm/pantry`:
-
-| Secret | Source of truth | Value |
-|--------|-----------------|-------|
-| `REGISTRY_SSH_KEY` | `~/.ssh/stacks-production.pem` | private key for `root@` on the Hetzner box |
-
-The host is **not** a secret: the workflow targets `registry.pantry.dev` by DNS (always resolves to the current Hetzner box), so there's nothing to drift. (The old `REGISTRY_HOST` secret pointed at the decommissioned EC2 IP and is intentionally no longer referenced.) Re-run a deploy with:
-
-```bash
-gh workflow run deploy-registry.yml --repo pantry-pm/pantry --ref main
-```
-
-### Prerequisites
-
-- SSH key `~/.ssh/stacks-production.pem` (user `root` on the Hetzner box)
-- AWS CLI configured (region `us-east-1`) — only for the optional AWS SSM token mirror
-- `gh` CLI authenticated with access to target repos
-
-### Using in external repos
+## Using in external repos
 
 In a GitHub Actions workflow:
 
@@ -155,7 +87,7 @@ The Pantry action exports `PANTRY_TOKEN` and `PANTRY_REGISTRY_TOKEN` as env vars
 
 The pantry S3 registry (`registry.pantry.dev/binaries/`) hosts **system packages**(pre-built binaries like zig, curl, redis, bun) and**apps** (GUI applications like VS Code, Discord, Obsidian) uploaded via the `build.yml` / `sync-binaries.yml` workflows. JS/TS packages go to npm, not S3.
 
-### Prebuilt download vs custom source builds — do NOT convert custom builds
+## Prebuilt download vs custom source builds — do NOT convert custom builds
 
 A recipe can either **compile from source** or **download an official prebuilt binary** (the latter is faster/more reliable and covers platforms we can't compile). The download pattern lives in the recipe itself: the `build.script` cases on `{{hw.platform}}`/`{{hw.arch}}`, `curl`s the official per-platform asset, and extracts it (see `src/recipes/ziglang.org.ts` — Zig is a download recipe, not a source build). Versions come from the recipe's `versionSource`. The recipe is the single source of truth for *how to download every version per platform*. (The legacy `scripts/sync-packages.ts` hand-codes the same logic for ~19 domains — that mechanism is redundant with recipe-driven downloads and should not be grown; prefer making a package a zig-style download recipe.)
 
@@ -169,7 +101,7 @@ A recipe can either **compile from source** or **download an official prebuilt b
 
 When expanding prebuilt coverage, the test is: *does upstream ship the exact binary we'd otherwise produce, with nothing we customize?* If not, keep compiling.
 
-### Cross-platform download fanout — produce ALL platforms from ANY box
+## Cross-platform download fanout — produce ALL platforms from ANY box
 
 A download recipe has **no compile step** — its "build" is just `curl the official per-platform asset + repackage`. So **any single box can produce the artifact for any target platform**: a linux-x86-64 box can `curl` the darwin-arm64 prebuilt and upload it under the `darwin-arm64` key just as easily as its own. This eliminates the need for macOS / ARM hardware to fill download-recipe coverage across platforms.
 
@@ -193,17 +125,11 @@ Fleet wiring (`provision-build-workers.ts`): each box is assigned **one foreign 
 
 **Publish-on-update is ubuntu-only.** `update-packages.yml` (every 20 min) commits version bumps, then dispatches `publish-changed-packages.yml` so the registry updates AS bumps land — on ubuntu, never macOS. It **dispatches explicitly** (`gh workflow run`) rather than relying on publish-changed's `push` trigger, because bot commits are pushed with `GITHUB_TOKEN` (no `PAT_TOKEN` secret is set) and `GITHUB_TOKEN` pushes do not fire other workflows' `push` triggers — that suppression is exactly why version updates never used to publish. It previously dispatched `build.yml -f platform=unix`, which source-compiled every bump on a macOS-15 runner unsupervised; that path is gone.
 
-### Build-status dashboard reporting (authenticated — the same token)
+## Build-status dashboard reporting (authenticated — the same token)
 
-The live build dashboard at **pantry.dev/packages** is fed by builders POSTing `building`/`built`/`failed` events to `registry.pantry.dev/api/build-events` (and log lines to `/api/build-logs`). These endpoints are **authenticated** — the server (`packages/registry/src/server.ts`, `isAuthorizedRequest`) returns **401** without a valid `Authorization: Bearer <token>`. The reporter (`packages/ts-pantry/scripts/report-build.ts`) reads the token from `PANTRY_REGISTRY_TOKEN` → `PANTRY_TOKEN` → `PANTRY_BUILD_REPORT_TOKEN`, and **silently skips** reporting if none is set (a 401 never fails the build — reporting is fire-and-forget). The token is the **same `ptry_` registry token** documented above (AWS SSM `/pantry/registry-token`).
+The live build dashboard at **pantry.dev/packages** is fed by builders POSTing `building`/`built`/`failed` events to `registry.pantry.dev/api/build-events` (and log lines to `/api/build-logs`). These endpoints are **authenticated** — the server (`packages/registry/src/server.ts`, `isAuthorizedRequest`) returns **401** without a valid `Authorization: Bearer <token>`. The reporter (`packages/ts-pantry/scripts/report-build.ts`) reads the token from `PANTRY_REGISTRY_TOKEN` → `PANTRY_TOKEN` → `PANTRY_BUILD_REPORT_TOKEN`, and **silently skips** reporting if none is set (a 401 never fails the build — reporting is fire-and-forget). The token is the **same `ptry_` registry token** used for publishing.
 
-**The failure mode:** a build channel with no token compiles fine but is **invisible on the dashboard** (every POST 401s). So every channel that runs `build-all-packages.ts` MUST have the token in its environment:
-
-| Channel | Where the token comes from |
-|---------|----------------------------|
-| Hetzner build fleet | `PANTRY_REGISTRY_TOKEN` in each box's `/root/.pantry-hetzner.env` (sourced by `fleet-daemon.sh`) |
-| GitHub Actions | top-level `env: PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}` in **every** build workflow (`build.yml`, `sync-binaries.yml`, `build-registry.yml`, `build-versions.yml`) so all jobs/steps inherit it |
-| Local Mac | `PANTRY_REGISTRY_TOKEN` in `~/.pantry-hetzner.env` (sourced by `scripts/local-darwin-build.sh`) |
+**The failure mode:** a build channel with no token compiles fine but is **invisible on the dashboard** (every POST 401s). So every channel that runs `build-all-packages.ts` MUST have the token in its environment — which channel gets it from where is recorded in [pantry-pm/ops](https://github.com/pantry-pm/ops).
 
 **Rule going forward: any new build workflow or build host must export `PANTRY_REGISTRY_TOKEN` (= `secrets.PANTRY_TOKEN` in CI) or its builds won't show on the dashboard.** `report-build.ts` tags each event with a `hostKind` (`github` / `hetzner` / `local`), so a channel that has silently stopped reporting shows up as a missing `hostKind` in `GET /api/build-status` — the quickest way to detect a token/reporting regression. Set `PANTRY_BUILD_REPORT=0` only to intentionally disable reporting. `build-zig.yml` does not report (it doesn't run `build-all-packages.ts`), so it needs no token.
 
@@ -221,21 +147,6 @@ Registry object storage is **provider-agnostic** (AWS S3, Hetzner Object Storage
 ## pkgx new-package sync
 
 `pkgx-sync.yml` (daily) watches `pkgxdev/pantry` for packages we don't have and opens **one PR per new package** (label `pkgx-sync`). `scripts/discover-pkgx-new.ts` diffs pkgx's project list against `packages/ts-pantry/src/packages/*.ts` (by `convertDomainToFileName`); the workflow scaffolds each new formula via `pantry fetch <domain>` on its own branch. Index/aliases are regenerated post-merge by `update-packages.yml` (so per-package PRs don't conflict). This complements `update-packages.yml`, which only bumps versions of **existing** packages.
-
-## AWS / ts-cloud (`/.config/cloud.ts`)
-
-Production site infrastructure uses **ts-cloud** from `~/Code/Libraries/ts-cloud`:
-
-| Resource | Name | Deploy |
-|----------|------|--------|
-| Site CloudFormation stack | `pantry-production-main-site` | `cloud deploy --env production --skip-security-scan --yes` |
-| S3 install assets | `pantry-production-site` | same (site deploy path) |
-| Registry server (Hetzner) | `registry.pantry.dev` (`178.105.248.188`) | `.github/workflows/deploy-registry.yml` |
-| Binaries S3 | `pantry-binaries` | manual |
-
-Naming conventions: `{slug}-{environment}-{siteKey}-site` for stacks, `{slug}-{environment}-site` for the main site bucket. `infrastructure.deployStack: false` skips the unused `pantry-production` VPC stack.
-
-One-time stack rename script: `bun scripts/migrate-production-site-stack.ts` (already run May 2026).
 
 ## GitHub Action (`packages/action/`)
 
