@@ -13,6 +13,7 @@ const common = @import("common.zig");
 const style = @import("../style.zig");
 const advanced_glob = @import("../../packages/advanced_glob.zig");
 const workspace_publish = @import("workspace_publish.zig");
+const token_commands = @import("token.zig");
 const http = std.http;
 
 const CommandResult = common.CommandResult;
@@ -839,29 +840,30 @@ fn publishSingleToRegistry(
 
     style.print("Registry: {s}\n", .{options.registry});
 
-    // Get auth token (from options, env, or ~/.pantry/credentials)
-    var token: ?[]const u8 = options.token;
-    var token_owned = false;
-    if (token == null) {
-        token = io_helper.getEnvVarOwned(allocator, "PANTRY_REGISTRY_TOKEN") catch null;
-        if (token != null) token_owned = true;
-    }
-    if (token == null) {
-        token = readPantryToken(allocator) catch null;
-        if (token != null) token_owned = true;
-    }
-    defer if (token_owned and token != null) allocator.free(token.?);
+    // Auth: --token, then the environment, then ~/.pantry/credentials — scoped
+    // to this registry if an entry for it exists, otherwise the global one.
+    const resolved_token = try token_commands.resolve(
+        allocator,
+        options.token,
+        options.registry,
+        token_commands.default_key,
+    );
+    defer if (resolved_token) |t| t.deinit(allocator);
 
     // Publishing goes through the registry server (HTTP) — a token is required.
-    if (token == null) {
+    if (resolved_token == null) {
         return CommandResult.err(
             allocator,
             \\Error: No authentication found.
             \\
-            \\Set PANTRY_REGISTRY_TOKEN (or pass --token) to publish to the registry.
+            \\Store a token once:
+            \\  pantry token set
+            \\
+            \\Or set PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN, or pass --token.
             ,
         );
     }
+    const token: ?[]const u8 = resolved_token.?.value;
 
     // Rewrite workspace: protocol ranges in the published manifest (same
     // semantics as `bun publish`) BEFORE anything is packed or uploaded —
@@ -1002,35 +1004,17 @@ fn publishSingleToRegistry(
     return .{ .exit_code = 0 };
 }
 
-/// Read PANTRY_TOKEN from ~/.pantry/credentials
+/// Read PANTRY_TOKEN from ~/.pantry/credentials.
+///
+/// Kept for callers outside this file; the store in `token.zig` is the single
+/// implementation, so registry-scoped entries and this path can't disagree.
 pub fn readPantryToken(allocator: std.mem.Allocator) ![]u8 {
-    const home = io_helper.getenv("HOME") orelse return error.EnvironmentVariableNotFound;
+    var store = try token_commands.Store.load(allocator);
+    defer store.deinit();
 
-    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const credentials_path = try std.fmt.bufPrint(&path_buf, "{s}/.pantry/credentials", .{home});
-
-    const content = io_helper.readFileAlloc(allocator, credentials_path, 64 * 1024) catch {
-        return error.FileNotFound;
-    };
-    defer allocator.free(content);
-
-    // Parse key=value pairs
-    var lines = std.mem.splitSequence(u8, content, "\n");
-    while (lines.next()) |line| {
-        const trimmed = std.mem.trim(u8, line, &std.ascii.whitespace);
-        if (trimmed.len == 0 or trimmed[0] == '#') continue;
-
-        if (std.mem.indexOfScalar(u8, trimmed, '=')) |eq_pos| {
-            const key = std.mem.trim(u8, trimmed[0..eq_pos], &std.ascii.whitespace);
-            const value = std.mem.trim(u8, trimmed[eq_pos + 1 ..], &std.ascii.whitespace);
-
-            if (std.mem.eql(u8, key, "PANTRY_TOKEN") or std.mem.eql(u8, key, "PANTRY_REGISTRY_TOKEN")) {
-                return try allocator.dupe(u8, value);
-            }
-        }
-    }
-
-    return error.EnvironmentVariableNotFound;
+    const entry = store.get(token_commands.default_key, null) orelse
+        return error.EnvironmentVariableNotFound;
+    return try allocator.dupe(u8, entry.value);
 }
 
 /// Create tarball of the current project respecting package.json "files" field

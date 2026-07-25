@@ -4,6 +4,7 @@ const std = @import("std");
 const io_helper = @import("../../io_helper.zig");
 const lib = @import("../../lib.zig");
 const common = @import("common.zig");
+const token_commands = @import("token.zig");
 const style = @import("../style.zig");
 const workspace_publish = @import("workspace_publish.zig");
 
@@ -3351,71 +3352,17 @@ test "npmrc token parser supports unscoped auth token" {
     try std.testing.expectEqualStrings("local-token", token);
 }
 
-/// Save a credential to ~/.pantry/credentials file
-/// Creates the file and directory if they don't exist
+/// Save a credential to ~/.pantry/credentials.
+///
+/// Delegates to the credential store so this path and `pantry token set` write
+/// the same format — an earlier hand-rolled writer here flattened the file and
+/// would have dropped any registry-scoped entries it didn't understand.
 pub fn savePantryCredential(allocator: std.mem.Allocator, key: []const u8, value: []const u8) !void {
-    // Get home directory
-    const home = io_helper.getenv("HOME") orelse return error.EnvironmentVariableNotFound;
+    var store = try token_commands.Store.load(allocator);
+    defer store.deinit();
 
-    // Build paths
-    var dir_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const pantry_dir = try std.fmt.bufPrint(&dir_buf, "{s}/.pantry", .{home});
-
-    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const credentials_path = try std.fmt.bufPrint(&path_buf, "{s}/.pantry/credentials", .{home});
-
-    // Create directory if needed
-    io_helper.makePath(pantry_dir) catch {};
-
-    // Read existing content or start fresh
-    const existing_content = io_helper.readFileAlloc(allocator, credentials_path, 64 * 1024) catch try allocator.alloc(u8, 0);
-    defer allocator.free(existing_content);
-
-    // Build new content
-    var new_content: std.ArrayList(u8) = .empty;
-    defer new_content.deinit(allocator);
-
-    var found = false;
-    var lines = std.mem.splitSequence(u8, existing_content, "\n");
-    while (lines.next()) |line| {
-        const trimmed = std.mem.trim(u8, line, &std.ascii.whitespace);
-        if (trimmed.len == 0) continue;
-
-        // Check if this is the key we're updating
-        if (std.mem.indexOfScalar(u8, trimmed, '=')) |eq_pos| {
-            const line_key = std.mem.trim(u8, trimmed[0..eq_pos], &std.ascii.whitespace);
-            if (std.mem.eql(u8, line_key, key)) {
-                // Replace with new value
-                try new_content.appendSlice(allocator, key);
-                try new_content.append(allocator, '=');
-                try new_content.appendSlice(allocator, value);
-                try new_content.append(allocator, '\n');
-                found = true;
-                continue;
-            }
-        }
-
-        // Keep existing line
-        try new_content.appendSlice(allocator, trimmed);
-        try new_content.append(allocator, '\n');
-    }
-
-    // Append new key if not found
-    if (!found) {
-        try new_content.appendSlice(allocator, key);
-        try new_content.append(allocator, '=');
-        try new_content.appendSlice(allocator, value);
-        try new_content.append(allocator, '\n');
-    }
-
-    // Write file with restricted permissions (0600)
-    const file = try std.Io.Dir.createFileAbsolute(io_helper.io, credentials_path, .{});
-    defer file.close(io_helper.io);
-    try io_helper.writeAllToFile(file, new_content.items);
-    // Set restrictive permissions after writing (POSIX only)
-    if (comptime @import("builtin").os.tag != .windows) {
-        file.setPermissions(io_helper.io, std.Io.File.Permissions.fromMode(0o600)) catch {};
-    }
+    try store.set(key, null, value);
+    try store.save();
 }
 
 /// Save a credential to the project's .env file

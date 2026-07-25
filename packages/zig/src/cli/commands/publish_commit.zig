@@ -14,6 +14,7 @@ const io_helper = @import("../../io_helper.zig");
 const style = @import("../style.zig");
 const common = @import("common.zig");
 const registry_commands = @import("registry.zig");
+const token_commands = @import("token.zig");
 
 const CommandResult = common.CommandResult;
 
@@ -137,52 +138,27 @@ pub fn publishCommitCommand(allocator: std.mem.Allocator, args: []const []const 
 
     // Check for authentication. Publishing goes through the registry server
     // (HTTP), which persists to the configured object store — a token is required.
-    var token: ?[]const u8 = if (options.token) |t| (if (t.len > 0) t else null) else null;
-    var token_owned = false;
-    if (token == null) {
-        token = io_helper.getEnvVarOwned(allocator, "PANTRY_REGISTRY_TOKEN") catch null;
-        if (token) |t| {
-            if (t.len == 0) {
-                allocator.free(t);
-                token = null;
-            } else {
-                token_owned = true;
-            }
-        }
-    }
-    if (token == null) {
-        token = io_helper.getEnvVarOwned(allocator, "PANTRY_TOKEN") catch null;
-        if (token) |t| {
-            if (t.len == 0) {
-                allocator.free(t);
-                token = null;
-            } else {
-                token_owned = true;
-            }
-        }
-    }
-    if (token == null) {
-        token = registry_commands.readPantryToken(allocator) catch null;
-        if (token) |t| {
-            if (t.len == 0) {
-                allocator.free(t);
-                token = null;
-            } else {
-                token_owned = true;
-            }
-        }
-    }
-    defer if (token_owned and token != null) allocator.free(token.?);
+    const resolved_token = try token_commands.resolve(
+        allocator,
+        options.token,
+        options.registry,
+        token_commands.default_key,
+    );
+    defer if (resolved_token) |t| t.deinit(allocator);
 
-    if (token == null) {
+    if (resolved_token == null) {
         return CommandResult.err(
             allocator,
             \\Error: No authentication found.
             \\
-            \\Set PANTRY_REGISTRY_TOKEN (or PANTRY_TOKEN, or --token) to publish to the registry.
+            \\Store a token once:
+            \\  pantry token set
+            \\
+            \\Or set PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN, or pass --token.
             ,
         );
     }
+    const token: ?[]const u8 = resolved_token.?.value;
 
     // Publish each package
     var succeeded: usize = 0;
