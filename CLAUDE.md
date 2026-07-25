@@ -47,9 +47,11 @@ The registry validates tokens via simple string equality (`zig-routes.ts:validat
 | Location | Purpose |
 |----------|---------|
 | AWS SSM `/pantry/registry-token` (us-east-1, SecureString) | Source of truth |
-| Hetzner box systemd service `/etc/systemd/system/pantry-registry.service` | Runtime config |
+| Hetzner box `/opt/pantry-registry/registry.env` | Runtime config — the unit's `EnvironmentFile`, *not* `Environment=` lines in `/etc/systemd/system/pantry-registry.service` |
 | GitHub secret `PANTRY_TOKEN` on `pickier/pickier` | CI publish |
 | GitHub secret `PANTRY_TOKEN` on `pantry-pm/pantry` | CI publish |
+| GitHub secret `PANTRY_TOKEN` on `cwcss/crosswind` | CI publish |
+| GitHub secret `PANTRY_TOKEN` on `den-shell/den` | CI publish |
 
 ### Rotating the token
 
@@ -61,11 +63,26 @@ This script:
 
 1. Generates a new `ptry_` token
 2. Stores it in AWS SSM (`/pantry/registry-token`)
-3. Updates the registry EC2 server's systemd config
+3. Writes it into the registry box's `EnvironmentFile` (backing up the old one)
 4. Restarts the registry service
-5. Updates `PANTRY_TOKEN` GitHub secret on all repos
+5. Verifies the live registry accepts the new token — and stops before touching
+   any GitHub secret if it doesn't, so a failed server update can't leave CI
+   holding a token the server rejects
+6. Updates the `PANTRY_TOKEN` GitHub secret on all repos
 
 To add more repos: `./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry,other/repo"`
+
+Adding a *new* repo to the list doesn't require rotating. Read the current token
+out of the registry box and set it directly:
+
+```bash
+ssh -i ~/.ssh/stacks-production.pem root@registry.pantry.dev \
+  'grep -oP "^PANTRY_REGISTRY_TOKEN=\K.*" /opt/pantry-registry/registry.env' \
+  | gh secret set PANTRY_TOKEN --repo <owner>/<repo>
+```
+
+Then add the repo to `DEFAULT_REPOS` in the script so the next rotation keeps it
+working.
 
 ### Manual retrieval
 
