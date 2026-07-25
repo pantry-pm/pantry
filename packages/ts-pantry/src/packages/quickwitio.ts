@@ -67,6 +67,7 @@ export const quickwitioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.9.0',
     '0.8.2',
     '0.8.1',
     '0.8.0',
