@@ -963,6 +963,123 @@ fn tokenSyncAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+// ============================================================================
+// Registry Operations (`pantry registry …` — running a registry yourself)
+// ============================================================================
+
+/// The SSH-facing options every box-level subcommand shares.
+fn remoteOptions(ctx: *cli.BaseCommand.ParseContext) lib.commands.registry_ops.RemoteOptions {
+    return .{
+        .host = ctx.getOption("host"),
+        .user = ctx.getOption("user"),
+        .key = ctx.getOption("key"),
+        .service = ctx.getOption("service"),
+        .env_file = ctx.getOption("env-file"),
+        .url = ctx.getOption("url"),
+    };
+}
+
+fn registrySetupAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.registry_ops.setupCommand(allocator, .{
+        .remote = remoteOptions(ctx),
+        .repo = ctx.getOption("repo"),
+        .ref = ctx.getOption("ref"),
+        .path = ctx.getOption("path"),
+        .port = ctx.getOption("port"),
+        .public = ctx.hasOption("public"),
+        .rotate_token = ctx.hasOption("rotate-token"),
+        .storage = .{
+            .provider = ctx.getOption("provider"),
+            .bucket = ctx.getOption("bucket"),
+            .region = ctx.getOption("region"),
+            .endpoint = ctx.getOption("endpoint"),
+            .access_key_id = ctx.getOption("access-key-id"),
+            .secret_access_key = ctx.getOption("secret-access-key"),
+        },
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn registryStorageAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.registry_ops.storageCommand(allocator, .{
+        .remote = remoteOptions(ctx),
+        .provider = ctx.getOption("provider"),
+        .bucket = ctx.getOption("bucket"),
+        .region = ctx.getOption("region"),
+        .endpoint = ctx.getOption("endpoint"),
+        .access_key_id = ctx.getOption("access-key-id"),
+        .secret_access_key = ctx.getOption("secret-access-key"),
+        .metadata_backend = ctx.getOption("metadata-backend"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn registryRotateTokenAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.registry_ops.rotateTokenCommand(allocator, .{
+        .remote = remoteOptions(ctx),
+        .repos = ctx.getOption("repos"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn registryMemberAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const email = ctx.getArgument(0) orelse {
+        style.print("Error: an email address is required (pantry registry member add dev@yourco.com --password '…')\n", .{});
+        std.process.exit(1);
+    };
+    const result = try lib.commands.registry_ops.memberAddCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .email = email,
+        .name = ctx.getOption("name"),
+        .password = ctx.getOption("password"),
+        .admin = ctx.hasOption("admin"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn registryTokenIssueAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const email = ctx.getArgument(0) orelse {
+        style.print("Error: an email address is required (pantry registry token issue dev@yourco.com)\n", .{});
+        std.process.exit(1);
+    };
+    const result = try lib.commands.registry_ops.tokenIssueCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .email = email,
+        .name = ctx.getOption("name"),
+        .publish = ctx.hasOption("publish"),
+        .expires_in_days = ctx.getOption("expires-in-days"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn registryTokenRevokeAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const email = ctx.getArgument(0) orelse {
+        style.print("Error: an email address is required (pantry registry token revoke dev@yourco.com --id …)\n", .{});
+        std.process.exit(1);
+    };
+    const result = try lib.commands.registry_ops.tokenRevokeCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .email = email,
+        .id = ctx.getOption("id"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn registryInfoAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.registry_ops.infoCommand(allocator, ctx.getOption("registry"));
+    finishTokenResult(allocator, result);
+}
+
 fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -3738,6 +3855,115 @@ pub fn main() !void {
     _ = try token_cmd.addCommand(token_sync_cmd);
 
     _ = try root.addCommand(token_cmd);
+
+    // ========================================================================
+    // Registry Command (running a registry yourself)
+    //
+    // `setup`, `storage` and `rotate-token` drive the box over SSH; `member`,
+    // `token` and `info` are HTTPS calls to the registry's own API. These used
+    // to be shell scripts in the repo, which meant every fork had to keep a
+    // folder of bash in sync with the server it drives.
+    // ========================================================================
+    var registry_cmd = try cli.BaseCommand.init(allocator, "registry", "Run and operate a registry of your own");
+
+    const reg_host_opt = cli.Option.init("host", "host", "Registry host to operate on (env: PANTRY_REGISTRY_HOST)", .string);
+    const reg_user_opt = cli.Option.init("user", "user", "SSH user (default: root)", .string);
+    const reg_key_opt = cli.Option.init("key", "key", "SSH identity file (default: your agent)", .string);
+    const reg_service_opt = cli.Option.init("service", "service", "systemd unit name (default: pantry-registry)", .string);
+    const reg_env_file_opt = cli.Option.init("env-file", "env-file", "Unit's EnvironmentFile path", .string);
+    const reg_url_opt = cli.Option.init("url", "url", "Public URL (default: https://<host>)", .string);
+
+    var registry_setup_cmd = try cli.BaseCommand.init(allocator, "setup", "Provision a box and start the registry (private by default)");
+    _ = try registry_setup_cmd.addOption(reg_host_opt);
+    _ = try registry_setup_cmd.addOption(reg_user_opt);
+    _ = try registry_setup_cmd.addOption(reg_key_opt);
+    _ = try registry_setup_cmd.addOption(reg_service_opt);
+    _ = try registry_setup_cmd.addOption(reg_env_file_opt);
+    _ = try registry_setup_cmd.addOption(reg_url_opt);
+    _ = try registry_setup_cmd.addOption(cli.Option.init("repo", "repo", "Git URL to deploy (default: this checkout's origin)", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("ref", "ref", "Branch or tag to check out (default: main)", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("path", "path", "Checkout path on the box", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("port", "port", "Port the process listens on (default: 3000)", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("public", "public", "Serve reads without authentication", .bool));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("rotate-token", "rotate-token", "Replace the registry token even if one is set", .bool));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("provider", "provider", "Object storage provider (hetzner | backblaze | aws)", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("bucket", "bucket", "Object storage bucket", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("region", "region", "Object storage region", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("endpoint", "endpoint", "Object storage endpoint (default: derived)", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("access-key-id", "access-key-id", "Object storage access key id", .string));
+    _ = try registry_setup_cmd.addOption(cli.Option.init("secret-access-key", "secret-access-key", "Object storage secret key", .string));
+    _ = registry_setup_cmd.setAction(registrySetupAction);
+    _ = try registry_cmd.addCommand(registry_setup_cmd);
+
+    var registry_storage_cmd = try cli.BaseCommand.init(allocator, "storage", "Point the registry at an S3-compatible bucket");
+    _ = try registry_storage_cmd.addOption(reg_host_opt);
+    _ = try registry_storage_cmd.addOption(reg_user_opt);
+    _ = try registry_storage_cmd.addOption(reg_key_opt);
+    _ = try registry_storage_cmd.addOption(reg_service_opt);
+    _ = try registry_storage_cmd.addOption(reg_env_file_opt);
+    _ = try registry_storage_cmd.addOption(reg_url_opt);
+    _ = try registry_storage_cmd.addOption(cli.Option.init("provider", "provider", "hetzner | backblaze | aws (default: aws)", .string));
+    _ = try registry_storage_cmd.addOption(cli.Option.init("bucket", "bucket", "Bucket name", .string));
+    _ = try registry_storage_cmd.addOption(cli.Option.init("region", "region", "Region", .string));
+    _ = try registry_storage_cmd.addOption(cli.Option.init("endpoint", "endpoint", "Endpoint (default: derived from provider + region)", .string));
+    _ = try registry_storage_cmd.addOption(cli.Option.init("access-key-id", "access-key-id", "Access key id", .string));
+    _ = try registry_storage_cmd.addOption(cli.Option.init("secret-access-key", "secret-access-key", "Secret access key", .string));
+    _ = try registry_storage_cmd.addOption(cli.Option.init("metadata-backend", "metadata-backend", "object | dynamodb | file (default: object)", .string));
+    _ = registry_storage_cmd.setAction(registryStorageAction);
+    _ = try registry_cmd.addCommand(registry_storage_cmd);
+
+    var registry_rotate_cmd = try cli.BaseCommand.init(allocator, "rotate-token", "Replace the shared registry token");
+    _ = try registry_rotate_cmd.addOption(reg_host_opt);
+    _ = try registry_rotate_cmd.addOption(reg_user_opt);
+    _ = try registry_rotate_cmd.addOption(reg_key_opt);
+    _ = try registry_rotate_cmd.addOption(reg_service_opt);
+    _ = try registry_rotate_cmd.addOption(reg_env_file_opt);
+    _ = try registry_rotate_cmd.addOption(reg_url_opt);
+    _ = try registry_rotate_cmd.addOption(cli.Option.init("repos", "repos", "Repositories whose PANTRY_TOKEN secret to update (owner/name,…)", .string));
+    _ = registry_rotate_cmd.setAction(registryRotateTokenAction);
+    _ = try registry_cmd.addCommand(registry_rotate_cmd);
+
+    const reg_registry_opt = cli.Option.init("registry", "registry", "Registry URL (env: PANTRY_REGISTRY_URL)", .string);
+    const reg_admin_token_opt = cli.Option.init("token", "token", "Admin token (default: the stored credential for this registry)", .string);
+
+    var registry_member_cmd = try cli.BaseCommand.init(allocator, "member", "Manage registry accounts");
+    var registry_member_add_cmd = try cli.BaseCommand.init(allocator, "add", "Create an account (signups are closed on a private registry)");
+    _ = try registry_member_add_cmd.addArgument(cli.Argument.init("email", "Email address", .string).withRequired(true));
+    _ = try registry_member_add_cmd.addOption(reg_registry_opt);
+    _ = try registry_member_add_cmd.addOption(reg_admin_token_opt);
+    _ = try registry_member_add_cmd.addOption(cli.Option.init("name", "name", "Display name (default: the email)", .string));
+    _ = try registry_member_add_cmd.addOption(cli.Option.init("password", "password", "Initial password (at least 8 characters)", .string));
+    _ = try registry_member_add_cmd.addOption(cli.Option.init("admin", "admin", "Make them an operator", .bool));
+    _ = registry_member_add_cmd.setAction(registryMemberAddAction);
+    _ = try registry_member_cmd.addCommand(registry_member_add_cmd);
+    _ = try registry_cmd.addCommand(registry_member_cmd);
+
+    var registry_token_cmd = try cli.BaseCommand.init(allocator, "token", "Issue and revoke access tokens for a registry you operate");
+    var registry_token_issue_cmd = try cli.BaseCommand.init(allocator, "issue", "Mint a token for a member (read-only unless --publish)");
+    _ = try registry_token_issue_cmd.addArgument(cli.Argument.init("email", "Member's email address", .string).withRequired(true));
+    _ = try registry_token_issue_cmd.addOption(reg_registry_opt);
+    _ = try registry_token_issue_cmd.addOption(reg_admin_token_opt);
+    _ = try registry_token_issue_cmd.addOption(cli.Option.init("name", "name", "Label for the token (e.g. ci, laptop)", .string));
+    _ = try registry_token_issue_cmd.addOption(cli.Option.init("publish", "publish", "Allow publishing as well as downloading", .bool));
+    _ = try registry_token_issue_cmd.addOption(cli.Option.init("expires-in-days", "expires-in-days", "Expire the token after N days", .string));
+    _ = registry_token_issue_cmd.setAction(registryTokenIssueAction);
+    _ = try registry_token_cmd.addCommand(registry_token_issue_cmd);
+
+    var registry_token_revoke_cmd = try cli.BaseCommand.init(allocator, "revoke", "Revoke a token");
+    _ = try registry_token_revoke_cmd.addArgument(cli.Argument.init("email", "Member's email address", .string).withRequired(true));
+    _ = try registry_token_revoke_cmd.addOption(reg_registry_opt);
+    _ = try registry_token_revoke_cmd.addOption(reg_admin_token_opt);
+    _ = try registry_token_revoke_cmd.addOption(cli.Option.init("id", "id", "Token id, as shown when it was issued", .string));
+    _ = registry_token_revoke_cmd.setAction(registryTokenRevokeAction);
+    _ = try registry_token_cmd.addCommand(registry_token_revoke_cmd);
+    _ = try registry_cmd.addCommand(registry_token_cmd);
+
+    var registry_info_cmd = try cli.BaseCommand.init(allocator, "info", "Show what a registry says about itself");
+    _ = try registry_info_cmd.addOption(reg_registry_opt);
+    _ = registry_info_cmd.setAction(registryInfoAction);
+    _ = try registry_cmd.addCommand(registry_info_cmd);
+
+    _ = try root.addCommand(registry_cmd);
 
     // ========================================================================
     // Dedupe Command (Deduplicate Dependencies)

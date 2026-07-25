@@ -1918,6 +1918,65 @@ pub fn httpGetTimeout(
     return httpGetWithClientTimeout(&client, allocator, url, extra_headers, timeout_ms);
 }
 
+/// A response whose status matters as much as its body.
+pub const HttpResponse = struct {
+    status: u16,
+    body: []u8,
+
+    pub fn ok(self: HttpResponse) bool {
+        return self.status >= 200 and self.status < 300;
+    }
+
+    pub fn deinit(self: HttpResponse, allocator: std.mem.Allocator) void {
+        allocator.free(self.body);
+    }
+};
+
+/// HTTP request that reports the status instead of collapsing every non-200
+/// into `error.HttpRequestFailed`. API callers need to tell "401, your token is
+/// wrong" from "404, no such package" from "the host is unreachable" — the
+/// other helpers here deliberately hide that, because their callers only ever
+/// wanted the bytes.
+pub fn httpRequest(
+    allocator: std.mem.Allocator,
+    method: std.http.Method,
+    url: []const u8,
+    body: ?[]const u8,
+    extra_headers: []const std.http.Header,
+) !HttpResponse {
+    var client: std.http.Client = .{ .allocator = allocator, .io = io };
+    defer client.deinit();
+
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    var header_buf: [8]std.http.Header = undefined;
+
+    var alloc_writer = std.Io.Writer.Allocating.init(allocator);
+    errdefer alloc_writer.deinit();
+
+    var redirect_buf: [8192]u8 = undefined;
+
+    const result = client.fetch(.{
+        .location = .{ .url = decoration.effectiveUrl(url) },
+        .method = method,
+        .payload = body,
+        .response_writer = &alloc_writer.writer,
+        .redirect_buffer = &redirect_buf,
+        .redirect_behavior = @fromBackingInt(@intCast(10)),
+        .headers = .{
+            .content_type = if (body != null) .{ .override = "application/json" } else .default,
+        },
+        .extra_headers = mergedHeaders(&header_buf, extra_headers, decoration),
+    }) catch {
+        return error.HttpRequestFailed;
+    };
+
+    const data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
+    const owned = try allocator.dupe(u8, data);
+    alloc_writer.deinit();
+    return .{ .status = @intFromEnum(result.status), .body = owned };
+}
+
 /// HTTP POST with JSON body. Returns response body as owned slice.
 pub fn httpPostJson(allocator: std.mem.Allocator, url: []const u8, json_body: []const u8) ![]u8 {
     var client: std.http.Client = .{

@@ -4,4 +4,5 @@ const std = @import("std");
 // imported for its own sake, which `refAllDecls` does not do.
 test {
     _ = @import("registry/endpoint.zig");
+    _ = @import("cli/commands/registry_ops.zig");
 }
