@@ -893,6 +893,76 @@ fn publisherRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
     std.process.exit(result.exit_code);
 }
 
+// ============================================================================
+// Token Commands (registry credentials)
+// ============================================================================
+
+/// Finish a token subcommand: print its message and exit with its code.
+fn finishTokenResult(allocator: std.mem.Allocator, result: lib.commands.CommandResult) noreturn {
+    var r = result;
+    defer r.deinit(allocator);
+    if (result.message) |msg| {
+        style.print("{s}\n", .{msg});
+    }
+    std.process.exit(result.exit_code);
+}
+
+/// The credential key a token subcommand acts on: the first positional
+/// argument, defaulting to PANTRY_TOKEN.
+fn tokenKeyArg(ctx: *cli.BaseCommand.ParseContext) []const u8 {
+    return ctx.getArgument(0) orelse lib.commands.token_commands.default_key;
+}
+
+fn tokenSetAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.token_commands.setCommand(allocator, .{
+        .key = tokenKeyArg(ctx),
+        .registry = ctx.getOption("registry"),
+        .value = ctx.getOption("value"),
+        .from_stdin = ctx.hasOption("stdin"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn tokenGetAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.token_commands.getCommand(allocator, .{
+        .key = tokenKeyArg(ctx),
+        .registry = ctx.getOption("registry"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn tokenListAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.token_commands.listCommand(allocator);
+    finishTokenResult(allocator, result);
+}
+
+fn tokenRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.token_commands.removeCommand(allocator, .{
+        .key = tokenKeyArg(ctx),
+        .registry = ctx.getOption("registry"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn tokenSyncAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const repo = ctx.getOption("repo") orelse {
+        style.print("Error: --repo is required (e.g. --repo pantry-pm/pantry)\n", .{});
+        std.process.exit(1);
+    };
+    const result = try lib.commands.token_commands.syncCommand(allocator, .{
+        .key = tokenKeyArg(ctx),
+        .registry = ctx.getOption("registry"),
+        .repo = repo,
+        .secret = ctx.getOption("secret"),
+    });
+    finishTokenResult(allocator, result);
+}
+
 fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -3622,6 +3692,47 @@ pub fn main() !void {
     _ = try oidc_cmd.addCommand(oidc_setup_cmd);
 
     _ = try root.addCommand(oidc_cmd);
+
+    // ========================================================================
+    // Token Command (registry credentials)
+    // ========================================================================
+    var token_cmd = try cli.BaseCommand.init(allocator, "token", "Manage registry credentials");
+
+    // Every subcommand takes the same optional key + registry scope, so they're
+    // built in a loop-free but uniform way below.
+    var token_set_cmd = try cli.BaseCommand.init(allocator, "set", "Store a credential (reads the value from stdin unless --value is given)");
+    _ = try token_set_cmd.addArgument(cli.Argument.init("key", "Credential name (default: PANTRY_TOKEN)", .string).withRequired(false));
+    _ = try token_set_cmd.addOption(cli.Option.init("registry", "registry", "Scope the credential to one registry URL", .string));
+    _ = try token_set_cmd.addOption(cli.Option.init("value", "value", "Credential value (prefer stdin: the value is visible to other processes)", .string));
+    _ = try token_set_cmd.addOption(cli.Option.init("stdin", "stdin", "Read the value from stdin", .bool));
+    _ = token_set_cmd.setAction(tokenSetAction);
+    _ = try token_cmd.addCommand(token_set_cmd);
+
+    var token_get_cmd = try cli.BaseCommand.init(allocator, "get", "Print a credential to stdout (for piping)");
+    _ = try token_get_cmd.addArgument(cli.Argument.init("key", "Credential name (default: PANTRY_TOKEN)", .string).withRequired(false));
+    _ = try token_get_cmd.addOption(cli.Option.init("registry", "registry", "Registry URL to resolve the credential for", .string));
+    _ = token_get_cmd.setAction(tokenGetAction);
+    _ = try token_cmd.addCommand(token_get_cmd);
+
+    var token_list_cmd = try cli.BaseCommand.init(allocator, "list", "List configured credentials (values masked)");
+    _ = token_list_cmd.setAction(tokenListAction);
+    _ = try token_cmd.addCommand(token_list_cmd);
+
+    var token_rm_cmd = try cli.BaseCommand.init(allocator, "rm", "Remove a credential");
+    _ = try token_rm_cmd.addArgument(cli.Argument.init("key", "Credential name (default: PANTRY_TOKEN)", .string).withRequired(false));
+    _ = try token_rm_cmd.addOption(cli.Option.init("registry", "registry", "Remove only the entry scoped to this registry", .string));
+    _ = token_rm_cmd.setAction(tokenRemoveAction);
+    _ = try token_cmd.addCommand(token_rm_cmd);
+
+    var token_sync_cmd = try cli.BaseCommand.init(allocator, "sync", "Copy a credential into a GitHub repository's Actions secrets");
+    _ = try token_sync_cmd.addArgument(cli.Argument.init("key", "Credential name (default: PANTRY_TOKEN)", .string).withRequired(false));
+    _ = try token_sync_cmd.addOption(cli.Option.init("repo", "repo", "Target repository as owner/name", .string));
+    _ = try token_sync_cmd.addOption(cli.Option.init("secret", "secret", "Secret name on the repository (default: the credential's key)", .string));
+    _ = try token_sync_cmd.addOption(cli.Option.init("registry", "registry", "Registry URL to resolve the credential for", .string));
+    _ = token_sync_cmd.setAction(tokenSyncAction);
+    _ = try token_cmd.addCommand(token_sync_cmd);
+
+    _ = try root.addCommand(token_cmd);
 
     // ========================================================================
     // Dedupe Command (Deduplicate Dependencies)
