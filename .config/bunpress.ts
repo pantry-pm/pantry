@@ -64,6 +64,15 @@ const config = {
           ],
         },
         {
+          text: 'Self-Hosting',
+          items: [
+            { text: 'Run Your Own Registry', link: '/self-hosting' },
+            { text: 'Extending the Registry', link: '/registry-extensions' },
+            { text: 'Object Storage', link: '/object-storage' },
+            { text: 'Registry Contract', link: '/registry' },
+          ],
+        },
+        {
           text: 'Advanced',
           items: [
             { text: 'Custom Shims', link: '/advanced/custom-shims' },

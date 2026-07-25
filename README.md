@@ -69,6 +69,13 @@ pantry transforms how you manage dependencies across your entire development wor
 - 🔗 **Instant Install URLs** — Get shareable install URLs for every published commit
 - 🤖 **CI/CD Ready** — Drop-in replacement for `pkg-pr-new` in GitHub Actions
 
+### Private Registries
+
+- 🔒 **Private by Default** — `./scripts/setup-private-registry.sh` stands up your own registry where nothing — metadata, tarballs, binaries, search, the UI — is served without a credential
+- 🎟️ **Read-Only Tokens** — Mint per-person and per-machine tokens, scoped to `read` or `publish`, revocable instantly
+- 🧩 **Extensible** — Add routes and access policies (SSO, IP allowlists, per-team packages) as [plugins](https://pantry.dev/registry-extensions), no fork of the server required
+- 🏠 **Runs Anywhere** — One Bun process plus any S3-compatible bucket (Hetzner, Backblaze, MinIO, AWS); no AWS account needed
+
 ### Desktop Apps
 
 - 🖥️ **50+ Desktop Apps** — Install VS Code, Discord, Obsidian, Spotify, and more via `pantry install`
@@ -495,7 +502,8 @@ See [GitHub Action Documentation](https://github.com/pantry-pm/pantry/tree/main/
 
 Explore advanced dependency management topics:
 
-- [Run Your Own Registry](https://pantry.dev/self-hosting) _(fork it and self-host)_
+- [Run Your Own Registry](https://pantry.dev/self-hosting) _(one command, and it's private by default — only authenticated members can download)_
+- [Extending the Registry](https://pantry.dev/registry-extensions) _(custom routes and access policies without forking server.ts)_
 - [Commit Publishing](https://pantry.dev/features/commit-publishing) _(pkg-pr-new alternative)_
 - [Service Management](https://pantry.dev/features/service-management)
 - [Project Environment Configuration](https://pantry.dev/features/package-management)
