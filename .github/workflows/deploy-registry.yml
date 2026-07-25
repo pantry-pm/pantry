@@ -41,11 +41,14 @@ jobs:
       - name: Deploy to registry server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.REGISTRY_SSH_KEY }}
-          # Target the live box by its DNS name. The old REGISTRY_HOST secret
-          # still points at the decommissioned EC2 IP, so we deliberately do NOT
-          # use it — registry.pantry.dev always resolves to the current Hetzner
-          # host. (Public DNS, not a secret.)
-          REGISTRY_HOST: registry.pantry.dev
+          # Repository variables, so a fork deploys to its own box by setting
+          # them rather than editing this file (see docs/self-hosting.md). The
+          # host is public DNS, not a secret — it belongs in a variable.
+          REGISTRY_HOST: ${{ vars.REGISTRY_HOST || 'registry.pantry.dev' }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER || 'root' }}
+          REGISTRY_PATH: ${{ vars.REGISTRY_PATH || '/opt/pantry-registry/repo' }}
+          REGISTRY_SERVICE: ${{ vars.REGISTRY_SERVICE || 'pantry-registry' }}
+          REGISTRY_PORT: ${{ vars.REGISTRY_PORT || '3001' }}
         run: |
           # Create the key file with a 0600 umask before writing so it is
           # never readable by other users for any window of time, and use
@@ -54,50 +57,61 @@ jobs:
           (umask 077 && cat > ~/.ssh/id_rsa <<< "$SSH_PRIVATE_KEY")
           ssh-keyscan -H "$REGISTRY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-          # Hetzner Cloud images log in as root (the old EC2 host used ec2-user).
-          # Running as root means no sudo is needed (and minimal images lack it).
+          # Deploy user defaults to root: minimal cloud images log in as root
+          # and don't ship sudo. The remote script takes its paths as arguments
+          # so the heredoc can stay quoted — an unquoted one would expand the
+          # remote script's own variables here on the runner.
           ssh \
             -o StrictHostKeyChecking=no \
             -o ConnectionAttempts=5 \
             -o ConnectTimeout=20 \
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
-            "root@${REGISTRY_HOST}" << 'EOF'
+            "${REGISTRY_USER}@${REGISTRY_HOST}" \
+            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}'" << 'EOF'
             set -e
-            cd /opt/pantry-registry/repo
+            REPO_PATH="$1"
+            SERVICE="$2"
+            PORT="$3"
 
-            git config --global --add safe.directory /opt/pantry-registry/repo
+            BUN=$(command -v bun || echo /root/.bun/bin/bun)
+
+            cd "$REPO_PATH"
+
+            git config --global --add safe.directory "$REPO_PATH"
             git checkout -- bun.lock 2>/dev/null || true
             git fetch origin main
             git reset --hard origin/main
-            /root/.bun/bin/bun install
+            "$BUN" install
 
             # Build bunpress docs (served at /docs). Project-local bunpress finds
             # crosswind from the root node_modules.
-            /root/.bun/bin/bun ./node_modules/@stacksjs/bunpress/dist/bin/cli.js build docs || echo "::warning::Docs build failed — check bunpress/crosswind"
+            "$BUN" ./node_modules/@stacksjs/bunpress/dist/bin/cli.js build docs || echo "::warning::Docs build failed — check bunpress/crosswind"
 
             # Stop the old standalone site service if it lingers (merged into registry).
             systemctl stop pantry-site 2>/dev/null || true
             systemctl disable pantry-site 2>/dev/null || true
 
-            systemctl restart pantry-registry
+            systemctl restart "$SERVICE"
             sleep 2
-            # The registry listens on :3001 (the :3000 buddy-serve is the stacksjs
-            # site on this shared box).
-            curl -sf http://localhost:3001/health || echo "Health check failed"
+            curl -sf "http://localhost:${PORT}/health" || echo "Health check failed"
 
-            # Publish Pantry's route ownership through ts-cloud's additive
-            # gateway-fragment boundary. Each app updates only its own file, so
-            # a Stacks deploy cannot erase Pantry and Pantry never edits the
-            # generated gateway launcher.
-            install -d -m 0755 /etc/rpx/sites.d
-            RPX_FRAGMENT_TMP=$(mktemp /etc/rpx/sites.d/pantry.json.XXXXXX)
-            install -m 0600 infrastructure/rpx/pantry.json "$RPX_FRAGMENT_TMP"
-            mv -f "$RPX_FRAGMENT_TMP" /etc/rpx/sites.d/pantry.json
-            systemctl restart rpx-gateway
+            # Publish route ownership through ts-cloud's additive gateway-fragment
+            # boundary, so each app updates only its own file and a co-hosted
+            # deploy can't erase this one. Only applies where the rpx gateway is
+            # the proxy — a deployment fronted by Caddy/nginx skips it.
+            if [ -d /etc/rpx ]; then
+              install -d -m 0755 /etc/rpx/sites.d
+              RPX_FRAGMENT_TMP=$(mktemp /etc/rpx/sites.d/pantry.json.XXXXXX)
+              install -m 0600 infrastructure/rpx/pantry.json "$RPX_FRAGMENT_TMP"
+              mv -f "$RPX_FRAGMENT_TMP" /etc/rpx/sites.d/pantry.json
+              systemctl restart rpx-gateway
+            fi
           EOF
 
       - name: Verify deployment
+        env:
+          REGISTRY_URL: ${{ vars.REGISTRY_URL || format('https://{0}', vars.REGISTRY_HOST || 'registry.pantry.dev') }}
         run: |
           # Poll /health for up to ~60s instead of a single shot: `systemctl
           # restart pantry-registry` returns before the new process is accepting
@@ -106,7 +120,7 @@ jobs:
           HTTP_CODE=000
           for attempt in $(seq 1 12); do
             HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
-              'https://registry.pantry.dev/health' \
+              "${REGISTRY_URL}/health" \
               --max-time 15 2>/dev/null) || true
             [ "$HTTP_CODE" = "200" ] && break
             echo "Health check attempt $attempt: HTTP $HTTP_CODE — retrying in 5s…"
@@ -119,7 +133,7 @@ jobs:
           fi
 
           ACTIONS_STATUS=$(curl -fsSL \
-            'https://registry.pantry.dev/api/github-actions-status' \
+            "${REGISTRY_URL}/api/github-actions-status" \
             --max-time 15)
           ACTIONS_ERROR=$(echo "$ACTIONS_STATUS" | jq -r '.error // ""')
           ACTIONS_RECENT=$(echo "$ACTIONS_STATUS" | jq -r '.recent | length')
