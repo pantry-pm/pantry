@@ -8,6 +8,41 @@ The package's metadata stays public. That's deliberate: the page is where
 someone reads what a package does and decides to buy it. What's gated is the
 tarball.
 
+## Plans and what the registry takes
+
+Publishing is free. A plan lowers the commission on what you sell, and unlocks
+the things a serious publisher wants anyway.
+
+| | Free | Pro — $9/mo | Team — $29/mo |
+|---|---|---|---|
+| Commission on sales | 10% | **5%** | **5%** |
+| Private & unlisted packages | — | ✓ | ✓ |
+| Analytics history | 30 days | full | full |
+| Max artifact size | 50MB | 250MB | 1GB |
+| Priority builds | — | ✓ | ✓ |
+| Seats | 1 | 1 | 10 |
+
+```bash
+pantry plan             # what each plan costs and unlocks, from the registry
+pantry subscribe pro    # subscribe in a browser
+```
+
+Three things worth being precise about:
+
+- **The commission comes out of the seller's side.** A buyer pays the listed
+  price and nothing else.
+- **A sale that started on pantry.dev adds 3%.** The registry put that package
+  in front of someone who wasn't looking for it, so a site sale from a Pro
+  seller is 5% + 3% = 8%. A sale you brought yourself — a link you sent, or
+  `pantry buy` typed into a terminal — is just 5%.
+- **Card fees are Stripe's and settle against your account** (`on_behalf_of`),
+  so the percentages above are what the registry keeps, not what it charges.
+
+Your plan is read at the moment of sale, not baked into the listing: subscribe
+today and tomorrow's sales are commissioned at 5% without touching a single
+package. A failed payment keeps your benefits while Stripe retries, and
+cancelling keeps them until the period you already paid for runs out.
+
 ## For publishers
 
 ### 1. Get an account and publish
@@ -117,16 +152,32 @@ the merchant of record and settles up with publishers however they choose.
 
 When a publisher supplies a Stripe Connect account
 (`pantry price set … --payout-account acct_…`), the charge is created with that
-account as the transfer destination, so the money lands with them directly. The
-platform's cut is configurable:
-
-```bash
-pantry registry payments --host … --secret-key … --webhook-secret … --fee-bps 1000  # 10%
-```
+account as both the transfer destination and the settlement merchant
+(`on_behalf_of`). The money lands with them directly, Stripe's processing fee
+comes out of their side, and the registry keeps its commission — 10% from a free
+seller, 5% from a subscriber, plus 3% when the site made the sale.
 
 Connect onboarding — creating those `acct_…` accounts and collecting the
 publisher's tax and bank details — happens in your Stripe dashboard; the
 registry only stores the id it's given.
+
+### Subscription billing
+
+Plans are ordinary Stripe subscriptions. The recurring prices are found or
+created by `lookup_key` (`pantry_pro_monthly`, `pantry_team_monthly`) the first
+time someone subscribes, so a fresh Stripe account sets itself up with nothing
+to configure. Add these events to your webhook endpoint alongside
+`checkout.session.completed`:
+
+```
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+```
+
+Stripe stays the source of truth: the registry mirrors what those events report
+and never infers a plan from anything else, so a billing outage can't silently
+upgrade or downgrade anyone.
 
 ## How it works
 
@@ -167,7 +218,11 @@ Everything the CLI does is a plain HTTP call, if you'd rather drive it yourself.
 | `GET /packages/{name}/buy` | session | Browser flow: sign in, then Stripe |
 | `GET /publisher/api/packages/{name}/paywall` | session | Dashboard read |
 | `PUT /publisher/api/packages/{name}/paywall` | session | Dashboard write |
-| `POST /webhooks/stripe` | Stripe signature | Records the purchase |
+| `POST /webhooks/stripe` | Stripe signature | Records purchases and plan changes |
+| `GET /api/plans` | none | The tier table, prices and fees |
+| `GET /account/subscription` | session | The account's current plan |
+| `POST /account/subscription` | session | Start a plan checkout |
+| `POST /account/billing-portal` | session | Change or cancel in Stripe |
 
 ```bash
 curl -X POST https://registry.pantry.dev/packages/my-package/paywall \
@@ -183,8 +238,10 @@ currencies (JPY) take whole units.
 
 - **Refunds** are issued in Stripe. The entitlement is not revoked
   automatically; remove it with a registry operator's help if you need to.
-- **Subscriptions** are not supported — a purchase is a one-time payment for
-  ongoing access to the package.
+- **Package purchases are one-time.** A purchase buys ongoing access to that
+  package; recurring billing is for plans, not packages.
+- **An API token can't move an account onto a paid plan.** Subscribing is
+  something a person does about their own billing, so it needs a session.
 - **Private registries** and paid packages compose: on a
   [private registry](self-hosting.md) everything already requires a credential,
   and a price adds "…and has paid" on top for that one package.

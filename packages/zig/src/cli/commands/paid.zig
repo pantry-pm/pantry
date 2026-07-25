@@ -370,6 +370,134 @@ fn openInBrowser(arena: std.mem.Allocator, url: []const u8) bool {
 }
 
 // ---------------------------------------------------------------------------
+// pantry subscribe / pantry plan
+// ---------------------------------------------------------------------------
+
+pub const PlanOptions = struct {
+    registry: ?[]const u8 = null,
+    token: ?[]const u8 = null,
+    /// "pro" or "team".
+    tier: ?[]const u8 = null,
+    print_only: bool = false,
+};
+
+/// What the plans cost and what they change, straight from the registry — so
+/// the CLI never disagrees with the pricing page.
+pub fn plansCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const url = registryUrl(arena, opts.registry);
+    const target = try std.fmt.allocPrint(arena, "{s}/api/plans", .{url});
+    const res = io_helper.httpRequest(arena, .GET, target, null, &.{}) catch
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not reach {s}.", .{url}));
+
+    if (!res.ok())
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not read the plans: {s}", .{registry_ops.apiError(arena, res)}));
+
+    var parsed = std.json.parseFromSlice(std.json.Value, arena, res.body, .{ .ignore_unknown_fields = true }) catch
+        return CommandResult.err(allocator, "The registry returned a response this version doesn't understand.");
+    defer parsed.deinit();
+
+    var out: std.ArrayList(u8) = .empty;
+    const plans = if (parsed.value == .object) parsed.value.object.get("plans") else null;
+    if (plans == null or plans.? != .array)
+        return CommandResult.err(allocator, "That registry does not offer subscriptions.");
+
+    for (plans.?.array.items) |plan| {
+        if (plan != .object) continue;
+        const name = jsonString(plan, "name") orelse continue;
+        const price = jsonString(plan, "formattedPrice") orelse "";
+        const commission = jsonString(plan, "commission") orelse "";
+        const mb = if (plan.object.get("maxArtifactMB")) |v| (if (v == .integer) v.integer else 0) else 0;
+        const private = jsonBool(plan, "privatePackages");
+        const priority = jsonBool(plan, "priorityBuilds");
+        const days = if (plan.object.get("analyticsRetentionDays")) |v| (if (v == .integer) v.integer else 0) else 0;
+        const seats = if (plan.object.get("seats")) |v| (if (v == .integer) v.integer else 1) else 1;
+
+        var line: [512]u8 = undefined;
+        const rendered = try std.fmt.bufPrint(&line,
+            \\{s} — {s}
+            \\  Commission on sales: {s}
+            \\  Private packages:    {s}
+            \\  Analytics history:   {s}
+            \\  Max artifact:        {d}MB
+            \\  Priority builds:     {s}
+            \\  Seats:               {d}
+            \\
+            \\
+        , .{
+            name,
+            price,
+            commission,
+            if (private) "yes" else "no",
+            if (days >= 3650) "full" else "30 days",
+            mb,
+            if (priority) "yes" else "no",
+            seats,
+        });
+        try out.appendSlice(arena, rendered);
+    }
+
+    if (jsonString(parsed.value, "discoveryFee")) |fee| {
+        try out.appendSlice(arena, try std.fmt.allocPrint(arena,
+            "A sale that started on the registry's website adds a {s} discovery fee.\n" ++
+                "Sales you bring yourself (a link you sent, `pantry buy`) do not.\n", .{fee}));
+    }
+
+    return CommandResult.success(allocator, out.items);
+}
+
+fn jsonString(value: std.json.Value, key: []const u8) ?[]const u8 {
+    if (value != .object) return null;
+    const found = value.object.get(key) orelse return null;
+    return if (found == .string) found.string else null;
+}
+
+fn jsonBool(value: std.json.Value, key: []const u8) bool {
+    if (value != .object) return false;
+    const found = value.object.get(key) orelse return false;
+    return found == .bool and found.bool;
+}
+
+/// Subscriptions are billed to a person, so this hands off to a browser session
+/// rather than accepting a token: an API token deliberately cannot move an
+/// account onto a paid plan.
+pub fn subscribeCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const url = registryUrl(arena, opts.registry);
+    const tier = opts.tier orelse "pro";
+    if (!std.mem.eql(u8, tier, "pro") and !std.mem.eql(u8, tier, "team"))
+        return CommandResult.err(allocator, "Error: the plan must be `pro` or `team` (see `pantry plan`).");
+
+    const target = try std.fmt.allocPrint(arena, "{s}/pricing?plan={s}", .{ url, tier });
+
+    var opened = false;
+    if (!opts.print_only) opened = openInBrowser(arena, target);
+
+    const message = try std.fmt.allocPrint(arena,
+        \\{s}
+        \\
+        \\  {s}
+        \\
+        \\Subscribing is billed to your account, so it happens in a browser
+        \\where you're signed in. Once it's active:
+        \\
+        \\  pantry plan            what every plan costs and unlocks
+        \\  pantry price set …     your sales are now commissioned at the lower rate
+    , .{
+        if (opened) "Opened the pricing page in your browser:" else "Subscribe here:",
+        target,
+    });
+
+    return CommandResult.success(allocator, message);
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

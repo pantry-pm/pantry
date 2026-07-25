@@ -67,6 +67,7 @@ const config = {
           text: 'Publishing',
           items: [
             { text: 'Paid Packages', link: '/paid-packages' },
+            { text: 'Plans & Fees', link: '/pricing' },
             { text: 'Commit Publishing', link: '/features/commit-publishing' },
           ],
         },

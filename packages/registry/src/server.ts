@@ -910,6 +910,31 @@ export function createHandler(
         if (adminResponse) return adminResponse
       }
 
+      // Pricing page. Rendered server-side from the same tier table the API
+      // serves, so the page and the invoice can never disagree.
+      if (path === '/pricing' && req.method === 'GET') {
+        const html = await renderSitePage('pricing.stx', {
+          title: 'Plans',
+          metaDescription: 'Publishing on pantry is free. A plan lowers the commission on package sales and unlocks private packages, full analytics, larger artifacts and priority builds.',
+          canonicalUrl: 'https://pantry.dev/pricing',
+          plans: Object.values(TIERS).map(t => ({
+            id: t.id,
+            name: t.name,
+            featured: t.id === 'pro',
+            formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
+            commission: formatBps(t.commissionBps),
+            privateLabel: t.privatePackages ? 'Private & unlisted packages' : 'Public packages',
+            analyticsLabel: t.analyticsRetentionDays >= 3650 ? 'Full analytics history' : '30 days of analytics',
+            artifactLabel: `${Math.round(t.maxArtifactBytes / (1024 * 1024))}MB artifacts`,
+            buildsLabel: t.priorityBuilds ? 'Priority builds' : 'Standard build queue',
+            seatsLabel: t.seats > 1 ? `${t.seats} seats` : '1 seat',
+          })),
+          discoveryFee: formatBps(DISCOVERY_FEE_BPS),
+          paymentsEnabled: paymentsEnabled(),
+        })
+        return htmlResponse(html)
+      }
+
       // Site auth pages (login, signup, account)
       if (authService && (path === '/login' || path === '/signup' || path === '/account')) {
         return handleSiteAuth(path, req, authService, corsHeaders)

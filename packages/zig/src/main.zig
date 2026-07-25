@@ -1136,6 +1136,24 @@ fn priceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+fn planAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.paid_commands.plansCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+    });
+    finishTokenResult(allocator, result);
+}
+
+fn subscribeAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.paid_commands.subscribeCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .tier = ctx.getArgument(0),
+        .print_only = ctx.hasOption("print"),
+    });
+    finishTokenResult(allocator, result);
+}
+
 fn buyAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const package = requirePackageArg(ctx, "pantry buy my-package");
@@ -4081,6 +4099,18 @@ pub fn main() !void {
     _ = try price_cmd.addCommand(price_rm_cmd);
 
     _ = try root.addCommand(price_cmd);
+
+    var plan_cmd = try cli.BaseCommand.init(allocator, "plan", "Show what each subscription plan costs and unlocks");
+    _ = try plan_cmd.addOption(paid_registry_opt);
+    _ = plan_cmd.setAction(planAction);
+    _ = try root.addCommand(plan_cmd);
+
+    var subscribe_cmd = try cli.BaseCommand.init(allocator, "subscribe", "Subscribe to a plan (lower commission on your sales, plus Pro features)");
+    _ = try subscribe_cmd.addArgument(cli.Argument.init("plan", "pro or team (default: pro)", .string).withRequired(false));
+    _ = try subscribe_cmd.addOption(paid_registry_opt);
+    _ = try subscribe_cmd.addOption(cli.Option.init("print", "print", "Print the URL instead of opening a browser", .bool));
+    _ = subscribe_cmd.setAction(subscribeAction);
+    _ = try root.addCommand(subscribe_cmd);
 
     var buy_cmd = try cli.BaseCommand.init(allocator, "buy", "Buy access to a paid package");
     _ = try buy_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
