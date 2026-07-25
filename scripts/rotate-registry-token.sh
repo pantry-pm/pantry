@@ -1,109 +1,87 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Rotate the Pantry Registry token.
+# Rotate a Pantry registry's publish token.
 #
-# This script:
 # 1. Generates a new ptry_ token
-# 2. Stores it in AWS SSM (/pantry/registry-token)
-# 3. Updates the registry server's systemd config
+# 2. Optionally mirrors it to AWS SSM
+# 3. Writes it into the registry host's EnvironmentFile (backing up the old one)
 # 4. Restarts the registry service
-# 5. Updates GitHub secrets on specified repos
+# 5. Verifies the live registry accepts the new token
+# 6. Updates the PANTRY_TOKEN GitHub secret on the repos that publish
+#
+# Step 5 gates step 6 on purpose: if the server update didn't land, the GitHub
+# secrets are left alone, so CI keeps working on the token the server still
+# accepts. The alternative — rotating secrets first — breaks every publishing
+# repo at once with nothing to point at.
+#
+# Works against any registry you run. See docs/self-hosting.md.
 #
 # Prerequisites:
-#   - AWS CLI configured (us-east-1)
-#   - SSH key at ~/.ssh/stacks-production.pem
-#   - gh CLI authenticated
+#   - SSH access to the registry host
+#   - gh CLI authenticated (only if updating GitHub secrets)
+#   - AWS CLI (only with PANTRY_SSM_MIRROR=1)
 #
 # Usage:
-#   ./scripts/rotate-registry-token.sh
-#   ./scripts/rotate-registry-token.sh --repos "pickier/pickier,pantry-pm/pantry"
+#   PANTRY_REGISTRY_HOST=registry.example.com \
+#   PANTRY_TOKEN_REPOS="owner/one,owner/two" \
+#     ./scripts/rotate-registry-token.sh
+#
+#   ./scripts/rotate-registry-token.sh --repos "owner/one,owner/two"
+#
+# Optional:
+#   PANTRY_SSM_MIRROR=1       (mirror the token to AWS SSM)
+#   PANTRY_SSM_PARAM=/pantry/registry-token
+#   AWS_REGION=us-east-1
 
-# Defaults describe our deployment; every one is overridable so the script is
-# usable against any registry host rather than only ours.
-REGISTRY_HOST="${REGISTRY_HOST:-registry.pantry.dev}"
-SSH_KEY="${SSH_KEY:-$HOME/.ssh/stacks-production.pem}"
-SSH_USER="${SSH_USER:-root}"
-SSM_PARAM="${SSM_PARAM:-/pantry/registry-token}"
-AWS_REGION="${AWS_REGION:-us-east-1}"
-SERVICE_FILE="/etc/systemd/system/pantry-registry.service"
-# The unit reads its environment from this file (EnvironmentFile=), not from
-# Environment= lines in the unit itself. The token has to be written here or the
-# server keeps validating against the old value.
-ENV_FILE="/opt/pantry-registry/registry.env"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/registry-remote.sh
+source "$SCRIPT_DIR/lib/registry-remote.sh"
 
-# Default repos to update
-DEFAULT_REPOS="pickier/pickier,pantry-pm/pantry,cwcss/crosswind,den-shell/den"
+registry_require_config
 
-# Parse args
-REPOS="${1:---repos}"
-if [[ "$REPOS" == "--repos" ]]; then
-  REPOS="${2:-$DEFAULT_REPOS}"
-fi
-if [[ "$REPOS" == "$DEFAULT_REPOS" ]] && [[ "${1:-}" != "--repos" ]] && [[ -n "${1:-}" ]]; then
+# Which repositories publish to this registry. No default: the maintainers' repo
+# list is not a sensible thing for a fork to inherit — it lives in the operator's
+# own environment or is passed explicitly.
+REPOS="${PANTRY_TOKEN_REPOS:-}"
+if [[ "${1:-}" == "--repos" ]]; then
+  REPOS="${2:-}"
+elif [[ -n "${1:-}" ]]; then
   REPOS="$1"
 fi
-[[ "$REPOS" == "--repos" ]] && REPOS="$DEFAULT_REPOS"
 
 echo "==> Generating new token..."
 TOKEN=$(bun -e "console.log('ptry_' + require('node:crypto').randomBytes(32).toString('hex'))")
 echo "    Token: ${TOKEN:0:20}..."
 
-echo "==> Storing in AWS SSM ($SSM_PARAM)..."
-aws ssm put-parameter \
-  --name "$SSM_PARAM" \
-  --type "SecureString" \
-  --value "$TOKEN" \
-  --description "Pantry registry admin token for commit publishing (rotated $(date -u +%Y-%m-%dT%H:%M:%SZ))" \
-  --region "$AWS_REGION" \
-  --overwrite > /dev/null
-echo "    Stored."
-
-echo "==> Updating registry server ($REGISTRY_HOST)..."
-# We log in as root on the Hetzner box, so no sudo is needed (minimal Hetzner
-# images don't ship sudo at all).
-#
-# The token goes into the unit's EnvironmentFile. An earlier version of this
-# script edited Environment= lines in the unit file instead — the unit has none,
-# so the edit silently matched nothing and the server kept the old token while
-# SSM and every GitHub secret moved to the new one. That breaks publishing for
-# every repo at once, so the write is verified below rather than assumed.
-ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$REGISTRY_HOST" bash -s <<SSH_EOF
-set -euo pipefail
-
-if [ ! -f "$ENV_FILE" ]; then
-  echo "    ERROR: $ENV_FILE not found — is the registry deployed here?" >&2
-  exit 1
+if [[ "${PANTRY_SSM_MIRROR:-0}" == "1" ]]; then
+  ssm_param="${PANTRY_SSM_PARAM:-/pantry/registry-token}"
+  aws_region="${AWS_REGION:-us-east-1}"
+  echo "==> Storing in AWS SSM ($ssm_param)..."
+  aws ssm put-parameter \
+    --name "$ssm_param" \
+    --type "SecureString" \
+    --value "$TOKEN" \
+    --description "Pantry registry publish token (rotated $(date -u +%Y-%m-%dT%H:%M:%SZ))" \
+    --region "$aws_region" \
+    --overwrite > /dev/null
+  echo "    Stored."
 fi
 
-# Keep a timestamped backup so a bad rotation can be undone by hand.
-cp "$ENV_FILE" "$ENV_FILE.bak.\$(date -u +%Y%m%d%H%M%S)"
+echo "==> Updating registry host ($PANTRY_REGISTRY_HOST)..."
+registry_set_env "PANTRY_REGISTRY_TOKEN=$TOKEN"
+echo "    Written to $PANTRY_REGISTRY_ENV_FILE."
 
-# Replace the existing assignment, or append if the key isn't there yet.
-if grep -q '^PANTRY_REGISTRY_TOKEN=' "$ENV_FILE"; then
-  sed -i "s|^PANTRY_REGISTRY_TOKEN=.*|PANTRY_REGISTRY_TOKEN=$TOKEN|" "$ENV_FILE"
-else
-  printf 'PANTRY_REGISTRY_TOKEN=%s\n' "$TOKEN" >> "$ENV_FILE"
-fi
-
-# Fail loudly rather than restarting into a half-applied config.
-if ! grep -qx "PANTRY_REGISTRY_TOKEN=$TOKEN" "$ENV_FILE"; then
-  echo "    ERROR: token was not written to $ENV_FILE" >&2
-  exit 1
-fi
-
-chmod 600 "$ENV_FILE"
-systemctl daemon-reload
-systemctl restart pantry-registry
-SSH_EOF
-echo "    Registry restarted."
+echo "==> Restarting ${PANTRY_REGISTRY_SERVICE}..."
+registry_restart
+echo "    Restarted."
 
 echo "==> Verifying the server accepts the new token..."
-# A publish with no body: 401 means the server is still on the old token, and
-# anything else means authentication passed and it got as far as validating the
+# A publish with no body: 401 means the server is still on the old token;
+# anything else means authentication passed and it went on to validate the
 # request itself.
 for attempt in 1 2 3 4 5; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "https://$REGISTRY_HOST/zig/publish" \
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "${PANTRY_REGISTRY_URL}/zig/publish" \
     -H "Authorization: Bearer $TOKEN" || echo 000)
   if [[ "$code" != "401" && "$code" != "000" && "$code" != "502" && "$code" != "503" ]]; then
     echo "    Accepted (HTTP $code)."
@@ -111,22 +89,32 @@ for attempt in 1 2 3 4 5; do
   fi
   if [[ "$attempt" == "5" ]]; then
     echo "    ERROR: registry still rejects the new token (HTTP $code)." >&2
-    echo "    SSM and the server are now out of sync — do not update GitHub secrets." >&2
+    echo "    The server and any SSM mirror are now out of sync with CI." >&2
+    echo "    GitHub secrets were NOT updated — publishing still works on the old token." >&2
     exit 1
   fi
   sleep 3
 done
 
+if [[ -z "$REPOS" ]]; then
+  echo ""
+  echo "Done. No repositories given, so no GitHub secrets were updated."
+  echo "Pass --repos \"owner/name,...\" or set PANTRY_TOKEN_REPOS to update CI."
+  echo "A single repo can also be updated with:"
+  echo "  pantry token set && pantry token sync --repo owner/name"
+  exit 0
+fi
+
 echo "==> Updating GitHub secrets..."
 IFS=',' read -ra REPO_LIST <<< "$REPOS"
 for repo in "${REPO_LIST[@]}"; do
   repo=$(echo "$repo" | xargs) # trim whitespace
+  [[ -z "$repo" ]] && continue
   gh secret set PANTRY_TOKEN --repo "$repo" --body "$TOKEN"
   echo "    Updated: $repo"
 done
 
 echo ""
 echo "Done. Token rotated successfully."
-echo "SSM:      $SSM_PARAM"
-echo "Server:   $REGISTRY_HOST"
+echo "Registry: $PANTRY_REGISTRY_HOST"
 echo "Repos:    $REPOS"
