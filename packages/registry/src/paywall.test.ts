@@ -197,8 +197,13 @@ describe('Paywall', () => {
       expect(formatPrice(999, 'gbp')).toBe('£9.99')
     })
 
-    it('formats other currencies with code', () => {
-      expect(formatPrice(999, 'jpy')).toBe('JPY 9.99')
+    it('does not add a decimal point to zero-decimal currencies', () => {
+      // ¥999 is 999 yen, not 9.99 — Stripe takes JPY in whole units.
+      expect(formatPrice(999, 'jpy')).toBe('¥999')
+    })
+
+    it('falls back to the currency code for anything unmapped', () => {
+      expect(formatPrice(999, 'sek')).toBe('SEK 9.99')
     })
   })
 

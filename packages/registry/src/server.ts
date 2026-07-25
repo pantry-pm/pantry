@@ -13,7 +13,17 @@ import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { augmentMetadataWithPkgx, isPendingMaterialize, materializeFromPkgx } from './pkgx-fallback'
 import { ObjectAnalytics } from './storage/object-analytics'
 import { BuildStatusStore } from './storage/build-status'
-import { checkPaywallAccess, configurePaywall, createCheckoutSession, handleStripeWebhook, formatPrice } from './paywall'
+import {
+  configurePaywall,
+  createCheckoutSession,
+  formatPrice,
+  handleStripeWebhook,
+  isEntitled,
+  paymentsEnabled,
+  resolveAccess,
+  validatePriceConfig,
+  type PriceConfig,
+} from './paywall'
 import { renderTemplate } from '@stacksjs/stx'
 import {
   generateSparkline,
@@ -1234,81 +1244,133 @@ export function createHandler(
           })
         }
 
-        // GET /packages/{name}/paywall — get paywall info
+        // GET /packages/{name}/paywall — price, and whether the caller owns it
         if (rest === 'paywall' && req.method === 'GET') {
           const paywall = await registry.metadata.getPaywall(packageName)
           if (!paywall || !paywall.enabled) {
             return Response.json({ enabled: false }, { headers: corsHeaders })
           }
+          const identity = await identifyReader(req)
+          const owned = identity.userId && identity.userId !== '_admin'
+            ? await isEntitled(registry.metadata, packageName, identity.userId)
+            : false
           return Response.json({
             enabled: true,
             price: paywall.price,
             currency: paywall.currency,
             formattedPrice: formatPrice(paywall.price, paywall.currency),
             freeVersions: paywall.freeVersions || [],
-          }, { headers: corsHeaders })
+            owned,
+            paymentsEnabled: paymentsEnabled(),
+            buyUrl: `${baseUrl}/packages/${encodeURIComponent(packageName)}/buy`,
+          }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
         }
 
-        // POST /packages/{name}/paywall — configure paywall (requires publish token)
+        // POST /packages/{name}/paywall — set the price. The publisher only:
+        // a valid publish token is not authority over someone else's package.
         if (rest === 'paywall' && req.method === 'POST') {
-          const authResult = await validateToken(req.headers.get('authorization'))
-          if (!authResult.valid) {
-            return Response.json({ error: authResult.error }, { status: 401, headers: corsHeaders })
-          }
+          const denied = await requirePackageOwner(req, registry, packageName, corsHeaders)
+          if (denied) return denied
 
-          let body: { price: number, currency?: string, freeVersions?: string[], trialDays?: number }
+          let body: PriceConfig
           try {
-            body = await req.json() as typeof body
+            body = await req.json() as PriceConfig
           }
           catch {
             return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
           }
-          if (!body.price || typeof body.price !== 'number' || body.price < 100) {
-            return Response.json({ error: 'Price must be at least 100 cents ($1.00)' }, { status: 400, headers: corsHeaders })
+
+          const invalid = validatePriceConfig(body)
+          if (invalid) {
+            return Response.json({ error: invalid }, { status: 400, headers: corsHeaders })
           }
 
-          const paywall = await configurePaywall(registry.metadata, packageName, body)
-          return Response.json({
-            success: true,
-            paywall: {
-              enabled: paywall.enabled,
-              price: paywall.price,
-              currency: paywall.currency,
-              formattedPrice: formatPrice(paywall.price, paywall.currency),
-            },
-          }, { status: 200, headers: corsHeaders })
+          try {
+            const paywall = await configurePaywall(registry.metadata, packageName, body)
+            return Response.json({
+              success: true,
+              paywall: {
+                enabled: paywall.enabled,
+                price: paywall.price,
+                currency: paywall.currency,
+                formattedPrice: formatPrice(paywall.price, paywall.currency),
+                freeVersions: paywall.freeVersions || [],
+                payoutAccountId: paywall.stripeAccountId,
+                paymentsEnabled: paymentsEnabled(),
+              },
+            }, { status: 200, headers: corsHeaders })
+          }
+          catch (err: any) {
+            return Response.json({ error: err.message || 'Could not set the price' }, { status: 400, headers: corsHeaders })
+          }
         }
 
-        // DELETE /packages/{name}/paywall — remove paywall (requires publish token)
+        // DELETE /packages/{name}/paywall — stop charging (publisher only)
         if (rest === 'paywall' && req.method === 'DELETE') {
-          const authResult = await validateToken(req.headers.get('authorization'))
-          if (!authResult.valid) {
-            return Response.json({ error: authResult.error }, { status: 401, headers: corsHeaders })
-          }
+          const denied = await requirePackageOwner(req, registry, packageName, corsHeaders)
+          if (denied) return denied
           await registry.metadata.deletePaywall(packageName)
           return Response.json({ success: true }, { headers: corsHeaders })
         }
 
-        // GET /packages/{name}/checkout — create Stripe checkout session
-        if (rest === 'checkout' && req.method === 'GET') {
-          const token = url.searchParams.get('token')
-          if (!token) {
+        // POST /packages/{name}/checkout — the CLI's `pantry buy`. Authenticated
+        // with the buyer's API token; returns a URL to open in a browser.
+        if (rest === 'checkout' && req.method === 'POST') {
+          const identity = await identifyReader(req)
+          if (!identity.authenticated || !identity.userId || identity.userId === '_admin') {
             return Response.json(
-              { error: 'Token required — run `pantry auth login` first' },
-              { status: 400, headers: corsHeaders },
+              {
+                error: 'Sign in to buy a package',
+                hint: 'Create an account at /signup, then: pantry token set',
+              },
+              { status: 401, headers: corsHeaders },
             )
           }
+          if (await isEntitled(registry.metadata, packageName, identity.userId)) {
+            return Response.json({ owned: true, message: 'You already own this package' }, { headers: corsHeaders })
+          }
           try {
-            const session = await createCheckoutSession(registry.metadata, packageName, token, baseUrl)
-            // Redirect browser to Stripe Checkout
-            return new Response(null, {
-              status: 302,
-              headers: { ...corsHeaders, Location: session.url },
+            const session = await createCheckoutSession(registry.metadata, {
+              packageName,
+              email: identity.userId,
+              baseUrl,
             })
+            return Response.json({ url: session.url }, { headers: corsHeaders })
           }
           catch (err: any) {
             console.error('Checkout session error:', err)
-            return Response.json({ error: 'Failed to create checkout session' }, { status: 400, headers: corsHeaders })
+            return Response.json({ error: err.message || 'Could not start checkout' }, { status: 400, headers: corsHeaders })
+          }
+        }
+
+        // GET /packages/{name}/buy — the browser path: sign in, then Stripe.
+        if ((rest === 'buy' || rest === 'checkout') && req.method === 'GET') {
+          const sessionToken = extractSessionToken(req)
+          const user = sessionToken && authService ? await authService.validateSession(sessionToken) : null
+          if (!user) {
+            const next = `/packages/${encodeURIComponent(packageName)}/buy`
+            return new Response(null, {
+              status: 302,
+              headers: { ...corsHeaders, Location: `/login?next=${encodeURIComponent(next)}` },
+            })
+          }
+          if (await isEntitled(registry.metadata, packageName, user.email)) {
+            return new Response(null, {
+              status: 302,
+              headers: { ...corsHeaders, Location: `/packages/${encodeURIComponent(packageName)}/checkout/success` },
+            })
+          }
+          try {
+            const session = await createCheckoutSession(registry.metadata, {
+              packageName,
+              email: user.email,
+              baseUrl,
+            })
+            return new Response(null, { status: 302, headers: { ...corsHeaders, Location: session.url } })
+          }
+          catch (err: any) {
+            console.error('Checkout session error:', err)
+            return Response.json({ error: err.message || 'Could not start checkout' }, { status: 400, headers: corsHeaders })
           }
         }
 
@@ -1335,23 +1397,28 @@ export function createHandler(
             return Response.json({ error: 'Invalid version' }, { status: 400, headers: corsHeaders })
           }
 
-          // Check paywall before serving tarball
-          const authToken = extractBearerToken(req.headers.get('authorization'))
-            || url.searchParams.get('token')
-          const access = await checkPaywallAccess(registry.metadata, packageName, version, authToken)
+          // Paid packages: the publisher and the operator always get through,
+          // buyers get through once their account is entitled, everyone else
+          // gets a 402 that says what it costs and where to buy it.
+          const access = await resolvePackageAccess(req, registry, packageName, version)
           if (!access.allowed && access.paywall) {
-            const checkoutUrl = `${baseUrl}/packages/${encodeURIComponent(packageName)}/checkout`
+            const buyUrl = `${baseUrl}/packages/${encodeURIComponent(packageName)}/buy`
+            const priceText = formatPrice(access.paywall.price, access.paywall.currency)
             return Response.json(
               {
                 error: 'Payment required',
                 package: packageName,
                 price: access.paywall.price,
                 currency: access.paywall.currency,
-                formattedPrice: formatPrice(access.paywall.price, access.paywall.currency),
-                checkoutUrl,
-                message: `This package requires payment (${formatPrice(access.paywall.price, access.paywall.currency)}). Visit ${checkoutUrl} to purchase access, or run: pantry auth login`,
+                formattedPrice: priceText,
+                buyUrl,
+                // Kept for older clients that read `checkoutUrl`.
+                checkoutUrl: buyUrl,
+                message: access.reason === 'unauthenticated'
+                  ? `${packageName} costs ${priceText}. Sign in and buy it with: pantry buy ${packageName}`
+                  : `${packageName} costs ${priceText}. Buy it with: pantry buy ${packageName} (or open ${buyUrl})`,
               },
-              { status: 402, headers: corsHeaders },
+              { status: 402, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } },
             )
           }
 
@@ -1921,6 +1988,74 @@ async function isAdminRequest(req: Request): Promise<boolean> {
     // fall through to unauthorized
   }
   return false
+}
+
+/**
+ * Refuse anyone but the package's publisher (or the operator).
+ *
+ * Pricing is not a publish operation: holding a valid publish token says you
+ * may upload *your* packages, not that you may put a price on — or remove one
+ * from — somebody else's. An unclaimed package (published before publishers
+ * were recorded) can be priced by any authenticated account, matching how the
+ * publisher dashboard already treats it.
+ *
+ * Returns a Response when the request must be refused, or null to proceed.
+ */
+async function requirePackageOwner(
+  req: Request,
+  registry: Registry,
+  packageName: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  const identity = await identifyReader(req)
+  if (!identity.authenticated) {
+    return Response.json(
+      { error: 'Authentication required', hint: 'pantry token set --registry <registry-url>' },
+      { status: 401, headers: corsHeaders },
+    )
+  }
+  if (identity.userId === '_admin') return null
+
+  const record = await registry.getPublisherPackageRecord(packageName)
+  if (!record) {
+    return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
+  }
+  if (record.publishedBy && record.publishedBy !== identity.userId) {
+    return Response.json(
+      { error: 'Only the publisher of this package can change its price' },
+      { status: 403, headers: corsHeaders },
+    )
+  }
+  return null
+}
+
+/** Resolve paid-package access for a request, including who published it. */
+async function resolvePackageAccess(
+  req: Request,
+  registry: Registry,
+  packageName: string,
+  version: string,
+): Promise<Awaited<ReturnType<typeof resolveAccess>>> {
+  const paywall = await registry.metadata.getPaywall(packageName)
+  // The common case is a free package: don't pay for identity resolution or a
+  // publisher lookup on every download just to find there's nothing to check.
+  if (!paywall || !paywall.enabled)
+    return { allowed: true, reason: 'no-paywall' }
+
+  const identity = await identifyReader(req)
+  const record = await registry.getPublisherPackageRecord(packageName)
+
+  return resolveAccess(
+    registry.metadata,
+    packageName,
+    version,
+    {
+      userId: identity.userId,
+      token: extractBearerToken(req.headers.get('authorization')),
+      admin: identity.userId === '_admin',
+    },
+    record?.publishedBy,
+  )
 }
 
 /**
@@ -2718,6 +2853,75 @@ async function handlePublisherApi(
   if (path === '/publisher/api/packages' && req.method === 'GET') {
     const packages = await registry.listPublisherPackages(user.email, admin ? 200 : 50, admin)
     return Response.json({ packages, admin }, { headers: corsHeaders })
+  }
+
+  // Pricing from the publisher dashboard. Matched before the generic package
+  // route below, whose `(.+)` would otherwise swallow the `/paywall` suffix
+  // into the package name.
+  const paywallMatch = path.match(/^\/publisher\/api\/packages\/(.+)\/paywall$/)
+  if (paywallMatch) {
+    const name = decodeURIComponent(paywallMatch[1])
+    const record = await registry.getPublisherPackageRecord(name)
+    if (!record || !canManagePackage(record, user)) {
+      return Response.json({ error: 'Package not found or access denied' }, { status: 403, headers: corsHeaders })
+    }
+
+    if (req.method === 'GET') {
+      const paywall = await registry.metadata.getPaywall(name)
+      return Response.json({
+        paywall: paywall && paywall.enabled
+          ? {
+              enabled: true,
+              price: paywall.price,
+              currency: paywall.currency,
+              formattedPrice: formatPrice(paywall.price, paywall.currency),
+              freeVersions: paywall.freeVersions || [],
+              payoutAccountId: paywall.stripeAccountId,
+            }
+          : { enabled: false },
+        paymentsEnabled: paymentsEnabled(),
+      }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+    }
+
+    if (req.method === 'PUT' || req.method === 'POST') {
+      let body: PriceConfig
+      try {
+        body = await req.json() as PriceConfig
+      }
+      catch {
+        return Response.json({ error: 'Invalid JSON' }, { status: 400, headers: corsHeaders })
+      }
+      const invalid = validatePriceConfig(body)
+      if (invalid) return Response.json({ error: invalid }, { status: 400, headers: corsHeaders })
+
+      // Claim the package on first price, the same way editing its metadata does.
+      if (!record.publishedBy && !admin) {
+        await registry.claimPublisherPackage(name, user.email)
+      }
+
+      try {
+        const paywall = await configurePaywall(registry.metadata, name, body)
+        return Response.json({
+          paywall: {
+            enabled: paywall.enabled,
+            price: paywall.price,
+            currency: paywall.currency,
+            formattedPrice: formatPrice(paywall.price, paywall.currency),
+            freeVersions: paywall.freeVersions || [],
+            payoutAccountId: paywall.stripeAccountId,
+          },
+          paymentsEnabled: paymentsEnabled(),
+        }, { headers: corsHeaders })
+      }
+      catch (err: any) {
+        return Response.json({ error: err.message || 'Could not set the price' }, { status: 400, headers: corsHeaders })
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      await registry.metadata.deletePaywall(name)
+      return Response.json({ paywall: { enabled: false } }, { headers: corsHeaders })
+    }
   }
 
   const pkgMatch = path.match(/^\/publisher\/api\/packages\/(.+)$/)
@@ -4330,6 +4534,23 @@ async function handleSitePackage(
   const aliased = _aliases.get(name)
   if (aliased && aliased !== name)
     name = aliased
+
+  // Paid packages: the page is where someone decides to buy, so it has to show
+  // the price whether or not they can download the tarball. Every render below
+  // goes through this wrapper so a new branch can't quietly drop it.
+  const paywall = registry ? await registry.metadata.getPaywall(name).catch(() => null) : null
+  const paidProps = paywall?.enabled
+    ? {
+        isPaid: true,
+        priceLabel: formatPrice(paywall.price, paywall.currency),
+        buyUrl: `/packages/${encodeURIComponent(name)}/buy`,
+        freeVersionList: (paywall.freeVersions || []).join(', '),
+        hasFreeVersions: (paywall.freeVersions || []).length > 0,
+      }
+    : { isPaid: false, priceLabel: '', buyUrl: '', freeVersionList: '', hasFreeVersions: false }
+
+  const renderPackagePage = (props: Record<string, unknown>): Promise<string> =>
+    renderSitePage('package.stx', { ...paidProps, ...props })
   const safeName = escapeHtml(name)
   const encodedName = encodeURIComponent(name)
   const [rawMeta, stats, timeline, pkgInfo, zigPkg, phpPkg] = await Promise.all([
@@ -4359,7 +4580,7 @@ async function handleSitePackage(
   }
 
   if (!meta && !pkgInfo && !zigPkg && !phpPkg && !packagistPkg) {
-    const html = await renderSitePage('package.stx', {
+    const html = await renderPackagePage({
       name, safeName, encodedName,
       notFound: true,
       isZigPackage: false,
@@ -4383,7 +4604,7 @@ async function handleSitePackage(
     const zigLineChart = generateLineChart(zigTimeline, 700, 200)
     const zigStats = stats || { totalDownloads: 0, weeklyDownloads: 0, monthlyDownloads: 0, versionDownloads: {} }
 
-    const html = await renderSitePage('package.stx', {
+    const html = await renderPackagePage({
       name, safeName, encodedName,
       notFound: false,
       isZigPackage: true,
@@ -4422,7 +4643,7 @@ async function handleSitePackage(
     const phpStats = stats || { totalDownloads: 0, weeklyDownloads: 0, monthlyDownloads: 0, versionDownloads: {} }
     const phpDeps = phpPkg.require ? Object.keys(phpPkg.require).filter(d => d !== 'php') : []
 
-    const html = await renderSitePage('package.stx', {
+    const html = await renderPackagePage({
       name, safeName, encodedName,
       notFound: false,
       isZigPackage: false,
@@ -4461,7 +4682,7 @@ async function handleSitePackage(
     const pkgDeps = Object.keys(packagistPkg.require || {}).filter((d: string) => d !== 'php' && !d.startsWith('ext-'))
     const pkgVersions = (packagistPkg.versions || []) as string[]
 
-    const html = await renderSitePage('package.stx', {
+    const html = await renderPackagePage({
       name, safeName, encodedName,
       notFound: false,
       isZigPackage: false,
@@ -4541,7 +4762,7 @@ async function handleSitePackage(
     const versionDistribution = generateHorizontalBarChart(versionItems, 600, 28, 6, 120)
 
     const pkgDescription = meta.description || `${name} — ${versionCount} versions available for macOS and Linux`
-    const html = await renderSitePage('package.stx', {
+    const html = await renderPackagePage({
       name, safeName, encodedName,
       notFound: false,
       isZigPackage,
@@ -4579,7 +4800,7 @@ async function handleSitePackage(
   const fbVersion = (pkgInfo as any)?.version || 'unknown'
   const fbVersions = fbVersion !== 'unknown' ? [fbVersion] : []
 
-  const html = await renderSitePage('package.stx', {
+  const html = await renderPackagePage({
     name, safeName, encodedName,
     notFound: false,
     isZigPackage,

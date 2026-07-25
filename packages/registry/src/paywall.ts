@@ -1,34 +1,78 @@
 /**
- * Paywall — gates package downloads behind Stripe payments.
+ * Paid packages — publish something and charge for it.
+ *
+ * The shape of it:
+ *
+ *   1. A publisher signs up, publishes a package, and sets a price. Only the
+ *      account that published a package may price it.
+ *   2. The package's *metadata* stays public — that's how anyone finds it and
+ *      decides to buy. The *tarball* is what's gated.
+ *   3. A buyer signs in, pays through Stripe Checkout, and the webhook records
+ *      an entitlement against their **account**.
+ *   4. Any token that account owns can then download it, on any machine, for
+ *      as long as the entitlement lasts.
+ *
+ * Entitlements are keyed to accounts rather than to a token string, which is
+ * what an earlier version did. Tokens get rotated, revoked and issued per
+ * machine; a purchase should survive all three. It also keeps tokens out of
+ * checkout URLs, where they would end up in browser history, in Stripe's
+ * dashboard, and in the referrer of every link on the success page.
+ *
+ * The storage layer keys grants by an opaque subject string, so account
+ * entitlements are stored as `user:<email>` and grants written by the older
+ * token-based flow keep working unchanged.
  *
  * Publisher flow:
- *   POST /packages/{name}/paywall  — configure price (requires publish token)
- *   DELETE /packages/{name}/paywall — remove paywall
+ *   POST   /packages/{name}/paywall   — set the price (owner only)
+ *   DELETE /packages/{name}/paywall   — stop charging (owner only)
  *
- * Consumer flow:
- *   GET tarball → 402 with checkout URL if unpaid
- *   GET /packages/{name}/checkout?token=xxx → Stripe Checkout session
- *   Stripe webhook → grants access token
- *
- * CLI sends `Authorization: Bearer <token>` on install.
- * Token is stored in `~/.pantry/auth` or `PANTRY_TOKEN` env var.
+ * Buyer flow:
+ *   GET  /packages/{name}/buy         — browser: sign in, then Stripe Checkout
+ *   POST /packages/{name}/checkout    — CLI: returns the checkout URL
+ *   GET  /packages/{name}/{v}/tarball — 402 until the account is entitled
  */
 
 import type { MetadataStorage, PackagePaywall, PackageAccessGrant } from './types'
 
 // ---------------------------------------------------------------------------
-// Stripe helpers (lazy-loaded, only when STRIPE_SECRET_KEY is set)
+// Stripe configuration
+//
+// Read lazily. A module-load snapshot bakes in whatever the environment looked
+// like at import time, which is empty in tests and — more importantly — empty
+// in any process that loads this before its secrets are populated.
 // ---------------------------------------------------------------------------
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || ''
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || ''
+function stripeSecretKey(): string {
+  return process.env.STRIPE_SECRET_KEY || ''
+}
+
+function stripeWebhookSecret(): string {
+  return process.env.STRIPE_WEBHOOK_SECRET || ''
+}
+
+/** Whether payments are configured at all. */
+export function paymentsEnabled(): boolean {
+  return stripeSecretKey().length > 0
+}
+
+/**
+ * The platform's cut of a sale, in basis points (100 = 1%). Only applies when
+ * the publisher has connected a payout account; without one the whole charge
+ * stays on the platform account and there is nothing to take a fee from.
+ */
+function platformFeeBps(): number {
+  const raw = Number.parseInt(process.env.PANTRY_PLATFORM_FEE_BPS || '0', 10)
+  if (!Number.isFinite(raw) || raw < 0) return 0
+  return Math.min(raw, 5000) // never more than half
+}
 
 async function stripeRequest(method: string, path: string, body?: Record<string, any>): Promise<any> {
-  if (!STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY not configured')
+  const key = stripeSecretKey()
+  if (!key) throw new Error('STRIPE_SECRET_KEY not configured')
 
   const url = `https://api.stripe.com/v1${path}`
   const headers: Record<string, string> = {
-    'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
+    'Authorization': `Bearer ${key}`,
   }
 
   let fetchBody: string | undefined
@@ -36,6 +80,7 @@ async function stripeRequest(method: string, path: string, body?: Record<string,
     headers['Content-Type'] = 'application/x-www-form-urlencoded'
     fetchBody = new URLSearchParams(
       Object.entries(body).flatMap(([k, v]): [string, string][] => {
+        if (v === undefined || v === null) return []
         if (Array.isArray(v)) return v.map((item, i) => [`${k}[${i}]`, String(item)] as [string, string])
         return [[k, String(v)] as [string, string]]
       }),
@@ -45,7 +90,8 @@ async function stripeRequest(method: string, path: string, body?: Record<string,
   const res = await fetch(url, { method, headers, body: fetchBody })
   if (!res.ok) {
     const err = await res.text()
-    // Log full error for debugging, but throw a sanitized message
+    // Log the full error for debugging, but throw a sanitized message: Stripe
+    // errors can echo request parameters back, and those include the buyer.
     console.error(`Stripe ${method} ${path} failed (${res.status}):`, err)
     throw new Error(`Payment service error (${res.status})`)
   }
@@ -53,85 +99,229 @@ async function stripeRequest(method: string, path: string, body?: Record<string,
 }
 
 // ---------------------------------------------------------------------------
-// Check access
+// Entitlement subjects
 // ---------------------------------------------------------------------------
 
+/** The storage key for an account's entitlement. */
+export function accountSubject(email: string): string {
+  return `user:${email.toLowerCase().trim()}`
+}
+
+/** Who is asking, as far as the registry could tell. */
+export interface Buyer {
+  /** Account email, when the caller is authenticated. */
+  userId?: string | null
+  /** Raw bearer token, for entitlements granted before accounts were used. */
+  token?: string | null
+  /** True for the shared registry token. */
+  admin?: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Access
+// ---------------------------------------------------------------------------
+
+export interface AccessResult {
+  allowed: boolean
+  paywall?: PackagePaywall
+  /** Why access was granted or refused — surfaced in the 402 body and in tests. */
+  reason?: 'no-paywall' | 'free-version' | 'owner' | 'admin' | 'entitled' | 'unauthenticated' | 'payment-required' | 'expired'
+}
+
+/**
+ * Decide whether this caller may download this version.
+ *
+ * Order matters: the publisher and the operator must never be locked out of a
+ * package by its own price, and a version explicitly marked free must stay free
+ * even for people who have not paid.
+ */
+export async function resolveAccess(
+  storage: MetadataStorage,
+  packageName: string,
+  version: string,
+  buyer: Buyer,
+  ownerEmail?: string | null,
+): Promise<AccessResult> {
+  const paywall = await storage.getPaywall(packageName)
+
+  if (!paywall || !paywall.enabled)
+    return { allowed: true, reason: 'no-paywall' }
+
+  if (paywall.freeVersions?.includes(version))
+    return { allowed: true, paywall, reason: 'free-version' }
+
+  if (buyer.admin)
+    return { allowed: true, paywall, reason: 'admin' }
+
+  const email = buyer.userId?.toLowerCase().trim()
+  if (email && ownerEmail && email === ownerEmail.toLowerCase().trim())
+    return { allowed: true, paywall, reason: 'owner' }
+
+  if (email) {
+    const grant = await storage.getAccessGrant(packageName, accountSubject(email))
+    if (grant) {
+      if (grant.expiresAt && new Date(grant.expiresAt) < new Date())
+        return { allowed: false, paywall, reason: 'expired' }
+      return { allowed: true, paywall, reason: 'entitled' }
+    }
+  }
+
+  // Entitlements written before purchases were tied to accounts.
+  if (buyer.token) {
+    const legacy = await storage.getAccessGrant(packageName, buyer.token)
+    if (legacy)
+      return { allowed: true, paywall, reason: 'entitled' }
+  }
+
+  return {
+    allowed: false,
+    paywall,
+    // "Sign in" and "buy it" are different instructions, and a caller that
+    // presented a credential has already done the first one.
+    reason: email || buyer.token ? 'payment-required' : 'unauthenticated',
+  }
+}
+
+/**
+ * Backwards-compatible wrapper for callers that only have a bearer token.
+ * Prefer `resolveAccess`, which can see the account behind the token.
+ */
 export async function checkPaywallAccess(
   storage: MetadataStorage,
   packageName: string,
   version: string,
   authToken: string | null,
 ): Promise<{ allowed: boolean, paywall?: PackagePaywall, reason?: string }> {
-  const paywall = await storage.getPaywall(packageName)
-
-  // No paywall or disabled → allow
-  if (!paywall || !paywall.enabled) {
-    return { allowed: true }
+  const result = await resolveAccess(storage, packageName, version, { token: authToken })
+  return {
+    allowed: result.allowed,
+    paywall: result.paywall,
+    reason: result.allowed
+      ? undefined
+      : result.reason === 'unauthenticated'
+        ? 'Authentication required for paid package'
+        : 'Payment required',
   }
+}
 
-  // Version is marked as free → allow
-  if (paywall.freeVersions?.includes(version)) {
-    return { allowed: true, paywall }
-  }
-
-  // No auth token → blocked
-  if (!authToken) {
-    return { allowed: false, paywall, reason: 'Authentication required for paid package' }
-  }
-
-  // Check if token has been granted access
-  const grant = await storage.getAccessGrant(packageName, authToken)
-  if (grant) {
-    return { allowed: true, paywall }
-  }
-
-  return { allowed: false, paywall, reason: 'Payment required' }
+/** Whether an account already owns a package (used by the buy flow and the UI). */
+export async function isEntitled(
+  storage: MetadataStorage,
+  packageName: string,
+  email: string,
+): Promise<boolean> {
+  const grant = await storage.getAccessGrant(packageName, accountSubject(email))
+  if (!grant) return false
+  if (grant.expiresAt && new Date(grant.expiresAt) < new Date()) return false
+  return true
 }
 
 // ---------------------------------------------------------------------------
-// Configure paywall (publisher)
+// Pricing (publisher)
 // ---------------------------------------------------------------------------
 
+/** Currencies Stripe Checkout supports that we're willing to render. */
+const SUPPORTED_CURRENCIES = new Set(['usd', 'eur', 'gbp', 'cad', 'aud', 'chf', 'jpy', 'sek', 'nok', 'dkk'])
+
+/** The smallest charge worth making: below this, fees eat the sale. */
+export const MIN_PRICE_CENTS = 100
+/** A sanity ceiling. A five-figure package price is a typo, not a business. */
+export const MAX_PRICE_CENTS = 100_000_00
+
+export interface PriceConfig {
+  price: number
+  currency?: string
+  freeVersions?: string[]
+  trialDays?: number
+  /** Stripe Connect account to pay out to (`acct_…`). */
+  payoutAccountId?: string
+}
+
+/** Validate a publisher-supplied price. Returns an error message, or null. */
+export function validatePriceConfig(config: PriceConfig): string | null {
+  if (typeof config.price !== 'number' || !Number.isInteger(config.price))
+    return 'Price must be a whole number of cents (e.g. 900 for $9.00)'
+  if (config.price < MIN_PRICE_CENTS)
+    return `Price must be at least ${MIN_PRICE_CENTS} cents ($${(MIN_PRICE_CENTS / 100).toFixed(2)})`
+  if (config.price > MAX_PRICE_CENTS)
+    return `Price must be at most ${MAX_PRICE_CENTS} cents ($${(MAX_PRICE_CENTS / 100).toFixed(2)})`
+
+  const currency = (config.currency || 'usd').toLowerCase()
+  if (!SUPPORTED_CURRENCIES.has(currency))
+    return `Unsupported currency "${currency}" — one of: ${[...SUPPORTED_CURRENCIES].join(', ')}`
+
+  if (config.freeVersions && !Array.isArray(config.freeVersions))
+    return 'freeVersions must be an array of version strings'
+  if (config.freeVersions?.some(v => typeof v !== 'string' || v.length > 64))
+    return 'freeVersions must be version strings'
+
+  if (config.payoutAccountId && !/^acct_[A-Za-z0-9]+$/.test(config.payoutAccountId))
+    return 'payoutAccountId must be a Stripe Connect account id (acct_…)'
+
+  if (config.trialDays !== undefined && (!Number.isInteger(config.trialDays) || config.trialDays < 0 || config.trialDays > 365))
+    return 'trialDays must be a whole number of days between 0 and 365'
+
+  return null
+}
+
+/**
+ * Set (or update) a package's price.
+ *
+ * Stripe objects are created only when payments are configured, so a registry
+ * without Stripe keys can still be developed and tested against — it just can't
+ * take money. Prices in Stripe are immutable, so a change creates a new one and
+ * repoints the product at it.
+ */
 export async function configurePaywall(
   storage: MetadataStorage,
   packageName: string,
-  config: { price: number, currency?: string, freeVersions?: string[], trialDays?: number },
+  config: PriceConfig,
 ): Promise<PackagePaywall> {
+  const invalid = validatePriceConfig(config)
+  if (invalid) throw new Error(invalid)
+
   const now = new Date().toISOString()
   const existing = await storage.getPaywall(packageName)
+  const currency = (config.currency || existing?.currency || 'usd').toLowerCase()
 
   let stripeProductId = existing?.stripeProductId
   let stripePriceId = existing?.stripePriceId
 
-  // Create Stripe product + price if Stripe is configured
-  if (STRIPE_SECRET_KEY) {
+  if (paymentsEnabled()) {
     if (!stripeProductId) {
       const product = await stripeRequest('POST', '/products', {
         name: packageName,
-        description: `Access to ${packageName} package`,
+        description: `Access to ${packageName} on the pantry registry`,
         metadata: { pantry_package: packageName },
       })
       stripeProductId = product.id
     }
 
-    // Always create a new price (Stripe prices are immutable)
-    const price = await stripeRequest('POST', '/prices', {
-      product: stripeProductId,
-      unit_amount: String(config.price),
-      currency: config.currency || 'usd',
-    })
-    stripePriceId = price.id
+    // Only mint a new Stripe price when the amount or currency actually
+    // changed — otherwise every dashboard save leaves another orphan behind.
+    const priceChanged = !stripePriceId
+      || existing?.price !== config.price
+      || existing?.currency?.toLowerCase() !== currency
+    if (priceChanged) {
+      const price = await stripeRequest('POST', '/prices', {
+        product: stripeProductId,
+        unit_amount: String(config.price),
+        currency,
+      })
+      stripePriceId = price.id
+    }
   }
 
   const paywall: PackagePaywall = {
     name: packageName,
     enabled: true,
     price: config.price,
-    currency: config.currency || 'usd',
+    currency,
     stripeProductId,
     stripePriceId,
-    freeVersions: config.freeVersions,
-    trialDays: config.trialDays,
+    stripeAccountId: config.payoutAccountId ?? existing?.stripeAccountId,
+    freeVersions: config.freeVersions ?? existing?.freeVersions,
+    trialDays: config.trialDays ?? existing?.trialDays,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
   }
@@ -141,44 +331,71 @@ export async function configurePaywall(
 }
 
 // ---------------------------------------------------------------------------
-// Create checkout session
+// Checkout
 // ---------------------------------------------------------------------------
 
+export interface CheckoutRequest {
+  packageName: string
+  /** The account being charged. Entitlement is granted to this address. */
+  email: string
+  baseUrl: string
+}
+
+/**
+ * Start a Stripe Checkout session for one account.
+ *
+ * The buyer's account travels in `metadata` and comes back on the webhook —
+ * that, and not anything in the URL, is what the entitlement is written
+ * against, so the success URL is safe to share and safe to log.
+ */
 export async function createCheckoutSession(
   storage: MetadataStorage,
-  packageName: string,
-  accessToken: string,
-  baseUrl: string,
+  request: CheckoutRequest,
 ): Promise<{ url: string }> {
+  const { packageName, email, baseUrl } = request
+
   const paywall = await storage.getPaywall(packageName)
-  if (!paywall || !paywall.enabled) {
-    throw new Error('Package does not have a paywall')
-  }
+  if (!paywall || !paywall.enabled)
+    throw new Error('This package is not for sale')
 
-  if (!STRIPE_SECRET_KEY) {
-    throw new Error('Stripe is not configured — set STRIPE_SECRET_KEY')
-  }
+  if (!paymentsEnabled())
+    throw new Error('Payments are not configured on this registry')
 
-  if (!paywall.stripePriceId) {
-    throw new Error('Stripe price not configured for this package')
-  }
+  if (!paywall.stripePriceId)
+    throw new Error('This package has a price but no Stripe price — the publisher should save it again')
+
+  const encoded = encodeURIComponent(packageName)
+  const fee = platformFeeBps()
 
   const session = await stripeRequest('POST', '/checkout/sessions', {
-    mode: 'payment',
+    'mode': 'payment',
     'line_items[0][price]': paywall.stripePriceId,
     'line_items[0][quantity]': '1',
-    success_url: `${baseUrl}/packages/${encodeURIComponent(packageName)}/checkout/success?token=${accessToken}`,
-    cancel_url: `${baseUrl}/packages/${encodeURIComponent(packageName)}`,
+    'customer_email': email,
+    // Stripe dedupes on this key, so a buyer who double-clicks Buy doesn't get
+    // charged twice for the same package.
+    'client_reference_id': `${packageName}:${email}`,
+    'success_url': `${baseUrl}/packages/${encoded}/checkout/success`,
+    'cancel_url': `${baseUrl}/pkg/${encoded}`,
     'metadata[package_name]': packageName,
-    'metadata[access_token]': accessToken,
-    ...(paywall.stripeAccountId ? { 'payment_intent_data[transfer_data][destination]': paywall.stripeAccountId } : {}),
+    'metadata[buyer_email]': email,
+    // Marketplace payouts: with a connected account the money lands there and
+    // the platform keeps its fee; without one it stays on the platform account.
+    ...(paywall.stripeAccountId
+      ? {
+          'payment_intent_data[transfer_data][destination]': paywall.stripeAccountId,
+          ...(fee > 0
+            ? { 'payment_intent_data[application_fee_amount]': String(Math.round((paywall.price * fee) / 10_000)) }
+            : {}),
+        }
+      : {}),
   })
 
   return { url: session.url }
 }
 
 // ---------------------------------------------------------------------------
-// Handle Stripe webhook
+// Webhook
 // ---------------------------------------------------------------------------
 
 const processedWebhookEvents = new Map<string, number>() // eventId -> timestamp
@@ -188,21 +405,17 @@ export async function handleStripeWebhook(
   storage: MetadataStorage,
   rawBody: string,
   signature: string,
-): Promise<{ processed: boolean }> {
-  if (!STRIPE_WEBHOOK_SECRET) {
+): Promise<{ processed: boolean, granted?: string }> {
+  if (!stripeWebhookSecret())
     throw new Error('STRIPE_WEBHOOK_SECRET not configured')
-  }
 
-  // Verify webhook signature
   const event = await verifyStripeWebhook(rawBody, signature)
 
-  // Deduplicate webhook events (Stripe may retry)
+  // Stripe retries until it gets a 2xx, so the same event arrives more than once.
   if (event.id) {
-    if (processedWebhookEvents.has(event.id)) {
+    if (processedWebhookEvents.has(event.id))
       return { processed: true }
-    }
     processedWebhookEvents.set(event.id, Date.now())
-    // Evict expired entries periodically (every 100 events or when map is large)
     if (processedWebhookEvents.size > 100) {
       const now = Date.now()
       for (const [id, ts] of processedWebhookEvents) {
@@ -213,17 +426,32 @@ export async function handleStripeWebhook(
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
-    const packageName = session.metadata?.package_name
-    const accessToken = session.metadata?.access_token
+    const packageName: string | undefined = session.metadata?.package_name
+    const email: string | undefined = session.metadata?.buyer_email
+    // A session can complete with payment still pending (bank debits). Only an
+    // actually-paid session buys anything.
+    const paid = !session.payment_status || session.payment_status === 'paid' || session.payment_status === 'no_payment_required'
 
-    if (packageName && accessToken) {
+    if (packageName && email && paid) {
       const grant: PackageAccessGrant = {
         packageName,
-        token: accessToken,
+        token: accountSubject(email),
         stripePaymentId: session.payment_intent || session.id,
         grantedAt: new Date().toISOString(),
       }
       await storage.putAccessGrant(grant)
+      return { processed: true, granted: email }
+    }
+
+    // An older session, from when the buyer's token was the subject.
+    const legacyToken: string | undefined = session.metadata?.access_token
+    if (packageName && legacyToken && paid) {
+      await storage.putAccessGrant({
+        packageName,
+        token: legacyToken,
+        stripePaymentId: session.payment_intent || session.id,
+        grantedAt: new Date().toISOString(),
+      })
       return { processed: true }
     }
   }
@@ -232,7 +460,7 @@ export async function handleStripeWebhook(
 }
 
 async function verifyStripeWebhook(rawBody: string, signature: string): Promise<any> {
-  // Parse Stripe signature header: t=timestamp,v1=hash
+  // Stripe signature header: t=timestamp,v1=hash
   const parts = signature.split(',').reduce((acc, part) => {
     const [key, value] = part.split('=')
     acc[key] = value
@@ -242,15 +470,13 @@ async function verifyStripeWebhook(rawBody: string, signature: string): Promise<
   const timestamp = parts.t
   const expectedSig = parts.v1
 
-  if (!timestamp || !expectedSig) {
+  if (!timestamp || !expectedSig)
     throw new Error('Invalid Stripe signature format')
-  }
 
-  // Compute expected signature
   const payload = `${timestamp}.${rawBody}`
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(STRIPE_WEBHOOK_SECRET),
+    new TextEncoder().encode(stripeWebhookSecret()),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign'],
@@ -258,18 +484,15 @@ async function verifyStripeWebhook(rawBody: string, signature: string): Promise<
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload))
   const computedSig = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
 
-  // Use constant-time comparison to prevent timing attacks
   const computedBuf = Buffer.from(computedSig)
   const expectedBuf = Buffer.from(expectedSig)
-  if (computedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(computedBuf, expectedBuf)) {
+  if (computedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(computedBuf, expectedBuf))
     throw new Error('Stripe webhook signature verification failed')
-  }
 
-  // Check timestamp freshness (5 minute tolerance)
+  // Replay window. Without this a captured webhook stays valid forever.
   const age = Math.abs(Date.now() / 1000 - Number(timestamp))
-  if (age > 300) {
+  if (age > 300)
     throw new Error('Stripe webhook timestamp too old')
-  }
 
   try {
     return JSON.parse(rawBody)
@@ -280,11 +503,34 @@ async function verifyStripeWebhook(rawBody: string, signature: string): Promise<
 }
 
 // ---------------------------------------------------------------------------
-// Format price for display
+// Display
 // ---------------------------------------------------------------------------
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  usd: '$',
+  eur: '€',
+  gbp: '£',
+  cad: 'CA$',
+  aud: 'A$',
+  jpy: '¥',
+}
+
+/** Zero-decimal currencies: ¥500 is 500 units, not 5.00. */
+const ZERO_DECIMAL = new Set(['jpy'])
+
 export function formatPrice(price: number, currency: string): string {
-  const amount = price / 100
-  const symbol = currency === 'usd' ? '$' : currency === 'eur' ? '€' : currency === 'gbp' ? '£' : `${currency.toUpperCase()} `
-  return `${symbol}${amount.toFixed(2)}`
+  const code = (currency || 'usd').toLowerCase()
+  const symbol = CURRENCY_SYMBOLS[code] || `${code.toUpperCase()} `
+  if (ZERO_DECIMAL.has(code)) return `${symbol}${price}`
+  return `${symbol}${(price / 100).toFixed(2)}`
+}
+
+/** Parse a human price ("9", "9.00", "$9.00") into cents. Null when it isn't one. */
+export function parsePriceToCents(input: string, currency = 'usd'): number | null {
+  const cleaned = input.trim().replace(/^[^\d.,-]+/, '').replace(/,/g, '')
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null
+  const amount = Number.parseFloat(cleaned)
+  if (!Number.isFinite(amount)) return null
+  const cents = ZERO_DECIMAL.has(currency.toLowerCase()) ? Math.round(amount) : Math.round(amount * 100)
+  return cents
 }
