@@ -15,11 +15,12 @@
 //!      `pantry token set --registry https://registry.example.com`, or
 //!      `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN` from the environment.
 //!
-//! Tokens are only ever sent to a registry you have named: either the origin
-//! matches `PANTRY_REGISTRY_URL`, or `~/.pantry/credentials` holds an entry
-//! scoped to exactly that origin. A stray `PANTRY_TOKEN` in the environment is
-//! never broadcast to third-party hosts (npm, GitHub, object storage), and
-//! nothing is sent to the public registry unless you asked for it.
+//! A token only ever goes to the registry that issued it: the origin matches
+//! `PANTRY_REGISTRY_URL`, or `~/.pantry/credentials` holds an entry scoped to
+//! exactly that origin, or it is the public registry a `PANTRY_TOKEN` belongs
+//! to (which is what identifies the account that bought a paid package). It is
+//! never broadcast to third-party hosts — npm, GitHub, or the object-storage
+//! host a download redirects to.
 //!
 //! `io_helper` calls in here through a function pointer (installed in `main`)
 //! so the low-level HTTP code doesn't have to know about the credential store.
@@ -48,6 +49,10 @@ const Resolved = struct {
     base_token: ?[]const u8 = null,
     /// Per-origin credentials from `~/.pantry/credentials` sections.
     scoped: []const Scoped = &.{},
+    /// Credential for the default registry, when one is stored. Paid packages
+    /// and any private package on the public registry are served against an
+    /// account, so the token has to travel — to its own issuer and nowhere else.
+    default_token: ?[]const u8 = null,
 };
 
 var resolve_mutex: io_helper.Mutex = .{};
@@ -79,6 +84,10 @@ fn config() Resolved {
     } else |_| {}
 
     out.scoped = loadScoped(allocator) catch &.{};
+
+    if (token_commands.resolve(allocator, null, default_base, token_commands.default_key)) |maybe| {
+        if (maybe) |token| out.default_token = token.value;
+    } else |_| {}
 
     resolved = out;
     return out;
@@ -179,6 +188,16 @@ fn decorateWith(allocator: std.mem.Allocator, url: []const u8, cfg: Resolved) De
         }
     }
 
+    // The public registry, when this machine has a pantry token at all. The
+    // token was issued by that registry, so this is the one host it belongs on;
+    // it is what identifies the account that bought a paid package.
+    if (cfg.default_token) |token| {
+        if (originOf(default_base)) |default_origin| {
+            if (sameOrigin(origin, default_origin))
+                out.authorization = std.fmt.allocPrint(allocator, "Bearer {s}", .{token}) catch null;
+        }
+    }
+
     return out;
 }
 
@@ -234,6 +253,27 @@ test "a configured registry receives rewritten, authenticated requests" {
     defer dec.deinit(alloc);
     try std.testing.expectEqualStrings("https://registry.example.com/binaries/curl.se/metadata.json", dec.url.?);
     try std.testing.expectEqualStrings("Bearer ptry_secret", dec.authorization.?);
+}
+
+test "the public registry gets the credential it issued" {
+    const alloc = std.testing.allocator;
+    const cfg = Resolved{ .default_token = "ptry_account" };
+
+    // A paid package is served against an account, so the token has to travel.
+    const mine = decorateWith(alloc, default_base ++ "/packages/paid-lib/1.0.0/tarball", cfg);
+    defer mine.deinit(alloc);
+    try std.testing.expectEqualStrings("Bearer ptry_account", mine.authorization.?);
+
+    // ...but only there.
+    for ([_][]const u8{
+        "https://registry.npmjs.org/left-pad",
+        "https://bucket.fsn1.your-objectstorage.com/binaries/x.tar.gz",
+        "https://registry.pantry.dev.attacker.test/packages/x",
+    }) |url| {
+        const dec = decorateWith(alloc, url, cfg);
+        defer dec.deinit(alloc);
+        try std.testing.expect(dec.authorization == null);
+    }
 }
 
 test "the token never leaves the registry it belongs to" {

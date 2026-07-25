@@ -1016,6 +1016,18 @@ fn registryStorageAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+fn registryPaymentsAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.registry_ops.paymentsCommand(allocator, .{
+        .remote = remoteOptions(ctx),
+        .secret_key = ctx.getOption("secret-key"),
+        .webhook_secret = ctx.getOption("webhook-secret"),
+        .fee_bps = ctx.getOption("fee-bps"),
+        .disable = ctx.hasOption("disable"),
+    });
+    finishTokenResult(allocator, result);
+}
+
 fn registryRotateTokenAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const result = try lib.commands.registry_ops.rotateTokenCommand(allocator, .{
@@ -1077,6 +1089,62 @@ fn registryTokenRevokeAction(ctx: *cli.BaseCommand.ParseContext) !void {
 fn registryInfoAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const result = try lib.commands.registry_ops.infoCommand(allocator, ctx.getOption("registry"));
+    finishTokenResult(allocator, result);
+}
+
+// ============================================================================
+// Paid packages (`pantry price …`, `pantry buy`)
+// ============================================================================
+
+fn priceOptions(ctx: *cli.BaseCommand.ParseContext, package: []const u8) lib.commands.paid_commands.PriceOptions {
+    return .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .package = package,
+        .amount = ctx.getArgument(1),
+        .currency = ctx.getOption("currency"),
+        .free_versions = ctx.getOption("free-versions"),
+        .payout_account = ctx.getOption("payout-account"),
+    };
+}
+
+fn requirePackageArg(ctx: *cli.BaseCommand.ParseContext, usage: []const u8) []const u8 {
+    return ctx.getArgument(0) orelse {
+        style.print("Error: a package name is required ({s})\n", .{usage});
+        std.process.exit(1);
+    };
+}
+
+fn priceSetAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const package = requirePackageArg(ctx, "pantry price set my-package 9.00");
+    const result = try lib.commands.paid_commands.priceSetCommand(allocator, priceOptions(ctx, package));
+    finishTokenResult(allocator, result);
+}
+
+fn priceShowAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const package = requirePackageArg(ctx, "pantry price show my-package");
+    const result = try lib.commands.paid_commands.priceShowCommand(allocator, priceOptions(ctx, package));
+    finishTokenResult(allocator, result);
+}
+
+fn priceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const package = requirePackageArg(ctx, "pantry price rm my-package");
+    const result = try lib.commands.paid_commands.priceRemoveCommand(allocator, priceOptions(ctx, package));
+    finishTokenResult(allocator, result);
+}
+
+fn buyAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const package = requirePackageArg(ctx, "pantry buy my-package");
+    const result = try lib.commands.paid_commands.buyCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .package = package,
+        .print_only = ctx.hasOption("print"),
+    });
     finishTokenResult(allocator, result);
 }
 
@@ -3912,6 +3980,20 @@ pub fn main() !void {
     _ = registry_storage_cmd.setAction(registryStorageAction);
     _ = try registry_cmd.addCommand(registry_storage_cmd);
 
+    var registry_payments_cmd = try cli.BaseCommand.init(allocator, "payments", "Configure Stripe so publishers can charge for packages");
+    _ = try registry_payments_cmd.addOption(reg_host_opt);
+    _ = try registry_payments_cmd.addOption(reg_user_opt);
+    _ = try registry_payments_cmd.addOption(reg_key_opt);
+    _ = try registry_payments_cmd.addOption(reg_service_opt);
+    _ = try registry_payments_cmd.addOption(reg_env_file_opt);
+    _ = try registry_payments_cmd.addOption(reg_url_opt);
+    _ = try registry_payments_cmd.addOption(cli.Option.init("secret-key", "secret-key", "Stripe secret key (sk_…)", .string));
+    _ = try registry_payments_cmd.addOption(cli.Option.init("webhook-secret", "webhook-secret", "Stripe webhook signing secret (whsec_…)", .string));
+    _ = try registry_payments_cmd.addOption(cli.Option.init("fee-bps", "fee-bps", "Platform cut in basis points when publishers are paid out directly (100 = 1%)", .string));
+    _ = try registry_payments_cmd.addOption(cli.Option.init("disable", "disable", "Turn payments off", .bool));
+    _ = registry_payments_cmd.setAction(registryPaymentsAction);
+    _ = try registry_cmd.addCommand(registry_payments_cmd);
+
     var registry_rotate_cmd = try cli.BaseCommand.init(allocator, "rotate-token", "Replace the shared registry token");
     _ = try registry_rotate_cmd.addOption(reg_host_opt);
     _ = try registry_rotate_cmd.addOption(reg_user_opt);
@@ -3964,6 +4046,49 @@ pub fn main() !void {
     _ = try registry_cmd.addCommand(registry_info_cmd);
 
     _ = try root.addCommand(registry_cmd);
+
+    // ========================================================================
+    // Paid Packages (charge for what you publish, buy what you don't)
+    // ========================================================================
+    const paid_registry_opt = cli.Option.init("registry", "registry", "Registry URL (default: PANTRY_REGISTRY_URL, else the public registry)", .string);
+    const paid_token_opt = cli.Option.init("token", "token", "Token to authenticate with (default: your stored credential)", .string);
+
+    var price_cmd = try cli.BaseCommand.init(allocator, "price", "Charge for a package you publish");
+
+    var price_set_cmd = try cli.BaseCommand.init(allocator, "set", "Set the price (e.g. `pantry price set my-package 9.00`)");
+    _ = try price_set_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try price_set_cmd.addArgument(cli.Argument.init("amount", "Price, e.g. 9.00", .string).withRequired(true));
+    _ = try price_set_cmd.addOption(paid_registry_opt);
+    _ = try price_set_cmd.addOption(paid_token_opt);
+    _ = try price_set_cmd.addOption(cli.Option.init("currency", "currency", "Currency code (default: usd)", .string));
+    _ = try price_set_cmd.addOption(cli.Option.init("free-versions", "free-versions", "Versions that stay free (comma-separated)", .string));
+    _ = try price_set_cmd.addOption(cli.Option.init("payout-account", "payout-account", "Stripe Connect account to pay out to (acct_…)", .string));
+    _ = price_set_cmd.setAction(priceSetAction);
+    _ = try price_cmd.addCommand(price_set_cmd);
+
+    var price_show_cmd = try cli.BaseCommand.init(allocator, "show", "Show what a package costs, and whether you own it");
+    _ = try price_show_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try price_show_cmd.addOption(paid_registry_opt);
+    _ = try price_show_cmd.addOption(paid_token_opt);
+    _ = price_show_cmd.setAction(priceShowAction);
+    _ = try price_cmd.addCommand(price_show_cmd);
+
+    var price_rm_cmd = try cli.BaseCommand.init(allocator, "rm", "Stop charging for a package");
+    _ = try price_rm_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try price_rm_cmd.addOption(paid_registry_opt);
+    _ = try price_rm_cmd.addOption(paid_token_opt);
+    _ = price_rm_cmd.setAction(priceRemoveAction);
+    _ = try price_cmd.addCommand(price_rm_cmd);
+
+    _ = try root.addCommand(price_cmd);
+
+    var buy_cmd = try cli.BaseCommand.init(allocator, "buy", "Buy access to a paid package");
+    _ = try buy_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try buy_cmd.addOption(paid_registry_opt);
+    _ = try buy_cmd.addOption(paid_token_opt);
+    _ = try buy_cmd.addOption(cli.Option.init("print", "print", "Print the checkout URL instead of opening a browser", .bool));
+    _ = buy_cmd.setAction(buyAction);
+    _ = try root.addCommand(buy_cmd);
 
     // ========================================================================
     // Dedupe Command (Deduplicate Dependencies)

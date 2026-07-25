@@ -64,7 +64,7 @@ pub const RemoteOptions = struct {
     url: ?[]const u8 = null,
 };
 
-fn env(arena: std.mem.Allocator, name: []const u8) ?[]const u8 {
+pub fn env(arena: std.mem.Allocator, name: []const u8) ?[]const u8 {
     const value = io_helper.getEnvVarOwned(arena, name) catch return null;
     if (value.len == 0) return null;
     return value;
@@ -270,7 +270,7 @@ fn readRemoteToken(arena: std.mem.Allocator, r: Remote) ?[]const u8 {
 /// The credential to authenticate admin API calls with: an explicit --token,
 /// else whatever `pantry token set` stored for this registry, else the
 /// environment.
-fn adminToken(arena: std.mem.Allocator, explicit: ?[]const u8, registry_url: []const u8) ?[]const u8 {
+pub fn credentialFor(arena: std.mem.Allocator, explicit: ?[]const u8, registry_url: []const u8) ?[]const u8 {
     const resolved = token_commands.resolve(arena, explicit, registry_url, token_commands.default_key) catch return null;
     const found = resolved orelse return null;
     return found.value;
@@ -280,7 +280,7 @@ fn adminToken(arena: std.mem.Allocator, explicit: ?[]const u8, registry_url: []c
 // Admin API over HTTPS
 // ---------------------------------------------------------------------------
 
-fn appendJsonString(out: *std.ArrayList(u8), arena: std.mem.Allocator, value: []const u8) !void {
+pub fn appendJsonString(out: *std.ArrayList(u8), arena: std.mem.Allocator, value: []const u8) !void {
     try out.append(arena, '"');
     for (value) |c| {
         switch (c) {
@@ -303,7 +303,7 @@ fn appendJsonString(out: *std.ArrayList(u8), arena: std.mem.Allocator, value: []
     try out.append(arena, '"');
 }
 
-fn adminPost(
+pub fn adminPost(
     arena: std.mem.Allocator,
     registry_url: []const u8,
     path: []const u8,
@@ -318,7 +318,7 @@ fn adminPost(
 
 /// Surface the server's own `error` message rather than a bare status code —
 /// it already says whether the token, the payload or the user was the problem.
-fn apiError(arena: std.mem.Allocator, res: io_helper.HttpResponse) []const u8 {
+pub fn apiError(arena: std.mem.Allocator, res: io_helper.HttpResponse) []const u8 {
     var parsed = std.json.parseFromSlice(std.json.Value, arena, res.body, .{ .ignore_unknown_fields = true }) catch
         return std.fmt.allocPrint(arena, "HTTP {d}", .{res.status}) catch "request failed";
     defer parsed.deinit();
@@ -652,6 +652,100 @@ pub fn storageCommand(allocator: std.mem.Allocator, opts: StorageOptions) !Comma
 }
 
 // ---------------------------------------------------------------------------
+// pantry registry payments
+// ---------------------------------------------------------------------------
+
+pub const PaymentsOptions = struct {
+    remote: RemoteOptions = .{},
+    secret_key: ?[]const u8 = null,
+    webhook_secret: ?[]const u8 = null,
+    /// The platform's cut of a sale, in basis points (100 = 1%).
+    fee_bps: ?[]const u8 = null,
+    /// Turn payments off again: paid packages stay priced but nobody can pay.
+    disable: bool = false,
+};
+
+/// Configure Stripe on the registry box, so publishers can charge for packages.
+///
+/// The keys go into the same EnvironmentFile as everything else and are never
+/// echoed back — a secret key in a terminal scrollback is a secret key in a
+/// screen recording.
+pub fn paymentsCommand(allocator: std.mem.Allocator, opts: PaymentsOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const r = resolveRemote(arena, opts.remote) orelse
+        return CommandResult.err(allocator, missing_host_message);
+
+    if (opts.disable) {
+        style.print("==> Disabling payments on {s}...\n", .{r.host});
+        if (!try setEnv(arena, r, &.{ "STRIPE_SECRET_KEY=", "STRIPE_WEBHOOK_SECRET=" }))
+            return CommandResult.err(allocator, "Could not clear the Stripe configuration.");
+        if (!try restart(arena, r))
+            return CommandResult.err(allocator, "Configuration was cleared but the service did not restart cleanly.");
+        return CommandResult.success(allocator, "Payments are off. Priced packages stay priced and stay gated — nobody can complete a purchase until you configure Stripe again.");
+    }
+
+    const secret = pick(arena, opts.secret_key, &.{"STRIPE_SECRET_KEY"}, null) orelse
+        return CommandResult.err(allocator,
+            \\Error: --secret-key is required (or set STRIPE_SECRET_KEY).
+            \\
+            \\From the Stripe dashboard: Developers → API keys → Secret key (sk_live_… or sk_test_…).
+        );
+    const webhook = pick(arena, opts.webhook_secret, &.{"STRIPE_WEBHOOK_SECRET"}, null) orelse
+        return CommandResult.err(allocator,
+            \\Error: --webhook-secret is required (or set STRIPE_WEBHOOK_SECRET).
+            \\
+            \\In Stripe, add an endpoint for `checkout.session.completed` pointing at
+            \\<your-registry>/webhooks/stripe, then copy its signing secret (whsec_…).
+            \\Without it the registry cannot tell a real payment from a forged one, so
+            \\it refuses every webhook — and nobody's purchase would ever land.
+        );
+
+    if (!std.mem.startsWith(u8, secret, "sk_") and !std.mem.startsWith(u8, secret, "rk_"))
+        return CommandResult.err(allocator, "That doesn't look like a Stripe secret key (expected sk_… or rk_…).");
+    if (!std.mem.startsWith(u8, webhook, "whsec_"))
+        return CommandResult.err(allocator, "That doesn't look like a Stripe webhook signing secret (expected whsec_…).");
+
+    var pairs: std.ArrayList([]const u8) = .empty;
+    try pairs.append(arena, try std.fmt.allocPrint(arena, "STRIPE_SECRET_KEY={s}", .{secret}));
+    try pairs.append(arena, try std.fmt.allocPrint(arena, "STRIPE_WEBHOOK_SECRET={s}", .{webhook}));
+    if (pick(arena, opts.fee_bps, &.{"PANTRY_PLATFORM_FEE_BPS"}, null)) |fee| {
+        _ = std.fmt.parseInt(u32, fee, 10) catch
+            return CommandResult.err(allocator, "--fee-bps must be a whole number of basis points (100 = 1%).");
+        try pairs.append(arena, try std.fmt.allocPrint(arena, "PANTRY_PLATFORM_FEE_BPS={s}", .{fee}));
+    }
+
+    const live = std.mem.startsWith(u8, secret, "sk_live") or std.mem.startsWith(u8, secret, "rk_live");
+    style.print("==> Configuring payments on {s} ({s} mode)...\n", .{ r.host, if (live) "live" else "test" });
+    if (!try setEnv(arena, r, pairs.items))
+        return CommandResult.err(allocator, "Could not write the Stripe configuration.");
+
+    style.print("==> Restarting {s}...\n", .{r.service});
+    if (!try restart(arena, r))
+        return CommandResult.err(allocator, "Configuration was written but the service did not restart cleanly.");
+
+    if (!waitHealthy(arena, r.url, 8))
+        style.print("    Warning: {s}/health did not answer.\n", .{r.url});
+
+    const message = try std.fmt.allocPrint(arena,
+        \\
+        \\Payments are on ({s} mode).
+        \\
+        \\Point a Stripe webhook at:
+        \\
+        \\  {s}/webhooks/stripe        (event: checkout.session.completed)
+        \\
+        \\Publishers can now price their packages:
+        \\
+        \\  pantry price set <package> 9.00 --registry {s}
+    , .{ if (live) "live" else "test", r.url, r.url });
+
+    return CommandResult.success(allocator, message);
+}
+
+// ---------------------------------------------------------------------------
 // pantry registry rotate-token
 // ---------------------------------------------------------------------------
 
@@ -767,20 +861,20 @@ pub const MemberOptions = struct {
     admin: bool = false,
 };
 
-fn resolveRegistryUrl(arena: std.mem.Allocator, explicit: ?[]const u8) ?[]const u8 {
+pub fn resolveRegistryUrl(arena: std.mem.Allocator, explicit: ?[]const u8) ?[]const u8 {
     const url = pick(arena, explicit, &.{ "PANTRY_REGISTRY_URL", "PANTRY_REGISTRY_HOST" }, null) orelse return null;
     if (std.mem.indexOf(u8, url, "://") == null)
         return std.fmt.allocPrint(arena, "https://{s}", .{url}) catch null;
     return std.mem.trimEnd(u8, url, "/");
 }
 
-const missing_registry_message =
+pub const missing_registry_message =
     \\Error: no registry URL.
     \\
     \\Pass --registry https://registry.example.com, or export PANTRY_REGISTRY_URL.
 ;
 
-fn missingTokenMessage(arena: std.mem.Allocator, url: []const u8) []const u8 {
+pub fn missingTokenMessage(arena: std.mem.Allocator, url: []const u8) []const u8 {
     return std.fmt.allocPrint(arena,
         \\Error: no admin credential for {s}.
         \\
@@ -797,7 +891,7 @@ pub fn memberAddCommand(allocator: std.mem.Allocator, opts: MemberOptions) !Comm
 
     const url = resolveRegistryUrl(arena, opts.registry) orelse
         return CommandResult.err(allocator, missing_registry_message);
-    const token = adminToken(arena, opts.token, url) orelse
+    const token = credentialFor(arena, opts.token, url) orelse
         return CommandResult.err(allocator, missingTokenMessage(arena, url));
 
     const password = opts.password orelse
@@ -854,7 +948,7 @@ pub fn tokenIssueCommand(allocator: std.mem.Allocator, opts: IssueOptions) !Comm
 
     const url = resolveRegistryUrl(arena, opts.registry) orelse
         return CommandResult.err(allocator, missing_registry_message);
-    const admin = adminToken(arena, opts.token, url) orelse
+    const admin = credentialFor(arena, opts.token, url) orelse
         return CommandResult.err(allocator, missingTokenMessage(arena, url));
 
     var body: std.ArrayList(u8) = .empty;
@@ -941,7 +1035,7 @@ pub fn tokenRevokeCommand(allocator: std.mem.Allocator, opts: RevokeOptions) !Co
 
     const url = resolveRegistryUrl(arena, opts.registry) orelse
         return CommandResult.err(allocator, missing_registry_message);
-    const admin = adminToken(arena, opts.token, url) orelse
+    const admin = credentialFor(arena, opts.token, url) orelse
         return CommandResult.err(allocator, missingTokenMessage(arena, url));
     const id = opts.id orelse
         return CommandResult.err(allocator, "Error: --id is required (shown when the token was issued, and on the owner's account page).");

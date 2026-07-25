@@ -1544,6 +1544,11 @@ fn mergedHeaders(
     decoration: RequestDecoration,
 ) []const std.http.Header {
     const auth = decoration.authorization orelse return extra;
+    // A caller that set its own Authorization means it: sending both produces
+    // one joined header value ("Bearer a, Bearer b") that no server accepts.
+    for (extra) |header| {
+        if (std.ascii.eqlIgnoreCase(header.name, "Authorization")) return extra;
+    }
     if (buf.len < extra.len + 1) return extra;
     @memcpy(buf[0..extra.len], extra);
     buf[extra.len] = .{ .name = "Authorization", .value = auth };

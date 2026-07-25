@@ -5,4 +5,5 @@ const std = @import("std");
 test {
     _ = @import("registry/endpoint.zig");
     _ = @import("cli/commands/registry_ops.zig");
+    _ = @import("cli/commands/paid.zig");
 }
