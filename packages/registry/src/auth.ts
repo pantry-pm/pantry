@@ -129,6 +129,22 @@ export class AuthService {
    * Create or update an admin account (production provisioning).
    */
   async upsertAdminUser(email: string, name: string, password: string): Promise<Omit<User, 'passwordHash'>> {
+    return this.upsertUserAccount(email, name, password, 'admin')
+  }
+
+  /**
+   * Create or update an account with an explicit role.
+   *
+   * This is how members are onboarded onto a private registry, where open
+   * signup is off: the operator provisions the account, the member logs in and
+   * mints their own tokens.
+   */
+  async upsertUserAccount(
+    email: string,
+    name: string,
+    password: string,
+    role: 'admin' | 'user' = 'user',
+  ): Promise<Omit<User, 'passwordHash'>> {
     const normalizedEmail = email.toLowerCase().trim()
     if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       throw new AuthError('Invalid email address', 400)
@@ -142,14 +158,14 @@ export class AuthService {
     const passwordHash = await hashPassword(password)
     const user: User = {
       email: normalizedEmail,
-      name: (name || existing?.name || 'Admin').trim(),
+      name: (name || existing?.name || (role === 'admin' ? 'Admin' : normalizedEmail.split('@')[0])).trim(),
       passwordHash,
-      role: 'admin',
+      role,
       createdAt: existing?.createdAt || now,
       updatedAt: now,
     }
     await this.storage.upsertUser(user)
-    return { email: user.email, name: user.name, role: 'admin', createdAt: user.createdAt, updatedAt: user.updatedAt }
+    return { email: user.email, name: user.name, role, createdAt: user.createdAt, updatedAt: user.updatedAt }
   }
 
   /**
@@ -278,6 +294,23 @@ export class AuthService {
    * Handles both legacy REGISTRY_TOKEN and user ptry_ tokens.
    */
   async validatePublishToken(token: string, legacyToken: string): Promise<TokenValidationResult> {
+    return this.validateAccessToken(token, legacyToken, 'publish')
+  }
+
+  /**
+   * Validate a Bearer token for a given permission.
+   *
+   * `publish` implies `read`: a CI token that uploads a version also needs to
+   * ask the registry which versions already exist, and issuing two tokens for
+   * one pipeline is friction with no security benefit. A `read` token, on the
+   * other hand, can only download — which is exactly what you hand to a
+   * consumer of a private registry.
+   */
+  async validateAccessToken(
+    token: string,
+    legacyToken: string,
+    permission: 'publish' | 'read',
+  ): Promise<TokenValidationResult> {
     // Legacy admin token check (constant-time comparison to prevent timing attacks)
     if (legacyToken) {
       // Pad both to same length to prevent length-based timing leaks
@@ -303,9 +336,11 @@ export class AuthService {
         return { valid: false, error: 'Token has expired' }
       }
 
-      // Check publish permission
-      if (!tokenRecord.permissions.includes('publish')) {
-        return { valid: false, error: 'Token does not have publish permission' }
+      const permitted = permission === 'read'
+        ? tokenRecord.permissions.includes('read') || tokenRecord.permissions.includes('publish')
+        : tokenRecord.permissions.includes('publish')
+      if (!permitted) {
+        return { valid: false, error: `Token does not have ${permission} permission` }
       }
 
       // Update last-used timestamp (fire-and-forget)
@@ -316,6 +351,19 @@ export class AuthService {
 
     // Not a recognized token format
     return { valid: false, error: 'Invalid token' }
+  }
+
+  /** Look up a user without exposing the password hash. Null when unknown. */
+  async findUser(email: string): Promise<Omit<User, 'passwordHash'> | null> {
+    const user = await this.storage.getUser(email.toLowerCase().trim())
+    if (!user) return null
+    return {
+      email: user.email,
+      name: user.name,
+      role: user.role || 'user',
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }
   }
 }
 
