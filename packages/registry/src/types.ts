@@ -246,10 +246,30 @@ export interface User {
   passwordHash: string
   /** Site-wide permissions (admin can manage all packages on pantry.dev) */
   role?: UserRole
+  /**
+   * Paid plan, when there is one. Governs the marketplace commission on this
+   * account's sales and the features it can use — see `subscriptions.ts`.
+   * Absent means Free; the tier is never inferred from anything else, so a
+   * billing outage can't silently upgrade or downgrade anyone.
+   */
+  subscription?: UserSubscription
   /** ISO 8601 timestamp */
   createdAt: string
   /** ISO 8601 timestamp */
   updatedAt: string
+}
+
+/** The stored half of a subscription. Interpretation lives in `subscriptions.ts`. */
+export interface UserSubscription {
+  /** 'pro' | 'team'. Free accounts have no record at all. */
+  tier: string
+  /** Stripe's subscription status, verbatim. */
+  status: string
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  /** End of the paid period — a cancelled plan keeps its benefits until then. */
+  currentPeriodEnd?: string
+  updatedAt?: string
 }
 
 /**

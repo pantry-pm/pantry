@@ -15,7 +15,9 @@ import { ObjectAnalytics } from './storage/object-analytics'
 import { BuildStatusStore } from './storage/build-status'
 import {
   configurePaywall,
+  createBillingPortalSession,
   createCheckoutSession,
+  createSubscriptionCheckout,
   formatPrice,
   handleStripeWebhook,
   isEntitled,
@@ -23,7 +25,18 @@ import {
   resolveAccess,
   validatePriceConfig,
   type PriceConfig,
+  type SubscriptionChange,
 } from './paywall'
+import {
+  calculateFee,
+  DISCOVERY_FEE_BPS,
+  formatBps,
+  TIERS,
+  tierDefinition,
+  tierOf,
+  type SaleOrigin,
+  type Tier,
+} from './subscriptions'
 import { renderTemplate } from '@stacksjs/stx'
 import {
   generateSparkline,
@@ -831,8 +844,13 @@ export function createHandler(
         const domain = typeof body?.domain === 'string' ? body.domain : ''
         if (!/^[a-zA-Z0-9._/-]{1,128}$/.test(domain))
           return Response.json({ error: 'valid domain required' }, { status: 400, headers: corsHeaders })
-        const queued = getBuildStatus().requestRebuild(domain)
-        return Response.json({ queued, domain }, { headers: corsHeaders })
+        // Paid plans jump the queue. Rebuilds cost real CPU, and the wait is
+        // the scarce thing, so this is the perk rather than a separate queue.
+        const identity = await identifyReader(req)
+        const tier = await tierForUser(identity.userId)
+        const priority = identity.userId === '_admin' || tierDefinition(tier).priorityBuilds
+        const queued = getBuildStatus().requestRebuild(domain, priority)
+        return Response.json({ queued, domain, priority }, { headers: corsHeaders })
       }
       // The build-driver reads (and optionally clears) the rebuild queue.
       if (path === '/api/rebuild-queue' && req.method === 'GET') {
@@ -878,6 +896,12 @@ export function createHandler(
       if (path.startsWith('/auth/') && authService) {
         const authResponse = await handleAuthRoutes(path, req, authService, corsHeaders)
         if (authResponse) return authResponse
+      }
+
+      // Plans and billing
+      if (authService && (path === '/api/plans' || path.startsWith('/account/'))) {
+        const subscriptionResponse = await handleSubscriptionRoutes(path, req, authService, baseUrl, corsHeaders)
+        if (subscriptionResponse) return subscriptionResponse
       }
 
       // Member + token administration (private registries onboard people here)
@@ -1005,7 +1029,24 @@ export function createHandler(
         }
         try {
           const rawBody = await req.text()
-          const result = await handleStripeWebhook(registry.metadata, rawBody, signature)
+          const result = await handleStripeWebhook(
+            registry.metadata,
+            rawBody,
+            signature,
+            // Subscription events move an account between plans. Stripe is the
+            // source of truth: we mirror what it reports rather than deciding.
+            authService
+              ? async (change: SubscriptionChange) => {
+                  await authService.setSubscription(change.email, {
+                    tier: tierOf(change.tier),
+                    status: change.status as any,
+                    stripeCustomerId: change.stripeCustomerId,
+                    stripeSubscriptionId: change.stripeSubscriptionId,
+                    currentPeriodEnd: change.currentPeriodEnd,
+                  })
+                }
+              : undefined,
+          )
           return Response.json(result, { headers: corsHeaders })
         }
         catch (err: any) {
@@ -1334,6 +1375,11 @@ export function createHandler(
               packageName,
               email: identity.userId,
               baseUrl,
+              sellerTier: await sellerTierFor(registry, authService, packageName),
+              // A CLI purchase is someone who already knew what they wanted, so
+              // no discovery fee. `?origin=site` marks a sale the website
+              // started (see the browser flow below).
+              origin: (url.searchParams.get('origin') === 'site' ? 'site' : 'cli') as SaleOrigin,
             })
             return Response.json({ url: session.url }, { headers: corsHeaders })
           }
@@ -1365,6 +1411,10 @@ export function createHandler(
               packageName,
               email: user.email,
               baseUrl,
+              sellerTier: await sellerTierFor(registry, authService, packageName),
+              // This route is only reached from the site's Buy button, so the
+              // registry put the package in front of this buyer: discovery fee.
+              origin: 'site',
             })
             return new Response(null, { status: 302, headers: { ...corsHeaders, Location: session.url } })
           }
@@ -2029,6 +2079,152 @@ async function requirePackageOwner(
   return null
 }
 
+/**
+ * The plan the seller of a package is on, which sets our commission.
+ *
+ * Resolved at checkout rather than stored on the package: a publisher who
+ * subscribes today should pay 5% on tomorrow's sales without having to touch
+ * every package they've ever listed. An unclaimed package has no seller, so it
+ * falls to Free.
+ */
+/** The plan an account is on, for gating features. Free when unknown. */
+async function tierForUser(userId: string | null | undefined): Promise<Tier> {
+  if (!userId || userId === '_admin' || !_authService) return 'free'
+  try {
+    return await _authService.getTier(userId)
+  }
+  catch {
+    return 'free'
+  }
+}
+
+async function sellerTierFor(
+  registry: Registry,
+  auth: AuthService | undefined,
+  packageName: string,
+): Promise<Tier> {
+  if (!auth) return 'free'
+  try {
+    const record = await registry.getPublisherPackageRecord(packageName)
+    if (!record?.publishedBy) return 'free'
+    return await auth.getTier(record.publishedBy)
+  }
+  catch {
+    // Never fail a sale over a tier lookup — charge the standard rate.
+    return 'free'
+  }
+}
+
+/**
+ * Subscriptions: the account's own plan.
+ *
+ *   GET  /api/plans                — the tier table, public
+ *   GET  /account/subscription     — what this account is on
+ *   POST /account/subscription     {tier} — start a checkout
+ *   POST /account/billing-portal   — manage or cancel in Stripe
+ *
+ * Session-authenticated, because these are things a person does about their own
+ * billing — an API token deliberately can't move someone onto a paid plan.
+ */
+async function handleSubscriptionRoutes(
+  path: string,
+  req: Request,
+  auth: AuthService,
+  baseUrl: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (path === '/api/plans' && req.method === 'GET') {
+    return Response.json({
+      plans: Object.values(TIERS).map(t => ({
+        id: t.id,
+        name: t.name,
+        price: t.price,
+        formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
+        commission: formatBps(t.commissionBps),
+        commissionBps: t.commissionBps,
+        privatePackages: t.privatePackages,
+        priorityBuilds: t.priorityBuilds,
+        analyticsRetentionDays: t.analyticsRetentionDays,
+        maxArtifactMB: Math.round(t.maxArtifactBytes / (1024 * 1024)),
+        seats: t.seats,
+      })),
+      discoveryFee: formatBps(DISCOVERY_FEE_BPS),
+      discoveryFeeBps: DISCOVERY_FEE_BPS,
+      paymentsEnabled: paymentsEnabled(),
+    }, { headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=300' } })
+  }
+
+  if (path !== '/account/subscription' && path !== '/account/billing-portal') return null
+
+  const sessionToken = extractSessionToken(req)
+  const user = sessionToken ? await auth.validateSession(sessionToken) : null
+  if (!user) {
+    return Response.json(
+      { error: 'Sign in to manage your plan' },
+      { status: 401, headers: corsHeaders },
+    )
+  }
+
+  const current = await auth.getSubscription(user.email)
+  const tier = await auth.getTier(user.email)
+
+  if (path === '/account/subscription' && req.method === 'GET') {
+    const def = tierDefinition(tier)
+    return Response.json({
+      tier,
+      name: def.name,
+      status: current?.status || 'none',
+      commission: formatBps(def.commissionBps),
+      currentPeriodEnd: current?.currentPeriodEnd,
+      manageable: Boolean(current?.stripeCustomerId),
+    }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+  }
+
+  if (path === '/account/subscription' && req.method === 'POST') {
+    const body = await req.json().catch(() => null) as { tier?: string } | null
+    const requested = tierOf(body?.tier)
+    if (requested === 'free') {
+      return Response.json(
+        { error: 'Cancel from the billing portal rather than downgrading here', hint: 'POST /account/billing-portal' },
+        { status: 400, headers: corsHeaders },
+      )
+    }
+    if (tier === requested) {
+      return Response.json({ alreadySubscribed: true, tier }, { headers: corsHeaders })
+    }
+
+    try {
+      const session = await createSubscriptionCheckout({
+        tier: tierDefinition(requested),
+        email: user.email,
+        baseUrl,
+        stripeCustomerId: current?.stripeCustomerId,
+      })
+      return Response.json({ url: session.url }, { headers: corsHeaders })
+    }
+    catch (err: any) {
+      console.error('Subscription checkout error:', err)
+      return Response.json({ error: err.message || 'Could not start checkout' }, { status: 400, headers: corsHeaders })
+    }
+  }
+
+  if (path === '/account/billing-portal' && req.method === 'POST') {
+    if (!current?.stripeCustomerId) {
+      return Response.json({ error: 'This account has no billing history' }, { status: 400, headers: corsHeaders })
+    }
+    try {
+      const session = await createBillingPortalSession(current.stripeCustomerId, `${baseUrl}/account`)
+      return Response.json({ url: session.url }, { headers: corsHeaders })
+    }
+    catch (err: any) {
+      console.error('Billing portal error:', err)
+      return Response.json({ error: err.message || 'Could not open the billing portal' }, { status: 400, headers: corsHeaders })
+    }
+  }
+
+  return null
+}
+
 /** Resolve paid-package access for a request, including who published it. */
 async function resolvePackageAccess(
   req: Request,
@@ -2193,10 +2389,20 @@ async function handlePublish(
     const metaErr = validateMetadataLimits(metadata)
     if (metaErr) return Response.json({ error: metaErr }, { status: 400, headers: corsHeaders })
 
-    // Enforce tarball size limit (50MB)
-    if (tarballFile.size > 50 * 1024 * 1024) {
+    // Artifact size is what the plan buys: 50MB on Free, 250MB on Pro, 1GB on
+    // Team. Checked against the declared size before the body is buffered, so
+    // an over-limit upload is refused rather than read into memory first.
+    const publisherTier = await tierForUser(authResult.userId)
+    const maxBytes = tierDefinition(publisherTier).maxArtifactBytes
+    if (tarballFile.size > maxBytes) {
+      const mb = (bytes: number): string => `${Math.round(bytes / (1024 * 1024))}MB`
       return Response.json(
-        { error: 'Tarball exceeds maximum size of 50MB' },
+        {
+          error: `Tarball is ${mb(tarballFile.size)}, over the ${mb(maxBytes)} limit for the ${tierDefinition(publisherTier).name} plan`,
+          ...(publisherTier === 'free'
+            ? { hint: 'Pro raises this to 250MB, Team to 1GB: pantry subscribe pro' }
+            : {}),
+        },
         { status: 413, headers: corsHeaders },
       )
     }
@@ -2935,6 +3141,12 @@ async function handlePublisherApi(
       }
       const stats = await analyticsStorage.getPackageStats(name)
       const commits = await registry.getPackageCommits(name, 15)
+      // Free accounts see the last 30 days; paid plans get the whole history.
+      // The data is kept either way — this is what the plan buys, not a reason
+      // to throw away someone's numbers.
+      const tier = await auth.getTier(user.email)
+      const retentionDays = tierDefinition(tier).analyticsRetentionDays
+      const timeline = await analyticsStorage.getDownloadTimeline(name, retentionDays)
       return Response.json({
         package: record,
         stats: {
@@ -2942,6 +3154,8 @@ async function handlePublisherApi(
           downloads30d: stats?.monthlyDownloads ?? 0,
           weeklyDownloads: stats?.weeklyDownloads ?? 0,
         },
+        timeline,
+        analytics: { tier, retentionDays, truncated: retentionDays < 3650 },
         commits,
       }, { headers: corsHeaders })
     }
@@ -2967,6 +3181,21 @@ async function handlePublisherApi(
       if (!record.publishedBy && !admin) {
         await registry.claimPublisherPackage(name, user.email)
       }
+
+      // Hiding a package from search is a paid feature. Refuse the change
+      // rather than silently saving a setting that wouldn't be honoured.
+      const settings = body.settings as Record<string, unknown> | undefined
+      if (settings?.visibility === 'unlisted' && !admin) {
+        const tier = await auth.getTier(user.email)
+        if (!tierDefinition(tier).privatePackages) {
+          return Response.json({
+            error: 'Unlisted packages are a Pro feature',
+            hint: 'Subscribe at /pricing, or with: pantry subscribe pro',
+            tier,
+          }, { status: 402, headers: corsHeaders })
+        }
+      }
+
       const updated = await registry.updatePublisherPackage(name, user.email, {
         description: body.description,
         homepage: body.homepage,

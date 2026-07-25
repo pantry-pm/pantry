@@ -448,11 +448,32 @@ export class BuildStatusStore {
       this.snapshot.scheduleSave()
   }
 
-  requestRebuild(domain: string): boolean {
+  /**
+   * Queue a rebuild. `priority` puts it at the front — what a paid plan buys is
+   * position in the queue, not a separate queue, so builders keep draining one
+   * list in order and need no changes.
+   *
+   * A domain already queued isn't re-queued, but a priority request for one
+   * that's waiting does move it up: asking again from a paid account should do
+   * something.
+   */
+  requestRebuild(domain: string, priority = false): boolean {
     const d = String(domain || '').trim()
-    if (!d || this.queue.includes(d))
-      return false
-    this.queue.push(d)
+    if (!d) return false
+
+    const queuedAt = this.queue.indexOf(d)
+    if (queuedAt !== -1) {
+      if (!priority || queuedAt === 0) return false
+      this.queue.splice(queuedAt, 1)
+      this.queue.unshift(d)
+      this.snapshot.scheduleSave()
+      this.emit()
+      return true
+    }
+
+    if (priority) this.queue.unshift(d)
+    else this.queue.push(d)
+
     this.snapshot.scheduleSave()
     this.emit()
     return true

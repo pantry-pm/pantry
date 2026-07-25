@@ -33,6 +33,13 @@
  */
 
 import type { MetadataStorage, PackagePaywall, PackageAccessGrant } from './types'
+import {
+  calculateFee,
+  isDiscovery,
+  type SaleOrigin,
+  type Tier,
+  type TierDefinition,
+} from './subscriptions'
 
 // ---------------------------------------------------------------------------
 // Stripe configuration
@@ -53,17 +60,6 @@ function stripeWebhookSecret(): string {
 /** Whether payments are configured at all. */
 export function paymentsEnabled(): boolean {
   return stripeSecretKey().length > 0
-}
-
-/**
- * The platform's cut of a sale, in basis points (100 = 1%). Only applies when
- * the publisher has connected a payout account; without one the whole charge
- * stays on the platform account and there is nothing to take a fee from.
- */
-function platformFeeBps(): number {
-  const raw = Number.parseInt(process.env.PANTRY_PLATFORM_FEE_BPS || '0', 10)
-  if (!Number.isFinite(raw) || raw < 0) return 0
-  return Math.min(raw, 5000) // never more than half
 }
 
 /**
@@ -367,6 +363,10 @@ export interface CheckoutRequest {
   /** The account being charged. Entitlement is granted to this address. */
   email: string
   baseUrl: string
+  /** The seller's plan, which sets our commission. Defaults to free (10%). */
+  sellerTier?: Tier
+  /** Where the sale came from — `site` adds the 3% discovery fee. */
+  origin?: SaleOrigin
 }
 
 /**
@@ -393,7 +393,12 @@ export async function createCheckoutSession(
     throw new Error('This package has a price but no Stripe price — the publisher should save it again')
 
   const encoded = encodeURIComponent(packageName)
-  const fee = platformFeeBps()
+  const origin: SaleOrigin = request.origin || 'cli'
+  const fee = calculateFee({
+    amount: paywall.price,
+    sellerTier: request.sellerTier || 'free',
+    discoveredOnSite: isDiscovery(origin),
+  })
 
   const session = await stripeRequest('POST', '/checkout/sessions', {
     'mode': 'payment',
@@ -410,13 +415,23 @@ export async function createCheckoutSession(
     'cancel_url': `${baseUrl}/pkg/${encoded}`,
     'metadata[package_name]': packageName,
     'metadata[buyer_email]': email,
-    // Marketplace payouts: with a connected account the money lands there and
-    // the platform keeps its fee; without one it stays on the platform account.
+    // Recorded so a payout can be explained months later, when nobody
+    // remembers which plan the seller was on or where the click came from.
+    'metadata[sale_origin]': origin,
+    'metadata[fee_bps]': String(fee.totalBps),
+    'metadata[seller_tier]': request.sellerTier || 'free',
+    // Marketplace payouts. With a connected account the sale settles there and
+    // we keep `application_fee_amount`; `on_behalf_of` makes that account the
+    // settlement merchant, so Stripe's processing fee comes out of the seller's
+    // side and our percentage is net rather than "minus whatever the card cost".
+    // Without a connected account there is nobody to transfer to, so the whole
+    // charge stays on the platform account and no fee is split out.
     ...(paywall.stripeAccountId
       ? {
           'payment_intent_data[transfer_data][destination]': paywall.stripeAccountId,
-          ...(fee > 0
-            ? { 'payment_intent_data[application_fee_amount]': String(Math.round((paywall.price * fee) / 10_000)) }
+          'payment_intent_data[on_behalf_of]': paywall.stripeAccountId,
+          ...(fee.applicationFee > 0
+            ? { 'payment_intent_data[application_fee_amount]': String(fee.applicationFee) }
             : {}),
         }
       : {}),
@@ -426,17 +441,145 @@ export async function createCheckoutSession(
 }
 
 // ---------------------------------------------------------------------------
+// Subscriptions
+// ---------------------------------------------------------------------------
+
+/**
+ * Find (or create) the recurring Stripe price for a tier.
+ *
+ * Keyed on `lookup_key` rather than an id in configuration: the registry can
+ * then be pointed at a fresh Stripe account and set itself up, and there is no
+ * environment variable to get wrong. Created prices are cached per process
+ * because this runs on the checkout path.
+ */
+const _tierPriceCache = new Map<string, string>()
+
+export async function ensureTierPrice(tier: TierDefinition): Promise<string> {
+  if (!tier.stripeLookupKey) throw new Error(`${tier.name} is not a paid tier`)
+
+  const cached = _tierPriceCache.get(tier.stripeLookupKey)
+  if (cached) return cached
+
+  const existing = await stripeRequest('GET', `/prices?lookup_keys[]=${encodeURIComponent(tier.stripeLookupKey)}&active=true&limit=1`)
+  if (existing?.data?.length > 0) {
+    _tierPriceCache.set(tier.stripeLookupKey, existing.data[0].id)
+    return existing.data[0].id
+  }
+
+  const product = await stripeRequest('POST', '/products', {
+    name: `pantry ${tier.name}`,
+    description: `pantry registry ${tier.name} plan`,
+    metadata: { pantry_tier: tier.id },
+  })
+
+  const price = await stripeRequest('POST', '/prices', {
+    product: product.id,
+    unit_amount: String(tier.price),
+    currency: 'usd',
+    recurring: { interval: 'month' },
+    lookup_key: tier.stripeLookupKey,
+  })
+
+  _tierPriceCache.set(tier.stripeLookupKey, price.id)
+  return price.id
+}
+
+/** Start a subscription checkout for one account. */
+export async function createSubscriptionCheckout(options: {
+  tier: TierDefinition
+  email: string
+  baseUrl: string
+  stripeCustomerId?: string
+}): Promise<{ url: string }> {
+  if (!paymentsEnabled())
+    throw new Error('Payments are not configured on this registry')
+  if (!options.tier.stripeLookupKey)
+    throw new Error('The free plan does not need a subscription')
+
+  const priceId = await ensureTierPrice(options.tier)
+
+  const session = await stripeRequest('POST', '/checkout/sessions', {
+    'mode': 'subscription',
+    'line_items[0][price]': priceId,
+    'line_items[0][quantity]': '1',
+    // Reuse the customer when we know it, so a resubscribe doesn't create a
+    // second customer with the same email and split their billing history.
+    ...(options.stripeCustomerId ? { customer: options.stripeCustomerId } : { customer_email: options.email }),
+    'success_url': `${options.baseUrl}/account?subscribed=${options.tier.id}`,
+    'cancel_url': `${options.baseUrl}/pricing`,
+    'metadata[pantry_tier]': options.tier.id,
+    'metadata[account_email]': options.email,
+    'subscription_data[metadata][pantry_tier]': options.tier.id,
+    'subscription_data[metadata][account_email]': options.email,
+  })
+
+  return { url: session.url }
+}
+
+/** A link into Stripe's billing portal, where people change or cancel a plan. */
+export async function createBillingPortalSession(customerId: string, returnUrl: string): Promise<{ url: string }> {
+  if (!paymentsEnabled())
+    throw new Error('Payments are not configured on this registry')
+
+  const session = await stripeRequest('POST', '/billing_portal/sessions', {
+    customer: customerId,
+    return_url: returnUrl,
+  })
+  return { url: session.url }
+}
+
+/** What a subscription webhook means for an account. */
+export interface SubscriptionChange {
+  email: string
+  tier: string
+  status: string
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  currentPeriodEnd?: string
+}
+
+/**
+ * Read a Stripe subscription object into the shape we store.
+ *
+ * The tier comes from the subscription's own metadata rather than from the
+ * price id, so a price rotated in Stripe doesn't strand every existing
+ * subscriber on a plan we can no longer identify.
+ */
+export function subscriptionChangeFrom(object: any): SubscriptionChange | null {
+  const email = object?.metadata?.account_email
+  const tier = object?.metadata?.pantry_tier
+  if (!email || !tier) return null
+
+  return {
+    email,
+    tier,
+    status: object.cancel_at_period_end && object.status === 'active' ? 'canceled' : (object.status || 'none'),
+    stripeCustomerId: typeof object.customer === 'string' ? object.customer : object.customer?.id,
+    stripeSubscriptionId: object.id,
+    currentPeriodEnd: object.current_period_end
+      ? new Date(object.current_period_end * 1000).toISOString()
+      : undefined,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Webhook
 // ---------------------------------------------------------------------------
 
 const processedWebhookEvents = new Map<string, number>() // eventId -> timestamp
 const WEBHOOK_DEDUP_TTL = 10 * 60 * 1000 // 10 minutes
 
+/**
+ * Handle a webhook from Stripe: a package purchase, or a subscription changing
+ * state. `onSubscription` applies the latter and is absent on registries that
+ * have no accounts to apply it to.
+ */
 export async function handleStripeWebhook(
   storage: MetadataStorage,
   rawBody: string,
   signature: string,
-): Promise<{ processed: boolean, granted?: string }> {
+  onSubscription?: (change: SubscriptionChange) => Promise<void>,
+): Promise<{ processed: boolean, granted?: string, subscription?: string }> {
   if (!stripeWebhookSecret())
     throw new Error('STRIPE_WEBHOOK_SECRET not configured')
 
@@ -455,8 +598,42 @@ export async function handleStripeWebhook(
     }
   }
 
+  // Subscription lifecycle. `deleted` is the only one that must downgrade;
+  // everything else is Stripe telling us the current state, which we mirror.
+  if (event.type?.startsWith('customer.subscription.') && onSubscription) {
+    const change = subscriptionChangeFrom(event.data.object)
+    if (change) {
+      const applied: SubscriptionChange = event.type === 'customer.subscription.deleted'
+        ? { ...change, status: 'canceled' }
+        : change
+      await onSubscription(applied)
+      return { processed: true, subscription: `${applied.email}:${applied.tier}:${applied.status}` }
+    }
+    return { processed: false }
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
+
+    // A subscription checkout completing: the subscription events carry the
+    // detail, but acting here too means the plan is live the moment someone
+    // lands back on their account page rather than a webhook later.
+    if (session.mode === 'subscription' && onSubscription) {
+      const email: string | undefined = session.metadata?.account_email
+      const tier: string | undefined = session.metadata?.pantry_tier
+      if (email && tier) {
+        await onSubscription({
+          email,
+          tier,
+          status: 'active',
+          stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id,
+          stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+        })
+        return { processed: true, subscription: `${email}:${tier}:active` }
+      }
+      return { processed: false }
+    }
+
     const packageName: string | undefined = session.metadata?.package_name
     const email: string | undefined = session.metadata?.buyer_email
     // A session can complete with payment still pending (bank debits). Only an

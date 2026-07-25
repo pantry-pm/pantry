@@ -23,6 +23,7 @@ import type {
   TokenValidationResult,
   User,
 } from './types'
+import { effectiveTier, tierOf, type AccountSubscription, type Tier } from './subscriptions'
 import { DynamoDBClient } from './storage/dynamodb-client'
 import type { S3Client } from './storage/aws-client'
 import { createS3Client, resolveStorageProvider } from './storage/provider'
@@ -361,9 +362,84 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role || 'user',
+      subscription: user.subscription,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }
+  }
+
+  /** The stored subscription for an account, or null when it is on Free. */
+  async getSubscription(email: string): Promise<AccountSubscription | null> {
+    const user = await this.storage.getUser(email.toLowerCase().trim())
+    if (!user?.subscription) return null
+    return {
+      tier: tierOf(user.subscription.tier),
+      status: (user.subscription.status || 'none') as AccountSubscription['status'],
+      stripeCustomerId: user.subscription.stripeCustomerId,
+      stripeSubscriptionId: user.subscription.stripeSubscriptionId,
+      currentPeriodEnd: user.subscription.currentPeriodEnd,
+      updatedAt: user.subscription.updatedAt,
+    }
+  }
+
+  /**
+   * The tier an account is entitled to right now, which is not the same as the
+   * tier it is billed for: a failed payment keeps its benefits while Stripe
+   * retries, and a cancellation keeps them until the paid period ends.
+   */
+  async getTier(email: string | null | undefined): Promise<Tier> {
+    if (!email || email === '_admin') return 'free'
+    return effectiveTier(await this.getSubscription(email))
+  }
+
+  /**
+   * Record what Stripe says about a subscription.
+   *
+   * Read-modify-write on the whole user rather than a field update, because
+   * that is the only operation every storage backend has in common. The write
+   * is small and subscription changes are rare, so the race window is
+   * theoretical — and Stripe is the source of truth either way, so a lost
+   * update is corrected by the next webhook.
+   */
+  async setSubscription(email: string, sub: AccountSubscription | null): Promise<void> {
+    const normalized = email.toLowerCase().trim()
+    const user = await this.storage.getUser(normalized)
+    if (!user) throw new AuthError(`No such account: ${email}`, 404)
+
+    const next: User = {
+      ...user,
+      updatedAt: new Date().toISOString(),
+    }
+
+    if (!sub || sub.tier === 'free') {
+      delete next.subscription
+    }
+    else {
+      next.subscription = {
+        tier: sub.tier,
+        status: sub.status,
+        stripeCustomerId: sub.stripeCustomerId,
+        stripeSubscriptionId: sub.stripeSubscriptionId,
+        currentPeriodEnd: sub.currentPeriodEnd,
+        updatedAt: new Date().toISOString(),
+      }
+    }
+
+    await this.storage.upsertUser(next)
+  }
+
+  /** Find the account a Stripe customer belongs to, for webhook handling. */
+  async findByStripeCustomer(customerId: string, candidateEmail?: string): Promise<string | null> {
+    // Stripe sends the customer's email on the events we care about, so a
+    // lookup by email confirms the mapping without needing a second index.
+    if (candidateEmail) {
+      const sub = await this.getSubscription(candidateEmail)
+      if (sub?.stripeCustomerId === customerId || !sub?.stripeCustomerId) {
+        const user = await this.storage.getUser(candidateEmail.toLowerCase().trim())
+        if (user) return user.email
+      }
+    }
+    return null
   }
 }
 
@@ -520,6 +596,9 @@ export class DynamoDBAuthStorage implements AuthStorage {
       name: data.name,
       passwordHash: data.passwordHash,
       role: data.role === 'admin' ? 'admin' : 'user',
+      // Stored as JSON: the shape is Stripe's to change, and a nested map here
+      // would mean a marshalling change every time it does.
+      ...(data.subscription ? { subscription: JSON.parse(data.subscription) } : {}),
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     }
@@ -535,6 +614,7 @@ export class DynamoDBAuthStorage implements AuthStorage {
         name: user.name,
         passwordHash: user.passwordHash,
         role: user.role || 'user',
+        ...(user.subscription ? { subscription: JSON.stringify(user.subscription) } : {}),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }),
@@ -552,6 +632,7 @@ export class DynamoDBAuthStorage implements AuthStorage {
         name: user.name,
         passwordHash: user.passwordHash,
         role: user.role || 'user',
+        ...(user.subscription ? { subscription: JSON.stringify(user.subscription) } : {}),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }),
