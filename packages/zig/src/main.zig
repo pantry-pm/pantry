@@ -2704,6 +2704,11 @@ pub fn main() !void {
     io_helper.initializeIo();
     defer io_helper.deinitializeIo();
 
+    // Point HTTP at the configured registry (PANTRY_REGISTRY_URL) and attach
+    // its stored credential, so installs work against a private registry
+    // without every call site knowing about either. No-op by default.
+    lib.registry.endpoint.install();
+
     // Release builds use the fast SMP allocator — building the full command
     // tree (~50 commands, hundreds of small allocations) runs on every single
     // invocation, including the hot `shell:lookup` fired on each `cd`. The

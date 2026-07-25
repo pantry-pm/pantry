@@ -30,6 +30,7 @@ pub const registry = struct {
     pub const core = @import("registry/core.zig");
     pub const npm = @import("registry/npm.zig");
     pub const custom = @import("registry/custom.zig");
+    pub const endpoint = @import("registry/endpoint.zig");
 };
 pub const workspace = @import("workspace.zig");
 pub const migrate = struct {

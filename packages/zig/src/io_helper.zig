@@ -1491,6 +1491,65 @@ pub const HttpError = error{
     FileWriteFailed,
 };
 
+/// How an outgoing request should be adjusted for the registry it is aimed at:
+/// sent somewhere else (a self-hosted registry) and/or authenticated (a private
+/// one). Both fields, when present, are owned by the allocator handed to the
+/// provider and freed by the caller.
+///
+/// The provider itself lives in `registry/endpoint.zig`; this module only holds
+/// the shape and the hook, so the low-level HTTP code carries no knowledge of
+/// credentials or configuration.
+pub const RequestDecoration = struct {
+    url: ?[]const u8 = null,
+    authorization: ?[]const u8 = null,
+
+    pub fn deinit(self: RequestDecoration, allocator: std.mem.Allocator) void {
+        if (self.url) |v| allocator.free(v);
+        if (self.authorization) |v| allocator.free(v);
+    }
+
+    pub fn effectiveUrl(self: RequestDecoration, original: []const u8) []const u8 {
+        return self.url orelse original;
+    }
+
+    pub fn headers(self: RequestDecoration, buf: *[1]std.http.Header) []const std.http.Header {
+        if (self.authorization) |value| {
+            buf[0] = .{ .name = "Authorization", .value = value };
+            return buf[0..1];
+        }
+        return &.{};
+    }
+
+    pub fn isEmpty(self: RequestDecoration) bool {
+        return self.url == null and self.authorization == null;
+    }
+};
+
+/// Installed once at startup by `registry.endpoint.install()`. Unset (the case
+/// in tests and in any embedding that doesn't want it) means every request goes
+/// out exactly as written.
+pub var decorate_request: ?*const fn (std.mem.Allocator, []const u8) RequestDecoration = null;
+
+/// Ask the installed provider how to send this request.
+pub fn decorateRequest(allocator: std.mem.Allocator, url: []const u8) RequestDecoration {
+    const provider = decorate_request orelse return .{};
+    return provider(allocator, url);
+}
+
+/// Merge an `Authorization` decoration into a caller's own header list.
+/// `buf` must have room for `extra.len + 1` headers.
+fn mergedHeaders(
+    buf: []std.http.Header,
+    extra: []const std.http.Header,
+    decoration: RequestDecoration,
+) []const std.http.Header {
+    const auth = decoration.authorization orelse return extra;
+    if (buf.len < extra.len + 1) return extra;
+    @memcpy(buf[0..extra.len], extra);
+    buf[extra.len] = .{ .name = "Authorization", .value = auth };
+    return buf[0 .. extra.len + 1];
+}
+
 /// Fetch a URL's response body into allocated memory (replaces `curl -sL <url>`).
 /// Handles HTTPS (native TLS), redirects (up to 10), and content decompression.
 /// Caller owns the returned slice and must free it with `allocator`.
@@ -1501,16 +1560,21 @@ pub fn httpGet(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
     };
     defer client.deinit();
 
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    var header_buf: [1]std.http.Header = undefined;
+
     var alloc_writer = std.Io.Writer.Allocating.init(allocator);
     errdefer alloc_writer.deinit();
 
     var redirect_buf: [8192]u8 = undefined;
 
     const result = client.fetch(.{
-        .location = .{ .url = url },
+        .location = .{ .url = decoration.effectiveUrl(url) },
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
         .redirect_behavior = @fromBackingInt(@intCast(10)),
+        .extra_headers = decoration.headers(&header_buf),
     }) catch {
         return error.HttpRequestFailed;
     };
@@ -1530,12 +1594,33 @@ pub fn httpGet(allocator: std.mem.Allocator, url: []const u8) ![]u8 {
 /// Download a URL to a file on disk via curl subprocess. Returns on success;
 /// errors if curl is not found or exits non-zero. `-fsSL` fails on HTTP errors,
 /// stays silent, and follows redirects.
-fn curlDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path: []const u8) !void {
+fn curlDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path: []const u8, auth_header: ?[]const u8) !void {
     const curl_paths = [_][]const u8{ "/usr/bin/curl", "curl" };
     var tried = false;
     for (curl_paths) |curl| {
-        const args = [_][]const u8{ curl, "-fsSL", "--connect-timeout", "30", "--retry", "3", "--max-time", "300", "-o", dest_path, url };
-        const result = childRun(allocator, &args) catch continue;
+        // curl drops Authorization when a redirect crosses hosts, so a private
+        // registry can still hand out presigned object-storage URLs without the
+        // token following the download off-site.
+        var args_buf: [13][]const u8 = undefined;
+        var argc: usize = 0;
+        for ([_][]const u8{ curl, "-fsSL", "--connect-timeout", "30", "--retry", "3", "--max-time", "300" }) |a| {
+            args_buf[argc] = a;
+            argc += 1;
+        }
+        if (auth_header) |header| {
+            args_buf[argc] = "-H";
+            argc += 1;
+            args_buf[argc] = header;
+            argc += 1;
+        }
+        args_buf[argc] = "-o";
+        argc += 1;
+        args_buf[argc] = dest_path;
+        argc += 1;
+        args_buf[argc] = url;
+        argc += 1;
+        const args = args_buf[0..argc];
+        const result = childRun(allocator, args) catch continue;
         defer allocator.free(result.stdout);
         defer allocator.free(result.stderr);
         tried = true;
@@ -1557,7 +1642,17 @@ fn curlDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path: []
 /// these correctly and is already relied on for metadata fetches, so prefer it
 /// and fall back to the Zig client only when curl is unavailable.
 pub fn httpDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path: []const u8) !void {
-    if (curlDownloadFile(allocator, url, dest_path)) {
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    const effective_url = decoration.effectiveUrl(url);
+
+    const curl_header: ?[]const u8 = if (decoration.authorization) |value|
+        std.fmt.allocPrint(allocator, "Authorization: {s}", .{value}) catch null
+    else
+        null;
+    defer if (curl_header) |h| allocator.free(h);
+
+    if (curlDownloadFile(allocator, effective_url, dest_path, curl_header)) {
         return;
     } else |_| {
         // curl missing or failed — fall through to the native client below.
@@ -1576,12 +1671,14 @@ pub fn httpDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path
     var file_writer = file.writerStreaming(io, &write_buf);
 
     var redirect_buf: [8192]u8 = undefined;
+    var header_buf: [1]std.http.Header = undefined;
 
     const result = client.fetch(.{
-        .location = .{ .url = url },
+        .location = .{ .url = effective_url },
         .response_writer = &file_writer.interface,
         .redirect_buffer = &redirect_buf,
         .redirect_behavior = @fromBackingInt(@intCast(10)),
+        .extra_headers = decoration.headers(&header_buf),
     }) catch return error.HttpRequestFailed;
 
     // Flush any remaining buffered data to disk
@@ -1636,7 +1733,11 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
         allocator.destroy(stream);
     }
 
-    const uri = std.Uri.parse(url) catch return error.InvalidUrl;
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    var header_buf: [1]std.http.Header = undefined;
+
+    const uri = std.Uri.parse(decoration.effectiveUrl(url)) catch return error.InvalidUrl;
 
     stream.req = stream.client.request(.GET, uri, .{
         .redirect_behavior = @fromBackingInt(@intCast(10)),
@@ -1645,6 +1746,7 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
             // Don't request compression for file downloads — we want raw bytes
             .accept_encoding = .{ .override = "identity" },
         },
+        .extra_headers = decoration.headers(&header_buf),
     }) catch return error.NetworkError;
     errdefer stream.req.deinit();
 
@@ -1662,7 +1764,15 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
         // 404s on the pantry registry are expected for packages without pre-built
         // binaries — they fall back to npm/source silently. Only surface non-404s.
         const style = @import("cli/style.zig");
-        if (!style.isCI() and status_code != 404) {
+        // A private registry answers 401/403 to anyone without a credential.
+        // Say so plainly — "HTTP 401" during an install otherwise looks like an
+        // outage rather than a missing token.
+        if (status_code == 401 or status_code == 403) {
+            style.print(
+                "  {s}HTTP {d} from {s} — this registry requires authentication.\n  Store a token with: pantry token set --registry <registry-url>{s}\n",
+                .{ style.dim, status_code, url, style.reset },
+            );
+        } else if (!style.isCI() and status_code != 404) {
             style.print("  {s}HTTP {d} from {s}{s}\n", .{ style.dim, status_code, url, style.reset });
         }
         return error.HttpRequestFailed;
@@ -1674,16 +1784,21 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
 /// Like `httpGet`, but reuses an existing `std.http.Client` for connection pooling.
 /// The caller retains ownership of `client` — do NOT deinit it here.
 pub fn httpGetWithClient(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8) ![]u8 {
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    var header_buf: [1]std.http.Header = undefined;
+
     var alloc_writer = std.Io.Writer.Allocating.init(allocator);
     errdefer alloc_writer.deinit();
 
     var redirect_buf: [8192]u8 = undefined;
 
     const result = client.fetch(.{
-        .location = .{ .url = url },
+        .location = .{ .url = decoration.effectiveUrl(url) },
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
         .redirect_behavior = @fromBackingInt(@intCast(10)),
+        .extra_headers = decoration.headers(&header_buf),
     }) catch {
         return error.HttpRequestFailed;
     };
@@ -1701,17 +1816,24 @@ pub fn httpGetWithClient(client: *std.http.Client, allocator: std.mem.Allocator,
 /// HTTP GET with extra headers using a shared client for connection pooling.
 /// Used for npm abbreviated metadata (application/vnd.npm.install-v1+json).
 pub fn httpGetWithClientAndHeaders(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header) ![]u8 {
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    // Caller headers plus at most one Authorization header. Callers pass a
+    // couple of Accept-style headers; anything longer keeps its own list and
+    // simply goes out unauthenticated rather than silently dropping headers.
+    var header_buf: [8]std.http.Header = undefined;
+
     var alloc_writer = std.Io.Writer.Allocating.init(allocator);
     errdefer alloc_writer.deinit();
 
     var redirect_buf: [8192]u8 = undefined;
 
     const result = client.fetch(.{
-        .location = .{ .url = url },
+        .location = .{ .url = decoration.effectiveUrl(url) },
         .response_writer = &alloc_writer.writer,
         .redirect_buffer = &redirect_buf,
         .redirect_behavior = @fromBackingInt(@intCast(10)),
-        .extra_headers = extra_headers,
+        .extra_headers = mergedHeaders(&header_buf, extra_headers, decoration),
     }) catch {
         return error.HttpRequestFailed;
     };
@@ -1808,13 +1930,17 @@ pub fn httpPostJson(allocator: std.mem.Allocator, url: []const u8, json_body: []
 
 /// HTTP POST with JSON body using a shared client for connection pooling.
 pub fn httpPostJsonWithClient(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, json_body: []const u8) ![]u8 {
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    var header_buf: [1]std.http.Header = undefined;
+
     var alloc_writer = std.Io.Writer.Allocating.init(allocator);
     errdefer alloc_writer.deinit();
 
     var redirect_buf: [8192]u8 = undefined;
 
     const result = client.fetch(.{
-        .location = .{ .url = url },
+        .location = .{ .url = decoration.effectiveUrl(url) },
         .method = .POST,
         .payload = json_body,
         .response_writer = &alloc_writer.writer,
@@ -1823,6 +1949,7 @@ pub fn httpPostJsonWithClient(client: *std.http.Client, allocator: std.mem.Alloc
         .headers = .{
             .content_type = .{ .override = "application/json" },
         },
+        .extra_headers = decoration.headers(&header_buf),
     }) catch {
         return error.HttpRequestFailed;
     };
