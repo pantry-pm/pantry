@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { createServer } from './server'
 import { createLocalRegistry } from './registry'
 import { AuthService, InMemoryAuthStorage } from './auth'
-import { accountSubject, formatPrice, parsePriceToCents, validatePriceConfig } from './paywall'
+import { accountSubject, encodeStripeParams, formatPrice, parsePriceToCents, validatePriceConfig } from './paywall'
 import { getAvailablePort } from './test-utils'
 
 const ADMIN_TOKEN = 'ptry_admin_token_for_paid_package_tests'
@@ -352,6 +352,30 @@ describe('paid packages', () => {
 
     it('formats what it parsed', () => {
       expect(formatPrice(parsePriceToCents('19.99')!, 'usd')).toBe('$19.99')
+    })
+
+    it('encodes nested Stripe params in bracket notation', () => {
+      // Regression: `String({...})` produced the literal "[object Object]" and
+      // Stripe answered 400 "Metadata must be a single object containing
+      // key-value pairs" — which no test caught, because no test called Stripe.
+      expect(encodeStripeParams({ name: 'pkg', metadata: { pantry_package: 'pkg' } })).toEqual([
+        ['name', 'pkg'],
+        ['metadata[pantry_package]', 'pkg'],
+      ])
+
+      expect(encodeStripeParams({
+        mode: 'payment',
+        line_items: [{ price: 'price_1', quantity: 1 }],
+        payment_intent_data: { transfer_data: { destination: 'acct_1' } },
+      })).toEqual([
+        ['mode', 'payment'],
+        ['line_items[0][price]', 'price_1'],
+        ['line_items[0][quantity]', '1'],
+        ['payment_intent_data[transfer_data][destination]', 'acct_1'],
+      ])
+
+      // Undefined values are dropped rather than sent as the string "undefined".
+      expect(encodeStripeParams({ a: 'x', b: undefined, c: null })).toEqual([['a', 'x']])
     })
 
     it('states why a price is invalid', () => {

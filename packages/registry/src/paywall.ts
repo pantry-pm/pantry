@@ -66,6 +66,40 @@ function platformFeeBps(): number {
   return Math.min(raw, 5000) // never more than half
 }
 
+/**
+ * Encode a body the way Stripe's API expects: form-encoded, with nested
+ * structures in bracket notation (`metadata[package]=x`, `line_items[0][price]=y`).
+ *
+ * Worth spelling out because the naive version — `String(value)` — turns a
+ * nested object into the literal text `[object Object]`, and Stripe answers
+ * with a 400 that names the parameter but not the reason.
+ */
+export function encodeStripeParams(body: Record<string, any>, prefix = ''): [string, string][] {
+  const out: [string, string][] = []
+
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null) continue
+    const name = prefix ? `${prefix}[${key}]` : key
+
+    if (Array.isArray(value)) {
+      value.forEach((item, i) => {
+        if (item !== null && typeof item === 'object')
+          out.push(...encodeStripeParams(item, `${name}[${i}]`))
+        else
+          out.push([`${name}[${i}]`, String(item)])
+      })
+    }
+    else if (typeof value === 'object') {
+      out.push(...encodeStripeParams(value, name))
+    }
+    else {
+      out.push([name, String(value)])
+    }
+  }
+
+  return out
+}
+
 async function stripeRequest(method: string, path: string, body?: Record<string, any>): Promise<any> {
   const key = stripeSecretKey()
   if (!key) throw new Error('STRIPE_SECRET_KEY not configured')
@@ -78,13 +112,7 @@ async function stripeRequest(method: string, path: string, body?: Record<string,
   let fetchBody: string | undefined
   if (body) {
     headers['Content-Type'] = 'application/x-www-form-urlencoded'
-    fetchBody = new URLSearchParams(
-      Object.entries(body).flatMap(([k, v]): [string, string][] => {
-        if (v === undefined || v === null) return []
-        if (Array.isArray(v)) return v.map((item, i) => [`${k}[${i}]`, String(item)] as [string, string])
-        return [[k, String(v)] as [string, string]]
-      }),
-    ).toString()
+    fetchBody = new URLSearchParams(encodeStripeParams(body)).toString()
   }
 
   const res = await fetch(url, { method, headers, body: fetchBody })
