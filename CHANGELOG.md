@@ -1,3 +1,125 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.48...v0.10.49)
+
+## 🚀 Features
+
+- build insurance, continuous alerts, SBOM export, org entitlements ([3c4dcfe](https://github.com/pantry-pm/pantry/commit/3c4dcfe)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: team seats, and only the owner may publish ([b50e00a](https://github.com/pantry-pm/pantry/commit/b50e00a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- pricing page, plan commands and the fee documented ([d04712c](https://github.com/pantry-pm/pantry/commit/d04712c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: subscription tiers and the marketplace fee ([a53adc9](https://github.com/pantry-pm/pantry/commit/a53adc9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **site**: show the price on a paid package's page ([74e46e2](https://github.com/pantry-pm/pantry/commit/74e46e2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: price a package, buy a package, take payments ([38ba4ca](https://github.com/pantry-pm/pantry/commit/38ba4ca)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: sell packages, with access tied to accounts ([67a4b21](https://github.com/pantry-pm/pantry/commit/67a4b21)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: add a registry command group for running your own ([dc7dfe5](https://github.com/pantry-pm/pantry/commit/dc7dfe5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: stand up a private registry in one command ([3698906](https://github.com/pantry-pm/pantry/commit/3698906)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: authenticate installs against a private registry ([89c4fd2](https://github.com/pantry-pm/pantry/commit/89c4fd2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: serve private registries behind authenticated reads ([9a34e1c](https://github.com/pantry-pm/pantry/commit/9a34e1c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: validate tokens per permission and provision members ([2996b51](https://github.com/pantry-pm/pantry/commit/2996b51)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: add a plugin surface for self-hosted registries ([358b752](https://github.com/pantry-pm/pantry/commit/358b752)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: add a shared registry remote-config helper ([2b7abf1](https://github.com/pantry-pm/pantry/commit/2b7abf1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: add `pantry token` commands ([9a6d9e8](https://github.com/pantry-pm/pantry/commit/9a6d9e8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: add a credential store for registry tokens ([bc09d54](https://github.com/pantry-pm/pantry/commit/bc09d54)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: lenient boolean inputs and recursive library packaging ([c2dd2a3](https://github.com/pantry-pm/pantry/commit/c2dd2a3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **install**: give libexec helpers the executable bit ([5532bd1](https://github.com/pantry-pm/pantry/commit/5532bd1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **installer**: restore the exec bit on bundled helpers, not just declared bins ([7324c87](https://github.com/pantry-pm/pantry/commit/7324c87)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: report why logsmith failed instead of just an exit code ([53a22e5](https://github.com/pantry-pm/pantry/commit/53a22e5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **site**: stop selling the fee, and three corrections ([1f4fbfe](https://github.com/pantry-pm/pantry/commit/1f4fbfe)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **add**: stop rewriting the manifest when saving a dependency ([6c72671](https://github.com/pantry-pm/pantry/commit/6c72671)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **resolver**: treat ^0.x as minor-pinned and exclude prereleases ([3584006](https://github.com/pantry-pm/pantry/commit/3584006)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: encode nested Stripe params in bracket notation ([96fc147](https://github.com/pantry-pm/pantry/commit/96fc147)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: explain a paid package instead of reporting a network error ([8fed46f](https://github.com/pantry-pm/pantry/commit/8fed46f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: write storage config where the registry reads it ([f2337fc](https://github.com/pantry-pm/pantry/commit/f2337fc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: resolve publish credentials through one path ([0c27594](https://github.com/pantry-pm/pantry/commit/0c27594)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: write the rotated token where the registry reads it ([39fdfe3](https://github.com/pantry-pm/pantry/commit/39fdfe3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **release**: make pantry release self-contained ([f702ec7](https://github.com/pantry-pm/pantry/commit/f702ec7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: replace assets on release updates ([e2bc11f](https://github.com/pantry-pm/pantry/commit/e2bc11f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **run**: forward child script options ([4dd24c4](https://github.com/pantry-pm/pantry/commit/4dd24c4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ♻️ Code Refactoring
+
+- call the selling fee what it is ([5a88293](https://github.com/pantry-pm/pantry/commit/5a88293)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: drop the registry shell scripts for the CLI ([07e7cdb](https://github.com/pantry-pm/pantry/commit/07e7cdb)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: drop deployment-specific defaults from rotation ([33306af](https://github.com/pantry-pm/pantry/commit/33306af)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- document team seats and who may publish what ([0e75345](https://github.com/pantry-pm/pantry/commit/0e75345)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: correct what client_reference_id does ([1e81e91](https://github.com/pantry-pm/pantry/commit/1e81e91)) _(by Chris <chrisbreuer93@gmail.com>)_
+- document paid packages ([513e00c](https://github.com/pantry-pm/pantry/commit/513e00c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- document private registries and the plugin API ([568ef63](https://github.com/pantry-pm/pantry/commit/568ef63)) _(by Chris <chrisbreuer93@gmail.com>)_
+- link the community as stacksjs.com/discord ([e06d309](https://github.com/pantry-pm/pantry/commit/e06d309)) _(by Chris <chrisbreuer93@gmail.com>)_
+- add a self-hosting guide ([c143a3c](https://github.com/pantry-pm/pantry/commit/c143a3c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- move deployment runbooks to the private ops repo ([fa58a69](https://github.com/pantry-pm/pantry/commit/fa58a69)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **auth**: document storing and syncing tokens ([8b7a424](https://github.com/pantry-pm/pantry/commit/8b7a424)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💅 Styles
+
+- **cli**: apply zig fmt to the token command module ([3d389c2](https://github.com/pantry-pm/pantry/commit/3d389c2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🤖 Continuous Integration
+
+- **deploy**: drive the registry deploy from repository variables ([9928593](https://github.com/pantry-pm/pantry/commit/9928593)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.49 ([ec1917f](https://github.com/pantry-pm/pantry/commit/ec1917f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update goreleaser.com to 2.17.1 ([b48b7d7](https://github.com/pantry-pm/pantry/commit/b48b7d7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, dozzle.dev ([e5bc053](https://github.com/pantry-pm/pantry/commit/e5bc053)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/tw93/mole, mise.jdx.dev ([b2504b0](https://github.com/pantry-pm/pantry/commit/b2504b0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, ziglang.org ([81bc99a](https://github.com/pantry-pm/pantry/commit/81bc99a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/tw93/mole to 1.48.0 ([1df5d46](https://github.com/pantry-pm/pantry/commit/1df5d46)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update quickwit.io to 0.9.0 ([fcd55ff](https://github.com/pantry-pm/pantry/commit/fcd55ff)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **scripts**: make the token rotation script host-agnostic ([a9eba96](https://github.com/pantry-pm/pantry/commit/a9eba96)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update ollama.ai to 0.32.4 ([f82e717](https://github.com/pantry-pm/pantry/commit/f82e717)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.100 ([4e602c6](https://github.com/pantry-pm/pantry/commit/4e602c6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ziglang.org to 0.17.0-dev.1464+6aff551f1 ([e7fabd0](https://github.com/pantry-pm/pantry/commit/e7fabd0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([ed4a83a](https://github.com/pantry-pm/pantry/commit/ed4a83a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([bcc13ff](https://github.com/pantry-pm/pantry/commit/bcc13ff)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([c170ae5](https://github.com/pantry-pm/pantry/commit/c170ae5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app diabrowser.com 1.41.0 → 1.41.1 ([dc061dc](https://github.com/pantry-pm/pantry/commit/dc061dc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, diabrowser.com, squawkhq.com ([55a2eda](https://github.com/pantry-pm/pantry/commit/55a2eda)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.99 ([ec17e46](https://github.com/pantry-pm/pantry/commit/ec17e46)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai, planetscale.com ([48f07c3](https://github.com/pantry-pm/pantry/commit/48f07c3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com to 26.721.41059 ([e205e3f](https://github.com/pantry-pm/pantry/commit/e205e3f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app codex.openai.com 26.721.31836 → 26.721.41059 ([a1040ef](https://github.com/pantry-pm/pantry/commit/a1040ef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update sqlite.org, vapoursynth.com ([b74b695](https://github.com/pantry-pm/pantry/commit/b74b695)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mise.jdx.dev to 2026.7.13 ([f8255f1](https://github.com/pantry-pm/pantry/commit/f8255f1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, casdoor.org, github.com/router-for-me/CLIProxyAPI ([9c00960](https://github.com/pantry-pm/pantry/commit/9c00960)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 3 apps ([94a06c1](https://github.com/pantry-pm/pantry/commit/94a06c1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update projen.io to 0.101.20 ([5000b05](https://github.com/pantry-pm/pantry/commit/5000b05)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, github.com/ggerganov/llama.cpp, ohmyposh.dev, traefik.io, whatsapp.com, ziglang.org ([1811823](https://github.com/pantry-pm/pantry/commit/1811823)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10106 ([7d07156](https://github.com/pantry-pm/pantry/commit/7d07156)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/ggerganov/llama.cpp, packer.io, projen.io ([f546a3b](https://github.com/pantry-pm/pantry/commit/f546a3b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update libreoffice.org, ohmyposh.dev ([1c08271](https://github.com/pantry-pm/pantry/commit/1c08271)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (codex.openai.com, insomnia.rest) ([57c95ec](https://github.com/pantry-pm/pantry/commit/57c95ec)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, cython.org, github.com/ggerganov/llama.cpp ([a7a8a1e](https://github.com/pantry-pm/pantry/commit/a7a8a1e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update insomnia.rest, railway.app ([1a542f5](https://github.com/pantry-pm/pantry/commit/1a542f5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com/code-server, github.com/ggerganov/llama.cpp ([dd65711](https://github.com/pantry-pm/pantry/commit/dd65711)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app bitwarden.com 2026.6.0 → 2026.7.0 ([b8b771b](https://github.com/pantry-pm/pantry/commit/b8b771b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bitwarden.com to 2026.7.0 ([e181cf1](https://github.com/pantry-pm/pantry/commit/e181cf1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update kaggle.com, skaffold.dev, zarf.dev ([b42e136](https://github.com/pantry-pm/pantry/commit/b42e136)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (codex.openai.com, diabrowser.com) ([61c66e8](https://github.com/pantry-pm/pantry/commit/61c66e8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp ([44221bf](https://github.com/pantry-pm/pantry/commit/44221bf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update etcd.io, redis.io ([5510ec5](https://github.com/pantry-pm/pantry/commit/5510ec5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, ohmyposh.dev, pnpm.io, systemd.io ([2d9bde3](https://github.com/pantry-pm/pantry/commit/2d9bde3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update deno.land, diabrowser.com, encore.dev, fluxcd.io/flux2, github.com/chainguard-dev/apko, ollama.ai, openshift.com, vale.sh, ziglang.org ([046f3a4](https://github.com/pantry-pm/pantry/commit/046f3a4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update digitalocean.com/doctl, planetscale.com, pulumi.io, rabbitmq.com, scaleway.com ([2699dbb](https://github.com/pantry-pm/pantry/commit/2699dbb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev, wasmer.io, whatsapp.com ([7d4b353](https://github.com/pantry-pm/pantry/commit/7d4b353)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app whatsapp.com 2.26.29.18 → 2.26.29.20 ([9a52ba7](https://github.com/pantry-pm/pantry/commit/9a52ba7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, getsops.io, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI ([84393a9](https://github.com/pantry-pm/pantry/commit/84393a9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([591f9dc](https://github.com/pantry-pm/pantry/commit/591f9dc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, materialize.com, mise.jdx.dev ([f44c9de](https://github.com/pantry-pm/pantry/commit/f44c9de)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app zed.dev 1.11.3 → 1.12.0 ([0c3d2a1](https://github.com/pantry-pm/pantry/commit/0c3d2a1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update zed.dev to 1.12.0 ([5d36cfd](https://github.com/pantry-pm/pantry/commit/5d36cfd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([b574dd1](https://github.com/pantry-pm/pantry/commit/b574dd1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, github.com/ggerganov/llama.cpp, pkgx.sh, pnpm.io, railway.app, rioterm.com, tea.xyz ([95a686b](https://github.com/pantry-pm/pantry/commit/95a686b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.47...v0.10.48)
 
 ## 🐛 Bug Fixes
