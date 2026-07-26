@@ -310,3 +310,385 @@ test "stripTrailingCommas - preserves commas in strings" {
     const msg = parsed.value.object.get("msg").?.string;
     try std.testing.expectEqualStrings("hello,}world", msg);
 }
+
+/// Sets `"<name>": "<version>"` inside the `<section>` object, editing the
+/// source text in place rather than reserializing it.
+///
+/// `pantry add` used to strip comments, parse, and write the tree back out.
+/// That is lossless only for data: every comment and every formatting choice in
+/// the file was discarded. On a `.jsonc` file — a format whose entire reason to
+/// exist is comments — that turns adding one dependency into a rewrite of the
+/// whole manifest.
+///
+/// This walks the raw bytes instead, touching only the one value (or inserting
+/// one line), so everything else survives byte for byte.
+///
+/// Returns null when the shape is not something it can edit confidently: no
+/// such section, unbalanced braces, a non-object section. Callers fall back to
+/// the reserializing path, so a file this cannot handle is never made worse.
+///
+/// Caller owns the returned buffer.
+pub fn setDependency(
+    allocator: std.mem.Allocator,
+    source: []const u8,
+    section: []const u8,
+    name: []const u8,
+    version: []const u8,
+) !?[]u8 {
+    const section_body = findSectionBody(source, section) orelse {
+        // The key exists but is not an object (an array, a string, …).
+        // Creating another would leave a duplicate key, so give up and let the
+        // caller decide.
+        if (indexOfKey(source, 0, section) != null) return null;
+        return createSection(allocator, source, section, name, version);
+    };
+
+    if (findKeyValueSpan(source, section_body, name)) |span| {
+        // Present already: replace just the value token, quotes included.
+        var out: std.ArrayList(u8) = .empty;
+        errdefer out.deinit(allocator);
+        try out.appendSlice(allocator, source[0..span.value_start]);
+        try out.append(allocator, '"');
+        try out.appendSlice(allocator, version);
+        try out.append(allocator, '"');
+        try out.appendSlice(allocator, source[span.value_end..]);
+        return try out.toOwnedSlice(allocator);
+    }
+
+    // Absent: insert as the first entry, matching the indentation and comma
+    // style of whatever is already there.
+    const indent = detectEntryIndent(source, section_body);
+    const has_entries = firstNonSpace(source[section_body.start..section_body.end]) != null;
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+    try out.appendSlice(allocator, source[0..section_body.start]);
+    try out.append(allocator, '\n');
+    try out.appendSlice(allocator, indent);
+    try out.append(allocator, '"');
+    try out.appendSlice(allocator, name);
+    try out.appendSlice(allocator, "\": \"");
+    try out.appendSlice(allocator, version);
+    try out.append(allocator, '"');
+    if (has_entries) try out.append(allocator, ',');
+    try out.appendSlice(allocator, source[section_body.start..]);
+    return try out.toOwnedSlice(allocator);
+}
+
+/// Adds `"<section>": { "<name>": "<version>" }` as the first member of the
+/// root object.
+///
+/// Without this, `pantry add --dev` on a manifest that has no
+/// `devDependencies` yet fell through to the reserializing path — which not
+/// only dropped every comment but wrote the package at the ROOT of the
+/// document rather than inside the section.
+///
+/// Returns null when the root is not an object.
+fn createSection(
+    allocator: std.mem.Allocator,
+    source: []const u8,
+    section: []const u8,
+    name: []const u8,
+    version: []const u8,
+) !?[]u8 {
+    const root_open = std.mem.indexOfScalar(u8, source, '{') orelse return null;
+    // Anything before the first brace must be whitespace, or this is not a
+    // plain JSON document and guessing would corrupt it.
+    for (source[0..root_open]) |c| {
+        if (c != ' ' and c != '\t' and c != '\n' and c != '\r') return null;
+    }
+
+    const body = Span{ .start = root_open + 1, .end = matchBrace(source, root_open) orelse return null };
+    const indent = detectEntryIndent(source, body);
+    const has_entries = firstNonSpace(source[body.start..body.end]) != null;
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+    try out.appendSlice(allocator, source[0..body.start]);
+    try out.append(allocator, '\n');
+    try out.appendSlice(allocator, indent);
+    try out.append(allocator, '"');
+    try out.appendSlice(allocator, section);
+    try out.appendSlice(allocator, "\": {\n");
+    try out.appendSlice(allocator, indent);
+    try out.appendSlice(allocator, indent);
+    try out.append(allocator, '"');
+    try out.appendSlice(allocator, name);
+    try out.appendSlice(allocator, "\": \"");
+    try out.appendSlice(allocator, version);
+    try out.appendSlice(allocator, "\"\n");
+    try out.appendSlice(allocator, indent);
+    try out.append(allocator, '}');
+    if (has_entries) try out.append(allocator, ',');
+    try out.appendSlice(allocator, source[body.start..]);
+    return try out.toOwnedSlice(allocator);
+}
+
+const Span = struct { start: usize, end: usize };
+const KeyValueSpan = struct { value_start: usize, value_end: usize };
+
+/// Byte range between the braces of `"<section>": { … }`, or null.
+fn findSectionBody(source: []const u8, section: []const u8) ?Span {
+    var search: usize = 0;
+    while (true) {
+        const key_at = indexOfKey(source, search, section) orelse return null;
+        var i = key_at;
+        // Skip the key, then whitespace, then the colon.
+        i += section.len + 2;
+        i = skipSpace(source, i);
+        if (i >= source.len or source[i] != ':') {
+            search = key_at + 1;
+            continue;
+        }
+        i = skipSpace(source, i + 1);
+        if (i >= source.len or source[i] != '{') {
+            search = key_at + 1;
+            continue;
+        }
+        const body_start = i + 1;
+        const body_end = matchBrace(source, i) orelse return null;
+        return .{ .start = body_start, .end = body_end };
+    }
+}
+
+/// Position of `"<key>"` at the top level of `body`, with its value span.
+fn findKeyValueSpan(source: []const u8, body: Span, key: []const u8) ?KeyValueSpan {
+    var i = body.start;
+    var depth: usize = 0;
+
+    while (i < body.end) {
+        const c = source[i];
+        if (c == '"') {
+            const str_end = endOfString(source, i) orelse return null;
+            if (depth == 0 and std.mem.eql(u8, source[i + 1 .. str_end], key)) {
+                var j = skipSpace(source, str_end + 1);
+                if (j < body.end and source[j] == ':') {
+                    j = skipSpace(source, j + 1);
+                    if (j < body.end and source[j] == '"') {
+                        const val_end = endOfString(source, j) orelse return null;
+                        return .{ .value_start = j, .value_end = val_end + 1 };
+                    }
+                }
+            }
+            i = str_end + 1;
+            continue;
+        }
+        if (c == '{' or c == '[') depth += 1;
+        if (c == '}' or c == ']') {
+            if (depth == 0) break;
+            depth -= 1;
+        }
+        i += 1;
+    }
+    return null;
+}
+
+/// Indentation of the first entry in the section, so an inserted line lines up.
+/// Falls back to four spaces for an empty section.
+fn detectEntryIndent(source: []const u8, body: Span) []const u8 {
+    var i = body.start;
+    while (i < body.end and (source[i] == '\n' or source[i] == '\r')) i += 1;
+    const line_start = i;
+    while (i < body.end and (source[i] == ' ' or source[i] == '\t')) i += 1;
+    if (i > line_start and i < body.end) return source[line_start..i];
+    return "    ";
+}
+
+/// Index of `"<key>"` at or after `from`, ignoring occurrences inside strings
+/// only insofar as the quote pairing allows — good enough because a key is
+/// always quote-delimited and immediately followed by a colon, which the
+/// caller verifies.
+fn indexOfKey(source: []const u8, from: usize, key: []const u8) ?usize {
+    if (from >= source.len) return null;
+    var buf: [256]u8 = undefined;
+    if (key.len + 2 > buf.len) return null;
+    buf[0] = '"';
+    @memcpy(buf[1 .. key.len + 1], key);
+    buf[key.len + 1] = '"';
+    const needle = buf[0 .. key.len + 2];
+    const at = std.mem.indexOfPos(u8, source, from, needle) orelse return null;
+    return at;
+}
+
+fn skipSpace(source: []const u8, from: usize) usize {
+    var i = from;
+    while (i < source.len and (source[i] == ' ' or source[i] == '\t' or source[i] == '\n' or source[i] == '\r')) i += 1;
+    return i;
+}
+
+fn firstNonSpace(slice: []const u8) ?usize {
+    for (slice, 0..) |c, i| {
+        if (c != ' ' and c != '\t' and c != '\n' and c != '\r' and c != ',') return i;
+    }
+    return null;
+}
+
+/// Index of the closing quote of the string starting at `open`.
+fn endOfString(source: []const u8, open: usize) ?usize {
+    var i = open + 1;
+    while (i < source.len) {
+        if (source[i] == '\\') {
+            i += 2;
+            continue;
+        }
+        if (source[i] == '"') return i;
+        i += 1;
+    }
+    return null;
+}
+
+/// Index of the `}` matching the `{` at `open`, skipping strings.
+fn matchBrace(source: []const u8, open: usize) ?usize {
+    var depth: usize = 0;
+    var i = open;
+    while (i < source.len) {
+        const c = source[i];
+        if (c == '"') {
+            i = (endOfString(source, i) orelse return null) + 1;
+            continue;
+        }
+        if (c == '{') depth += 1;
+        if (c == '}') {
+            depth -= 1;
+            if (depth == 0) return i;
+        }
+        i += 1;
+    }
+    return null;
+}
+
+// ── setDependency ───────────────────────────────────────────────────────────
+
+test "setDependency replaces an existing version and keeps every comment" {
+    const src =
+        \\{
+        \\  // the toolchain
+        \\  "dependencies": {
+        \\    "ziglang.org": "0.16.0-dev", // pinned
+        \\    "zig-cli": "github:zig-utils/zig-cli"
+        \\  },
+        \\  "scripts": {
+        \\    // Build & Run
+        \\    "build": "zig build"
+        \\  }
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "dependencies", "ziglang.org", "^0.16.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"ziglang.org\": \"^0.16.0\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "0.16.0-dev") == null);
+    // The comments are the whole point.
+    try std.testing.expect(std.mem.indexOf(u8, out, "// the toolchain") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "// pinned") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "// Build & Run") != null);
+    // And so is leaving everything else alone.
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"zig-cli\": \"github:zig-utils/zig-cli\"") != null);
+}
+
+test "setDependency inserts a missing dependency" {
+    const src =
+        \\{
+        \\  "dependencies": {
+        \\    "zig-cli": "1.0.0"
+        \\  }
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "dependencies", "ziglang.org", "^0.16.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"ziglang.org\": \"^0.16.0\",") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"zig-cli\": \"1.0.0\"") != null);
+}
+
+test "setDependency inserts into an empty section without a stray comma" {
+    const src =
+        \\{
+        \\  "dependencies": {}
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "dependencies", "a.org", "1.0.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"a.org\": \"1.0.0\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "1.0.0\",") == null);
+}
+
+test "setDependency targets the named section only" {
+    const src =
+        \\{
+        \\  "dependencies": { "shared": "1.0.0" },
+        \\  "devDependencies": { "shared": "2.0.0" }
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "devDependencies", "shared", "3.0.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"dependencies\": { \"shared\": \"1.0.0\" }") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"shared\": \"3.0.0\"") != null);
+}
+
+test "setDependency does not match a key nested deeper in the section" {
+    // `overrides.ziglang.org` must not be mistaken for the dependency itself.
+    const src =
+        \\{
+        \\  "dependencies": {
+        \\    "overrides": { "ziglang.org": "0.1.0" },
+        \\    "ziglang.org": "0.15.0"
+        \\  }
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "dependencies", "ziglang.org", "^0.16.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"overrides\": { \"ziglang.org\": \"0.1.0\" }") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"ziglang.org\": \"^0.16.0\"") != null);
+}
+
+test "setDependency creates a missing section rather than falling back" {
+    // The fallback path wrote the package at the ROOT of the document, and
+    // dropped every comment on the way.
+    const src =
+        \\{
+        \\  // project
+        \\  "name": "x"
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "devDependencies", "bun.sh", "^1.3.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"devDependencies\": {") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"bun.sh\": \"^1.3.0\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "// project") != null);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"name\": \"x\"") != null);
+
+    // And the result still parses.
+    const stripped = try stripComments(std.testing.allocator, out);
+    defer std.testing.allocator.free(stripped);
+    var parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, stripped, .{});
+    defer parsed.deinit();
+    try std.testing.expect(parsed.value.object.get("devDependencies") != null);
+}
+
+test "setDependency gives up when the section is not an object" {
+    const src =
+        \\{
+        \\  "dependencies": ["a"]
+        \\}
+    ;
+    try std.testing.expect(try setDependency(std.testing.allocator, src, "dependencies", "a", "1") == null);
+}
+
+test "setDependency preserves a scoped package name" {
+    const src =
+        \\{
+        \\  "dependencies": {
+        \\    "@scope/pkg": "1.0.0"
+        \\  }
+        \\}
+    ;
+    const out = (try setDependency(std.testing.allocator, src, "dependencies", "@scope/pkg", "2.0.0")).?;
+    defer std.testing.allocator.free(out);
+
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"@scope/pkg\": \"2.0.0\"") != null);
+}

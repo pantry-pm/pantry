@@ -359,6 +359,66 @@ fn serializeJsonValue(value: std.json.Value, writer: anytype, indent_level: usiz
     }
 }
 
+
+/// Applies each package to the manifest text with `jsonc.setDependency`.
+///
+/// All-or-nothing: if any package cannot be placed surgically the whole attempt
+/// is abandoned and the caller reserializes, so a manifest is never written
+/// half-edited.
+fn editDependenciesInPlace(
+    allocator: std.mem.Allocator,
+    source: []const u8,
+    dep_field: []const u8,
+    packages: []const []const u8,
+    is_exact: bool,
+) !?[]u8 {
+    var current = try allocator.dupe(u8, source);
+    errdefer allocator.free(current);
+
+    for (packages) |pkg| {
+        const parts = splitPackageSpec(pkg);
+        const version = try formatSavedVersion(allocator, parts.version, is_exact);
+        defer allocator.free(version);
+
+        const next = try lib.utils.jsonc.setDependency(allocator, current, dep_field, parts.name, version);
+        if (next) |edited| {
+            allocator.free(current);
+            current = edited;
+        } else {
+            allocator.free(current);
+            return null;
+        }
+    }
+
+    return current;
+}
+
+const PackageSpec = struct { name: []const u8, version: []const u8 };
+
+/// Splits `name@version`, keeping a leading `@` for scoped packages.
+fn splitPackageSpec(pkg: []const u8) PackageSpec {
+    const at_pos = std.mem.lastIndexOf(u8, pkg, "@") orelse
+        return .{ .name = pkg, .version = "latest" };
+    if (at_pos == 0) return .{ .name = pkg, .version = "latest" };
+    return .{ .name = pkg[0..at_pos], .version = pkg[at_pos + 1 ..] };
+}
+
+/// Adds a `^` unless `--exact`, or the version already carries a range
+/// operator or a protocol prefix.
+fn formatSavedVersion(allocator: std.mem.Allocator, version: []const u8, is_exact: bool) ![]u8 {
+    const verbatim = is_exact or version.len == 0 or
+        std.mem.eql(u8, version, "latest") or
+        version[0] == '^' or version[0] == '~' or version[0] == '>' or
+        version[0] == '<' or version[0] == '=' or
+        std.mem.startsWith(u8, version, "workspace:") or
+        std.mem.startsWith(u8, version, "link:");
+
+    return if (verbatim)
+        allocator.dupe(u8, version)
+    else
+        std.fmt.allocPrint(allocator, "^{s}", .{version});
+}
+
 fn saveDependenciesToConfig(
     allocator: std.mem.Allocator,
     config_path: []const u8,
@@ -374,6 +434,32 @@ fn saveDependenciesToConfig(
 
     // Strip JSONC comments if needed
     const is_jsonc = std.mem.endsWith(u8, config_path, ".jsonc");
+
+    // Determine dependency type field up front — the in-place editor below
+    // needs it too.
+    const dep_field_name = if (is_optional)
+        "optionalDependencies"
+    else if (is_peer)
+        "peerDependencies"
+    else if (is_dev)
+        "devDependencies"
+    else
+        "dependencies";
+
+    // Edit the raw text where possible. Reserializing a parsed tree is lossless
+    // for data but throws away every comment and formatting choice in the file
+    // — on a `.jsonc`, whose whole point is comments, adding one dependency
+    // would rewrite the entire manifest. `setDependency` returns null when the
+    // shape is not something it can edit confidently, and we fall through to
+    // the parse-and-reserialize path below.
+    if (try editDependenciesInPlace(allocator, config_content, dep_field_name, packages, is_exact)) |edited| {
+        defer allocator.free(edited);
+        const fs_file = try io_helper.cwd().createFile(io_helper.io, config_path, .{});
+        defer fs_file.close(io_helper.io);
+        try io_helper.writeAllToFile(fs_file, edited);
+        return;
+    }
+
     const json_content = if (is_jsonc)
         try lib.utils.jsonc.stripComments(allocator, config_content)
     else
@@ -384,15 +470,7 @@ fn saveDependenciesToConfig(
     var parsed = try std.json.parseFromSlice(std.json.Value, allocator, json_content, .{});
     defer parsed.deinit();
 
-    // Determine dependency type field
-    const dep_field = if (is_optional)
-        "optionalDependencies"
-    else if (is_peer)
-        "peerDependencies"
-    else if (is_dev)
-        "devDependencies"
-    else
-        "dependencies";
+    const dep_field = dep_field_name;
 
     // Get root object
     if (parsed.value != .object) return error.InvalidJson;
