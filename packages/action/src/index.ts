@@ -1200,9 +1200,31 @@ async function generateReleaseNotes(tag: string, required = false): Promise<stri
     if (from)
       args.push('--from', from)
 
-    const code = await exec.exec('bun', args, { cwd: process.cwd(), ignoreReturnCode: true, silent: true })
+    // Capture logsmith's own output. Running it `silent` and reporting only an
+    // exit code made every failure here undiagnosable -- three consecutive
+    // stacks releases failed at this step with nothing but "exit 1" to go on,
+    // after the npm publish ahead of it had already succeeded.
+    let stdout = ''
+    let stderr = ''
+    const code = await exec.exec('bun', args, {
+      cwd: process.cwd(),
+      ignoreReturnCode: true,
+      silent: true,
+      listeners: {
+        stdout: (data: Buffer) => { stdout += data.toString() },
+        stderr: (data: Buffer) => { stderr += data.toString() },
+      },
+    })
+
     if (code !== 0 || !fs.existsSync(notesPath)) {
-      const message = `logsmith did not produce notes for ${tag} (exit ${code})`
+      const detail = [
+        `command: bun ${args.join(' ')}`,
+        !fs.existsSync(notesPath) ? `no output written to ${notesPath}` : undefined,
+        stderr.trim() ? `stderr:\n${stderr.trim()}` : undefined,
+        stdout.trim() ? `stdout:\n${stdout.trim()}` : undefined,
+      ].filter(Boolean).join('\n')
+
+      const message = `logsmith did not produce notes for ${tag} (exit ${code})\n${detail}`
       if (required)
         throw new Error(message)
       core.warning(message)
