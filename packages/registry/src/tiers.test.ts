@@ -1,6 +1,6 @@
 /**
  * What a subscription actually changes, exercised against a running server:
- * the commission on a sale, and the four things a paid plan unlocks.
+ * the fee a seller pays per sale, and the four things a paid plan unlocks.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
@@ -66,9 +66,12 @@ describe('subscription tiers', () => {
       const body = await res.json() as any
 
       const byId = Object.fromEntries(body.plans.map((p: any) => [p.id, p]))
+      expect(byId.free.sellingFee).toBe('10%')
+      expect(byId.pro.sellingFee).toBe('5%')
+      expect(byId.team.sellingFee).toBe('5%')
+      // `commission` is kept as an alias so a CLI built before the rename
+      // still renders the right number against a newer registry.
       expect(byId.free.commission).toBe('10%')
-      expect(byId.pro.commission).toBe('5%')
-      expect(byId.team.commission).toBe('5%')
       expect(byId.pro.formattedPrice).toBe('$9/mo')
       expect(byId.team.formattedPrice).toBe('$29/mo')
       expect(body.discoveryFee).toBe('3%')
@@ -79,7 +82,7 @@ describe('subscription tiers', () => {
       const res = await fetch(`${baseUrl}/account/subscription`, { headers: { Cookie: `pantry_session=${session}` } })
       const body = await res.json() as any
       expect(body.tier).toBe('free')
-      expect(body.commission).toBe('10%')
+      expect(body.sellingFee).toBe('10%')
       expect(body.manageable).toBe(false)
     })
 
@@ -96,7 +99,7 @@ describe('subscription tiers', () => {
 
   // -------------------------------------------------------------------------
 
-  describe('commission', () => {
+  describe('the selling fee', () => {
     it('is 10% for a free seller and 5% once they subscribe', () => {
       expect(calculateFee({ amount: 2000, sellerTier: 'free', discoveredOnSite: false }).applicationFee).toBe(200)
       expect(calculateFee({ amount: 2000, sellerTier: 'pro', discoveredOnSite: false }).applicationFee).toBe(100)
@@ -119,7 +122,7 @@ describe('subscription tiers', () => {
       })
 
       // Subscribing changes the rate on the next sale with no change to the
-      // package — nothing about the price record encodes the commission.
+      // package — nothing about the price record encodes the fee.
       await auth.setSubscription('seller@acme.com', { tier: 'pro', status: 'active' })
       expect(await auth.getTier('seller@acme.com')).toBe('pro')
     })

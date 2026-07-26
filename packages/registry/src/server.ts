@@ -925,14 +925,17 @@ export function createHandler(
       if (path === '/pricing' && req.method === 'GET') {
         const html = await renderSitePage('pricing.stx', {
           title: 'Plans',
-          metaDescription: 'Publishing on pantry is free. A plan lowers the commission on package sales and unlocks private packages, full analytics, larger artifacts and priority builds.',
+          metaDescription: 'Publishing and installing on pantry is free. Selling a package costs a fee per sale — 10% on Free, 5% on a plan — and a plan also insures your builds, watches your lockfile and unlocks private packages.',
           canonicalUrl: 'https://pantry.dev/pricing',
           plans: Object.values(TIERS).map(t => ({
             id: t.id,
             name: t.name,
             featured: t.id === 'pro',
             formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
-            commission: formatBps(t.commissionBps),
+            sellingFee: formatBps(t.commissionBps),
+            // The number in the abstract means little; what a $10 sale costs is
+            // the thing a seller is actually deciding about.
+            feeExample: `$10 sale → $${(1000 * t.commissionBps / 10_000 / 100).toFixed(2)} to pantry`,
             tagline: t.id === 'free'
               ? 'Publish and sell, no cost'
               : t.id === 'pro'
@@ -2250,6 +2253,10 @@ async function handleSubscriptionRoutes(
         name: t.name,
         price: t.price,
         formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
+        // What a seller pays us per sale. `commission` is kept as an alias so a
+        // CLI built before this rename keeps rendering the right number.
+        sellingFee: formatBps(t.commissionBps),
+        sellingFeeBps: t.commissionBps,
         commission: formatBps(t.commissionBps),
         commissionBps: t.commissionBps,
         privatePackages: t.privatePackages,
@@ -2289,6 +2296,7 @@ async function handleSubscriptionRoutes(
       tier,
       name: def.name,
       status: current?.status || 'none',
+      sellingFee: formatBps(def.commissionBps),
       commission: formatBps(def.commissionBps),
       currentPeriodEnd: current?.currentPeriodEnd,
       manageable: Boolean(current?.stripeCustomerId),

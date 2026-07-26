@@ -8,14 +8,18 @@ The package's metadata stays public. That's deliberate: the page is where
 someone reads what a package does and decides to buy it. What's gated is the
 tarball.
 
-## Plans and what the registry takes
+## What selling costs
 
-Publishing is free. A plan lowers the commission on what you sell, and unlocks
-the things a serious publisher wants anyway.
+Publishing is free and installing is free. **Selling** a package costs a fee per
+sale, paid to the registry — and a plan halves it, on top of unlocking the things
+a serious publisher wants anyway.
+
+List a package at $10 and sell one copy: **$1 goes to pantry on Free, or 50¢ on
+a plan.** Nothing is charged until something sells.
 
 | | Free | Pro — $9/mo | Team — $29/mo |
 |---|---|---|---|
-| Commission on sales | 10% | **5%** | **5%** |
+| Fee per sale | 10% | **5%** | **5%** |
 | Private & unlisted packages | — | ✓ | ✓ |
 | Analytics history | 30 days | full | full |
 | Max artifact size | 50MB | 250MB | 1GB |
@@ -29,14 +33,15 @@ pantry subscribe pro    # subscribe in a browser
 
 Three things worth being precise about:
 
-- **The commission comes out of the seller's side.** A buyer pays the listed
-  price and nothing else.
+- **The fee comes out of the sale, not on top of it.** A buyer pays exactly the
+  price you listed; the fee is deducted from what reaches you.
 - **A sale that started on pantry.dev adds 3%.** The registry put that package
   in front of someone who wasn't looking for it, so a site sale from a Pro
   seller is 5% + 3% = 8%. A sale you brought yourself — a link you sent, or
   `pantry buy` typed into a terminal — is just 5%.
-- **Card fees are Stripe's and settle against your account** (`on_behalf_of`),
-  so the percentages above are what the registry keeps, not what it charges.
+- **Payment processing and sales tax are separate.** Card fees are Stripe's and
+  settle against your own connected account (`on_behalf_of`), so the percentages
+  above are what the registry charges you and nothing else.
 
 Your plan is read at the moment of sale, not baked into the listing: subscribe
 today and tomorrow's sales are commissioned at 5% without touching a single
@@ -187,8 +192,8 @@ When a publisher supplies a Stripe Connect account
 (`pantry price set … --payout-account acct_…`), the charge is created with that
 account as both the transfer destination and the settlement merchant
 (`on_behalf_of`). The money lands with them directly, Stripe's processing fee
-comes out of their side, and the registry keeps its commission — 10% from a free
-seller, 5% from a subscriber, plus 3% when the site made the sale.
+comes out of their side, and the registry takes its selling fee — 10% from a
+free seller, 5% from a subscriber, plus 3% when the site made the sale.
 
 Connect onboarding — creating those `acct_…` accounts and collecting the
 publisher's tax and bank details — happens in your Stripe dashboard; the

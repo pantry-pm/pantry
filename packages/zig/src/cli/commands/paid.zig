@@ -409,7 +409,8 @@ pub fn plansCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandRes
         if (plan != .object) continue;
         const name = jsonString(plan, "name") orelse continue;
         const price = jsonString(plan, "formattedPrice") orelse "";
-        const commission = jsonString(plan, "commission") orelse "";
+        // Newer registries send `sellingFee`; `commission` is the old alias.
+        const selling_fee = jsonString(plan, "sellingFee") orelse jsonString(plan, "commission") orelse "";
         const mb = if (plan.object.get("maxArtifactMB")) |v| (if (v == .integer) v.integer else 0) else 0;
         const private = jsonBool(plan, "privatePackages");
         const priority = jsonBool(plan, "priorityBuilds");
@@ -419,7 +420,7 @@ pub fn plansCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandRes
         var line: [512]u8 = undefined;
         const rendered = try std.fmt.bufPrint(&line,
             \\{s} — {s}
-            \\  Commission on sales: {s}
+            \\  Fee per sale:        {s}
             \\  Private packages:    {s}
             \\  Analytics history:   {s}
             \\  Max artifact:        {d}MB
@@ -430,7 +431,7 @@ pub fn plansCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandRes
         , .{
             name,
             price,
-            commission,
+            selling_fee,
             if (private) "yes" else "no",
             if (days >= 3650) "full" else "30 days",
             mb,

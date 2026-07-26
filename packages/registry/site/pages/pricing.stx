@@ -5,8 +5,8 @@
     <div class="text-center mb-10 animate-fade-in">
       <h1 class="text-3xl font-semibold tracking-tight mb-3">Plans</h1>
       <p class="text-sm max-w-2xl mx-auto" style="color: var(--fg-muted);">
-        Publishing is free and installing is free. A plan lowers the commission when you
-        <em>sell</em> a package, and insures the builds that depend on what you install.
+        Publishing is free. Installing is free. <em>Selling</em> a package costs a fee per
+        sale — and a plan halves it, then insures the builds that depend on what you install.
       </p>
     </div>
 
@@ -21,7 +21,10 @@
         </div>
         <p class="text-2xl font-semibold">{{ plan.formattedPrice }}</p>
         <p class="mb-3" style="font-size: 0.75rem; color: var(--fg-subtle);">{{ plan.tagline }}</p>
-        <p class="mb-4 pb-4 border-b border-[var(--border)]" style="font-size: 0.8125rem; color: var(--accent);">{{ plan.commission }} commission on sales</p>
+        <div class="mb-4 pb-4 border-b border-[var(--border)]">
+          <p style="font-size: 0.8125rem; color: var(--accent);">{{ plan.sellingFee }} fee per sale</p>
+          <p style="font-size: 0.75rem; color: var(--fg-subtle);">{{ plan.feeExample }}</p>
+        </div>
 
         <p class="uppercase tracking-widest mb-2" style="font-size: 0.625rem; color: var(--fg-subtle);">Publishing</p>
         <ul class="flex flex-col gap-1.5 mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">
@@ -90,12 +93,13 @@
     </div>
 
     <div class="border border-[var(--border)] rounded-lg p-5 mb-6" style="background: var(--bg-subtle);">
-      <h2 class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--fg-subtle);">How the fee works</h2>
+      <h2 class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--fg-subtle);">What selling costs</h2>
       <ul class="flex flex-col gap-2" style="font-size: 0.875rem; color: var(--fg-muted);">
-        <li>The commission comes out of the seller's side. Buyers pay the listed price, and nothing else.</li>
-        <li>A sale that <strong>started on this site</strong> adds a {{ discoveryFee }} discovery fee — we put the package in front of a buyer who wasn't looking for it. A sale you bring yourself (a link you sent, <code class="font-mono">pantry buy</code>) doesn't.</li>
-        <li>Card processing is Stripe's, settled against your connected account, so the percentage above is what the registry keeps rather than what it charges.</li>
-        <li>You never pay to download your own package, and versions you mark free stay free for everyone.</li>
+        <li><strong>The fee is what you pay pantry for each sale.</strong> List a package at $10 and sell one copy: $1 goes to pantry on Free, or 50&cent; on a plan.</li>
+        <li>It comes out of the sale rather than being added to it — the buyer pays the price you listed, and nothing more.</li>
+        <li>A sale that <strong>started on this site</strong> adds {{ discoveryFee }} on top: we put the package in front of a buyer who wasn't looking for it. A sale you bring yourself — a link you sent, or <code class="font-mono">pantry buy</code> in a terminal — doesn't.</li>
+        <li>Payment processing and any sales tax are separate, and settle against your own Stripe account.</li>
+        <li>Nothing is charged until something sells. You never pay to download your own package, and versions you mark free stay free for everyone.</li>
       </ul>
     </div>
 

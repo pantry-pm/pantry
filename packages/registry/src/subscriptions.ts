@@ -1,12 +1,16 @@
 /**
- * Subscriptions and the marketplace fee.
+ * Subscriptions and the selling fee.
  *
- * Selling on the registry is free. What a subscription buys you is a lower cut
- * of what you sell, plus the things a serious publisher wants anyway:
+ * Publishing is free and installing is free. *Selling* a package costs a fee
+ * per sale, paid to the registry — and a plan halves it:
  *
- *   Free          10% of each sale   public packages, 30 days of analytics, 50MB
- *   Pro    $9/mo   5% of each sale   + private packages, full history, 250MB, priority builds
- *   Team  $29/mo   5% of each sale   + 10 seats, 1GB artifacts
+ *   Free          10% per sale   public packages, 30 days of analytics, 50MB
+ *   Pro    $9/mo   5% per sale   + private packages, full history, 250MB, priority builds
+ *   Team  $29/mo   5% per sale   + 10 seats, 1GB artifacts
+ *
+ * Concretely: list a package at $10 and sell one copy, and $1 goes to the
+ * registry on Free, or 50c on a plan. Payment processing and any sales tax are
+ * on top of that, and settle against the seller.
  *
  * On top of the tier rate, a sale that started on pantry.dev carries a **3%
  * discovery fee**: the registry did the work of putting the package in front of
@@ -28,7 +32,11 @@ export interface TierDefinition {
   name: string
   /** Monthly price in cents. Zero for free. */
   price: number
-  /** Our cut of each sale, in basis points (100 = 1%). */
+  /**
+   * What the seller pays us per sale, in basis points (100 = 1%). Taken out of
+   * the sale price rather than added to it, so the buyer pays exactly what the
+   * package is listed at.
+   */
   commissionBps: number
   /** Days of download history the dashboard will show. */
   analyticsRetentionDays: number

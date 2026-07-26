@@ -184,7 +184,7 @@
         </h3>
         <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
           Put a price on what you publish. Metadata stays public so people can find it; the
-          tarball is gated until an account has paid. 5% on a plan, 10% without.
+          tarball is gated until an account has paid. Selling costs 10% per sale, or 5% on a plan.
         </p>
         <code class="text-xs" style="color: var(--accent);">pantry price set my-pkg 9.00</code>
       </div>
