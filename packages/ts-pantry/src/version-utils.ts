@@ -424,57 +424,172 @@ export async function validatePackageSpec(packageSpec: string): Promise<{
   }
 }
 
+/** A version split into its comparable parts. */
+interface ParsedVersion {
+  major: number
+  minor: number
+  patch: number
+  /** Dot-separated prerelease identifiers, empty for a stable release. */
+  prerelease: string[]
+}
+
 /**
- * Resolve a version constraint against available versions in S3 metadata
+ * Parses a semver-ish version string.
+ *
+ * Tolerant of what registries actually publish: a missing patch (`0.16`), build
+ * metadata (`+d5181a9c9`), and a `v` prefix. Non-numeric junk becomes 0 rather
+ * than NaN, because NaN silently poisons every comparison it touches - that is
+ * how a prerelease could sort above a stable release.
+ */
+export function parseVersion(version: string): ParsedVersion {
+  const withoutBuild = version.replace(/^v/, '').split('+')[0]
+  const [core, ...preParts] = withoutBuild.split('-')
+  const [major, minor, patch] = core.split('.').map((part) => {
+    const n = Number.parseInt(part, 10)
+    return Number.isNaN(n) ? 0 : n
+  })
+
+  return {
+    major: major ?? 0,
+    minor: minor ?? 0,
+    patch: patch ?? 0,
+    prerelease: preParts.length > 0 ? preParts.join('-').split('.') : [],
+  }
+}
+
+/**
+ * Orders two versions, newest first. Precedence follows semver: compare
+ * major/minor/patch numerically, then treat a prerelease as *lower* than the
+ * release it precedes (`1.0.0-rc.1` < `1.0.0`), comparing identifiers so that
+ * numeric ones sort numerically and `alpha` < `beta` < `rc`.
+ */
+export function compareVersionsDesc(a: string, b: string): number {
+  const va = parseVersion(a)
+  const vb = parseVersion(b)
+
+  if (va.major !== vb.major) return vb.major - va.major
+  if (va.minor !== vb.minor) return vb.minor - va.minor
+  if (va.patch !== vb.patch) return vb.patch - va.patch
+
+  const aPre = va.prerelease.length > 0
+  const bPre = vb.prerelease.length > 0
+  if (aPre !== bPre) return aPre ? 1 : -1 // stable first
+  if (!aPre) return 0
+
+  for (let i = 0; i < Math.max(va.prerelease.length, vb.prerelease.length); i++) {
+    const x = va.prerelease[i]
+    const y = vb.prerelease[i]
+    if (x === undefined) return 1 // shorter prerelease is lower
+    if (y === undefined) return -1
+
+    const xn = Number.parseInt(x, 10)
+    const yn = Number.parseInt(y, 10)
+    const xIsNum = !Number.isNaN(xn) && String(xn) === x
+    const yIsNum = !Number.isNaN(yn) && String(yn) === y
+
+    if (xIsNum && yIsNum) {
+      if (xn !== yn) return yn - xn
+    }
+    else if (xIsNum !== yIsNum) {
+      return xIsNum ? 1 : -1 // numeric identifiers are lower than alphanumeric
+    }
+    else if (x !== y) {
+      return x < y ? 1 : -1
+    }
+  }
+
+  return 0
+}
+
+/**
+ * Resolve a version constraint against available versions in S3 metadata.
+ *
+ * Ranges follow npm/semver semantics, which for `^` on a 0.x version means the
+ * MINOR is pinned: `^0.16.0` is `>=0.16.0 <0.17.0`, not `>=0.16.0 <1.0.0`.
+ * Zero-major releases make no compatibility promise between minors, so treating
+ * `^0.16.0` as "any 0.x" hands back a toolchain that cannot build the project -
+ * which is exactly what `^0.16.0` did when it resolved to 0.17.0-dev.
+ *
+ * Prereleases are excluded unless the constraint itself names one, again per
+ * semver: `^0.16.0` must not select `0.17.0-dev`, but `^0.16.0-dev` may select
+ * `0.16.0-dev.5`.
  */
 export function resolveVersionFromMetadata(constraint: string, availableVersions: string[]): string | null {
   if (!availableVersions || availableVersions.length === 0) {
     return null
   }
 
-  // Sort versions descending (latest first)
-  const sortedVersions = [...availableVersions].sort((a, b) => {
-    const aParts = a.split('.').map(Number)
-    const bParts = b.split('.').map(Number)
-    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-      const aVal = aParts[i] || 0
-      const bVal = bParts[i] || 0
-      if (aVal !== bVal) return bVal - aVal
-    }
-    return 0
-  })
+  const sortedVersions = [...availableVersions].sort(compareVersionsDesc)
 
   const cleanConstraint = constraint.replace(/^[\^~]/, '')
-  const constraintParts = cleanConstraint.split('.')
-  const majorConstraint = Number.parseInt(constraintParts[0], 10)
-  const minorConstraint = Number.parseInt(constraintParts[1] || '0', 10)
+  const wanted = parseVersion(cleanConstraint)
+  // An explicit patch is required for `~1.2` to mean "any 1.2.x" rather than
+  // "1.2.0 only", and for `^0.16` to pin the minor the same way `^0.16.0` does.
+  const constraintCore = cleanConstraint.replace(/^v/, '').split('+')[0].split('-')[0]
+  const hasPatch = constraintCore.split('.').length >= 3
+  const constraintIsPrerelease = wanted.prerelease.length > 0
 
-  // Caret: compatible with major version (returns latest within major)
+  /**
+   * Whether a prerelease may be selected. Semver only allows it when the
+   * constraint is itself a prerelease of the same major.minor.patch.
+   */
+  const prereleaseAllowed = (candidate: ParsedVersion): boolean => {
+    if (candidate.prerelease.length === 0) return true
+    if (!constraintIsPrerelease) return false
+    return candidate.major === wanted.major
+      && candidate.minor === wanted.minor
+      && candidate.patch === wanted.patch
+  }
+
+  const atLeastConstraint = (candidate: ParsedVersion, version: string): boolean =>
+    compareVersionsDesc(version, cleanConstraint) <= 0 || candidate.prerelease.length > 0
+
+  const pick = (predicate: (candidate: ParsedVersion, version: string) => boolean): string | null => {
+    for (const version of sortedVersions) {
+      const candidate = parseVersion(version)
+      if (!prereleaseAllowed(candidate)) continue
+      if (predicate(candidate, version)) return version
+    }
+    return null
+  }
+
+  // Caret: same major, or - for a 0.x constraint - the same minor too.
   if (constraint.startsWith('^')) {
-    const matching = sortedVersions.filter((v) => {
-      const major = Number.parseInt(v.split('.')[0], 10)
-      return major === majorConstraint
+    return pick((candidate, version) => {
+      if (candidate.major !== wanted.major) return false
+      if (wanted.major === 0 && candidate.minor !== wanted.minor) return false
+      return atLeastConstraint(candidate, version)
     })
-    return matching[0] || null
   }
 
-  // Tilde: compatible with minor version (returns latest within minor)
+  // Tilde: same major.minor. Without an explicit patch (`~1.2`) any patch
+  // qualifies; with one, only patches at or above it.
   if (constraint.startsWith('~')) {
-    const matching = sortedVersions.filter((v) => {
-      const parts = v.split('.')
-      const major = Number.parseInt(parts[0], 10)
-      const minor = Number.parseInt(parts[1] || '0', 10)
-      return major === majorConstraint && minor === minorConstraint
+    return pick((candidate, version) => {
+      if (candidate.major !== wanted.major || candidate.minor !== wanted.minor) return false
+      return !hasPatch || atLeastConstraint(candidate, version)
     })
-    return matching[0] || null
   }
 
-  // Exact match
+  // Exact match wins over any prefix interpretation.
   if (sortedVersions.includes(cleanConstraint)) {
     return cleanConstraint
   }
 
-  // Default: prefix match then fallback to latest
-  const matching = sortedVersions.filter(v => v.startsWith(cleanConstraint))
-  return matching[0] || sortedVersions[0] || null
+  // A partial version (`0.16`) means the latest release under it. Compare parsed
+  // components rather than the raw string, so `0.1` cannot match `0.16.0`.
+  const parts = constraintCore.split('.').filter(Boolean).map(n => Number.parseInt(n, 10))
+  if (parts.length > 0 && parts.every(n => !Number.isNaN(n))) {
+    const prefixMatch = pick((candidate) => {
+      if (parts[0] !== undefined && candidate.major !== parts[0]) return false
+      if (parts[1] !== undefined && candidate.minor !== parts[1]) return false
+      if (parts[2] !== undefined && candidate.patch !== parts[2]) return false
+      return true
+    })
+    if (prefixMatch) return prefixMatch
+  }
+
+  // Nothing matched. Fall back to the newest stable, then the newest overall -
+  // an install with no version is more useful than a hard failure here.
+  return pick(() => true) ?? sortedVersions[0] ?? null
 }
