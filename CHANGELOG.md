@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.50...v0.10.51)
+
+## 🧪 Tests
+
+- **shell**: stop the activate test running a real install ([fb0f8fc](https://github.com/pantry-pm/pantry/commit/fb0f8fc)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🤖 Continuous Integration
+
+- pin the Zig dev build instead of tracking latest ([238d945](https://github.com/pantry-pm/pantry/commit/238d945)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.51 ([96445c9](https://github.com/pantry-pm/pantry/commit/96445c9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update chompbuild.com to 0.3.1 ([5c61ddd](https://github.com/pantry-pm/pantry/commit/5c61ddd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([ff96e86](https://github.com/pantry-pm/pantry/commit/ff96e86)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.49...v0.10.50)
 
 ## 🐛 Bug Fixes
