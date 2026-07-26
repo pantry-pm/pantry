@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.49...v0.10.50)
+
+## 🐛 Bug Fixes
+
+- **build**: qualify OptimizeMode so build.zig survives the enum rename ([bc5612d](https://github.com/pantry-pm/pantry/commit/bc5612d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.50 ([f1fbc24](https://github.com/pantry-pm/pantry/commit/f1fbc24)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.48...v0.10.49)
 
 ## 🚀 Features
