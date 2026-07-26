@@ -1704,6 +1704,12 @@ export function createServer(
     server = Bun.serve({
       port,
       fetch: handler,
+      // Bun defaults to 128MB, which would make the 250MB and 1GB artifacts the
+      // paid plans advertise physically impossible to upload — the request
+      // would be cut off before any of our own limits were consulted. Sized to
+      // the largest plan plus multipart overhead; the per-account ceiling is
+      // still enforced in the publish handler.
+      maxRequestBodySize: Math.max(...Object.values(TIERS).map(t => t.maxArtifactBytes)) + 32 * 1024 * 1024,
     })
 
     const visibility = resolveVisibility()
@@ -2096,6 +2102,9 @@ async function requirePackageOwner(
     return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
   }
   if (record.publishedBy && record.publishedBy !== identity.userId) {
+    // A team member acts for the seat holder who owns the package.
+    if (_authService && await _authService.canActFor(identity.userId, record.publishedBy))
+      return null
     return Response.json(
       { error: 'Only the publisher of this package can change its price' },
       { status: 403, headers: corsHeaders },
@@ -2112,6 +2121,57 @@ async function requirePackageOwner(
  * every package they've ever listed. An unclaimed package has no seller, so it
  * falls to Free.
  */
+/**
+ * Refuse a publish that would overwrite someone else's package.
+ *
+ * Without this, holding any publish token was enough to ship a new version of
+ * *any* package: the registry recorded the first publisher and then never
+ * consulted the record again, so a stranger could push `their-package@99.0.0`
+ * and that is what everyone would install.
+ *
+ * Allowed: the account that published it, anyone on that account's team, and
+ * the operator. A name nobody has claimed is still first-come.
+ *
+ * Returns a Response to refuse with, or null to proceed.
+ */
+async function requirePublishRights(
+  registry: Registry,
+  userId: string | undefined,
+  packageName: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (!userId || userId === '_admin') return null
+
+  const record = await registry.getPublisherPackageRecord(packageName).catch(() => null)
+  const owner = record?.publishedBy
+  if (!owner) return null // unclaimed — first publish wins it
+
+  if (owner === userId) return null
+  if (_authService && await _authService.canActFor(userId, owner)) return null
+
+  return Response.json(
+    {
+      error: `${packageName} belongs to another account`,
+      hint: 'Ask its owner to add you to their team, or publish under a name you own',
+    },
+    { status: 403, headers: corsHeaders },
+  )
+}
+
+/**
+ * The plan whose limits apply when publishing a package: the owner's, so a team
+ * member gets the seat holder's headroom rather than their own personal plan.
+ */
+async function tierForPackage(
+  registry: Registry,
+  packageName: string,
+  fallbackUserId: string | undefined,
+): Promise<Tier> {
+  const record = await registry.getPublisherPackageRecord(packageName).catch(() => null)
+  if (record?.publishedBy) return tierForUser(record.publishedBy)
+  return tierForUser(fallbackUserId)
+}
+
 /** The plan an account is on, for gating features. Free when unknown. */
 async function tierForUser(userId: string | null | undefined): Promise<Tier> {
   if (!userId || userId === '_admin' || !_authService) return 'free'
@@ -2179,7 +2239,8 @@ async function handleSubscriptionRoutes(
     }, { headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=300' } })
   }
 
-  if (path !== '/account/subscription' && path !== '/account/billing-portal') return null
+  const isTeamPath = path === '/account/team' || path.startsWith('/account/team/')
+  if (path !== '/account/subscription' && path !== '/account/billing-portal' && !isTeamPath) return null
 
   const sessionToken = extractSessionToken(req)
   const user = sessionToken ? await auth.validateSession(sessionToken) : null
@@ -2231,6 +2292,60 @@ async function handleSubscriptionRoutes(
       console.error('Subscription checkout error:', err)
       return Response.json({ error: err.message || 'Could not start checkout' }, { status: 400, headers: corsHeaders })
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Team seats
+  // -------------------------------------------------------------------------
+
+  if (isTeamPath) {
+    const def = tierDefinition(tier)
+
+    if (path === '/account/team' && req.method === 'GET') {
+      const members = await auth.getTeamMembers(user.email)
+      const belongsTo = await auth.getTeamOwner(user.email)
+      return Response.json({
+        tier,
+        seats: def.seats,
+        // The seat holder occupies one, so a 10-seat plan invites 9 people.
+        seatsUsed: members.length + 1,
+        members,
+        memberOf: belongsTo,
+        canInvite: def.seats > 1,
+      }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+    }
+
+    if (path === '/account/team/members' && req.method === 'POST') {
+      if (def.seats <= 1) {
+        return Response.json({
+          error: 'Seats are a Team feature',
+          hint: 'pantry subscribe team',
+          tier,
+        }, { status: 402, headers: corsHeaders })
+      }
+      const body = await req.json().catch(() => null) as { email?: string } | null
+      const invitee = typeof body?.email === 'string' ? body.email.trim() : ''
+      if (!invitee) {
+        return Response.json({ error: 'An email address is required' }, { status: 400, headers: corsHeaders })
+      }
+      try {
+        const members = await auth.addTeamMember(user.email, invitee, def.seats)
+        return Response.json({ members, seats: def.seats, seatsUsed: members.length + 1 }, { headers: corsHeaders })
+      }
+      catch (err: any) {
+        const status = err instanceof AuthError ? err.status : 400
+        return Response.json({ error: err.message }, { status, headers: corsHeaders })
+      }
+    }
+
+    const removeMatch = path.match(/^\/account\/team\/members\/(.+)$/)
+    if (removeMatch && req.method === 'DELETE') {
+      const target = decodeURIComponent(removeMatch[1])
+      const members = await auth.removeTeamMember(user.email, target)
+      return Response.json({ members, seats: def.seats, seatsUsed: members.length + 1 }, { headers: corsHeaders })
+    }
+
+    return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
   }
 
   if (path === '/account/billing-portal' && req.method === 'POST') {
@@ -2414,10 +2529,15 @@ async function handlePublish(
     const metaErr = validateMetadataLimits(metadata)
     if (metaErr) return Response.json({ error: metaErr }, { status: 400, headers: corsHeaders })
 
+    // You may only publish to a name you own, or one your team owns.
+    const notYours = await requirePublishRights(registry, authResult.userId, metadata.name, corsHeaders)
+    if (notYours) return notYours
+
     // Artifact size is what the plan buys: 50MB on Free, 250MB on Pro, 1GB on
     // Team. Checked against the declared size before the body is buffered, so
-    // an over-limit upload is refused rather than read into memory first.
-    const publisherTier = await tierForUser(authResult.userId)
+    // an over-limit upload is refused rather than read into memory first. The
+    // owner's plan applies, so a team member gets the seat holder's headroom.
+    const publisherTier = await tierForPackage(registry, metadata.name, authResult.userId)
     const maxBytes = tierDefinition(publisherTier).maxArtifactBytes
     if (tarballFile.size > maxBytes) {
       const mb = (bytes: number): string => `${Math.round(bytes / (1024 * 1024))}MB`
@@ -2478,6 +2598,9 @@ async function handlePublish(
     if (jsonNameErr) return Response.json({ error: jsonNameErr }, { status: 400, headers: corsHeaders })
     const jsonVersionErr = validatePublishVersion(metadata.version)
     if (jsonVersionErr) return Response.json({ error: jsonVersionErr }, { status: 400, headers: corsHeaders })
+    const notYoursJson = await requirePublishRights(registry, authResult.userId, metadata.name, corsHeaders)
+    if (notYoursJson) return notYoursJson
+
     const jsonMetaErr = validateMetadataLimits(metadata)
     if (jsonMetaErr) return Response.json({ error: jsonMetaErr }, { status: 400, headers: corsHeaders })
 
@@ -3053,11 +3176,13 @@ function isSiteAdmin(user: SessionUser): boolean {
   return user.role === 'admin'
 }
 
-function canManagePackage(pkg: { publishedBy?: string } | null, user: SessionUser): boolean {
+async function canManagePackage(pkg: { publishedBy?: string } | null, user: SessionUser): Promise<boolean> {
   if (!pkg) return false
   if (isSiteAdmin(user)) return true
   if (!pkg.publishedBy) return true
-  return pkg.publishedBy === user.email
+  if (pkg.publishedBy === user.email) return true
+  // Team members manage the seat holder's packages as if they were their own.
+  return _authService ? _authService.canActFor(user.email, pkg.publishedBy) : false
 }
 
 async function handlePublisherApi(
@@ -3093,7 +3218,7 @@ async function handlePublisherApi(
   if (paywallMatch) {
     const name = decodeURIComponent(paywallMatch[1])
     const record = await registry.getPublisherPackageRecord(name)
-    if (!record || !canManagePackage(record, user)) {
+    if (!record || !(await canManagePackage(record, user))) {
       return Response.json({ error: 'Package not found or access denied' }, { status: 403, headers: corsHeaders })
     }
 
@@ -3161,7 +3286,7 @@ async function handlePublisherApi(
 
     if (req.method === 'GET') {
       const record = await registry.getPublisherPackageRecord(name)
-      if (!record || !canManagePackage(record, user)) {
+      if (!record || !(await canManagePackage(record, user))) {
         return Response.json({ error: 'Package not found or access denied' }, { status: 403, headers: corsHeaders })
       }
       const stats = await analyticsStorage.getPackageStats(name)
@@ -3187,7 +3312,7 @@ async function handlePublisherApi(
 
     if (req.method === 'PATCH') {
       const record = await registry.getPublisherPackageRecord(name)
-      if (!record || !canManagePackage(record, user)) {
+      if (!record || !(await canManagePackage(record, user))) {
         return Response.json({ error: 'Package not found or access denied' }, { status: 403, headers: corsHeaders })
       }
       let body: {
@@ -3221,7 +3346,15 @@ async function handlePublisherApi(
         }
       }
 
-      const updated = await registry.updatePublisherPackage(name, user.email, {
+      // The storage layer keeps a strict single-owner check as its own line of
+      // defence. A team member has already been authorized above, so the write
+      // is made *as* the seat holder rather than by loosening that invariant.
+      const actingAs = record.publishedBy && record.publishedBy !== user.email
+        && _authService && await _authService.canActFor(user.email, record.publishedBy)
+        ? record.publishedBy
+        : user.email
+
+      const updated = await registry.updatePublisherPackage(name, actingAs, {
         description: body.description,
         homepage: body.homepage,
         repository: body.repository,

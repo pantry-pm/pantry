@@ -498,6 +498,141 @@ pub fn subscribeCommand(allocator: std.mem.Allocator, opts: PlanOptions) !Comman
 }
 
 // ---------------------------------------------------------------------------
+// pantry team
+// ---------------------------------------------------------------------------
+
+pub const TeamOptions = struct {
+    registry: ?[]const u8 = null,
+    /// Session token. Team changes are billing-adjacent, so the registry wants
+    /// a signed-in person rather than a machine token.
+    session: ?[]const u8 = null,
+    email: ?[]const u8 = null,
+};
+
+fn sessionHeaders(arena: std.mem.Allocator, session: []const u8) ![]const std.http.Header {
+    const cookie = try std.fmt.allocPrint(arena, "pantry_session={s}", .{session});
+    const headers = try arena.alloc(std.http.Header, 1);
+    headers[0] = .{ .name = "Cookie", .value = cookie };
+    return headers;
+}
+
+const team_session_help =
+    \\Error: team changes need a signed-in session, not an API token.
+    \\
+    \\Sign in on the website and pass the session, or manage the team there:
+    \\
+    \\  pantry team list --session <token>
+;
+
+fn teamRequest(
+    arena: std.mem.Allocator,
+    method: std.http.Method,
+    url: []const u8,
+    path: []const u8,
+    session: []const u8,
+    body: ?[]const u8,
+) !io_helper.HttpResponse {
+    const target = try std.fmt.allocPrint(arena, "{s}{s}", .{ url, path });
+    return io_helper.httpRequest(arena, method, target, body, try sessionHeaders(arena, session));
+}
+
+fn renderTeam(arena: std.mem.Allocator, res: io_helper.HttpResponse) ![]const u8 {
+    var parsed = std.json.parseFromSlice(std.json.Value, arena, res.body, .{ .ignore_unknown_fields = true }) catch
+        return "Team updated.";
+    defer parsed.deinit();
+
+    const root = parsed.value;
+    const seats = if (root == .object) (if (root.object.get("seats")) |v| (if (v == .integer) v.integer else 1) else 1) else 1;
+    const used = if (root == .object) (if (root.object.get("seatsUsed")) |v| (if (v == .integer) v.integer else 1) else 1) else 1;
+
+    var out: std.ArrayList(u8) = .empty;
+    try out.appendSlice(arena, try std.fmt.allocPrint(arena, "Seats: {d} of {d} used\n", .{ used, seats }));
+
+    if (root == .object) {
+        if (root.object.get("memberOf")) |owner| {
+            if (owner == .string) {
+                try out.appendSlice(arena, try std.fmt.allocPrint(arena, "You are on {s}'s team.\n", .{owner.string}));
+            }
+        }
+        if (root.object.get("members")) |members| {
+            if (members == .array) {
+                if (members.array.items.len == 0) {
+                    try out.appendSlice(arena, "No members yet — add one with `pantry team add <email>`.\n");
+                } else {
+                    try out.appendSlice(arena, "Members:\n");
+                    for (members.array.items) |m| {
+                        if (m != .string) continue;
+                        try out.appendSlice(arena, try std.fmt.allocPrint(arena, "  {s}\n", .{m.string}));
+                    }
+                }
+            }
+        }
+    }
+
+    return out.items;
+}
+
+pub fn teamListCommand(allocator: std.mem.Allocator, opts: TeamOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const url = registryUrl(arena, opts.registry);
+    const session = opts.session orelse return CommandResult.err(allocator, team_session_help);
+
+    const res = teamRequest(arena, .GET, url, "/account/team", session, null) catch
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not reach {s}.", .{url}));
+    if (!res.ok())
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not read the team: {s}", .{registry_ops.apiError(arena, res)}));
+
+    return CommandResult.success(allocator, try renderTeam(arena, res));
+}
+
+pub fn teamAddCommand(allocator: std.mem.Allocator, opts: TeamOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const url = registryUrl(arena, opts.registry);
+    const session = opts.session orelse return CommandResult.err(allocator, team_session_help);
+    const email = opts.email orelse return CommandResult.err(allocator, "Error: an email address is required (`pantry team add dev@yourco.com`).");
+
+    var body: std.ArrayList(u8) = .empty;
+    try body.appendSlice(arena, "{\"email\":");
+    try registry_ops.appendJsonString(&body, arena, email);
+    try body.append(arena, '}');
+
+    const res = teamRequest(arena, .POST, url, "/account/team/members", session, body.items) catch
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not reach {s}.", .{url}));
+    if (!res.ok())
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not add them: {s}", .{registry_ops.apiError(arena, res)}));
+
+    const rendered = try renderTeam(arena, res);
+    return CommandResult.success(allocator, try std.fmt.allocPrint(arena,
+        "{s} can now publish to and manage your packages.\n\n{s}", .{ email, rendered }));
+}
+
+pub fn teamRemoveCommand(allocator: std.mem.Allocator, opts: TeamOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const url = registryUrl(arena, opts.registry);
+    const session = opts.session orelse return CommandResult.err(allocator, team_session_help);
+    const email = opts.email orelse return CommandResult.err(allocator, "Error: an email address is required (`pantry team rm dev@yourco.com`).");
+
+    const path = try std.fmt.allocPrint(arena, "/account/team/members/{s}", .{email});
+    const res = teamRequest(arena, .DELETE, url, path, session, null) catch
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not reach {s}.", .{url}));
+    if (!res.ok())
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not remove them: {s}", .{registry_ops.apiError(arena, res)}));
+
+    const rendered = try renderTeam(arena, res);
+    return CommandResult.success(allocator, try std.fmt.allocPrint(arena,
+        "{s} no longer has access. Packages they published under your account stay yours.\n\n{s}", .{ email, rendered }));
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 

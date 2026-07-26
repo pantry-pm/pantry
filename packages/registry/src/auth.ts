@@ -428,6 +428,114 @@ export class AuthService {
     await this.storage.upsertUser(next)
   }
 
+  // -------------------------------------------------------------------------
+  // Teams
+  //
+  // A seat holder shares their packages with members: the members can publish
+  // new versions, price them and see their analytics, and the *owner's* plan
+  // governs the commission and the limits. Membership is stored on both sides
+  // — the roster on the owner, a back-pointer on the member — so "may this
+  // account publish this package?" is one lookup on the hot publish path.
+  // -------------------------------------------------------------------------
+
+  /** The member roster for a seat holder. Empty when they have no team. */
+  async getTeamMembers(owner: string): Promise<string[]> {
+    const user = await this.storage.getUser(owner.toLowerCase().trim())
+    return user?.team?.members ?? []
+  }
+
+  /** The seat holder this account belongs to, if any. */
+  async getTeamOwner(email: string): Promise<string | null> {
+    const user = await this.storage.getUser(email.toLowerCase().trim())
+    return user?.teamOwner ?? null
+  }
+
+  /**
+   * Whether `actor` may act on things owned by `owner` — the same account, or
+   * one of its team members.
+   */
+  async canActFor(actor: string | null | undefined, owner: string | null | undefined): Promise<boolean> {
+    if (!actor || !owner) return false
+    const a = actor.toLowerCase().trim()
+    const o = owner.toLowerCase().trim()
+    if (a === o) return true
+    return (await this.getTeamOwner(a)) === o
+  }
+
+  /**
+   * Add a member to a seat holder's team.
+   *
+   * `seatLimit` counts the owner, so a 10-seat plan invites 9 people. Callers
+   * pass it from the tier table rather than this module reading plans, which
+   * keeps billing policy in one place.
+   */
+  async addTeamMember(owner: string, memberEmail: string, seatLimit: number): Promise<string[]> {
+    const ownerEmail = owner.toLowerCase().trim()
+    const member = memberEmail.toLowerCase().trim()
+
+    if (member === ownerEmail)
+      throw new AuthError('You are already on your own team', 400)
+
+    const ownerUser = await this.storage.getUser(ownerEmail)
+    if (!ownerUser) throw new AuthError('No such account', 404)
+
+    const memberUser = await this.storage.getUser(member)
+    if (!memberUser)
+      throw new AuthError(`${memberEmail} does not have an account yet — they need to sign up first`, 404)
+
+    // One team per account: being on two would make "whose plan applies?"
+    // ambiguous on every publish.
+    if (memberUser.teamOwner && memberUser.teamOwner !== ownerEmail)
+      throw new AuthError(`${memberEmail} is already on another team`, 409)
+    if (memberUser.team?.members?.length)
+      throw new AuthError(`${memberEmail} runs their own team`, 409)
+
+    const members = ownerUser.team?.members ?? []
+    if (members.includes(member)) return members
+
+    if (members.length + 1 >= seatLimit)
+      throw new AuthError(`That plan includes ${seatLimit} seats, and they are all taken`, 402)
+
+    const next = [...members, member]
+    await this.storage.upsertUser({
+      ...ownerUser,
+      team: { members: next, updatedAt: new Date().toISOString() },
+      updatedAt: new Date().toISOString(),
+    })
+    await this.storage.upsertUser({
+      ...memberUser,
+      teamOwner: ownerEmail,
+      updatedAt: new Date().toISOString(),
+    })
+
+    return next
+  }
+
+  /** Remove a member. Their own packages are untouched — only the sharing ends. */
+  async removeTeamMember(owner: string, memberEmail: string): Promise<string[]> {
+    const ownerEmail = owner.toLowerCase().trim()
+    const member = memberEmail.toLowerCase().trim()
+
+    const ownerUser = await this.storage.getUser(ownerEmail)
+    if (!ownerUser) throw new AuthError('No such account', 404)
+
+    const next = (ownerUser.team?.members ?? []).filter(m => m !== member)
+    await this.storage.upsertUser({
+      ...ownerUser,
+      team: { members: next, updatedAt: new Date().toISOString() },
+      updatedAt: new Date().toISOString(),
+    })
+
+    const memberUser = await this.storage.getUser(member)
+    if (memberUser?.teamOwner === ownerEmail) {
+      const cleaned: User = { ...memberUser, updatedAt: new Date().toISOString() }
+      delete cleaned.teamOwner
+      await this.storage.upsertUser(cleaned)
+    }
+
+    return next
+  }
+
   /** Find the account a Stripe customer belongs to, for webhook handling. */
   async findByStripeCustomer(customerId: string, candidateEmail?: string): Promise<string | null> {
     // Stripe sends the customer's email on the events we care about, so a
@@ -599,6 +707,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
       // Stored as JSON: the shape is Stripe's to change, and a nested map here
       // would mean a marshalling change every time it does.
       ...(data.subscription ? { subscription: JSON.parse(data.subscription) } : {}),
+      ...(data.team ? { team: JSON.parse(data.team) } : {}),
+      ...(data.teamOwner ? { teamOwner: data.teamOwner } : {}),
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     }
@@ -615,6 +725,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
         passwordHash: user.passwordHash,
         role: user.role || 'user',
         ...(user.subscription ? { subscription: JSON.stringify(user.subscription) } : {}),
+        ...(user.team ? { team: JSON.stringify(user.team) } : {}),
+        ...(user.teamOwner ? { teamOwner: user.teamOwner } : {}),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }),
@@ -633,6 +745,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
         passwordHash: user.passwordHash,
         role: user.role || 'user',
         ...(user.subscription ? { subscription: JSON.stringify(user.subscription) } : {}),
+        ...(user.team ? { team: JSON.stringify(user.team) } : {}),
+        ...(user.teamOwner ? { teamOwner: user.teamOwner } : {}),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       }),

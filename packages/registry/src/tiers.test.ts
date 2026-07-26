@@ -204,6 +204,218 @@ describe('subscription tiers', () => {
 
   // -------------------------------------------------------------------------
 
+  describe('package ownership', () => {
+    it('refuses a publish over someone else\'s package', async () => {
+      const owner = await account('owner@acme.com')
+      const stranger = await account('stranger@acme.com')
+
+      expect((await publish('owned-pkg', owner.token)).status).toBe(201)
+
+      const intrusion = await publish('owned-pkg', stranger.token)
+      expect(intrusion.status).toBe(403)
+      const body = await intrusion.json() as any
+      expect(body.error).toContain('belongs to another account')
+    })
+
+    it('still lets anyone claim an unpublished name', async () => {
+      const someone = await account('first@acme.com')
+      expect((await publish('brand-new-pkg', someone.token)).status).toBe(201)
+    })
+
+    it('lets the owner keep publishing', async () => {
+      const owner = await account('owner@acme.com')
+      await publish('mine', owner.token)
+
+      const form = new FormData()
+      form.set('metadata', JSON.stringify({ name: 'mine', version: '2.0.0' }))
+      form.set('tarball', new File([new Uint8Array(8)], 'mine.tgz'))
+      const second = await fetch(`${baseUrl}/publish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.token}` },
+        body: form,
+      })
+      expect(second.status).toBe(201)
+    })
+
+    it('lets the operator publish anywhere', async () => {
+      const owner = await account('owner@acme.com')
+      await publish('operated', owner.token)
+
+      const form = new FormData()
+      form.set('metadata', JSON.stringify({ name: 'operated', version: '3.0.0' }))
+      form.set('tarball', new File([new Uint8Array(8)], 'operated.tgz'))
+      const res = await fetch(`${baseUrl}/publish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${ADMIN_TOKEN}` },
+        body: form,
+      })
+      expect(res.status).toBe(201)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+
+  describe('team seats', () => {
+    async function team(): Promise<{ owner: any, member: any }> {
+      const owner = await account('lead@acme.com')
+      const member = await account('dev@acme.com')
+      await auth.setSubscription('lead@acme.com', { tier: 'team', status: 'active' })
+      return { owner, member }
+    }
+
+    function invite(session: string, email: string): Promise<Response> {
+      return fetch(`${baseUrl}/account/team/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Cookie': `pantry_session=${session}` },
+        body: JSON.stringify({ email }),
+      })
+    }
+
+    it('is a Team feature', async () => {
+      const solo = await account('solo@acme.com')
+      await account('friend@acme.com')
+
+      const onFree = await invite(solo.session, 'friend@acme.com')
+      expect(onFree.status).toBe(402)
+      expect((await onFree.json() as any).hint).toContain('pantry subscribe team')
+
+      await auth.setSubscription('solo@acme.com', { tier: 'pro', status: 'active' })
+      const onPro = await invite(solo.session, 'friend@acme.com')
+      expect(onPro.status).toBe(402) // Pro is a single seat
+    })
+
+    it('lets a member publish to the team\'s packages', async () => {
+      const { owner, member } = await team()
+      await publish('team-pkg', owner.token)
+
+      // Before the invite, the member is a stranger.
+      expect((await publish('team-pkg', member.token)).status).toBe(403)
+
+      expect((await invite(owner.session, 'dev@acme.com')).status).toBe(200)
+
+      const form = new FormData()
+      form.set('metadata', JSON.stringify({ name: 'team-pkg', version: '1.1.0' }))
+      form.set('tarball', new File([new Uint8Array(8)], 'team-pkg.tgz'))
+      const asMember = await fetch(`${baseUrl}/publish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${member.token}` },
+        body: form,
+      })
+      expect(asMember.status).toBe(201)
+    })
+
+    it('lets a member manage and price the team\'s packages', async () => {
+      const { owner, member } = await team()
+      await publish('team-priced', owner.token)
+      await invite(owner.session, 'dev@acme.com')
+
+      const priced = await fetch(`${baseUrl}/packages/team-priced/paywall`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${member.token}` },
+        body: JSON.stringify({ price: 1500 }),
+      })
+      expect(priced.status).toBe(200)
+
+      const settings = await fetch(`${baseUrl}/publisher/api/packages/team-priced`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Cookie': `pantry_session=${member.session}` },
+        body: JSON.stringify({ description: 'edited by a teammate' }),
+      })
+      expect(settings.status).toBe(200)
+    })
+
+    it('gives members the seat holder\'s limits, not their own', async () => {
+      const { owner, member } = await team()
+      await publish('big-team-pkg', owner.token)
+      await invite(owner.session, 'dev@acme.com')
+
+      // The member is personally on Free (50MB), but the package is the team's.
+      expect(await auth.getTier('dev@acme.com')).toBe('free')
+      const form = new FormData()
+      form.set('metadata', JSON.stringify({ name: 'big-team-pkg', version: '2.0.0' }))
+      form.set('tarball', new File([new Uint8Array(300 * 1024 * 1024)], 'big.tgz'))
+      const res = await fetch(`${baseUrl}/publish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${member.token}` },
+        body: form,
+      })
+      expect(res.status).toBe(201) // 300MB — over Free and Pro, inside Team's 1GB
+    })
+
+    it('enforces the seat count', async () => {
+      const owner = await account('lead@acme.com')
+      await auth.setSubscription('lead@acme.com', { tier: 'team', status: 'active' })
+
+      // Team is 10 seats: the holder plus 9 invitees.
+      for (let i = 0; i < 9; i++) {
+        await account(`member${i}@acme.com`)
+        expect((await invite(owner.session, `member${i}@acme.com`)).status).toBe(200)
+      }
+
+      await account('one-too-many@acme.com')
+      const overflow = await invite(owner.session, 'one-too-many@acme.com')
+      expect(overflow.status).toBe(402)
+      expect((await overflow.json() as any).error).toContain('all taken')
+    })
+
+    it('refuses to invite someone who is already on a team', async () => {
+      const { owner } = await team()
+      await invite(owner.session, 'dev@acme.com')
+
+      const other = await account('other-lead@acme.com')
+      await auth.setSubscription('other-lead@acme.com', { tier: 'team', status: 'active' })
+      const poached = await invite(other.session, 'dev@acme.com')
+      expect(poached.status).toBe(409)
+    })
+
+    it('refuses to invite someone without an account', async () => {
+      const { owner } = await team()
+      const res = await invite(owner.session, 'ghost@acme.com')
+      expect(res.status).toBe(404)
+    })
+
+    it('removing a member revokes their access', async () => {
+      const { owner, member } = await team()
+      await publish('revoked-pkg', owner.token)
+      await invite(owner.session, 'dev@acme.com')
+
+      const removed = await fetch(`${baseUrl}/account/team/members/${encodeURIComponent('dev@acme.com')}`, {
+        method: 'DELETE',
+        headers: { Cookie: `pantry_session=${owner.session}` },
+      })
+      expect(removed.status).toBe(200)
+      expect((await removed.json() as any).members).toEqual([])
+
+      const form = new FormData()
+      form.set('metadata', JSON.stringify({ name: 'revoked-pkg', version: '9.0.0' }))
+      form.set('tarball', new File([new Uint8Array(8)], 'x.tgz'))
+      const afterRemoval = await fetch(`${baseUrl}/publish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${member.token}` },
+        body: form,
+      })
+      expect(afterRemoval.status).toBe(403)
+    })
+
+    it('reports the roster and seat usage', async () => {
+      const { owner } = await team()
+      await invite(owner.session, 'dev@acme.com')
+
+      const res = await fetch(`${baseUrl}/account/team`, { headers: { Cookie: `pantry_session=${owner.session}` } })
+      const body = await res.json() as any
+      expect(body.seats).toBe(10)
+      expect(body.seatsUsed).toBe(2)
+      expect(body.members).toEqual(['dev@acme.com'])
+
+      const memberView = await fetch(`${baseUrl}/account/team`, {
+        headers: { Cookie: `pantry_session=${(await auth.login('dev@acme.com', 'password123')).sessionToken}` },
+      })
+      expect((await memberView.json() as any).memberOf).toBe('lead@acme.com')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+
   describe('subscription state', () => {
     it('survives a failed payment and expires after a cancellation', async () => {
       await account('billing@acme.com')

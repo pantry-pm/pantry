@@ -1136,6 +1136,32 @@ fn priceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+fn teamOptions(ctx: *cli.BaseCommand.ParseContext) lib.commands.paid_commands.TeamOptions {
+    return .{
+        .registry = ctx.getOption("registry"),
+        .session = ctx.getOption("session"),
+        .email = ctx.getArgument(0),
+    };
+}
+
+fn teamListAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.paid_commands.teamListCommand(allocator, teamOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
+fn teamAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.paid_commands.teamAddCommand(allocator, teamOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
+fn teamRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.paid_commands.teamRemoveCommand(allocator, teamOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
 fn planAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const result = try lib.commands.paid_commands.plansCommand(allocator, .{
@@ -4111,6 +4137,32 @@ pub fn main() !void {
     _ = try subscribe_cmd.addOption(cli.Option.init("print", "print", "Print the URL instead of opening a browser", .bool));
     _ = subscribe_cmd.setAction(subscribeAction);
     _ = try root.addCommand(subscribe_cmd);
+
+    const team_session_opt = cli.Option.init("session", "session", "Session token from the website (team changes need a signed-in person)", .string);
+
+    var team_cmd = try cli.BaseCommand.init(allocator, "team", "Share your packages with teammates (Team plan)");
+
+    var team_list_cmd = try cli.BaseCommand.init(allocator, "list", "Show your team and how many seats are used");
+    _ = try team_list_cmd.addOption(paid_registry_opt);
+    _ = try team_list_cmd.addOption(team_session_opt);
+    _ = team_list_cmd.setAction(teamListAction);
+    _ = try team_cmd.addCommand(team_list_cmd);
+
+    var team_add_cmd = try cli.BaseCommand.init(allocator, "add", "Let a teammate publish to and manage your packages");
+    _ = try team_add_cmd.addArgument(cli.Argument.init("email", "Their account email", .string).withRequired(true));
+    _ = try team_add_cmd.addOption(paid_registry_opt);
+    _ = try team_add_cmd.addOption(team_session_opt);
+    _ = team_add_cmd.setAction(teamAddAction);
+    _ = try team_cmd.addCommand(team_add_cmd);
+
+    var team_rm_cmd = try cli.BaseCommand.init(allocator, "rm", "Remove a teammate");
+    _ = try team_rm_cmd.addArgument(cli.Argument.init("email", "Their account email", .string).withRequired(true));
+    _ = try team_rm_cmd.addOption(paid_registry_opt);
+    _ = try team_rm_cmd.addOption(team_session_opt);
+    _ = team_rm_cmd.setAction(teamRemoveAction);
+    _ = try team_cmd.addCommand(team_rm_cmd);
+
+    _ = try root.addCommand(team_cmd);
 
     var buy_cmd = try cli.BaseCommand.init(allocator, "buy", "Buy access to a paid package");
     _ = try buy_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));

@@ -253,10 +253,28 @@ export interface User {
    * billing outage can't silently upgrade or downgrade anyone.
    */
   subscription?: UserSubscription
+  /**
+   * Accounts this one shares its packages with (Team plan). Present on the
+   * seat holder — the account that pays and owns the packages.
+   */
+  team?: UserTeam
+  /**
+   * The seat holder this account belongs to, when it is a member of someone
+   * else's team. An account is on at most one team, which keeps "who may
+   * publish this" a single lookup rather than a graph walk.
+   */
+  teamOwner?: string
   /** ISO 8601 timestamp */
   createdAt: string
   /** ISO 8601 timestamp */
   updatedAt: string
+}
+
+/** The members sharing a seat holder's packages. */
+export interface UserTeam {
+  /** Member emails. The seat holder is not listed — they're the owner. */
+  members: string[]
+  updatedAt?: string
 }
 
 /** The stored half of a subscription. Interpretation lives in `subscriptions.ts`. */
