@@ -92,6 +92,39 @@ can always download it.
 `pantry price rm` makes a package free again. Existing purchases keep working —
 you can't un-sell something.
 
+## Teams
+
+The Team plan shares your packages with up to nine other accounts. A member can
+publish new versions, price them, and manage them from the dashboard — and the
+**seat holder's plan applies throughout**, so a member on a personal Free
+account still gets the team's 1GB artifacts and 5% commission when they publish
+to a team package.
+
+```bash
+pantry team add dev@yourco.com --session <session-token>
+pantry team list
+pantry team rm dev@yourco.com
+```
+
+Team changes need a signed-in session rather than an API token: sharing write
+access to everything you've published is a decision a person makes, not
+something a CI credential should be able to do.
+
+Notes worth knowing:
+
+- **An account is on one team.** Being on two would make "whose plan applies to
+  this publish?" ambiguous on every upload.
+- **Removing someone is immediate** — their next publish is refused. Packages
+  they published under the account stay with the account.
+- **Members need an account first.** Invite is by email, and the address has to
+  already exist.
+
+### Who may publish what
+
+A package with a publisher only accepts new versions from that account, its
+team, or the registry operator. A name nobody has published yet is still
+first-come — publishing it claims it.
+
 ## For buyers
 
 `pantry install` on a paid package you don't own stops with the price and what
