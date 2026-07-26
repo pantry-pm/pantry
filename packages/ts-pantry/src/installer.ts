@@ -348,6 +348,16 @@ export async function installPackage(
           fs.chmodSync(binSubPath, 0o755)
         }
       }
+
+      // Restoring the bit only on the DECLARED binaries leaves a package that
+      // shells out to its own helpers broken in a way that looks like the
+      // wrapper working: git's `bin/git` ran fine and then died on
+      // `exec .../libexec/git: Permission denied`, which reads as "not a git
+      // repository" to everything downstream. Anything living in a directory
+      // that exists to hold executables needs the bit too.
+      for (const dir of ['bin', 'sbin', 'libexec']) {
+        makeTreeExecutable(path.join(pkgDir, dir))
+      }
     }
 
     // Create .bin/ links
@@ -758,6 +768,46 @@ async function extractArchive(archivePath: string, destDir: string, format: stri
 
 function copyDirRecursive(src: string, dest: string): void {
   fs.cpSync(src, dest, { recursive: true })
+}
+
+/**
+ * Give every regular file under `dir` the executable bit, following
+ * subdirectories. Used on the directories whose whole purpose is to hold
+ * executables (`bin`, `sbin`, `libexec`), where an archive that lost its mode
+ * bits leaves helpers that the package's own wrappers exec.
+ *
+ * Preserves whatever read/write bits are already there and never widens a
+ * file that is already executable.
+ */
+function makeTreeExecutable(dir: string): void {
+  let entries: fs.Dirent[]
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true })
+  }
+  catch {
+    return // directory absent for this package
+  }
+
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name)
+    try {
+      if (entry.isDirectory()) {
+        makeTreeExecutable(entryPath)
+        continue
+      }
+      if (!entry.isFile())
+        continue // leave symlinks and specials alone
+
+      const mode = fs.statSync(entryPath).mode & 0o777
+      // Mirror each read bit into the matching execute bit.
+      const withExec = mode | ((mode & 0o444) >> 2)
+      if (withExec !== mode)
+        fs.chmodSync(entryPath, withExec)
+    }
+    catch {
+      // A single unreadable entry should not abort the install.
+    }
+  }
 }
 
 function fetchJSON(url: string, maxRedirects = 5): Promise<unknown> {
