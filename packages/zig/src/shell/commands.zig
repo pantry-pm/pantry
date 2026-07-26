@@ -7,6 +7,17 @@ pub const ShellCommands = struct {
     allocator: std.mem.Allocator,
     env_cache: *lib.cache.EnvCache,
 
+    /// Emit shell code without installing anything when the environment is
+    /// missing.
+    ///
+    /// `activate()` otherwise runs the full install pipeline, which downloads
+    /// packages and `chdir`s the whole process. That chdir is a global side
+    /// effect: any caller holding a relative path loses it mid-call, and
+    /// `zig build test` is exactly such a caller — it launches the test binary
+    /// with `--cache-dir=./.zig-cache`. Callers that only want the generated
+    /// shell code set this and skip the side effect.
+    skip_install: bool = false,
+
     pub fn init(allocator: std.mem.Allocator) !ShellCommands {
         // Use persistent cache to avoid re-installing on every cd
         const env_cache = try allocator.create(lib.cache.EnvCache);
@@ -227,7 +238,7 @@ pub const ShellCommands = struct {
             break :blk true;
         };
 
-        if (!env_exists and dep_file != null) {
+        if (!env_exists and dep_file != null and !self.skip_install) {
             // Parse dependency file to detect version changes
             const dep_file_content = io_helper.readFileAlloc(self.allocator, dep_file.?, 10 * 1024 * 1024) catch { // 10MB max
                 return try self.allocator.dupe(u8, "");
@@ -2864,20 +2875,24 @@ test "ShellCommands activate generates shell code" {
     // (--listen=-). activate() emits progress via style.print (stdout by
     // default), which corrupts that protocol. Route diagnostics to stderr for
     // the duration, exactly like the eval'd CLI commands do.
-    //
-    // KNOWN COSMETIC QUIRK: even with diagnostics redirected, the full
-    // install pipeline this test exercises still kills the listen-mode
-    // process on its FIRST attempt — `zig build test` prints one
-    // "failed command: ... --listen=-" line, then its automatic non-listen
-    // retry passes and the build succeeds (exit 0, all steps green).
-    // Skipping this test removes the line entirely; it has never produced a
-    // real failure. If you're grepping CI logs, match on the exit code or
-    // "Build Summary", not on "failed command".
     style.setDiagnosticsToStderr(true);
     defer style.setDiagnosticsToStderr(false);
 
     var commands = try ShellCommands.init(allocator);
     defer commands.deinit();
+
+    // This test asserts on the generated shell code, not on installing
+    // anything, so don't run the real install pipeline for it — that pulled a
+    // network install and a process-wide `chdir` into a unit test.
+    //
+    // It also makes the build output quieter. `zig build test` intermittently
+    // prints "failed command: ... --listen=-" for this test: the listen-mode
+    // runner dies, zig retries without listen mode, and the build goes green
+    // (exit 0, all 324 tests pass). Skipping the install makes that rarer but
+    // does NOT eliminate it — measured 1-in-3 cold runs on 0.17.0-dev.1465
+    // with this set. Judge CI on the exit code or "Build Summary", never on
+    // the presence of "failed command".
+    commands.skip_install = true;
 
     // Create test project under an ABSOLUTE path outside the repo. A relative
     // dir made detectProjectRoot walk up into the real repo and activate IT —
