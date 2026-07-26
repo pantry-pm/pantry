@@ -420,26 +420,30 @@ pub fn plansCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandRes
         var line: [512]u8 = undefined;
         const rendered = try std.fmt.bufPrint(&line,
             \\{s} — {s}
-            \\  Fee per sale:        {s}
             \\  Private packages:    {s}
-            \\  Analytics history:   {s}
+            \\  Full analytics:      {s}
             \\  Max artifact:        {d}MB
             \\  Priority builds:     {s}
             \\  Seats:               {d}
+            \\  Selling fee:         {s} per sale
             \\
             \\
         , .{
             name,
             price,
-            selling_fee,
             if (private) "yes" else "no",
-            if (days >= 3650) "full" else "30 days",
+            if (days >= 3650) "lifetime" else "30 days",
             mb,
             if (priority) "yes" else "no",
             seats,
+            selling_fee,
         });
         try out.appendSlice(arena, rendered);
     }
+
+    try out.appendSlice(arena,
+        "Lifetime download totals are shown on every plan; the depth of the timeline is\n" ++
+            "what a plan buys.\n");
 
     if (jsonString(parsed.value, "discoveryFee")) |fee| {
         try out.appendSlice(arena, try std.fmt.allocPrint(arena,

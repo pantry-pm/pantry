@@ -5,8 +5,9 @@
     <div class="text-center mb-10 animate-fade-in">
       <h1 class="text-3xl font-semibold tracking-tight mb-3">Plans</h1>
       <p class="text-sm max-w-2xl mx-auto" style="color: var(--fg-muted);">
-        Publishing is free. Installing is free. <em>Selling</em> a package costs a fee per
-        sale — and a plan halves it, then insures the builds that depend on what you install.
+        Publishing is free and installing is free — you just need an account for an API token.
+        A plan insures the builds that depend on what you install, and halves what it costs to
+        <em>sell</em> a package.
       </p>
     </div>
 
@@ -20,11 +21,7 @@
           @endif
         </div>
         <p class="text-2xl font-semibold">{{ plan.formattedPrice }}</p>
-        <p class="mb-3" style="font-size: 0.75rem; color: var(--fg-subtle);">{{ plan.tagline }}</p>
-        <div class="mb-4 pb-4 border-b border-[var(--border)]">
-          <p style="font-size: 0.8125rem; color: var(--accent);">{{ plan.sellingFee }} fee per sale</p>
-          <p style="font-size: 0.75rem; color: var(--fg-subtle);">{{ plan.feeExample }}</p>
-        </div>
+        <p class="mb-4 pb-4 border-b border-[var(--border)]" style="font-size: 0.75rem; color: var(--fg-subtle);">{{ plan.tagline }}</p>
 
         <p class="uppercase tracking-widest mb-2" style="font-size: 0.625rem; color: var(--fg-subtle);">Publishing</p>
         <ul class="flex flex-col gap-1.5 mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">
@@ -40,12 +37,18 @@
           @endforeach
         </ul>
 
+        <p class="mb-3" style="font-size: 0.6875rem; color: var(--fg-subtle);">
+          Selling a package costs {{ plan.sellingFee }} per sale &mdash; <a href="#what-selling-costs" class="hvr-accent transition-colors" style="color: var(--fg-subtle); text-decoration: underline;">details</a>
+        </p>
+
         @if (plan.id !== 'free')
         <a href="/account?plan={{ plan.id }}" class="mt-auto rounded-lg px-4 py-2.5 font-medium text-sm text-center transition-colors" style="background: var(--accent); color: var(--bg);">
           Choose {{ plan.name }}
         </a>
         @else
-        <p class="mt-auto text-center" style="font-size: 0.8125rem; color: var(--fg-subtle);">No signup needed</p>
+        <a href="/signup" class="mt-auto rounded-lg px-4 py-2.5 font-medium text-sm text-center transition-colors border border-[var(--border)]" style="color: var(--fg);">
+          Create an account
+        </a>
         @endif
       </div>
       @endforeach
@@ -92,7 +95,7 @@
       </div>
     </div>
 
-    <div class="border border-[var(--border)] rounded-lg p-5 mb-6" style="background: var(--bg-subtle);">
+    <div id="what-selling-costs" class="border border-[var(--border)] rounded-lg p-5 mb-6" style="background: var(--bg-subtle);">
       <h2 class="text-xs uppercase tracking-widest font-medium mb-3" style="color: var(--fg-subtle);">What selling costs</h2>
       <ul class="flex flex-col gap-2" style="font-size: 0.875rem; color: var(--fg-muted);">
         <li><strong>The fee is what you pay pantry for each sale.</strong> List a package at $10 and sell one copy: $1 goes to pantry on Free, or 50&cent; on a plan.</li>
@@ -101,6 +104,10 @@
         <li>Payment processing and any sales tax are separate, and settle against your own Stripe account.</li>
         <li>Nothing is charged until something sells. You never pay to download your own package, and versions you mark free stay free for everyone.</li>
       </ul>
+      <p class="mt-3" style="font-size: 0.8125rem; color: var(--fg-subtle);">
+        Lifetime download totals are shown for every package on every plan. What a plan buys is
+        the depth — the day-by-day timeline and per-version breakdowns beyond 30 days.
+      </p>
     </div>
 
     <div class="border border-[var(--border)] rounded-lg p-5" style="background: var(--bg-subtle);">

@@ -14,14 +14,18 @@ Publishing is free and installing is free. **Selling** a package costs a fee per
 sale, paid to the registry — and a plan halves it, on top of unlocking the things
 a serious publisher wants anyway.
 
-List a package at $10 and sell one copy: **$1 goes to pantry on Free, or 50¢ on
-a plan.** Nothing is charged until something sells.
+List a package at $10 and sell one copy: $1 goes to pantry on Free, or 50¢ on a
+plan. Nothing is charged until something sells.
+
+Lifetime download totals are shown for every package on every plan. What a plan
+buys is the *depth* — the day-by-day timeline and per-version breakdowns beyond
+30 days.
 
 | | Free | Pro — $9/mo | Team — $29/mo |
 |---|---|---|---|
 | Fee per sale | 10% | **5%** | **5%** |
 | Private & unlisted packages | — | ✓ | ✓ |
-| Analytics history | 30 days | full | full |
+| Full analytics | 30 days | lifetime | lifetime |
 | Max artifact size | 50MB | 250MB | 1GB |
 | Priority builds | — | ✓ | ✓ |
 | Seats | 1 | 1 | 10 |
@@ -52,8 +56,10 @@ cancelling keeps them until the period you already paid for runs out.
 
 ### 1. Get an account and publish
 
+Publishing needs an account, because it needs an API token:
+
 ```bash
-# Sign up at https://pantry.dev/signup, then store a token
+# Create an account at https://pantry.dev/signup, then store a token
 pantry token set
 pantry publish
 ```

@@ -4,7 +4,7 @@
  * Publishing is free and installing is free. *Selling* a package costs a fee
  * per sale, paid to the registry — and a plan halves it:
  *
- *   Free          10% per sale   public packages, 30 days of analytics, 50MB
+ *   Free          10% per sale   public packages, 30 days of full analytics, 50MB
  *   Pro    $9/mo   5% per sale   + private packages, full history, 250MB, priority builds
  *   Team  $29/mo   5% per sale   + 10 seats, 1GB artifacts
  *
@@ -38,7 +38,11 @@ export interface TierDefinition {
    * package is listed at.
    */
   commissionBps: number
-  /** Days of download history the dashboard will show. */
+  /**
+   * How far back the *detailed* download timeline goes. Lifetime totals are
+   * shown for every package on every plan — this is the depth, not the
+   * existence, of analytics.
+   */
   analyticsRetentionDays: number
   /** Largest tarball this account may publish, in bytes. */
   maxArtifactBytes: number

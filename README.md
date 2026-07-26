@@ -72,8 +72,7 @@ pantry transforms how you manage dependencies across your entire development wor
 ### Paid Packages
 
 - 💳 **Charge for What You Publish** — `pantry price set my-package 9.00`; metadata stays public, the tarball is gated
-- 📉 **Pay Less to Sell** — selling costs 10% per sale on Free, **5% on Pro ($9/mo) and Team ($29/mo)**; +3% when the sale started on pantry.dev. A $10 sale costs you $1, or 50¢ on a plan
-- 🧾 **Purchases Belong to Accounts** — buy once, install on every machine; rotating a token doesn't cost you what you bought
+- 🧾 **Purchases Follow the Account** — buy once, install on every machine; on Team, one purchase covers everyone with a seat
 - 🆓 **Free Versions** — keep a 1.x free while charging for 2.x, with `--free-versions`
 - 🏦 **Direct Payouts** — Stripe Connect payouts to the publisher, with a configurable platform fee
 
@@ -519,7 +518,7 @@ Explore advanced dependency management topics:
 
 - [Paid Packages](https://pantry.dev/paid-packages) _(price a package, get paid, buyers install with their account)_
 - [Build Insurance, Alerts & SBOMs](https://pantry.dev/build-insurance) _(never lose a build to an unpublished dependency)_
-- [Plans & Fees](https://pantry.dev/pricing) _(Free / Pro $9 / Team $29 — selling fees, private packages, priority builds)_
+- [Plans & Fees](https://pantry.dev/pricing) _(Free / Pro $9 / Team $29 — private packages, build insurance, priority builds)_
 - [Run Your Own Registry](https://pantry.dev/self-hosting) _(one command, and it's private by default — only authenticated members can download)_
 - [Extending the Registry](https://pantry.dev/registry-extensions) _(custom routes and access policies without forking server.ts)_
 - [Commit Publishing](https://pantry.dev/features/commit-publishing) _(pkg-pr-new alternative)_

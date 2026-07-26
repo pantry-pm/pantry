@@ -933,9 +933,6 @@ export function createHandler(
             featured: t.id === 'pro',
             formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
             sellingFee: formatBps(t.commissionBps),
-            // The number in the abstract means little; what a $10 sale costs is
-            // the thing a seller is actually deciding about.
-            feeExample: `$10 sale → $${(1000 * t.commissionBps / 10_000 / 100).toFixed(2)} to pantry`,
             tagline: t.id === 'free'
               ? 'Publish and sell, no cost'
               : t.id === 'pro'
@@ -944,7 +941,7 @@ export function createHandler(
             // What you get as a publisher…
             publishing: [
               t.privatePackages ? 'Private & unlisted packages' : 'Public packages',
-              t.analyticsRetentionDays >= 3650 ? 'Full analytics history' : '30 days of analytics',
+              t.analyticsRetentionDays >= 3650 ? 'Lifetime full analytics' : '30 days of full analytics',
               `${Math.round(t.maxArtifactBytes / (1024 * 1024))}MB artifacts`,
               t.priorityBuilds ? 'Priority builds' : 'Standard build queue',
               t.seats > 1 ? `${t.seats} seats, shared packages` : '1 seat',
