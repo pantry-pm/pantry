@@ -67,6 +67,7 @@ export const chompbuildcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.3.1',
     '0.3.0',
     '0.2.23',
     '0.2.22',
