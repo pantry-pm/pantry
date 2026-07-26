@@ -58,7 +58,7 @@ pub fn build(b: *std.Build) void {
     // avoided on purpose — on zig 0.17 it drops the -Doptimize flag entirely
     // and silently falls back to Debug unless --release is passed, which also
     // broke scripts that pass -Doptimize=Debug (e.g. scripts/coverage.sh).
-    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseFast)") orelse .ReleaseFast;
+    const optimize = b.option(std.builtin.OptimizeMode, "optimize", "Optimization mode (default: ReleaseFast)") orelse std.builtin.OptimizeMode.ReleaseFast;
 
     // Option to strip debug symbols for smaller binaries
     // Strip debug symbols by default in release builds: it cut `pantry`'s
@@ -66,7 +66,7 @@ pub fn build(b: *std.Build) void {
     // `shell:lookup` fired on every cold `cd`. Debug/ReleaseSafe keep symbols
     // for backtraces; override either way with `-Dstrip=true|false`.
     const strip = b.option(bool, "strip", "Strip debug symbols") orelse
-        (optimize == .ReleaseFast or optimize == .ReleaseSmall);
+        (optimize == std.builtin.OptimizeMode.ReleaseFast or optimize == std.builtin.OptimizeMode.ReleaseSmall);
 
     // Single-threaded mode for smaller binary (optional, off by default)
     const single_threaded = b.option(bool, "single-threaded", "Build in single-threaded mode for smaller binary") orelse false;
@@ -450,7 +450,7 @@ pub fn build(b: *std.Build) void {
     const shell_bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/shell_bench.zig"),
         .target = target,
-        .optimize = .ReleaseFast,
+        .optimize = std.builtin.OptimizeMode.ReleaseFast,
         .link_libc = true,
         .imports = &.{
             .{ .name = "lib", .module = lib_mod },
@@ -536,7 +536,7 @@ pub fn build(b: *std.Build) void {
     const bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/bench.zig"),
         .target = target,
-        .optimize = .ReleaseFast,
+        .optimize = std.builtin.OptimizeMode.ReleaseFast,
         .link_libc = true,
         .imports = &.{
             .{ .name = "lib", .module = lib_mod },
@@ -587,7 +587,7 @@ pub fn build(b: *std.Build) void {
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/main.zig"),
                 .target = resolved_target,
-                .optimize = .ReleaseFast,
+                .optimize = std.builtin.OptimizeMode.ReleaseFast,
                 // Strip the distributed binaries: cuts process startup ~5x
                 // (≈26ms → ≈5ms), which every `cd` pays via `shell:lookup`.
                 .strip = true,
