@@ -3818,6 +3818,19 @@ pub const Installer = struct {
 
     /// Copy directory structure from source to destination
     fn copyDirectoryStructure(self: *Installer, source: []const u8, dest: []const u8) !void {
+        return self.copyDirectoryStructureInner(source, dest, false);
+    }
+
+    /// `inherited_executable` marks that we are already somewhere beneath a
+    /// directory whose purpose is to hold executables, so nested entries keep
+    /// the bit. git needs both halves of this: its helpers live in `libexec`,
+    /// and the ones that matter are a further level down in `libexec/git-core`.
+    fn copyDirectoryStructureInner(
+        self: *Installer,
+        source: []const u8,
+        dest: []const u8,
+        inherited_executable: bool,
+    ) !void {
         // Use std.fs.Dir for iteration (Io.Dir doesn't have iterate() in Zig 0.16)
         var src_dir = try io_helper.openDirAbsoluteForIteration(source);
         defer src_dir.close();
@@ -3825,11 +3838,16 @@ pub const Installer = struct {
         // Ensure destination exists
         try io_helper.makePath(dest);
 
-        // Check if this is a bin or sbin directory - files here need to be executable
-        const is_bin_dir = std.mem.endsWith(u8, source, "/bin") or
-            std.mem.endsWith(u8, source, "/sbin") or
-            std.mem.eql(u8, std.fs.path.basename(source), "bin") or
-            std.mem.eql(u8, std.fs.path.basename(source), "sbin");
+        // Files in a directory that exists to hold executables need the bit.
+        // `libexec` belongs here as much as `bin`: leaving it out produced a
+        // git whose `bin/git` wrapper ran and then died on
+        // `exec .../libexec/git: Permission denied`, which every consumer
+        // reported as "not a git repository".
+        const base = std.fs.path.basename(source);
+        const is_bin_dir = inherited_executable or
+            std.mem.eql(u8, base, "bin") or
+            std.mem.eql(u8, base, "sbin") or
+            std.mem.eql(u8, base, "libexec");
 
         var it = src_dir.iterate();
         while (it.next() catch null) |entry| {
@@ -3846,8 +3864,9 @@ pub const Installer = struct {
             defer self.allocator.free(dst_path);
 
             if (entry.kind == .directory) {
-                // Recursively copy directory
-                try self.copyDirectoryStructure(src_path, dst_path);
+                // Recursively copy directory, carrying the executable context
+                // down so `libexec/git-core/*` is not left unexecutable.
+                try self.copyDirectoryStructureInner(src_path, dst_path, is_bin_dir);
             } else if (entry.kind == .sym_link) {
                 // Recreate symlink — read the target and create a new symlink at dest
                 const link_target = io_helper.readLinkAlloc(self.allocator, src_path) catch continue;
