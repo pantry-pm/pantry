@@ -139,6 +139,13 @@ export interface Buyer {
   token?: string | null
   /** True for the shared registry token. */
   admin?: boolean
+  /**
+   * The seat holder this caller belongs to, when they're on a team. A purchase
+   * belongs to the org, not the person who happened to click Buy — teams buy a
+   * package once, and everyone on the team can install it. It also means a
+   * departing employee doesn't take the licence with them.
+   */
+  org?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +156,7 @@ export interface AccessResult {
   allowed: boolean
   paywall?: PackagePaywall
   /** Why access was granted or refused — surfaced in the 402 body and in tests. */
-  reason?: 'no-paywall' | 'free-version' | 'owner' | 'admin' | 'entitled' | 'unauthenticated' | 'payment-required' | 'expired'
+  reason?: 'no-paywall' | 'free-version' | 'owner' | 'admin' | 'entitled' | 'team-entitled' | 'unauthenticated' | 'payment-required' | 'expired'
 }
 
 /**
@@ -178,15 +185,19 @@ export async function resolveAccess(
     return { allowed: true, paywall, reason: 'admin' }
 
   const email = buyer.userId?.toLowerCase().trim()
-  if (email && ownerEmail && email === ownerEmail.toLowerCase().trim())
+  const owner = ownerEmail?.toLowerCase().trim()
+  if (owner && (email === owner || buyer.org?.toLowerCase().trim() === owner))
     return { allowed: true, paywall, reason: 'owner' }
 
-  if (email) {
-    const grant = await storage.getAccessGrant(packageName, accountSubject(email))
+  // The caller's own purchase, then their team's. Checked in that order so a
+  // personal purchase still works for someone who later joins a team.
+  for (const subject of [email, buyer.org?.toLowerCase().trim()]) {
+    if (!subject) continue
+    const grant = await storage.getAccessGrant(packageName, accountSubject(subject))
     if (grant) {
       if (grant.expiresAt && new Date(grant.expiresAt) < new Date())
         return { allowed: false, paywall, reason: 'expired' }
-      return { allowed: true, paywall, reason: 'entitled' }
+      return { allowed: true, paywall, reason: subject === email ? 'entitled' : 'team-entitled' }
     }
   }
 
@@ -233,11 +244,16 @@ export async function isEntitled(
   storage: MetadataStorage,
   packageName: string,
   email: string,
+  org?: string | null,
 ): Promise<boolean> {
-  const grant = await storage.getAccessGrant(packageName, accountSubject(email))
-  if (!grant) return false
-  if (grant.expiresAt && new Date(grant.expiresAt) < new Date()) return false
-  return true
+  for (const subject of [email, org]) {
+    if (!subject) continue
+    const grant = await storage.getAccessGrant(packageName, accountSubject(subject))
+    if (!grant) continue
+    if (grant.expiresAt && new Date(grant.expiresAt) < new Date()) continue
+    return true
+  }
+  return false
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +383,8 @@ export interface CheckoutRequest {
   sellerTier?: Tier
   /** Where the sale came from — `site` adds the 3% discovery fee. */
   origin?: SaleOrigin
+  /** Seat holder to grant to, when the buyer is on a team. */
+  org?: string | null
 }
 
 /**
@@ -414,7 +432,10 @@ export async function createCheckoutSession(
     'success_url': `${baseUrl}/packages/${encoded}/checkout/success`,
     'cancel_url': `${baseUrl}/pkg/${encoded}`,
     'metadata[package_name]': packageName,
-    'metadata[buyer_email]': email,
+    // Who the entitlement is written for: the org when there is one, so the
+    // whole team is covered by the one purchase.
+    'metadata[buyer_email]': (request.org || email).toLowerCase().trim(),
+    'metadata[purchased_by]': email,
     // Recorded so a payout can be explained months later, when nobody
     // remembers which plan the seller was on or where the click came from.
     'metadata[sale_origin]': origin,

@@ -7,6 +7,7 @@ const config = {
     { text: 'Guide', link: '/intro' },
     { text: 'Quick Start', link: '/quickstart' },
     { text: 'Configuration', link: '/config' },
+    { text: 'Pricing', link: '/pricing' },
     { text: 'Features', link: '/features/package-management' },
     {
       text: 'Ecosystem',
@@ -68,6 +69,7 @@ const config = {
           items: [
             { text: 'Paid Packages', link: '/paid-packages' },
             { text: 'Plans & Fees', link: '/pricing' },
+            { text: 'Build Insurance & SBOMs', link: '/build-insurance' },
             { text: 'Commit Publishing', link: '/features/commit-publishing' },
           ],
         },

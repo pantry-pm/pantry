@@ -77,6 +77,13 @@ pantry transforms how you manage dependencies across your entire development wor
 - 🆓 **Free Versions** — keep a 1.x free while charging for 2.x, with `--free-versions`
 - 🏦 **Direct Payouts** — Stripe Connect payouts to the publisher, with a configurable platform fee
 
+### For Teams
+
+- 🛡️ **Build Insurance** — `pantry insure` mirrors every artifact you install into your own namespace; an unpublished or retagged dependency can't break your build
+- 🚨 **Continuous Alerts** — your lockfile watched against the OSV advisory database plus your own licence policy, not just when you remember to audit
+- 📜 **SBOM Export** — CycloneDX or SPDX with hashes computed from the bytes we stored, deterministic so it doesn't churn your repo
+- 👥 **Team Seats** — up to 10 people share one account's packages, mirror, watch list, and paid-package purchases
+
 ### Private Registries
 
 - 🔒 **Private by Default** — `pantry registry setup` stands up your own registry where nothing — metadata, tarballs, binaries, search, the UI — is served without a credential
@@ -511,6 +518,7 @@ See [GitHub Action Documentation](https://github.com/pantry-pm/pantry/tree/main/
 Explore advanced dependency management topics:
 
 - [Paid Packages](https://pantry.dev/paid-packages) _(price a package, get paid, buyers install with their account)_
+- [Build Insurance, Alerts & SBOMs](https://pantry.dev/build-insurance) _(never lose a build to an unpublished dependency)_
 - [Plans & Fees](https://pantry.dev/pricing) _(Free / Pro $9 / Team $29 — commission, private packages, priority builds)_
 - [Run Your Own Registry](https://pantry.dev/self-hosting) _(one command, and it's private by default — only authenticated members can download)_
 - [Extending the Registry](https://pantry.dev/registry-extensions) _(custom routes and access policies without forking server.ts)_

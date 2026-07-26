@@ -1214,6 +1214,42 @@ fn priceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+fn insureOptions(ctx: *cli.BaseCommand.ParseContext) lib.commands.insure_commands.Options {
+    return .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .lockfile = ctx.getOption("lockfile"),
+        .format = ctx.getOption("format"),
+        .out = ctx.getOption("out"),
+        .deny = ctx.getOption("deny"),
+        .allow = ctx.getOption("allow"),
+    };
+}
+
+fn insureAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.insure_commands.insureCommand(allocator, insureOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
+fn insureListAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.insure_commands.insureListCommand(allocator, insureOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
+fn alertsAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.insure_commands.alertsCommand(allocator, insureOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
+fn sbomAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.insure_commands.sbomCommand(allocator, insureOptions(ctx));
+    finishTokenResult(allocator, result);
+}
+
 fn teamOptions(ctx: *cli.BaseCommand.ParseContext) lib.commands.paid_commands.TeamOptions {
     return .{
         .registry = ctx.getOption("registry"),
@@ -4241,6 +4277,38 @@ pub fn main() !void {
     _ = try team_cmd.addCommand(team_rm_cmd);
 
     _ = try root.addCommand(team_cmd);
+
+    const insure_lockfile_opt = cli.Option.init("lockfile", "lockfile", "Lockfile to read (default: pantry.lock, bun.lock or package-lock.json)", .string);
+
+    var insure_cmd = try cli.BaseCommand.init(allocator, "insure", "Mirror everything this project installs, so a build can always be reproduced");
+    _ = try insure_cmd.addOption(paid_registry_opt);
+    _ = try insure_cmd.addOption(paid_token_opt);
+    _ = try insure_cmd.addOption(insure_lockfile_opt);
+    _ = insure_cmd.setAction(insureAction);
+
+    var insure_list_cmd = try cli.BaseCommand.init(allocator, "list", "Show what is insured");
+    _ = try insure_list_cmd.addOption(paid_registry_opt);
+    _ = try insure_list_cmd.addOption(paid_token_opt);
+    _ = insure_list_cmd.setAction(insureListAction);
+    _ = try insure_cmd.addCommand(insure_list_cmd);
+    _ = try root.addCommand(insure_cmd);
+
+    var alerts_cmd = try cli.BaseCommand.init(allocator, "alerts", "Vulnerabilities and licence violations in what you depend on");
+    _ = try alerts_cmd.addOption(paid_registry_opt);
+    _ = try alerts_cmd.addOption(paid_token_opt);
+    _ = try alerts_cmd.addOption(insure_lockfile_opt);
+    _ = try alerts_cmd.addOption(cli.Option.init("deny", "deny", "Licences to refuse, comma-separated", .string));
+    _ = try alerts_cmd.addOption(cli.Option.init("allow", "allow", "The only licences to accept, comma-separated", .string));
+    _ = alerts_cmd.setAction(alertsAction);
+    _ = try root.addCommand(alerts_cmd);
+
+    var sbom_cmd = try cli.BaseCommand.init(allocator, "sbom", "Export an SBOM of everything you install");
+    _ = try sbom_cmd.addOption(paid_registry_opt);
+    _ = try sbom_cmd.addOption(paid_token_opt);
+    _ = try sbom_cmd.addOption(cli.Option.init("format", "format", "cyclonedx (default) or spdx", .string));
+    _ = try sbom_cmd.addOption(cli.Option.init("out", "out", "Write to a file instead of stdout", .string));
+    _ = sbom_cmd.setAction(sbomAction);
+    _ = try root.addCommand(sbom_cmd);
 
     var buy_cmd = try cli.BaseCommand.init(allocator, "buy", "Buy access to a paid package");
     _ = try buy_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));

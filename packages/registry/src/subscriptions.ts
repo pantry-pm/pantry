@@ -40,6 +40,14 @@ export interface TierDefinition {
   priorityBuilds: boolean
   /** How many accounts can manage this account's packages. */
   seats: number
+  /** Mirror every artifact you install, and serve it after upstream is gone. */
+  buildInsurance: boolean
+  /** Continuous vulnerability and licence-policy alerts over your lockfile. */
+  securityAlerts: boolean
+  /** CycloneDX / SPDX export of everything you install. */
+  sbomExport: boolean
+  /** One purchase covers the whole team. */
+  teamEntitlements: boolean
   /** Stripe `lookup_key` for the recurring price. Absent for free. */
   stripeLookupKey?: string
 }
@@ -55,6 +63,10 @@ export const TIERS: Record<Tier, TierDefinition> = {
     privatePackages: false,
     priorityBuilds: false,
     seats: 1,
+    buildInsurance: false,
+    securityAlerts: false,
+    sbomExport: false,
+    teamEntitlements: false,
   },
   pro: {
     id: 'pro',
@@ -66,6 +78,11 @@ export const TIERS: Record<Tier, TierDefinition> = {
     privatePackages: true,
     priorityBuilds: true,
     seats: 1,
+    buildInsurance: true,
+    securityAlerts: true,
+    sbomExport: true,
+    // Nothing to share on a single seat, but the machinery is the same.
+    teamEntitlements: false,
     stripeLookupKey: 'pantry_pro_monthly',
   },
   team: {
@@ -78,6 +95,10 @@ export const TIERS: Record<Tier, TierDefinition> = {
     privatePackages: true,
     priorityBuilds: true,
     seats: 10,
+    buildInsurance: true,
+    securityAlerts: true,
+    sbomExport: true,
+    teamEntitlements: true,
     stripeLookupKey: 'pantry_team_monthly',
   },
 }

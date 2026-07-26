@@ -1,28 +1,40 @@
 <!-- Plans and marketplace fees -->
 
 <section class="py-12 pb-20">
-  <div class="max-w-4xl mx-auto px-6">
+  <div class="max-w-5xl mx-auto px-6">
     <div class="text-center mb-10 animate-fade-in">
       <h1 class="text-3xl font-semibold tracking-tight mb-3">Plans</h1>
-      <p class="text-sm max-w-xl mx-auto" style="color: var(--fg-muted);">
-        Publishing is free, and always will be. A plan lowers what the registry takes
-        when you sell a package, and unlocks the things a serious publisher wants anyway.
+      <p class="text-sm max-w-2xl mx-auto" style="color: var(--fg-muted);">
+        Publishing is free and installing is free. A plan lowers the commission when you
+        <em>sell</em> a package, and insures the builds that depend on what you install.
       </p>
     </div>
 
-    <div class="grid gap-4 mb-10 animate-fade-in-delay" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    <div class="grid gap-4 mb-12 animate-fade-in-delay" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
       @foreach (plans as plan)
       <div class="border rounded-lg p-5 flex flex-col" style="background: var(--bg-subtle); border-color: {{ plan.featured ? 'var(--accent)' : 'var(--border)' }};">
-        <p class="uppercase tracking-widest mb-1" style="font-size: 0.6875rem; color: var(--fg-subtle);">{{ plan.name }}</p>
-        <p class="text-2xl font-semibold mb-1">{{ plan.formattedPrice }}</p>
-        <p class="mb-4" style="font-size: 0.8125rem; color: var(--accent);">{{ plan.commission }} of each sale</p>
+        <div class="flex items-baseline justify-between mb-1">
+          <p class="uppercase tracking-widest" style="font-size: 0.6875rem; color: var(--fg-subtle);">{{ plan.name }}</p>
+          @if (plan.featured)
+          <span class="rounded px-1.5 py-0.5" style="font-size: 0.625rem; background: var(--accent); color: var(--bg);">Most popular</span>
+          @endif
+        </div>
+        <p class="text-2xl font-semibold">{{ plan.formattedPrice }}</p>
+        <p class="mb-3" style="font-size: 0.75rem; color: var(--fg-subtle);">{{ plan.tagline }}</p>
+        <p class="mb-4 pb-4 border-b border-[var(--border)]" style="font-size: 0.8125rem; color: var(--accent);">{{ plan.commission }} commission on sales</p>
 
-        <ul class="flex flex-col gap-2 mb-5" style="font-size: 0.8125rem; color: var(--fg-muted);">
-          <li>{{ plan.privateLabel }}</li>
-          <li>{{ plan.analyticsLabel }}</li>
-          <li>{{ plan.artifactLabel }}</li>
-          <li>{{ plan.buildsLabel }}</li>
-          <li>{{ plan.seatsLabel }}</li>
+        <p class="uppercase tracking-widest mb-2" style="font-size: 0.625rem; color: var(--fg-subtle);">Publishing</p>
+        <ul class="flex flex-col gap-1.5 mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          @foreach (plan.publishing as item)
+          <li>{{ item }}</li>
+          @endforeach
+        </ul>
+
+        <p class="uppercase tracking-widest mb-2" style="font-size: 0.625rem; color: var(--fg-subtle);">Consuming</p>
+        <ul class="flex flex-col gap-1.5 mb-5" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          @foreach (plan.consuming as item)
+          <li>{{ item }}</li>
+          @endforeach
         </ul>
 
         @if (plan.id !== 'free')
@@ -34,6 +46,47 @@
         @endif
       </div>
       @endforeach
+    </div>
+
+    <div class="grid gap-4 mb-8" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+      <div class="border border-[var(--border)] rounded-lg p-5" style="background: var(--bg-subtle);">
+        <h2 class="text-sm font-medium mb-2">Build insurance</h2>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          Every artifact your build resolves is copied into your own namespace and kept there.
+          When a dependency is unpublished, retagged or deleted upstream, your build still
+          resolves — from bytes we verified against your lockfile's integrity hash.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry insure</code>
+      </div>
+
+      <div class="border border-[var(--border)] rounded-lg p-5" style="background: var(--bg-subtle);">
+        <h2 class="text-sm font-medium mb-2">Continuous alerts</h2>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          An audit tells you about today. This watches your lockfile against the OSV advisory
+          database and your own licence policy, so the advisory published next Tuesday for the
+          version you shipped last Tuesday still reaches you.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry alerts --deny AGPL-3.0</code>
+      </div>
+
+      <div class="border border-[var(--border)] rounded-lg p-5" style="background: var(--bg-subtle);">
+        <h2 class="text-sm font-medium mb-2">SBOM export</h2>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          CycloneDX or SPDX for everything you install, with hashes we computed from the bytes
+          we stored rather than claims copied out of a manifest. Deterministic, so regenerating
+          it doesn't churn your repo.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry sbom --format spdx</code>
+      </div>
+
+      <div class="border border-[var(--border)] rounded-lg p-5" style="background: var(--bg-subtle);">
+        <h2 class="text-sm font-medium mb-2">Team seats</h2>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          Up to ten people share one account's packages, one mirror, one watch list — and one
+          purchase of any paid package. A departing teammate doesn't take the licence with them.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry team add dev@yourco.com</code>
+      </div>
     </div>
 
     <div class="border border-[var(--border)] rounded-lg p-5 mb-6" style="background: var(--bg-subtle);">
@@ -61,7 +114,14 @@
           <code style="color: var(--accent);">pantry price set my-package 9.00</code>
           <span style="color: var(--fg-subtle);"> — charge for a package</span>
         </div>
+        <div class="bg-[var(--bg)] rounded-md px-3 py-2 border border-[var(--border)]">
+          <code style="color: var(--accent);">pantry insure</code>
+          <span style="color: var(--fg-subtle);"> — mirror this project's dependencies</span>
+        </div>
       </div>
+      <p class="mt-4" style="font-size: 0.8125rem; color: var(--fg-subtle);">
+        Full detail in <a href="/docs" class="hvr-accent transition-colors" style="color: var(--accent);">the docs</a>.
+      </p>
     </div>
 
     @if (!paymentsEnabled)

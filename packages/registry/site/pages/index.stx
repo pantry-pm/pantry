@@ -140,6 +140,59 @@
   </div>
 </section>
 
+<!-- For teams: what a plan buys -->
+<section class="px-6 pb-16">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-baseline justify-between mb-8">
+      <h2 class="text-xs uppercase tracking-widest font-medium" style="color: var(--fg-subtle);">For Teams</h2>
+      <a href="/pricing" class="hvr-accent transition-colors" style="font-size: 0.8125rem; color: var(--accent);">See plans &rarr;</a>
+    </div>
+    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));">
+      <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-5">
+        <h3 class="font-medium mb-2 flex items-center gap-2" style="font-size: 0.9375rem;">
+          <span style="color: var(--accent);">&#128737;</span> Build insurance
+        </h3>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          Every artifact you install is mirrored into your own namespace. When a dependency is
+          unpublished or retagged upstream, your build still resolves.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry insure</code>
+      </div>
+      <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-5">
+        <h3 class="font-medium mb-2 flex items-center gap-2" style="font-size: 0.9375rem;">
+          <span style="color: var(--accent);">&#128680;</span> Continuous alerts
+        </h3>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          Your lockfile watched against the OSV advisory database and your own licence policy —
+          not just when you remember to run an audit.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry alerts</code>
+      </div>
+      <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-5">
+        <h3 class="font-medium mb-2 flex items-center gap-2" style="font-size: 0.9375rem;">
+          <span style="color: var(--accent);">&#128220;</span> SBOM export
+        </h3>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          CycloneDX or SPDX for everything you install, with hashes computed from the bytes we
+          stored — not claims copied from a manifest.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry sbom</code>
+      </div>
+      <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-5">
+        <h3 class="font-medium mb-2 flex items-center gap-2" style="font-size: 0.9375rem;">
+          <span style="color: var(--accent);">&#128176;</span> Sell your packages
+        </h3>
+        <p class="mb-3" style="font-size: 0.8125rem; color: var(--fg-muted);">
+          Put a price on what you publish. Metadata stays public so people can find it; the
+          tarball is gated until an account has paid. 5% on a plan, 10% without.
+        </p>
+        <code class="text-xs" style="color: var(--accent);">pantry price set my-pkg 9.00</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <!-- Trending packages (top by downloads) -->
 @if (topPackages.length > 0)
 <section class="px-6 pb-16">

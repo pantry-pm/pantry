@@ -387,6 +387,7 @@
         </form>
         <a href="/stats" class="hvr-fg transition-colors" style="color: var(--fg-muted);" data-tooltip="View stats (t)">stats</a>
         <a href="/compare" class="hvr-fg transition-colors" style="color: var(--fg-muted);" data-tooltip="Compare packages (p)">compare</a>
+        <a href="/pricing" class="hvr-fg transition-colors" style="color: var(--fg-muted);" data-tooltip="Plans and marketplace fees">pricing</a>
         <a href="/docs" class="hvr-fg transition-colors" style="color: var(--fg-muted);">docs</a>
         <a href="/about" class="hvr-fg transition-colors" style="color: var(--fg-muted);">about</a>
         <a href="https://github.com/pantry-pm/pantry" target="_blank" rel="noopener" class="hvr-fg transition-colors" style="color: var(--fg-muted);">
@@ -430,6 +431,7 @@
           <nav class="flex flex-wrap gap-6" style="font-size: 0.8125rem; color: var(--fg-muted);" aria-label="footer navigation">
             <a href="/stats" class="hvr-fg transition-colors">stats</a>
             <a href="/compare" class="hvr-fg transition-colors">compare</a>
+            <a href="/pricing" class="hvr-fg transition-colors">pricing</a>
             <a href="/docs" class="hvr-fg transition-colors">docs</a>
             <a href="/about" class="hvr-fg transition-colors">about</a>
             <a href="/settings" class="hvr-fg transition-colors">settings</a>

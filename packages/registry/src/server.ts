@@ -36,6 +36,7 @@ import {
   tierOf,
   type SaleOrigin,
   type Tier,
+  type TierDefinition,
 } from './subscriptions'
 import { renderTemplate } from '@stacksjs/stx'
 import {
@@ -55,6 +56,9 @@ import {
   type ReaderIdentity,
 } from './access'
 import { pluginResponse } from './plugins'
+import { MirrorStore, normalizeEntries } from './mirror'
+import { normalizePolicy, SecurityStore } from './security'
+import { buildSbom, parseFormat } from './sbom'
 
 // Build domain→versions lookup from ts-pantry package metadata for version
 // validation. Exposed via reloadKnownVersions() so an operator can refresh
@@ -898,6 +902,12 @@ export function createHandler(
         if (authResponse) return authResponse
       }
 
+      // Build insurance, security alerts and SBOM export
+      if (authService) {
+        const enterprise = await handleEnterpriseRoutes(path, req, registry, corsHeaders)
+        if (enterprise) return enterprise
+      }
+
       // Plans and billing
       if (authService && (path === '/api/plans' || path.startsWith('/account/'))) {
         const subscriptionResponse = await handleSubscriptionRoutes(path, req, authService, baseUrl, corsHeaders)
@@ -923,11 +933,26 @@ export function createHandler(
             featured: t.id === 'pro',
             formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
             commission: formatBps(t.commissionBps),
-            privateLabel: t.privatePackages ? 'Private & unlisted packages' : 'Public packages',
-            analyticsLabel: t.analyticsRetentionDays >= 3650 ? 'Full analytics history' : '30 days of analytics',
-            artifactLabel: `${Math.round(t.maxArtifactBytes / (1024 * 1024))}MB artifacts`,
-            buildsLabel: t.priorityBuilds ? 'Priority builds' : 'Standard build queue',
-            seatsLabel: t.seats > 1 ? `${t.seats} seats` : '1 seat',
+            tagline: t.id === 'free'
+              ? 'Publish and sell, no cost'
+              : t.id === 'pro'
+                ? 'For people who ship'
+                : 'For teams who depend on it',
+            // What you get as a publisher…
+            publishing: [
+              t.privatePackages ? 'Private & unlisted packages' : 'Public packages',
+              t.analyticsRetentionDays >= 3650 ? 'Full analytics history' : '30 days of analytics',
+              `${Math.round(t.maxArtifactBytes / (1024 * 1024))}MB artifacts`,
+              t.priorityBuilds ? 'Priority builds' : 'Standard build queue',
+              t.seats > 1 ? `${t.seats} seats, shared packages` : '1 seat',
+            ],
+            // …and as a consumer.
+            consuming: [
+              t.buildInsurance ? 'Build insurance — every artifact mirrored' : 'Standard downloads',
+              t.securityAlerts ? 'Continuous CVE & licence alerts' : 'Point-in-time `pantry audit`',
+              t.sbomExport ? 'SBOM export (CycloneDX, SPDX)' : 'No SBOM export',
+              t.teamEntitlements ? 'Paid packages bought once for the whole team' : 'Purchases are per account',
+            ],
           })),
           discoveryFee: formatBps(DISCOVERY_FEE_BPS),
           paymentsEnabled: paymentsEnabled(),
@@ -2232,6 +2257,10 @@ async function handleSubscriptionRoutes(
         analyticsRetentionDays: t.analyticsRetentionDays,
         maxArtifactMB: Math.round(t.maxArtifactBytes / (1024 * 1024)),
         seats: t.seats,
+        buildInsurance: t.buildInsurance,
+        securityAlerts: t.securityAlerts,
+        sbomExport: t.sbomExport,
+        teamEntitlements: t.teamEntitlements,
       })),
       discoveryFee: formatBps(DISCOVERY_FEE_BPS),
       discoveryFeeBps: DISCOVERY_FEE_BPS,
@@ -2365,6 +2394,230 @@ async function handleSubscriptionRoutes(
   return null
 }
 
+// ===========================================================================
+// Build insurance, alerts and SBOMs
+//
+// All three answer to one org — the seat holder when the caller is on a team,
+// otherwise themselves — so a team shares one mirror, one watch list and one
+// inventory rather than each member accumulating their own.
+// ===========================================================================
+
+let _mirrorStore: MirrorStore | null = null
+let _securityStore: SecurityStore | null = null
+
+function mirrorStore(registry: Registry): MirrorStore {
+  if (!_mirrorStore) _mirrorStore = new MirrorStore(registry.tarball)
+  return _mirrorStore
+}
+
+function securityStore(registry: Registry): SecurityStore {
+  if (!_securityStore) _securityStore = new SecurityStore(registry.tarball)
+  return _securityStore
+}
+
+/** Swap the stores out in tests, so neither S3 nor OSV is touched. */
+export function setEnterpriseStores(mirror: MirrorStore | null, security: SecurityStore | null): void {
+  _mirrorStore = mirror
+  _securityStore = security
+}
+
+/** The org a caller acts for: their team's seat holder, or themselves. */
+async function orgFor(email: string): Promise<string> {
+  if (!_authService) return email
+  return (await _authService.getTeamOwner(email)) || email
+}
+
+/**
+ * Insurance, alerts and SBOMs are what a paid plan buys. Returns the caller's
+ * org, or a Response explaining why not.
+ */
+async function requirePaidOrg(
+  req: Request,
+  feature: string,
+  corsHeaders: Record<string, string>,
+  entitled: (t: TierDefinition) => boolean = t => t.buildInsurance,
+): Promise<{ org: string, email: string, tier: Tier } | Response> {
+  const identity = await identifyReader(req)
+  if (!identity.authenticated || !identity.userId || identity.userId === '_admin') {
+    return Response.json(
+      { error: 'Sign in to use this', hint: 'pantry token set' },
+      { status: 401, headers: corsHeaders },
+    )
+  }
+
+  const org = await orgFor(identity.userId)
+  // The org's plan, not the individual's — a team member gets what the seat
+  // holder pays for.
+  const tier = await tierForUser(org)
+  if (!entitled(tierDefinition(tier))) {
+    return Response.json(
+      {
+        error: `${feature} is a paid feature`,
+        hint: 'pantry subscribe pro',
+        tier,
+      },
+      { status: 402, headers: corsHeaders },
+    )
+  }
+
+  return { org, email: identity.userId, tier }
+}
+
+/**
+ * Routes for the three:
+ *
+ *   POST /mirror/snapshot            record and store what you installed
+ *   GET  /mirror                     what's insured
+ *   GET  /mirror/{name}/{version}/tarball   serve the insured copy
+ *   PUT  /security/watch             register a lockfile (+ licence policy)
+ *   GET  /security/alerts            what's wrong with it now
+ *   PUT  /security/policy            set the licence policy alone
+ *   GET  /sbom?format=cyclonedx|spdx an SBOM of the inventory
+ */
+async function handleEnterpriseRoutes(
+  path: string,
+  req: Request,
+  registry: Registry,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  if (!path.startsWith('/mirror') && !path.startsWith('/security') && path !== '/sbom') return null
+
+  // ---- mirror -------------------------------------------------------------
+
+  if (path === '/mirror/snapshot' && req.method === 'POST') {
+    const gate = await requirePaidOrg(req, 'Build insurance', corsHeaders)
+    if (gate instanceof Response) return gate
+
+    const body = await req.json().catch(() => null) as { entries?: unknown } | null
+    const entries = normalizeEntries(body?.entries)
+    if (entries.length === 0) {
+      return Response.json({ error: 'No usable entries — send {entries: [{name, version, resolved, integrity}]}' }, { status: 400, headers: corsHeaders })
+    }
+
+    const result = await mirrorStore(registry).snapshot(gate.org, entries)
+    return Response.json({
+      org: gate.org,
+      mirrored: result.mirrored,
+      skipped: result.skipped,
+      failed: result.failed,
+      // Only the failures are echoed back: a 2,000-package snapshot doesn't
+      // need to repeat the whole lockfile to say it worked.
+      failures: result.entries.filter(e => e.error).map(e => ({ name: e.name, version: e.version, error: e.error })),
+    }, { headers: corsHeaders })
+  }
+
+  if (path === '/mirror' && req.method === 'GET') {
+    const gate = await requirePaidOrg(req, 'Build insurance', corsHeaders)
+    if (gate instanceof Response) return gate
+
+    const store = mirrorStore(registry)
+    return Response.json({
+      org: gate.org,
+      stats: await store.stats(gate.org),
+      entries: (await store.list(gate.org)).slice(0, 500),
+    }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+  }
+
+  const mirrorTarball = path.match(/^\/mirror\/(.+)\/([^/]+)\/tarball$/)
+  if (mirrorTarball && req.method === 'GET') {
+    const gate = await requirePaidOrg(req, 'Build insurance', corsHeaders)
+    if (gate instanceof Response) return gate
+
+    const found = await mirrorStore(registry).fetchArtifact(
+      gate.org,
+      decodeURIComponent(mirrorTarball[1]),
+      decodeURIComponent(mirrorTarball[2]),
+    )
+    if (!found) {
+      return Response.json({ error: 'Not in your mirror' }, { status: 404, headers: corsHeaders })
+    }
+
+    return new Response(found.bytes, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/gzip',
+        'Content-Length': String(found.bytes.byteLength),
+        'X-Pantry-Mirrored-At': found.record.mirroredAt,
+        ...(found.record.sha256 ? { 'X-Pantry-SHA256': found.record.sha256 } : {}),
+        'Cache-Control': 'private, max-age=31536000, immutable',
+      },
+    })
+  }
+
+  // ---- security -----------------------------------------------------------
+
+  if (path === '/security/watch' && (req.method === 'PUT' || req.method === 'POST')) {
+    const gate = await requirePaidOrg(req, 'Security alerts', corsHeaders, t => t.securityAlerts)
+    if (gate instanceof Response) return gate
+
+    const body = await req.json().catch(() => null) as { entries?: unknown, policy?: unknown } | null
+    const entries = normalizeEntries(body?.entries)
+    if (entries.length === 0) {
+      return Response.json({ error: 'No usable entries — send {entries: [{name, version, ecosystem, license}]}' }, { status: 400, headers: corsHeaders })
+    }
+
+    const list = await securityStore(registry).setWatchList(gate.org, entries, normalizePolicy(body?.policy))
+    return Response.json({ org: gate.org, watched: list.entries.length, policy: list.policy }, { headers: corsHeaders })
+  }
+
+  if (path === '/security/policy' && (req.method === 'PUT' || req.method === 'POST')) {
+    const gate = await requirePaidOrg(req, 'Security alerts', corsHeaders, t => t.securityAlerts)
+    if (gate instanceof Response) return gate
+
+    const policy = normalizePolicy(await req.json().catch(() => null))
+    if (!policy) {
+      return Response.json({ error: 'Send {allow: [...]} and/or {deny: [...]}' }, { status: 400, headers: corsHeaders })
+    }
+
+    const list = await securityStore(registry).setPolicy(gate.org, policy)
+    return Response.json({ org: gate.org, policy: list.policy }, { headers: corsHeaders })
+  }
+
+  if (path === '/security/alerts' && req.method === 'GET') {
+    const gate = await requirePaidOrg(req, 'Security alerts', corsHeaders, t => t.securityAlerts)
+    if (gate instanceof Response) return gate
+
+    const report = await securityStore(registry).report(gate.org)
+    // 'no-store': a cached all-clear is the one thing this endpoint must never
+    // serve.
+    return Response.json(report, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+  }
+
+  // ---- SBOM ---------------------------------------------------------------
+
+  if (path === '/sbom' && req.method === 'GET') {
+    const gate = await requirePaidOrg(req, 'SBOM export', corsHeaders, t => t.sbomExport)
+    if (gate instanceof Response) return gate
+
+    const url = new URL(req.url)
+    const format = parseFormat(url.searchParams.get('format'))
+
+    // Prefer the mirror (it has hashes we computed ourselves); fall back to the
+    // watch list for orgs that registered a lockfile without insuring it.
+    let entries = await mirrorStore(registry).list(gate.org)
+    if (entries.length === 0) {
+      const watched = await securityStore(registry).getWatchList(gate.org)
+      entries = watched.entries.map(e => ({ ...e, mirroredAt: watched.updatedAt }))
+    }
+
+    const document = buildSbom(entries, format, {
+      org: gate.org,
+      subject: url.searchParams.get('name') || undefined,
+    })
+
+    return new Response(JSON.stringify(document, null, 2), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="${format === 'spdx' ? 'sbom.spdx.json' : 'sbom.cdx.json'}"`,
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
+
+  return null
+}
+
 /** Resolve paid-package access for a request, including who published it. */
 async function resolvePackageAccess(
   req: Request,
@@ -2389,6 +2642,7 @@ async function resolvePackageAccess(
       userId: identity.userId,
       token: extractBearerToken(req.headers.get('authorization')),
       admin: identity.userId === '_admin',
+      org: identity.userId && identity.userId !== '_admin' ? await orgFor(identity.userId) : null,
     },
     record?.publishedBy,
   )
