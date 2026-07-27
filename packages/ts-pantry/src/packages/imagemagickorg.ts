@@ -104,6 +104,7 @@ export const imagemagickorgPackage = {
   */
   versions: [
     '7.1.2.13',
+    '7.1.2-28',
     '7.1.2-27',
     '7.1.2-26',
     '7.1.2-25',
