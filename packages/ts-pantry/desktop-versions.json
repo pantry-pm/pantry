@@ -518,7 +518,7 @@
       "name": "Slack",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "4.51.180",
       "published": "4.51.180",
       "needsUpdate": false
     },
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.29.22",
-      "published": "2.26.29.22",
+      "latest": "2.26.30.13",
+      "published": "2.26.30.13",
       "needsUpdate": false
     },
     {
