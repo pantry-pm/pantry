@@ -498,7 +498,7 @@ function getBuildStatus(): BuildStatusStore {
     s.load()
       // Warm the coverage cache in the background so the first /api/packages
       // request never waits on the full binaries/ listing.
-      .then(() => s.refreshCoverage(true))
+      .then(() => s.refreshCoverage())
       .catch(e => console.error('build-status init failed:', (e as Error).message))
   }
   return _buildStatus

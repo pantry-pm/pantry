@@ -103,7 +103,7 @@ const RECENT_LIMIT = 500
 // with no "failed" event, so the heartbeat backstop must be tight — 10 min keeps
 // the count close to the ~15-20 genuinely-active workers.
 const BUILDING_TTL_MS = 10 * 60 * 1000
-const COVERAGE_TTL_MS = 15 * 60 * 1000
+const COVERAGE_TTL_MS = 6 * 60 * 60 * 1000
 
 // Bound the persisted unavailable-versions list so a long-running grind can't grow
 // it without limit: keep the most-recently-seen N entries per domain, and an
@@ -120,6 +120,12 @@ interface PersistedState {
   unavailable?: UnavailableVersion[]
 }
 
+interface PersistedCoverage {
+  version: 1
+  at: number
+  packages: Array<[domain: string, versions: Array<[version: string, platforms: string[]]>, lastBuilt?: string]>
+}
+
 export class BuildStatusStore {
   private building = new Map<string, BuildEvent>() // key: domain|version|platform
   private recent: BuildEvent[] = [] // newest first
@@ -129,6 +135,7 @@ export class BuildStatusStore {
   // same domain@version later builds successfully.
   private unavailable = new Map<string, UnavailableVersion>()
   private snapshot: ObjectSnapshot
+  private coverageSnapshot: ObjectSnapshot
 
   // Derived coverage cache (domain -> version -> set of platforms) + freshness.
   private coverage = new Map<string, Map<string, Set<string>>>()
@@ -154,6 +161,7 @@ export class BuildStatusStore {
 
   constructor(private s3: S3Client, private bucket: string) {
     this.snapshot = new ObjectSnapshot(s3, bucket, 'build-status/status.json', () => this.captureState())
+    this.coverageSnapshot = new ObjectSnapshot(s3, bucket, 'build-status/coverage.json', () => this.captureCoverage())
   }
 
   /**
@@ -261,26 +269,38 @@ export class BuildStatusStore {
   }
 
   async load(): Promise<void> {
-    const s = (await this.snapshot.load()) as PersistedState | null
-    if (!s)
-      return
-    // Filter out any non-package junk that was persisted before ingest validation
-    // existed (e.g. probe events) so a restart self-heals the dashboard data.
-    this.building = new Map((s.building || []).filter(e => isValidPackageDomain(e?.domain)).map(e => [this.key(e), e]))
-    this.recent = (s.recent || []).filter(e => isValidPackageDomain(e?.domain)).slice(0, RECENT_LIMIT)
-    this.queue = (s.queue || []).filter(d => isValidPackageDomain(d))
-    this.unavailable = new Map(
-      (s.unavailable || [])
-        .filter(u => u && isValidPackageDomain(u.domain) && u.version && u.platform)
-        .map(u => [this.key(u), {
-          domain: String(u.domain),
-          version: String(u.version),
-          platform: String(u.platform),
-          reason: u.reason ? String(u.reason).slice(0, MESSAGE_MAX) : undefined,
-          lastSeen: Number(u.lastSeen) || Date.now(),
-        }]),
-    )
-    this.capUnavailable()
+    const [state, coverage] = await Promise.all([
+      this.snapshot.load() as Promise<PersistedState | null>,
+      this.coverageSnapshot.load() as Promise<PersistedCoverage | null>,
+    ])
+    if (state) {
+      // Filter out any non-package junk that was persisted before ingest validation
+      // existed (e.g. probe events) so a restart self-heals the dashboard data.
+      this.building = new Map((state.building || []).filter(e => isValidPackageDomain(e?.domain)).map(e => [this.key(e), e]))
+      this.recent = (state.recent || []).filter(e => isValidPackageDomain(e?.domain)).slice(0, RECENT_LIMIT)
+      this.queue = (state.queue || []).filter(d => isValidPackageDomain(d))
+      this.unavailable = new Map(
+        (state.unavailable || [])
+          .filter(u => u && isValidPackageDomain(u.domain) && u.version && u.platform)
+          .map(u => [this.key(u), {
+            domain: String(u.domain),
+            version: String(u.version),
+            platform: String(u.platform),
+            reason: u.reason ? String(u.reason).slice(0, MESSAGE_MAX) : undefined,
+            lastSeen: Number(u.lastSeen) || Date.now(),
+          }]),
+      )
+      this.capUnavailable()
+    }
+    if (coverage)
+      this.restoreCoverage(coverage)
+
+    // Successful events newer than the last full listing are authoritative and
+    // cheaply close any gap in the persisted coverage snapshot.
+    for (const event of this.recent) {
+      if (event.state === 'built' && event.version)
+        this.mergeCoverage(event.domain, event.version, event.platform, new Date(event.ts).toISOString())
+    }
   }
 
   private key(e: { domain: string, version: string, platform: string }): string {
@@ -295,6 +315,56 @@ export class BuildStatusStore {
       queue: this.queue,
       unavailable: [...this.unavailable.values()],
     }
+  }
+
+  private captureCoverage(): PersistedCoverage {
+    return {
+      version: 1,
+      at: this.coverageAt,
+      packages: [...this.coverage].map(([domain, versions]) => [
+        domain,
+        [...versions].map(([version, platforms]) => [version, [...platforms]]),
+        this.coverageLastBuilt.get(domain),
+      ]),
+    }
+  }
+
+  private restoreCoverage(state: PersistedCoverage): void {
+    if (state.version !== 1 || !Array.isArray(state.packages))
+      return
+    const coverage = new Map<string, Map<string, Set<string>>>()
+    const lastBuilt = new Map<string, string>()
+    for (const [domain, versions, builtAt] of state.packages) {
+      if (!isValidPackageDomain(domain) || !Array.isArray(versions))
+        continue
+      const restoredVersions = new Map<string, Set<string>>()
+      for (const [version, platforms] of versions) {
+        if (version && Array.isArray(platforms))
+          restoredVersions.set(version, new Set(platforms.filter(platform => PLATFORM_SET.has(platform))))
+      }
+      if (restoredVersions.size > 0)
+        coverage.set(domain, restoredVersions)
+      if (builtAt)
+        lastBuilt.set(domain, builtAt)
+    }
+    this.coverage = coverage
+    this.coverageLastBuilt = lastBuilt
+    this.coverageAt = Math.min(Number(state.at) || 0, Date.now())
+  }
+
+  private mergeCoverage(domain: string, version: string, platform: string, builtAt: string): void {
+    let versions = this.coverage.get(domain)
+    if (!versions) {
+      versions = new Map()
+      this.coverage.set(domain, versions)
+    }
+    let platforms = versions.get(version)
+    if (!platforms) {
+      platforms = new Set()
+      versions.set(version, platforms)
+    }
+    platforms.add(platform)
+    this.coverageLastBuilt.set(domain, builtAt)
   }
 
   /** Record a build event reported by a builder. */
@@ -349,18 +419,7 @@ export class BuildStatusStore {
       // next S3 listing (the listing then reconciles it). Only `built`, never
       // `failed` — a failure must not look like coverage.
       if (event.state === 'built' && event.version) {
-        let vers = this.coverage.get(event.domain)
-        if (!vers) {
-          vers = new Map()
-          this.coverage.set(event.domain, vers)
-        }
-        let plats = vers.get(event.version)
-        if (!plats) {
-          plats = new Set()
-          vers.set(event.version, plats)
-        }
-        plats.add(event.platform)
-        this.coverageLastBuilt.set(event.domain, new Date().toISOString())
+        this.mergeCoverage(event.domain, event.version, event.platform, new Date().toISOString())
       }
       // A finished build changes coverage for this domain — invalidate cache.
       this.coverageAt = 0
@@ -562,6 +621,7 @@ export class BuildStatusStore {
       this.coverage = cov
       this.coverageLastBuilt = lastBuilt
       this.coverageAt = Date.now()
+      await this.coverageSnapshot.flush()
     })().finally(() => { this.coveragePromise = null })
     return this.coveragePromise
   }
