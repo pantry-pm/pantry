@@ -99,6 +99,86 @@ inputs:
     description: GitHub token for creating releases. Defaults to GITHUB_TOKEN.
     required: false
     default: ''
+  release-dry-run:
+    description: Plan configured release targets without uploading to the App Store or object storage
+    required: false
+    default: 'false'
+  release-app-store:
+    description: Validate and upload a signed macOS .pkg to App Store Connect before publishing the GitHub release
+    required: false
+    default: 'false'
+  release-app-store-package:
+    description: Path to the signed .pkg. Defaults to the only .pkg in release-files.
+    required: false
+    default: ''
+  release-app-store-api-key-id:
+    description: App Store Connect API key ID. Defaults to APP_STORE_CONNECT_API_KEY_ID.
+    required: false
+    default: ''
+  release-app-store-issuer-id:
+    description: App Store Connect API issuer ID. Defaults to APP_STORE_CONNECT_ISSUER_ID.
+    required: false
+    default: ''
+  release-app-store-private-key:
+    description: App Store Connect .p8 private key contents. Defaults to APP_STORE_CONNECT_PRIVATE_KEY.
+    required: false
+    default: ''
+  release-app-store-validate-only:
+    description: Validate the package without uploading it
+    required: false
+    default: 'false'
+  release-app-store-retry-existing:
+    description: Treat an already-uploaded bundle version as a successful repeat run
+    required: false
+    default: 'true'
+  release-s3:
+    description: Mirror release artifacts, changelog, manifest, and latest pointer to S3-compatible storage
+    required: false
+    default: 'false'
+  release-s3-provider:
+    description: Object storage provider (aws, backblaze, or hetzner)
+    required: false
+    default: aws
+  release-s3-bucket:
+    description: Object storage bucket
+    required: false
+    default: ''
+  release-s3-region:
+    description: Object storage region or location
+    required: false
+    default: ''
+  release-s3-endpoint:
+    description: Optional S3-compatible endpoint host or URL
+    required: false
+    default: ''
+  release-s3-prefix:
+    description: Object key prefix. Defaults to releases/{owner}/{repo}.
+    required: false
+    default: ''
+  release-s3-public-url:
+    description: Optional public base URL used in release receipts and latest.json
+    required: false
+    default: ''
+  release-s3-force-path-style:
+    description: Force path-style S3 addressing
+    required: false
+    default: 'false'
+  release-s3-cache-control:
+    description: Cache-Control value reserved for mirrored release objects
+    required: false
+    default: 'public, max-age=31536000, immutable'
+  release-s3-access-key-id:
+    description: Object storage access key ID. Defaults to AWS_ACCESS_KEY_ID.
+    required: false
+    default: ''
+  release-s3-secret-access-key:
+    description: Object storage secret access key. Defaults to AWS_SECRET_ACCESS_KEY.
+    required: false
+    default: ''
+  release-s3-session-token:
+    description: Optional object storage session token. Defaults to AWS_SESSION_TOKEN.
+    required: false
+    default: ''
 
 outputs:
   pantry-path:
@@ -107,6 +187,12 @@ outputs:
     description: The version of pantry that was installed
   release-url:
     description: URL of the created GitHub release (when release is enabled)
+  release-manifest:
+    description: Path to the generated release-manifest.json
+  release-app-store-receipt:
+    description: Path to the generated App Store delivery receipt
+  release-s3-receipt:
+    description: Path to the generated S3 mirror receipt
   redis-url:
     description: Loopback Redis URL when the redis service is requested
   redis-version:

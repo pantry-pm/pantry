@@ -3,6 +3,9 @@ import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFi
 import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release-latest'
 import { downloadReleaseAssetReliably } from './release-download'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
+import { deliverReleaseToAppStore } from './release-app-store'
+import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
+import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
@@ -664,6 +667,26 @@ export async function run(): Promise<void> {
       releaseChangelog: core.getInput('release-changelog') || 'CHANGELOG.md',
       releaseChecksums: core.getInput('release-checksums') || '',
       releaseToken: core.getInput('release-token') || process.env.GITHUB_TOKEN || '',
+      releaseDryRun: boolInput('release-dry-run', false),
+      releaseAppStore: boolInput('release-app-store', false),
+      releaseAppStorePackage: core.getInput('release-app-store-package') || '',
+      releaseAppStoreApiKeyId: core.getInput('release-app-store-api-key-id') || process.env.APP_STORE_CONNECT_API_KEY_ID || '',
+      releaseAppStoreIssuerId: core.getInput('release-app-store-issuer-id') || process.env.APP_STORE_CONNECT_ISSUER_ID || '',
+      releaseAppStorePrivateKey: core.getInput('release-app-store-private-key') || process.env.APP_STORE_CONNECT_PRIVATE_KEY || '',
+      releaseAppStoreValidateOnly: boolInput('release-app-store-validate-only', false),
+      releaseAppStoreRetryExisting: boolInput('release-app-store-retry-existing', true),
+      releaseS3: boolInput('release-s3', false),
+      releaseS3Provider: (core.getInput('release-s3-provider') || 'aws') as ActionInputs['releaseS3Provider'],
+      releaseS3Bucket: core.getInput('release-s3-bucket') || '',
+      releaseS3Region: core.getInput('release-s3-region') || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || '',
+      releaseS3Endpoint: core.getInput('release-s3-endpoint') || '',
+      releaseS3Prefix: core.getInput('release-s3-prefix') || '',
+      releaseS3PublicUrl: core.getInput('release-s3-public-url') || '',
+      releaseS3ForcePathStyle: boolInput('release-s3-force-path-style', false),
+      releaseS3CacheControl: core.getInput('release-s3-cache-control') || 'public, max-age=31536000, immutable',
+      releaseS3AccessKeyId: core.getInput('release-s3-access-key-id') || process.env.AWS_ACCESS_KEY_ID || '',
+      releaseS3SecretAccessKey: core.getInput('release-s3-secret-access-key') || process.env.AWS_SECRET_ACCESS_KEY || '',
+      releaseS3SessionToken: core.getInput('release-s3-session-token') || process.env.AWS_SESSION_TOKEN || '',
     }
 
     // Mask secrets so they never appear in logs
@@ -673,6 +696,17 @@ export async function run(): Promise<void> {
       core.setSecret(inputs.slackWebhook)
     if (inputs.releaseToken)
       core.setSecret(inputs.releaseToken)
+    for (const secret of [
+      inputs.releaseAppStoreApiKeyId,
+      inputs.releaseAppStoreIssuerId,
+      inputs.releaseAppStorePrivateKey,
+      inputs.releaseS3AccessKeyId,
+      inputs.releaseS3SecretAccessKey,
+      inputs.releaseS3SessionToken,
+    ]) {
+      if (secret)
+        core.setSecret(secret)
+    }
 
     // Export registry token as env vars for subsequent steps (e.g. pantry publish:commit)
     const token = inputs.token || process.env.PANTRY_TOKEN || process.env.PANTRY_REGISTRY_TOKEN || ''
@@ -1375,14 +1409,96 @@ async function packageBuildArtifacts(cwd: string): Promise<string[]> {
   return packaged
 }
 
+async function runReleaseTargets(options: {
+  inputs: ActionInputs
+  releaseFiles: string[]
+  releaseDirectory: string
+  manifest: ReturnType<typeof createReleaseManifest>
+  manifestPath: string
+  releaseNotes: string
+  owner: string
+  repo: string
+}): Promise<string[]> {
+  const { inputs, releaseFiles, releaseDirectory, manifest, manifestPath, releaseNotes, owner, repo } = options
+  const receiptFiles: string[] = []
+
+  if (inputs.releaseAppStore) {
+    core.startGroup(inputs.releaseDryRun ? 'Plan Mac App Store delivery' : 'Mac App Store delivery')
+    try {
+      const configuredPackage = inputs.releaseAppStorePackage
+        ? path.resolve(inputs.releaseAppStorePackage)
+        : ''
+      const packages = releaseFiles.filter(file => path.extname(file).toLowerCase() === '.pkg')
+      const packagePath = configuredPackage || (packages.length === 1 ? packages[0] : '')
+      if (!packagePath)
+        throw new Error(`Mac App Store delivery needs exactly one .pkg release artifact; found ${packages.length}`)
+      if (!releaseFiles.some(file => path.resolve(file) === path.resolve(packagePath)))
+        throw new Error('Mac App Store package must also be included in release-files')
+
+      const receipt = await deliverReleaseToAppStore({
+        package: packagePath,
+        apiKeyId: inputs.releaseAppStoreApiKeyId,
+        issuerId: inputs.releaseAppStoreIssuerId,
+        privateKey: inputs.releaseAppStorePrivateKey,
+        validateOnly: inputs.releaseAppStoreValidateOnly,
+        retryExisting: inputs.releaseAppStoreRetryExisting,
+        dryRun: inputs.releaseDryRun,
+      })
+      const receiptPath = path.join(releaseDirectory, 'app-store-receipt.json')
+      fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 })
+      receiptFiles.push(receiptPath)
+      core.setOutput('release-app-store-receipt', receiptPath)
+      core.info(inputs.releaseDryRun
+        ? `Planned App Store delivery: ${receipt.package}`
+        : `App Store delivery complete: ${receipt.package}`)
+    }
+    finally {
+      core.endGroup()
+    }
+  }
+
+  if (inputs.releaseS3) {
+    core.startGroup(inputs.releaseDryRun ? 'Plan object storage mirror' : 'Object storage mirror')
+    try {
+      if (!['aws', 'backblaze', 'hetzner'].includes(inputs.releaseS3Provider))
+        throw new Error(`Unsupported release-s3-provider: ${inputs.releaseS3Provider}`)
+      const receipt = await mirrorReleaseToS3({
+        config: {
+          provider: inputs.releaseS3Provider,
+          bucket: inputs.releaseS3Bucket,
+          region: inputs.releaseS3Region,
+          endpoint: inputs.releaseS3Endpoint,
+          prefix: inputs.releaseS3Prefix || `releases/${owner}/${repo}`,
+          publicUrl: inputs.releaseS3PublicUrl,
+          forcePathStyle: inputs.releaseS3ForcePathStyle,
+          cacheControl: inputs.releaseS3CacheControl,
+          accessKeyId: inputs.releaseS3AccessKeyId,
+          secretAccessKey: inputs.releaseS3SecretAccessKey,
+          sessionToken: inputs.releaseS3SessionToken,
+          dryRun: inputs.releaseDryRun,
+        },
+        manifest,
+        manifestFile: manifestPath,
+        releaseNotes,
+        files: releaseFiles,
+      })
+      const receiptPath = path.join(releaseDirectory, 's3-release-receipt.json')
+      fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 })
+      receiptFiles.push(receiptPath)
+      core.setOutput('release-s3-receipt', receiptPath)
+      core.info(`${inputs.releaseDryRun ? 'Planned' : 'Mirrored'} ${receipt.objects.length} object(s)`)
+    }
+    finally {
+      core.endGroup()
+    }
+  }
+
+  return receiptFiles
+}
+
 async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   core.startGroup('GitHub release')
 
-  const token = inputs.releaseToken
-  if (!token)
-    throw new Error('GitHub token is required for creating releases (set release-token or GITHUB_TOKEN)')
-
-  const octokit = github.getOctokit(token)
   const { owner, repo } = github.context.repo
   const tag = inputs.releaseTag
   if (!tag) {
@@ -1434,6 +1550,20 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
     }
   }
 
+  const releaseFiles = [...files]
+  const releaseDirectory = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'pantry-release-'))
+  const manifestPath = path.join(releaseDirectory, 'release-manifest.json')
+  const manifest = createReleaseManifest({
+    repository: `${owner}/${repo}`,
+    tag,
+    commit: process.env.GITHUB_SHA || '',
+    files: releaseFiles,
+  })
+  writeReleaseManifest(manifestPath, manifest)
+  files.push(manifestPath)
+  core.setOutput('release-manifest', manifestPath)
+  core.info(`Generated release-manifest.json for ${manifest.assets.length} artifact(s)`)
+
   // Get or create release
   let releaseId: number
   let releaseUrl = ''
@@ -1444,6 +1574,25 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   const body = (inputs.releaseChangelog === 'auto'
     ? await generateReleaseNotes(tag, true)
     : extractChangelogForVersion(inputs.releaseChangelog, tag)) || inputs.releaseNotes
+  if (inputs.releaseDryRun) {
+    await runReleaseTargets({
+      inputs,
+      releaseFiles,
+      releaseDirectory,
+      manifest,
+      manifestPath,
+      releaseNotes: body || '',
+      owner,
+      repo,
+    })
+    core.info(`Release plan complete: ${files.length} GitHub asset(s); no network changes made`)
+    core.endGroup()
+    return
+  }
+  const token = inputs.releaseToken
+  if (!token)
+    throw new Error('GitHub token is required for creating releases (set release-token or GITHUB_TOKEN)')
+  const octokit = github.getOctokit(token)
   let existingRelease: Awaited<ReturnType<typeof octokit.rest.repos.getReleaseByTag>>['data'] | undefined
   try {
     const response = await retryGitHubReleaseOperation(
@@ -1539,7 +1688,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
 
   // Upload assets
   const uploadFailures: string[] = []
-  for (const file of files) {
+  const uploadFile = async (file: string): Promise<void> => {
     const name = path.basename(file)
     try {
       const data = fs.readFileSync(file)
@@ -1588,9 +1737,30 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
       core.error(`Failed to upload ${name}: ${msg}`)
     }
   }
+  for (const file of files) {
+    await uploadFile(file)
+  }
 
   if (uploadFailures.length > 0)
     throw new Error(`Failed to upload ${uploadFailures.length} release asset(s): ${uploadFailures.join('; ')}`)
+
+  const receiptFiles = await runReleaseTargets({
+    inputs,
+    releaseFiles,
+    releaseDirectory,
+    manifest,
+    manifestPath,
+    releaseNotes: body || '',
+    owner,
+    repo,
+  })
+
+  for (const receiptFile of receiptFiles) {
+    await uploadFile(receiptFile)
+    files.push(receiptFile)
+  }
+  if (uploadFailures.length > 0)
+    throw new Error(`Failed to upload ${uploadFailures.length} release receipt(s): ${uploadFailures.join('; ')}`)
 
   const repositoryTags = await retryGitHubReleaseOperation(
     'Repository tag listing',

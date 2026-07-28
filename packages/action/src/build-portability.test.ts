@@ -20,5 +20,8 @@ describe('GitHub Action build portability', () => {
   test('ships release asset publication retries in the committed bundle', () => {
     const bundle = readFileSync(new URL('../dist/index.js', import.meta.url), 'utf8')
     expect(bundle).toContain('remained unavailable after')
+    expect(bundle).toContain('App Store delivery complete')
+    expect(bundle).toContain('Object storage mirror')
+    expect(bundle).toContain('release-manifest.json')
   })
 })

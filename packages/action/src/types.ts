@@ -22,6 +22,26 @@ export interface ActionInputs {
   releaseChangelog: string
   releaseChecksums: string
   releaseToken: string
+  releaseDryRun: boolean
+  releaseAppStore: boolean
+  releaseAppStorePackage: string
+  releaseAppStoreApiKeyId: string
+  releaseAppStoreIssuerId: string
+  releaseAppStorePrivateKey: string
+  releaseAppStoreValidateOnly: boolean
+  releaseAppStoreRetryExisting: boolean
+  releaseS3: boolean
+  releaseS3Provider: 'aws' | 'backblaze' | 'hetzner'
+  releaseS3Bucket: string
+  releaseS3Region: string
+  releaseS3Endpoint: string
+  releaseS3Prefix: string
+  releaseS3PublicUrl: string
+  releaseS3ForcePathStyle: boolean
+  releaseS3CacheControl: string
+  releaseS3AccessKeyId: string
+  releaseS3SecretAccessKey: string
+  releaseS3SessionToken: string
 }
 
 export interface Platform {
