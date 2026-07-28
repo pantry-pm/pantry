@@ -24,6 +24,10 @@ describe('Mac App Store release delivery', () => {
     const calls: Array<{ command: string, args: string[], env?: NodeJS.ProcessEnv }> = []
     const receipt = await deliverReleaseToAppStore({
       package: packageFixture(),
+      bundleId: 'com.example.desktop',
+      version: '1.2.3',
+      buildNumber: '42',
+      sourceRevision: 'abc123',
       apiKeyId: 'KEY123',
       issuerId: 'issuer',
       privateKey: 'PRIVATE KEY',
@@ -52,6 +56,10 @@ describe('Mac App Store release delivery', () => {
       validated: true,
       uploaded: true,
       deliveryId: '12345678-abcd-1234-abcd-1234567890ab',
+      bundleId: 'com.example.desktop',
+      version: '1.2.3',
+      buildNumber: '42',
+      sourceRevision: 'abc123',
     })
   })
 

@@ -25,6 +25,9 @@ export interface ActionInputs {
   releaseDryRun: boolean
   releaseAppStore: boolean
   releaseAppStorePackage: string
+  releaseAppStoreBundleId: string
+  releaseAppStoreVersion: string
+  releaseAppStoreBuildNumber: string
   releaseAppStoreApiKeyId: string
   releaseAppStoreIssuerId: string
   releaseAppStorePrivateKey: string

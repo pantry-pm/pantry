@@ -111,6 +111,18 @@ inputs:
     description: Path to the signed .pkg. Defaults to the only .pkg in release-files.
     required: false
     default: ''
+  release-app-store-bundle-id:
+    description: Bundle identifier recorded in the App Store delivery receipt
+    required: false
+    default: ''
+  release-app-store-version:
+    description: Marketing version recorded in the App Store delivery receipt
+    required: false
+    default: ''
+  release-app-store-build-number:
+    description: Build number recorded in the App Store delivery receipt
+    required: false
+    default: ''
   release-app-store-api-key-id:
     description: App Store Connect API key ID. Defaults to APP_STORE_CONNECT_API_KEY_ID.
     required: false

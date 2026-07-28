@@ -670,6 +670,9 @@ export async function run(): Promise<void> {
       releaseDryRun: boolInput('release-dry-run', false),
       releaseAppStore: boolInput('release-app-store', false),
       releaseAppStorePackage: core.getInput('release-app-store-package') || '',
+      releaseAppStoreBundleId: core.getInput('release-app-store-bundle-id') || '',
+      releaseAppStoreVersion: core.getInput('release-app-store-version') || '',
+      releaseAppStoreBuildNumber: core.getInput('release-app-store-build-number') || '',
       releaseAppStoreApiKeyId: core.getInput('release-app-store-api-key-id') || process.env.APP_STORE_CONNECT_API_KEY_ID || '',
       releaseAppStoreIssuerId: core.getInput('release-app-store-issuer-id') || process.env.APP_STORE_CONNECT_ISSUER_ID || '',
       releaseAppStorePrivateKey: core.getInput('release-app-store-private-key') || process.env.APP_STORE_CONNECT_PRIVATE_KEY || '',
@@ -1437,6 +1440,10 @@ async function runReleaseTargets(options: {
 
       const receipt = await deliverReleaseToAppStore({
         package: packagePath,
+        bundleId: inputs.releaseAppStoreBundleId || undefined,
+        version: inputs.releaseAppStoreVersion || undefined,
+        buildNumber: inputs.releaseAppStoreBuildNumber || undefined,
+        sourceRevision: process.env.GITHUB_SHA || undefined,
         apiKeyId: inputs.releaseAppStoreApiKeyId,
         issuerId: inputs.releaseAppStoreIssuerId,
         privateKey: inputs.releaseAppStorePrivateKey,

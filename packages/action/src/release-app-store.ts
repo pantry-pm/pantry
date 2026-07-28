@@ -6,6 +6,10 @@ import { sha256File } from './release-manifest'
 
 export interface AppStoreReleaseOptions {
   package: string
+  bundleId?: string
+  version?: string
+  buildNumber?: string
+  sourceRevision?: string
   apiKeyId: string
   issuerId: string
   privateKey: string
@@ -17,6 +21,10 @@ export interface AppStoreReleaseOptions {
 export interface AppStoreReleaseReceipt {
   schemaVersion: 1
   package: string
+  bundleId?: string
+  version?: string
+  buildNumber?: string
+  sourceRevision?: string
   size: number
   sha256: string
   validated: boolean
@@ -89,6 +97,10 @@ export async function deliverReleaseToAppStore(
   const receipt: AppStoreReleaseReceipt = {
     schemaVersion: 1,
     package: path.basename(options.package),
+    ...(options.bundleId ? { bundleId: options.bundleId } : {}),
+    ...(options.version ? { version: options.version } : {}),
+    ...(options.buildNumber ? { buildNumber: options.buildNumber } : {}),
+    ...(options.sourceRevision ? { sourceRevision: options.sourceRevision } : {}),
     size: fs.statSync(options.package).size,
     sha256: sha256File(options.package),
     validated: false,
