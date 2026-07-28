@@ -1,3 +1,21 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.57...v0.11.0)
+
+## 🚀 Features
+
+- **app-store**: automate certificate provisioning ([2de1698](https://github.com/pantry-pm/pantry/commit/2de1698)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- **app-store**: document provisioning CLI ([12b5355](https://github.com/pantry-pm/pantry/commit/12b5355)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.0 ([1300d22](https://github.com/pantry-pm/pantry/commit/1300d22)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.56...v0.10.57)
 
 ## 🚀 Features
