@@ -66,7 +66,7 @@ export const redisPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^3',
+    'openssl.org^1.1',
   ] as const,
   buildDependencies: [] as const,
   /**
