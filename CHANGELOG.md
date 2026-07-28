@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.53...v0.10.54)
+
+## ⚡ Performance Improvements
+
+- **registry**: import only the stx renderer ([ab5e7e2](https://github.com/pantry-pm/pantry/commit/ab5e7e2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.54 ([c863348](https://github.com/pantry-pm/pantry/commit/c863348)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.52...v0.10.53)
 
 ## ⚡ Performance Improvements
