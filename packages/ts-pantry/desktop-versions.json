@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.402",
-      "published": "0.0.402",
+      "latest": "0.0.403",
+      "published": "0.0.403",
       "needsUpdate": false
     },
     {
@@ -365,8 +365,8 @@
       "name": "Maccy",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.6.1",
-      "published": "2.6.1",
+      "latest": "2.7.0",
+      "published": "2.7.0",
       "needsUpdate": false
     },
     {
