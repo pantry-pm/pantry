@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.54...v0.10.55)
+
+## ⚡ Performance Improvements
+
+- **registry**: persist build coverage across deploys ([653f4d5](https://github.com/pantry-pm/pantry/commit/653f4d5)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.55 ([f9f7dc4](https://github.com/pantry-pm/pantry/commit/f9f7dc4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.53...v0.10.54)
 
 ## ⚡ Performance Improvements
