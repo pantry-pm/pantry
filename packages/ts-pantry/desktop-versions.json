@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.13.21",
-      "published": "3.13.21",
+      "latest": "3.13.25",
+      "published": "3.13.25",
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.30.13",
-      "published": "2.26.30.13",
+      "latest": "2.26.30.16",
+      "published": "2.26.30.16",
       "needsUpdate": false
     },
     {
