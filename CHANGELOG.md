@@ -1,3 +1,38 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.51...v0.10.52)
+
+## ⚡ Performance Improvements
+
+- **registry**: cache public renders and bound runtime state ([23f1e59](https://github.com/pantry-pm/pantry/commit/23f1e59)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: parse package catalog without evaluation ([4b63b22](https://github.com/pantry-pm/pantry/commit/4b63b22)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.52 ([33cf8d9](https://github.com/pantry-pm/pantry/commit/33cf8d9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, railway.app ([7aa838d](https://github.com/pantry-pm/pantry/commit/7aa838d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.30.0 ([11ff7c2](https://github.com/pantry-pm/pantry/commit/11ff7c2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10155 ([551d041](https://github.com/pantry-pm/pantry/commit/551d041)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.103 ([21eecd0](https://github.com/pantry-pm/pantry/commit/21eecd0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([5b6804f](https://github.com/pantry-pm/pantry/commit/5b6804f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, ollama.ai, ziglang.org ([e95355b](https://github.com/pantry-pm/pantry/commit/e95355b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app zed.dev 1.12.0 → 1.12.1 ([63ad873](https://github.com/pantry-pm/pantry/commit/63ad873)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/shaka-project/shaka-packager, mise.jdx.dev, werf.io, zed.dev ([b27f8e8](https://github.com/pantry-pm/pantry/commit/b27f8e8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app cursor.com 3.13.10 → 3.13.21 ([a38ab14](https://github.com/pantry-pm/pantry/commit/a38ab14)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, dblab.danvergara.com, dozzle.dev, github.com/ggerganov/llama.cpp ([d409cd2](https://github.com/pantry-pm/pantry/commit/d409cd2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update babashka.org, github.com/ggerganov/llama.cpp, rioterm.com, turso.tech ([b9c504e](https://github.com/pantry-pm/pantry/commit/b9c504e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, github.com/ggerganov/llama.cpp, prefix.dev, railway.app, rucio.cern.ch/rucio-client, whatsapp.com ([bcf4cc4](https://github.com/pantry-pm/pantry/commit/bcf4cc4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app whatsapp.com 2.26.29.22 → 2.26.30.13 ([5ad33b6](https://github.com/pantry-pm/pantry/commit/5ad33b6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com, github.com/ggerganov/llama.cpp, huggingface.co, meilisearch.com, opencode.ai, postgrest.org ([4d58e9a](https://github.com/pantry-pm/pantry/commit/4d58e9a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([d53c774](https://github.com/pantry-pm/pantry/commit/d53c774)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai to 1.18.6 ([92b3780](https://github.com/pantry-pm/pantry/commit/92b3780)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp ([3423f72](https://github.com/pantry-pm/pantry/commit/3423f72)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10141 ([b2bae86](https://github.com/pantry-pm/pantry/commit/b2bae86)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.102 ([e4a446c](https://github.com/pantry-pm/pantry/commit/e4a446c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([152a3d9](https://github.com/pantry-pm/pantry/commit/152a3d9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.50...v0.10.51)
 
 ## 🧪 Tests
