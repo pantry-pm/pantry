@@ -5,7 +5,7 @@ TypeScript types for Pantry package manager configuration with **full type valid
 ## Installation
 
 ```bash
-bun add -d ts-pantry ts-pantry
+bun add -d ts-pantry
 ```
 
 ## Usage
@@ -42,6 +42,44 @@ export default config
 - **IntelliSense Support**: Get autocomplete for all 3000+ packages from the pkgx registry
 - **Version Validation**: Invalid versions trigger TypeScript errors
 - **Zero Configuration**: Just import and use - no additional setup required
+- **App Store Automation**: Provision macOS identifiers, capabilities, certificates,
+  and profiles, then manage App Store versions and processed builds
+
+## App Store Connect
+
+Pantry owns the provider-neutral Apple distribution layer used by release actions
+and framework integrations. Authentication defaults to
+`APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_API_ISSUER_ID`, and
+`APP_STORE_CONNECT_API_KEY_PATH`.
+
+Provisioning is plan-only unless `checkOnly: false` is explicitly passed. It
+reuses active certificates and profiles and never revokes existing resources.
+Apple requires the initial app record to be created manually in App Store
+Connect; Pantry reports that remaining action in its result.
+
+```typescript
+import {
+  AppStoreConnectClient,
+  ensureAppStoreVersions,
+  provisionMacApp,
+  waitForAppStoreBuilds,
+} from 'ts-pantry'
+
+const plan = await provisionMacApp({
+  identifier: 'com.example.desktop',
+  name: 'Example Desktop',
+  capabilities: ['APP_GROUPS'],
+})
+
+const client = new AppStoreConnectClient()
+const app = await client.findApp('com.example.desktop')
+if (app) {
+  const versions = await ensureAppStoreVersions(client, app.id, [
+    { platform: 'MAC_OS', version: '1.0.0' },
+  ])
+  await waitForAppStoreBuilds(client, app.id, versions, '42')
+}
+```
 
 ## Type Definitions
 
