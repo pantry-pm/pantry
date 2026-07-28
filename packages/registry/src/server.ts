@@ -266,10 +266,10 @@ const FEATURED_PACKAGES = [
 // Render helpers — uses @stacksjs/stx
 // ============================================================================
 
-type RenderTemplate = typeof import('@stacksjs/stx')['renderTemplate']
+type RenderTemplate = typeof import('@stacksjs/stx/render')['renderTemplate']
 const stxRenderer: { promise: Promise<RenderTemplate> | null } = { promise: null }
 function getRenderTemplate(): Promise<RenderTemplate> {
-  stxRenderer.promise ??= import('@stacksjs/stx').then(module => module.renderTemplate)
+  stxRenderer.promise ??= import('@stacksjs/stx/render').then(module => module.renderTemplate)
   return stxRenderer.promise
 }
 
