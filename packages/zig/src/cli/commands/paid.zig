@@ -441,14 +441,12 @@ pub fn plansCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandRes
         try out.appendSlice(arena, rendered);
     }
 
-    try out.appendSlice(arena,
-        "Lifetime download totals are shown on every plan; the depth of the timeline is\n" ++
-            "what a plan buys.\n");
+    try out.appendSlice(arena, "Lifetime download totals are shown on every plan; the depth of the timeline is\n" ++
+        "what a plan buys.\n");
 
     if (jsonString(parsed.value, "discoveryFee")) |fee| {
-        try out.appendSlice(arena, try std.fmt.allocPrint(arena,
-            "A sale that started on the registry's website adds a {s} discovery fee.\n" ++
-                "Sales you bring yourself (a link you sent, `pantry buy`) do not.\n", .{fee}));
+        try out.appendSlice(arena, try std.fmt.allocPrint(arena, "A sale that started on the registry's website adds a {s} discovery fee.\n" ++
+            "Sales you bring yourself (a link you sent, `pantry buy`) do not.\n", .{fee}));
     }
 
     return CommandResult.success(allocator, out.items);
@@ -613,8 +611,7 @@ pub fn teamAddCommand(allocator: std.mem.Allocator, opts: TeamOptions) !CommandR
         return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not add them: {s}", .{registry_ops.apiError(arena, res)}));
 
     const rendered = try renderTeam(arena, res);
-    return CommandResult.success(allocator, try std.fmt.allocPrint(arena,
-        "{s} can now publish to and manage your packages.\n\n{s}", .{ email, rendered }));
+    return CommandResult.success(allocator, try std.fmt.allocPrint(arena, "{s} can now publish to and manage your packages.\n\n{s}", .{ email, rendered }));
 }
 
 pub fn teamRemoveCommand(allocator: std.mem.Allocator, opts: TeamOptions) !CommandResult {
@@ -633,8 +630,7 @@ pub fn teamRemoveCommand(allocator: std.mem.Allocator, opts: TeamOptions) !Comma
         return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not remove them: {s}", .{registry_ops.apiError(arena, res)}));
 
     const rendered = try renderTeam(arena, res);
-    return CommandResult.success(allocator, try std.fmt.allocPrint(arena,
-        "{s} no longer has access. Packages they published under your account stay yours.\n\n{s}", .{ email, rendered }));
+    return CommandResult.success(allocator, try std.fmt.allocPrint(arena, "{s} no longer has access. Packages they published under your account stay yours.\n\n{s}", .{ email, rendered }));
 }
 
 // ---------------------------------------------------------------------------

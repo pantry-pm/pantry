@@ -1979,7 +1979,7 @@ pub fn httpRequest(
     const data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
     const owned = try allocator.dupe(u8, data);
     alloc_writer.deinit();
-    return .{ .status = @intFromEnum(result.status), .body = owned };
+    return .{ .status = @backingInt(result.status), .body = owned };
 }
 
 /// HTTP POST with JSON body. Returns response body as owned slice.

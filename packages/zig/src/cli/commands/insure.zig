@@ -225,8 +225,7 @@ pub fn insureCommand(allocator: std.mem.Allocator, opts: Options) !CommandResult
     const failed = jsonInt(parsed.value, "failed");
 
     var out: std.ArrayList(u8) = .empty;
-    try out.appendSlice(arena, try std.fmt.allocPrint(arena,
-        "{d} newly stored, {d} already insured, {d} could not be fetched.\n", .{ mirrored, skipped, failed }));
+    try out.appendSlice(arena, try std.fmt.allocPrint(arena, "{d} newly stored, {d} already insured, {d} could not be fetched.\n", .{ mirrored, skipped, failed }));
 
     if (failed > 0) {
         if (parsed.value == .object) {
@@ -272,12 +271,11 @@ pub fn insureListCommand(allocator: std.mem.Allocator, opts: Options) !CommandRe
     const failed = if (stats) |st| jsonInt(st, "failed") else 0;
 
     var out: std.ArrayList(u8) = .empty;
-    try out.appendSlice(arena, try std.fmt.allocPrint(arena,
-        "{d} artifact(s) insured, {d} MB stored{s}\n\n", .{
-            stored,
-            @divTrunc(bytes, 1024 * 1024),
-            if (failed > 0) " (some could not be fetched)" else "",
-        }));
+    try out.appendSlice(arena, try std.fmt.allocPrint(arena, "{d} artifact(s) insured, {d} MB stored{s}\n\n", .{
+        stored,
+        @divTrunc(bytes, 1024 * 1024),
+        if (failed > 0) " (some could not be fetched)" else "",
+    }));
 
     if (parsed.value == .object) {
         if (parsed.value.object.get("entries")) |entries| {
@@ -354,8 +352,7 @@ pub fn alertsCommand(allocator: std.mem.Allocator, opts: Options) !CommandResult
 
     // A degraded report means we could not check — never let that read as clean.
     if (jsonStr(parsed.value, "degraded")) |why| {
-        try out.appendSlice(arena, try std.fmt.allocPrint(arena,
-            "WARNING: the advisory database could not be reached ({s}).\nThis is NOT an all-clear.\n\n", .{why}));
+        try out.appendSlice(arena, try std.fmt.allocPrint(arena, "WARNING: the advisory database could not be reached ({s}).\nThis is NOT an all-clear.\n\n", .{why}));
     }
 
     const alerts = if (parsed.value == .object) parsed.value.object.get("alerts") else null;

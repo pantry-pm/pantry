@@ -359,7 +359,6 @@ fn serializeJsonValue(value: std.json.Value, writer: anytype, indent_level: usiz
     }
 }
 
-
 /// Applies each package to the manifest text with `jsonc.setDependency`.
 ///
 /// All-or-nothing: if any package cannot be placed surgically the whole attempt
