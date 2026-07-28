@@ -379,7 +379,14 @@ interface CachedResponse {
   statusText: string
 }
 
-const publicPageCache = new BoundedAsyncCache<string, CachedResponse>(128, 60_000)
+const PUBLIC_PAGE_CACHE_BYTES = 16 * 1024 * 1024
+const publicPageCache = new BoundedAsyncCache<string, CachedResponse>(
+  128,
+  60_000,
+  Date.now,
+  PUBLIC_PAGE_CACHE_BYTES,
+  snapshot => (snapshot.body.length + snapshot.headers.reduce((sum, [key, value]) => sum + key.length + value.length, 0)) * 2,
+)
 
 async function cachedPublicResponse(key: string, load: () => Promise<Response>): Promise<Response> {
   const snapshot = await publicPageCache.getOrCreate(key, async () => {

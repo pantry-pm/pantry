@@ -52,10 +52,13 @@ export class ObjectAnalytics extends InMemoryAnalytics {
     }
   }
 
-  // Persist after tracking mutations, debounced (analytics writes are very frequent).
+  // Persist after tracking mutations, coalesced because analytics writes are frequent.
   protected onMutate(): void {
+    // Schedule once instead of cancelling and allocating a new timer for every
+    // download. This also guarantees a flush under continuous traffic, whereas
+    // a trailing debounce could postpone persistence indefinitely.
     if (this.saveTimeout)
-      clearTimeout(this.saveTimeout)
+      return
     this.saveTimeout = setTimeout(() => {
       this.saveTimeout = null
       this.save().catch(err => console.error('ObjectAnalytics save failed:', (err as Error).message))

@@ -31,6 +31,26 @@ describe('bounded runtime caches', () => {
     expect(cache.get('one')).toBeUndefined()
   })
 
+  it('evicts by total value weight as well as entry count', () => {
+    const cache = new BoundedTtlCache<string, string>(10, 1_000, Date.now, 6, value => value.length)
+    cache.set('one', '123')
+    cache.set('two', '456')
+    expect(cache.weight).toBe(6)
+    cache.set('three', '789')
+    expect(cache.get('one')).toBeUndefined()
+    expect(cache.get('two')).toBe('456')
+    expect(cache.get('three')).toBe('789')
+    expect(cache.weight).toBe(6)
+  })
+
+  it('does not retain a single value larger than the weight budget', () => {
+    const cache = new BoundedTtlCache<string, string>(10, 1_000, Date.now, 3, value => value.length)
+    cache.set('large', '1234')
+    expect(cache.get('large')).toBeUndefined()
+    expect(cache.size).toBe(0)
+    expect(cache.weight).toBe(0)
+  })
+
   it('coalesces concurrent loads for the same key', async () => {
     const cache = new BoundedAsyncCache<string, number>(2, 1_000)
     let loads = 0

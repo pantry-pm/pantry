@@ -1,24 +1,32 @@
 export class BoundedTtlCache<K, V> {
-  private readonly entries = new Map<K, { value: V, expiresAt: number }>()
+  private readonly entries = new Map<K, { value: V, expiresAt: number, weight: number }>()
+  private currentWeight = 0
 
   constructor(
     private readonly maxEntries: number,
     private readonly ttlMs: number,
     private readonly now: () => number = Date.now,
+    private readonly maxWeight: number = Number.POSITIVE_INFINITY,
+    private readonly weightOf: (value: V) => number = () => 1,
   ) {
     if (!Number.isInteger(maxEntries) || maxEntries < 1) throw new RangeError('maxEntries must be a positive integer')
     if (!Number.isFinite(ttlMs) || ttlMs < 1) throw new RangeError('ttlMs must be a positive number')
+    if (maxWeight <= 0) throw new RangeError('maxWeight must be a positive number')
   }
 
   get size(): number {
     return this.entries.size
   }
 
+  get weight(): number {
+    return this.currentWeight
+  }
+
   get(key: K): V | undefined {
     const entry = this.entries.get(key)
     if (!entry) return undefined
     if (entry.expiresAt <= this.now()) {
-      this.entries.delete(key)
+      this.remove(key, entry)
       return undefined
     }
 
@@ -29,21 +37,37 @@ export class BoundedTtlCache<K, V> {
   }
 
   set(key: K, value: V): void {
-    this.entries.delete(key)
-    this.entries.set(key, { value, expiresAt: this.now() + this.ttlMs })
-    while (this.entries.size > this.maxEntries) {
+    const existing = this.entries.get(key)
+    if (existing) this.remove(key, existing)
+
+    const weight = Math.max(0, this.weightOf(value))
+    if (!Number.isFinite(weight) || weight > this.maxWeight) return
+
+    this.entries.set(key, { value, expiresAt: this.now() + this.ttlMs, weight })
+    this.currentWeight += weight
+    while (this.entries.size > this.maxEntries || this.currentWeight > this.maxWeight) {
       const oldest = this.entries.keys().next().value
       if (oldest === undefined) break
-      this.entries.delete(oldest)
+      const entry = this.entries.get(oldest)
+      if (entry) this.remove(oldest, entry)
     }
   }
 
   delete(key: K): boolean {
-    return this.entries.delete(key)
+    const entry = this.entries.get(key)
+    if (!entry) return false
+    this.remove(key, entry)
+    return true
   }
 
   clear(): void {
     this.entries.clear()
+    this.currentWeight = 0
+  }
+
+  private remove(key: K, entry: { weight: number }): void {
+    this.entries.delete(key)
+    this.currentWeight -= entry.weight
   }
 }
 
@@ -51,8 +75,14 @@ export class BoundedAsyncCache<K, V> {
   private readonly cache: BoundedTtlCache<K, V>
   private readonly inFlight = new Map<K, Promise<V>>()
 
-  constructor(maxEntries: number, ttlMs: number, now: () => number = Date.now) {
-    this.cache = new BoundedTtlCache(maxEntries, ttlMs, now)
+  constructor(
+    maxEntries: number,
+    ttlMs: number,
+    now: () => number = Date.now,
+    maxWeight: number = Number.POSITIVE_INFINITY,
+    weightOf: (value: V) => number = () => 1,
+  ) {
+    this.cache = new BoundedTtlCache(maxEntries, ttlMs, now, maxWeight, weightOf)
   }
 
   get size(): number {
