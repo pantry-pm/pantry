@@ -19,6 +19,7 @@ import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { BoundedTtlCache } from './runtime-cache'
 
 const BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64'] as const
 
@@ -78,8 +79,8 @@ function compareVersionsDesc(a: string, b: string): number {
 }
 
 // ── availability cache (HEAD dist.pkgx.dev) ──────────────────────────────────
-const _availCache = new Map<string, { at: number, ok: boolean }>()
 const AVAIL_TTL_MS = 6 * 60 * 60 * 1000
+const _availCache = new BoundedTtlCache<string, boolean>(20_000, AVAIL_TTL_MS)
 
 export async function pkgxHasBinary(domain: string, version: string, platform: string): Promise<boolean> {
   if (CUSTOM_BUILD_DOMAINS.has(domain))
@@ -89,8 +90,8 @@ export async function pkgxHasBinary(domain: string, version: string, platform: s
     return false
   const cacheKey = `${domain}@${version}#${platform}`
   const cached = _availCache.get(cacheKey)
-  if (cached && Date.now() - cached.at < AVAIL_TTL_MS)
-    return cached.ok
+  if (cached !== undefined)
+    return cached
   let ok = false
   try {
     const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
@@ -99,7 +100,7 @@ export async function pkgxHasBinary(domain: string, version: string, platform: s
   catch {
     ok = false
   }
-  _availCache.set(cacheKey, { at: Date.now(), ok })
+  _availCache.set(cacheKey, ok)
   return ok
 }
 
@@ -116,8 +117,8 @@ export function isPendingMaterialize(domain: string, version: string, platform: 
 }
 
 // ── metadata augmentation ────────────────────────────────────────────────────
-const _augCache = new Map<string, { at: number, sourceFingerprint: string, data: PackageMetadata }>()
 const AUG_TTL_MS = 30 * 60 * 1000
+const _augCache = new BoundedTtlCache<string, { sourceFingerprint: string, data: PackageMetadata }>(1_000, AUG_TTL_MS)
 // How many of the most-recent tracked-but-unpublished versions to probe on pkgx.
 const MAX_AUGMENT_VERSIONS = 20
 
@@ -139,7 +140,7 @@ export async function augmentMetadataWithPkgx(
     ? `${published.updatedAt || ''}:${published.latestVersion || ''}:${Object.keys(published.versions || {}).length}`
     : 'unpublished'
   const cached = _augCache.get(domain)
-  if (cached && cached.sourceFingerprint === sourceFingerprint && Date.now() - cached.at < AUG_TTL_MS)
+  if (cached && cached.sourceFingerprint === sourceFingerprint)
     return cached.data
 
   const base: PackageMetadata = published
@@ -180,7 +181,7 @@ export async function augmentMetadataWithPkgx(
     }
   }))
 
-  _augCache.set(domain, { at: Date.now(), sourceFingerprint, data: base })
+  _augCache.set(domain, { sourceFingerprint, data: base })
   return base
 }
 

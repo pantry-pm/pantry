@@ -38,7 +38,6 @@ import {
   type Tier,
   type TierDefinition,
 } from './subscriptions'
-import { renderTemplate } from '@stacksjs/stx'
 import {
   generateSparkline,
   generateLineChart,
@@ -60,6 +59,7 @@ import { MirrorStore, normalizeEntries } from './mirror'
 import { normalizePolicy, SecurityStore } from './security'
 import { buildSbom, parseFormat } from './sbom'
 import { loadPackageVersions, loadSupportedPlatforms as loadRecipePlatforms } from './catalog'
+import { BoundedAsyncCache, BoundedTtlCache } from './runtime-cache'
 
 // Build domain→versions lookup from ts-pantry package metadata for version
 // validation. Exposed via reloadKnownVersions() so an operator can refresh
@@ -266,8 +266,16 @@ const FEATURED_PACKAGES = [
 // Render helpers — uses @stacksjs/stx
 // ============================================================================
 
+type RenderTemplate = typeof import('@stacksjs/stx')['renderTemplate']
+const stxRenderer: { promise: Promise<RenderTemplate> | null } = { promise: null }
+function getRenderTemplate(): Promise<RenderTemplate> {
+  stxRenderer.promise ??= import('@stacksjs/stx').then(module => module.renderTemplate)
+  return stxRenderer.promise
+}
+
 async function renderSitePage(file: string, context: Record<string, unknown> = {}): Promise<string> {
   const title = (context.title as string) || 'pantry'
+  const renderTemplate = await getRenderTemplate()
   let html = await renderTemplate(resolve(SITE_DIR, file), {
     context: { ...context, title },
     layout: SITE_LAYOUT,
@@ -285,6 +293,7 @@ async function renderSitePage(file: string, context: Record<string, unknown> = {
 }
 
 async function renderDashboardPage(file: string, context: Record<string, unknown> = {}): Promise<string> {
+  const renderTemplate = await getRenderTemplate()
   return renderTemplate(resolve(DASHBOARD_DIR, file), {
     context,
     injectCSS: true,
@@ -360,6 +369,32 @@ function htmlResponse(html: string, status = 200): Response {
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
     },
+  })
+}
+
+interface CachedResponse {
+  body: string
+  headers: [string, string][]
+  status: number
+  statusText: string
+}
+
+const publicPageCache = new BoundedAsyncCache<string, CachedResponse>(128, 60_000)
+
+async function cachedPublicResponse(key: string, load: () => Promise<Response>): Promise<Response> {
+  const snapshot = await publicPageCache.getOrCreate(key, async () => {
+    const response = await load()
+    return {
+      body: await response.text(),
+      headers: [...response.headers.entries()],
+      status: response.status,
+      statusText: response.statusText,
+    }
+  })
+  return new Response(snapshot.body, {
+    headers: snapshot.headers,
+    status: snapshot.status,
+    statusText: snapshot.statusText,
   })
 }
 
@@ -880,41 +915,43 @@ export function createHandler(
       // Pricing page. Rendered server-side from the same tier table the API
       // serves, so the page and the invoice can never disagree.
       if (path === '/pricing' && req.method === 'GET') {
-        const html = await renderSitePage('pricing.stx', {
-          title: 'Plans',
-          metaDescription: 'Publishing and installing on pantry is free. Selling a package costs a fee per sale — 10% on Free, 5% on a plan — and a plan also insures your builds, watches your lockfile and unlocks private packages.',
-          canonicalUrl: 'https://pantry.dev/pricing',
-          plans: Object.values(TIERS).map(t => ({
-            id: t.id,
-            name: t.name,
-            featured: t.id === 'pro',
-            formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
-            sellingFee: formatBps(t.commissionBps),
-            tagline: t.id === 'free'
-              ? 'Publish and sell, no cost'
-              : t.id === 'pro'
-                ? 'For people who ship'
-                : 'For teams who depend on it',
-            // What you get as a publisher…
-            publishing: [
-              t.privatePackages ? 'Private & unlisted packages' : 'Public packages',
-              t.analyticsRetentionDays >= 3650 ? 'Lifetime full analytics' : '30 days of full analytics',
-              `${Math.round(t.maxArtifactBytes / (1024 * 1024))}MB artifacts`,
-              t.priorityBuilds ? 'Priority builds' : 'Standard build queue',
-              t.seats > 1 ? `${t.seats} seats, shared packages` : '1 seat',
-            ],
-            // …and as a consumer.
-            consuming: [
-              t.buildInsurance ? 'Build insurance — every artifact mirrored' : 'Standard downloads',
-              t.securityAlerts ? 'Continuous CVE & licence alerts' : 'Point-in-time `pantry audit`',
-              t.sbomExport ? 'SBOM export (CycloneDX, SPDX)' : 'No SBOM export',
-              t.teamEntitlements ? 'Paid packages bought once for the whole team' : 'Purchases are per account',
-            ],
-          })),
-          discoveryFee: formatBps(DISCOVERY_FEE_BPS),
-          paymentsEnabled: paymentsEnabled(),
+        return cachedPublicResponse('pricing', async () => {
+          const html = await renderSitePage('pricing.stx', {
+            title: 'Plans',
+            metaDescription: 'Publishing and installing on pantry is free. Selling a package costs a fee per sale — 10% on Free, 5% on a plan — and a plan also insures your builds, watches your lockfile and unlocks private packages.',
+            canonicalUrl: 'https://pantry.dev/pricing',
+            plans: Object.values(TIERS).map(t => ({
+              id: t.id,
+              name: t.name,
+              featured: t.id === 'pro',
+              formattedPrice: t.price === 0 ? 'Free' : `$${(t.price / 100).toFixed(0)}/mo`,
+              sellingFee: formatBps(t.commissionBps),
+              tagline: t.id === 'free'
+                ? 'Publish and sell, no cost'
+                : t.id === 'pro'
+                  ? 'For people who ship'
+                  : 'For teams who depend on it',
+              // What you get as a publisher…
+              publishing: [
+                t.privatePackages ? 'Private & unlisted packages' : 'Public packages',
+                t.analyticsRetentionDays >= 3650 ? 'Lifetime full analytics' : '30 days of full analytics',
+                `${Math.round(t.maxArtifactBytes / (1024 * 1024))}MB artifacts`,
+                t.priorityBuilds ? 'Priority builds' : 'Standard build queue',
+                t.seats > 1 ? `${t.seats} seats, shared packages` : '1 seat',
+              ],
+              // …and as a consumer.
+              consuming: [
+                t.buildInsurance ? 'Build insurance — every artifact mirrored' : 'Standard downloads',
+                t.securityAlerts ? 'Continuous CVE & licence alerts' : 'Point-in-time `pantry audit`',
+                t.sbomExport ? 'SBOM export (CycloneDX, SPDX)' : 'No SBOM export',
+                t.teamEntitlements ? 'Paid packages bought once for the whole team' : 'Purchases are per account',
+              ],
+            })),
+            discoveryFee: formatBps(DISCOVERY_FEE_BPS),
+            paymentsEnabled: paymentsEnabled(),
+          })
+          return htmlResponse(html)
         })
-        return htmlResponse(html)
       }
 
       // Site auth pages (login, signup, account)
@@ -1020,7 +1057,9 @@ export function createHandler(
         const rawType = url.searchParams.get('type') || 'all'
         const type = ['all', 'system', 'zig', 'php', 'npm'].includes(rawType) ? rawType : 'all'
         const page = Math.min(Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1), 10000)
-        return await handleSiteSearch(q, registry, binaryStorage, analyticsStorage, sort, view, type, zigPackageStorage, page, phpPackageStorage)
+        const cacheKey = `search:${JSON.stringify([q, sort, view, type, page])}`
+        return cachedPublicResponse(cacheKey, () =>
+          handleSiteSearch(q, registry, binaryStorage, analyticsStorage, sort, view, type, zigPackageStorage, page, phpPackageStorage))
       }
 
       // Publish
@@ -1556,25 +1595,28 @@ export function createHandler(
 
       // Homepage
       if (path === '/' || path === '') {
-        return await handleSiteHome(binaryStorage, analyticsStorage, zigPackageStorage)
+        return cachedPublicResponse('home', () => handleSiteHome(binaryStorage, analyticsStorage, zigPackageStorage))
       }
 
       // Package detail page
       const sitePkgMatch = path.match(/^\/package\/(.+)$/)
       if (sitePkgMatch) {
         const name = decodeURIComponent(sitePkgMatch[1])
-        return await handleSitePackage(name, analyticsStorage, binaryStorage, registry, zigPackageStorage, phpPackageStorage)
+        return cachedPublicResponse(`package:${name}`, () =>
+          handleSitePackage(name, analyticsStorage, binaryStorage, registry, zigPackageStorage, phpPackageStorage))
       }
 
       // Compare page
       if (path === '/compare') {
         const packagesParam = url.searchParams.get('packages') || ''
-        return await handleSiteCompare(packagesParam, analyticsStorage, binaryStorage)
+        const cacheKey = packagesParam.split(',').map(name => name.trim()).filter(Boolean).slice(0, 4).join(',')
+        return cachedPublicResponse(`compare:${cacheKey}`, () =>
+          handleSiteCompare(packagesParam, analyticsStorage, binaryStorage))
       }
 
       // Stats page
       if (path === '/stats') {
-        return await handleSiteStats(analyticsStorage)
+        return cachedPublicResponse('stats', () => handleSiteStats(analyticsStorage))
       }
 
       // Fonts — serve self-hosted font files
@@ -1604,11 +1646,12 @@ export function createHandler(
 
       // Settings page
       if (path === '/settings') {
-        return htmlResponse(await renderSitePage('settings.stx', {
-          title: 'Settings',
-          metaDescription: 'Customize your pantry.dev experience — theme, accent color, and preferences.',
-          canonicalUrl: 'https://pantry.dev/settings',
-        }))
+        return cachedPublicResponse('settings', async () =>
+          htmlResponse(await renderSitePage('settings.stx', {
+            title: 'Settings',
+            metaDescription: 'Customize your pantry.dev experience — theme, accent color, and preferences.',
+            canonicalUrl: 'https://pantry.dev/settings',
+          })))
       }
 
       // OpenSearch description
@@ -1637,9 +1680,18 @@ export function createHandler(
 
       // Static pages
       if (path === '/packages') return htmlResponse(await renderPackagesPage())
-      if (path === '/about') return htmlResponse(await renderSitePage('about.stx', { title: 'About', canonicalUrl: 'https://pantry.dev/about' }))
-      if (path === '/privacy') return htmlResponse(await renderSitePage('privacy.stx', { title: 'Privacy Policy', canonicalUrl: 'https://pantry.dev/privacy' }))
-      if (path === '/accessibility') return htmlResponse(await renderSitePage('accessibility.stx', { title: 'Accessibility', canonicalUrl: 'https://pantry.dev/accessibility' }))
+      if (path === '/about') {
+        return cachedPublicResponse('about', async () =>
+          htmlResponse(await renderSitePage('about.stx', { title: 'About', canonicalUrl: 'https://pantry.dev/about' })))
+      }
+      if (path === '/privacy') {
+        return cachedPublicResponse('privacy', async () =>
+          htmlResponse(await renderSitePage('privacy.stx', { title: 'Privacy Policy', canonicalUrl: 'https://pantry.dev/privacy' })))
+      }
+      if (path === '/accessibility') {
+        return cachedPublicResponse('accessibility', async () =>
+          htmlResponse(await renderSitePage('accessibility.stx', { title: 'Accessibility', canonicalUrl: 'https://pantry.dev/accessibility' })))
+      }
 
       // API 404 (JSON) for /api/* and /packages/* paths
       if (path.startsWith('/api/') || path.startsWith('/packages/') || path.startsWith('/analytics/')) {
@@ -3632,18 +3684,16 @@ async function handlePublisherSite(
 // ---------------------------------------------------------------------------
 
 /** Cache of npm registry metadata (package name -> abbreviated metadata) */
-const npmMetadataCache = new Map<string, { data: any, ts: number }>()
 const NPM_METADATA_TTL = 30 * 60 * 1000 // 30 minutes — npm packages change infrequently
+const npmMetadataCache = new BoundedTtlCache<string, any>(500, NPM_METADATA_TTL)
 
 /** Cache of full resolution results (input hash -> resolved tree) */
-const npmResolutionCache = new Map<string, { data: any, ts: number }>()
 const NPM_RESOLUTION_TTL = 15 * 60 * 1000 // 15 minutes
+const npmResolutionCache = new BoundedTtlCache<string, any>(200, NPM_RESOLUTION_TTL)
 
 async function fetchNpmMetadata(name: string): Promise<any> {
   const cached = npmMetadataCache.get(name)
-  if (cached && Date.now() - cached.ts < NPM_METADATA_TTL) {
-    return cached.data
-  }
+  if (cached !== undefined) return cached
   // Scoped packages: @scope/name -> @scope%2fname in URL
   const encodedName = name.startsWith('@') ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)
   const res = await fetch(`https://registry.npmjs.org/${encodedName}`, {
@@ -3653,16 +3703,7 @@ async function fetchNpmMetadata(name: string): Promise<any> {
     throw new Error(`npm registry returned ${res.status} for ${name}`)
   }
   const data = await res.json()
-  npmMetadataCache.set(name, { data, ts: Date.now() })
-  // Evict stale entries when cache grows large
-  if (npmMetadataCache.size > 500) {
-    const now = Date.now()
-    const staleKeys: string[] = []
-    for (const [key, val] of npmMetadataCache) {
-      if (now - val.ts > NPM_METADATA_TTL) staleKeys.push(key)
-    }
-    for (const key of staleKeys) npmMetadataCache.delete(key)
-  }
+  npmMetadataCache.set(name, data)
   return data
 }
 
@@ -4264,8 +4305,8 @@ async function handleNpmResolve(req: Request, corsHeaders: Record<string, string
     // Check resolution cache
     const cacheKey = hashDeps(deps)
     const cached = npmResolutionCache.get(cacheKey)
-    if (cached && Date.now() - cached.ts < NPM_RESOLUTION_TTL) {
-      return Response.json(cached.data, {
+    if (cached !== undefined) {
+      return Response.json(cached, {
         headers: { ...corsHeaders, 'X-Cache': 'HIT' },
       })
     }
@@ -4274,17 +4315,7 @@ async function handleNpmResolve(req: Request, corsHeaders: Record<string, string
     const responseData = { resolved }
 
     // Cache the result
-    npmResolutionCache.set(cacheKey, { data: responseData, ts: Date.now() })
-
-    // Evict stale entries when cache grows large
-    if (npmResolutionCache.size > 200) {
-      const now = Date.now()
-      const staleKeys: string[] = []
-      for (const [key, val] of npmResolutionCache) {
-        if (now - val.ts > NPM_RESOLUTION_TTL) staleKeys.push(key)
-      }
-      for (const key of staleKeys) npmResolutionCache.delete(key)
-    }
+    npmResolutionCache.set(cacheKey, responseData)
 
     return Response.json(responseData, {
       headers: { ...corsHeaders, 'X-Cache': 'MISS' },
@@ -4354,8 +4385,8 @@ else {
     // Check resolution cache
     const cacheKey = hashDeps(deps)
     const cached = npmResolutionCache.get(cacheKey)
-    if (cached && Date.now() - cached.ts < NPM_RESOLUTION_TTL) {
-      return Response.json(cached.data, {
+    if (cached !== undefined) {
+      return Response.json(cached, {
         headers: { ...corsHeaders, 'X-Cache': 'HIT' },
       })
     }
@@ -4363,17 +4394,7 @@ else {
     const resolved = await resolveNpmDeps(deps)
     const responseData = { resolved }
 
-    npmResolutionCache.set(cacheKey, { data: responseData, ts: Date.now() })
-
-    // Evict stale entries when cache grows large
-    if (npmResolutionCache.size > 200) {
-      const now = Date.now()
-      const staleKeys: string[] = []
-      for (const [key, val] of npmResolutionCache) {
-        if (now - val.ts > NPM_RESOLUTION_TTL) staleKeys.push(key)
-      }
-      for (const key of staleKeys) npmResolutionCache.delete(key)
-    }
+    npmResolutionCache.set(cacheKey, responseData)
 
     return Response.json(responseData, {
       headers: { ...corsHeaders, 'X-Cache': 'MISS' },
