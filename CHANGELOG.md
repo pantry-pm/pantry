@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.52...v0.10.53)
+
+## ⚡ Performance Improvements
+
+- **registry**: cap render bytes and coalesce analytics saves ([ed63185](https://github.com/pantry-pm/pantry/commit/ed63185)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.53 ([ef3cf34](https://github.com/pantry-pm/pantry/commit/ef3cf34)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.51...v0.10.52)
 
 ## ⚡ Performance Improvements
