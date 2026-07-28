@@ -6,6 +6,11 @@ import path from 'node:path'
 import process from 'node:process'
 import { CLI } from '@stacksjs/clapp'
 import { version } from '../package.json'
+import {
+  exportAppleCertificateP12,
+  generateMacCertificateRequests,
+} from '../src/apple-certificates'
+import { provisionMacApp } from '../src/app-store-connect'
 import { findDependencyFiles, resolveDependencyFile } from '../src/dependency-resolver'
 import {
   cleanStaleOutputFiles,
@@ -1636,6 +1641,127 @@ cli
     }
     catch (error) {
       console.error('Generate failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// app-store:* — provider-neutral Apple provisioning and certificate automation
+// ─────────────────────────────────────────────────────────────────────────────
+cli
+  .command('app-store:csr', 'Generate private keys and CSRs for Mac App Store certificates')
+  .option('--name <name>', 'App name used in certificate request common names')
+  .option('--output <dir>', 'Output directory (default: .pantry/apple)')
+  .action((options: { name?: string, output?: string }) => {
+    try {
+      if (!options.name)
+        throw new Error('--name is required')
+      const requests = generateMacCertificateRequests({
+        outputDirectory: options.output ?? '.pantry/apple',
+        commonName: options.name,
+      })
+      console.log(JSON.stringify({ requests }, null, 2))
+      process.exit(0)
+    }
+    catch (error) {
+      console.error('Apple CSR generation failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+cli
+  .command('app-store:provision', 'Plan or reconcile macOS App Store Connect resources')
+  .option('--bundle-id <id>', 'Reverse-DNS bundle identifier')
+  .option('--name <name>', 'Mac App Store display name')
+  .option('--api-key-id <id>', 'App Store Connect API key ID')
+  .option('--api-issuer-id <id>', 'App Store Connect API issuer ID')
+  .option('--api-key-path <path>', 'App Store Connect AuthKey .p8 file')
+  .option('--capabilities <types>', 'Comma-separated Apple capability types')
+  .option('--app-certificate-csr <path>', 'CSR for a missing Mac App Distribution certificate')
+  .option('--installer-certificate-csr <path>', 'CSR for a missing Mac Installer Distribution certificate')
+  .option('--profile-name <name>', 'Provisioning profile name')
+  .option('--output <dir>', 'Output directory (default: .pantry/apple)')
+  .option('--p12-password <password>', 'Export newly issued certificates as password-protected P12 files')
+  .option('--apply', 'Apply the plan; the default only reports missing resources')
+  .action(async (options: {
+    bundleId?: string
+    name?: string
+    apiKeyId?: string
+    apiIssuerId?: string
+    apiKeyPath?: string
+    capabilities?: string
+    appCertificateCsr?: string
+    installerCertificateCsr?: string
+    profileName?: string
+    output?: string
+    p12Password?: string
+    apply?: boolean
+  }) => {
+    try {
+      if (!options.bundleId || !options.name)
+        throw new Error('--bundle-id and --name are required')
+      const readCsr = (file?: string): string | undefined => {
+        if (!file) return undefined
+        return fs.readFileSync(path.resolve(file), 'utf8')
+      }
+      const outputDirectory = path.resolve(options.output ?? '.pantry/apple')
+      fs.mkdirSync(outputDirectory, { recursive: true })
+      const result = await provisionMacApp({
+        identifier: options.bundleId,
+        name: options.name,
+        capabilities: options.capabilities?.split(',').map(value => value.trim()).filter(Boolean),
+        appCertificateCsr: readCsr(options.appCertificateCsr),
+        installerCertificateCsr: readCsr(options.installerCertificateCsr),
+        profileName: options.profileName,
+        keyId: options.apiKeyId,
+        issuerId: options.apiIssuerId,
+        keyPath: options.apiKeyPath,
+        checkOnly: !options.apply,
+      })
+
+      for (const certificate of result.certificates) {
+        if (!certificate.certificateContent) continue
+        const fileName = certificate.type === 'MAC_APP_DISTRIBUTION'
+          ? 'mac-app-distribution'
+          : 'mac-installer-distribution'
+        const certificatePath = path.join(outputDirectory, `${fileName}.cer`)
+        fs.writeFileSync(certificatePath, Buffer.from(certificate.certificateContent, 'base64'), { mode: 0o600 })
+        const csrPath = certificate.type === 'MAC_APP_DISTRIBUTION'
+          ? options.appCertificateCsr
+          : options.installerCertificateCsr
+        if (options.p12Password && csrPath) {
+          exportAppleCertificateP12({
+            certificatePath,
+            privateKeyPath: path.resolve(csrPath.replace(/\.csr$/i, '.key')),
+            outputPath: path.join(outputDirectory, `${fileName}.p12`),
+            password: options.p12Password,
+            name: `${options.name} ${certificate.type === 'MAC_APP_DISTRIBUTION' ? 'Mac App Distribution' : 'Mac Installer Distribution'}`,
+          })
+        }
+      }
+      if (result.profile.profileContent) {
+        fs.writeFileSync(
+          path.join(outputDirectory, 'mac-app-store.provisionprofile'),
+          Buffer.from(result.profile.profileContent, 'base64'),
+          { mode: 0o600 },
+        )
+      }
+
+      const certificates = result.certificates.map((item) => {
+        const certificate = { ...item }
+        delete certificate.certificateContent
+        return certificate
+      })
+      const profile = { ...result.profile }
+      delete profile.profileContent
+      const report = { ...result, certificates, profile }
+      const reportPath = path.join(outputDirectory, 'provisioning-plan.json')
+      fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 })
+      console.log(JSON.stringify({ reportPath, ...report }, null, 2))
+      process.exit(0)
+    }
+    catch (error) {
+      console.error('App Store provisioning failed:', error instanceof Error ? error.message : error)
       process.exit(1)
     }
   })
