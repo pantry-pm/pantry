@@ -740,13 +740,10 @@ test "saved credentials are not readable by other users" {
     try store.set(default_key, null, "ptry_secret");
     try store.save();
 
-    // Straight to libc: io_helper.statFile reports mode 0 on macOS, which would
-    // make this assertion pass for a world-readable file.
-    var path_z: [std.fs.max_path_bytes:0]u8 = undefined;
-    @memcpy(path_z[0..store.path.len], store.path);
-    path_z[store.path.len] = 0;
-
-    var st: std.c.Stat = undefined;
-    try testing.expectEqual(@as(c_int, 0), std.c.stat(@ptrCast(&path_z), &st));
-    try testing.expectEqual(@as(u32, 0o600), @as(u32, @intCast(st.mode)) & 0o777);
+    // Use the descriptor stat directly: io_helper.statFile reports mode 0 on
+    // macOS, which would make this assertion pass for a world-readable file.
+    const file = try io_helper.openFileAbsolute(store.path, .{});
+    defer io_helper.closeFile(file);
+    const st = try file.stat(io_helper.io);
+    try testing.expectEqual(@as(u32, 0o600), @as(u32, @intCast(@backingInt(st.permissions))) & 0o777);
 }
