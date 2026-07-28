@@ -1,3 +1,21 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.56...v0.10.57)
+
+## 🚀 Features
+
+- **app-store**: centralize connect automation ([8fd00b4](https://github.com/pantry-pm/pantry/commit/8fd00b4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- **app-store**: explain automated distribution ([c5dcb36](https://github.com/pantry-pm/pantry/commit/c5dcb36)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.57 ([0432825](https://github.com/pantry-pm/pantry/commit/0432825)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.55...v0.10.56)
 
 ## 🚀 Features
