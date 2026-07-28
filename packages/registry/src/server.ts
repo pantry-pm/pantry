@@ -1,5 +1,5 @@
-import { resolve, dirname, relative, join, sep } from 'node:path'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { resolve, dirname, relative } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import type { RegistryConfig, AuthStorage } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
@@ -59,6 +59,7 @@ import { pluginResponse } from './plugins'
 import { MirrorStore, normalizeEntries } from './mirror'
 import { normalizePolicy, SecurityStore } from './security'
 import { buildSbom, parseFormat } from './sbom'
+import { loadPackageVersions, loadSupportedPlatforms as loadRecipePlatforms } from './catalog'
 
 // Build domain→versions lookup from ts-pantry package metadata for version
 // validation. Exposed via reloadKnownVersions() so an operator can refresh
@@ -89,18 +90,11 @@ loadAliases()
 const _knownVersions = new Map<string, Set<string>>()
 async function loadKnownVersions(): Promise<void> {
   try {
-    const pantryPkgsPath = resolve(
+    const packagesRoot = resolve(
       typeof import.meta.dirname === 'string' ? import.meta.dirname : dirname(fileURLToPath(import.meta.url)),
-      '../../ts-pantry/src/packages/index.ts',
+      '../../ts-pantry/src/packages',
     )
-    // Cache-bust so a second call re-reads from disk.
-    const { pantry: pantryPkgs } = await import(`${pantryPkgsPath}?t=${Date.now()}`)
-    const next = new Map<string, Set<string>>()
-    for (const val of Object.values(pantryPkgs as Record<string, any>)) {
-      if (val && typeof val === 'object' && typeof val.domain === 'string' && Array.isArray(val.versions)) {
-        next.set(val.domain, new Set(val.versions))
-      }
-    }
+    const next = loadPackageVersions(packagesRoot)
     _knownVersions.clear()
     for (const [k, v] of next) _knownVersions.set(k, v)
     console.log(`Loaded ${_knownVersions.size} packages for version validation`)
@@ -116,50 +110,13 @@ await loadKnownVersions()
 // ⇒ supports all four. Lets the dashboard call a macOS-only package "complete"
 // once it has its darwin binaries, instead of forever short of "all 4".
 const _supportedPlatforms = new Map<string, string[]>()
-const ALL_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64']
-function mapPlatformTokens(tokens: string[]): string[] {
-  const out = new Set<string>()
-  for (const raw of tokens) {
-    const t = raw.trim().replace(/^['"]|['"]$/g, '')
-    if (!t)
-      continue
-    const [os, arch] = t.split('/')
-    const archMap = (a?: string) => (a === 'aarch64' || a === 'arm64' ? 'arm64' : a === 'x86-64' || a === 'x86_64' ? 'x86-64' : a)
-    if (os === 'darwin')
-      arch ? out.add(`darwin-${archMap(arch)}`) : (out.add('darwin-arm64'), out.add('darwin-x86-64'))
-    else if (os === 'linux')
-      arch ? out.add(`linux-${archMap(arch)}`) : (out.add('linux-x86-64'), out.add('linux-arm64'))
-    // windows/* and anything else aren't tracked by the dashboard → ignored
-  }
-  return [...out].filter(p => ALL_PLATFORMS.includes(p))
-}
 async function loadSupportedPlatforms(): Promise<void> {
   try {
     const recipesDir = resolve(
       typeof import.meta.dirname === 'string' ? import.meta.dirname : dirname(fileURLToPath(import.meta.url)),
       '../../ts-pantry/src/recipes',
     )
-    const next = new Map<string, string[]>()
-    const walk = (dir: string): void => {
-      for (const entry of readdirSync(dir)) {
-        const p = join(dir, entry)
-        if (statSync(p).isDirectory()) {
-          walk(p)
-          continue
-        }
-        if (!p.endsWith('.ts'))
-          continue
-        const m = readFileSync(p, 'utf8').match(/platforms:\s*\[([^\]]*)\]/)
-        if (!m)
-          continue // no constraint ⇒ defaults to all four (left out of the map)
-        const mapped = mapPlatformTokens(m[1].split(','))
-        if (mapped.length && mapped.length < ALL_PLATFORMS.length) {
-          const domain = relative(recipesDir, p).replace(/\.ts$/, '').split(sep).join('/')
-          next.set(domain, mapped)
-        }
-      }
-    }
-    walk(recipesDir)
+    const next = loadRecipePlatforms(recipesDir)
     _supportedPlatforms.clear()
     for (const [k, v] of next) _supportedPlatforms.set(k, v)
     console.log(`Loaded ${_supportedPlatforms.size} platform-constrained packages`)
