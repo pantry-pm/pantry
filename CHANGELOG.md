@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.1...v0.11.2)
+
+## ⚡ Performance Improvements
+
+- run registry from a production bundle ([46c7d0b](https://github.com/pantry-pm/pantry/commit/46c7d0b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.2 ([9fcc34a](https://github.com/pantry-pm/pantry/commit/9fcc34a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update tailscale.com to 1.98.10 ([e378de4](https://github.com/pantry-pm/pantry/commit/e378de4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.57...v0.11.0)
 
 ## 🚀 Features
