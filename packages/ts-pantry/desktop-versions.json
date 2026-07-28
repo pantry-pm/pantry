@@ -131,7 +131,7 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.403",
+      "latest": "0.0.402",
       "published": "0.0.403",
       "needsUpdate": false
     },
