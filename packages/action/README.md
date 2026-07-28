@@ -84,7 +84,7 @@ publishes the GitHub release.
 
 ```yaml
 - name: Publish release
-  uses: pantry-pm/pantry/packages/action@v0.10.56
+  uses: pantry-pm/pantry/packages/action@v0.11.0
   with:
     install: 'false'
     release: 'true'
@@ -93,6 +93,9 @@ publishes the GitHub release.
       dist/Postline.dmg
     release-checksums: sha256
     release-app-store: 'true'
+    release-app-store-bundle-id: com.example.postline
+    release-app-store-version: ${{ github.ref_name }}
+    release-app-store-build-number: ${{ github.run_number }}
     release-app-store-api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
     release-app-store-issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
     release-app-store-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
@@ -110,6 +113,10 @@ publishes the GitHub release.
 The Mac App Store target requires a macOS runner and a package signed with a
 Mac Installer Distribution certificate. The API key is written to an
 owner-only temporary directory for `xcrun altool` and removed after delivery.
+Create a dedicated App Store Connect API key with only the roles needed to
+upload and manage this app; store its ID, issuer ID, and private key as
+repository or organization secrets. For object storage, scope the access key
+to the configured bucket/prefix and grant only object read/write/list access.
 The object-storage target streams files from disk, retries stalled uploads,
 verifies remote sizes, writes immutable versioned objects, and writes
 `latest.json` with `no-cache`.
