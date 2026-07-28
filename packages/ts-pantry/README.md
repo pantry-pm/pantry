@@ -57,6 +57,24 @@ reuses active certificates and profiles and never revokes existing resources.
 Apple requires the initial app record to be created manually in App Store
 Connect; Pantry reports that remaining action in its result.
 
+```bash
+# Generate the two private-key/CSR pairs locally.
+ts-pantry app-store:csr --name "Example Desktop"
+
+# Safe plan (no Apple resources are changed).
+ts-pantry app-store:provision \
+  --bundle-id com.example.desktop \
+  --name "Example Desktop"
+
+# Apply after supplying CSRs for any missing certificates.
+ts-pantry app-store:provision \
+  --bundle-id com.example.desktop \
+  --name "Example Desktop" \
+  --app-certificate-csr .pantry/apple/mac-app-distribution.csr \
+  --installer-certificate-csr .pantry/apple/mac-installer-distribution.csr \
+  --apply
+```
+
 ```typescript
 import {
   AppStoreConnectClient,
