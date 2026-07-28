@@ -364,6 +364,8 @@ const provision_script =
     \\
     \\echo "    Installing dependencies..."
     \\(cd "$repo_path" && "$bun_bin" install --frozen-lockfile >/dev/null 2>&1 || "$bun_bin" install >/dev/null)
+    \\echo "    Building production server..."
+    \\(cd "$repo_path/packages/registry" && NODE_ENV=production "$bun_bin" run build:server)
     \\
     \\mkdir -p "$(dirname "$env_file")"
     \\[ -f "$env_file" ] || install -m 600 /dev/null "$env_file"
@@ -393,7 +395,9 @@ const provision_script =
     \\Type=simple
     \\WorkingDirectory=${repo_path}/packages/registry
     \\EnvironmentFile=${env_file}
-    \\ExecStart=${bun_bin} run src/server.ts
+    \\Environment=APP_ENV=production
+    \\Environment=NODE_ENV=production
+    \\ExecStart=${bun_bin} run dist/server.js
     \\Restart=always
     \\RestartSec=5
     \\
