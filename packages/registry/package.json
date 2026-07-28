@@ -1,6 +1,6 @@
 {
   "name": "@stacksjs/registry",
-  "version": "0.10.55",
+  "version": "0.10.56",
   "type": "module",
   "description": "Pantry package registry backend - S3 storage with DynamoDB metadata",
   "author": "Stacks.js",

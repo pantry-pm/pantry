@@ -1,3 +1,31 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.55...v0.10.56)
+
+## 🚀 Features
+
+- **action**: add app release delivery targets ([e8fe4ec](https://github.com/pantry-pm/pantry/commit/e8fe4ec)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- **action**: document app release delivery ([7ac91c1](https://github.com/pantry-pm/pantry/commit/7ac91c1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.10.56 ([73d7e5e](https://github.com/pantry-pm/pantry/commit/73d7e5e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **desktop**: publish 2 apps (discord.com, maccy.app) ([05d2106](https://github.com/pantry-pm/pantry/commit/05d2106)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update discord.com, github.com/ggerganov/llama.cpp ([fe67954](https://github.com/pantry-pm/pantry/commit/fe67954)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai to 1.18.9 ([34d8656](https://github.com/pantry-pm/pantry/commit/34d8656)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/mail-os/mail, ziglang.org ([6fadef4](https://github.com/pantry-pm/pantry/commit/6fadef4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cmake.org, cursor.com, github.com/ggerganov/llama.cpp, github.com/mail-os/mail, projen.io, pulumi.io ([412d9d2](https://github.com/pantry-pm/pantry/commit/412d9d2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (cursor.com, whatsapp.com) ([ca9bf63](https://github.com/pantry-pm/pantry/commit/ca9bf63)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, php.net, whatsapp.com ([c090efe](https://github.com/pantry-pm/pantry/commit/c090efe)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, ohmyposh.dev, rioterm.com ([0c7cc38](https://github.com/pantry-pm/pantry/commit/0c7cc38)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([41bb924](https://github.com/pantry-pm/pantry/commit/41bb924)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, mailpit.axllent.org, moonrepo.dev/moon, opencode.ai ([a95d6d9](https://github.com/pantry-pm/pantry/commit/a95d6d9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.10.54...v0.10.55)
 
 ## ⚡ Performance Improvements
