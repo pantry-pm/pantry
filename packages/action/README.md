@@ -73,6 +73,53 @@ also available as action outputs. Pin both the action revision and the Pantry
 binary `version` in release-sensitive workflows so source and CLI behavior are
 independently reproducible.
 
+### GitHub, Mac App Store, and S3 releases
+
+Pantry can keep a GitHub release as the source of truth while delivering the
+same signed package to App Store Connect and mirroring every artifact to AWS
+S3, Backblaze B2, or Hetzner Object Storage. The Action first creates a GitHub
+draft and verifies its artifacts. It then validates/uploads the App Store
+package, mirrors the release, attaches provider receipts, and only then
+publishes the GitHub release.
+
+```yaml
+- name: Publish release
+  uses: pantry-pm/pantry/packages/action@v0.10.56
+  with:
+    install: 'false'
+    release: 'true'
+    release-files: |
+      dist/Postline.pkg
+      dist/Postline.dmg
+    release-checksums: sha256
+    release-app-store: 'true'
+    release-app-store-api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+    release-app-store-issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    release-app-store-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+    release-s3: 'true'
+    release-s3-provider: hetzner
+    release-s3-bucket: app-releases
+    release-s3-region: fsn1
+    release-s3-public-url: https://downloads.example.com
+    release-s3-access-key-id: ${{ secrets.RELEASE_S3_ACCESS_KEY_ID }}
+    release-s3-secret-access-key: ${{ secrets.RELEASE_S3_SECRET_ACCESS_KEY }}
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+The Mac App Store target requires a macOS runner and a package signed with a
+Mac Installer Distribution certificate. The API key is written to an
+owner-only temporary directory for `xcrun altool` and removed after delivery.
+The object-storage target streams files from disk, retries stalled uploads,
+verifies remote sizes, writes immutable versioned objects, and writes
+`latest.json` with `no-cache`.
+
+Every release includes `release-manifest.json` with SHA-256 hashes. Enabled
+targets also attach `app-store-receipt.json` and/or
+`s3-release-receipt.json`. To validate the release plan without creating a
+GitHub release or making provider network changes, set `release-dry-run:
+'true'`.
+
 ## Supported Dependency Files
 
 The action automatically detects dependencies from these file types:
