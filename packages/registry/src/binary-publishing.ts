@@ -603,18 +603,29 @@ export class BinaryArtifactPublisher {
     const request = validateBinaryRescanRequest(value)
     const tarball = typeof value.tarball === 'string' ? storedBinaryKey(value.tarball) : ''
     const sha256 = typeof value.sha256 === 'string' ? value.sha256.toLowerCase() : ''
+    const preparedSha256 = typeof value.preparedSha256 === 'string'
+      ? value.preparedSha256.toLowerCase()
+      : sha256
     const size = typeof value.size === 'number' ? value.size : Number.NaN
     const objectIdentity = typeof value.objectIdentity === 'string' ? value.objectIdentity : ''
-    const scan = this.validateExternalScan(value.scan, sha256)
-    if (!tarball || !sha256Pattern.test(sha256) || !Number.isSafeInteger(size) || size <= 0 || !objectIdentity)
+    if (
+      !tarball
+      || !sha256Pattern.test(sha256)
+      || !sha256Pattern.test(preparedSha256)
+      || !Number.isSafeInteger(size)
+      || size <= 0
+      || !objectIdentity
+    ) {
       throw new BinaryPublishError('External rescan artifact identity is invalid', 422, 'INVALID_BINARY_RESCAN_ATTESTATION')
+    }
+    const scan = this.validateExternalScan(value.scan, sha256)
 
     return this.withDomainLock(request.domain, async () => {
       const current = await this.loadExistingRescan(request)
       this.assertExternalRescanEligible(current)
       if (
         current.tarball !== tarball
-        || current.sha256 !== sha256
+        || current.sha256 !== preparedSha256
         || current.size !== size
         || current.objectIdentity !== objectIdentity
       ) {
@@ -641,7 +652,7 @@ export class BinaryArtifactPublisher {
         current.metadata,
         request,
         current.tarball,
-        current.sha256,
+        sha256,
         current.size,
         scan,
       )

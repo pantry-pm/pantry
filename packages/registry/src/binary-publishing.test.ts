@@ -592,6 +592,64 @@ describe('binary scan-before-promote publisher', () => {
     })
   })
 
+  it('repairs a stale legacy checksum only after scanning the stable retained object', async () => {
+    const store = new UrlArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
+    })
+    const bytes = Buffer.from('legacy bytes whose recorded checksum drifted')
+    const actualSha256 = createHash('sha256').update(bytes).digest('hex')
+    const staleSha256 = 'f'.repeat(64)
+    const tarball = await seedLegacyArtifact(store, bytes)
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    metadata.versions['1.2.3'].platforms['darwin-arm64'].sha256 = staleSha256
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    await store.putObject(
+      `${tarball}.sha256`,
+      `${staleSha256}  example.com-tool-1.2.3.tar.gz\n`,
+      'text/plain',
+    )
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }
+
+    const prepared = await publisher.prepareExternalRescan(selector)
+    expect(prepared.sha256).toBe(staleSha256)
+    const completed = await publisher.attestExternalRescan({
+      ...selector,
+      tarball: prepared.tarball,
+      preparedSha256: prepared.sha256,
+      sha256: actualSha256,
+      size: prepared.size,
+      objectIdentity: prepared.objectIdentity,
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: new Date().toISOString(),
+        durationMs: 123,
+        artifactSha256: actualSha256,
+        engineVersion: 'ClamAV 1.4.3',
+        databaseVersion: '27690',
+      },
+    }, '_admin-external-scanner')
+
+    expect(completed).toMatchObject({
+      action: 'attested',
+      scan: { verdict: 'clean', artifactSha256: actualSha256 },
+    })
+    const repaired = JSON.parse(store.files.get(metadataKey)!.toString())
+    expect(repaired.versions['1.2.3'].platforms['darwin-arm64']).toMatchObject({
+      sha256: actualSha256,
+      malwareScan: { verdict: 'clean', artifactSha256: actualSha256 },
+    })
+    expect(store.files.get(`${tarball}.sha256`)!.toString())
+      .toBe(`${actualSha256}  example.com-tool-1.2.3.tar.gz\n`)
+  })
+
   it('supports an explicit oversized legacy migration bound without raising the publish limit', async () => {
     const store = new UrlArtifactStore()
     const legacySize = 1_227_076_242
