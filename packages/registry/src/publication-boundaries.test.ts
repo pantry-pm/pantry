@@ -55,5 +55,7 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('${REGISTRY_URL}/ready')
     expect(workflow).toContain('.malwareScanning.required == true')
     expect(workflow).toContain('.malwareScanning.ready == true')
+    expect(workflow).toContain('.code == "MALWARE_DETECTED"')
+    expect(workflow).toContain('.scan.verdict == "blocked"')
   })
 })

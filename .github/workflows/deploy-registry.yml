@@ -205,6 +205,46 @@ jobs:
               exit 1
             fi
 
+            # End-to-end production rehearsal: clamd must detect EICAR through
+            # the Registry publish route, and the API must reject it before any
+            # package metadata or installable artifact can be written.
+            REGISTRY_TOKEN=$(sed -n 's/^PANTRY_REGISTRY_TOKEN=//p' "$ENV_FILE" | tail -n 1)
+            [ -n "$REGISTRY_TOKEN" ] || {
+              echo "PANTRY_REGISTRY_TOKEN is required for the malware rehearsal" >&2
+              exit 1
+            }
+            REHEARSAL_DIR=$(mktemp -d)
+            trap 'rm -rf "$REHEARSAL_DIR"' EXIT
+            mkdir -p "$REHEARSAL_DIR/package"
+            printf '%s\n' \
+              '{"name":"pantry-malware-rehearsal","version":"0.0.0"}' \
+              > "$REHEARSAL_DIR/package/package.json"
+            printf '%s' \
+              'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-' \
+              'STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' \
+              > "$REHEARSAL_DIR/package/eicar.com"
+            tar -C "$REHEARSAL_DIR" -czf "$REHEARSAL_DIR/eicar.tgz" package
+            REHEARSAL_METADATA=$(printf \
+              '{"name":"pantry-malware-rehearsal","version":"0.0.0","publishedAt":"%s"}' \
+              "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+            REHEARSAL_RESPONSE="$REHEARSAL_DIR/response.json"
+            REHEARSAL_STATUS=$(curl -sS \
+              -o "$REHEARSAL_RESPONSE" \
+              -w '%{http_code}' \
+              -H "Authorization: Bearer $REGISTRY_TOKEN" \
+              -F "metadata=$REHEARSAL_METADATA" \
+              -F "tarball=@$REHEARSAL_DIR/eicar.tgz;type=application/gzip" \
+              "http://localhost:${PORT}/publish")
+            if [ "$REHEARSAL_STATUS" != 422 ] ||
+              ! jq -e '.code == "MALWARE_DETECTED"
+                and .scan.verdict == "blocked"' "$REHEARSAL_RESPONSE" >/dev/null; then
+              echo "EICAR publish rehearsal failed with HTTP $REHEARSAL_STATUS" >&2
+              jq '{code, retryable, scan}' "$REHEARSAL_RESPONSE" >&2 || true
+              exit 1
+            fi
+            rm -rf "$REHEARSAL_DIR"
+            trap - EXIT
+
             # Publish route ownership through ts-cloud's additive gateway-fragment
             # boundary, so each app updates only its own file and a co-hosted
             # deploy can't erase this one. Only applies where the rpx gateway is
