@@ -132,6 +132,47 @@ export {
   resetPlugins,
   setPlugins,
 } from './plugins'
+
+// Publish-time malware scanning and dual-use package policy
+export {
+  ClamAvScanner,
+  DevelopmentScanner,
+  UnavailableScanner,
+  createMalwareScannerFromEnv,
+  assertCleanMalwareScan,
+  malwareScanAttestationRequired,
+  malwareScanMetrics,
+  scanPackageArtifact,
+  scanPackageArtifactStream,
+  validateDualUsePackage,
+  DualUsePolicyError,
+} from './malware-scanning'
+export {
+  BinaryArtifactPublisher,
+  BinaryPublishError,
+  S3BinaryArtifactStore,
+  binaryAttestationKey,
+  binaryPublishErrorResponse,
+  filterBinaryMetadataForCleanScans,
+  validateBinaryPublishRequest,
+  type BinaryArtifactPublisherOptions,
+  type BinaryArtifactStore,
+  type BinaryPackageMetadata,
+  type BinaryPlatformRecord,
+  type BinaryPublishCompleted,
+  type BinaryPublishInitiated,
+  type BinaryPublishRequest,
+} from './binary-publishing'
+export type {
+  DisclosureMetadata,
+  MalwareScanner,
+  MalwareScannerHealth,
+  MalwareScanContext,
+  MalwareScanResult,
+  MalwareScanVerdict,
+  MalwareScanMetrics,
+  PublishSurface,
+} from './malware-scanning'
 export type {
   AccessRequest,
   AccessVerdict,

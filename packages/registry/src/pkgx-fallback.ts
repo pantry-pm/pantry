@@ -13,7 +13,7 @@
 // If pkgx has no such binary, nothing is advertised / materialized and the caller
 // returns its normal "not found" error.
 
-import type { S3Client } from './storage/aws-client'
+import type { BinaryArtifactPublisher } from './binary-publishing'
 import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -197,8 +197,7 @@ export async function materializeFromPkgx(
   domain: string,
   version: string,
   platform: string,
-  bucket: string,
-  s3: S3Client,
+  publisher: BinaryArtifactPublisher,
 ): Promise<MaterializeResult | null> {
   if (CUSTOM_BUILD_DOMAINS.has(domain))
     return null
@@ -247,9 +246,14 @@ export async function materializeFromPkgx(
       const gzBuf = readFileSync(gzPath)
       const sha256 = createHash('sha256').update(gzBuf).digest('hex')
 
-      await s3.putObject({ bucket, key: tarballKey, body: gzBuf, contentType: 'application/gzip' })
-      await s3.putObject({ bucket, key: `${tarballKey}.sha256`, body: `${sha256}  ${safe}-${version}.tar.gz\n`, contentType: 'text/plain' })
-      await upsertMetadata(domain, version, platform, { tarball: tarballKey, sha256, size: gzBuf.length, uploadedAt: new Date().toISOString() }, bucket, s3)
+      await publisher.publishBuffer({
+        domain,
+        version,
+        platforms: [platform],
+        filename: `${safe}-${version}.tar.gz`,
+        size: gzBuf.length,
+        sha256,
+      }, gzBuf, '_pkgx', 'pkgx')
       _augCache.delete(domain) // augmented view is stale now that this is real
       _pending.delete(pendKey(domain, version, platform))
       return { tarballKey, sha256, size: gzBuf.length }
@@ -271,26 +275,4 @@ export async function materializeFromPkgx(
   finally {
     _inflight.delete(key)
   }
-}
-
-async function upsertMetadata(
-  domain: string,
-  version: string,
-  platform: string,
-  info: PlatformBinary,
-  bucket: string,
-  s3: S3Client,
-): Promise<void> {
-  const metaKey = `binaries/${domain}/metadata.json`
-  let meta: PackageMetadata = { name: domain, latestVersion: version, versions: {}, updatedAt: new Date().toISOString() }
-  try {
-    meta = JSON.parse((await s3.getObjectBuffer(bucket, metaKey)).toString('utf8')) as PackageMetadata
-  }
-  catch { /* no metadata yet — start fresh */ }
-  meta.versions ??= {}
-  meta.versions[version] ??= { platforms: {} }
-  meta.versions[version].platforms ??= {}
-  meta.versions[version].platforms![platform] = info
-  meta.updatedAt = new Date().toISOString()
-  await s3.putObject({ bucket, key: metaKey, body: JSON.stringify(meta), contentType: 'application/json' })
 }

@@ -232,6 +232,26 @@ export class S3Client {
     return Buffer.from(arrayBuffer)
   }
 
+  async getObjectStream(
+    bucket: string,
+    key: string,
+  ): Promise<{ body: ReadableStream<Uint8Array>, contentLength?: number }> {
+    const host = this.getHost(bucket)
+    const path = this.objectPath(bucket, key)
+    const headers = this.sign('GET', path, host, {}, '')
+    const response = await fetch(`https://${host}${path}`, { method: 'GET', headers })
+    if (!response.ok || !response.body) {
+      const text = await response.text().catch(() => '')
+      throw new Error(`S3 GET failed: ${response.status} ${text}`)
+    }
+    const rawLength = response.headers.get('content-length')
+    const contentLength = rawLength ? Number.parseInt(rawLength, 10) : undefined
+    return {
+      body: response.body,
+      contentLength: Number.isSafeInteger(contentLength) ? contentLength : undefined,
+    }
+  }
+
   async headObject(bucket: string, key: string): Promise<Record<string, string>> {
     const host = this.getHost(bucket)
     const path = this.objectPath(bucket, key)
@@ -269,6 +289,30 @@ export class S3Client {
     if (!response.ok && response.status !== 404) {
       const text = await response.text().catch(() => '')
       throw new Error(`S3 DELETE failed: ${response.status} ${text}`)
+    }
+  }
+
+  /**
+   * Promote an object without downloading and re-uploading it. S3-compatible
+   * providers implement CopyObject as a signed PUT with x-amz-copy-source.
+   */
+  async copyObject(bucket: string, sourceKey: string, destinationKey: string): Promise<void> {
+    const host = this.getHost(bucket)
+    const path = this.objectPath(bucket, destinationKey)
+    const encodedSource = `/${bucket}/${encodeURIComponent(sourceKey).replace(/%2F/g, '/')}`
+    const headers = this.sign('PUT', path, host, {
+      'content-length': '0',
+      'x-amz-copy-source': encodedSource,
+    }, '')
+
+    const response = await fetch(`https://${host}${path}`, {
+      method: 'PUT',
+      headers,
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      throw new Error(`S3 COPY failed: ${response.status} ${text}`)
     }
   }
 
@@ -336,7 +380,7 @@ export class S3Client {
     return this.generatePresignedUrl('GET', bucket, key, expiresInSeconds)
   }
 
-  generatePresignedPutUrl(bucket: string, key: string, contentType: string, expiresInSeconds = 900): string {
+  generatePresignedPutUrl(bucket: string, key: string, contentType?: string, expiresInSeconds = 900): string {
     return this.generatePresignedUrl('PUT', bucket, key, expiresInSeconds, contentType)
   }
 
