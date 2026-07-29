@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.4...v0.11.5)
+
+## 🐛 Bug Fixes
+
+- **action**: normalize Zig lock metadata ([02b8b69](https://github.com/pantry-pm/pantry/commit/02b8b69)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.5 ([982110f](https://github.com/pantry-pm/pantry/commit/982110f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.3...v0.11.4)
 
 ## 🧹 Chores
