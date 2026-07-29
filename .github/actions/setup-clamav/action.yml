@@ -25,9 +25,9 @@ runs:
           fi
         }
         set_clam LocalSocket /run/clamav/clamd.ctl
-        set_clam StreamMaxLength 1G
-        set_clam MaxScanSize 1G
-        set_clam MaxFileSize 1G
+        set_clam StreamMaxLength 2G
+        set_clam MaxScanSize 2G
+        set_clam MaxFileSize 2G
         set_clam MaxScanTime 600000
         set_clam MaxThreads 2
         set_clam MaxQueue 4

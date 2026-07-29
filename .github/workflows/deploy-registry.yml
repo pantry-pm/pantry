@@ -51,6 +51,7 @@ jobs:
           REGISTRY_PORT: ${{ vars.REGISTRY_PORT || '3001' }}
           REGISTRY_ENV_FILE: ${{ vars.REGISTRY_ENV_FILE || '/opt/pantry-registry/registry.env' }}
           LEGACY_SCAN_ATTESTATION_CUTOFF: ${{ vars.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF || '' }}
+          LEGACY_RESCAN_MAX_BYTES: ${{ vars.PANTRY_LEGACY_RESCAN_MAX_BYTES || '2147483648' }}
           # Existing artifacts predate scan attestations. Keep reads compatible
           # until the controlled backfill finishes, then set this repository
           # variable to true and dispatch one final deployment.
@@ -194,8 +195,10 @@ jobs:
             set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION "$BINARY_SCAN_ATTESTATION"
             if [ -n "$LEGACY_SCAN_ATTESTATION_CUTOFF" ]; then
               set_env PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF "$LEGACY_SCAN_ATTESTATION_CUTOFF"
+              set_env PANTRY_LEGACY_RESCAN_MAX_BYTES "$LEGACY_RESCAN_MAX_BYTES"
             else
               sed -i '/^PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF=/d' "$ENV_FILE"
+              sed -i '/^PANTRY_LEGACY_RESCAN_MAX_BYTES=/d' "$ENV_FILE"
             fi
             set_env CLAMD_SOCKET /run/clamav/clamd.ctl
             set_env CLAMD_HOST 127.0.0.1
