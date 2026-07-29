@@ -50,6 +50,7 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain("EXPECTED_SHA=\"$5\"")
     expect(workflow).toContain('NODE_ENV=production "$BUN" run build:server')
     expect(workflow).toContain('set_env PANTRY_MALWARE_SCANNING required')
+    expect(workflow).toContain('set_env CLAMD_SOCKET /run/clamav/clamd.ctl')
     expect(workflow).toContain('systemctl restart clamav-daemon')
     expect(workflow).toContain('${REGISTRY_URL}/ready')
     expect(workflow).toContain('.malwareScanning.required == true')

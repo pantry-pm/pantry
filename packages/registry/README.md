@@ -97,6 +97,7 @@ AWS_REGION=us-east-1
 
 # Required in production (defaults to required when NODE_ENV=production)
 PANTRY_MALWARE_SCANNING=required
+CLAMD_SOCKET=/run/clamav/clamd.ctl
 CLAMD_HOST=127.0.0.1
 CLAMD_PORT=3310
 PANTRY_BINARY_STAGING_SECRET=replace-with-openssl-rand-hex-32
@@ -106,6 +107,8 @@ PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION=true
 See [publish-time malware scanning](../../docs/registry-malware-scanning.md) for
 the verdict contract, dual-use `contentPolicy`/`DISCLOSURE` requirements, clamd
 deployment, EICAR rehearsal, monitoring, and incident runbook.
+`CLAMD_SOCKET` takes precedence over `CLAMD_HOST`/`CLAMD_PORT`; use the socket
+for a local systemd-managed daemon and TCP for containers or remote scanners.
 
 ### Native binary publication
 

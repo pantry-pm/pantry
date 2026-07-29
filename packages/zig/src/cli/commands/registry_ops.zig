@@ -414,6 +414,7 @@ const provision_script =
     \\set_env REGISTRY_VISIBILITY "$visibility"
     \\set_env PANTRY_MALWARE_SCANNING required
     \\set_env PANTRY_REQUIRE_MALWARE_SCAN_ATTESTATION true
+    \\set_env CLAMD_SOCKET /run/clamav/clamd.ctl
     \\set_env CLAMD_HOST 127.0.0.1
     \\set_env CLAMD_PORT 3310
     \\set_env CLAMD_TIMEOUT_MS 30000
