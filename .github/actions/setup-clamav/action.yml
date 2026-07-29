@@ -1,0 +1,43 @@
+name: Set up isolated ClamAV
+description: Install and start a bounded local clamd for malware-scanning workflows
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        sudo systemctl stop clamav-freshclam clamav-daemon 2>/dev/null || true
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+          clamav-daemon clamav-freshclam >/dev/null
+        sudo systemctl stop clamav-freshclam clamav-daemon 2>/dev/null || true
+        sudo freshclam --stdout || {
+          test -s /var/lib/clamav/main.cvd -o -s /var/lib/clamav/main.cld
+        }
+        set_clam() {
+          key="$1"
+          value="$2"
+          if sudo grep -Eq "^[#[:space:]]*${key}[[:space:]]+" /etc/clamav/clamd.conf; then
+            sudo sed -Ei "s|^[#[:space:]]*${key}[[:space:]]+.*|${key} ${value}|" /etc/clamav/clamd.conf
+          else
+            printf '%s %s\n' "$key" "$value" | sudo tee -a /etc/clamav/clamd.conf >/dev/null
+          fi
+        }
+        set_clam TCPAddr 127.0.0.1
+        set_clam TCPSocket 3310
+        set_clam StreamMaxLength 1G
+        set_clam MaxScanSize 1G
+        set_clam MaxFileSize 1G
+        set_clam MaxScanTime 600000
+        set_clam MaxThreads 2
+        set_clam MaxQueue 4
+        sudo systemctl restart clamav-daemon
+        for attempt in $(seq 1 30); do
+          if timeout 2 bash -c '</dev/tcp/127.0.0.1/3310' 2>/dev/null; then
+            exit 0
+          fi
+          sleep 2
+        done
+        sudo systemctl status clamav-daemon --no-pager
+        exit 1

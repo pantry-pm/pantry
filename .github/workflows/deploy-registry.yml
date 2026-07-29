@@ -50,6 +50,7 @@ jobs:
           REGISTRY_SERVICE: ${{ vars.REGISTRY_SERVICE || 'pantry-registry' }}
           REGISTRY_PORT: ${{ vars.REGISTRY_PORT || '3001' }}
           REGISTRY_ENV_FILE: ${{ vars.REGISTRY_ENV_FILE || '/opt/pantry-registry/registry.env' }}
+          LEGACY_SCAN_ATTESTATION_CUTOFF: ${{ vars.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF || '' }}
           # Existing artifacts predate scan attestations. Keep reads compatible
           # until the controlled backfill finishes, then set this repository
           # variable to true and dispatch one final deployment.
@@ -73,7 +74,7 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
             "${REGISTRY_USER}@${REGISTRY_HOST}" \
-            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}'" << 'EOF'
+            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}'" << 'EOF'
             set -euo pipefail
             REPO_PATH="$1"
             SERVICE="$2"
@@ -81,6 +82,7 @@ jobs:
             ENV_FILE="$4"
             EXPECTED_SHA="$5"
             BINARY_SCAN_ATTESTATION="$6"
+            LEGACY_SCAN_ATTESTATION_CUTOFF="$7"
             case "$BINARY_SCAN_ATTESTATION" in
               true|false) ;;
               *)
@@ -140,6 +142,7 @@ jobs:
             set_clam MaxFileSize 1G
             set_clam MaxRecursion 30
             set_clam MaxFiles 100000
+            set_clam MaxScanTime 60000
             set_clam MaxThreads 2
             set_clam MaxQueue 4
             set_clam ConcurrentDatabaseReload no
@@ -189,12 +192,18 @@ jobs:
             set_env PANTRY_MALWARE_SCANNING required
             set_env PANTRY_REQUIRE_MALWARE_SCAN_ATTESTATION true
             set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION "$BINARY_SCAN_ATTESTATION"
+            if [ -n "$LEGACY_SCAN_ATTESTATION_CUTOFF" ]; then
+              set_env PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF "$LEGACY_SCAN_ATTESTATION_CUTOFF"
+            else
+              sed -i '/^PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF=/d' "$ENV_FILE"
+            fi
             set_env CLAMD_SOCKET /run/clamav/clamd.ctl
             set_env CLAMD_HOST 127.0.0.1
             set_env CLAMD_PORT 3310
             set_env CLAMD_TIMEOUT_MS 240000
             set_env CLAMD_HEALTH_TIMEOUT_MS 5000
             set_env CLAMD_MAX_BYTES 1073741824
+            set_env PANTRY_SCANNER_DOWNLOAD_BYTES_PER_SECOND 8388608
             set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
             if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$ENV_FILE"; then
               command -v openssl >/dev/null 2>&1 || {
