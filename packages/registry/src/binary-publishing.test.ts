@@ -65,7 +65,7 @@ class MemoryArtifactStore implements BinaryArtifactStore {
 }
 
 describe('S3BinaryArtifactStore', () => {
-  it('streams reader-based response bodies without requiring releaseLock', async () => {
+  it('uses only read() from variant response-body readers', async () => {
     const chunks = [new Uint8Array([1, 2]), new Uint8Array([3])]
     let index = 0
     const body = {

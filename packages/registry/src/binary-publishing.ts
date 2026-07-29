@@ -105,15 +105,10 @@ export class S3BinaryArtifactStore implements BinaryArtifactStore {
     return {
       async *[Symbol.asyncIterator]() {
         const reader = body.getReader()
-        try {
-          while (true) {
-            const result = await reader.read()
-            if (result.done) break
-            yield result.value
-          }
-        }
-        finally {
-          reader.releaseLock?.()
+        while (true) {
+          const result = await reader.read()
+          if (result.done) break
+          yield result.value
         }
       },
     }
