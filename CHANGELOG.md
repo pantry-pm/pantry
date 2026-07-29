@@ -1,3 +1,38 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.8...v0.11.9)
+
+## 🚀 Features
+
+- **ops**: target malware backfill versions ([a337854](https://github.com/pantry-pm/pantry/commit/a337854)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: rescan retained artifacts in place ([ac0890e](https://github.com/pantry-pm/pantry/commit/ac0890e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **deploy**: recover scanner after host maintenance ([95eb83e](https://github.com/pantry-pm/pantry/commit/95eb83e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: serialize legacy malware scans ([9b59f52](https://github.com/pantry-pm/pantry/commit/9b59f52)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: tolerate variant object streams ([acbdd86](https://github.com/pantry-pm/pantry/commit/acbdd86)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: pace retained artifact scans ([9cec98a](https://github.com/pantry-pm/pantry/commit/9cec98a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: keep rescan requests connected ([e531e87](https://github.com/pantry-pm/pantry/commit/e531e87)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: bound concurrent legacy scans ([b995299](https://github.com/pantry-pm/pantry/commit/b995299)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: keep long malware scans connected ([aa24e0f](https://github.com/pantry-pm/pantry/commit/aa24e0f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: source backfill artifacts from storage ([d4736cd](https://github.com/pantry-pm/pantry/commit/d4736cd)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- bound registry scanner resources ([75a889a](https://github.com/pantry-pm/pantry/commit/75a889a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ♻️ Code Refactoring
+
+- **ops**: backfill retained artifacts in place ([f75babf](https://github.com/pantry-pm/pantry/commit/f75babf)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.9 ([5920518](https://github.com/pantry-pm/pantry/commit/5920518)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: audit malware scan errors ([cace347](https://github.com/pantry-pm/pantry/commit/cace347)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.7...v0.11.8)
 
 ## 🐛 Bug Fixes
