@@ -10,7 +10,7 @@ runs:
         sudo systemctl stop clamav-freshclam clamav-daemon 2>/dev/null || true
         sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-          clamav-daemon clamav-freshclam >/dev/null
+          clamav clamav-daemon clamav-freshclam >/dev/null
         sudo systemctl stop clamav-freshclam clamav-daemon 2>/dev/null || true
         sudo freshclam --stdout || {
           test -s /var/lib/clamav/main.cvd -o -s /var/lib/clamav/main.cld
@@ -41,7 +41,7 @@ runs:
           --wait \
           --stream \
           "$probe_file"
-        scanner_version=$(clamdscan --config-file=/etc/clamav/clamd.conf --version)
+        scanner_version=$(clamscan --version)
         case "$scanner_version" in
           */*) echo "PANTRY_BACKFILL_CLAMAV_VERSION=$scanner_version" >> "$GITHUB_ENV" ;;
           *) echo "ClamAV did not report engine and database versions" >&2; exit 1 ;;
