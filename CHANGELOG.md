@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.9...v0.11.10)
+
+## 🐛 Bug Fixes
+
+- support latest Zig 0.17 dev ([a031a0c](https://github.com/pantry-pm/pantry/commit/a031a0c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deploy**: detect active package upgrades ([d66e6ca](https://github.com/pantry-pm/pantry/commit/d66e6ca)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.10 ([b103399](https://github.com/pantry-pm/pantry/commit/b103399)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.8...v0.11.9)
 
 ## 🚀 Features
