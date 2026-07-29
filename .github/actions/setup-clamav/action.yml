@@ -41,3 +41,8 @@ runs:
           --wait \
           --stream \
           "$probe_file"
+        scanner_version=$(clamdscan --config-file=/etc/clamav/clamd.conf --version)
+        case "$scanner_version" in
+          */*) echo "PANTRY_BACKFILL_CLAMAV_VERSION=$scanner_version" >> "$GITHUB_ENV" ;;
+          *) echo "ClamAV did not report engine and database versions" >&2; exit 1 ;;
+        esac
