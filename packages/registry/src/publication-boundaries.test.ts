@@ -1,0 +1,47 @@
+import { describe, expect, it } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const root = resolve(import.meta.dir, '../../..')
+
+function source(path: string): string {
+  return readFileSync(resolve(root, path), 'utf8')
+}
+
+describe('first-party publication boundaries', () => {
+  it('keeps native publishers behind the scan-before-promote API', () => {
+    const centralUploader = source('packages/ts-pantry/scripts/upload-to-s3.ts')
+    const client = source('packages/ts-pantry/scripts/binary-publish-client.ts')
+    const zigPublisher = source('packages/zig/src/cli/commands/publish_binary.zig')
+    const phpBundler = source('packages/ts-pantry/scripts/bundle-php.sh')
+    const pkgxFallback = source('packages/registry/src/pkgx-fallback.ts')
+
+    expect(centralUploader).not.toContain('createObjectStorageClient')
+    expect(centralUploader).not.toContain('.putObject(')
+    expect(centralUploader).toContain('publishBinaryArtifact')
+    expect(client).toContain('/api/v1/binaries/uploads')
+    expect(client).toContain('/api/v1/binaries/uploads/complete')
+    expect(zigPublisher).not.toContain('aws s3')
+    expect(zigPublisher).toContain('/api/v1/binaries/uploads')
+    expect(phpBundler).not.toContain('aws s3 cp')
+    expect(phpBundler).toContain('scripts/upload-to-s3.ts')
+    expect(pkgxFallback).not.toContain('s3.putObject')
+    expect(pkgxFallback).toContain('publisher.publishBuffer')
+  })
+
+  it('keeps the legacy core publisher behind the authenticated API', () => {
+    const legacyPublisher = source('packages/registry/app/publish.ts')
+    expect(legacyPublisher).not.toContain('S3Client')
+    expect(legacyPublisher).not.toContain('DynamoDBClient')
+    expect(legacyPublisher).toContain('fetch(`${registryUrl}/publish`')
+  })
+
+  it('enforces staging cleanup and registry-only installable writes in CloudFormation', () => {
+    const template = source('packages/registry/infrastructure/cloudformation.yml')
+    expect(template).toContain('ExpireAbandonedMalwareStaging')
+    expect(template).toContain('ExpireAbandonedSealedArtifacts')
+    expect(template).toContain('DenyNonRegistryInstallableWrites')
+    expect(template).toContain('${PackagesBucket.Arn}/binaries/*')
+    expect(template).toContain('aws:PrincipalArn: !GetAtt RegistryRole.Arn')
+  })
+})

@@ -12,71 +12,49 @@ pub const PublishBinaryOptions = struct {
     dry_run: bool = false,
 };
 
-/// Resolve the S3-compatible endpoint URL for the configured storage provider
-/// so `publish:binary` works against Hetzner / Backblaze (private, S3-compatible)
-/// as well as AWS. Returns an allocator-owned `https://…` URL, or null for AWS
-/// (where the `aws` CLI uses its built-in regional endpoints). Caller frees.
-fn resolveS3Endpoint(allocator: std.mem.Allocator) !?[]u8 {
-    // An explicit S3_ENDPOINT wins (normalize to include a scheme).
-    if (io_helper.getEnvVarOwned(allocator, "S3_ENDPOINT")) |ep| {
-        if (ep.len == 0) {
-            allocator.free(ep);
-        } else if (std.mem.startsWith(u8, ep, "http://") or std.mem.startsWith(u8, ep, "https://")) {
-            return ep;
-        } else {
-            defer allocator.free(ep);
-            return try std.fmt.allocPrint(allocator, "https://{s}", .{ep});
-        }
-    } else |_| {}
-
-    // Otherwise derive it from the provider. Hetzner has a predictable endpoint;
-    // other non-AWS providers must set S3_ENDPOINT explicitly.
-    const provider = io_helper.getEnvVarOwned(allocator, "STORAGE_PROVIDER") catch return null;
-    defer allocator.free(provider);
-    if (std.ascii.eqlIgnoreCase(provider, "hetzner")) {
-        const region = io_helper.getEnvVarOwned(allocator, "S3_REGION") catch null;
-        defer if (region) |r| allocator.free(r);
-        return try std.fmt.allocPrint(allocator, "https://{s}.your-objectstorage.com", .{region orelse "fsn1"});
-    }
-    return null;
+fn commandFailed(result: io_helper.ChildRunResult) bool {
+    return switch (result.term) {
+        .exited => |code| code != 0,
+        else => true,
+    };
 }
 
-/// Run `aws s3 cp <base args…>`, appending `--endpoint-url` when targeting a
-/// non-AWS S3-compatible provider (Hetzner/Backblaze). The `aws` CLI speaks to
-/// any S3-compatible endpoint, so this keeps a single upload path across all
-/// providers without a bespoke SigV4 client.
-fn awsS3Cp(allocator: std.mem.Allocator, endpoint: ?[]const u8, base: []const []const u8) !io_helper.ChildRunResult {
-    var argv = std.ArrayList([]const u8).empty;
-    defer argv.deinit(allocator);
-    try argv.append(allocator, "aws");
-    try argv.append(allocator, "s3");
-    try argv.append(allocator, "cp");
-    try argv.appendSlice(allocator, base);
-    if (endpoint) |ep| {
-        try argv.append(allocator, "--endpoint-url");
-        try argv.append(allocator, ep);
-    }
-    return io_helper.childRun(allocator, argv.items);
+fn safeCommandError(allocator: std.mem.Allocator, prefix: []const u8, stderr: []const u8) !CommandResult {
+    const safe_len = @min(stderr.len, 500);
+    const msg = try std.fmt.allocPrint(allocator, "{s}: {s}", .{ prefix, stderr[0..safe_len] });
+    return CommandResult.err(allocator, msg);
 }
 
-/// Publish a native binary to the pantry binary registry (object storage).
+fn jsonString(root: std.json.Value, key: []const u8) ?[]const u8 {
+    if (root != .object) return null;
+    const value = root.object.get(key) orelse return null;
+    return if (value == .string) value.string else null;
+}
+
+fn jsonBool(root: std.json.Value, key: []const u8) ?bool {
+    if (root != .object) return null;
+    const value = root.object.get(key) orelse return null;
+    return if (value == .bool) value.bool else null;
+}
+
+fn isSafeIdentifier(value: []const u8, allow_slash: bool) bool {
+    if (value.len == 0) return false;
+    for (value) |c| {
+        if (std.ascii.isAlphanumeric(c) or c == '.' or c == '_' or c == '-' or c == '+' or (allow_slash and c == '/'))
+            continue;
+        return false;
+    }
+    return true;
+}
+
+/// Publish a native binary through the registry's scan-before-promote API.
 ///
-/// Usage from CI:
-///   pantry publish:binary --domain craft-native.org --version 0.0.4 --binary ./release/craft-darwin-arm64
-///
-/// Uploads to: {bucket}/binaries/{domain}/{version}/{platform}/{domain-slug}-{version}.tar.gz
-/// and updates: {bucket}/binaries/{domain}/metadata.json
-/// The target provider is selected via STORAGE_PROVIDER / S3_ENDPOINT (AWS by
-/// default; Hetzner/Backblaze when configured), using the `aws` CLI for upload.
+/// The CLI can upload only to a short-lived untrusted staging key. The registry
+/// scans those exact bytes and owns the only path that promotes them into the
+/// installable binaries/ namespace.
 pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const u8, options: PublishBinaryOptions) !CommandResult {
     _ = args;
 
-    const bucket = io_helper.getenv("PANTRY_S3_BUCKET") orelse io_helper.getenv("S3_BUCKET") orelse "pantry-registry";
-
-    const s3_endpoint = try resolveS3Endpoint(allocator);
-    defer if (s3_endpoint) |ep| allocator.free(ep);
-
-    // Detect platform if not specified
     const platform = options.platform orelse comptime blk: {
         const os_str = switch (@import("builtin").os.tag) {
             .macos => "darwin",
@@ -92,12 +70,13 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
         break :blk os_str ++ "-" ++ arch_str;
     };
 
-    // Validate domain doesn't contain path traversal
-    if (std.mem.indexOf(u8, options.domain, "..") != null) {
-        return CommandResult.err(allocator, "Invalid domain: contains path traversal");
-    }
+    if (!isSafeIdentifier(options.domain, true) or std.mem.indexOf(u8, options.domain, "..") != null)
+        return CommandResult.err(allocator, "Invalid binary package domain");
+    if (!isSafeIdentifier(options.version, false))
+        return CommandResult.err(allocator, "Invalid binary package version");
+    if (!isSafeIdentifier(platform, false))
+        return CommandResult.err(allocator, "Invalid binary platform");
 
-    // Sanitize domain for use in filenames (replace / with -)
     var domain_slug_buf: [256]u8 = undefined;
     var slug_len: usize = 0;
     for (options.domain) |c| {
@@ -107,166 +86,117 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
     }
     const domain_slug = domain_slug_buf[0..slug_len];
 
-    style.print("Publishing native binary to pantry registry\n", .{});
+    const registry = io_helper.getenv("PANTRY_REGISTRY_URL") orelse "https://registry.pantry.dev";
+    const token = io_helper.getenv("PANTRY_REGISTRY_TOKEN") orelse io_helper.getenv("PANTRY_TOKEN") orelse "";
+
+    style.print("Publishing native binary through Pantry registry\n", .{});
     style.print("  Domain:   {s}\n", .{options.domain});
     style.print("  Version:  {s}\n", .{options.version});
     style.print("  Platform: {s}\n", .{platform});
     style.print("  Binary:   {s}\n", .{options.binary_path});
-    style.print("  Bucket:   {s}\n\n", .{bucket});
+    style.print("  Registry: {s}\n\n", .{registry});
 
     if (options.dry_run) {
-        style.print("[dry-run] Would upload to: binaries/{s}/{s}/{s}/{s}-{s}.tar.gz\n", .{
+        style.print("[dry-run] Would stage, scan, and promote binaries/{s}/{s}/{s}/{s}-{s}.tar.gz\n", .{
             options.domain, options.version, platform, domain_slug, options.version,
         });
         return .{ .exit_code = 0 };
     }
+    if (token.len == 0)
+        return CommandResult.err(allocator, "PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN is required");
 
-    // Verify binary exists
     io_helper.accessAbsolute(options.binary_path, .{}) catch {
         const msg = try std.fmt.allocPrint(allocator, "Error: Binary not found: {s}", .{options.binary_path});
         return CommandResult.err(allocator, msg);
     };
 
-    const tmp_dir = io_helper.getTempDir();
-
-    // Create tarball from binary
     const tarball_name = try std.fmt.allocPrint(allocator, "{s}-{s}.tar.gz", .{ domain_slug, options.version });
     defer allocator.free(tarball_name);
-
-    const tarball_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir, tarball_name });
+    const tarball_path = try std.fs.path.join(allocator, &.{ io_helper.getTempDir(), tarball_name });
     defer allocator.free(tarball_path);
     defer io_helper.deleteFile(tarball_path) catch {};
 
     style.print("  Creating tarball...\n", .{});
-    const tar_result = try io_helper.childRun(allocator, &[_][]const u8{
+    const tar_result = try io_helper.childRun(allocator, &.{
         "tar", "-czf", tarball_path, "-C", std.fs.path.dirname(options.binary_path) orelse ".", std.fs.path.basename(options.binary_path),
     });
     defer allocator.free(tar_result.stdout);
     defer allocator.free(tar_result.stderr);
+    if (commandFailed(tar_result))
+        return safeCommandError(allocator, "Failed to create tarball", tar_result.stderr);
 
-    const tar_failed = switch (tar_result.term) {
-        .exited => |code| code != 0,
-        else => true,
-    };
-    if (tar_failed) {
-        const msg = try std.fmt.allocPrint(allocator, "Error: Failed to create tarball: {s}", .{tar_result.stderr});
-        return CommandResult.err(allocator, msg);
-    }
+    const stat = io_helper.statFile(tarball_path) catch
+        return CommandResult.err(allocator, "Failed to stat generated tarball");
+    const hash_result = try io_helper.childRun(allocator, &.{ "shasum", "-a", "256", tarball_path });
+    defer allocator.free(hash_result.stdout);
+    defer allocator.free(hash_result.stderr);
+    if (commandFailed(hash_result) or hash_result.stdout.len < 64)
+        return safeCommandError(allocator, "Failed to hash tarball", hash_result.stderr);
+    const sha256 = hash_result.stdout[0..64];
 
-    // Upload tarball to S3
-    const s3_key = try std.fmt.allocPrint(allocator, "binaries/{s}/{s}/{s}/{s}-{s}.tar.gz", .{
-        options.domain, options.version, platform, domain_slug, options.version,
-    });
-    defer allocator.free(s3_key);
-
-    const s3_uri = try std.fmt.allocPrint(allocator, "s3://{s}/{s}", .{ bucket, s3_key });
-    defer allocator.free(s3_uri);
-
-    style.print("  Uploading to {s}...\n", .{s3_uri});
-    const upload_result = try awsS3Cp(allocator, s3_endpoint, &[_][]const u8{
-        tarball_path, s3_uri, "--content-type", "application/gzip",
-    });
-    defer allocator.free(upload_result.stdout);
-    defer allocator.free(upload_result.stderr);
-
-    const upload_failed = switch (upload_result.term) {
-        .exited => |code| code != 0,
-        else => true,
-    };
-    if (upload_failed) {
-        // Truncate stderr to avoid leaking credentials in error messages
-        const safe_len = @min(upload_result.stderr.len, 500);
-        const msg = try std.fmt.allocPrint(allocator, "Error: S3 upload failed (exit code {d}): {s}", .{
-            switch (upload_result.term) {
-                .exited => |code| code,
-                else => 1,
-            },
-            upload_result.stderr[0..safe_len],
-        });
-        return CommandResult.err(allocator, msg);
-    }
-
-    // Update metadata.json
-    // Fetch existing metadata or create new
-    const metadata_s3_key = try std.fmt.allocPrint(allocator, "binaries/{s}/metadata.json", .{options.domain});
-    defer allocator.free(metadata_s3_key);
-
-    const metadata_s3_uri = try std.fmt.allocPrint(allocator, "s3://{s}/{s}", .{ bucket, metadata_s3_key });
-    defer allocator.free(metadata_s3_uri);
-
-    const metadata_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir, "pantry-metadata.json" });
-    defer allocator.free(metadata_path);
-    defer io_helper.deleteFile(metadata_path) catch {};
-
-    const metadata_updated_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir, "pantry-metadata-updated.json" });
-    defer allocator.free(metadata_updated_path);
-    defer io_helper.deleteFile(metadata_updated_path) catch {};
-
-    // Try to fetch existing metadata
-    style.print("  Fetching existing metadata...\n", .{});
-    const fetch_result = awsS3Cp(allocator, s3_endpoint, &[_][]const u8{
-        metadata_s3_uri, metadata_path,
-    }) catch null;
-    if (fetch_result) |fr| {
-        allocator.free(fr.stdout);
-        allocator.free(fr.stderr);
-    }
-
-    // Use jq to update metadata (add/update this version+platform entry)
-    // If no existing metadata, start from scratch
-    const jq_input = if (fetch_result) |fr| switch (fr.term) {
-        .exited => |code| if (code == 0) metadata_path else "/dev/null",
-        else => "/dev/null",
-    } else "/dev/null";
-
-    // Build jq expression to upsert version/platform
-    const jq_expr = try std.fmt.allocPrint(
+    const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
+    defer allocator.free(auth_header);
+    const initiate_url = try std.fmt.allocPrint(allocator, "{s}/api/v1/binaries/uploads", .{std.mem.trimRight(u8, registry, "/")});
+    defer allocator.free(initiate_url);
+    const initiate_json = try std.fmt.allocPrint(
         allocator,
-        "(if . == null then {{\"versions\": {{}}}} else . end) | .versions[\"{s}\"].platforms[\"{s}\"].tarball = \"{s}\"",
-        .{ options.version, platform, s3_key },
+        "{{\"domain\":\"{s}\",\"version\":\"{s}\",\"platforms\":[\"{s}\"],\"filename\":\"{s}\",\"size\":{d},\"sha256\":\"{s}\"}}",
+        .{ options.domain, options.version, platform, tarball_name, stat.size, sha256 },
     );
-    defer allocator.free(jq_expr);
+    defer allocator.free(initiate_json);
 
-    style.print("  Updating metadata...\n", .{});
-    const jq_result = try io_helper.childRun(allocator, &[_][]const u8{
-        "jq", jq_expr, jq_input,
+    style.print("  Requesting scan staging upload...\n", .{});
+    const initiate = try io_helper.childRun(allocator, &.{
+        "curl",          "-fsS",        "-X",         "POST", "-H", auth_header, "-H", "Content-Type: application/json",
+        "--data-binary", initiate_json, initiate_url,
     });
-    defer allocator.free(jq_result.stderr);
+    defer allocator.free(initiate.stdout);
+    defer allocator.free(initiate.stderr);
+    if (commandFailed(initiate))
+        return safeCommandError(allocator, "Registry rejected binary staging request", initiate.stderr);
 
-    const jq_failed = switch (jq_result.term) {
-        .exited => |code| code != 0,
-        else => true,
-    };
-    if (jq_failed) {
-        allocator.free(jq_result.stdout);
-        const msg = try std.fmt.allocPrint(allocator, "Error: Failed to update metadata: {s}", .{jq_result.stderr});
-        return CommandResult.err(allocator, msg);
-    }
+    var parsed = std.json.parseFromSlice(std.json.Value, allocator, initiate.stdout, .{}) catch
+        return CommandResult.err(allocator, "Registry returned invalid staging JSON");
+    defer parsed.deinit();
+    const upload_id = jsonString(parsed.value, "uploadId") orelse
+        return CommandResult.err(allocator, "Registry staging response is missing uploadId");
+    const upload_url = jsonString(parsed.value, "uploadUrl") orelse
+        return CommandResult.err(allocator, "Registry staging response is missing uploadUrl");
 
-    // Write updated metadata and upload
-    const meta_file = try io_helper.cwd().createFile(io_helper.io, metadata_updated_path, .{});
-    try io_helper.writeAllToFile(meta_file, jq_result.stdout);
-    meta_file.close(io_helper.io);
-    allocator.free(jq_result.stdout);
-
-    const meta_upload_result = try awsS3Cp(allocator, s3_endpoint, &[_][]const u8{
-        metadata_updated_path, metadata_s3_uri, "--content-type", "application/json",
+    style.print("  Streaming artifact to untrusted staging...\n", .{});
+    const upload = try io_helper.childRun(allocator, &.{
+        "curl",       "-fsS",     "--connect-timeout",  "30", "--speed-limit", "1024", "--speed-time",                   "120",
+        "--retry",    "3",        "--retry-all-errors", "-X", "PUT",           "-H",   "Content-Type: application/gzip", "-T",
+        tarball_path, upload_url,
     });
-    defer allocator.free(meta_upload_result.stdout);
-    defer allocator.free(meta_upload_result.stderr);
+    defer allocator.free(upload.stdout);
+    defer allocator.free(upload.stderr);
+    if (commandFailed(upload))
+        return safeCommandError(allocator, "Staging upload failed", upload.stderr);
 
-    const meta_upload_failed = switch (meta_upload_result.term) {
-        .exited => |code| code != 0,
-        else => true,
-    };
-    if (meta_upload_failed) {
-        const msg = try std.fmt.allocPrint(allocator, "Error: Failed to upload metadata: {s}", .{meta_upload_result.stderr});
-        return CommandResult.err(allocator, msg);
-    }
+    const complete_url = try std.fmt.allocPrint(allocator, "{s}/api/v1/binaries/uploads/complete", .{std.mem.trimRight(u8, registry, "/")});
+    defer allocator.free(complete_url);
+    const complete_json = try std.fmt.allocPrint(allocator, "{{\"uploadId\":\"{s}\"}}", .{upload_id});
+    defer allocator.free(complete_json);
 
-    style.print("\n✓ Published {s}@{s} ({s}) to pantry registry\n", .{
+    style.print("  Waiting for malware scan and promotion...\n", .{});
+    const complete = try io_helper.childRun(allocator, &.{
+        "curl",          "-fsS",        "-X",         "POST", "-H", auth_header, "-H", "Content-Type: application/json",
+        "--data-binary", complete_json, complete_url,
+    });
+    defer allocator.free(complete.stdout);
+    defer allocator.free(complete.stderr);
+    if (commandFailed(complete))
+        return safeCommandError(allocator, "Registry scan/promotion failed", complete.stderr);
+
+    var completed = std.json.parseFromSlice(std.json.Value, allocator, complete.stdout, .{}) catch
+        return CommandResult.err(allocator, "Registry returned invalid completion JSON");
+    defer completed.deinit();
+    if (jsonBool(completed.value, "success") != true)
+        return CommandResult.err(allocator, "Registry did not confirm binary promotion");
+
+    style.print("\n✓ Published {s}@{s} ({s}) with a clean malware verdict\n", .{
         options.domain, options.version, platform,
     });
-
     return .{ .exit_code = 0 };
 }

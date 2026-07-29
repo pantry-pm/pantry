@@ -347,7 +347,7 @@ async function bootstrap(options: BootstrapOptions): Promise<void> {
       rmSync(artifactDir, { recursive: true, force: true })
 
       built.push(domain)
-      console.log(`✓ ${pkg.domain}@${version} uploaded`)
+      console.log(`✓ ${pkg.domain}@${version} published with malware scanning`)
 
     }
 catch (error: any) {
@@ -373,7 +373,7 @@ catch (error: any) {
   }
 
   if (built.length > 0 && !dryRun) {
-    console.log(`\n✓ Packages uploaded to s3://${bucket}/binaries/`)
+    console.log(`\n✓ Packages published through ${process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev'}`)
   }
 
   if (failed.length > 0) {

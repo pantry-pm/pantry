@@ -4,11 +4,11 @@ set -euo pipefail
 # Populate the pantry registry with desktop fonts.
 #
 # For each font recipe in src/recipes/*.font.ts, resolve the latest upstream
-# version and build + upload its artifact via build-and-upload.sh. Fonts are
+# version and publish its artifact via build-and-upload.sh. Fonts are
 # universal, but the registry stores per-platform; this publishes for the
 # platform it runs on (run on macOS arm64/x86-64 to cover Macs).
 #
-# Requires registry/S3 credentials in the environment (same as any
+# Requires a registry operator token in the environment (same as any
 # `build-and-upload.sh` run) and `gh`/`curl` for version resolution.
 #
 #   ./scripts/publish-fonts.sh                 # all fonts
@@ -50,4 +50,4 @@ for entry in "${FONTS[@]}"; do
   published=$((published + 1))
 done
 
-echo "Done. Published $published font(s) to s3://${BUCKET}/binaries/"
+echo "Done. Published $published font(s) through ${PANTRY_REGISTRY_URL:-https://registry.pantry.dev}"

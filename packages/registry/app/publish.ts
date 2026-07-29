@@ -1,383 +1,128 @@
 /**
- * Pantry Publish Command
+ * Legacy Pantry publish helper.
  *
- * Packs the package and uploads it to the pantry-registry S3 bucket.
- * Usage: bun run publish.ts [directory]
+ * This intentionally publishes through the registry HTTP API. Direct S3 or
+ * DynamoDB writes bypass authentication, ownership checks, immutable-version
+ * checks, and publish-time malware scanning, so they are not a supported
+ * publication path.
  */
 
+import { execSync, spawn } from 'node:child_process'
 import { existsSync, readFileSync, statSync, unlinkSync } from 'node:fs'
-import { join, basename } from 'node:path'
-import { execSync } from 'node:child_process'
-import { S3Client, DynamoDBClient } from 'ts-cloud/aws'
-import { getAWSRegion } from './aws-config'
-
-// Import pack function
-import { spawn } from 'node:child_process'
+import { basename, join } from 'node:path'
 
 interface PackageJson {
   name: string
   version: string
   description?: string
-  author?: string | {
-    name: string
-    email?: string
-  }
+  author?: string | { name: string, email?: string }
   license?: string
   keywords?: string[]
-  repository?: string | {
-    type: string
-    url: string
-  }
+  repository?: string | { type: string, url: string }
   homepage?: string
   bin?: string | Record<string, string>
+  contentPolicy?: unknown
 }
 
-const BUCKET_NAME = 'pantry-registry'
-const TABLE_NAME = 'pantry-packages'
-const REGION = getAWSRegion()
-
-/**
- * Get repository URL from git remote origin
- * Converts SSH URLs to HTTPS format
- */
-function getGitRemoteUrl(targetDir: string): string | null {
+function getGitRemoteUrl(targetDir: string): string | undefined {
   try {
-    const remoteUrl = execSync('git remote get-url origin', {
+    const value = execSync('git remote get-url origin', {
       cwd: targetDir,
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     }).trim()
-
-    if (!remoteUrl) return null
-
-    // Convert SSH URL to HTTPS if needed
-    // git@github.com:user/repo.git -> https://github.com/user/repo
-    if (remoteUrl.startsWith('git@')) {
-      const match = remoteUrl.match(/^git@([^:]+):(.+?)(?:\.git)?$/)
-      if (match) {
-        return `https://${match[1]}/${match[2]}`
-      }
+    if (value.startsWith('git@')) {
+      const match = value.match(/^git@([^:]+):(.+?)(?:\.git)?$/)
+      return match ? `https://${match[1]}/${match[2]}` : value
     }
-
-    // Handle HTTPS URLs - remove .git suffix if present
-    if (remoteUrl.startsWith('https://')) {
-      return remoteUrl.replace(/\.git$/, '')
-    }
-
-    return remoteUrl
+    return value.replace(/\.git$/, '')
   }
-catch {
-    // Not a git repo or no remote configured
-    return null
+  catch {
+    return undefined
   }
 }
 
-// eslint-disable-next-line no-unused-vars
-async function publish(targetDir: string = process.cwd()): Promise<void> {
-  console.log('🚀 Pantry Publish')
-  console.log('='.repeat(40))
-  console.log()
-
-  // Check for package.json
-  const packageJsonPath = join(targetDir, 'package.json')
-  if (!existsSync(packageJsonPath)) {
-    console.error('❌ No package.json found in', targetDir)
-    process.exit(1)
-  }
-
-  // Read package.json
-  const packageJson: PackageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
-
-  if (!packageJson.name) {
-    console.error('❌ package.json is missing "name" field')
-    process.exit(1)
-  }
-
-  if (!packageJson.version) {
-    console.error('❌ package.json is missing "version" field')
-    process.exit(1)
-  }
-
-  console.log(`📋 Package: ${packageJson.name}`)
-  console.log(`📋 Version: ${packageJson.version}`)
-  if (packageJson.bin) {
-    const binEntries = typeof packageJson.bin === 'string'
-      ? { [packageJson.name.replace(/^@[^/]+\//, '')]: packageJson.bin }
-      : packageJson.bin
-    const binNames = Object.keys(binEntries)
-    console.log(`📋 Binaries: ${binNames.join(', ')}`)
-  }
-  console.log()
-
-  // Step 1: Run pack to create tarball
-  console.log('📦 Creating tarball...')
-  const packResult = await runPack(targetDir)
-  if (!packResult.success) {
-    console.error('❌ Failed to create tarball')
-    process.exit(1)
-  }
-
-  const tarballPath = packResult.tarballPath!
-  const tarballName = basename(tarballPath)
-  const stats = statSync(tarballPath)
-  const sizeKB = (stats.size / 1024).toFixed(2)
-
-  console.log(`   ✓ Created ${tarballName} (${sizeKB} KB)`)
-  console.log()
-
-  // Step 2: Upload to S3
-  console.log('☁️  Uploading to registry...')
-
-  const s3 = new S3Client(REGION)
-
-  // Determine S3 key structure: packages/pantry/{name}/{version}/{tarball}
-  const safeName = packageJson.name.replaceAll('@', '').replaceAll('/', '-').replaceAll('..', '').replace(/[^\w.-]/g, '-')
-  const s3Key = `packages/pantry/${safeName}/${packageJson.version}/${tarballName}`
-
-  try {
-    // Read tarball as buffer
-    const tarballContent = readFileSync(tarballPath)
-
-    // Upload tarball
-    await s3.putObject({
-      bucket: BUCKET_NAME,
-      key: s3Key,
-      body: tarballContent,
-      contentType: 'application/gzip',
-    })
-    console.log(`   ✓ Uploaded ${s3Key}`)
-
-    // Also upload/update package metadata
-    const metadataKey = `packages/pantry/${safeName}/metadata.json`
-    const metadata = await getOrCreateMetadata(s3, safeName, packageJson, targetDir)
-
-    // Normalize bin field: string -> { name: path }, object -> as-is
-    const normalizedBin = packageJson.bin
-      ? typeof packageJson.bin === 'string'
-        ? { [packageJson.name.replace(/^@[^/]+\//, '')]: packageJson.bin }
-        : packageJson.bin
-      : undefined
-
-    // Add this version to metadata
-    metadata.versions[packageJson.version] = {
-      tarball: s3Key,
-      publishedAt: new Date().toISOString(),
-      size: stats.size,
-      ...(normalizedBin && { bin: normalizedBin }),
-    }
-    metadata.latest = packageJson.version
-    metadata.updatedAt = new Date().toISOString()
-
-    await s3.putObject({
-      bucket: BUCKET_NAME,
-      key: metadataKey,
-      body: JSON.stringify(metadata, null, 2),
-      contentType: 'application/json',
-    })
-    console.log(`   ✓ Updated ${metadataKey}`)
-
-    // Also update DynamoDB index for package lookup
-    console.log()
-    console.log('📊 Updating registry index...')
-    const dynamodb = new DynamoDBClient(REGION)
-
-    // Determine repository URL - use package.json value, git remote, or default to GitHub
-    const repositoryUrl = typeof packageJson.repository === 'string'
-      ? packageJson.repository
-      : packageJson.repository?.url
-        ? packageJson.repository.url
-        : getGitRemoteUrl(targetDir) || `https://github.com/stacksjs/${safeName}`
-
-    const dbRecord: Record<string, any> = {
-      packageName: packageJson.name,
-      safeName,
-      s3Path: s3Key,
-      latestVersion: packageJson.version,
-      description: packageJson.description || '',
-      author: typeof packageJson.author === 'string'
-        ? packageJson.author
-        : packageJson.author?.name || '',
-      license: packageJson.license || '',
-      keywords: packageJson.keywords || [],
-      repository: repositoryUrl,
-      homepage: packageJson.homepage || '',
-      updatedAt: new Date().toISOString(),
-    }
-
-    // Add bin if present
-    if (normalizedBin) {
-      dbRecord.bin = normalizedBin
-    }
-
-    // Check if package exists to preserve createdAt
-    const existingItem = await dynamodb.getItem({
-      TableName: TABLE_NAME,
-      Key: { packageName: { S: packageJson.name } },
-    })
-
-    if (!existingItem.Item) {
-      (dbRecord as any).createdAt = new Date().toISOString()
-    }
-else {
-      const existingRecord = DynamoDBClient.unmarshal(existingItem.Item) as { createdAt?: string }
-      (dbRecord as any).createdAt = existingRecord.createdAt || new Date().toISOString()
-    }
-
-    await dynamodb.putItem({
-      TableName: TABLE_NAME,
-      Item: DynamoDBClient.marshal(dbRecord),
-    })
-    console.log(`   ✓ Updated registry index for ${packageJson.name}`)
-  }
-catch (err) {
-    console.error(`   ❌ Upload failed: ${err}`)
-    process.exit(1)
-  }
-
-  // Step 3: Clean up local tarball
-  console.log()
-  console.log('🧹 Cleaning up...')
-  try {
-    unlinkSync(tarballPath)
-    console.log(`   ✓ Removed local tarball`)
-  }
-catch {
-    console.log(`   ⚠ Could not remove local tarball`)
-  }
-
-  console.log()
-  console.log('='.repeat(40))
-  console.log('✅ Published successfully!')
-  console.log()
-  console.log(`   📦 ${packageJson.name}@${packageJson.version}`)
-  console.log(`   🔗 s3://${BUCKET_NAME}/${s3Key}`)
-  console.log(`   📊 Indexed in ${TABLE_NAME}`)
-  console.log()
-  console.log('Install with:')
-  console.log(`   pantry install ${packageJson.name}`)
-  console.log()
-}
-
-interface PackageMetadata {
-  name: string
-  description?: string
-  author?: string
-  license?: string
-  keywords?: string[]
-  repository?: string
-  homepage?: string
-  latest: string
-  versions: Record<string, {
-    tarball: string
-    publishedAt: string
-    size: number
-    bin?: Record<string, string>
-  }>
-  createdAt: string
-  updatedAt: string
-}
-
-async function getOrCreateMetadata(
-  s3: S3Client,
-  safeName: string,
-  packageJson: PackageJson,
-  targetDir: string
-): Promise<PackageMetadata> {
-  const metadataKey = `packages/pantry/${safeName}/metadata.json`
-
-  try {
-    const existing = await s3.getObject(BUCKET_NAME, metadataKey)
-    const parsed = JSON.parse(existing)
-
-    // Check if it's valid metadata format (has versions field)
-    if (parsed.versions && typeof parsed.versions === 'object') {
-      return parsed as PackageMetadata
-    }
-
-    // Invalid format, create new metadata
-    throw new Error('Invalid metadata format')
-  }
-catch {
-    // Create new metadata
-    const author = typeof packageJson.author === 'string'
-      ? packageJson.author
-      : packageJson.author?.name
-
-    // Use repository from package.json, git remote, or default to GitHub
-    const repository = typeof packageJson.repository === 'string'
-      ? packageJson.repository
-      : packageJson.repository?.url
-        ? packageJson.repository.url
-        : getGitRemoteUrl(targetDir) || `https://github.com/stacksjs/${safeName}`
-
-    return {
-      name: packageJson.name,
-      description: packageJson.description,
-      author,
-      license: packageJson.license,
-      keywords: packageJson.keywords,
-      repository,
-      homepage: packageJson.homepage,
-      latest: '',
-      versions: {},
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  }
-}
-
-// eslint-disable-next-line no-unused-vars
-function runPack(targetDir: string): Promise<{
-  success: boolean
-  tarballPath?: string
-}> {
-  return new Promise((resolve) => {
+function runPack(targetDir: string): Promise<string> {
+  return new Promise((resolve, reject) => {
     const packScript = join(import.meta.dir, 'pack.ts')
-    const proc = spawn('bun', ['run', packScript, targetDir], {
-      stdio: ['pipe', 'pipe', 'pipe'],
+    const child = spawn('bun', ['run', packScript, targetDir], {
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
-
     let stdout = ''
     let stderr = ''
-
-    proc.stdout?.on('data', (data) => {
-      stdout += data.toString()
-    })
-
-    proc.stderr?.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    proc.on('close', (code) => {
-      if (code === 0) {
-        // Extract tarball path from output
-        const match = stdout.match(/📦\s+(\S+\.tgz)/)
-        if (match) {
-          const tarballName = match[1]
-          resolve({
-            success: true,
-            tarballPath: join(targetDir, tarballName),
-          })
-        }
-else {
-          resolve({ success: false })
-        }
-      }
-else {
-        console.error(stderr)
-        resolve({ success: false })
-      }
-    })
-
-    proc.on('error', () => {
-      resolve({ success: false })
+    child.stdout?.on('data', data => stdout += data.toString())
+    child.stderr?.on('data', data => stderr += data.toString())
+    child.once('error', reject)
+    child.once('close', (code) => {
+      if (code !== 0) return reject(new Error(stderr.trim() || `pack exited ${code}`))
+      const match = stdout.match(/📦\s+(\S+\.tgz)/)
+      if (!match) return reject(new Error('pack did not report a tarball path'))
+      resolve(join(targetDir, match[1]))
     })
   })
 }
 
-// Run if called directly
-const targetDir = process.argv[2] || process.cwd()
-publish(targetDir).catch((err) => {
-  console.error('Failed to publish:', err)
-  process.exit(1)
-})
+export async function publish(targetDir: string = process.cwd()): Promise<void> {
+  const packageJsonPath = join(targetDir, 'package.json')
+  if (!existsSync(packageJsonPath)) throw new Error(`No package.json found in ${targetDir}`)
+
+  const manifest = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as PackageJson
+  if (!manifest.name) throw new Error('package.json is missing "name"')
+  if (!manifest.version) throw new Error('package.json is missing "version"')
+
+  const token = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+  if (!token) throw new Error('PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN is required')
+  const registryUrl = (process.env.PANTRY_REGISTRY_URL || process.env.BASE_URL || 'https://registry.pantry.dev').replace(/\/+$/, '')
+
+  console.log(`Publishing ${manifest.name}@${manifest.version} through ${registryUrl}`)
+  const tarballPath = await runPack(targetDir)
+  try {
+    const tarball = readFileSync(tarballPath)
+    const repository = typeof manifest.repository === 'string'
+      ? manifest.repository
+      : manifest.repository?.url || getGitRemoteUrl(targetDir)
+    const author = typeof manifest.author === 'string' ? manifest.author : manifest.author?.name
+
+    const form = new FormData()
+    form.set('metadata', JSON.stringify({
+      name: manifest.name,
+      version: manifest.version,
+      description: manifest.description,
+      author,
+      license: manifest.license,
+      keywords: manifest.keywords,
+      repository,
+      homepage: manifest.homepage,
+      bin: manifest.bin,
+      contentPolicy: manifest.contentPolicy,
+      publishedAt: new Date().toISOString(),
+    }))
+    form.set('tarball', new File([tarball], basename(tarballPath), { type: 'application/gzip' }))
+
+    const response = await fetch(`${registryUrl}/publish`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+    const result = await response.json().catch(() => ({ error: response.statusText })) as any
+    if (!response.ok) {
+      const retry = result.retryable ? ' (retryable)' : ''
+      throw new Error(`${result.code || response.status}: ${result.error || response.statusText}${retry}`)
+    }
+
+    const sizeKB = (statSync(tarballPath).size / 1024).toFixed(2)
+    console.log(`Published ${manifest.name}@${manifest.version} (${sizeKB} KB)`)
+    console.log(`Malware scan: ${result.scan?.verdict || 'unknown'} via ${result.scan?.engine || 'unknown'}`)
+  }
+  finally {
+    try { unlinkSync(tarballPath) }
+    catch { /* best-effort cleanup */ }
+  }
+}
+
+if (import.meta.main) {
+  publish(process.argv[2] || process.cwd()).catch((error) => {
+    console.error(`Failed to publish: ${(error as Error).message}`)
+    process.exit(1)
+  })
+}

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Build and Upload Package to S3
+# Build and publish a package through the registry scan gate
 # Usage: ./scripts/build-and-upload.sh <package> <version> [bucket] [region]
 # Example: ./scripts/build-and-upload.sh php.net 8.4.11 my-bucket us-east-1
 
@@ -101,7 +101,7 @@ if [ -n "${RECIPE_PLATFORMS}" ]; then
 fi
 
 echo ""
-echo ">>> Step 3: Uploading to S3..."
+echo ">>> Step 3: Staging, scanning, and publishing..."
 bun scripts/upload-to-s3.ts \
   --package "${PACKAGE}" \
   --version "${VERSION}" \
@@ -117,5 +117,5 @@ rm -rf "${BUILD_DIR}" "${INSTALL_DIR}"
 
 echo ""
 echo "============================================================"
-echo "Done! ${PACKAGE}@${VERSION} uploaded to s3://${BUCKET}/binaries/${PACKAGE}/"
+echo "Done! ${PACKAGE}@${VERSION} published through ${PANTRY_REGISTRY_URL:-https://registry.pantry.dev}"
 echo "============================================================"

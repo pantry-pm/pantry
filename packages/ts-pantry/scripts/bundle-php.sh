@@ -4,6 +4,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PACKAGE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Config
 PHP_VERSION="${1:-8.4.17}"
 PLATFORM="darwin-arm64"
@@ -235,51 +238,21 @@ shasum -a 256 "$TARBALL" > "$TARBALL.sha256"
 SIZE=$(ls -lh "$TARBALL" | awk '{print $5}')
 echo -e "${GREEN}✓ Created: $TARBALL ($SIZE)${NC}"
 
-# Upload to S3
+# Publish through the registry's scan-before-promote API
 echo ""
-echo -e "${BLUE}Uploading to S3...${NC}"
-
-S3_PATH="binaries/php.net/${PHP_VERSION}/${PLATFORM}"
-aws s3 cp "$ARTIFACT_DIR/$TARBALL" "s3://${BUCKET}/${S3_PATH}/$TARBALL"
-aws s3 cp "$ARTIFACT_DIR/$TARBALL.sha256" "s3://${BUCKET}/${S3_PATH}/$TARBALL.sha256"
-
-# Update metadata
-echo -e "${BLUE}Updating metadata...${NC}"
-METADATA_KEY="binaries/php.net/metadata.json"
-METADATA=$(aws s3 cp "s3://${BUCKET}/${METADATA_KEY}" - 2>/dev/null || echo '{"name":"php.net","versions":{}}')
-
-# Get file size in bytes (macOS and Linux compatible)
-if [[ "$(uname)" == "Darwin" ]]; then
-  SIZE_BYTES=$(stat -f%z "$ARTIFACT_DIR/$TARBALL")
-else
-  SIZE_BYTES=$(stat --format=%s "$ARTIFACT_DIR/$TARBALL")
-fi
-SHA256=$(cat "$ARTIFACT_DIR/$TARBALL.sha256" | awk '{print $1}')
-
-# Update metadata with jq or simple sed
-if command -v jq &>/dev/null; then
-  METADATA=$(echo "$METADATA" | jq --arg v "$PHP_VERSION" --arg p "$PLATFORM" --arg t "${S3_PATH}/$TARBALL" --arg s "$SHA256" --arg sz "$SIZE_BYTES" '
-    .latestVersion = $v |
-    .versions[$v].platforms[$p] = {
-      tarball: $t,
-      sha256: $s,
-      size: ($sz | tonumber),
-      uploadedAt: (now | todate)
-    } |
-    .updatedAt = (now | todate)
-  ')
-else
-  # Simple update without jq
-  METADATA='{"name":"php.net","latestVersion":"'"$PHP_VERSION"'","versions":{"'"$PHP_VERSION"'":{"platforms":{"'"$PLATFORM"'":{"tarball":"'"${S3_PATH}/$TARBALL"'","sha256":"'"$SHA256"'","size":'"$SIZE_BYTES"'}}}}}'
-fi
-
-echo "$METADATA" | aws s3 cp - "s3://${BUCKET}/${METADATA_KEY}" --content-type "application/json"
+echo -e "${BLUE}Staging, scanning, and publishing through the registry...${NC}"
+cd "$PACKAGE_ROOT"
+bun scripts/upload-to-s3.ts \
+  --package php.net \
+  --version "$PHP_VERSION" \
+  --artifacts-dir "$ARTIFACTS_DIR" \
+  --platforms "$PLATFORM"
 
 echo ""
 echo -e "${GREEN}✅ Done!${NC}"
 echo ""
-echo "Bundled PHP uploaded to:"
-echo "  s3://${BUCKET}/${S3_PATH}/$TARBALL"
+echo "Bundled PHP published through ${PANTRY_REGISTRY_URL:-https://registry.pantry.dev}:"
+echo "  binaries/php.net/${PHP_VERSION}/${PLATFORM}/$TARBALL"
 echo ""
 echo "Package size: $SIZE (includes all dependencies)"
 echo ""
