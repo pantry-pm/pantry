@@ -444,22 +444,6 @@ export class BinaryArtifactPublisher {
         record.malwareScan?.verdict === 'clean'
         && record.malwareScan.artifactSha256 === record.sha256,
       )
-      if (alreadyClean) {
-        try {
-          const attestation = JSON.parse((await this.store.getObject(binaryAttestationKey(tarball))).toString('utf8'))
-          if (attestation?.scan?.verdict === 'clean' && attestation.scan.artifactSha256 === Object.values(selected)[0].sha256) {
-            return {
-              action: 'already-clean',
-              domain: request.domain,
-              version: request.version,
-              tarball,
-              platforms: selected,
-              scan: publicScanResult(Object.values(selected)[0].malwareScan),
-            }
-          }
-        }
-        catch {}
-      }
 
       let size: number
       try {
@@ -485,6 +469,21 @@ export class BinaryArtifactPublisher {
       }
       if (!sha256)
         throw new BinaryPublishError('Retained binary artifact has no valid SHA-256', 422, 'BINARY_SHA256_MISSING')
+
+      const durableScan = await this.readCleanAttestation(tarball, sha256)
+      if (durableScan) {
+        if (alreadyClean) {
+          return {
+            action: 'already-clean',
+            domain: request.domain,
+            version: request.version,
+            tarball,
+            platforms: selected,
+            scan: publicScanResult(durableScan),
+          }
+        }
+        return this.attestExisting(metadataKey, metadata, request, tarball, sha256, size, durableScan)
+      }
 
       const context = {
         surface: 'binary' as const,
@@ -518,39 +517,84 @@ export class BinaryArtifactPublisher {
       if (scan.verdict !== 'clean')
         throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
 
-      const updatedAt = new Date(this.now()).toISOString()
-      const records: Record<string, BinaryPlatformRecord> = {}
-      for (const [version, versionInfo] of Object.entries(metadata.versions || {})) {
-        for (const [platform, record] of Object.entries(versionInfo.platforms || {})) {
-          if (storedBinaryKey(record.tarball) !== tarball) continue
-          record.tarball = tarball
-          record.sha256 = sha256
-          record.size = size
-          record.malwareScan = scan
-          if (!record.uploadedAt) record.uploadedAt = updatedAt
-          if (version === request.version) records[platform] = record
-        }
-      }
-      await this.store.putObject(`${tarball}.sha256`, `${sha256}  ${tarball.split('/').at(-1)}\n`, 'text/plain')
-      await this.store.putObject(binaryAttestationKey(tarball), JSON.stringify({
-        domain: request.domain,
-        version: request.version,
-        platforms: Object.keys(records),
-        filename: tarball.split('/').at(-1),
-        scan,
-      }), 'application/json')
-      metadata.updatedAt = updatedAt
-      await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
-
-      const completed: BinaryPublishCompleted = {
-        domain: request.domain,
-        version: request.version,
-        platforms: records,
-        scan: publicScanResult(scan),
-      }
-      await this.options.onPublished?.(completed)
-      return { action: 'attested', tarball, ...completed }
+      return this.attestExisting(metadataKey, metadata, request, tarball, sha256, size, scan)
     })
+  }
+
+  private async readCleanAttestation(tarball: string, sha256: string): Promise<MalwareScanResult | null> {
+    try {
+      // The sidecar is the durable evidence written after the original clean
+      // scan. It may repair metadata, but only while it remains digest-bound
+      // and structurally valid; otherwise the retained bytes are scanned again.
+      const parsed = JSON.parse(
+        (await this.store.getObject(binaryAttestationKey(tarball))).toString('utf8'),
+      ) as { scan?: Partial<MalwareScanResult> }
+      const scan = parsed.scan
+      if (
+        scan?.verdict !== 'clean'
+        || scan.artifactSha256 !== sha256
+        || typeof scan.engine !== 'string'
+        || scan.engine.trim().length === 0
+        || typeof scan.scannedAt !== 'string'
+        || !Number.isFinite(Date.parse(scan.scannedAt))
+        || typeof scan.durationMs !== 'number'
+        || !Number.isFinite(scan.durationMs)
+        || scan.durationMs < 0
+        || (scan.signature !== undefined && typeof scan.signature !== 'string')
+        || (scan.engineVersion !== undefined && typeof scan.engineVersion !== 'string')
+        || (scan.databaseVersion !== undefined && typeof scan.databaseVersion !== 'string')
+        || (scan.reason !== undefined && typeof scan.reason !== 'string')
+      ) {
+        return null
+      }
+      return scan as MalwareScanResult
+    }
+    catch {
+      return null
+    }
+  }
+
+  private async attestExisting(
+    metadataKey: string,
+    metadata: BinaryPackageMetadata,
+    request: BinaryRescanRequest,
+    tarball: string,
+    sha256: string,
+    size: number,
+    scan: MalwareScanResult,
+  ): Promise<BinaryRescanCompleted> {
+    const updatedAt = new Date(this.now()).toISOString()
+    const records: Record<string, BinaryPlatformRecord> = {}
+    for (const [version, versionInfo] of Object.entries(metadata.versions || {})) {
+      for (const [platform, record] of Object.entries(versionInfo.platforms || {})) {
+        if (storedBinaryKey(record.tarball) !== tarball) continue
+        record.tarball = tarball
+        record.sha256 = sha256
+        record.size = size
+        record.malwareScan = scan
+        if (!record.uploadedAt) record.uploadedAt = updatedAt
+        if (version === request.version) records[platform] = record
+      }
+    }
+    await this.store.putObject(`${tarball}.sha256`, `${sha256}  ${tarball.split('/').at(-1)}\n`, 'text/plain')
+    await this.store.putObject(binaryAttestationKey(tarball), JSON.stringify({
+      domain: request.domain,
+      version: request.version,
+      platforms: Object.keys(records),
+      filename: tarball.split('/').at(-1),
+      scan,
+    }), 'application/json')
+    metadata.updatedAt = updatedAt
+    await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
+
+    const completed: BinaryPublishCompleted = {
+      domain: request.domain,
+      version: request.version,
+      platforms: records,
+      scan: publicScanResult(scan),
+    }
+    await this.options.onPublished?.(completed)
+    return { action: 'attested', tarball, ...completed }
   }
 
   private async quarantineExisting(

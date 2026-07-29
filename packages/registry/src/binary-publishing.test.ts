@@ -295,6 +295,69 @@ describe('binary scan-before-promote publisher', () => {
     expect(metadata.versions['1.2.3'].platforms['linux-x86-64'].malwareScan.verdict).toBe('clean')
   })
 
+  it('restores metadata from a digest-bound durable attestation without rescanning', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('previously scanned retained artifact')
+    const tarball = await seedLegacyArtifact(store, bytes)
+    const sha256 = createHash('sha256').update(bytes).digest('hex')
+    await store.putObject(`${tarball}.scan.json`, JSON.stringify({
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: '2026-01-01T00:00:00.000Z',
+        durationMs: 42,
+        artifactSha256: sha256,
+      },
+    }), 'application/json')
+
+    const result = await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }, '_admin')
+
+    expect(result.action).toBe('attested')
+    expect(result.scan.artifactSha256).toBe(sha256)
+    expect(scanner.contexts).toHaveLength(0)
+    const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
+    expect(metadata.versions['1.2.3'].platforms['darwin-arm64'].malwareScan).toMatchObject({
+      verdict: 'clean',
+      artifactSha256: sha256,
+    })
+  })
+
+  it('rescans when a durable attestation does not match the retained digest', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const tarball = await seedLegacyArtifact(store, Buffer.from('changed retained artifact'))
+    await store.putObject(`${tarball}.scan.json`, JSON.stringify({
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: '2026-01-01T00:00:00.000Z',
+        durationMs: 42,
+        artifactSha256: 'a'.repeat(64),
+      },
+    }), 'application/json')
+
+    const result = await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }, '_admin')
+
+    expect(result.action).toBe('attested')
+    expect(scanner.contexts).toHaveLength(1)
+    expect(result.scan.artifactSha256).not.toBe('a'.repeat(64))
+  })
+
   it('quarantines blocked retained artifacts and removes every installable reference', async () => {
     const store = new MemoryArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
