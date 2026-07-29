@@ -192,11 +192,11 @@ jobs:
             printf '%s\n' \
               '[Unit]' \
               'Description=Recover Pantry Registry malware scanning services' \
-              'After=apt-daily-upgrade.service unattended-upgrades.service' \
+              'After=apt-daily-upgrade.service' \
               '' \
               '[Service]' \
               'Type=oneshot' \
-              "ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service && ! systemctl is-active --quiet unattended-upgrades.service'" \
+              "ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service'" \
               "ExecStart=/bin/systemctl start clamav-daemon.service ${SERVICE}.service" \
               > "/etc/systemd/system/${SERVICE}-recovery.service"
             printf '%s\n' \
