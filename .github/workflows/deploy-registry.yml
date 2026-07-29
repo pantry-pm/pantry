@@ -185,19 +185,22 @@ jobs:
             systemctl restart "$SERVICE"
             READY=false
             for attempt in $(seq 1 20); do
-              if curl -fsS "http://localhost:${PORT}/ready" |
-                jq -e '.status == "ready"
+              READY_STATUS=$(curl -sS "http://localhost:${PORT}/ready" || true)
+              if echo "$READY_STATUS" | jq -e '.status == "ready"
                   and .malwareScanning.required == true
                   and .malwareScanning.ready == true' >/dev/null; then
                 READY=true
                 break
               fi
-              echo "Readiness attempt $attempt failed; retrying in 3s..."
+              echo "Readiness attempt $attempt: ${READY_STATUS:-no response}"
               sleep 3
             done
             if [ "$READY" != true ]; then
               systemctl status "$SERVICE" --no-pager || true
               journalctl -u "$SERVICE" -n 100 --no-pager || true
+              systemctl status clamav-daemon --no-pager || true
+              journalctl -u clamav-daemon -n 100 --no-pager || true
+              ss -ltnp || true
               exit 1
             fi
 
