@@ -1,6 +1,6 @@
 {
   "name": "pantry-zig",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "Pantry package manager - Zig implementation",
   "dependencies": {
     "zig-config": {
