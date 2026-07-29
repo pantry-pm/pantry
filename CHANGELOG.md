@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.10...v0.11.11)
+
+## 🐛 Bug Fixes
+
+- **action**: reuse resolved system packages ([d919caf](https://github.com/pantry-pm/pantry/commit/d919caf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: allow bounded deep scan latency ([2edbd4b](https://github.com/pantry-pm/pantry/commit/2edbd4b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: prefer stable object stream readers ([b3d7c4b](https://github.com/pantry-pm/pantry/commit/b3d7c4b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.11 ([154db3a](https://github.com/pantry-pm/pantry/commit/154db3a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.9...v0.11.10)
 
 ## 🐛 Bug Fixes
