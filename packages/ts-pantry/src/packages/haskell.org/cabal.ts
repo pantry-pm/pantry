@@ -73,6 +73,7 @@ export const haskellorgcabalPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.18.1.0',
     '3.16.1.0',
     '3.16.0.0',
     '3.14.2.0',

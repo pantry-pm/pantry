@@ -60,6 +60,7 @@ export const gleamrunPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.18.0',
     '1.17.0',
     '1.16.0',
     '1.15.4',
