@@ -62,4 +62,9 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('.code == "MALWARE_DETECTED"')
     expect(workflow).toContain('.scan.verdict == "blocked"')
   })
+
+  it('serializes retained-artifact backfill scans to production scanner capacity', () => {
+    const workflow = source('.github/workflows/backfill-malware-scans.yml')
+    expect(workflow).toContain('max-parallel: 1')
+  })
 })
