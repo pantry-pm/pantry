@@ -24,4 +24,15 @@ describe('GitHub Action build portability', () => {
     expect(bundle).toContain('Object storage mirror')
     expect(bundle).toContain('release-manifest.json')
   })
+
+  test('does not reinstall action-managed Zig dependencies in workflows', () => {
+    for (const path of [
+      '../../../.github/workflows/build-zig.yml',
+      '../../../.github/workflows/release.yml',
+    ]) {
+      const workflow = readFileSync(new URL(path, import.meta.url), 'utf8')
+      expect(workflow).toContain('uses: ./packages/action')
+      expect(workflow).not.toContain('run: pantry install --no-save')
+    }
+  })
 })

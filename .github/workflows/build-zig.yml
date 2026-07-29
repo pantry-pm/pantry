@@ -32,10 +32,6 @@ jobs:
           # the latest mirrored build and the compile job catches API changes.
           packages: ziglang.org@0.17.0-dev
 
-      - name: Install Zig package dependencies
-        working-directory: packages/zig
-        run: pantry install --no-save
-
       - name: Build for All Platforms
         run: |
           set -e
