@@ -26,5 +26,5 @@
     "hosts": false,
     "certs": false
   },
-  "version": "0.11.3"
+  "version": "0.11.4"
 }

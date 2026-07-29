@@ -1,3 +1,14 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.3...v0.11.4)
+
+## 🧹 Chores
+
+- release v0.11.4 ([d0eda18](https://github.com/pantry-pm/pantry/commit/d0eda18)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: refresh pinned Zig toolchain ([17e54d9](https://github.com/pantry-pm/pantry/commit/17e54d9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.2...v0.11.3)
 
 ## 🐛 Bug Fixes
