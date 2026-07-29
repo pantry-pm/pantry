@@ -160,8 +160,9 @@ jobs:
             set_env CLAMD_SOCKET /run/clamav/clamd.ctl
             set_env CLAMD_HOST 127.0.0.1
             set_env CLAMD_PORT 3310
-            set_env CLAMD_TIMEOUT_MS 30000
+            set_env CLAMD_TIMEOUT_MS 120000
             set_env CLAMD_MAX_BYTES 1073741824
+            set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
             if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$ENV_FILE"; then
               command -v openssl >/dev/null 2>&1 || {
                 echo "openssl is required to generate the binary staging secret" >&2

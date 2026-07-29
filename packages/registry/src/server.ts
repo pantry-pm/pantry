@@ -1864,9 +1864,19 @@ export function createServer(
   )
 
   const start = () => {
+    const configuredIdleTimeout = Number.parseInt(process.env.PANTRY_HTTP_IDLE_TIMEOUT_SECONDS || '', 10)
+    const idleTimeout = Number.isSafeInteger(configuredIdleTimeout)
+      && configuredIdleTimeout >= 10
+      && configuredIdleTimeout <= 255
+      ? configuredIdleTimeout
+      : 255
     server = Bun.serve({
       port,
       fetch: handler,
+      // ClamAV streams can legitimately take longer than Bun's 10-second
+      // default. Keep the client connection open through the scanner's bounded
+      // timeout so retries cannot duplicate an in-flight scan.
+      idleTimeout,
       // Bun defaults to 128MB, which would make the 250MB and 1GB artifacts the
       // paid plans advertise physically impossible to upload — the request
       // would be cut off before any of our own limits were consulted. Sized to
