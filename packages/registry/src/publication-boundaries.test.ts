@@ -74,6 +74,7 @@ describe('first-party publication boundaries', () => {
   it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
     const workflow = source('.github/workflows/backfill-malware-scans.yml')
     const backfill = source('packages/ts-pantry/scripts/backfill-malware-scans.ts')
+    expect(workflow).toContain('SHARD_COUNT=256')
     expect(workflow).toContain('max-parallel: 1')
     expect(backfill).toContain('const DOMAIN_CONCURRENCY = 2')
     expect(backfill).toContain("'Connection: close'")
