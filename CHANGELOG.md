@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.11...v0.11.12)
+
+## 🐛 Bug Fixes
+
+- **ci**: avoid duplicate Zig dependency install ([5d4e5b3](https://github.com/pantry-pm/pantry/commit/5d4e5b3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.12 ([b38c3d8](https://github.com/pantry-pm/pantry/commit/b38c3d8)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.10...v0.11.11)
 
 ## 🐛 Bug Fixes
