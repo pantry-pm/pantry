@@ -44,4 +44,15 @@ describe('first-party publication boundaries', () => {
     expect(template).toContain('${PackagesBucket.Arn}/binaries/*')
     expect(template).toContain('aws:PrincipalArn: !GetAtt RegistryRole.Arn')
   })
+
+  it('deploys the exact bundle only after scanner readiness is proven', () => {
+    const workflow = source('.github/workflows/deploy-registry.yml')
+    expect(workflow).toContain("EXPECTED_SHA=\"$5\"")
+    expect(workflow).toContain('NODE_ENV=production "$BUN" run build:server')
+    expect(workflow).toContain('set_env PANTRY_MALWARE_SCANNING required')
+    expect(workflow).toContain('systemctl restart clamav-daemon')
+    expect(workflow).toContain('${REGISTRY_URL}/ready')
+    expect(workflow).toContain('.malwareScanning.required == true')
+    expect(workflow).toContain('.malwareScanning.ready == true')
+  })
 })
