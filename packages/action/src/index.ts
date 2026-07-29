@@ -6,7 +6,7 @@ import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadRelea
 import { deliverReleaseToAppStore } from './release-app-store'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import { mirrorReleaseToS3 } from './release-s3'
-import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
+import { isRollingVersionSpec, normalizeLockedVersion, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
@@ -319,7 +319,7 @@ async function installSystemPackage(spec: string, pantryDir: string, lockedVersi
   let version: string
   let source: string
   if (pinned && shouldUseLockedVersion(domain, pinned, rawVersion)) {
-    version = pinned
+    version = normalizeLockedVersion(domain, pinned)
     source = ' (from pantry.lock)'
   }
   else {

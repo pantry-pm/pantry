@@ -45,6 +45,17 @@ export function isRollingVersionSpec(domain: string, spec: string): boolean {
 }
 
 /**
+ * Pantry lockfiles encode Zig build metadata with an underscore so the
+ * version is safe to reuse as a filesystem segment. Restore the canonical
+ * semver spelling before comparing it with, or passing it to, the installer.
+ */
+export function normalizeLockedVersion(domain: string, version: string): string {
+  if (domain !== 'ziglang.org')
+    return version
+  return version.replace(/(-dev\.\d+)_([0-9A-Za-z-]+)$/, '$1+$2')
+}
+
+/**
  * Decide whether the action may reuse a concrete lock entry.
  *
  * A short Zig development version is a rolling channel, not an immutable
@@ -56,5 +67,5 @@ export function isRollingVersionSpec(domain: string, spec: string): boolean {
 export function shouldUseLockedVersion(domain: string, pinned: string, spec: string): boolean {
   if (isRollingVersionSpec(domain, spec))
     return false
-  return versionSatisfiesSpec(pinned, spec)
+  return versionSatisfiesSpec(normalizeLockedVersion(domain, pinned), spec)
 }

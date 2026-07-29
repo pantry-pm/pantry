@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { isRollingVersionSpec, shouldUseLockedVersion, versionSatisfiesSpec } from './lock-version'
+import {
+  isRollingVersionSpec,
+  normalizeLockedVersion,
+  shouldUseLockedVersion,
+  versionSatisfiesSpec,
+} from './lock-version'
 
 describe('versionSatisfiesSpec', () => {
   test('supports sentinels, exact versions, and common ranges', () => {
@@ -31,6 +36,19 @@ describe('shouldUseLockedVersion', () => {
       '0.17.0-dev.956+2dca73595',
     )).toBe(true)
     expect(shouldUseLockedVersion('bun.sh', '1.3.14', '^1.3.10')).toBe(true)
+  })
+
+  test('matches filesystem-safe Zig metadata to its canonical exact pin', () => {
+    expect(normalizeLockedVersion(
+      'ziglang.org',
+      '0.17.0-dev.1465_8b2d0ce21',
+    )).toBe('0.17.0-dev.1465+8b2d0ce21')
+    expect(shouldUseLockedVersion(
+      'ziglang.org',
+      '0.17.0-dev.1465_8b2d0ce21',
+      '0.17.0-dev.1465+8b2d0ce21',
+    )).toBe(true)
+    expect(normalizeLockedVersion('example.com', '1.0.0_build')).toBe('1.0.0_build')
   })
 })
 
