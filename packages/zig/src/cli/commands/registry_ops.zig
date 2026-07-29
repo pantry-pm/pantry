@@ -420,7 +420,7 @@ const provision_script =
     \\set_env CLAMD_SOCKET /run/clamav/clamd.ctl
     \\set_env CLAMD_HOST 127.0.0.1
     \\set_env CLAMD_PORT 3310
-    \\set_env CLAMD_TIMEOUT_MS 30000
+    \\set_env CLAMD_TIMEOUT_MS 240000
     \\set_env CLAMD_MAX_BYTES 1073741824
     \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
     \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then
