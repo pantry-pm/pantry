@@ -377,6 +377,15 @@ const provision_script =
     \\set_clam MaxThreads 2
     \\set_clam MaxQueue 4
     \\set_clam ConcurrentDatabaseReload no
+    \\clam_capacity_dir=/etc/systemd/system/clamav-daemon.service.d
+    \\install -d -m 0755 "$clam_capacity_dir"
+    \\cat > "$clam_capacity_dir/pantry-registry-capacity.conf" <<'CLAMD_UNIT'
+    \\[Service]
+    \\Nice=10
+    \\CPUWeight=25
+    \\IOWeight=25
+    \\CLAMD_UNIT
+    \\systemctl daemon-reload
     \\systemctl enable --quiet clamav-freshclam clamav-daemon
     \\systemctl restart clamav-freshclam || true
     \\systemctl restart clamav-daemon
@@ -421,6 +430,7 @@ const provision_script =
     \\set_env CLAMD_HOST 127.0.0.1
     \\set_env CLAMD_PORT 3310
     \\set_env CLAMD_TIMEOUT_MS 240000
+    \\set_env CLAMD_HEALTH_TIMEOUT_MS 5000
     \\set_env CLAMD_MAX_BYTES 1073741824
     \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
     \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then
