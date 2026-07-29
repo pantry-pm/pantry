@@ -112,6 +112,8 @@ describe('first-party publication boundaries', () => {
     expect(setupClamav).toContain('set_clam MaxScanTime 600000')
     expect(backfill).toContain('const ARTIFACT_CONCURRENCY = resolveArtifactConcurrency()')
     expect(backfill).toContain('socketPath: process.env.PANTRY_BACKFILL_CLAMD_SOCKET')
+    expect(backfill).toContain('const health = await externalScanner.health()')
+    expect(backfill).toContain('external ClamAV did not report engine and database versions')
     expect(backfill).toContain("'/api/v1/binaries/rescan/prepare'")
     expect(backfill).toContain("'/api/v1/binaries/rescan/attest'")
     expect(backfill).toContain("'Connection: close'")
