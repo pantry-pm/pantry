@@ -157,6 +157,10 @@ jobs:
               'CPUWeight=25' \
               'IOSchedulingClass=idle' \
               'IOWeight=25' \
+              'MemoryAccounting=yes' \
+              'MemoryHigh=55%' \
+              'MemoryMax=65%' \
+              'MemorySwapMax=0' \
               'OOMScoreAdjust=250' \
               > "$CLAMD_CAPACITY_TMP"
             CLAMD_CPU_COUNT=$(nproc)
@@ -244,6 +248,18 @@ jobs:
             systemctl restart clamav-freshclam || true
             systemctl restart clamav-daemon
             systemctl is-active --quiet clamav-daemon
+            CLAMD_MEMORY_MAX=$(systemctl show clamav-daemon --property=MemoryMax --value)
+            CLAMD_SWAP_MAX=$(systemctl show clamav-daemon --property=MemorySwapMax --value)
+            case "$CLAMD_MEMORY_MAX" in
+              ''|infinity)
+                echo "clamav-daemon memory limit was not applied" >&2
+                exit 1
+                ;;
+            esac
+            [ "$CLAMD_SWAP_MAX" = 0 ] || {
+              echo "clamav-daemon swap limit was not applied" >&2
+              exit 1
+            }
             if [ "$CLAMD_CPU_COUNT" -gt 1 ]; then
               CLAMD_EFFECTIVE_AFFINITY=$(systemctl show clamav-daemon --property=CPUAffinity --value)
               [ -n "$CLAMD_EFFECTIVE_AFFINITY" ] || {
@@ -251,6 +267,7 @@ jobs:
                 exit 1
               }
             fi
+            echo "clamav-daemon resources: cpus=$CLAMD_CPU_COUNT memory_max=$CLAMD_MEMORY_MAX swap_max=$CLAMD_SWAP_MAX"
 
             # Build bunpress docs (served at /docs). Project-local bunpress finds
             # crosswind from the root node_modules.

@@ -387,6 +387,10 @@ const provision_script =
     \\CPUWeight=25
     \\IOSchedulingClass=idle
     \\IOWeight=25
+    \\MemoryAccounting=yes
+    \\MemoryHigh=55%
+    \\MemoryMax=65%
+    \\MemorySwapMax=0
     \\OOMScoreAdjust=250
     \\CLAMD_UNIT
     \\clam_cpu_count=$(nproc)
@@ -399,10 +403,15 @@ const provision_script =
     \\systemctl restart clamav-freshclam || true
     \\systemctl restart clamav-daemon
     \\systemctl is-active --quiet clamav-daemon || { echo "Error: clamav-daemon did not start." >&2; exit 1; }
+    \\clam_memory_max=$(systemctl show clamav-daemon --property=MemoryMax --value)
+    \\clam_swap_max=$(systemctl show clamav-daemon --property=MemorySwapMax --value)
+    \\case "$clam_memory_max" in ''|infinity) echo "Error: clamav-daemon memory limit was not applied." >&2; exit 1 ;; esac
+    \\[ "$clam_swap_max" = 0 ] || { echo "Error: clamav-daemon swap limit was not applied." >&2; exit 1; }
     \\if [ "$clam_cpu_count" -gt 1 ]; then
     \\  clam_effective_affinity=$(systemctl show clamav-daemon --property=CPUAffinity --value)
     \\  [ -n "$clam_effective_affinity" ] || { echo "Error: clamav-daemon CPU affinity was not applied." >&2; exit 1; }
     \\fi
+    \\echo "    clamd resources: cpus=$clam_cpu_count memory_max=$clam_memory_max swap_max=$clam_swap_max"
     \\
     \\if [ -d "$repo_path/.git" ]; then
     \\  echo "    Updating checkout..."
