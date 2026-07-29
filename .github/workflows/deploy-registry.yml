@@ -152,7 +152,9 @@ jobs:
             printf '%s\n' \
               '[Service]' \
               'Nice=10' \
+              'CPUSchedulingPolicy=idle' \
               'CPUWeight=25' \
+              'IOSchedulingClass=idle' \
               'IOWeight=25' \
               'OOMScoreAdjust=250' \
               > "$CLAMD_CAPACITY_TMP"
