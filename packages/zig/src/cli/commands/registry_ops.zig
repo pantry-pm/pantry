@@ -379,17 +379,28 @@ const provision_script =
     \\set_clam ConcurrentDatabaseReload no
     \\clam_capacity_dir=/etc/systemd/system/clamav-daemon.service.d
     \\install -d -m 0755 "$clam_capacity_dir"
-    \\cat > "$clam_capacity_dir/pantry-registry-capacity.conf" <<'CLAMD_UNIT'
+    \\clam_capacity_tmp=$(mktemp "$clam_capacity_dir/pantry-registry-capacity.conf.XXXXXX")
+    \\cat > "$clam_capacity_tmp" <<'CLAMD_UNIT'
     \\[Service]
     \\Nice=10
     \\CPUWeight=25
     \\IOWeight=25
+    \\OOMScoreAdjust=250
     \\CLAMD_UNIT
+    \\clam_cpu_count=$(nproc)
+    \\if [ "$clam_cpu_count" -gt 1 ]; then
+    \\  printf 'CPUAffinity=1-%s\n' "$((clam_cpu_count - 1))" >> "$clam_capacity_tmp"
+    \\fi
+    \\mv -f "$clam_capacity_tmp" "$clam_capacity_dir/pantry-registry-capacity.conf"
     \\systemctl daemon-reload
     \\systemctl enable --quiet clamav-freshclam clamav-daemon
     \\systemctl restart clamav-freshclam || true
     \\systemctl restart clamav-daemon
     \\systemctl is-active --quiet clamav-daemon || { echo "Error: clamav-daemon did not start." >&2; exit 1; }
+    \\if [ "$clam_cpu_count" -gt 1 ]; then
+    \\  clam_effective_affinity=$(systemctl show clamav-daemon --property=CPUAffinity --value)
+    \\  [ -n "$clam_effective_affinity" ] || { echo "Error: clamav-daemon CPU affinity was not applied." >&2; exit 1; }
+    \\fi
     \\
     \\if [ -d "$repo_path/.git" ]; then
     \\  echo "    Updating checkout..."

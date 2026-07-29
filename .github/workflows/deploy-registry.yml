@@ -148,12 +148,22 @@ jobs:
             # unrelated package traffic remain responsive under scan load.
             CLAMD_CAPACITY_DIR=/etc/systemd/system/clamav-daemon.service.d
             install -d -m 0755 "$CLAMD_CAPACITY_DIR"
+            CLAMD_CAPACITY_TMP=$(mktemp "$CLAMD_CAPACITY_DIR/pantry-registry-capacity.conf.XXXXXX")
             printf '%s\n' \
               '[Service]' \
               'Nice=10' \
               'CPUWeight=25' \
               'IOWeight=25' \
-              > "$CLAMD_CAPACITY_DIR/pantry-registry-capacity.conf"
+              'OOMScoreAdjust=250' \
+              > "$CLAMD_CAPACITY_TMP"
+            CLAMD_CPU_COUNT=$(nproc)
+            if [ "$CLAMD_CPU_COUNT" -gt 1 ]; then
+              # Keep CPU 0 available to rpx and the Registry. A saturated scan
+              # may use every other CPU but cannot starve the serving path.
+              printf 'CPUAffinity=1-%s\n' "$((CLAMD_CPU_COUNT - 1))" \
+                >> "$CLAMD_CAPACITY_TMP"
+            fi
+            mv -f "$CLAMD_CAPACITY_TMP" "$CLAMD_CAPACITY_DIR/pantry-registry-capacity.conf"
 
             install -d -m 0755 "$(dirname "$ENV_FILE")"
             [ -f "$ENV_FILE" ] || install -m 0600 /dev/null "$ENV_FILE"
@@ -231,6 +241,13 @@ jobs:
             systemctl restart clamav-freshclam || true
             systemctl restart clamav-daemon
             systemctl is-active --quiet clamav-daemon
+            if [ "$CLAMD_CPU_COUNT" -gt 1 ]; then
+              CLAMD_EFFECTIVE_AFFINITY=$(systemctl show clamav-daemon --property=CPUAffinity --value)
+              [ -n "$CLAMD_EFFECTIVE_AFFINITY" ] || {
+                echo "clamav-daemon CPU affinity was not applied" >&2
+                exit 1
+              }
+            fi
 
             # Build bunpress docs (served at /docs). Project-local bunpress finds
             # crosswind from the root node_modules.
