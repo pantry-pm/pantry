@@ -18,12 +18,14 @@ describe('Pantry rpx route fragment', () => {
     expect(config.cleanup).toEqual({ hosts: false, certs: false })
   })
 
-  test('removes the legacy registry-only fragment during deploy', () => {
+  test('reloads rpx only when route ownership changes during deploy', () => {
     const workflow = readFileSync(
       join(import.meta.dir, '../../.github/workflows/deploy-registry.yml'),
       'utf8',
     )
 
+    expect(workflow).toContain('cmp -s infrastructure/rpx/pantry.json /etc/rpx/sites.d/pantry.json')
     expect(workflow).toContain('rm -f /etc/rpx/sites.d/pantry-registry.json')
+    expect(workflow).toContain('if [ "$RPX_ROUTES_CHANGED" -eq 1 ]; then')
   })
 })

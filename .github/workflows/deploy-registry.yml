@@ -263,14 +263,23 @@ jobs:
             # the proxy — a deployment fronted by Caddy/nginx skips it.
             if [ -d /etc/rpx ]; then
               install -d -m 0755 /etc/rpx/sites.d
-              RPX_FRAGMENT_TMP=$(mktemp /etc/rpx/sites.d/pantry.json.XXXXXX)
-              install -m 0600 infrastructure/rpx/pantry.json "$RPX_FRAGMENT_TMP"
-              mv -f "$RPX_FRAGMENT_TMP" /etc/rpx/sites.d/pantry.json
+              RPX_ROUTES_CHANGED=0
+              if ! cmp -s infrastructure/rpx/pantry.json /etc/rpx/sites.d/pantry.json; then
+                RPX_FRAGMENT_TMP=$(mktemp /etc/rpx/sites.d/pantry.json.XXXXXX)
+                install -m 0600 infrastructure/rpx/pantry.json "$RPX_FRAGMENT_TMP"
+                mv -f "$RPX_FRAGMENT_TMP" /etc/rpx/sites.d/pantry.json
+                RPX_ROUTES_CHANGED=1
+              fi
               # pantry.json is the canonical owner of all Pantry routes. Remove
               # the pre-fragment-migration file so registry.pantry.dev cannot be
               # declared twice after an upgrade.
-              rm -f /etc/rpx/sites.d/pantry-registry.json
-              systemctl restart rpx-gateway
+              if [ -e /etc/rpx/sites.d/pantry-registry.json ]; then
+                rm -f /etc/rpx/sites.d/pantry-registry.json
+                RPX_ROUTES_CHANGED=1
+              fi
+              if [ "$RPX_ROUTES_CHANGED" -eq 1 ]; then
+                systemctl restart rpx-gateway
+              fi
             fi
           EOF
 
