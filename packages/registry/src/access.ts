@@ -85,6 +85,7 @@ export function isSignupEmailAllowed(email: string, env: Env = process.env): boo
  */
 const ALWAYS_PUBLIC_PATHS: ReadonlySet<string> = new Set([
   '/health',
+  '/ready',
   '/api/registry-info',
   '/login',
   '/signup',

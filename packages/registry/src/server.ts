@@ -60,6 +60,24 @@ import { normalizePolicy, SecurityStore } from './security'
 import { buildSbom, parseFormat } from './sbom'
 import { loadPackageVersions, loadSupportedPlatforms as loadRecipePlatforms } from './catalog'
 import { BoundedAsyncCache, BoundedTtlCache } from './runtime-cache'
+import {
+  createMalwareScannerFromEnv,
+  DualUsePolicyError,
+  malwareScanFailureResponse,
+  malwareScanMetrics,
+  publicScanResult,
+  scanPackageArtifact,
+  validateDualUsePackage,
+  type MalwareScanner,
+} from './malware-scanning'
+import {
+  BinaryArtifactPublisher,
+  BinaryPublishError,
+  S3BinaryArtifactStore,
+  binaryAttestationKey,
+  binaryPublishErrorResponse,
+  filterBinaryMetadataForCleanScans,
+} from './binary-publishing'
 
 // Build domain→versions lookup from ts-pantry package metadata for version
 // validation. Exposed via reloadKnownVersions() so an operator can refresh
@@ -456,6 +474,8 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  * GET  /npm/resolve/{specs}            - GET variant (comma-separated name@constraint pairs)
  *
  * Binary proxy (pantry CLI install):
+ * POST /api/v1/binaries/uploads                              - Create untrusted staged upload
+ * POST /api/v1/binaries/uploads/complete                     - Scan and promote staged upload
  * GET  /binaries/{domain}/metadata.json                        - Package metadata (5min cache)
  * GET  /binaries/{domain}/{version}/{platform}/{file}.tar.gz   - Tarball download (24h cache, tracked)
  * GET  /binaries/{domain}/{version}/{platform}/{file}.sha256   - Checksum (24h cache)
@@ -675,7 +695,39 @@ export function createHandler(
   phpPackageStorage?: PhpPackageStorage,
   authService?: AuthService,
   internalBaseUrl: string = baseUrl,
+  malwareScanner: MalwareScanner = createMalwareScannerFromEnv(),
+  injectedBinaryPublisher?: BinaryArtifactPublisher,
 ): (req: Request) => Promise<Response> {
+  let binaryPublisher = injectedBinaryPublisher
+  const getBinaryPublisher = (): BinaryArtifactPublisher => {
+    if (binaryPublisher) return binaryPublisher
+    const secret = process.env.PANTRY_BINARY_STAGING_SECRET || getRegistryToken() || ''
+    const storage = resolveStorageProvider()
+    const store = new S3BinaryArtifactStore(
+      createS3Client(storage),
+      process.env.S3_BUCKET || 'pantry-registry',
+    )
+    binaryPublisher = new BinaryArtifactPublisher(store, malwareScanner, {
+      tokenSecret: secret,
+      maxBytes: Number.parseInt(process.env.CLAMD_MAX_BYTES || '', 10) || undefined,
+      onPublished: async (result) => {
+        const first = Object.values(result.platforms)[0]
+        for (const record of Object.values(result.platforms))
+          _binaryAttestationCache.delete(record.tarball)
+        await registry.metadata.putVersion(result.domain, result.version, {
+          name: result.domain,
+          version: result.version,
+          tarballUrl: `${baseUrl}/${first.tarball}`,
+          checksum: first.sha256,
+          publishedAt: first.uploadedAt,
+          size: first.size,
+          malwareScan: first.malwareScan,
+        })
+      },
+    })
+    return binaryPublisher
+  }
+
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url)
     const path = url.pathname
@@ -731,7 +783,41 @@ export function createHandler(
 
       // Health check
       if (path === '/health') {
-        return Response.json({ status: 'ok', timestamp: new Date().toISOString() }, { headers: corsHeaders })
+        return Response.json({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          malwareScanning: {
+            enabled: malwareScanner.enabled,
+            required: malwareScanner.required,
+          },
+        }, { headers: corsHeaders })
+      }
+
+      // Readiness includes the scanner because production publication fails
+      // closed when it is unavailable. Keep /health as a process-liveness check.
+      if (path === '/ready') {
+        const scannerHealth = await malwareScanner.health()
+        const ready = !scannerHealth.required || scannerHealth.ready
+        return Response.json({
+          status: ready ? 'ready' : 'not-ready',
+          timestamp: new Date().toISOString(),
+          malwareScanning: scannerHealth,
+        }, { status: ready ? 200 : 503, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+      }
+
+      if (path === '/api/security/malware-scanning' && req.method === 'GET') {
+        return Response.json({
+          metrics: malwareScanMetrics(),
+          health: await malwareScanner.health(),
+        }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+      }
+
+      if (path === '/api/v1/binaries/uploads' && req.method === 'POST') {
+        return handleBinaryUploadInitiate(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/uploads/complete' && req.method === 'POST') {
+        return handleBinaryUploadComplete(req, getBinaryPublisher, corsHeaders)
       }
 
       // ================================================================
@@ -1071,7 +1157,7 @@ export function createHandler(
 
       // Publish
       if (path === '/publish' && req.method === 'POST') {
-        return handlePublish(req, registry, corsHeaders)
+        return handlePublish(req, registry, corsHeaders, malwareScanner)
       }
 
       // Stripe webhook
@@ -1198,7 +1284,7 @@ export function createHandler(
 
       // Commit publish routes (pkg-pr-new equivalent)
       if (path === '/publish/commit' && req.method === 'POST') {
-        return handleCommitPublish(req, registry, baseUrl, corsHeaders)
+        return handleCommitPublish(req, registry, baseUrl, corsHeaders, malwareScanner)
       }
 
       // GET /commits/{sha} - List all packages for a commit
@@ -1264,7 +1350,16 @@ export function createHandler(
 
       // Zig package routes
       if (path.startsWith('/zig/')) {
-        const zigResponse = await handleZigRoutes(path, req, url, zigPackageStorage, baseUrl, corsHeaders, analyticsStorage)
+        const zigResponse = await handleZigRoutes(
+          path,
+          req,
+          url,
+          zigPackageStorage,
+          baseUrl,
+          corsHeaders,
+          analyticsStorage,
+          malwareScanner,
+        )
         if (zigResponse) {
           return zigResponse
         }
@@ -1272,7 +1367,16 @@ export function createHandler(
 
       // PHP package routes
       if (path.startsWith('/php/') && phpPackageStorage) {
-        const phpResponse = await handlePhpRoutes(path, req, url, phpPackageStorage, baseUrl, corsHeaders, analyticsStorage)
+        const phpResponse = await handlePhpRoutes(
+          path,
+          req,
+          url,
+          phpPackageStorage,
+          baseUrl,
+          corsHeaders,
+          analyticsStorage,
+          malwareScanner,
+        )
         if (phpResponse) {
           return phpResponse
         }
@@ -1294,7 +1398,7 @@ export function createHandler(
 
       // Binary proxy routes — proxy pantry binary tarballs from S3
       if (path.startsWith('/binaries/')) {
-        return handleBinaryProxy(path, req, analyticsStorage, corsHeaders, binaryStorage)
+        return handleBinaryProxy(path, req, analyticsStorage, corsHeaders, binaryStorage, getBinaryPublisher)
       }
 
       // Dashboard routes
@@ -1729,6 +1833,8 @@ export function createServer(
   binaryStorage?: BinaryStorage,
   phpStorage?: PhpPackageStorage,
   authStorage?: AuthStorage,
+  malwareScanner: MalwareScanner = createMalwareScannerFromEnv(),
+  binaryPublisher?: BinaryArtifactPublisher,
 ): { start: () => void, stop: () => void } {
   let server: ReturnType<typeof Bun.serve> | null = null
   const analyticsStorage = analytics || createAnalytics()
@@ -1739,7 +1845,18 @@ export function createServer(
   _authService = authSvc
   const baseUrl = process.env.BASE_URL || `http://localhost:${port}`
   const internalBaseUrl = process.env.REGISTRY_INTERNAL_URL || `http://127.0.0.1:${port}`
-  const handler = createHandler(registry, analyticsStorage, zigPackageStorage, baseUrl, binaryStorage, phpPackageStorage, authSvc, internalBaseUrl)
+  const handler = createHandler(
+    registry,
+    analyticsStorage,
+    zigPackageStorage,
+    baseUrl,
+    binaryStorage,
+    phpPackageStorage,
+    authSvc,
+    internalBaseUrl,
+    malwareScanner,
+    binaryPublisher,
+  )
 
   const start = () => {
     server = Bun.serve({
@@ -1800,6 +1917,8 @@ export function createServer(
     console.log('  POST /npm/download              - Compatibility alias for /registry/download')
     console.log('  GET  /npm/resolve/{specs}        - GET variant (name@constraint,...)')
     console.log('Binary proxy (pantry CLI):')
+    console.log('  POST /api/v1/binaries/uploads          - Stage native artifact')
+    console.log('  POST /api/v1/binaries/uploads/complete - Scan and promote native artifact')
     console.log('  GET  /binaries/{domain}/metadata.json  - Package metadata')
     console.log('  GET  /binaries/{domain}/{ver}/{plat}/*  - Tarball/checksum')
     console.log('Dashboard:')
@@ -2747,6 +2866,84 @@ async function handleAdminRoutes(
   }
 }
 
+async function authorizeBinaryPublisher(
+  req: Request,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  const auth = await validateToken(req.headers.get('authorization'))
+  if (!auth.valid) {
+    return Response.json({ error: auth.error }, { status: 401, headers: corsHeaders })
+  }
+  if (auth.userId !== '_admin') {
+    return Response.json({
+      error: 'Native binary publication requires the operator registry token',
+      code: 'BINARY_OPERATOR_AUTH_REQUIRED',
+    }, { status: 403, headers: corsHeaders })
+  }
+  return null
+}
+
+async function handleBinaryUploadInitiate(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  try {
+    const initiated = getPublisher().initiate(body)
+    return Response.json(initiated, { status: 201, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary upload initiation failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary publication is not configured',
+      code: 'BINARY_PUBLISH_NOT_CONFIGURED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryUploadComplete(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null) as { uploadId?: unknown } | null
+  if (!body || typeof body.uploadId !== 'string') {
+    return Response.json({
+      error: 'uploadId is required',
+      code: 'BINARY_UPLOAD_ID_REQUIRED',
+    }, { status: 400, headers: corsHeaders })
+  }
+
+  try {
+    const completed = await getPublisher().complete(body.uploadId, '_admin')
+    return Response.json({ success: true, ...completed }, {
+      status: 201,
+      headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+    })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary upload completion failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary publication failed before promotion',
+      code: 'BINARY_PUBLISH_FAILED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
 /**
  * Handle package publish
  */
@@ -2754,6 +2951,7 @@ async function handlePublish(
   req: Request,
   registry: Registry,
   corsHeaders: Record<string, string>,
+  malwareScanner: MalwareScanner,
 ): Promise<Response> {
   const contentType = req.headers.get('content-type') || ''
 
@@ -2840,10 +3038,24 @@ async function handlePublish(
     const tarball = await tarballFile.arrayBuffer()
 
     const publisherId = authResult.userId && authResult.userId !== '_admin' ? authResult.userId : undefined
+    const security = await validateAndScanCorePackage(
+      metadata,
+      tarball,
+      registry,
+      malwareScanner,
+      authResult.userId,
+      corsHeaders,
+    )
+    if (security instanceof Response) return security
+    metadata.malwareScan = security
     await registry.publish(metadata, tarball, publisherId)
 
     return Response.json(
-      { success: true, message: `Published ${metadata.name}@${metadata.version}` },
+      {
+        success: true,
+        message: `Published ${metadata.name}@${metadata.version}`,
+        scan: publicScanResult(security),
+      },
       { status: 201, headers: corsHeaders },
     )
   }
@@ -2900,10 +3112,24 @@ async function handlePublish(
     }
 
     const publisherIdJson = authResult.userId && authResult.userId !== '_admin' ? authResult.userId : undefined
+    const security = await validateAndScanCorePackage(
+      metadata,
+      tarball,
+      registry,
+      malwareScanner,
+      authResult.userId,
+      corsHeaders,
+    )
+    if (security instanceof Response) return security
+    metadata.malwareScan = security
     await registry.publish(metadata, tarball, publisherIdJson)
 
     return Response.json(
-      { success: true, message: `Published ${metadata.name}@${metadata.version}` },
+      {
+        success: true,
+        message: `Published ${metadata.name}@${metadata.version}`,
+        scan: publicScanResult(security),
+      },
       { status: 201, headers: corsHeaders },
     )
   }
@@ -2912,6 +3138,55 @@ async function handlePublish(
     { error: 'Unsupported content type' },
     { status: 415, headers: corsHeaders },
   )
+}
+
+async function validateAndScanCorePackage(
+  metadata: any,
+  tarball: ArrayBuffer,
+  registry: Registry,
+  malwareScanner: MalwareScanner,
+  publisher: string | undefined,
+  corsHeaders: Record<string, string>,
+) {
+  const existing = await registry.getPublisherPackageRecord(metadata.name)
+  const previouslyDeclared = Object.values(existing?.versions || {})
+    .some(version => version.contentPolicy !== undefined)
+
+  try {
+    const dualUse = validateDualUsePackage(metadata.contentPolicy, tarball, previouslyDeclared)
+    if (dualUse) {
+      // Pantry account/API tokens do not currently carry 2FA/OIDC assurance.
+      // Until they do, dual-use releases require the operator-reviewed legacy
+      // credential rather than pretending an ordinary bearer token is strong.
+      if (publisher !== '_admin') {
+        return Response.json({
+          error: 'Dual-use packages require an operator-reviewed publish because Pantry API tokens do not yet carry 2FA assurance',
+          code: 'DUAL_USE_STRONG_AUTH_REQUIRED',
+        }, { status: 403, headers: corsHeaders })
+      }
+      metadata.contentPolicy = dualUse.contentPolicy
+      metadata.disclosure = dualUse.disclosure
+    }
+  }
+  catch (error) {
+    if (error instanceof DualUsePolicyError) {
+      return Response.json({
+        error: error.message,
+        code: 'DUAL_USE_POLICY_INVALID',
+      }, { status: 422, headers: corsHeaders })
+    }
+    throw error
+  }
+
+  const result = await scanPackageArtifact(malwareScanner, tarball, {
+    surface: 'package',
+    name: metadata.name,
+    version: metadata.version,
+    publisher,
+  })
+  if (result.verdict !== 'clean')
+    return malwareScanFailureResponse(result, corsHeaders)
+  return result
 }
 
 /**
@@ -2931,6 +3206,7 @@ async function handleCommitPublish(
   registry: Registry,
   baseUrl: string,
   corsHeaders: Record<string, string>,
+  malwareScanner: MalwareScanner,
 ): Promise<Response> {
   const contentType = req.headers.get('content-type') || ''
 
@@ -2977,8 +3253,13 @@ async function handleCommitPublish(
       )
     }
 
-    const results: Array<{ name: string, url: string, sha: string }> = []
+    const results: Array<{ name: string, url: string, sha: string, scan: ReturnType<typeof publicScanResult> }> = []
     const publisherId = authResult.userId && authResult.userId !== '_admin' ? authResult.userId : undefined
+    const prepared: Array<{
+      pkg: { name: string, packageDir?: string, version?: string }
+      tarball: ArrayBuffer
+      scan: Awaited<ReturnType<typeof scanPackageArtifact>>
+    }> = []
 
     for (const pkg of metadata.packages) {
       const tarballFile = formData.get(`package:${pkg.name}`)
@@ -2994,17 +3275,34 @@ async function handleCommitPublish(
       }
 
       const tarball = await tarballFile.arrayBuffer()
+      const scan = await scanPackageArtifact(malwareScanner, tarball, {
+        surface: 'commit',
+        name: pkg.name,
+        version: pkg.version,
+        commit: metadata.sha,
+        publisher: authResult.userId,
+      })
+      if (scan.verdict !== 'clean')
+        return malwareScanFailureResponse(scan, corsHeaders)
+      prepared.push({ pkg, tarball, scan })
+    }
+
+    // Scan the whole batch before the first write. One blocked/unavailable
+    // member leaves every member unpublished.
+    for (const { pkg, tarball, scan } of prepared) {
       await registry.publishCommit(pkg.name, metadata.sha, tarball, {
         repository: metadata.repository,
         packageDir: pkg.packageDir,
         version: pkg.version,
         publishedBy: publisherId,
+        malwareScan: scan,
       })
 
       results.push({
         name: pkg.name,
         url: `${baseUrl}/commits/${metadata.sha}/${encodeURIComponent(pkg.name)}/tarball`,
         sha: metadata.sha,
+        scan: publicScanResult(scan),
       })
     }
 
@@ -3042,8 +3340,13 @@ async function handleCommitPublish(
       )
     }
 
-    const results: Array<{ name: string, url: string, sha: string }> = []
+    const results: Array<{ name: string, url: string, sha: string, scan: ReturnType<typeof publicScanResult> }> = []
     const publisherIdJson = authResult.userId && authResult.userId !== '_admin' ? authResult.userId : undefined
+    const prepared: Array<{
+      pkg: { name: string, tarball: string, packageDir?: string, version?: string }
+      tarball: ArrayBuffer
+      scan: Awaited<ReturnType<typeof scanPackageArtifact>>
+    }> = []
 
     for (const pkg of body.packages) {
       let tarball: ArrayBuffer
@@ -3064,17 +3367,32 @@ async function handleCommitPublish(
         )
       }
 
+      const scan = await scanPackageArtifact(malwareScanner, tarball, {
+        surface: 'commit',
+        name: pkg.name,
+        version: pkg.version,
+        commit: body.sha,
+        publisher: authResult.userId,
+      })
+      if (scan.verdict !== 'clean')
+        return malwareScanFailureResponse(scan, corsHeaders)
+      prepared.push({ pkg, tarball, scan })
+    }
+
+    for (const { pkg, tarball, scan } of prepared) {
       await registry.publishCommit(pkg.name, body.sha, tarball, {
         repository: body.repository,
         packageDir: pkg.packageDir,
         version: pkg.version,
         publishedBy: publisherIdJson,
+        malwareScan: scan,
       })
 
       results.push({
         name: pkg.name,
         url: `${baseUrl}/commits/${body.sha}/${encodeURIComponent(pkg.name)}/tarball`,
         sha: body.sha,
+        scan: publicScanResult(scan),
       })
     }
 
@@ -4422,6 +4740,36 @@ else {
 let _defaultBinaryStorage: BinaryStorage | undefined
 /** Cached client used to presign tarball download URLs for private (non-AWS) buckets. */
 let _presignClient: ReturnType<typeof createS3Client> | undefined
+const _binaryAttestationCache = new BoundedTtlCache<string, boolean>(50_000, 5 * 60_000)
+
+function binaryAttestationRequired(): boolean {
+  const configured = process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION
+  if (configured !== undefined)
+    return ['1', 'true', 'yes', 'on'].includes(configured.trim().toLowerCase())
+  return process.env.NODE_ENV === 'production'
+}
+
+async function hasCleanBinaryAttestation(
+  client: ReturnType<typeof createS3Client>,
+  bucket: string,
+  tarballKey: string,
+): Promise<boolean> {
+  const cached = _binaryAttestationCache.get(tarballKey)
+  if (cached !== undefined) return cached
+  let clean = false
+  try {
+    const parsed = JSON.parse(
+      (await client.getObjectBuffer(bucket, binaryAttestationKey(tarballKey))).toString('utf8'),
+    ) as { scan?: { verdict?: unknown, artifactSha256?: unknown } }
+    clean = parsed.scan?.verdict === 'clean'
+      && typeof parsed.scan.artifactSha256 === 'string'
+      && /^[a-f0-9]{64}$/.test(parsed.scan.artifactSha256)
+  }
+  catch {}
+  _binaryAttestationCache.set(tarballKey, clean)
+  return clean
+}
+
 // Split a binaries/ key into its parts. The domain itself may contain slashes
 // (e.g. crates.io/ripgrep), so peel the fixed trailing segments off the end.
 function parseBinaryKey(key: string): { domain: string, version: string, platform: string } | null {
@@ -4441,16 +4789,20 @@ function parseBinaryKey(key: string): { domain: string, version: string, platfor
 // Ensure the requested binary object exists, materializing it from pkgx on a miss.
 // Returns true when the object is now available to serve, false when neither S3 nor
 // pkgx has it (caller returns its normal not-found error).
-async function ensureBinaryAvailable(s3Key: string, bucket: string, client: ReturnType<typeof createS3Client>): Promise<boolean> {
+async function ensureBinaryAvailable(
+  s3Key: string,
+  client: ReturnType<typeof createS3Client>,
+  publisher: BinaryArtifactPublisher,
+): Promise<boolean> {
   try {
-    await client.headObject(bucket, s3Key)
+    await client.headObject(process.env.S3_BUCKET || 'pantry-registry', s3Key)
     return true
   }
   catch { /* missing — try the on-the-fly pkgx fallback below */ }
   const m = parseBinaryKey(s3Key)
   if (!m)
     return false
-  return !!(await materializeFromPkgx(m.domain, m.version, m.platform, bucket, client))
+  return !!(await materializeFromPkgx(m.domain, m.version, m.platform, publisher))
 }
 
 async function handleBinaryProxy(
@@ -4459,6 +4811,7 @@ async function handleBinaryProxy(
   analytics: AnalyticsStorage,
   corsHeaders: Record<string, string>,
   storage?: BinaryStorage,
+  getPublisher?: () => BinaryArtifactPublisher,
 ): Promise<Response> {
   if (req.method !== 'GET') {
     return Response.json({ error: 'Method not allowed' }, { status: 405, headers: corsHeaders })
@@ -4543,8 +4896,17 @@ async function handleBinaryProxy(
       const pk = parseBinaryKey(s3Key)
       if (pk && isPendingMaterialize(pk.domain, pk.version, pk.platform)) {
         _presignClient ??= createS3Client(resolved)
-        if (!await ensureBinaryAvailable(s3Key, s3Bucket, _presignClient)) {
+        if (!getPublisher || !await ensureBinaryAvailable(s3Key, _presignClient, getPublisher())) {
           return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
+        }
+      }
+      if (binaryAttestationRequired()) {
+        _presignClient ??= createS3Client(resolved)
+        if (!await hasCleanBinaryAttestation(_presignClient, s3Bucket, s3Key)) {
+          return Response.json({
+            error: 'Binary artifact has no clean malware-scan attestation',
+            code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
+          }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
         }
       }
       let location: string
@@ -4583,7 +4945,13 @@ async function handleBinaryProxy(
         : stored
       if (!augmented)
         return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
-      const body = JSON.stringify(augmented)
+      const visible = binaryAttestationRequired()
+        ? filterBinaryMetadataForCleanScans(
+            augmented as any,
+            (domain, version, platform) => isPendingMaterialize(domain, version, platform),
+          )
+        : augmented
+      const body = JSON.stringify(visible)
       return new Response(body, {
         headers: { ...corsHeaders, 'Content-Type': contentType, 'Cache-Control': cacheControl, 'Content-Length': String(Buffer.byteLength(body)) },
       })
@@ -4602,9 +4970,20 @@ async function handleBinaryProxy(
         throw missErr
       const s3Bucket = process.env.S3_BUCKET || 'pantry-registry'
       _presignClient ??= createS3Client(resolveStorageProvider())
-      if (!await ensureBinaryAvailable(tarKey, s3Bucket, _presignClient))
+      if (!getPublisher || !await ensureBinaryAvailable(tarKey, _presignClient, getPublisher()))
         throw missErr
       buffer = await binaryStore.getObject(s3Key)
+    }
+
+    if (isChecksum && !storage && binaryAttestationRequired()) {
+      const s3Bucket = process.env.S3_BUCKET || 'pantry-registry'
+      _presignClient ??= createS3Client(resolveStorageProvider())
+      if (!await hasCleanBinaryAttestation(_presignClient, s3Bucket, s3Key.replace(/\.sha256$/, ''))) {
+        return Response.json({
+          error: 'Binary artifact has no clean malware-scan attestation',
+          code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
+        }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+      }
     }
 
     return new Response(new Uint8Array(buffer), {

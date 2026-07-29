@@ -108,7 +108,7 @@ describe('registry visibility', () => {
     })
 
     it('always keeps health, login and discovery public', () => {
-      for (const path of ['/health', '/api/registry-info', '/login', '/auth/login'])
+      for (const path of ['/health', '/ready', '/api/registry-info', '/login', '/auth/login'])
         expect(isPublicPath(path, {})).toBe(true)
     })
 

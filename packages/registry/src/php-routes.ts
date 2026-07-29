@@ -20,6 +20,12 @@ import {
   type PhpPackageStorage,
 } from './php'
 import type { AnalyticsStorage } from './analytics'
+import {
+  malwareScanFailureResponse,
+  publicScanResult,
+  scanPackageArtifact,
+  type MalwareScanner,
+} from './malware-scanning'
 
 /**
  * Handle PHP package routes
@@ -32,6 +38,7 @@ export async function handlePhpRoutes(
   baseUrl: string,
   corsHeaders: Record<string, string>,
   analytics?: AnalyticsStorage,
+  malwareScanner?: MalwareScanner,
 ): Promise<Response | null> {
   // Remove /php prefix
   const phpPath = path.replace(/^\/php/, '')
@@ -56,7 +63,8 @@ export async function handlePhpRoutes(
 
   // POST /php/publish
   if (phpPath === '/publish' && req.method === 'POST') {
-    return handlePhpPublish(req, storage, baseUrl, corsHeaders, analytics)
+    if (!malwareScanner) throw new Error('malware scanner is required for publishing')
+    return handlePhpPublish(req, storage, baseUrl, corsHeaders, analytics, malwareScanner)
   }
 
   // DELETE /php/packages/{vendor}/{package}
@@ -194,6 +202,7 @@ async function handlePhpPublish(
   baseUrl: string,
   corsHeaders: Record<string, string>,
   analytics?: AnalyticsStorage,
+  malwareScanner?: MalwareScanner,
 ): Promise<Response> {
   const contentType = req.headers.get('content-type') || ''
 
@@ -266,6 +275,16 @@ async function handlePhpPublish(
       )
     }
 
+    if (!malwareScanner) throw new Error('malware scanner is required for publishing')
+    const scan = await scanPackageArtifact(malwareScanner, tarball, {
+      surface: 'php',
+      name,
+      version,
+      publisher: '_admin',
+    })
+    if (scan.verdict !== 'clean')
+      return malwareScanFailureResponse(scan, corsHeaders)
+
     const encodedName = name.split('/').map(encodeURIComponent).join('/')
     const tarballUrl = `${baseUrl}/php/packages/${encodedName}/${version}/tarball`
 
@@ -281,6 +300,7 @@ async function handlePhpPublish(
       tarballUrl,
       checksum,
       publishedAt: new Date().toISOString(),
+      malwareScan: scan,
     }
 
     await storage.publish(metadata, tarball)
@@ -299,6 +319,7 @@ async function handlePhpPublish(
       checksum,
       tarballUrl,
       composerRequire: generateComposerRequire(name, version),
+      scan: publicScanResult(scan),
     }, { status: 201, headers: corsHeaders })
   }
 

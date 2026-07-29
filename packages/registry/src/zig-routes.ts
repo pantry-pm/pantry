@@ -21,6 +21,12 @@ import {
   type ZigPackageStorage,
 } from './zig'
 import type { AnalyticsStorage } from './analytics'
+import {
+  malwareScanFailureResponse,
+  publicScanResult,
+  scanPackageArtifact,
+  type MalwareScanner,
+} from './malware-scanning'
 
 /**
  * Handle Zig package routes
@@ -33,6 +39,7 @@ export async function handleZigRoutes(
   baseUrl: string,
   corsHeaders: Record<string, string>,
   analytics?: AnalyticsStorage,
+  malwareScanner?: MalwareScanner,
 ): Promise<Response | null> {
   // Remove /zig prefix
   const zigPath = path.replace(/^\/zig/, '')
@@ -79,7 +86,8 @@ export async function handleZigRoutes(
 
   // POST /zig/publish
   if (zigPath === '/publish' && req.method === 'POST') {
-    return handleZigPublish(req, storage, baseUrl, corsHeaders, analytics)
+    if (!malwareScanner) throw new Error('malware scanner is required for publishing')
+    return handleZigPublish(req, storage, baseUrl, corsHeaders, analytics, malwareScanner)
   }
 
   // DELETE /zig/packages/{name}
@@ -225,6 +233,7 @@ async function handleZigPublish(
   baseUrl: string,
   corsHeaders: Record<string, string>,
   analytics?: AnalyticsStorage,
+  malwareScanner?: MalwareScanner,
 ): Promise<Response> {
   const contentType = req.headers.get('content-type') || ''
 
@@ -302,6 +311,16 @@ async function handleZigPublish(
       )
     }
 
+    if (!malwareScanner) throw new Error('malware scanner is required for publishing')
+    const scan = await scanPackageArtifact(malwareScanner, tarball, {
+      surface: 'zig',
+      name,
+      version,
+      publisher: '_admin',
+    })
+    if (scan.verdict !== 'clean')
+      return malwareScanFailureResponse(scan, corsHeaders)
+
     const tarballUrl = `${baseUrl}/zig/packages/${encodeURIComponent(name)}/${version}/tarball`
 
     const metadata: ZigPackageMetadata = {
@@ -311,6 +330,7 @@ async function handleZigPublish(
       tarballUrl,
       hash,
       publishedAt: new Date().toISOString(),
+      malwareScan: scan,
     }
 
     await storage.publish(metadata, tarball)
@@ -330,6 +350,7 @@ async function handleZigPublish(
       tarballUrl,
       fetchCommand: generateFetchCommand(tarballUrl),
       dependency: generateDependencyEntry(name, tarballUrl, hash),
+      scan: publicScanResult(scan),
     }, { status: 201, headers: corsHeaders })
   }
 
