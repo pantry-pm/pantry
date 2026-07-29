@@ -55,7 +55,10 @@ class MemoryArtifactStore implements BinaryArtifactStore {
 
   async headObject(key: string): Promise<Record<string, string>> {
     const value = await this.getObject(key)
-    return { 'content-length': String(value.byteLength) }
+    return {
+      'content-length': String(value.byteLength),
+      etag: createHash('sha256').update(value).digest('hex'),
+    }
   }
 
   createUploadUrl(key: string): string {
@@ -127,6 +130,40 @@ class TestScanner implements MalwareScanner {
 
   async health(): Promise<MalwareScannerHealth> {
     return { enabled: true, required: true, ready: true, engine: 'test-scanner' }
+  }
+}
+
+class ConcurrentTestScanner extends TestScanner {
+  active = 0
+  maxActive = 0
+
+  override async scan(data: ArrayBuffer, context: MalwareScanContext): Promise<MalwareScanResult> {
+    this.active++
+    this.maxActive = Math.max(this.maxActive, this.active)
+    try {
+      await Bun.sleep(25)
+      return await super.scan(data, context)
+    }
+    finally {
+      this.active--
+    }
+  }
+}
+
+class ControlledTestScanner extends TestScanner {
+  private markStarted!: () => void
+  private continueScan!: () => void
+  readonly started = new Promise<void>(resolve => this.markStarted = resolve)
+  private readonly released = new Promise<void>(resolve => this.continueScan = resolve)
+
+  release(): void {
+    this.continueScan()
+  }
+
+  override async scan(data: ArrayBuffer, context: MalwareScanContext): Promise<MalwareScanResult> {
+    this.markStarted()
+    await this.released
+    return super.scan(data, context)
   }
 }
 
@@ -356,6 +393,81 @@ describe('binary scan-before-promote publisher', () => {
     expect(result.action).toBe('attested')
     expect(scanner.contexts).toHaveLength(1)
     expect(result.scan.artifactSha256).not.toBe('a'.repeat(64))
+  })
+
+  it('scans independent retained artifacts concurrently without racing metadata writes', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new ConcurrentTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const artifacts = [
+      { version: '1.0.0', bytes: Buffer.from('first retained artifact') },
+      { version: '2.0.0', bytes: Buffer.from('second retained artifact') },
+    ]
+    const versions: Record<string, { platforms: Record<string, object> }> = {}
+    for (const artifact of artifacts) {
+      const tarball = `binaries/example.com/tool/${artifact.version}/darwin-arm64/example.com-tool-${artifact.version}.tar.gz`
+      const sha256 = createHash('sha256').update(artifact.bytes).digest('hex')
+      await store.putObject(tarball, artifact.bytes, 'application/gzip')
+      await store.putObject(`${tarball}.sha256`, `${sha256}  ${tarball.split('/').at(-1)}\n`, 'text/plain')
+      versions[artifact.version] = {
+        platforms: {
+          'darwin-arm64': {
+            tarball,
+            sha256,
+            size: artifact.bytes.byteLength,
+            uploadedAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
+      }
+    }
+    await store.putObject('binaries/example.com/tool/metadata.json', JSON.stringify({
+      name: 'example.com/tool',
+      latestVersion: '2.0.0',
+      versions,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }), 'application/json')
+
+    await Promise.all(artifacts.map(artifact => publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: artifact.version,
+      platforms: ['darwin-arm64'],
+    }, '_admin')))
+
+    expect(scanner.maxActive).toBe(2)
+    const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
+    expect(metadata.versions['1.0.0'].platforms['darwin-arm64'].malwareScan.verdict).toBe('clean')
+    expect(metadata.versions['2.0.0'].platforms['darwin-arm64'].malwareScan.verdict).toBe('clean')
+  })
+
+  it('rejects a scan result when the retained object changes during scanning', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new ControlledTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('retained artifact before replacement')
+    const tarball = await seedLegacyArtifact(store, bytes)
+
+    const pending = publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }, '_admin')
+    await scanner.started
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const replacement = Buffer.from(bytes)
+    replacement[0] ^= 1
+    await store.putObject(tarball, replacement, 'application/gzip')
+    scanner.release()
+
+    await expect(pending).rejects.toMatchObject({
+      status: 409,
+      code: 'BINARY_RESCAN_ARTIFACT_CHANGED',
+    })
+    const stored = JSON.parse(store.files.get(metadataKey)!.toString())
+    expect(stored.versions['1.2.3'].platforms['darwin-arm64'].malwareScan).toBeUndefined()
   })
 
   it('quarantines blocked retained artifacts and removes every installable reference', async () => {

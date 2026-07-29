@@ -64,6 +64,17 @@ export interface BinaryRescanCompleted {
   scan: ReturnType<typeof publicScanResult>
 }
 
+interface ExistingRescanState {
+  metadataKey: string
+  metadata: BinaryPackageMetadata
+  selected: Record<string, BinaryPlatformRecord>
+  tarball: string
+  alreadyClean: boolean
+  size: number
+  sha256: string
+  objectIdentity?: string
+}
+
 interface StagingClaim extends BinaryPublishRequest {
   stagingKey: string
   expiresAt: number
@@ -244,6 +255,13 @@ function parseContentLength(headers: Record<string, string>): number | null {
   return Number.isSafeInteger(value) && value >= 0 ? value : null
 }
 
+function parseObjectIdentity(headers: Record<string, string>): string | undefined {
+  return headers['x-amz-version-id']
+    || headers['X-Amz-Version-Id']
+    || headers.etag
+    || headers.ETag
+}
+
 function newerVersion(candidate: string, current: string): boolean {
   const a = candidate.split(/[.+_-]/)
   const b = current.split(/[.+_-]/)
@@ -415,110 +433,170 @@ export class BinaryArtifactPublisher {
 
   async rescanExisting(input: unknown, publisher?: string): Promise<BinaryRescanCompleted> {
     const request = validateBinaryRescanRequest(input)
-    return this.withDomainLock(request.domain, async () => {
-      const metadataKey = `binaries/${request.domain}/metadata.json`
-      let metadata: BinaryPackageMetadata
-      try {
-        metadata = JSON.parse((await this.store.getObject(metadataKey)).toString('utf8')) as BinaryPackageMetadata
-      }
-      catch {
-        throw new BinaryPublishError('Binary package metadata was not found', 404, 'BINARY_METADATA_NOT_FOUND')
-      }
-
-      const selected: Record<string, BinaryPlatformRecord> = {}
-      for (const platform of request.platforms) {
-        const record = metadata.versions?.[request.version]?.platforms?.[platform]
-        if (!record)
-          throw new BinaryPublishError(`Binary platform was not found: ${platform}`, 404, 'BINARY_PLATFORM_NOT_FOUND')
-        selected[platform] = record
-      }
-
-      const tarballs = [...new Set(Object.values(selected).map(record => storedBinaryKey(record.tarball)))]
-      if (tarballs.length !== 1)
-        throw new BinaryPublishError('Rescan platforms must reference the same retained artifact', 422, 'BINARY_RESCAN_ARTIFACT_MISMATCH')
-      const tarball = tarballs[0]
-      if (!tarball.startsWith(`binaries/${request.domain}/${request.version}/`))
-        throw new BinaryPublishError('Retained artifact is outside its package namespace', 422, 'BINARY_RESCAN_ARTIFACT_MISMATCH')
-
-      const alreadyClean = Object.values(selected).every(record =>
-        record.malwareScan?.verdict === 'clean'
-        && record.malwareScan.artifactSha256 === record.sha256,
-      )
-
-      let size: number
-      try {
-        const head = await this.store.headObject(tarball)
-        const observed = parseContentLength(head)
-        size = observed ?? Object.values(selected)[0].size
-      }
-      catch {
-        throw new BinaryPublishError('Retained binary artifact was not found', 404, 'BINARY_ARTIFACT_NOT_FOUND')
-      }
-      if (!Number.isSafeInteger(size) || size <= 0 || size > this.maxBytes)
-        throw new BinaryPublishError(`Retained binary artifact size must be between 1 and ${this.maxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
-
-      let sha256 = Object.values(selected)
-        .map(record => record.sha256)
-        .find(value => sha256Pattern.test(value || ''))
-      if (!sha256) {
-        try {
-          const checksum = (await this.store.getObject(`${tarball}.sha256`)).toString('utf8')
-          sha256 = checksum.match(/\b[a-f0-9]{64}\b/i)?.[0]?.toLowerCase()
-        }
-        catch {}
-      }
-      if (!sha256)
-        throw new BinaryPublishError('Retained binary artifact has no valid SHA-256', 422, 'BINARY_SHA256_MISSING')
-
-      const durableScan = await this.readCleanAttestation(tarball, sha256)
+    const prepared = await this.withDomainLock<
+      { completed: BinaryRescanCompleted } | { state: ExistingRescanState }
+    >(request.domain, async () => {
+      const state = await this.loadExistingRescan(request)
+      const durableScan = await this.readCleanAttestation(state.tarball, state.sha256)
       if (durableScan) {
-        if (alreadyClean) {
-          return {
-            action: 'already-clean',
-            domain: request.domain,
-            version: request.version,
-            tarball,
-            platforms: selected,
-            scan: publicScanResult(durableScan),
-          }
+        return {
+          completed: await this.finishDurableRescan(state, request, durableScan),
         }
-        return this.attestExisting(metadataKey, metadata, request, tarball, sha256, size, durableScan)
       }
+      return { state }
+    })
+    if ('completed' in prepared)
+      return prepared.completed
 
-      const context = {
-        surface: 'binary' as const,
-        name: request.domain,
-        version: request.version,
-        publisher,
-      }
-      let scan: MalwareScanResult
-      if (this.store.getObjectStream && this.scanner.scanStream) {
-        scan = await scanPackageArtifactStream(
-          this.scanner,
-          await this.store.getObjectStream(tarball),
-          context,
-          { sha256, size },
+    const planned = prepared.state
+    const context = {
+      surface: 'binary' as const,
+      name: request.domain,
+      version: request.version,
+      publisher,
+    }
+    let scan: MalwareScanResult
+    if (this.store.getObjectStream && this.scanner.scanStream) {
+      scan = await scanPackageArtifactStream(
+        this.scanner,
+        await this.store.getObjectStream(planned.tarball),
+        context,
+        { sha256: planned.sha256, size: planned.size },
+      )
+    }
+    else {
+      const bytes = await this.store.getObject(planned.tarball)
+      if (bytes.byteLength !== planned.size)
+        throw new BinaryPublishError('Retained artifact size does not match metadata', 422, 'BINARY_SIZE_MISMATCH')
+      scan = await scanPackageArtifact(this.scanner, Uint8Array.from(bytes).buffer, context)
+    }
+
+    if (scan.artifactSha256 !== planned.sha256)
+      throw new BinaryPublishError('Retained artifact SHA-256 does not match metadata', 422, 'BINARY_SHA256_MISMATCH', scan)
+    if (scan.verdict === 'error')
+      throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
+
+    // Byte scanning is intentionally outside the per-domain metadata lock so
+    // independent retained artifacts can use the daemon's two bounded streams.
+    // Re-read and compare the exact object identity before applying the verdict.
+    return this.withDomainLock(request.domain, async () => {
+      const current = await this.loadExistingRescan(request)
+      if (
+        current.tarball !== planned.tarball
+        || current.sha256 !== planned.sha256
+        || current.size !== planned.size
+        || current.objectIdentity !== planned.objectIdentity
+      ) {
+        throw new BinaryPublishError(
+          'Retained artifact changed while malware scanning was in progress',
+          409,
+          'BINARY_RESCAN_ARTIFACT_CHANGED',
         )
       }
-      else {
-        const bytes = await this.store.getObject(tarball)
-        if (bytes.byteLength !== size)
-          throw new BinaryPublishError('Retained artifact size does not match metadata', 422, 'BINARY_SIZE_MISMATCH')
-        scan = await scanPackageArtifact(this.scanner, Uint8Array.from(bytes).buffer, context)
-      }
-
-      if (scan.artifactSha256 !== sha256)
-        throw new BinaryPublishError('Retained artifact SHA-256 does not match metadata', 422, 'BINARY_SHA256_MISMATCH', scan)
-      if (scan.verdict === 'error')
-        throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
-
+      const durableScan = await this.readCleanAttestation(current.tarball, current.sha256)
+      if (durableScan)
+        return this.finishDurableRescan(current, request, durableScan)
       if (scan.verdict === 'blocked' || scan.verdict === 'review')
-        return this.quarantineExisting(metadataKey, metadata, request, tarball, scan)
+        return this.quarantineExisting(current.metadataKey, current.metadata, request, current.tarball, scan)
       if (scan.verdict !== 'clean')
         throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
 
-      return this.attestExisting(metadataKey, metadata, request, tarball, sha256, size, scan)
+      return this.attestExisting(
+        current.metadataKey,
+        current.metadata,
+        request,
+        current.tarball,
+        current.sha256,
+        current.size,
+        scan,
+      )
     })
+  }
+
+  private async loadExistingRescan(request: BinaryRescanRequest): Promise<ExistingRescanState> {
+    const metadataKey = `binaries/${request.domain}/metadata.json`
+    let metadata: BinaryPackageMetadata
+    try {
+      metadata = JSON.parse((await this.store.getObject(metadataKey)).toString('utf8')) as BinaryPackageMetadata
+    }
+    catch {
+      throw new BinaryPublishError('Binary package metadata was not found', 404, 'BINARY_METADATA_NOT_FOUND')
+    }
+
+    const selected: Record<string, BinaryPlatformRecord> = {}
+    for (const platform of request.platforms) {
+      const record = metadata.versions?.[request.version]?.platforms?.[platform]
+      if (!record)
+        throw new BinaryPublishError(`Binary platform was not found: ${platform}`, 404, 'BINARY_PLATFORM_NOT_FOUND')
+      selected[platform] = record
+    }
+
+    const tarballs = [...new Set(Object.values(selected).map(record => storedBinaryKey(record.tarball)))]
+    if (tarballs.length !== 1)
+      throw new BinaryPublishError('Rescan platforms must reference the same retained artifact', 422, 'BINARY_RESCAN_ARTIFACT_MISMATCH')
+    const tarball = tarballs[0]
+    if (!tarball.startsWith(`binaries/${request.domain}/${request.version}/`))
+      throw new BinaryPublishError('Retained artifact is outside its package namespace', 422, 'BINARY_RESCAN_ARTIFACT_MISMATCH')
+
+    const alreadyClean = Object.values(selected).every(record =>
+      record.malwareScan?.verdict === 'clean'
+      && record.malwareScan.artifactSha256 === record.sha256,
+    )
+
+    let size: number
+    let objectIdentity: string | undefined
+    try {
+      const head = await this.store.headObject(tarball)
+      const observed = parseContentLength(head)
+      size = observed ?? Object.values(selected)[0].size
+      objectIdentity = parseObjectIdentity(head)
+    }
+    catch {
+      throw new BinaryPublishError('Retained binary artifact was not found', 404, 'BINARY_ARTIFACT_NOT_FOUND')
+    }
+    if (!Number.isSafeInteger(size) || size <= 0 || size > this.maxBytes)
+      throw new BinaryPublishError(`Retained binary artifact size must be between 1 and ${this.maxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
+
+    let sha256 = Object.values(selected)
+      .map(record => record.sha256)
+      .find(value => sha256Pattern.test(value || ''))
+    if (!sha256) {
+      try {
+        const checksum = (await this.store.getObject(`${tarball}.sha256`)).toString('utf8')
+        sha256 = checksum.match(/\b[a-f0-9]{64}\b/i)?.[0]?.toLowerCase()
+      }
+      catch {}
+    }
+    if (!sha256)
+      throw new BinaryPublishError('Retained binary artifact has no valid SHA-256', 422, 'BINARY_SHA256_MISSING')
+
+    return { metadataKey, metadata, selected, tarball, alreadyClean, size, sha256, objectIdentity }
+  }
+
+  private async finishDurableRescan(
+    state: ExistingRescanState,
+    request: BinaryRescanRequest,
+    scan: MalwareScanResult,
+  ): Promise<BinaryRescanCompleted> {
+    if (state.alreadyClean) {
+      return {
+        action: 'already-clean',
+        domain: request.domain,
+        version: request.version,
+        tarball: state.tarball,
+        platforms: state.selected,
+        scan: publicScanResult(scan),
+      }
+    }
+    return this.attestExisting(
+      state.metadataKey,
+      state.metadata,
+      request,
+      state.tarball,
+      state.sha256,
+      state.size,
+      scan,
+    )
   }
 
   private async readCleanAttestation(tarball: string, sha256: string): Promise<MalwareScanResult | null> {
