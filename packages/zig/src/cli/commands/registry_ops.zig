@@ -374,6 +374,7 @@ const provision_script =
     \\set_clam MaxFileSize 1G
     \\set_clam MaxRecursion 30
     \\set_clam MaxFiles 100000
+    \\set_clam MaxScanTime 60000
     \\set_clam MaxThreads 2
     \\set_clam MaxQueue 4
     \\set_clam ConcurrentDatabaseReload no
@@ -454,6 +455,7 @@ const provision_script =
     \\set_env CLAMD_TIMEOUT_MS 240000
     \\set_env CLAMD_HEALTH_TIMEOUT_MS 5000
     \\set_env CLAMD_MAX_BYTES 1073741824
+    \\set_env PANTRY_SCANNER_DOWNLOAD_BYTES_PER_SECOND 8388608
     \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
     \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then
     \\  command -v openssl >/dev/null 2>&1 || { echo "Error: openssl is required to generate the binary staging secret." >&2; exit 1; }

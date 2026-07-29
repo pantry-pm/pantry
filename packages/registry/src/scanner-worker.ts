@@ -17,10 +17,35 @@ interface WorkerInput {
   expected: { sha256: string, size: number }
 }
 
+interface StreamTiming {
+  now: () => number
+  sleep: (milliseconds: number) => Promise<unknown>
+}
+
 function positiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback
   const parsed = Number.parseInt(value, 10)
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+export async function* rateLimitStream(
+  stream: AsyncIterable<Uint8Array>,
+  bytesPerSecond: number,
+  timing: StreamTiming = {
+    now: () => performance.now(),
+    sleep: milliseconds => Bun.sleep(milliseconds),
+  },
+): AsyncGenerator<Uint8Array> {
+  const startedAt = timing.now()
+  let total = 0
+  for await (const chunk of stream) {
+    total += chunk.byteLength
+    yield chunk
+    const targetElapsedMs = total / bytesPerSecond * 1000
+    const delayMs = targetElapsedMs - (timing.now() - startedAt)
+    if (delayMs > 0)
+      await timing.sleep(delayMs)
+  }
 }
 
 async function main(): Promise<void> {
@@ -58,7 +83,7 @@ async function main(): Promise<void> {
     chunkBytes: positiveInt(process.env.CLAMD_CHUNK_BYTES, 64 * 1024),
   })
   const reader = response.body.getReader()
-  const stream = {
+  const responseStream = {
     async *[Symbol.asyncIterator](): AsyncGenerator<Uint8Array> {
       while (true) {
         const chunk = await reader.read()
@@ -67,14 +92,20 @@ async function main(): Promise<void> {
       }
     },
   }
-  const result = await scanner.scanStream(stream, {
+  const bytesPerSecond = positiveInt(
+    process.env.PANTRY_SCANNER_DOWNLOAD_BYTES_PER_SECOND,
+    8 * 1024 * 1024,
+  )
+  const result = await scanner.scanStream(rateLimitStream(responseStream, bytesPerSecond), {
     surface: 'binary',
     name: '_isolated',
   }, input.expected)
   process.stdout.write(JSON.stringify(result))
 }
 
-main().catch((error) => {
-  console.error(`Isolated scanner failed: ${(error as Error).message}`)
-  process.exit(1)
-})
+if (import.meta.main) {
+  main().catch((error) => {
+    console.error(`Isolated scanner failed: ${(error as Error).message}`)
+    process.exit(1)
+  })
+}
