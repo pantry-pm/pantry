@@ -711,6 +711,7 @@ export function createHandler(
     binaryPublisher = new BinaryArtifactPublisher(store, malwareScanner, {
       tokenSecret: secret,
       maxBytes: Number.parseInt(process.env.CLAMD_MAX_BYTES || '', 10) || undefined,
+      legacyRescanMaxBytes: Number.parseInt(process.env.PANTRY_LEGACY_RESCAN_MAX_BYTES || '', 10) || undefined,
       legacyScanAttestationCutoff: (() => {
         const value = process.env.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF?.trim()
         if (!value) return undefined

@@ -181,6 +181,8 @@ export class BinaryPublishError extends Error {
 export interface BinaryArtifactPublisherOptions {
   tokenSecret: string
   maxBytes?: number
+  /** Migration-only bound for retained artifacts; never changes new publish limits. */
+  legacyRescanMaxBytes?: number
   stagingTtlSeconds?: number
   now?: () => number
   onPublished?: (result: BinaryPublishCompleted) => Promise<void>
@@ -328,6 +330,7 @@ export function filterBinaryMetadataForCleanScans(
 
 export class BinaryArtifactPublisher {
   private maxBytes: number
+  private legacyRescanMaxBytes: number
   private stagingTtlSeconds: number
   private now: () => number
   private locks = new Map<string, Promise<void>>()
@@ -340,6 +343,9 @@ export class BinaryArtifactPublisher {
     if (!options.tokenSecret || options.tokenSecret.length < 16)
       throw new Error('binary staging token secret must contain at least 16 characters')
     this.maxBytes = options.maxBytes || DEFAULT_MAX_BINARY_BYTES
+    this.legacyRescanMaxBytes = options.legacyRescanMaxBytes || this.maxBytes
+    if (!Number.isSafeInteger(this.legacyRescanMaxBytes) || this.legacyRescanMaxBytes < this.maxBytes)
+      throw new Error('legacy rescan limit must be a safe integer at least as large as the publish limit')
     this.stagingTtlSeconds = options.stagingTtlSeconds || DEFAULT_STAGING_TTL_SECONDS
     this.now = options.now || Date.now
   }
@@ -742,8 +748,8 @@ export class BinaryArtifactPublisher {
     catch {
       throw new BinaryPublishError('Retained binary artifact was not found', 404, 'BINARY_ARTIFACT_NOT_FOUND')
     }
-    if (!Number.isSafeInteger(size) || size <= 0 || size > this.maxBytes)
-      throw new BinaryPublishError(`Retained binary artifact size must be between 1 and ${this.maxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
+    if (!Number.isSafeInteger(size) || size <= 0 || size > this.legacyRescanMaxBytes)
+      throw new BinaryPublishError(`Retained binary artifact size must be between 1 and ${this.legacyRescanMaxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
 
     let sha256 = Object.values(selected)
       .map(record => record.sha256)

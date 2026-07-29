@@ -592,6 +592,34 @@ describe('binary scan-before-promote publisher', () => {
     })
   })
 
+  it('supports an explicit oversized legacy migration bound without raising the publish limit', async () => {
+    const store = new UrlArtifactStore()
+    const legacySize = 1_227_076_242
+    store.headObject = async () => ({
+      'content-length': String(legacySize),
+      etag: 'stable-legacy-object',
+    })
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
+      legacyRescanMaxBytes: 2 * 1024 * 1024 * 1024,
+    })
+    const bytes = Buffer.from('oversized legacy object represented without allocating it')
+    await seedLegacyArtifact(store, bytes)
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }
+
+    const prepared = await publisher.prepareExternalRescan(selector)
+    expect(prepared.size).toBe(legacySize)
+    expect(() => publisher.initiate({
+      ...request(bytes),
+      size: legacySize,
+    })).toThrow('Binary artifact size must be between')
+  })
+
   it('rejects external evidence for recent, changed, or malformed artifacts', async () => {
     const store = new UrlArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
