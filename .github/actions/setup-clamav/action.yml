@@ -24,20 +24,18 @@ runs:
             printf '%s %s\n' "$key" "$value" | sudo tee -a /etc/clamav/clamd.conf >/dev/null
           fi
         }
-        set_clam TCPAddr 127.0.0.1
-        set_clam TCPSocket 3310
+        set_clam LocalSocket /run/clamav/clamd.ctl
         set_clam StreamMaxLength 1G
         set_clam MaxScanSize 1G
         set_clam MaxFileSize 1G
         set_clam MaxScanTime 600000
         set_clam MaxThreads 2
         set_clam MaxQueue 4
+        sudo systemctl restart clamav-daemon.socket
         sudo systemctl restart clamav-daemon
-        for attempt in $(seq 1 30); do
-          if timeout 2 bash -c '</dev/tcp/127.0.0.1/3310' 2>/dev/null; then
-            exit 0
-          fi
-          sleep 2
-        done
-        sudo systemctl status clamav-daemon --no-pager
-        exit 1
+        timeout 90 clamdscan \
+          --config-file=/etc/clamav/clamd.conf \
+          --ping 30:2 \
+          --wait \
+          --stream \
+          /dev/null
