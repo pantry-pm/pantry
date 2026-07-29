@@ -6,6 +6,7 @@ import {
   BinaryArtifactPublisher,
   BinaryPublishError,
   filterBinaryMetadataForCleanScans,
+  S3BinaryArtifactStore,
   type BinaryArtifactStore,
 } from './binary-publishing'
 import {
@@ -62,6 +63,31 @@ class MemoryArtifactStore implements BinaryArtifactStore {
     return `memory://${encodeURIComponent(key)}`
   }
 }
+
+describe('S3BinaryArtifactStore', () => {
+  it('streams reader-based response bodies without requiring releaseLock', async () => {
+    const chunks = [new Uint8Array([1, 2]), new Uint8Array([3])]
+    let index = 0
+    const body = {
+      getReader: () => ({
+        read: async () => index < chunks.length
+          ? { done: false as const, value: chunks[index++] }
+          : { done: true as const, value: undefined },
+      }),
+    } as ReadableStream<Uint8Array>
+    const s3 = {
+      getObjectStream: async () => ({ body }),
+    }
+    const store = new S3BinaryArtifactStore(s3 as never, 'test-bucket')
+    const streamed: Uint8Array[] = []
+
+    for await (const chunk of await store.getObjectStream('artifact.tar.gz')) {
+      streamed.push(chunk)
+    }
+
+    expect(Buffer.concat(streamed)).toEqual(Buffer.from([1, 2, 3]))
+  })
+})
 
 class TestScanner implements MalwareScanner {
   readonly enabled = true
