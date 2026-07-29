@@ -27,12 +27,9 @@ jobs:
       - name: Setup Pantry and Zig from the registry
         uses: ./packages/action
         with:
-          # Pinned, not `@0.17.0-dev`. That floating spec resolves to whatever
-          # dev build is current, so an upstream breaking change lands here with
-          # no commit of ours: 0.17.0-dev.1465 renamed std.builtin.OptimizeMode's
-          # fields and broke the v0.10.49 release build outright. Bump this
-          # deliberately, after checking `zig build` still passes.
-          packages: ziglang.org@0.17.0-dev.1465+8b2d0ce21
+          # Pantry intentionally tracks Zig 0.17 dev. This rolling spec resolves
+          # the latest mirrored build and the compile job catches API changes.
+          packages: ziglang.org@0.17.0-dev
 
       - name: Install Zig package dependencies
         working-directory: packages/zig

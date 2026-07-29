@@ -136,7 +136,7 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
 
     const auth_header = try std.fmt.allocPrint(allocator, "Authorization: Bearer {s}", .{token});
     defer allocator.free(auth_header);
-    const initiate_url = try std.fmt.allocPrint(allocator, "{s}/api/v1/binaries/uploads", .{std.mem.trimRight(u8, registry, "/")});
+    const initiate_url = try std.fmt.allocPrint(allocator, "{s}/api/v1/binaries/uploads", .{std.mem.trimEnd(u8, registry, "/")});
     defer allocator.free(initiate_url);
     const initiate_json = try std.fmt.allocPrint(
         allocator,
@@ -174,7 +174,7 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
     if (commandFailed(upload))
         return safeCommandError(allocator, "Staging upload failed", upload.stderr);
 
-    const complete_url = try std.fmt.allocPrint(allocator, "{s}/api/v1/binaries/uploads/complete", .{std.mem.trimRight(u8, registry, "/")});
+    const complete_url = try std.fmt.allocPrint(allocator, "{s}/api/v1/binaries/uploads/complete", .{std.mem.trimEnd(u8, registry, "/")});
     defer allocator.free(complete_url);
     const complete_json = try std.fmt.allocPrint(allocator, "{{\"uploadId\":\"{s}\"}}", .{upload_id});
     defer allocator.free(complete_json);
