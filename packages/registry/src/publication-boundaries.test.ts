@@ -55,6 +55,7 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_env PANTRY_MALWARE_SCANNING required')
     expect(workflow).toContain('set_env CLAMD_SOCKET /run/clamav/clamd.ctl')
     expect(workflow).toContain('set_env CLAMD_TIMEOUT_MS 240000')
+    expect(workflow).toContain('Environment=RPX_UPSTREAM_TIMEOUT=300')
     expect(workflow).toContain("vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION || 'false'")
     expect(workflow).toContain('set_clam MaxThreads 2')
     expect(workflow).toContain('set_clam MaxQueue 4')

@@ -296,6 +296,23 @@ jobs:
             if [ -d /etc/rpx ]; then
               install -d -m 0755 /etc/rpx/sites.d
               RPX_ROUTES_CHANGED=0
+              # rpx's upstream socket timeout is expressed in seconds. Keep it
+              # above clamd's 240s bound and Bun's 255s idle timeout so the
+              # proxy cannot terminate a healthy long scan before Registry can
+              # return its fail-closed verdict.
+              install -d -m 0755 /etc/systemd/system/rpx-gateway.service.d
+              RPX_TIMEOUT_DROPIN=/etc/systemd/system/rpx-gateway.service.d/pantry-malware-scanning.conf
+              RPX_TIMEOUT_TMP=$(mktemp /etc/systemd/system/rpx-gateway.service.d/pantry-malware-scanning.conf.XXXXXX)
+              printf '%s\n' \
+                '[Service]' \
+                'Environment=RPX_UPSTREAM_TIMEOUT=300' \
+                > "$RPX_TIMEOUT_TMP"
+              if ! cmp -s "$RPX_TIMEOUT_TMP" "$RPX_TIMEOUT_DROPIN"; then
+                mv -f "$RPX_TIMEOUT_TMP" "$RPX_TIMEOUT_DROPIN"
+                RPX_ROUTES_CHANGED=1
+              else
+                rm -f "$RPX_TIMEOUT_TMP"
+              fi
               if ! cmp -s infrastructure/rpx/pantry.json /etc/rpx/sites.d/pantry.json; then
                 RPX_FRAGMENT_TMP=$(mktemp /etc/rpx/sites.d/pantry.json.XXXXXX)
                 install -m 0600 infrastructure/rpx/pantry.json "$RPX_FRAGMENT_TMP"
@@ -310,6 +327,7 @@ jobs:
                 RPX_ROUTES_CHANGED=1
               fi
               if [ "$RPX_ROUTES_CHANGED" -eq 1 ]; then
+                systemctl daemon-reload
                 systemctl restart rpx-gateway
               fi
             fi
