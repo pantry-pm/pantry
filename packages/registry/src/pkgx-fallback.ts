@@ -16,9 +16,11 @@
 import type { BinaryArtifactPublisher } from './binary-publishing'
 import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createReadStream, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { BoundedTtlCache } from './runtime-cache'
 
 const BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64'] as const
@@ -188,6 +190,13 @@ export async function augmentMetadataWithPkgx(
 // ── lazy materialization ─────────────────────────────────────────────────────
 const _inflight = new Map<string, Promise<MaterializeResult | null>>()
 
+async function sha256File(path: string): Promise<string> {
+  const hash = createHash('sha256')
+  for await (const chunk of createReadStream(path))
+    hash.update(chunk)
+  return hash.digest('hex')
+}
+
 /**
  * Download domain@version for `platform` from pkgx, repackage to our flat .tar.gz,
  * upload it (+ .sha256) and patch metadata.json. Returns null if pkgx has no such
@@ -214,19 +223,20 @@ export async function materializeFromPkgx(
     const tarballKey = tarballKeyFor(domain, version, platform)
     const work = mkdtempSync(join(tmpdir(), `pkgx-${safe}-`))
     try {
-      let xzBuf: Buffer
+      const xzPath = join(work, 'pkg.tar.xz')
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(120000) })
-        if (!res.ok)
+        if (!res.ok || !res.body)
           return null
-        xzBuf = Buffer.from(await res.arrayBuffer())
+        await pipeline(
+          Readable.fromWeb(res.body as never),
+          createWriteStream(xzPath),
+        )
       }
       catch {
         return null
       }
-      const xzPath = join(work, 'pkg.tar.xz')
       const exDir = join(work, 'ex')
-      writeFileSync(xzPath, xzBuf)
       mkdirSync(exDir, { recursive: true })
       execSync(`tar -xJf "${xzPath}" -C "${exDir}"`, { stdio: 'pipe' })
 
@@ -243,20 +253,30 @@ export async function materializeFromPkgx(
 
       const gzPath = join(work, 'out.tar.gz')
       execSync(`tar -czf "${gzPath}" -C "${root}" .`, { stdio: 'pipe' })
-      const gzBuf = readFileSync(gzPath)
-      const sha256 = createHash('sha256').update(gzBuf).digest('hex')
-
-      await publisher.publishBuffer({
+      const size = statSync(gzPath).size
+      const sha256 = await sha256File(gzPath)
+      const initiated = publisher.initiate({
         domain,
         version,
         platforms: [platform],
         filename: `${safe}-${version}.tar.gz`,
-        size: gzBuf.length,
+        size,
         sha256,
-      }, gzBuf, '_pkgx', 'pkgx')
+      })
+      const upload = await fetch(initiated.uploadUrl, {
+        method: 'PUT',
+        headers: {
+          ...initiated.uploadHeaders,
+          'Content-Length': String(size),
+        },
+        body: Bun.file(gzPath),
+      })
+      if (!upload.ok)
+        throw new Error(`pkgx staged upload failed with HTTP ${upload.status}`)
+      await publisher.complete(initiated.uploadId, '_pkgx', 'pkgx')
       _augCache.delete(domain) // augmented view is stale now that this is real
       _pending.delete(pendKey(domain, version, platform))
-      return { tarballKey, sha256, size: gzBuf.length }
+      return { tarballKey, sha256, size }
     }
     catch (err) {
       console.error(`pkgx materialize failed for ${key}:`, (err as Error).message)

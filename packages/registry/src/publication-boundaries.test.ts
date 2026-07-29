@@ -26,7 +26,10 @@ describe('first-party publication boundaries', () => {
     expect(phpBundler).not.toContain('aws s3 cp')
     expect(phpBundler).toContain('scripts/upload-to-s3.ts')
     expect(pkgxFallback).not.toContain('s3.putObject')
-    expect(pkgxFallback).toContain('publisher.publishBuffer')
+    expect(pkgxFallback).not.toContain('await res.arrayBuffer()')
+    expect(pkgxFallback).not.toContain('readFileSync(gzPath)')
+    expect(pkgxFallback).toContain('publisher.initiate')
+    expect(pkgxFallback).toContain('publisher.complete')
   })
 
   it('keeps the legacy core publisher behind the authenticated API', () => {
