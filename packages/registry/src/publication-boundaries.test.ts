@@ -70,9 +70,12 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('.scan.verdict == "blocked"')
   })
 
-  it('serializes retained-artifact backfill scans to production scanner capacity', () => {
+  it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
     const workflow = source('.github/workflows/backfill-malware-scans.yml')
+    const backfill = source('packages/ts-pantry/scripts/backfill-malware-scans.ts')
     expect(workflow).toContain('max-parallel: 1')
+    expect(backfill).toContain('const DOMAIN_CONCURRENCY = 2')
+    expect(backfill).toContain("'Connection: close'")
   })
 
   it('keeps CLI provisioning within the registry host resource budget', () => {
