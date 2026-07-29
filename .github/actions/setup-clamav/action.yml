@@ -4,6 +4,12 @@ description: Install and start a bounded local clamd for malware-scanning workfl
 runs:
   using: composite
   steps:
+    - uses: actions/cache@v5
+      with:
+        path: /var/lib/clamav
+        # The first completed matrix job seeds an immutable cache for the
+        # remaining jobs in this run. Every run still refreshes signatures.
+        key: pantry-clamav-${{ runner.os }}-${{ github.run_id }}
     - shell: bash
       run: |
         set -euo pipefail
