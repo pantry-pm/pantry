@@ -75,7 +75,7 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
             "${REGISTRY_USER}@${REGISTRY_HOST}" \
-            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}'" << 'EOF'
+            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}' '${LEGACY_RESCAN_MAX_BYTES}'" << 'EOF'
             set -euo pipefail
             REPO_PATH="$1"
             SERVICE="$2"
@@ -84,6 +84,7 @@ jobs:
             EXPECTED_SHA="$5"
             BINARY_SCAN_ATTESTATION="$6"
             LEGACY_SCAN_ATTESTATION_CUTOFF="$7"
+            LEGACY_RESCAN_MAX_BYTES="$8"
             case "$BINARY_SCAN_ATTESTATION" in
               true|false) ;;
               *)

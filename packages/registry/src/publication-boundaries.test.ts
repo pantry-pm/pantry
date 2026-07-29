@@ -67,6 +67,7 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_clam MaxScanTime 60000')
     expect(workflow).toContain('set_clam ConcurrentDatabaseReload no')
     expect(workflow).toContain("LEGACY_RESCAN_MAX_BYTES: ${{ vars.PANTRY_LEGACY_RESCAN_MAX_BYTES || '2147483648' }}")
+    expect(workflow).toContain('LEGACY_RESCAN_MAX_BYTES="$8"')
     expect(workflow).toContain('set_env PANTRY_LEGACY_RESCAN_MAX_BYTES "$LEGACY_RESCAN_MAX_BYTES"')
     expect(workflow).toContain("sed -i '/^PANTRY_LEGACY_RESCAN_MAX_BYTES=/d'")
     expect(workflow).toContain('clamav-daemon clamav-freshclam jq util-linux')
