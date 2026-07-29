@@ -76,7 +76,8 @@ describe('first-party publication boundaries', () => {
     const backfill = source('packages/ts-pantry/scripts/backfill-malware-scans.ts')
     expect(workflow).toContain('SHARD_COUNT=256')
     expect(workflow).toContain('max-parallel: 1')
-    expect(backfill).toContain('const ARTIFACT_CONCURRENCY = 2')
+    expect(workflow).toContain("PANTRY_BACKFILL_SCAN_CONCURRENCY: '1'")
+    expect(backfill).toContain('const ARTIFACT_CONCURRENCY = resolveArtifactConcurrency()')
     expect(backfill).toContain("'Connection: close'")
   })
 
