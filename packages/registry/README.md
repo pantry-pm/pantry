@@ -14,6 +14,7 @@ critical claims directly against the route handlers.
 - **S3 storage** - Tarball storage via S3 (or local filesystem for development)
 - **Analytics** - Track download counts and package statistics
 - **Portable metadata** - Local/in-memory stores for development and an object-storage snapshot for production
+- **Publish-time malware scanning** - Fail-closed ClamAV scanning before any package becomes installable
 - **Zero config** - Works out of the box for local development
 
 ## Quick Start
@@ -93,7 +94,31 @@ DYNAMODB_ANALYTICS_TABLE=registry-analytics
 AWS_ACCESS_KEY_ID=your-key
 AWS_SECRET_ACCESS_KEY=your-secret
 AWS_REGION=us-east-1
+
+# Required in production (defaults to required when NODE_ENV=production)
+PANTRY_MALWARE_SCANNING=required
+CLAMD_HOST=127.0.0.1
+CLAMD_PORT=3310
+PANTRY_BINARY_STAGING_SECRET=replace-with-openssl-rand-hex-32
+PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION=true
 ```
+
+See [publish-time malware scanning](../../docs/registry-malware-scanning.md) for
+the verdict contract, dual-use `contentPolicy`/`DISCLOSURE` requirements, clamd
+deployment, EICAR rehearsal, monitoring, and incident runbook.
+
+### Native binary publication
+
+Native artifacts use an authenticated scan-before-promote API:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/binaries/uploads` | Create a short-lived, untrusted staged upload |
+| POST | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, verify, and promote the artifact |
+
+Use `packages/ts-pantry/scripts/upload-to-s3.ts` or
+`pantry publish:binary`; both clients implement the protocol and never receive
+an installable object key.
 
 ## Publishing npm Packages
 

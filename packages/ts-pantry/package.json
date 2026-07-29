@@ -91,7 +91,8 @@
     "pantry:install": "bun scripts/download-from-s3.ts",
     "pantry:shell": "bun scripts/pantry-cli.ts shell",
     "pantry:build": "bun scripts/build-package.ts",
-    "pantry:upload": "bun scripts/upload-to-s3.ts"
+    "pantry:upload": "bun scripts/upload-to-s3.ts",
+    "pantry:rescan-binaries": "bun scripts/backfill-malware-scans.ts"
   },
   "dependencies": {
     "@stacksjs/ts-cloud": "^0.7.26",

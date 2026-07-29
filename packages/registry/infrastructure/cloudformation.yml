@@ -38,6 +38,14 @@ Resources:
             Prefix: commits/
             ExpirationInDays: 90
             TagFilters: []
+          - Id: ExpireAbandonedMalwareStaging
+            Status: Enabled
+            Prefix: .pantry-staging/malware/
+            ExpirationInDays: 1
+          - Id: ExpireAbandonedSealedArtifacts
+            Status: Enabled
+            Prefix: .pantry-staging/sealed/
+            ExpirationInDays: 1
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders:
@@ -45,6 +53,7 @@ Resources:
             AllowedMethods:
               - GET
               - HEAD
+              - PUT
             AllowedOrigins:
               - '*'
             MaxAge: 3600
@@ -122,8 +131,8 @@ Resources:
                   - s3:DeleteObject
                   - s3:ListBucket
                 Resource:
-                  - !GetAtt PackagesBucket.Arn
-                  - !Sub '${PackagesBucket.Arn}/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::pantry-registry-${Environment}-packages'
+                  - !Sub 'arn:${AWS::Partition}:s3:::pantry-registry-${Environment}-packages/*'
         - PolicyName: DynamoDBAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -139,6 +148,29 @@ Resources:
                 Resource:
                   - !GetAtt MetadataTable.Arn
                   - !GetAtt AnalyticsTable.Arn
+
+  # Defense in depth: even a leaked legacy builder credential cannot bypass the
+  # registry's scan-before-promote service and write an installable artifact or
+  # a sealed-to-be-scanned object. Presigned staging PUTs are signed by this
+  # registry role and target only .pantry-staging/malware/.
+  PackagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PackagesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyNonRegistryInstallableWrites
+            Effect: Deny
+            Principal: '*'
+            Action:
+              - s3:PutObject
+            Resource:
+              - !Sub '${PackagesBucket.Arn}/binaries/*'
+              - !Sub '${PackagesBucket.Arn}/.pantry-staging/sealed/*'
+            Condition:
+              StringNotEquals:
+                aws:PrincipalArn: !GetAtt RegistryRole.Arn
 
 Outputs:
   PackagesBucketName:

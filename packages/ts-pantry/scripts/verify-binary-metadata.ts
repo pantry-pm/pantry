@@ -38,6 +38,11 @@ interface PlatformMetadata {
   sha256: string
   size: number
   uploadedAt: string
+  malwareScan?: {
+    verdict: string
+    artifactSha256: string
+    [key: string]: unknown
+  }
 }
 
 interface PackageMetadata {
@@ -273,6 +278,23 @@ function normalizeMetadata(metadata: PackageMetadata): string {
   })
 }
 
+function carryForwardCleanScans(existing: PackageMetadata | null, rebuilt: PackageMetadata): void {
+  if (!existing) return
+  for (const [version, versionInfo] of Object.entries(rebuilt.versions)) {
+    for (const [platform, current] of Object.entries(versionInfo.platforms)) {
+      const previous = existing.versions?.[version]?.platforms?.[platform]
+      if (
+        previous?.malwareScan?.verdict === 'clean'
+        && previous.malwareScan.artifactSha256 === current.sha256
+        && previous.sha256 === current.sha256
+        && previous.tarball === current.tarball
+      ) {
+        current.malwareScan = previous.malwareScan
+      }
+    }
+  }
+}
+
 function checkConfiguredPlatforms(domain: string, metadata: PackageMetadata): string[] {
   const requiredPlatforms = BINARY_SYNC_REQUIRED_PLATFORMS[domain]
   if (!requiredPlatforms?.length) return []
@@ -370,6 +392,7 @@ export async function verifyBinaryMetadata(
     repairSha256: options.repair,
     region: options.region,
   })
+  carryForwardCleanScans(existing, metadata)
   const platformCount = countPlatforms(metadata)
   const existingPlatformCount = existing ? countPlatforms(existing) : 0
 

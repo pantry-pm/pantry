@@ -125,6 +125,45 @@ describe('verify-binary-metadata', () => {
     expect(repaired.versions['1.34.3'].platforms['darwin-arm64'].sha256).toBe(expectedSha)
   })
 
+  it('preserves only clean scan attestations that still match the exact artifact record', async () => {
+    const s3 = new FakeS3()
+    const key = 'binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz'
+    const sha256 = 'f'.repeat(64)
+    s3.put(key, 'tarball', 123)
+    s3.put(`${key}.sha256`, `${sha256}  cmake.org-3.24.2.tar.gz\n`)
+    s3.put('binaries/cmake.org/metadata.json', JSON.stringify({
+      name: 'cmake.org',
+      latestVersion: '3.24.2',
+      versions: {
+        '3.24.2': {
+          platforms: {
+            'darwin-arm64': {
+              tarball: key,
+              sha256,
+              size: 999,
+              uploadedAt: '2026-05-04T00:00:00.000Z',
+              malwareScan: {
+                verdict: 'clean',
+                engine: 'clamav',
+                artifactSha256: sha256,
+                scannedAt: '2026-05-04T00:00:00.000Z',
+                durationMs: 1,
+              },
+            },
+          },
+        },
+      },
+      updatedAt: '2026-05-04T00:00:00.000Z',
+    }))
+
+    await verifyBinaryMetadata(s3, 'bucket', 'cmake.org', { repair: true })
+    const repaired = JSON.parse(await s3.getObject('bucket', 'binaries/cmake.org/metadata.json'))
+    expect(repaired.versions['3.24.2'].platforms['darwin-arm64'].malwareScan).toMatchObject({
+      verdict: 'clean',
+      artifactSha256: sha256,
+    })
+  })
+
   it('refuses to replace metadata with an empty object listing for active binary domains', async () => {
     const s3 = new FakeS3()
     s3.put('binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz', 'tarball', 123)

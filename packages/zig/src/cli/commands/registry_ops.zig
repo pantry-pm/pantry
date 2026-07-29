@@ -351,6 +351,34 @@ const provision_script =
     \\bun_bin="$(command -v bun || echo /root/.bun/bin/bun)"
     \\echo "    Bun: $($bun_bin --version)"
     \\
+    \\if ! command -v clamdscan >/dev/null 2>&1; then
+    \\  command -v apt-get >/dev/null 2>&1 || { echo "Error: clamav-daemon is required and this host has no apt-get." >&2; exit 1; }
+    \\  echo "    Installing ClamAV publish-time scanner..."
+    \\  DEBIAN_FRONTEND=noninteractive apt-get update -qq
+    \\  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq clamav-daemon clamav-freshclam >/dev/null
+    \\fi
+    \\clam_conf=/etc/clamav/clamd.conf
+    \\[ -f "$clam_conf" ] || { echo "Error: $clam_conf was not installed." >&2; exit 1; }
+    \\set_clam() {
+    \\  key="$1"; value="$2"
+    \\  if grep -Eq "^[#[:space:]]*${key}[[:space:]]+" "$clam_conf"; then
+    \\    sed -Ei "s|^[#[:space:]]*${key}[[:space:]]+.*|${key} ${value}|" "$clam_conf"
+    \\  else
+    \\    printf '%s %s\n' "$key" "$value" >> "$clam_conf"
+    \\  fi
+    \\}
+    \\set_clam TCPAddr 127.0.0.1
+    \\set_clam TCPSocket 3310
+    \\set_clam StreamMaxLength 1G
+    \\set_clam MaxScanSize 1G
+    \\set_clam MaxFileSize 1G
+    \\set_clam MaxRecursion 30
+    \\set_clam MaxFiles 100000
+    \\systemctl enable --quiet clamav-freshclam clamav-daemon
+    \\systemctl restart clamav-freshclam || true
+    \\systemctl restart clamav-daemon
+    \\systemctl is-active --quiet clamav-daemon || { echo "Error: clamav-daemon did not start." >&2; exit 1; }
+    \\
     \\if [ -d "$repo_path/.git" ]; then
     \\  echo "    Updating checkout..."
     \\  git -C "$repo_path" fetch --quiet origin "$ref"
@@ -384,12 +412,24 @@ const provision_script =
     \\set_env PORT "$port"
     \\set_env BASE_URL "$base_url"
     \\set_env REGISTRY_VISIBILITY "$visibility"
+    \\set_env PANTRY_MALWARE_SCANNING required
+    \\set_env PANTRY_REQUIRE_MALWARE_SCAN_ATTESTATION true
+    \\set_env CLAMD_HOST 127.0.0.1
+    \\set_env CLAMD_PORT 3310
+    \\set_env CLAMD_TIMEOUT_MS 30000
+    \\set_env CLAMD_MAX_BYTES 1073741824
+    \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
+    \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then
+    \\  command -v openssl >/dev/null 2>&1 || { echo "Error: openssl is required to generate the binary staging secret." >&2; exit 1; }
+    \\  set_env PANTRY_BINARY_STAGING_SECRET "$(openssl rand -hex 32)"
+    \\fi
     \\chmod 600 "$env_file"
     \\
     \\cat > "/etc/systemd/system/${service}.service" <<UNIT
     \\[Unit]
     \\Description=Pantry Registry
-    \\After=network.target
+    \\Requires=clamav-daemon.service
+    \\After=network.target clamav-daemon.service
     \\
     \\[Service]
     \\Type=simple
@@ -412,14 +452,14 @@ const provision_script =
     \\systemctl is-active "$service"
     \\
     \\for _ in 1 2 3 4 5 6 7 8 9 10; do
-    \\  if curl -fsS "http://localhost:${port}/health" >/dev/null 2>&1; then
-    \\    echo "    Local health check passed."
+    \\  if curl -fsS "http://localhost:${port}/ready" >/dev/null 2>&1; then
+    \\    echo "    Local readiness check passed (registry + malware scanner)."
     \\    exit 0
     \\  fi
     \\  sleep 2
     \\done
     \\
-    \\echo "Error: the service did not answer /health on localhost:${port}." >&2
+    \\echo "Error: the service did not answer /ready on localhost:${port}." >&2
     \\echo "Logs: journalctl -u ${service} -n 50 --no-pager" >&2
     \\exit 1
 ;

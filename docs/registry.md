@@ -24,7 +24,9 @@ integrity semantics; clients must use the contract for the selected surface.
 
 | Method | Path | Authentication | Behavior |
 | --- | --- | --- | --- |
-| `GET` | `/health` | Public | Process health and current timestamp. It does not prove every storage dependency is writable. |
+| `GET` | `/health` | Public | Process health, timestamp, and whether publish-time malware scanning is enabled/required. It does not contact the scanner. |
+| `GET` | `/ready` | Public | Readiness including the required malware scanner; returns `503` when clamd is unavailable. |
+| `GET` | `/api/security/malware-scanning` | Registry read policy | Scanner health, verdict/surface counters, and aggregate latency. |
 | `GET` | `/search?q={query}&limit={n}&format=json` | Public | Search local metadata and optionally supplement from npm; query and result limits are bounded. |
 | `GET` | `/packages/{name}` | Public | Return the latest stored version, with npm fallback when enabled. |
 | `GET` | `/packages/{name}/{version}` | Public | Return an exact version; no version mutation occurs. |
@@ -32,10 +34,13 @@ integrity semantics; clients must use the contract for the selected surface.
 | `GET` | `/packages/{name}/{version}/tarball` | Public | Proxy exact bytes, update download analytics, and return 404 when unavailable. |
 | `POST` | `/publish` | Legacy admin token or `ptry_` API token with publish permission | Accept multipart metadata/tarball or JSON/base64, validate limits, reject duplicates, persist bytes then metadata. |
 
-Publishing validates package name, version, metadata size, content type, and a
-50 MiB tarball limit. A duplicate `{name, version}` returns `409` before the
-tarball is buffered where possible. Successful publication returns `201`; it
-does not overwrite an existing immutable version.
+Publishing validates package name, version, metadata size, content type, and the
+plan's artifact limit. A duplicate `{name, version}` returns `409` before the
+tarball is buffered where possible. The exact artifact is malware-scanned before
+storage: clean publishes return `201`, malware returns `422`, and a scanner
+failure returns retryable `503` without a write. It does not overwrite an
+existing immutable version. See
+[Registry publish-time malware scanning](./registry-malware-scanning.md).
 
 The registry computes SHA-256 over uploaded bytes and records it as
 `sha256:{hex}` alongside the canonical public proxy URL. This is integrity
@@ -52,7 +57,9 @@ publisher identity comes from the accepted credential.
 | `GET` | `/commits/{sha}/{name}/tarball` | Public | Download exact commit-package bytes. |
 | `GET` | `/{name}@{sha}` | Public | Short preview URL; resolves exact and supported alias forms. |
 
-Each commit tarball is limited to 50 MiB. Production object storage applies the
+Each commit tarball is limited to 50 MiB. Every member is scanned before any
+member is stored, so a non-clean verdict makes the batch write nothing.
+Production object storage applies the
 documented expiry policy to the `commits/` prefix. Commit packages are previews,
 not permanent semantic-version releases. Consumers should retain the commit SHA,
 source repository, checksum, and test evidence.
@@ -70,7 +77,8 @@ source repository, checksum, and test evidence.
 | `POST` | `/zig/publish` | Current `PANTRY_REGISTRY_TOKEN` or `PANTRY_TOKEN` | Publish multipart tarball plus optional `build.zig.zon`; reject duplicate version. |
 | `DELETE` | `/zig/packages/{name}` | Current registry token | Delete all versions of the named Zig package. |
 
-Zig publication computes the `1220` SHA-256 multihash over received bytes.
+Zig publication scans the received bytes before storage, then computes the
+`1220` SHA-256 multihash over those same bytes.
 Manifest names using underscores are canonicalized to hyphens. The auth token is
 read per request so a rotated token takes effect without re-importing the route
 module; comparison is timing-safe and missing server configuration fails closed.
@@ -88,7 +96,8 @@ module; comparison is timing-safe and missing server configuration fails closed.
 | `DELETE` | `/php/packages/{vendor}/{package}` | Current registry token | Delete the complete package. |
 
 PHP token lookup is per request and fails closed when the server token is
-missing. The registry checksum is SHA-256 over the uploaded archive.
+missing. The archive is malware-scanned before storage. The registry checksum is
+SHA-256 over the uploaded archive.
 
 ## Bulk resolver and native binary surfaces
 
@@ -98,14 +107,20 @@ missing. The registry checksum is SHA-256 over the uploaded archive.
 | `GET` | `/npm/resolve/{specs}` | GET compatibility form for bounded spec lists. |
 | `POST` | `/registry/download` | Stream or bundle resolved tarballs for efficient installs. |
 | `POST` | `/npm/download` | Compatibility alias for registry download. |
+| `POST` | `/api/v1/binaries/uploads` | Authenticate an operator and create a short-lived upload scoped to an untrusted staging key. |
+| `POST` | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, digest-verify, and promote a staged native artifact. |
 | `GET` | `/binaries/{domain}/metadata.json` | Return package version/platform metadata. |
 | `GET` | `/binaries/{domain}/{version}/{platform}/{artifact}` | Proxy an exact binary or checksum from object storage. |
 | `GET` | `/desktop-apps` | List the configured desktop catalog with live version/platform availability. |
 | `GET` | `/fonts` | List the configured font catalog with live availability. |
 
-Binary paths are allowlisted and normalized before proxying. Public URLs may use
-the registry proxy while storage remains private. A binary checksum is evidence
-only when the client verifies it; availability metadata alone is not verification.
+Binary paths are allowlisted and normalized before proxying. Production filters
+metadata entries without a clean scan verdict and requires a clean `.scan.json`
+attestation before serving or redirecting a tarball/checksum. Native publishers
+never receive an installable object key: the registry owns staged-object sealing,
+streamed clamd scanning, server-side promotion, checksum/attestation writes, and
+the final metadata update. Public URLs use the registry proxy while storage
+remains private.
 
 ## Authentication and authorization
 
@@ -148,6 +163,12 @@ the authenticated publisher. The legacy operator token represents `_admin` and
 does not fabricate a normal publisher identity. Publisher dashboard mutations
 verify ownership unless the account is an administrator.
 
+Core packages may declare bounded `contentPolicy` metadata. The uploaded archive
+must contain a matching root package manifest and a unique, non-empty, text-only
+root `DISCLOSURE`; Pantry stores only the disclosure digest and size. Once
+declared, later versions cannot remove either field. Until Pantry registry tokens
+carry verifiable 2FA/OIDC assurance, dual-use releases require operator review.
+
 Deletion is deliberately narrower than publication: Zig/PHP deletion currently
 uses the operator token, while publisher-account package settings use the account
 authorization path. Operators should not expose the legacy token to ordinary CI
@@ -184,6 +205,14 @@ Important variables include `BASE_URL`, `REGISTRY_INTERNAL_URL`, `S3_BUCKET`,
 turns missing Pantry metadata into a local miss instead of querying npm. Prefer
 the `S3_*` names for portable object storage; legacy `AWS_*` credentials remain
 relevant to the AWS-specific backends.
+
+Publish-time scanning variables are `PANTRY_MALWARE_SCANNING`,
+`PANTRY_REQUIRE_MALWARE_SCAN_ATTESTATION`, `PANTRY_BINARY_STAGING_SECRET`,
+`CLAMD_HOST`, `CLAMD_PORT`, `CLAMD_TIMEOUT_MS`, `CLAMD_MAX_BYTES`, and
+`CLAMD_CHUNK_BYTES`. Production defaults to required scanning and attestation
+enforcement, and fails closed; the deployment, storage policy, migration, and
+incident runbook is in
+[Registry publish-time malware scanning](./registry-malware-scanning.md).
 
 The public `BASE_URL` is stored in metadata and returned to clients. The internal
 URL is used for server-side storage proxying when public routing would be
