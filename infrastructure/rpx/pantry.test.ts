@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import config from './pantry.json'
 
 describe('Pantry rpx route fragment', () => {
@@ -14,5 +16,14 @@ describe('Pantry rpx route fragment', () => {
     expect(config.productionCerts.certsDir).toBe('/etc/rpx/certs')
     expect(config.hostsManagement).toBe(false)
     expect(config.cleanup).toEqual({ hosts: false, certs: false })
+  })
+
+  test('removes the legacy registry-only fragment during deploy', () => {
+    const workflow = readFileSync(
+      join(import.meta.dir, '../../.github/workflows/deploy-registry.yml'),
+      'utf8',
+    )
+
+    expect(workflow).toContain('rm -f /etc/rpx/sites.d/pantry-registry.json')
   })
 })

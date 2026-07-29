@@ -266,6 +266,10 @@ jobs:
               RPX_FRAGMENT_TMP=$(mktemp /etc/rpx/sites.d/pantry.json.XXXXXX)
               install -m 0600 infrastructure/rpx/pantry.json "$RPX_FRAGMENT_TMP"
               mv -f "$RPX_FRAGMENT_TMP" /etc/rpx/sites.d/pantry.json
+              # pantry.json is the canonical owner of all Pantry routes. Remove
+              # the pre-fragment-migration file so registry.pantry.dev cannot be
+              # declared twice after an upgrade.
+              rm -f /etc/rpx/sites.d/pantry-registry.json
               systemctl restart rpx-gateway
             fi
           EOF
