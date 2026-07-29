@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.7...v0.11.8)
+
+## 🐛 Bug Fixes
+
+- **ops**: read backfill metadata from storage ([dcb793e](https://github.com/pantry-pm/pantry/commit/dcb793e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: retry transient backfill reads ([d35fff5](https://github.com/pantry-pm/pantry/commit/d35fff5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: shard backfill from package catalog ([da82cb3](https://github.com/pantry-pm/pantry/commit/da82cb3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- **registry**: stream pkgx materialization ([e2d500e](https://github.com/pantry-pm/pantry/commit/e2d500e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.8 ([a949bb1](https://github.com/pantry-pm/pantry/commit/a949bb1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.4...v0.11.5)
 
 ## 🐛 Bug Fixes
