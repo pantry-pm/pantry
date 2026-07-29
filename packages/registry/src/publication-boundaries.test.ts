@@ -55,6 +55,9 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_env PANTRY_MALWARE_SCANNING required')
     expect(workflow).toContain('set_env CLAMD_SOCKET /run/clamav/clamd.ctl')
     expect(workflow).toContain("vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION || 'false'")
+    expect(workflow).toContain('set_clam MaxThreads 2')
+    expect(workflow).toContain('set_clam MaxQueue 4')
+    expect(workflow).toContain('set_clam ConcurrentDatabaseReload no')
     expect(workflow).toContain('systemctl restart clamav-daemon')
     expect(workflow).toContain('ExecCondition=/bin/sh -c')
     expect(workflow).toContain('${SERVICE}-recovery.timer')
@@ -68,5 +71,12 @@ describe('first-party publication boundaries', () => {
   it('serializes retained-artifact backfill scans to production scanner capacity', () => {
     const workflow = source('.github/workflows/backfill-malware-scans.yml')
     expect(workflow).toContain('max-parallel: 1')
+  })
+
+  it('keeps CLI provisioning within the registry host resource budget', () => {
+    const setup = source('packages/zig/src/cli/commands/registry_ops.zig')
+    expect(setup).toContain('set_clam MaxThreads 2')
+    expect(setup).toContain('set_clam MaxQueue 4')
+    expect(setup).toContain('set_clam ConcurrentDatabaseReload no')
   })
 })

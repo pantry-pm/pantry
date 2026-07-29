@@ -374,6 +374,9 @@ const provision_script =
     \\set_clam MaxFileSize 1G
     \\set_clam MaxRecursion 30
     \\set_clam MaxFiles 100000
+    \\set_clam MaxThreads 2
+    \\set_clam MaxQueue 4
+    \\set_clam ConcurrentDatabaseReload no
     \\systemctl enable --quiet clamav-freshclam clamav-daemon
     \\systemctl restart clamav-freshclam || true
     \\systemctl restart clamav-daemon
