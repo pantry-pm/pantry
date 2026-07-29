@@ -13,6 +13,7 @@ import {
   publicScanResult,
   scanPackageArtifact,
   scanPackageArtifactStream,
+  scanPackageArtifactUrl,
   type MalwareScanResult,
   type MalwareScanner,
   type PublishSurface,
@@ -97,6 +98,7 @@ export interface BinaryPublishCompleted {
 export interface BinaryArtifactStore {
   getObject(key: string): Promise<Buffer>
   getObjectStream?(key: string): Promise<AsyncIterable<Uint8Array>>
+  createDownloadUrl?(key: string, expiresInSeconds: number): string
   putObject(key: string, body: Buffer | string, contentType: string): Promise<void>
   copyObject(sourceKey: string, destinationKey: string): Promise<void>
   deleteObject(key: string): Promise<void>
@@ -123,6 +125,10 @@ export class S3BinaryArtifactStore implements BinaryArtifactStore {
         }
       },
     }
+  }
+
+  createDownloadUrl(key: string, expiresInSeconds: number): string {
+    return this.s3.generatePresignedGetUrl(this.bucket, key, expiresInSeconds)
   }
 
   putObject(key: string, body: Buffer | string, contentType: string): Promise<void> {
@@ -378,7 +384,15 @@ export class BinaryArtifactPublisher {
         publisher,
       } as const
       let scan: MalwareScanResult
-      if (this.store.getObjectStream && this.scanner.scanStream) {
+      if (this.store.createDownloadUrl && this.scanner.scanUrl) {
+        scan = await scanPackageArtifactUrl(
+          this.scanner,
+          this.store.createDownloadUrl(sealedKey, 10 * 60),
+          context,
+          { sha256: claim.sha256, size: claim.size },
+        )
+      }
+      else if (this.store.getObjectStream && this.scanner.scanStream) {
         scan = await scanPackageArtifactStream(
           this.scanner,
           await this.store.getObjectStream(sealedKey),
@@ -456,7 +470,15 @@ export class BinaryArtifactPublisher {
       publisher,
     }
     let scan: MalwareScanResult
-    if (this.store.getObjectStream && this.scanner.scanStream) {
+    if (this.store.createDownloadUrl && this.scanner.scanUrl) {
+      scan = await scanPackageArtifactUrl(
+        this.scanner,
+        this.store.createDownloadUrl(planned.tarball, 10 * 60),
+        context,
+        { sha256: planned.sha256, size: planned.size },
+      )
+    }
+    else if (this.store.getObjectStream && this.scanner.scanStream) {
       scan = await scanPackageArtifactStream(
         this.scanner,
         await this.store.getObjectStream(planned.tarball),

@@ -68,6 +68,17 @@ class MemoryArtifactStore implements BinaryArtifactStore {
 }
 
 describe('S3BinaryArtifactStore', () => {
+  it('creates short-lived signed download sources for isolated scans', () => {
+    const s3 = {
+      generatePresignedGetUrl: (bucket: string, key: string, expires: number) =>
+        `https://objects.example.test/${bucket}/${key}?expires=${expires}`,
+    }
+    const store = new S3BinaryArtifactStore(s3 as never, 'test-bucket')
+
+    expect(store.createDownloadUrl('artifact.tar.gz', 600))
+      .toBe('https://objects.example.test/test-bucket/artifact.tar.gz?expires=600')
+  })
+
   it('uses only read() from variant response-body readers', async () => {
     const chunks = [new Uint8Array([1, 2]), new Uint8Array([3])]
     let index = 0
@@ -167,6 +178,40 @@ class ControlledTestScanner extends TestScanner {
   }
 }
 
+class UrlArtifactStore extends MemoryArtifactStore {
+  urls: string[] = []
+
+  createDownloadUrl(key: string, expiresInSeconds: number): string {
+    const url = `https://objects.example.test/${encodeURIComponent(key)}?expires=${expiresInSeconds}`
+    this.urls.push(url)
+    return url
+  }
+}
+
+class UrlTestScanner extends TestScanner {
+  urls: string[] = []
+
+  override async scanStream(): Promise<MalwareScanResult> {
+    throw new Error('stream scan must not run when isolated URL scanning is available')
+  }
+
+  async scanUrl(
+    url: string,
+    context: MalwareScanContext,
+    expected: { sha256: string, size: number },
+  ): Promise<MalwareScanResult> {
+    this.urls.push(url)
+    this.contexts.push(context)
+    return {
+      verdict: 'clean',
+      engine: 'test-scanner',
+      scannedAt: new Date().toISOString(),
+      durationMs: 1,
+      artifactSha256: expected.sha256,
+    }
+  }
+}
+
 function request(bytes: Buffer, platforms = ['darwin-arm64']) {
   return {
     domain: 'example.com/tool',
@@ -206,6 +251,32 @@ async function seedLegacyArtifact(
 }
 
 describe('binary scan-before-promote publisher', () => {
+  it('isolates native object scanning behind a short-lived download URL', async () => {
+    const store = new UrlArtifactStore()
+    const scanner = new UrlTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('isolated retained artifact')
+    await seedLegacyArtifact(store, bytes)
+
+    const result = await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }, '_admin')
+
+    expect(result.action).toBe('attested')
+    expect(scanner.urls).toEqual(store.urls)
+    expect(scanner.urls).toHaveLength(1)
+    expect(scanner.urls[0]).toContain('expires=600')
+    expect(scanner.contexts[0]).toMatchObject({
+      surface: 'binary',
+      name: 'example.com/tool',
+      version: '1.2.3',
+    })
+  })
+
   it('promotes clean bytes, writes attestations, and indexes metadata last', async () => {
     const store = new MemoryArtifactStore()
     const scanner = new TestScanner()

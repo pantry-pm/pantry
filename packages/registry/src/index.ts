@@ -144,6 +144,7 @@ export {
   malwareScanMetrics,
   scanPackageArtifact,
   scanPackageArtifactStream,
+  scanPackageArtifactUrl,
   validateDualUsePackage,
   DualUsePolicyError,
 } from './malware-scanning'

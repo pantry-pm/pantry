@@ -30,7 +30,7 @@
   ],
   "scripts": {
     "build": "bun build --production ./src/index.ts --outdir ./dist --target bun && bun run build:server",
-    "build:server": "bun build --production ./src/server.ts --outfile ./dist/server.js --target bun",
+    "build:server": "bun build --production ./src/server.ts --outfile ./dist/server.js --target bun && bun build --production ./src/scanner-worker.ts --outfile ./dist/scanner-worker.js --target bun",
     "prepublishOnly": "bun run build",
     "dev": "bun run --watch src/server.ts",
     "start": "NODE_ENV=production bun run dist/server.js",
