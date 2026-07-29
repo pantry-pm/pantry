@@ -6,7 +6,7 @@ import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadRelea
 import { deliverReleaseToAppStore } from './release-app-store'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import { mirrorReleaseToS3 } from './release-s3'
-import { isRollingVersionSpec, normalizeLockedVersion, shouldUseLockedVersion } from './lock-version'
+import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
@@ -302,7 +302,13 @@ function getBinName(dep: string): string {
  * CI (immutable checkout), so the user needs to re-run `pantry install`
  * locally to refresh the lock.
  */
-async function installSystemPackage(spec: string, pantryDir: string, lockedVersions: Map<string, string>): Promise<void> {
+async function installSystemPackage(
+  spec: string,
+  pantryDir: string,
+  lockedVersions: Map<string, string>,
+  resolvedVersions?: Map<string, string>,
+  reuseResolved = false,
+): Promise<void> {
   // Import from the pantry TS installer SDK
   const installer = await import('../../ts-pantry/src/installer')
 
@@ -316,9 +322,16 @@ async function installSystemPackage(spec: string, pantryDir: string, lockedVersi
   }
 
   const pinned = lockedVersions.get(domain)
+  const declaredVersion = reuseResolved
+    ? reassertVersionSpec(domain, rawVersion, resolvedVersions || new Map())
+    : rawVersion
   let version: string
   let source: string
-  if (pinned && shouldUseLockedVersion(domain, pinned, rawVersion)) {
+  if (reuseResolved && declaredVersion !== rawVersion) {
+    version = declaredVersion
+    source = ' (from this action run)'
+  }
+  else if (pinned && shouldUseLockedVersion(domain, pinned, rawVersion)) {
     version = normalizeLockedVersion(domain, pinned)
     source = ' (from pantry.lock)'
   }
@@ -336,7 +349,8 @@ async function installSystemPackage(spec: string, pantryDir: string, lockedVersi
   core.info(`Installing ${domain}@${version} via pantry SDK${source}`)
   // `installPackage` handles "latest", "*", empty, semver ranges, and concrete
   // versions — don't pre-resolve here or semver ranges get flattened to latest.
-  await installPackage(domain, version, { installDir: pantryDir, quiet: true })
+  const installed = await installPackage(domain, version, { installDir: pantryDir, quiet: true })
+  resolvedVersions?.set(domain, installed.version)
 }
 
 /** Parse pantry.lock and return a map of `domain` → concrete `version`. */
@@ -830,11 +844,12 @@ export async function run(): Promise<void> {
     // before falling back to the deps file / "latest" when installing system
     // packages, so the action stays in lockstep with `pantry install`.
     const lockedVersions = readLockedVersions()
+    const resolvedSystemVersions = new Map<string, string>()
 
     // Bun is part of the action's baseline runtime contract even when callers
     // provide an explicit package/service list. Keep downstream `bun` steps
     // working without requiring every workflow to repeat `bun.sh`.
-    await installSystemPackage('bun.sh', pantryDir, lockedVersions)
+    await installSystemPackage('bun.sh', pantryDir, lockedVersions, resolvedSystemVersions)
 
     // Put `pantry/.bin` (and `~/.pantry/bin`) on PATH *before* any install
     // branch runs. `core.addPath` mutates `process.env.PATH` in-process in
@@ -879,7 +894,7 @@ export async function run(): Promise<void> {
         core.info(`Cache hit — reconciling system deps against lock/spec: ${systemDeps.join(', ')}`)
         for (const dep of systemDeps) {
           try {
-            await installSystemPackage(dep, pantryDir, lockedVersions)
+            await installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions)
           }
           catch (err) {
             core.warning(`${dep}: ${err instanceof Error ? err.message : 'install failed'}`)
@@ -917,7 +932,7 @@ export async function run(): Promise<void> {
         core.startGroup(`Installing system packages: ${systemDeps.join(', ')}`)
         // Use the pantry TS installer SDK — works cross-platform via Node.js APIs
         const results = await Promise.allSettled(
-          systemDeps.map(dep => installSystemPackage(dep, pantryDir, lockedVersions))
+          systemDeps.map(dep => installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions))
         )
         for (let i = 0; i < results.length; i++) {
           if (results[i].status === 'rejected') {
@@ -963,7 +978,7 @@ export async function run(): Promise<void> {
       const reassertDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
       for (const dep of reassertDeps) {
         try {
-          await installSystemPackage(dep, pantryDir, lockedVersions)
+          await installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions, true)
         }
         catch (err) {
           core.warning(`re-assert ${dep}: ${err instanceof Error ? err.message : 'failed'}`)

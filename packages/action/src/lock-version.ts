@@ -69,3 +69,16 @@ export function shouldUseLockedVersion(domain: string, pinned: string, spec: str
     return false
   return versionSatisfiesSpec(normalizeLockedVersion(domain, pinned), spec)
 }
+
+/**
+ * Re-assert an already installed system package with its concrete resolution.
+ * This keeps rolling channels fresh on the first install without resolving or
+ * downloading the floating alias again after workspace installation.
+ */
+export function reassertVersionSpec(
+  domain: string,
+  declaredVersion: string,
+  resolvedVersions: ReadonlyMap<string, string>,
+): string {
+  return resolvedVersions.get(domain) || declaredVersion
+}

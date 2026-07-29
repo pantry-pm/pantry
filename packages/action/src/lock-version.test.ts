@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   isRollingVersionSpec,
   normalizeLockedVersion,
+  reassertVersionSpec,
   shouldUseLockedVersion,
   versionSatisfiesSpec,
 } from './lock-version'
@@ -57,5 +58,16 @@ describe('isRollingVersionSpec', () => {
     expect(isRollingVersionSpec('ziglang.org', '0.17.0-dev')).toBe(true)
     expect(isRollingVersionSpec('ziglang.org', '0.17.0-dev.1413+addc3c3b8')).toBe(false)
     expect(isRollingVersionSpec('bun.sh', '0.17.0-dev')).toBe(false)
+  })
+})
+
+describe('reassertVersionSpec', () => {
+  test('reuses the concrete result of a rolling Zig install', () => {
+    const resolved = new Map([
+      ['ziglang.org', '0.17.0-dev.1476+91a29d707'],
+    ])
+    expect(reassertVersionSpec('ziglang.org', '0.17.0-dev', resolved))
+      .toBe('0.17.0-dev.1476+91a29d707')
+    expect(reassertVersionSpec('bun.sh', '1.3.14', resolved)).toBe('1.3.14')
   })
 })
