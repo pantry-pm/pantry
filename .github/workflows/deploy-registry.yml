@@ -143,6 +143,18 @@ jobs:
             set_clam MaxQueue 4
             set_clam ConcurrentDatabaseReload no
 
+            # Large archive scans are intentionally CPU and I/O intensive. Run
+            # clamd below the proxy and Registry so liveness, readiness, and
+            # unrelated package traffic remain responsive under scan load.
+            CLAMD_CAPACITY_DIR=/etc/systemd/system/clamav-daemon.service.d
+            install -d -m 0755 "$CLAMD_CAPACITY_DIR"
+            printf '%s\n' \
+              '[Service]' \
+              'Nice=10' \
+              'CPUWeight=25' \
+              'IOWeight=25' \
+              > "$CLAMD_CAPACITY_DIR/pantry-registry-capacity.conf"
+
             install -d -m 0755 "$(dirname "$ENV_FILE")"
             [ -f "$ENV_FILE" ] || install -m 0600 /dev/null "$ENV_FILE"
             set_env() {
