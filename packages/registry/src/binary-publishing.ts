@@ -11,6 +11,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import type { S3Client } from './storage/aws-client'
 import {
   publicScanResult,
+  recordMalwareScanResult,
   scanPackageArtifact,
   scanPackageArtifactStream,
   scanPackageArtifactUrl,
@@ -63,6 +64,20 @@ export interface BinaryRescanCompleted {
   tarball: string
   platforms: Record<string, BinaryPlatformRecord>
   scan: ReturnType<typeof publicScanResult>
+}
+
+export interface BinaryExternalRescanPrepared {
+  action: 'already-clean' | 'prepared'
+  domain: string
+  version: string
+  tarball: string
+  platforms: string[]
+  sha256: string
+  size: number
+  objectIdentity: string
+  downloadUrl?: string
+  expiresAt?: string
+  scan?: ReturnType<typeof publicScanResult>
 }
 
 interface ExistingRescanState {
@@ -169,6 +184,8 @@ export interface BinaryArtifactPublisherOptions {
   stagingTtlSeconds?: number
   now?: () => number
   onPublished?: (result: BinaryPublishCompleted) => Promise<void>
+  /** Enables migration-only external attestations for artifacts uploaded no later than this instant. */
+  legacyScanAttestationCutoff?: number
 }
 
 const domainPattern = /^[a-z0-9](?:[a-z0-9._-]|\/(?=[a-z0-9])){0,213}$/i
@@ -533,6 +550,155 @@ export class BinaryArtifactPublisher {
         scan,
       )
     })
+  }
+
+  async prepareExternalRescan(input: unknown): Promise<BinaryExternalRescanPrepared> {
+    const request = validateBinaryRescanRequest(input)
+    return this.withDomainLock(request.domain, async () => {
+      const state = await this.loadExistingRescan(request)
+      this.assertExternalRescanEligible(state)
+      const durableScan = await this.readCleanAttestation(state.tarball, state.sha256)
+      if (durableScan) {
+        const completed = await this.finishDurableRescan(state, request, durableScan)
+        return {
+          action: 'already-clean',
+          domain: request.domain,
+          version: request.version,
+          tarball: state.tarball,
+          platforms: Object.keys(completed.platforms),
+          sha256: state.sha256,
+          size: state.size,
+          objectIdentity: state.objectIdentity!,
+          scan: completed.scan,
+        }
+      }
+      if (!this.store.createDownloadUrl)
+        throw new BinaryPublishError('Retained artifact download preparation is unavailable', 503, 'BINARY_RESCAN_PREPARE_UNAVAILABLE')
+      const expiresInSeconds = 15 * 60
+      return {
+        action: 'prepared',
+        domain: request.domain,
+        version: request.version,
+        tarball: state.tarball,
+        platforms: request.platforms,
+        sha256: state.sha256,
+        size: state.size,
+        objectIdentity: state.objectIdentity!,
+        downloadUrl: this.store.createDownloadUrl(state.tarball, expiresInSeconds),
+        expiresAt: new Date(this.now() + expiresInSeconds * 1000).toISOString(),
+      }
+    })
+  }
+
+  async attestExternalRescan(input: unknown, publisher?: string): Promise<BinaryRescanCompleted> {
+    if (!input || typeof input !== 'object')
+      throw new BinaryPublishError('External rescan attestation must be an object', 400, 'INVALID_BINARY_RESCAN_ATTESTATION')
+    const value = input as Record<string, unknown>
+    const request = validateBinaryRescanRequest(value)
+    const tarball = typeof value.tarball === 'string' ? storedBinaryKey(value.tarball) : ''
+    const sha256 = typeof value.sha256 === 'string' ? value.sha256.toLowerCase() : ''
+    const size = typeof value.size === 'number' ? value.size : Number.NaN
+    const objectIdentity = typeof value.objectIdentity === 'string' ? value.objectIdentity : ''
+    const scan = this.validateExternalScan(value.scan, sha256)
+    if (!tarball || !sha256Pattern.test(sha256) || !Number.isSafeInteger(size) || size <= 0 || !objectIdentity)
+      throw new BinaryPublishError('External rescan artifact identity is invalid', 422, 'INVALID_BINARY_RESCAN_ATTESTATION')
+
+    return this.withDomainLock(request.domain, async () => {
+      const current = await this.loadExistingRescan(request)
+      this.assertExternalRescanEligible(current)
+      if (
+        current.tarball !== tarball
+        || current.sha256 !== sha256
+        || current.size !== size
+        || current.objectIdentity !== objectIdentity
+      ) {
+        throw new BinaryPublishError(
+          'Retained artifact changed after external scan preparation',
+          409,
+          'BINARY_RESCAN_ARTIFACT_CHANGED',
+        )
+      }
+      const durableScan = await this.readCleanAttestation(current.tarball, current.sha256)
+      if (durableScan)
+        return this.finishDurableRescan(current, request, durableScan)
+
+      recordMalwareScanResult({
+        surface: 'binary',
+        name: request.domain,
+        version: request.version,
+        publisher,
+      }, scan)
+      if (scan.verdict === 'blocked')
+        return this.quarantineExisting(current.metadataKey, current.metadata, request, current.tarball, scan)
+      return this.attestExisting(
+        current.metadataKey,
+        current.metadata,
+        request,
+        current.tarball,
+        current.sha256,
+        current.size,
+        scan,
+      )
+    })
+  }
+
+  private assertExternalRescanEligible(state: ExistingRescanState): void {
+    const cutoff = this.options.legacyScanAttestationCutoff
+    if (!Number.isFinite(cutoff))
+      throw new BinaryPublishError('External legacy scan attestation is disabled', 403, 'BINARY_EXTERNAL_ATTESTATION_DISABLED')
+    if (!state.objectIdentity)
+      throw new BinaryPublishError('Retained artifact has no stable object identity', 422, 'BINARY_OBJECT_IDENTITY_MISSING')
+    for (const record of Object.values(state.selected)) {
+      const uploadedAt = Date.parse(record.uploadedAt)
+      if (!Number.isFinite(uploadedAt) || uploadedAt > cutoff!) {
+        throw new BinaryPublishError(
+          'External attestation is limited to legacy artifacts uploaded before the configured cutoff',
+          403,
+          'BINARY_EXTERNAL_ATTESTATION_NOT_LEGACY',
+        )
+      }
+    }
+  }
+
+  private validateExternalScan(input: unknown, expectedSha256: string): MalwareScanResult {
+    if (!input || typeof input !== 'object')
+      throw new BinaryPublishError('External scan result is required', 422, 'INVALID_BINARY_RESCAN_ATTESTATION')
+    const scan = input as Partial<MalwareScanResult>
+    const scannedAt = typeof scan.scannedAt === 'string' ? Date.parse(scan.scannedAt) : Number.NaN
+    const ageMs = this.now() - scannedAt
+    if (
+      (scan.verdict !== 'clean' && scan.verdict !== 'blocked')
+      || scan.engine !== 'clamav'
+      || scan.artifactSha256 !== expectedSha256
+      || !Number.isFinite(scannedAt)
+      || ageMs < -5 * 60_000
+      || ageMs > 60 * 60_000
+      || typeof scan.durationMs !== 'number'
+      || !Number.isFinite(scan.durationMs)
+      || scan.durationMs < 0
+      || scan.durationMs > 30 * 60_000
+      || typeof scan.engineVersion !== 'string'
+      || scan.engineVersion.trim().length === 0
+      || scan.engineVersion.length > 128
+      || typeof scan.databaseVersion !== 'string'
+      || scan.databaseVersion.trim().length === 0
+      || scan.databaseVersion.length > 128
+      || (scan.verdict === 'blocked' && (typeof scan.signature !== 'string' || scan.signature.trim().length === 0))
+      || (scan.signature !== undefined && scan.signature.length > 256)
+      || scan.reason !== undefined
+    ) {
+      throw new BinaryPublishError('External scan result is invalid or stale', 422, 'INVALID_BINARY_RESCAN_ATTESTATION')
+    }
+    return {
+      verdict: scan.verdict,
+      engine: 'clamav',
+      scannedAt: scan.scannedAt!,
+      durationMs: scan.durationMs,
+      artifactSha256: scan.artifactSha256!,
+      engineVersion: scan.engineVersion,
+      databaseVersion: scan.databaseVersion,
+      ...(scan.signature ? { signature: scan.signature } : {}),
+    }
   }
 
   private async loadExistingRescan(request: BinaryRescanRequest): Promise<ExistingRescanState> {

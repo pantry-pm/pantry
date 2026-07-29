@@ -145,6 +145,7 @@ export {
   scanPackageArtifact,
   scanPackageArtifactStream,
   scanPackageArtifactUrl,
+  recordMalwareScanResult,
   validateDualUsePackage,
   DualUsePolicyError,
 } from './malware-scanning'
@@ -158,6 +159,7 @@ export {
   validateBinaryPublishRequest,
   type BinaryArtifactPublisherOptions,
   type BinaryArtifactStore,
+  type BinaryExternalRescanPrepared,
   type BinaryPackageMetadata,
   type BinaryPlatformRecord,
   type BinaryPublishCompleted,

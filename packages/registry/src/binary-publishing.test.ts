@@ -541,6 +541,102 @@ describe('binary scan-before-promote publisher', () => {
     expect(stored.versions['1.2.3'].platforms['darwin-arm64'].malwareScan).toBeUndefined()
   })
 
+  it('accepts cutoff-gated external ClamAV evidence for the exact retained object', async () => {
+    const store = new UrlArtifactStore()
+    const scanner = new TestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
+    })
+    const bytes = Buffer.from('externally scanned legacy artifact')
+    const tarball = await seedLegacyArtifact(store, bytes)
+    const request = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }
+
+    const prepared = await publisher.prepareExternalRescan(request)
+    expect(prepared).toMatchObject({
+      action: 'prepared',
+      tarball,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      size: bytes.byteLength,
+    })
+    expect(prepared.downloadUrl).toContain('expires=900')
+    expect(prepared.objectIdentity).toBeTruthy()
+    expect(scanner.contexts).toHaveLength(0)
+
+    const completed = await publisher.attestExternalRescan({
+      ...request,
+      tarball: prepared.tarball,
+      sha256: prepared.sha256,
+      size: prepared.size,
+      objectIdentity: prepared.objectIdentity,
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: new Date().toISOString(),
+        durationMs: 123,
+        artifactSha256: prepared.sha256,
+        engineVersion: 'ClamAV 1.4.3',
+        databaseVersion: '27690',
+      },
+    }, '_admin-external-scanner')
+
+    expect(completed.action).toBe('attested')
+    expect(JSON.parse(store.files.get(`${tarball}.scan.json`)!.toString()).scan).toMatchObject({
+      verdict: 'clean',
+      engine: 'clamav',
+      artifactSha256: prepared.sha256,
+    })
+  })
+
+  it('rejects external evidence for recent, changed, or malformed artifacts', async () => {
+    const store = new UrlArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
+    })
+    const bytes = Buffer.from('legacy exact bytes')
+    const tarball = await seedLegacyArtifact(store, bytes)
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }
+    const prepared = await publisher.prepareExternalRescan(selector)
+    const validScan = {
+      verdict: 'clean',
+      engine: 'clamav',
+      scannedAt: new Date().toISOString(),
+      durationMs: 12,
+      artifactSha256: prepared.sha256,
+      engineVersion: 'ClamAV 1.4.3',
+      databaseVersion: '27690',
+    }
+
+    await expect(publisher.attestExternalRescan({
+      ...selector,
+      ...prepared,
+      scan: { ...validScan, artifactSha256: 'f'.repeat(64) },
+    })).rejects.toMatchObject({ code: 'INVALID_BINARY_RESCAN_ATTESTATION' })
+
+    await store.putObject(tarball, Buffer.from('changed exact bytes'), 'application/gzip')
+    await expect(publisher.attestExternalRescan({
+      ...selector,
+      ...prepared,
+      scan: validScan,
+    })).rejects.toMatchObject({ code: 'BINARY_RESCAN_ARTIFACT_CHANGED' })
+
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    metadata.versions['1.2.3'].platforms['darwin-arm64'].uploadedAt = '2026-01-03T00:00:00.000Z'
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    await expect(publisher.prepareExternalRescan(selector))
+      .rejects.toMatchObject({ code: 'BINARY_EXTERNAL_ATTESTATION_NOT_LEGACY' })
+  })
+
   it('quarantines blocked retained artifacts and removes every installable reference', async () => {
     const store = new MemoryArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
@@ -594,17 +690,18 @@ describe('binary publication API', () => {
   let server: ReturnType<typeof createServer>
   let baseUrl: string
   let token: string
-  let store: MemoryArtifactStore
+  let store: UrlArtifactStore
 
   beforeEach(async () => {
     token = `binary-test-${crypto.randomUUID()}`
     process.env.PANTRY_REGISTRY_TOKEN = token
     const port = await getAvailablePort()
     baseUrl = `http://localhost:${port}`
-    store = new MemoryArtifactStore()
+    store = new UrlArtifactStore()
     const scanner = new TestScanner()
     const publisher = new BinaryArtifactPublisher(store, scanner, {
       tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
     })
     server = createServer(
       createLocalRegistry(baseUrl),
@@ -675,5 +772,46 @@ describe('binary publication API', () => {
     })
     expect(rescanned.status).toBe(200)
     expect((await rescanned.json() as any).action).toBe('attested')
+  })
+
+  it('prepares and accepts an authenticated external legacy scan', async () => {
+    const bytes = Buffer.from('api external retained artifact')
+    await seedLegacyArtifact(store, bytes)
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }
+    const prepareResponse = await fetch(`${baseUrl}/api/v1/binaries/rescan/prepare`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(selector),
+    })
+    expect(prepareResponse.status).toBe(200)
+    const prepared = await prepareResponse.json() as any
+    expect(prepared.action).toBe('prepared')
+
+    const attestResponse = await fetch(`${baseUrl}/api/v1/binaries/rescan/attest`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...selector,
+        tarball: prepared.tarball,
+        sha256: prepared.sha256,
+        size: prepared.size,
+        objectIdentity: prepared.objectIdentity,
+        scan: {
+          verdict: 'clean',
+          engine: 'clamav',
+          scannedAt: new Date().toISOString(),
+          durationMs: 10,
+          artifactSha256: prepared.sha256,
+          engineVersion: 'ClamAV 1.4.3',
+          databaseVersion: '27690',
+        },
+      }),
+    })
+    expect(attestResponse.status).toBe(200)
+    expect((await attestResponse.json() as any).action).toBe('attested')
   })
 })

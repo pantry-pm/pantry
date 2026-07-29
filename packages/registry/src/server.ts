@@ -711,6 +711,14 @@ export function createHandler(
     binaryPublisher = new BinaryArtifactPublisher(store, malwareScanner, {
       tokenSecret: secret,
       maxBytes: Number.parseInt(process.env.CLAMD_MAX_BYTES || '', 10) || undefined,
+      legacyScanAttestationCutoff: (() => {
+        const value = process.env.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF?.trim()
+        if (!value) return undefined
+        const parsed = Date.parse(value)
+        if (!Number.isFinite(parsed))
+          throw new Error('PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF must be an ISO-8601 timestamp')
+        return parsed
+      })(),
       onPublished: async (result) => {
         const first = Object.values(result.platforms)[0]
         for (const record of Object.values(result.platforms))
@@ -823,6 +831,14 @@ export function createHandler(
 
       if (path === '/api/v1/binaries/rescan' && req.method === 'POST') {
         return handleBinaryRescan(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/rescan/prepare' && req.method === 'POST') {
+        return handleBinaryExternalRescanPrepare(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/rescan/attest' && req.method === 'POST') {
+        return handleBinaryExternalRescanAttest(req, getBinaryPublisher, corsHeaders)
       }
 
       // ================================================================
@@ -2967,6 +2983,13 @@ async function handleBinaryRescan(
 ): Promise<Response> {
   const denied = await authorizeBinaryPublisher(req, corsHeaders)
   if (denied) return denied
+  if (process.env.NODE_ENV === 'production') {
+    return Response.json({
+      error: 'Production legacy rescans must use the isolated prepare/attest workflow',
+      code: 'BINARY_EXTERNAL_RESCAN_REQUIRED',
+      retryable: false,
+    }, { status: 409, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+  }
   const body = await req.json().catch(() => null)
   if (!body)
     return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
@@ -2987,6 +3010,66 @@ async function handleBinaryRescan(
     return Response.json({
       error: 'Binary rescan failed before attestation',
       code: 'BINARY_RESCAN_FAILED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryExternalRescanPrepare(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  try {
+    return Response.json(await getPublisher().prepareExternalRescan(body), {
+      headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+    })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary external rescan preparation failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary external rescan preparation failed',
+      code: 'BINARY_RESCAN_PREPARE_FAILED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryExternalRescanAttest(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  try {
+    const completed = await getPublisher().attestExternalRescan(body, '_admin-external-scanner')
+    if (completed.action === 'quarantined')
+      _binaryAttestationCache.delete(completed.tarball)
+    return Response.json({ success: true, ...completed }, {
+      status: completed.action === 'quarantined' ? 202 : 200,
+      headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+    })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary external rescan attestation failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary external rescan attestation failed',
+      code: 'BINARY_RESCAN_ATTEST_FAILED',
       retryable: true,
     }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
   }
