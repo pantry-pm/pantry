@@ -112,6 +112,33 @@ function request(bytes: Buffer, platforms = ['darwin-arm64']) {
   }
 }
 
+async function seedLegacyArtifact(
+  store: MemoryArtifactStore,
+  bytes: Buffer,
+  platforms = ['darwin-arm64'],
+): Promise<string> {
+  const tarball = 'binaries/example.com/tool/1.2.3/darwin-arm64/example.com-tool-1.2.3.tar.gz'
+  const sha256 = createHash('sha256').update(bytes).digest('hex')
+  await store.putObject(tarball, bytes, 'application/gzip')
+  await store.putObject(`${tarball}.sha256`, `${sha256}  example.com-tool-1.2.3.tar.gz\n`, 'text/plain')
+  await store.putObject('binaries/example.com/tool/metadata.json', JSON.stringify({
+    name: 'example.com/tool',
+    latestVersion: '1.2.3',
+    versions: {
+      '1.2.3': {
+        platforms: Object.fromEntries(platforms.map(platform => [platform, {
+          tarball,
+          sha256,
+          size: bytes.byteLength,
+          uploadedAt: '2026-01-01T00:00:00.000Z',
+        }])),
+      },
+    },
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  }), 'application/json')
+  return tarball
+}
+
 describe('binary scan-before-promote publisher', () => {
   it('promotes clean bytes, writes attestations, and indexes metadata last', async () => {
     const store = new MemoryArtifactStore()
@@ -210,6 +237,60 @@ describe('binary scan-before-promote publisher', () => {
     expect(second.scan.artifactSha256).toBe(first.scan.artifactSha256)
   })
 
+  it('attests retained artifacts in place and skips a verified clean retry', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('retained clean artifact')
+    const tarball = await seedLegacyArtifact(store, bytes, ['darwin-arm64', 'linux-x86-64'])
+
+    const first = await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64', 'linux-x86-64'],
+    }, '_admin')
+    const second = await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64', 'linux-x86-64'],
+    }, '_admin')
+
+    expect(first.action).toBe('attested')
+    expect(second.action).toBe('already-clean')
+    expect(scanner.contexts).toHaveLength(1)
+    expect(store.files.get(tarball)?.toString()).toBe(bytes.toString())
+    expect(JSON.parse(store.files.get(`${tarball}.scan.json`)!.toString()).scan.verdict).toBe('clean')
+    const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
+    expect(metadata.versions['1.2.3'].platforms['linux-x86-64'].malwareScan.verdict).toBe('clean')
+  })
+
+  it('quarantines blocked retained artifacts and removes every installable reference', async () => {
+    const store = new MemoryArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('retained EICAR')
+    const tarball = await seedLegacyArtifact(store, bytes, ['darwin-arm64', 'linux-x86-64'])
+
+    const result = await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }, '_admin')
+
+    expect(result.action).toBe('quarantined')
+    expect(result.scan.verdict).toBe('blocked')
+    expect(store.files.has(tarball)).toBe(false)
+    expect(store.files.has(`${tarball}.sha256`)).toBe(false)
+    const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
+    expect(metadata.versions).toEqual({})
+    const quarantineKeys = [...store.files.keys()].filter(key => key.startsWith('.pantry-quarantine/malware/'))
+    expect(quarantineKeys.some(key => !key.endsWith('.scan.json'))).toBe(true)
+    expect(quarantineKeys.some(key => key.endsWith('.scan.json'))).toBe(true)
+  })
+
   it('filters unattested metadata without mutating the stored snapshot', () => {
     const clean = {
       verdict: 'clean' as const,
@@ -294,5 +375,30 @@ describe('binary publication API', () => {
     })
     expect(completed.status).toBe(201)
     expect((await completed.json() as any).scan.verdict).toBe('clean')
+  })
+
+  it('requires operator auth and rescans a retained artifact in place', async () => {
+    const bytes = Buffer.from('api retained artifact')
+    await seedLegacyArtifact(store, bytes)
+    const body = JSON.stringify({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+
+    const unauthenticated = await fetch(`${baseUrl}/api/v1/binaries/rescan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    })
+    expect(unauthenticated.status).toBe(401)
+
+    const rescanned = await fetch(`${baseUrl}/api/v1/binaries/rescan`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body,
+    })
+    expect(rescanned.status).toBe(200)
+    expect((await rescanned.json() as any).action).toBe('attested')
   })
 })

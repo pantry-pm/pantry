@@ -49,6 +49,21 @@ export interface BinaryPublishRequest {
   sha256: string
 }
 
+export interface BinaryRescanRequest {
+  domain: string
+  version: string
+  platforms: string[]
+}
+
+export interface BinaryRescanCompleted {
+  action: 'already-clean' | 'attested' | 'quarantined'
+  domain: string
+  version: string
+  tarball: string
+  platforms: Record<string, BinaryPlatformRecord>
+  scan: ReturnType<typeof publicScanResult>
+}
+
 interface StagingClaim extends BinaryPublishRequest {
   stagingKey: string
   expiresAt: number
@@ -178,6 +193,35 @@ export function validateBinaryPublishRequest(input: unknown, maxBytes: number = 
     throw new BinaryPublishError('Binary artifact SHA-256 must be 64 lowercase hexadecimal characters', 422, 'INVALID_BINARY_SHA256')
 
   return { domain, version, platforms, filename, size, sha256 }
+}
+
+export function validateBinaryRescanRequest(input: unknown): BinaryRescanRequest {
+  if (!input || typeof input !== 'object')
+    throw new BinaryPublishError('Rescan request must be an object', 400, 'INVALID_BINARY_RESCAN')
+
+  const value = input as Record<string, unknown>
+  const domain = typeof value.domain === 'string' ? value.domain.trim() : ''
+  const version = typeof value.version === 'string' ? value.version.trim() : ''
+  const platforms = Array.isArray(value.platforms)
+    ? [...new Set(value.platforms.filter((item): item is string => typeof item === 'string').map(item => item.trim()))]
+    : []
+
+  if (!domainPattern.test(domain) || domain.includes('..') || domain.endsWith('/'))
+    throw new BinaryPublishError('Invalid binary package domain', 422, 'INVALID_BINARY_DOMAIN')
+  if (!versionPattern.test(version))
+    throw new BinaryPublishError('Invalid binary package version', 422, 'INVALID_BINARY_VERSION')
+  if (platforms.length === 0 || platforms.length > MAX_PLATFORMS || platforms.some(item => !platformPattern.test(item)))
+    throw new BinaryPublishError('One or more binary platforms are invalid', 422, 'INVALID_BINARY_PLATFORM')
+  return { domain, version, platforms }
+}
+
+function storedBinaryKey(tarball: string): string {
+  try {
+    return decodeURIComponent(new URL(tarball).pathname.replace(/^\/+/, ''))
+  }
+  catch {
+    return decodeURIComponent(tarball.replace(/^\/+/, ''))
+  }
 }
 
 function base64url(value: string): string {
@@ -372,6 +416,191 @@ export class BinaryArtifactPublisher {
     const claim = this.verifyClaim(initiated.uploadId)
     await this.store.putObject(claim.stagingKey, bytes, 'application/gzip')
     return this.complete(initiated.uploadId, publisher, surface)
+  }
+
+  async rescanExisting(input: unknown, publisher?: string): Promise<BinaryRescanCompleted> {
+    const request = validateBinaryRescanRequest(input)
+    return this.withDomainLock(request.domain, async () => {
+      const metadataKey = `binaries/${request.domain}/metadata.json`
+      let metadata: BinaryPackageMetadata
+      try {
+        metadata = JSON.parse((await this.store.getObject(metadataKey)).toString('utf8')) as BinaryPackageMetadata
+      }
+      catch {
+        throw new BinaryPublishError('Binary package metadata was not found', 404, 'BINARY_METADATA_NOT_FOUND')
+      }
+
+      const selected: Record<string, BinaryPlatformRecord> = {}
+      for (const platform of request.platforms) {
+        const record = metadata.versions?.[request.version]?.platforms?.[platform]
+        if (!record)
+          throw new BinaryPublishError(`Binary platform was not found: ${platform}`, 404, 'BINARY_PLATFORM_NOT_FOUND')
+        selected[platform] = record
+      }
+
+      const tarballs = [...new Set(Object.values(selected).map(record => storedBinaryKey(record.tarball)))]
+      if (tarballs.length !== 1)
+        throw new BinaryPublishError('Rescan platforms must reference the same retained artifact', 422, 'BINARY_RESCAN_ARTIFACT_MISMATCH')
+      const tarball = tarballs[0]
+      if (!tarball.startsWith(`binaries/${request.domain}/${request.version}/`))
+        throw new BinaryPublishError('Retained artifact is outside its package namespace', 422, 'BINARY_RESCAN_ARTIFACT_MISMATCH')
+
+      const alreadyClean = Object.values(selected).every(record =>
+        record.malwareScan?.verdict === 'clean'
+        && record.malwareScan.artifactSha256 === record.sha256,
+      )
+      if (alreadyClean) {
+        try {
+          const attestation = JSON.parse((await this.store.getObject(binaryAttestationKey(tarball))).toString('utf8'))
+          if (attestation?.scan?.verdict === 'clean' && attestation.scan.artifactSha256 === Object.values(selected)[0].sha256) {
+            return {
+              action: 'already-clean',
+              domain: request.domain,
+              version: request.version,
+              tarball,
+              platforms: selected,
+              scan: publicScanResult(Object.values(selected)[0].malwareScan),
+            }
+          }
+        }
+        catch {}
+      }
+
+      let size: number
+      try {
+        const head = await this.store.headObject(tarball)
+        const observed = parseContentLength(head)
+        size = observed ?? Object.values(selected)[0].size
+      }
+      catch {
+        throw new BinaryPublishError('Retained binary artifact was not found', 404, 'BINARY_ARTIFACT_NOT_FOUND')
+      }
+      if (!Number.isSafeInteger(size) || size <= 0 || size > this.maxBytes)
+        throw new BinaryPublishError(`Retained binary artifact size must be between 1 and ${this.maxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
+
+      let sha256 = Object.values(selected)
+        .map(record => record.sha256)
+        .find(value => sha256Pattern.test(value || ''))
+      if (!sha256) {
+        try {
+          const checksum = (await this.store.getObject(`${tarball}.sha256`)).toString('utf8')
+          sha256 = checksum.match(/\b[a-f0-9]{64}\b/i)?.[0]?.toLowerCase()
+        }
+        catch {}
+      }
+      if (!sha256)
+        throw new BinaryPublishError('Retained binary artifact has no valid SHA-256', 422, 'BINARY_SHA256_MISSING')
+
+      const context = {
+        surface: 'binary' as const,
+        name: request.domain,
+        version: request.version,
+        publisher,
+      }
+      let scan: MalwareScanResult
+      if (this.store.getObjectStream && this.scanner.scanStream) {
+        scan = await scanPackageArtifactStream(
+          this.scanner,
+          await this.store.getObjectStream(tarball),
+          context,
+          { sha256, size },
+        )
+      }
+      else {
+        const bytes = await this.store.getObject(tarball)
+        if (bytes.byteLength !== size)
+          throw new BinaryPublishError('Retained artifact size does not match metadata', 422, 'BINARY_SIZE_MISMATCH')
+        scan = await scanPackageArtifact(this.scanner, Uint8Array.from(bytes).buffer, context)
+      }
+
+      if (scan.artifactSha256 !== sha256)
+        throw new BinaryPublishError('Retained artifact SHA-256 does not match metadata', 422, 'BINARY_SHA256_MISMATCH', scan)
+      if (scan.verdict === 'error')
+        throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
+
+      if (scan.verdict === 'blocked' || scan.verdict === 'review')
+        return this.quarantineExisting(metadataKey, metadata, request, tarball, scan)
+      if (scan.verdict !== 'clean')
+        throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
+
+      const updatedAt = new Date(this.now()).toISOString()
+      const records: Record<string, BinaryPlatformRecord> = {}
+      for (const [version, versionInfo] of Object.entries(metadata.versions || {})) {
+        for (const [platform, record] of Object.entries(versionInfo.platforms || {})) {
+          if (storedBinaryKey(record.tarball) !== tarball) continue
+          record.tarball = tarball
+          record.sha256 = sha256
+          record.size = size
+          record.malwareScan = scan
+          if (!record.uploadedAt) record.uploadedAt = updatedAt
+          if (version === request.version) records[platform] = record
+        }
+      }
+      await this.store.putObject(`${tarball}.sha256`, `${sha256}  ${tarball.split('/').at(-1)}\n`, 'text/plain')
+      await this.store.putObject(binaryAttestationKey(tarball), JSON.stringify({
+        domain: request.domain,
+        version: request.version,
+        platforms: Object.keys(records),
+        filename: tarball.split('/').at(-1),
+        scan,
+      }), 'application/json')
+      metadata.updatedAt = updatedAt
+      await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
+
+      const completed: BinaryPublishCompleted = {
+        domain: request.domain,
+        version: request.version,
+        platforms: records,
+        scan: publicScanResult(scan),
+      }
+      await this.options.onPublished?.(completed)
+      return { action: 'attested', tarball, ...completed }
+    })
+  }
+
+  private async quarantineExisting(
+    metadataKey: string,
+    metadata: BinaryPackageMetadata,
+    request: BinaryRescanRequest,
+    tarball: string,
+    scan: MalwareScanResult,
+  ): Promise<BinaryRescanCompleted> {
+    const quarantineKey = `.pantry-quarantine/malware/${request.domain}/${request.version}/${scan.artifactSha256}/${tarball.split('/').at(-1)}`
+    await this.store.copyObject(tarball, quarantineKey)
+    await this.store.putObject(`${quarantineKey}.scan.json`, JSON.stringify({
+      quarantinedAt: new Date(this.now()).toISOString(),
+      originalKey: tarball,
+      domain: request.domain,
+      version: request.version,
+      scan,
+    }), 'application/json')
+
+    for (const [version, versionInfo] of Object.entries(metadata.versions || {})) {
+      for (const [platform, record] of Object.entries(versionInfo.platforms || {})) {
+        if (storedBinaryKey(record.tarball) === tarball)
+          delete versionInfo.platforms[platform]
+      }
+      if (Object.keys(versionInfo.platforms || {}).length === 0)
+        delete metadata.versions[version]
+    }
+    if (!metadata.versions[metadata.latestVersion]) {
+      metadata.latestVersion = Object.keys(metadata.versions)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+        .at(0) || ''
+    }
+    metadata.updatedAt = new Date(this.now()).toISOString()
+    await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
+    await this.store.deleteObject(tarball)
+    await this.store.deleteObject(`${tarball}.sha256`).catch(() => {})
+    await this.store.deleteObject(binaryAttestationKey(tarball)).catch(() => {})
+    return {
+      action: 'quarantined',
+      domain: request.domain,
+      version: request.version,
+      tarball,
+      platforms: {},
+      scan: publicScanResult(scan),
+    }
   }
 
   private verifyClaim(uploadId: string): StagingClaim {

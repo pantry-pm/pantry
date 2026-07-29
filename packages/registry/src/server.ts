@@ -476,6 +476,7 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  * Binary proxy (pantry CLI install):
  * POST /api/v1/binaries/uploads                              - Create untrusted staged upload
  * POST /api/v1/binaries/uploads/complete                     - Scan and promote staged upload
+ * POST /api/v1/binaries/rescan                               - Attest or quarantine a retained artifact
  * GET  /binaries/{domain}/metadata.json                        - Package metadata (5min cache)
  * GET  /binaries/{domain}/{version}/{platform}/{file}.tar.gz   - Tarball download (24h cache, tracked)
  * GET  /binaries/{domain}/{version}/{platform}/{file}.sha256   - Checksum (24h cache)
@@ -818,6 +819,10 @@ export function createHandler(
 
       if (path === '/api/v1/binaries/uploads/complete' && req.method === 'POST') {
         return handleBinaryUploadComplete(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/rescan' && req.method === 'POST') {
+        return handleBinaryRescan(req, getBinaryPublisher, corsHeaders)
       }
 
       // ================================================================
@@ -1919,6 +1924,7 @@ export function createServer(
     console.log('Binary proxy (pantry CLI):')
     console.log('  POST /api/v1/binaries/uploads          - Stage native artifact')
     console.log('  POST /api/v1/binaries/uploads/complete - Scan and promote native artifact')
+    console.log('  POST /api/v1/binaries/rescan          - Attest or quarantine retained artifact')
     console.log('  GET  /binaries/{domain}/metadata.json  - Package metadata')
     console.log('  GET  /binaries/{domain}/{ver}/{plat}/*  - Tarball/checksum')
     console.log('Dashboard:')
@@ -2939,6 +2945,38 @@ async function handleBinaryUploadComplete(
     return Response.json({
       error: 'Binary publication failed before promotion',
       code: 'BINARY_PUBLISH_FAILED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryRescan(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  try {
+    const completed = await getPublisher().rescanExisting(body, '_admin')
+    if (completed.action === 'quarantined')
+      _binaryAttestationCache.delete(completed.tarball)
+    return Response.json({ success: true, ...completed }, {
+      status: completed.action === 'quarantined' ? 202 : 200,
+      headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+    })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary rescan failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary rescan failed before attestation',
+      code: 'BINARY_RESCAN_FAILED',
       retryable: true,
     }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
   }

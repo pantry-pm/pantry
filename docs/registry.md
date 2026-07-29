@@ -109,6 +109,7 @@ SHA-256 over the uploaded archive.
 | `POST` | `/npm/download` | Compatibility alias for registry download. |
 | `POST` | `/api/v1/binaries/uploads` | Authenticate an operator and create a short-lived upload scoped to an untrusted staging key. |
 | `POST` | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, digest-verify, and promote a staged native artifact. |
+| `POST` | `/api/v1/binaries/rescan` | Authenticate an operator, stream-scan a retained artifact in place, and either attest it clean or quarantine it. |
 | `GET` | `/binaries/{domain}/metadata.json` | Return package version/platform metadata. |
 | `GET` | `/binaries/{domain}/{version}/{platform}/{artifact}` | Proxy an exact binary or checksum from object storage. |
 | `GET` | `/desktop-apps` | List the configured desktop catalog with live version/platform availability. |

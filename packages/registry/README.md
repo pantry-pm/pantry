@@ -118,6 +118,7 @@ Native artifacts use an authenticated scan-before-promote API:
 |--------|----------|-------------|
 | POST | `/api/v1/binaries/uploads` | Create a short-lived, untrusted staged upload |
 | POST | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, verify, and promote the artifact |
+| POST | `/api/v1/binaries/rescan` | Stream-scan and attest or quarantine an existing artifact (operator only) |
 
 Use `packages/ts-pantry/scripts/upload-to-s3.ts` or
 `pantry publish:binary`; both clients implement the protocol and never receive
