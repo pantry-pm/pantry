@@ -351,11 +351,11 @@ const provision_script =
     \\bun_bin="$(command -v bun || echo /root/.bun/bin/bun)"
     \\echo "    Bun: $($bun_bin --version)"
     \\
-    \\if ! command -v clamdscan >/dev/null 2>&1; then
+    \\if ! command -v clamdscan >/dev/null 2>&1 || ! command -v ionice >/dev/null 2>&1; then
     \\  command -v apt-get >/dev/null 2>&1 || { echo "Error: clamav-daemon is required and this host has no apt-get." >&2; exit 1; }
     \\  echo "    Installing ClamAV publish-time scanner..."
     \\  DEBIAN_FRONTEND=noninteractive apt-get update -qq
-    \\  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq clamav-daemon clamav-freshclam >/dev/null
+    \\  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq clamav-daemon clamav-freshclam util-linux >/dev/null
     \\fi
     \\clam_conf=/etc/clamav/clamd.conf
     \\[ -f "$clam_conf" ] || { echo "Error: $clam_conf was not installed." >&2; exit 1; }

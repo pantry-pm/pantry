@@ -50,8 +50,10 @@ describe('first-party publication boundaries', () => {
 
   it('deploys the exact bundle only after scanner readiness is proven', () => {
     const workflow = source('.github/workflows/deploy-registry.yml')
+    const packageJson = source('packages/registry/package.json')
     expect(workflow).toContain("EXPECTED_SHA=\"$5\"")
     expect(workflow).toContain('NODE_ENV=production "$BUN" run build:server')
+    expect(packageJson).toContain('./src/scanner-worker.ts --outfile ./dist/scanner-worker.js')
     expect(workflow).toContain('set_env PANTRY_MALWARE_SCANNING required')
     expect(workflow).toContain('set_env CLAMD_SOCKET /run/clamav/clamd.ctl')
     expect(workflow).toContain('set_env CLAMD_TIMEOUT_MS 240000')
@@ -61,6 +63,7 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_clam MaxThreads 2')
     expect(workflow).toContain('set_clam MaxQueue 4')
     expect(workflow).toContain('set_clam ConcurrentDatabaseReload no')
+    expect(workflow).toContain('clamav-daemon clamav-freshclam jq util-linux')
     expect(workflow).toContain('clamav-daemon.service.d')
     expect(workflow).toContain("'Nice=10'")
     expect(workflow).toContain("'CPUSchedulingPolicy=idle'")
@@ -79,6 +82,8 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('.malwareScanning.ready == true')
     expect(workflow).toContain('.code == "MALWARE_DETECTED"')
     expect(workflow).toContain('.scan.verdict == "blocked"')
+    expect(workflow).toContain('/api/v1/binaries/uploads/complete')
+    expect(workflow).toContain('Isolated EICAR binary rehearsal failed')
   })
 
   it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
@@ -96,6 +101,7 @@ describe('first-party publication boundaries', () => {
     expect(setup).toContain('set_clam MaxThreads 2')
     expect(setup).toContain('set_clam MaxQueue 4')
     expect(setup).toContain('set_clam ConcurrentDatabaseReload no')
+    expect(setup).toContain('clamav-daemon clamav-freshclam util-linux')
     expect(setup).toContain('clamav-daemon.service.d')
     expect(setup).toContain('Nice=10')
     expect(setup).toContain('CPUSchedulingPolicy=idle')

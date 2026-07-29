@@ -108,6 +108,7 @@ jobs:
             # Publish-time scanning is part of Registry readiness. Provision
             # clamd on existing hosts as well as fresh registry setups.
             if ! command -v clamdscan >/dev/null 2>&1 ||
+              ! command -v ionice >/dev/null 2>&1 ||
               ! command -v jq >/dev/null 2>&1; then
               command -v apt-get >/dev/null 2>&1 || {
                 echo "clamav-daemon and jq are required and this host has no apt-get" >&2
@@ -115,7 +116,7 @@ jobs:
               }
               DEBIAN_FRONTEND=noninteractive apt-get update -qq
               DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-                clamav-daemon clamav-freshclam jq >/dev/null
+                clamav-daemon clamav-freshclam jq util-linux >/dev/null
             fi
 
             CLAM_CONF=/etc/clamav/clamd.conf
@@ -316,6 +317,49 @@ jobs:
                 and .scan.verdict == "blocked"' "$REHEARSAL_RESPONSE" >/dev/null; then
               echo "EICAR publish rehearsal failed with HTTP $REHEARSAL_STATUS" >&2
               jq '{code, retryable, scan}' "$REHEARSAL_RESPONSE" >&2 || true
+              exit 1
+            fi
+
+            # Exercise the isolated native worker too: stage the same EICAR
+            # archive in object storage, then require scan-before-promote to
+            # block it without creating an installable binary or attestation.
+            REHEARSAL_SHA256=$(sha256sum "$REHEARSAL_DIR/eicar.tgz" | awk '{print $1}')
+            REHEARSAL_SIZE=$(stat -c '%s' "$REHEARSAL_DIR/eicar.tgz")
+            BINARY_INIT_RESPONSE="$REHEARSAL_DIR/binary-init.json"
+            jq -cn \
+              --arg domain 'pantry.dev/malware-rehearsal' \
+              --arg version '0.0.0' \
+              --arg filename 'pantry-malware-rehearsal.tar.gz' \
+              --arg sha256 "$REHEARSAL_SHA256" \
+              --argjson size "$REHEARSAL_SIZE" \
+              '{domain:$domain,version:$version,platforms:["linux-x86-64"],filename:$filename,size:$size,sha256:$sha256}' \
+              | curl -fsS \
+                -o "$BINARY_INIT_RESPONSE" \
+                -H "Authorization: Bearer $REGISTRY_TOKEN" \
+                -H 'Content-Type: application/json' \
+                --data-binary @- \
+                "http://localhost:${PORT}/api/v1/binaries/uploads"
+            BINARY_UPLOAD_URL=$(jq -er '.uploadUrl' "$BINARY_INIT_RESPONSE")
+            BINARY_UPLOAD_ID=$(jq -er '.uploadId' "$BINARY_INIT_RESPONSE")
+            curl -fsS \
+              -X PUT \
+              -H 'Content-Type: application/gzip' \
+              --data-binary "@$REHEARSAL_DIR/eicar.tgz" \
+              "$BINARY_UPLOAD_URL"
+            BINARY_REHEARSAL_RESPONSE="$REHEARSAL_DIR/binary-response.json"
+            BINARY_REHEARSAL_STATUS=$(jq -cn --arg uploadId "$BINARY_UPLOAD_ID" '{uploadId:$uploadId}' \
+              | curl -sS \
+                -o "$BINARY_REHEARSAL_RESPONSE" \
+                -w '%{http_code}' \
+                -H "Authorization: Bearer $REGISTRY_TOKEN" \
+                -H 'Content-Type: application/json' \
+                --data-binary @- \
+                "http://localhost:${PORT}/api/v1/binaries/uploads/complete")
+            if [ "$BINARY_REHEARSAL_STATUS" != 422 ] ||
+              ! jq -e '.code == "MALWARE_DETECTED"
+                and .scan.verdict == "blocked"' "$BINARY_REHEARSAL_RESPONSE" >/dev/null; then
+              echo "Isolated EICAR binary rehearsal failed with HTTP $BINARY_REHEARSAL_STATUS" >&2
+              jq '{code, retryable, scan}' "$BINARY_REHEARSAL_RESPONSE" >&2 || true
               exit 1
             fi
             rm -rf "$REHEARSAL_DIR"
