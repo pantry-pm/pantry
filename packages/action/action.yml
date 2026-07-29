@@ -103,6 +103,26 @@ inputs:
     description: Plan configured release targets without uploading to the App Store or object storage
     required: false
     default: 'false'
+  apple-signing:
+    description: Import Apple signing certificates into a temporary keychain before the build, and remove it when the job ends. Requires a macOS runner.
+    required: false
+    default: 'false'
+  apple-signing-application-certificate:
+    description: Base64-encoded .p12 holding the application signing certificate. Defaults to APPLE_APPLICATION_CERTIFICATE.
+    required: false
+    default: ''
+  apple-signing-installer-certificate:
+    description: Base64-encoded .p12 holding the installer signing certificate, needed to build an App Store .pkg. Defaults to APPLE_INSTALLER_CERTIFICATE.
+    required: false
+    default: ''
+  apple-signing-certificate-password:
+    description: Password protecting the .p12 certificates. Defaults to APPLE_CERTIFICATE_PASSWORD.
+    required: false
+    default: ''
+  apple-signing-provisioning-profile:
+    description: Base64-encoded .provisionprofile written to disk for embedding in the app bundle. Defaults to APPLE_PROVISIONING_PROFILE.
+    required: false
+    default: ''
   release-app-store:
     description: Validate and upload a signed macOS .pkg to App Store Connect before publishing the GitHub release
     required: false
@@ -201,6 +221,12 @@ outputs:
     description: URL of the created GitHub release (when release is enabled)
   release-manifest:
     description: Path to the generated release-manifest.json
+  apple-signing-identity:
+    description: Application signing identity imported from the certificates. Also exported as APPLE_SIGNING_IDENTITY.
+  apple-signing-installer-identity:
+    description: Installer signing identity imported from the certificates. Also exported as APPLE_INSTALLER_SIGNING_IDENTITY.
+  apple-signing-provisioning-profile:
+    description: Path to the written provisioning profile. Also exported as APPLE_PROVISIONING_PROFILE_PATH.
   release-app-store-receipt:
     description: Path to the generated App Store delivery receipt
   release-s3-receipt:

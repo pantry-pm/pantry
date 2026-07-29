@@ -45,6 +45,11 @@ export interface ActionInputs {
   releaseS3AccessKeyId: string
   releaseS3SecretAccessKey: string
   releaseS3SessionToken: string
+  appleSigning: boolean
+  appleSigningApplicationCertificate: string
+  appleSigningInstallerCertificate: string
+  appleSigningCertificatePassword: string
+  appleSigningProvisioningProfile: string
 }
 
 export interface Platform {

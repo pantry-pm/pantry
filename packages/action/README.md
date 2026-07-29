@@ -73,6 +73,39 @@ also available as action outputs. Pin both the action revision and the Pantry
 binary `version` in release-sensitive workflows so source and CLI behavior are
 independently reproducible.
 
+### Apple code signing
+
+A macOS runner starts with no signing identities, so `codesign` and
+`productbuild` have nothing to sign with. Set `apple-signing: 'true'` and the
+Action imports your certificates into a temporary keychain before the build,
+then deletes that keychain when the job ends — including when the job fails.
+
+```yaml
+- name: Set up signing
+  id: signing
+  uses: pantry-pm/pantry/packages/action@v0.11.0
+  with:
+    apple-signing: 'true'
+    apple-signing-application-certificate: ${{ secrets.APPLE_APPLICATION_CERTIFICATE }}
+    apple-signing-installer-certificate: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
+    apple-signing-certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+    apple-signing-provisioning-profile: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+
+- name: Build and sign
+  run: bun run build
+  env:
+    # Also available as steps.signing.outputs.apple-signing-identity
+    SIGN_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+    INSTALLER_IDENTITY: ${{ env.APPLE_INSTALLER_SIGNING_IDENTITY }}
+    PROVISIONING_PROFILE: ${{ env.APPLE_PROVISIONING_PROFILE_PATH }}
+```
+
+Certificates are base64-encoded `.p12` files (`base64 -i cert.p12 | pbcopy`).
+The identity names are discovered from the imported certificates and published
+as outputs and `APPLE_*` environment variables, so the build step never has to
+hardcode a certificate common name. Generate the certificates and profile with
+`pantry app-store:csr` and `pantry app-store:provision --apply`.
+
 ### GitHub, Mac App Store, and S3 releases
 
 Pantry can keep a GitHub release as the source of truth while delivering the

@@ -4,6 +4,7 @@ import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release
 import { downloadReleaseAssetReliably } from './release-download'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { deliverReleaseToAppStore } from './release-app-store'
+import { setupAppleSigning } from './apple-signing'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
@@ -712,6 +713,11 @@ export async function run(): Promise<void> {
       releaseS3AccessKeyId: core.getInput('release-s3-access-key-id') || process.env.AWS_ACCESS_KEY_ID || '',
       releaseS3SecretAccessKey: core.getInput('release-s3-secret-access-key') || process.env.AWS_SECRET_ACCESS_KEY || '',
       releaseS3SessionToken: core.getInput('release-s3-session-token') || process.env.AWS_SESSION_TOKEN || '',
+      appleSigning: boolInput('apple-signing', false),
+      appleSigningApplicationCertificate: core.getInput('apple-signing-application-certificate') || process.env.APPLE_APPLICATION_CERTIFICATE || '',
+      appleSigningInstallerCertificate: core.getInput('apple-signing-installer-certificate') || process.env.APPLE_INSTALLER_CERTIFICATE || '',
+      appleSigningCertificatePassword: core.getInput('apple-signing-certificate-password') || process.env.APPLE_CERTIFICATE_PASSWORD || '',
+      appleSigningProvisioningProfile: core.getInput('apple-signing-provisioning-profile') || process.env.APPLE_PROVISIONING_PROFILE || '',
     }
 
     // Mask secrets so they never appear in logs
@@ -728,6 +734,10 @@ export async function run(): Promise<void> {
       inputs.releaseS3AccessKeyId,
       inputs.releaseS3SecretAccessKey,
       inputs.releaseS3SessionToken,
+      inputs.appleSigningApplicationCertificate,
+      inputs.appleSigningInstallerCertificate,
+      inputs.appleSigningCertificatePassword,
+      inputs.appleSigningProvisioningProfile,
     ]) {
       if (secret)
         core.setSecret(secret)
@@ -768,6 +778,10 @@ export async function run(): Promise<void> {
     core.setOutput('version', ver.trim() || resolvedVersion)
     core.info(`pantry ${ver.trim() || resolvedVersion}`)
     core.endGroup()
+
+    // Signing has to happen before the build step that packages the app, so
+    // configure it up front rather than alongside the release targets.
+    await configureAppleSigning(inputs)
 
     // If setup-only with no packages, skip to publish/release (if any)
     if (inputs.setupOnly && !inputs.packages && !inputs.services) {
@@ -1433,6 +1447,50 @@ async function packageBuildArtifacts(cwd: string): Promise<string[]> {
   }
 
   return packaged
+}
+
+/**
+ * Import Apple signing certificates so the build step can sign the app.
+ *
+ * The identities are published as outputs and as `APPLE_*` environment
+ * variables, so a packaging step reads them without the workflow having to
+ * know the certificate's common name.
+ */
+async function configureAppleSigning(inputs: ActionInputs): Promise<void> {
+  if (!inputs.appleSigning)
+    return
+
+  core.startGroup('Apple code signing')
+  try {
+    const result = await setupAppleSigning({
+      applicationCertificate: inputs.appleSigningApplicationCertificate,
+      installerCertificate: inputs.appleSigningInstallerCertificate || undefined,
+      certificatePassword: inputs.appleSigningCertificatePassword,
+      provisioningProfile: inputs.appleSigningProvisioningProfile || undefined,
+      outputDirectory: process.env.RUNNER_TEMP || undefined,
+    })
+
+    // The post step deletes the keychain even if the job fails.
+    core.saveState('apple-signing-keychain', result.keychainPath)
+
+    core.setOutput('apple-signing-identity', result.applicationIdentity)
+    core.exportVariable('APPLE_SIGNING_IDENTITY', result.applicationIdentity)
+    core.info(`Application identity: ${result.applicationIdentity}`)
+
+    if (result.installerIdentity) {
+      core.setOutput('apple-signing-installer-identity', result.installerIdentity)
+      core.exportVariable('APPLE_INSTALLER_SIGNING_IDENTITY', result.installerIdentity)
+      core.info(`Installer identity: ${result.installerIdentity}`)
+    }
+
+    if (result.provisioningProfilePath) {
+      core.setOutput('apple-signing-provisioning-profile', result.provisioningProfilePath)
+      core.exportVariable('APPLE_PROVISIONING_PROFILE_PATH', result.provisioningProfilePath)
+    }
+  }
+  finally {
+    core.endGroup()
+  }
 }
 
 async function runReleaseTargets(options: {
