@@ -102,13 +102,6 @@ export class S3BinaryArtifactStore implements BinaryArtifactStore {
 
   async getObjectStream(key: string): Promise<AsyncIterable<Uint8Array>> {
     const { body } = await this.s3.getObjectStream(this.bucket, key)
-    const asyncIterator = (body as ReadableStream<Uint8Array> & Partial<AsyncIterable<Uint8Array>>)[Symbol.asyncIterator]
-    if (typeof asyncIterator === 'function') {
-      return {
-        [Symbol.asyncIterator]: () => asyncIterator.call(body),
-      }
-    }
-
     return {
       async *[Symbol.asyncIterator]() {
         const reader = body.getReader()

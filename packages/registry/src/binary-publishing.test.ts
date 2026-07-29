@@ -69,6 +69,9 @@ describe('S3BinaryArtifactStore', () => {
     const chunks = [new Uint8Array([1, 2]), new Uint8Array([3])]
     let index = 0
     const body = {
+      // Some Bun response bodies expose a non-conforming async iterator. The
+      // stable Web Streams reader contract must remain the source of chunks.
+      [Symbol.asyncIterator]: () => ({}),
       getReader: () => ({
         read: async () => index < chunks.length
           ? { done: false as const, value: chunks[index++] }
