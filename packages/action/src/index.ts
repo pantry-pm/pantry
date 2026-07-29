@@ -10,7 +10,7 @@ import { isRollingVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
-import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
+import { mergeServicePackages, nativeServiceEnvironment, parseRedisVersion, parseServiceSpecs, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -68,6 +68,10 @@ async function installRequestedServicePackages(services: ServiceSpec[], pantryEx
 async function startRequestedServices(services: ServiceSpec[], pantryBinDir: string, platform: Platform): Promise<void> {
   if (!services.length) return
   if (platform.os === 'windows') throw new Error('Pantry Action services are not yet supported on Windows runners')
+  const serviceEnvironment = nativeServiceEnvironment(pantryBinDir, platform.os)
+  const libraryVariable = platform.os === 'darwin' ? 'DYLD_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
+  if (serviceEnvironment[libraryVariable])
+    core.exportVariable(libraryVariable, serviceEnvironment[libraryVariable])
 
   for (const service of services) {
     if (service.name !== 'redis') continue
@@ -82,7 +86,7 @@ async function startRequestedServices(services: ServiceSpec[], pantryBinDir: str
 
     core.startGroup('Starting Pantry Redis service')
     try {
-      await exec.exec(server, redisLaunchArgs(process.env.RUNNER_TEMP || os.tmpdir()))
+      await exec.exec(server, redisLaunchArgs(process.env.RUNNER_TEMP || os.tmpdir()), { env: serviceEnvironment })
       let pid: number
       try {
         pid = await waitForRedisPid(pidfile)
@@ -95,7 +99,10 @@ async function startRequestedServices(services: ServiceSpec[], pantryBinDir: str
 
       let ready = false
       for (let attempt = 0; attempt < 60; attempt++) {
-        const exitCode = await exec.exec(client, ['-h', '127.0.0.1', '-p', '6379', 'ping'], { silent: true }).catch(() => 1)
+        const exitCode = await exec.exec(client, ['-h', '127.0.0.1', '-p', '6379', 'ping'], {
+          env: serviceEnvironment,
+          silent: true,
+        }).catch(() => 1)
         if (exitCode === 0) {
           ready = true
           break
@@ -106,6 +113,7 @@ async function startRequestedServices(services: ServiceSpec[], pantryBinDir: str
 
       let versionOutput = ''
       await exec.exec(server, ['--version'], {
+        env: serviceEnvironment,
         listeners: { stdout: (data: Buffer) => { versionOutput += data.toString() } },
         silent: true,
       })

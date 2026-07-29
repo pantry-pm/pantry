@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { mergeServicePackages, parseRedisVersion, parseServiceSpecs, readRedisPid, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
+import { mergeServicePackages, nativeServiceEnvironment, pantryLibraryPaths, parseRedisVersion, parseServiceSpecs, readRedisPid, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 
 describe('GitHub Actions services', () => {
   test('parses an exact Redis service and rejects ambiguous declarations', () => {
@@ -26,6 +26,31 @@ describe('GitHub Actions services', () => {
     expect(args).toContain('no')
     expect(args.join(' ')).toContain('/runner/temp/pantry-services/redis/redis.pid')
     expect(parseRedisVersion('Redis server v=8.8.0 sha=00000000:0 malloc=libc')).toBe('8.8.0')
+  })
+
+  test('exposes native dependency libraries to service processes', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-action-libraries-'))
+    const pantryBin = join(directory, 'pantry', '.bin')
+    const openssl = join(directory, 'pantry', 'openssl.org', 'v1.1.1w', 'lib')
+    const curl = join(directory, 'pantry', 'curl.se', 'ca-certs', 'v2026.3.19', 'lib')
+    const unrelated = join(directory, 'pantry', 'node_modules', 'example', 'lib')
+    try {
+      mkdirSync(pantryBin, { recursive: true })
+      mkdirSync(openssl, { recursive: true })
+      mkdirSync(curl, { recursive: true })
+      mkdirSync(unrelated, { recursive: true })
+
+      expect(pantryLibraryPaths(pantryBin)).toEqual([curl, openssl])
+      expect(nativeServiceEnvironment(pantryBin, 'linux', { LD_LIBRARY_PATH: '/system/lib' }).LD_LIBRARY_PATH)
+        .toBe(`${curl}:${openssl}:/system/lib`)
+      expect(nativeServiceEnvironment(pantryBin, 'darwin', {}).DYLD_LIBRARY_PATH)
+        .toBe(`${curl}:${openssl}`)
+      expect(nativeServiceEnvironment(pantryBin, 'windows', { PATH: 'C:\\Windows' }))
+        .toEqual({ PATH: 'C:\\Windows' })
+    }
+    finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
   })
 
   test('accepts only a live Redis process pidfile', () => {

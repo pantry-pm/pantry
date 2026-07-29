@@ -33,6 +33,57 @@ export function mergeServicePackages(packages: string, services: ServiceSpec[]):
   return requested.join(' ')
 }
 
+export function pantryLibraryPaths(pantryBinDir: string): string[] {
+  const pantryRoot = path.dirname(pantryBinDir)
+  const libraries: string[] = []
+  const seen = new Set<string>()
+
+  const visit = (directory: string, depth: number): void => {
+    if (depth > 5) return
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true })
+    }
+    catch {
+      return
+    }
+    entries.sort((left, right) => left.name.localeCompare(right.name))
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+      const child = path.join(directory, entry.name)
+      if (/^v\d/.test(entry.name)) {
+        const libraryDirectory = path.join(child, 'lib')
+        if (fs.existsSync(libraryDirectory) && !seen.has(libraryDirectory)) {
+          seen.add(libraryDirectory)
+          libraries.push(libraryDirectory)
+        }
+        continue
+      }
+      visit(child, depth + 1)
+    }
+  }
+
+  visit(pantryRoot, 0)
+  return libraries
+}
+
+export function nativeServiceEnvironment(
+  pantryBinDir: string,
+  platform: 'darwin' | 'linux' | 'windows',
+  baseEnvironment: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const environment = Object.fromEntries(
+    Object.entries(baseEnvironment).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  )
+  if (platform === 'windows') return environment
+
+  const variable = platform === 'darwin' ? 'DYLD_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
+  const value = [...pantryLibraryPaths(pantryBinDir), environment[variable]].filter(Boolean).join(path.delimiter)
+  if (value) environment[variable] = value
+  return environment
+}
+
 export function redisLaunchArgs(tempDir: string, port = 6379): string[] {
   const serviceDir = path.join(tempDir, 'pantry-services', 'redis')
   return [
