@@ -56,6 +56,8 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_env CLAMD_SOCKET /run/clamav/clamd.ctl')
     expect(workflow).toContain("vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION || 'false'")
     expect(workflow).toContain('systemctl restart clamav-daemon')
+    expect(workflow).toContain('ExecCondition=/bin/sh -c')
+    expect(workflow).toContain('${SERVICE}-recovery.timer')
     expect(workflow).toContain('${REGISTRY_URL}/ready')
     expect(workflow).toContain('.malwareScanning.required == true')
     expect(workflow).toContain('.malwareScanning.ready == true')

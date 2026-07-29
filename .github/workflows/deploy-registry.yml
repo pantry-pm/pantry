@@ -182,8 +182,36 @@ jobs:
               '[Service]' \
               "EnvironmentFile=$ENV_FILE" \
               > "/etc/systemd/system/${SERVICE}.service.d/malware-scanning.conf"
+
+            # Debian package maintenance explicitly stops clamd while replacing
+            # it. An explicit stop also suppresses Restart=always on dependent
+            # services, so recover both services after maintenance completes.
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Recover Pantry Registry malware scanning services' \
+              'After=apt-daily-upgrade.service unattended-upgrades.service' \
+              '' \
+              '[Service]' \
+              'Type=oneshot' \
+              "ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service && ! systemctl is-active --quiet unattended-upgrades.service'" \
+              "ExecStart=/bin/systemctl start clamav-daemon.service ${SERVICE}.service" \
+              > "/etc/systemd/system/${SERVICE}-recovery.service"
+            printf '%s\n' \
+              '[Unit]' \
+              'Description=Periodically recover Pantry Registry malware scanning services' \
+              '' \
+              '[Timer]' \
+              'OnBootSec=1min' \
+              'OnUnitActiveSec=1min' \
+              'Persistent=true' \
+              "Unit=${SERVICE}-recovery.service" \
+              '' \
+              '[Install]' \
+              'WantedBy=timers.target' \
+              > "/etc/systemd/system/${SERVICE}-recovery.timer"
             systemctl daemon-reload
             systemctl enable --quiet clamav-freshclam clamav-daemon
+            systemctl enable --now --quiet "${SERVICE}-recovery.timer"
             systemctl restart clamav-freshclam || true
             systemctl restart clamav-daemon
             systemctl is-active --quiet clamav-daemon
