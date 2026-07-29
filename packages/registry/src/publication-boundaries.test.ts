@@ -106,6 +106,7 @@ describe('first-party publication boundaries', () => {
     expect(workflow.match(/uses: \.\/\.github\/actions\/setup-clamav/g)).toHaveLength(2)
     expect(setupClamav).toContain('set_clam LocalSocket /run/clamav/clamd.ctl')
     expect(setupClamav).toContain('--ping 30:2')
+    expect(setupClamav).toContain('probe_file=$(mktemp)')
     expect(setupClamav).toContain('set_clam StreamMaxLength 1G')
     expect(setupClamav).toContain('set_clam MaxThreads 2')
     expect(setupClamav).toContain('set_clam MaxScanTime 600000')

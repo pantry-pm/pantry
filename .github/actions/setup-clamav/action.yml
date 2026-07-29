@@ -33,9 +33,11 @@ runs:
         set_clam MaxQueue 4
         sudo systemctl restart clamav-daemon.socket
         sudo systemctl restart clamav-daemon
+        probe_file=$(mktemp)
+        trap 'rm -f "$probe_file"' EXIT
         timeout 90 clamdscan \
           --config-file=/etc/clamav/clamd.conf \
           --ping 30:2 \
           --wait \
           --stream \
-          /dev/null
+          "$probe_file"
