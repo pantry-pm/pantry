@@ -160,14 +160,14 @@ jobs:
 
             # Ensure legacy units also consume the managed environment file.
             install -d -m 0755 "/etc/systemd/system/${SERVICE}.service.d"
-            cat > "/etc/systemd/system/${SERVICE}.service.d/malware-scanning.conf" << UNIT
-            [Unit]
-            Requires=clamav-daemon.service
-            After=clamav-daemon.service
-
-            [Service]
-            EnvironmentFile=$ENV_FILE
-            UNIT
+            printf '%s\n' \
+              '[Unit]' \
+              'Requires=clamav-daemon.service' \
+              'After=clamav-daemon.service' \
+              '' \
+              '[Service]' \
+              "EnvironmentFile=$ENV_FILE" \
+              > "/etc/systemd/system/${SERVICE}.service.d/malware-scanning.conf"
             systemctl daemon-reload
             systemctl enable --quiet clamav-freshclam clamav-daemon
             systemctl restart clamav-freshclam || true
