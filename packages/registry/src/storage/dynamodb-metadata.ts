@@ -77,6 +77,9 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         checksum: versionData.checksum,
         publishedAt: versionData.publishedAt,
         size: versionData.size || 0,
+        contentPolicy: versionData.contentPolicy,
+        disclosure: versionData.disclosure,
+        malwareScan: versionData.malwareScan,
       }
     }
 
@@ -140,6 +143,10 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
       tarballUrl: versionData.tarballUrl,
       checksum: versionData.checksum,
       publishedAt: versionData.publishedAt,
+      size: versionData.size || 0,
+      contentPolicy: versionData.contentPolicy,
+      disclosure: versionData.disclosure,
+      malwareScan: versionData.malwareScan,
     }
   }
 
@@ -178,6 +185,9 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
           checksum: versionInfo.checksum,
           publishedAt: versionInfo.publishedAt,
           size: versionInfo.size,
+          contentPolicy: versionInfo.contentPolicy,
+          disclosure: versionInfo.disclosure,
+          malwareScan: versionInfo.malwareScan,
         }),
       })
     }
@@ -297,6 +307,9 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         checksum: metadata.checksum || '',
         publishedAt: metadata.publishedAt || now,
         size: metadata.size || 0,
+        contentPolicy: metadata.contentPolicy,
+        disclosure: metadata.disclosure,
+        malwareScan: metadata.malwareScan,
       }),
     })
   }
@@ -411,6 +424,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         version: publish.version || '',
         size: publish.size || 0,
         publishedBy: publish.publishedBy || '',
+        malwareScan: publish.malwareScan,
       }),
     })
 
@@ -457,6 +471,8 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
       packageDir: data.packageDir,
       version: data.version,
       size: data.size,
+      publishedBy: data.publishedBy,
+      malwareScan: data.malwareScan,
     }
   }
 
@@ -482,6 +498,8 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         packageDir: data.packageDir,
         version: data.version,
         size: data.size,
+        publishedBy: data.publishedBy,
+        malwareScan: data.malwareScan,
       }
     })
   }

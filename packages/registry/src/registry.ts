@@ -19,6 +19,7 @@ import { DynamoDBMetadataStorage } from './storage/dynamodb-metadata'
 import { ObjectMetadataStorage } from './storage/object-metadata'
 import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { LocalStorage, S3Storage, sanitizePackageName } from './storage/s3'
+import { assertCleanMalwareScan } from './malware-scanning'
 
 /** Reject version strings containing shell-unsafe or path-unsafe characters. */
 function isSafeVersion(v: string): boolean {
@@ -228,6 +229,7 @@ export class Registry {
    * Publish a package
    */
   async publish(metadata: PackageMetadata, tarball: ArrayBuffer, publishedBy?: string): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     const safeName = sanitizePackageName(metadata.name)
     if (!isSafeVersion(metadata.version)) {
       throw new Error(`Invalid package version: ${metadata.version}`)
@@ -255,6 +257,7 @@ export class Registry {
       tarballUrl,
       checksum,
       publishedAt: new Date().toISOString(),
+      size: tarball.byteLength,
     })
 
     if (publishedBy && publishedBy !== '_admin') {
@@ -304,8 +307,15 @@ export class Registry {
     name: string,
     sha: string,
     tarball: ArrayBuffer,
-    options?: { repository?: string, packageDir?: string, version?: string, publishedBy?: string },
+    options?: {
+      repository?: string
+      packageDir?: string
+      version?: string
+      publishedBy?: string
+      malwareScan?: CommitPublish['malwareScan']
+    },
   ): Promise<CommitPublish> {
+    assertCleanMalwareScan(options?.malwareScan, tarball)
     const safeName = sanitizePackageName(name)
     if (!/^[a-f0-9]{7,40}$/i.test(sha)) {
       throw new Error(`Invalid commit SHA: ${sha}`)
@@ -331,6 +341,7 @@ export class Registry {
       version: options?.version,
       size: tarball.byteLength,
       publishedBy: options?.publishedBy,
+      malwareScan: options?.malwareScan,
     }
 
     // Store metadata

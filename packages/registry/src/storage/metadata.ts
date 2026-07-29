@@ -50,6 +50,10 @@ export class InMemoryMetadataStorage implements MetadataStorage {
       tarballUrl: versionInfo.tarballUrl,
       checksum: versionInfo.checksum,
       publishedAt: versionInfo.publishedAt,
+      size: versionInfo.size,
+      contentPolicy: versionInfo.contentPolicy,
+      disclosure: versionInfo.disclosure,
+      malwareScan: versionInfo.malwareScan,
     }
   }
 
@@ -83,7 +87,10 @@ export class InMemoryMetadataStorage implements MetadataStorage {
       tarballUrl: metadata.tarballUrl || '',
       checksum: metadata.checksum || '',
       publishedAt: metadata.publishedAt || new Date().toISOString(),
-      size: 0,
+      size: metadata.size || 0,
+      contentPolicy: metadata.contentPolicy,
+      disclosure: metadata.disclosure,
+      malwareScan: metadata.malwareScan,
     }
 
     // Update latest version (simple semver comparison)

@@ -15,6 +15,7 @@ import { DynamoDBClient } from './storage/dynamodb-client'
 import type { S3Client } from './storage/aws-client'
 import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { ObjectSnapshot } from './storage/object-snapshot'
+import { assertCleanMalwareScan, type MalwareScanResult } from './malware-scanning'
 
 /**
  * Composer package manifest (composer.json structure)
@@ -65,6 +66,7 @@ export interface PhpPackageMetadata {
   checksum: string // SHA256 hex
   require?: Record<string, string>
   publishedAt: string
+  malwareScan?: MalwareScanResult
 }
 
 /**
@@ -230,6 +232,7 @@ export class InMemoryPhpStorage implements PhpPackageStorage {
   }
 
   async publish(metadata: PhpPackageMetadata, tarball: ArrayBuffer): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     this.upsertRecord(metadata)
     this.tarballs.set(`${metadata.name}@${metadata.version}`, tarball)
     this.onMutate()
@@ -367,7 +370,7 @@ export class DynamoDBPhpStorage implements PhpPackageStorage {
       })
       if (!result.Item) return null
       const d = this.unmarshal(result.Item)
-      return { name: d.name, version: d.version, description: d.description, tarballUrl: d.tarballUrl, checksum: d.checksum, publishedAt: d.publishedAt, license: d.license, type: d.type, keywords: d.keywords, authors: d.authors, homepage: d.homepage, repository: d.repository, require: d.require }
+      return { name: d.name, version: d.version, description: d.description, tarballUrl: d.tarballUrl, checksum: d.checksum, publishedAt: d.publishedAt, license: d.license, type: d.type, keywords: d.keywords, authors: d.authors, homepage: d.homepage, repository: d.repository, require: d.require, malwareScan: d.malwareScan }
     }
 
     // Get latest
@@ -445,6 +448,7 @@ export class DynamoDBPhpStorage implements PhpPackageStorage {
   }
 
   async publish(metadata: PhpPackageMetadata, tarball: ArrayBuffer): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     const { name, version } = metadata
     const now = new Date().toISOString()
 
@@ -473,6 +477,7 @@ export class DynamoDBPhpStorage implements PhpPackageStorage {
         repository: metadata.repository || '',
         require: metadata.require || {},
         publishedAt: metadata.publishedAt || now,
+        malwareScan: metadata.malwareScan,
       }),
     })
 
@@ -590,6 +595,7 @@ export class ObjectPhpStorage extends InMemoryPhpStorage {
   }
 
   async publish(metadata: PhpPackageMetadata, tarball: ArrayBuffer): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     const key = phpTarballKey(metadata.name, metadata.version)
     await this.s3.putObject({ bucket: this.bucket, key, body: Buffer.from(tarball), contentType: 'application/gzip' })
 

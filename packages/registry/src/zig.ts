@@ -14,6 +14,7 @@ import { DynamoDBClient } from './storage/dynamodb-client'
 import type { S3Client } from './storage/aws-client'
 import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { ObjectSnapshot } from './storage/object-snapshot'
+import { assertCleanMalwareScan, type MalwareScanResult } from './malware-scanning'
 
 /**
  * Zig package manifest (build.zig.zon structure)
@@ -52,6 +53,7 @@ export interface ZigPackageMetadata {
   hash: string // multihash
   publishedAt: string
   paths?: string[]
+  malwareScan?: MalwareScanResult
 }
 
 /**
@@ -265,6 +267,7 @@ export class InMemoryZigStorage implements ZigPackageStorage {
   }
 
   async publish(metadata: ZigPackageMetadata, tarball: ArrayBuffer): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     this.upsertRecord(metadata)
     this.tarballs.set(`${metadata.name}@${metadata.version}`, tarball)
     this.onMutate()
@@ -425,7 +428,7 @@ export class DynamoDBZigStorage implements ZigPackageStorage {
       })
       if (!result.Item) return null
       const d = this.unmarshal(result.Item)
-      return { name: d.name, version: d.version, description: d.description, tarballUrl: d.tarballUrl, hash: d.hash, publishedAt: d.publishedAt, license: d.license, repository: d.repository, homepage: d.homepage, author: d.author, keywords: d.keywords }
+      return { name: d.name, version: d.version, description: d.description, tarballUrl: d.tarballUrl, hash: d.hash, publishedAt: d.publishedAt, license: d.license, repository: d.repository, homepage: d.homepage, author: d.author, keywords: d.keywords, malwareScan: d.malwareScan }
     }
 
     // Get latest
@@ -521,6 +524,7 @@ export class DynamoDBZigStorage implements ZigPackageStorage {
   }
 
   async publish(metadata: ZigPackageMetadata, tarball: ArrayBuffer): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     const { name, version } = metadata
     const now = new Date().toISOString()
 
@@ -545,6 +549,7 @@ export class DynamoDBZigStorage implements ZigPackageStorage {
         author: metadata.author || '',
         keywords: metadata.keywords || [],
         publishedAt: metadata.publishedAt || now,
+        malwareScan: metadata.malwareScan,
       }),
     })
 
@@ -687,6 +692,7 @@ export class ObjectZigStorage extends InMemoryZigStorage {
   }
 
   async publish(metadata: ZigPackageMetadata, tarball: ArrayBuffer): Promise<void> {
+    assertCleanMalwareScan(metadata.malwareScan, tarball)
     const key = zigTarballKey(metadata.name, metadata.version)
     await this.s3.putObject({ bucket: this.bucket, key, body: Buffer.from(tarball), contentType: 'application/gzip' })
 

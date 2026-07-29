@@ -1,3 +1,5 @@
+import type { DisclosureMetadata, MalwareScanResult } from './malware-scanning'
+
 /**
  * Package metadata stored in the registry
  */
@@ -18,6 +20,12 @@ export interface PackageMetadata {
   publishedAt: string
   size?: number
   downloads?: number
+  /** Publisher-declared dual-use policy, validated against packaged package.json. */
+  contentPolicy?: unknown
+  /** Digest/size only; disclosure text is never copied into registry metadata. */
+  disclosure?: DisclosureMetadata
+  /** Clean publish-time verdict for the exact uploaded bytes. */
+  malwareScan?: MalwareScanResult
 }
 
 /**
@@ -29,6 +37,9 @@ export interface PackageVersion {
   checksum: string
   publishedAt: string
   size: number
+  contentPolicy?: unknown
+  disclosure?: DisclosureMetadata
+  malwareScan?: MalwareScanResult
 }
 
 /**
@@ -161,6 +172,8 @@ export interface CommitPublish {
   size?: number
   /** Account that published this commit snapshot */
   publishedBy?: string
+  /** Clean publish-time verdict for the exact commit artifact. */
+  malwareScan?: MalwareScanResult
 }
 
 /**
