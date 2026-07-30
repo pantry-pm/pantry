@@ -42,6 +42,56 @@ jobs:
             echo "status=unhealthy" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Capture pre-recovery service diagnostics
+        if: steps.registry.outputs.status == 'unhealthy'
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.REGISTRY_SSH_KEY }}
+          REGISTRY_HOST: ${{ vars.REGISTRY_HOST || 'registry.pantry.dev' }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER || 'root' }}
+          REGISTRY_SERVICE: ${{ vars.REGISTRY_SERVICE || 'pantry-registry' }}
+        run: |
+          mkdir -p ~/.ssh
+          (umask 077 && cat > ~/.ssh/id_rsa <<< "$SSH_PRIVATE_KEY")
+          ssh-keyscan -H "$REGISTRY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -o ConnectionAttempts=3 \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=2 \
+            "${REGISTRY_USER}@${REGISTRY_HOST}" \
+            "bash -s -- '${REGISTRY_SERVICE}'" << 'EOF'
+            set -u
+            SERVICE="$1"
+            for unit in "$SERVICE" clamav-daemon rpx-gateway apt-daily-upgrade; do
+              echo "[$unit]"
+              systemctl show "$unit" --no-pager \
+                --property=Id \
+                --property=ActiveState \
+                --property=SubState \
+                --property=Result \
+                --property=NRestarts \
+                --property=ExecMainCode \
+                --property=ExecMainStatus \
+                --property=ExecMainStartTimestamp \
+                --property=ExecMainExitTimestamp \
+                --property=MemoryCurrent \
+                --property=MemoryPeak \
+                --property=MemoryMax \
+                --property=TasksCurrent \
+                2>/dev/null || true
+            done
+            echo "[failed-units]"
+            systemctl list-units --failed --no-legend --no-pager || true
+            echo "[kernel-memory-events]"
+            journalctl -k --since '-30 minutes' --no-pager -o short-iso \
+              | grep -Ei 'out of memory|oom-kill|killed process|memory cgroup' \
+              | tail -n 50 || true
+            echo "[relevant-timers]"
+            systemctl list-timers --all --no-pager \
+              | grep -Ei 'apt|clam|pantry' || true
+          EOF
+
       - name: Recover registry through Hetzner deploy
         id: recovery
         if: steps.registry.outputs.status == 'unhealthy'
