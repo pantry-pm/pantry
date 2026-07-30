@@ -47,12 +47,16 @@ export interface BinaryMalwareQuarantine {
   version: string
   platforms: string[]
   artifactSha256: string
+  quarantineKey?: string
+  filename?: string
+  size?: number
   signature?: string
   engine: string
   engineVersion?: string
   databaseVersion?: string
   scannedAt: string
   quarantinedAt: string
+  reviewedAt?: string
 }
 
 export interface BinaryPublishRequest {
@@ -93,6 +97,36 @@ export interface BinaryExternalRescanPrepared {
   scan?: ReturnType<typeof publicScanResult>
 }
 
+export interface BinaryQuarantineReviewRequest {
+  domain: string
+  version: string
+  artifactSha256: string
+  filename?: string
+}
+
+export interface BinaryExternalQuarantineReviewPrepared {
+  action: 'already-released' | 'prepared'
+  domain: string
+  version: string
+  platforms: string[]
+  artifactSha256: string
+  quarantineKey?: string
+  filename?: string
+  size?: number
+  objectIdentity?: string
+  downloadUrl?: string
+  expiresAt?: string
+  scan?: ReturnType<typeof publicScanResult>
+}
+
+export interface BinaryQuarantineReviewCompleted {
+  action: 'already-released' | 'released' | 'still-quarantined'
+  domain: string
+  version: string
+  platforms: Record<string, BinaryPlatformRecord>
+  scan: ReturnType<typeof publicScanResult>
+}
+
 interface ExistingRescanState {
   metadataKey: string
   metadata: BinaryPackageMetadata
@@ -102,6 +136,24 @@ interface ExistingRescanState {
   size: number
   sha256: string
   objectIdentity?: string
+}
+
+interface QuarantineReviewState {
+  metadataKey: string
+  metadata: BinaryPackageMetadata
+  quarantine: BinaryMalwareQuarantine
+  quarantineKey: string
+  filename: string
+  size: number
+  objectIdentity?: string
+}
+
+interface ReleasedQuarantineState {
+  domain: string
+  version: string
+  platforms: Record<string, BinaryPlatformRecord>
+  artifactSha256: string
+  scan: MalwareScanResult
 }
 
 interface StagingClaim extends BinaryPublishRequest {
@@ -257,6 +309,27 @@ export function validateBinaryRescanRequest(input: unknown): BinaryRescanRequest
   if (platforms.length === 0 || platforms.length > MAX_PLATFORMS || platforms.some(item => !platformPattern.test(item)))
     throw new BinaryPublishError('One or more binary platforms are invalid', 422, 'INVALID_BINARY_PLATFORM')
   return { domain, version, platforms }
+}
+
+export function validateBinaryQuarantineReviewRequest(input: unknown): BinaryQuarantineReviewRequest {
+  if (!input || typeof input !== 'object')
+    throw new BinaryPublishError('Quarantine review request must be an object', 400, 'INVALID_BINARY_QUARANTINE_REVIEW')
+
+  const value = input as Record<string, unknown>
+  const domain = typeof value.domain === 'string' ? value.domain.trim() : ''
+  const version = typeof value.version === 'string' ? value.version.trim() : ''
+  const artifactSha256 = typeof value.artifactSha256 === 'string' ? value.artifactSha256.toLowerCase() : ''
+  const filename = typeof value.filename === 'string' ? value.filename.trim() : undefined
+
+  if (!domainPattern.test(domain) || domain.includes('..') || domain.endsWith('/'))
+    throw new BinaryPublishError('Invalid binary package domain', 422, 'INVALID_BINARY_DOMAIN')
+  if (!versionPattern.test(version))
+    throw new BinaryPublishError('Invalid binary package version', 422, 'INVALID_BINARY_VERSION')
+  if (!sha256Pattern.test(artifactSha256))
+    throw new BinaryPublishError('Quarantined artifact SHA-256 must be 64 lowercase hexadecimal characters', 422, 'INVALID_BINARY_SHA256')
+  if (filename !== undefined && (!filenamePattern.test(filename) || filename.includes('..')))
+    throw new BinaryPublishError('Invalid quarantined artifact filename', 422, 'INVALID_BINARY_FILENAME')
+  return { domain, version, artifactSha256, ...(filename ? { filename } : {}) }
 }
 
 function storedBinaryKey(tarball: string): string {
@@ -683,6 +756,89 @@ export class BinaryArtifactPublisher {
     })
   }
 
+  async prepareExternalQuarantineReview(input: unknown): Promise<BinaryExternalQuarantineReviewPrepared> {
+    const request = validateBinaryQuarantineReviewRequest(input)
+    return this.withDomainLock(request.domain, async () => {
+      const loaded = await this.loadQuarantineReview(request)
+      if ('released' in loaded) {
+        return {
+          action: 'already-released',
+          domain: loaded.released.domain,
+          version: loaded.released.version,
+          platforms: Object.keys(loaded.released.platforms),
+          artifactSha256: loaded.released.artifactSha256,
+          scan: publicScanResult(loaded.released.scan),
+        }
+      }
+      if (!loaded.state.objectIdentity)
+        throw new BinaryPublishError('Quarantined artifact has no stable object identity', 422, 'BINARY_OBJECT_IDENTITY_MISSING')
+      if (!this.store.createDownloadUrl)
+        throw new BinaryPublishError('Quarantine review download preparation is unavailable', 503, 'BINARY_QUARANTINE_REVIEW_PREPARE_UNAVAILABLE')
+      const expiresInSeconds = 15 * 60
+      return {
+        action: 'prepared',
+        domain: request.domain,
+        version: request.version,
+        platforms: loaded.state.quarantine.platforms,
+        artifactSha256: request.artifactSha256,
+        quarantineKey: loaded.state.quarantineKey,
+        filename: loaded.state.filename,
+        size: loaded.state.size,
+        objectIdentity: loaded.state.objectIdentity,
+        downloadUrl: this.store.createDownloadUrl(loaded.state.quarantineKey, expiresInSeconds),
+        expiresAt: new Date(this.now() + expiresInSeconds * 1000).toISOString(),
+      }
+    })
+  }
+
+  async attestExternalQuarantineReview(input: unknown, publisher?: string): Promise<BinaryQuarantineReviewCompleted> {
+    if (!input || typeof input !== 'object')
+      throw new BinaryPublishError('External quarantine review attestation must be an object', 400, 'INVALID_BINARY_QUARANTINE_REVIEW_ATTESTATION')
+    const value = input as Record<string, unknown>
+    const request = validateBinaryQuarantineReviewRequest(value)
+    const quarantineKey = typeof value.quarantineKey === 'string' ? storedBinaryKey(value.quarantineKey) : ''
+    const size = typeof value.size === 'number' ? value.size : Number.NaN
+    const objectIdentity = typeof value.objectIdentity === 'string' ? value.objectIdentity : ''
+    if (!quarantineKey || !Number.isSafeInteger(size) || size <= 0 || !objectIdentity)
+      throw new BinaryPublishError('External quarantine review identity is invalid', 422, 'INVALID_BINARY_QUARANTINE_REVIEW_ATTESTATION')
+    const scan = this.validateExternalScan(value.scan, request.artifactSha256)
+
+    return this.withDomainLock(request.domain, async () => {
+      const loaded = await this.loadQuarantineReview(request)
+      if ('released' in loaded) {
+        return {
+          action: 'already-released',
+          domain: loaded.released.domain,
+          version: loaded.released.version,
+          platforms: loaded.released.platforms,
+          scan: publicScanResult(loaded.released.scan),
+        }
+      }
+      const state = loaded.state
+      if (
+        state.quarantineKey !== quarantineKey
+        || state.size !== size
+        || state.objectIdentity !== objectIdentity
+      ) {
+        throw new BinaryPublishError(
+          'Quarantined artifact changed after external scan preparation',
+          409,
+          'BINARY_QUARANTINE_ARTIFACT_CHANGED',
+        )
+      }
+
+      recordMalwareScanResult({
+        surface: 'binary',
+        name: request.domain,
+        version: request.version,
+        publisher,
+      }, scan)
+      if (scan.verdict === 'blocked')
+        return this.keepQuarantinedAfterReview(state, scan)
+      return this.releaseQuarantine(state, request, scan)
+    })
+  }
+
   private assertExternalRescanEligible(state: ExistingRescanState): void {
     const cutoff = this.options.legacyScanAttestationCutoff
     if (!Number.isFinite(cutoff))
@@ -739,6 +895,97 @@ export class BinaryArtifactPublisher {
       engineVersion: scan.engineVersion,
       databaseVersion: scan.databaseVersion,
       ...(scan.signature ? { signature: scan.signature } : {}),
+    }
+  }
+
+  private async loadQuarantineReview(
+    request: BinaryQuarantineReviewRequest,
+  ): Promise<
+    { state: QuarantineReviewState }
+    | { released: ReleasedQuarantineState }
+  > {
+    const metadataKey = `binaries/${request.domain}/metadata.json`
+    let metadata: BinaryPackageMetadata
+    try {
+      metadata = JSON.parse((await this.store.getObject(metadataKey)).toString('utf8')) as BinaryPackageMetadata
+    }
+    catch {
+      throw new BinaryPublishError('Binary package metadata was not found', 404, 'BINARY_METADATA_NOT_FOUND')
+    }
+
+    const quarantine = metadata.malwareQuarantines?.find(item =>
+      item.version === request.version
+      && item.artifactSha256 === request.artifactSha256,
+    )
+    if (!quarantine) {
+      const platforms = Object.entries(metadata.versions?.[request.version]?.platforms || {})
+        .filter(([, record]) =>
+          record.sha256 === request.artifactSha256
+          && record.malwareScan?.verdict === 'clean'
+          && record.malwareScan.artifactSha256 === request.artifactSha256,
+        )
+      if (platforms.length === 0)
+        throw new BinaryPublishError('Malware quarantine tombstone was not found', 404, 'BINARY_QUARANTINE_NOT_FOUND')
+      const records = Object.fromEntries(platforms)
+      const scan = platforms[0][1].malwareScan
+      return {
+        released: {
+          domain: request.domain,
+          version: request.version,
+          platforms: records,
+          artifactSha256: request.artifactSha256,
+          scan,
+        },
+      }
+    }
+    if (
+      quarantine.platforms.length === 0
+      || quarantine.platforms.length > MAX_PLATFORMS
+      || quarantine.platforms.some(platform => !platformPattern.test(platform))
+    ) {
+      throw new BinaryPublishError('Malware quarantine platforms are invalid', 422, 'INVALID_BINARY_QUARANTINE')
+    }
+
+    const prefix = `.pantry-quarantine/malware/${request.domain}/${request.version}/${request.artifactSha256}/`
+    const quarantineKey = quarantine.quarantineKey
+      ? storedBinaryKey(quarantine.quarantineKey)
+      : request.filename
+        ? `${prefix}${request.filename}`
+        : ''
+    if (!quarantineKey.startsWith(prefix) || quarantineKey.endsWith('.scan.json')) {
+      throw new BinaryPublishError(
+        'Legacy quarantine review requires the original validated filename',
+        422,
+        'BINARY_QUARANTINE_FILENAME_REQUIRED',
+      )
+    }
+    const filename = quarantine.filename || quarantineKey.slice(prefix.length)
+    if (!filenamePattern.test(filename) || filename.includes('..') || quarantineKey !== `${prefix}${filename}`)
+      throw new BinaryPublishError('Malware quarantine object identity is invalid', 422, 'INVALID_BINARY_QUARANTINE')
+
+    let size: number
+    let objectIdentity: string | undefined
+    try {
+      const head = await this.store.headObject(quarantineKey)
+      size = parseContentLength(head) ?? quarantine.size ?? 0
+      objectIdentity = parseObjectIdentity(head)
+    }
+    catch {
+      throw new BinaryPublishError('Quarantined binary artifact was not found', 404, 'BINARY_QUARANTINE_ARTIFACT_NOT_FOUND')
+    }
+    if (!Number.isSafeInteger(size) || size <= 0 || size > this.legacyRescanMaxBytes)
+      throw new BinaryPublishError(`Quarantined artifact size must be between 1 and ${this.legacyRescanMaxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
+
+    return {
+      state: {
+        metadataKey,
+        metadata,
+        quarantine,
+        quarantineKey,
+        filename,
+        size,
+        objectIdentity,
+      },
     }
   }
 
@@ -904,6 +1151,99 @@ export class BinaryArtifactPublisher {
     return { action: 'attested', tarball, ...completed }
   }
 
+  private async keepQuarantinedAfterReview(
+    state: QuarantineReviewState,
+    scan: MalwareScanResult,
+  ): Promise<BinaryQuarantineReviewCompleted> {
+    const reviewedAt = new Date(this.now()).toISOString()
+    Object.assign(state.quarantine, {
+      signature: scan.signature,
+      engine: scan.engine,
+      engineVersion: scan.engineVersion,
+      databaseVersion: scan.databaseVersion,
+      scannedAt: scan.scannedAt,
+      reviewedAt,
+      quarantineKey: state.quarantineKey,
+      filename: state.filename,
+      size: state.size,
+    })
+    state.metadata.updatedAt = reviewedAt
+    await this.store.putObject(
+      `${state.quarantineKey}.review-${reviewedAt.replaceAll(/[:.]/g, '-')}.json`,
+      JSON.stringify({
+        reviewedAt,
+        domain: state.metadata.name,
+        version: state.quarantine.version,
+        platforms: state.quarantine.platforms,
+        quarantineKey: state.quarantineKey,
+        scan,
+      }),
+      'application/json',
+    )
+    await this.store.putObject(state.metadataKey, JSON.stringify(state.metadata, null, 2), 'application/json')
+    return {
+      action: 'still-quarantined',
+      domain: state.metadata.name,
+      version: state.quarantine.version,
+      platforms: {},
+      scan: publicScanResult(scan),
+    }
+  }
+
+  private async releaseQuarantine(
+    state: QuarantineReviewState,
+    request: BinaryQuarantineReviewRequest,
+    scan: MalwareScanResult,
+  ): Promise<BinaryQuarantineReviewCompleted> {
+    const releasedAt = new Date(this.now()).toISOString()
+    const records: Record<string, BinaryPlatformRecord> = {}
+    for (const platform of state.quarantine.platforms) {
+      const tarball = `binaries/${request.domain}/${request.version}/${platform}/${state.filename}`
+      await this.store.copyObject(state.quarantineKey, tarball)
+      await this.store.putObject(`${tarball}.sha256`, `${request.artifactSha256}  ${state.filename}\n`, 'text/plain')
+      await this.store.putObject(binaryAttestationKey(tarball), JSON.stringify({
+        domain: request.domain,
+        version: request.version,
+        platform,
+        filename: state.filename,
+        source: 'quarantine-review',
+        quarantineKey: state.quarantineKey,
+        scan,
+      }), 'application/json')
+      records[platform] = {
+        tarball,
+        sha256: request.artifactSha256,
+        size: state.size,
+        uploadedAt: releasedAt,
+        malwareScan: scan,
+      }
+    }
+
+    state.metadata.versions ||= {}
+    state.metadata.versions[request.version] ||= { platforms: {} }
+    state.metadata.versions[request.version].platforms ||= {}
+    Object.assign(state.metadata.versions[request.version].platforms, records)
+    state.metadata.malwareQuarantines = state.metadata.malwareQuarantines?.filter(item =>
+      item.version !== request.version
+      || item.artifactSha256 !== request.artifactSha256,
+    )
+    if (state.metadata.malwareQuarantines?.length === 0)
+      delete state.metadata.malwareQuarantines
+    if (!state.metadata.latestVersion || newerVersion(request.version, state.metadata.latestVersion))
+      state.metadata.latestVersion = request.version
+    state.metadata.updatedAt = releasedAt
+    await this.store.putObject(state.metadataKey, JSON.stringify(state.metadata, null, 2), 'application/json')
+
+    const completed: BinaryPublishCompleted = {
+      domain: request.domain,
+      version: request.version,
+      platforms: records,
+      scan: publicScanResult(scan),
+    }
+    await this.options.onPublished?.(completed)
+    return { action: 'released', ...completed }
+  }
+
   private async quarantineExisting(
     metadataKey: string,
     metadata: BinaryPackageMetadata,
@@ -923,9 +1263,11 @@ export class BinaryArtifactPublisher {
     }), 'application/json')
 
     const removedPlatforms = new Map<string, Set<string>>()
+    let quarantinedSize: number | undefined
     for (const [version, versionInfo] of Object.entries(metadata.versions || {})) {
       for (const [platform, record] of Object.entries(versionInfo.platforms || {})) {
         if (storedBinaryKey(record.tarball) === tarball) {
+          quarantinedSize ??= record.size
           const platforms = removedPlatforms.get(version) || new Set<string>()
           platforms.add(platform)
           removedPlatforms.set(version, platforms)
@@ -942,6 +1284,11 @@ export class BinaryArtifactPublisher {
         [...platforms],
         scan,
         quarantinedAt,
+        {
+          quarantineKey,
+          filename: tarball.split('/').at(-1)!,
+          size: quarantinedSize,
+        },
       )
     }
     if (!metadata.versions[metadata.latestVersion]) {
@@ -1002,6 +1349,11 @@ export class BinaryArtifactPublisher {
         claim.platforms,
         scan,
         quarantinedAt,
+        {
+          quarantineKey,
+          filename: claim.filename,
+          size: claim.size,
+        },
       )
       metadata.updatedAt = quarantinedAt
       await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
@@ -1014,6 +1366,11 @@ export class BinaryArtifactPublisher {
     platforms: string[],
     scan: MalwareScanResult,
     quarantinedAt: string,
+    artifact: {
+      quarantineKey: string
+      filename: string
+      size?: number
+    },
   ): void {
     metadata.malwareQuarantines ||= []
     const existing = metadata.malwareQuarantines.find(
@@ -1023,12 +1380,18 @@ export class BinaryArtifactPublisher {
     if (existing) {
       existing.platforms = [...new Set([...existing.platforms, ...platforms])].sort()
       existing.quarantinedAt = quarantinedAt
+      existing.quarantineKey = artifact.quarantineKey
+      existing.filename = artifact.filename
+      if (artifact.size !== undefined) existing.size = artifact.size
       return
     }
     metadata.malwareQuarantines.push({
       version,
       platforms: [...new Set(platforms)].sort(),
       artifactSha256: scan.artifactSha256,
+      quarantineKey: artifact.quarantineKey,
+      filename: artifact.filename,
+      ...(artifact.size !== undefined ? { size: artifact.size } : {}),
       ...(scan.signature ? { signature: scan.signature } : {}),
       engine: scan.engine,
       ...(scan.engineVersion ? { engineVersion: scan.engineVersion } : {}),

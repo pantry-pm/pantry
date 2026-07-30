@@ -478,6 +478,8 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  * POST /api/v1/binaries/uploads                              - Create untrusted staged upload
  * POST /api/v1/binaries/uploads/complete                     - Scan and promote staged upload
  * POST /api/v1/binaries/rescan                               - Attest or quarantine a retained artifact
+ * POST /api/v1/binaries/quarantine/rescan/prepare             - Prepare an operator quarantine review
+ * POST /api/v1/binaries/quarantine/rescan/attest              - Apply a digest-bound quarantine review
  * GET  /binaries/{domain}/metadata.json                        - Package metadata (5min cache)
  * GET  /binaries/{domain}/{version}/{platform}/{file}.tar.gz   - Tarball download (24h cache, tracked)
  * GET  /binaries/{domain}/{version}/{platform}/{file}.sha256   - Checksum (24h cache)
@@ -841,6 +843,14 @@ export function createHandler(
 
       if (path === '/api/v1/binaries/rescan/attest' && req.method === 'POST') {
         return handleBinaryExternalRescanAttest(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/quarantine/rescan/prepare' && req.method === 'POST') {
+        return handleBinaryQuarantineReviewPrepare(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/quarantine/rescan/attest' && req.method === 'POST') {
+        return handleBinaryQuarantineReviewAttest(req, getBinaryPublisher, corsHeaders)
       }
 
       // ================================================================
@@ -1953,6 +1963,7 @@ export function createServer(
     console.log('  POST /api/v1/binaries/uploads          - Stage native artifact')
     console.log('  POST /api/v1/binaries/uploads/complete - Scan and promote native artifact')
     console.log('  POST /api/v1/binaries/rescan          - Attest or quarantine retained artifact')
+    console.log('  POST /api/v1/binaries/quarantine/rescan/* - Review quarantined artifact')
     console.log('  GET  /binaries/{domain}/metadata.json  - Package metadata')
     console.log('  GET  /binaries/{domain}/{ver}/{plat}/*  - Tarball/checksum')
     console.log('Dashboard:')
@@ -3072,6 +3083,66 @@ async function handleBinaryExternalRescanAttest(
     return Response.json({
       error: 'Binary external rescan attestation failed',
       code: 'BINARY_RESCAN_ATTEST_FAILED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryQuarantineReviewPrepare(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  try {
+    return Response.json(await getPublisher().prepareExternalQuarantineReview(body), {
+      headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+    })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary quarantine review preparation failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary quarantine review preparation failed',
+      code: 'BINARY_QUARANTINE_REVIEW_PREPARE_FAILED',
+      retryable: true,
+    }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryQuarantineReviewAttest(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+
+  try {
+    const completed = await getPublisher().attestExternalQuarantineReview(body, '_admin-quarantine-review')
+    for (const record of Object.values(completed.platforms))
+      _binaryAttestationCache.delete(record.tarball)
+    return Response.json({ success: true, ...completed }, {
+      status: completed.action === 'still-quarantined' ? 202 : 200,
+      headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
+    })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary quarantine review attestation failed:', (error as Error).message)
+    return Response.json({
+      error: 'Binary quarantine review attestation failed',
+      code: 'BINARY_QUARANTINE_REVIEW_ATTEST_FAILED',
       retryable: true,
     }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
   }
