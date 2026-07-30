@@ -497,6 +497,7 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  */
 export interface BinaryStorage {
   getObject(key: string): Promise<Buffer>
+  createDownloadUrl?(key: string): string
 }
 
 // Build dashboard status store — lazily created against the active storage
@@ -4944,7 +4945,7 @@ else {
 let _defaultBinaryStorage: BinaryStorage | undefined
 /** Cached client used to presign tarball download URLs for private (non-AWS) buckets. */
 let _presignClient: ReturnType<typeof createS3Client> | undefined
-const _binaryAttestationCache = new BoundedTtlCache<string, boolean>(50_000, 5 * 60_000)
+const _binaryAttestationCache = new BoundedTtlCache<string, string | false>(50_000, 5 * 60_000)
 
 function binaryAttestationRequired(): boolean {
   const configured = process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION
@@ -4957,21 +4958,25 @@ async function hasCleanBinaryAttestation(
   client: ReturnType<typeof createS3Client>,
   bucket: string,
   tarballKey: string,
+  expectedSha256: string,
 ): Promise<boolean> {
   const cached = _binaryAttestationCache.get(tarballKey)
-  if (cached !== undefined) return cached
-  let clean = false
+  if (cached !== undefined) return cached === expectedSha256
+  let artifactSha256: string | false = false
   try {
     const parsed = JSON.parse(
       (await client.getObjectBuffer(bucket, binaryAttestationKey(tarballKey))).toString('utf8'),
     ) as { scan?: { verdict?: unknown, artifactSha256?: unknown } }
-    clean = parsed.scan?.verdict === 'clean'
+    if (
+      parsed.scan?.verdict === 'clean'
       && typeof parsed.scan.artifactSha256 === 'string'
       && /^[a-f0-9]{64}$/.test(parsed.scan.artifactSha256)
+    )
+      artifactSha256 = parsed.scan.artifactSha256
   }
   catch {}
-  _binaryAttestationCache.set(tarballKey, clean)
-  return clean
+  _binaryAttestationCache.set(tarballKey, artifactSha256)
+  return artifactSha256 === expectedSha256
 }
 
 // Split a binaries/ key into its parts. The domain itself may contain slashes
@@ -4988,6 +4993,65 @@ function parseBinaryKey(key: string): { domain: string, version: string, platfor
   if (!domain || !version || !platform)
     return null
   return { domain, version, platform }
+}
+
+function storedBinaryObjectKey(value: string): string {
+  try {
+    return decodeURIComponent(new URL(value).pathname.replace(/^\/+/, ''))
+  }
+  catch {
+    try {
+      return decodeURIComponent(value.replace(/^\/+/, ''))
+    }
+    catch {
+      return ''
+    }
+  }
+}
+
+interface ActiveBinaryRecord {
+  tarball: string
+  sha256: string
+  malwareScan?: {
+    verdict?: unknown
+    artifactSha256?: unknown
+  }
+}
+
+async function findActiveBinaryRecord(
+  store: BinaryStorage,
+  s3Key: string,
+  kind: 'tarball' | 'checksum',
+): Promise<ActiveBinaryRecord | null> {
+  const parsed = parseBinaryKey(s3Key)
+  if (!parsed)
+    return null
+  let metadata: any
+  try {
+    metadata = JSON.parse(
+      (await store.getObject(`binaries/${parsed.domain}/metadata.json`)).toString('utf8'),
+    )
+  }
+  catch {
+    return null
+  }
+  if (metadata?.malwareQuarantines?.some((item: any) =>
+    item?.version === parsed.version
+    && Array.isArray(item.platforms)
+    && item.platforms.includes(parsed.platform),
+  ))
+    return null
+  const record = metadata?.versions?.[parsed.version]?.platforms?.[parsed.platform] as ActiveBinaryRecord | undefined
+  if (
+    !record
+    || typeof record.tarball !== 'string'
+    || typeof record.sha256 !== 'string'
+    || !/^[a-f0-9]{64}$/.test(record.sha256)
+  )
+    return null
+  const tarballKey = storedBinaryObjectKey(record.tarball)
+  const expectedKey = kind === 'tarball' ? tarballKey : `${tarballKey}.sha256`
+  return expectedKey === s3Key ? record : null
 }
 
 // Ensure the requested binary object exists, materializing it from pkgx on a miss.
@@ -5033,6 +5097,8 @@ async function handleBinaryProxy(
   const isMetadata = path.endsWith('/metadata.json')
   const isTarball = path.endsWith('.tar.gz')
   const isChecksum = path.endsWith('.sha256')
+  if (!isMetadata && !isTarball && !isChecksum)
+    return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
 
   const contentType = isMetadata ? 'application/json'
     : isTarball ? 'application/gzip'
@@ -5054,7 +5120,34 @@ async function handleBinaryProxy(
   })()
 
   try {
-    // Track tarball downloads fire-and-forget (before redirect)
+    let activeRecord: ActiveBinaryRecord | null = null
+    if (isTarball || isChecksum) {
+      const kind = isTarball ? 'tarball' : 'checksum'
+      activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind)
+      const parsed = parseBinaryKey(s3Key)
+      if (!activeRecord && parsed && isPendingMaterialize(parsed.domain, parsed.version, parsed.platform)) {
+        const tarballKey = isTarball ? s3Key : s3Key.slice(0, -'.sha256'.length)
+        _presignClient ??= createS3Client(resolveStorageProvider())
+        if (getPublisher && await ensureBinaryAvailable(tarballKey, _presignClient, getPublisher()))
+          activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind)
+      }
+      if (!activeRecord)
+        return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
+      if (
+        binaryAttestationRequired()
+        && (
+          activeRecord.malwareScan?.verdict !== 'clean'
+          || activeRecord.malwareScan.artifactSha256 !== activeRecord.sha256
+        )
+      ) {
+        return Response.json({
+          error: 'Binary artifact has no clean malware-scan attestation',
+          code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
+        }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+      }
+    }
+
+    // Track only authorized tarball downloads fire-and-forget.
     if (isTarball) {
       const parts = s3Key.split('/')
       if (parts.length >= 4) {
@@ -5074,8 +5167,9 @@ async function handleBinaryProxy(
         }).catch(err => console.warn('Analytics tracking failed:', err))
       }
 
-      // Stream tarball: use injected storage for tests, S3 direct for production
-      if (storage) {
+      // Stream tarball from ordinary injected storage, or use its explicit
+      // redirect capability when a test/adapter models private object storage.
+      if (storage && !storage.createDownloadUrl) {
         // Test/injected storage — serve from buffer
         try {
           const buffer = await storage.getObject(s3Key)
@@ -5087,6 +5181,17 @@ async function handleBinaryProxy(
           return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
         }
       }
+      if (storage?.createDownloadUrl) {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            ...corsHeaders,
+            'Location': storage.createDownloadUrl(s3Key),
+            'Content-Type': contentType,
+            'Cache-Control': cacheControl,
+          },
+        })
+      }
 
       // Production: redirect clients to the immutable object so large binary
       // artifacts aren't buffered through the registry process. AWS public
@@ -5094,19 +5199,9 @@ async function handleBinaryProxy(
       // (Hetzner/B2) use private buckets, so presign a time-limited GET URL.
       const s3Bucket = process.env.S3_BUCKET || 'pantry-registry'
       const resolved = resolveStorageProvider()
-      // Only a version we ADVERTISED from pkgx (via metadata augmentation) but haven't
-      // published gets the existence-check + on-the-fly materialize. Published versions
-      // keep the zero-round-trip optimistic redirect (no S3 HEAD on the hot path).
-      const pk = parseBinaryKey(s3Key)
-      if (pk && isPendingMaterialize(pk.domain, pk.version, pk.platform)) {
-        _presignClient ??= createS3Client(resolved)
-        if (!getPublisher || !await ensureBinaryAvailable(s3Key, _presignClient, getPublisher())) {
-          return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
-        }
-      }
       if (binaryAttestationRequired()) {
         _presignClient ??= createS3Client(resolved)
-        if (!await hasCleanBinaryAttestation(_presignClient, s3Bucket, s3Key)) {
+        if (!await hasCleanBinaryAttestation(_presignClient, s3Bucket, s3Key, activeRecord!.sha256)) {
           return Response.json({
             error: 'Binary artifact has no clean malware-scan attestation',
             code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
@@ -5182,7 +5277,12 @@ async function handleBinaryProxy(
     if (isChecksum && !storage && binaryAttestationRequired()) {
       const s3Bucket = process.env.S3_BUCKET || 'pantry-registry'
       _presignClient ??= createS3Client(resolveStorageProvider())
-      if (!await hasCleanBinaryAttestation(_presignClient, s3Bucket, s3Key.replace(/\.sha256$/, ''))) {
+      if (!await hasCleanBinaryAttestation(
+        _presignClient,
+        s3Bucket,
+        s3Key.replace(/\.sha256$/, ''),
+        activeRecord!.sha256,
+      )) {
         return Response.json({
           error: 'Binary artifact has no clean malware-scan attestation',
           code: 'BINARY_SCAN_ATTESTATION_REQUIRED',

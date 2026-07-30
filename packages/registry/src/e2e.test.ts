@@ -33,6 +33,7 @@ function parseTarEntries(bytes: Uint8Array): Map<string, Uint8Array> {
 /** Mock binary storage that serves test data from an in-memory map */
 class MockBinaryStorage implements BinaryStorage {
   private files = new Map<string, Buffer>()
+  createDownloadUrl?: (key: string) => string
 
   put(key: string, data: Buffer | string): void {
     this.files.set(key, typeof data === 'string' ? Buffer.from(data) : data)
@@ -74,7 +75,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
           platforms: {
             'darwin-arm64': {
               tarball: 'binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz',
-              sha256: 'abc123def456',
+              sha256: 'abc123def456'.padEnd(64, '0'),
             },
           },
         },
@@ -86,7 +87,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
       Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0xDE, 0xAD, 0xBE, 0xEF]),
     )
     binaryStore.put(
-      'binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.sha256',
+      'binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz.sha256',
       'abc123def456  curl.se-8.12.0.tar.gz',
     )
 
@@ -159,7 +160,28 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
     it('GET production tarball redirects directly to S3 instead of buffering through registry', async () => {
       const directPort = await getAvailablePort()
       const directBaseUrl = `http://localhost:${directPort}`
-      const directServer = createServer(createLocalRegistry(directBaseUrl), directPort, analytics)
+      const directStore = new MockBinaryStorage()
+      directStore.put('binaries/cmake.org/metadata.json', JSON.stringify({
+        name: 'cmake.org',
+        versions: {
+          '3.24.2': {
+            platforms: {
+              'darwin-arm64': {
+                tarball: 'binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz',
+                sha256: 'a'.repeat(64),
+              },
+            },
+          },
+        },
+      }))
+      directStore.createDownloadUrl = key => `https://objects.example/${key}`
+      const directServer = createServer(
+        createLocalRegistry(directBaseUrl),
+        directPort,
+        analytics,
+        undefined,
+        directStore,
+      )
       directServer.start()
 
       try {
@@ -169,10 +191,8 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
         )
 
         expect(res.status).toBe(302)
-        const s3Bucket = process.env.S3_BUCKET || 'pantry-registry'
-        const s3Region = process.env.AWS_REGION || 'us-east-1'
         expect(res.headers.get('location')).toBe(
-          `https://${s3Bucket}.s3.${s3Region}.amazonaws.com/binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz`,
+          'https://objects.example/binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz',
         )
         expect(res.headers.get('cache-control')).toBe('public, max-age=86400, immutable')
       }
@@ -188,6 +208,66 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
       expect(res.status).toBe(404)
     })
 
+    it('returns 404 for an existing object that is absent from active metadata', async () => {
+      binaryStore.put(
+        'binaries/curl.se/8.12.0/linux-arm64/curl.se-8.12.0.tar.gz',
+        Buffer.from([0x1f, 0x8b]),
+      )
+      const res = await fetch(
+        `${baseUrl}/binaries/curl.se/8.12.0/linux-arm64/curl.se-8.12.0.tar.gz`,
+        { redirect: 'manual' },
+      )
+      expect(res.status).toBe(404)
+      expect(res.headers.get('location')).toBeNull()
+    })
+
+    it('returns 404 when a private tombstone overlaps stale active metadata', async () => {
+      binaryStore.put('binaries/curl.se/metadata.json', JSON.stringify({
+        name: 'curl.se',
+        versions: {
+          '8.12.0': {
+            platforms: {
+              'darwin-arm64': {
+                tarball: 'binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz',
+                sha256: 'abc123def456'.padEnd(64, '0'),
+              },
+            },
+          },
+        },
+        malwareQuarantines: [{
+          version: '8.12.0',
+          platforms: ['darwin-arm64'],
+          artifactSha256: 'f'.repeat(64),
+        }],
+      }))
+      const res = await fetch(
+        `${baseUrl}/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz`,
+        { redirect: 'manual' },
+      )
+      expect(res.status).toBe(404)
+      expect(res.headers.get('location')).toBeNull()
+    })
+
+    it('returns 503 in strict mode when active metadata lacks exact clean evidence', async () => {
+      const previous = process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION
+      process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION = 'true'
+      try {
+        const res = await fetch(
+          `${baseUrl}/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz`,
+          { redirect: 'manual' },
+        )
+        expect(res.status).toBe(503)
+        expect(res.headers.get('location')).toBeNull()
+        expect(await res.json()).toMatchObject({ code: 'BINARY_SCAN_ATTESTATION_REQUIRED' })
+      }
+      finally {
+        if (previous === undefined)
+          delete process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION
+        else
+          process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION = previous
+      }
+    })
+
     it('rejects non-GET methods', async () => {
       const res = await fetch(
         `${baseUrl}/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz`,
@@ -200,7 +280,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
   describe('binary proxy: checksum', () => {
     it('GET .sha256 returns plain text with 24h immutable cache', async () => {
       const res = await fetch(
-        `${baseUrl}/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.sha256`,
+        `${baseUrl}/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz.sha256`,
       )
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('text/plain')
@@ -208,6 +288,17 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
 
       const text = await res.text()
       expect(text).toContain('abc123def456')
+    })
+
+    it('returns 404 for an unindexed checksum object', async () => {
+      binaryStore.put(
+        'binaries/curl.se/8.12.0/linux-arm64/curl.se-8.12.0.tar.gz.sha256',
+        'secret',
+      )
+      const res = await fetch(
+        `${baseUrl}/binaries/curl.se/8.12.0/linux-arm64/curl.se-8.12.0.tar.gz.sha256`,
+      )
+      expect(res.status).toBe(404)
     })
   })
 
@@ -730,7 +821,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
       expect(tarballBytes.byteLength).toBe(8)
 
       // Step 3: CLI fetches checksum
-      const checksumPath = tarballPath.replace('.tar.gz', '.sha256')
+      const checksumPath = `${tarballPath}.sha256`
       const checksumRes = await fetch(`${baseUrl}/${checksumPath}`)
       expect(checksumRes.status).toBe(200)
 
