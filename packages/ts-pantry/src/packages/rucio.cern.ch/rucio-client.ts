@@ -77,8 +77,10 @@ export const ruciocernchrucioclientPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '41.1.1',
     '41.1.0',
     '41.0.0',
+    '40.4.2',
     '40.4.1',
     '40.4.0',
     '40.3.0',
@@ -95,6 +97,7 @@ export const ruciocernchrucioclientPackage = {
     '39.2.0',
     '39.1.0',
     '39.0.0',
+    '38.6.1',
     '38.6.0',
     '38.5.5',
     '38.5.4',
@@ -122,6 +125,7 @@ export const ruciocernchrucioclientPackage = {
     '36.3.0',
     '36.2.0',
     '36.1.0',
+    '35.9.1',
     '35.9.0',
     '35.8.5',
     '35.8.4',
