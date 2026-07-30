@@ -370,8 +370,9 @@ const provision_script =
     \\set_clam TCPAddr 127.0.0.1
     \\set_clam TCPSocket 3310
     \\set_clam StreamMaxLength 1G
-    \\set_clam MaxScanSize 1G
-    \\set_clam MaxFileSize 1G
+    \\set_clam MaxScanSize 8G
+    \\set_clam MaxFileSize 2G
+    \\set_clam AlertExceedsMax yes
     \\set_clam MaxRecursion 30
     \\set_clam MaxFiles 100000
     \\set_clam MaxScanTime 60000

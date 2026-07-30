@@ -51,7 +51,7 @@ jobs:
           REGISTRY_PORT: ${{ vars.REGISTRY_PORT || '3001' }}
           REGISTRY_ENV_FILE: ${{ vars.REGISTRY_ENV_FILE || '/opt/pantry-registry/registry.env' }}
           LEGACY_SCAN_ATTESTATION_CUTOFF: ${{ vars.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF || '' }}
-          LEGACY_RESCAN_MAX_BYTES: ${{ vars.PANTRY_LEGACY_RESCAN_MAX_BYTES || '2147483648' }}
+          LEGACY_RESCAN_MAX_BYTES: ${{ vars.PANTRY_LEGACY_RESCAN_MAX_BYTES || '8589934592' }}
           # Existing artifacts predate scan attestations. Keep reads compatible
           # until the controlled backfill finishes, then set this repository
           # variable to true and dispatch one final deployment.
@@ -140,8 +140,9 @@ jobs:
             set_clam TCPAddr 127.0.0.1
             set_clam TCPSocket 3310
             set_clam StreamMaxLength 1G
-            set_clam MaxScanSize 1G
-            set_clam MaxFileSize 1G
+            set_clam MaxScanSize 8G
+            set_clam MaxFileSize 2G
+            set_clam AlertExceedsMax yes
             set_clam MaxRecursion 30
             set_clam MaxFiles 100000
             set_clam MaxScanTime 60000

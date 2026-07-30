@@ -97,10 +97,12 @@
   "dependencies": {
     "@stacksjs/ts-cloud": "^0.7.26",
     "bunfig": "^0.15.6",
+    "tar-stream": "^3.2.0",
     "ts-web-scraper": "^0.1.1"
   },
   "devDependencies": {
     "@stacksjs/bunpress": "^0.1.6",
+    "@types/tar-stream": "^3.1.4",
     "better-dx": "^0.2.6"
   }
 }

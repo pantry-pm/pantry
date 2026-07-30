@@ -652,7 +652,7 @@ describe('binary scan-before-promote publisher', () => {
 
   it('supports an explicit oversized legacy migration bound without raising the publish limit', async () => {
     const store = new UrlArtifactStore()
-    const legacySize = 1_227_076_242
+    const legacySize = 3_000_000_000
     store.headObject = async () => ({
       'content-length': String(legacySize),
       etag: 'stable-legacy-object',
@@ -660,7 +660,7 @@ describe('binary scan-before-promote publisher', () => {
     const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
       tokenSecret: 'test-secret-that-is-long-enough',
       legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
-      legacyRescanMaxBytes: 2 * 1024 * 1024 * 1024,
+      legacyRescanMaxBytes: 8 * 1024 * 1024 * 1024,
     })
     const bytes = Buffer.from('oversized legacy object represented without allocating it')
     await seedLegacyArtifact(store, bytes)
