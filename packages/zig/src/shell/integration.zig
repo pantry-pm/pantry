@@ -332,7 +332,11 @@ fn generateDenHook(allocator: std.mem.Allocator) ![]const u8 {
         \\    __cp_pwd="$PWD/"
         \\    __cp_rest="${__cp_pwd#$__PANTRY_PROJECT_SLASH}"
         \\    [ "$__cp_rest" != "$__cp_pwd" ] && return 0
-        \\    [ "$PWD" = "$__PANTRY_LAST_NONE" ] && return 0
+        \\    # The remembered non-project directory only short-circuits when
+        \\    # nothing is active. Checking it first meant stepping out of a
+        \\    # project into a directory already known to have none skipped the
+        \\    # switch entirely, and the project stayed on PATH.
+        \\    [ -z "$PANTRY_CURRENT_PROJECT" ] && [ "$PWD" = "$__PANTRY_LAST_NONE" ] && return 0
         \\    __pantry_switch
         \\}
         \\
@@ -596,4 +600,90 @@ test "Activation script generation" {
 
     try std.testing.expect(std.mem.indexOf(u8, script, "export PATH=") != null);
     try std.testing.expect(std.mem.indexOf(u8, script, "NODE_VERSION") != null);
+}
+
+test "den: hook is generated and names the shell" {
+    const allocator = std.testing.allocator;
+    const hook = try generateHook(.den, allocator);
+    defer allocator.free(hook);
+
+    try std.testing.expect(std.mem.indexOf(u8, hook, "integration for den") != null);
+    try std.testing.expect(std.mem.indexOf(u8, hook, "chpwd()") != null);
+}
+
+test "den: hook avoids constructs den does not parse" {
+    const allocator = std.testing.allocator;
+    const hook = try generateHook(.den, allocator);
+    defer allocator.free(hook);
+
+    // den crashes on multi-line if/case inside a function body, so every
+    // construct here has to open and close on one line. A bare `then`, `else`,
+    // `fi`, `esac` or `do` at the end of a line means one has been split.
+    var lines = std.mem.splitScalar(u8, hook, '\n');
+    while (lines.next()) |raw| {
+        const line = std.mem.trim(u8, raw, " \t");
+        if (line.len == 0 or line[0] == '#') continue;
+        for ([_][]const u8{ "then", "else", "do" }) |tail| {
+            if (std.mem.endsWith(u8, line, tail)) {
+                std.debug.print("multi-line construct in den hook: {s}\n", .{line});
+                return error.MultiLineConstruct;
+            }
+        }
+        if (std.mem.eql(u8, line, "fi") or std.mem.eql(u8, line, "esac") or std.mem.eql(u8, line, "done")) {
+            std.debug.print("multi-line construct in den hook: {s}\n", .{line});
+            return error.MultiLineConstruct;
+        }
+    }
+}
+
+test "den: leaving a project is never short-circuited by the non-project memo" {
+    const allocator = std.testing.allocator;
+    const hook = try generateHook(.den, allocator);
+    defer allocator.free(hook);
+
+    // Regression: checking the remembered non-project directory before the
+    // active project meant stepping out of a project into a directory already
+    // known to have none skipped the switch, leaving the project on PATH.
+    const memo = std.mem.indexOf(u8, hook, "__PANTRY_LAST_NONE\"") orelse return error.MemoMissing;
+    const guard = std.mem.indexOf(u8, hook, "[ -z \"$PANTRY_CURRENT_PROJECT\" ]") orelse return error.GuardMissing;
+    try std.testing.expect(guard < memo);
+}
+
+test "den: PATH is rebuilt from the remembered base rather than edited" {
+    const allocator = std.testing.allocator;
+    const hook = try generateHook(.den, allocator);
+    defer allocator.free(hook);
+
+    try std.testing.expect(std.mem.indexOf(u8, hook, "__PANTRY_BASE_PATH") != null);
+    // Substitution over PATH is both slow here and mis-evaluated by den when
+    // the pattern holds a variable.
+    try std.testing.expect(std.mem.indexOf(u8, hook, "${PATH//") == null);
+}
+
+test "den: activation accepts a project-local pantry bin" {
+    const allocator = std.testing.allocator;
+    const hook = try generateHook(.den, allocator);
+    defer allocator.free(hook);
+
+    // A project whose packages live under its own pantry/.bin has an empty
+    // shared env dir; requiring both left those projects permanently inactive.
+    try std.testing.expect(std.mem.indexOf(u8, hook, "pantry/.bin") != null);
+}
+
+test "den: rc guidance sources the hook rather than eval'ing it" {
+    const allocator = std.testing.allocator;
+    const hook = try generateHook(.den, allocator);
+    defer allocator.free(hook);
+
+    // den's eval parses its argument as a command chain, which cannot carry a
+    // function definition, so an eval'd hook silently defines nothing.
+    try std.testing.expect(std.mem.indexOf(u8, hook, "source \"$HOME/.cache/pantry-den-hook.sh\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, hook, "eval \"$(pantry dev:shellcode)\"") == null);
+}
+
+test "den: rc file is ~/.denrc" {
+    const allocator = std.testing.allocator;
+    const rc = try getRcFile(.den, allocator);
+    defer allocator.free(rc);
+    try std.testing.expect(std.mem.endsWith(u8, rc, "/.denrc"));
 }
