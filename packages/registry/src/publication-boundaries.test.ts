@@ -122,6 +122,8 @@ describe('first-party publication boundaries', () => {
     expect(setupClamav).toContain('set_clam MaxScanSize 8G')
     expect(setupClamav).toContain('set_clam MaxFileSize 2G')
     expect(setupClamav).toContain('set_clam AlertExceedsMax yes')
+    expect(setupClamav).toContain('set_clam MaxRecursion 30')
+    expect(setupClamav).toContain('set_clam MaxFiles 100000')
     expect(setupClamav).toContain('set_clam MaxThreads 2')
     expect(setupClamav).toContain('set_clam MaxScanTime 600000')
     expect(backfill).toContain('const ARTIFACT_CONCURRENCY = resolveArtifactConcurrency()')
