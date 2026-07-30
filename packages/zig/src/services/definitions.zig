@@ -213,20 +213,48 @@ fn pantryRootOf(bin: []const u8) ?[]const u8 {
 }
 
 fn serviceDataDir(allocator: std.mem.Allocator, home: ?[]const u8, name: []const u8) ![]const u8 {
+    return serviceDataDirScoped(allocator, home, name, null);
+}
+
+/// Data directory for a service, optionally scoped to one project.
+///
+/// Service *units* are already per-project (`com.pantry.<scope>.<name>`), so a
+/// stateful service whose data directory is not scoped the same way ends up with
+/// several units owning one directory. For a database that is actively harmful:
+/// two projects on different major versions each see the other's cluster as
+/// incompatible, move it aside, and re-initialize, so both keep destroying a
+/// cluster the other just built. Scoping the data directory the same way the
+/// unit is scoped keeps each project on its own.
+fn serviceDataDirScoped(allocator: std.mem.Allocator, home: ?[]const u8, name: []const u8, scope: ?[]const u8) ![]const u8 {
     const io_helper = @import("../io_helper.zig");
     // System scope (root on Linux): use /var/lib/pantry so a service that drops
     // privileges (postgres/mysql refuse to run as root) can still reach its data
     // dir — $HOME is /root (mode 700), which an unprivileged service user can't
     // traverse.
     const system = builtin.os.tag == .linux and std.os.linux.geteuid() == 0;
-    const dir = if (system)
-        try std.fmt.allocPrint(allocator, "/var/lib/pantry/{s}", .{name})
-    else if (home) |h|
-        try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/{s}", .{ h, name })
-    else
-        try std.fmt.allocPrint(allocator, "/tmp/{s}-data", .{name});
+    const dir = if (system) blk: {
+        if (scope) |s|
+            break :blk try std.fmt.allocPrint(allocator, "/var/lib/pantry/{s}/{s}", .{ s, name });
+        break :blk try std.fmt.allocPrint(allocator, "/var/lib/pantry/{s}", .{name});
+    } else if (home) |h| blk: {
+        if (scope) |s|
+            break :blk try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/{s}/{s}", .{ h, s, name });
+        break :blk try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/{s}", .{ h, name });
+    } else try std.fmt.allocPrint(allocator, "/tmp/{s}-data", .{name});
     io_helper.makePath(dir) catch {};
     return dir;
+}
+
+/// The data directory a project's PostgreSQL cluster lives in. Shared by the
+/// service definition and the post-install setup path, which both have to agree
+/// on where the cluster is.
+pub fn postgresDataDir(allocator: std.mem.Allocator, home: ?[]const u8, project_root: ?[]const u8) ![]const u8 {
+    if (project_root) |root| {
+        const scope = try projectScopeId(allocator, root);
+        defer allocator.free(scope);
+        return serviceDataDirScoped(allocator, home, "postgres", scope);
+    }
+    return serviceDataDir(allocator, home, "postgres");
 }
 
 /// Write `content` to `dir/filename`, returning the absolute path (caller-owned).
@@ -410,11 +438,11 @@ pub const Services = struct {
     pub fn postgresqlWithContext(allocator: std.mem.Allocator, port: u16, project_root: ?[]const u8) !ServiceConfig {
         const io_helper = @import("../io_helper.zig");
 
-        // Resolve PGDATA: use ~/.local/share/pantry/data/postgres
+        // Resolve PGDATA: ~/.local/share/pantry/data/<project>/postgres
         const home = io_helper.getEnvVarOwned(allocator, "HOME") catch null;
         defer if (home) |h| allocator.free(h);
 
-        const pgdata = try serviceDataDir(allocator, home, "postgres");
+        const pgdata = try postgresDataDir(allocator, home, project_root);
         defer allocator.free(pgdata);
 
         var env_vars = std.StringHashMap([]const u8).init(allocator);

@@ -1738,7 +1738,10 @@ pub const ShellCommands = struct {
         const home_dir = try lib.core.Paths.home(self.allocator);
         defer self.allocator.free(home_dir);
 
-        const pgdata = try std.fmt.allocPrint(self.allocator, "{s}/.local/share/pantry/data/postgres", .{home_dir});
+        // Ask the service definition where the cluster lives rather than
+        // rebuilding the path here: the two disagreeing is how this code ends up
+        // initializing one directory while the unit starts another.
+        const pgdata = try lib.services.definitions.postgresDataDir(self.allocator, home_dir, project_root);
         defer self.allocator.free(pgdata);
 
         // Check if PGDATA already exists and has content
