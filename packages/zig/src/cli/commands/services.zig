@@ -1748,7 +1748,9 @@ fn ensurePostgresDataDir(allocator: std.mem.Allocator, project_root: ?[]const u8
     const home = io_helper.getEnvVarOwned(allocator, "HOME") catch return;
     defer allocator.free(home);
 
-    const pgdata = std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/postgres", .{home}) catch return;
+    // Same helper the service definition uses, so this cannot initialize one
+    // directory while the unit starts another.
+    const pgdata = lib.services.definitions.postgresDataDir(allocator, home, project_root) catch return;
     defer allocator.free(pgdata);
 
     // Check if PGDATA exists
@@ -1864,9 +1866,10 @@ fn runInitdb(allocator: std.mem.Allocator, pgdata: []const u8, project_root: ?[]
         }
     }
 
-    const result = io_helper.childRun(allocator, &[_][]const u8{
-        initdb_path, "-D", pgdata, "--no-locale", "--encoding=UTF8",
-    }) catch |err| {
+    const argv = lib.services.definitions.postgresInitdbArgv(allocator, initdb_path, pgdata) catch return;
+    defer allocator.free(argv);
+
+    const result = io_helper.childRun(allocator, argv) catch |err| {
         style.print("  ⚠️  initdb failed: {s}\n", .{@errorName(err)});
         return;
     };

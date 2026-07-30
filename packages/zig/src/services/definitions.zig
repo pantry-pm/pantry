@@ -245,6 +245,34 @@ fn serviceDataDirScoped(allocator: std.mem.Allocator, home: ?[]const u8, name: [
     return dir;
 }
 
+/// Flags every `initdb` pantry runs must carry.
+///
+/// `--username` decides who the cluster's superuser is, and everything that
+/// talks to a pantry-managed cluster afterwards (its own database creation
+/// included) assumes `postgres`. Leaving it off makes the superuser the OS
+/// account, which then fails as `role "postgres" does not exist` against a
+/// cluster pantry built itself. Callers must use `postgresInitdbArgv` rather
+/// than spelling these out, because four copies of this list is how they came
+/// to disagree in the first place.
+pub const postgres_initdb_flags = [_][]const u8{
+    "--no-locale",
+    "--encoding=UTF8",
+    "--username=postgres",
+    "--auth-local=trust",
+    "--auth-host=trust",
+};
+
+/// Full argv for initializing a cluster at `pgdata` with `initdb_path`.
+/// Caller owns the returned slice.
+pub fn postgresInitdbArgv(allocator: std.mem.Allocator, initdb_path: []const u8, pgdata: []const u8) ![]const []const u8 {
+    var argv = try allocator.alloc([]const u8, 3 + postgres_initdb_flags.len);
+    argv[0] = initdb_path;
+    argv[1] = "-D";
+    argv[2] = pgdata;
+    for (postgres_initdb_flags, 0..) |flag, i| argv[3 + i] = flag;
+    return argv;
+}
+
 /// The data directory a project's PostgreSQL cluster lives in. Shared by the
 /// service definition and the post-install setup path, which both have to agree
 /// on where the cluster is.
