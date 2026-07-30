@@ -36,7 +36,10 @@ runs:
         set_clam MaxFileSize 2G
         set_clam AlertExceedsMax yes
         set_clam MaxRecursion 30
-        set_clam MaxFiles 100000
+        # Historical package archives can legitimately contain vendored trees
+        # above production's 100k-file ceiling. Hosted reconciliation runners
+        # are ephemeral and remain bounded by MaxScanSize and MaxScanTime.
+        set_clam MaxFiles 1000000
         set_clam MaxScanTime 1800000
         set_clam MaxThreads 2
         set_clam MaxQueue 4

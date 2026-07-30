@@ -135,7 +135,7 @@ describe('first-party publication boundaries', () => {
     expect(setupClamav).toContain('set_clam MaxFileSize 2G')
     expect(setupClamav).toContain('set_clam AlertExceedsMax yes')
     expect(setupClamav).toContain('set_clam MaxRecursion 30')
-    expect(setupClamav).toContain('set_clam MaxFiles 100000')
+    expect(setupClamav).toContain('set_clam MaxFiles 1000000')
     expect(setupClamav).toContain('set_clam MaxThreads 2')
     expect(setupClamav).toContain('set_clam MaxScanTime 1800000')
     expect(backfill).toContain('timeoutMs: 35 * 60_000')
