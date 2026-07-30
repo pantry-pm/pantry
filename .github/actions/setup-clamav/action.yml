@@ -37,7 +37,7 @@ runs:
         set_clam AlertExceedsMax yes
         set_clam MaxRecursion 30
         set_clam MaxFiles 100000
-        set_clam MaxScanTime 600000
+        set_clam MaxScanTime 1800000
         set_clam MaxThreads 2
         set_clam MaxQueue 4
         sudo systemctl restart clamav-daemon.socket
