@@ -930,6 +930,36 @@ describe('binary scan-before-promote publisher', () => {
     })).rejects.toMatchObject({ code: 'BINARY_QUARANTINE_ARTIFACT_CHANGED' })
   })
 
+  it('reviews a shared quarantined object from each tombstoned version', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('shared version artifact')
+    await seedLegacyArtifact(store, bytes)
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    metadata.versions['1.2.4'] = structuredClone(metadata.versions['1.2.3'])
+    metadata.latestVersion = '1.2.4'
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const artifactSha256 = createHash('sha256').update(bytes).digest('hex')
+
+    const prepared = await publisher.prepareExternalQuarantineReview({
+      domain: 'example.com/tool',
+      version: '1.2.4',
+      artifactSha256,
+    })
+
+    expect(prepared.action).toBe('prepared')
+    expect(prepared.quarantineKey).toContain(`/1.2.3/${artifactSha256}/`)
+    expect(prepared.version).toBe('1.2.4')
+  })
+
   it('strips private malware quarantine tombstones from public metadata', () => {
     const metadata: any = {
       name: 'example.com/tool',

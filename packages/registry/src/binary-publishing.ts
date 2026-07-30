@@ -946,21 +946,35 @@ export class BinaryArtifactPublisher {
       throw new BinaryPublishError('Malware quarantine platforms are invalid', 422, 'INVALID_BINARY_QUARANTINE')
     }
 
-    const prefix = `.pantry-quarantine/malware/${request.domain}/${request.version}/${request.artifactSha256}/`
+    const domainPrefix = `.pantry-quarantine/malware/${request.domain}/`
+    const legacyPrefix = `${domainPrefix}${request.version}/${request.artifactSha256}/`
     const quarantineKey = quarantine.quarantineKey
       ? storedBinaryKey(quarantine.quarantineKey)
       : request.filename
-        ? `${prefix}${request.filename}`
+        ? `${legacyPrefix}${request.filename}`
         : ''
-    if (!quarantineKey.startsWith(prefix) || quarantineKey.endsWith('.scan.json')) {
+    const digestSegment = `/${request.artifactSha256}/`
+    const digestOffset = quarantineKey.indexOf(digestSegment, domainPrefix.length)
+    if (
+      !quarantineKey.startsWith(domainPrefix)
+      || digestOffset <= domainPrefix.length
+      || quarantineKey.indexOf('/', domainPrefix.length) !== digestOffset
+      || quarantineKey.endsWith('.scan.json')
+    ) {
       throw new BinaryPublishError(
         'Legacy quarantine review requires the original validated filename',
         422,
         'BINARY_QUARANTINE_FILENAME_REQUIRED',
       )
     }
-    const filename = quarantine.filename || quarantineKey.slice(prefix.length)
-    if (!filenamePattern.test(filename) || filename.includes('..') || quarantineKey !== `${prefix}${filename}`)
+    const storedVersion = quarantineKey.slice(domainPrefix.length, digestOffset)
+    const filename = quarantine.filename || quarantineKey.slice(digestOffset + digestSegment.length)
+    if (
+      !versionPattern.test(storedVersion)
+      || !filenamePattern.test(filename)
+      || filename.includes('..')
+      || quarantineKey !== `${domainPrefix}${storedVersion}${digestSegment}${filename}`
+    )
       throw new BinaryPublishError('Malware quarantine object identity is invalid', 422, 'INVALID_BINARY_QUARANTINE')
 
     let size: number
