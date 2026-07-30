@@ -116,6 +116,7 @@ describe('first-party publication boundaries', () => {
   it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
     const workflow = source('.github/workflows/backfill-malware-scans.yml')
     const backfill = source('packages/ts-pantry/scripts/backfill-malware-scans.ts')
+    const binaryPublishing = source('packages/registry/src/binary-publishing.ts')
     const setupClamav = source('.github/actions/setup-clamav/action.yml')
     expect(workflow).toContain('DOMAIN_SHARD_COUNT=32')
     expect(workflow).toContain('ARTIFACT_SHARD_COUNT=8')
@@ -149,6 +150,9 @@ describe('first-party publication boundaries', () => {
     expect(backfill).toContain('MAX_OVERSIZED_ARCHIVE_ENTRIES = 1_000_000')
     expect(backfill).toContain('scanner coverage limit exceeded: Heuristics.Limits.Exceeded.')
     expect(backfill).toContain('retrying incomplete whole-archive coverage with archive-entry scanning')
+    expect(binaryPublishing).toContain('EXTERNAL_SCAN_MAX_DURATION_MS = 6 * 60 * 60_000')
+    expect(binaryPublishing).toContain('EXTERNAL_SCAN_SUBMISSION_GRACE_MS = 15 * 60_000')
+    expect(binaryPublishing).toContain('durationMs > ageMs + EXTERNAL_SCAN_CLOCK_SKEW_MS')
     expect(backfill).toContain('scanOversizedGzipTar')
     expect(backfill).toContain('external ClamAV did not report engine and database versions')
     expect(backfill).toContain("'/api/v1/binaries/rescan/prepare'")

@@ -624,6 +624,72 @@ describe('binary scan-before-promote publisher', () => {
     })
   })
 
+  it('accepts long hosted scan evidence only within the bounded job window', async () => {
+    const store = new UrlArtifactStore()
+    const now = Date.parse('2026-07-30T12:00:00.000Z')
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
+      now: () => now,
+    })
+    const bytes = Buffer.from('legacy archive with hundreds of thousands of members')
+    await seedLegacyArtifact(store, bytes)
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    }
+    const prepared = await publisher.prepareExternalRescan(selector)
+    const scan = {
+      verdict: 'clean',
+      engine: 'clamav',
+      artifactSha256: prepared.sha256,
+      engineVersion: 'ClamAV 1.5.3',
+      databaseVersion: '28077',
+    } as const
+    const sixHours = 6 * 60 * 60_000
+
+    await expect(publisher.attestExternalRescan({
+      ...selector,
+      ...prepared,
+      scan: {
+        ...scan,
+        scannedAt: new Date(now - sixHours - 1).toISOString(),
+        durationMs: sixHours + 1,
+      },
+    })).rejects.toMatchObject({ code: 'INVALID_BINARY_RESCAN_ATTESTATION' })
+
+    await expect(publisher.attestExternalRescan({
+      ...selector,
+      ...prepared,
+      scan: {
+        ...scan,
+        scannedAt: new Date(now - sixHours - 15 * 60_000 - 1).toISOString(),
+        durationMs: 1,
+      },
+    })).rejects.toMatchObject({ code: 'INVALID_BINARY_RESCAN_ATTESTATION' })
+
+    const durationMs = 49 * 60_000 + 18_594
+    const completed = await publisher.attestExternalRescan({
+      ...selector,
+      ...prepared,
+      scan: {
+        ...scan,
+        scannedAt: new Date(now - durationMs).toISOString(),
+        durationMs,
+      },
+    }, '_admin-external-scanner')
+
+    expect(completed).toMatchObject({
+      action: 'attested',
+      scan: {
+        verdict: 'clean',
+        durationMs,
+        artifactSha256: prepared.sha256,
+      },
+    })
+  })
+
   it('repairs a stale legacy checksum only after scanning the stable retained object', async () => {
     const store = new UrlArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {

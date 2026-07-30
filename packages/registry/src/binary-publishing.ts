@@ -156,6 +156,10 @@ interface ReleasedQuarantineState {
   scan: MalwareScanResult
 }
 
+const EXTERNAL_SCAN_MAX_DURATION_MS = 6 * 60 * 60_000
+const EXTERNAL_SCAN_SUBMISSION_GRACE_MS = 15 * 60_000
+const EXTERNAL_SCAN_CLOCK_SKEW_MS = 5 * 60_000
+
 interface StagingClaim extends BinaryPublishRequest {
   stagingKey: string
   expiresAt: number
@@ -863,17 +867,19 @@ export class BinaryArtifactPublisher {
     const scan = input as Partial<MalwareScanResult>
     const scannedAt = typeof scan.scannedAt === 'string' ? Date.parse(scan.scannedAt) : Number.NaN
     const ageMs = this.now() - scannedAt
+    const durationMs = scan.durationMs
     if (
       (scan.verdict !== 'clean' && scan.verdict !== 'blocked')
       || scan.engine !== 'clamav'
       || scan.artifactSha256 !== expectedSha256
       || !Number.isFinite(scannedAt)
-      || ageMs < -5 * 60_000
-      || ageMs > 60 * 60_000
-      || typeof scan.durationMs !== 'number'
-      || !Number.isFinite(scan.durationMs)
-      || scan.durationMs < 0
-      || scan.durationMs > 30 * 60_000
+      || ageMs < -EXTERNAL_SCAN_CLOCK_SKEW_MS
+      || ageMs > EXTERNAL_SCAN_MAX_DURATION_MS + EXTERNAL_SCAN_SUBMISSION_GRACE_MS
+      || typeof durationMs !== 'number'
+      || !Number.isFinite(durationMs)
+      || durationMs < 0
+      || durationMs > EXTERNAL_SCAN_MAX_DURATION_MS
+      || durationMs > ageMs + EXTERNAL_SCAN_CLOCK_SKEW_MS
       || typeof scan.engineVersion !== 'string'
       || scan.engineVersion.trim().length === 0
       || scan.engineVersion.length > 128
@@ -890,7 +896,7 @@ export class BinaryArtifactPublisher {
       verdict: scan.verdict,
       engine: 'clamav',
       scannedAt: scan.scannedAt!,
-      durationMs: scan.durationMs,
+      durationMs,
       artifactSha256: scan.artifactSha256!,
       engineVersion: scan.engineVersion,
       databaseVersion: scan.databaseVersion,
