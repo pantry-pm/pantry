@@ -30,6 +30,14 @@ export interface PublishedBinaryArtifact {
   }
 }
 
+export interface CompleteBinaryUploadOptions {
+  attempts?: number
+  fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+  sleep?: (milliseconds: number) => Promise<void>
+}
+
+class PermanentCompletionError extends Error {}
+
 async function sha256File(filePath: string): Promise<string> {
   const hash = createHash('sha256')
   await new Promise<void>((resolve, reject) => {
@@ -58,6 +66,70 @@ function registryConfig(options: PublishBinaryArtifactOptions): { registryUrl: s
   if (!token)
     throw new Error('PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN is required for binary publication')
   return { registryUrl, token }
+}
+
+function completionError(response: Response, completed: any): Error {
+  const retryable = completed.retryable ? ' (retryable)' : ''
+  return new Error(`${completed.code || response.status}: ${completed.error || response.statusText}${retryable}`)
+}
+
+function completionMayStillBeRunning(response: Response, completed: any): boolean {
+  return (
+    response.status === 408
+    || response.status === 425
+    || response.status === 429
+    || response.status === 502
+    || response.status === 504
+    || (response.status === 404 && completed.code === 'BINARY_STAGING_NOT_FOUND')
+  )
+}
+
+/**
+ * Complete an upload through the Registry's idempotent endpoint.
+ *
+ * A proxy or client socket can disappear after Registry has sealed and scanned
+ * the artifact but before the success response reaches the publisher. Retrying
+ * the signed upload claim is safe: Registry returns the exact completed,
+ * digest-bound metadata once promotion commits. A missing staging object is
+ * therefore temporarily ambiguous while the first request is still scanning.
+ */
+export async function completeBinaryUpload(
+  registryUrl: string,
+  uploadId: string,
+  auth: { Authorization: string },
+  options: CompleteBinaryUploadOptions = {},
+): Promise<any> {
+  const attempts = Math.max(1, options.attempts ?? 15)
+  const fetchUpload = options.fetch ?? fetch
+  const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
+  let lastError: Error = new Error('binary upload completion did not run')
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetchUpload(`${registryUrl}/api/v1/binaries/uploads/complete`, {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadId }),
+      })
+      const completed = await responseJson(response)
+      if (response.ok && completed.success === true)
+        return completed
+
+      lastError = completionError(response, completed)
+      if (!completionMayStillBeRunning(response, completed))
+        throw new PermanentCompletionError(lastError.message)
+    }
+    catch (error) {
+      if (error instanceof PermanentCompletionError)
+        throw error
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
+
+    if (attempt < attempts)
+      await sleep(Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5)))
+  }
+
+  throw new Error(`Binary upload completion remained ambiguous after ${attempts} attempts: ${lastError.message}`)
 }
 
 /**
@@ -105,16 +177,7 @@ export async function publishBinaryArtifact(
   uploadArgs.push('-T', options.filePath, initiated.uploadUrl)
   execFileSync('curl', uploadArgs, { stdio: ['ignore', 'ignore', 'inherit'] })
 
-  const completeResponse = await fetch(`${registryUrl}/api/v1/binaries/uploads/complete`, {
-    method: 'POST',
-    headers: { ...auth, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uploadId: initiated.uploadId }),
-  })
-  const completed = await responseJson(completeResponse)
-  if (!completeResponse.ok || completed.success !== true) {
-    const retryable = completed.retryable ? ' (retryable)' : ''
-    throw new Error(`${completed.code || completeResponse.status}: ${completed.error || completeResponse.statusText}${retryable}`)
-  }
+  const completed = await completeBinaryUpload(registryUrl, initiated.uploadId, auth)
   if (completed.scan?.artifactSha256 !== sha256 || completed.scan?.verdict !== 'clean')
     throw new Error('Registry returned an invalid binary malware-scan attestation')
   return completed as PublishedBinaryArtifact
