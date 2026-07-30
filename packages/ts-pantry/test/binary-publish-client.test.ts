@@ -15,6 +15,7 @@ describe('binary upload completion', () => {
         code: 'BINARY_STAGING_NOT_FOUND',
         error: 'Staged artifact was not found or has expired',
       }, 404),
+      new Response('upstream unavailable', { status: 503 }),
       jsonResponse({
         success: true,
         scan: { verdict: 'clean', artifactSha256: 'a'.repeat(64) },
@@ -39,7 +40,7 @@ describe('binary upload completion', () => {
 
     expect(completed.scan.verdict).toBe('clean')
     expect(responses).toHaveLength(0)
-    expect(delays).toEqual([1000, 2000])
+    expect(delays).toEqual([1000, 2000, 4000])
   })
 
   it('does not retry an explicit malware verdict', async () => {

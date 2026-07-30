@@ -78,8 +78,7 @@ function completionMayStillBeRunning(response: Response, completed: any): boolea
     response.status === 408
     || response.status === 425
     || response.status === 429
-    || response.status === 502
-    || response.status === 504
+    || (response.status >= 500 && !completed.code)
     || (response.status === 404 && completed.code === 'BINARY_STAGING_NOT_FOUND')
   )
 }
