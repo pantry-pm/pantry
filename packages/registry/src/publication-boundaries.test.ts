@@ -147,6 +147,8 @@ describe('first-party publication boundaries', () => {
     expect(backfill).toContain('process.env.PANTRY_BACKFILL_CLAMAV_VERSION')
     expect(backfill).toContain('maxBytes: 8 * 1024 * 1024 * 1024')
     expect(backfill).toContain('MAX_OVERSIZED_ARCHIVE_ENTRIES = 1_000_000')
+    expect(backfill).toContain('scanner coverage limit exceeded: Heuristics.Limits.Exceeded.')
+    expect(backfill).toContain('retrying incomplete whole-archive coverage with archive-entry scanning')
     expect(backfill).toContain('scanOversizedGzipTar')
     expect(backfill).toContain('external ClamAV did not report engine and database versions')
     expect(backfill).toContain("'/api/v1/binaries/rescan/prepare'")
