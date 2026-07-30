@@ -821,6 +821,51 @@ describe('binary scan-before-promote publisher', () => {
       .rejects.toMatchObject({ code: 'BINARY_EXTERNAL_ATTESTATION_NOT_LEGACY' })
   })
 
+  it('recovers durable clean publish evidence newer than the legacy cutoff', async () => {
+    const store = new UrlArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
+    })
+    const bytes = Buffer.from('current publish with reconstructed metadata')
+    const tarball = await seedLegacyArtifact(store, bytes)
+    const sha256 = createHash('sha256').update(bytes).digest('hex')
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    const record = metadata.versions['1.2.3'].platforms['darwin-arm64']
+    record.uploadedAt = '2026-01-03T00:00:00.000Z'
+    delete record.malwareScan
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    await store.putObject(`${tarball}.scan.json`, JSON.stringify({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platform: 'darwin-arm64',
+      filename: 'example.com-tool-1.2.3.tar.gz',
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: '2026-01-03T00:00:00.000Z',
+        durationMs: 123,
+        artifactSha256: sha256,
+      },
+    }), 'application/json')
+
+    const result = await publisher.prepareExternalRescan({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+
+    expect(result).toMatchObject({
+      action: 'already-clean',
+      sha256,
+      scan: { verdict: 'clean', artifactSha256: sha256 },
+    })
+    const repaired = JSON.parse(store.files.get(metadataKey)!.toString())
+    expect(repaired.versions['1.2.3'].platforms['darwin-arm64'].malwareScan)
+      .toMatchObject({ verdict: 'clean', artifactSha256: sha256 })
+  })
+
   it('quarantines blocked retained artifacts and removes every installable reference', async () => {
     const store = new MemoryArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {

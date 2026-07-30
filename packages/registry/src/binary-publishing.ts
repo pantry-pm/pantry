@@ -663,7 +663,6 @@ export class BinaryArtifactPublisher {
     const request = validateBinaryRescanRequest(input)
     return this.withDomainLock(request.domain, async () => {
       const state = await this.loadExistingRescan(request)
-      this.assertExternalRescanEligible(state)
       const durableScan = await this.readCleanAttestation(state.tarball, state.sha256)
       if (durableScan) {
         const completed = await this.finishDurableRescan(state, request, durableScan)
@@ -679,6 +678,12 @@ export class BinaryArtifactPublisher {
           scan: completed.scan,
         }
       }
+      // A current Registry publish writes digest-bound scan evidence before it
+      // updates metadata. Metadata reconstruction may therefore need to recover
+      // that evidence even when the object's timestamp is newer than the legacy
+      // migration cutoff. Only an artifact without durable evidence needs the
+      // restricted external-scanner path.
+      this.assertExternalRescanEligible(state)
       if (!this.store.createDownloadUrl)
         throw new BinaryPublishError('Retained artifact download preparation is unavailable', 503, 'BINARY_RESCAN_PREPARE_UNAVAILABLE')
       const expiresInSeconds = 15 * 60
@@ -723,7 +728,6 @@ export class BinaryArtifactPublisher {
 
     return this.withDomainLock(request.domain, async () => {
       const current = await this.loadExistingRescan(request)
-      this.assertExternalRescanEligible(current)
       if (
         current.tarball !== tarball
         || current.sha256 !== preparedSha256
@@ -739,6 +743,7 @@ export class BinaryArtifactPublisher {
       const durableScan = await this.readCleanAttestation(current.tarball, current.sha256)
       if (durableScan)
         return this.finishDurableRescan(current, request, durableScan)
+      this.assertExternalRescanEligible(current)
 
       recordMalwareScanResult({
         surface: 'binary',
