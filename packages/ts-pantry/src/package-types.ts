@@ -280,7 +280,26 @@ export type PackageVersions<T extends PackageName> = Packages[T & keyof Packages
     : never
 
 /**
- * Strict version constraint that only allows valid versions for a package
+ * Numeric versions that may be newer than the generated registry snapshot.
+ *
+ * Generated versions still provide precise autocomplete, but a configuration
+ * must not become invalid merely because Pantry has not regenerated its
+ * package catalog since a compatible release was published.
+ */
+export type NumericVersion = `${number}.${number}.${number}${string}`
+
+export type NumericVersionConstraint =
+  | NumericVersion
+  | `^${NumericVersion}`
+  | `~${NumericVersion}`
+  | `>=${NumericVersion}`
+  | `<=${NumericVersion}`
+  | `>${NumericVersion}`
+  | `<${NumericVersion}`
+
+/**
+ * Version constraint with registry-backed suggestions and forward-compatible
+ * numeric semver ranges.
  */
 export type StrictVersionConstraint<T extends PackageName> =
   | PackageVersions<T>
@@ -290,6 +309,7 @@ export type StrictVersionConstraint<T extends PackageName> =
   | `<=${PackageVersions<T>}`
   | `>${PackageVersions<T>}`
   | `<${PackageVersions<T>}`
+  | NumericVersionConstraint
   | 'latest'
   | '*'
 
@@ -324,26 +344,9 @@ export type ExactDependency<K extends PackageName, V> =
  */
 export type CleanDependencies = {
   readonly [K in PackageName]?:
-    | PackageVersions<K>
-    | `^${PackageVersions<K>}`
-    | `~${PackageVersions<K>}`
-    | `>=${PackageVersions<K>}`
-    | `<=${PackageVersions<K>}`
-    | `>${PackageVersions<K>}`
-    | `<${PackageVersions<K>}`
-    | 'latest'
-    | '*'
+    | StrictVersionConstraint<K>
     | {
-        version?:
-          | PackageVersions<K>
-          | `^${PackageVersions<K>}`
-          | `~${PackageVersions<K>}`
-          | `>=${PackageVersions<K>}`
-          | `<=${PackageVersions<K>}`
-          | `>${PackageVersions<K>}`
-          | `<${PackageVersions<K>}`
-          | 'latest'
-          | '*'
+        version?: StrictVersionConstraint<K>
         global?: boolean
       }
 }

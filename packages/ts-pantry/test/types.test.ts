@@ -6,9 +6,19 @@ import type {
   PkgxPackage,
   ProjectFolder,
 } from '../src/types'
+import type { Dependencies, StrictVersionConstraint } from '../src/package-types'
 import { describe, expect, test } from 'bun:test'
 
 describe('Types Module', () => {
+  test('accepts semver constraints newer than the generated registry snapshot', () => {
+    const bunVersion: StrictVersionConstraint<'bun.sh'> = '^99.1.0'
+    const dependencies = {
+      bun: bunVersion,
+    } satisfies Dependencies
+
+    expect(dependencies.bun).toBe('^99.1.0')
+  })
+
   describe('ProjectFolder Interface', () => {
     test('should have correct structure', () => {
       const projectFolder: ProjectFolder = {
