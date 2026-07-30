@@ -150,6 +150,8 @@ describe('first-party publication boundaries', () => {
     expect(backfill).toContain('MAX_OVERSIZED_ARCHIVE_ENTRIES = 1_000_000')
     expect(backfill).toContain('scanner coverage limit exceeded: Heuristics.Limits.Exceeded.')
     expect(backfill).toContain('retrying incomplete whole-archive coverage with archive-entry scanning')
+    expect(backfill).toContain('ARTIFACT_DOWNLOAD_ATTEMPTS = 5')
+    expect(backfill).toContain('transient artifact download failure')
     expect(binaryPublishing).toContain('EXTERNAL_SCAN_MAX_DURATION_MS = 6 * 60 * 60_000')
     expect(binaryPublishing).toContain('EXTERNAL_SCAN_SUBMISSION_GRACE_MS = 15 * 60_000')
     expect(binaryPublishing).toContain('durationMs > ageMs + EXTERNAL_SCAN_CLOCK_SKEW_MS')
