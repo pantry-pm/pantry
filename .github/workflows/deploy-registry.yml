@@ -145,7 +145,10 @@ jobs:
             set_clam AlertExceedsMax yes
             set_clam MaxRecursion 30
             set_clam MaxFiles 100000
-            set_clam MaxScanTime 60000
+            # Keep the engine below every enclosing request timeout: clamd
+            # 225s < Registry 240s < Bun 255s < rpx 300s. This leaves each
+            # layer time to return a structured fail-closed response.
+            set_clam MaxScanTime 225000
             set_clam MaxThreads 2
             set_clam MaxQueue 4
             set_clam ConcurrentDatabaseReload no
@@ -404,7 +407,7 @@ jobs:
               install -d -m 0755 /etc/rpx/sites.d
               RPX_ROUTES_CHANGED=0
               # rpx's upstream socket timeout is expressed in seconds. Keep it
-              # above clamd's 240s bound and Bun's 255s idle timeout so the
+              # above clamd's 225s bound and Bun's 255s idle timeout so the
               # proxy cannot terminate a healthy long scan before Registry can
               # return its fail-closed verdict.
               install -d -m 0755 /etc/systemd/system/rpx-gateway.service.d
