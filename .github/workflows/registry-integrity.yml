@@ -45,6 +45,8 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF: ${{ vars.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF }}
+          PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION: ${{ vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION }}
         run: |
           cd packages/ts-pantry
           bun scripts/verify-binary-metadata.ts \

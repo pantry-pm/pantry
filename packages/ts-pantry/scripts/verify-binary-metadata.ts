@@ -56,6 +56,7 @@ interface VerifyOptions {
   repair?: boolean
   deleteStrays?: boolean
   requireConfiguredPlatforms?: boolean
+  requireCleanScanAfter?: number
   region?: string
 }
 
@@ -121,6 +122,51 @@ function parseSha256(text: string, key: string): string {
   return hash.toLowerCase()
 }
 
+function parseDurableCleanScan(
+  text: string,
+  key: string,
+  expected: {
+    domain: string
+    version: string
+    platform: string
+    filename: string
+    sha256: string
+  },
+): PlatformMetadata['malwareScan'] {
+  let sidecar: Record<string, unknown>
+  try {
+    sidecar = JSON.parse(text) as Record<string, unknown>
+  }
+  catch {
+    throw new Error(`Invalid malware scan attestation JSON: ${key}`)
+  }
+  const scan = sidecar.scan as Record<string, unknown> | undefined
+  const platforms = Array.isArray(sidecar.platforms)
+    ? sidecar.platforms.filter((value): value is string => typeof value === 'string')
+    : []
+  if (
+    sidecar.domain !== expected.domain
+    || sidecar.version !== expected.version
+    || sidecar.filename !== expected.filename
+    || (
+      sidecar.platform !== expected.platform
+      && !platforms.includes(expected.platform)
+    )
+    || scan?.verdict !== 'clean'
+    || scan.artifactSha256 !== expected.sha256
+    || typeof scan.engine !== 'string'
+    || scan.engine.trim().length === 0
+    || typeof scan.scannedAt !== 'string'
+    || !Number.isFinite(Date.parse(scan.scannedAt))
+    || typeof scan.durationMs !== 'number'
+    || !Number.isFinite(scan.durationMs)
+    || scan.durationMs < 0
+  ) {
+    throw new Error(`Invalid digest-bound clean malware scan attestation: ${key}`)
+  }
+  return scan as PlatformMetadata['malwareScan']
+}
+
 function s3ObjectUrl(bucket: string, region: string, key: string): string {
   return `https://${bucket}.s3.${region}.amazonaws.com/${key.split('/').map(encodeURIComponent).join('/')}`
 }
@@ -168,6 +214,7 @@ export async function rebuildMetadataFromObjects(
   const safeName = domainSafeName(domain)
   const tarballs = new Map<string, S3ObjectInfo>()
   const shaKeys = new Set<string>()
+  const scanKeys = new Set<string>()
   const strays: string[] = []
   const errors: string[] = []
   const repairedSha256: string[] = []
@@ -180,6 +227,11 @@ export async function rebuildMetadataFromObjects(
     if (parts.length !== 3) continue
     const [version, platform, filename] = parts
     const expectedTarball = `${safeName}-${version}.tar.gz`
+
+    if (filename.endsWith('.tar.gz.scan.json')) {
+      scanKeys.add(key)
+      continue
+    }
 
     if (filename.endsWith('.tar.gz.sha256')) {
       shaKeys.add(key)
@@ -210,6 +262,7 @@ export async function rebuildMetadataFromObjects(
   for (const [id, object] of tarballEntries) {
     const [version, platform] = id.split('|')
     const tarballKey = object.Key
+    const expectedTarball = `${safeName}-${version}.tar.gz`
     const shaKey = `${tarballKey}.sha256`
 
     let sha256: string
@@ -247,12 +300,34 @@ export async function rebuildMetadataFromObjects(
       }
     }
 
+    let malwareScan: PlatformMetadata['malwareScan'] | undefined
+    const scanKey = `${tarballKey}.scan.json`
+    if (scanKeys.has(scanKey)) {
+      try {
+        malwareScan = parseDurableCleanScan(
+          await s3.getObject(bucket, scanKey),
+          scanKey,
+          {
+            domain,
+            version,
+            platform,
+            filename: expectedTarball,
+            sha256,
+          },
+        )
+      }
+      catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error))
+      }
+    }
+
     metadata.versions[version] ??= { platforms: {} }
     metadata.versions[version].platforms[platform] = {
       tarball: tarballKey,
       sha256,
       size: object.Size ?? 0,
       uploadedAt: object.LastModified || metadata.updatedAt,
+      ...(malwareScan ? { malwareScan } : {}),
     }
 
     if (!metadata.latestVersion || isNewerVersion(version, metadata.latestVersion)) {
@@ -293,6 +368,28 @@ function carryForwardCleanScans(existing: PackageMetadata | null, rebuilt: Packa
       }
     }
   }
+}
+
+function requireCleanScansAfter(metadata: PackageMetadata, cutoff: number): string[] {
+  const errors: string[] = []
+  for (const [version, versionInfo] of Object.entries(metadata.versions)) {
+    for (const [platform, record] of Object.entries(versionInfo.platforms)) {
+      const uploadedAt = Date.parse(record.uploadedAt)
+      const requiresScan = cutoff === Number.NEGATIVE_INFINITY
+        || !Number.isFinite(uploadedAt)
+        || uploadedAt > cutoff
+      if (
+        requiresScan
+        && (
+          record.malwareScan?.verdict !== 'clean'
+          || record.malwareScan.artifactSha256 !== record.sha256
+        )
+      ) {
+        errors.push(`Missing digest-bound clean malware scan: ${metadata.name}@${version} ${platform}`)
+      }
+    }
+  }
+  return errors
 }
 
 function checkConfiguredPlatforms(domain: string, metadata: PackageMetadata): string[] {
@@ -393,6 +490,9 @@ export async function verifyBinaryMetadata(
     region: options.region,
   })
   carryForwardCleanScans(existing, metadata)
+  if (options.requireCleanScanAfter !== undefined) {
+    errors.push(...requireCleanScansAfter(metadata, options.requireCleanScanAfter))
+  }
   const platformCount = countPlatforms(metadata)
   const existingPlatformCount = existing ? countPlatforms(existing) : 0
 
@@ -453,7 +553,11 @@ export async function verifyBinaryMetadata(
   }
 
   const ok = errors.length === 0 && (options.repair || !metadataChanged) && (options.deleteStrays || strays.length === 0)
-  const repaired = Boolean(options.repair && (metadataChanged || repairedSha256.length > 0))
+  const repaired = Boolean(
+    options.repair
+    && errors.length === 0
+    && (metadataChanged || repairedSha256.length > 0),
+  )
 
   return {
     domain,
@@ -514,6 +618,16 @@ async function main(): Promise<void> {
 
   if (domains.length === 0) throw new Error('Provide --package or --all-binary-sync')
 
+  const strictScanAttestations = process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION?.trim().toLowerCase() === 'true'
+  const configuredCutoff = process.env.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF?.trim()
+    || '2026-07-29T00:00:00.000Z'
+  const requireCleanScanAfter = strictScanAttestations
+    ? Number.NEGATIVE_INFINITY
+    : Date.parse(configuredCutoff)
+  if (!strictScanAttestations && !Number.isFinite(requireCleanScanAfter)) {
+    throw new Error('PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF must be an ISO-8601 timestamp')
+  }
+
   // Provider-aware, authenticated client (AWS S3 / Hetzner / Backblaze). Buckets
   // may be private, so every read/HEAD goes through signed requests — never a
   // public URL. STORAGE_PROVIDER/S3_ENDPOINT/credentials come from the env.
@@ -542,6 +656,7 @@ async function main(): Promise<void> {
           repair: values.repair,
           deleteStrays: values['delete-strays'],
           requireConfiguredPlatforms: values['require-configured-platforms'],
+          requireCleanScanAfter,
         })
         break
       }

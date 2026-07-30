@@ -96,7 +96,7 @@ describe('verify-binary-metadata', () => {
       deleteStrays: true,
     })
 
-    expect(result.ok).toBe(true)
+    expect(result).toMatchObject({ ok: true, errors: [] })
     expect(result.repaired).toBe(true)
     expect(result.deletedStrays).toHaveLength(2)
 
@@ -162,6 +162,92 @@ describe('verify-binary-metadata', () => {
       verdict: 'clean',
       artifactSha256: sha256,
     })
+  })
+
+  it('recovers digest-bound clean evidence from a durable publish sidecar', async () => {
+    const s3 = new FakeS3()
+    const key = 'binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz'
+    const sha256 = 'a'.repeat(64)
+    s3.put(key, 'tarball', 123)
+    s3.objects.get(key)!.lastModified = '2026-07-30T00:00:00.000Z'
+    s3.put(`${key}.sha256`, `${sha256}  cmake.org-3.24.2.tar.gz\n`)
+    s3.put(`${key}.scan.json`, JSON.stringify({
+      domain: 'cmake.org',
+      version: '3.24.2',
+      platform: 'darwin-arm64',
+      filename: 'cmake.org-3.24.2.tar.gz',
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        artifactSha256: sha256,
+        scannedAt: '2026-07-29T23:59:00.000Z',
+        durationMs: 42,
+      },
+    }))
+    s3.put('binaries/cmake.org/metadata.json', JSON.stringify({
+      name: 'cmake.org',
+      latestVersion: '3.24.2',
+      versions: {
+        '3.24.2': {
+          platforms: {
+            'darwin-arm64': {
+              tarball: key,
+              sha256,
+              size: 999,
+              uploadedAt: '2026-07-30T00:00:00.000Z',
+            },
+          },
+        },
+      },
+      updatedAt: '2026-07-30T00:00:00.000Z',
+    }))
+
+    const result = await verifyBinaryMetadata(s3, 'bucket', 'cmake.org', {
+      repair: true,
+      requireCleanScanAfter: Date.parse('2026-07-29T00:00:00.000Z'),
+    })
+
+    expect(result).toMatchObject({ ok: true, errors: [] })
+    const repaired = JSON.parse(await s3.getObject('bucket', 'binaries/cmake.org/metadata.json'))
+    expect(repaired.versions['3.24.2'].platforms['darwin-arm64'].malwareScan)
+      .toMatchObject({ verdict: 'clean', artifactSha256: sha256 })
+  })
+
+  it('refuses to advertise a post-cutoff object without clean durable evidence', async () => {
+    const s3 = new FakeS3()
+    const key = 'binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz'
+    s3.put(key, 'unattested bytes', 123)
+    s3.objects.get(key)!.lastModified = '2026-07-30T00:00:00.000Z'
+    s3.put(`${key}.sha256`, `${'b'.repeat(64)}  cmake.org-3.24.2.tar.gz\n`)
+
+    const result = await verifyBinaryMetadata(s3, 'bucket', 'cmake.org', {
+      repair: true,
+      requireCleanScanAfter: Date.parse('2026-07-29T00:00:00.000Z'),
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.repaired).toBe(false)
+    expect(result.errors).toEqual([
+      'Missing digest-bound clean malware scan: cmake.org@3.24.2 darwin-arm64',
+    ])
+    expect(s3.objects.has('binaries/cmake.org/metadata.json')).toBe(false)
+  })
+
+  it('requires every retained artifact to be attested in strict mode', async () => {
+    const s3 = new FakeS3()
+    const key = 'binaries/cmake.org/3.24.2/darwin-arm64/cmake.org-3.24.2.tar.gz'
+    s3.put(key, 'legacy unattested bytes', 123)
+    s3.put(`${key}.sha256`, `${'c'.repeat(64)}  cmake.org-3.24.2.tar.gz\n`)
+
+    const result = await verifyBinaryMetadata(s3, 'bucket', 'cmake.org', {
+      repair: true,
+      requireCleanScanAfter: Number.NEGATIVE_INFINITY,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toContain(
+      'Missing digest-bound clean malware scan: cmake.org@3.24.2 darwin-arm64',
+    )
   })
 
   it('refuses to replace metadata with an empty object listing for active binary domains', async () => {
