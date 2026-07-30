@@ -457,8 +457,11 @@ export class BinaryArtifactPublisher {
 
       if (scan.artifactSha256 !== claim.sha256)
         throw new BinaryPublishError('Staged artifact SHA-256 does not match the initiated upload', 422, 'BINARY_SHA256_MISMATCH', scan)
-      if (scan.verdict === 'blocked')
+      if (scan.verdict === 'blocked') {
+        if (surface === 'pkgx')
+          await this.quarantineBlockedFallback(claim, sealedKey, scan)
         throw new BinaryPublishError('Binary artifact blocked by malware scanning', 422, 'MALWARE_DETECTED', scan)
+      }
       if (scan.verdict === 'review')
         throw new BinaryPublishError('Binary artifact requires security review', 202, 'PACKAGE_REQUIRES_REVIEW', scan)
       if (scan.verdict !== 'clean')
@@ -932,29 +935,14 @@ export class BinaryArtifactPublisher {
       if (Object.keys(versionInfo.platforms || {}).length === 0)
         delete metadata.versions[version]
     }
-    metadata.malwareQuarantines ||= []
     for (const [version, platforms] of removedPlatforms) {
-      const existing = metadata.malwareQuarantines.find(
-        quarantine => quarantine.version === version
-          && quarantine.artifactSha256 === scan.artifactSha256,
+      this.recordQuarantineTombstone(
+        metadata,
+        version,
+        [...platforms],
+        scan,
+        quarantinedAt,
       )
-      if (existing) {
-        existing.platforms = [...new Set([...existing.platforms, ...platforms])].sort()
-        existing.quarantinedAt = quarantinedAt
-      }
-      else {
-        metadata.malwareQuarantines.push({
-          version,
-          platforms: [...platforms].sort(),
-          artifactSha256: scan.artifactSha256,
-          ...(scan.signature ? { signature: scan.signature } : {}),
-          engine: scan.engine,
-          ...(scan.engineVersion ? { engineVersion: scan.engineVersion } : {}),
-          ...(scan.databaseVersion ? { databaseVersion: scan.databaseVersion } : {}),
-          scannedAt: scan.scannedAt,
-          quarantinedAt,
-        })
-      }
     }
     if (!metadata.versions[metadata.latestVersion]) {
       metadata.latestVersion = Object.keys(metadata.versions)
@@ -974,6 +962,80 @@ export class BinaryArtifactPublisher {
       platforms: {},
       scan: publicScanResult(scan),
     }
+  }
+
+  private async quarantineBlockedFallback(
+    claim: StagingClaim,
+    sealedKey: string,
+    scan: MalwareScanResult,
+  ): Promise<void> {
+    const quarantinedAt = new Date(this.now()).toISOString()
+    const quarantineKey = `.pantry-quarantine/malware/${claim.domain}/${claim.version}/${scan.artifactSha256}/${claim.filename}`
+    await this.store.copyObject(sealedKey, quarantineKey)
+    await this.store.putObject(`${quarantineKey}.scan.json`, JSON.stringify({
+      quarantinedAt,
+      originalKey: sealedKey,
+      domain: claim.domain,
+      version: claim.version,
+      platforms: claim.platforms,
+      source: 'pkgx',
+      scan,
+    }), 'application/json')
+
+    await this.withDomainLock(claim.domain, async () => {
+      const metadataKey = `binaries/${claim.domain}/metadata.json`
+      let metadata: BinaryPackageMetadata = {
+        name: claim.domain,
+        latestVersion: '',
+        versions: {},
+        updatedAt: quarantinedAt,
+      }
+      try {
+        metadata = JSON.parse(
+          (await this.store.getObject(metadataKey)).toString('utf8'),
+        ) as BinaryPackageMetadata
+      }
+      catch {}
+      this.recordQuarantineTombstone(
+        metadata,
+        claim.version,
+        claim.platforms,
+        scan,
+        quarantinedAt,
+      )
+      metadata.updatedAt = quarantinedAt
+      await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
+    })
+  }
+
+  private recordQuarantineTombstone(
+    metadata: BinaryPackageMetadata,
+    version: string,
+    platforms: string[],
+    scan: MalwareScanResult,
+    quarantinedAt: string,
+  ): void {
+    metadata.malwareQuarantines ||= []
+    const existing = metadata.malwareQuarantines.find(
+      quarantine => quarantine.version === version
+        && quarantine.artifactSha256 === scan.artifactSha256,
+    )
+    if (existing) {
+      existing.platforms = [...new Set([...existing.platforms, ...platforms])].sort()
+      existing.quarantinedAt = quarantinedAt
+      return
+    }
+    metadata.malwareQuarantines.push({
+      version,
+      platforms: [...new Set(platforms)].sort(),
+      artifactSha256: scan.artifactSha256,
+      ...(scan.signature ? { signature: scan.signature } : {}),
+      engine: scan.engine,
+      ...(scan.engineVersion ? { engineVersion: scan.engineVersion } : {}),
+      ...(scan.databaseVersion ? { databaseVersion: scan.databaseVersion } : {}),
+      scannedAt: scan.scannedAt,
+      quarantinedAt,
+    })
   }
 
   private verifyClaim(uploadId: string): StagingClaim {

@@ -324,6 +324,37 @@ describe('binary scan-before-promote publisher', () => {
     expect(store.files.has(store.lastUploadKey)).toBe(false)
   })
 
+  it('durably quarantines a blocked pkgx fallback without creating installable keys', async () => {
+    const store = new MemoryArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('blocked pkgx fallback')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    await expect(
+      publisher.complete(initiated.uploadId, '_pkgx', 'pkgx'),
+    ).rejects.toMatchObject({ code: 'MALWARE_DETECTED' })
+
+    const metadata = JSON.parse(
+      store.files.get('binaries/example.com/tool/metadata.json')!.toString(),
+    )
+    expect(metadata.versions).toEqual({})
+    expect(metadata.malwareQuarantines).toEqual([expect.objectContaining({
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+      artifactSha256: createHash('sha256').update(bytes).digest('hex'),
+      signature: 'Test.EICAR',
+    })])
+    expect([...store.files.keys()].some(
+      key => key.startsWith('binaries/example.com/tool/1.2.3/'),
+    )).toBe(false)
+    expect([...store.files.keys()].filter(
+      key => key.startsWith('.pantry-quarantine/malware/'),
+    )).toHaveLength(2)
+  })
+
   it('fails closed and cleans staging when the scanner is unavailable', async () => {
     const store = new MemoryArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner('error'), {

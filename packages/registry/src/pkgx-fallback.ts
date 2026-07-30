@@ -13,7 +13,7 @@
 // If pkgx has no such binary, nothing is advertised / materialized and the caller
 // returns its normal "not found" error.
 
-import type { BinaryArtifactPublisher } from './binary-publishing'
+import { BinaryPublishError, type BinaryArtifactPublisher } from './binary-publishing'
 import { createHash } from 'node:crypto'
 import { execSync } from 'node:child_process'
 import { createReadStream, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
@@ -297,6 +297,10 @@ export async function materializeFromPkgx(
       return { tarballKey, sha256, size }
     }
     catch (err) {
+      if (err instanceof BinaryPublishError && err.code === 'MALWARE_DETECTED') {
+        _augCache.delete(domain)
+        _pending.delete(pendKey(domain, version, platform))
+      }
       console.error(`pkgx materialize failed for ${key}:`, (err as Error).message)
       return null
     }
