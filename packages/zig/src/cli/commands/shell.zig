@@ -46,6 +46,7 @@ pub fn shellIntegrateCommand(allocator: std.mem.Allocator) !CommandResult {
         .fish => style.print("  source ~/.config/fish/config.fish\n", .{}),
         .nushell => style.print("  source $nu.env-path\n", .{}),
         .powershell => style.print("  . $PROFILE\n", .{}),
+        .den => style.print("  source ~/.denrc\n", .{}),
         .unknown => {},
     }
 
@@ -82,6 +83,18 @@ fn selfLinkIntoGlobalBin(allocator: std.mem.Allocator) !void {
 }
 
 pub fn shellCodeCommand(allocator: std.mem.Allocator) !CommandResult {
+    // Shells whose syntax the bash/zsh template does not fit get their own
+    // generated hook. The template leans on `[[ ]]`, typeset, arrays and zsh
+    // modules, none of which den has.
+    const integration = @import("../../shell/integration.zig");
+    const detected = integration.Shell.detect();
+    if (detected == .den) {
+        return .{
+            .exit_code = 0,
+            .message = try integration.generateHook(detected, allocator),
+        };
+    }
+
     var generator = shell.ShellCodeGenerator.init(allocator, .{
         .show_messages = true,
         .activation_message = "✅ Environment activated",

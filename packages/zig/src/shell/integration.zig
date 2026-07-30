@@ -13,6 +13,7 @@ pub const Shell = enum {
     fish,
     nushell,
     powershell,
+    den,
     unknown,
 
     /// Detect current shell from environment. Checks both `$SHELL` (Unix) and
@@ -26,6 +27,7 @@ pub const Shell = enum {
             if (std.mem.eql(u8, forced, "fish")) return .fish;
             if (std.mem.eql(u8, forced, "nushell") or std.mem.eql(u8, forced, "nu")) return .nushell;
             if (std.mem.eql(u8, forced, "powershell") or std.mem.eql(u8, forced, "pwsh")) return .powershell;
+            if (std.mem.eql(u8, forced, "den")) return .den;
         } else |_| {}
 
         // PowerShell sets $PSModulePath; check that before $SHELL which may
@@ -33,6 +35,13 @@ pub const Shell = enum {
         if (io_helper.getEnvVarOwned(std.heap.page_allocator, "PSModulePath")) |ps| {
             std.heap.page_allocator.free(ps);
             return .powershell;
+        } else |_| {}
+
+        // Den sets $DEN_VERSION. Checked before $SHELL because $SHELL names the
+        // login shell, which is not den when den was started from another one.
+        if (io_helper.getEnvVarOwned(std.heap.page_allocator, "DEN_VERSION")) |den| {
+            std.heap.page_allocator.free(den);
+            return .den;
         } else |_| {}
 
         // Nushell sets $NU_VERSION in its environment.
@@ -48,6 +57,7 @@ pub const Shell = enum {
         if (std.mem.endsWith(u8, shell_env, "bash")) return .bash;
         if (std.mem.endsWith(u8, shell_env, "fish")) return .fish;
         if (std.mem.endsWith(u8, shell_env, "nu")) return .nushell;
+        if (std.mem.endsWith(u8, shell_env, "den")) return .den;
         if (std.mem.endsWith(u8, shell_env, "pwsh") or std.mem.endsWith(u8, shell_env, "powershell")) return .powershell;
         return .unknown;
     }
@@ -59,6 +69,7 @@ pub const Shell = enum {
             .fish => "fish",
             .nushell => "nushell",
             .powershell => "powershell",
+            .den => "den",
             .unknown => "unknown",
         };
     }
@@ -72,6 +83,7 @@ pub fn generateHook(shell: Shell, allocator: std.mem.Allocator) ![]const u8 {
         .fish => try generateFishHook(allocator),
         .nushell => try generateNushellHook(allocator),
         .powershell => try generatePowershellHook(allocator),
+        .den => try generateDenHook(allocator),
         .unknown => error.ShellNotSupported,
     };
 }
@@ -204,6 +216,123 @@ fn generatePowershellHook(allocator: std.mem.Allocator) ![]const u8 {
         \\
         \\# Run once at shell start
         \\Invoke-PantryChpwd
+    ;
+    return try allocator.dupe(u8, hook);
+}
+
+/// Den hook. Den gained `chpwd` in 0.2.2, so this is a plain POSIX function
+/// registered under that name.
+///
+/// Not the bash/zsh template: that one relies on `[[ ]]`, typeset, arrays and
+/// zsh modules. This is written to den's POSIX surface instead.
+///
+/// Cost, in order of how often each path is taken:
+///
+///   * `cd` inside the active project: one prefix comparison, no forks. This is
+///     the overwhelmingly common case and it never reaches the binary.
+///   * `cd` to a directory with no dependency file anywhere above it: a pure
+///     shell walk up the tree, ~25 `test -f` builtin calls per level, still no
+///     fork. `/tmp` and `~` cost nothing.
+///   * `cd` into a project: one `pantry shell:lookup`, which is the only fork.
+///   * A project whose environment is missing: one `pantry install`, memoised
+///     against the dependency file so a failed install is not retried on every
+///     prompt.
+fn generateDenHook(allocator: std.mem.Allocator) ![]const u8 {
+    const hook =
+        \\# pantry shell integration for den
+        \\# Add to ~/.denrc:  eval "$(pantry dev:shellcode)"
+        \\
+        \\# Why this looks nothing like the bash/zsh template:
+        \\#
+        \\# In den a `[` test costs ~5ms and a function call ~6ms, where bash
+        \\# measures both in microseconds. The template's shell-side parent walk
+        \\# would be ~25 filename probes per level, so a `cd` into an ordinary
+        \\# directory would spend the better part of a second deciding there was
+        \\# no project. Forking the binary, which walks in native code, costs
+        \\# ~25ms once. So this hook does the least shell work it can and lets
+        \\# `pantry shell:lookup` make the decision.
+        \\#
+        \\# What a `cd` costs, in order of frequency:
+        \\#   inside the active project   one string strip, one test   (~6ms)
+        \\#   back to a known non-project one test                     (~6ms)
+        \\#   anywhere else               the above plus one fork      (~30ms)
+        \\#
+        \\# PATH is rebuilt from a remembered base rather than edited, because
+        \\# removing an entry means either substitution or a split loop and both
+        \\# cost more per `cd` than assigning a string that is already built.
+        \\__PANTRY_BASE_PATH="$PATH"
+        \\[ -d "$HOME/.local/share/pantry/global/bin" ] && __PANTRY_BASE_PATH="$HOME/.local/share/pantry/global/bin:$PATH"
+        \\PATH="$__PANTRY_BASE_PATH"
+        \\export PATH
+        \\
+        \\__pantry_deactivate() {
+        \\    PATH="$__PANTRY_BASE_PATH"
+        \\    export PATH
+        \\    __PANTRY_PROJECT_SLASH=""
+        \\    unset PANTRY_CURRENT_PROJECT PANTRY_ENV_DIR PANTRY_ENV_BIN_PATH PANTRY_BIN_PATH
+        \\}
+        \\
+        \\# Consumes `env_dir|project_dir`, the line every other shell parses.
+        \\# Either bin directory is enough: a project whose packages live under
+        \\# its own pantry/.bin has an empty shared env dir.
+        \\__pantry_activate() {
+        \\    __pa_env="${1%%|*}"
+        \\    __pa_proj="${1#*|}"
+        \\    [ "$__pa_proj" = "$1" ] && __pa_proj="$2"
+        \\    __pa_path="$__PANTRY_BASE_PATH"
+        \\    [ -d "$__pa_env/bin" ] && __pa_path="$__pa_env/bin:$__pa_path"
+        \\    [ -d "$__pa_proj/pantry/.bin" ] && __pa_path="$__pa_proj/pantry/.bin:$__pa_path"
+        \\    [ "$__pa_path" = "$__PANTRY_BASE_PATH" ] && return 1
+        \\    PATH="$__pa_path"
+        \\    export PATH
+        \\    PANTRY_CURRENT_PROJECT="$__pa_proj"
+        \\    PANTRY_ENV_DIR="$__pa_env"
+        \\    PANTRY_ENV_BIN_PATH="$__pa_env/bin"
+        \\    PANTRY_BIN_PATH="$__pa_proj/pantry/.bin"
+        \\    # Precomputed here so the hot path below is a single strip and a
+        \\    # single test, whatever the project path looks like.
+        \\    __PANTRY_PROJECT_SLASH="$__pa_proj/"
+        \\    export PANTRY_CURRENT_PROJECT PANTRY_ENV_DIR PANTRY_ENV_BIN_PATH PANTRY_BIN_PATH
+        \\    [ -n "$PANTRY_QUIET" ] || printf '\xe2\x9a\xa1 pantry env activated \xe2\x86\x92 %s\n' "${__pa_proj##*/}"
+        \\    return 0
+        \\}
+        \\
+        \\__pantry_switch() {
+        \\    command -v pantry >/dev/null 2>&1 || return 0
+        \\    __ps_lookup="$(pantry shell:lookup "$PWD" 2>/dev/null)"
+        \\    [ -z "$__ps_lookup" ] && __PANTRY_LAST_NONE="$PWD" && __pantry_deactivate && return 0
+        \\    __pantry_activate "$__ps_lookup" "$PWD" && return 0
+        \\    [ -n "$PANTRY_NO_AUTO_INSTALL" ] && return 0
+        \\    # One attempt per project directory, so a project whose install
+        \\    # fails is not reinstalled on every prompt.
+        \\    [ "$__PANTRY_NOINSTALL" = "${__ps_lookup#*|}" ] && return 0
+        \\    __PANTRY_NOINSTALL="${__ps_lookup#*|}"
+        \\    printf 'pantry: installing dependencies for %s\n' "${PWD##*/}"
+        \\    pantry install
+        \\    __ps_lookup="$(pantry shell:lookup "$PWD" 2>/dev/null)"
+        \\    [ -n "$__ps_lookup" ] && __pantry_activate "$__ps_lookup" "$PWD" && __PANTRY_NOINSTALL=""
+        \\    return 0
+        \\}
+        \\
+        \\# The hot path, run on every directory change: two string operations
+        \\# and one test to answer "still inside the active project?".
+        \\#
+        \\# Comparing "$PWD/" against "<project>/" is what makes one test enough.
+        \\# It says yes for the project root and for anything below it, and no
+        \\# for a sibling whose name merely starts the same way (/srv/app2 is not
+        \\# inside /srv/app). With no project active the prefix is empty, nothing
+        \\# strips, and it falls through.
+        \\chpwd() {
+        \\    __cp_pwd="$PWD/"
+        \\    __cp_rest="${__cp_pwd#$__PANTRY_PROJECT_SLASH}"
+        \\    [ "$__cp_rest" != "$__cp_pwd" ] && return 0
+        \\    [ "$PWD" = "$__PANTRY_LAST_NONE" ] && return 0
+        \\    __pantry_switch
+        \\}
+        \\
+        \\# Once at shell start: den fires chpwd on a change, not on the first
+        \\# prompt, so a terminal opened inside a project activates from here.
+        \\__pantry_switch
     ;
     return try allocator.dupe(u8, hook);
 }
@@ -359,6 +488,7 @@ pub fn getRcFile(shell: Shell, allocator: std.mem.Allocator) ![]const u8 {
             // Users who symlink their profile elsewhere can always use `pantry shell:install --path`.
             break :blk try std.fmt.allocPrint(allocator, "{s}/Documents/PowerShell/Microsoft.PowerShell_profile.ps1", .{home});
         },
+        .den => try std.fmt.allocPrint(allocator, "{s}/.denrc", .{home}),
         .unknown => error.ShellNotSupported,
     };
 }

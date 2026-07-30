@@ -219,6 +219,7 @@ fn configurePath(allocator: std.mem.Allocator, install_path: []const u8, verbose
         .fish => try std.fmt.allocPrint(allocator, "{s}/.config/fish/config.fish", .{home}),
         .nushell => try std.fmt.allocPrint(allocator, "{s}/.config/nushell/env.nu", .{home}),
         .powershell => try std.fmt.allocPrint(allocator, "{s}/.config/powershell/profile.ps1", .{home}),
+        .den => try std.fmt.allocPrint(allocator, "{s}/.denrc", .{home}),
         .unknown => return error.UnknownShell,
     };
     defer allocator.free(rc_file);
