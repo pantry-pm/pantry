@@ -1763,8 +1763,16 @@ pub const ShellCommands = struct {
                 initdb_allocated = true;
             }
 
+            // Keep these flags identical to the service definition's
+            // self-initializing start command (services/definitions.zig): both
+            // paths can be the one that creates the cluster, and whichever wins
+            // decides who its superuser is. Without --username the superuser
+            // becomes the OS account, so `createdb -U postgres` later fails with
+            // `role "postgres" does not exist` — on a cluster pantry itself made.
             const result = io_helper.childRun(self.allocator, &[_][]const u8{
-                initdb_path, "-D", pgdata, "--no-locale", "--encoding=UTF8",
+                initdb_path,      "-D",              pgdata,
+                "--no-locale",    "--encoding=UTF8", "--username=postgres",
+                "--auth-local=trust", "--auth-host=trust",
             }) catch |err| {
                 style.print("  ⚠️  initdb failed: {s}\n", .{@errorName(err)});
                 return;
