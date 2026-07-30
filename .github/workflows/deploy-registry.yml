@@ -19,6 +19,12 @@ on:
       - 'package.json'
       - 'bun.lock'
   workflow_dispatch:
+    inputs:
+      rehearse_scanner_outage:
+        description: Briefly make clamd unreachable and prove clean publishes fail closed
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: deploy-registry
@@ -56,6 +62,7 @@ jobs:
           # until the controlled backfill finishes, then set this repository
           # variable to true and dispatch one final deployment.
           BINARY_SCAN_ATTESTATION: ${{ vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION || 'false' }}
+          REHEARSE_SCANNER_OUTAGE: ${{ inputs.rehearse_scanner_outage || false }}
         run: |
           # Create the key file with a 0600 umask before writing so it is
           # never readable by other users for any window of time, and use
@@ -75,7 +82,7 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
             "${REGISTRY_USER}@${REGISTRY_HOST}" \
-            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}' '${LEGACY_RESCAN_MAX_BYTES}'" << 'EOF'
+            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}' '${LEGACY_RESCAN_MAX_BYTES}' '${REHEARSE_SCANNER_OUTAGE}'" << 'EOF'
             set -euo pipefail
             REPO_PATH="$1"
             SERVICE="$2"
@@ -85,10 +92,18 @@ jobs:
             BINARY_SCAN_ATTESTATION="$6"
             LEGACY_SCAN_ATTESTATION_CUTOFF="$7"
             LEGACY_RESCAN_MAX_BYTES="$8"
+            REHEARSE_SCANNER_OUTAGE="$9"
             case "$BINARY_SCAN_ATTESTATION" in
               true|false) ;;
               *)
                 echo "PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION must be true or false" >&2
+                exit 1
+                ;;
+            esac
+            case "$REHEARSE_SCANNER_OUTAGE" in
+              true|false) ;;
+              *)
+                echo "rehearse_scanner_outage must be true or false" >&2
                 exit 1
                 ;;
             esac
@@ -325,7 +340,15 @@ jobs:
               exit 1
             }
             REHEARSAL_DIR=$(mktemp -d)
-            trap 'rm -rf "$REHEARSAL_DIR"' EXIT
+            CLAMD_SOCKET=/run/clamav/clamd.ctl
+            CLAMD_HIDDEN_SOCKET="${CLAMD_SOCKET}.outage-rehearsal.$$"
+            cleanup_rehearsal() {
+              if [ -S "$CLAMD_HIDDEN_SOCKET" ] && [ ! -e "$CLAMD_SOCKET" ]; then
+                mv "$CLAMD_HIDDEN_SOCKET" "$CLAMD_SOCKET"
+              fi
+              rm -rf "$REHEARSAL_DIR"
+            }
+            trap cleanup_rehearsal EXIT
             mkdir -p "$REHEARSAL_DIR/package"
             printf '%s\n' \
               '{"name":"pantry-malware-rehearsal","version":"0.0.0"}' \
@@ -395,6 +418,81 @@ jobs:
               echo "Isolated EICAR binary rehearsal failed with HTTP $BINARY_REHEARSAL_STATUS" >&2
               jq '{code, retryable, scan}' "$BINARY_REHEARSAL_RESPONSE" >&2 || true
               exit 1
+            fi
+
+            if [ "$REHEARSE_SCANNER_OUTAGE" = true ]; then
+              # Hide only the local socket pathname. clamd keeps running on the
+              # same bound inode, while new Registry connections get an
+              # immediate scanner-unavailable error. The EXIT trap restores the
+              # pathname even if any assertion below fails.
+              [ -S "$CLAMD_SOCKET" ] || {
+                echo "clamd socket is unavailable before outage rehearsal" >&2
+                exit 1
+              }
+              OUTAGE_NAME=pantry-malware-outage-rehearsal
+              OUTAGE_VERSION="0.0.0-${EXPECTED_SHA:0:12}"
+              rm -rf "$REHEARSAL_DIR/package"
+              mkdir -p "$REHEARSAL_DIR/package"
+              printf '{"name":"%s","version":"%s"}\n' \
+                "$OUTAGE_NAME" "$OUTAGE_VERSION" \
+                > "$REHEARSAL_DIR/package/package.json"
+              printf 'clean scanner-outage rehearsal\n' \
+                > "$REHEARSAL_DIR/package/fixture.txt"
+              tar -C "$REHEARSAL_DIR" -czf "$REHEARSAL_DIR/outage.tgz" package
+              OUTAGE_METADATA=$(printf \
+                '{"name":"%s","version":"%s","publishedAt":"%s"}' \
+                "$OUTAGE_NAME" \
+                "$OUTAGE_VERSION" \
+                "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+              mv "$CLAMD_SOCKET" "$CLAMD_HIDDEN_SOCKET"
+              OUTAGE_RESPONSE="$REHEARSAL_DIR/outage-response.json"
+              OUTAGE_STATUS=$(curl -sS \
+                --max-time 30 \
+                -o "$OUTAGE_RESPONSE" \
+                -w '%{http_code}' \
+                -H "Authorization: Bearer $REGISTRY_TOKEN" \
+                -F "metadata=$OUTAGE_METADATA" \
+                -F "tarball=@$REHEARSAL_DIR/outage.tgz;type=application/gzip" \
+                "http://localhost:${PORT}/publish") || OUTAGE_STATUS=000
+              mv "$CLAMD_HIDDEN_SOCKET" "$CLAMD_SOCKET"
+
+              if [ "$OUTAGE_STATUS" != 503 ] ||
+                ! jq -e '.code == "MALWARE_SCAN_UNAVAILABLE"
+                  and .retryable == true' "$OUTAGE_RESPONSE" >/dev/null; then
+                echo "Scanner outage rehearsal failed with HTTP $OUTAGE_STATUS" >&2
+                jq '{code, retryable, scan}' "$OUTAGE_RESPONSE" >&2 || true
+                exit 1
+              fi
+              OUTAGE_METADATA_STATUS=$(curl -sS \
+                -o /dev/null \
+                -w '%{http_code}' \
+                "http://localhost:${PORT}/packages/${OUTAGE_NAME}/${OUTAGE_VERSION}")
+              OUTAGE_TARBALL_STATUS=$(curl -sS \
+                -o /dev/null \
+                -w '%{http_code}' \
+                "http://localhost:${PORT}/packages/${OUTAGE_NAME}/${OUTAGE_VERSION}/tarball")
+              if [ "$OUTAGE_METADATA_STATUS" != 404 ] ||
+                [ "$OUTAGE_TARBALL_STATUS" != 404 ]; then
+                echo "Scanner outage rehearsal left an installable artifact" >&2
+                echo "metadata=$OUTAGE_METADATA_STATUS tarball=$OUTAGE_TARBALL_STATUS" >&2
+                exit 1
+              fi
+
+              RECOVERED=false
+              for attempt in $(seq 1 10); do
+                if curl -fsS "http://localhost:${PORT}/ready" \
+                  | jq -e '.status == "ready"
+                    and .malwareScanning.ready == true' >/dev/null; then
+                  RECOVERED=true
+                  break
+                fi
+                sleep 1
+              done
+              [ "$RECOVERED" = true ] || {
+                echo "Registry did not recover after scanner outage rehearsal" >&2
+                exit 1
+              }
+              echo "Scanner outage rehearsal: retryable 503, zero writes, recovered"
             fi
             rm -rf "$REHEARSAL_DIR"
             trap - EXIT

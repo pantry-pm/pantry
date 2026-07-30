@@ -100,6 +100,11 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('.scan.verdict == "blocked"')
     expect(workflow).toContain('/api/v1/binaries/uploads/complete')
     expect(workflow).toContain('Isolated EICAR binary rehearsal failed')
+    expect(workflow).toContain('rehearse_scanner_outage:')
+    expect(workflow).toContain('.code == "MALWARE_SCAN_UNAVAILABLE"')
+    expect(workflow).toContain('.retryable == true')
+    expect(workflow).toContain('Scanner outage rehearsal left an installable artifact')
+    expect(workflow).toContain('Scanner outage rehearsal: retryable 503, zero writes, recovered')
   })
 
   it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
