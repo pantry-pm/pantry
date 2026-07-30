@@ -49,6 +49,7 @@ jobs:
           REGISTRY_HOST: ${{ vars.REGISTRY_HOST || 'registry.pantry.dev' }}
           REGISTRY_USER: ${{ vars.REGISTRY_USER || 'root' }}
           REGISTRY_SERVICE: ${{ vars.REGISTRY_SERVICE || 'pantry-registry' }}
+          REGISTRY_PORT: ${{ vars.REGISTRY_PORT || '3001' }}
         run: |
           mkdir -p ~/.ssh
           (umask 077 && cat > ~/.ssh/id_rsa <<< "$SSH_PRIVATE_KEY")
@@ -60,9 +61,11 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=2 \
             "${REGISTRY_USER}@${REGISTRY_HOST}" \
-            "bash -s -- '${REGISTRY_SERVICE}'" << 'EOF'
+            "bash -s -- '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_HOST}'" << 'EOF'
             set -u
             SERVICE="$1"
+            PORT="$2"
+            HOST="$3"
             for unit in "$SERVICE" clamav-daemon rpx-gateway apt-daily-upgrade; do
               echo "[$unit]"
               systemctl show "$unit" --no-pager \
@@ -78,9 +81,32 @@ jobs:
                 --property=MemoryCurrent \
                 --property=MemoryPeak \
                 --property=MemoryMax \
+                --property=LimitNOFILE \
                 --property=TasksCurrent \
                 2>/dev/null || true
             done
+            SERVICE_PID=$(systemctl show "$SERVICE" --property=MainPID --value 2>/dev/null || true)
+            echo "[serving-path]"
+            REGISTRY_LOCAL=$(curl -sS -o /dev/null -w '%{http_code}' \
+              --connect-timeout 3 --max-time 8 \
+              "http://127.0.0.1:${PORT}/health" || true)
+            GATEWAY_LOOPBACK=$(curl -ksS -o /dev/null -w '%{http_code}' \
+              --resolve "${HOST}:443:127.0.0.1" \
+              --connect-timeout 3 --max-time 8 \
+              "https://${HOST}/health" || true)
+            GATEWAY_PUBLIC=$(curl -ksS -o /dev/null -w '%{http_code}' \
+              --connect-timeout 3 --max-time 8 \
+              "https://${HOST}/health" || true)
+            echo "registry-local=${REGISTRY_LOCAL: -3}"
+            echo "gateway-loopback=${GATEWAY_LOOPBACK: -3}"
+            echo "gateway-public=${GATEWAY_PUBLIC: -3}"
+            if [ -n "$SERVICE_PID" ] && [ "$SERVICE_PID" != 0 ] && [ -d "/proc/$SERVICE_PID/fd" ]; then
+              echo "registry-main-pid=$SERVICE_PID"
+              echo "registry-open-fds=$(find "/proc/$SERVICE_PID/fd" -maxdepth 1 -type l | wc -l)"
+            fi
+            ss -s || true
+            ss -ltnp \
+              | grep -E ":(${PORT}|80|443|3310)[[:space:]]" || true
             echo "[failed-units]"
             systemctl list-units --failed --no-legend --no-pager || true
             echo "[kernel-memory-events]"
