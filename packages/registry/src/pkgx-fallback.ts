@@ -37,6 +37,11 @@ interface PackageMetadata {
   latestVersion?: string
   versions?: Record<string, { platforms?: Record<string, PlatformBinary> }>
   updatedAt?: string
+  malwareQuarantines?: Array<{
+    version: string
+    platforms: string[]
+    artifactSha256: string
+  }>
 }
 
 function pkgxOsArch(platform: string): { os: string, arch: string } | null {
@@ -118,6 +123,17 @@ export function isPendingMaterialize(domain: string, version: string, platform: 
   return _pending.has(pendKey(domain, version, platform))
 }
 
+export function isQuarantinedFallback(
+  metadata: PackageMetadata | null,
+  version: string,
+  platform: string,
+): boolean {
+  return metadata?.malwareQuarantines?.some(
+    quarantine => quarantine.version === version
+      && quarantine.platforms.includes(platform),
+  ) === true
+}
+
 // ── metadata augmentation ────────────────────────────────────────────────────
 const AUG_TTL_MS = 30 * 60 * 1000
 const _augCache = new BoundedTtlCache<string, { sourceFingerprint: string, data: PackageMetadata }>(1_000, AUG_TTL_MS)
@@ -162,7 +178,9 @@ export async function augmentMetadataWithPkgx(
 
   await Promise.all(candidates.map(async (version) => {
     const present = base.versions![version]?.platforms || {}
-    const missing = BUILD_PLATFORMS.filter(p => !present[p])
+    const missing = BUILD_PLATFORMS.filter(
+      p => !present[p] && !isQuarantinedFallback(published, version, p),
+    )
     const found = await Promise.all(missing.map(async p => ({ p, ok: await pkgxHasBinary(domain, version, p) })))
     const avail = found.filter(f => f.ok)
     if (avail.length === 0)

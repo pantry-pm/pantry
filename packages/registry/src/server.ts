@@ -77,6 +77,7 @@ import {
   binaryAttestationKey,
   binaryPublishErrorResponse,
   filterBinaryMetadataForCleanScans,
+  publicBinaryMetadata,
 } from './binary-publishing'
 
 // Build domain→versions lookup from ts-pantry package metadata for version
@@ -5083,7 +5084,7 @@ async function handleBinaryProxy(
             (domain, version, platform) => isPendingMaterialize(domain, version, platform),
           )
         : augmented
-      const body = JSON.stringify(visible)
+      const body = JSON.stringify(publicBinaryMetadata(visible as any))
       return new Response(body, {
         headers: { ...corsHeaders, 'Content-Type': contentType, 'Cache-Control': cacheControl, 'Content-Length': String(Buffer.byteLength(body)) },
       })

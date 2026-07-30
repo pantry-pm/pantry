@@ -40,6 +40,19 @@ export interface BinaryPackageMetadata {
     platforms: Record<string, BinaryPlatformRecord>
   }>
   updatedAt: string
+  malwareQuarantines?: BinaryMalwareQuarantine[]
+}
+
+export interface BinaryMalwareQuarantine {
+  version: string
+  platforms: string[]
+  artifactSha256: string
+  signature?: string
+  engine: string
+  engineVersion?: string
+  databaseVersion?: string
+  scannedAt: string
+  quarantinedAt: string
 }
 
 export interface BinaryPublishRequest {
@@ -325,6 +338,14 @@ export function filterBinaryMetadataForCleanScans(
       .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
       .at(0) || ''
   }
+  return metadata
+}
+
+export function publicBinaryMetadata(
+  input: BinaryPackageMetadata,
+): BinaryPackageMetadata {
+  const metadata = structuredClone(input)
+  delete metadata.malwareQuarantines
   return metadata
 }
 
@@ -888,29 +909,59 @@ export class BinaryArtifactPublisher {
     scan: MalwareScanResult,
   ): Promise<BinaryRescanCompleted> {
     const quarantineKey = `.pantry-quarantine/malware/${request.domain}/${request.version}/${scan.artifactSha256}/${tarball.split('/').at(-1)}`
+    const quarantinedAt = new Date(this.now()).toISOString()
     await this.store.copyObject(tarball, quarantineKey)
     await this.store.putObject(`${quarantineKey}.scan.json`, JSON.stringify({
-      quarantinedAt: new Date(this.now()).toISOString(),
+      quarantinedAt,
       originalKey: tarball,
       domain: request.domain,
       version: request.version,
       scan,
     }), 'application/json')
 
+    const removedPlatforms = new Map<string, Set<string>>()
     for (const [version, versionInfo] of Object.entries(metadata.versions || {})) {
       for (const [platform, record] of Object.entries(versionInfo.platforms || {})) {
-        if (storedBinaryKey(record.tarball) === tarball)
+        if (storedBinaryKey(record.tarball) === tarball) {
+          const platforms = removedPlatforms.get(version) || new Set<string>()
+          platforms.add(platform)
+          removedPlatforms.set(version, platforms)
           delete versionInfo.platforms[platform]
+        }
       }
       if (Object.keys(versionInfo.platforms || {}).length === 0)
         delete metadata.versions[version]
+    }
+    metadata.malwareQuarantines ||= []
+    for (const [version, platforms] of removedPlatforms) {
+      const existing = metadata.malwareQuarantines.find(
+        quarantine => quarantine.version === version
+          && quarantine.artifactSha256 === scan.artifactSha256,
+      )
+      if (existing) {
+        existing.platforms = [...new Set([...existing.platforms, ...platforms])].sort()
+        existing.quarantinedAt = quarantinedAt
+      }
+      else {
+        metadata.malwareQuarantines.push({
+          version,
+          platforms: [...platforms].sort(),
+          artifactSha256: scan.artifactSha256,
+          ...(scan.signature ? { signature: scan.signature } : {}),
+          engine: scan.engine,
+          ...(scan.engineVersion ? { engineVersion: scan.engineVersion } : {}),
+          ...(scan.databaseVersion ? { databaseVersion: scan.databaseVersion } : {}),
+          scannedAt: scan.scannedAt,
+          quarantinedAt,
+        })
+      }
     }
     if (!metadata.versions[metadata.latestVersion]) {
       metadata.latestVersion = Object.keys(metadata.versions)
         .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
         .at(0) || ''
     }
-    metadata.updatedAt = new Date(this.now()).toISOString()
+    metadata.updatedAt = quarantinedAt
     await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
     await this.store.deleteObject(tarball)
     await this.store.deleteObject(`${tarball}.sha256`).catch(() => {})

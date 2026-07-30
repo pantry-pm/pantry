@@ -6,6 +6,7 @@ import {
   BinaryArtifactPublisher,
   BinaryPublishError,
   filterBinaryMetadataForCleanScans,
+  publicBinaryMetadata,
   S3BinaryArtifactStore,
   type BinaryArtifactStore,
 } from './binary-publishing'
@@ -743,9 +744,31 @@ describe('binary scan-before-promote publisher', () => {
     expect(store.files.has(`${tarball}.sha256`)).toBe(false)
     const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
     expect(metadata.versions).toEqual({})
+    expect(metadata.malwareQuarantines).toEqual([expect.objectContaining({
+      version: '1.2.3',
+      platforms: ['darwin-arm64', 'linux-x86-64'],
+      artifactSha256: createHash('sha256').update(bytes).digest('hex'),
+      signature: 'Test.EICAR',
+    })])
     const quarantineKeys = [...store.files.keys()].filter(key => key.startsWith('.pantry-quarantine/malware/'))
     expect(quarantineKeys.some(key => !key.endsWith('.scan.json'))).toBe(true)
     expect(quarantineKeys.some(key => key.endsWith('.scan.json'))).toBe(true)
+  })
+
+  it('strips private malware quarantine tombstones from public metadata', () => {
+    const metadata: any = {
+      name: 'example.com/tool',
+      latestVersion: '',
+      versions: {},
+      updatedAt: new Date().toISOString(),
+      malwareQuarantines: [{
+        version: '1.2.3',
+        platforms: ['darwin-arm64'],
+        artifactSha256: 'a'.repeat(64),
+      }],
+    }
+
+    expect(publicBinaryMetadata(metadata)).not.toHaveProperty('malwareQuarantines')
   })
 
   it('filters unattested metadata without mutating the stored snapshot', () => {
