@@ -928,10 +928,11 @@ export class BinaryArtifactPublisher {
       throw new BinaryPublishError('Binary package metadata was not found', 404, 'BINARY_METADATA_NOT_FOUND')
     }
 
-    const quarantine = metadata.malwareQuarantines?.find(item =>
+    let quarantine = metadata.malwareQuarantines?.find(item =>
       item.version === request.version
       && item.artifactSha256 === request.artifactSha256,
     )
+    let recoveredTombstone = false
     if (!quarantine) {
       const platforms = Object.entries(metadata.versions?.[request.version]?.platforms || {})
         .filter(([, record]) =>
@@ -939,19 +940,25 @@ export class BinaryArtifactPublisher {
           && record.malwareScan?.verdict === 'clean'
           && record.malwareScan.artifactSha256 === request.artifactSha256,
         )
-      if (platforms.length === 0)
-        throw new BinaryPublishError('Malware quarantine tombstone was not found', 404, 'BINARY_QUARANTINE_NOT_FOUND')
-      const records = Object.fromEntries(platforms)
-      const scan = platforms[0][1].malwareScan
-      return {
-        released: {
-          domain: request.domain,
-          version: request.version,
-          platforms: records,
-          artifactSha256: request.artifactSha256,
-          scan,
-        },
+      if (platforms.length > 0) {
+        const records = Object.fromEntries(platforms)
+        const scan = platforms[0][1].malwareScan
+        return {
+          released: {
+            domain: request.domain,
+            version: request.version,
+            platforms: records,
+            artifactSha256: request.artifactSha256,
+            scan,
+          },
+        }
       }
+      quarantine = await this.recoverQuarantineTombstone(request)
+      if (!quarantine)
+        throw new BinaryPublishError('Malware quarantine tombstone was not found', 404, 'BINARY_QUARANTINE_NOT_FOUND')
+      metadata.malwareQuarantines ||= []
+      metadata.malwareQuarantines.push(quarantine)
+      recoveredTombstone = true
     }
     if (
       quarantine.platforms.length === 0
@@ -1004,6 +1011,11 @@ export class BinaryArtifactPublisher {
     }
     if (!Number.isSafeInteger(size) || size <= 0 || size > this.legacyRescanMaxBytes)
       throw new BinaryPublishError(`Quarantined artifact size must be between 1 and ${this.legacyRescanMaxBytes} bytes`, 413, 'INVALID_BINARY_SIZE')
+    if (recoveredTombstone) {
+      quarantine.size = size
+      metadata.updatedAt = new Date(this.now()).toISOString()
+      await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
+    }
 
     return {
       state: {
@@ -1015,6 +1027,70 @@ export class BinaryArtifactPublisher {
         size,
         objectIdentity,
       },
+    }
+  }
+
+  private async recoverQuarantineTombstone(
+    request: BinaryQuarantineReviewRequest,
+  ): Promise<BinaryMalwareQuarantine | undefined> {
+    if (!request.filename)
+      return
+    const quarantineKey = `.pantry-quarantine/malware/${request.domain}/${request.version}/${request.artifactSha256}/${request.filename}`
+    let value: unknown
+    try {
+      value = JSON.parse((await this.store.getObject(`${quarantineKey}.scan.json`)).toString('utf8'))
+    }
+    catch {
+      return
+    }
+    if (!value || typeof value !== 'object')
+      return
+    const evidence = value as Record<string, unknown>
+    const scan = evidence.scan
+    if (!scan || typeof scan !== 'object')
+      return
+    const storedScan = scan as Partial<MalwareScanResult>
+    const quarantinedAt = typeof evidence.quarantinedAt === 'string' ? evidence.quarantinedAt : ''
+    if (
+      evidence.domain !== request.domain
+      || evidence.version !== request.version
+      || storedScan.verdict !== 'blocked'
+      || storedScan.artifactSha256 !== request.artifactSha256
+      || typeof storedScan.engine !== 'string'
+      || storedScan.engine.trim().length === 0
+      || typeof storedScan.scannedAt !== 'string'
+      || !Number.isFinite(Date.parse(storedScan.scannedAt))
+      || !Number.isFinite(Date.parse(quarantinedAt))
+      || (storedScan.signature !== undefined && typeof storedScan.signature !== 'string')
+    )
+      return
+
+    let platforms = Array.isArray(evidence.platforms)
+      ? evidence.platforms.filter((item): item is string => typeof item === 'string')
+      : []
+    if (platforms.length === 0 && typeof evidence.originalKey === 'string') {
+      const prefix = `binaries/${request.domain}/${request.version}/`
+      const suffix = `/${request.filename}`
+      const originalKey = storedBinaryKey(evidence.originalKey)
+      if (originalKey.startsWith(prefix) && originalKey.endsWith(suffix))
+        platforms = [originalKey.slice(prefix.length, -suffix.length)]
+    }
+    platforms = [...new Set(platforms)].sort()
+    if (platforms.length === 0 || platforms.length > MAX_PLATFORMS || platforms.some(platform => !platformPattern.test(platform)))
+      return
+
+    return {
+      version: request.version,
+      platforms,
+      artifactSha256: request.artifactSha256,
+      quarantineKey,
+      filename: request.filename,
+      ...(storedScan.signature ? { signature: storedScan.signature } : {}),
+      engine: storedScan.engine,
+      ...(storedScan.engineVersion ? { engineVersion: storedScan.engineVersion } : {}),
+      ...(storedScan.databaseVersion ? { databaseVersion: storedScan.databaseVersion } : {}),
+      scannedAt: storedScan.scannedAt,
+      quarantinedAt,
     }
   }
 
@@ -1226,7 +1302,13 @@ export class BinaryArtifactPublisher {
   ): Promise<BinaryQuarantineReviewCompleted> {
     const releasedAt = new Date(this.now()).toISOString()
     const records: Record<string, BinaryPlatformRecord> = {}
+    const otherQuarantines = state.metadata.malwareQuarantines?.filter(item =>
+      item.version === request.version
+      && item.artifactSha256 !== request.artifactSha256,
+    ) || []
     for (const platform of state.quarantine.platforms) {
+      if (otherQuarantines.some(item => item.platforms.includes(platform)))
+        continue
       const tarball = `binaries/${request.domain}/${request.version}/${platform}/${state.filename}`
       await this.store.copyObject(state.quarantineKey, tarball)
       await this.store.putObject(`${tarball}.sha256`, `${request.artifactSha256}  ${state.filename}\n`, 'text/plain')

@@ -1043,6 +1043,126 @@ describe('binary scan-before-promote publisher', () => {
     })).rejects.toMatchObject({ code: 'BINARY_QUARANTINE_ARTIFACT_CHANGED' })
   })
 
+  it('recovers a lost quarantine tombstone only from its private scan evidence', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('recoverable quarantine bytes')
+    await seedLegacyArtifact(store, bytes)
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    const [lost] = metadata.malwareQuarantines
+    delete metadata.malwareQuarantines
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+
+    const prepared = await publisher.prepareExternalQuarantineReview({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      artifactSha256: lost.artifactSha256,
+      filename: lost.filename,
+    })
+
+    expect(prepared.action).toBe('prepared')
+    expect(prepared.platforms).toEqual(['darwin-arm64'])
+    const repaired = JSON.parse(store.files.get(metadataKey)!.toString())
+    expect(repaired.malwareQuarantines).toEqual([expect.objectContaining({
+      artifactSha256: lost.artifactSha256,
+      quarantineKey: lost.quarantineKey,
+      filename: lost.filename,
+      platforms: ['darwin-arm64'],
+      signature: 'Test.EICAR',
+      size: bytes.byteLength,
+    })])
+  })
+
+  it('does not recover a lost tombstone from mismatched private scan evidence', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('mismatched quarantine evidence')
+    await seedLegacyArtifact(store, bytes)
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    const [lost] = metadata.malwareQuarantines
+    delete metadata.malwareQuarantines
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    const sidecar = JSON.parse(store.files.get(`${lost.quarantineKey}.scan.json`)!.toString())
+    sidecar.scan.artifactSha256 = 'f'.repeat(64)
+    await store.putObject(`${lost.quarantineKey}.scan.json`, JSON.stringify(sidecar), 'application/json')
+
+    await expect(publisher.prepareExternalQuarantineReview({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      artifactSha256: lost.artifactSha256,
+      filename: lost.filename,
+    })).rejects.toMatchObject({ code: 'BINARY_QUARANTINE_NOT_FOUND' })
+  })
+
+  it('does not release a clean artifact over another quarantine for the same platform', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('older quarantined artifact')
+    await seedLegacyArtifact(store, bytes)
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    const [older] = metadata.malwareQuarantines
+    metadata.malwareQuarantines.push({
+      ...older,
+      artifactSha256: 'e'.repeat(64),
+      quarantineKey: older.quarantineKey.replace(older.artifactSha256, 'e'.repeat(64)),
+    })
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      artifactSha256: older.artifactSha256,
+    }
+    const prepared = await publisher.prepareExternalQuarantineReview(selector)
+    const result = await publisher.attestExternalQuarantineReview({
+      ...selector,
+      quarantineKey: prepared.quarantineKey,
+      size: prepared.size,
+      objectIdentity: prepared.objectIdentity,
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: new Date().toISOString(),
+        durationMs: 10,
+        artifactSha256: older.artifactSha256,
+        engineVersion: 'ClamAV 1.5.3',
+        databaseVersion: '28079',
+      },
+    })
+
+    expect(result).toMatchObject({ action: 'released', platforms: {} })
+    expect([...store.files.keys()].some(key =>
+      key.startsWith('binaries/example.com/tool/1.2.3/'),
+    )).toBe(false)
+    const after = JSON.parse(store.files.get(metadataKey)!.toString())
+    expect(after.malwareQuarantines).toEqual([
+      expect.objectContaining({ artifactSha256: 'e'.repeat(64), platforms: ['darwin-arm64'] }),
+    ])
+  })
+
   it('reviews a shared quarantined object from each tombstoned version', async () => {
     const store = new UrlArtifactStore()
     const bytes = Buffer.from('shared version artifact')
