@@ -240,7 +240,13 @@ fn generatePowershellHook(allocator: std.mem.Allocator) ![]const u8 {
 fn generateDenHook(allocator: std.mem.Allocator) ![]const u8 {
     const hook =
         \\# pantry shell integration for den
-        \\# Add to ~/.denrc:  eval "$(pantry dev:shellcode)"
+        \\#
+        \\# Add to ~/.denrc, written out and sourced rather than eval'd, because
+        \\# den's eval parses its argument as a command chain and a command chain
+        \\# cannot carry a function definition, so an eval'd hook defines nothing:
+        \\#
+        \\#   pantry dev:shellcode > "$HOME/.cache/pantry-den-hook.sh"
+        \\#   source "$HOME/.cache/pantry-den-hook.sh"
         \\
         \\# Why this looks nothing like the bash/zsh template:
         \\#
