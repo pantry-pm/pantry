@@ -595,7 +595,9 @@ describe('binary scan-before-promote publisher', () => {
       sha256: createHash('sha256').update(bytes).digest('hex'),
       size: bytes.byteLength,
     })
-    expect(prepared.downloadUrl).toContain('expires=900')
+    // The URL remains valid if a 30-minute whole-archive scan exhausts a
+    // coverage limit and the client must fetch the same object for deep scan.
+    expect(prepared.downloadUrl).toContain('expires=3600')
     expect(prepared.objectIdentity).toBeTruthy()
     expect(scanner.contexts).toHaveLength(0)
 

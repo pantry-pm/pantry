@@ -22,6 +22,10 @@ import {
 
 const DEFAULT_MAX_BINARY_BYTES = 1024 * 1024 * 1024
 const DEFAULT_STAGING_TTL_SECONDS = 60 * 60
+// A retained whole-archive scan may consume the full 30-minute ClamAV
+// MaxScanTime before coverage-limit fallback downloads the exact object again.
+// Keep the read capability bounded, but long enough for that second request.
+const RETAINED_RESCAN_DOWNLOAD_TTL_SECONDS = 60 * 60
 const MAX_PLATFORMS = 16
 const STAGING_PREFIX = '.pantry-staging/malware'
 
@@ -686,7 +690,7 @@ export class BinaryArtifactPublisher {
       this.assertExternalRescanEligible(state)
       if (!this.store.createDownloadUrl)
         throw new BinaryPublishError('Retained artifact download preparation is unavailable', 503, 'BINARY_RESCAN_PREPARE_UNAVAILABLE')
-      const expiresInSeconds = 15 * 60
+      const expiresInSeconds = RETAINED_RESCAN_DOWNLOAD_TTL_SECONDS
       return {
         action: 'prepared',
         domain: request.domain,
