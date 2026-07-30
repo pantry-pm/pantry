@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.130.0",
-      "published": "1.130.0",
+      "latest": "1.131.0",
+      "published": "1.131.0",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.721.41059",
-      "published": "26.721.41059",
+      "latest": "26.721.81911",
+      "published": "26.721.81911",
       "needsUpdate": false
     },
     {
@@ -338,8 +338,8 @@
       "name": "Linear",
       "kind": "app",
       "host": "macos",
-      "latest": "1.31.1",
-      "published": "1.31.1",
+      "latest": "1.32.0",
+      "published": "1.32.0",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "Zed",
       "kind": "app",
       "host": "macos",
-      "latest": "1.12.1",
-      "published": "1.12.1",
+      "latest": "1.13.1",
+      "published": "1.13.1",
       "needsUpdate": false
     }
   ]
