@@ -786,6 +786,150 @@ describe('binary scan-before-promote publisher', () => {
     expect(quarantineKeys.some(key => key.endsWith('.scan.json'))).toBe(true)
   })
 
+  it('keeps a blocked quarantine review private and records fresh evidence', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('reviewed blocked artifact')
+    await seedLegacyArtifact(store, bytes, ['darwin-arm64', 'linux-x86-64'])
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const artifactSha256 = createHash('sha256').update(bytes).digest('hex')
+    const selector = { domain: 'example.com/tool', version: '1.2.3', artifactSha256 }
+    const prepared = await publisher.prepareExternalQuarantineReview(selector)
+    expect(prepared.action).toBe('prepared')
+
+    const result = await publisher.attestExternalQuarantineReview({
+      ...selector,
+      quarantineKey: prepared.quarantineKey,
+      size: prepared.size,
+      objectIdentity: prepared.objectIdentity,
+      scan: {
+        verdict: 'blocked',
+        engine: 'clamav',
+        scannedAt: new Date().toISOString(),
+        durationMs: 10,
+        artifactSha256,
+        engineVersion: 'ClamAV 1.5.3',
+        databaseVersion: '28078',
+        signature: 'Macos.Test.FalsePositive',
+      },
+    })
+
+    expect(result.action).toBe('still-quarantined')
+    expect(result.platforms).toEqual({})
+    expect([...store.files.keys()].some(key =>
+      key.startsWith('binaries/example.com/tool/1.2.3/'),
+    )).toBe(false)
+    const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
+    expect(metadata.malwareQuarantines[0]).toEqual(expect.objectContaining({
+      artifactSha256,
+      quarantineKey: prepared.quarantineKey,
+      filename: 'example.com-tool-1.2.3.tar.gz',
+      size: bytes.byteLength,
+      databaseVersion: '28078',
+      signature: 'Macos.Test.FalsePositive',
+      reviewedAt: expect.any(String),
+    }))
+    expect([...store.files.keys()].some(key => key.includes('.review-'))).toBe(true)
+  })
+
+  it('releases only an identity-bound quarantine after a fresh clean verdict', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('reviewed clean artifact')
+    await seedLegacyArtifact(store, bytes, ['darwin-arm64', 'linux-x86-64'])
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const artifactSha256 = createHash('sha256').update(bytes).digest('hex')
+    const selector = { domain: 'example.com/tool', version: '1.2.3', artifactSha256 }
+    const prepared = await publisher.prepareExternalQuarantineReview(selector)
+    const result = await publisher.attestExternalQuarantineReview({
+      ...selector,
+      quarantineKey: prepared.quarantineKey,
+      size: prepared.size,
+      objectIdentity: prepared.objectIdentity,
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: new Date().toISOString(),
+        durationMs: 10,
+        artifactSha256,
+        engineVersion: 'ClamAV 1.5.3',
+        databaseVersion: '28079',
+      },
+    })
+
+    expect(result.action).toBe('released')
+    expect(Object.keys(result.platforms)).toEqual(['darwin-arm64', 'linux-x86-64'])
+    for (const record of Object.values(result.platforms)) {
+      expect(store.files.get(record.tarball)).toEqual(bytes)
+      expect(store.files.has(`${record.tarball}.sha256`)).toBe(true)
+      expect(store.files.has(`${record.tarball}.scan.json`)).toBe(true)
+    }
+    const metadata = JSON.parse(store.files.get('binaries/example.com/tool/metadata.json')!.toString())
+    expect(metadata.malwareQuarantines).toBeUndefined()
+    expect(Object.keys(metadata.versions['1.2.3'].platforms)).toEqual(['darwin-arm64', 'linux-x86-64'])
+    expect([...store.files.keys()].some(key => key.startsWith('.pantry-quarantine/malware/'))).toBe(true)
+    expect((await publisher.prepareExternalQuarantineReview(selector)).action).toBe('already-released')
+  })
+
+  it('supports legacy tombstones by filename and rejects changed quarantine bytes', async () => {
+    const store = new UrlArtifactStore()
+    const bytes = Buffer.from('legacy tombstone bytes')
+    await seedLegacyArtifact(store, bytes)
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await publisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const metadataKey = 'binaries/example.com/tool/metadata.json'
+    const metadata = JSON.parse(store.files.get(metadataKey)!.toString())
+    const quarantineKey = metadata.malwareQuarantines[0].quarantineKey
+    delete metadata.malwareQuarantines[0].quarantineKey
+    delete metadata.malwareQuarantines[0].filename
+    delete metadata.malwareQuarantines[0].size
+    await store.putObject(metadataKey, JSON.stringify(metadata), 'application/json')
+    const artifactSha256 = createHash('sha256').update(bytes).digest('hex')
+    const selector = { domain: 'example.com/tool', version: '1.2.3', artifactSha256 }
+
+    await expect(publisher.prepareExternalQuarantineReview(selector))
+      .rejects.toMatchObject({ code: 'BINARY_QUARANTINE_FILENAME_REQUIRED' })
+    const prepared = await publisher.prepareExternalQuarantineReview({
+      ...selector,
+      filename: 'example.com-tool-1.2.3.tar.gz',
+    })
+    await store.putObject(quarantineKey, Buffer.from('changed tombstone byte'), 'application/gzip')
+    await expect(publisher.attestExternalQuarantineReview({
+      ...selector,
+      filename: 'example.com-tool-1.2.3.tar.gz',
+      quarantineKey: prepared.quarantineKey,
+      size: prepared.size,
+      objectIdentity: prepared.objectIdentity,
+      scan: {
+        verdict: 'clean',
+        engine: 'clamav',
+        scannedAt: new Date().toISOString(),
+        durationMs: 10,
+        artifactSha256,
+        engineVersion: 'ClamAV 1.5.3',
+        databaseVersion: '28079',
+      },
+    })).rejects.toMatchObject({ code: 'BINARY_QUARANTINE_ARTIFACT_CHANGED' })
+  })
+
   it('strips private malware quarantine tombstones from public metadata', () => {
     const metadata: any = {
       name: 'example.com/tool',
@@ -953,5 +1097,61 @@ describe('binary publication API', () => {
     })
     expect(attestResponse.status).toBe(200)
     expect((await attestResponse.json() as any).action).toBe('attested')
+  })
+
+  it('requires operator auth for quarantine review and releases clean bytes', async () => {
+    const bytes = Buffer.from('api quarantined artifact')
+    await seedLegacyArtifact(store, bytes)
+    const blockedPublisher = new BinaryArtifactPublisher(store, new TestScanner('blocked'), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    await blockedPublisher.rescanExisting({
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      platforms: ['darwin-arm64'],
+    })
+    const selector = {
+      domain: 'example.com/tool',
+      version: '1.2.3',
+      artifactSha256: createHash('sha256').update(bytes).digest('hex'),
+    }
+
+    const unauthenticated = await fetch(`${baseUrl}/api/v1/binaries/quarantine/rescan/prepare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(selector),
+    })
+    expect(unauthenticated.status).toBe(401)
+
+    const prepareResponse = await fetch(`${baseUrl}/api/v1/binaries/quarantine/rescan/prepare`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(selector),
+    })
+    expect(prepareResponse.status).toBe(200)
+    const prepared = await prepareResponse.json() as any
+    expect(prepared.action).toBe('prepared')
+
+    const attestResponse = await fetch(`${baseUrl}/api/v1/binaries/quarantine/rescan/attest`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...selector,
+        quarantineKey: prepared.quarantineKey,
+        size: prepared.size,
+        objectIdentity: prepared.objectIdentity,
+        scan: {
+          verdict: 'clean',
+          engine: 'clamav',
+          scannedAt: new Date().toISOString(),
+          durationMs: 10,
+          artifactSha256: selector.artifactSha256,
+          engineVersion: 'ClamAV 1.5.3',
+          databaseVersion: '28079',
+        },
+      }),
+    })
+    expect(attestResponse.status).toBe(200)
+    expect((await attestResponse.json() as any).action).toBe('released')
   })
 })
