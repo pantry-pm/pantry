@@ -128,7 +128,8 @@ jobs:
             # clamd on existing hosts as well as fresh registry setups.
             if ! command -v clamdscan >/dev/null 2>&1 ||
               ! command -v ionice >/dev/null 2>&1 ||
-              ! command -v jq >/dev/null 2>&1; then
+              ! command -v jq >/dev/null 2>&1 ||
+              ! command -v systemd-run >/dev/null 2>&1; then
               command -v apt-get >/dev/null 2>&1 || {
                 echo "clamav-daemon and jq are required and this host has no apt-get" >&2
                 exit 1
@@ -227,6 +228,9 @@ jobs:
             set_env CLAMD_HEALTH_TIMEOUT_MS 5000
             set_env CLAMD_MAX_BYTES 1073741824
             set_env PANTRY_SCANNER_DOWNLOAD_BYTES_PER_SECOND 8388608
+            set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true
+            set_env PANTRY_SCANNER_WORKER_MEMORY_HIGH 192M
+            set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 256M
             set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
             if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$ENV_FILE"; then
               command -v openssl >/dev/null 2>&1 || {
@@ -259,7 +263,7 @@ jobs:
               '[Service]' \
               'Type=oneshot' \
               "ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service'" \
-              "ExecStart=/bin/systemctl start clamav-daemon.service ${SERVICE}.service" \
+              "ExecStart=/bin/bash -c '/bin/systemctl start clamav-daemon.service ${SERVICE}.service; for attempt in 1 2 3; do /usr/bin/curl -fsS --connect-timeout 3 --max-time 8 http://127.0.0.1:${PORT}/health >/dev/null && exit 0; sleep 2; done; /bin/systemctl restart ${SERVICE}.service'" \
               > "/etc/systemd/system/${SERVICE}-recovery.service"
             printf '%s\n' \
               '[Unit]' \

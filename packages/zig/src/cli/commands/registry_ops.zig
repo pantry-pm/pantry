@@ -351,7 +351,7 @@ const provision_script =
     \\bun_bin="$(command -v bun || echo /root/.bun/bin/bun)"
     \\echo "    Bun: $($bun_bin --version)"
     \\
-    \\if ! command -v clamdscan >/dev/null 2>&1 || ! command -v ionice >/dev/null 2>&1; then
+    \\if ! command -v clamdscan >/dev/null 2>&1 || ! command -v ionice >/dev/null 2>&1 || ! command -v systemd-run >/dev/null 2>&1; then
     \\  command -v apt-get >/dev/null 2>&1 || { echo "Error: clamav-daemon is required and this host has no apt-get." >&2; exit 1; }
     \\  echo "    Installing ClamAV publish-time scanner..."
     \\  DEBIAN_FRONTEND=noninteractive apt-get update -qq
@@ -459,6 +459,9 @@ const provision_script =
     \\set_env CLAMD_HEALTH_TIMEOUT_MS 5000
     \\set_env CLAMD_MAX_BYTES 1073741824
     \\set_env PANTRY_SCANNER_DOWNLOAD_BYTES_PER_SECOND 8388608
+    \\set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true
+    \\set_env PANTRY_SCANNER_WORKER_MEMORY_HIGH 192M
+    \\set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 256M
     \\set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
     \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
     \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then
