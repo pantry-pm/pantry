@@ -62,6 +62,7 @@ export const cliproxyapiPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.2.110',
     '7.2.109',
     '7.2.108',
     '7.2.107',
