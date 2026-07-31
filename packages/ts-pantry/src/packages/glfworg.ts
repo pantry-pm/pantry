@@ -70,6 +70,7 @@ export const glfworgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.5.1',
     '3.4',
     '3.4.0',
     '3.3.10',
