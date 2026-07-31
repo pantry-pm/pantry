@@ -22,6 +22,7 @@ export const cursorcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.14.7',
     '3.13.25',
     '3.13.21',
     '3.13.10',

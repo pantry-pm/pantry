@@ -77,6 +77,7 @@ export const cmakePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.4.2',
     '4.4.1',
     '4.4.0',
     '4.3.4',
