@@ -76,6 +76,7 @@ export const misejdxdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2026.8.0',
     '2026.7.18',
     '2026.7.17',
     '2026.7.16',
