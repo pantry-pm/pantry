@@ -67,6 +67,8 @@ export const casdoororgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.136.0',
+    '3.135.0',
     '3.134.0',
     '3.133.0',
     '3.132.0',
