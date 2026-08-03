@@ -25,6 +25,7 @@ export const linearappPackage = {
     '1.53.0',
     '1.52.0',
     '1.51.0',
+    '1.32.1',
     '1.32.0',
     '1.31.1',
   ] as const,
