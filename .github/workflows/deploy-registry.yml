@@ -263,16 +263,24 @@ jobs:
               '[Service]' \
               'Type=oneshot' \
               "ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service'" \
-              "ExecStart=/bin/bash -c '/bin/systemctl start clamav-daemon.service ${SERVICE}.service; for attempt in 1 2 3; do /usr/bin/curl -fsS --connect-timeout 3 --max-time 8 http://127.0.0.1:${PORT}/health >/dev/null && exit 0; sleep 2; done; /bin/systemctl restart ${SERVICE}.service'" \
+              "ExecStart=/bin/bash -c 'systemctl start clamav-daemon.service ${SERVICE}.service; probe() { for attempt in 1 2 3; do /usr/bin/curl -fsS --connect-timeout 3 --max-time 8 http://127.0.0.1:${PORT}/health >/dev/null && return 0; sleep 2; done; return 1; }; probe && exit 0; echo \"[recover] UNHEALTHY: :${PORT}/health failed 3 probes; restarting clamav-daemon + ${SERVICE}\"; systemctl restart clamav-daemon.service; systemctl restart ${SERVICE}.service; sleep 8; probe && { echo \"[recover] RECOVERED\"; exit 0; }; echo \"[recover] STILL UNHEALTHY after restart - needs a human\"; exit 1'" \
+              'SuccessExitStatus=0 1' \
               > "/etc/systemd/system/${SERVICE}-recovery.service"
+            # OnCalendar, not OnBootSec+OnUnitActiveSec. systemd derives the next
+            # OnUnitActiveSec elapse from the activated unit's ActiveEnterTimestamp,
+            # which is empty for a Type=oneshot service after a reboot: it then
+            # resolves NextElapseUSecMonotonic=infinity and the timer never fires
+            # again while still reporting active/enabled. That happened on
+            # 2026-07-31 and left the registry unwatched until it wedged on
+            # 2026-08-03, taking pantry.dev down until someone noticed by hand.
+            # An absolute calendar schedule cannot enter that state.
             printf '%s\n' \
               '[Unit]' \
               'Description=Periodically recover Pantry Registry malware scanning services' \
               '' \
               '[Timer]' \
-              'OnBootSec=1min' \
-              'OnUnitActiveSec=1min' \
-              'Persistent=true' \
+              'OnCalendar=*:0/1' \
+              'AccuracySec=5s' \
               "Unit=${SERVICE}-recovery.service" \
               '' \
               '[Install]' \
