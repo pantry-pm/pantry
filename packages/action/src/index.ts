@@ -350,7 +350,11 @@ async function installSystemPackage(
   core.info(`Installing ${domain}@${version} via pantry SDK${source}`)
   // `installPackage` handles "latest", "*", empty, semver ranges, and concrete
   // versions — don't pre-resolve here or semver ranges get flattened to latest.
-  const installed = await installPackage(domain, version, { installDir: pantryDir, quiet: true })
+  const installed = await installPackage(domain, version, {
+    installDir: pantryDir,
+    quiet: true,
+    onRetry: message => core.warning(message),
+  })
   resolvedVersions?.set(domain, installed.version)
 }
 

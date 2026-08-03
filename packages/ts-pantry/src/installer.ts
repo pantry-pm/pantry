@@ -16,6 +16,9 @@ import * as os from 'node:os'
 import * as https from 'node:https'
 import * as http from 'node:http'
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { compareVersions } from './generate-zig'
 
 const PANTRY_REGISTRY = (process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev').replace(/\/$/, '')
@@ -36,6 +39,8 @@ export interface InstallOptions {
   createBinLinks?: boolean
   /** Quiet mode — suppress progress output (default: false) */
   quiet?: boolean
+  /** Receive bounded transport-retry diagnostics. */
+  onRetry?: (message: string) => void
   /**
    * Mirror this package's binaries to a stable user-level directory so they
    * appear on PATH after a one-time `pantry shell-init`. When `true` the
@@ -264,8 +269,10 @@ export async function installPackage(
   }
   // Resolve short dev versions (e.g. "0.16.0-dev") to full version via upstream API
   else if (domain === 'ziglang.org' && version.endsWith('-dev')) {
-    const resolved = await resolveZigShortDevVersion(version)
-    if (resolved) version = resolved
+    const resolved = await resolveZigShortDevVersion(version, { onRetry: options.onRetry })
+    if (!resolved)
+      throw new Error(`Could not resolve ${version} to a published ziglang.org development build`)
+    version = resolved
   }
 
   // Catch every path where version resolution silently produced "". An
@@ -308,7 +315,24 @@ export async function installPackage(
   const archivePath = path.join(tmpDir, `archive.${format}`)
 
   try {
-    await downloadFile(url, archivePath, 10, options.quiet ?? false)
+    let expectedSha256: string | undefined
+    if (url.startsWith(`${PANTRY_REGISTRY}/binaries/`)) {
+      const checksumPath = path.join(tmpDir, 'archive.sha256')
+      await downloadFileReliably(`${url}.sha256`, checksumPath, {
+        quiet: options.quiet,
+        onRetry: options.onRetry,
+      })
+      const checksum = fs.readFileSync(checksumPath, 'utf8').match(/\b([a-f0-9]{64})\b/i)?.[1]
+      if (!checksum)
+        throw new Error(`Invalid SHA-256 checksum response for ${url}`)
+      expectedSha256 = checksum.toLowerCase()
+    }
+
+    await downloadFileReliably(url, archivePath, {
+      quiet: options.quiet,
+      onRetry: options.onRetry,
+      expectedSha256,
+    })
 
     // Extract
     const extractDir = path.join(tmpDir, 'extracted')
@@ -501,13 +525,13 @@ async function latestFromPackageMetadata(domain: string): Promise<string> {
 /**
  * Resolve a short Zig dev version like "0.17.0-dev" from the Pantry registry.
  */
-async function resolveZigShortDevVersion(shortVersion: string): Promise<string | null> {
-  const versions = await registryVersions('ziglang.org')
+async function resolveZigShortDevVersion(shortVersion: string, retryOptions: NetworkRetryOptions = {}): Promise<string | null> {
+  const versions = await registryVersions('ziglang.org', retryOptions)
   return versions.filter(version => version.startsWith(`${shortVersion}.`)).sort(compareVersions)[0] || null
 }
 
-async function registryVersions(domain: string): Promise<string[]> {
-  const metadata = await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`)
+async function registryVersions(domain: string, retryOptions: NetworkRetryOptions = {}): Promise<string[]> {
+  const metadata = await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`, 5, retryOptions)
     .catch(() => null) as { versions?: Record<string, unknown> } | null
   return Object.keys(metadata?.versions || {})
 }
@@ -656,93 +680,174 @@ async function resolveVersionConstraint(domain: string, constraint: string): Pro
 
 // ── Helpers ──
 
-function downloadFile(url: string, dest: string, maxRedirects = 10, quiet = false): Promise<void> {
+export interface NetworkRetryOptions {
+  maxAttempts?: number
+  retryDelayMs?: number
+  sleep?: (milliseconds: number) => Promise<void>
+  onRetry?: (message: string) => void
+}
+
+export interface DownloadFileOptions extends NetworkRetryOptions {
+  quiet?: boolean
+  expectedSha256?: string
+  stallTimeoutMs?: number
+}
+
+const DEFAULT_NETWORK_MAX_ATTEMPTS = 4
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (typeof error === 'object' && error !== null && 'statusCode' in error) {
+    const status = Number((error as { statusCode?: unknown }).statusCode)
+    if (Number.isFinite(status)) return status
+  }
+  const match = errorMessage(error).match(/\bHTTP\s+(\d{3})\b/i)
+  return match ? Number(match[1]) : undefined
+}
+
+function errorCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return ''
+  const direct = 'code' in error ? String((error as { code?: unknown }).code || '') : ''
+  if (direct) return direct
+  const cause = 'cause' in error ? (error as { cause?: unknown }).cause : undefined
+  return typeof cause === 'object' && cause !== null && 'code' in cause
+    ? String((cause as { code?: unknown }).code || '')
+    : ''
+}
+
+export function isRetryableNetworkError(error: unknown): boolean {
+  const status = errorStatus(error)
+  if (status !== undefined)
+    return status === 408 || status === 425 || status === 429 || status >= 500
+
+  if (/^(?:ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|EAI_AGAIN|ENETDOWN|ENETUNREACH|EHOSTUNREACH|UND_ERR_SOCKET)$/i.test(errorCode(error)))
+    return true
+
+  return /socket hang up|connection reset|premature close|aborted|terminated|timed? ?out|temporar|stalled|incomplete download|checksum mismatch/i.test(errorMessage(error))
+}
+
+export async function retryNetworkOperation<T>(
+  label: string,
+  operation: () => Promise<T>,
+  options: NetworkRetryOptions = {},
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? DEFAULT_NETWORK_MAX_ATTEMPTS
+  const retryDelayMs = options.retryDelayMs ?? 1000
+  const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
+
+  let lastError: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await operation()
+    }
+    catch (error) {
+      lastError = error
+      if (!isRetryableNetworkError(error)) throw error
+      if (attempt === maxAttempts) break
+      const delay = Math.min(retryDelayMs * 2 ** (attempt - 1), 10_000)
+      options.onRetry?.(`${label} failed (${errorMessage(error)}); retrying in ${delay}ms`)
+      await sleep(delay)
+    }
+  }
+
+  throw new Error(`${label} failed after ${maxAttempts} attempts: ${errorMessage(lastError)}`)
+}
+
+function openDownload(url: string, maxRedirects: number, stallTimeoutMs: number): Promise<http.IncomingMessage> {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest)
     const get = url.startsWith('https') ? https.get : http.get
-    const showProgress = !quiet && process.stderr.isTTY
-
-    // Stall watchdog — abort if no bytes arrive for 60s. Without this,
-    // a hung TCP connection makes `pantry install` look like it's
-    // frozen forever instead of failing with a clear error.
-    let lastDataAt = Date.now()
-    let received = 0
-    let total = 0
-    let lastPrintAt = 0
-    const STALL_MS = 60_000
-
-    const req = get(url, (res) => {
-      // Handle redirects
+    const req = get(url, { headers: { 'User-Agent': 'pantry-installer' } }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        file.close()
-        try { fs.unlinkSync(dest) } catch { /* ignore */ }
+        res.resume()
         if (maxRedirects <= 0) return reject(new Error(`Too many redirects for ${url}`))
-        return downloadFile(res.headers.location, dest, maxRedirects - 1, quiet).then(resolve, reject)
+        const redirect = new URL(res.headers.location, url).href
+        return openDownload(redirect, maxRedirects - 1, stallTimeoutMs).then(resolve, reject)
       }
 
       if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-        file.close()
-        try { fs.unlinkSync(dest) } catch { /* ignore */ }
-        return reject(new Error(`HTTP ${res.statusCode || 'unknown'} downloading ${url}`))
+        res.resume()
+        const error = Object.assign(new Error(`HTTP ${res.statusCode || 'unknown'} downloading ${url}`), {
+          statusCode: res.statusCode,
+        })
+        return reject(error)
       }
 
-      const contentLength = res.headers['content-length']
-      if (contentLength) total = Number.parseInt(contentLength, 10) || 0
-
-      res.on('data', (chunk: Buffer) => {
-        lastDataAt = Date.now()
-        received += chunk.length
-        if (showProgress && lastDataAt - lastPrintAt > 200) {
-          lastPrintAt = lastDataAt
-          const mb = (received / 1_048_576).toFixed(1)
-          if (total > 0) {
-            const totalMb = (total / 1_048_576).toFixed(1)
-            const pct = Math.floor((received / total) * 100)
-            process.stderr.write(`\r    ${mb}/${totalMb} MB (${pct}%)`)
-          }
-          else {
-            process.stderr.write(`\r    ${mb} MB`)
-          }
-        }
+      res.setTimeout(stallTimeoutMs, () => {
+        res.destroy(new Error(`Download stalled (no data for ${stallTimeoutMs / 1000}s): ${url}`))
       })
-
-      res.pipe(file)
-      res.on('error', (err) => {
-        file.close()
-        try { fs.unlinkSync(dest) } catch { /* ignore */ }
-        reject(err)
-      })
-      file.on('finish', () => {
-        file.close()
-        if (showProgress && lastPrintAt > 0) process.stderr.write('\r\x1b[K')
-        resolve()
-      })
-      file.on('error', (err) => {
-        try { fs.unlinkSync(dest) } catch { /* ignore */ }
-        reject(err)
-      })
+      resolve(res)
     })
-
-    req.on('error', (err) => {
-      file.close()
-      try { fs.unlinkSync(dest) } catch { /* ignore */ }
-      reject(err)
+    req.setTimeout(stallTimeoutMs, () => {
+      req.destroy(new Error(`Download timed out after ${stallTimeoutMs / 1000}s: ${url}`))
     })
-
-    // Drive the stall timer off setInterval so we surface a clean
-    // error message instead of relying on the OS-level socket timeout
-    // (which on macOS can be 60+ seconds with no visible feedback).
-    const stallTimer = setInterval(() => {
-      if (Date.now() - lastDataAt > STALL_MS) {
-        clearInterval(stallTimer)
-        req.destroy(new Error(`Download stalled (no data for ${STALL_MS / 1000}s): ${url}`))
-      }
-    }, 5_000)
-    const clearStall = () => clearInterval(stallTimer)
-    file.once('finish', clearStall)
-    file.once('error', clearStall)
-    req.once('error', clearStall)
+    req.once('error', reject)
   })
+}
+
+async function downloadFileOnce(url: string, dest: string, options: DownloadFileOptions): Promise<void> {
+  const partialPath = `${dest}.part`
+  try { fs.rmSync(partialPath, { force: true }) } catch { /* ignore */ }
+
+  const response = await openDownload(url, 10, options.stallTimeoutMs ?? 60_000)
+  const showProgress = !options.quiet && process.stderr.isTTY
+  const declaredLength = Number.parseInt(String(response.headers['content-length'] || ''), 10)
+  const total = Number.isFinite(declaredLength) ? declaredLength : 0
+  let received = 0
+  let lastPrintAt = 0
+  const hash = options.expectedSha256 ? createHash('sha256') : undefined
+
+  const meter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      received += chunk.length
+      hash?.update(chunk)
+      const now = Date.now()
+      if (showProgress && now - lastPrintAt > 200) {
+        lastPrintAt = now
+        const mb = (received / 1_048_576).toFixed(1)
+        if (total > 0) {
+          const totalMb = (total / 1_048_576).toFixed(1)
+          const pct = Math.floor((received / total) * 100)
+          process.stderr.write(`\r    ${mb}/${totalMb} MB (${pct}%)`)
+        }
+        else {
+          process.stderr.write(`\r    ${mb} MB`)
+        }
+      }
+      callback(null, chunk)
+    },
+  })
+
+  try {
+    await pipeline(response, meter, fs.createWriteStream(partialPath))
+    if (!response.complete || (total > 0 && received !== total))
+      throw new Error(`Incomplete download for ${url}: received ${received} of ${total || 'unknown'} bytes`)
+
+    if (options.expectedSha256) {
+      const actual = hash!.digest('hex')
+      if (actual !== options.expectedSha256.toLowerCase())
+        throw new Error(`Checksum mismatch for ${url}: expected ${options.expectedSha256}, got ${actual}`)
+    }
+
+    fs.renameSync(partialPath, dest)
+  }
+  catch (error) {
+    try { fs.rmSync(partialPath, { force: true }) } catch { /* ignore */ }
+    throw error
+  }
+  finally {
+    if (showProgress && lastPrintAt > 0) process.stderr.write('\r\x1b[K')
+  }
+}
+
+export async function downloadFileReliably(url: string, dest: string, options: DownloadFileOptions = {}): Promise<void> {
+  await retryNetworkOperation(
+    `Download ${url}`,
+    () => downloadFileOnce(url, dest, options),
+    options,
+  )
 }
 
 async function extractArchive(archivePath: string, destDir: string, format: string): Promise<void> {
@@ -810,7 +915,7 @@ function makeTreeExecutable(dir: string): void {
   }
 }
 
-function fetchJSON(url: string, maxRedirects = 5): Promise<unknown> {
+function fetchJSONOnce(url: string, maxRedirects: number): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const get = url.startsWith('https') ? https.get : http.get
     const headers: Record<string, string> = {
@@ -829,10 +934,13 @@ function fetchJSON(url: string, maxRedirects = 5): Promise<unknown> {
     const req = get(url, { headers, timeout: 30000 }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         if (maxRedirects <= 0) return reject(new Error(`Too many redirects for ${url}`))
-        return fetchJSON(res.headers.location, maxRedirects - 1).then(resolve, reject)
+        const redirect = new URL(res.headers.location, url).href
+        return fetchJSONOnce(redirect, maxRedirects - 1).then(resolve, reject)
       }
       if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
-        return reject(new Error(`HTTP ${res.statusCode || 'unknown'} fetching ${url}`))
+        return reject(Object.assign(new Error(`HTTP ${res.statusCode || 'unknown'} fetching ${url}`), {
+          statusCode: res.statusCode,
+        }))
       }
       let data = ''
       res.on('data', chunk => data += chunk)
@@ -847,6 +955,14 @@ function fetchJSON(url: string, maxRedirects = 5): Promise<unknown> {
       reject(new Error(`Request timed out: ${url}`))
     })
   })
+}
+
+function fetchJSON(url: string, maxRedirects = 5, retryOptions: NetworkRetryOptions = {}): Promise<unknown> {
+  return retryNetworkOperation(
+    `Fetch ${url}`,
+    () => fetchJSONOnce(url, maxRedirects),
+    retryOptions,
+  )
 }
 
 /**
