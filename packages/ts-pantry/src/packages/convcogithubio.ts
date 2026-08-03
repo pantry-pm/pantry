@@ -67,6 +67,7 @@ export const convcogithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.7.1',
     '0.7.0',
     '0.6.4',
     '0.6.3',
