@@ -19,6 +19,7 @@ export const meslolgnerdfontPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.5.0',
     '3.4.0',
     '3.3.0',
     '3.2.1',
