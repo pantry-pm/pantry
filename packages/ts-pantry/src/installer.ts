@@ -61,6 +61,12 @@ export interface InstallResult {
   globalLinks?: string[]
 }
 
+/** Normalize canonical versions to the registry's filesystem-safe spelling. */
+export function normalizeInstallerVersion(domain: string, version: string): string {
+  if (domain !== 'ziglang.org') return version
+  return version.replace(/(-dev\.\d+)\+([0-9A-Za-z-]+)$/, '$1_$2')
+}
+
 /**
  * Stable user-level directory we expose on PATH via `pantry shell-init`.
  * Mirrors the Zig CLI's `$HOME/.local/share/pantry/global/bin` convention so
@@ -274,6 +280,8 @@ export async function installPackage(
       throw new Error(`Could not resolve ${version} to a published ziglang.org development build`)
     version = resolved
   }
+
+  version = normalizeInstallerVersion(domain, version)
 
   // Catch every path where version resolution silently produced "". An
   // empty version string used to slip through and become a `bun-v/...`-

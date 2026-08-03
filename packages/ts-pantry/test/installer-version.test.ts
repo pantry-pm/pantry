@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'bun:test'
 import {
   compareInstallerVersionsDesc,
+  normalizeInstallerVersion,
   parseInstallerConstraint,
   resolveInstallerConstraintFromCandidates,
   satisfiesInstallerConstraint,
 } from '../src/installer'
 
 describe('installer version constraints', () => {
+  it('maps canonical Zig build metadata to registry paths', () => {
+    expect(normalizeInstallerVersion('ziglang.org', '0.17.0-dev.1441+d5181a9c9'))
+      .toBe('0.17.0-dev.1441_d5181a9c9')
+    expect(normalizeInstallerVersion('bun.sh', '1.3.14+build')).toBe('1.3.14+build')
+  })
+
   it('preserves prerelease metadata while parsing', () => {
     expect(parseInstallerConstraint('^0.17.0-dev')).toEqual({ operator: '^', target: '0.17.0-dev' })
     expect(parseInstallerConstraint('>=0.17.0-dev.1417+20befa4e6')).toEqual({
