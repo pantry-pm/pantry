@@ -84,6 +84,7 @@ export const ansiblecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.21.3rc1',
     '2.21.2',
     '2.21.2rc1',
     '2.21.1',
@@ -93,6 +94,7 @@ export const ansiblecomPackage = {
     '2.21.0b3',
     '2.21.0b2',
     '2.21.0b1',
+    '2.20.8rc1',
     '2.20.7',
     '2.20.7rc1',
     '2.20.6',
@@ -113,6 +115,7 @@ export const ansiblecomPackage = {
     '2.20.0rc1',
     '2.20.0b2',
     '2.20.0b1',
+    '2.19.12rc1',
     '2.19.11',
     '2.19.11rc1',
     '2.19.10',

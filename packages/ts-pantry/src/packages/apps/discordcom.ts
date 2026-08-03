@@ -22,6 +22,7 @@ export const discordcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '0.0.406',
     '0.0.405',
     '0.0.403',
     '0.0.402',
