@@ -66,6 +66,7 @@ export const molePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.49.2',
     '1.49.1',
     '1.49.0',
     '1.48.1',
