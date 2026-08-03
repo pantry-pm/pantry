@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
+import { installRequiredSystemPackages, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 
 describe('Pantry Action install mode', () => {
   test('service-only setup does not install project dependencies', () => {
@@ -17,5 +17,14 @@ describe('Pantry Action install mode', () => {
     expect(selectSystemPackages('zig@0.16.0 bun@1.3.14', true, () => [])).toEqual(['zig@0.16.0', 'bun@1.3.14'])
     expect(shouldInstallWorkspace('', false)).toBe(true)
     expect(shouldInstallWorkspace('zig', false)).toBe(false)
+  })
+
+  test('required system package failures reject the action', async () => {
+    const attempted: string[] = []
+    await expect(installRequiredSystemPackages(['bun.sh', 'zig@0.17.0-dev'], async packageSpec => {
+      attempted.push(packageSpec)
+      if (packageSpec.startsWith('zig')) throw new Error('socket hang up')
+    })).rejects.toThrow('Required system package zig@0.17.0-dev failed to install: socket hang up')
+    expect(attempted).toEqual(['bun.sh', 'zig@0.17.0-dev'])
   })
 })

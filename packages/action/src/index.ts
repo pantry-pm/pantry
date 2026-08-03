@@ -9,7 +9,7 @@ import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
-import { selectSystemPackages, shouldInstallWorkspace } from './install-mode'
+import { installRequiredSystemPackages, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
 import { mergeServicePackages, nativeServiceEnvironment, parseRedisVersion, parseServiceSpecs, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 import * as fs from 'node:fs'
@@ -906,14 +906,10 @@ export async function run(): Promise<void> {
       const systemDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
       if (systemDeps.length > 0) {
         core.info(`Cache hit — reconciling system deps against lock/spec: ${systemDeps.join(', ')}`)
-        for (const dep of systemDeps) {
-          try {
-            await installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions)
-          }
-          catch (err) {
-            core.warning(`${dep}: ${err instanceof Error ? err.message : 'install failed'}`)
-          }
-        }
+        await installRequiredSystemPackages(
+          systemDeps,
+          dep => installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions),
+        )
       }
 
       // Validate workspace deps: pantry/<name>/ dirs exist for every non-system
@@ -944,17 +940,18 @@ export async function run(): Promise<void> {
 
       if (systemDeps.length > 0) {
         core.startGroup(`Installing system packages: ${systemDeps.join(', ')}`)
-        // Use the pantry TS installer SDK — works cross-platform via Node.js APIs
-        const results = await Promise.allSettled(
-          systemDeps.map(dep => installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions))
-        )
-        for (let i = 0; i < results.length; i++) {
-          if (results[i].status === 'rejected') {
-            const reason = (results[i] as PromiseRejectedResult).reason
-            core.warning(`${systemDeps[i]}: ${reason instanceof Error ? reason.message : 'install failed'}`)
-          }
+        try {
+          // Use the pantry TS installer SDK — works cross-platform via Node.js APIs.
+          // Every selected package is part of the action contract; a partial
+          // install must fail this step rather than surprising a later command.
+          await installRequiredSystemPackages(
+            systemDeps,
+            dep => installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions),
+          )
         }
-        core.endGroup()
+        finally {
+          core.endGroup()
+        }
       }
 
       if (shouldInstallWorkspace(inputs.packages, inputs.setupOnly)) {
@@ -990,14 +987,10 @@ export async function run(): Promise<void> {
     // any per-workflow workaround.
     {
       const reassertDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
-      for (const dep of reassertDeps) {
-        try {
-          await installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions, true)
-        }
-        catch (err) {
-          core.warning(`re-assert ${dep}: ${err instanceof Error ? err.message : 'failed'}`)
-        }
-      }
+      await installRequiredSystemPackages(
+        reassertDeps,
+        dep => installSystemPackage(dep, pantryDir, lockedVersions, resolvedSystemVersions, true),
+      )
     }
 
     // ── Ensure installed binaries are executable ──
