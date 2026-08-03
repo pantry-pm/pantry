@@ -79,10 +79,12 @@ export const vclustercomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.36.1',
     '0.36.0',
     '0.35.2',
     '0.35.1',
     '0.35.0',
+    '0.34.7',
     '0.34.6',
     '0.34.5',
     '0.34.4',
