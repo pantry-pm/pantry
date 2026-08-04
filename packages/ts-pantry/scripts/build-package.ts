@@ -1967,10 +1967,15 @@ else {
       },
       stdio: 'inherit',
       shell: bashShell,
-      // Build-script timeout. Default 60 min (heavy C++ like mariadb/mysql can
-      // exceed 30 min on slower x86-64 runners — that ETIMEDOUT killed mariadb
-      // at 64%). Override with BUILD_SCRIPT_TIMEOUT_MS.
-      timeout: Number(process.env.BUILD_SCRIPT_TIMEOUT_MS) || 60 * 60 * 1000,
+      // Build-script timeout. Raised from 60 to 150 minutes: the 60-minute
+      // bound was set after an ETIMEDOUT killed mariadb at 64%, but it was
+      // still too tight - mysql.com now compiles for over an hour on a
+      // 4-core x86-64 runner and died the same way, having done everything
+      // right. The GitHub job it runs inside has no explicit timeout (a
+      // 6-hour default), so this is the binding limit and it needs headroom
+      // for the heaviest package rather than the typical one.
+      // Override with BUILD_SCRIPT_TIMEOUT_MS.
+      timeout: Number(process.env.BUILD_SCRIPT_TIMEOUT_MS) || 150 * 60 * 1000,
     })
   }
 catch (error: unknown) {
