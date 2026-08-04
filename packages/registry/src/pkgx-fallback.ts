@@ -28,7 +28,17 @@ const BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux
 // Custom builds: we deliberately compile these with our own configure flags /
 // extensions, so pkgx's vanilla binary would silently drop them. NEVER serve these
 // from pkgx — they only ever come from our own build.
-const CUSTOM_BUILD_DOMAINS = new Set<string>(['php.net', 'postgresql.org'])
+const CUSTOM_BUILD_DOMAINS = new Set<string>([
+  'php.net',
+  'postgresql.org',
+  // mysql.com is compiled with `-DWITH_ICU=bundled`, `-DWITH_SSL` pointed at
+  // pantry's openssl, and libtirpc for the Sun RPC headers glibc dropped.
+  // pkgx's vanilla build has none of that: its mysqld links an EXTERNAL
+  // `libicuuc.so.<major>` that the registry does not carry, so the binary
+  // installs cleanly and then cannot start at all. Observed on a real box as
+  // "libicuuc.so.71: cannot open shared object file".
+  'mysql.com',
+])
 
 export interface MaterializeResult { tarballKey: string, sha256: string, size: number }
 interface PlatformBinary { tarball: string, sha256: string, size: number, uploadedAt: string }

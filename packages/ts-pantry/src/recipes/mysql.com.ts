@@ -7,14 +7,65 @@ export const recipe: Recipe = {
   homepage: 'https://www.mysql.com/',
   github: 'https://github.com/mysql/mysql-server',
   programs: ['mysql_client_test', 'my_print_defaults', 'myisam_ftdump', 'myisamchk', 'myisamlog', 'myisampack', 'mysql', 'mysql_config', 'mysql_config_editor', 'mysql_keyring_encryption_test', 'mysql_migrate_keyring', 'mysql_secure_installation', 'mysql_tzinfo_to_sql', 'mysqladmin', 'mysqlbinlog', 'mysqlcheck', 'mysqld', 'mysqld_multi', 'mysqld_safe', 'mysqldump', 'mysqldumpslow', 'mysqlimport', 'mysqlrouter', 'mysqlrouter_keyring', 'mysqlrouter_passwd', 'mysqlrouter_plugin_info', 'mysqlshow', 'mysqlslap', 'mysqltest', 'mysqltest_safe_process', 'mysqlxtest'],
-  // github-releases tags (mysql-server) surface phantom "innovation" versions
-  // (e.g. 9.6.0) whose source tarball isn't published on the CDN, so the build
-  // would no-op as "source unavailable". Pin to the latest 8.0 GA, whose
-  // `mysql-boost-` archive tarball (bundled boost the build needs) is published.
+  // github-releases tags (mysql-server) surface "innovation" versions (9.x)
+  // whose source tarball is never published on the CDN, so a build for one
+  // fails with a 404 and - worse - the registry used to fall back to pkgx's
+  // vanilla binary, which links an external ICU the registry does not carry.
+  // See CUSTOM_BUILD_DOMAINS in packages/registry/src/pkgx-fallback.ts.
+  //
+  // So versions are not taken on trust: candidates come from the 8.0 GA line
+  // and each is kept only if its `mysql-boost-` tarball actually exists. That
+  // is what makes this self-maintaining - a new 8.0 patch is picked up on its
+  // own, and anything unbuildable never reaches the catalog.
   versionSource: {
     type: 'custom',
-    fetch: async () => ['8.0.43'],
+    fetch: async () => {
+      // The CDN is the only authority for what can actually be built, so it
+      // is asked directly rather than inferred from git tags.
+      //
+      // GitHub's tag list is not usable here: mysql-server is tagged
+      // `mysql-cluster-8.0.48` for MySQL Cluster, a different product whose
+      // numbering does not track the server's, so trusting it advertises
+      // versions with no server tarball. Trusting the tags is also how the
+      // 9.x "innovation" releases got into the catalog in the first place -
+      // they are tagged but never published as source.
+      const FLOOR = 43 // 8.0.43, the oldest release this recipe is known to build
+      const MAX_PROBES = 24
+      const STOP_AFTER_MISSES = 3
+
+      const exists = async (version: string): Promise<boolean> => {
+        try {
+          const res = await fetch(
+            `https://cdn.mysql.com/archives/mysql-8.0/mysql-boost-${version}.tar.gz`,
+            { method: 'HEAD' },
+          )
+          return res.ok
+        }
+        catch {
+          return false
+        }
+      }
+
+      const found: string[] = []
+      let misses = 0
+      for (let patch = FLOOR; patch < FLOOR + MAX_PROBES && misses < STOP_AFTER_MISSES; patch++) {
+        const version = `8.0.${patch}`
+        // eslint-disable-next-line no-await-in-loop
+        if (await exists(version)) {
+          found.push(version)
+          misses = 0
+        }
+        else {
+          misses++
+        }
+      }
+
+      // Never hand back an empty catalog on a bad network day: removing the
+      // package outright is worse than serving the last known-good release.
+      return found.length > 0 ? found.reverse() : [`8.0.${FLOOR}`]
+    },
   },
+
   distributable: {
     // The archive host serves stable, never-moving source URLs. 8.4+ dropped the
     // bundled-boost tarball; 8.0.x keeps `mysql-boost-<version>.tar.gz`.

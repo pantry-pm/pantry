@@ -137,3 +137,38 @@ describe('version metadata', () => {
     expect(pkg.dependencies).toEqual([])
   })
 })
+
+// ---------------------------------------------------------------------------
+// mysql.com must only advertise versions it can actually build.
+//
+// A box installing `mysql.com` got a mysqld that could not start:
+// "libicuuc.so.71: cannot open shared object file". The chain was:
+// the catalog advertised 9.6.0, whose source tarball MySQL never publishes;
+// the recipe therefore could not build it; and because mysql.com was not in
+// the pkgx denylist the registry quietly served pkgx's vanilla binary
+// instead - one built against an external ICU the registry does not carry,
+// with every custom flag (bundled ICU, pantry openssl, libtirpc) dropped.
+// ---------------------------------------------------------------------------
+
+describe('mysql.com advertises only buildable versions', () => {
+  const mysql = (pantry as any).mysqlcom
+
+  it('advertises no 9.x innovation release', () => {
+    // These are tagged but never published as source.
+    for (const v of mysql.versions) expect(v.startsWith('9.')).toBe(false)
+  })
+
+  it('advertises only the 8.0 GA line the recipe builds', () => {
+    for (const v of mysql.versions) expect(v).toMatch(/^8\.0\.\d+$/)
+  })
+
+  it('is excluded from the pkgx fallback', async () => {
+    // The registry must never substitute a vanilla build for this package:
+    // it silently drops the flags that make it work.
+    const src = await Bun.file(
+      new URL('../../registry/src/pkgx-fallback.ts', import.meta.url).pathname,
+    ).text()
+    const block = src.slice(src.indexOf('CUSTOM_BUILD_DOMAINS'), src.indexOf('MaterializeResult'))
+    expect(block).toContain(`'mysql.com'`)
+  })
+})

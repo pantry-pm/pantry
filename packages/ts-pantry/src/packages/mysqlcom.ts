@@ -3,7 +3,7 @@
  *
  * @domain `mysql.com`
  * @programs `mysql_client_test`, `my_print_defaults`, `myisam_ftdump`, `myisamchk`, `myisamlog`, ... (+26 more)
- * @version `9.6.0` (32 versions available)
+ * @version `8.0.45` (3 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mysql.com`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "mysql"
  * console.log(pkg.description) // "MySQL Server, the world's most popular open sou..."
  * console.log(pkg.programs)    // ["mysql_client_test", "my_print_defaults", ...]
- * console.log(pkg.versions[0]) // "9.6.0" (latest)
+ * console.log(pkg.versions[0]) // "8.0.43" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/mysql-com.md
@@ -122,38 +122,9 @@ export const mysqlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
-    '9.6.0',
-    '9.5.0',
-    '9.4.0',
-    '9.3.0',
-    '9.2.0',
-    '9.1.0',
-    '9.0.1',
-    '9.0.0',
-    '8.4.7',
-    '8.4.6',
-    '8.4.5',
-    '8.4.4',
-    '8.4.3',
-    '8.4.2',
-    '8.4.1',
-    '8.4.0',
-    '8.3.0',
-    '8.2.0',
-    '8.1.0',
     '8.0.45',
     '8.0.44',
     '8.0.43',
-    '8.0.42',
-    '8.0.41',
-    '8.0.40',
-    '8.0.39',
-    '8.0.38',
-    '8.0.36',
-    '8.0.35',
-    '8.0.34',
-    '8.0.33',
-    '8.0.32',
   ] as const,
   /**
   * Alternative names for this package.
