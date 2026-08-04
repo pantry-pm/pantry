@@ -540,7 +540,39 @@ export class BinaryArtifactPublisher {
     }
   }
 
+  /**
+   * Complete an upload on behalf of an HTTP caller.
+   *
+   * Bounded by what a response can hold open; a scan that outruns that budget
+   * keeps going and the caller polls. See completeAwaitingScan for in-process
+   * callers, which have no such bound.
+   */
   async complete(
+    uploadId: string,
+    publisher?: string,
+    surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
+  ): Promise<BinaryPublishCompleted> {
+    return this.completeWithin(this.completionResponseBudgetMs, uploadId, publisher, surface)
+  }
+
+  /**
+   * Complete an upload, waiting for the verdict however long it takes.
+   *
+   * For callers inside the process - publishBuffer, the pkgx fallback - which
+   * are not holding a response open and have nothing to poll with. Handing
+   * them a retryable 425 would just be an error they cannot act on.
+   */
+  async completeAwaitingScan(
+    uploadId: string,
+    publisher?: string,
+    surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
+  ): Promise<BinaryPublishCompleted> {
+    return this.completeWithin(undefined, uploadId, publisher, surface)
+  }
+
+  /** @param responseBudgetMs undefined waits for the scan however long it takes. */
+  private async completeWithin(
+    responseBudgetMs: number | undefined,
     uploadId: string,
     publisher?: string,
     surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
@@ -556,7 +588,8 @@ export class BinaryArtifactPublisher {
     const running = this.completing.get(uploadId)
     if (running) {
       // Answer a poll at once: the result if it is ready, otherwise "wait".
-      if (running.settledAt === undefined)
+      // An unbounded caller waits for it instead of being told to retry.
+      if (running.settledAt === undefined && responseBudgetMs !== undefined)
         throw completionInProgress()
       return await running.promise
     }
@@ -608,14 +641,24 @@ export class BinaryArtifactPublisher {
     const state = this.beginCompletion(uploadId, () =>
       this.runCompletion(claim, sealedKey, stagingExists, publisher, surface))
 
+    if (responseBudgetMs === undefined)
+      return await state.promise
+
     // The call that STARTED the scan waits, but only as long as a response can
     // safely be held open. Small artifacts - including the EICAR rehearsal the
     // deploy asserts on - settle well inside this and still get a definitive
     // verdict in a single call.
+    let budgetTimer: ReturnType<typeof setTimeout> | undefined
     const settled = await Promise.race([
       state.promise.then(() => true, () => true),
-      new Promise<false>(resolve => setTimeout(() => resolve(false), this.completionResponseBudgetMs)),
-    ])
+      new Promise<false>((resolve) => {
+        budgetTimer = setTimeout(() => resolve(false), responseBudgetMs)
+      }),
+    ]).finally(() => {
+      // Without this the timer keeps the process alive for the whole budget
+      // after a fast scan has already answered.
+      if (budgetTimer) clearTimeout(budgetTimer)
+    })
     if (!settled)
       throw completionInProgress()
     return await state.promise
@@ -752,7 +795,8 @@ export class BinaryArtifactPublisher {
     const initiated = this.initiate(request)
     const claim = this.verifyClaim(initiated.uploadId)
     await this.store.putObject(claim.stagingKey, bytes, 'application/gzip')
-    return this.complete(initiated.uploadId, publisher, surface)
+    // In-process: nothing here can poll a 425, so wait for the verdict.
+    return this.completeAwaitingScan(initiated.uploadId, publisher, surface)
   }
 
   async rescanExisting(input: unknown, publisher?: string): Promise<BinaryRescanCompleted> {

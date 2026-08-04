@@ -301,7 +301,9 @@ export async function materializeFromPkgx(
       })
       if (!upload.ok)
         throw new Error(`pkgx staged upload failed with HTTP ${upload.status}`)
-      await publisher.complete(initiated.uploadId, '_pkgx', 'pkgx')
+      // Materialization runs in-process with nothing to poll a retryable 425
+      // with, so wait for the actual verdict.
+      await publisher.completeAwaitingScan(initiated.uploadId, '_pkgx', 'pkgx')
       _augCache.delete(domain) // augmented view is stale now that this is real
       _pending.delete(pendKey(domain, version, platform))
       return { tarballKey, sha256, size }

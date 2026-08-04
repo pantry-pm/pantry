@@ -1584,6 +1584,30 @@ describe('a retry does not start a competing scan', () => {
     expect(scanner.contexts).toHaveLength(1)
   })
 
+  it('makes an in-process caller wait for the verdict instead of handing it a 425', async () => {
+    // publishBuffer and the pkgx fallback run inside the process with nothing
+    // to poll with. A retryable "ask again later" is an error they cannot act
+    // on, so they must get the real verdict however long it takes.
+    const store = new MemoryArtifactStore()
+    const scanner = new ControlledTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      completionResponseBudgetMs: 10,
+    })
+    const bytes = Buffer.from('clean artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    const waiting = publisher.completeAwaitingScan(initiated.uploadId, '_pkgx', 'pkgx')
+    await scanner.started
+    // Well past the response budget, and still waiting rather than rejected.
+    await Bun.sleep(60)
+    scanner.release()
+
+    expect((await waiting).scan.verdict).toBe('clean')
+    expect(scanner.contexts).toHaveLength(1)
+  })
+
   it('reports a detached failure to the poll rather than losing it', async () => {
     const store = new MemoryArtifactStore()
     const scanner = new ControlledTestScanner('blocked')
