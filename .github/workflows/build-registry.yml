@@ -39,7 +39,11 @@ env:
   S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
 
 concurrency:
-  group: build-registry-${{ github.ref }}
+  # Keyed on the PACKAGE, not just the ref. With only the ref in the key,
+  # starting a build for one package cancelled an in-flight build of a
+  # completely unrelated one, because `cancel-in-progress` treats them as the
+  # same work. Two packages have no reason to contend.
+  group: build-registry-${{ github.ref }}-${{ github.event.inputs.package }}-${{ github.event.inputs.version }}
   cancel-in-progress: true
 
 permissions:
@@ -245,7 +249,12 @@ jobs:
     name: Publish scanned binaries
     needs: [prepare, build]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Publication downloads every platform artifact, scans it for malware, and
+    # uploads it. A large package (vitess.io is ~500MB of Go binaries) does not
+    # fit in 15 minutes, and the job was killed mid-scan - which GitHub reports
+    # as "cancelled", so it read as someone aborting the run rather than a
+    # timeout. The build itself takes ~5 minutes; publication is the long pole.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository

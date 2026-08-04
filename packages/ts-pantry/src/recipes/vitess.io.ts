@@ -71,7 +71,12 @@ export const recipe: Recipe = {
       // and ships nothing the server binaries use. The `vtadmin` API binary is
       // still built by `go build ./go/...`; only its bundled frontend is
       // skipped.
-      'make build NOVTADMINBUILD=1 NOBANNER=1',
+      // `-s -w` drops the symbol table and DWARF debug info. Go binaries are
+      // large and Vitess ships fourteen of them: unstripped the artifact is
+      // ~500MB, which overran the registry's publish-and-scan budget. Nothing
+      // at runtime needs the symbols, and upstream's own release build strips
+      // the same way.
+      'make build NOVTADMINBUILD=1 NOBANNER=1 VT_EXTRA_BUILD_LDFLAGS="-s -w"',
       'mkdir -p {{prefix}}/bin',
       // Copied by name rather than `cp bin/*`: `go build ./go/...` also emits
       // test harnesses (vtgateclienttest, vttestserver) and zookeeper helpers
