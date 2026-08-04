@@ -1658,6 +1658,7 @@ import { vimPackage } from './vimorg'
 import { virtualenvpypaioPackage } from './virtualenvpypaio'
 import { virtualsquareorgvdePackage } from './virtualsquare.org/vde'
 import { vitejsdevPackage } from './vitejsdev'
+import { vitessioPackage } from './vitessio'
 import { vlangioPackage } from './vlangio'
 import { voltashPackage } from './voltash'
 import { wailsioPackage } from './wailsio'
@@ -4493,6 +4494,7 @@ export interface Pantry {
 
   virtualsquareorgvde: typeof virtualsquareorgvdePackage
   vitejsdev: typeof vitejsdevPackage
+  vitessio: typeof vitessioPackage
   vlangio: typeof vlangioPackage
   voltash: typeof voltashPackage
   wailsio: typeof wailsioPackage
@@ -6252,6 +6254,7 @@ export interface Pantry {
   virtualenv: typeof virtualenvpypaioPackage
   'Visual Studio Code': typeof codevisualstudiocomPackage
   vite: typeof vitejsdevPackage
+  vitess: typeof vitessioPackage
   vivid: typeof cratesiovividPackage
   vlc: typeof vlcappPackage
   VLC: typeof vlcappPackage
@@ -9135,6 +9138,7 @@ export const pantry: Pantry = {
 
   virtualsquareorgvde: virtualsquareorgvdePackage,
   vitejsdev: vitejsdevPackage,
+  vitessio: vitessioPackage,
   vlangio: vlangioPackage,
   voltash: voltashPackage,
   wailsio: wailsioPackage,
@@ -10894,6 +10898,7 @@ export const pantry: Pantry = {
   virtualenv: virtualenvpypaioPackage,
   'Visual Studio Code': codevisualstudiocomPackage,
   vite: vitejsdevPackage,
+  vitess: vitessioPackage,
   vivid: cratesiovividPackage,
   vlc: vlcappPackage,
   VLC: vlcappPackage,
