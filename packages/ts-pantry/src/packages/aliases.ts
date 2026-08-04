@@ -1614,6 +1614,7 @@ export const aliases: Record<string, string> = {
   'virtualenv': 'virtualenv.pypa.io',
   'Visual Studio Code': 'code.visualstudio.com',
   'vite': 'vitejs.dev',
+  'vitess': 'vitess.io',
   'vivid': 'crates.io/vivid',
   'vlc': 'vlc.app',
   'VLC': 'vlc.app',

@@ -68,6 +68,7 @@ export const rubocoporgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.89.0',
     '1.88.2',
     '1.88.1',
     '1.88.0',
