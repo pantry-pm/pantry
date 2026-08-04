@@ -323,3 +323,39 @@ jobs:
             artifact_name=$(basename "$artifact_dir")
             echo "- \`$artifact_name\`" >> $GITHUB_STEP_SUMMARY
           done
+
+  notify:
+    name: discord-notification
+    needs: [prepare, build, upload-to-s3]
+    # A build that fails is otherwise silent. Every failure so far was found
+    # by someone happening to watch the run, and a publish that exceeded its
+    # timeout reported as "cancelled" - which reads as a human aborting it
+    # rather than a budget being too small. Both now say so out loud.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/discord-notify
+        with:
+          title: >-
+            Package Build - ${{ github.event.inputs.package }}
+            ${{ (needs.build.result == 'success' && needs.upload-to-s3.result == 'success') && 'Published'
+              || (contains(fromJSON('["cancelled","skipped"]'), needs.upload-to-s3.result) || contains(fromJSON('["cancelled","skipped"]'), needs.build.result)) && 'Timed out or cancelled'
+              || 'Failed' }}
+          description: >-
+            ${{ (needs.build.result == 'success' && needs.upload-to-s3.result == 'success')
+              && 'Built and published through the registry scan gate'
+              || 'Check the run: a cancelled job is usually the step timeout, not a human' }}
+          status: >-
+            ${{ (needs.build.result == 'success' && needs.upload-to-s3.result == 'success') && 'success'
+              || (contains(fromJSON('["cancelled","skipped"]'), needs.upload-to-s3.result) || contains(fromJSON('["cancelled","skipped"]'), needs.build.result)) && 'warning'
+              || 'failure' }}
+          fields: |
+            [
+              {"name": "Package", "value": "${{ github.event.inputs.package || 'scheduled' }}", "inline": true},
+              {"name": "Version", "value": "${{ needs.prepare.outputs.version || github.event.inputs.version || 'latest' }}", "inline": true},
+              {"name": "Build", "value": "${{ needs.build.result }}", "inline": true},
+              {"name": "Publish", "value": "${{ needs.upload-to-s3.result }}", "inline": true},
+              {"name": "Run", "value": "[#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": true}
+            ]
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
