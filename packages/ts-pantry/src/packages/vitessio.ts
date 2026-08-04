@@ -2,7 +2,7 @@
  * **vitess** - Horizontally scalable MySQL: a database clustering system that shards MySQL behind a query router
  *
  * @domain `vitess.io`
- * @programs `vtgate`, `vttablet`, `vtctld`, `vtctldclient`, `vtorc`, ... (+12 more)
+ * @programs `mysqlctl`, `mysqlctld`, `vtorc`, `vtadmin`, `vtctl`, ... (+9 more)
  * @version `24.0.2` (71 versions available)
  * @versions From newest version to oldest.
  *
@@ -56,23 +56,20 @@ export const vitessioPackage = {
   * and `vtorc` handles failure detection and reparenting.
   */
   programs: [
-    'vtgate',
-    'vttablet',
-    'vtctld',
-    'vtctldclient',
-    'vtorc',
-    'vtbackup',
-    'vtadmin',
     'mysqlctl',
     'mysqlctld',
-    'vtcombo',
-    'vtexplain',
-    'vtclient',
-    'vtbench',
-    'vtaclcheck',
+    'vtorc',
+    'vtadmin',
     'vtctl',
+    'vtctld',
     'vtctlclient',
-    'topo2topo',
+    'vtctldclient',
+    'vtgate',
+    'vttablet',
+    'vtbackup',
+    'vtexplain',
+    'vtcombo',
+    'vtclient',
   ] as const,
   /**
   * Packages typically installed alongside this one.

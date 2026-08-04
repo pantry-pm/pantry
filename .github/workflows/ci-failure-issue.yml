@@ -12,6 +12,14 @@ on:
       - Build Zig (All Platforms)
       - Releaser
       - Update Packages
+      # A failed package build is the failure most worth surfacing: the
+      # registry keeps serving the previous version, so nothing looks broken
+      # from the outside while new versions silently stop arriving.
+      - Build Package Binaries
+      # Integrity and health run on a schedule, so a failure has no human
+      # watching it by definition.
+      - Registry Integrity
+      - Health Monitor
     types: [completed]
 
 permissions:
