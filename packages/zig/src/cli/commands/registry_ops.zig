@@ -375,9 +375,11 @@ const provision_script =
     \\set_clam AlertExceedsMax yes
     \\set_clam MaxRecursion 30
     \\set_clam MaxFiles 100000
-    \\# Preserve a fail-closed timeout ladder: clamd 225s, Registry 240s,
-    \\# Bun 255s, and the managed reverse proxy 300s.
-    \\set_clam MaxScanTime 225000
+    \\# Must not sit below Registry's largest per-artifact scan budget
+    \\# (MAX_SCAN_TIMEOUT_MS, 45 min), or the engine aborts scans Registry is
+    \\# still waiting for. This was 225s, sized against an HTTP timeout ladder
+    \\# that no longer applies now that a scan outlives its request.
+    \\set_clam MaxScanTime 2700000
     \\set_clam MaxThreads 2
     \\set_clam MaxQueue 4
     \\set_clam ConcurrentDatabaseReload no

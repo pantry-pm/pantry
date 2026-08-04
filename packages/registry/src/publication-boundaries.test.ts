@@ -69,7 +69,10 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('command -v systemd-run')
     expect(workflow).toContain('set_clam MaxThreads 2')
     expect(workflow).toContain('set_clam MaxQueue 4')
-    expect(workflow).toContain('set_clam MaxScanTime 225000')
+    // Must be at least Registry's largest per-artifact budget. Below it, the
+    // engine aborts scans Registry is still waiting for - which is exactly
+    // what capped the 183MB vitess package at 225s of engine time.
+    expect(workflow).toContain('set_clam MaxScanTime 2700000')
     expect(workflow).toContain('set_clam MaxScanSize 8G')
     expect(workflow).toContain('set_clam MaxFileSize 2G')
     expect(workflow).toContain('set_clam AlertExceedsMax yes')
@@ -172,7 +175,7 @@ describe('first-party publication boundaries', () => {
     const setup = source('packages/zig/src/cli/commands/registry_ops.zig')
     expect(setup).toContain('set_clam MaxThreads 2')
     expect(setup).toContain('set_clam MaxQueue 4')
-    expect(setup).toContain('set_clam MaxScanTime 225000')
+    expect(setup).toContain('set_clam MaxScanTime 2700000')
     expect(setup).toContain('set_clam ConcurrentDatabaseReload no')
     expect(setup).toContain('clamav-daemon clamav-freshclam util-linux')
     expect(setup).toContain('clamav-daemon.service.d')
