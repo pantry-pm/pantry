@@ -6,7 +6,12 @@ export const recipe: Recipe = {
   description: 'MySQL Server, the world\\s most popular open source database, and MySQL Cluster, a real-time, open source transactional database.',
   homepage: 'https://www.mysql.com/',
   github: 'https://github.com/mysql/mysql-server',
-  programs: ['mysql_client_test', 'my_print_defaults', 'myisam_ftdump', 'myisamchk', 'myisamlog', 'myisampack', 'mysql', 'mysql_config', 'mysql_config_editor', 'mysql_keyring_encryption_test', 'mysql_migrate_keyring', 'mysql_secure_installation', 'mysql_tzinfo_to_sql', 'mysqladmin', 'mysqlbinlog', 'mysqlcheck', 'mysqld', 'mysqld_multi', 'mysqld_safe', 'mysqldump', 'mysqldumpslow', 'mysqlimport', 'mysqlrouter', 'mysqlrouter_keyring', 'mysqlrouter_passwd', 'mysqlrouter_plugin_info', 'mysqlshow', 'mysqlslap', 'mysqltest', 'mysqltest_safe_process', 'mysqlxtest'],
+  // Trimmed to what a deployment runs. The test harnesses MySQL builds
+  // (mysqltest, mysql_client_test, mysqlxtest, ...) are no longer built at all
+  // (-DWITH_TESTS=OFF), so advertising them would promise binaries the tarball
+  // does not contain. Router likewise: it is a separate product, and Vitess
+  // supersedes it here.
+  programs: ['my_print_defaults', 'myisam_ftdump', 'myisamchk', 'myisamlog', 'myisampack', 'mysql', 'mysql_config', 'mysql_config_editor', 'mysql_migrate_keyring', 'mysql_secure_installation', 'mysql_tzinfo_to_sql', 'mysqladmin', 'mysqlbinlog', 'mysqlcheck', 'mysqld', 'mysqld_multi', 'mysqld_safe', 'mysqldump', 'mysqldumpslow', 'mysqlimport', 'mysqlshow', 'mysqlslap'],
   // github-releases tags (mysql-server) surface "innovation" versions (9.x)
   // whose source tarball is never published on the CDN, so a build for one
   // fails with a 404 and - worse - the registry used to fall back to pkgx's
@@ -125,6 +130,16 @@ export const recipe: Recipe = {
       // /usr/local/mysql and `make install` fails (no write permission).
       'export ARGS="$ARGS -DCMAKE_INSTALL_PREFIX={{prefix}}"',
       'export ARGS="$ARGS -DCMAKE_C_STANDARD=17"',
+      // MySQL's cmake defaults to RelWithDebInfo when no build type is given,
+      // and nothing here was giving one. The result carried full DWARF debug
+      // info: a 605MB artifact that could not finish uploading inside the
+      // publish window, so mysql.com never actually shipped. Nothing at
+      // runtime reads those symbols.
+      'export ARGS="$ARGS -DCMAKE_BUILD_TYPE=Release"',
+      // Don't build or install the test suite. `make install` otherwise lays
+      // down mysql-test/ (the full regression corpus, hundreds of megabytes of
+      // .test/.result fixtures) into the package a deployment installs.
+      'export ARGS="$ARGS -DWITH_TESTS=OFF -DWITH_ROUTER=OFF"',
       // Use pantry deps for SSL + ICU so the runtime binary doesn't depend on
       // the build host's system libs.
       // openssl from pantry (soname-stable so.3); ICU bundled (static) so mysqld
@@ -168,6 +183,12 @@ export const recipe: Recipe = {
       // them at runtime. Hoist them into <prefix>/lib so they resolve.
       'if [ -d {{prefix}}/lib/private ]; then mv {{prefix}}/lib/private/*.so* {{prefix}}/lib/ 2>/dev/null || true; fi',
       'if [ -d {{prefix}}/lib/mysql/private ]; then mv {{prefix}}/lib/mysql/private/*.so* {{prefix}}/lib/ 2>/dev/null || true; fi',
+      // Belt and braces against the size problem above: strip anything that
+      // still carries symbols, and drop the directories `make install` adds
+      // that no running server reads. Both are guarded - a stray failure here
+      // must not fail an otherwise good build.
+      'find {{prefix}}/bin {{prefix}}/lib -type f \\( -perm -u+x -o -name "*.so*" \\) -exec strip --strip-unneeded {} + 2>/dev/null || true',
+      'rm -rf {{prefix}}/mysql-test {{prefix}}/share/doc {{prefix}}/docs {{prefix}}/man {{prefix}}/share/man',
     ],
   },
 }

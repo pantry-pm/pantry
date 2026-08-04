@@ -2,7 +2,7 @@
  * **mysql** - MySQL Server, the world's most popular open source database, and MySQL Cluster, a real-time, open source transactional database.
  *
  * @domain `mysql.com`
- * @programs `mysql_client_test`, `my_print_defaults`, `myisam_ftdump`, `myisamchk`, `myisamlog`, ... (+26 more)
+ * @programs `my_print_defaults`, `myisam_ftdump`, `myisamchk`, `myisamlog`, `myisampack`, ... (+17 more)
  * @version `8.0.45` (3 versions available)
  * @versions From newest version to oldest.
  *
@@ -23,7 +23,7 @@
  * console.log(pkg === samePkg) // true
  * console.log(pkg.name)        // "mysql"
  * console.log(pkg.description) // "MySQL Server, the world's most popular open sou..."
- * console.log(pkg.programs)    // ["mysql_client_test", "my_print_defaults", ...]
+ * console.log(pkg.programs)    // ["my_print_defaults", "myisam_ftdump", ...]
  * console.log(pkg.versions[0]) // "8.0.43" (latest)
  * ```
  *
@@ -57,7 +57,6 @@ export const mysqlPackage = {
   * These can be run after installation.
   */
   programs: [
-    'mysql_client_test',
     'my_print_defaults',
     'myisam_ftdump',
     'myisamchk',
@@ -66,7 +65,6 @@ export const mysqlPackage = {
     'mysql',
     'mysql_config',
     'mysql_config_editor',
-    'mysql_keyring_encryption_test',
     'mysql_migrate_keyring',
     'mysql_secure_installation',
     'mysql_tzinfo_to_sql',
@@ -79,16 +77,9 @@ export const mysqlPackage = {
     'mysqldump',
     'mysqldumpslow',
     'mysqlimport',
-    'mysqlrouter',
-    'mysqlrouter_keyring',
-    'mysqlrouter_passwd',
-    'mysqlrouter_plugin_info',
     'mysqlshow',
     'mysqlslap',
-    'mysqltest',
-    'mysqltest_safe_process',
-    'mysqlxtest',
-  ] as const,
+    ] as const,
   companions: [] as const,
   /**
   * Runtime dependencies for this package.

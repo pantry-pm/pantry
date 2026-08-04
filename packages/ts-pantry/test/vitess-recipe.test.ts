@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from 'bun:test'
 import { pantry } from '../src/index'
+import * as mysqlRecipeModule from '../src/recipes/mysql.com'
 import { recipe } from '../src/recipes/vitess.io'
 
 const pkg = (pantry as any).vitessio
@@ -170,5 +171,61 @@ describe('mysql.com advertises only buildable versions', () => {
     ).text()
     const block = src.slice(src.indexOf('CUSTOM_BUILD_DOMAINS'), src.indexOf('MaterializeResult'))
     expect(block).toContain(`'mysql.com'`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// mysql.com must ship an artifact that can actually be published.
+//
+// The build had no CMAKE_BUILD_TYPE, so MySQL's cmake defaulted to
+// RelWithDebInfo and produced a 605MB tarball carrying full DWARF debug info
+// plus the installed regression suite. It could not finish uploading inside
+// the publish window, so mysql.com never shipped at all.
+// ---------------------------------------------------------------------------
+
+describe('mysql.com builds a publishable artifact', () => {
+  const mysqlRecipe = () => mysqlRecipeModule.recipe
+  const script = () => mysqlRecipe().build.script.map(String).join('\n')
+
+  it('builds Release, not the RelWithDebInfo cmake default', () => {
+    expect(script()).toContain('-DCMAKE_BUILD_TYPE=Release')
+  })
+
+  it('does not install the regression suite', () => {
+    expect(script()).toContain('-DWITH_TESTS=OFF')
+    expect(script()).toContain('rm -rf {{prefix}}/mysql-test')
+  })
+
+  it('strips what still carries symbols', () => {
+    expect(script()).toContain('strip --strip-unneeded')
+  })
+
+  it('advertises nothing the build no longer produces', () => {
+    // WITH_TESTS=OFF and WITH_ROUTER=OFF mean these binaries do not exist;
+    // advertising them promises a tarball contents it does not have.
+    for (const gone of [
+      'mysqltest',
+      'mysql_client_test',
+      'mysqlxtest',
+      'mysqltest_safe_process',
+      'mysql_keyring_encryption_test',
+      'mysqlrouter',
+      'mysqlrouter_keyring',
+      'mysqlrouter_passwd',
+      'mysqlrouter_plugin_info',
+    ]) {
+      expect(mysqlRecipe().programs).not.toContain(gone)
+      expect((pantry as any).mysqlcom.programs).not.toContain(gone)
+    }
+  })
+
+  it('still advertises the server and client a deployment needs', () => {
+    for (const required of ['mysqld', 'mysql', 'mysqladmin', 'mysqldump'])
+      expect(mysqlRecipe().programs).toContain(required)
+  })
+
+  it('the catalog and the recipe advertise the same binaries', () => {
+    expect([...(pantry as any).mysqlcom.programs].sort())
+      .toEqual([...mysqlRecipe().programs].sort())
   })
 })
