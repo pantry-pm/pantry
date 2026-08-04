@@ -437,6 +437,21 @@ export class BinaryArtifactPublisher {
   private now: () => number
   private locks = new Map<string, Promise<void>>()
 
+  /**
+   * Completions currently scanning, keyed by upload id.
+   *
+   * A publisher retries `complete()` while the first call is still scanning,
+   * and that first call has already deleted the staging object. Without this,
+   * every retry looked like an orphaned upload and started ANOTHER scan of the
+   * same artifact - so a slow scan turned 60 polls into 60 concurrent scans of
+   * the same file, which is far worse than the problem it was meant to fix.
+   *
+   * In flight means "wait, someone is on it" (retryable). Sealed but NOT in
+   * flight means the previous attempt died and the upload really is orphaned,
+   * which is the only case worth resuming.
+   */
+  private completing = new Set<string>()
+
   constructor(
     private store: BinaryArtifactStore,
     private scanner: MalwareScanner,
@@ -512,8 +527,19 @@ export class BinaryArtifactPublisher {
 
       if (!sealedExists)
         throw new BinaryPublishError('Staged artifact was not found or has expired', 404, 'BINARY_STAGING_NOT_FOUND')
+
+      // Sealed and someone is already scanning it: tell the caller to wait
+      // rather than starting a competing scan of the same bytes.
+      if (this.completing.has(uploadId)) {
+        throw new BinaryPublishError(
+          'Completion is already in progress for this upload',
+          425,
+          'BINARY_COMPLETION_IN_PROGRESS',
+        )
+      }
     }
 
+    this.completing.add(uploadId)
     try {
       // Seal the object before scanning. The presigned URL can write only the
       // original staging key, so a retry/overwrite cannot race the scan and the
@@ -577,6 +603,10 @@ export class BinaryArtifactPublisher {
       return completed
     }
     finally {
+      // Cleared before the object cleanup so a retry arriving right after a
+      // failure is treated as a fresh attempt rather than being told to wait
+      // for a completion that is no longer running.
+      this.completing.delete(uploadId)
       await this.store.deleteObject(claim.stagingKey).catch(() => {})
       await this.store.deleteObject(sealedKey).catch(() => {})
     }

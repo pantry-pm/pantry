@@ -1474,3 +1474,35 @@ describe('completion resumes from a sealed artifact', () => {
       .rejects.toThrow(/not found or has expired/)
   })
 })
+
+describe('a retry does not start a competing scan', () => {
+  // Resuming from the sealed copy fixed orphaned uploads, but naively it also
+  // meant every retry began ANOTHER scan of the same artifact. A publisher
+  // polls while the first completion is still scanning, so a slow scan turned
+  // 60 polls into 60 concurrent scans of the same 180MB file - strictly worse
+  // than the bug it replaced.
+  it('tells a concurrent retry to wait instead of rescanning', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new ControlledTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('clean artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    // First completion parks inside the scanner.
+    const first = publisher.complete(initiated.uploadId, '_admin')
+    await scanner.started
+
+    // Second arrives mid-scan: staging is gone, sealed exists, someone is on it.
+    await expect(publisher.complete(initiated.uploadId, '_admin'))
+      .rejects.toThrow(/already in progress/)
+
+    scanner.release()
+    const result = await first
+    expect(result.scan.verdict).toBe('clean')
+    // One scan, not two.
+    expect(scanner.contexts).toHaveLength(1)
+  })
+})
