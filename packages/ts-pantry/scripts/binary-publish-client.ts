@@ -76,7 +76,18 @@ function registryConfig(options: PublishBinaryArtifactOptions): { registryUrl: s
 
 function completionError(response: Response, completed: any): Error {
   const retryable = completed.retryable ? ' (retryable)' : ''
-  return new Error(`${completed.code || response.status}: ${completed.error || response.statusText}${retryable}`)
+  // Include what the scanner reported. A bare MALWARE_SCAN_UNAVAILABLE says
+  // only "fail closed", so working out WHY a 183MB artifact failed meant
+  // querying the registry's metrics endpoint after the fact and inferring the
+  // cause from durationMs. The verdict, reason and duration are right here.
+  const scan = completed.scan
+    ? ` [scan verdict=${completed.scan.verdict}`
+      + `${completed.scan.reason ? ` reason=${completed.scan.reason}` : ''}`
+      + `${completed.scan.durationMs ? ` durationMs=${completed.scan.durationMs}` : ''}]`
+    : ''
+  return new Error(
+    `${completed.code || response.status}: ${completed.error || response.statusText}${retryable}${scan}`,
+  )
 }
 
 function completionMayStillBeRunning(response: Response, completed: any): boolean {

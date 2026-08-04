@@ -149,3 +149,48 @@ describe('completion waits long enough for a large artifact to be scanned', () =
     })).rejects.toThrow('BINARY_SIZE_MISMATCH')
   })
 })
+
+describe('a failed publish explains itself', () => {
+  // A bare MALWARE_SCAN_UNAVAILABLE says only "fail closed". Working out why a
+  // 183MB artifact failed meant querying the registry's metrics endpoint after
+  // the fact and inferring the cause from durationMs.max. The verdict, reason
+  // and duration are in the response already.
+  it('includes the scanner verdict, reason and duration in the error', async () => {
+    const fetch = async () => jsonResponse({
+      code: 'MALWARE_SCAN_UNAVAILABLE',
+      error: 'Binary artifact malware scanning is temporarily unavailable',
+      retryable: true,
+      scan: { verdict: 'error', reason: 'isolated scanner timed out after 270000ms', durationMs: 270005 },
+    }, 503)
+
+    const failure = await completeBinaryUpload('https://registry.test', 'upload-1', auth, {
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      attempts: 1,
+      sleep: async () => {},
+    }).catch((error: Error) => error)
+
+    expect(failure).toBeInstanceOf(Error)
+    const message = (failure as Error).message
+    expect(message).toContain('MALWARE_SCAN_UNAVAILABLE')
+    expect(message).toContain('verdict=error')
+    expect(message).toContain('isolated scanner timed out after 270000ms')
+    expect(message).toContain('durationMs=270005')
+  })
+
+  it('says nothing extra when there is no scan to report', async () => {
+    const fetch = async () => jsonResponse({
+      code: 'BINARY_SIZE_MISMATCH',
+      error: 'Staged artifact size does not match the initiated upload',
+    }, 422)
+
+    const failure = await completeBinaryUpload('https://registry.test', 'upload-1', auth, {
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      attempts: 1,
+      sleep: async () => {},
+    }).catch((error: Error) => error)
+
+    expect((failure as Error).message).toBe(
+      'BINARY_SIZE_MISMATCH: Staged artifact size does not match the initiated upload',
+    )
+  })
+})
