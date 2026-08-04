@@ -9,6 +9,7 @@ import {
   publicBinaryMetadata,
   S3BinaryArtifactStore,
   type BinaryArtifactStore,
+  type BinaryPublishCompleted,
 } from './binary-publishing'
 import {
   type MalwareScanContext,
@@ -1504,5 +1505,104 @@ describe('a retry does not start a competing scan', () => {
     expect(result.scan.verdict).toBe('clean')
     // One scan, not two.
     expect(scanner.contexts).toHaveLength(1)
+  })
+
+  // The scan used to run inside the HTTP request that asked for it, so its
+  // budget was capped by the enclosing timeouts (255s Bun idle, 300s rpx). A
+  // 183MB artifact needs longer, so it was killed at its deadline and reported
+  // as MALWARE_SCAN_UNAVAILABLE - a working scanner, described as broken.
+  // Polls until the detached completion settles. Sleeping a fixed interval
+  // instead makes the test a race against machine load.
+  const claimWhenSettled = async (
+    publisher: BinaryArtifactPublisher,
+    uploadId: string,
+  ): Promise<BinaryPublishCompleted> => {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      try {
+        return await publisher.complete(uploadId, '_admin')
+      }
+      catch (error) {
+        if (!/already in progress/.test((error as Error).message)) throw error
+        await Bun.sleep(10)
+      }
+    }
+    throw new Error('completion never settled')
+  }
+
+  // The scan used to run inside the HTTP request that asked for it, so its
+  // budget was capped by the enclosing timeouts (255s Bun idle, 300s rpx). A
+  // 183MB artifact needs longer, so it was killed at its deadline and reported
+  // as MALWARE_SCAN_UNAVAILABLE - a working scanner, described as broken.
+  it('keeps scanning after the response budget expires, and a later poll claims the result', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new ControlledTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      // Stands in for "longer than a response can be held open".
+      completionResponseBudgetMs: 50,
+    })
+    const bytes = Buffer.from('clean artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    // The scan outlives the request that started it: the caller is told to
+    // poll rather than the scan being abandoned.
+    await expect(publisher.complete(initiated.uploadId, '_admin'))
+      .rejects.toThrow(/already in progress/)
+    await scanner.started
+    scanner.release()
+
+    const claimed = await claimWhenSettled(publisher, initiated.uploadId)
+    expect(claimed.scan.verdict).toBe('clean')
+    // Still exactly one scan across the abandoned request and every poll.
+    expect(scanner.contexts).toHaveLength(1)
+  })
+
+  it('answers a poll without holding it for the response budget', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new ControlledTestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      // Deliberately huge: a poll that waited even a fraction of this would
+      // put every retry back on the connection budget this change escapes.
+      completionResponseBudgetMs: 60_000,
+    })
+    const bytes = Buffer.from('clean artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    const first = publisher.complete(initiated.uploadId, '_admin')
+    await scanner.started
+
+    const polledAt = performance.now()
+    await expect(publisher.complete(initiated.uploadId, '_admin'))
+      .rejects.toThrow(/already in progress/)
+    expect(performance.now() - polledAt).toBeLessThan(1_000)
+
+    scanner.release()
+    expect((await first).scan.verdict).toBe('clean')
+    expect(scanner.contexts).toHaveLength(1)
+  })
+
+  it('reports a detached failure to the poll rather than losing it', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new ControlledTestScanner('blocked')
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      completionResponseBudgetMs: 50,
+    })
+    const bytes = Buffer.from('malicious artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    await expect(publisher.complete(initiated.uploadId, '_admin'))
+      .rejects.toThrow(/already in progress/)
+    await scanner.started
+    scanner.release()
+
+    // A verdict reached after the request ended must still reach the client;
+    // silently dropping it would let a blocked artifact look merely slow.
+    await expect(claimWhenSettled(publisher, initiated.uploadId))
+      .rejects.toThrow(/blocked by malware scanning/)
   })
 })

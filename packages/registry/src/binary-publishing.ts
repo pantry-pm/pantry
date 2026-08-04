@@ -14,6 +14,7 @@ import {
   recordMalwareScanResult,
   scanPackageArtifact,
   scanPackageArtifactStream,
+  scanBudgetMs,
   scanPackageArtifactUrl,
   type MalwareScanResult,
   type MalwareScanner,
@@ -22,6 +23,41 @@ import {
 
 const DEFAULT_MAX_BINARY_BYTES = 1024 * 1024 * 1024
 const DEFAULT_STAGING_TTL_SECONDS = 60 * 60
+
+/**
+ * How long `complete()` may hold a response open waiting for the scan.
+ *
+ * Bounded by the smallest enclosing timeout, not by how long a scan takes:
+ * the registry's own Bun idle timeout is 255s and rpx cuts upstreams at 300s,
+ * so anything at or past those is an aborted connection rather than an answer.
+ * 120s leaves generous headroom and still settles every small artifact - the
+ * EICAR rehearsal included - in a single call.
+ */
+const DEFAULT_COMPLETION_RESPONSE_BUDGET_MS = 120_000
+
+/** Retryable "someone is already scanning this, ask again shortly". */
+function completionInProgress(): BinaryPublishError {
+  return new BinaryPublishError(
+    'Completion is already in progress for this upload',
+    425,
+    'BINARY_COMPLETION_IN_PROGRESS',
+  )
+}
+
+/**
+ * How long a settled completion stays readable.
+ *
+ * Matches the publish client's own polling deadline, so a result is available
+ * for exactly as long as someone may still ask for it.
+ */
+const COMPLETION_RETENTION_MS = 30 * 60_000
+
+/** A completion in flight, or one that finished recently enough to still be claimed. */
+interface CompletionState {
+  promise: Promise<BinaryPublishCompleted>
+  /** Unset while running. */
+  settledAt: number | undefined
+}
 // A retained whole-archive scan may consume the full 30-minute ClamAV
 // MaxScanTime before coverage-limit fallback downloads the exact object again.
 // Keep the read capability bounded, but long enough for that second request.
@@ -257,6 +293,12 @@ export interface BinaryArtifactPublisherOptions {
   /** Migration-only bound for retained artifacts; never changes new publish limits. */
   legacyRescanMaxBytes?: number
   stagingTtlSeconds?: number
+  /**
+   * How long `complete()` waits inline before telling the caller to poll.
+   * Must stay below every enclosing HTTP timeout; see
+   * DEFAULT_COMPLETION_RESPONSE_BUDGET_MS.
+   */
+  completionResponseBudgetMs?: number
   now?: () => number
   onPublished?: (result: BinaryPublishCompleted) => Promise<void>
   /** Enables migration-only external attestations for artifacts uploaded no later than this instant. */
@@ -434,23 +476,34 @@ export class BinaryArtifactPublisher {
   private maxBytes: number
   private legacyRescanMaxBytes: number
   private stagingTtlSeconds: number
+  private completionResponseBudgetMs: number
   private now: () => number
   private locks = new Map<string, Promise<void>>()
 
   /**
-   * Completions currently scanning, keyed by upload id.
+   * Completions currently running, plus recently settled ones, keyed by
+   * upload id.
    *
-   * A publisher retries `complete()` while the first call is still scanning,
-   * and that first call has already deleted the staging object. Without this,
-   * every retry looked like an orphaned upload and started ANOTHER scan of the
-   * same artifact - so a slow scan turned 60 polls into 60 concurrent scans of
-   * the same file, which is far worse than the problem it was meant to fix.
+   * Two problems share this map. First, a publisher retries `complete()`
+   * while the first call is still scanning, and that first call has already
+   * deleted the staging object; without this, every retry looked like an
+   * orphaned upload and started ANOTHER scan of the same artifact, so a slow
+   * scan turned 60 polls into 60 concurrent scans of one file.
    *
-   * In flight means "wait, someone is on it" (retryable). Sealed but NOT in
-   * flight means the previous attempt died and the upload really is orphaned,
-   * which is the only case worth resuming.
+   * The scan used to run inside the HTTP request that asked for it, which
+   * capped it at whatever the enclosing timeouts allowed (255s Bun idle, 300s
+   * rpx). A 183MB artifact needs longer than that, so the scan was killed at
+   * its 270s deadline and reported as MALWARE_SCAN_UNAVAILABLE - a scanner
+   * that was working fine, described as broken.
+   *
+   * The scan now outlives the request. A caller waits inline only as long as
+   * the response budget allows; past that it gets 425 and polls, while the
+   * scan keeps running against its own, size-derived deadline.
+   *
+   * Sealed but NOT present here means the previous attempt died outright and
+   * the upload really is orphaned, which is the only case worth resuming.
    */
-  private completing = new Set<string>()
+  private completing = new Map<string, CompletionState>()
 
   constructor(
     private store: BinaryArtifactStore,
@@ -464,6 +517,8 @@ export class BinaryArtifactPublisher {
     if (!Number.isSafeInteger(this.legacyRescanMaxBytes) || this.legacyRescanMaxBytes < this.maxBytes)
       throw new Error('legacy rescan limit must be a safe integer at least as large as the publish limit')
     this.stagingTtlSeconds = options.stagingTtlSeconds || DEFAULT_STAGING_TTL_SECONDS
+    this.completionResponseBudgetMs
+      = options.completionResponseBudgetMs || DEFAULT_COMPLETION_RESPONSE_BUDGET_MS
     this.now = options.now || Date.now
   }
 
@@ -491,6 +546,21 @@ export class BinaryArtifactPublisher {
     surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
   ): Promise<BinaryPublishCompleted> {
     const claim = this.verifyClaim(uploadId)
+
+    // Consulted BEFORE any object lookup. A completion that already ran
+    // deleted both the staging and sealed objects on its way out, so an
+    // object-first poll reports BINARY_STAGING_NOT_FOUND and the verdict it
+    // was polling for is lost - a blocked artifact would read as a missing
+    // upload. The recorded outcome is authoritative whatever the store holds.
+    this.pruneSettledCompletions()
+    const running = this.completing.get(uploadId)
+    if (running) {
+      // Answer a poll at once: the result if it is ready, otherwise "wait".
+      if (running.settledAt === undefined)
+        throw completionInProgress()
+      return await running.promise
+    }
+
     const sealedKey = claim.stagingKey.replace(`${STAGING_PREFIX}/`, '.pantry-staging/sealed/')
     let stagingExists = true
     try {
@@ -528,18 +598,72 @@ export class BinaryArtifactPublisher {
       if (!sealedExists)
         throw new BinaryPublishError('Staged artifact was not found or has expired', 404, 'BINARY_STAGING_NOT_FOUND')
 
-      // Sealed and someone is already scanning it: tell the caller to wait
-      // rather than starting a competing scan of the same bytes.
-      if (this.completing.has(uploadId)) {
-        throw new BinaryPublishError(
-          'Completion is already in progress for this upload',
-          425,
-          'BINARY_COMPLETION_IN_PROGRESS',
-        )
-      }
+      // No early "already in progress" throw here. Entries now outlive the
+      // scan so they can carry its result, which means `has()` stays true
+      // after it settles; short-circuiting on it would hide the finished
+      // verdict and make every poll wait out the client's full deadline.
+      // beginCompletion adopts a running scan instead of starting a rival one.
     }
 
-    this.completing.add(uploadId)
+    const state = this.beginCompletion(uploadId, () =>
+      this.runCompletion(claim, sealedKey, stagingExists, publisher, surface))
+
+    // The call that STARTED the scan waits, but only as long as a response can
+    // safely be held open. Small artifacts - including the EICAR rehearsal the
+    // deploy asserts on - settle well inside this and still get a definitive
+    // verdict in a single call.
+    const settled = await Promise.race([
+      state.promise.then(() => true, () => true),
+      new Promise<false>(resolve => setTimeout(() => resolve(false), this.completionResponseBudgetMs)),
+    ])
+    if (!settled)
+      throw completionInProgress()
+    return await state.promise
+  }
+
+  /**
+   * Start a completion for an upload that has none running.
+   *
+   * Callers arriving for an existing completion are answered earlier, from the
+   * map, so this only ever begins fresh work.
+   */
+  private beginCompletion(
+    uploadId: string,
+    run: () => Promise<BinaryPublishCompleted>,
+  ): CompletionState {
+
+    const state: CompletionState = { promise: undefined as never, settledAt: undefined }
+    state.promise = run().finally(() => {
+      state.settledAt = Date.now()
+    })
+    // Nothing may await this promise before the next poll arrives, and an
+    // unobserved rejection would take the process down.
+    state.promise.catch(() => {})
+    this.completing.set(uploadId, state)
+    return state
+  }
+
+  /**
+   * Drop settled completions once no client can still be polling for them.
+   *
+   * Retention matches the publish client's own deadline, so a result is always
+   * available for as long as someone may ask, and never longer.
+   */
+  private pruneSettledCompletions(): void {
+    const cutoff = Date.now() - COMPLETION_RETENTION_MS
+    for (const [id, state] of this.completing) {
+      if (state.settledAt !== undefined && state.settledAt < cutoff)
+        this.completing.delete(id)
+    }
+  }
+
+  private async runCompletion(
+    claim: StagingClaim,
+    sealedKey: string,
+    stagingExists: boolean,
+    publisher?: string,
+    surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
+  ): Promise<BinaryPublishCompleted> {
     try {
       // Seal the object before scanning. The presigned URL can write only the
       // original staging key, so a retry/overwrite cannot race the scan and the
@@ -562,7 +686,12 @@ export class BinaryArtifactPublisher {
       if (this.store.createDownloadUrl && this.scanner.scanUrl) {
         scan = await scanPackageArtifactUrl(
           this.scanner,
-          this.store.createDownloadUrl(sealedKey, 10 * 60),
+          // Outlives the scan it is for. These were independent - a fixed
+          // 10-minute URL and a separately-sized scan budget - and a URL that
+          // expires mid-download fails the scan with the same
+          // "scanner unavailable" verdict as a genuinely dead scanner, which
+          // is indistinguishable from the outside.
+          this.store.createDownloadUrl(sealedKey, Math.ceil(scanBudgetMs(claim.size) / 1000) + 120),
           context,
           { sha256: claim.sha256, size: claim.size },
         )
@@ -603,10 +732,9 @@ export class BinaryArtifactPublisher {
       return completed
     }
     finally {
-      // Cleared before the object cleanup so a retry arriving right after a
-      // failure is treated as a fresh attempt rather than being told to wait
-      // for a completion that is no longer running.
-      this.completing.delete(uploadId)
+      // The map entry is NOT dropped here. It holds the outcome this upload's
+      // next poll will read; pruneSettledCompletions retires it once the
+      // client's own deadline has passed.
       await this.store.deleteObject(claim.stagingKey).catch(() => {})
       await this.store.deleteObject(sealedKey).catch(() => {})
     }
