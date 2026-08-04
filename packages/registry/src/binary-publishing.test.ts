@@ -1418,3 +1418,59 @@ describe('binary publication API', () => {
     expect((await attestResponse.json() as any).action).toBe('released')
   })
 })
+
+describe('completion resumes from a sealed artifact', () => {
+  // complete() seals the upload (copy to sealed, delete staging) BEFORE
+  // scanning. So "staging is gone" does not mean "nothing was uploaded" - it
+  // usually means a completion got that far. Two cases were previously
+  // indistinguishable and both returned BINARY_STAGING_NOT_FOUND:
+  //
+  //   - a concurrent attempt is mid-scan (retryable, resolves itself)
+  //   - an earlier attempt DIED after sealing, e.g. its CI job hit a timeout
+  //     mid-scan, which is exactly what happened to a 500MB package
+  //
+  // The second orphaned the upload permanently: staging deleted, promotion
+  // never recorded, so every retry failed forever and the only way out was to
+  // rebuild from scratch.
+  // Mirrors the derivation in complete(): STAGING_PREFIX is
+  // `.pantry-staging/malware`, and sealing swaps that for
+  // `.pantry-staging/sealed`.
+  const sealedKeyFor = (stagingKey: string): string =>
+    stagingKey.replace('.pantry-staging/malware/', '.pantry-staging/sealed/')
+
+  it('promotes an upload whose first completion died after sealing', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('clean artifact')
+
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+
+    // Simulate the crash: sealed exists, staging is gone, nothing promoted.
+    const staging = store.lastUploadKey
+    await store.copyObject(staging, sealedKeyFor(staging))
+    await store.deleteObject(staging)
+
+    const result = await publisher.complete(initiated.uploadId, '_admin')
+
+    expect(result.scan.verdict).toBe('clean')
+    for (const record of Object.values(result.platforms))
+      expect(store.files.get(record.tarball)?.toString()).toBe('clean artifact')
+  })
+
+  it('still reports not-found when nothing was ever uploaded', async () => {
+    // The resume path must not mask a genuinely absent artifact.
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const initiated = publisher.initiate(request(Buffer.from('clean artifact')))
+
+    await expect(publisher.complete(initiated.uploadId, '_admin'))
+      .rejects.toThrow(/not found or has expired/)
+  })
+})

@@ -31,6 +31,12 @@ export interface PublishedBinaryArtifact {
 }
 
 export interface CompleteBinaryUploadOptions {
+  /**
+   * Give up after this long, regardless of attempts remaining. Bounds the
+   * wait by the thing that actually varies - how long the registry takes to
+   * scan the artifact - rather than by a fixed number of polls.
+   */
+  deadlineMs?: number
   attempts?: number
   fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
   sleep?: (milliseconds: number) => Promise<void>
@@ -98,7 +104,16 @@ export async function completeBinaryUpload(
   auth: { Authorization: string },
   options: CompleteBinaryUploadOptions = {},
 ): Promise<any> {
-  const attempts = Math.max(1, options.attempts ?? 15)
+  // 15 attempts with the backoff below is a budget of roughly five minutes,
+  // which is not enough time for the registry to scan a large artifact: a
+  // 273MB package left every retry returning BINARY_STAGING_NOT_FOUND and the
+  // publish gave up while the first request was still scanning, discarding a
+  // build that had in fact succeeded.
+  //
+  // The wait is bounded by TIME rather than attempt count, because what
+  // matters is how long the scan takes, not how many times we asked.
+  const attempts = Math.max(1, options.attempts ?? 60)
+  const deadline = Date.now() + (options.deadlineMs ?? 30 * 60_000)
   const fetchUpload = options.fetch ?? fetch
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
   let lastError: Error = new Error('binary upload completion did not run')
@@ -124,8 +139,9 @@ export async function completeBinaryUpload(
       lastError = error instanceof Error ? error : new Error(String(error))
     }
 
-    if (attempt < attempts)
-      await sleep(Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5)))
+    if (attempt >= attempts || Date.now() >= deadline)
+      break
+    await sleep(Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5)))
   }
 
   throw new Error(`Binary upload completion remained ambiguous after ${attempts} attempts: ${lastError.message}`)

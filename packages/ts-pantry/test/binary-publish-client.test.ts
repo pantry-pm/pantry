@@ -78,3 +78,74 @@ describe('binary upload completion', () => {
     expect(calls).toBe(3)
   })
 })
+
+describe('completion waits long enough for a large artifact to be scanned', () => {
+  // A 273MB package failed to publish because the client gave up after ~5
+  // minutes (15 attempts, backoff capped at 30s) while the registry was still
+  // scanning. The build had succeeded; only the wait was too short.
+  it('keeps polling past the old 15-attempt budget', async () => {
+    let calls = 0
+    const fetch = (async () => {
+      calls++
+      // Mid-scan: staging is already sealed and deleted, promotion not yet
+      // recorded. This is the ambiguous-but-retryable state.
+      if (calls < 25) {
+        return {
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: async () => ({ code: 'BINARY_STAGING_NOT_FOUND', error: 'Staged artifact was not found or has expired' }),
+        }
+      }
+      return { ok: true, status: 200, statusText: 'OK', json: async () => ({ success: true, domain: 'vitess.io' }) }
+    }) as any
+
+    const result = await completeBinaryUpload('https://registry.test', 'upload-1', { Authorization: 'Bearer t' }, {
+      fetch,
+      sleep: async () => {},
+    })
+    expect(result.success).toBe(true)
+    expect(calls).toBe(25)
+  })
+
+  it('stops at the deadline even with attempts left', async () => {
+    // The wait is bounded by time, not poll count: what varies is how long a
+    // scan takes, not how many times we asked.
+    let now = 0
+    const realNow = Date.now
+    Date.now = () => now
+    try {
+      const fetch = (async () => {
+        now += 60_000
+        return {
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: async () => ({ code: 'BINARY_STAGING_NOT_FOUND', error: 'gone' }),
+        }
+      }) as any
+      await expect(completeBinaryUpload('https://registry.test', 'u', { Authorization: 'Bearer t' }, {
+        fetch,
+        sleep: async () => {},
+        deadlineMs: 5 * 60_000,
+      })).rejects.toThrow('remained ambiguous')
+    }
+    finally {
+      Date.now = realNow
+    }
+  })
+
+  it('still fails fast on a permanent error', async () => {
+    // A budget increase must not turn a real rejection into a long hang.
+    const fetch = (async () => ({
+      ok: false,
+      status: 422,
+      statusText: 'Unprocessable',
+      json: async () => ({ code: 'BINARY_SIZE_MISMATCH', error: 'size mismatch' }),
+    })) as any
+    await expect(completeBinaryUpload('https://registry.test', 'u', { Authorization: 'Bearer t' }, {
+      fetch,
+      sleep: async () => {},
+    })).rejects.toThrow('BINARY_SIZE_MISMATCH')
+  })
+})

@@ -489,18 +489,42 @@ export class BinaryArtifactPublisher {
       stagingExists = false
     }
 
+    // A completion that got as far as sealing has already deleted the staging
+    // object, so "staging is gone" does not mean "nothing was uploaded".
+    let sealedExists = false
     if (!stagingExists) {
       const existing = await this.findCompleted(claim)
       if (existing) return existing
-      throw new BinaryPublishError('Staged artifact was not found or has expired', 404, 'BINARY_STAGING_NOT_FOUND')
+
+      // The artifact may still be sealed: either a concurrent attempt is
+      // mid-scan, or an earlier one died after sealing and before promoting.
+      // The latter used to orphan the upload permanently - staging deleted,
+      // promotion never recorded - so every subsequent retry returned
+      // BINARY_STAGING_NOT_FOUND forever and the only way out was to rebuild.
+      // Resuming from the sealed copy makes complete() genuinely idempotent.
+      try {
+        await this.store.headObject(sealedKey)
+        sealedExists = true
+      }
+      catch {
+        sealedExists = false
+      }
+
+      if (!sealedExists)
+        throw new BinaryPublishError('Staged artifact was not found or has expired', 404, 'BINARY_STAGING_NOT_FOUND')
     }
 
     try {
       // Seal the object before scanning. The presigned URL can write only the
       // original staging key, so a retry/overwrite cannot race the scan and the
       // subsequent server-side promotion.
-      await this.store.copyObject(claim.stagingKey, sealedKey)
-      await this.store.deleteObject(claim.stagingKey)
+      //
+      // Skipped when resuming: the sealed copy is already the authoritative
+      // one, and the staging key it came from no longer exists.
+      if (stagingExists) {
+        await this.store.copyObject(claim.stagingKey, sealedKey)
+        await this.store.deleteObject(claim.stagingKey)
+      }
 
       const context = {
         surface,
