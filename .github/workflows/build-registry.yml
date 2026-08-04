@@ -202,13 +202,27 @@ jobs:
 
           echo "Building $PACKAGE $VERSION for $PLATFORM"
 
+          # --deps-dir/--bucket/--region are REQUIRED, not optional:
+          # build-package.ts only downloads dependencies (and therefore only
+          # populates the `{{deps.<domain>.prefix}}` template variables) when
+          # all three are present. Without them every such placeholder reached
+          # the build verbatim, so mysql.com died on
+          # "Wrong option or path for WITH_SSL={{deps.openssl.org.prefix}}"
+          # and any other recipe pointing a configure flag at a dependency
+          # failed the same way.
+          DEPS_DIR="${{ runner.temp }}/deps-${PACKAGE}-${VERSION}"
+          mkdir -p "$DEPS_DIR"
+
           cd packages/ts-pantry
           bun scripts/build-package.ts \
             --package "$PACKAGE" \
             --version "$VERSION" \
             --platform "$PLATFORM" \
             --build-dir "$BUILD_DIR" \
-            --prefix "$INSTALL_PREFIX"
+            --prefix "$INSTALL_PREFIX" \
+            --deps-dir "$DEPS_DIR" \
+            --bucket "$S3_BUCKET" \
+            --region "$AWS_REGION"
 
           echo "install_prefix=$INSTALL_PREFIX" >> $GITHUB_OUTPUT
 
