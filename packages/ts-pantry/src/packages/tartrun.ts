@@ -67,6 +67,7 @@ export const tartrunPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.35.0',
     '2.34.0',
     '2.33.1',
     '2.33.0',
