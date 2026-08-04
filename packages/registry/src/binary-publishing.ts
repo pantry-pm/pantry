@@ -47,10 +47,10 @@ function completionInProgress(): BinaryPublishError {
 /**
  * How long a settled completion stays readable.
  *
- * Matches the publish client's own polling deadline, so a result is available
- * for exactly as long as someone may still ask for it.
+ * Must outlast the longest scan plus the client's polling deadline, or a
+ * result is retired before the thing waiting for it can claim it.
  */
-const COMPLETION_RETENTION_MS = 30 * 60_000
+const COMPLETION_RETENTION_MS = 60 * 60_000
 
 /** A completion in flight, or one that finished recently enough to still be claimed. */
 interface CompletionState {

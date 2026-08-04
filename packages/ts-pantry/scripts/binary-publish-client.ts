@@ -74,6 +74,16 @@ function registryConfig(options: PublishBinaryArtifactOptions): { registryUrl: s
   return { registryUrl, token }
 }
 
+/**
+ * How long to keep polling for a verdict.
+ *
+ * Must outlast the registry's largest scan budget. It did not: a 183MB
+ * artifact's scan was still running when this gave up, and because the scan is
+ * detached from the request it then finished into a void - work done, nobody
+ * listening. Asserted against maxScanBudgetMs in the tests.
+ */
+export const DEFAULT_CLIENT_DEADLINE_MS: number = 60 * 60_000
+
 function completionError(response: Response, completed: any): Error {
   const retryable = completed.retryable ? ' (retryable)' : ''
   // Include what the scanner reported. A bare MALWARE_SCAN_UNAVAILABLE says
@@ -124,7 +134,7 @@ export async function completeBinaryUpload(
   // The wait is bounded by TIME rather than attempt count, because what
   // matters is how long the scan takes, not how many times we asked.
   const attempts = Math.max(1, options.attempts ?? 60)
-  const deadline = Date.now() + (options.deadlineMs ?? 30 * 60_000)
+  const deadline = Date.now() + (options.deadlineMs ?? DEFAULT_CLIENT_DEADLINE_MS)
   const fetchUpload = options.fetch ?? fetch
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
   let lastError: Error = new Error('binary upload completion did not run')

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { completeBinaryUpload } from '../scripts/binary-publish-client'
+import { maxScanBudgetMs } from '../../registry/src/malware-scanning'
+import { completeBinaryUpload, DEFAULT_CLIENT_DEADLINE_MS } from '../scripts/binary-publish-client'
 
 const auth = { Authorization: 'Bearer test' }
 
@@ -192,5 +193,22 @@ describe('a failed publish explains itself', () => {
     expect((failure as Error).message).toBe(
       'BINARY_SIZE_MISMATCH: Staged artifact size does not match the initiated upload',
     )
+  })
+})
+
+describe('the publish client outlasts the scan it is waiting for', () => {
+  // Detaching the scan from the request made these two numbers dependent on
+  // each other for the first time. They were not: a 183MB artifact's scan was
+  // still running when the client's 30-minute deadline expired, and because
+  // the scan no longer belongs to a request it carried on and finished into a
+  // void - the work was done and nothing was left listening for the verdict.
+  it('waits longer than the registry will ever spend scanning', () => {
+    expect(DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThan(maxScanBudgetMs())
+  })
+
+  it('leaves room for the upload and polling on top of the scan', () => {
+    // The scan starts only once the artifact is staged, and a large upload to
+    // object storage took eight minutes on its own.
+    expect(DEFAULT_CLIENT_DEADLINE_MS - maxScanBudgetMs()).toBeGreaterThanOrEqual(10 * 60_000)
   })
 })
