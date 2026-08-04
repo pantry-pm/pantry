@@ -78,6 +78,14 @@ export const recipe: Recipe = {
       // that no deployment runs, and shipping them would bloat the artifact
       // and widen the attack surface for no benefit.
       'for b in mysqlctl mysqlctld vtorc vtadmin vtctl vtctld vtctlclient vtctldclient vtgate vttablet vtbackup vtexplain vtcombo vtclient; do cp "bin/$b" "{{prefix}}/bin/$b"; done',
+      // `config/init_db.sql` is not optional. mysqlctld runs it after
+      // initializing mysqld to create the `vt_dba`, `vt_app` and `vt_repl`
+      // accounts; without it vttablet cannot start, failing with "timed out
+      // waiting for the dba user to have the required permissions". The
+      // upstream release tarball omits it, which is why a binaries-only
+      // package produces a cluster that comes up and cannot serve.
+      'mkdir -p {{prefix}}/config',
+      'cp -r config/. {{prefix}}/config/',
     ],
     env: {
       // Belt and braces: the Makefile sets this for `build`, but an override
