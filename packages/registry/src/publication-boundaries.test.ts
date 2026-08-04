@@ -95,7 +95,13 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('systemctl show clamav-daemon --property=MemorySwapMax --value')
     expect(workflow).toContain('systemctl restart clamav-daemon')
     expect(workflow).toContain("ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service'")
-    expect(workflow).toContain('/bin/systemctl restart ${SERVICE}.service')
+    // The recovery unit restarts BOTH services and reports the outcome. An
+    // earlier version only restarted the registry and exited silently, so a
+    // wedged clamd stayed wedged and the timer reported success either way.
+    expect(workflow).toContain('systemctl restart clamav-daemon.service; systemctl restart ${SERVICE}.service')
+    expect(workflow).toContain('[recover] STILL UNHEALTHY after restart')
+    // Must exit non-zero when recovery fails, or the failure is invisible.
+    expect(workflow).toContain('needs a human\\"; exit 1')
     expect(workflow).toContain('http://127.0.0.1:${PORT}/health')
     expect(workflow).not.toContain('is-active --quiet unattended-upgrades.service')
     expect(workflow).toContain('${SERVICE}-recovery.timer')
