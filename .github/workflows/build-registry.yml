@@ -263,12 +263,15 @@ jobs:
     name: Publish scanned binaries
     needs: [prepare, build]
     runs-on: ubuntu-latest
-    # Publication downloads every platform artifact, scans it for malware, and
-    # uploads it. A large package (vitess.io is ~500MB of Go binaries) does not
-    # fit in 15 minutes, and the job was killed mid-scan - which GitHub reports
-    # as "cancelled", so it read as someone aborting the run rather than a
-    # timeout. The build itself takes ~5 minutes; publication is the long pole.
-    timeout-minutes: 45
+    # Publication downloads every platform artifact, uploads it to object
+    # storage, and scans it. The upload is the long pole, not the scan: a
+    # 275MB artifact was still staging 45 minutes in, and curl retries up to
+    # three times, so a slow transfer multiplies. A timed-out job reports as
+    # "cancelled", which reads as somebody aborting the run rather than the
+    # budget being too small - it took two rounds to see that.
+    #
+    # The build itself takes ~5 minutes. Sized for the transfer.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository

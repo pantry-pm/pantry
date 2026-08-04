@@ -29,26 +29,28 @@ export const recipe: Recipe = {
    * `programs` in src/packages/vitessio.ts. A name here that the script does
    * not install produces a package advertising a binary it does not ship.
    *
-   * This is the Makefile's own `install` set plus `vtcombo` and `vtclient`.
-   * `vtcombo` runs the whole stack in one process, which is what makes a
-   * single-box development cluster possible; upstream omits it from `install`
-   * because their packaging targets production only.
+   * Trimmed to what a deployment actually runs. Each Vitess binary is tens of
+   * megabytes even stripped, and the artifact has to cross the network to the
+   * registry: at fourteen binaries it was 275MB and the upload could not
+   * finish inside the publish window. Dropped are `vtctl`/`vtctlclient`
+   * (superseded by `vtctld`/`vtctldclient`), `vtexplain`/`vtclient` (developer
+   * tools, not daemons), and `vtadmin` (an API for a web UI this recipe
+   * deliberately does not build).
+   *
+   * `vtcombo` is kept even though upstream's `make install` omits it: it runs
+   * the whole stack in one process, which is what makes a single-box
+   * development cluster possible.
    */
   programs: [
     'mysqlctl',
     'mysqlctld',
     'vtorc',
-    'vtadmin',
-    'vtctl',
     'vtctld',
-    'vtctlclient',
     'vtctldclient',
     'vtgate',
     'vttablet',
     'vtbackup',
-    'vtexplain',
     'vtcombo',
-    'vtclient',
   ],
 
   versionSource: {
@@ -82,7 +84,7 @@ export const recipe: Recipe = {
       // test harnesses (vtgateclienttest, vttestserver) and zookeeper helpers
       // that no deployment runs, and shipping them would bloat the artifact
       // and widen the attack surface for no benefit.
-      'for b in mysqlctl mysqlctld vtorc vtadmin vtctl vtctld vtctlclient vtctldclient vtgate vttablet vtbackup vtexplain vtcombo vtclient; do cp "bin/$b" "{{prefix}}/bin/$b"; done',
+      'for b in mysqlctl mysqlctld vtorc vtctld vtctldclient vtgate vttablet vtbackup vtcombo; do cp "bin/$b" "{{prefix}}/bin/$b"; done',
       // `config/init_db.sql` is not optional. mysqlctld runs it after
       // initializing mysqld to create the `vt_dba`, `vt_app` and `vt_repl`
       // accounts; without it vttablet cannot start, failing with "timed out
