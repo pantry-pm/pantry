@@ -129,7 +129,21 @@ export const recipe: Recipe = {
       // the build host's system libs.
       // openssl from pantry (soname-stable so.3); ICU bundled (static) so mysqld
       // has no external libicuuc.so.<major> the registry can't version-match.
-      'export ARGS="$ARGS -DWITH_SSL={{deps.openssl.org.prefix}} -DWITH_ICU=bundled"',
+      // `-DWITH_SSL=system`, not a `{{deps.openssl.org.prefix}}` template.
+      // That placeholder was never substituted - it reached cmake verbatim,
+      // which failed with "Wrong option or path for
+      // WITH_SSL={{deps.openssl.org.prefix}}" and killed every build. So the
+      // fix this recipe was written to make (link current openssl/ICU instead
+      // of the long-gone libssl.so.1.1 and libicuuc.so.71) never actually
+      // shipped, and the registry kept serving the broken artifact.
+      //
+      // `system` is correct here rather than a workaround: the build image is
+      // Ubuntu 24.04, whose openssl is 3.x, so the binary links libssl.so.3 -
+      // the same soname the `openssl.org: ^3` runtime dependency provides on
+      // the target box. ICU stays bundled because its soname carries the
+      // major version (libicuuc.so.<major>) and the registry only ever
+      // carries one ICU, so an external link cannot be version-matched.
+      'export ARGS="$ARGS -DWITH_SSL=system -DWITH_ICU=bundled"',
       // The mysql-boost tarball bundles the exact boost MySQL needs at <src>/boost.
       'export ARGS="$ARGS -DWITH_BOOST=../boost"',
       // Skip the bundled googletest unit tests: a build-tool dep (ninja) puts its
