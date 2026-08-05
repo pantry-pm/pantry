@@ -1,3 +1,228 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.12...v0.11.13)
+
+## 🚀 Features
+
+- **pantry**: build vitess.io from source, and surface build failures ([bd1b103](https://github.com/pantry-pm/pantry/commit/bd1b103)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **pantry**: add vitess.io ([88689d1](https://github.com/pantry-pm/pantry/commit/88689d1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **shell**: den support ([cfe0ed0](https://github.com/pantry-pm/pantry/commit/cfe0ed0)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: scale retained scan recovery (#220 #224) ([19b34d1](https://github.com/pantry-pm/pantry/commit/19b34d1)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **ops**: add retained-artifact audit mode ([528337f](https://github.com/pantry-pm/pantry/commit/528337f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: automate quarantine reviews ([9845c7f](https://github.com/pantry-pm/pantry/commit/9845c7f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: review quarantined artifacts ([56f2088](https://github.com/pantry-pm/pantry/commit/56f2088)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: rehearse scanner outages ([a7c0ee9](https://github.com/pantry-pm/pantry/commit/a7c0ee9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: trace registry serving path ([a9cf0f5](https://github.com/pantry-pm/pantry/commit/a9cf0f5)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: capture registry crash diagnostics ([a3645d9](https://github.com/pantry-pm/pantry/commit/a3645d9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **action**: import Apple signing certificates before the build ([9fe67bd](https://github.com/pantry-pm/pantry/commit/9fe67bd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: bound oversized legacy rescans ([78bf701](https://github.com/pantry-pm/pantry/commit/78bf701)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: scan legacy artifacts off host ([3a4b7a5](https://github.com/pantry-pm/pantry/commit/3a4b7a5)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: accept legacy scan evidence ([6cb6f04](https://github.com/pantry-pm/pantry/commit/6cb6f04)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: isolate native artifact scanning ([3ac7fd6](https://github.com/pantry-pm/pantry/commit/3ac7fd6)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: restore durable scan attestations ([97a3c25](https://github.com/pantry-pm/pantry/commit/97a3c25)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: reconcile retained scan inventory ([048b424](https://github.com/pantry-pm/pantry/commit/048b424)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **cli**: fall back to system tar, and say why an extraction failed ([277d996](https://github.com/pantry-pm/pantry/commit/277d996)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: keep the staging claim alive as long as the publish it authorizes ([976655b](https://github.com/pantry-pm/pantry/commit/976655b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: keep the evidence when a scan worker dies without a result ([5aa00f6](https://github.com/pantry-pm/pantry/commit/5aa00f6)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: give the scan budget to the process that actually scans ([a8c04a9](https://github.com/pantry-pm/pantry/commit/a8c04a9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: stop starving the scanner instead of merely deprioritizing it ([6498916](https://github.com/pantry-pm/pantry/commit/6498916)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **pantry**: stop the attempt cap silently outranking the deadline ([14f39b6](https://github.com/pantry-pm/pantry/commit/14f39b6)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: size the scan ceiling for the worst case, not the typical one ([1d8ad0d](https://github.com/pantry-pm/pantry/commit/1d8ad0d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: stop clamd aborting scans the registry is still waiting for ([8aae260](https://github.com/pantry-pm/pantry/commit/8aae260)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: size the scan budget from what a scan actually costs ([93ffe7f](https://github.com/pantry-pm/pantry/commit/93ffe7f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **pantry**: make a failed publish say why it failed ([567a190](https://github.com/pantry-pm/pantry/commit/567a190)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: don't hand a retryable 425 to callers that cannot retry ([75db11b](https://github.com/pantry-pm/pantry/commit/75db11b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **pantry**: stop shipping 605MB of debug info as mysql.com ([3f6941d](https://github.com/pantry-pm/pantry/commit/3f6941d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: let a scan outlive the request that asked for it ([5bb77a4](https://github.com/pantry-pm/pantry/commit/5bb77a4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: a retry must wait, not start a competing scan ([b7ceb74](https://github.com/pantry-pm/pantry/commit/b7ceb74)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **vitess.io**: ship the daemons a deployment runs, not the whole toolbox ([8e008d7](https://github.com/pantry-pm/pantry/commit/8e008d7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: give heavy packages time to finish compiling ([f69d4cb](https://github.com/pantry-pm/pantry/commit/f69d4cb)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: stop discarding large publishes that actually succeeded ([bc6725c](https://github.com/pantry-pm/pantry/commit/bc6725c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: resolve dependency prefixes during package builds ([2f01e5c](https://github.com/pantry-pm/pantry/commit/2f01e5c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql.com**: substitute the SSL path instead of passing a template ([bc38668](https://github.com/pantry-pm/pantry/commit/bc38668)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mysql.com**: stop shipping a mysqld that cannot start ([b5e6785](https://github.com/pantry-pm/pantry/commit/b5e6785)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: stop killing large package publishes, and unrelated builds ([134387e](https://github.com/pantry-pm/pantry/commit/134387e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **vitess.io**: ship config/init_db.sql, not just binaries ([e262a45](https://github.com/pantry-pm/pantry/commit/e262a45)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deploy**: stop generating a watchdog timer that dies at every reboot ([10ca42d](https://github.com/pantry-pm/pantry/commit/10ca42d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: bound concurrent isolated malware scans ([9813abc](https://github.com/pantry-pm/pantry/commit/9813abc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **installer**: normalize exact Zig snapshots ([4ad0cc7](https://github.com/pantry-pm/pantry/commit/4ad0cc7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **installer**: retry verified package downloads ([b6a4805](https://github.com/pantry-pm/pantry/commit/b6a4805)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: fail required package installs ([9b105ea](https://github.com/pantry-pm/pantry/commit/9b105ea)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: authorize binary downloads from metadata (#220) (#224) (#226) ([f295058](https://github.com/pantry-pm/pantry/commit/f295058)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#226](https://github.com/pantry-pm/pantry/issues/226), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#226](https://github.com/pantry-pm/pantry/issues/226))
+- **registry**: recover durable quarantine evidence (#220) (#224) (#226) ([335014e](https://github.com/pantry-pm/pantry/commit/335014e)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#226](https://github.com/pantry-pm/pantry/issues/226), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#226](https://github.com/pantry-pm/pantry/issues/226))
+- **shell**: deactivate when leaving a project into a known non-project dir ([0db0c09](https://github.com/pantry-pm/pantry/commit/0db0c09)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: keep retained scan downloads valid (#220) (#224) ([79c9b45](https://github.com/pantry-pm/pantry/commit/79c9b45)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **ops**: preserve scans during metadata repair (#220) (#224) ([2c67e13](https://github.com/pantry-pm/pantry/commit/2c67e13)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **registry**: recover durable publish attestations (#220) (#224) ([03ca9e8](https://github.com/pantry-pm/pantry/commit/03ca9e8)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **types**: accept newer semver constraints ([d37914d](https://github.com/pantry-pm/pantry/commit/d37914d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: converge concurrent clean backfills (#220) (#224) ([12c45c4](https://github.com/pantry-pm/pantry/commit/12c45c4)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **services**: initialize every Postgres cluster through one code path ([13df32d](https://github.com/pantry-pm/pantry/commit/13df32d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ts-pantry**: add the bun releases published since the last snapshot ([0434de8](https://github.com/pantry-pm/pantry/commit/0434de8)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **services**: give each project its own PostgreSQL cluster ([a8c41ba](https://github.com/pantry-pm/pantry/commit/a8c41ba)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **services**: initialize the Postgres cluster with the postgres superuser ([2bd5334](https://github.com/pantry-pm/pantry/commit/2bd5334)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: retry retained object downloads (#220 #224) ([5f7bfd7](https://github.com/pantry-pm/pantry/commit/5f7bfd7)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **registry**: accept bounded long scan evidence (#220 #224) ([39bce2e](https://github.com/pantry-pm/pantry/commit/39bce2e)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **ops**: deep-scan every coverage limit (#220 #224) ([61dfe8f](https://github.com/pantry-pm/pantry/commit/61dfe8f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **ops**: deep-scan vendored archives ([56927df](https://github.com/pantry-pm/pantry/commit/56927df)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: resume high-file-count scans ([a567833](https://github.com/pantry-pm/pantry/commit/a567833)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: isolate scan worker resources ([1afe07e](https://github.com/pantry-pm/pantry/commit/1afe07e)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: review shared quarantine objects ([d28bdb9](https://github.com/pantry-pm/pantry/commit/d28bdb9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: reconcile after malware quarantine ([1d326b9](https://github.com/pantry-pm/pantry/commit/1d326b9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: quarantine blocked fallbacks ([ee1babe](https://github.com/pantry-pm/pantry/commit/ee1babe)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: tombstone quarantined fallbacks ([e2a57b1](https://github.com/pantry-pm/pantry/commit/e2a57b1)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: retry ambiguous gateway failures ([e984810](https://github.com/pantry-pm/pantry/commit/e984810)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: split heavy archive families ([39deb28](https://github.com/pantry-pm/pantry/commit/39deb28)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: reconcile lost scan responses ([14faba1](https://github.com/pantry-pm/pantry/commit/14faba1)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: preserve live scan timeout ladder ([9cf5811](https://github.com/pantry-pm/pantry/commit/9cf5811)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: bound registry backfill load ([6ed66a2](https://github.com/pantry-pm/pantry/commit/6ed66a2)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: survive registry recovery windows ([3207832](https://github.com/pantry-pm/pantry/commit/3207832)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: deep-scan limited legacy archives ([cc8dfe8](https://github.com/pantry-pm/pantry/commit/cc8dfe8)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: bound long legacy scans ([653fee7](https://github.com/pantry-pm/pantry/commit/653fee7)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: bound hosted archive traversal ([9d63a80](https://github.com/pantry-pm/pantry/commit/9d63a80)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: scan oversized legacy archives ([2c6dd94](https://github.com/pantry-pm/pantry/commit/2c6dd94)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: repair scanned legacy digests ([bea9068](https://github.com/pantry-pm/pantry/commit/bea9068)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: balance retained artifact shards ([175e961](https://github.com/pantry-pm/pantry/commit/175e961)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: forward legacy rescan bound ([d06db63](https://github.com/pantry-pm/pantry/commit/d06db63)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: size hosted legacy migration ([d2c56a4](https://github.com/pantry-pm/pantry/commit/d2c56a4)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: read hosted signature identity locally ([c2f08d8](https://github.com/pantry-pm/pantry/commit/c2f08d8)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: preserve hosted ClamAV identity ([0a84b54](https://github.com/pantry-pm/pantry/commit/0a84b54)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: preflight external scanner identity ([4fc7d6b](https://github.com/pantry-pm/pantry/commit/4fc7d6b)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: probe clamd with regular file ([b373629](https://github.com/pantry-pm/pantry/commit/b373629)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: use local socket for hosted scans ([19c76ed](https://github.com/pantry-pm/pantry/commit/19c76ed)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: bound native scan workload ([67f631a](https://github.com/pantry-pm/pantry/commit/67f631a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: contain scanner memory pressure ([02b99ce](https://github.com/pantry-pm/pantry/commit/02b99ce)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: verify isolated scanner deployment ([559b900](https://github.com/pantry-pm/pantry/commit/559b900)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: make scanner yield serving resources ([b2cf854](https://github.com/pantry-pm/pantry/commit/b2cf854)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: isolate scanner cpu capacity ([7b3a906](https://github.com/pantry-pm/pantry/commit/7b3a906)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: bound scanner readiness probes ([771b4bb](https://github.com/pantry-pm/pantry/commit/771b4bb)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: protect registry capacity from scanner load ([6e78512](https://github.com/pantry-pm/pantry/commit/6e78512)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: reserve scanner capacity during backfills ([08ef2db](https://github.com/pantry-pm/pantry/commit/08ef2db)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **deploy**: align proxy scan timeout ([9396747](https://github.com/pantry-pm/pantry/commit/9396747)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: verify backfill attestation digests ([1ca439c](https://github.com/pantry-pm/pantry/commit/1ca439c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: close backfill HTTP connections ([030c234](https://github.com/pantry-pm/pantry/commit/030c234)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: harden scanner stream cleanup ([7f89d50](https://github.com/pantry-pm/pantry/commit/7f89d50)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- **ops**: keep both scanner streams busy ([e39e3e8](https://github.com/pantry-pm/pantry/commit/e39e3e8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: parallelize retained artifact scans ([5e3b0e7](https://github.com/pantry-pm/pantry/commit/5e3b0e7)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: bound backfill shard runtimes ([9fcc47a](https://github.com/pantry-pm/pantry/commit/9fcc47a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: scan independent domains concurrently ([f27155e](https://github.com/pantry-pm/pantry/commit/f27155e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📚 Documentation
+
+- **shell**: show the den hook being sourced, not eval'd ([f03d524](https://github.com/pantry-pm/pantry/commit/f03d524)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: explain safe quarantine release ([90632ca](https://github.com/pantry-pm/pantry/commit/90632ca)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: explain bounded scan retries ([0869f88](https://github.com/pantry-pm/pantry/commit/0869f88)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🧪 Tests
+
+- **registry**: repair the drifted recovery-unit guard ([66604a1](https://github.com/pantry-pm/pantry/commit/66604a1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ops**: cover max scan size fallback (#220 #224) ([a21b2a4](https://github.com/pantry-pm/pantry/commit/a21b2a4)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224), [#220](https://github.com/pantry-pm/pantry/issues/220), [#224](https://github.com/pantry-pm/pantry/issues/224))
+- **registry**: prove safe quarantine release ([fdadeee](https://github.com/pantry-pm/pantry/commit/fdadeee)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: assert bounded backfill load ([a021932](https://github.com/pantry-pm/pantry/commit/a021932)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ops**: lock backfill resource bounds ([3aa793b](https://github.com/pantry-pm/pantry/commit/3aa793b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🤖 Continuous Integration
+
+- **pantry**: say something when a package build fails ([ffc7907](https://github.com/pantry-pm/pantry/commit/ffc7907)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.13 ([6340b24](https://github.com/pantry-pm/pantry/commit/6340b24)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update cnquery.io, codex.openai.com, rubygems.org ([199334c](https://github.com/pantry-pm/pantry/commit/199334c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, mise.jdx.dev, openexr.com ([71eb10c](https://github.com/pantry-pm/pantry/commit/71eb10c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/ggerganov/llama.cpp, tailscale.com ([ce57f5e](https://github.com/pantry-pm/pantry/commit/ce57f5e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, github.com/router-for-me/CLIProxyAPI, pip.pypa.io ([8975a93](https://github.com/pantry-pm/pantry/commit/8975a93)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10273 ([8a918f9](https://github.com/pantry-pm/pantry/commit/8a918f9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update laravel.com, pulumi.io, stripe.com ([ebb8d59](https://github.com/pantry-pm/pantry/commit/ebb8d59)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, rioterm.com, tart.run, vaultproject.io, zotregistry.dev ([248f125](https://github.com/pantry-pm/pantry/commit/248f125)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, llm.datasette.io, mupdf.com, mysql.com, planetscale.com ([191cb82](https://github.com/pantry-pm/pantry/commit/191cb82)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, projen.io, talos.dev, whatsapp.com ([f7bc1b0](https://github.com/pantry-pm/pantry/commit/f7bc1b0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp, opencode.ai ([2aaa9a9](https://github.com/pantry-pm/pantry/commit/2aaa9a9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, coder.com, github.com/ggerganov/llama.cpp, prefix.dev, rioterm.com, whatsapp.com, ziglang.org ([dd902c8](https://github.com/pantry-pm/pantry/commit/dd902c8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update argoproj.github.io/cd, casdoor.org, changie.dev, depot.dev, github.com/ggerganov/llama.cpp, ohmyposh.dev, rubocop.org, unbound.net, zotregistry.dev ([a4991d0](https://github.com/pantry-pm/pantry/commit/a4991d0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp ([2d14a31](https://github.com/pantry-pm/pantry/commit/2d14a31)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, cnquery.io, github.com/ggerganov/llama.cpp, opencode.ai, planetscale.com ([2046b2b](https://github.com/pantry-pm/pantry/commit/2046b2b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10246 ([9b46000](https://github.com/pantry-pm/pantry/commit/9b46000)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ansible.com, discord.com, github.com/ggerganov/llama.cpp, rioterm.com, tailscale.com ([c53c01a](https://github.com/pantry-pm/pantry/commit/c53c01a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update just.systems to 1.58.0 ([96d1456](https://github.com/pantry-pm/pantry/commit/96d1456)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, fly.io, github.com/ggerganov/llama.cpp, harlequin.sh ([2c2f7d7](https://github.com/pantry-pm/pantry/commit/2c2f7d7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, convco.github.io, discord.com, github.com/ggerganov/llama.cpp ([edac0d4](https://github.com/pantry-pm/pantry/commit/edac0d4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, ipfs.tech, mise.jdx.dev, vcluster.com ([746b159](https://github.com/pantry-pm/pantry/commit/746b159)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, github.com/tw93/mole, libvips.org, nodejs.org, pnpm.io, prefix.dev, ziglang.org ([b829e60](https://github.com/pantry-pm/pantry/commit/b829e60)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, conftest.dev, github.com/ggerganov/llama.cpp, meilisearch.com ([07a8fe7](https://github.com/pantry-pm/pantry/commit/07a8fe7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, github.com/ggerganov/llama.cpp, odigos.io, ohmyposh.dev, railway.app ([3e63b59](https://github.com/pantry-pm/pantry/commit/3e63b59)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, orbstack.dev ([75b5d0d](https://github.com/pantry-pm/pantry/commit/75b5d0d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, jetbrains-mono-nerd-font, meslo-lg-nerd-font ([fecc4d0](https://github.com/pantry-pm/pantry/commit/fecc4d0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.115 ([685d4d9](https://github.com/pantry-pm/pantry/commit/685d4d9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10235 ([cf76b74](https://github.com/pantry-pm/pantry/commit/cf76b74)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10234 ([cc82f58](https://github.com/pantry-pm/pantry/commit/cc82f58)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, chezmoi.io, github.com/ggerganov/llama.cpp ([f4e8444](https://github.com/pantry-pm/pantry/commit/f4e8444)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, zed.dev ([16bb46c](https://github.com/pantry-pm/pantry/commit/16bb46c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev, ziglang.org ([6579194](https://github.com/pantry-pm/pantry/commit/6579194)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.134.0 ([9f797da](https://github.com/pantry-pm/pantry/commit/9f797da)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10229 ([7a6e1b6](https://github.com/pantry-pm/pantry/commit/7a6e1b6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/tw93/mole ([c3dab3b](https://github.com/pantry-pm/pantry/commit/c3dab3b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stats.app to 3.0.10 ([b5ec125](https://github.com/pantry-pm/pantry/commit/b5ec125)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, ohmyposh.dev ([3de8938](https://github.com/pantry-pm/pantry/commit/3de8938)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update atlasgo.io, github.com/ggerganov/llama.cpp ([ab50eb6](https://github.com/pantry-pm/pantry/commit/ab50eb6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10224 ([1a8816c](https://github.com/pantry-pm/pantry/commit/1a8816c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, gleam.run ([abb2e14](https://github.com/pantry-pm/pantry/commit/abb2e14)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mise.jdx.dev, rioterm.com ([457e683](https://github.com/pantry-pm/pantry/commit/457e683)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ziglang.org to 0.17.0-dev.1516+8a4b5424d ([ab7f5e8](https://github.com/pantry-pm/pantry/commit/ab7f5e8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, streamlink.github.io ([36a0c56](https://github.com/pantry-pm/pantry/commit/36a0c56)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/ggerganov/llama.cpp ([dc58677](https://github.com/pantry-pm/pantry/commit/dc58677)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.131.0 ([3a96988](https://github.com/pantry-pm/pantry/commit/3a96988)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev to 30.1.1 ([95120f1](https://github.com/pantry-pm/pantry/commit/95120f1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, projen.io ([0ab77cf](https://github.com/pantry-pm/pantry/commit/0ab77cf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai to 1.18.11 ([e75995e](https://github.com/pantry-pm/pantry/commit/e75995e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, ohmyposh.dev ([cdcaf0a](https://github.com/pantry-pm/pantry/commit/cdcaf0a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI ([2ca09ba](https://github.com/pantry-pm/pantry/commit/2ca09ba)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.30.3 ([ec7e1aa](https://github.com/pantry-pm/pantry/commit/ec7e1aa)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, openshift.com ([0ee9927](https://github.com/pantry-pm/pantry/commit/0ee9927)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10216 ([87606a2](https://github.com/pantry-pm/pantry/commit/87606a2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10214 ([3314927](https://github.com/pantry-pm/pantry/commit/3314927)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, glfw.org ([85f9762](https://github.com/pantry-pm/pantry/commit/85f9762)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, rclone.org, rioterm.com ([130f5b8](https://github.com/pantry-pm/pantry/commit/130f5b8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update digitalocean.com/doctl, github.com/ggerganov/llama.cpp, vale.sh ([1293cab](https://github.com/pantry-pm/pantry/commit/1293cab)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cmake.org, cursor.com, depot.dev, github.com/ggerganov/llama.cpp, temporal.io ([1f5363d](https://github.com/pantry-pm/pantry/commit/1f5363d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update argoproj.github.io/cd, github.com/ggerganov/llama.cpp, raycast.com, traefik.io ([0702765](https://github.com/pantry-pm/pantry/commit/0702765)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, pnpm.io ([f129ffd](https://github.com/pantry-pm/pantry/commit/f129ffd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cli.github.com to 2.97.0 ([cb5534c](https://github.com/pantry-pm/pantry/commit/cb5534c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, mupdf.com ([b2da6f8](https://github.com/pantry-pm/pantry/commit/b2da6f8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([63eefd1](https://github.com/pantry-pm/pantry/commit/63eefd1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com/code-server, github.com/chainguard-dev/apko, mise.jdx.dev ([261ed76](https://github.com/pantry-pm/pantry/commit/261ed76)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, stripe.com ([e961d13](https://github.com/pantry-pm/pantry/commit/e961d13)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, diabrowser.com, fly.io, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, openpolicyagent.org ([01f52fd](https://github.com/pantry-pm/pantry/commit/01f52fd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bytebase.com, dgraph.io, dozzle.dev, github.com/ggerganov/llama.cpp, ohmyposh.dev ([a6298e8](https://github.com/pantry-pm/pantry/commit/a6298e8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update diabrowser.com, obsidian.md, scaleway.com ([bc7406a](https://github.com/pantry-pm/pantry/commit/bc7406a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update digitalocean.com/doctl, github.com/ggerganov/llama.cpp, huggingface.co, opencode.ai ([c0b563b](https://github.com/pantry-pm/pantry/commit/c0b563b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, rucio.cern.ch/rucio-client ([6ace3fb](https://github.com/pantry-pm/pantry/commit/6ace3fb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, whatsapp.com, ziglang.org ([576def2](https://github.com/pantry-pm/pantry/commit/576def2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI ([d0b3874](https://github.com/pantry-pm/pantry/commit/d0b3874)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, casdoor.org, github.com/ggerganov/llama.cpp, pocketbase.io ([ca55f71](https://github.com/pantry-pm/pantry/commit/ca55f71)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 4 apps ([74f6a49](https://github.com/pantry-pm/pantry/commit/74f6a49)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, materialize.com, mise.jdx.dev ([2a03d56](https://github.com/pantry-pm/pantry/commit/2a03d56)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update depot.dev, github.com/router-for-me/CLIProxyAPI ([7c1f112](https://github.com/pantry-pm/pantry/commit/7c1f112)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.107 ([7da1ac3](https://github.com/pantry-pm/pantry/commit/7da1ac3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pip.pypa.io to 26.2 ([b20cd56](https://github.com/pantry-pm/pantry/commit/b20cd56)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update npmjs.com to 12.0.2 ([b994fa8](https://github.com/pantry-pm/pantry/commit/b994fa8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, github.com/router-for-me/CLIProxyAPI, werf.io ([8866862](https://github.com/pantry-pm/pantry/commit/8866862)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dblab.danvergara.com, terragrunt.gruntwork.io ([b8e817e](https://github.com/pantry-pm/pantry/commit/b8e817e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **ops**: report legacy scan evidence ([23cbe77](https://github.com/pantry-pm/pantry/commit/23cbe77)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update dagger.io, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, redis.io, stripe.com ([698e341](https://github.com/pantry-pm/pantry/commit/698e341)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, vale.sh, zed.dev ([384150e](https://github.com/pantry-pm/pantry/commit/384150e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, gleam.run, haskell.org/cabal, nodejs.org, prefix.dev, ziglang.org ([a81e803](https://github.com/pantry-pm/pantry/commit/a81e803)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, pnpm.io, projen.io ([5436a8d](https://github.com/pantry-pm/pantry/commit/5436a8d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, codex.openai.com, github.com/ggerganov/llama.cpp, mise.jdx.dev ([8fd0759](https://github.com/pantry-pm/pantry/commit/8fd0759)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.11...v0.11.12)
 
 ## 🐛 Bug Fixes
