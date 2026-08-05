@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.13...v0.11.14)
+
+## 🐛 Bug Fixes
+
+- **registry**: resolve versions for the target ([cecf6af](https://github.com/pantry-pm/pantry/commit/cecf6af)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.14 ([a795e63](https://github.com/pantry-pm/pantry/commit/a795e63)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.12...v0.11.13)
 
 ## 🚀 Features
