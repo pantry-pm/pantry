@@ -84,6 +84,23 @@ function registryConfig(options: PublishBinaryArtifactOptions): { registryUrl: s
  */
 export const DEFAULT_CLIENT_DEADLINE_MS: number = 60 * 60_000
 
+/** Ceiling the backoff below settles at. */
+export const MAX_BACKOFF_MS: number = 30_000
+
+/**
+ * Runaway guard, NOT the thing that decides how long to wait.
+ *
+ * That is DEFAULT_CLIENT_DEADLINE_MS - what matters is how long the scan
+ * takes, not how many times we asked. This was 60, which at the backoff
+ * ceiling is about 28 minutes, so it silently became the real limit and gave
+ * up on a scan that was still running: "remained ambiguous after 60 attempts"
+ * on an artifact the registry was still working on.
+ *
+ * Sized so it cannot bind before the deadline does, and asserted as such.
+ */
+export const DEFAULT_CLIENT_ATTEMPTS: number
+  = Math.ceil(DEFAULT_CLIENT_DEADLINE_MS / MAX_BACKOFF_MS) + 10
+
 function completionError(response: Response, completed: any): Error {
   const retryable = completed.retryable ? ' (retryable)' : ''
   // Include what the scanner reported. A bare MALWARE_SCAN_UNAVAILABLE says
@@ -133,7 +150,7 @@ export async function completeBinaryUpload(
   //
   // The wait is bounded by TIME rather than attempt count, because what
   // matters is how long the scan takes, not how many times we asked.
-  const attempts = Math.max(1, options.attempts ?? 60)
+  const attempts = Math.max(1, options.attempts ?? DEFAULT_CLIENT_ATTEMPTS)
   const deadline = Date.now() + (options.deadlineMs ?? DEFAULT_CLIENT_DEADLINE_MS)
   const fetchUpload = options.fetch ?? fetch
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
@@ -162,7 +179,7 @@ export async function completeBinaryUpload(
 
     if (attempt >= attempts || Date.now() >= deadline)
       break
-    await sleep(Math.min(30_000, 1000 * 2 ** Math.min(attempt - 1, 5)))
+    await sleep(Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(attempt - 1, 5)))
   }
 
   throw new Error(`Binary upload completion remained ambiguous after ${attempts} attempts: ${lastError.message}`)

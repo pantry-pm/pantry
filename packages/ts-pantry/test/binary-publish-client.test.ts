@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { maxScanBudgetMs } from '../../registry/src/malware-scanning'
-import { completeBinaryUpload, DEFAULT_CLIENT_DEADLINE_MS } from '../scripts/binary-publish-client'
+import { completeBinaryUpload, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS } from '../scripts/binary-publish-client'
 
 const auth = { Authorization: 'Bearer test' }
 
@@ -210,5 +210,25 @@ describe('the publish client outlasts the scan it is waiting for', () => {
     // The scan starts only once the artifact is staged, and a large upload to
     // object storage took eight minutes on its own.
     expect(DEFAULT_CLIENT_DEADLINE_MS - maxScanBudgetMs()).toBeGreaterThanOrEqual(10 * 60_000)
+  })
+})
+
+describe('the attempt cap is a runaway guard, not the real limit', () => {
+  // Three independent things can end the wait: the attempt count, the time
+  // deadline, and the registry's own scan budget. They have to be ordered, and
+  // they were not. The deadline was raised to outlast the longest scan but the
+  // attempt cap was left at 60, which at the backoff ceiling is roughly 28
+  // minutes - so it quietly became the real limit and abandoned a scan that
+  // was still running, 37 minutes into a publish.
+  it('cannot expire before the time deadline does', () => {
+    const soonestAttemptsCanExpire = DEFAULT_CLIENT_ATTEMPTS * MAX_BACKOFF_MS
+    expect(soonestAttemptsCanExpire).toBeGreaterThan(DEFAULT_CLIENT_DEADLINE_MS)
+  })
+
+  it('still outlasts the largest scan the registry will run', () => {
+    // The ordering that has to hold end to end: scan budget < deadline, and
+    // the attempt cap out of the way of both.
+    expect(DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThan(maxScanBudgetMs())
+    expect(DEFAULT_CLIENT_ATTEMPTS * MAX_BACKOFF_MS).toBeGreaterThan(maxScanBudgetMs())
   })
 })
