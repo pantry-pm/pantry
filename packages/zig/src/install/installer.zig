@@ -1512,29 +1512,22 @@ pub const Installer = struct {
 
         // Extract tarball from memory — npm tarballs have a 'package' directory inside
         if (options.verbose) std.debug.print("[verbose:npm] extracting tarball ({d} bytes) to {s}\n", .{ tarball_bytes.len, install_dir });
-        {
-            var dest = try io_helper.cwd().openDir(io_helper.io, install_dir, .{});
-            defer dest.close(io_helper.io);
-
-            var input_reader: std.Io.Reader = .fixed(tarball_bytes);
-            var window_buf: [65536]u8 = undefined;
-            var decompressor: std.compress.flate.Decompress = .init(&input_reader, .gzip, &window_buf);
-            // Use diagnostics to tolerate duplicate tar entries (some npm packages
-            // have the same file listed twice, e.g. ts-mocker's dist/bin/cli.js)
-            var tar_diagnostics: std.tar.Diagnostics = .{ .allocator = self.allocator };
-            defer tar_diagnostics.deinit();
-            std.tar.pipeToFileSystem(io_helper.io, dest, &decompressor.reader, .{
-                .strip_components = 1,
-                .diagnostics = &tar_diagnostics,
-            }) catch {
-                if (options.verbose) std.debug.print("[verbose:npm] EXTRACTION FAILED for {s}\n", .{spec.name});
-                if (!options.quiet) {
-                    style.print("  ✗ Failed to extract {s} — skipping\n", .{spec.name});
-                }
-                io_helper.deleteTree(install_dir) catch {};
-                return error.ExtractionFailed;
-            };
-        }
+        // Zig's std.tar alone was not enough here: a 183MB pantry package
+        // (573MB unpacked) failed in it while /usr/bin/tar handled the same
+        // bytes fine, so vitess.io could be downloaded and verified and still
+        // never install. extractGzipFromMemory falls back to system tar, as
+        // the sibling extractArchiveQuiet already does for large archives.
+        extractor.extractGzipFromMemory(self.allocator, tarball_bytes, install_dir, 1) catch |err| {
+            if (options.verbose) std.debug.print("[verbose:npm] EXTRACTION FAILED for {s}: {s}\n", .{ spec.name, @errorName(err) });
+            if (!options.quiet) {
+                // Name the error. The previous `catch {}` discarded it, so an
+                // install that died here said only "Failed to extract — skipping"
+                // and left nothing to act on.
+                style.print("  ✗ Failed to extract {s} ({s}, {d} bytes) — skipping\n", .{ spec.name, @errorName(err), tarball_bytes.len });
+            }
+            io_helper.deleteTree(install_dir) catch {};
+            return error.ExtractionFailed;
+        };
         if (options.verbose) std.debug.print("[verbose:npm] extraction complete for {s}\n", .{spec.name});
 
         // Create shims for npm package binaries

@@ -94,6 +94,80 @@ pub fn extractArchiveQuiet(
 /// Fall back to system tar command for extraction.
 /// On non-zero exit the captured stderr is returned via `stderr_out` so the caller
 /// can include it in diagnostics (ownership transferred to caller — must free).
+/// Extract a gzipped tarball from memory, stripping `strip_components` leading
+/// path components — the layout npm and pantry binary tarballs both use.
+///
+/// Zig's `std.tar` is the primary path because it needs no subprocess, but it
+/// does not manage every archive: a 183MB pantry package (573MB unpacked)
+/// failed there while `/usr/bin/tar` handled it without complaint. So this
+/// falls back to system tar exactly as `extractArchiveQuiet` does, and for the
+/// same stated reason — system tar "handles all entry types (symlinks, hard
+/// links, large archives) reliably".
+///
+/// On failure the caller gets the real error rather than a bare
+/// `ExtractionFailed`: the previous `catch {}` discarded it, so an install that
+/// died here reported only "Failed to extract <pkg> — skipping" with nothing
+/// to act on.
+pub fn extractGzipFromMemory(
+    allocator: std.mem.Allocator,
+    bytes: []const u8,
+    dest_dir: []const u8,
+    strip_components: u32,
+) !void {
+    var dest = try io_helper.cwd().openDir(io_helper.io, dest_dir, .{});
+    defer dest.close(io_helper.io);
+
+    var input_reader: std.Io.Reader = .fixed(bytes);
+    var window_buf: [65536]u8 = undefined;
+    var decompressor: std.compress.flate.Decompress = .init(&input_reader, .gzip, &window_buf);
+    // Diagnostics tolerate duplicate tar entries (some npm packages list the
+    // same file twice, e.g. ts-mocker's dist/bin/cli.js).
+    var tar_diagnostics: std.tar.Diagnostics = .{ .allocator = allocator };
+    defer tar_diagnostics.deinit();
+
+    const native_err = blk: {
+        std.tar.pipeToFileSystem(io_helper.io, dest, &decompressor.reader, .{
+            .strip_components = strip_components,
+            .diagnostics = &tar_diagnostics,
+        }) catch |err| break :blk err;
+        return;
+    };
+
+    if (verboseExtract()) {
+        style.print(
+            "  [pantry:extract] native tar failed ({s}) on {d} bytes, falling back to system tar\n",
+            .{ @errorName(native_err), bytes.len },
+        );
+    }
+
+    // Spill to a temp file so system tar has something to read, then let it do
+    // the work it is better at.
+    const tmp_path = try std.fmt.allocPrint(allocator, "{s}/.pantry-extract.tar.gz", .{dest_dir});
+    defer allocator.free(tmp_path);
+    {
+        const tmp_file = io_helper.cwd().createFile(io_helper.io, tmp_path, .{}) catch return native_err;
+        defer tmp_file.close(io_helper.io);
+        io_helper.writeAllToFile(tmp_file, bytes) catch return native_err;
+    }
+    defer io_helper.deleteFile(tmp_path) catch {};
+
+    const strip_arg = try std.fmt.allocPrint(allocator, "--strip-components={d}", .{strip_components});
+    defer allocator.free(strip_arg);
+    const result = io_helper.childRun(allocator, &[_][]const u8{
+        "/usr/bin/tar", "xzf", tmp_path, "-C", dest_dir, strip_arg,
+    }) catch return native_err;
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+
+    const ok = result.term == .exited and result.term.exited == 0;
+    if (!ok) {
+        if (verboseExtract()) {
+            style.print("  [pantry:extract] system tar stderr:\n{s}\n", .{result.stderr});
+        }
+        return native_err;
+    }
+}
+
 fn extractWithSystemTar(
     allocator: std.mem.Allocator,
     archive_path: []const u8,
