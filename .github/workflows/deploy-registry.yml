@@ -187,12 +187,29 @@ jobs:
             # clamd below the proxy and Registry so liveness, readiness, and
             # unrelated package traffic remain responsive under scan load.
             CLAMD_CAPACITY_DIR=/etc/systemd/system/clamav-daemon.service.d
+            # batch, NOT idle. CPUSchedulingPolicy=idle is SCHED_IDLE, which
+            # only runs when no other task on the CPU is runnable - on a box
+            # that serves traffic that means a large scan makes almost no
+            # progress. It also silently voids the two knobs below it: Nice and
+            # CPUWeight are CFS controls and do not apply to SCHED_IDLE tasks,
+            # so the intended "low priority" was really "starved".
+            #
+            # A 183MB package took the whole 45 minute ceiling without
+            # finishing, at about 0.185 MB/s, while a 97MB one managed 2 MB/s -
+            # a rate that moves with how busy the box is, which is exactly the
+            # signature of SCHED_IDLE rather than of a big archive.
+            #
+            # SCHED_BATCH keeps the protection and drops the starvation: still
+            # CFS, so Nice=10 and CPUWeight=25 now genuinely apply (a quarter
+            # of the default share under contention), but marked non-
+            # interactive so it never preempts the serving path on wakeup. IO
+            # stays idle-class and CPU 0 stays reserved.
             install -d -m 0755 "$CLAMD_CAPACITY_DIR"
             CLAMD_CAPACITY_TMP=$(mktemp "$CLAMD_CAPACITY_DIR/pantry-registry-capacity.conf.XXXXXX")
             printf '%s\n' \
               '[Service]' \
               'Nice=10' \
-              'CPUSchedulingPolicy=idle' \
+              'CPUSchedulingPolicy=batch' \
               'CPUWeight=25' \
               'IOSchedulingClass=idle' \
               'IOWeight=25' \

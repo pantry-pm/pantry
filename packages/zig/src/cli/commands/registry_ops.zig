@@ -389,7 +389,7 @@ const provision_script =
     \\cat > "$clam_capacity_tmp" <<'CLAMD_UNIT'
     \\[Service]
     \\Nice=10
-    \\CPUSchedulingPolicy=idle
+    \\CPUSchedulingPolicy=batch
     \\CPUWeight=25
     \\IOSchedulingClass=idle
     \\IOWeight=25

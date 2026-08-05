@@ -84,7 +84,10 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('clamav-daemon clamav-freshclam jq util-linux')
     expect(workflow).toContain('clamav-daemon.service.d')
     expect(workflow).toContain("'Nice=10'")
-    expect(workflow).toContain("'CPUSchedulingPolicy=idle'")
+    // batch, never idle: SCHED_IDLE starves a large scan and voids Nice and
+    // CPUWeight, which are CFS controls that do not apply to it.
+    expect(workflow).toContain("'CPUSchedulingPolicy=batch'")
+    expect(workflow).not.toContain("'CPUSchedulingPolicy=idle'")
     expect(workflow).toContain("'CPUWeight=25'")
     expect(workflow).toContain("'IOSchedulingClass=idle'")
     expect(workflow).toContain("'IOWeight=25'")
@@ -180,7 +183,7 @@ describe('first-party publication boundaries', () => {
     expect(setup).toContain('clamav-daemon clamav-freshclam util-linux')
     expect(setup).toContain('clamav-daemon.service.d')
     expect(setup).toContain('Nice=10')
-    expect(setup).toContain('CPUSchedulingPolicy=idle')
+    expect(setup).toContain('CPUSchedulingPolicy=batch')
     expect(setup).toContain('CPUWeight=25')
     expect(setup).toContain('IOSchedulingClass=idle')
     expect(setup).toContain('IOWeight=25')
