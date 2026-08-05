@@ -22,7 +22,23 @@ import {
 } from './malware-scanning'
 
 const DEFAULT_MAX_BINARY_BYTES = 1024 * 1024 * 1024
-const DEFAULT_STAGING_TTL_SECONDS = 60 * 60
+/**
+ * How long a signed staging claim stays usable.
+ *
+ * This is the outermost limit on a publish and it has to outlast everything
+ * inside it: the upload, then the scan, then the client polling for a verdict.
+ * At one hour it did not. A 183MB artifact uploaded, scanned for the better
+ * part of an hour, and then every poll failed with BINARY_UPLOAD_EXPIRED at
+ * 60m14s - the claim died while the work it authorized was still going.
+ *
+ * That was the fourth limit in this chain found the same way, one failed
+ * publish at a time. The chain, outermost last, is asserted in the tests:
+ *
+ *   max scan budget (45m) < client deadline (60m) < attempt cap (65m) < this
+ *
+ * Three hours leaves room for a slow upload ahead of the client's own window.
+ */
+export const DEFAULT_STAGING_TTL_SECONDS: number = 3 * 60 * 60
 
 /**
  * How long `complete()` may hold a response open waiting for the scan.
@@ -577,7 +593,7 @@ export class BinaryArtifactPublisher {
     publisher?: string,
     surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
   ): Promise<BinaryPublishCompleted> {
-    const claim = this.verifyClaim(uploadId)
+    const claim = this.verifyClaim(uploadId, { allowExpired: true })
 
     // Consulted BEFORE any object lookup. A completion that already ran
     // deleted both the staging and sealed objects on its way out, so an
@@ -593,6 +609,11 @@ export class BinaryArtifactPublisher {
         throw completionInProgress()
       return await running.promise
     }
+
+    // Past this point we would be starting or resuming work, which an expired
+    // claim may not authorize.
+    if (claim.expiresAt < this.now())
+      throw new BinaryPublishError('Binary staging upload has expired', 410, 'BINARY_UPLOAD_EXPIRED')
 
     const sealedKey = claim.stagingKey.replace(`${STAGING_PREFIX}/`, '.pantry-staging/sealed/')
     let stagingExists = true
@@ -1738,7 +1759,15 @@ export class BinaryArtifactPublisher {
     })
   }
 
-  private verifyClaim(uploadId: string): StagingClaim {
+  /**
+   * @param allowExpired Let a poll read a claim whose window has closed.
+   *   Expiry exists to stop new work being authorized, not to hide work that
+   *   already ran: the signature is still valid, so the claim still says
+   *   truthfully which artifact this was. complete() re-checks expiry itself,
+   *   after looking for a result, so an expired claim can still collect a
+   *   verdict it waited an hour for but cannot start anything.
+   */
+  private verifyClaim(uploadId: string, options: { allowExpired?: boolean } = {}): StagingClaim {
     const [payload, signature, extra] = uploadId.split('.')
     if (!payload || !signature || extra || !safeEqual(signClaim(payload, this.options.tokenSecret), signature))
       throw new BinaryPublishError('Invalid binary staging upload ID', 401, 'INVALID_BINARY_UPLOAD_ID')
@@ -1754,7 +1783,7 @@ export class BinaryArtifactPublisher {
     const value = claim as Partial<StagingClaim>
     if (typeof value.stagingKey !== 'string' || !value.stagingKey.startsWith(`${STAGING_PREFIX}/`) || typeof value.expiresAt !== 'number')
       throw new BinaryPublishError('Invalid binary staging upload ID', 401, 'INVALID_BINARY_UPLOAD_ID')
-    if (value.expiresAt < this.now())
+    if (!options.allowExpired && value.expiresAt < this.now())
       throw new BinaryPublishError('Binary staging upload has expired', 410, 'BINARY_UPLOAD_EXPIRED')
     return { ...request, stagingKey: value.stagingKey, expiresAt: value.expiresAt }
   }

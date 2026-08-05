@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { DEFAULT_STAGING_TTL_SECONDS } from '../../registry/src/binary-publishing'
 import { maxScanBudgetMs } from '../../registry/src/malware-scanning'
 import { completeBinaryUpload, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS } from '../scripts/binary-publish-client'
 
@@ -230,5 +231,35 @@ describe('the attempt cap is a runaway guard, not the real limit', () => {
     // the attempt cap out of the way of both.
     expect(DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThan(maxScanBudgetMs())
     expect(DEFAULT_CLIENT_ATTEMPTS * MAX_BACKOFF_MS).toBeGreaterThan(maxScanBudgetMs())
+  })
+})
+
+describe('the whole publish timeout chain is ordered', () => {
+  // Four limits govern one publish, and each was found the same way: a failed
+  // publish, hours apart, because whichever one happened to be smallest cut
+  // off work the others were still waiting on. Written down here so the next
+  // change to any of them has to keep the ordering.
+  //
+  //   max scan budget  <  client deadline  <  attempt cap  <  staging TTL
+  const attemptCapMs = DEFAULT_CLIENT_ATTEMPTS * MAX_BACKOFF_MS
+  const stagingTtlMs = DEFAULT_STAGING_TTL_SECONDS * 1000
+
+  it('lets a scan finish before the client stops waiting', () => {
+    expect(maxScanBudgetMs()).toBeLessThan(DEFAULT_CLIENT_DEADLINE_MS)
+  })
+
+  it('lets the deadline, not the attempt count, decide when to stop', () => {
+    expect(DEFAULT_CLIENT_DEADLINE_MS).toBeLessThan(attemptCapMs)
+  })
+
+  it('keeps the staging claim alive for the whole attempt', () => {
+    // It expired at 60m14s while the scan it authorized was still running.
+    expect(attemptCapMs).toBeLessThan(stagingTtlMs)
+  })
+
+  it('leaves the claim room for a slow upload on top of the client window', () => {
+    // The claim is minted before the upload; the client's window only starts
+    // once the bytes are staged. An eight minute upload has been observed.
+    expect(stagingTtlMs - DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThanOrEqual(30 * 60_000)
   })
 })
