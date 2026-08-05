@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.14...v0.11.15)
+
+## 🐛 Bug Fixes
+
+- **action**: bundle target-aware resolution ([7424c96](https://github.com/pantry-pm/pantry/commit/7424c96)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🧹 Chores
+
+- release v0.11.15 ([d901d0b](https://github.com/pantry-pm/pantry/commit/d901d0b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.13...v0.11.14)
 
 ## 🐛 Bug Fixes
