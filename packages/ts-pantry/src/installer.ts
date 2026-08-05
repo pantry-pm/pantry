@@ -268,14 +268,14 @@ export async function installPackage(
 
   // Resolve semver constraints (^, ~, >=, etc.) to concrete versions
   if (/^[\^~>=<]/.test(version)) {
-    version = await resolveVersionConstraint(domain, version)
+    version = await resolveVersionConstraint(domain, version, platform)
   }
   else if (version === 'latest' || version === '*' || !version) {
-    version = await resolveLatestVersion(domain)
+    version = await resolveLatestVersion(domain, platform)
   }
   // Resolve short dev versions (e.g. "0.16.0-dev") to full version via upstream API
   else if (domain === 'ziglang.org' && version.endsWith('-dev')) {
-    const resolved = await resolveZigShortDevVersion(version, { onRetry: options.onRetry })
+    const resolved = await resolveZigShortDevVersion(version, platform, { onRetry: options.onRetry })
     if (!resolved)
       throw new Error(`Could not resolve ${version} to a published ziglang.org development build`)
     version = resolved
@@ -464,7 +464,7 @@ export async function installPackages(
 /**
  * Resolve 'latest' version for known packages.
  */
-export async function resolveLatestVersion(domain: string): Promise<string> {
+export async function resolveLatestVersion(domain: string, platform: Platform = detectPlatform()): Promise<string> {
   if (domain === 'bun.sh') {
     // Try GitHub API first, then fall back to the newest version in the
     // bundled package metadata. The earlier code returned `""` on API
@@ -479,11 +479,9 @@ export async function resolveLatestVersion(domain: string): Promise<string> {
     throw new Error('Failed to resolve latest bun.sh version (GitHub API unreachable, no bundled metadata)')
   }
   if (domain === 'ziglang.org') {
-    const versions = await registryVersions(domain)
+    const versions = await registryVersions(domain, platform)
     if (versions.length > 0) return versions.sort(compareVersions)[0]
-    const fallback = await latestFromPackageMetadata(domain)
-    if (fallback) return fallback
-    throw new Error('Failed to resolve latest ziglang.org version from the Pantry registry')
+    throw new Error(`Failed to resolve a ziglang.org version published for ${registryPlatformKey(platform)}`)
   }
   if (domain === 'nodejs.org') {
     const resp = await fetchJSON('https://nodejs.org/dist/index.json').catch(() => null)
@@ -533,15 +531,35 @@ async function latestFromPackageMetadata(domain: string): Promise<string> {
 /**
  * Resolve a short Zig dev version like "0.17.0-dev" from the Pantry registry.
  */
-async function resolveZigShortDevVersion(shortVersion: string, retryOptions: NetworkRetryOptions = {}): Promise<string | null> {
-  const versions = await registryVersions('ziglang.org', retryOptions)
+async function resolveZigShortDevVersion(shortVersion: string, platform: Platform, retryOptions: NetworkRetryOptions = {}): Promise<string | null> {
+  const versions = await registryVersions('ziglang.org', platform, retryOptions)
   return versions.filter(version => version.startsWith(`${shortVersion}.`)).sort(compareVersions)[0] || null
 }
 
-async function registryVersions(domain: string, retryOptions: NetworkRetryOptions = {}): Promise<string[]> {
+interface RegistryVersionMetadata {
+  platforms?: Record<string, unknown>
+}
+
+interface RegistryMetadata {
+  versions?: Record<string, RegistryVersionMetadata>
+}
+
+export function registryPlatformKey(platform: Platform): string {
+  const arch = platform.arch === 'aarch64' ? 'arm64' : 'x86-64'
+  return `${platform.os}-${arch}`
+}
+
+export function registryVersionsForPlatform(metadata: RegistryMetadata | null, platform: Platform): string[] {
+  const platformKey = registryPlatformKey(platform)
+  return Object.entries(metadata?.versions || {})
+    .filter(([, version]) => Object.hasOwn(version.platforms || {}, platformKey))
+    .map(([version]) => version)
+}
+
+async function registryVersions(domain: string, platform: Platform, retryOptions: NetworkRetryOptions = {}): Promise<string[]> {
   const metadata = await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`, 5, retryOptions)
-    .catch(() => null) as { versions?: Record<string, unknown> } | null
-  return Object.keys(metadata?.versions || {})
+    .catch(() => null) as RegistryMetadata | null
+  return registryVersionsForPlatform(metadata, platform)
 }
 
 /** Does `version` satisfy `op` + `target`? Shared by the bundled and live scans. */
@@ -624,7 +642,7 @@ export function satisfiesInstallerConstraint(version: string, constraint: Instal
  * last published. Returns [] for domains with no live source — the bundled
  * list is then the only answer.
  */
-async function fetchLiveVersions(domain: string): Promise<string[]> {
+async function fetchLiveVersions(domain: string, platform: Platform): Promise<string[]> {
   if (domain === 'bun.sh') {
     const resp = await fetchJSON('https://api.github.com/repos/oven-sh/bun/releases?per_page=100').catch(() => null)
     const releases = (resp as Array<{ tag_name?: string }> | null) || []
@@ -635,7 +653,7 @@ async function fetchLiveVersions(domain: string): Promise<string[]> {
     const versions = (resp as Array<{ version?: string }> | null) || []
     return versions.map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
   }
-  if (domain === 'ziglang.org') return registryVersions(domain)
+  if (domain === 'ziglang.org') return registryVersions(domain, platform)
   return []
 }
 
@@ -653,8 +671,8 @@ export function resolveInstallerConstraintFromCandidates(constraint: string, can
 /**
  * Resolve a semver constraint (^1.0.0, ~1.2.0, >=1.0.0, etc.) to the best matching concrete version.
  */
-async function resolveVersionConstraint(domain: string, constraint: string): Promise<string> {
-  if (!parseInstallerConstraint(constraint)) return resolveLatestVersion(domain)
+async function resolveVersionConstraint(domain: string, constraint: string, platform: Platform): Promise<string> {
+  if (!parseInstallerConstraint(constraint)) return resolveLatestVersion(domain, platform)
 
   // Get available versions from package metadata
   let bundledVersions: readonly string[]
@@ -671,8 +689,12 @@ async function resolveVersionConstraint(domain: string, constraint: string): Pro
   // Union of upstream + bundled, sorted so the first match is the highest one.
   // Merging rather than preferring either list keeps resolution working when
   // upstream is unreachable (bundled-only) and when it's ahead (live-only).
-  const live = await fetchLiveVersions(domain)
-  const candidates = [...new Set([...live, ...bundledVersions])].sort(compareInstallerVersionsDesc)
+  const live = await fetchLiveVersions(domain, platform)
+  // The Pantry registry is authoritative for Zig binaries. Bundled recipe
+  // versions do not prove that a particular target artifact was published.
+  const candidates = domain === 'ziglang.org'
+    ? live.sort(compareInstallerVersionsDesc)
+    : [...new Set([...live, ...bundledVersions])].sort(compareInstallerVersionsDesc)
   const resolved = resolveInstallerConstraintFromCandidates(constraint, candidates)
   if (resolved) return resolved
 
