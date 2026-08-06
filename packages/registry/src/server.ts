@@ -61,6 +61,8 @@ import { buildSbom, parseFormat } from './sbom'
 import { loadPackageVersions, loadSupportedPlatforms as loadRecipePlatforms } from './catalog'
 import { BoundedAsyncCache, BoundedTtlCache } from './runtime-cache'
 import { binaryRateLimiterFromEnv, rateLimitClientKey } from './binary-rate-limit'
+import { EgressLedger } from './egress'
+import { ObjectSnapshot } from './storage/object-snapshot'
 import {
   createMalwareScannerFromEnv,
   DualUsePolicyError,
@@ -865,6 +867,14 @@ export function createHandler(
         return Response.json(data, { headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=15' } })
       }
       // Live build status: what's building now, recent outcomes, rebuild queue.
+      // Aggregate only — no per-client or per-package breakdown — so this is
+      // the same class of information as the download counts already on /stats.
+      if (path === '/api/egress' && req.method === 'GET') {
+        return Response.json(getEgressLedger().snapshot(), {
+          headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=60' },
+        })
+      }
+
       if (path === '/api/build-status' && req.method === 'GET') {
         return Response.json({
           ...getBuildStatus().getStatus(),
@@ -4952,6 +4962,43 @@ let _defaultBinaryStorage: BinaryStorage | undefined
 let _presignClient: ReturnType<typeof createS3Client> | undefined
 /** Per-client download budget, built lazily so env changes in tests take effect. */
 let _binaryRateLimiter: ReturnType<typeof binaryRateLimiterFromEnv> | undefined
+/** Day-bucketed record of bytes handed out. See {@link EgressLedger}. */
+let _egressLedger: EgressLedger | undefined
+let _egressSnapshotStore: ObjectSnapshot | undefined
+
+/**
+ * The egress ledger, persisted to the bucket when one is configured.
+ *
+ * Persistence matters more here than for most counters: the figure it answers
+ * questions about is a *monthly* one, so a restart that lost it would reset the
+ * month-to-date total and hide exactly the overrun it exists to catch.
+ */
+export function getEgressLedger(): EgressLedger {
+  if (_egressLedger)
+    return _egressLedger
+  const ledger = new EgressLedger()
+  _egressLedger = ledger
+  const bucket = process.env.S3_BUCKET
+  if (bucket && bucket !== 'local') {
+    const store = new ObjectSnapshot(
+      createS3Client(resolveStorageProvider()),
+      bucket,
+      'analytics/registry-egress.json',
+      () => ledger.toJSON(),
+    )
+    _egressSnapshotStore = store
+    store.load()
+      .then((state) => {
+        if (state)
+          ledger.load(state)
+        // Registered only after the load resolves, so a save triggered by an
+        // early download cannot overwrite the stored month with an empty one.
+        ledger.persistWith(() => store.scheduleSave())
+      })
+      .catch(err => console.warn('Egress ledger load failed:', (err as Error).message))
+  }
+  return ledger
+}
 const _binaryAttestationCache = new BoundedTtlCache<string, string | false>(50_000, 5 * 60_000)
 /**
  * Per-domain `binaries/<domain>/metadata.json`, memoized for the download path.
@@ -5258,6 +5305,12 @@ async function handleBinaryProxy(
         })
       }
     }
+
+    // Bytes we authorized, recorded where the size is already known. Host
+    // network counters cannot see this: the client is redirected to object
+    // storage, so the transfer never touches this process.
+    if (isTarball && activeRecord)
+      getEgressLedger().record(Number(activeRecord.size) || 0)
 
     // Track only authorized tarball downloads fire-and-forget.
     if (isTarball) {
