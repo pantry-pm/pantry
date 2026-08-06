@@ -457,6 +457,76 @@ export function binaryAttestationKey(tarballKey: string): string {
   return `${tarballKey}.scan.json`
 }
 
+/**
+ * Content-addressed home for a clean verdict.
+ *
+ * Attestations are otherwise stored next to the tarball, so the identical bytes
+ * republished under a new domain/version/platform key — which is most of what a
+ * mirror sweep does — looked like a brand new artifact and were downloaded out
+ * of the bucket and pushed through clamd all over again. Over one week the
+ * registry scanned 604 distinct artifacts 2301 times: nearly 4x of pure repeat
+ * egress, and the worst offenders were re-scanned 44 times each.
+ */
+export function digestAttestationKey(sha256: string): string {
+  return `attestations/sha256/${sha256}.json`
+}
+
+/**
+ * How long a clean verdict may be reused before the artifact is scanned again.
+ *
+ * Signature databases move, so a verdict is evidence about a moment, not a
+ * permanent property of the bytes. A week keeps the repeat-publish storm off
+ * the bucket while still re-checking everything against a current database on
+ * a human timescale.
+ */
+const DEFAULT_SCAN_REUSE_MS = 7 * 24 * 60 * 60 * 1000
+
+function scanReuseWindowMs(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.PANTRY_SCAN_ATTESTATION_REUSE_HOURS
+  if (!raw)
+    return DEFAULT_SCAN_REUSE_MS
+  const hours = Number.parseFloat(raw)
+  if (!Number.isFinite(hours) || hours < 0)
+    return DEFAULT_SCAN_REUSE_MS
+  return hours * 60 * 60 * 1000
+}
+
+/**
+ * Validate a stored digest attestation hard enough to act on it.
+ *
+ * Reusing a verdict skips the scan, so anything less than a well-formed clean
+ * result that is bound to this exact digest and still inside the reuse window
+ * has to fall through to a real scan.
+ */
+export function reusableCleanScan(
+  raw: unknown,
+  sha256: string,
+  now: number,
+  reuseWindowMs: number = scanReuseWindowMs(),
+): MalwareScanResult | null {
+  if (!raw || typeof raw !== 'object')
+    return null
+  const scan = (raw as { scan?: unknown }).scan
+  if (!scan || typeof scan !== 'object')
+    return null
+  const candidate = scan as MalwareScanResult
+  if (candidate.verdict !== 'clean')
+    return null
+  if (candidate.artifactSha256 !== sha256)
+    return null
+  if (typeof candidate.engine !== 'string' || candidate.engine.length === 0)
+    return null
+  if (typeof candidate.durationMs !== 'number' || !Number.isFinite(candidate.durationMs) || candidate.durationMs < 0)
+    return null
+  const scannedAt = Date.parse(candidate.scannedAt)
+  if (!Number.isFinite(scannedAt))
+    return null
+  // A timestamp in the future means a clock we cannot reason about.
+  if (scannedAt > now || now - scannedAt > reuseWindowMs)
+    return null
+  return candidate
+}
+
 export function filterBinaryMetadataForCleanScans(
   input: BinaryPackageMetadata,
   allowPending: (domain: string, version: string, platform: string) => boolean = () => false,
@@ -721,6 +791,31 @@ export class BinaryArtifactPublisher {
     }
   }
 
+  /**
+   * A recent clean verdict for these exact bytes, if we already have one.
+   *
+   * Best-effort by design: a missing, unreadable or stale attestation just
+   * means we scan, so a failure here costs bandwidth but never correctness.
+   */
+  private async recallCleanScan(sha256: string): Promise<MalwareScanResult | null> {
+    try {
+      const raw = JSON.parse((await this.store.getObject(digestAttestationKey(sha256))).toString('utf8'))
+      return reusableCleanScan(raw, sha256, this.now())
+    }
+    catch {
+      return null
+    }
+  }
+
+  /** Publish the clean verdict under its digest so identical bytes reuse it. */
+  private async rememberCleanScan(scan: MalwareScanResult): Promise<void> {
+    await this.store.putObject(
+      digestAttestationKey(scan.artifactSha256),
+      JSON.stringify({ scan }),
+      'application/json',
+    ).catch(() => {})
+  }
+
   private async runCompletion(
     claim: StagingClaim,
     sealedKey: string,
@@ -746,8 +841,14 @@ export class BinaryArtifactPublisher {
         version: claim.version,
         publisher,
       } as const
-      let scan: MalwareScanResult
-      if (this.store.createDownloadUrl && this.scanner.scanUrl) {
+      // A recent clean verdict for these exact bytes is the answer to the
+      // question the scan would ask, and it costs nothing to read. Without this
+      // every republish of an unchanged artifact re-downloaded it in full.
+      let scan: MalwareScanResult | null = await this.recallCleanScan(claim.sha256)
+      if (scan) {
+        recordMalwareScanResult({ ...context, reused: true }, scan)
+      }
+      else if (this.store.createDownloadUrl && this.scanner.scanUrl) {
         scan = await scanPackageArtifactUrl(
           this.scanner,
           // Outlives the scan it is for. These were independent - a fixed
@@ -791,6 +892,7 @@ export class BinaryArtifactPublisher {
       if (scan.verdict !== 'clean')
         throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
 
+      await this.rememberCleanScan(scan)
       const completed = await this.withDomainLock(claim.domain, () => this.promote(claim, sealedKey, scan))
       await this.options.onPublished?.(completed)
       return completed
