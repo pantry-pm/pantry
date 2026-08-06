@@ -62,6 +62,10 @@ jobs:
           # until the controlled backfill finishes, then set this repository
           # variable to true and dispatch one final deployment.
           BINARY_SCAN_ATTESTATION: ${{ vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION || 'false' }}
+          # Monthly object-storage allowance in decimal TB, matching how the
+          # provider quotes and bills it. Feeds /api/egress so month-to-date
+          # usage reads as a share of the allowance instead of a bare number.
+          EGRESS_BUDGET_TB: ${{ vars.PANTRY_EGRESS_BUDGET_TB || '5' }}
           REHEARSE_SCANNER_OUTAGE: ${{ inputs.rehearse_scanner_outage || false }}
         run: |
           # Create the key file with a 0600 umask before writing so it is
@@ -82,7 +86,7 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
             "${REGISTRY_USER}@${REGISTRY_HOST}" \
-            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}' '${LEGACY_RESCAN_MAX_BYTES}' '${REHEARSE_SCANNER_OUTAGE}'" << 'EOF'
+            "bash -s -- '${REGISTRY_PATH}' '${REGISTRY_SERVICE}' '${REGISTRY_PORT}' '${REGISTRY_ENV_FILE}' '${GITHUB_SHA}' '${BINARY_SCAN_ATTESTATION}' '${LEGACY_SCAN_ATTESTATION_CUTOFF}' '${LEGACY_RESCAN_MAX_BYTES}' '${REHEARSE_SCANNER_OUTAGE}' '${EGRESS_BUDGET_TB}'" << 'EOF'
             set -euo pipefail
             REPO_PATH="$1"
             SERVICE="$2"
@@ -93,6 +97,7 @@ jobs:
             LEGACY_SCAN_ATTESTATION_CUTOFF="$7"
             LEGACY_RESCAN_MAX_BYTES="$8"
             REHEARSE_SCANNER_OUTAGE="$9"
+            EGRESS_BUDGET_TB="${10}"
             case "$BINARY_SCAN_ATTESTATION" in
               true|false) ;;
               *)
@@ -263,6 +268,7 @@ jobs:
             set_env PANTRY_SCANNER_WORKER_MEMORY_HIGH 192M
             set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 256M
             set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
+            set_env PANTRY_EGRESS_BUDGET_TB "$EGRESS_BUDGET_TB"
             if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$ENV_FILE"; then
               command -v openssl >/dev/null 2>&1 || {
                 echo "openssl is required to generate the binary staging secret" >&2
