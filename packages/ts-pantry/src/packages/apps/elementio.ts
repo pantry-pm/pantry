@@ -22,6 +22,7 @@ export const elementioPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.12.25',
     '1.12.24',
     '1.12.23',
     '1.12.22',

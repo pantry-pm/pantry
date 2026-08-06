@@ -67,6 +67,7 @@ export const syncthingnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.3',
     '2.1.2',
     '2.1.1',
     '2.1.0',
