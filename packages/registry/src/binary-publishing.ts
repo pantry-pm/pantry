@@ -529,7 +529,14 @@ export function reusableCleanScan(
   if (!scan || typeof scan !== 'object')
     return null
   const candidate = scan as MalwareScanResult
-  if (candidate.verdict !== 'clean')
+  // Clean and blocked are both decisive answers about these exact bytes, and
+  // both are worth not paying for twice. Blocked especially: whatever keeps
+  // republishing a rejected artifact will keep republishing it, and each
+  // attempt was re-downloading the full artifact to reach the same verdict —
+  // three getmonero.org builds accounted for 45 such scans in a week. An
+  // explicit rescan bypasses this entirely, which is the escape hatch when a
+  // block turns out to be a false positive.
+  if (candidate.verdict !== 'clean' && candidate.verdict !== 'blocked')
     return null
   if (candidate.artifactSha256 !== sha256)
     return null
@@ -854,8 +861,17 @@ export class BinaryArtifactPublisher {
     }
   }
 
-  /** Publish the clean verdict under its digest so identical bytes reuse it. */
+  /**
+   * Publish a decisive verdict under its digest so identical bytes reuse it.
+   *
+   * Only clean and blocked are decisive. An "error" or "review" result must not
+   * be written: it would overwrite a good stored attestation with a non-answer,
+   * turning one flaky scan into a re-download for every future republish of
+   * those bytes — the opposite of what this exists to do.
+   */
   private async rememberCleanScan(scan: MalwareScanResult): Promise<void> {
+    if (scan.verdict !== 'clean' && scan.verdict !== 'blocked')
+      return
     await this.store.putObject(
       digestAttestationKey(scan.artifactSha256),
       JSON.stringify({ scan }),
@@ -946,6 +962,12 @@ export class BinaryArtifactPublisher {
 
       if (scan.artifactSha256 !== claim.sha256)
         throw new BinaryPublishError('Staged artifact SHA-256 does not match the initiated upload', 422, 'BINARY_SHA256_MISMATCH', scan)
+
+      // Recorded before the verdict is acted on, so a rejection is remembered
+      // too. Otherwise the throw below skips the write and the next republish
+      // of the same rejected bytes downloads and scans them all over again.
+      await this.rememberCleanScan(scan)
+
       if (scan.verdict === 'blocked') {
         if (surface === 'pkgx')
           await this.quarantineBlockedFallback(claim, sealedKey, scan)
@@ -956,7 +978,6 @@ export class BinaryArtifactPublisher {
       if (scan.verdict !== 'clean')
         throw new BinaryPublishError('Binary artifact malware scanning is temporarily unavailable', 503, 'MALWARE_SCAN_UNAVAILABLE', scan)
 
-      await this.rememberCleanScan(scan)
       const completed = await this.withDomainLock(claim.domain, () => this.promote(claim, sealedKey, scan))
       await this.options.onPublished?.(completed)
       return completed

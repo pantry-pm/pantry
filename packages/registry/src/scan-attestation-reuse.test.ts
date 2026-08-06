@@ -138,8 +138,13 @@ describe('reusableCleanScan', () => {
     expect(reusableCleanScan({ scan: clean }, 'b'.repeat(64), now)).toBeNull()
   })
 
-  it('rejects a non-clean verdict', () => {
-    expect(reusableCleanScan({ scan: { ...clean, verdict: 'blocked' } }, sha, now)).toBeNull()
+  it('accepts a blocked verdict — also a decisive answer about these bytes', () => {
+    expect(reusableCleanScan({ scan: { ...clean, verdict: 'blocked' } }, sha, now)?.verdict).toBe('blocked')
+  })
+
+  it('rejects verdicts that decided nothing', () => {
+    expect(reusableCleanScan({ scan: { ...clean, verdict: 'error' } }, sha, now)).toBeNull()
+    expect(reusableCleanScan({ scan: { ...clean, verdict: 'review' } }, sha, now)).toBeNull()
   })
 
   it('rejects a verdict older than the reuse window', () => {
@@ -202,5 +207,52 @@ describe('scan failure backoff', () => {
 
     expect(result.scan.verdict).toBe('clean')
     expect(scanner.scans).toBe(2)
+  })
+})
+
+describe('blocked verdict reuse', () => {
+  it('reuses a block instead of re-downloading rejected bytes', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    scanner.verdict = 'blocked'
+    const publisher = new BinaryArtifactPublisher(store, scanner, { tokenSecret: 'test-secret-that-is-long-enough' })
+    const bytes = Buffer.from('an artifact a scanner keeps rejecting')
+
+    await expect(publish(publisher, store, bytes, '1.2.3')).rejects.toThrow(/blocked by malware scanning/)
+    // Still rejected on the next attempt — but without paying for the scan again.
+    await expect(publish(publisher, store, bytes, '1.2.4')).rejects.toThrow(/blocked by malware scanning/)
+    expect(scanner.scans).toBe(1)
+  })
+
+  it('never overwrites a stored verdict with a non-answer', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    const publisher = new BinaryArtifactPublisher(store, scanner, { tokenSecret: 'test-secret-that-is-long-enough' })
+    const bytes = Buffer.from('an artifact whose scanner later goes flaky')
+
+    const clean = await publish(publisher, store, bytes, '1.2.3')
+    const key = digestAttestationKey(clean.scan.artifactSha256)
+    expect(JSON.parse(store.files.get(key)!.toString()).scan.verdict).toBe('clean')
+
+    // An error verdict must leave the good attestation in place; overwriting it
+    // would make every future republish of these bytes scan from scratch.
+    scanner.verdict = 'error'
+    await publish(publisher, store, bytes, '1.2.4')
+    expect(JSON.parse(store.files.get(key)!.toString()).scan.verdict).toBe('clean')
+  })
+
+  it('rejects a stored review verdict as non-reusable', () => {
+    const sha = 'c'.repeat(64)
+    const now = Date.parse('2026-08-06T12:00:00.000Z')
+    const review = {
+      scan: {
+        verdict: 'review',
+        engine: 'clamav',
+        scannedAt: '2026-08-06T11:00:00.000Z',
+        durationMs: 10,
+        artifactSha256: sha,
+      },
+    }
+    expect(reusableCleanScan(review, sha, now)).toBeNull()
   })
 })
