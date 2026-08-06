@@ -4969,6 +4969,48 @@ export function invalidateBinaryMetadata(domain: string): void {
   _binaryMetadataCache.delete(domain)
 }
 
+/**
+ * How long a presigned binary download URL stays valid, and how coarsely its
+ * signing instant is rounded.
+ *
+ * Two things were wrong with signing each download afresh for an hour. The
+ * signature covers `X-Amz-Date`, so every request produced a different URL and
+ * nothing between us and the client could ever reuse a response — each install
+ * of the same immutable tarball billed the bucket for the full transfer again.
+ * And the 302 carried `max-age=86400, immutable` while its Location died after
+ * 3600s, so a redirect cached for the advertised day pointed at a signature
+ * that had already expired; the client got a 403 and retried, which is exactly
+ * the "artifact download failed with HTTP 403" our own scanner kept hitting.
+ *
+ * Signing from a rounded-down window boundary makes every client inside that
+ * window receive a byte-identical URL a shared cache can serve, and deriving
+ * the redirect's max-age from the signature's *remaining* life means a cached
+ * redirect can never outlive the URL it carries.
+ */
+const BINARY_PRESIGN_TTL_SECONDS = 24 * 60 * 60
+const BINARY_PRESIGN_WINDOW_SECONDS = 60 * 60
+/** Safety margin so a redirect served at the very edge of its max-age still resolves. */
+const BINARY_PRESIGN_SAFETY_SECONDS = 5 * 60
+
+export function presignBinaryDownload(
+  client: { generatePresignedGetUrl: (bucket: string, key: string, expiresInSeconds?: number, signedAt?: Date) => string },
+  bucket: string,
+  key: string,
+  now: number = Date.now(),
+): { url: string, maxAgeSeconds: number } {
+  const windowMs = BINARY_PRESIGN_WINDOW_SECONDS * 1000
+  const signedAtMs = Math.floor(now / windowMs) * windowMs
+  const elapsedSeconds = Math.floor((now - signedAtMs) / 1000)
+  const maxAgeSeconds = Math.max(
+    0,
+    BINARY_PRESIGN_TTL_SECONDS - elapsedSeconds - BINARY_PRESIGN_SAFETY_SECONDS,
+  )
+  return {
+    url: client.generatePresignedGetUrl(bucket, key, BINARY_PRESIGN_TTL_SECONDS, new Date(signedAtMs)),
+    maxAgeSeconds,
+  }
+}
+
 /** Read `binaries/<domain>/metadata.json`, serving from the memo when allowed. */
 export async function loadBinaryMetadata(store: BinaryStorage, domain: string, cacheable: boolean): Promise<any> {
   if (cacheable) {
@@ -5247,12 +5289,15 @@ async function handleBinaryProxy(
         }
       }
       let location: string
+      let redirectCacheControl = cacheControl
       if (resolved.provider === 'aws' && !resolved.endpoint) {
         location = `https://${s3Bucket}.s3.${resolved.region}.amazonaws.com/${s3Key}`
       }
       else {
         _presignClient ??= createS3Client(resolved)
-        location = _presignClient.generatePresignedGetUrl(s3Bucket, s3Key, 3600)
+        const { url, maxAgeSeconds } = presignBinaryDownload(_presignClient, s3Bucket, s3Key)
+        location = url
+        redirectCacheControl = `public, max-age=${maxAgeSeconds}`
       }
       return new Response(null, {
         status: 302,
@@ -5260,7 +5305,7 @@ async function handleBinaryProxy(
           ...corsHeaders,
           'Location': location,
           'Content-Type': contentType,
-          'Cache-Control': cacheControl,
+          'Cache-Control': redirectCacheControl,
         },
       })
     }

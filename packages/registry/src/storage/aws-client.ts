@@ -376,20 +376,27 @@ export class S3Client {
     return results
   }
 
-  generatePresignedGetUrl(bucket: string, key: string, expiresInSeconds = 900): string {
-    return this.generatePresignedUrl('GET', bucket, key, expiresInSeconds)
+  /**
+   * `signedAt` pins the signing instant. Left unset every call produces a
+   * different URL, which is correct but makes the result uncacheable by
+   * anything downstream. Callers that hand the same object to many clients can
+   * pass a rounded timestamp so everyone inside that window gets a
+   * byte-identical URL a shared cache can reuse.
+   */
+  generatePresignedGetUrl(bucket: string, key: string, expiresInSeconds = 900, signedAt?: Date): string {
+    return this.generatePresignedUrl('GET', bucket, key, expiresInSeconds, undefined, signedAt)
   }
 
   generatePresignedPutUrl(bucket: string, key: string, contentType?: string, expiresInSeconds = 900): string {
     return this.generatePresignedUrl('PUT', bucket, key, expiresInSeconds, contentType)
   }
 
-  private generatePresignedUrl(method: 'GET' | 'PUT', bucket: string, key: string, expiresInSeconds: number, contentType?: string): string {
+  private generatePresignedUrl(method: 'GET' | 'PUT', bucket: string, key: string, expiresInSeconds: number, contentType?: string, signedAt?: Date): string {
     const credentials = this.getCredentials()
     const host = this.getHost(bucket)
     const path = this.objectPath(bucket, key)
 
-    const now = new Date()
+    const now = signedAt ?? new Date()
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '')
     const dateStamp = amzDate.slice(0, 8)
     const credentialScope = `${dateStamp}/${this.region}/s3/aws4_request`
