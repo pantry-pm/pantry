@@ -60,6 +60,7 @@ import { normalizePolicy, SecurityStore } from './security'
 import { buildSbom, parseFormat } from './sbom'
 import { loadPackageVersions, loadSupportedPlatforms as loadRecipePlatforms } from './catalog'
 import { BoundedAsyncCache, BoundedTtlCache } from './runtime-cache'
+import { binaryRateLimiterFromEnv, rateLimitClientKey } from './binary-rate-limit'
 import {
   createMalwareScannerFromEnv,
   DualUsePolicyError,
@@ -4949,6 +4950,8 @@ else {
 let _defaultBinaryStorage: BinaryStorage | undefined
 /** Cached client used to presign tarball download URLs for private (non-AWS) buckets. */
 let _presignClient: ReturnType<typeof createS3Client> | undefined
+/** Per-client download budget, built lazily so env changes in tests take effect. */
+let _binaryRateLimiter: ReturnType<typeof binaryRateLimiterFromEnv> | undefined
 const _binaryAttestationCache = new BoundedTtlCache<string, string | false>(50_000, 5 * 60_000)
 /**
  * Per-domain `binaries/<domain>/metadata.json`, memoized for the download path.
@@ -5089,6 +5092,8 @@ function storedBinaryObjectKey(value: string): string {
 interface ActiveBinaryRecord {
   tarball: string
   sha256: string
+  /** Declared artifact size — what the bucket will serve, and what we bill against. */
+  size?: number
   malwareScan?: {
     verdict?: unknown
     artifactSha256?: unknown
@@ -5228,6 +5233,29 @@ async function handleBinaryProxy(
           error: 'Binary artifact has no clean malware-scan attestation',
           code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
         }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+      }
+    }
+
+    // Charge the download against the caller's budget before handing over a
+    // URL for it. The record's declared size is what the bucket will actually
+    // serve, so the byte budget is measured in the same unit as the bill.
+    if (isTarball && activeRecord) {
+      _binaryRateLimiter ??= binaryRateLimiterFromEnv()
+      const decision = _binaryRateLimiter.check(rateLimitClientKey(req), Number(activeRecord.size) || 0)
+      if (!decision.allowed) {
+        return Response.json({
+          error: 'Too many binary downloads',
+          code: 'BINARY_DOWNLOAD_RATE_LIMITED',
+          limit: decision.limit,
+          retryAfterSeconds: decision.retryAfterSeconds,
+        }, {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Retry-After': String(decision.retryAfterSeconds),
+            'Cache-Control': 'no-store',
+          },
+        })
       }
     }
 
