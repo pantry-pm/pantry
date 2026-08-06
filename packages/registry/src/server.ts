@@ -157,6 +157,23 @@ process.on('SIGUSR2', () => {
     .catch(err => console.error('Reload failed:', err))
 })
 
+// systemd sends SIGTERM on every restart, so this runs on each deploy. Handling
+// the signal suppresses the default exit, hence the explicit one — and the
+// bounded wait, so a slow bucket turns into a normal shutdown rather than
+// systemd's kill timeout.
+let _shuttingDown = false
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(signal, () => {
+    if (_shuttingDown)
+      return
+    _shuttingDown = true
+    Promise.race([
+      flushEgressLedger().catch(err => console.warn('Egress flush failed:', (err as Error).message)),
+      new Promise(resolve => setTimeout(resolve, 5000)),
+    ]).finally(() => process.exit(0))
+  })
+}
+
 function isKnownVersion(domain: string, version: string): boolean {
   const versions = _knownVersions.get(domain)
   if (!versions) return false // Unknown package — don't track
@@ -4965,6 +4982,14 @@ let _binaryRateLimiter: ReturnType<typeof binaryRateLimiterFromEnv> | undefined
 /** Day-bucketed record of bytes handed out. See {@link EgressLedger}. */
 let _egressLedger: EgressLedger | undefined
 let _egressSnapshotStore: ObjectSnapshot | undefined
+/**
+ * Set once the stored ledger has been read back successfully.
+ *
+ * Writing before that would serialize an empty in-memory ledger over a stored
+ * month — the load is asynchronous, so a shutdown (or a download) arriving
+ * first would otherwise destroy exactly the history being protected.
+ */
+let _egressPersistReady = false
 
 /**
  * The egress ledger, persisted to the bucket when one is configured.
@@ -4991,13 +5016,29 @@ export function getEgressLedger(): EgressLedger {
       .then((state) => {
         if (state)
           ledger.load(state)
-        // Registered only after the load resolves, so a save triggered by an
-        // early download cannot overwrite the stored month with an empty one.
+        // Enabled only after the load resolves, so neither a save from an early
+        // download nor a shutdown flush can overwrite the stored month.
+        _egressPersistReady = true
         ledger.persistWith(() => store.scheduleSave())
       })
       .catch(err => console.warn('Egress ledger load failed:', (err as Error).message))
   }
   return ledger
+}
+
+/**
+ * Write the egress ledger out now, rather than on its next throttled tick.
+ *
+ * Counts are held in memory for up to a minute to avoid a billable object write
+ * per download. A deploy restarts this process several times a week, so without
+ * an explicit flush the month-to-date figure quietly loses a slice on every
+ * one — small each time, systematically low over a month, and always
+ * understating the number the whole ledger exists to watch.
+ */
+export async function flushEgressLedger(): Promise<void> {
+  if (!_egressSnapshotStore || !_egressPersistReady)
+    return
+  await _egressSnapshotStore.flush()
 }
 const _binaryAttestationCache = new BoundedTtlCache<string, string | false>(50_000, 5 * 60_000)
 /**
