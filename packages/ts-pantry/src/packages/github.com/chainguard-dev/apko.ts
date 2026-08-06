@@ -60,6 +60,7 @@ export const apkoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.2.35',
     '1.2.34',
     '1.2.33',
     '1.2.32',
