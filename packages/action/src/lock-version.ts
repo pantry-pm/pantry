@@ -59,14 +59,36 @@ export function normalizeLockedVersion(domain: string, version: string): string 
  * Decide whether the action may reuse a concrete lock entry.
  *
  * A short Zig development version is a rolling channel, not an immutable
- * version. Zig removes older development archives, so pinning yesterday's
- * concrete channel result can turn an otherwise healthy setup into a 404.
- * Let the installer resolve this channel through download/index.json on every
- * cold setup; exact full development versions remain lockable.
+ * version, and the original rule refused every pin on that channel: Zig removes
+ * older development archives from its own download index, so yesterday's
+ * concrete result could turn a healthy setup into a 404.
+ *
+ * That hazard is upstream's. The action installs Zig from our registry, which
+ * retains every dev build it has published, and taking the newest one on every
+ * run meant each of the several dev builds published per week invalidated the
+ * cached toolchain on every runner — an ~89 MB re-download per CI job, and by
+ * a wide margin the largest single line on our object-storage bill.
+ *
+ * So a rolling pin is reusable exactly when the pinned build is still published
+ * for this platform. `availableVersions` is the registry's list; pass it as
+ * undefined (unknown) to keep the old always-resolve behaviour.
  */
-export function shouldUseLockedVersion(domain: string, pinned: string, spec: string): boolean {
-  if (isRollingVersionSpec(domain, spec))
-    return false
+export function shouldUseLockedVersion(
+  domain: string,
+  pinned: string,
+  spec: string,
+  availableVersions?: readonly string[],
+): boolean {
+  if (isRollingVersionSpec(domain, spec)) {
+    if (!availableVersions)
+      return false
+    const normalized = normalizeLockedVersion(domain, pinned)
+    // A pin from a different channel (0.16.0-dev under a 0.17.0-dev spec) is
+    // not a stale pin, it is the wrong package.
+    if (!normalized.startsWith(`${spec}.`))
+      return false
+    return availableVersions.includes(normalized)
+  }
   return versionSatisfiesSpec(normalizeLockedVersion(domain, pinned), spec)
 }
 

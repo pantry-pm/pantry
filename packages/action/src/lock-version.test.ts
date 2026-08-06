@@ -22,12 +22,50 @@ describe('versionSatisfiesSpec', () => {
 })
 
 describe('shouldUseLockedVersion', () => {
-  test('does not freeze a rolling Zig development channel', () => {
+  test('does not freeze a rolling Zig development channel when availability is unknown', () => {
     expect(shouldUseLockedVersion(
       'ziglang.org',
       '0.17.0-dev.131+73c51c142',
       '0.17.0-dev',
     )).toBe(false)
+  })
+
+  test('keeps a rolling pin the registry still publishes', () => {
+    // Every dev build published in a week otherwise invalidates the cached
+    // toolchain on every runner, at ~89 MB of object-storage egress a job.
+    expect(shouldUseLockedVersion(
+      'ziglang.org',
+      '0.17.0-dev.1503+1f1bee62e',
+      '0.17.0-dev',
+      ['0.17.0-dev.1503+1f1bee62e', '0.17.0-dev.1567+f0354179a'],
+    )).toBe(true)
+  })
+
+  test('re-resolves a rolling pin the registry has dropped', () => {
+    expect(shouldUseLockedVersion(
+      'ziglang.org',
+      '0.17.0-dev.131+73c51c142',
+      '0.17.0-dev',
+      ['0.17.0-dev.1567+f0354179a'],
+    )).toBe(false)
+  })
+
+  test('rejects a rolling pin from a different channel', () => {
+    expect(shouldUseLockedVersion(
+      'ziglang.org',
+      '0.16.0-dev.2984+cb7d2b056',
+      '0.17.0-dev',
+      ['0.16.0-dev.2984+cb7d2b056'],
+    )).toBe(false)
+  })
+
+  test('accepts a rolling pin stored in lockfile spelling', () => {
+    expect(shouldUseLockedVersion(
+      'ziglang.org',
+      '0.17.0-dev.1503_1f1bee62e',
+      '0.17.0-dev',
+      ['0.17.0-dev.1503+1f1bee62e'],
+    )).toBe(true)
   })
 
   test('preserves exact Zig development pins and ordinary lock entries', () => {

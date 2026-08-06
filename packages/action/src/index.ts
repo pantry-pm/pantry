@@ -303,6 +303,33 @@ function getBinName(dep: string): string {
  * CI (immutable checkout), so the user needs to re-run `pantry install`
  * locally to refresh the lock.
  */
+/**
+ * Versions the registry still publishes for this runner's platform, or
+ * undefined when we could not find out.
+ *
+ * Undefined is meaningfully different from empty: it means "unknown", and the
+ * caller falls back to resolving the channel rather than assuming a pin is
+ * gone. A registry hiccup must never turn into a wrong version.
+ */
+async function publishedRegistryVersions(
+  installer: typeof import('../../ts-pantry/src/installer'),
+  domain: string,
+): Promise<string[] | undefined> {
+  try {
+    const platform = installer.detectPlatform()
+    const response = await fetch(
+      `https://registry.pantry.dev/binaries/${encodeURI(domain)}/metadata.json`,
+      { signal: AbortSignal.timeout(15_000) },
+    )
+    if (!response.ok)
+      return undefined
+    return installer.registryVersionsForPlatform(await response.json() as never, platform)
+  }
+  catch {
+    return undefined
+  }
+}
+
 async function installSystemPackage(
   spec: string,
   pantryDir: string,
@@ -326,13 +353,19 @@ async function installSystemPackage(
   const declaredVersion = reuseResolved
     ? reassertVersionSpec(domain, rawVersion, resolvedVersions || new Map())
     : rawVersion
+  // Only a rolling spec needs this, and only when there is a pin to validate:
+  // one small metadata read decides whether we can keep the toolchain already
+  // in the runner's cache instead of pulling the newest build again.
+  const publishedVersions = pinned && isRollingVersionSpec(domain, rawVersion)
+    ? await publishedRegistryVersions(installer, domain)
+    : undefined
   let version: string
   let source: string
   if (reuseResolved && declaredVersion !== rawVersion) {
     version = declaredVersion
     source = ' (from this action run)'
   }
-  else if (pinned && shouldUseLockedVersion(domain, pinned, rawVersion)) {
+  else if (pinned && shouldUseLockedVersion(domain, pinned, rawVersion, publishedVersions)) {
     version = normalizeLockedVersion(domain, pinned)
     source = ' (from pantry.lock)'
   }
