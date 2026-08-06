@@ -144,6 +144,47 @@ Registry object storage is **provider-agnostic** (AWS S3, Hetzner Object Storage
 - Buckets stay **private**; the registry server proxies `registry.pantry.dev/binaries/...`.
 - **Analytics** also persist off-AWS on non-AWS providers: `ObjectAnalytics` (`analytics/registry-analytics.json`) replaces the previously **ephemeral in-memory** prod analytics and DynamoDB analytics, so download tracking survives restarts. Per-package download counts persist via the object metadata store (`incrementDownloads`). On AWS the prior behavior (DynamoDB if `DYNAMODB_ANALYTICS_TABLE` set, else in-memory) is unchanged.
 
+## Object storage egress — what it costs and what protects it
+
+The bucket has a **5 TB/month included traffic** allowance and bills ~$1.20/TB
+beyond it; we blew through it once already. Egress is the metric to watch, and
+it comes from four places. Anything you add near the download or scan path
+should be checked against this list.
+
+1. **Artifact downloads** (the bulk). `ziglang.org` alone was ~1.3 TB — its
+   artifacts are ~89 MB and CI pulled a fresh one on nearly every job. See the
+   Zig rolling-pin rule below.
+2. **The malware scanner re-downloading artifacts.** Every scan streams the full
+   artifact out of the bucket. A clean verdict is now cached by digest at
+   `attestations/sha256/<digest>.json` and reused for 7 days
+   (`PANTRY_SCAN_ATTESTATION_REUSE_HOURS`), so republishing unchanged bytes no
+   longer re-scans them. Scans that fail to reach a verdict back off 15m → 6h
+   per digest instead of retrying immediately.
+3. **Per-request manifest reads.** `binaries/<domain>/metadata.json` is memoized
+   for 60s and invalidated on publish. **Any new write path to a manifest must
+   call `invalidateBinaryMetadata(domain)`.**
+4. **Unbounded clients.** `/binaries/` tarball downloads are budgeted per client
+   IP per hour — `PANTRY_BINARY_RATE_LIMIT_REQUESTS_PER_HOUR` (600) and
+   `PANTRY_BINARY_RATE_LIMIT_GIB_PER_HOUR` (20); either at `0` disables that
+   dimension. Over budget returns 429 + `Retry-After`.
+
+Two rules that are easy to undo by accident:
+
+- **Presigned download URLs are signed from a rounded hourly boundary**, not
+  from "now" (`presignBinaryDownload`). A per-request signature makes every
+  response uncacheable by anything downstream, which is what made repeat
+  installs of the same immutable tarball pay full price each time. The 302's
+  `max-age` is derived from the signature's *remaining* life — never hard-code
+  one, or cached redirects will outlive their URL and 403.
+- **`ziglang.org: "0.17.0-dev"` is a rolling spec, but a `pantry.lock` pin on it
+  is reused when the registry still publishes that exact build**
+  (`shouldUseLockedVersion`). The old always-resolve-newest behaviour existed
+  because *ziglang.org* deletes old dev archives — we install from our own
+  registry, which retains them. Do not restore the unconditional refusal.
+
+`/binaries/` answers `HEAD`. Use it for existence/freshness checks rather than a
+GET that throws the body away.
+
 ## pkgx new-package sync
 
 `pkgx-sync.yml` (daily) watches `pkgxdev/pantry` for packages we don't have and opens **one PR per new package** (label `pkgx-sync`). `scripts/discover-pkgx-new.ts` diffs pkgx's project list against `packages/ts-pantry/src/packages/*.ts` (by `convertDomainToFileName`); the workflow scaffolds each new formula via `pantry fetch <domain>` on its own branch. Index/aliases are regenerated post-merge by `update-packages.yml` (so per-package PRs don't conflict). This complements `update-packages.yml`, which only bumps versions of **existing** packages.
