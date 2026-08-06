@@ -11,6 +11,41 @@ const install = lib.install;
 const style = @import("../../style.zig");
 
 // ============================================================================
+// Package Spec Parsing
+// ============================================================================
+
+/// A package spec split into its name and version constraint.
+pub const PackageSpecParts = struct {
+    name: []const u8,
+    /// "latest" when the spec carried no version.
+    version: []const u8,
+};
+
+/// Split `name@version` into its parts, correctly for scoped packages.
+///
+/// A scoped npm name BEGINS with '@' — `@stacksjs/tlsx` — so the first '@' in
+/// the string is the scope marker, not the version delimiter. Splitting on it
+/// yielded an empty name and a version of "stacksjs/tlsx", and every scoped
+/// package resolved to nothing: `pantry add @types/semver` reported "not found
+/// in pantry or npm registry" for a package that has existed for years. The
+/// same spec without a scope installed fine, which is why this went unnoticed.
+///
+/// npm's own rule is what applies: the version delimiter is the first '@' AFTER
+/// position zero.
+pub fn splitPackageSpec(spec: []const u8) PackageSpecParts {
+    const scoped = spec.len > 0 and spec[0] == '@';
+    const search_from: usize = if (scoped) 1 else 0;
+
+    const rel = std.mem.indexOfScalar(u8, spec[search_from..], '@');
+    if (rel) |r| {
+        const at = r + search_from;
+        return .{ .name = spec[0..at], .version = spec[at + 1 ..] };
+    }
+
+    return .{ .name = spec, .version = "latest" };
+}
+
+// ============================================================================
 // Package Alias Resolution
 // ============================================================================
 
@@ -2247,4 +2282,54 @@ test "validatePackageName - invalid names" {
     try std.testing.expect(!validatePackageName("pkg\\name"));
     try std.testing.expect(!validatePackageName("pkg name")); // spaces
     try std.testing.expect(!validatePackageName("pkg;rm -rf")); // semicolons
+}
+
+test "splitPackageSpec: unscoped" {
+    const parts = splitPackageSpec("is-odd");
+    try std.testing.expectEqualStrings("is-odd", parts.name);
+    try std.testing.expectEqualStrings("latest", parts.version);
+}
+
+test "splitPackageSpec: unscoped with version" {
+    const parts = splitPackageSpec("is-odd@3.0.1");
+    try std.testing.expectEqualStrings("is-odd", parts.name);
+    try std.testing.expectEqualStrings("3.0.1", parts.version);
+}
+
+test "splitPackageSpec: scoped keeps its scope and defaults the version" {
+    // The regression: the leading '@' was read as the version delimiter, so the
+    // name came out empty and the version came out "stacksjs/tlsx".
+    const parts = splitPackageSpec("@stacksjs/tlsx");
+    try std.testing.expectEqualStrings("@stacksjs/tlsx", parts.name);
+    try std.testing.expectEqualStrings("latest", parts.version);
+}
+
+test "splitPackageSpec: scoped with version" {
+    const parts = splitPackageSpec("@stacksjs/tlsx@0.13.15");
+    try std.testing.expectEqualStrings("@stacksjs/tlsx", parts.name);
+    try std.testing.expectEqualStrings("0.13.15", parts.version);
+}
+
+test "splitPackageSpec: scoped with a semver range" {
+    const parts = splitPackageSpec("@types/semver@^7.5.0");
+    try std.testing.expectEqualStrings("@types/semver", parts.name);
+    try std.testing.expectEqualStrings("^7.5.0", parts.version);
+}
+
+test "splitPackageSpec: domain-style system package is unaffected" {
+    const parts = splitPackageSpec("nodejs.org@22.1.0");
+    try std.testing.expectEqualStrings("nodejs.org", parts.name);
+    try std.testing.expectEqualStrings("22.1.0", parts.version);
+}
+
+test "splitPackageSpec: a bare '@' is not treated as a scope with no name" {
+    const parts = splitPackageSpec("@");
+    try std.testing.expectEqualStrings("@", parts.name);
+    try std.testing.expectEqualStrings("latest", parts.version);
+}
+
+test "splitPackageSpec: empty spec does not panic" {
+    const parts = splitPackageSpec("");
+    try std.testing.expectEqualStrings("", parts.name);
+    try std.testing.expectEqualStrings("latest", parts.version);
 }

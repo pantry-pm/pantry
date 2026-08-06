@@ -234,9 +234,7 @@ fn appendTransitiveDeps(allocator: std.mem.Allocator, package_args: *std.ArrayLi
 
     // Seed with the resolved domains of the requested packages.
     for (package_args.items) |a| {
-        const at = std.mem.indexOfScalar(u8, a, '@');
-        const raw = if (at) |p| a[0..p] else a;
-        const domain = helpers.resolvePackageAlias(raw);
+        const domain = helpers.resolvePackageAlias(helpers.splitPackageSpec(a).name);
         if (seen.contains(domain)) continue;
         seen.put(domain, {}) catch {};
         queue.append(allocator, domain) catch {};
@@ -1277,10 +1275,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
     for (package_args.items, 0..) |pkg_spec_str, arg_idx| {
         const is_transitive_dep = arg_idx >= user_requested_count;
-        // Parse package spec (name@version)
-        const at_pos = std.mem.indexOf(u8, pkg_spec_str, "@");
-        const raw_name = if (at_pos) |pos| pkg_spec_str[0..pos] else pkg_spec_str;
-        const version = if (at_pos) |pos| pkg_spec_str[pos + 1 ..] else "latest";
+        // Parse package spec (name@version). Scope-aware: a scoped name begins
+        // with '@', so splitting on the FIRST '@' emptied the name and turned
+        // the scope into the version — every scoped package resolved to nothing.
+        const parts = helpers.splitPackageSpec(pkg_spec_str);
+        const raw_name = parts.name;
+        const version = parts.version;
 
         // Resolve aliases (e.g. "meilisearch" -> "meilisearch.com")
         const name = helpers.resolvePackageAlias(raw_name);
