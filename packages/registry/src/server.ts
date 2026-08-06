@@ -5322,7 +5322,15 @@ async function handleBinaryProxy(
       }
       let location: string
       let redirectCacheControl = cacheControl
-      if (resolved.provider === 'aws' && !resolved.endpoint) {
+      if (resolved.cdnBaseUrl) {
+        // A CDN in front of the bucket only helps if every client is sent to the
+        // same URL. Signing is what breaks that, so a configured CDN origin
+        // replaces it outright: artifacts under binaries/ are public, immutable
+        // for a given (domain, version, platform), and safe to cache forever.
+        location = `${resolved.cdnBaseUrl}/${s3Key.split('/').map(encodeURIComponent).join('/')}`
+        redirectCacheControl = 'public, max-age=31536000, immutable'
+      }
+      else if (resolved.provider === 'aws' && !resolved.endpoint) {
         location = `https://${s3Bucket}.s3.${resolved.region}.amazonaws.com/${s3Key}`
       }
       else {
