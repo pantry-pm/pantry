@@ -25,24 +25,44 @@ import { tmpdir } from 'node:os'
 const PANTRY_BIN = resolve(dirname(import.meta.dir), 'zig-out/bin/pantry')
 let testDir: string
 let pantryAvailable = false
+/** The binary the suite actually invokes — resolved once, in beforeAll. */
+let pantryBin = PANTRY_BIN
+
+/**
+ * A binary that exists is not the same as a binary this machine can run.
+ *
+ * `zig-out/` is shared with cross-compiled output, so a checkout that last
+ * built for Linux leaves a Mach-O-incompatible binary sitting exactly where
+ * this looked. Presence alone flipped the suite on, every invocation died with
+ * "exec format error", and the result was four confusing assertion failures
+ * that read like product bugs instead of one clear "not built for this host".
+ */
+function canExecute(command: string): boolean {
+  try {
+    execSync(`${command} --version`, { stdio: 'pipe' })
+    return true
+  }
+  catch {
+    return false
+  }
+}
 
 beforeAll(() => {
-  // Check if pantry binary exists
-  if (existsSync(PANTRY_BIN)) {
+  if (existsSync(PANTRY_BIN) && canExecute(PANTRY_BIN)) {
     pantryAvailable = true
+    pantryBin = PANTRY_BIN
+    return
   }
-  else {
-    // Try to find pantry in PATH
-    try {
-      execSync('which pantry', { stdio: 'pipe' })
-      pantryAvailable = true
-    }
-    catch {
-      console.warn('pantry binary not found — skipping workspace e2e tests')
-      console.warn(`Looked for: ${PANTRY_BIN}`)
-      console.warn('Build with: cd packages/zig && zig build')
-    }
+  if (canExecute('pantry')) {
+    pantryAvailable = true
+    // Resolved here, not per-invocation: the local build existing is not a
+    // reason to run it when it is the one that cannot execute.
+    pantryBin = 'pantry'
+    return
   }
+  console.warn('No runnable pantry binary — skipping workspace e2e tests')
+  console.warn(`Looked for: ${PANTRY_BIN}${existsSync(PANTRY_BIN) ? ' (present, but not executable on this host)' : ''}`)
+  console.warn('Build with: cd packages/zig && zig build')
 })
 
 function createTestDir(): string {
@@ -244,8 +264,7 @@ describe('Workspace install - CLI E2E', () => {
       return { stdout: '', stderr: 'pantry not available', exitCode: -1 }
     }
 
-    const bin = existsSync(PANTRY_BIN) ? PANTRY_BIN : 'pantry'
-    const result = spawnSync(bin, args, {
+    const result = spawnSync(pantryBin, args, {
       cwd,
       env: { ...process.env, ...env },
       timeout: 60_000,
