@@ -2,7 +2,7 @@ import type { BinaryArtifactStore } from './binary-publishing'
 import type { MalwareScanContext, MalwareScanner, MalwareScannerHealth, MalwareScanResult } from './malware-scanning'
 import { describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
-import { BinaryArtifactPublisher, digestAttestationKey, reusableCleanScan } from './binary-publishing'
+import { BinaryArtifactPublisher, digestAttestationKey, reusableCleanScan, scanFailureBackoffMs } from './binary-publishing'
 
 class MemoryArtifactStore implements BinaryArtifactStore {
   files = new Map<string, Buffer>()
@@ -41,11 +41,12 @@ class CountingScanner implements MalwareScanner {
   readonly enabled = true
   readonly required = true
   scans = 0
+  verdict: MalwareScanResult['verdict'] = 'clean'
 
   async scan(data: ArrayBuffer, _context: MalwareScanContext): Promise<MalwareScanResult> {
     this.scans++
     return {
-      verdict: 'clean',
+      verdict: this.verdict,
       engine: 'test-scanner',
       scannedAt: new Date().toISOString(),
       durationMs: 1,
@@ -157,5 +158,49 @@ describe('reusableCleanScan', () => {
     expect(reusableCleanScan({ scan: { ...clean, engine: '' } }, sha, now)).toBeNull()
     expect(reusableCleanScan({ scan: { ...clean, durationMs: -1 } }, sha, now)).toBeNull()
     expect(reusableCleanScan({ scan: { ...clean, scannedAt: 'not-a-date' } }, sha, now)).toBeNull()
+  })
+})
+
+describe('scan failure backoff', () => {
+  it('grows the wait with each consecutive failure and then caps it', () => {
+    expect(scanFailureBackoffMs(1)).toBe(15 * 60 * 1000)
+    expect(scanFailureBackoffMs(2)).toBe(30 * 60 * 1000)
+    expect(scanFailureBackoffMs(3)).toBe(60 * 60 * 1000)
+    expect(scanFailureBackoffMs(50)).toBe(6 * 60 * 60 * 1000)
+  })
+
+  it('refuses a repeat publish without re-downloading the artifact', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    scanner.verdict = 'error'
+    const publisher = new BinaryArtifactPublisher(store, scanner, { tokenSecret: 'test-secret-that-is-long-enough' })
+    const bytes = Buffer.from('an artifact whose scan never finishes')
+
+    await expect(publish(publisher, store, bytes, '1.2.3')).rejects.toThrow(/temporarily unavailable/)
+    expect(scanner.scans).toBe(1)
+
+    await expect(publish(publisher, store, bytes, '1.2.4')).rejects.toThrow(/retry in \d+s/)
+    expect(scanner.scans).toBe(1)
+  })
+
+  it('clears the backoff once a scan reaches a verdict', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    scanner.verdict = 'error'
+    let clockOffsetMs = 0
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      now: () => Date.now() + clockOffsetMs,
+    })
+    const bytes = Buffer.from('an artifact that eventually scans')
+
+    await expect(publish(publisher, store, bytes, '1.2.3')).rejects.toThrow()
+
+    clockOffsetMs = 16 * 60 * 1000
+    scanner.verdict = 'clean'
+    const result = await publish(publisher, store, bytes, '1.2.4')
+
+    expect(result.scan.verdict).toBe('clean')
+    expect(scanner.scans).toBe(2)
   })
 })

@@ -492,6 +492,25 @@ function scanReuseWindowMs(env: NodeJS.ProcessEnv = process.env): number {
 }
 
 /**
+ * Backoff applied after a scan fails to reach a verdict.
+ *
+ * A scan that times out has already streamed the whole artifact out of the
+ * bucket before giving up — the 45-minute clamd timeouts on large desktop
+ * bundles are the expensive case. Nothing about the next attempt is different,
+ * so an immediate retry pays the full transfer again for the same answer; the
+ * registry logged 404 such timeouts in a week, on a small set of artifacts that
+ * simply never finish. Backing off turns an unbounded retry storm into a slow
+ * poll while leaving the artifact genuinely retryable.
+ */
+const SCAN_FAILURE_BACKOFF_MS = 15 * 60 * 1000
+const SCAN_FAILURE_BACKOFF_MAX_MS = 6 * 60 * 60 * 1000
+
+export function scanFailureBackoffMs(consecutiveFailures: number): number {
+  const exponent = Math.max(0, consecutiveFailures - 1)
+  return Math.min(SCAN_FAILURE_BACKOFF_MAX_MS, SCAN_FAILURE_BACKOFF_MS * 2 ** exponent)
+}
+
+/**
  * Validate a stored digest attestation hard enough to act on it.
  *
  * Reusing a verdict skips the scan, so anything less than a well-formed clean
@@ -792,6 +811,34 @@ export class BinaryArtifactPublisher {
   }
 
   /**
+   * Digests whose last scan failed to reach a verdict, and when to try again.
+   *
+   * In memory on purpose: the registry is a single instance, and a restart is
+   * exactly the kind of change that makes a retry worth attempting again.
+   */
+  private scanFailures = new Map<string, { consecutive: number, retryAt: number }>()
+
+  /** Milliseconds left before this digest may be scanned again, or 0 if now. */
+  private scanBackoffRemainingMs(sha256: string): number {
+    const entry = this.scanFailures.get(sha256)
+    if (!entry)
+      return 0
+    const remaining = entry.retryAt - this.now()
+    if (remaining > 0)
+      return remaining
+    this.scanFailures.delete(sha256)
+    return 0
+  }
+
+  private recordScanFailure(sha256: string): void {
+    const consecutive = (this.scanFailures.get(sha256)?.consecutive ?? 0) + 1
+    this.scanFailures.set(sha256, {
+      consecutive,
+      retryAt: this.now() + scanFailureBackoffMs(consecutive),
+    })
+  }
+
+  /**
    * A recent clean verdict for these exact bytes, if we already have one.
    *
    * Best-effort by design: a missing, unreadable or stale attestation just
@@ -848,6 +895,16 @@ export class BinaryArtifactPublisher {
       if (scan) {
         recordMalwareScanResult({ ...context, reused: true }, scan)
       }
+      else if (this.scanBackoffRemainingMs(claim.sha256) > 0) {
+        // Refuse before the download, not after — the whole point is to not
+        // move the bytes again for an answer we already failed to get.
+        const retryInSeconds = Math.ceil(this.scanBackoffRemainingMs(claim.sha256) / 1000)
+        throw new BinaryPublishError(
+          `Binary artifact malware scanning is temporarily unavailable; retry in ${retryInSeconds}s`,
+          503,
+          'MALWARE_SCAN_UNAVAILABLE',
+        )
+      }
       else if (this.store.createDownloadUrl && this.scanner.scanUrl) {
         scan = await scanPackageArtifactUrl(
           this.scanner,
@@ -879,6 +936,13 @@ export class BinaryArtifactPublisher {
           context,
         )
       }
+
+      // Any verdict at all — including "blocked" — is a decisive answer, so the
+      // artifact leaves backoff. Only a scan that never got there extends it.
+      if (scan.verdict === 'error')
+        this.recordScanFailure(claim.sha256)
+      else
+        this.scanFailures.delete(claim.sha256)
 
       if (scan.artifactSha256 !== claim.sha256)
         throw new BinaryPublishError('Staged artifact SHA-256 does not match the initiated upload', 422, 'BINARY_SHA256_MISMATCH', scan)
