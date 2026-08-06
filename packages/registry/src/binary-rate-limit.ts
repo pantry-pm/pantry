@@ -112,20 +112,43 @@ export class BinaryDownloadRateLimiter {
  * Identify the caller for rate-limiting purposes.
  *
  * The registry sits behind a reverse proxy, so the socket address is always the
- * proxy. `X-Forwarded-For` is client-settable and therefore not trustworthy for
- * authorization, but it is the only signal available here and the cost of a
- * forged value is a client evading its own limit — not access to anything.
+ * proxy and the client has to be read from a header. Which header, and which
+ * part of it, decides whether the limit can be evaded outright.
+ *
+ * `X-Forwarded-For` is a list that each proxy *appends* to, and the client
+ * controls whatever was in it on arrival. Reading the leftmost entry — the
+ * conventional-looking choice — therefore reads a value the client wrote, so
+ * anyone can rotate it and never hit a limit. The rightmost entry is the one
+ * the nearest proxy added and is the only part of that header we can trust.
+ *
+ * `CF-Connecting-IP` is better still: Cloudflare sets it to the real client and
+ * strips any client-supplied copy, so it is preferred when present. Behind
+ * additional trusted hops, set `PANTRY_TRUSTED_PROXY_HOPS` to count further
+ * left in the list.
  */
-export function rateLimitClientKey(req: Request): string {
+export function rateLimitClientKey(req: Request, env: NodeJS.ProcessEnv = process.env): string {
+  const cloudflare = req.headers.get('cf-connecting-ip')?.trim()
+  if (cloudflare)
+    return cloudflare
+
+  // Set by nginx/rpx with `proxy_set_header`, which overwrites rather than
+  // appends, so it cannot carry a client-supplied value.
+  const real = req.headers.get('x-real-ip')?.trim()
+  if (real)
+    return real
+
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim()
-    if (first)
-      return first
+    const hops = Number.parseInt(env.PANTRY_TRUSTED_PROXY_HOPS || '1', 10)
+    const trusted = Number.isFinite(hops) && hops >= 1 ? hops : 1
+    const entries = forwarded.split(',').map(entry => entry.trim()).filter(Boolean)
+    // Count in from the right: one trusted hop ⇒ the last entry, which that hop
+    // appended itself. Never fall past the start into client-written territory.
+    const candidate = entries[entries.length - trusted]
+    if (candidate)
+      return candidate
   }
-  return req.headers.get('cf-connecting-ip')?.trim()
-    || req.headers.get('x-real-ip')?.trim()
-    || 'unknown'
+  return 'unknown'
 }
 
 function positiveNumber(raw: string | undefined, fallback: number): number {

@@ -76,23 +76,60 @@ describe('BinaryDownloadRateLimiter', () => {
 })
 
 describe('rateLimitClientKey', () => {
-  it('uses the first X-Forwarded-For hop', () => {
+  const env = {} as NodeJS.ProcessEnv
+
+  it('prefers CF-Connecting-IP, which a client cannot forge', () => {
     const req = new Request('https://registry.example/binaries/a', {
-      headers: { 'x-forwarded-for': '203.0.113.7, 70.41.3.18' },
+      headers: { 'cf-connecting-ip': '198.51.100.4', 'x-forwarded-for': '1.1.1.1, 198.51.100.4' },
     })
-    expect(rateLimitClientKey(req)).toBe('203.0.113.7')
+    expect(rateLimitClientKey(req, env)).toBe('198.51.100.4')
   })
 
-  it('falls back through the other proxy headers', () => {
-    const cf = new Request('https://registry.example/binaries/a', { headers: { 'cf-connecting-ip': '198.51.100.4' } })
-    expect(rateLimitClientKey(cf)).toBe('198.51.100.4')
+  it('prefers X-Real-IP over the forwarded list', () => {
+    const req = new Request('https://registry.example/binaries/a', {
+      headers: { 'x-real-ip': '198.51.100.9', 'x-forwarded-for': '1.1.1.1' },
+    })
+    expect(rateLimitClientKey(req, env)).toBe('198.51.100.9')
+  })
 
-    const real = new Request('https://registry.example/binaries/a', { headers: { 'x-real-ip': '198.51.100.9' } })
-    expect(rateLimitClientKey(real)).toBe('198.51.100.9')
+  it('reads the proxy-appended end of X-Forwarded-For, not the client-written start', () => {
+    // A client that sends its own X-Forwarded-For has its value kept at the
+    // front; reading the front would let anyone rotate it and evade the limit.
+    const spoofed = new Request('https://registry.example/binaries/a', {
+      headers: { 'x-forwarded-for': '10.0.0.1, 203.0.113.7' },
+    })
+    expect(rateLimitClientKey(spoofed, env)).toBe('203.0.113.7')
+  })
+
+  it('cannot be evaded by rotating the client-written entry', () => {
+    const keys = new Set(
+      ['a', 'b', 'c'].map(fake => rateLimitClientKey(
+        new Request('https://registry.example/binaries/a', {
+          headers: { 'x-forwarded-for': `${fake}, 203.0.113.7` },
+        }),
+        env,
+      )),
+    )
+    expect([...keys]).toEqual(['203.0.113.7'])
+  })
+
+  it('counts further left when more trusted hops are configured', () => {
+    const req = new Request('https://registry.example/binaries/a', {
+      headers: { 'x-forwarded-for': '203.0.113.7, 70.41.3.18, 10.0.0.5' },
+    })
+    expect(rateLimitClientKey(req, { PANTRY_TRUSTED_PROXY_HOPS: '2' } as NodeJS.ProcessEnv)).toBe('70.41.3.18')
+  })
+
+  it('ignores a nonsensical hop count rather than trusting the whole list', () => {
+    const req = new Request('https://registry.example/binaries/a', {
+      headers: { 'x-forwarded-for': '10.0.0.1, 203.0.113.7' },
+    })
+    expect(rateLimitClientKey(req, { PANTRY_TRUSTED_PROXY_HOPS: '0' } as NodeJS.ProcessEnv)).toBe('203.0.113.7')
+    expect(rateLimitClientKey(req, { PANTRY_TRUSTED_PROXY_HOPS: 'many' } as NodeJS.ProcessEnv)).toBe('203.0.113.7')
   })
 
   it('buckets unattributable callers together', () => {
-    expect(rateLimitClientKey(new Request('https://registry.example/binaries/a'))).toBe('unknown')
+    expect(rateLimitClientKey(new Request('https://registry.example/binaries/a'), env)).toBe('unknown')
   })
 })
 
