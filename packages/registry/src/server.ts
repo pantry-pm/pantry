@@ -728,6 +728,7 @@ export function createHandler(
         const first = Object.values(result.platforms)[0]
         for (const record of Object.values(result.platforms))
           _binaryAttestationCache.delete(record.tarball)
+        invalidateBinaryMetadata(result.domain)
         await registry.metadata.putVersion(result.domain, result.version, {
           name: result.domain,
           version: result.version,
@@ -3010,6 +3011,7 @@ async function handleBinaryRescan(
 
   try {
     const completed = await getPublisher().rescanExisting(body, '_admin')
+    invalidateBinaryMetadata(completed.domain)
     if (completed.action === 'quarantined')
       _binaryAttestationCache.delete(completed.tarball)
     return Response.json({ success: true, ...completed }, {
@@ -3070,6 +3072,7 @@ async function handleBinaryExternalRescanAttest(
 
   try {
     const completed = await getPublisher().attestExternalRescan(body, '_admin-external-scanner')
+    invalidateBinaryMetadata(completed.domain)
     if (completed.action === 'quarantined')
       _binaryAttestationCache.delete(completed.tarball)
     return Response.json({ success: true, ...completed }, {
@@ -3130,6 +3133,7 @@ async function handleBinaryQuarantineReviewAttest(
 
   try {
     const completed = await getPublisher().attestExternalQuarantineReview(body, '_admin-quarantine-review')
+    invalidateBinaryMetadata(completed.domain)
     for (const record of Object.values(completed.platforms))
       _binaryAttestationCache.delete(record.tarball)
     return Response.json({ success: true, ...completed }, {
@@ -4946,6 +4950,37 @@ let _defaultBinaryStorage: BinaryStorage | undefined
 /** Cached client used to presign tarball download URLs for private (non-AWS) buckets. */
 let _presignClient: ReturnType<typeof createS3Client> | undefined
 const _binaryAttestationCache = new BoundedTtlCache<string, string | false>(50_000, 5 * 60_000)
+/**
+ * Per-domain `binaries/<domain>/metadata.json`, memoized for the download path.
+ *
+ * Every tarball AND every checksum request resolved its record by re-reading
+ * the whole manifest out of object storage, so a single `pantry install` pulled
+ * the same document three times (CLI metadata fetch, tarball, .sha256). These
+ * manifests are large — ziglang.org's is >100 KB — and the bucket bills egress
+ * per byte, so the repeat reads were a pure multiplier on our storage bill.
+ *
+ * The TTL is short and every publish path invalidates the domain explicitly, so
+ * a freshly published version is still visible immediately.
+ */
+const _binaryMetadataCache = new BoundedTtlCache<string, any>(2_000, 60_000)
+
+/** Drop the cached manifest for a domain — call after any write to it. */
+export function invalidateBinaryMetadata(domain: string): void {
+  _binaryMetadataCache.delete(domain)
+}
+
+/** Read `binaries/<domain>/metadata.json`, serving from the memo when allowed. */
+export async function loadBinaryMetadata(store: BinaryStorage, domain: string, cacheable: boolean): Promise<any> {
+  if (cacheable) {
+    const hit = _binaryMetadataCache.get(domain)
+    if (hit !== undefined)
+      return hit
+  }
+  const metadata = JSON.parse((await store.getObject(`binaries/${domain}/metadata.json`)).toString('utf8'))
+  if (cacheable)
+    _binaryMetadataCache.set(domain, metadata)
+  return metadata
+}
 
 function binaryAttestationRequired(): boolean {
   const configured = process.env.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION
@@ -5022,15 +5057,14 @@ async function findActiveBinaryRecord(
   store: BinaryStorage,
   s3Key: string,
   kind: 'tarball' | 'checksum',
+  cacheable = false,
 ): Promise<ActiveBinaryRecord | null> {
   const parsed = parseBinaryKey(s3Key)
   if (!parsed)
     return null
   let metadata: any
   try {
-    metadata = JSON.parse(
-      (await store.getObject(`binaries/${parsed.domain}/metadata.json`)).toString('utf8'),
-    )
+    metadata = await loadBinaryMetadata(store, parsed.domain, cacheable)
   }
   catch {
     return null
@@ -5123,13 +5157,17 @@ async function handleBinaryProxy(
     let activeRecord: ActiveBinaryRecord | null = null
     if (isTarball || isChecksum) {
       const kind = isTarball ? 'tarball' : 'checksum'
-      activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind)
+      activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind, !storage)
       const parsed = parseBinaryKey(s3Key)
       if (!activeRecord && parsed && isPendingMaterialize(parsed.domain, parsed.version, parsed.platform)) {
         const tarballKey = isTarball ? s3Key : s3Key.slice(0, -'.sha256'.length)
         _presignClient ??= createS3Client(resolveStorageProvider())
-        if (getPublisher && await ensureBinaryAvailable(tarballKey, _presignClient, getPublisher()))
-          activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind)
+        if (getPublisher && await ensureBinaryAvailable(tarballKey, _presignClient, getPublisher())) {
+          // Materializing rewrote the manifest — the memo now holds the
+          // pre-materialize copy that is missing this very record.
+          invalidateBinaryMetadata(parsed.domain)
+          activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind, !storage)
+        }
       }
       if (!activeRecord)
         return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
@@ -5237,7 +5275,7 @@ async function handleBinaryProxy(
         ? s3Key.slice('binaries/'.length, -'/metadata.json'.length)
         : null
       let stored: Awaited<ReturnType<typeof augmentMetadataWithPkgx>> = null
-      try { stored = JSON.parse((await binaryStore.getObject(s3Key)).toString('utf8')) }
+      try { stored = domain ? await loadBinaryMetadata(binaryStore, domain, true) : null }
       catch { /* unpublished domain — may still be augmentable from pkgx */ }
       const augmented = domain
         ? await augmentMetadataWithPkgx(domain, stored, [...(_knownVersions.get(domain) || [])])
