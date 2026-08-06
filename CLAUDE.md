@@ -185,6 +185,44 @@ Two rules that are easy to undo by accident:
 `/binaries/` answers `HEAD`. Use it for existence/freshness checks rather than a
 GET that throws the body away.
 
+### Measuring it: `GET /api/egress`
+
+**Host network metrics cannot see artifact egress and never will.** Downloads are
+a 302 to object storage, so the bytes never cross the registry box's NIC — the
+server can look idle while the bucket serves terabytes. Any dashboard reading
+`/proc/net/dev` on the box is answering a different question.
+
+The registry therefore keeps its own day-bucketed ledger of bytes it authorized
+(`analytics/registry-egress.json`, persisted, throttled to one write a minute).
+`GET /api/egress` reports today, month-to-date, the share of an optional
+`PANTRY_EGRESS_BUDGET_TB` allowance, and a month-end projection. Set that env
+var to the plan's allowance so the projection is meaningful. Two caveats when
+reading it: it counts bytes *authorized*, not completed, and with a CDN in front
+it counts client downloads rather than origin egress.
+
+### Cloudflare: R2 yes, free CDN in front of Hetzner no
+
+Cloudflare removed the old §2.8 non-HTML restriction in 2023, but moved it into
+the Service-Specific Terms rather than dropping it: **large files hosted outside
+Cloudflare are still restricted on the CDN**, and explicitly permitted when the
+content is hosted by a Cloudflare service such as R2. Multi-TB of tarballs
+proxied from a Hetzner bucket through the free CDN is exactly the restricted
+case — it works until someone notices.
+
+- **R2 is the sanctioned and cheapest path**: `$0` egress removes this bill
+  rather than shrinking it, and `STORAGE_PROVIDER=r2` is supported
+  (account-scoped endpoint via `R2_ACCOUNT_ID`, `auto` region, path-style
+  addressing — virtual-host addressing 404s on R2).
+- **`S3_CDN_BASE_URL` is what makes any CDN work.** Set it to the public CDN
+  origin for the bucket and the tarball redirect points there with a plain
+  immutable URL instead of a presigned one. This matters more than it looks: a
+  presigned URL is unique per request, so a CDN in front of signed URLs caches
+  nothing. Only set it for a bucket whose objects are genuinely public.
+- **WAF / edge rate limiting is worth having regardless** — it protects the
+  registry API (JSON/HTML, squarely permitted) and costs no origin work. If you
+  put Cloudflare in front, the in-process limiter keeps working: it reads
+  `CF-Connecting-IP` first precisely because that header cannot be forged.
+
 ## pkgx new-package sync
 
 `pkgx-sync.yml` (daily) watches `pkgxdev/pantry` for packages we don't have and opens **one PR per new package** (label `pkgx-sync`). `scripts/discover-pkgx-new.ts` diffs pkgx's project list against `packages/ts-pantry/src/packages/*.ts` (by `convertDomainToFileName`); the workflow scaffolds each new formula via `pantry fetch <domain>` on its own branch. Index/aliases are regenerated post-merge by `update-packages.yml` (so per-package PRs don't conflict). This complements `update-packages.yml`, which only bumps versions of **existing** packages.
