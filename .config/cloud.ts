@@ -54,6 +54,23 @@ const config: CloudConfig = {
     compute: {
       size: 'small', // Hetzner cx23 (2 vCPU, 4 GB)
       runtime: 'bun',
+
+      monitoring: {
+        alerts: {
+          // The bucket's included traffic. This is host NIC bandwidth, which is
+          // a different (and much smaller) number than object-storage egress —
+          // see egressEndpoints below for the one that actually gets billed.
+          bandwidthTb: 5,
+        },
+        // Artifact downloads are a redirect to the bucket, so their bytes never
+        // touch this host's network interface. The registry counts them at the
+        // moment it authorizes the redirect and reports them here; without this
+        // the dashboard would show an idle box while the bucket served
+        // terabytes, which is exactly how the last overrun went unnoticed.
+        egressEndpoints: [
+          { name: 'registry', url: 'https://registry.pantry.dev/api/egress' },
+        ],
+      },
     },
   },
 
