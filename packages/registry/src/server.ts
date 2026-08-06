@@ -750,7 +750,7 @@ export function createHandler(
     // CORS headers for browser access
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, HEAD, POST, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     }
 
@@ -5157,9 +5157,13 @@ async function handleBinaryProxy(
   storage?: BinaryStorage,
   getPublisher?: () => BinaryArtifactPublisher,
 ): Promise<Response> {
-  if (req.method !== 'GET') {
+  // HEAD is answered exactly like GET minus the body. Rejecting it left every
+  // "does this artifact exist / has it changed" probe — ours and other
+  // people's tooling — with no option but a full GET of the tarball.
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
     return Response.json({ error: 'Method not allowed' }, { status: 405, headers: corsHeaders })
   }
+  const bodyless = req.method === 'HEAD'
 
   // Strip leading slash to get S3 key: /binaries/curl.se/metadata.json -> binaries/curl.se/metadata.json
   const s3Key = path.slice(1)
@@ -5253,7 +5257,7 @@ async function handleBinaryProxy(
         // Test/injected storage — serve from buffer
         try {
           const buffer = await storage.getObject(s3Key)
-          return new Response(new Uint8Array(buffer), {
+          return new Response(bodyless ? null : new Uint8Array(buffer), {
             headers: { ...corsHeaders, 'Content-Type': contentType, 'Cache-Control': cacheControl, 'Content-Length': String(buffer.byteLength) },
           })
         }
@@ -5334,7 +5338,7 @@ async function handleBinaryProxy(
           )
         : augmented
       const body = JSON.stringify(publicBinaryMetadata(visible as any))
-      return new Response(body, {
+      return new Response(bodyless ? null : body, {
         headers: { ...corsHeaders, 'Content-Type': contentType, 'Cache-Control': cacheControl, 'Content-Length': String(Buffer.byteLength(body)) },
       })
     }
@@ -5373,7 +5377,7 @@ async function handleBinaryProxy(
       }
     }
 
-    return new Response(new Uint8Array(buffer), {
+    return new Response(bodyless ? null : new Uint8Array(buffer), {
       headers: {
         ...corsHeaders,
         'Content-Type': contentType,
