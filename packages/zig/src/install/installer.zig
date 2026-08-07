@@ -3680,63 +3680,163 @@ pub const Installer = struct {
     }
 
     /// List installed packages
+    ///
+    /// Scans the *global* package store. Installs land in
+    /// `data_dir/global/packages` — the path getGlobalPackageDir writes and the
+    /// same one createPackageSymlinks was corrected to use above — so reading
+    /// `data_dir/packages` opened a directory that has never existed. The
+    /// iteration then failed open and `pantry list` answered "0 package(s)
+    /// installed" on a machine with a fully populated store.
     pub fn listInstalled(self: *Installer) !std.ArrayList(packages.InstalledPackage) {
         var installed = try std.ArrayList(packages.InstalledPackage).initCapacity(self.allocator, 16);
-        errdefer installed.deinit(self.allocator);
+        errdefer {
+            for (installed.items) |*pkg| pkg.deinit(self.allocator);
+            installed.deinit(self.allocator);
+        }
 
-        const packages_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/packages",
-            .{self.data_dir},
-        );
+        const packages_dir = if (std.mem.eql(u8, self.data_dir, "/usr/local"))
+            try self.allocator.dupe(u8, "/usr/local/packages")
+        else blk: {
+            const global = try Paths.globalDir(self.allocator);
+            defer self.allocator.free(global);
+            break :blk try std.fmt.allocPrint(self.allocator, "{s}/packages", .{global});
+        };
         defer self.allocator.free(packages_dir);
 
+        try self.collectInstalled(packages_dir, "", 0, &installed);
+
+        return installed;
+    }
+
+    /// List the packages installed into a project's `modules_dir`.
+    ///
+    /// `pantry install <pkg>` run inside a project installs there, not into the
+    /// global store — so listing only the global store answered "0 package(s)
+    /// installed" immediately after a successful project install, and the
+    /// install looked like it had lied about what it placed.
+    pub fn listInstalledInProject(
+        self: *Installer,
+        project_root: []const u8,
+    ) !std.ArrayList(packages.InstalledPackage) {
+        var installed = try std.ArrayList(packages.InstalledPackage).initCapacity(self.allocator, 16);
+        errdefer {
+            for (installed.items) |*pkg| pkg.deinit(self.allocator);
+            installed.deinit(self.allocator);
+        }
+
+        const modules_path = try std.fmt.allocPrint(
+            self.allocator,
+            "{s}/{s}",
+            .{ project_root, self.modules_dir },
+        );
+        defer self.allocator.free(modules_path);
+
+        try self.collectInstalled(modules_path, "", 0, &installed);
+
+        return installed;
+    }
+
+    /// How many path segments a domain may span before the walk gives up.
+    /// The longest in the registry today is three (`github.com/router-for-me/
+    /// CLIProxyAPI`); the cap only exists so an unexpected deep tree cannot turn
+    /// a listing into an unbounded walk.
+    const max_domain_depth = 4;
+
+    /// Walk one level of a package store, appending every `v{version}` leaf.
+    ///
+    /// A domain is not always one path segment: `gnu.org/bash` and
+    /// `gnupg.org/libgcrypt` nest, so a fixed two-level walk reported `gnu.org`
+    /// at version `bash` and never saw the versions underneath. Version
+    /// directories are the ones written as `v{version}`; every other directory
+    /// is a further segment of the domain.
+    ///
+    /// Major-version aliases (`v1` -> `v1.3.14`) are symlinks rather than
+    /// directories, so the `.directory` filter already keeps each version once.
+    fn collectInstalled(
+        self: *Installer,
+        dir_path: []const u8,
+        domain: []const u8,
+        depth: usize,
+        out: *std.ArrayList(packages.InstalledPackage),
+    ) !void {
         // Use FsDir for iteration (Io.Dir doesn't have iterate() in Zig 0.16)
-        var dir = io_helper.openDirForIteration(packages_dir) catch {
-            return installed;
-        };
+        var dir = io_helper.openDirForIteration(dir_path) catch return;
         defer dir.close();
 
         var it = dir.iterate();
         while (it.next() catch null) |entry| {
             if (entry.kind != .directory) continue;
 
-            // Build full path to package directory
-            const pkg_path = try std.fmt.allocPrint(
+            // `.bin` and friends hold symlinks into the packages, not packages.
+            if (entry.name.len > 0 and entry.name[0] == '.') continue;
+
+            const child_path = try std.fmt.allocPrint(
                 self.allocator,
                 "{s}/{s}",
-                .{ packages_dir, entry.name },
+                .{ dir_path, entry.name },
             );
-            defer self.allocator.free(pkg_path);
 
-            // Each package has its own directory with version subdirectories
-            var pkg_dir = io_helper.openDirForIteration(pkg_path) catch continue;
-            defer pkg_dir.close();
+            const is_version = entry.name.len > 1 and
+                entry.name[0] == 'v' and
+                std.ascii.isDigit(entry.name[1]);
 
-            var ver_it = pkg_dir.iterate();
-            while (ver_it.next() catch null) |ver_entry| {
-                if (ver_entry.kind != .directory) continue;
+            if (!is_version) {
+                defer self.allocator.free(child_path);
 
-                const install_path = try std.fmt.allocPrint(
-                    self.allocator,
-                    "{s}/{s}/{s}",
-                    .{ packages_dir, entry.name, ver_entry.name },
-                );
+                if (depth + 1 >= max_domain_depth) continue;
 
-                // Use io_helper.statFile with full path
-                const stat = io_helper.statFile(install_path) catch continue;
+                // A project's modules_dir holds npm packages beside the domain
+                // trees, and those nest without limit. A pantry domain directory
+                // contains only `v*` version directories, so a package.json marks
+                // an npm package — prune there rather than descending into every
+                // dependency's own sources looking for versions that cannot exist.
+                if (self.hasPackageJson(child_path)) continue;
 
-                try installed.append(self.allocator, .{
-                    .name = try self.allocator.dupe(u8, entry.name),
-                    .version = try self.allocator.dupe(u8, ver_entry.name),
-                    .install_path = install_path,
-                    .installed_at = @intCast(@divFloor(stat.ctime, std.time.ns_per_s)),
-                    .size = @intCast(stat.size),
-                });
+                const nested = if (domain.len == 0)
+                    try self.allocator.dupe(u8, entry.name)
+                else
+                    try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ domain, entry.name });
+                defer self.allocator.free(nested);
+
+                try self.collectInstalled(child_path, nested, depth + 1, out);
+                continue;
             }
-        }
 
-        return installed;
+            // A version directory directly under the root has no domain to
+            // belong to; skip rather than record a nameless package.
+            if (domain.len == 0) {
+                self.allocator.free(child_path);
+                continue;
+            }
+
+            // Use io_helper.statFile with full path
+            const stat = io_helper.statFile(child_path) catch {
+                self.allocator.free(child_path);
+                continue;
+            };
+
+            try out.append(self.allocator, .{
+                .name = try self.allocator.dupe(u8, domain),
+                .version = try self.allocator.dupe(u8, entry.name[1..]),
+                .install_path = child_path,
+                .installed_at = @intCast(@divFloor(stat.ctime, std.time.ns_per_s)),
+                .size = @intCast(stat.size),
+            });
+        }
+    }
+
+    /// Whether `dir_path` holds a package.json, i.e. is an npm package rather
+    /// than a segment of a pantry domain.
+    fn hasPackageJson(self: *Installer, dir_path: []const u8) bool {
+        const manifest = std.fmt.allocPrint(
+            self.allocator,
+            "{s}/package.json",
+            .{dir_path},
+        ) catch return false;
+        defer self.allocator.free(manifest);
+
+        _ = io_helper.statFile(manifest) catch return false;
+        return true;
     }
 
     /// Find the actual package root in the extracted directory
@@ -4143,6 +4243,77 @@ test "Installer basic operations" {
 
     // Unknown packages should fail cleanly without creating partial state.
     try std.testing.expectError(error.PackageNotFound, installer.install(spec, .{}));
+}
+
+test "listInstalledInProject reports the packages install placed there" {
+    const allocator = std.testing.allocator;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const tmp_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const project_root = path_buf[0..tmp_len];
+
+    // The layout a project install writes, plus the two things that share the
+    // modules dir with it: the `.bin` symlink farm and npm packages.
+    const dirs = [_][]const u8{
+        "pantry/gnupg.org/v2.4.8/bin",
+        "pantry/gnupg.org/libgcrypt/v1.12.1/lib", // nested domain
+        "pantry/bun.sh/v1.3.14/bin",
+        "pantry/.bin", // symlinks, not packages
+        "pantry/acorn/v8", // npm package that happens to hold a `v8` dir
+    };
+    for (dirs) |rel| {
+        const full = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ project_root, rel });
+        defer allocator.free(full);
+        try io_helper.makePath(full);
+    }
+
+    const manifest = try std.fmt.allocPrint(allocator, "{s}/pantry/acorn/package.json", .{project_root});
+    defer allocator.free(manifest);
+    const manifest_file = try io_helper.cwd().createFile(io_helper.io, manifest, .{});
+    manifest_file.close(io_helper.io);
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    var installed = try installer.listInstalledInProject(project_root);
+    defer {
+        for (installed.items) |*pkg| pkg.deinit(allocator);
+        installed.deinit(allocator);
+    }
+
+    var found_gnupg = false;
+    var found_nested = false;
+    var found_bun = false;
+    for (installed.items) |pkg| {
+        // `.bin` holds symlinks and acorn is an npm package; neither is a
+        // package this should name, and acorn's `v8` is the case that makes
+        // the package.json prune load-bearing rather than an optimisation.
+        try std.testing.expect(!std.mem.startsWith(u8, pkg.name, "."));
+        try std.testing.expect(!std.mem.eql(u8, pkg.name, "acorn"));
+
+        if (std.mem.eql(u8, pkg.name, "gnupg.org")) {
+            // The version is reported without the `v` the directory carries.
+            try std.testing.expectEqualStrings("2.4.8", pkg.version);
+            found_gnupg = true;
+        } else if (std.mem.eql(u8, pkg.name, "gnupg.org/libgcrypt")) {
+            try std.testing.expectEqualStrings("1.12.1", pkg.version);
+            found_nested = true;
+        } else if (std.mem.eql(u8, pkg.name, "bun.sh")) {
+            try std.testing.expectEqualStrings("1.3.14", pkg.version);
+            found_bun = true;
+        }
+    }
+
+    try std.testing.expect(found_gnupg);
+    try std.testing.expect(found_nested);
+    try std.testing.expect(found_bun);
+    try std.testing.expectEqual(@as(usize, 3), installed.items.len);
 }
 
 test "lockfile restore fast path accepts only immutable npm tarballs" {

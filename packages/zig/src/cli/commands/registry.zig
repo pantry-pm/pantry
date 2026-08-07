@@ -260,6 +260,29 @@ pub fn listCommand(allocator: std.mem.Allocator, _: []const []const u8) !Command
     return listCommandWithFormat(allocator, "table", false);
 }
 
+/// The project whose packages `pantry list` should include, or null when the
+/// cwd cannot be resolved. Mirrors the resolution in the install command:
+/// workspace root first, then the directory holding the nearest deps file, then
+/// the cwd itself — so `list` reports on exactly the directory `install` writes.
+fn projectRootForListing(allocator: std.mem.Allocator) !?[]const u8 {
+    const detector = @import("../../deps/detector.zig");
+
+    const cwd = io_helper.getCwdAlloc(allocator) catch return null;
+    defer allocator.free(cwd);
+
+    if (try detector.findWorkspaceFile(allocator, cwd)) |ws| {
+        allocator.free(ws.path);
+        return ws.root_dir; // already allocated
+    }
+
+    if (try detector.findDepsFile(allocator, cwd)) |df| {
+        defer allocator.free(df.path);
+        return try allocator.dupe(u8, std.fs.path.dirname(df.path) orelse cwd);
+    }
+
+    return try allocator.dupe(u8, cwd);
+}
+
 /// List all installed packages with format and verbose options
 pub fn listCommandWithFormat(allocator: std.mem.Allocator, format: []const u8, verbose: bool) !CommandResult {
     var pkg_cache = try cache.PackageCache.init(allocator);
@@ -274,6 +297,20 @@ pub fn listCommandWithFormat(allocator: std.mem.Allocator, format: []const u8, v
             pkg.deinit(allocator);
         }
         installed.deinit(allocator);
+    }
+
+    // Packages installed into a project live under the project, not in the
+    // global store, so listing only the global store reported nothing right
+    // after a successful `pantry install` inside a project. Resolve the project
+    // the same way install does, so list and install agree on what "here" means.
+    if (try projectRootForListing(allocator)) |project_root| {
+        defer allocator.free(project_root);
+
+        var project = try installer.listInstalledInProject(project_root);
+        defer project.deinit(allocator);
+
+        // Ownership of each entry moves to `installed`, which frees them above.
+        try installed.appendSlice(allocator, project.items);
     }
 
     if (std.mem.eql(u8, format, "json")) {
