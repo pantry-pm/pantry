@@ -45,9 +45,21 @@ fn resolveDependencyPath(b: *std.Build, package_name: []const u8, entry_point: [
     if (fallback_exists) {
         return fallback_path;
     }
-    // Neither exists - print helpful message and return primary (will fail at compile time with clear error)
-    std.debug.print("Warning: dependency '{s}' not found at '{s}' or '{s}'. Run 'pantry install' first.\n", .{ package_name, primary, fallback_path });
-    return primary;
+    // Neither exists. Returning the missing path here "fails at compile time"
+    // as the old comment claimed, but it fails as
+    //
+    //   error: failed to check cache: .../zig-cli/src/root.zig file_hash FileNotFound
+    //
+    // which names a cache and not the missing dependency, buried under a
+    // hundred lines of build graph. The warning above it scrolls past unread.
+    // Stop at the actual problem and say what to do about it.
+    std.debug.panic(
+        "dependency '{s}' not found at '{s}' or '{s}'.\n" ++
+            "Run 'pantry install' in the repository root first - build.zig resolves " ++
+            "these from the gitignored pantry/ directory, so a fresh checkout or a " ++
+            "CI job that skipped the workspace install will not have them.\n",
+        .{ package_name, primary, fallback_path },
+    );
 }
 
 pub fn build(b: *std.Build) void {

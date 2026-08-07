@@ -24,12 +24,25 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # No `packages:` input on purpose. Naming explicit packages switches the
+      # action to install-only-those and skips the workspace install
+      # (shouldInstallWorkspace, deliberately), so the project's OWN zig
+      # dependencies - zig-cli, zig-config, zig-test-framework - never landed in
+      # pantry/. build.zig resolves them from that directory, so every platform
+      # died with
+      #
+      #   error: failed to check cache: .../pantry/zig-cli/src/root.zig
+      #          file_hash FileNotFound
+      #
+      # which reads like a cache fault and is a missing dependency. Every
+      # release build since has failed this way.
+      #
+      # The override was also redundant: deps.yaml already pins `zig:
+      # 0.17.0-dev`, the same rolling spec, and the workspace install resolves
+      # it. This is what ci.yml has always done, which is why its Zig Tests job
+      # builds and this one did not.
       - name: Setup Pantry and Zig from the registry
         uses: ./packages/action
-        with:
-          # Pantry intentionally tracks Zig 0.17 dev. This rolling spec resolves
-          # the latest mirrored build and the compile job catches API changes.
-          packages: ziglang.org@0.17.0-dev
 
       - name: Build for All Platforms
         run: |
