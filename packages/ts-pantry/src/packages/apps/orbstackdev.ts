@@ -22,6 +22,7 @@ export const orbstackdevPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '2.2.3',
     '2.2.2',
     '2.2.1',
     '1.9.2',

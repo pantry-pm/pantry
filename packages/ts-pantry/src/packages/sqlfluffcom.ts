@@ -67,6 +67,7 @@ export const sqlfluffcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.3.0',
     '4.2.2',
     '4.2.1',
     '4.2.0',
