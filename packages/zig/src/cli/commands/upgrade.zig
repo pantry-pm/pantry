@@ -17,18 +17,35 @@ pub fn ensurePackageExecutorAliases(allocator: std.mem.Allocator, home: []const 
     const is_windows = comptime @import("builtin").os.tag == .windows;
     const aliases = [_][]const u8{ "panx", "pnx" };
 
-    if (is_windows) {
-        for (aliases) |alias| {
-            const alias_path = std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}.exe", .{ home, alias }) catch continue;
-            defer allocator.free(alias_path);
-            io_helper.deleteFile(alias_path) catch {};
+    // Put the aliases beside the pantry they alias, not in a presumed
+    // $HOME/.local/bin.
+    //
+    // Two things were wrong with the old path. It failed outright wherever
+    // ~/.local/bin does not exist — on a server with pantry in /usr/local/bin,
+    // `pantry upgrade` ended with "its panx aliases could not be repaired
+    // (SymLinkError)" even when the upgrade itself had succeeded. And the
+    // symlink target below is the relative name "pantry", which only resolves
+    // when the link sits in the same directory as the binary: pointing
+    // ~/.local/bin/panx at "pantry" while pantry lives elsewhere produces a
+    // dangling link that reports success.
+    //
+    // Deriving the directory from pantry_path makes the relative target correct
+    // by construction and puts the aliases on the same PATH entry that already
+    // found pantry.
+    const bin_dir = std.fs.path.dirname(pantry_path) orelse
+        try std.fmt.allocPrint(allocator, "{s}/.local/bin", .{home});
+
+    for (aliases) |alias| {
+        const alias_path = if (is_windows)
+            std.fmt.allocPrint(allocator, "{s}/{s}.exe", .{ bin_dir, alias }) catch continue
+        else
+            std.fmt.allocPrint(allocator, "{s}/{s}", .{ bin_dir, alias }) catch continue;
+        defer allocator.free(alias_path);
+
+        io_helper.deleteFile(alias_path) catch {};
+        if (is_windows) {
             try io_helper.copyFile(pantry_path, alias_path);
-        }
-    } else {
-        for (aliases) |alias| {
-            const alias_path = std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, alias }) catch continue;
-            defer allocator.free(alias_path);
-            io_helper.deleteFile(alias_path) catch {};
+        } else {
             try io_helper.symLink("pantry", alias_path);
         }
     }
