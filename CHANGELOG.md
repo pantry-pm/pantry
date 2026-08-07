@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.16...v0.11.17)
+
+## 🐛 Bug Fixes
+
+- **upgrade**: replace the pantry that is running, not a presumed path ([43c6f55](https://github.com/pantry-pm/pantry/commit/43c6f55)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.17 ([65b09cb](https://github.com/pantry-pm/pantry/commit/65b09cb)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update codex.openai.com, openai.com/codex, ziglang.org ([11c8077](https://github.com/pantry-pm/pantry/commit/11c8077)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.15...v0.11.16)
 
 ## ✨ Features
