@@ -67,6 +67,7 @@ export const ohmyposhdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '30.6.3',
     '30.6.2',
     '30.6.1',
     '30.6.0',
