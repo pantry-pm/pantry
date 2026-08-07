@@ -1482,15 +1482,36 @@ pub fn addDependencyToDepsYaml(
         const key_prefix = try std.fmt.allocPrint(allocator, "{s}:", .{pkg_name});
         defer allocator.free(key_prefix);
 
+        // Whether the key is already in the file decides which of the two
+        // branches below may fire, so it has to be known before the rewrite
+        // starts. A single pass could not know it: `dependencies:` is reached
+        // first, the insert fired there, and the `wrote` flag it set then locked
+        // out the re-pin branch for the existing entry further down. Every
+        // `pantry install <pkg>` appended another copy of a key already present
+        // — four `gnupg.org: ^2.4.8` lines in one deps.yaml, which YAML reads as
+        // one key and a human reads as a corrupted file.
+        const has_key = blk: {
+            var scan = std.mem.splitScalar(u8, content, '\n');
+            while (scan.next()) |raw_line| {
+                const trimmed = std.mem.trim(u8, raw_line, " \t\r\n");
+                if (std.mem.startsWith(u8, trimmed, key_prefix)) break :blk true;
+            }
+            break :blk false;
+        };
+
         var wrote = false;
-        var saw_deps_key = false;
         var lines = std.mem.splitScalar(u8, content, '\n');
         var first = true;
         while (lines.next()) |raw_line| {
             const trimmed = std.mem.trim(u8, raw_line, " \t\r\n");
 
             // Re-pin an existing entry in place, preserving the rest of the file.
-            if (!wrote and std.mem.startsWith(u8, trimmed, key_prefix)) {
+            if (has_key and std.mem.startsWith(u8, trimmed, key_prefix)) {
+                // Later copies are the damage the old behaviour left behind.
+                // Dropping them repairs the file on the next install rather than
+                // requiring the duplicates to be deleted by hand.
+                if (wrote) continue;
+
                 if (!first) try out.append(allocator, '\n');
                 try out.appendSlice(allocator, entry);
                 wrote = true;
@@ -1503,8 +1524,7 @@ pub fn addDependencyToDepsYaml(
             first = false;
 
             // New entry goes directly under the existing `dependencies:` key.
-            if (!wrote and !saw_deps_key and std.mem.eql(u8, trimmed, "dependencies:")) {
-                saw_deps_key = true;
+            if (!has_key and !wrote and std.mem.eql(u8, trimmed, "dependencies:")) {
                 try out.append(allocator, '\n');
                 try out.appendSlice(allocator, entry);
                 wrote = true;
@@ -2332,4 +2352,105 @@ test "splitPackageSpec: empty spec does not panic" {
     const parts = splitPackageSpec("");
     try std.testing.expectEqualStrings("", parts.name);
     try std.testing.expectEqualStrings("latest", parts.version);
+}
+
+test "addDependencyToDepsYaml re-pins an existing key instead of appending" {
+    const allocator = std.testing.allocator;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const tmp_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const project_root = path_buf[0..tmp_len];
+
+    const deps_path = try std.fmt.allocPrint(allocator, "{s}/deps.yaml", .{project_root});
+    defer allocator.free(deps_path);
+
+    const write = struct {
+        fn f(path: []const u8, body: []const u8) !void {
+            const file = try io_helper.cwd().createFile(io_helper.io, path, .{});
+            defer file.close(io_helper.io);
+            try io_helper.writeAllToFile(file, body);
+        }
+    }.f;
+
+    // The key already exists, and it sits *below* `dependencies:` — the order
+    // every real deps.yaml has, and the one that used to append a second copy.
+    try write(deps_path,
+        \\dependencies:
+        \\  git: ^2.47.0
+        \\  gnupg.org: ^2.4.0
+        \\
+    );
+
+    try addDependencyToDepsYaml(allocator, project_root, "gnupg.org", "2.4.8");
+
+    const once = try io_helper.readFileAlloc(allocator, deps_path, 1024 * 1024);
+    defer allocator.free(once);
+
+    try std.testing.expectEqualStrings(
+        \\dependencies:
+        \\  git: ^2.47.0
+        \\  gnupg.org: ^2.4.8
+        \\
+    , once);
+
+    // Installing again must be a no-op, not another line.
+    try addDependencyToDepsYaml(allocator, project_root, "gnupg.org", "2.4.8");
+
+    const twice = try io_helper.readFileAlloc(allocator, deps_path, 1024 * 1024);
+    defer allocator.free(twice);
+    try std.testing.expectEqualStrings(once, twice);
+
+    // A neighbouring key that merely shares a prefix is not the same key.
+    try addDependencyToDepsYaml(allocator, project_root, "gnupg.org/npth", "1.8.0");
+
+    const with_nested = try io_helper.readFileAlloc(allocator, deps_path, 1024 * 1024);
+    defer allocator.free(with_nested);
+
+    try std.testing.expectEqualStrings(
+        \\dependencies:
+        \\  gnupg.org/npth: ^1.8.0
+        \\  git: ^2.47.0
+        \\  gnupg.org: ^2.4.8
+        \\
+    , with_nested);
+}
+
+test "addDependencyToDepsYaml repairs a file the append bug already duplicated" {
+    const allocator = std.testing.allocator;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const tmp_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const project_root = path_buf[0..tmp_len];
+
+    const deps_path = try std.fmt.allocPrint(allocator, "{s}/deps.yaml", .{project_root});
+    defer allocator.free(deps_path);
+
+    const file = try io_helper.cwd().createFile(io_helper.io, deps_path, .{});
+    try io_helper.writeAllToFile(file,
+        \\dependencies:
+        \\  gnupg.org: ^2.4.8
+        \\  gnupg.org: ^2.4.8
+        \\  git: ^2.47.0
+        \\  gnupg.org: ^2.4.8
+        \\
+    );
+    file.close(io_helper.io);
+
+    try addDependencyToDepsYaml(allocator, project_root, "gnupg.org", "2.4.8");
+
+    const repaired = try io_helper.readFileAlloc(allocator, deps_path, 1024 * 1024);
+    defer allocator.free(repaired);
+
+    try std.testing.expectEqualStrings(
+        \\dependencies:
+        \\  gnupg.org: ^2.4.8
+        \\  git: ^2.47.0
+        \\
+    , repaired);
 }
