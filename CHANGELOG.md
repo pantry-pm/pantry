@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.17...v0.11.18)
+
+## 🐛 Bug Fixes
+
+- **upgrade**: put the panx aliases beside the pantry they alias ([375be77](https://github.com/pantry-pm/pantry/commit/375be77)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.18 ([509d45d](https://github.com/pantry-pm/pantry/commit/509d45d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.16...v0.11.17)
 
 ## 🐛 Bug Fixes
