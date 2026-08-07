@@ -81,6 +81,7 @@ export const postgrestorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '16.0',
     '14.16',
     '14.15',
     '14.14',
