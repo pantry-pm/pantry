@@ -1,3 +1,52 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.15...v0.11.16)
+
+## ✨ Features
+
+- **cloud**: report registry egress and the bandwidth allowance to the dashboard ([839b46c](https://github.com/pantry-pm/pantry/commit/839b46c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: reuse blocked verdicts too, and never cache a non-answer ([8ff890b](https://github.com/pantry-pm/pantry/commit/8ff890b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: record bytes served so egress is measurable before the bill ([6584788](https://github.com/pantry-pm/pantry/commit/6584788)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: support R2 and a public CDN origin for artifacts ([ef5c2c0](https://github.com/pantry-pm/pantry/commit/ef5c2c0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: budget binary downloads per client ([53f0fd2](https://github.com/pantry-pm/pantry/commit/53f0fd2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: back off artifacts whose scan never reaches a verdict ([fb50748](https://github.com/pantry-pm/pantry/commit/fb50748)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: reuse clean scan verdicts by artifact digest ([6c6e40a](https://github.com/pantry-pm/pantry/commit/6c6e40a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: answer HEAD on the binary proxy instead of 405 ([0780181](https://github.com/pantry-pm/pantry/commit/0780181)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **test**: run the pantry binary this host can actually execute ([f71d120](https://github.com/pantry-pm/pantry/commit/f71d120)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: flush the egress ledger on shutdown ([5e5e77b](https://github.com/pantry-pm/pantry/commit/5e5e77b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: identify rate-limited clients from a header the client cannot write ([db6b192](https://github.com/pantry-pm/pantry/commit/db6b192)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: keep a locked Zig dev build the registry still publishes ([a18f44d](https://github.com/pantry-pm/pantry/commit/a18f44d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: make binary download redirects cacheable and non-expiring ([1c9cdc9](https://github.com/pantry-pm/pantry/commit/1c9cdc9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: stop reading a package's scope as its version ([e45f684](https://github.com/pantry-pm/pantry/commit/e45f684)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- **registry**: memoize per-domain binary metadata in the download path ([dbd85b4](https://github.com/pantry-pm/pantry/commit/dbd85b4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- record the egress endpoint and the Cloudflare position ([a76178f](https://github.com/pantry-pm/pantry/commit/a76178f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- record the object-storage egress budget and its protections ([943437b](https://github.com/pantry-pm/pantry/commit/943437b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.16 ([a01c983](https://github.com/pantry-pm/pantry/commit/a01c983)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: bumpx 0.2.16, which stops --recursive bumping ignored files ([f3210b2](https://github.com/pantry-pm/pantry/commit/f3210b2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: bumpx 0.2.15, with the clean-tree guard ([b77264d](https://github.com/pantry-pm/pantry/commit/b77264d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update casdoor.org, circleci.com, deno.land, diabrowser.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, localai.io, openexr.com, openshift.com, rioterm.com ([2846623](https://github.com/pantry-pm/pantry/commit/2846623)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **deploy**: set the egress allowance from the deploy, not by hand ([642e808](https://github.com/pantry-pm/pantry/commit/642e808)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update circleci.com, github.com/ggerganov/llama.cpp ([b5fa058](https://github.com/pantry-pm/pantry/commit/b5fa058)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, projen.io, whatsapp.com ([2cc4a51](https://github.com/pantry-pm/pantry/commit/2cc4a51)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update alttab.app, casdoor.org, circleci.com, github.com/ggerganov/llama.cpp, huggingface.co, seaweedfs.com ([8cef16e](https://github.com/pantry-pm/pantry/commit/8cef16e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dblab.danvergara.com, rioterm.com, squawkhq.com ([d53d2f2](https://github.com/pantry-pm/pantry/commit/d53d2f2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, harlequin.sh, materialize.com, ziglang.org ([c42ab7d](https://github.com/pantry-pm/pantry/commit/c42ab7d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, aux4.io, circleci.com, cursor.com, dblab.danvergara.com, element.io, fly.io, getzola.org, github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, harlequin.sh, hasura.io, localai.io, neo4j.com, nodejs.org, ohmyposh.dev, ollama.ai, openai.com/codex, opencode.ai, opensearch.org, planetscale.com, projen.io, rioterm.com, syncthing.net, vale.sh, werf.io, whatsapp.com, zed.dev, ziglang.org ([3767862](https://github.com/pantry-pm/pantry/commit/3767862)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.14...v0.11.15)
 
 ## 🐛 Bug Fixes
