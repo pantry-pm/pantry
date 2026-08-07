@@ -39,6 +39,38 @@ pub fn ensurePackageExecutorAliases(allocator: std.mem.Allocator, home: []const 
 /// Usage:
 ///   pantry upgrade            # upgrade to latest stable release
 ///   pantry upgrade --canary   # upgrade to latest canary (pre-release)
+extern fn _NSGetExecutablePath(buf: [*]u8, bufsize: *u32) c_int;
+
+/// Absolute path of the running executable, or null when the OS will not say.
+///
+/// std has no portable helper for this in the Zig this project builds against,
+/// and src/install/mas.zig already reaches for _NSGetExecutablePath directly,
+/// so this mirrors that rather than inventing a second convention.
+pub fn selfExePath(allocator: std.mem.Allocator) ?[]u8 {
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+
+    switch (@import("builtin").os.tag) {
+        .macos => {
+            var size: u32 = buf.len;
+            if (_NSGetExecutablePath(&buf, &size) != 0) return null;
+            const path = std.mem.sliceTo(&buf, 0);
+            if (path.len == 0) return null;
+            return allocator.dupe(u8, path) catch null;
+        },
+        .linux => {
+            const path = io_helper.readLink("/proc/self/exe", &buf) catch return null;
+            if (path.len == 0) return null;
+            return allocator.dupe(u8, path) catch null;
+        },
+        .freebsd => {
+            const path = io_helper.readLink("/proc/curproc/file", &buf) catch return null;
+            if (path.len == 0) return null;
+            return allocator.dupe(u8, path) catch null;
+        },
+        else => return null,
+    }
+}
+
 pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, options: UpgradeOptions) !CommandResult {
     const version_options = @import("version");
     const current_version = version_options.version;
@@ -62,7 +94,28 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
     const is_windows = comptime @import("builtin").os.tag == .windows;
     const bin_name = if (is_windows) "pantry.exe" else "pantry";
     const home = io_helper.getenv("HOME") orelse "/tmp";
-    const install_path = try std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, bin_name });
+
+    // Upgrade the pantry that is running, not a presumed install location.
+    //
+    // This was hardcoded to $HOME/.local/bin/pantry. That is where the install
+    // script puts it on a developer machine, so the assumption held everywhere
+    // it was tried — and failed on any host where pantry lives somewhere else.
+    // On a server with pantry at /usr/local/bin/pantry and no ~/.local/bin at
+    // all, `pantry upgrade` downloaded the release, then died staging the new
+    // binary into a directory that does not exist:
+    //
+    //   error: Failed to stage new binary at /root/.local/bin/pantry...
+    //          (FileNotFound). Try: sudo pantry upgrade
+    //
+    // The hint compounded it: the run was already root, and the real target was
+    // writable. Nothing was wrong with permissions — the path was simply not
+    // where pantry was installed.
+    //
+    // selfExePath resolves the running executable, which is the only defensible
+    // answer to "which pantry should upgrade replace". The old path stays as the
+    // fallback for the case where the OS cannot tell us.
+    const install_path = selfExePath(allocator) orelse
+        try std.fmt.allocPrint(allocator, "{s}/.local/bin/{s}", .{ home, bin_name });
     defer allocator.free(install_path);
 
     style.print("  Current version: {s}\n", .{current_version});
