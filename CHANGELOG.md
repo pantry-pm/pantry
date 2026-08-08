@@ -1,3 +1,26 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.19...v0.11.20)
+
+## 🐛 Bug Fixes
+
+- **services**: --port reaches the service it was given for ([6c6ee97](https://github.com/pantry-pm/pantry/commit/6c6ee97)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: typesense scopes its data dir per project, like postgres ([2b5f517](https://github.com/pantry-pm/pantry/commit/2b5f517)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.20 ([6bf0d4d](https://github.com/pantry-pm/pantry/commit/6bf0d4d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update ziglang.org to 0.17.0-dev.1622+2b242157b ([470a4ae](https://github.com/pantry-pm/pantry/commit/470a4ae)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10330 ([9bc2f9e](https://github.com/pantry-pm/pantry/commit/9bc2f9e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10329 ([6aef468](https://github.com/pantry-pm/pantry/commit/6aef468)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, ohmyposh.dev ([d113b35](https://github.com/pantry-pm/pantry/commit/d113b35)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update projen.io to 0.101.30 ([5cbb8b7](https://github.com/pantry-pm/pantry/commit/5cbb8b7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mailpit.axllent.org to 1.30.7 ([4036750](https://github.com/pantry-pm/pantry/commit/4036750)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.34.2 ([2b89f04](https://github.com/pantry-pm/pantry/commit/2b89f04)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/tw93/mole, railway.app ([41c4df9](https://github.com/pantry-pm/pantry/commit/41c4df9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.18...v0.11.19)
 
 ## 🐛 Bug Fixes
