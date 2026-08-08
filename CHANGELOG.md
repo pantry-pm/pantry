@@ -1,3 +1,40 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.18...v0.11.19)
+
+## 🐛 Bug Fixes
+
+- **ts-pantry**: a domain-style name resolves to its versions, not to never ([39500a8](https://github.com/pantry-pm/pantry/commit/39500a8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: re-pin a deps.yaml key instead of appending a second one ([3045ec4](https://github.com/pantry-pm/pantry/commit/3045ec4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **list**: read the store install writes, and count the project too ([d70e4b4](https://github.com/pantry-pm/pantry/commit/d70e4b4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: let the release build install the workspace's zig dependencies ([980b18f](https://github.com/pantry-pm/pantry/commit/980b18f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.19 ([8b07364](https://github.com/pantry-pm/pantry/commit/8b07364)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update anthropic.com/claude-code, railway.app ([38f0a76](https://github.com/pantry-pm/pantry/commit/38f0a76)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, mise.jdx.dev ([10a83a8](https://github.com/pantry-pm/pantry/commit/10a83a8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, railway.app ([4ba53d8](https://github.com/pantry-pm/pantry/commit/4ba53d8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update postgrest.org, ziglang.org ([742a2ba](https://github.com/pantry-pm/pantry/commit/742a2ba)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10322 ([418d43d](https://github.com/pantry-pm/pantry/commit/418d43d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/mamba-org/micro, railway.app ([b73d339](https://github.com/pantry-pm/pantry/commit/b73d339)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10319 ([482f44f](https://github.com/pantry-pm/pantry/commit/482f44f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, consul.io, dozzle.dev, github.com/ggerganov/llama.cpp ([84dbde5](https://github.com/pantry-pm/pantry/commit/84dbde5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, github.com/ggerganov/llama.cpp, localai.io, neo4j.com, projen.io ([13a24b9](https://github.com/pantry-pm/pantry/commit/13a24b9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10311 ([2337e72](https://github.com/pantry-pm/pantry/commit/2337e72)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fluxcd.io/flux2, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, whatsapp.com ([be46988](https://github.com/pantry-pm/pantry/commit/be46988)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, github.com/ggerganov/llama.cpp, huggingface.co, zarf.dev ([e84a95e](https://github.com/pantry-pm/pantry/commit/e84a95e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, github.com/ggerganov/llama.cpp ([174d94a](https://github.com/pantry-pm/pantry/commit/174d94a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, groonga.org ([d1c8657](https://github.com/pantry-pm/pantry/commit/d1c8657)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10301 ([633846b](https://github.com/pantry-pm/pantry/commit/633846b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update getzola.org, orbstack.dev, sqlfluff.com ([f3a9370](https://github.com/pantry-pm/pantry/commit/f3a9370)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cassandra.apache.org, projen.io, vapoursynth.com ([1a095c5](https://github.com/pantry-pm/pantry/commit/1a095c5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, github.com/ggerganov/llama.cpp, opencode.ai ([9e3d267](https://github.com/pantry-pm/pantry/commit/9e3d267)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, ohmyposh.dev ([98629cb](https://github.com/pantry-pm/pantry/commit/98629cb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code to 2.1.224 ([95a61b4](https://github.com/pantry-pm/pantry/commit/95a61b4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.17...v0.11.18)
 
 ## 🐛 Bug Fixes
