@@ -1737,9 +1737,21 @@ pub const Services = struct {
         // default /usr/local/var/typesense is neither on a fresh machine).
         // TYPESENSE_DATA_DIR overrides for production deployments with an
         // existing index.
+        //
+        // Scoped per project, like postgres. It was not, and the display and
+        // the command disagreed: `pantry inspect typesense` printed a
+        // project-scoped Data Dir while the generated unit passed the global
+        // one. Every project on the machine therefore shared one index, and
+        // Typesense namespaces nothing above a collection - so two projects
+        // that both have a `reviews` model wrote into one `reviews`
+        // collection, and one of them read the other's rows back.
         const data_dir = if (io_helper.getEnvVarOwned(allocator, "TYPESENSE_DATA_DIR") catch null) |d|
             d
-        else if (home) |h|
+        else if (project_root) |root| blk: {
+            const scope = try projectScopeId(allocator, root);
+            defer allocator.free(scope);
+            break :blk try serviceDataDirScoped(allocator, home, "typesense", scope);
+        } else if (home) |h|
             try std.fmt.allocPrint(allocator, "{s}/.local/share/pantry/data/typesense", .{h})
         else
             try allocator.dupe(u8, "/tmp/typesense-data");

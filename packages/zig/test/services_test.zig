@@ -265,6 +265,34 @@ test "ServiceConfig creation - Typesense" {
     try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "8108") != null);
 }
 
+test "Typesense WithContext - two projects do not share one data dir" {
+    const allocator = std.testing.allocator;
+
+    // The bug this pins: the data dir was global, so every project on the
+    // machine indexed into one Typesense. Typesense namespaces nothing above a
+    // collection, so two projects that both define a `reviews` model wrote into
+    // one `reviews` collection and read each other's rows back. `pantry inspect`
+    // made it hard to spot by printing a project-scoped path the generated unit
+    // did not actually use.
+    var a = try definitions.Services.typesenseWithContext(allocator, 8108, "/Users/x/Code/project-a");
+    defer a.deinit(allocator);
+    var b = try definitions.Services.typesenseWithContext(allocator, 8108, "/Users/x/Code/project-b");
+    defer b.deinit(allocator);
+
+    try std.testing.expect(!std.mem.eql(u8, a.start_command, b.start_command));
+}
+
+test "Typesense WithContext - null project_root falls back gracefully" {
+    const allocator = std.testing.allocator;
+
+    // No project context is the global install, which keeps the old path.
+    var svc = try definitions.Services.typesenseWithContext(allocator, 8108, null);
+    defer svc.deinit(allocator);
+
+    try std.testing.expectEqualStrings("typesense", svc.name);
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "typesense") != null);
+}
+
 test "ServiceConfig creation - Valkey" {
     const allocator = std.testing.allocator;
     var svc = try definitions.Services.valkey(allocator, 6379);
