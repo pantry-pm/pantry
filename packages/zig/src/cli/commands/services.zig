@@ -363,6 +363,26 @@ pub fn startCommandWithContext(allocator: std.mem.Allocator, args: []const []con
 
     const service_name = args[0];
 
+    // `--port` / `-p`, which the CLI already advertises and which used to stop
+    // here. `getServiceConfigWithPort` existed and nothing called it, so the
+    // flag parsed cleanly, the service launched on its default port, and then
+    // failed to bind when another project already held it.
+    //
+    // The failure was invisible: the health check probes the default port too,
+    // so the *other* project's server answered it and the start reported
+    // healthy while this one was dead.
+    var port_override: ?u16 = null;
+    var arg_index: usize = 1;
+    while (arg_index < args.len) : (arg_index += 1) {
+        const arg = args[arg_index];
+        if ((std.mem.eql(u8, arg, "--port") or std.mem.eql(u8, arg, "-p")) and arg_index + 1 < args.len) {
+            port_override = std.fmt.parseInt(u16, args[arg_index + 1], 10) catch null;
+            arg_index += 1;
+        } else if (std.mem.startsWith(u8, arg, "--port=")) {
+            port_override = std.fmt.parseInt(u16, arg["--port=".len..], 10) catch null;
+        }
+    }
+
     // Check if this is a group name
     if (resolveBuiltinGroup(service_name)) |members| {
         return startGroup(allocator, members, project_root);
@@ -375,7 +395,7 @@ pub fn startCommandWithContext(allocator: std.mem.Allocator, args: []const []con
         return startGroup(allocator, members, project_root);
     }
 
-    return startSingleService(allocator, service_name, project_root);
+    return startSingleService(allocator, service_name, project_root, port_override);
 }
 
 /// Resolve service health-check executables through the project-local Pantry
@@ -416,7 +436,7 @@ pub fn waitForServiceHealth(
 }
 
 /// Start a single service (no group resolution — avoids recursive error set)
-fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, project_root: ?[]const u8) !CommandResult {
+fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, project_root: ?[]const u8, port_override: ?u16) !CommandResult {
     // For PostgreSQL, ensure data directory is initialized and version-compatible
     if (std.mem.eql(u8, service_name, "postgres") or std.mem.eql(u8, service_name, "postgresql")) {
         ensurePostgresDataDir(allocator, project_root);
@@ -427,7 +447,10 @@ fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, pr
     defer manager.deinit();
 
     // Register the service based on its name (with project context for path resolution)
-    var service_config = getServiceConfig(allocator, service_name, project_root) catch {
+    var service_config = (if (port_override) |p|
+        getServiceConfigWithPort(allocator, service_name, p, project_root)
+    else
+        getServiceConfig(allocator, service_name, project_root)) catch {
         const msg = try std.fmt.allocPrint(allocator, "Unknown service: {s}", .{service_name});
         return .{ .exit_code = 1, .message = msg };
     };
@@ -468,7 +491,7 @@ fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, pr
 fn startGroup(allocator: std.mem.Allocator, members: []const []const u8, project_root: ?[]const u8) !CommandResult {
     var failed: u32 = 0;
     for (members) |member| {
-        const result = try startSingleService(allocator, member, project_root);
+        const result = try startSingleService(allocator, member, project_root, null);
         if (result.exit_code != 0) failed += 1;
         if (result.message) |msg| allocator.free(msg);
     }

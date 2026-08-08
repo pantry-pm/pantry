@@ -1882,8 +1882,27 @@ fn startAction(ctx: *cli.BaseCommand.ParseContext) !void {
         std.process.exit(1);
     };
 
-    const args = [_][]const u8{service_name};
-    const result = try lib.commands.serviceStartCommand(allocator, &args);
+    // `--port` forwarded, which it was not.
+    //
+    // The option is declared on the command and parsed into `ctx`, and then
+    // this built an argument list of just the service name - so the port was
+    // accepted, silently dropped, and the service started on its default. On a
+    // machine running the same service for two projects, the second one failed
+    // to bind, and the health check (which probes the default port) got its
+    // answer from the first project's server - so the start reported healthy
+    // for a service that was not running.
+    const port_opt = ctx.getOption("port");
+
+    var arg_buf: [3][]const u8 = undefined;
+    arg_buf[0] = service_name;
+    var arg_len: usize = 1;
+    if (port_opt) |p| {
+        arg_buf[1] = "--port";
+        arg_buf[2] = p;
+        arg_len = 3;
+    }
+
+    const result = try lib.commands.serviceStartCommand(allocator, arg_buf[0..arg_len]);
     defer result.deinit(allocator);
 
     if (result.message) |msg| {

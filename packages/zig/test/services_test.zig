@@ -282,6 +282,26 @@ test "Typesense WithContext - two projects do not share one data dir" {
     try std.testing.expect(!std.mem.eql(u8, a.start_command, b.start_command));
 }
 
+test "getServiceConfigWithPort - typesense honours the override" {
+    const allocator = std.testing.allocator;
+
+    // Pins the contract the CLI depends on, and deliberately not the bug that
+    // was fixed alongside it: this function was always correct. `pantry start
+    // <svc> --port N` accepted the flag and dropped it two layers earlier - the
+    // action forwarded only the service name, so this was never called - and
+    // that path runs through the CLI parser, which is not reachable from here.
+    // It was verified by hand instead: two projects, two ports, both serving.
+    //
+    // Kept because the moment this function stops honouring the override, the
+    // plumbing above it becomes silently useless again.
+    var svc = try commands.getServiceConfigWithPort(allocator, "typesense", 8208, "/Users/x/Code/project-a");
+    defer svc.deinit(allocator);
+
+    try std.testing.expect(svc.port.? == 8208);
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "8208") != null);
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--api-port 8108") == null);
+}
+
 test "Typesense WithContext - null project_root falls back gracefully" {
     const allocator = std.testing.allocator;
 
