@@ -6,7 +6,7 @@ import type {
   PkgxPackage,
   ProjectFolder,
 } from '../src/types'
-import type { Dependencies, StrictVersionConstraint } from '../src/package-types'
+import type { Dependencies, PackageVersions, StrictVersionConstraint } from '../src/package-types'
 import { describe, expect, test } from 'bun:test'
 
 describe('Types Module', () => {
@@ -17,6 +17,35 @@ describe('Types Module', () => {
     } satisfies Dependencies
 
     expect(dependencies.bun).toBe('^99.1.0')
+  })
+
+  /*
+   * A domain-style name resolves to its versions, not to `never`.
+   *
+   * `Packages` is keyed by flattened names (`gnupgorg`) and never by the domain
+   * (`gnupg.org`), so `Packages[T & keyof Packages]` was `never` for every
+   * domain - and `never` satisfies the `{ versions }` check vacuously, because
+   * it is assignable to everything. The true branch was taken, `infer V` gave
+   * `never`, and the generated fallback that does carry those versions was never
+   * consulted.
+   *
+   * The effect on a consumer was total: no version string typechecked for any
+   * domain name, and the only way past it was a `@ts-expect-error` in their
+   * config. These assign rather than assert, so a regression is a type error on
+   * the line rather than a silently-passing `expect`.
+   */
+  test('a domain-style name resolves to its versions rather than never', () => {
+    const gnupg: PackageVersions<'gnupg.org'> = '2.4.8'
+
+    expect(gnupg).toBe('2.4.8')
+  })
+
+  test('and a flattened name still does, which always worked', () => {
+    // The control. This one is a real key of `Packages`, so it took the branch
+    // that was working and is why the bug looked like it could not exist.
+    const bun: PackageVersions<'bun'> = '1.3.11'
+
+    expect(bun).toBe('1.3.11')
   })
 
   describe('ProjectFolder Interface', () => {

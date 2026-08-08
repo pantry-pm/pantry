@@ -270,14 +270,33 @@ export function isPackageInCategory(packageName: string, category: keyof typeof 
 /**
  * Extract available versions for a specific package
  * Uses pre-generated version mappings for domains to avoid TypeScript performance issues
+ *
+ * The `[T] extends [keyof Packages]` guard is load-bearing, and its absence made
+ * every domain-style name resolve to `never`. `Packages` is keyed by flattened
+ * names (`gnupgorg`), never by the domain (`gnupg.org`), so for a domain
+ * `T & keyof Packages` was `never` and `Packages[never]` was `never` — which
+ * satisfies the `{ versions }` check vacuously, because `never` is assignable to
+ * everything. The true branch was taken, `infer V` produced `never`, and the
+ * generated fallback below — which does carry that package's versions — was
+ * never consulted. So no version string at all typechecked for a domain name,
+ * and the only way past it was a `@ts-expect-error` in the consumer's config.
+ *
+ * Written with the tuple form rather than a bare `T extends keyof Packages`
+ * because a naked type parameter distributes over unions, and the point here is
+ * to ask one question about `T` as a whole.
  */
-export type PackageVersions<T extends PackageName> = Packages[T & keyof Packages] extends { versions: readonly (infer V)[] }
-  ? V extends string
-    ? V
-    : never
-  : T extends keyof GeneratedPackageVersions
-    ? GeneratedPackageVersions[T]
-    : never
+export type PackageVersions<T extends PackageName> = [T] extends [keyof Packages]
+  ? Packages[T & keyof Packages] extends { versions: readonly (infer V)[] }
+    ? V extends string
+      ? V
+      : never
+    : GeneratedVersionsFor<T>
+  : GeneratedVersionsFor<T>
+
+/** The generated snapshot's versions for a package, when it has an entry. */
+type GeneratedVersionsFor<T> = T extends keyof GeneratedPackageVersions
+  ? GeneratedPackageVersions[T]
+  : never
 
 /**
  * Numeric versions that may be newer than the generated registry snapshot.
