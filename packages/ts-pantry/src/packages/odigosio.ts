@@ -67,6 +67,7 @@ export const odigosioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.34.0',
     '1.33.0',
     '1.32.2',
     '1.32.1',
