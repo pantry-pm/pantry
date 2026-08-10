@@ -72,6 +72,7 @@ export const wailsioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.14.0',
     '2.13.0',
     '2.12.0',
     '2.11.0',
