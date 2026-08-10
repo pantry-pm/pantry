@@ -15167,7 +15167,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{"slack"},
-    .versions = &[_][]const u8{ "4.51.180", "4.50.143", "4.41.105", "4.41.104", "4.41.103" },
+    .versions = &[_][]const u8{ "4.51.185", "4.51.180", "4.50.143", "4.41.105", "4.41.104", "4.41.103" },
 }, .{
     .name = "smartmontools",
     .domain = "smartmontools.org",
