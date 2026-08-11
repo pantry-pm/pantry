@@ -60,6 +60,7 @@ export const getzolaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.23.3',
     '0.23.2',
     '0.23.1',
     '0.23.0',
