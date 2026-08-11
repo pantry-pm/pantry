@@ -1,20 +1,58 @@
 import type { CloudConfig } from '@ts-cloud/core'
+import process from 'node:process'
 
 /**
  * Pantry production infrastructure — Hetzner Cloud (no AWS, no CloudFront).
  *
- * Everything runs on a single Hetzner box in `fsn1` that both `registry.pantry.dev`
- * and `pantry.dev`/`www` resolve to (DNS via Porkbun). The box serves the registry
- * API and the static site (`./public`) behind a reverse proxy that terminates TLS
- * (Let's Encrypt). Tarballs/binaries live in Hetzner Object Storage, pointed at by
+ * Everything runs on the shared Stacks Hetzner box in `fsn1` that
+ * `registry.pantry.dev`, `pantry.dev` and `www.pantry.dev` all resolve to (DNS via
+ * Porkbun). Tarballs and binaries live in Hetzner Object Storage, pointed at by
  * `pantry registry storage` (STORAGE_PROVIDER=hetzner) — not in S3.
  *
- * NOTE: the registry box already exists and is (re)deployed by
- * `.github/workflows/deploy-registry.yml` (SSH to `root@registry.pantry.dev`).
- * This config drives the static-site deploy via ts-cloud's Hetzner driver. Before
- * running `cloud deploy`, confirm it ADOPTS the existing box rather than
- * provisioning a new one (set HCLOUD_TOKEN and check the plan first).
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DO NOT RUN `cloud deploy` AGAINST THIS CONFIG. It is not how pantry ships, and
+ * the guard below stops it. Audited 2026-08-11; the reasons are concrete:
+ *
+ *   1. The registry is NOT a ts-cloud site. `.github/workflows/deploy-registry.yml`
+ *      is a 656-line host provisioner: it git-resets /opt/pantry-registry/repo to
+ *      the deployed SHA, runs `bun install` + `build:server`, installs and tunes
+ *      clamav-daemon (clamd.conf limits, MaxScanTime 45m, capacity drop-ins with
+ *      deliberate CPU scheduling), sets up systemd-isolated scanner workers, and
+ *      restarts `pantry-registry.service`. ts-cloud has no vocabulary for any of it.
+ *
+ *   2. ts-cloud's generated unit is a fixed template — After=network.target,
+ *      Restart=always, one EnvironmentFile, Environment=PORT. It cannot express
+ *      `Requires=clamav-daemon.service` or the resource caps this service runs
+ *      under (MemoryMax=768M, MemorySwapMax=512M, TasksMax=128, CPUWeight/IOWeight
+ *      80). Deploying through it would silently drop the malware-scanner ordering
+ *      and the memory caps that keep the registry from starving the other tenants.
+ *
+ *   3. `sites` below describes a static site on `pantry.dev` served from `./public`.
+ *      That is not what runs: all three hosts proxy to the registry on :3001, and
+ *      `./public` holds only `fonts/` and `install.sh` — no index. Deploying it
+ *      would replace the routes and drop `registry.pantry.dev` from the rpx
+ *      fragment entirely, taking the package registry offline.
+ *
+ * What ts-cloud DOES own here: nothing at deploy time. The box-side rpx fragment
+ * `/etc/rpx/sites.d/pantry.json` and the `rpx-cert-renew-pantry.{service,timer}`
+ * units are maintained out of band; the renew timer covers all three hosts and was
+ * verified on 2026-08-11.
+ *
+ * To bring pantry into the tenant flow properly, ts-cloud first needs a proxy-only
+ * site kind (a route with an upstream that ts-cloud does not own the unit for).
+ * Today `resolveSiteKind` only emits an upstream route for sites with `start`,
+ * which forces ts-cloud to manage the systemd unit.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
+if (!process.env.PANTRY_ALLOW_TS_CLOUD_DEPLOY) {
+  throw new Error(
+    'pantry does not deploy through ts-cloud. The registry is provisioned by '
+    + '.github/workflows/deploy-registry.yml; running `cloud deploy` here would '
+    + 'rewrite /etc/rpx/sites.d/pantry.json and drop registry.pantry.dev. '
+    + 'See the comment at the top of .config/cloud.ts. Set '
+    + 'PANTRY_ALLOW_TS_CLOUD_DEPLOY=1 only if you have read it and mean to.',
+  )
+}
 const config: CloudConfig = {
   project: {
     name: 'pantry',
