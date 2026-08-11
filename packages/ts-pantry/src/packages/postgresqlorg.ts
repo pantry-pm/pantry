@@ -115,12 +115,14 @@ export const postgresPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '18.6',
     '18.4',
     '18.3',
     '18.2',
     '18.1',
     '18.0',
     '18.0.0',
+    '17.11',
     '17.10',
     '17.9',
     '17.8',
@@ -134,6 +136,7 @@ export const postgresPackage = {
     '17.1',
     '17.0',
     '17.0.0',
+    '16.15',
     '16.14',
     '16.13',
     '16.12',
