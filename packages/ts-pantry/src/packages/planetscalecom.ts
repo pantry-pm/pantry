@@ -67,6 +67,7 @@ export const planetscalecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.313.0',
     '0.312.0',
     '0.311.0',
     '0.310.0',
