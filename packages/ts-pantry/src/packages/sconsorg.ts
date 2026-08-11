@@ -69,6 +69,7 @@ export const sconsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.11.0',
     '4.10.1',
     '4.10.0',
     '4.9.1',
