@@ -22,6 +22,7 @@ export const zeddevPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.15.0',
     '1.14.2',
     '1.13.2',
     '1.13.1',
