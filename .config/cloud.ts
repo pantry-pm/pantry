@@ -10,49 +10,33 @@ import process from 'node:process'
  * `pantry registry storage` (STORAGE_PROVIDER=hetzner) — not in S3.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * DO NOT RUN `cloud deploy` AGAINST THIS CONFIG. It is not how pantry ships, and
- * the guard below stops it. Audited 2026-08-11; the reasons are concrete:
+ * WHAT `cloud deploy` DOES AND DOES NOT DO HERE (audited 2026-08-11).
  *
- *   1. The registry is NOT a ts-cloud site. `.github/workflows/deploy-registry.yml`
- *      is a 656-line host provisioner: it git-resets /opt/pantry-registry/repo to
- *      the deployed SHA, runs `bun install` + `build:server`, installs and tunes
- *      clamav-daemon (clamd.conf limits, MaxScanTime 45m, capacity drop-ins with
- *      deliberate CPU scheduling), sets up systemd-isolated scanner workers, and
- *      restarts `pantry-registry.service`. ts-cloud has no vocabulary for any of it.
- *
- *   2. ts-cloud's generated unit is a fixed template — After=network.target,
- *      Restart=always, one EnvironmentFile, Environment=PORT. It cannot express
- *      `Requires=clamav-daemon.service` or the resource caps this service runs
- *      under (MemoryMax=768M, MemorySwapMax=512M, TasksMax=128, CPUWeight/IOWeight
- *      80). Deploying through it would silently drop the malware-scanner ordering
- *      and the memory caps that keep the registry from starving the other tenants.
- *
- *   3. `sites` below describes a static site on `pantry.dev` served from `./public`.
- *      That is not what runs: all three hosts proxy to the registry on :3001, and
- *      `./public` holds only `fonts/` and `install.sh` — no index. Deploying it
- *      would replace the routes and drop `registry.pantry.dev` from the rpx
- *      fragment entirely, taking the package registry offline.
- *
- * What ts-cloud DOES own here: nothing at deploy time. The box-side rpx fragment
+ * It owns the ROUTING and the CERTIFICATES only. Every site below is
+ * proxy-only (`proxyTo`), so a deploy regenerates
  * `/etc/rpx/sites.d/pantry.json` and the `rpx-cert-renew-pantry.{service,timer}`
- * units are maintained out of band; the renew timer covers all three hosts and was
- * verified on 2026-08-11.
+ * units from this file — and ships, builds and restarts nothing.
  *
- * To bring pantry into the tenant flow properly, ts-cloud first needs a proxy-only
- * site kind (a route with an upstream that ts-cloud does not own the unit for).
- * Today `resolveSiteKind` only emits an upstream route for sites with `start`,
- * which forces ts-cloud to manage the systemd unit.
+ * It does NOT deploy the registry. `.github/workflows/deploy-registry.yml` is a
+ * 656-line host provisioner: it git-resets /opt/pantry-registry/repo to the
+ * deployed SHA, runs `bun install` + `build:server`, installs and tunes
+ * clamav-daemon (clamd.conf limits, MaxScanTime 45m, capacity drop-ins with
+ * deliberate CPU scheduling), sets up systemd-isolated scanner workers, and
+ * restarts `pantry-registry.service`. That stays the only way the service ships.
+ *
+ * This split exists because ts-cloud's generated unit is a fixed template
+ * (After=network.target, Restart=always, one EnvironmentFile, Environment=PORT).
+ * It cannot express `Requires=clamav-daemon.service` or the caps this service
+ * runs under (MemoryMax=768M, MemorySwapMax=512M, TasksMax=128, CPU/IOWeight
+ * 80), so letting ts-cloud own the unit would silently drop the malware-scanner
+ * ordering and the memory caps that keep the registry from starving the other
+ * tenants on the shared box.
+ *
+ * Requires a ts-cloud with the proxy-only site kind (`proxyTo`, stacksjs/ts-cloud
+ * 8e3f776). An older one resolves these sites to `bucket` and aborts the deploy
+ * with "deploys to a bucket but has no `root`" rather than doing any damage.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-if (!process.env.PANTRY_ALLOW_TS_CLOUD_DEPLOY) {
-  throw new Error(
-    'pantry does not deploy through ts-cloud. The registry is provisioned by '
-    + '.github/workflows/deploy-registry.yml; running `cloud deploy` here would '
-    + 'rewrite /etc/rpx/sites.d/pantry.json and drop registry.pantry.dev. '
-    + 'See the comment at the top of .config/cloud.ts. Set '
-    + 'PANTRY_ALLOW_TS_CLOUD_DEPLOY=1 only if you have read it and mean to.',
-  )
-}
 const config: CloudConfig = {
   project: {
     name: 'pantry',
@@ -112,13 +96,32 @@ const config: CloudConfig = {
     },
   },
 
+  /**
+   * All three hosts are proxy-only sites: the gateway forwards them to the
+   * registry on :3001, and ts-cloud builds, ships and supervises nothing.
+   *
+   * That is deliberate, not a gap. `pantry-registry.service` runs under
+   * `Requires=clamav-daemon.service` with hard caps (MemoryMax=768M,
+   * MemorySwapMax=512M, TasksMax=128, CPU/IOWeight 80) and is provisioned by
+   * .github/workflows/deploy-registry.yml, which also installs and tunes clamd
+   * and the isolated scanner workers. ts-cloud's generated unit template cannot
+   * express any of that, so routing these hosts with `start` + `port` — the only
+   * way to emit an upstream route before `proxyTo` existed — would have handed
+   * ts-cloud the unit and silently dropped the hardening.
+   *
+   * What this buys: the hosts join the gateway's TLS set, so
+   * `certsDirServerNames`, `onDemandTls.allowedSuffixes` and the
+   * `rpx-cert-renew-pantry` units are generated from this file instead of being
+   * maintained by hand on the box.
+   *
+   * `www` is declared explicitly rather than left to autoWww, which would turn
+   * it into a 301 to the apex; today it serves the registry directly, and this
+   * config is not the place to change that.
+   */
   sites: {
-    main: {
-      root: './public',
-      domain: 'pantry.dev',
-      deploy: 'server', // serve straight from the Hetzner box (no S3 + CloudFront)
-      installScript: './public/install.sh',
-    },
+    registry: { domain: 'registry.pantry.dev', proxyTo: 'localhost:3001' },
+    main: { domain: 'pantry.dev', proxyTo: 'localhost:3001' },
+    www: { domain: 'www.pantry.dev', proxyTo: 'localhost:3001' },
   },
 
   tags: {
