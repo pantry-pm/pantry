@@ -22,6 +22,7 @@ export const obsidianmdPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.13.7',
     '1.13.6',
     '1.13.4',
     '1.12.7',
