@@ -46,7 +46,12 @@ const config: CloudConfig = {
 
   // Deploy to Hetzner, not AWS. (resolveCloudProvider also auto-detects Hetzner
   // when hetzner.apiToken is set, but be explicit.)
-  cloud: { provider: 'hetzner' },
+  // Join the box the `stacks` project provisions, rather than standing up one
+  // of our own. Without `attachTo` a deploy looks for a server labelled
+  // `ts-cloud/project: pantry`, finds none, and provisions a NEW Hetzner box —
+  // the registry would keep running here while a second, empty machine started
+  // billing. There is no pinned state file to fall back on either.
+  cloud: { provider: 'hetzner', attachTo: 'stacks' },
 
   hetzner: {
     // Falls back to HCLOUD_TOKEN / HETZNER_API_TOKEN if unset.
@@ -76,6 +81,18 @@ const config: CloudConfig = {
     compute: {
       size: 'small', // Hetzner cx23 (2 vCPU, 4 GB)
       runtime: 'bun',
+
+      // rpx already fronts :80/:443 on the shared box. Declaring it is what
+      // makes the deploy own this project's gateway fragment and cert units at
+      // all: `usesRpxProxy` gates the whole gateway step on one of these two
+      // fields, so without them a deploy runs to completion and silently
+      // touches nothing, which is exactly what happened the first time.
+      webServer: 'rpx',
+      proxy: {
+        engine: 'rpx',
+        onDemandTls: true,
+        onDemandTlsEmail: 'hello@stacksjs.com',
+      },
 
       monitoring: {
         alerts: {
