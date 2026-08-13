@@ -10,7 +10,7 @@
         "@stacksjs/ts-cloud": "^0.7.26"
       },
       "devDependencies": {
-        "@stacksjs/bumpx": "^0.2.10",
+        "@stacksjs/bumpx": "^0.2.16",
         "better-dx": "^0.2.15"
       }
     },
@@ -66,10 +66,12 @@
       "dependencies": {
         "@stacksjs/ts-cloud": "^0.7.26",
         "bunfig": "^0.15.6",
+        "tar-stream": "^3.2.0",
         "ts-web-scraper": "^0.1.1"
       },
       "devDependencies": {
         "@stacksjs/bunpress": "^0.1.6",
+        "@types/tar-stream": "^3.1.4",
         "better-dx": "^0.2.6"
       }
     }
@@ -256,6 +258,16 @@
         "@ts-charts/path": "0.2.3"
       }
     },
+    "@types/tar-stream@3.1.4": {
+      "name": "@types/tar-stream",
+      "version": "3.1.4",
+      "source": "npm",
+      "resolved": "https://registry.npmjs.org/@types/tar-stream/-/tar-stream-3.1.4.tgz",
+      "integrity": "sha512-921gW0+g29mCJX0fRvqeHzBlE/XclDaAG0Ousy1LCghsOhvaKacDeRGEVzQP9IPfKn8Vysy7FEXAIxycpc/CMg==",
+      "dependencies": {
+        "@types/node": "*"
+      }
+    },
     "better-dx@0.2.19": {
       "name": "better-dx",
       "version": "0.2.19",
@@ -315,6 +327,19 @@
       "resolved": "https://registry.npmjs.org/mitata/-/mitata-1.0.34.tgz",
       "integrity": "sha512-Mc3zrtNBKIMeHSCQ0XqRLo1vbdIx1wvFV9c8NJAiyho6AjNfMY8bVhbS12bwciUdd1t4rj8099CH3N3NFahaUA=="
     },
+    "tar-stream@3.2.0": {
+      "name": "tar-stream",
+      "version": "3.2.0",
+      "source": "npm",
+      "resolved": "https://registry.npmjs.org/tar-stream/-/tar-stream-3.2.0.tgz",
+      "integrity": "sha512-ojzvCvVaNp6aOTFmG7jaRD0meowIAuPc3cMMhSgKiVWws1GyHbGd/xvnyuRKcKlMpt3qvxx6r0hreCNITP9hIg==",
+      "dependencies": {
+        "b4a": "^1.6.4",
+        "bare-fs": "^4.5.5",
+        "fast-fifo": "^1.2.0",
+        "streamx": "^2.15.0"
+      }
+    },
     "ts-web-scraper@0.1.4": {
       "name": "ts-web-scraper",
       "version": "0.1.4",
@@ -358,9 +383,9 @@
       "version": "c149e957e3989bdb8f9148a161f6eef4ae63d75e",
       "source": "github"
     },
-    "ziglang.org@0.17.0-dev.1476_91a29d707": {
+    "ziglang.org@0.17.0-dev.1737+de207594e": {
       "name": "ziglang.org",
-      "version": "0.17.0-dev.1476_91a29d707",
+      "version": "0.17.0-dev.1737+de207594e",
       "source": "pantry"
     }
   }
