@@ -69,6 +69,7 @@ export const kubesharkcoPackage = {
   */
   versions: [
     '72.3.83',
+    '53.4.0',
     '53.3.0',
     '53.2.5',
     '53.2.3',
