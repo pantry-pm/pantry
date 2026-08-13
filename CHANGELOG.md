@@ -1,3 +1,20 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.25...v0.11.26)
+
+## 🐛 Bug Fixes
+
+- **upgrade**: prevent stale release downgrades ([c030b78](https://github.com/pantry-pm/pantry/commit/c030b78)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: avoid unused Zig dependency hooks ([1aafb90](https://github.com/pantry-pm/pantry/commit/1aafb90)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.26 ([11aefb2](https://github.com/pantry-pm/pantry/commit/11aefb2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **deps**: refresh Pantry workspace lock ([57aa691](https://github.com/pantry-pm/pantry/commit/57aa691)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp, github.com/mail-os/mail, railway.app ([f26b70c](https://github.com/pantry-pm/pantry/commit/f26b70c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.24...v0.11.25)
 
 ## 🐛 Bug Fixes
