@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.22...v0.11.23)
+
+## 🐛 Bug Fixes
+
+- **action**: fall back to official Zig archives ([273a533](https://github.com/pantry-pm/pantry/commit/273a533)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.23 ([922636c](https://github.com/pantry-pm/pantry/commit/922636c)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.21...v0.11.22)
 
 ## ✨ Features
