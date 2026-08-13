@@ -109,6 +109,22 @@ export function detectPlatform(): Platform {
 
 // ── Package Resolvers ──
 
+export function ziglangOfficialDownload(version: string, platform: Platform): { url: string, format: 'tar.xz' | 'zip', prefix: string } {
+  const upstreamVersion = version.replace(/(-dev\.\d+)_([0-9A-Za-z-]+)$/, '$1+$2')
+  const osName = platform.os === 'darwin' ? 'macos' : platform.os
+  const arch = platform.arch === 'aarch64' ? 'aarch64' : 'x86_64'
+  const format = platform.os === 'windows' ? 'zip' : 'tar.xz'
+  const prefix = `zig-${arch}-${osName}-${upstreamVersion}`
+  const archive = `${prefix}.${format}`
+  return {
+    url: upstreamVersion.includes('-dev.')
+      ? `https://ziglang.org/builds/${archive}`
+      : `https://ziglang.org/download/${upstreamVersion}/${archive}`,
+    format,
+    prefix,
+  }
+}
+
 const resolvers: Record<string, PackageResolver> = {
   'github.com/mail-os/mail': {
     getDownloadUrl(version: string, platform: Platform): string {
@@ -130,15 +146,16 @@ const resolvers: Record<string, PackageResolver> = {
 
   'ziglang.org': {
     getDownloadUrl(version: string, platform: Platform): string {
-      const platformKey = `${platform.os}-${platform.arch === 'aarch64' ? 'arm64' : 'x86-64'}`
-      const archive = `ziglang.org-${version}.${platform.os === 'windows' ? 'zip' : 'tar.gz'}`
-      return `${PANTRY_REGISTRY}/binaries/ziglang.org/${version}/${platformKey}/${archive}`
+      return ziglangOfficialDownload(version, platform).url
     },
     getArchiveFormat(platform: Platform) {
-      return platform.os === 'windows' ? 'zip' : 'tar.gz'
+      return ziglangOfficialDownload('0.0.0', platform).format
     },
     getBinaries(platform: Platform) {
       return platform.os === 'windows' ? ['zig.exe'] : ['zig']
+    },
+    getArchivePrefix(version: string, platform: Platform) {
+      return ziglangOfficialDownload(version, platform).prefix
     },
   },
 
@@ -533,7 +550,12 @@ async function latestFromPackageMetadata(domain: string): Promise<string> {
  */
 async function resolveZigShortDevVersion(shortVersion: string, platform: Platform, retryOptions: NetworkRetryOptions = {}): Promise<string | null> {
   const versions = await registryVersions('ziglang.org', platform, retryOptions)
-  return versions.filter(version => version.startsWith(`${shortVersion}.`)).sort(compareVersions)[0] || null
+  const mirrored = versions.filter(version => version.startsWith(`${shortVersion}.`)).sort(compareVersions)[0]
+  if (mirrored) return mirrored
+
+  const index = await fetchJSON('https://ziglang.org/download/index.json', 3, retryOptions).catch(() => null) as { master?: { version?: string } } | null
+  const upstream = index?.master?.version || ''
+  return upstream.startsWith(`${shortVersion}.`) ? upstream : null
 }
 
 interface RegistryVersionMetadata {
@@ -653,7 +675,12 @@ async function fetchLiveVersions(domain: string, platform: Platform): Promise<st
     const versions = (resp as Array<{ version?: string }> | null) || []
     return versions.map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
   }
-  if (domain === 'ziglang.org') return registryVersions(domain, platform)
+  if (domain === 'ziglang.org') {
+    const mirrored = await registryVersions(domain, platform)
+    if (mirrored.length > 0) return mirrored
+    const index = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null) as Record<string, { version?: string }> | null
+    return Object.entries(index || {}).map(([key, entry]) => entry.version || key).filter(Boolean)
+  }
   return []
 }
 
