@@ -83,6 +83,7 @@ export const postgrestorgPackage = {
   versions: [
     '16.1',
     '16.0',
+    '14.17',
     '14.16',
     '14.15',
     '14.14',
