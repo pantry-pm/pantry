@@ -89,7 +89,10 @@ export function shouldUseLockedVersion(
       return false
     return availableVersions.includes(normalized)
   }
-  return versionSatisfiesSpec(normalizeLockedVersion(domain, pinned), spec)
+  return versionSatisfiesSpec(
+    normalizeLockedVersion(domain, pinned),
+    normalizeLockedVersion(domain, spec),
+  )
 }
 
 /**

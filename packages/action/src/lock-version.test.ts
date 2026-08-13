@@ -89,6 +89,14 @@ describe('shouldUseLockedVersion', () => {
     )).toBe(true)
     expect(normalizeLockedVersion('example.com', '1.0.0_build')).toBe('1.0.0_build')
   })
+
+  test('matches filesystem-safe Zig metadata on both sides', () => {
+    expect(shouldUseLockedVersion(
+      'ziglang.org',
+      '0.17.0-dev.1509_bb296ab9b',
+      '0.17.0-dev.1509_bb296ab9b',
+    )).toBe(true)
+  })
 })
 
 describe('isRollingVersionSpec', () => {
