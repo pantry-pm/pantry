@@ -125,6 +125,24 @@ export function ziglangOfficialDownload(version: string, platform: Platform): { 
   }
 }
 
+export function sqliteOfficialDownloadUrl(version: string, platform: Platform): string {
+  const [major, minor, patch] = version.split('.').map(Number)
+  if (major !== 3 || !Number.isInteger(minor) || !Number.isInteger(patch))
+    throw new Error(`Unsupported SQLite version: ${version}`)
+  const year = minor >= 52 ? 2026 : minor >= 48 ? 2025 : 2024
+  const platformMap: Record<string, string> = {
+    'darwin-aarch64': 'osx-arm64',
+    'darwin-x86_64': 'osx-x64',
+    'linux-x86_64': 'linux-x64',
+    'windows-aarch64': 'win-arm64',
+    'windows-x86_64': 'win-x64',
+  }
+  const target = platformMap[`${platform.os}-${platform.arch}`]
+  if (!target) throw new Error(`Unsupported platform for SQLite tools: ${platform.os}-${platform.arch}`)
+  const archiveVersion = `${major}${minor}${String(patch).padStart(2, '0')}00`
+  return `https://sqlite.org/${year}/sqlite-tools-${target}-${archiveVersion}.zip`
+}
+
 const resolvers: Record<string, PackageResolver> = {
   'github.com/mail-os/mail': {
     getDownloadUrl(version: string, platform: Platform): string {
@@ -190,6 +208,19 @@ const resolvers: Record<string, PackageResolver> = {
       const prefix = platformMap[key]
       if (!prefix) throw new Error(`Unsupported platform for bun: ${key}`)
       return prefix
+    },
+  },
+
+  'sqlite.org': {
+    getDownloadUrl(version: string, platform: Platform): string {
+      return sqliteOfficialDownloadUrl(version, platform)
+    },
+    getArchiveFormat() {
+      return 'zip' as const
+    },
+    getBinaries(platform: Platform) {
+      const suffix = platform.os === 'windows' ? '.exe' : ''
+      return [`sqlite3${suffix}`, `sqldiff${suffix}`, `sqlite3_analyzer${suffix}`, `sqlite3_rsync${suffix}`]
     },
   },
 
