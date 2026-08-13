@@ -2601,20 +2601,32 @@ pub const Installer = struct {
             };
         }
 
+        const registry_artifact = downloader.lookupS3Registry(self.allocator, "ziglang.org", resolved_version);
+        defer if (registry_artifact) |artifact| {
+            self.allocator.free(artifact.tarball_url);
+            self.allocator.free(artifact.version);
+        };
+
         if (!options.quiet) {
             const is_dev = downloader.isZigDevVersion(resolved_version);
-            if (is_dev) {
+            if (registry_artifact != null and is_dev) {
                 if (!std.mem.eql(u8, resolved_version, spec.version)) {
                     style.print("  → Resolved {s} to {s}\n", .{ spec.version, resolved_version });
                 }
                 style.print("  → Downloading mirrored Zig dev from registry.pantry.dev: {s}\n", .{resolved_version});
-            } else {
+            } else if (registry_artifact != null) {
                 style.print("  → Downloading mirrored Zig from registry.pantry.dev: {s}\n", .{resolved_version});
+            } else {
+                style.print("  → Pantry mirror unavailable; downloading Zig from ziglang.org: {s}\n", .{resolved_version});
             }
         }
 
-        // Build download URL
-        const url = try downloader.buildZiglangUrl(self.allocator, resolved_version);
+        // Prefer the Pantry mirror, but keep installs available during registry
+        // outages by falling back to Zig's official archive for this version.
+        const url = if (registry_artifact) |artifact|
+            try self.allocator.dupe(u8, artifact.tarball_url)
+        else
+            try downloader.buildZiglangFallbackUrl(self.allocator, resolved_version);
         defer self.allocator.free(url);
 
         // Create temp directory for downloading
@@ -2633,9 +2645,9 @@ pub const Installer = struct {
 
         try io_helper.makePath(temp_dir);
 
-        // Download the mirrored archive (Windows uses .zip, others use .tar.gz)
+        // Mirrored Unix archives are gzip; official Zig archives are xz.
         const is_windows = comptime @import("builtin").os.tag == .windows;
-        const archive_ext = if (is_windows) "zip" else "tar.gz";
+        const archive_ext = if (is_windows) "zip" else if (registry_artifact != null) "tar.gz" else "tar.xz";
         const archive_path = try std.fmt.allocPrint(
             self.allocator,
             "{s}/zig.{s}",

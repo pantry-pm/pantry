@@ -308,6 +308,8 @@ pub fn resolveZigDevVersion(allocator: std.mem.Allocator, version: []const u8) !
         return result.version;
     }
 
+    if (lookupZiglangIndexVersion(allocator, version)) |resolved| return resolved;
+
     return allocator.dupe(u8, version);
 }
 
@@ -355,6 +357,43 @@ pub fn buildZiglangUrl(
         allocator,
         "https://registry.pantry.dev/binaries/ziglang.org/{s}/{s}-{s}/ziglang.org-{s}.{s}",
         .{ version, platform_str, arch_str, version, ext },
+    );
+}
+
+/// Build an official ziglang.org archive URL for use when the Pantry binary
+/// mirror is unavailable. Pantry registry versions replace `+` with `_` in
+/// build metadata, so normalize that separator before addressing upstream.
+pub fn buildZiglangFallbackUrl(
+    allocator: std.mem.Allocator,
+    version: []const u8,
+) ![]const u8 {
+    const platform = switch (lib.Platform.current()) {
+        .darwin => "macos",
+        .linux => "linux",
+        .windows => "windows",
+        .freebsd => "freebsd",
+    };
+    const arch = switch (lib.Architecture.current()) {
+        .x86_64 => "x86_64",
+        .aarch64 => "aarch64",
+    };
+    const ext = if (lib.Platform.current() == .windows) "zip" else "tar.xz";
+
+    const upstream_version = try allocator.dupe(u8, version);
+    defer allocator.free(upstream_version);
+    if (std.mem.indexOfScalar(u8, upstream_version, '_')) |idx| upstream_version[idx] = '+';
+
+    if (isZigDevVersion(upstream_version)) {
+        return std.fmt.allocPrint(
+            allocator,
+            "https://ziglang.org/builds/zig-{s}-{s}-{s}.{s}",
+            .{ arch, platform, upstream_version, ext },
+        );
+    }
+    return std.fmt.allocPrint(
+        allocator,
+        "https://ziglang.org/download/{s}/zig-{s}-{s}-{s}.{s}",
+        .{ upstream_version, arch, platform, upstream_version, ext },
     );
 }
 
@@ -432,6 +471,49 @@ fn zigDevBuildNumber(version: []const u8) ?u64 {
     while (end < version.len and std.ascii.isDigit(version[end])) : (end += 1) {}
     if (end == start) return null;
     return std.fmt.parseInt(u64, version[start..end], 10) catch null;
+}
+
+/// Resolve a Zig range through the official download index when Pantry's
+/// binary metadata endpoint is unavailable.
+fn lookupZiglangIndexVersion(allocator: std.mem.Allocator, version_constraint: []const u8) ?[]const u8 {
+    const semver = @import("../packages/semver.zig");
+    const constraint = semver.parseConstraint(version_constraint) catch return null;
+    const response = io_helper.httpGet(allocator, "https://ziglang.org/download/index.json") catch return null;
+    defer allocator.free(response);
+
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, response, .{}) catch return null;
+    defer parsed.deinit();
+    if (parsed.value != .object) return null;
+
+    var best: ?[]const u8 = null;
+    var best_parsed: ?semver.Version = null;
+    var it = parsed.value.object.iterator();
+    while (it.next()) |entry| {
+        const version_value = if (std.mem.eql(u8, entry.key_ptr.*, "master"))
+            if (entry.value_ptr.* == .object) entry.value_ptr.*.object.get("version") orelse continue else continue
+        else
+            std.json.Value{ .string = entry.key_ptr.* };
+        if (version_value != .string) continue;
+        const candidate = version_value.string;
+        if (!semver.satisfiesConstraint(candidate, constraint)) continue;
+        const candidate_parsed = semver.parseVersion(candidate) catch continue;
+
+        if (best_parsed) |current| {
+            const newer_dev = candidate_parsed.major == current.major and
+                candidate_parsed.minor == current.minor and
+                candidate_parsed.patch == current.patch and
+                (zigDevBuildNumber(candidate) orelse 0) > (zigDevBuildNumber(best.?) orelse 0);
+            const newer_release = candidate_parsed.major > current.major or
+                (candidate_parsed.major == current.major and candidate_parsed.minor > current.minor) or
+                (candidate_parsed.major == current.major and candidate_parsed.minor == current.minor and
+                    candidate_parsed.patch > current.patch);
+            if (!newer_dev and !newer_release) continue;
+        }
+        best = candidate;
+        best_parsed = candidate_parsed;
+    }
+
+    return allocator.dupe(u8, best orelse return null) catch null;
 }
 
 /// Try to find a package tarball in the pantry S3 registry.
@@ -835,4 +917,13 @@ test "Zig download URL always uses the Pantry registry" {
     try std.testing.expect(std.mem.startsWith(u8, url, "https://registry.pantry.dev/binaries/ziglang.org/"));
     try std.testing.expect(std.mem.indexOf(u8, url, "ziglang.org/builds") == null);
     try std.testing.expect(std.mem.indexOf(u8, url, "ziglang.org/download") == null);
+}
+
+test "Zig fallback URL uses official archives" {
+    const allocator = std.testing.allocator;
+    const url = try buildZiglangFallbackUrl(allocator, "0.17.0-dev.1509_bb296ab9b");
+    defer allocator.free(url);
+
+    try std.testing.expect(std.mem.startsWith(u8, url, "https://ziglang.org/builds/zig-"));
+    try std.testing.expect(std.mem.indexOf(u8, url, "0.17.0-dev.1509+bb296ab9b") != null);
 }
