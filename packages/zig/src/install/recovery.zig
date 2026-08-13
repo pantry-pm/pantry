@@ -156,6 +156,15 @@ pub const InstallCheckpoint = struct {
         return checkpoint;
     }
 
+    /// Discard resume state before a forced reinstall. A checkpoint records
+    /// packages completed by a previous run; honoring it under `--force`
+    /// incorrectly skips the very packages the caller asked to reinstall.
+    pub fn clearPersisted(allocator: std.mem.Allocator, project_dir: []const u8) void {
+        const path = std.fmt.allocPrint(allocator, "{s}/pantry/.install-checkpoint", .{project_dir}) catch return;
+        defer allocator.free(path);
+        io_helper.deleteFile(path) catch {};
+    }
+
     /// Remove the checkpoint file (called on successful completion)
     pub fn cleanup(self: *InstallCheckpoint) void {
         if (self.checkpoint_path) |path| {

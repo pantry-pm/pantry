@@ -406,6 +406,10 @@ pub fn installWorkspaceCommandWithOptions(
         style.print("{s}⚡ Offline mode{s} — installing from cache only\n", .{ style.dim, style.reset });
     }
 
+    // A forced install must not resume the completed-package set from an older
+    // run, otherwise every recorded dependency is silently skipped.
+    if (options.force) recovery.InstallCheckpoint.clearPersisted(allocator, workspace_root);
+
     // Load recovery checkpoint (for resuming interrupted installs)
     var checkpoint = recovery.InstallCheckpoint.loadFromDisk(allocator, workspace_root) catch null orelse recovery.InstallCheckpoint.init(allocator);
     defer checkpoint.deinit();
