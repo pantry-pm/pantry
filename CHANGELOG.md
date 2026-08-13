@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.24...v0.11.25)
+
+## 🐛 Bug Fixes
+
+- **action**: normalize exact Zig lock specs ([d4a2ae9](https://github.com/pantry-pm/pantry/commit/d4a2ae9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.25 ([b531706](https://github.com/pantry-pm/pantry/commit/b531706)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update arkade.dev, casdoor.org, circleci.com, cnquery.io, diabrowser.com, github.com/ggerganov/llama.cpp, helm.sh ([470aafc](https://github.com/pantry-pm/pantry/commit/470aafc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.23...v0.11.24)
 
 ## ✨ Features
