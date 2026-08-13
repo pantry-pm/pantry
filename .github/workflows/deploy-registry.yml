@@ -327,6 +327,7 @@ jobs:
             # Debian may runtime-mask ClamAV while packages are configured on
             # low-memory hosts. Remove both persistent and /run masks so a
             # subsequent deploy can recover the scanner without manual SSH.
+            systemctl unmask --runtime clamav-freshclam clamav-daemon
             systemctl unmask clamav-freshclam clamav-daemon
             systemctl enable --quiet clamav-freshclam clamav-daemon
             systemctl enable --now --quiet "${SERVICE}-recovery.timer"
