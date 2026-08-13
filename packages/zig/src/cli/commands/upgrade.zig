@@ -4,6 +4,7 @@ const io_helper = lib.io_helper;
 const style = lib.style;
 const downloader = lib.install.downloader;
 const CommandResult = lib.commands.common.CommandResult;
+const compareVersions = lib.commands.outdated_cmd.compareVersions;
 
 const REPO = "pantry-pm/pantry";
 
@@ -208,6 +209,19 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
         return .{ .exit_code = 0 };
     }
 
+    // GitHub's `latest` pointer can lag briefly after a release is tagged or
+    // be moved backwards when a release is withdrawn. A self-updater must
+    // never replace a newer installed binary with an older one just because
+    // the remote pointer is stale.
+    if (compareVersions(latest_version, current_version) != .gt) {
+        const msg = try std.fmt.allocPrint(
+            allocator,
+            "Refusing to downgrade Pantry from {s} to stale release {s}.",
+            .{ current_version, latest_version },
+        );
+        return CommandResult.err(allocator, msg);
+    }
+
     style.print("  New version: {s}{s}{s}\n", .{ style.green, latest_version, style.reset });
 
     if (options.dry_run) {
@@ -377,4 +391,10 @@ pub fn upgradeCommand(allocator: std.mem.Allocator, _: []const []const u8, optio
     });
 
     return .{ .exit_code = 0 };
+}
+
+test "upgrade ordering rejects stale release pointers" {
+    try std.testing.expectEqual(std.math.Order.lt, compareVersions("0.11.21", "0.11.24"));
+    try std.testing.expectEqual(std.math.Order.eq, compareVersions("0.11.24", "0.11.24"));
+    try std.testing.expectEqual(std.math.Order.gt, compareVersions("0.11.25", "0.11.24"));
 }
