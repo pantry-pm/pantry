@@ -181,6 +181,16 @@ pub const PipelineDep = struct {
     github_repo: ?[]const u8 = null,
 };
 
+fn canUseNpmFastPath(top_level_count: usize, npm_count: usize, missing_npm_count: usize) bool {
+    return missing_npm_count == 0 and npm_count > 0 and npm_count == top_level_count;
+}
+
+test "npm fast path does not skip mixed-source dependencies" {
+    try std.testing.expect(canUseNpmFastPath(3, 3, 0));
+    try std.testing.expect(!canUseNpmFastPath(4, 3, 0));
+    try std.testing.expect(!canUseNpmFastPath(3, 3, 1));
+}
+
 // ============================================================================
 // Phase 1: Full Tree Resolution
 // ============================================================================
@@ -1534,7 +1544,7 @@ pub fn run(
         // packages must go through resolution/download; otherwise a fresh
         // project can get an empty pantry/ with an "up to date" summary.
         const missing = npm_count - present_count;
-        if (missing == 0 and npm_count > 0) {
+        if (canUseNpmFastPath(top_level_deps.len, npm_count, missing)) {
             if (verbose) {
                 const check_ts = io_helper.clockGettime();
                 const check_ms = @as(i64, @intCast(check_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(check_ts.nsec)), 1_000_000);

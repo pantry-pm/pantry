@@ -771,6 +771,14 @@ pub const Installer = struct {
             return try self.installFromNpm(spec, options);
         }
 
+        // Zig's official archive is a reliable fallback when the Pantry
+        // binary registry is unavailable. Route the canonical domain through
+        // the dedicated installer before generic Pantry package resolution.
+        if (std.mem.eql(u8, spec.name, "ziglang.org")) {
+            if (options.verbose) std.debug.print("[verbose:installer] -> zig package: {s}\n", .{spec.name});
+            return try self.installFromZiglang(spec, options);
+        }
+
         // Check if package exists in registry (used for domain resolution and fallback)
         const pkg_registry = @import("../packages/generated.zig");
         const pkg_info = pkg_registry.getPackageByName(spec.name);
