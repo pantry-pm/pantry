@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.23...v0.11.24)
+
+## ✨ Features
+
+- **action**: install SQLite tools with Pantry ([218f9d1](https://github.com/pantry-pm/pantry/commit/218f9d1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.24 ([367572b](https://github.com/pantry-pm/pantry/commit/367572b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.22...v0.11.23)
 
 ## 🐛 Bug Fixes
