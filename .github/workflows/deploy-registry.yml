@@ -249,7 +249,7 @@ jobs:
             # CPUWeight sits above clamd's 25 and below rpx's 500: the registry
             # answers requests, so it must outrank the scanning it dispatches,
             # and still yield to the gateway that fronts every tenant.
-            REGISTRY_CAPACITY_DIR="/etc/systemd/system/${REGISTRY_SERVICE}.service.d"
+            REGISTRY_CAPACITY_DIR="/etc/systemd/system/${SERVICE}.service.d"
             install -d -m 0755 "$REGISTRY_CAPACITY_DIR"
             REGISTRY_CAPACITY_TMP=$(mktemp "$REGISTRY_CAPACITY_DIR/pantry-registry-capacity.conf.XXXXXX")
             printf '%s\n' \
