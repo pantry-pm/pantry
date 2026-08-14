@@ -487,6 +487,16 @@ const provision_script =
     \\ExecStart=${bun_bin} run dist/server.js
     \\Restart=always
     \\RestartSec=5
+    \\MemoryAccounting=yes
+    \\# Sized above the service's observed working set (~400 MB serving the
+    \\# registry and coordinating scans), not below it. A MemoryHigh under the
+    \\# floor does not apply back-pressure, it deadlocks: the kernel throttles
+    \\# the cgroup to reclaim memory that is live and cannot be given back, and
+    \\# the process crawls instead of either working or failing. The scan
+    \\# workers were configured that way and wedged at 0.1% CPU for 25 minutes
+    \\# at a time.
+    \\MemoryHigh=1G
+    \\MemoryMax=1536M
     \\
     \\[Install]
     \\WantedBy=multi-user.target
