@@ -233,6 +233,36 @@ jobs:
             fi
             mv -f "$CLAMD_CAPACITY_TMP" "$CLAMD_CAPACITY_DIR/pantry-registry-capacity.conf"
 
+            # The Registry's own resource envelope, declared here rather than
+            # typed on the box. The unit itself is written by `pantry registry
+            # setup`, which only runs at provisioning time, so a value that
+            # lives only there does not reach a machine already running. This
+            # drop-in is rewritten on every deploy, which is what makes it the
+            # honest home for numbers that change.
+            #
+            # Sized above the observed working set (~400 MB serving the
+            # registry and coordinating scans), not under it: a MemoryHigh
+            # below the floor does not throttle a service gently, it deadlocks
+            # it — the kernel keeps demanding reclaim that live memory cannot
+            # give. The scan workers spent 25 minutes at a time proving that.
+            #
+            # CPUWeight sits above clamd's 25 and below rpx's 500: the registry
+            # answers requests, so it must outrank the scanning it dispatches,
+            # and still yield to the gateway that fronts every tenant.
+            REGISTRY_CAPACITY_DIR="/etc/systemd/system/${REGISTRY_SERVICE}.service.d"
+            install -d -m 0755 "$REGISTRY_CAPACITY_DIR"
+            REGISTRY_CAPACITY_TMP=$(mktemp "$REGISTRY_CAPACITY_DIR/pantry-registry-capacity.conf.XXXXXX")
+            printf '%s\n' \
+              '[Service]' \
+              'MemoryAccounting=yes' \
+              'MemoryHigh=1G' \
+              'MemoryMax=1536M' \
+              'CPUWeight=80' \
+              'IOWeight=80' \
+              'TasksMax=256' \
+              > "$REGISTRY_CAPACITY_TMP"
+            mv -f "$REGISTRY_CAPACITY_TMP" "$REGISTRY_CAPACITY_DIR/pantry-registry-capacity.conf"
+
             install -d -m 0755 "$(dirname "$ENV_FILE")"
             [ -f "$ENV_FILE" ] || install -m 0600 /dev/null "$ENV_FILE"
             set_env() {
