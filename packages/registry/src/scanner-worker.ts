@@ -17,36 +17,25 @@ interface WorkerInput {
   expected: { sha256: string, size: number }
 }
 
-interface StreamTiming {
-  now: () => number
-  sleep: (milliseconds: number) => Promise<unknown>
-}
-
-function positiveInt(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number.parseInt(value, 10)
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback
-}
-
-export async function* rateLimitStream(
-  stream: AsyncIterable<Uint8Array>,
-  bytesPerSecond: number,
-  timing: StreamTiming = {
-    now: () => performance.now(),
-    sleep: milliseconds => Bun.sleep(milliseconds),
-  },
-): AsyncGenerator<Uint8Array> {
-  const startedAt = timing.now()
-  let total = 0
-  for await (const chunk of stream) {
-    total += chunk.byteLength
-    yield chunk
-    const targetElapsedMs = total / bytesPerSecond * 1000
-    const delayMs = targetElapsedMs - (timing.now() - startedAt)
-    if (delayMs > 0)
-      await timing.sleep(delayMs)
-  }
-}
+/*
+ * There is deliberately no download rate limiter here any more.
+ *
+ * One used to wrap this stream, pacing consumption to 8 MB/s. It never limited
+ * a download: `fetch` pulls the body off the network at link speed and queues
+ * it internally regardless of how slowly anything reads, so the only thing the
+ * pacing changed was how long those bytes sat in this process. Measured on a
+ * 1 GB artifact, same code and same clamd, it cost 4x the memory (2030 MB peak
+ * against 529 MB) and 25x the wall clock (156s against 6.1s) — and the extra
+ * 150 seconds outlived the presigned URL often enough to produce its own class
+ * of failure: scans ending in `artifact download failed with HTTP 403`.
+ *
+ * Nothing on the network side changes by removing it, because the download was
+ * always running at full speed. If artifact fetches ever do need pacing — to
+ * keep a scan from crowding the uplink it shares with every other tenant — it
+ * has to happen where the bytes are pulled: ranged GETs of a bounded window,
+ * paced between windows. That limits the transfer AND bounds memory to one
+ * window. Pacing the consumer does neither.
+ */
 
 async function main(): Promise<void> {
   const input = JSON.parse(await Bun.stdin.text()) as WorkerInput
@@ -92,11 +81,7 @@ async function main(): Promise<void> {
       }
     },
   }
-  const bytesPerSecond = positiveInt(
-    process.env.PANTRY_SCANNER_DOWNLOAD_BYTES_PER_SECOND,
-    8 * 1024 * 1024,
-  )
-  const result = await scanner.scanStream(rateLimitStream(responseStream, bytesPerSecond), {
+  const result = await scanner.scanStream(responseStream, {
     surface: 'binary',
     name: '_isolated',
   }, input.expected)
