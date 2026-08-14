@@ -17,6 +17,12 @@ interface WorkerInput {
   expected: { sha256: string, size: number }
 }
 
+function positiveInt(value: string | undefined, fallback: number): number {
+  if (!value) return fallback
+  const parsed = Number.parseInt(value, 10)
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
 /*
  * There is deliberately no download rate limiter here any more.
  *
