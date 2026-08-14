@@ -70,6 +70,7 @@ export const argoprojgithubioworkflowsPackage = {
     '4.0.2',
     '4.0.1',
     '4.0.0',
+    '3.7.18',
     '3.7.17',
     '3.7.16',
     '3.7.15',
