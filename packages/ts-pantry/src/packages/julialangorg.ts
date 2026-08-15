@@ -68,6 +68,7 @@ export const julialangorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.12.7',
     '1.12.6',
     '1.12.5',
     '1.12.4',
