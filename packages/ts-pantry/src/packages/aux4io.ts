@@ -67,6 +67,7 @@ export const aux4ioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.2.5',
     '5.2.4',
     '5.2.3',
     '5.2.2',
