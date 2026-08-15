@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.810.50856",
-      "published": "26.810.50856",
+      "latest": "26.810.52044",
+      "published": "26.810.52044",
       "needsUpdate": false
     },
     {
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
