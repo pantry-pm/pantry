@@ -10177,7 +10177,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"invisible-island.net/ncurses@6"},
     .build_dependencies = &[_][]const u8{ "gnu.org/autoconf", "gnu.org/automake" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "3.5.2", "3.5.1", "3.5.0", "3.4.1", "3.4.0", "3.3.0", "3.2.2", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0", "3.0.5", "3.0.4", "3.0.3", "3.0.2", "3.0.1", "3.0.0", "2.2.0" },
+    .versions = &[_][]const u8{ "3.5.3", "3.5.2", "3.5.1", "3.5.0", "3.4.1", "3.4.0", "3.3.0", "3.2.2", "3.2.1", "3.2.0", "3.1.2", "3.1.1", "3.1.0", "3.0.5", "3.0.4", "3.0.3", "3.0.2", "3.0.1", "3.0.0", "2.2.0" },
 }, .{
     .name = "htslib",
     .domain = "htslib.org",
