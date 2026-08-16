@@ -707,10 +707,21 @@ async function fetchLiveVersions(domain: string, platform: Platform): Promise<st
     return versions.map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
   }
   if (domain === 'ziglang.org') {
-    const mirrored = await registryVersions(domain, platform)
-    if (mirrored.length > 0) return mirrored
-    const index = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null) as Record<string, { version?: string }> | null
-    return Object.entries(index || {}).map(([key, entry]) => entry.version || key).filter(Boolean)
+    // The installer downloads zig from ziglang.org itself, and ziglang.org
+    // PRUNES dev builds — so the origin's live index is the only list that
+    // proves a tarball is still downloadable. Preferring the registry's
+    // mirrored list here pinned a pruned dev build and deadlocked CI: the
+    // job that refreshes the mirror could not install zig to run, so the
+    // stale pin could never heal itself. Origin first; the registry is the
+    // fallback for when the origin index is unreachable.
+    const index = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null) as Record<string, Record<string, unknown> & { version?: string }> | null
+    const platformKey = `${platform.arch}-${platform.os === 'darwin' ? 'macos' : platform.os}`
+    const origin = Object.entries(index || {})
+      .filter(([, entry]) => Boolean((entry as Record<string, unknown>)[platformKey]))
+      .map(([key, entry]) => entry.version || key)
+      .filter(Boolean)
+    if (origin.length > 0) return origin
+    return await registryVersions(domain, platform)
   }
   return []
 }
