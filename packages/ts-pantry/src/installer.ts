@@ -714,16 +714,23 @@ async function fetchLiveVersions(domain: string, platform: Platform): Promise<st
     // job that refreshes the mirror could not install zig to run, so the
     // stale pin could never heal itself. Origin first; the registry is the
     // fallback for when the origin index is unreachable.
-    const index = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null) as Record<string, Record<string, unknown> & { version?: string }> | null
-    const platformKey = `${platform.arch}-${platform.os === 'darwin' ? 'macos' : platform.os}`
-    const origin = Object.entries(index || {})
-      .filter(([, entry]) => Boolean((entry as Record<string, unknown>)[platformKey]))
-      .map(([key, entry]) => entry.version || key)
-      .filter(Boolean)
+    const index = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null) as ZigDownloadIndex | null
+    const origin = zigOriginVersions(index, platform)
     if (origin.length > 0) return origin
     return await registryVersions(domain, platform)
   }
   return []
+}
+
+export type ZigDownloadIndex = Record<string, Record<string, unknown> & { version?: string }>
+
+/** Return only Zig versions that the live origin publishes for this target. */
+export function zigOriginVersions(index: ZigDownloadIndex | null, platform: Platform): string[] {
+  const platformKey = `${platform.arch}-${platform.os === 'darwin' ? 'macos' : platform.os}`
+  return Object.entries(index || {})
+    .filter(([, entry]) => Boolean(entry[platformKey]))
+    .map(([key, entry]) => entry.version || key)
+    .filter(Boolean)
 }
 
 /** Newest-first semver sort, so the first match found is always the highest. */

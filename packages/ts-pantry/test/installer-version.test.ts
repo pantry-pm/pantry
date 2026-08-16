@@ -5,6 +5,7 @@ import {
   parseInstallerConstraint,
   resolveInstallerConstraintFromCandidates,
   satisfiesInstallerConstraint,
+  zigOriginVersions,
 } from '../src/installer'
 
 describe('installer version constraints', () => {
@@ -32,6 +33,27 @@ describe('installer version constraints', () => {
     ]
     expect(resolveInstallerConstraintFromCandidates('^0.17.0-dev', versions)).toBe('0.17.0-dev.1441_d5181a9c9')
     expect([...versions].sort(compareInstallerVersionsDesc)[0]).toBe('0.17.0-dev.1441_d5181a9c9')
+  })
+
+  it('uses only live Zig origin builds published for the target platform', () => {
+    const index = {
+      master: {
+        version: '0.17.0-dev.1770+8f9d34bca',
+        'aarch64-macos': { tarball: 'https://ziglang.org/builds/live.tar.xz' },
+      },
+      '0.17.0-dev.1282+7779fba5b': {
+        version: '0.17.0-dev.1282+7779fba5b',
+        'x86_64-linux': { tarball: 'https://ziglang.org/builds/linux-only.tar.xz' },
+      },
+      '0.15.2': {
+        'aarch64-macos': { tarball: 'https://ziglang.org/download/0.15.2/stable.tar.xz' },
+      },
+    }
+
+    expect(zigOriginVersions(index, { os: 'darwin', arch: 'aarch64' })).toEqual([
+      '0.17.0-dev.1770+8f9d34bca',
+      '0.15.2',
+    ])
   })
 
   it('keeps stable constraints separate from prereleases', () => {
