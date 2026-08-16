@@ -892,7 +892,7 @@ function parseDep(dep: string): string {
 function parseDepConstraint(dep: string): string | null {
   let spec = dep
   // Remove platform prefix
-  if (spec.includes(':') && /^(darwin|linux):/i.test(spec)) {
+  if (spec.includes(':') && /^(?:darwin|linux):/i.test(spec)) {
     spec = spec.split(':').slice(1).join(':')
   }
   // Remove comments

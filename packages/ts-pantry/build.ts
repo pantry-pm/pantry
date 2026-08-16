@@ -1,6 +1,7 @@
 import process from 'node:process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { dts } from 'bun-plugin-dtsx'
 
 /**
@@ -50,11 +51,38 @@ function findBrokenChunks(): string[] {
   return broken
 }
 
+/**
+ * Execute the emitted public library entry points before a release can use
+ * them. Static text checks miss bundles that contain declarations but export
+ * a minified identifier that was never declared. Importing the exact files
+ * consumers load catches that class of broken package immediately.
+ */
+async function verifyEntryPoints(): Promise<void> {
+  const entries = [
+    path.join(process.cwd(), 'dist', 'src', 'index.js'),
+    path.join(process.cwd(), 'dist', 'src', 'testing', 'index.js'),
+  ]
+
+  for (const entry of entries) {
+    try {
+      await import(pathToFileURL(entry).href)
+    }
+    catch (error) {
+      console.error(`Built entry point cannot be imported: ${path.relative(process.cwd(), entry)}`)
+      throw error
+    }
+  }
+}
+
 async function build() {
   console.log('Building...')
   cleanDist()
 
-  const result = await Bun.build({
+  // Generate declarations from the complete public graph first. Bun can emit
+  // invalid minified exports when the same module is both an entry point and a
+  // dependency of another entry point, so these multi-entry JavaScript files
+  // are replaced by isolated runtime builds below.
+  const declarationResult = await Bun.build({
     entrypoints: ['src/index.ts', 'bin/cli.ts', 'src/testing/index.ts'],
     outdir: './dist',
     target: 'node',
@@ -63,9 +91,29 @@ async function build() {
     plugins: [dts()],
   })
 
-  if (!result.success) {
-    console.error('Build failed:', result.logs)
+  if (!declarationResult.success) {
+    console.error('Declaration build failed:', declarationResult.logs)
     process.exit(1)
+  }
+
+  const runtimeEntries = [
+    { entrypoint: 'src/index.ts', outdir: './dist/src' },
+    { entrypoint: 'src/testing/index.ts', outdir: './dist/src/testing' },
+    { entrypoint: 'bin/cli.ts', outdir: './dist/bin' },
+  ]
+
+  for (const { entrypoint, outdir } of runtimeEntries) {
+    const result = await Bun.build({
+      entrypoints: [entrypoint],
+      outdir,
+      target: 'node',
+      minify: true,
+    })
+
+    if (!result.success) {
+      console.error(`Runtime build failed for ${entrypoint}:`, result.logs)
+      process.exit(1)
+    }
   }
 
   // Manually copy generated-package-names.ts as .d.ts to preserve formatting
@@ -88,6 +136,8 @@ async function build() {
       console.error(`  dist/${entry}`)
     process.exit(1)
   }
+
+  await verifyEntryPoints()
 
   console.log('Build completed successfully!')
 }

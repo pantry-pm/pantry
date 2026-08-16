@@ -95,7 +95,7 @@ export function isPackageDomain(name: string): name is PackageDomain {
   // AND not look like a version number (e.g., "1.0.0" or "v1.2")
   if (!name.includes('.') || name.startsWith('.') || name.endsWith('.')) return false
   // eslint-disable-next-line no-super-linear-backtracking
-  if (/^v?\d+(\.\d+){0,10}$/.test(name)) return false // pure numeric versions
+  if (/^v?\d+(?:\.\d+){0,10}$/.test(name)) return false // pure numeric versions
   return /^[a-z0-9][\w.\-/]*$/i.test(name)
 }
 

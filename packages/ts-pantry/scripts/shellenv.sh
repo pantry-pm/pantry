@@ -165,17 +165,13 @@ if [[ -n "$ZSH_VERSION" ]]; then
   _pantry_hook
 
 elif [[ -n "$BASH_VERSION" ]]; then
-  # Bash: use PROMPT_COMMAND
-  _pantry_prompt_command() {
-    _pantry_hook
-    # Preserve any existing PROMPT_COMMAND
-    if [[ -n "$_pantry_old_prompt_command" ]]; then
-      eval "$_pantry_old_prompt_command"
-    fi
-  }
-
-  _pantry_old_prompt_command="$PROMPT_COMMAND"
-  PROMPT_COMMAND="_pantry_prompt_command"
+  # Bash executes every PROMPT_COMMAND array entry before drawing a prompt.
+  # Preserve the existing command as its own entry instead of reparsing it.
+  if [[ -n "${PROMPT_COMMAND:-}" ]]; then
+    PROMPT_COMMAND=("$PROMPT_COMMAND" _pantry_hook)
+  else
+    PROMPT_COMMAND=(_pantry_hook)
+  fi
 
   # Run on initial load too
   _pantry_hook

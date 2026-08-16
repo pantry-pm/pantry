@@ -61,7 +61,7 @@ function main {
     sudo -u _sftpgo pkgx +${package_project}^${package_version} \
   | cut -d= -f2 \
   | cut -d$ -f1 \
-  | tr -d \" 
+  | tr -d \"
   )"
   declare -r  package_path="$( dirname "${package_bin_path}" )"
   declare -r  package_conf_path="${package_path}/conf"
@@ -82,7 +82,7 @@ function main {
       echo 'OS not supported'
       ;;
   esac
-  
+
 }
 
 main

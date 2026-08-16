@@ -69,7 +69,9 @@ async function sshKeyId(c: HetznerClient): Promise<number> {
 }
 
 const c = client()
+// eslint-disable-next-line ts/no-top-level-await
 const imageId = await templateImageId(c)
+// eslint-disable-next-line ts/no-top-level-await
 const keyId = await sshKeyId(c)
 const name = `pantry-republish-${Date.now().toString(36)}`
 log(`booting ${name} (${SERVER_TYPE} @ ${LOCATION}) from snapshot ${imageId} for ${DOMAIN} ${PLATFORM}`)
