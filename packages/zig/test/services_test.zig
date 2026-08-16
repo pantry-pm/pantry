@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const pantry = @import("pantry");
 const services = pantry.services;
 const definitions = services.definitions;
@@ -1418,6 +1419,10 @@ test "PostgreSQL WithContext - null project_root falls back gracefully" {
     try std.testing.expectEqualStrings("postgres", pg.name);
     try std.testing.expect(pg.port.? == 5432);
     try std.testing.expect(pg.start_command.len > 0);
+    const expected_library_var = if (builtin.os.tag == .macos) "DYLD_LIBRARY_PATH" else "LD_LIBRARY_PATH";
+    try std.testing.expect(std.mem.indexOf(u8, pg.start_command, expected_library_var) != null);
+    try std.testing.expect(std.mem.indexOf(u8, pg.health_check.?, expected_library_var) != null);
+    try std.testing.expect(std.mem.indexOf(u8, pg.health_check.?, "pg_isready") != null);
 }
 
 test "Redis WithContext - null project_root falls back gracefully" {

@@ -482,9 +482,11 @@ pub const Services = struct {
         defer allocator.free(postgres_bin);
         const initdb_bin = try resolveServiceBinary(allocator, "initdb", project_root, home);
         defer allocator.free(initdb_bin);
+        const pg_isready_bin = try resolveServiceBinary(allocator, "pg_isready", project_root, home);
+        defer allocator.free(pg_isready_bin);
 
         // The pantry install root (".../pantry") derived from the binary path,
-        // so the command can compute LD_LIBRARY_PATH itself by globbing every
+        // so the command can compute the platform library path itself by globbing every
         // installed package's lib dir — self-contained, independent of the unit
         // Environment. postgres links libpq/readline/icu/... from sibling deps.
         const pantry_root = pantryRootOf(postgres_bin) orelse "/opt/pantry/pantry";
@@ -504,23 +506,24 @@ pub const Services = struct {
         // init/exec flow, detect that and move the stale cluster aside (timestamped
         // backup) so the `test -f PG_VERSION || initdb` below re-initializes a
         // fresh, compatible cluster instead of the service silently failing.
+        const library_var = Paths.libraryPathVar();
         const start_cmd = try std.fmt.allocPrint(
             allocator,
             "/bin/sh -c 'D=\"{s}\"; " ++
                 "L=\"$(find {s} -maxdepth 6 -type d -path \"*/v*/lib\" 2>/dev/null | tr \"\\n\" \":\")\"; " ++
                 "if [ -f \"$D/PG_VERSION\" ]; then " ++
                 "DV=$(cat \"$D/PG_VERSION\" 2>/dev/null); " ++
-                "SV=$(env LD_LIBRARY_PATH=$L {s} -V 2>/dev/null | sed -E \"s/[^0-9]*([0-9]+).*/\\1/\"); " ++
+                "SV=$(env {s}=$L {s} -V 2>/dev/null | sed -E \"s/[^0-9]*([0-9]+).*/\\1/\"); " ++
                 "if [ -n \"$DV\" ] && [ -n \"$SV\" ] && [ \"$DV\" != \"$SV\" ]; then " ++
                 "echo \"pantry: PostgreSQL data dir $D is v$DV but the server is v$SV; backing it up and re-initializing.\" >&2; " ++
                 "mv \"$D\" \"$D.bak.v$DV.$(date +%s)\"; fi; fi; " ++
                 "if [ \"$(id -u)\" = 0 ]; then " ++
                 "id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry; " ++
-                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env LD_LIBRARY_PATH=$L\"; " ++
-                "else R=\"env LD_LIBRARY_PATH=$L\"; fi; " ++
+                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env {s}=$L\"; " ++
+                "else R=\"env {s}=$L\"; fi; " ++
                 "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
                 "exec $R {s} -D \"$D\" -p {d}'",
-            .{ pgdata, pantry_root, postgres_bin, initdb_bin, postgres_bin, port },
+            .{ pgdata, pantry_root, library_var, postgres_bin, library_var, library_var, initdb_bin, postgres_bin, port },
         );
 
         return ServiceConfig{
@@ -532,7 +535,11 @@ pub const Services = struct {
             .port = port,
             .auto_start = false,
             .keep_alive = true,
-            .health_check = try std.fmt.allocPrint(allocator, "pg_isready -q -p {d}", .{port}),
+            .health_check = try std.fmt.allocPrint(
+                allocator,
+                "L=\"$(find {s} -maxdepth 6 -type d -path \"*/v*/lib\" 2>/dev/null | tr \"\\n\" \":\")\"; env {s}=\"$L\" {s} -q -p {d}",
+                .{ pantry_root, library_var, pg_isready_bin, port },
+            ),
         };
     }
 

@@ -437,11 +437,6 @@ pub fn waitForServiceHealth(
 
 /// Start a single service (no group resolution — avoids recursive error set)
 fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, project_root: ?[]const u8, port_override: ?u16) !CommandResult {
-    // For PostgreSQL, ensure data directory is initialized and version-compatible
-    if (std.mem.eql(u8, service_name, "postgres") or std.mem.eql(u8, service_name, "postgresql")) {
-        ensurePostgresDataDir(allocator, project_root);
-    }
-
     // Initialize service manager
     var manager = ServiceManager.init(allocator);
     defer manager.deinit();

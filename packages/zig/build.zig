@@ -636,8 +636,10 @@ pub fn build(b: *std.Build) void {
 
 /// Get package version from package.json
 fn getPackageVersion(b: *std.Build) ![]const u8 {
-    // Read version directly from root package.json (../../ from packages/zig/)
-    const content = readBuildRootFileAlloc(b, "../../package.json", 1024 * 1024) catch return "0.0.0";
+    // The distributable CLI and TypeScript package share one release version.
+    // The repository root is private and is not bumped by the package release
+    // workflow, so it must not be used as the binary's version source.
+    const content = readBuildRootFileAlloc(b, "../ts-pantry/package.json", 1024 * 1024) catch return "0.0.0";
     // Find "version": "x.y.z" (first occurrence)
     const needle = "\"version\"";
     const idx = std.mem.indexOf(u8, content, needle) orelse return "0.0.0";
