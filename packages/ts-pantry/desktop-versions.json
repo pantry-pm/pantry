@@ -518,8 +518,8 @@
       "name": "Slack",
       "kind": "app",
       "host": "macos",
-      "latest": "4.51.185",
-      "published": "4.51.185",
+      "latest": "4.51.191",
+      "published": "4.51.191",
       "needsUpdate": false
     },
     {
