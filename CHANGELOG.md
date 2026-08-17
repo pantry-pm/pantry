@@ -1,3 +1,34 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.29...v0.11.30)
+
+## 🐛 Bug Fixes
+
+- **pantry**: bun lives at bun.com, and carries the versions it has shipped ([593bc04](https://github.com/pantry-pm/pantry/commit/593bc04)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.30 ([51fd825](https://github.com/pantry-pm/pantry/commit/51fd825)) _(by Chris <chris@stacksjs.com>)_
+- sync the root version with the published package ([e193b5c](https://github.com/pantry-pm/pantry/commit/e193b5c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update package metadata ([f540f0f](https://github.com/pantry-pm/pantry/commit/f540f0f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([67cbd81](https://github.com/pantry-pm/pantry/commit/67cbd81)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([cb1ccef](https://github.com/pantry-pm/pantry/commit/cb1ccef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app whatsapp.com 2.26.32.19 → 2.26.33.12 ([19255bf](https://github.com/pantry-pm/pantry/commit/19255bf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com to 1.0.48275 ([f3c616b](https://github.com/pantry-pm/pantry/commit/f3c616b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update whatsapp.com to 2.26.33.12 ([7ff0df0](https://github.com/pantry-pm/pantry/commit/7ff0df0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update odigos.io to 1.35.0 ([ad3266b](https://github.com/pantry-pm/pantry/commit/ad3266b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pygments.org to 2.21.0 ([e1c8141](https://github.com/pantry-pm/pantry/commit/e1c8141)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update seaweedfs.com, ziglang.org ([f346105](https://github.com/pantry-pm/pantry/commit/f346105)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10456 ([27ea6e7](https://github.com/pantry-pm/pantry/commit/27ea6e7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10455 ([167857f](https://github.com/pantry-pm/pantry/commit/167857f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update moonrepo.dev/moon to 2.5.1 ([41e2441](https://github.com/pantry-pm/pantry/commit/41e2441)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.135 ([a7ebf4e](https://github.com/pantry-pm/pantry/commit/a7ebf4e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([c85a372](https://github.com/pantry-pm/pantry/commit/c85a372)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([4a4acdf](https://github.com/pantry-pm/pantry/commit/4a4acdf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko to 1.2.37 ([62d599d](https://github.com/pantry-pm/pantry/commit/62d599d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.25...v0.11.26)
 
 ## 🐛 Bug Fixes
