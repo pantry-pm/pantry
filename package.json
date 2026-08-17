@@ -47,7 +47,7 @@
   ],
   "devDependencies": {
     "@stacksjs/bumpx": "^0.2.16",
-    "better-dx": "^0.2.15"
+    "better-dx": "^0.2.23"
   },
   "git-hooks": {
     "pre-commit": {

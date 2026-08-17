@@ -11,7 +11,7 @@ import {
   generateMacCertificateRequests,
 } from '../src/apple-certificates'
 import { provisionMacApp } from '../src/app-store-connect'
-import { findDependencyFiles, resolveDependencyFile } from '../src/dependency-resolver'
+import { findDependencyFiles, parseDependencyFile, resolveDependencyFile } from '../src/dependency-resolver'
 import {
   cleanStaleOutputFiles,
   cleanupBrowserResources,
@@ -1470,6 +1470,106 @@ cli
       console.error(`Error installing ${pkg}:`, error instanceof Error ? error.message : error)
       process.exit(1)
     }
+  })
+
+/**
+ * What a project's dependency file names, if it has one.
+ *
+ * Through pantry's own resolver rather than a second reader: `deps.yaml`,
+ * `dependencies.yaml`, `pkgx.yaml` and the dotted forms are all already
+ * understood in one place, and a command that parsed them slightly differently
+ * would be a second definition of what a project depends on.
+ */
+function dependenciesIn(directory: string): string[] {
+  const files = findDependencyFiles(directory)
+
+  if (files.length === 0)
+    return []
+
+  try {
+    return parseDependencyFile(files[0]!).map(dependency =>
+      dependency.version && dependency.version !== 'latest'
+        ? `${dependency.name}@${String(dependency.version).replace(/^[\^~>=<]+/, '')}`
+        : dependency.name)
+  }
+  catch {
+    /*
+     * An unreadable dependency file yields no dependencies rather than an
+     * error. This command's job is to hand a working environment to a program
+     * - usually in a cloud-init, with nobody watching - and failing the whole
+     * environment because one file has a typo takes out the tools that *are*
+     * installed.
+     */
+    return []
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// env — the environment a *program* needs, rather than a shell
+// ─────────────────────────────────────────────────────────────────────────────
+cli
+  .command('env', 'Print the environment pantry-installed packages need, for a program to consume')
+  .option('--json', 'Print JSON instead of shell assignments')
+  .option('--dir <path>', 'A project directory, whose dependency file is included (default: cwd)')
+  .option('--install', 'Install anything the dependency file names that is missing')
+  .action(async (options: { json?: boolean, dir?: string, install?: boolean }) => {
+    /*
+     * `shell-init` answers "what do I put in my rc file". This answers "what
+     * do I put in a child process's environment", which is a different
+     * question and the one every non-interactive consumer has: a CI runner, a
+     * Makefile, a build script, anything that spawns a process rather than
+     * sourcing a shell.
+     *
+     * Without it the only way to use pantry from a program is to start a login
+     * shell and hope the rc file was installed - which is why so many CI
+     * systems reach for a container image instead. This is the smaller answer.
+     */
+    const directory = path.resolve(options.dir ?? process.cwd())
+    const wanted = dependenciesIn(directory)
+
+    if (options.install && wanted.length > 0) {
+      for (const dependency of wanted) {
+        const atIdx = dependency.lastIndexOf('@')
+        const hasVersion = atIdx > 0
+
+        await installPackage(
+          hasVersion ? dependency.slice(0, atIdx) : dependency,
+          hasVersion ? dependency.slice(atIdx + 1) : 'latest',
+          { globalBin: true, quiet: true },
+        ).catch((error) => {
+          // Reported, not fatal: a machine that cannot install one tool should
+          // still get an environment for the ones it has, and the step that
+          // needs the missing one fails with its own message.
+          console.error(`# could not install ${dependency}: ${error instanceof Error ? error.message : error}`)
+        })
+      }
+    }
+
+    const bin = globalBinDir()
+
+    /*
+     * Local `.bin` first, then the global one. A project that pinned a version
+     * should get that version even when a different one is installed
+     * system-wide, which is the whole reason a project manifest exists.
+     */
+    const entries = [path.join(directory, '.bin'), bin].filter(entry => fs.existsSync(entry))
+
+    if (options.json) {
+      console.log(JSON.stringify({
+        path: entries,
+        // The whole PATH a caller can hand to a child process, so the common
+        // case is one field rather than an array to join.
+        PATH: [...entries, process.env.PATH ?? ''].filter(Boolean).join(path.delimiter),
+        dependencies: wanted,
+        globalBin: bin,
+      }, null, 2))
+
+      process.exit(0)
+    }
+
+    // Shell assignments, for `eval $(pantry env)`.
+    console.log(`export PATH="${[...entries, '$PATH'].join(path.delimiter)}"`)
+    process.exit(0)
   })
 
 // ─────────────────────────────────────────────────────────────────────────────
