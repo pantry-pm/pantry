@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.32.19",
-      "published": "2.26.32.19",
+      "latest": "2.26.33.12",
+      "published": "2.26.33.12",
       "needsUpdate": false
     },
     {
