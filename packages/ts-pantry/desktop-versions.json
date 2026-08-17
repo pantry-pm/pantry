@@ -320,7 +320,7 @@
       "name": "Lato",
       "kind": "font",
       "host": "ubuntu",
-      "latest": "2.015",
+      "latest": null,
       "published": "2.015",
       "needsUpdate": false
     },
@@ -446,7 +446,7 @@
       "name": "Open Sans",
       "kind": "font",
       "host": "ubuntu",
-      "latest": "3.003",
+      "latest": null,
       "published": "3.003",
       "needsUpdate": false
     },
@@ -617,7 +617,7 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.33.12",
+      "latest": "2.26.32.21",
       "published": "2.26.33.12",
       "needsUpdate": false
     },
