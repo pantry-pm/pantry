@@ -67,6 +67,7 @@ export const pygmentsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.21.0',
     '2.20.0',
     '2.19.2',
     '2.19.1',
