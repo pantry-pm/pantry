@@ -108,8 +108,12 @@ export const ALIAS_OVERRIDES: AliasOverride[] = [
     aliases: ['yarn'],
   },
   {
-    domain: 'bun.sh',
-    aliases: ['bun', 'bun.com'],
+    // Bun's site moved to bun.com and the package follows it. `bun.sh` stays
+    // an alias rather than disappearing: it is what every existing deps.yaml
+    // and lockfile in the wild still asks for, and a rename that breaks those
+    // is a worse outcome than carrying the old name forever.
+    domain: 'bun.com',
+    aliases: ['bun', 'bun.sh'],
   },
 
   // Containers & infrastructure

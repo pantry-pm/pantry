@@ -8,7 +8,9 @@ describe('Package surface regression', () => {
 
     expect(aliases.memcached).toBe('memcached.org')
     expect(aliases.mail).toBe('github.com/mail-os/mail')
-    expect(aliases.bun).toBe('bun.sh')
+    // bun.sh moved to bun.com. The old spelling still resolves, which is
+    // asserted in bun-domain-alias.test.ts along with the rest of the move.
+    expect(aliases.bun).toBe('bun.com')
     expect(aliases.git).toBe('git-scm.org')
     expect(aliases.sqlite).toBe('sqlite.org')
 

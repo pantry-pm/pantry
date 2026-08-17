@@ -3,7 +3,7 @@
  *
  * @domain `bun.sh`
  * @programs `bun`, `bunx`
- * @version `1.3.11` (139 versions available)
+ * @version `1.3.14` (142 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install bun.sh`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "bun"
  * console.log(pkg.description) // "Incredibly fast JavaScript runtime, bundler, te..."
  * console.log(pkg.programs)    // ["bun", "bunx"]
- * console.log(pkg.versions[0]) // "1.3.11" (latest)
+ * console.log(pkg.versions[0]) // "1.3.14" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/bun-sh.md
@@ -38,20 +38,20 @@ export const bunPackage = {
   /**
   * The canonical domain name for this package.
   */
-  domain: 'bun.sh' as const,
+  domain: 'bun.com' as const,
   /**
   * Brief description of what this package does.
   */
   description: 'Incredibly fast JavaScript runtime, bundler, test runner, and package manager – all in one' as const,
   packageYmlUrl: 'https://github.com/pkgxdev/pantry/tree/main/projects/bun.sh/package.yml' as const,
-  homepageUrl: 'https://bun.sh' as const,
+  homepageUrl: 'https://bun.com' as const,
   githubUrl: 'https://github.com/oven-sh/bun' as const,
   /**
   * Command to install this package using pantry.
   * @example pantry install package-name
   */
-  installCommand: 'pantry install bun.sh' as const,
-  pantryInstallCommand: 'pantry install bun.sh' as const,
+  installCommand: 'pantry install bun.com' as const,
+  pantryInstallCommand: 'pantry install bun.com' as const,
   /**
   * Executable programs provided by this package.
   * These can be run after installation.
@@ -74,6 +74,9 @@ export const bunPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.3.14',
+    '1.3.13',
+    '1.3.12',
     '1.3.11',
     '1.3.10',
     '1.3.9',

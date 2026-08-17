@@ -134,7 +134,7 @@ import { brxken128githubiodexiosPackage } from './brxken128.github.io/dexios'
 import { budimanjojogithubiotalhelperPackage } from './budimanjojo.github.io/talhelper'
 import { bufbuildPackage } from './bufbuild'
 import { buildpacksioPackage } from './buildpacksio'
-import { bunPackage } from './bunsh'
+import { bunPackage } from './buncom'
 import { bytebasecomPackage } from './bytebasecom'
 import { bytereeforgmpdecimalPackage } from './bytereef.org/mpdecimal'
 import { caresorgPackage } from './c-aresorg'
@@ -1929,6 +1929,8 @@ export interface Pantry {
   budimanjojogithubiotalhelper: typeof budimanjojogithubiotalhelperPackage
   bufbuild: typeof bufbuildPackage
   buildpacksio: typeof buildpacksioPackage
+  buncom: typeof bunPackage
+  /** @deprecated bun.sh moved to bun.com; kept so existing lookups keep working. */
   bunsh: typeof bunPackage
   bytebasecom: typeof bytebasecomPackage
 
@@ -6573,6 +6575,7 @@ export const pantry: Pantry = {
   budimanjojogithubiotalhelper: budimanjojogithubiotalhelperPackage,
   bufbuild: bufbuildPackage,
   buildpacksio: buildpacksioPackage,
+  buncom: bunPackage,
   bunsh: bunPackage,
   bytebasecom: bytebasecomPackage,
 
