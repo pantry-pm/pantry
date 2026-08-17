@@ -1930,8 +1930,6 @@ export interface Pantry {
   bufbuild: typeof bufbuildPackage
   buildpacksio: typeof buildpacksioPackage
   buncom: typeof bunPackage
-  /** @deprecated bun.sh moved to bun.com; kept so existing lookups keep working. */
-  bunsh: typeof bunPackage
   bytebasecom: typeof bytebasecomPackage
 
   bytereeforgmpdecimal: typeof bytereeforgmpdecimalPackage
@@ -4779,7 +4777,7 @@ export interface Pantry {
   buildkit: typeof buildkitPackage
   buildx: typeof dockercombuildxPackage
   bun: typeof bunPackage
-  'bun.com': typeof bunPackage
+  'bun.sh': typeof bunPackage
   bytebase: typeof bytebasecomPackage
   bzip2: typeof sourcewareorgbzip2Package
   'c-ares': typeof caresorgPackage
@@ -6576,7 +6574,6 @@ export const pantry: Pantry = {
   bufbuild: bufbuildPackage,
   buildpacksio: buildpacksioPackage,
   buncom: bunPackage,
-  bunsh: bunPackage,
   bytebasecom: bytebasecomPackage,
 
   bytereeforgmpdecimal: bytereeforgmpdecimalPackage,
@@ -9424,7 +9421,7 @@ export const pantry: Pantry = {
   buildkit: buildkitPackage,
   buildx: dockercombuildxPackage,
   bun: bunPackage,
-  'bun.com': bunPackage,
+  'bun.sh': bunPackage,
   bytebase: bytebasecomPackage,
   bzip2: sourcewareorgbzip2Package,
   'c-ares': caresorgPackage,
