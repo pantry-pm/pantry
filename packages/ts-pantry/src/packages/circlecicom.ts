@@ -67,6 +67,9 @@ export const circlecicomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.48424',
+    '1.0.48403',
+    '1.0.48386',
     '1.0.48365',
     '1.0.48340',
     '1.0.48275',
