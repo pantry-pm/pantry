@@ -140,8 +140,8 @@
       "name": "Element",
       "kind": "app",
       "host": "macos",
-      "latest": "1.12.25",
-      "published": "1.12.25",
+      "latest": "1.12.26",
+      "published": "1.12.26",
       "needsUpdate": false
     },
     {
@@ -230,7 +230,7 @@
       "name": "ImageOptim",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.9.3",
+      "latest": null,
       "published": "1.9.3",
       "needsUpdate": false
     },
