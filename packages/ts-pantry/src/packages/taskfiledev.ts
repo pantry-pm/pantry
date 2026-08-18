@@ -67,6 +67,7 @@ export const taskfiledevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.53.1',
     '3.52.0',
     '3.51.1',
     '3.50.0',
