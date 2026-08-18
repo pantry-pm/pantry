@@ -150,6 +150,7 @@ export const gdalorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.13.3',
     '3.13.2',
     '3.13.1',
     '3.13.0',
