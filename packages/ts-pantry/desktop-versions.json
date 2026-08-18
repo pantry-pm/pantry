@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.814.41407",
-      "published": "26.814.41407",
+      "latest": "26.814.41957",
+      "published": "26.814.41957",
       "needsUpdate": false
     },
     {
@@ -230,7 +230,7 @@
       "name": "ImageOptim",
       "kind": "app",
       "host": "ubuntu",
-      "latest": null,
+      "latest": "1.9.3",
       "published": "1.9.3",
       "needsUpdate": false
     },
@@ -626,8 +626,8 @@
       "name": "Zed",
       "kind": "app",
       "host": "macos",
-      "latest": "1.15.0",
-      "published": "1.15.0",
+      "latest": "1.15.1",
+      "published": "1.15.1",
       "needsUpdate": false
     }
   ]
