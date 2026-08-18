@@ -1030,6 +1030,74 @@ fn getServiceConfigRaw(allocator: std.mem.Allocator, name: []const u8, project_r
     }
 }
 
+/// The port an installed unit actually runs on, recovered from the unit file.
+///
+/// `inspect` used to recompute the service definition from scratch, which
+/// hands back the *default* port - so a service started with `--port 8208`
+/// was described as running on 8108, with a `Command:` line that was not the
+/// one running and a health check aimed at somebody else's server. The port
+/// override lives in exactly one durable place, the launchd plist or systemd
+/// unit pantry itself wrote, so that is what gets read.
+///
+/// Scanned rather than parsed as XML, and only for the flags pantry's own
+/// definitions emit (`--port`, `--api-port`, `--http-port`, `-p`, and the
+/// `--port=N` form). That set is finite because this file writes it; a flag
+/// no service definition uses cannot appear.
+pub fn portFromInstalledUnit(allocator: std.mem.Allocator, unit_path: []const u8) ?u16 {
+    const io_helper = @import("../../io_helper.zig");
+    const content = io_helper.readFileAllocAbsolute(allocator, unit_path, 1024 * 1024) catch return null;
+    defer allocator.free(content);
+
+    const flags = [_][]const u8{ "--api-port", "--http-port", "--port", "-p" };
+
+    // Tokenised on whitespace and XML angle brackets together, so one pass
+    // reads both `<string>--api-port</string><string>8208</string>` and
+    // `ExecStart=... --api-port 8208`.
+    var tokens = std.mem.tokenizeAny(u8, content, " \t\r\n<>");
+    var expecting = false;
+
+    while (tokens.next()) |raw| {
+        const token = std.mem.trim(u8, raw, "\"'");
+
+        if (expecting) {
+            // The plist wraps every argument in its own element, so between
+            // the flag and its value sit `/string` and `string`. They are
+            // punctuation here, not arguments, and skipping them is what lets
+            // one scanner read both unit formats.
+            const is_tag = std.mem.eql(u8, token, "string")
+                or std.mem.eql(u8, token, "/string")
+                or std.mem.eql(u8, token, "array")
+                or std.mem.eql(u8, token, "/array");
+
+            if (!is_tag) {
+                if (std.fmt.parseInt(u16, token, 10)) |value| {
+                    return value;
+                } else |_| {
+                    // A flag with no number after it: keep looking rather than
+                    // reporting a port this unit does not carry.
+                    expecting = false;
+                }
+            }
+        }
+
+        for (flags) |flag| {
+            if (std.mem.eql(u8, token, flag)) {
+                expecting = true;
+                break;
+            }
+
+            // `--port=8208`, the joined form.
+            if (token.len > flag.len + 1 and std.mem.startsWith(u8, token, flag) and token[flag.len] == '=') {
+                if (std.fmt.parseInt(u16, token[flag.len + 1 ..], 10)) |value|
+                    return value
+                else |_| {}
+            }
+        }
+    }
+
+    return null;
+}
+
 /// Get service configuration with a custom port override
 pub fn getServiceConfigWithPort(allocator: std.mem.Allocator, name: []const u8, port: u16, project_root: ?[]const u8) !ServiceConfig {
     var config = try getServiceConfigWithPortRaw(allocator, name, port, project_root);
@@ -1261,7 +1329,26 @@ pub fn inspectCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
     } else try allocator.dupe(u8, "(unknown)");
     defer allocator.free(err_path);
 
-    // Port
+    // The port the installed unit actually runs on, and with it the whole
+    // description. Recomputed rather than patched: the port reaches the start
+    // command, the health check and the data paths, so replacing the config
+    // wholesale is what keeps `Port:`, `Health Check:` and `Command:` telling
+    // one story instead of three.
+    if (portFromInstalledUnit(allocator, config_path)) |installed| {
+        const differs = config.port == null or config.port.? != installed;
+
+        if (differs) {
+            if (getServiceConfigWithPort(allocator, service_name, installed, cwd)) |rebuilt| {
+                config.deinit(allocator);
+                config = rebuilt;
+            } else |_| {
+                // A service whose definition will not take a port override
+                // keeps the description it had; better a stale port than a
+                // failed inspect.
+            }
+        }
+    }
+
     const port_str = if (config.port) |p|
         try std.fmt.allocPrint(allocator, "{d}", .{p})
     else

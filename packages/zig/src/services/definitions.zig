@@ -1780,18 +1780,35 @@ pub const Services = struct {
             allocator.free(k);
         }
 
+        // The peering port, named rather than left to default, and this is the
+        // whole reason a per-project port worked and did not work at once.
+        //
+        // typesense-server listens twice: the API port it is told about, and a
+        // peering port for clustering that defaults to `api-port - 1` **of the
+        // default**, 8107, not of whatever was passed. So a second project
+        // starting on --api-port 8208 came up on 8208 for HTTP and then tried
+        // to bind 8107, which the first project already held: "Fail to listen
+        // ...:8107", "Failed to start peering service", and the process
+        // restarts forever. The API port moved and the collision moved with
+        // it, so the symptom was a service that logs "has started listening on
+        // port 8208" and never becomes healthy.
+        //
+        // Derived from the API port so the two move together, which is the
+        // property that makes one port per project enough.
+        const peering_port: u16 = if (port > 1) port - 1 else port + 1;
+
         const ts_bin = try resolveServiceBinary(allocator, "typesense-server", project_root, home);
         const start_cmd = if (have_real_key)
             try std.fmt.allocPrint(
                 allocator,
-                "{s} --data-dir {s} --api-address 127.0.0.1 --api-port {d}",
-                .{ ts_bin, data_dir, port },
+                "{s} --data-dir {s} --api-address 127.0.0.1 --api-port {d} --peering-address 127.0.0.1 --peering-port {d}",
+                .{ ts_bin, data_dir, port, peering_port },
             )
         else
             try std.fmt.allocPrint(
                 allocator,
-                "{s} --data-dir {s} --api-key=pantry-dev --api-address 127.0.0.1 --api-port {d}",
-                .{ ts_bin, data_dir, port },
+                "{s} --data-dir {s} --api-key=pantry-dev --api-address 127.0.0.1 --api-port {d} --peering-address 127.0.0.1 --peering-port {d}",
+                .{ ts_bin, data_dir, port, peering_port },
             );
         allocator.free(ts_bin);
 

@@ -275,6 +275,7 @@ pub const serviceSnapshotCommand = services_commands.snapshotCommand;
 pub const serviceRestoreCommand = services_commands.restoreCommand;
 pub const serviceSnapshotListCommand = services_commands.snapshotListCommand;
 pub const getServiceConfigWithPort = services_commands.getServiceConfigWithPort;
+pub const portFromInstalledUnit = services_commands.portFromInstalledUnit;
 pub const computeProjectHash = services_commands.computeProjectHash;
 
 // ============================================================================

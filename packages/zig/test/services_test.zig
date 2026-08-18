@@ -1,6 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const pantry = @import("pantry");
+const io_helper = pantry.io_helper;
 const services = pantry.services;
 const definitions = services.definitions;
 const platform = services.platform;
@@ -301,6 +302,100 @@ test "getServiceConfigWithPort - typesense honours the override" {
     try std.testing.expect(svc.port.? == 8208);
     try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "8208") != null);
     try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--api-port 8108") == null);
+}
+
+test "typesense - the peering port follows the api port" {
+    const allocator = std.testing.allocator;
+
+    // The half of a per-project port that was missing. typesense-server binds
+    // twice, and its peering port defaults to 8107 - one below the *default*
+    // api port, not below the one it was given. So a second project on
+    // --api-port 8208 came up on 8208 for HTTP and then failed forever to
+    // bind 8107, which the first project held: "Failed to start peering
+    // service", restart, repeat. The API port moved and the collision did not
+    // move with it.
+    var svc = try definitions.Services.typesenseWithContext(allocator, 8208, "/Users/x/Code/project-a");
+    defer svc.deinit(allocator);
+
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--api-port 8208") != null);
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--peering-port 8207") != null);
+    // Never the default peering port on a non-default api port: that is the
+    // exact collision this pins.
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--peering-port 8107") == null);
+}
+
+test "typesense - the default port keeps its own peering port" {
+    const allocator = std.testing.allocator;
+
+    var svc = try definitions.Services.typesenseWithContext(allocator, 8108, "/Users/x/Code/project-a");
+    defer svc.deinit(allocator);
+
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--api-port 8108") != null);
+    try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "--peering-port 8107") != null);
+}
+
+test "portFromInstalledUnit - recovers the port a plist actually runs" {
+    const allocator = std.testing.allocator;
+
+    // `inspect` recomputed the definition from scratch, which hands back the
+    // default - so a service started with `--port 8208` was described as
+    // running on 8108, with a health check aimed at whatever else held that
+    // port. The override survives in one durable place: the unit pantry wrote.
+    const plist =
+        \\<?xml version="1.0" encoding="UTF-8"?>
+        \\<plist version="1.0">
+        \\<dict>
+        \\    <key>ProgramArguments</key>
+        \\    <array>
+        \\        <string>/x/typesense-server</string>
+        \\        <string>--data-dir</string>
+        \\        <string>/x/data</string>
+        \\        <string>--api-port</string>
+        \\        <string>8208</string>
+        \\    </array>
+        \\</dict>
+        \\</plist>
+    ;
+
+    const path = "/tmp/pantry-test-unit-port.plist";
+    defer io_helper.deleteFile(path) catch {};
+
+    const file = try io_helper.createFileAbsolute(path, .{ .truncate = true });
+    try io_helper.writeAllToFile(file, plist);
+    io_helper.closeFile(file);
+
+    const found = commands.portFromInstalledUnit(allocator, path);
+    try std.testing.expect(found != null);
+    try std.testing.expect(found.? == 8208);
+}
+
+test "portFromInstalledUnit - reads a systemd ExecStart line too" {
+    const allocator = std.testing.allocator;
+
+    const unit =
+        \\[Service]
+        \\ExecStart=/x/typesense-server --data-dir /x/data --api-port 8308 --peering-port 8307
+        \\Restart=always
+    ;
+
+    const path = "/tmp/pantry-test-unit-port.service";
+    defer io_helper.deleteFile(path) catch {};
+
+    const file = try io_helper.createFileAbsolute(path, .{ .truncate = true });
+    try io_helper.writeAllToFile(file, unit);
+    io_helper.closeFile(file);
+
+    const found = commands.portFromInstalledUnit(allocator, path);
+    try std.testing.expect(found != null);
+    try std.testing.expect(found.? == 8308);
+}
+
+test "portFromInstalledUnit - a missing unit is null, not a guess" {
+    const allocator = std.testing.allocator;
+
+    // No unit means nothing is installed, and answering with a number would
+    // be inventing one. The caller falls back to the definition's default.
+    try std.testing.expect(commands.portFromInstalledUnit(allocator, "/nonexistent/pantry/unit.plist") == null);
 }
 
 test "Typesense WithContext - null project_root falls back gracefully" {
