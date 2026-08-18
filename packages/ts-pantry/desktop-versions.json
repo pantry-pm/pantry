@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -482,8 +482,8 @@
       "name": "Raycast",
       "kind": "app",
       "host": "macos",
-      "latest": "1.104.24",
-      "published": "1.104.24",
+      "latest": "1.104.25",
+      "published": "1.104.25",
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.32.21",
-      "published": "2.26.33.12",
+      "latest": "2.26.33.15",
+      "published": "2.26.33.15",
       "needsUpdate": false
     },
     {
