@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.16.17",
-      "published": "3.16.17",
+      "latest": "3.16.29",
+      "published": "3.16.29",
       "needsUpdate": false
     },
     {
@@ -239,7 +239,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
