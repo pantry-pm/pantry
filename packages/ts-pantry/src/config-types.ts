@@ -294,6 +294,36 @@ export interface PantryConfig extends PantryConfigBase {
     enabled?: boolean
     autoStart?: boolean
     shouldAutoStart?: boolean
+    /**
+     * Services this project defines for itself: its own application server,
+     * its queue worker, anything else that should be a managed process rather
+     * than a terminal somebody has to remember to leave open.
+     *
+     * They are managed exactly as the built-in services are - a KeepAlive
+     * launchd agent or systemd unit, per-project labels, log paths, and an
+     * optional health check - which is what makes a production box "pantry
+     * plus a .env" rather than pantry plus a hand-written unit file.
+     *
+     * ```ts
+     * define: {
+     *   app: {
+     *     command: 'bun run --bun ./buddy serve',
+     *     port: 3000,
+     *     health: 'curl -sf http://127.0.0.1:3000/api/health',
+     *   },
+     *   worker: { command: 'bun run --bun ./buddy queue:work --concurrency 4' },
+     * }
+     * ```
+     *
+     * `command` is required; the rest are optional, and `cwd` defaults to the
+     * project root so a relative command means what it says.
+     */
+    define?: Record<string, {
+      command: string
+      port?: number
+      health?: string
+      cwd?: string
+    }>
     dataDir?: string
     logDir?: string
     configDir?: string

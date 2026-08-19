@@ -128,6 +128,189 @@ fn parseUserGroup(allocator: std.mem.Allocator, content: []const u8, group_name:
 }
 
 // ============================================================================
+// User-defined services
+// ============================================================================
+
+/// A service a project declares for itself, under `services.define` in
+/// deps.yaml.
+///
+/// Pantry knew how to run Postgres and Typesense and nothing about the program
+/// they were installed for, so every project ended at the same place: pantry
+/// for the dependencies, and a hand-written launchd plist or systemd unit -
+/// or, more often, a terminal somebody had to remember to leave open - for the
+/// application server and its worker. The mechanism to manage them already
+/// existed here, complete with KeepAlive, per-project labels, log paths and
+/// health checks. Only the definitions were hardcoded.
+///
+///     services:
+///       define:
+///         app:
+///           command: bun run --bun ./buddy serve
+///           port: 3000
+///           health: curl -sf http://127.0.0.1:3000/api/health
+///         worker:
+///           command: bun run --bun ./buddy queue:work --concurrency 4
+///
+/// `command` is required; everything else is optional. The working directory
+/// defaults to the project root, which is what makes a relative command like
+/// `./buddy` mean what it says.
+pub fn userServiceFromConfig(
+    allocator: std.mem.Allocator,
+    name: []const u8,
+    project_root: ?[]const u8,
+) ?ServiceConfig {
+    const io_helper = @import("../../io_helper.zig");
+
+    const root = project_root orelse (io_helper.getCwdAlloc(allocator) catch return null);
+    const owns_root = project_root == null;
+    defer if (owns_root) allocator.free(root);
+
+    const yaml_files = [_][]const u8{ "deps.yaml", "deps.yml", "dependencies.yaml" };
+
+    for (yaml_files) |yaml_name| {
+        const candidate = std.fs.path.join(allocator, &[_][]const u8{ root, yaml_name }) catch continue;
+        defer allocator.free(candidate);
+
+        const content = io_helper.readFileAlloc(allocator, candidate, 1 * 1024 * 1024) catch continue;
+        defer allocator.free(content);
+
+        if (parseUserService(allocator, content, name, root)) |config| return config;
+    }
+
+    return null;
+}
+
+/// One `services.define` entry, read out of a deps file.
+///
+/// Hand-scanned like `parseUserGroup` above rather than through a YAML
+/// library, and for the same reason: this file has no YAML dependency, the
+/// shape being read is two levels of plain `key: value`, and a parser that
+/// only understands what pantry documents cannot be surprised by what it does
+/// not.
+pub fn parseUserService(
+    allocator: std.mem.Allocator,
+    content: []const u8,
+    service_name: []const u8,
+    project_root: []const u8,
+) ?ServiceConfig {
+    var in_services = false;
+    var in_define = false;
+    var in_target = false;
+
+    var command: ?[]const u8 = null;
+    var health: ?[]const u8 = null;
+    var working_dir: ?[]const u8 = null;
+    var port: ?u16 = null;
+
+    var line_iter = std.mem.splitScalar(u8, content, '\n');
+
+    while (line_iter.next()) |line| {
+        const trimmed = std.mem.trim(u8, line, " \t\r");
+        if (trimmed.len == 0 or trimmed[0] == '#') continue;
+
+        const is_top_level = !std.mem.startsWith(u8, line, " ") and !std.mem.startsWith(u8, line, "\t");
+
+        if (is_top_level) {
+            in_services = std.mem.eql(u8, trimmed, "services:");
+            in_define = false;
+            in_target = false;
+            continue;
+        }
+
+        if (!in_services) continue;
+
+        if (std.mem.eql(u8, trimmed, "define:")) {
+            in_define = true;
+            in_target = false;
+            continue;
+        }
+
+        if (!in_define) continue;
+
+        if (std.mem.endsWith(u8, trimmed, ":")) {
+            const key = trimmed[0 .. trimmed.len - 1];
+
+            // A second service's block ends this one: whatever was gathered
+            // is what the target declared.
+            if (in_target) break;
+
+            in_target = std.mem.eql(u8, key, service_name);
+            continue;
+        }
+
+        if (!in_target) continue;
+
+        const colon = std.mem.indexOfScalar(u8, trimmed, ':') orelse continue;
+        const key = std.mem.trim(u8, trimmed[0..colon], " \t");
+        const value = std.mem.trim(u8, std.mem.trim(u8, trimmed[colon + 1 ..], " \t"), "\"'");
+
+        if (value.len == 0) continue;
+
+        if (std.mem.eql(u8, key, "command")) {
+            command = value;
+        } else if (std.mem.eql(u8, key, "health")) {
+            health = value;
+        } else if (std.mem.eql(u8, key, "cwd") or std.mem.eql(u8, key, "directory")) {
+            working_dir = value;
+        } else if (std.mem.eql(u8, key, "port")) {
+            port = std.fmt.parseInt(u16, value, 10) catch null;
+        }
+    }
+
+    // No command, no service. A definition that names nothing to run would
+    // produce a unit that starts nothing and reports healthy.
+    const cmd = command orelse return null;
+
+    var env_vars = std.StringHashMap([]const u8).init(allocator);
+    errdefer env_vars.deinit();
+
+    const name_copy = allocator.dupe(u8, service_name) catch return null;
+    const display = allocator.dupe(u8, service_name) catch {
+        allocator.free(name_copy);
+        return null;
+    };
+    const description = allocator.dupe(u8, "Project service defined in deps.yaml") catch {
+        allocator.free(name_copy);
+        allocator.free(display);
+        return null;
+    };
+    const command_copy = allocator.dupe(u8, cmd) catch {
+        allocator.free(name_copy);
+        allocator.free(display);
+        allocator.free(description);
+        return null;
+    };
+
+    // The project root unless told otherwise, which is what lets `./buddy` in
+    // a command mean the project's own binary.
+    const cwd_copy = allocator.dupe(u8, working_dir orelse project_root) catch {
+        allocator.free(name_copy);
+        allocator.free(display);
+        allocator.free(description);
+        allocator.free(command_copy);
+        return null;
+    };
+
+    const health_copy: ?[]const u8 = if (health) |h|
+        (allocator.dupe(u8, h) catch null)
+    else
+        null;
+
+    return ServiceConfig{
+        .name = name_copy,
+        .display_name = display,
+        .description = description,
+        .start_command = command_copy,
+        .working_directory = cwd_copy,
+        .env_vars = env_vars,
+        .port = port,
+        .auto_start = false,
+        .keep_alive = true,
+        .health_check = health_copy,
+    };
+}
+
+// ============================================================================
 // Service Listing
 // ============================================================================
 
@@ -862,6 +1045,12 @@ fn getServiceConfigRaw(allocator: std.mem.Allocator, name: []const u8, project_r
 
     // Get default port for the service
     const port = Services.getDefaultPort(name) orelse {
+        // Not one pantry ships. Before giving up, ask the project: a service
+        // declared under `services.define` in deps.yaml is as real as a
+        // built-in one, and this is where an application server and its queue
+        // worker come from.
+        if (userServiceFromConfig(allocator, name, project_root)) |custom| return custom;
+
         return error.UnknownService;
     };
 
@@ -1249,6 +1438,16 @@ fn getServiceConfigWithPortRaw(allocator: std.mem.Allocator, name: []const u8, p
     } else if (std.mem.eql(u8, name, "solr")) {
         return try Services.solrWithContext(allocator, port, project_root);
     } else {
+        // A project-defined service, with the override applied on top of its
+        // declaration - so `pantry start app --port 3001` works for an
+        // application server exactly as it does for Postgres.
+        if (userServiceFromConfig(allocator, name, project_root)) |custom| {
+            var with_port = custom;
+            with_port.port = port;
+
+            return with_port;
+        }
+
         return error.UnknownService;
     }
 }

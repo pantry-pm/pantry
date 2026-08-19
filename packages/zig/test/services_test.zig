@@ -390,6 +390,111 @@ test "portFromInstalledUnit - reads a systemd ExecStart line too" {
     try std.testing.expect(found.? == 8308);
 }
 
+test "parseUserService - a project's own service becomes a real one" {
+    const allocator = std.testing.allocator;
+
+    // The gap this closes: pantry managed Postgres and Typesense and knew
+    // nothing about the application they were installed for, so every project
+    // ended with pantry for its dependencies and a hand-written unit - or a
+    // terminal somebody had to remember - for the server and its worker.
+    const deps =
+        \\dependencies:
+        \\  bun: ^1.3.14
+        \\services:
+        \\  define:
+        \\    app:
+        \\      command: bun run --bun ./buddy serve
+        \\      port: 3000
+        \\      health: curl -sf http://127.0.0.1:3000/api/health
+        \\    worker:
+        \\      command: bun run --bun ./buddy queue:work --concurrency 4
+    ;
+
+    var app = commands.parseUserService(allocator, deps, "app", "/srv/app").?;
+    defer app.deinit(allocator);
+
+    try std.testing.expectEqualStrings("app", app.name);
+    try std.testing.expectEqualStrings("bun run --bun ./buddy serve", app.start_command);
+    try std.testing.expect(app.port.? == 3000);
+    try std.testing.expectEqualStrings("curl -sf http://127.0.0.1:3000/api/health", app.health_check.?);
+    // The project root by default, which is what lets `./buddy` mean the
+    // project's own binary rather than whatever the launcher's cwd was.
+    try std.testing.expectEqualStrings("/srv/app", app.working_directory.?);
+    // Restarted when it dies: the whole reason to hand a server to launchd.
+    try std.testing.expect(app.keep_alive);
+}
+
+test "parseUserService - one service's block does not leak into the next" {
+    const allocator = std.testing.allocator;
+
+    const deps =
+        \\services:
+        \\  define:
+        \\    app:
+        \\      command: bun run --bun ./buddy serve
+        \\      port: 3000
+        \\      health: curl -sf http://127.0.0.1:3000/api/health
+        \\    worker:
+        \\      command: bun run --bun ./buddy queue:work
+    ;
+
+    var worker = commands.parseUserService(allocator, deps, "worker", "/srv/app").?;
+    defer worker.deinit(allocator);
+
+    try std.testing.expectEqualStrings("bun run --bun ./buddy queue:work", worker.start_command);
+    // A worker has no port and no health check of its own, and inheriting the
+    // app's would report it healthy whenever the *web* process was up.
+    try std.testing.expect(worker.port == null);
+    try std.testing.expect(worker.health_check == null);
+}
+
+test "parseUserService - a definition with no command is not a service" {
+    const allocator = std.testing.allocator;
+
+    // A unit that starts nothing would report healthy forever, which is worse
+    // than refusing to make one.
+    const deps =
+        \\services:
+        \\  define:
+        \\    app:
+        \\      port: 3000
+    ;
+
+    try std.testing.expect(commands.parseUserService(allocator, deps, "app", "/srv/app") == null);
+}
+
+test "parseUserService - a name nobody defined stays unknown" {
+    const allocator = std.testing.allocator;
+
+    const deps =
+        \\services:
+        \\  define:
+        \\    app:
+        \\      command: bun run --bun ./buddy serve
+    ;
+
+    try std.testing.expect(commands.parseUserService(allocator, deps, "worker", "/srv/app") == null);
+    // And a deps file with no `define` block at all is the common case.
+    try std.testing.expect(commands.parseUserService(allocator, "dependencies:\n  bun: ^1.3.14\n", "app", "/srv/app") == null);
+}
+
+test "parseUserService - an explicit directory wins over the project root" {
+    const allocator = std.testing.allocator;
+
+    const deps =
+        \\services:
+        \\  define:
+        \\    docs:
+        \\      command: bun run docs:serve
+        \\      cwd: /srv/app/docs
+    ;
+
+    var docs = commands.parseUserService(allocator, deps, "docs", "/srv/app").?;
+    defer docs.deinit(allocator);
+
+    try std.testing.expectEqualStrings("/srv/app/docs", docs.working_directory.?);
+}
+
 test "portFromInstalledUnit - a missing unit is null, not a guess" {
     const allocator = std.testing.allocator;
 
