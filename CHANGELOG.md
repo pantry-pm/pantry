@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.32...v0.11.33)
+
+## 🐛 Bug Fixes
+
+- **deps**: drop four runtime dependencies ts-pantry does not import ([97eb137](https://github.com/pantry-pm/pantry/commit/97eb137)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.33 ([71ed291](https://github.com/pantry-pm/pantry/commit/71ed291)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.31...v0.11.32)
 
 ## 🐛 Bug Fixes
