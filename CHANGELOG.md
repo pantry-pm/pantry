@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.33...v0.11.34)
+
+## ✨ Features
+
+- **inspector**: inspect node_modules, not just the pantry lockfile ([e717aef](https://github.com/pantry-pm/pantry/commit/e717aef)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- four ways an install could be wrong without saying so ([b8c3d1b](https://github.com/pantry-pm/pantry/commit/b8c3d1b)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.34 ([a583bdb](https://github.com/pantry-pm/pantry/commit/a583bdb)) _(by Chris <chris@stacksjs.com>)_
+- **desktop**: publish app cursor.com 3.16.17 → 3.16.29 ([4c45039](https://github.com/pantry-pm/pantry/commit/4c45039)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.32...v0.11.33)
 
 ## 🐛 Bug Fixes
