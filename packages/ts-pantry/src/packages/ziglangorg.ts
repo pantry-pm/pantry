@@ -69,6 +69,7 @@ export const ziglangorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.17.0-dev.1811+6716bf52e',
     '0.17.0-dev.1786+75044cb04',
     '0.17.0-dev.1778+767d25269',
     '0.17.0-dev.1770+5d7cf3f34',
