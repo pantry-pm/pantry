@@ -1,6 +1,6 @@
 {
   "name": "pantry-setup",
-  "version": "0.11.35",
+  "version": "0.11.36",
   "private": true,
   "description": "GitHub Action to install pantry from pre-built binaries",
   "author": "home-lang",

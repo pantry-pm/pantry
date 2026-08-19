@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.35...v0.11.36)
+
+## 🐛 Bug Fixes
+
+- **exports**: point types at the declarations that exist ([da0667a](https://github.com/pantry-pm/pantry/commit/da0667a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.36 ([9ec5064](https://github.com/pantry-pm/pantry/commit/9ec5064)) _(by Chris <chris@stacksjs.com>)_
+- **desktop**: refresh version manifest ([4ae8fd6](https://github.com/pantry-pm/pantry/commit/4ae8fd6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update squawkhq.com to 2.63.0 ([47f8838](https://github.com/pantry-pm/pantry/commit/47f8838)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.34...v0.11.35)
 
 ## ✨ Features
