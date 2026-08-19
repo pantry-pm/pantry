@@ -68,6 +68,7 @@ export const squawkhqcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.63.0',
     '2.62.0',
     '2.61.0',
     '2.60.0',
