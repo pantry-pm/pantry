@@ -4372,6 +4372,42 @@ test "listInstalledInProject reports the packages install placed there" {
     try std.testing.expectEqual(@as(usize, 3), installed.items.len);
 }
 
+test "installedVersionMatches reads the version on disk rather than trusting the directory" {
+    // The defect this guards: a project install writes to
+    // `<project>/<modules>/<name>`, which is not version-scoped, so "the
+    // directory is there" said nothing about which version was in it -
+    // installing 1.3.0 over 1.2.0 was a cache hit that changed nothing.
+    const allocator = std.testing.allocator;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const tmp_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const project_root = path_buf[0..tmp_len];
+
+    const package_dir = try std.fmt.allocPrint(allocator, "{s}/pantry/left-pad", .{project_root});
+    defer allocator.free(package_dir);
+    try io_helper.makePath(package_dir);
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    // No manifest at all: cannot prove the right version is there, so do the work.
+    try std.testing.expect(!installer.installedVersionMatches(package_dir, "1.2.0"));
+
+    try tmp_dir.dir.writeFile(io_helper.io, .{
+        .sub_path = "pantry/left-pad/package.json",
+        .data = "{\"name\":\"left-pad\",\"version\":\"1.2.0\"}",
+    });
+
+    try std.testing.expect(installer.installedVersionMatches(package_dir, "1.2.0"));
+    try std.testing.expect(!installer.installedVersionMatches(package_dir, "1.3.0"));
+}
+
 test "lockfile restore fast path accepts only immutable npm tarballs" {
     const tarball = "https://registry.npmjs.org/bunfig/-/bunfig-0.15.15.tgz";
     try std.testing.expect(canRestoreLockTarball("0.15.15", tarball));
