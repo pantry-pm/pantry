@@ -5,10 +5,10 @@
   "private": true,
   "description": "Pantry Package Inspector - Explore, inspect, and analyze pantry packages",
   "scripts": {
-    "dev": "stx dev pages/ --port 3002",
-    "start": "stx dev pages/ --port 3002",
-    "open": "stx dev pages/ --port 3002 & sleep 1 && open http://localhost:3002",
-    "build": "echo no-op"
+    "dev": "bun serve.ts",
+    "start": "bun serve.ts",
+    "build": "bun build.ts",
+    "build:project": "bun build.ts --project"
   },
   "dependencies": {},
   "devDependencies": {

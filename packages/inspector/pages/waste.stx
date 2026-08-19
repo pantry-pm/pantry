@@ -1,19 +1,19 @@
 <script server>
   const { analyzeNodeModules, formatBytes } = await import('../lib/node-modules.ts')
-  const a = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
+  const __analysis = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
 
-  const projectName = a.projectName
-  const totalFormatted = formatBytes(a.totalBytes)
+  const projectName = __analysis.projectName
+  const totalFormatted = formatBytes(__analysis.totalBytes)
 
-  const duplicateWasteBytes = a.duplicates.reduce((sum, d) => sum + d.wastedBytes, 0)
-  const hygieneWasteBytes = a.hygiene.reduce((sum, h) => sum + h.bytes, 0)
+  const duplicateWasteBytes = __analysis.duplicates.reduce((sum, d) => sum + d.wastedBytes, 0)
+  const hygieneWasteBytes = __analysis.hygiene.reduce((sum, h) => sum + h.bytes, 0)
   const duplicateWaste = formatBytes(duplicateWasteBytes)
   const hygieneWaste = formatBytes(hygieneWasteBytes)
-  const combinedPercent = a.totalBytes > 0
-    ? Math.round(((duplicateWasteBytes + hygieneWasteBytes) / a.totalBytes) * 1000) / 10
+  const combinedPercent = __analysis.totalBytes > 0
+    ? Math.round(((duplicateWasteBytes + hygieneWasteBytes) / __analysis.totalBytes) * 1000) / 10
     : 0
 
-  const duplicates = a.duplicates.map(d => ({
+  const duplicates = __analysis.duplicates.map(d => ({
     name: d.name,
     wasted: formatBytes(d.wastedBytes),
     count: d.copies.length,
@@ -35,7 +35,7 @@
     'no-files-field': 'no files field',
   }
 
-  const hygiene = a.hygiene.map(h => ({
+  const hygiene = __analysis.hygiene.map(h => ({
     name: h.name,
     version: h.version,
     total: formatBytes(h.bytes),

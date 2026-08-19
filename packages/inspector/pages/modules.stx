@@ -1,14 +1,14 @@
 <script server>
   const { analyzeNodeModules, formatBytes } = await import('../lib/node-modules.ts')
-  const a = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
+  const __analysis = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
 
-  const projectName = a.projectName
-  const projectRoot = a.projectRoot
-  const totalFormatted = formatBytes(a.totalBytes)
-  const totalPackages = a.totalPackages
-  const distinctNames = a.distinctNames
-  const maxDepth = a.maxDepth
-  const rootDepCount = a.rootDependencies.length + a.rootDevDependencies.length
+  const projectName = __analysis.projectName
+  const projectRoot = __analysis.projectRoot
+  const totalFormatted = formatBytes(__analysis.totalBytes)
+  const totalPackages = __analysis.totalPackages
+  const distinctNames = __analysis.distinctNames
+  const maxDepth = __analysis.maxDepth
+  const rootDepCount = __analysis.rootDependencies.length + __analysis.rootDevDependencies.length
 
   const categoryOrder = ['code', 'assets', 'types', 'other', 'sourceMaps', 'docs']
   const categoryColor = {
@@ -22,14 +22,14 @@
   const categories = categoryOrder.map(key => ({
     key,
     label: key === 'sourceMaps' ? 'source maps' : key,
-    bytes: a.categoryTotals[key],
-    formatted: formatBytes(a.categoryTotals[key]),
-    percent: a.totalBytes > 0 ? Math.round((a.categoryTotals[key] / a.totalBytes) * 1000) / 10 : 0,
+    bytes: __analysis.categoryTotals[key],
+    formatted: formatBytes(__analysis.categoryTotals[key]),
+    percent: __analysis.totalBytes > 0 ? Math.round((__analysis.categoryTotals[key] / __analysis.totalBytes) * 1000) / 10 : 0,
     color: categoryColor[key],
   })).filter(c => c.bytes > 0)
 
-  const maxExclusive = a.topByExclusive.length > 0 ? a.topByExclusive[0].exclusiveBytes : 1
-  const topByExclusive = a.topByExclusive.slice(0, 20).map(t => ({
+  const maxExclusive = __analysis.topByExclusive.length > 0 ? __analysis.topByExclusive[0].exclusiveBytes : 1
+  const topByExclusive = __analysis.topByExclusive.slice(0, 20).map(t => ({
     name: t.name,
     exclusive: formatBytes(t.exclusiveBytes),
     self: formatBytes(t.selfBytes),
@@ -39,14 +39,14 @@
     percent: Math.round((t.exclusiveBytes / maxExclusive) * 100),
   }))
 
-  const duplicateCount = a.duplicates.length
-  const duplicateWaste = formatBytes(a.duplicates.reduce((sum, d) => sum + d.wastedBytes, 0))
-  const hygieneCount = a.hygiene.length
-  const hygieneWaste = formatBytes(a.hygiene.reduce((sum, h) => sum + h.bytes, 0))
+  const duplicateCount = __analysis.duplicates.length
+  const duplicateWaste = formatBytes(__analysis.duplicates.reduce((sum, d) => sum + d.wastedBytes, 0))
+  const hygieneCount = __analysis.hygiene.length
+  const hygieneWaste = formatBytes(__analysis.hygiene.reduce((sum, h) => sum + h.bytes, 0))
 
   // One row per install location, so a package installed three times shows up
   // three times — that IS the finding.
-  const rows = a.packages.map(p => ({
+  const rows = __analysis.packages.map(p => ({
     name: p.name,
     version: p.version,
     path: p.path,

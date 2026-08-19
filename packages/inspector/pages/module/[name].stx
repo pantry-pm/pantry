@@ -1,15 +1,15 @@
 <script server>
   const { analyzeNodeModules, formatBytes } = await import('../../lib/node-modules.ts')
-  const a = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
+  const __analysis = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
 
-  const projectName = a.projectName
+  const projectName = __analysis.projectName
   const wanted = typeof name === 'string' ? name : ''
-  const installs = a.packages.filter(p => p.name === wanted)
+  const installs = __analysis.packages.filter(p => p.name === wanted)
   const found = installs.length > 0
   const primary = found ? installs[0] : null
 
   const byName = new Map()
-  for (const p of a.packages) {
+  for (const p of __analysis.packages) {
     if (!byName.has(p.name)) byName.set(p.name, p)
   }
 
