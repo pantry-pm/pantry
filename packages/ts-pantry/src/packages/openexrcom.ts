@@ -128,6 +128,7 @@ export const openexrcomPackage = {
     '3.4.0-rc2',
     '3.4.0-rc',
     '3.4-alpha',
+    '3.3.14-rc',
     '3.3.13',
     '3.3.13-rc',
     '3.3.12',
