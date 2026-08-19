@@ -220,6 +220,29 @@ fn depDomainFromSpec(spec_in: []const u8) ?DepSpec {
     return .{ .domain = domain, .constraint = constraint };
 }
 
+/// Whether a version string names one version and no other.
+///
+/// `1.2.0` is exact; `^1.2.0`, `~1.2`, `>=1.2.0`, `1.x`, `*`, `latest` and the
+/// empty string are not. The distinction decides whether a request may be
+/// answered from the Pantry registry - which resolves ranges but ignores the
+/// version asked for - or has to go to npm, which honours an exact version.
+fn isExactVersion(version: []const u8) bool {
+    if (version.len == 0) return false;
+    if (std.mem.eql(u8, version, "latest")) return false;
+
+    // A version starts with a digit; anything else is an operator or a tag.
+    if (version[0] < '0' or version[0] > '9') return false;
+
+    for (version) |c| {
+        switch (c) {
+            '^', '~', '>', '<', '=', '|', ' ', '*', 'x', 'X', ',' => return false,
+            else => {},
+        }
+    }
+
+    return true;
+}
+
 /// Append the transitive system-dependency closure of the explicitly-requested
 /// packages to `package_args` (deduped) so a package's shared-library deps
 /// (php → libpq/libonig/libxml2/icu/libsodium, nginx → libpcre) are installed
@@ -1303,18 +1326,22 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .name = name,
             .version = version,
         } else npm_fallback: {
-            // A version the caller actually named, as opposed to the default.
+            // An exact version the caller named, as opposed to a range or the
+            // default.
             //
             // The Pantry registry lookup below answers with whatever version it
             // currently holds and takes no version argument, so consulting it
-            // for a pinned request silently installed something else:
+            // for an exact request silently installed something else:
             // `pantry install left-pad@1.2.0` reported success and put 1.3.0 on
-            // disk. A pin is the one thing a caller cannot be talked out of, so
-            // a pinned request skips the registry and goes to npm, which
-            // resolves the version it was asked for.
-            const pinned = !std.mem.eql(u8, version, "latest") and
-                !std.mem.eql(u8, version, "*") and
-                version.len > 0;
+            // disk. An exact version is the one thing a caller cannot be talked
+            // out of, so it skips the registry and goes to npm, which resolves
+            // the version it was asked for.
+            //
+            // A *range* is not a pin and must not take this path: the npm
+            // branch below looks the version string up as a key in `versions`,
+            // which `^1.2.0` is not, so routing a range there fails the install
+            // outright. Ranges keep the registry path, which resolves them.
+            const pinned = isExactVersion(version);
 
             // Try Pantry S3/DynamoDB registry first
             if (if (pinned) null else helpers.lookupPantryRegistry(allocator, name) catch |err| lkup: {
@@ -1923,4 +1950,26 @@ test "companion deps replace stale system pins without dropping workspace packag
     try t.expectEqualStrings("1.3.14", lockfile.packages.get("bun.sh@1.3.14").?.version);
     try t.expect(lockfile.packages.get("lit@3.3.1") != null);
     try t.expect(lockfile.workspaces.get("packages/ui") != null);
+}
+
+test "isExactVersion separates a pin from a range" {
+    const t = std.testing;
+
+    // Exact: these skip the Pantry registry, which would answer with whatever
+    // version it holds rather than the one asked for.
+    try t.expect(isExactVersion("1.2.0"));
+    try t.expect(isExactVersion("0.72.34"));
+    try t.expect(isExactVersion("9.2.0-rc1"));
+
+    // Ranges and tags are not pins. Routing one to npm looks the string up as a
+    // key in `versions`, where `^1.2.0` is not, so the install fails outright -
+    // which is how a caret range stopped installing in 0.11.37.
+    try t.expect(!isExactVersion("^1.2.0"));
+    try t.expect(!isExactVersion("~1.3"));
+    try t.expect(!isExactVersion(">=1.2.0"));
+    try t.expect(!isExactVersion("1.x"));
+    try t.expect(!isExactVersion("1.2.0 || 1.3.0"));
+    try t.expect(!isExactVersion("*"));
+    try t.expect(!isExactVersion("latest"));
+    try t.expect(!isExactVersion(""));
 }
