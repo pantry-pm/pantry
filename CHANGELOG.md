@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.31...v0.11.32)
+
+## 🐛 Bug Fixes
+
+- **types**: autoStart takes a list, which is what it always read ([4e0a148](https://github.com/pantry-pm/pantry/commit/4e0a148)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.32 ([382c80f](https://github.com/pantry-pm/pantry/commit/382c80f)) _(by Chris <chris@stacksjs.com>)_
+- update package metadata ([d71c8af](https://github.com/pantry-pm/pantry/commit/d71c8af)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.30...v0.11.31)
 
 ## ✨ Features
