@@ -1246,6 +1246,122 @@ pub const Services = struct {
         };
     }
 
+    /// The topology server a Vitess cluster keeps its metadata in.
+    ///
+    /// etcd with the one flag that matters: `--advertise-client-urls`. Without
+    /// it etcd advertises a URL derived from the hostname, and vtgate then
+    /// dials a name it may not resolve - which reads as "topology server
+    /// unavailable" on a cluster whose etcd is running perfectly.
+    ///
+    /// Separate from the plain `etcd` service on purpose: this one has a data
+    /// directory of its own and a name an operator can read, so a Vitess
+    /// cluster and an application's own etcd do not fight over one store.
+    pub fn vttopo(allocator: std.mem.Allocator, port: u16) !ServiceConfig {
+        const env_vars = std.StringHashMap([]const u8).init(allocator);
+        const home = getHome(allocator);
+        defer if (home) |h| allocator.free(h);
+
+        const data_dir = try serviceDataDir(allocator, home, "vttopo");
+        defer allocator.free(data_dir);
+
+        return ServiceConfig{
+            .name = try allocator.dupe(u8, "vttopo"),
+            .display_name = try allocator.dupe(u8, "Vitess topology"),
+            .description = try allocator.dupe(u8, "etcd holding a Vitess cluster's topology"),
+            .start_command = try std.fmt.allocPrint(
+                allocator,
+                "etcd --name vttopo --data-dir {s} --listen-client-urls http://127.0.0.1:{d} --advertise-client-urls http://127.0.0.1:{d}",
+                .{ data_dir, port, port },
+            ),
+            .env_vars = env_vars,
+            .port = port,
+            .auto_start = false,
+            .keep_alive = true,
+            .working_directory = try allocator.dupe(u8, data_dir),
+            .health_check = try std.fmt.allocPrint(allocator, "curl -sf http://127.0.0.1:{d}/health", .{port}),
+        };
+    }
+
+    /// The query router. This is the only address an application connects to.
+    ///
+    /// It speaks the MySQL wire protocol, which is what lets an application
+    /// keep its driver, its SQL and its schema and change one line of config.
+    /// `--mysql_server_port` is that port; the rest is where to find the
+    /// cluster.
+    ///
+    /// `--mysql_auth_server_impl none` because a local cluster has no user
+    /// table to check against, and a router that refuses every connection is
+    /// not a useful default for the machine an operator is trying things on. A
+    /// deployment sets `static` with a credentials file instead - and this is
+    /// the reason vtgate binds loopback here rather than every interface.
+    pub fn vtgate(allocator: std.mem.Allocator, port: u16) !ServiceConfig {
+        const env_vars = std.StringHashMap([]const u8).init(allocator);
+        const home = getHome(allocator);
+        defer if (home) |h| allocator.free(h);
+
+        const data_dir = try serviceDataDir(allocator, home, "vtgate");
+        defer allocator.free(data_dir);
+
+        return ServiceConfig{
+            .name = try allocator.dupe(u8, "vtgate"),
+            .display_name = try allocator.dupe(u8, "Vitess vtgate"),
+            .description = try allocator.dupe(u8, "The query router: speaks MySQL, routes to shards"),
+            .start_command = try std.fmt.allocPrint(
+                allocator,
+                "vtgate --topo_implementation etcd2 --topo_global_server_address 127.0.0.1:2389 --topo_global_root /vitess/global " ++
+                    "--cell zone1 --tablet_types_to_wait PRIMARY,REPLICA --service_map grpc-vtgateservice " ++
+                    "--mysql_server_port {d} --mysql_server_bind_address 127.0.0.1 --mysql_auth_server_impl none " ++
+                    "--port {d} --log_dir {s}",
+                .{ port, port + 1, data_dir },
+            ),
+            .env_vars = env_vars,
+            .port = port,
+            .auto_start = false,
+            .keep_alive = true,
+            .working_directory = try allocator.dupe(u8, data_dir),
+            // The MySQL port, not the HTTP one: what has to be true is that an
+            // application can connect, and vtgate serves its status page before
+            // it will accept a query.
+            .health_check = try std.fmt.allocPrint(allocator, "curl -sf http://127.0.0.1:{d}/debug/status", .{port + 1}),
+        };
+    }
+
+    /// The per-shard agent that sits in front of one mysqld.
+    ///
+    /// One tablet serves one shard of one keyspace, so a real cluster runs
+    /// several and this definition is the shape rather than the whole fleet:
+    /// `--init_shard` and `--init_keyspace` are what an operator changes per
+    /// tablet, and `pantry start vttablet --port` gives each its own.
+    pub fn vttablet(allocator: std.mem.Allocator, port: u16) !ServiceConfig {
+        const env_vars = std.StringHashMap([]const u8).init(allocator);
+        const home = getHome(allocator);
+        defer if (home) |h| allocator.free(h);
+
+        const data_dir = try serviceDataDir(allocator, home, "vttablet");
+        defer allocator.free(data_dir);
+
+        return ServiceConfig{
+            .name = try allocator.dupe(u8, "vttablet"),
+            .display_name = try allocator.dupe(u8, "Vitess vttablet"),
+            .description = try allocator.dupe(u8, "The agent in front of one shard's mysqld"),
+            .start_command = try std.fmt.allocPrint(
+                allocator,
+                "vttablet --topo_implementation etcd2 --topo_global_server_address 127.0.0.1:2389 --topo_global_root /vitess/global " ++
+                    "--tablet-path zone1-100 --init_keyspace reviewos --init_shard 0 --init_tablet_type replica " ++
+                    "--db_host 127.0.0.1 --db_port 3306 --db_app_user root --db_dba_user root " ++
+                    "--service_map grpc-queryservice,grpc-tabletmanager --port {d} --grpc_port {d} " ++
+                    "--vtctld_addr http://127.0.0.1:15000 --log_dir {s}",
+                .{ port, port + 1, data_dir },
+            ),
+            .env_vars = env_vars,
+            .port = port,
+            .auto_start = false,
+            .keep_alive = true,
+            .working_directory = try allocator.dupe(u8, data_dir),
+            .health_check = try std.fmt.allocPrint(allocator, "curl -sf http://127.0.0.1:{d}/debug/status", .{port}),
+        };
+    }
+
     /// MinIO service
     pub fn minio(allocator: std.mem.Allocator, port: u16) !ServiceConfig {
         return minioWithContext(allocator, port, null);
@@ -2660,6 +2776,14 @@ pub const Services = struct {
         if (std.mem.eql(u8, service_name, "vault")) return 8200;
         if (std.mem.eql(u8, service_name, "consul")) return 8500;
         if (std.mem.eql(u8, service_name, "etcd")) return 2379;
+        // Vitess. The topology server is deliberately not 2379: a Vitess
+        // cluster and an application's own etcd on one box would otherwise be
+        // the same store, and clearing one would clear the other.
+        if (std.mem.eql(u8, service_name, "vttopo")) return 2389;
+        // The MySQL wire port an application connects to. 15306 is Vitess's
+        // own convention for it.
+        if (std.mem.eql(u8, service_name, "vtgate")) return 15306;
+        if (std.mem.eql(u8, service_name, "vttablet")) return 15100;
         if (std.mem.eql(u8, service_name, "minio")) return 9000;
         if (std.mem.eql(u8, service_name, "sonarqube")) return 9001;
         if (std.mem.eql(u8, service_name, "temporal")) return 7233;

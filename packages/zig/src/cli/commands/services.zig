@@ -1154,6 +1154,12 @@ fn getServiceConfigRaw(allocator: std.mem.Allocator, name: []const u8, project_r
         return try Services.consul(allocator, port);
     } else if (std.mem.eql(u8, name, "etcd")) {
         return try Services.etcd(allocator, port);
+    } else if (std.mem.eql(u8, name, "vttopo")) {
+        return try Services.vttopo(allocator, port);
+    } else if (std.mem.eql(u8, name, "vtgate")) {
+        return try Services.vtgate(allocator, port);
+    } else if (std.mem.eql(u8, name, "vttablet")) {
+        return try Services.vttablet(allocator, port);
     } else if (std.mem.eql(u8, name, "minio")) {
         return try Services.minioWithContext(allocator, port, project_root);
     } else if (std.mem.eql(u8, name, "sonarqube")) {
@@ -1387,6 +1393,12 @@ fn getServiceConfigWithPortRaw(allocator: std.mem.Allocator, name: []const u8, p
         return try Services.consul(allocator, port);
     } else if (std.mem.eql(u8, name, "etcd")) {
         return try Services.etcd(allocator, port);
+    } else if (std.mem.eql(u8, name, "vttopo")) {
+        return try Services.vttopo(allocator, port);
+    } else if (std.mem.eql(u8, name, "vtgate")) {
+        return try Services.vtgate(allocator, port);
+    } else if (std.mem.eql(u8, name, "vttablet")) {
+        return try Services.vttablet(allocator, port);
     } else if (std.mem.eql(u8, name, "minio")) {
         return try Services.minioWithContext(allocator, port, project_root);
     } else if (std.mem.eql(u8, name, "sonarqube")) {
