@@ -94,15 +94,11 @@
     "pantry:upload": "bun scripts/upload-to-s3.ts",
     "pantry:rescan-binaries": "bun scripts/backfill-malware-scans.ts"
   },
-  "dependencies": {
-    "@stacksjs/ts-cloud": "^0.7.26",
-    "bunfig": "^0.15.6",
-    "tar-stream": "^3.2.0",
-    "ts-web-scraper": "^0.1.1"
-  },
   "devDependencies": {
-    "@stacksjs/bunpress": "^0.1.6",
+    "@stacksjs/bunpress": "^0.2.8",
+    "@stacksjs/ts-cloud": "^0.9.2",
     "@types/tar-stream": "^3.1.4",
-    "better-dx": "^0.2.6"
+    "better-dx": "^0.2.6",
+    "tar-stream": "^3.2.0"
   }
 }
