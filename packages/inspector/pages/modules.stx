@@ -85,7 +85,7 @@
   <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-16 fade-in">
 
     <div class="mono text-xs mb-5 px-3 py-2 rounded-lg border border-[var(--border)]" style="background: var(--bg-subtle); color: var(--fg-subtle);">
-      {{ projectRoot }}/node_modules · measured on disk, symlinked workspaces excluded
+      {{ projectRoot }}/node_modules · measured on disk · pnpm links resolved to the store, workspace packages excluded
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">

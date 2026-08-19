@@ -47,7 +47,12 @@ async function render(templatePath: string, params: Record<string, string> = {})
   if (script)
     await extractVariables(script[1], context, templatePath)
 
-  return processDirectives(template, context, templatePath, defaultConfig, new Set<string>())
+  // Partials resolve relative to the working directory by default, and this
+  // build runs from the project being analysed, not from here. Point it at the
+  // inspector's own partials or every page renders with six include errors
+  // where its nav and stylesheet should be.
+  const config = { ...defaultConfig, partialsDir: join(here, 'partials') }
+  return processDirectives(template, context, templatePath, config, new Set<string>())
 }
 
 function write(route: string, html: string): void {

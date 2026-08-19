@@ -18,7 +18,7 @@
  * @module node-modules
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 
 export interface Manifest {
@@ -309,8 +309,29 @@ function findHygiene(manifest: Manifest, scan: ScanResult): HygieneFinding[] {
   return findings
 }
 
-/** Every installed package directory under a `node_modules` tree. */
-function collectPackageDirs(root: string, nesting: number, out: Array<{ dir: string, nesting: number }>): void {
+/**
+ * Every installed package directory under a `node_modules` tree.
+ *
+ * Symlinks are followed rather than skipped, because on pnpm almost everything
+ * is one: `node_modules/foo` points into `node_modules/.pnpm/foo@1.2.3/...`,
+ * where the bytes actually live. Skipping them reported a 285MB install as
+ * 10MB of "real" directories — technically true and useless.
+ *
+ * A link is followed only when its target is inside the project. One that
+ * leaves the project is a workspace package or a `bun link`: it lives in the
+ * repository, not in the install, and charging the install for source the
+ * developer already had would overstate every monorepo.
+ *
+ * Entries are keyed by real path, so the dozens of links pnpm makes to a single
+ * store directory collapse into the one copy on disk.
+ */
+function collectPackageDirs(
+  root: string,
+  projectRoot: string,
+  nesting: number,
+  out: Array<{ dir: string, nesting: number }>,
+  seen: Set<string>,
+): void {
   const nodeModules = join(root, 'node_modules')
   let entries: ReturnType<typeof readdirSync>
   try {
@@ -320,14 +341,48 @@ function collectPackageDirs(root: string, nesting: number, out: Array<{ dir: str
     return
   }
 
-  for (const entry of entries) {
-    if (entry.name.startsWith('.')) continue
-    const full = join(nodeModules, entry.name)
+  const consider = (path: string, childNesting: number): void => {
+    let real: string
+    try {
+      real = realpathSync(path)
+    }
+    catch {
+      return
+    }
 
-    // A symlinked entry is a workspace package or a `bun link`: it lives in
-    // the repository, not in the install, and counting its bytes here would
-    // charge the install for source the developer already had.
-    if (entry.isSymbolicLink()) continue
+    // Outside the project: a workspace package or a link, not an install.
+    if (real !== projectRoot && !real.startsWith(`${projectRoot}/`))
+      return
+    if (!existsSync(join(real, 'package.json')))
+      return
+    if (seen.has(real))
+      return
+
+    seen.add(real)
+    out.push({ dir: real, nesting: childNesting })
+    collectPackageDirs(real, projectRoot, childNesting + 1, out, seen)
+  }
+
+  for (const entry of entries) {
+    // `.pnpm` is the store every top-level link points into; its contents are
+    // reached through those links, and it also holds packages nothing links to.
+    if (entry.name === '.pnpm') {
+      let stored: ReturnType<typeof readdirSync>
+      try {
+        stored = readdirSync(join(nodeModules, entry.name), { withFileTypes: true })
+      }
+      catch {
+        continue
+      }
+      for (const dir of stored)
+        collectPackageDirs(join(nodeModules, entry.name, dir.name), projectRoot, nesting, out, seen)
+      continue
+    }
+
+    if (entry.name.startsWith('.'))
+      continue
+
+    const full = join(nodeModules, entry.name)
 
     if (entry.name.startsWith('@')) {
       let scoped: ReturnType<typeof readdirSync>
@@ -337,19 +392,12 @@ function collectPackageDirs(root: string, nesting: number, out: Array<{ dir: str
       catch {
         continue
       }
-      for (const inner of scoped) {
-        if (inner.isSymbolicLink()) continue
-        const scopedDir = join(full, inner.name)
-        if (!existsSync(join(scopedDir, 'package.json'))) continue
-        out.push({ dir: scopedDir, nesting })
-        collectPackageDirs(scopedDir, nesting + 1, out)
-      }
+      for (const inner of scoped)
+        consider(join(full, inner.name), nesting)
       continue
     }
 
-    if (!existsSync(join(full, 'package.json'))) continue
-    out.push({ dir: full, nesting })
-    collectPackageDirs(full, nesting + 1, out)
+    consider(full, nesting)
   }
 }
 
@@ -367,23 +415,37 @@ function readManifest(dir: string): Manifest | null {
  * walking up towards the project root.
  */
 function resolveFrom(fromDir: string, name: string, byPath: Map<string, PackageNode>, projectRoot: string): PackageNode | undefined {
+  // Nodes are keyed by real path, so each candidate is resolved before lookup:
+  // on pnpm every `node_modules/<name>` is a link into the store, and the raw
+  // path matches nothing.
+  const at = (dir: string): PackageNode | undefined => {
+    const candidate = join(dir, 'node_modules', name)
+    const direct = byPath.get(candidate)
+    if (direct) return direct
+    try {
+      return byPath.get(realpathSync(candidate))
+    }
+    catch {
+      return undefined
+    }
+  }
+
   let current = fromDir
   for (;;) {
-    const candidate = join(current, 'node_modules', name)
-    const node = byPath.get(candidate)
+    const node = at(current)
     if (node) return node
     if (current === projectRoot || current.length <= projectRoot.length) break
     const parent = dirname(current)
     if (parent === current) break
     current = parent
   }
-  return byPath.get(join(projectRoot, 'node_modules', name))
+  return at(projectRoot)
 }
 
 export function analyzeNodeModules(projectRoot: string): NodeModulesAnalysis {
   const rootManifest = readManifest(projectRoot) ?? {}
   const dirs: Array<{ dir: string, nesting: number }> = []
-  collectPackageDirs(projectRoot, 0, dirs)
+  collectPackageDirs(projectRoot, projectRoot, 0, dirs, new Set<string>())
 
   const byPath = new Map<string, PackageNode>()
   const nodes: PackageNode[] = []
@@ -450,7 +512,7 @@ export function analyzeNodeModules(projectRoot: string): NodeModulesAnalysis {
   const rootDevDependencies = Object.keys(rootManifest.devDependencies ?? {})
   const roots: PackageNode[] = []
   for (const name of [...rootDependencies, ...rootDevDependencies]) {
-    const node = byPath.get(join(projectRoot, 'node_modules', name))
+    const node = resolveFrom(projectRoot, name, byPath, projectRoot)
     if (node && !roots.includes(node)) roots.push(node)
   }
 
