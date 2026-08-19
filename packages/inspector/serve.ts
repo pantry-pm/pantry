@@ -13,6 +13,9 @@ function discoverFiles(dir: string, base = ''): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const rel = base ? `${base}/${entry.name}` : entry.name
     if (entry.isDirectory()) {
+      // Partials are fragments included by pages, not pages: routing them
+      // would serve a nav bar with no document around it.
+      if (entry.name === 'partials') continue
       files.push(...discoverFiles(join(dir, entry.name), rel))
     }
 else if (entry.name.endsWith('.stx')) {
@@ -104,6 +107,17 @@ Bun.serve({
     // Normalize trailing slash
     if (pathname !== '/' && pathname.endsWith('/')) {
       pathname = pathname.slice(0, -1)
+    }
+
+    // JSON API for tooling / CI
+    if (pathname === '/api/node-modules.json') {
+      try {
+        const { analyzeNodeModules } = await import('./lib/node-modules.ts')
+        return Response.json(analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd()))
+      }
+      catch (err: any) {
+        return Response.json({ error: err.message || String(err) }, { status: 500 })
+      }
     }
 
     // JSON API for tooling / CI

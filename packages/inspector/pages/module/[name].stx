@@ -1,0 +1,256 @@
+<script server>
+  const { analyzeNodeModules, formatBytes } = await import('../../lib/node-modules.ts')
+  const a = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
+
+  const projectName = a.projectName
+  const wanted = typeof name === 'string' ? name : ''
+  const installs = a.packages.filter(p => p.name === wanted)
+  const found = installs.length > 0
+  const primary = found ? installs[0] : null
+
+  const byName = new Map()
+  for (const p of a.packages) {
+    if (!byName.has(p.name)) byName.set(p.name, p)
+  }
+
+  const title = found ? `${primary.name} ${primary.version}` : wanted
+  const description = found && primary.description ? primary.description : ''
+  const homepage = found && primary.homepage ? primary.homepage : ''
+  const license = found ? (primary.license || 'unlicensed') : ''
+
+  const summary = found
+    ? {
+        exclusive: formatBytes(primary.exclusiveBytes),
+        self: formatBytes(primary.size.self),
+        carried: formatBytes(Math.max(0, primary.exclusiveBytes - primary.size.self)),
+        files: primary.size.files,
+        transitive: primary.transitive,
+        depth: primary.depth < 0 ? '—' : String(primary.depth),
+        copies: installs.length,
+      }
+    : null
+
+  const categoryOrder = ['code', 'assets', 'types', 'other', 'sourceMaps', 'docs']
+  const categoryColor = {
+    code: 'var(--accent)',
+    assets: 'var(--purple)',
+    types: 'var(--green)',
+    other: 'var(--fg-subtle)',
+    sourceMaps: 'var(--amber)',
+    docs: 'var(--red)',
+  }
+  const breakdown = found
+    ? categoryOrder
+        .map(key => ({
+          label: key === 'sourceMaps' ? 'source maps' : key,
+          bytes: primary.size[key],
+          formatted: formatBytes(primary.size[key]),
+          color: categoryColor[key],
+        }))
+        .filter(c => c.bytes > 0)
+    : []
+
+  const dependencies = found
+    ? primary.deps.map((d) => {
+        const target = byName.get(d)
+        return { name: d, size: target ? formatBytes(target.size.self) : 'not installed', known: !!target }
+      }).sort((x, y) => x.name.localeCompare(y.name))
+    : []
+
+  const optionalPeers = found ? primary.optionalPeerDeps : []
+  const dependents = found ? [...primary.dependents].sort() : []
+  const installList = installs.map(p => ({
+    path: p.path,
+    version: p.version,
+    size: formatBytes(p.size.self),
+    nested: p.nesting > 0,
+  }))
+
+  const KIND_LABEL = {
+    'ships-source': 'source',
+    'ships-tests': 'tests',
+    'ships-ci': 'CI config',
+    'ships-lockfile': 'lockfile',
+    'ships-editor-config': 'editor config',
+    'no-files-field': 'no files field',
+  }
+  const findings = found
+    ? primary.hygiene.map(f => ({
+        label: KIND_LABEL[f.kind] || f.kind,
+        detail: f.detail,
+        size: f.bytes > 0 ? formatBytes(f.bytes) : '',
+      }))
+    : []
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }} - node_modules</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-sans@1/index.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@1/index.min.css" rel="stylesheet" />
+  @include('shell')
+</head>
+<body>
+  @include('nav', { active: 'modules', projectName: projectName })
+
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-16 fade-in">
+    <a href="/modules" class="mono text-xs inline-block mb-5" style="color: var(--fg-subtle);">&larr; all packages</a>
+
+    @if (found)
+    <div class="mb-7">
+      <h1 class="mono text-2xl font-semibold mb-1">{{ primary.name }} <span class="font-normal text-lg" style="color: var(--fg-subtle);">{{ primary.version }}</span></h1>
+      @if (description)
+      <p class="text-sm mb-2" style="color: var(--fg-muted);">{{ description }}</p>
+      @endif
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <span class="tag">{{ license }}</span>
+        @if (summary.copies > 1)
+        <span class="tag warn">{{ summary.copies }} copies installed</span>
+        @endif
+        @if (findings.length > 0)
+        <span class="tag bad">{{ findings.length }} publish issue@if (findings.length > 1)s@endif</span>
+        @endif
+        @if (homepage)
+        <a class="tag" href="{{ homepage }}" rel="noreferrer noopener" target="_blank">homepage</a>
+        @endif
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+      <div class="card p-4">
+        <p class="stat-label mb-1">Cost</p>
+        <p class="stat-value" style="color: var(--accent);">{{ summary.exclusive }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Itself</p>
+        <p class="stat-value">{{ summary.self }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Carried</p>
+        <p class="stat-value">{{ summary.carried }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Files</p>
+        <p class="stat-value">{{ summary.files }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Reaches</p>
+        <p class="stat-value">{{ summary.transitive }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Depth</p>
+        <p class="stat-value">{{ summary.depth }}</p>
+      </div>
+    </div>
+
+    <div class="card p-5 mb-6">
+      <h2 class="mono text-sm font-medium mb-1">Inside the package</h2>
+      <p class="text-xs mb-4" style="color: var(--fg-subtle);">{{ summary.files }} files, {{ summary.self }} on disk.</p>
+      <div class="flex h-2.5 rounded-full overflow-hidden mb-3">
+        @foreach (breakdown as c)
+        <div style="flex: {{ c.bytes }}; background: {!! c.color !!};" title="{{ c.label }}: {{ c.formatted }}"></div>
+        @endforeach
+      </div>
+      <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+        @foreach (breakdown as c)
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full" style="background: {!! c.color !!};"></span>
+          <span style="color: var(--fg-muted);">{{ c.label }}</span>
+          <span class="mono">{{ c.formatted }}</span>
+        </div>
+        @endforeach
+      </div>
+    </div>
+
+    @if (findings.length > 0)
+    <div class="card p-5 mb-6" style="border-color: var(--red);">
+      <h2 class="mono text-sm font-medium mb-1" style="color: var(--red);">Shipped more than build output</h2>
+      <p class="text-xs mb-3" style="color: var(--fg-subtle);">Every consumer downloads and stores these, and none of them reads them.</p>
+      <div class="space-y-1.5">
+        @foreach (findings as f)
+        <div class="flex items-baseline justify-between gap-3 text-xs">
+          <span class="mono" style="color: var(--fg-muted);">{{ f.detail }}</span>
+          <span class="mono" style="color: var(--red);">{{ f.size }}</span>
+        </div>
+        @endforeach
+      </div>
+    </div>
+    @endif
+
+    @if (installList.length > 1)
+    <div class="card p-5 mb-6">
+      <h2 class="mono text-sm font-medium mb-3">Installed {{ installList.length }} times</h2>
+      <div class="space-y-1.5">
+        @foreach (installList as i)
+        <div class="flex items-baseline justify-between gap-3 text-xs">
+          <span class="mono truncate" style="color: var(--fg-subtle);">{{ i.path }}</span>
+          <span class="mono whitespace-nowrap">
+            <span style="color: var(--fg-muted);">{{ i.version }}</span>
+            <span style="color: var(--fg-subtle);">· {{ i.size }}</span>
+            @if (i.nested)
+            <span class="tag warn">nested</span>
+            @endif
+          </span>
+        </div>
+        @endforeach
+      </div>
+    </div>
+    @endif
+
+    <div class="grid md:grid-cols-2 gap-3">
+      <div class="card p-5">
+        <h2 class="mono text-sm font-medium mb-3">Depends on <span style="color: var(--fg-subtle);">{{ dependencies.length }}</span></h2>
+        @if (dependencies.length > 0)
+        <div class="space-y-1.5">
+          @foreach (dependencies as d)
+          <div class="flex items-baseline justify-between gap-3 text-xs">
+            <a class="mono truncate" href="/module/{{ encodeURIComponent(d.name) }}" style="color: var(--fg-muted);">{{ d.name }}</a>
+            <span class="mono whitespace-nowrap" style="color: var(--fg-subtle);">{{ d.size }}</span>
+          </div>
+          @endforeach
+        </div>
+        @else
+        <p class="text-xs" style="color: var(--green);">Nothing. This package is self-contained.</p>
+        @endif
+
+        @if (optionalPeers.length > 0)
+        <div class="mt-4 pt-3 border-t border-[var(--border)]">
+          <p class="stat-label mb-2">Optional peers</p>
+          <div class="flex flex-wrap gap-1.5">
+            @foreach (optionalPeers as p)
+            <span class="tag good">{{ p }}</span>
+            @endforeach
+          </div>
+        </div>
+        @endif
+      </div>
+
+      <div class="card p-5">
+        <h2 class="mono text-sm font-medium mb-3">Depended on by <span style="color: var(--fg-subtle);">{{ dependents.length }}</span></h2>
+        @if (dependents.length > 0)
+        <div class="space-y-1.5">
+          @foreach (dependents as d)
+          <div class="text-xs">
+            <a class="mono truncate" href="/module/{{ encodeURIComponent(d) }}" style="color: var(--fg-muted);">{{ d }}</a>
+          </div>
+          @endforeach
+        </div>
+        @else
+        <p class="text-xs" style="color: var(--fg-subtle);">Nothing in the tree. This is a direct dependency of the project.</p>
+        @endif
+      </div>
+    </div>
+
+    @else
+    <div class="card p-8 text-center">
+      <p class="mono text-sm mb-1">{{ wanted }}</p>
+      <p class="text-sm" style="color: var(--fg-subtle);">Not installed in this project's node_modules.</p>
+    </div>
+    @endif
+  </main>
+</body>
+</html>

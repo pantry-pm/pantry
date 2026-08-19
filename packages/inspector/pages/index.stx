@@ -1,5 +1,5 @@
 <script server>
-  const { analyzeProject, formatSize } = require('../lib/analyze.ts')
+  const { analyzeProject, formatSize } = await import('../lib/analyze.ts')
   const a = analyzeProject(process.env.PANTRY_PROJECT_ROOT || process.cwd())
   const projectName = a.projectName
   const projectRoot = a.projectRoot

@@ -1,0 +1,272 @@
+<script server>
+  const { analyzeNodeModules, formatBytes } = await import('../lib/node-modules.ts')
+  const a = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
+
+  const projectName = a.projectName
+  const projectRoot = a.projectRoot
+  const totalFormatted = formatBytes(a.totalBytes)
+  const totalPackages = a.totalPackages
+  const distinctNames = a.distinctNames
+  const maxDepth = a.maxDepth
+  const rootDepCount = a.rootDependencies.length + a.rootDevDependencies.length
+
+  const categoryOrder = ['code', 'assets', 'types', 'other', 'sourceMaps', 'docs']
+  const categoryColor = {
+    code: 'var(--accent)',
+    assets: 'var(--purple)',
+    types: 'var(--green)',
+    other: 'var(--fg-subtle)',
+    sourceMaps: 'var(--amber)',
+    docs: 'var(--red)',
+  }
+  const categories = categoryOrder.map(key => ({
+    key,
+    label: key === 'sourceMaps' ? 'source maps' : key,
+    bytes: a.categoryTotals[key],
+    formatted: formatBytes(a.categoryTotals[key]),
+    percent: a.totalBytes > 0 ? Math.round((a.categoryTotals[key] / a.totalBytes) * 1000) / 10 : 0,
+    color: categoryColor[key],
+  })).filter(c => c.bytes > 0)
+
+  const maxExclusive = a.topByExclusive.length > 0 ? a.topByExclusive[0].exclusiveBytes : 1
+  const topByExclusive = a.topByExclusive.slice(0, 20).map(t => ({
+    name: t.name,
+    exclusive: formatBytes(t.exclusiveBytes),
+    self: formatBytes(t.selfBytes),
+    dependents: t.dependents,
+    // How much of the cost is other packages it alone keeps alive.
+    carried: formatBytes(Math.max(0, t.exclusiveBytes - t.selfBytes)),
+    percent: Math.round((t.exclusiveBytes / maxExclusive) * 100),
+  }))
+
+  const duplicateCount = a.duplicates.length
+  const duplicateWaste = formatBytes(a.duplicates.reduce((sum, d) => sum + d.wastedBytes, 0))
+  const hygieneCount = a.hygiene.length
+  const hygieneWaste = formatBytes(a.hygiene.reduce((sum, h) => sum + h.bytes, 0))
+
+  // One row per install location, so a package installed three times shows up
+  // three times — that IS the finding.
+  const rows = a.packages.map(p => ({
+    name: p.name,
+    version: p.version,
+    path: p.path,
+    nested: p.nesting > 0,
+    depth: p.depth < 0 ? '—' : String(p.depth),
+    selfBytes: p.size.self,
+    self: formatBytes(p.size.self),
+    exclusiveBytes: p.exclusiveBytes,
+    exclusive: formatBytes(p.exclusiveBytes),
+    deps: p.deps.length,
+    dependents: p.dependents.length,
+    transitive: p.transitive,
+    files: p.size.files,
+    issues: p.hygiene.length,
+    license: p.license || '—',
+  }))
+  // `<` is escaped so the payload cannot terminate the element it sits in, and
+  // it travels in a <template> because stx leaves the body of a <script> alone.
+  const rowsJson = JSON.stringify(rows).replace(/</g, '\\u003c')
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ projectName }} - node_modules</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-sans@1/index.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@1/index.min.css" rel="stylesheet" />
+  @include('shell')
+</head>
+<body>
+  @include('nav', { active: 'modules', projectName: projectName })
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-16 fade-in">
+
+    <div class="mono text-xs mb-5 px-3 py-2 rounded-lg border border-[var(--border)]" style="background: var(--bg-subtle); color: var(--fg-subtle);">
+      {{ projectRoot }}/node_modules · measured on disk, symlinked workspaces excluded
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+      <div class="card p-4">
+        <p class="stat-label mb-1">On disk</p>
+        <p class="stat-value" style="color: var(--accent);">{{ totalFormatted }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Installs</p>
+        <p class="stat-value">{{ totalPackages }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Distinct names</p>
+        <p class="stat-value">{{ distinctNames }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Direct deps</p>
+        <p class="stat-value">{{ rootDepCount }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Max depth</p>
+        <p class="stat-value">{{ maxDepth }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Recoverable</p>
+        <p class="stat-value" style="color: var(--amber);">{{ duplicateWaste }}</p>
+      </div>
+    </div>
+
+    <!-- What the bytes are -->
+    <div class="card p-5 mb-8">
+      <h2 class="mono text-sm font-medium mb-1">What the bytes are</h2>
+      <p class="text-xs mb-4" style="color: var(--fg-subtle);">Every file under every installed package, by kind.</p>
+      <div class="flex h-2.5 rounded-full overflow-hidden mb-4">
+        @foreach (categories as c)
+        <div style="flex: {{ c.bytes }}; background: {!! c.color !!};" title="{{ c.label }}: {{ c.formatted }}"></div>
+        @endforeach
+      </div>
+      <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs">
+        @foreach (categories as c)
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full" style="background: {!! c.color !!};"></span>
+          <span style="color: var(--fg-muted);">{{ c.label }}</span>
+          <span class="mono" style="color: var(--fg);">{{ c.formatted }}</span>
+          <span class="mono" style="color: var(--fg-subtle);">{{ c.percent }}%</span>
+        </div>
+        @endforeach
+      </div>
+    </div>
+
+    <!-- The differentiator -->
+    <div class="card p-5 mb-8">
+      <h2 class="mono text-sm font-medium mb-1">What each dependency actually costs</h2>
+      <p class="text-xs mb-5" style="color: var(--fg-subtle);">
+        Bytes that leave the install if this package is removed — itself, plus everything nothing else keeps alive.
+        A small package that is the only reason a large subtree is present is a large decision.
+      </p>
+      <div class="space-y-2.5">
+        @foreach (topByExclusive as t)
+        <div>
+          <div class="flex items-baseline justify-between gap-3 mb-1">
+            <a href="/module/{{ encodeURIComponent(t.name) }}" class="mono text-sm truncate" style="color: var(--fg);">{{ t.name }}</a>
+            <div class="mono text-xs whitespace-nowrap" style="color: var(--fg-subtle);">
+              <span style="color: var(--accent);">{{ t.exclusive }}</span>
+              · {{ t.self }} itself
+              @if (t.dependents === 0)
+              · direct
+              @else
+              · {{ t.dependents }} dependents
+              @endif
+            </div>
+          </div>
+          <div class="bar"><span style="width: {{ t.percent }}%;"></span></div>
+        </div>
+        @endforeach
+      </div>
+    </div>
+
+    <!-- Waste summary -->
+    <div class="grid sm:grid-cols-2 gap-3 mb-8">
+      <a href="/waste" class="card p-5 block" style="transition: border-color 0.15s;">
+        <p class="stat-label mb-1">Duplicate installs</p>
+        <p class="stat-value mb-1" style="color: var(--amber);">{{ duplicateCount }}</p>
+        <p class="text-xs" style="color: var(--fg-subtle);">{{ duplicateWaste }} in copies a version range refused to share</p>
+      </a>
+      <a href="/waste" class="card p-5 block" style="transition: border-color 0.15s;">
+        <p class="stat-label mb-1">Packages shipping their working tree</p>
+        <p class="stat-value mb-1" style="color: var(--red);">{{ hygieneCount }}</p>
+        <p class="text-xs" style="color: var(--fg-subtle);">{{ hygieneWaste }} of source, tests and CI config in the tarballs</p>
+      </a>
+    </div>
+
+    <!-- Full table -->
+    <div class="card overflow-hidden">
+      <div class="p-4 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex-1">
+          <h2 class="mono text-sm font-medium">Every install</h2>
+          <p class="text-xs" style="color: var(--fg-subtle);">One row per location on disk. Click a column to sort.</p>
+        </div>
+        <input id="q" class="search-input sm:max-w-xs" type="search" placeholder="filter packages..." autocomplete="off" />
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="name">Package</th>
+              <th data-sort="version">Version</th>
+              <th class="num" data-sort="exclusiveBytes">Cost</th>
+              <th class="num" data-sort="selfBytes">Self</th>
+              <th class="num" data-sort="files">Files</th>
+              <th class="num" data-sort="deps">Deps</th>
+              <th class="num" data-sort="dependents">Used by</th>
+              <th class="num" data-sort="depth">Depth</th>
+              <th data-sort="license">License</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="p-6 text-center text-sm" style="color: var(--fg-subtle); display: none;">Nothing matches that filter.</div>
+    </div>
+  </main>
+
+  <template id="package-data">{!! rowsJson !!}</template>
+  <script>
+    (function () {
+      var rows = JSON.parse(document.getElementById('package-data').innerHTML)
+      var body = document.getElementById('rows')
+      var empty = document.getElementById('empty')
+      var query = document.getElementById('q')
+      var sortKey = 'exclusiveBytes'
+      var sortDir = -1
+
+      function esc(value) {
+        return String(value).replace(/[&<>"]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+        })
+      }
+
+      function render() {
+        var term = query.value.trim().toLowerCase()
+        var visible = rows.filter(function (r) {
+          return !term || r.name.toLowerCase().indexOf(term) !== -1
+        })
+        visible.sort(function (a, b) {
+          var x = a[sortKey]
+          var y = b[sortKey]
+          if (typeof x === 'string' || typeof y === 'string') return String(x).localeCompare(String(y)) * sortDir
+          return (x - y) * sortDir
+        })
+        empty.style.display = visible.length ? 'none' : 'block'
+        body.innerHTML = visible.slice(0, 500).map(function (r) {
+          return '<tr>'
+            + '<td><a class="mono" href="/module/' + encodeURIComponent(r.name) + '" style="color:var(--fg)">' + esc(r.name) + '</a>'
+            + (r.nested ? ' <span class="tag warn" title="' + esc(r.path) + '">nested</span>' : '')
+            + (r.issues ? ' <span class="tag bad">' + r.issues + ' issue' + (r.issues > 1 ? 's' : '') + '</span>' : '')
+            + '</td>'
+            + '<td class="mono" style="color:var(--fg-subtle)">' + esc(r.version) + '</td>'
+            + '<td class="num" style="color:var(--accent)">' + esc(r.exclusive) + '</td>'
+            + '<td class="num" style="color:var(--fg-muted)">' + esc(r.self) + '</td>'
+            + '<td class="num" style="color:var(--fg-subtle)">' + r.files + '</td>'
+            + '<td class="num" style="color:var(--fg-subtle)">' + r.deps + '</td>'
+            + '<td class="num" style="color:var(--fg-subtle)">' + r.dependents + '</td>'
+            + '<td class="num" style="color:var(--fg-subtle)">' + esc(r.depth) + '</td>'
+            + '<td class="mono" style="color:var(--fg-subtle);font-size:11px">' + esc(r.license) + '</td>'
+            + '</tr>'
+        }).join('')
+      }
+
+      query.addEventListener('input', render)
+      Array.prototype.forEach.call(document.querySelectorAll('th[data-sort]'), function (th) {
+        th.style.cursor = 'pointer'
+        th.addEventListener('click', function () {
+          var key = th.getAttribute('data-sort')
+          if (key === sortKey) sortDir = -sortDir
+          else { sortKey = key; sortDir = key === 'name' || key === 'version' || key === 'license' ? 1 : -1 }
+          render()
+        })
+      })
+      render()
+    })()
+  </script>
+</body>
+</html>

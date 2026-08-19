@@ -1,0 +1,176 @@
+<script server>
+  const { analyzeNodeModules, formatBytes } = await import('../lib/node-modules.ts')
+  const a = analyzeNodeModules(process.env.PANTRY_PROJECT_ROOT || process.cwd())
+
+  const projectName = a.projectName
+  const totalFormatted = formatBytes(a.totalBytes)
+
+  const duplicateWasteBytes = a.duplicates.reduce((sum, d) => sum + d.wastedBytes, 0)
+  const hygieneWasteBytes = a.hygiene.reduce((sum, h) => sum + h.bytes, 0)
+  const duplicateWaste = formatBytes(duplicateWasteBytes)
+  const hygieneWaste = formatBytes(hygieneWasteBytes)
+  const combinedPercent = a.totalBytes > 0
+    ? Math.round(((duplicateWasteBytes + hygieneWasteBytes) / a.totalBytes) * 1000) / 10
+    : 0
+
+  const duplicates = a.duplicates.map(d => ({
+    name: d.name,
+    wasted: formatBytes(d.wastedBytes),
+    count: d.copies.length,
+    copies: d.copies.map(c => ({
+      version: c.version,
+      path: c.path,
+      size: formatBytes(c.bytes),
+      // The root install is the one every other copy could have shared.
+      root: c.path.indexOf('/node_modules/', 1) === -1,
+    })),
+  }))
+
+  const KIND_LABEL = {
+    'ships-source': 'source',
+    'ships-tests': 'tests',
+    'ships-ci': 'CI config',
+    'ships-lockfile': 'lockfile',
+    'ships-editor-config': 'editor config',
+    'no-files-field': 'no files field',
+  }
+
+  const hygiene = a.hygiene.map(h => ({
+    name: h.name,
+    version: h.version,
+    total: formatBytes(h.bytes),
+    findings: h.findings.map(f => ({
+      label: KIND_LABEL[f.kind] || f.kind,
+      detail: f.detail,
+      size: f.bytes > 0 ? formatBytes(f.bytes) : '',
+      severe: f.kind === 'ships-source' || f.kind === 'no-files-field',
+    })),
+  }))
+
+  const hasDuplicates = duplicates.length > 0
+  const hasHygiene = hygiene.length > 0
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ projectName }} - waste</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-sans@1/index.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@1/index.min.css" rel="stylesheet" />
+  @include('shell')
+</head>
+<body>
+  @include('nav', { active: 'waste', projectName: projectName })
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-16 fade-in">
+
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold mb-1">Bytes nobody chose</h1>
+      <p class="text-sm" style="color: var(--fg-subtle);">
+        {{ duplicateWaste }} in copies of packages already installed elsewhere, and {{ hygieneWaste }} of
+        repository contents that were never meant to leave the repository — {{ combinedPercent }}% of {{ totalFormatted }}.
+      </p>
+    </div>
+
+    <!-- Duplicates -->
+    <section class="mb-10">
+      <div class="flex items-baseline justify-between mb-3">
+        <h2 class="mono text-sm font-medium">Installed more than once</h2>
+        <span class="mono text-xs" style="color: var(--amber);">{{ duplicateWaste }} recoverable</span>
+      </div>
+      <p class="text-xs mb-4" style="color: var(--fg-subtle);">
+        Every copy after the first exists because some dependency asked for a range the shared copy could not satisfy.
+        Widening that one range removes the whole nested tree.
+      </p>
+
+      @if (hasDuplicates)
+      <div class="space-y-3">
+        @foreach (duplicates as d)
+        <div class="card p-4">
+          <div class="flex items-baseline justify-between gap-3 mb-3">
+            <span class="mono text-sm">{{ d.name }}</span>
+            <span class="mono text-xs" style="color: var(--amber);">{{ d.count }} copies · {{ d.wasted }} wasted</span>
+          </div>
+          <div class="space-y-1.5">
+            @foreach (d.copies as c)
+            <div class="flex items-baseline justify-between gap-3 text-xs">
+              <span class="mono truncate" style="color: var(--fg-subtle);">{{ c.path }}</span>
+              <span class="mono whitespace-nowrap">
+                <span style="color: var(--fg-muted);">{{ c.version }}</span>
+                <span style="color: var(--fg-subtle);">· {{ c.size }}</span>
+                @if (c.root)
+                <span class="tag good">shared</span>
+                @else
+                <span class="tag warn">nested</span>
+                @endif
+              </span>
+            </div>
+            @endforeach
+          </div>
+        </div>
+        @endforeach
+      </div>
+      @else
+      <div class="card p-6 text-center text-sm" style="color: var(--green);">
+        Every package is installed exactly once.
+      </div>
+      @endif
+    </section>
+
+    <!-- Publish hygiene -->
+    <section>
+      <div class="flex items-baseline justify-between mb-3">
+        <h2 class="mono text-sm font-medium">Tarballs carrying the working tree</h2>
+        <span class="mono text-xs" style="color: var(--red);">{{ hygieneWaste }}</span>
+      </div>
+      <p class="text-xs mb-4" style="color: var(--fg-subtle);">
+        A published package needs its build output. Source, tests, CI configuration and lockfiles are downloaded,
+        stored and never read — usually because `files` was left off, so the tarball is whatever the working tree held.
+      </p>
+
+      @if (hasHygiene)
+      <div class="card overflow-hidden">
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>What shipped</th>
+                <th class="num">Size</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (hygiene as h)
+              <tr>
+                <td class="mono" style="white-space: nowrap;">
+                  {{ h.name }}
+                  <span style="color: var(--fg-subtle);">{{ h.version }}</span>
+                </td>
+                <td>
+                  <div class="flex flex-wrap gap-1.5">
+                    @foreach (h.findings as f)
+                    <span class="tag {!! f.severe ? 'bad' : 'warn' !!}" title="{{ f.detail }}">
+                      {{ f.label }}@if (f.size) · {{ f.size }}@endif
+                    </span>
+                    @endforeach
+                  </div>
+                </td>
+                <td class="num" style="color: var(--red);">{{ h.total }}</td>
+              </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      </div>
+      @else
+      <div class="card p-6 text-center text-sm" style="color: var(--green);">
+        Every package shipped build output and nothing else.
+      </div>
+      @endif
+    </section>
+  </main>
+</body>
+</html>
