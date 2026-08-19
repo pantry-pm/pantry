@@ -1,3 +1,34 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.36...v0.11.37)
+
+## ✨ Features
+
+- **services**: vtgate, vttablet and a topology server ([03cd24b](https://github.com/pantry-pm/pantry/commit/03cd24b)) _(by Chris <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **install**: a pinned version is installed, and installing over one replaces it ([ed4c1c8](https://github.com/pantry-pm/pantry/commit/ed4c1c8)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.37 ([1a5a5dd](https://github.com/pantry-pm/pantry/commit/1a5a5dd)) _(by Chris <chris@stacksjs.com>)_
+- update circleci.com, cnquery.io, dozzle.dev, terraform.io ([cbc2571](https://github.com/pantry-pm/pantry/commit/cbc2571)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, circleci.com ([ef37fca](https://github.com/pantry-pm/pantry/commit/ef37fca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, projen.io, wait4x.dev ([dc4a88f](https://github.com/pantry-pm/pantry/commit/dc4a88f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app whatsapp.com 2.26.33.15 → 2.26.33.17 ([8f8a0c0](https://github.com/pantry-pm/pantry/commit/8f8a0c0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opentofu.org to 1.12.6 ([74aa6a9](https://github.com/pantry-pm/pantry/commit/74aa6a9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io, whatsapp.com ([d72945c](https://github.com/pantry-pm/pantry/commit/d72945c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (alttab.app, code.visualstudio.com) ([cb57807](https://github.com/pantry-pm/pantry/commit/cb57807)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update wait4x.dev to 3.7.0 ([4545063](https://github.com/pantry-pm/pantry/commit/4545063)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update alttab.app to 11.5.0 ([da2502a](https://github.com/pantry-pm/pantry/commit/da2502a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update talos.dev to 1.13.9 ([d2970fd](https://github.com/pantry-pm/pantry/commit/d2970fd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update encore.dev, prefix.dev ([c065be5](https://github.com/pantry-pm/pantry/commit/c065be5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([b5972d6](https://github.com/pantry-pm/pantry/commit/b5972d6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update odigos.io, traefik.io ([12d6557](https://github.com/pantry-pm/pantry/commit/12d6557)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.35...v0.11.36)
 
 ## 🐛 Bug Fixes
