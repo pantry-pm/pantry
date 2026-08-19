@@ -14,8 +14,8 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.4.4",
-      "published": "11.4.4",
+      "latest": "11.5.0",
+      "published": "11.5.0",
       "needsUpdate": false
     },
     {
@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.133.0",
-      "published": "1.133.0",
+      "latest": "1.134.0",
+      "published": "1.134.0",
       "needsUpdate": false
     },
     {
