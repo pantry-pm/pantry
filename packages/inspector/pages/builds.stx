@@ -1,0 +1,172 @@
+<script server>
+  const { analyzeNodeModules, formatBytes } = await import('../lib/node-modules.ts')
+  const { analyzeBuildQuality } = await import('../lib/build-quality.ts')
+
+  const root = process.env.PANTRY_PROJECT_ROOT || process.cwd()
+  const __analysis = analyzeNodeModules(root)
+  const __quality = analyzeBuildQuality(root, __analysis.packages.map(p => `${root}/${p.path}`))
+
+  const projectName = __analysis.projectName
+  const totalJs = formatBytes(__quality.totalJsBytes)
+  const totalMinifiable = formatBytes(__quality.totalMinifiable)
+  const totalDuplicate = formatBytes(__quality.totalDuplicate)
+  const totalUnshared = formatBytes(__quality.totalUnsharedEntry)
+  const recoverableBytes = __quality.totalMinifiable + __quality.totalDuplicate + __quality.totalUnsharedEntry
+  const recoverable = formatBytes(recoverableBytes)
+  const recoverablePercent = __quality.totalJsBytes > 0
+    ? Math.round((recoverableBytes / __quality.totalJsBytes) * 1000) / 10
+    : 0
+
+  const worst = __quality.packages
+    .map(p => ({
+      name: p.name,
+      version: p.version,
+      jsBytes: p.jsBytes,
+      js: formatBytes(p.jsBytes),
+      minifiable: formatBytes(p.minifiable),
+      minifiableBytes: p.minifiable,
+      minifiedPercent: Math.min(100, p.minifiedPercent),
+      unshared: formatBytes(p.unsharedEntryBytes),
+      unsharedBytes: p.unsharedEntryBytes,
+      duplicate: formatBytes(p.duplicateBytes),
+      duplicateBytes: p.duplicateBytes,
+      entries: p.entryCount,
+      chunks: p.chunkCount,
+      total: formatBytes(p.minifiable + p.duplicateBytes + p.unsharedEntryBytes),
+      totalBytes: p.minifiable + p.duplicateBytes + p.unsharedEntryBytes,
+      // Several entries and no chunks is the signature of a build that ran
+      // once per entry with splitting off.
+      unsplit: p.entryCount > 1 && p.chunkCount === 0,
+      worstFile: p.worstFiles[0] ? p.worstFiles[0].path : '',
+    }))
+    .filter(p => p.totalBytes > 20000)
+    .slice(0, 40)
+
+  const maxTotal = worst.length > 0 ? worst[0].totalBytes : 1
+  const rows = worst.map(p => ({ ...p, percent: Math.round((p.totalBytes / maxTotal) * 100) }))
+  const clean = rows.length === 0
+</script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ projectName }} - builds</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-sans@1/index.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist-mono@1/index.min.css" rel="stylesheet" />
+  @include('shell')
+</head>
+<body>
+  @include('nav', { active: 'builds', projectName: projectName })
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-16 fade-in">
+
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold mb-1">How the code was built</h1>
+      <p class="text-sm" style="color: var(--fg-subtle);">
+        Install size is decided twice — by which packages are in the tree, and by how each one was built.
+        The second half is invisible to a size column: a 2MB unminified bundle and a 2MB minified one look
+        identical from outside, and the first is really a 1.5MB package nobody ran a minifier over.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      <div class="card p-4">
+        <p class="stat-label mb-1">JavaScript shipped</p>
+        <p class="stat-value">{{ totalJs }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Not minified</p>
+        <p class="stat-value" style="color: var(--amber);">{{ totalMinifiable }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Unshared entries</p>
+        <p class="stat-value" style="color: var(--red);">{{ totalUnshared }}</p>
+      </div>
+      <div class="card p-4">
+        <p class="stat-label mb-1">Recoverable</p>
+        <p class="stat-value" style="color: var(--accent);">{{ recoverable }}</p>
+        <p class="text-xs mt-1" style="color: var(--fg-subtle);">{{ recoverablePercent }}% of shipped JS</p>
+      </div>
+    </div>
+
+    @if (clean)
+    <div class="card p-8 text-center text-sm" style="color: var(--green);">
+      Every package here is minified and shares its chunks. Nothing to recover.
+    </div>
+    @else
+    <div class="card p-5 mb-6">
+      <h2 class="mono text-sm font-medium mb-1">What a build flag would return</h2>
+      <p class="text-xs mb-5" style="color: var(--fg-subtle);">
+        Minifiable bytes are measured by minifying the file, not guessed from line length — a bundle full of
+        template literals has short lines and is already minified. "Unshared" is what several entry points
+        built separately duplicate between them, which one `splitting` flag would collapse.
+      </p>
+      <div class="space-y-2.5">
+        @foreach (rows as p)
+        <div>
+          <div class="flex items-baseline justify-between gap-3 mb-1">
+            <a href="/module/{{ encodeURIComponent(p.name) }}" class="mono text-sm truncate" style="color: var(--fg);">
+              {{ p.name }}
+              @if (p.unsplit)
+              <span class="tag bad">{{ p.entries }} entries, no chunks</span>
+              @endif
+              @if (p.minifiedPercent < 90)
+              <span class="tag warn">{{ p.minifiedPercent }}% minified</span>
+              @endif
+            </a>
+            <div class="mono text-xs whitespace-nowrap" style="color: var(--fg-subtle);">
+              <span style="color: var(--accent);">{{ p.total }}</span>
+              · of {{ p.js }}
+            </div>
+          </div>
+          <div class="bar"><span style="width: {{ p.percent }}%;"></span></div>
+        </div>
+        @endforeach
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="p-4 border-b border-[var(--border)]">
+        <h2 class="mono text-sm font-medium">Per package</h2>
+      </div>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th class="num">JS</th>
+              <th class="num">Minifiable</th>
+              <th class="num">Minified</th>
+              <th class="num">Unshared</th>
+              <th class="num">Entries</th>
+              <th class="num">Chunks</th>
+              <th>Biggest file</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (rows as p)
+            <tr>
+              <td class="mono" style="white-space: nowrap;">
+                <a href="/module/{{ encodeURIComponent(p.name) }}" style="color: var(--fg);">{{ p.name }}</a>
+                <span style="color: var(--fg-subtle);">{{ p.version }}</span>
+              </td>
+              <td class="num" style="color: var(--fg-muted);">{{ p.js }}</td>
+              <td class="num" style="color: var(--amber);">{{ p.minifiable }}</td>
+              <td class="num" style="color: var(--fg-subtle);">{{ p.minifiedPercent }}%</td>
+              <td class="num" style="color: var(--red);">{{ p.unshared }}</td>
+              <td class="num" style="color: var(--fg-subtle);">{{ p.entries }}</td>
+              <td class="num" style="color: var(--fg-subtle);">{{ p.chunks }}</td>
+              <td class="mono" style="color: var(--fg-subtle); font-size: 11px;">{{ p.worstFile }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+    @endif
+  </main>
+</body>
+</html>
