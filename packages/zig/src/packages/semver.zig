@@ -27,6 +27,11 @@ pub const Constraint = struct {
     allows_prerelease: bool = false,
     prerelease_number: ?u64 = null,
     raw_version: ?[]const u8 = null,
+    /// How many components the constraint actually named: `^0` is one, `^0.13`
+    /// is two. A missing minor parses as zero, which is indistinguishable from
+    /// a written zero without this - and the two mean different things under a
+    /// caret on a zero major.
+    components: u8 = 3,
 };
 
 /// Parse a semver version string into major.minor.patch
@@ -154,6 +159,7 @@ pub fn parseConstraint(constraint_str: []const u8) !Constraint {
         .allows_prerelease = isPrerelease(version_str),
         .prerelease_number = prereleaseNumber(version_str),
         .raw_version = version_str,
+        .components = @intCast(@min(components, 3)),
     };
 }
 
@@ -238,6 +244,15 @@ pub fn satisfiesConstraint(version_str: []const u8, constraint: Constraint) bool
         .caret => {
             if (order == .lt) return false;
             if (constraint.major == 0) {
+                // `^0` names only a major, and npm reads it as >=0.0.0 <1.0.0:
+                // every 0.x.y. Treating it as `^0.0.0` instead demanded an exact
+                // 0.0.0, so a dependency written `pkg@0` resolved to nothing at
+                // all - libcbor ships 0.13.0 and 0.10.1, libfido2 depends on
+                // `libcbor@0`, and mysql.com depends on libfido2, so installing
+                // MySQL failed with "could not resolve version" three levels
+                // down from anything the operator typed.
+                if (constraint.components == 1) return version.major == 0;
+
                 if (constraint.minor == 0) {
                     // ^0.0.x: only exact patch match (>=0.0.x <0.0.(x+1))
                     return version.major == 0 and version.minor == 0 and
@@ -489,7 +504,11 @@ test "parse constraint - loose/partial specifiers resolve to ranges" {
 }
 
 test "resolve version - bun ^1.2.16" {
-    const resolved = resolveVersion("bun.sh", "^1.2.16");
+    // `bun.com`: bun renamed its domain and the catalog followed. These two
+    // tests kept asking for `bun.sh` and had been failing ever since - the same
+    // half-finished rename that made `pantry install bun` resolve to npm's shim,
+    // because the recipe still published artifacts under the old domain.
+    const resolved = resolveVersion("bun.com", "^1.2.16");
     if (resolved) |version| {
         // Should resolve to latest 1.x version (1.2.23 or higher)
         const v = try parseVersion(version);
@@ -504,7 +523,7 @@ test "resolve version - bun ^1.2.16" {
 }
 
 test "resolve version - exact match" {
-    const resolved = resolveVersion("bun.sh", "1.2.20");
+    const resolved = resolveVersion("bun.com", "1.2.20");
     if (resolved) |version| {
         try std.testing.expectEqualStrings("1.2.20", version);
     } else {
@@ -615,4 +634,32 @@ test "caret constraint with 0.x" {
     try std.testing.expect(!satisfiesConstraint("0.3.0", c));
     try std.testing.expect(!satisfiesConstraint("0.2.2", c));
     try std.testing.expect(!satisfiesConstraint("1.0.0", c));
+}
+
+test "caret on a bare zero major matches every 0.x, the way npm reads it" {
+    // `^0` := >=0.0.0 <1.0.0. The old reading demanded an exact 0.0.0, which
+    // made `pkg@0` unresolvable for every package whose versions are all 0.x -
+    // and that is most young C libraries, including libcbor.
+    const c = try parseConstraint("^0");
+
+    try std.testing.expect(satisfiesConstraint("0.13.0", c));
+    try std.testing.expect(satisfiesConstraint("0.10.1", c));
+    try std.testing.expect(satisfiesConstraint("0.0.1", c));
+    try std.testing.expect(!satisfiesConstraint("1.0.0", c));
+}
+
+test "while a caret naming a minor still pins it" {
+    // `^0.13` is >=0.13.0 <0.14.0: the rule that makes a zero major cautious,
+    // which the fix above must not undo.
+    const c = try parseConstraint("^0.13");
+
+    try std.testing.expect(satisfiesConstraint("0.13.1", c));
+    try std.testing.expect(!satisfiesConstraint("0.14.0", c));
+    try std.testing.expect(!satisfiesConstraint("0.12.0", c));
+}
+
+test "and the dependency that found this resolves" {
+    const resolved = resolveVersion("github.com/PJK/libcbor", "^0") orelse return error.NoVersion;
+
+    try std.testing.expect(std.mem.startsWith(u8, resolved, "0."));
 }

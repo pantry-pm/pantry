@@ -615,6 +615,9 @@ pub const Services = struct {
         const mysqld = try resolveServiceBinary(allocator, "mysqld", project_root, home);
         defer allocator.free(mysqld);
 
+        const mysqladmin = try resolveServiceBinary(allocator, "mysqladmin", project_root, home);
+        defer allocator.free(mysqladmin);
+
         // pantry root for self-contained LD_LIBRARY_PATH; mysqld refuses root, so
         // run as the unprivileged `pantry` user via runuser in system scope.
         const pantry_root = pantryRootOf(mysqld) orelse "/opt/pantry/pantry";
@@ -631,18 +634,27 @@ pub const Services = struct {
             \\MYSQLD="$(ls -d {s}/mysql.com/v*/bin/mysqld 2>/dev/null | sort -V | tail -1)"
             \\[ -n "$MYSQLD" ] || MYSQLD="$(readlink -f "{s}")"
             \\BASE="$(dirname "$(dirname "$MYSQLD")")"
+            \\# The run prefix is held in the positional parameters rather than in a
+            \\# string: `R="env PATH=$BASE/bin:$PATH"` used unquoted is re-split on
+            \\# every space, and an inherited PATH with a space in it (macOS has
+            \\# "Application Support" in several) turned `env` into a command whose
+            \\# first argument was half a directory - "env: Support/...: No such
+            \\# file or directory", with the datadir already initialized so the
+            \\# failure looked like a database that would not come up. `set --`
+            \\# keeps each word one word.
             \\if [ "$(id -u)" = 0 ]; then
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
-            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$PATH"
-            \\else R="env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$PATH"; fi
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"
+            \\  set -- runuser -u pantry -- env "LD_LIBRARY_PATH=$L" "DYLD_LIBRARY_PATH=$L" "PATH=$BASE/bin:$PATH"
+            \\else set -- env "LD_LIBRARY_PATH=$L" "DYLD_LIBRARY_PATH=$L" "PATH=$BASE/bin:$PATH"; fi
             \\# Initialize only a truly-empty datadir (detected by the `mysql`
             \\# system-tables dir). Never wipe a populated datadir — a marker
             \\# gated on the init's exit code previously caused a destructive
             \\# rm+reinit on every restart (connection-refused loop).
             \\if [ ! -d "$DATADIR/mysql" ]; then
-            \\  $R "$MYSQLD" --basedir="$BASE" --initialize-insecure --datadir="$DATADIR" || true
+            \\  "$@" "$MYSQLD" --basedir="$BASE" --initialize-insecure --datadir="$DATADIR" || true
             \\fi
-            \\exec $R "$MYSQLD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
+            \\exec "$@" "$MYSQLD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mysqld.sock" --pid-file="$DATADIR/mysqld.pid" --mysqlx=OFF
             \\
         , .{ data_dir, pantry_root, pantry_root, mysqld, port });
         defer allocator.free(script);
@@ -663,7 +675,21 @@ pub const Services = struct {
             .auto_start = false,
             .keep_alive = true,
             .working_directory = try allocator.dupe(u8, data_dir),
-            .health_check = try std.fmt.allocPrint(allocator, "mysqladmin ping --port={d}", .{port}),
+            // `mysqladmin ping --port=N` does NOT reach a server on port N: with no
+            // host, the client connects over the unix socket at its compiled-in
+            // default (/tmp/mysql.sock) and ignores the port entirely, so the
+            // check failed against a server that was up and serving - "started
+            // but did not become healthy", with a log full of "ready for
+            // connections". Naming the host is what makes the port take effect.
+            //
+            // The binary is resolved rather than trusted to PATH, because the
+            // health check runs from the service manager, whose PATH is not the
+            // operator's.
+            .health_check = try std.fmt.allocPrint(
+                allocator,
+                "L=\"$(find {s} -maxdepth 6 -type d -path \"*/v*/lib\" 2>/dev/null | tr \"\\n\" \":\")\"; env LD_LIBRARY_PATH=\"$L\" DYLD_LIBRARY_PATH=\"$L\" {s} -h 127.0.0.1 -P {d} -u root ping",
+                .{ pantry_root, mysqladmin, port },
+            ),
         };
     }
 
@@ -1452,6 +1478,9 @@ pub const Services = struct {
         const mariadbd = try resolveServiceBinary(allocator, "mariadbd", project_root, home);
         defer allocator.free(mariadbd);
 
+        const mariadb_admin = try resolveServiceBinary(allocator, "mariadb-admin", project_root, home);
+        defer allocator.free(mariadb_admin);
+
         // pantry install root (".../pantry") from the binary path, so the script
         // can compute LD_LIBRARY_PATH itself (mariadbd links libssl/pcre/zstd/…
         // from sibling deps). mariadbd refuses to run as root, so in system scope
@@ -1469,18 +1498,23 @@ pub const Services = struct {
             \\MDBD="$(readlink -f "{s}")"
             \\BASE="$(dirname "$(dirname "$MDBD")")"
             \\IDB="$BASE/scripts/mariadb-install-db"
+            \\# Positional parameters rather than a string variable: an unquoted
+            \\# `$R` is re-split on every space, so an inherited PATH containing
+            \\# one (macOS has "Application Support" in several) broke `env` apart
+            \\# mid-path. See the same note on the mysql service.
             \\if [ "$(id -u)" = 0 ]; then
             \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
-            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"; R="runuser -u pantry -- env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$BASE/scripts:$PATH"
-            \\else R="env LD_LIBRARY_PATH=$L PATH=$BASE/bin:$BASE/scripts:$PATH"; fi
+            \\  mkdir -p "$DATADIR"; chown -R pantry "$DATADIR"
+            \\  set -- runuser -u pantry -- env "LD_LIBRARY_PATH=$L" "DYLD_LIBRARY_PATH=$L" "PATH=$BASE/bin:$BASE/scripts:$PATH"
+            \\else set -- env "LD_LIBRARY_PATH=$L" "DYLD_LIBRARY_PATH=$L" "PATH=$BASE/bin:$BASE/scripts:$PATH"; fi
             \\# Initialize only a truly-empty datadir (detected by the `mysql`
             \\# system-tables dir); never wipe a populated one. install-db (a perl
             \\# script calling mariadbd/my_print_defaults) needs $BASE/bin on PATH
             \\# and --basedir for share/.
             \\if [ ! -d "$DATADIR/mysql" ]; then
-            \\  $R sh "$IDB" --basedir="$BASE" --datadir="$DATADIR" --auth-root-authentication-method=normal || true
+            \\  "$@" sh "$IDB" --basedir="$BASE" --datadir="$DATADIR" --auth-root-authentication-method=normal || true
             \\fi
-            \\exec $R "$MDBD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
+            \\exec "$@" "$MDBD" --basedir="$BASE" --datadir="$DATADIR" --port={d} --socket="$DATADIR/mariadbd.sock" --pid-file="$DATADIR/mariadbd.pid"
             \\
         , .{ data_dir, pantry_root, mariadbd, port });
         defer allocator.free(script);
@@ -1501,7 +1535,14 @@ pub const Services = struct {
             .auto_start = false,
             .keep_alive = true,
             .working_directory = try allocator.dupe(u8, data_dir),
-            .health_check = try std.fmt.allocPrint(allocator, "mysqladmin ping --port={d}", .{port}),
+            // Named host, for the reason spelled out on the mysql service: with
+            // none, the client goes to its default socket and the port is
+            // ignored.
+            .health_check = try std.fmt.allocPrint(
+                allocator,
+                "L=\"$(find {s} -maxdepth 6 -type d -path \"*/v*/lib\" 2>/dev/null | tr \"\\n\" \":\")\"; env LD_LIBRARY_PATH=\"$L\" DYLD_LIBRARY_PATH=\"$L\" {s} -h 127.0.0.1 -P {d} -u root ping",
+                .{ pantry_root, mariadb_admin, port },
+            ),
         };
     }
 

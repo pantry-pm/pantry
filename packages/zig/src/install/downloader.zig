@@ -741,6 +741,23 @@ pub fn lookupPantryPublished(
     const root = parsed.value;
     if (root != .object) return null;
 
+    // The npm namespace is not this namespace.
+    //
+    // This endpoint is a proxy: ask it for a name it does not publish and it
+    // answers with npm's package of that name. Since the lookup above turns a
+    // domain into its short name, `bun.com` asks for `bun` and gets npm's bun -
+    // a postinstall shim with no binary in it - which pantry then installed as
+    // the system bun, shimmed into `.bin/bun`, so every tool that shelled out to
+    // it failed with ENOEXEC. `mysql.com` would have become npm's `mysql` driver
+    // the same way, had the binary registry not answered first.
+    //
+    // So an answer that comes from npm is not an answer to this question. A
+    // system package that is genuinely missing has to fail as missing.
+    if (root.object.get("tarballUrl")) |t| {
+        if (t == .string and std.mem.indexOf(u8, t.string, "registry.npmjs.org") != null)
+            return null;
+    }
+
     // Extract version from metadata
     const version_str = if (root.object.get("version")) |v| (if (v == .string) v.string else return null) else return null;
 

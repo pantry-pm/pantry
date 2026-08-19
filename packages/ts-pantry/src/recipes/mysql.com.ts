@@ -87,11 +87,20 @@ export const recipe: Recipe = {
     // latest ICU, so a build pinned to .so.73 won't load — ICU is bundled
     // statically instead (see -DWITH_ICU=bundled).
     'openssl.org': '^3',
-    // Sun RPC (rpc/rpc.h) was dropped from glibc >= 2.32; MySQL's MYSQL_CHECK_RPC
-    // needs it. libtirpc provides it (header at <prefix>/include/tirpc, lib
-    // libtirpc.so.3) — declared so the runtime dep resolves on the box. The build
-    // host also installs libtirpc-dev so cmake finds /usr/include/tirpc/rpc/rpc.h.
-    'sourceforge.net/libtirpc': '*',
+    // Sun RPC (rpc/rpc.h) was dropped from glibc >= 2.32; MySQL's
+    // MYSQL_CHECK_RPC needs it. libtirpc provides it (header at
+    // <prefix>/include/tirpc, lib libtirpc.so.3), declared so the runtime dep
+    // resolves on the box. The build host also installs libtirpc-dev so cmake
+    // finds /usr/include/tirpc/rpc/rpc.h.
+    //
+    // The linux scope is load-bearing rather than tidiness: macOS has Sun RPC
+    // in its own libc and the registry carries no darwin libtirpc, so declaring
+    // it for every platform made `pantry install mysql.com` fail on every Mac
+    // with "package sourceforge.net/libtirpc@1.3.7 not found in registry" - a
+    // dependency that platform neither has nor needs.
+    linux: {
+      'sourceforge.net/libtirpc': '*',
+    },
   },
 
   // GCC 15 emits the `.base64` assembler directive (binutils >= 2.44), but it
