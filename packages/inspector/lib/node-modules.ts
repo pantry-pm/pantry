@@ -58,7 +58,8 @@ export interface SizeBreakdown {
 
 /** Something in the tarball that has no business being installed. */
 export interface HygieneFinding {
-  kind: 'ships-source' | 'ships-tests' | 'ships-ci' | 'ships-lockfile' | 'ships-editor-config' | 'no-files-field'
+  kind: 'ships-source' | 'ships-tests' | 'ships-ci' | 'ships-lockfile' | 'ships-editor-config'
+    | 'no-files-field' | 'missing-bin' | 'missing-entry'
   detail: string
   bytes: number
 }
@@ -274,7 +275,32 @@ function directoryBytes(dir: string): number {
   return total
 }
 
-function findHygiene(manifest: Manifest, scan: ScanResult): HygieneFinding[] {
+/** `bin` normalised to a command -> path map. */
+function binPaths(manifest: Manifest): Record<string, string> {
+  const bin = manifest.bin
+  if (typeof bin === 'string') return { [manifest.name ?? 'default']: bin.replace(/^\.\//, '') }
+  if (bin && typeof bin === 'object') {
+    return Object.fromEntries(Object.entries(bin).map(([k, v]) => [k, String(v).replace(/^\.\//, '')]))
+  }
+  return {}
+}
+
+/** Concrete (non-wildcard) files named by `main`, `module` or `exports`. */
+function exportPaths(manifest: Manifest): string[] {
+  const found = new Set<string>()
+  const add = (value: unknown): void => {
+    if (typeof value === 'string' && /\.[cm]?[jt]s$/.test(value) && !value.includes('*'))
+      found.add(value.replace(/^\.\//, ''))
+    else if (Array.isArray(value)) value.forEach(add)
+    else if (value && typeof value === 'object') Object.values(value).forEach(add)
+  }
+  add(manifest.main)
+  add(manifest.module)
+  add(manifest.exports)
+  return [...found]
+}
+
+function findHygiene(manifest: Manifest, scan: ScanResult, dir: string): HygieneFinding[] {
   const findings: HygieneFinding[] = []
 
   for (const rule of HYGIENE_DIRS) {
@@ -292,6 +318,24 @@ function findHygiene(manifest: Manifest, scan: ScanResult): HygieneFinding[] {
     for (const name of rule.names) {
       if (!scan.topLevelFiles.includes(name)) continue
       findings.push({ kind: rule.kind, detail: `${name} — ${rule.label}`, bytes: scan.childBytes[name] ?? 0 })
+    }
+  }
+
+  // A file the manifest promises and the tarball does not contain.
+  //
+  // Costs no bytes, which is why a size report misses it, but it is the more
+  // serious defect: a `bin` whose target does not exist installs a command
+  // that cannot run, and an `exports` entry that does not exist throws on
+  // import. Both ship happily — `files` silently skips entries that are not
+  // there, so a package published without building looks like a success.
+  for (const [command, target] of Object.entries(binPaths(manifest))) {
+    if (!existsSync(join(dir, target))) {
+      findings.push({ kind: 'missing-bin', detail: `bin "${command}" -> ${target}, which is not in the package`, bytes: 0 })
+    }
+  }
+  for (const target of exportPaths(manifest)) {
+    if (!existsSync(join(dir, target))) {
+      findings.push({ kind: 'missing-entry', detail: `${target} is exported but not in the package`, bytes: 0 })
     }
   }
 
@@ -482,7 +526,7 @@ export function analyzeNodeModules(projectRoot: string): NodeModulesAnalysis {
         assets: scan.assets,
         other: scan.other,
       },
-      hygiene: findHygiene(manifest, scan),
+      hygiene: findHygiene(manifest, scan, dir),
       dependents: [],
       depth: Number.POSITIVE_INFINITY,
       transitive: 0,
