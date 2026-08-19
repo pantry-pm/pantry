@@ -1,3 +1,28 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.34...v0.11.35)
+
+## ✨ Features
+
+- **inspector**: report how each package was built, not just how big it is ([ff6f31c](https://github.com/pantry-pm/pantry/commit/ff6f31c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **inspector**: publish the report as a static site ([2cd65ee](https://github.com/pantry-pm/pantry/commit/2cd65ee)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **inspector**: follow pnpm's links to where the bytes actually are ([8c0a624](https://github.com/pantry-pm/pantry/commit/8c0a624)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- **build**: let the library and the CLI share a graph ([ad83c50](https://github.com/pantry-pm/pantry/commit/ad83c50)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.35 ([2c106c6](https://github.com/pantry-pm/pantry/commit/2c106c6)) _(by Chris <chris@stacksjs.com>)_
+- update coredns.io, cursor.com, ziglang.org ([37b2766](https://github.com/pantry-pm/pantry/commit/37b2766)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **deps**: take stx 0.2.195 and ts-cloud 0.9.3 ([38ac35b](https://github.com/pantry-pm/pantry/commit/38ac35b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.33...v0.11.34)
 
 ## ✨ Features
