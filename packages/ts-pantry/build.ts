@@ -96,24 +96,26 @@ async function build() {
     process.exit(1)
   }
 
-  const runtimeEntries = [
-    { entrypoint: 'src/index.ts', outdir: './dist/src' },
-    { entrypoint: 'src/testing/index.ts', outdir: './dist/src/testing' },
-    { entrypoint: 'bin/cli.ts', outdir: './dist/bin' },
-  ]
+  // One build with splitting, not three isolated ones.
+  //
+  // The library entry and the CLI reach almost the same graph — the installer,
+  // the resolver, the generated package catalogue — and built separately each
+  // inlined its own copy: 1.8MB in `dist/src/index.js` and 1.9MB in
+  // `dist/bin/cli.js`, most of it the same code twice. `root: '.'` keeps the
+  // emitted paths exactly where the export map already points, and the shared
+  // half moves into chunks both of them import.
+  const runtimeResult = await Bun.build({
+    entrypoints: ['src/index.ts', 'src/testing/index.ts', 'bin/cli.ts'],
+    outdir: './dist',
+    root: '.',
+    target: 'node',
+    splitting: true,
+    minify: true,
+  })
 
-  for (const { entrypoint, outdir } of runtimeEntries) {
-    const result = await Bun.build({
-      entrypoints: [entrypoint],
-      outdir,
-      target: 'node',
-      minify: true,
-    })
-
-    if (!result.success) {
-      console.error(`Runtime build failed for ${entrypoint}:`, result.logs)
-      process.exit(1)
-    }
+  if (!runtimeResult.success) {
+    console.error('Runtime build failed:', runtimeResult.logs)
+    process.exit(1)
   }
 
   // Manually copy generated-package-names.ts as .d.ts to preserve formatting
