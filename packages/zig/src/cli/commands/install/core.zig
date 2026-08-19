@@ -1303,8 +1303,21 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .name = name,
             .version = version,
         } else npm_fallback: {
+            // A version the caller actually named, as opposed to the default.
+            //
+            // The Pantry registry lookup below answers with whatever version it
+            // currently holds and takes no version argument, so consulting it
+            // for a pinned request silently installed something else:
+            // `pantry install left-pad@1.2.0` reported success and put 1.3.0 on
+            // disk. A pin is the one thing a caller cannot be talked out of, so
+            // a pinned request skips the registry and goes to npm, which
+            // resolves the version it was asked for.
+            const pinned = !std.mem.eql(u8, version, "latest") and
+                !std.mem.eql(u8, version, "*") and
+                version.len > 0;
+
             // Try Pantry S3/DynamoDB registry first
-            if (helpers.lookupPantryRegistry(allocator, name) catch |err| lkup: {
+            if (if (pinned) null else helpers.lookupPantryRegistry(allocator, name) catch |err| lkup: {
                 style.print("{s}  ? {s}: pantry registry lookup failed: {}{s}\n", .{ style.dim, name, err, style.reset });
                 break :lkup null;
             }) |info| {

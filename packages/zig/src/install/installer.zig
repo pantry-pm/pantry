@@ -1445,9 +1445,22 @@ pub const Installer = struct {
 
         if (options.verbose) std.debug.print("[verbose:npm] install_dir={s}\n", .{install_dir});
 
-        // Check if already installed (lightweight access check, no dir handle)
+        // Check if already installed.
+        //
+        // A project install writes to `<project>/<modules>/<name>`, which is not
+        // version-scoped: the same directory holds whichever version went in
+        // last. So "the directory exists" is not "the requested version is
+        // installed", and treating it as such made `pantry install pkg@1.2.3`
+        // over an existing 1.2.2 report success and change nothing - the whole
+        // point of naming a version. The version on disk is read and compared;
+        // a mismatch is a reinstall, not a cache hit.
         const already_installed = !options.force and blk: {
             io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
+            if (options.project_root != null and !self.installedVersionMatches(install_dir, spec.version)) {
+                if (options.verbose) std.debug.print("[verbose:npm] a different version is installed at {s}; replacing it\n", .{install_dir});
+                io_helper.deleteTree(install_dir) catch {};
+                break :blk false;
+            }
             break :blk true;
         };
 
@@ -2869,6 +2882,29 @@ pub const Installer = struct {
         try self.createProjectSymlinks(project_root, domain, spec.version, project_pkg_dir);
 
         return project_pkg_dir;
+    }
+
+    /// Whether the package already at `dir` is the exact version asked for.
+    ///
+    /// Missing or unreadable `package.json`, or a version that cannot be read,
+    /// answers false: an install that cannot prove the right version is there
+    /// should do the work rather than assume, since the cost of being wrong is
+    /// silence.
+    fn installedVersionMatches(self: *Installer, dir: []const u8, wanted: []const u8) bool {
+        var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const manifest = std.fmt.bufPrint(&path_buf, "{s}/package.json", .{dir}) catch return false;
+
+        const content = io_helper.readFileAlloc(self.allocator, manifest, 1024 * 1024) catch return false;
+        defer self.allocator.free(content);
+
+        const parsed = std.json.parseFromSlice(std.json.Value, self.allocator, content, .{}) catch return false;
+        defer parsed.deinit();
+
+        if (parsed.value != .object) return false;
+        const version = parsed.value.object.get("version") orelse return false;
+        if (version != .string) return false;
+
+        return std.mem.eql(u8, version.string, wanted);
     }
 
     /// Download and install package directly to project directory (bypassing global cache)
