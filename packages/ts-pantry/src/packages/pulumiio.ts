@@ -88,6 +88,7 @@ export const pulumiioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.259.0',
     '3.258.0',
     '3.257.0',
     '3.256.0',
