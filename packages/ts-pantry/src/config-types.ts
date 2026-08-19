@@ -292,7 +292,17 @@ export interface PantryConfig extends PantryConfigBase {
 
   services?: {
     enabled?: boolean
-    autoStart?: boolean
+    /**
+     * `true` to start whatever this project needs, or an explicit list of
+     * service names to start.
+     *
+     * The list form is not new - consumers that generate a deps file from this
+     * config have read an array here for a while - but the type said `boolean`,
+     * so every project writing the list it actually wanted got a type error,
+     * and every project that wrote `true` to avoid one silently gave up naming
+     * the services it wanted started. Widened to what is already supported.
+     */
+    autoStart?: boolean | string[]
     shouldAutoStart?: boolean
     /**
      * Services this project defines for itself: its own application server,
