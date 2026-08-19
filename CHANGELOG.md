@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.37...v0.11.38)
+
+## 🐛 Bug Fixes
+
+- **install**: a range is not a pin, and 0.11.37 stopped installing them ([d2ad272](https://github.com/pantry-pm/pantry/commit/d2ad272)) _(by Chris <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **install**: the version on disk is what decides a reinstall ([53c0546](https://github.com/pantry-pm/pantry/commit/53c0546)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.38 ([a782f43](https://github.com/pantry-pm/pantry/commit/a782f43)) _(by Chris <chris@stacksjs.com>)_
+- update anthropic.com/claude-code, pulumi.io, stripe.com ([c556a38](https://github.com/pantry-pm/pantry/commit/c556a38)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, github.com/chainguard-dev/apko, planetscale.com ([5d145d3](https://github.com/pantry-pm/pantry/commit/5d145d3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI to 7.2.137 ([a9f5e90](https://github.com/pantry-pm/pantry/commit/a9f5e90)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app zed.dev 1.15.1 → 1.16.1 ([6e727af](https://github.com/pantry-pm/pantry/commit/6e727af)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update moonrepo.dev/moon to 2.5.2 ([5da3b4e](https://github.com/pantry-pm/pantry/commit/5da3b4e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update zed.dev to 1.16.1 ([2cd38d7](https://github.com/pantry-pm/pantry/commit/2cd38d7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com to 1.0.48633 ([076fbb4](https://github.com/pantry-pm/pantry/commit/076fbb4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, cnquery.io, nginx.org ([828461e](https://github.com/pantry-pm/pantry/commit/828461e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.36...v0.11.37)
 
 ## ✨ Features
