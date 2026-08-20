@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.818.22352",
-      "published": "26.818.22352",
+      "latest": "26.818.31338",
+      "published": "26.818.31338",
       "needsUpdate": false
     },
     {
@@ -122,7 +122,7 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.45.0",
+      "latest": "1.44.1",
       "published": "1.45.0",
       "needsUpdate": false
     },
