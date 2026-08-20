@@ -76,6 +76,7 @@ export const bitwardencomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2026.8.0',
     '2026.7.0',
     '2026.6.0',
     '2026.5.0',
