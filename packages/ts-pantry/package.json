@@ -38,7 +38,7 @@
     }
   },
   "module": "./dist/src/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "bin": {
     "ts-pantry": "./dist/bin/cli.js"
   },
