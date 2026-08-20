@@ -81,6 +81,7 @@ export const materializecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '26.38.0',
     '26.37.0',
     '26.36.0',
     '26.35.0',
