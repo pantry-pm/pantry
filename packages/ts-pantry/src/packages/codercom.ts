@@ -67,6 +67,7 @@ export const codercomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.36.1',
     '2.36.0',
     '2.35.4',
     '2.35.3',
