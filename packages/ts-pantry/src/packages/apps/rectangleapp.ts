@@ -22,6 +22,7 @@ export const rectangleappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '0.99',
     '0.98',
     '0.97',
     '0.96',
