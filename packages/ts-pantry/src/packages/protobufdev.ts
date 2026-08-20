@@ -76,6 +76,7 @@ export const protobufdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '36.0',
     '35.1',
     '35.0',
     '34.2',
