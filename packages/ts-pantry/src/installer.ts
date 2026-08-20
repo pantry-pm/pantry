@@ -143,6 +143,20 @@ export function sqliteOfficialDownloadUrl(version: string, platform: Platform): 
   return `https://sqlite.org/${year}/sqlite-tools-${target}-${archiveVersion}.zip`
 }
 
+/**
+ * Whether a domain is Bun, under either of the two names it goes by.
+ *
+ * The alias table canonicalizes `bun.sh` to `bun.com`, because Bun's site moved
+ * and old lockfiles still say `bun.sh`. The resolver here was only ever keyed on
+ * `bun.sh`, so once a spec had been through that canonicalization nothing
+ * matched it: `isSupported('bun.com')` said no, the action logged "not supported
+ * by TS installer SDK, skipping", and the very next step failed on
+ * `bun: command not found`.
+ */
+function isBunDomain(domain: string): boolean {
+  return domain === 'bun.sh' || domain === 'bun.com'
+}
+
 const resolvers: Record<string, PackageResolver> = {
   'github.com/mail-os/mail': {
     getDownloadUrl(version: string, platform: Platform): string {
@@ -513,7 +527,7 @@ export async function installPackages(
  * Resolve 'latest' version for known packages.
  */
 export async function resolveLatestVersion(domain: string, platform: Platform = detectPlatform()): Promise<string> {
-  if (domain === 'bun.sh') {
+  if (isBunDomain(domain)) {
     // Try GitHub API first, then fall back to the newest version in the
     // bundled package metadata. The earlier code returned `""` on API
     // failure, which produced a `bun-v/bun-linux-x64.zip` 404 — silently
@@ -696,7 +710,7 @@ export function satisfiesInstallerConstraint(version: string, constraint: Instal
  * list is then the only answer.
  */
 async function fetchLiveVersions(domain: string, platform: Platform): Promise<string[]> {
-  if (domain === 'bun.sh') {
+  if (isBunDomain(domain)) {
     const resp = await fetchJSON('https://api.github.com/repos/oven-sh/bun/releases?per_page=100').catch(() => null)
     const releases = (resp as Array<{ tag_name?: string }> | null) || []
     return releases.map(r => (r.tag_name || '').replace(/^bun-v/, '')).filter(Boolean)
@@ -1074,6 +1088,10 @@ function fetchJSON(url: string, maxRedirects = 5, retryOptions: NetworkRetryOpti
 /**
  * Check if a package domain has a known resolver.
  */
+// Registered under both names, so a spec resolves whether it arrived as the
+// historical `bun.sh` or the canonical `bun.com`.
+resolvers['bun.com'] = resolvers['bun.sh']
+
 export function isSupported(domain: string): boolean {
   return domain in resolvers
 }
