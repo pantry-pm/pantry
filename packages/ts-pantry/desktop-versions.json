@@ -32,8 +32,8 @@
       "name": "bw",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2026.7.0",
-      "published": "2026.7.0",
+      "latest": "2026.8.0",
+      "published": "2026.8.0",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.818.21641",
-      "published": "26.818.21641",
+      "latest": "26.818.22352",
+      "published": "26.818.22352",
       "needsUpdate": false
     },
     {
@@ -122,8 +122,8 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.44.1",
-      "published": "1.44.1",
+      "latest": "1.45.0",
+      "published": "1.45.0",
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.33.17",
-      "published": "2.26.33.17",
+      "latest": "2.26.33.19",
+      "published": "2.26.33.19",
       "needsUpdate": false
     },
     {
