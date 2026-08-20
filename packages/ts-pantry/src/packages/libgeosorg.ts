@@ -67,6 +67,7 @@ export const libgeosorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.15.0rc1',
     '3.15.0beta3',
     '3.15.0beta2',
     '3.15.0beta1',
