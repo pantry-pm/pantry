@@ -3,7 +3,7 @@
  *
  * @domain `openshift.com`
  * @programs `oc`
- * @version `4.21.7` (364 versions available)
+ * @version `4.22.10` (1125 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openshift.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "oc"
  * console.log(pkg.description) // "The OpenShift Command Line, part of OKD"
  * console.log(pkg.programs)    // ["oc"]
- * console.log(pkg.versions[0]) // "4.21.7" (latest)
+ * console.log(pkg.versions[0]) // "4.22.10" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/openshift-com.md
@@ -118,6 +118,7 @@ export const openshiftcomPackage = {
     '4.21.2',
     '4.21.1',
     '4.21.0',
+    '4.20.35',
     '4.20.34',
     '4.20.33',
     '4.20.32',
