@@ -226,6 +226,16 @@ fn depDomainFromSpec(spec_in: []const u8) ?DepSpec {
 /// empty string are not. The distinction decides whether a request may be
 /// answered from the Pantry registry - which resolves ranges but ignores the
 /// version asked for - or has to go to npm, which honours an exact version.
+/// The exit code a manifest install ends on.
+///
+/// Named rather than inline so the rule has a test, the way
+/// `workspaceCommandResult` does for the workspace path. It is one line, and
+/// it was the wrong line for long enough to be worth pinning: see the comment
+/// at its call site for what a silently-zero install costs a caller.
+fn manifestExitCode(failed_count: usize) u8 {
+    return if (failed_count > 0) 1 else 0;
+}
+
 fn isExactVersion(version: []const u8) bool {
     if (version.len == 0) return false;
     if (std.mem.eql(u8, version, "latest")) return false;
@@ -1225,7 +1235,23 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             }
         }
 
-        return .{ .exit_code = 0 };
+        // A package the manifest asked for and did not get is a failed install,
+        // and the exit code has to say so.
+        //
+        // This path returned 0 unconditionally while the other three - named
+        // installs, the companion deps file, and workspaces - all returned 1.
+        // So `pantry install` reading a pantry.json printed "1 package(s)
+        // failed to install" in red and then reported success to its caller,
+        // which is the shape that does real damage: every script that runs
+        // `pantry install && build` carried on into a build with a missing
+        // system dependency, and the failure surfaced later as something else
+        // entirely - a compiler not found, a binary that is not there.
+        //
+        // Everything counted in `failed_count` is a dependency that is absent:
+        // it did not download, it is not linked, its path does not exist, its
+        // name was unsafe, or its symlink could not be made. None of those is
+        // a state a caller should be told is fine.
+        return .{ .exit_code = manifestExitCode(failed_count) };
     }
 
     // Detect if we're in a project directory
@@ -1950,6 +1976,21 @@ test "companion deps replace stale system pins without dropping workspace packag
     try t.expectEqualStrings("1.3.14", lockfile.packages.get("bun.sh@1.3.14").?.version);
     try t.expect(lockfile.packages.get("lit@3.3.1") != null);
     try t.expect(lockfile.workspaces.get("packages/ui") != null);
+}
+
+test "a manifest install fails when a package it asked for did not arrive" {
+    // The bug this pins: this path returned 0 unconditionally while every other
+    // install path returned 1, so `pantry install` printed "1 package(s) failed
+    // to install" in red and told its caller everything was fine. Scripts
+    // shaped like `pantry install && build` then built without the dependency.
+    try std.testing.expectEqual(@as(u8, 1), manifestExitCode(1));
+    try std.testing.expectEqual(@as(u8, 1), manifestExitCode(9));
+}
+
+test "and succeeds when nothing failed" {
+    // Including the two cases that are not installs at all: everything already
+    // present, and a manifest with no dependencies. Both count zero failures.
+    try std.testing.expectEqual(@as(u8, 0), manifestExitCode(0));
 }
 
 test "isExactVersion separates a pin from a range" {
