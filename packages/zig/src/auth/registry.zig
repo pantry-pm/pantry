@@ -116,6 +116,57 @@ fn urlEncodePackageName(allocator: std.mem.Allocator, package_name: []const u8) 
     return result;
 }
 
+/// Whether a publish request's status means the registry took the package.
+///
+/// `200 OK`, `201 Created` and **`202 Accepted`**. The third one is the reason
+/// this is a named function rather than an inline comparison: npm answers 202
+/// when it *queues* a publish rather than completing it inline, which it does
+/// routinely for larger packages and for publishes carrying provenance. The
+/// package is published; the response simply says so asynchronously.
+///
+/// Reading 202 as a failure cost a failed release job on every single release,
+/// in two distinct ways:
+///
+///   - a package whose publish returned 202 was reported failed while being
+///     live on the registry — the log line was literally
+///     `202 Error: {"success":true}`;
+///   - worse, a 202 on the first attempt *staged* the version, the caller read
+///     failure and retried, and the retry came back
+///     `409 Cannot publish over previously staged version` — a conflict the
+///     publisher had created for itself one attempt earlier.
+///
+/// Deliberately an explicit list rather than "any 2xx". The failure mode of
+/// being too generous here is a publish that did not happen being reported as
+/// one that did, which is the more expensive direction to be wrong in.
+fn publishSucceeded(status: std.http.Status) bool {
+    return switch (status) {
+        .ok, .created, .accepted => true,
+        else => false,
+    };
+}
+
+test "a queued publish is a successful publish" {
+    // npm returns 202 when it accepts a publish for asynchronous processing,
+    // which it does for large packages and for provenance. The package is
+    // published.
+    try std.testing.expect(publishSucceeded(.ok));
+    try std.testing.expect(publishSucceeded(.created));
+    try std.testing.expect(publishSucceeded(.accepted));
+}
+
+test "and everything the registry refuses is not" {
+    // Including 409, which this very check used to cause: a 202 read as failure
+    // was retried, and the retry conflicted with the version the first attempt
+    // had already staged.
+    try std.testing.expect(!publishSucceeded(.unauthorized));
+    try std.testing.expect(!publishSucceeded(.forbidden));
+    try std.testing.expect(!publishSucceeded(.not_found));
+    try std.testing.expect(!publishSucceeded(.conflict));
+    try std.testing.expect(!publishSucceeded(.unprocessable_entity));
+    try std.testing.expect(!publishSucceeded(.internal_server_error));
+    try std.testing.expect(!publishSucceeded(.no_content));
+}
+
 test "npm registry path encoding preserves scoped package at-sign" {
     const encoded = try urlEncodePackageName(std.testing.allocator, "@ts-charts/graph");
     defer std.testing.allocator.free(encoded);
@@ -341,7 +392,7 @@ pub const RegistryClient = struct {
         const body = try maybeDecompressGzip(self.allocator, raw_body);
         defer self.allocator.free(body);
 
-        const success = response.head.status == .ok or response.head.status == .created;
+        const success = publishSucceeded(response.head.status);
         const status_code = @backingInt(response.head.status);
 
         const message = if (body.len > 0)
@@ -543,7 +594,7 @@ pub const RegistryClient = struct {
         const body = try maybeDecompressGzip(self.allocator, raw_body);
         defer self.allocator.free(body);
 
-        const success = response.head.status == .ok or response.head.status == .created;
+        const success = publishSucceeded(response.head.status);
         const status_code = @backingInt(response.head.status);
 
         const message = if (body.len > 0)
@@ -665,7 +716,7 @@ pub const RegistryClient = struct {
         const body = try maybeDecompressGzip(self.allocator, raw_body);
         defer self.allocator.free(body);
 
-        const success = response.head.status == .ok or response.head.status == .created;
+        const success = publishSucceeded(response.head.status);
         const status_code = @backingInt(response.head.status);
 
         const message = if (body.len > 0)
