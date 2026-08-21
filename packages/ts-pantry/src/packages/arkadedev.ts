@@ -3,7 +3,7 @@
  *
  * @domain `arkade.dev`
  * @programs `arkade`
- * @version `0.11.88` (80 versions available)
+ * @version `0.11.123` (115 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install arkade.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "Arkade"
  * console.log(pkg.description) // "Open Source Marketplace For Developer Tools"
  * console.log(pkg.programs)    // ["arkade"]
- * console.log(pkg.versions[0]) // "0.11.88" (latest)
+ * console.log(pkg.versions[0]) // "0.11.123" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/arkade-dev.md
@@ -67,6 +67,7 @@ export const arkadedevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.11.123',
     '0.11.122',
     '0.11.121',
     '0.11.120',
