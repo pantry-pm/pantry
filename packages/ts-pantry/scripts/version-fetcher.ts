@@ -257,10 +257,25 @@ function updatePackageVersions(domain: string, newVersions: string[]): boolean {
   }
 
   const newVersionsStr = finalVersions.map(v => `\n    '${v}'`).join(',') + ',\n  '
-  const updated = content.replace(
-    /versions:\s*\[([\s\S]*?)\]\s*as const/,
-    `versions: [${newVersionsStr}] as const`,
-  )
+  const latest = finalVersions[0]
+  const updated = content
+    .replace(
+      /versions:\s*\[([\s\S]*?)\]\s*as const/,
+      `versions: [${newVersionsStr}] as const`,
+    )
+    // These generated files document themselves in a JSDoc block that quotes
+    // the latest version twice. Rewriting only the array left every package's
+    // own documentation contradicting its data — bun.com sat at "@version
+    // `1.3.14`" while the array below it started at 1.4.0 — so anything reading
+    // the header (docs site, editor hover, a human) got the stale answer.
+    .replace(
+      /(\* @version `)[^`]*(` \()\d+( versions available\))/,
+      `$1${latest}$2${finalVersions.length}$3`,
+    )
+    .replace(
+      /(\* console\.log\(pkg\.versions\[0\]\) \/\/ ")[^"]*(" \(latest\))/,
+      `$1${latest}$2`,
+    )
 
   if (dryRun) {
     console.log(`  [dry-run] Would update ${domain}: ${currentVersions[0]} → ${finalVersions[0]}`)

@@ -41,7 +41,13 @@ describe('bun domain aliasing', () => {
     for (const version of ['1.3.12', '1.3.13', '1.3.14'])
       expect(bun.versions).toContain(version)
 
-    expect(bun.versions[0]).toBe('1.3.14')
+    // Deliberately not `expect(versions[0]).toBe('1.3.14')`. Pinning the head
+    // of the list freezes the catalog at whatever shipped the day the test was
+    // written, so the next bun release turns a healthy update into a red build.
+    // What matters is that discovery is still running: the newest entry must
+    // be at least as new as the versions this test names.
+    expect(bun.versions.indexOf('1.3.14')).toBeLessThanOrEqual(bun.versions.indexOf('1.3.12'))
+    expect(bun.versions[0] >= '1.3.14').toBe(true)
   })
 
   it('keeps the old lookup key working', () => {
