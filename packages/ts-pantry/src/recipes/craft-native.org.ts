@@ -5,7 +5,7 @@ export const recipe: Recipe = {
   name: 'craft',
   description: 'Build desktop apps with web languages, powered by Zig',
   homepage: 'https://craft-native.org',
-  github: 'https://github.com/home-lang/craft',
+  github: 'https://github.com/craft-native/craft',
   programs: ['craft'],
   // Many craft GitHub releases (v0.0.16 and everything older) ship NO binary
   // assets at all — they predate upstream's binary publishing. The scheduled
@@ -25,7 +25,7 @@ export const recipe: Recipe = {
       const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
       if (token)
         headers.Authorization = `token ${token}`
-      const resp = await fetch('https://api.github.com/repos/home-lang/craft/releases?per_page=50', {
+      const resp = await fetch('https://api.github.com/repos/craft-native/craft/releases?per_page=50', {
         headers,
         signal: AbortSignal.timeout(30000),
       })
@@ -77,7 +77,7 @@ export const recipe: Recipe = {
       '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
       'esac',
       '',
-      'URL="https://github.com/home-lang/craft/releases/download/v${VERSION}/${ASSET}"',
+      'URL="https://github.com/craft-native/craft/releases/download/v${VERSION}/${ASSET}"',
       'curl -Lfo craft.zip "$URL"',
       'unzip -o craft.zip',
       '',

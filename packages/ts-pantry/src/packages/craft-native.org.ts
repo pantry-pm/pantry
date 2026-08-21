@@ -39,7 +39,7 @@ export const craftPackage = {
   description: 'Build desktop apps with web languages, powered by Zig' as const,
   packageYmlUrl: '' as const,
   homepageUrl: 'https://craft-native.org' as const,
-  githubUrl: 'https://github.com/home-lang/craft' as const,
+  githubUrl: 'https://github.com/craft-native/craft' as const,
   /**
   * Command to install this package using pantry.
   * @example pantry install package-name
