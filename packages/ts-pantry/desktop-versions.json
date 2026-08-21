@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.16.29",
-      "published": "3.16.29",
+      "latest": "3.17.8",
+      "published": "3.17.8",
       "needsUpdate": false
     },
     {
@@ -122,8 +122,8 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.44.1",
-      "published": "1.45.0",
+      "latest": "1.45.1",
+      "published": "1.45.1",
       "needsUpdate": false
     },
     {
