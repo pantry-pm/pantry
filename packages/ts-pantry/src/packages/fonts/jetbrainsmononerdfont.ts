@@ -19,6 +19,7 @@ export const jetbrainsmononerdfontPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.5.1',
     '3.5.0',
     '3.4.0',
     '3.3.0',
