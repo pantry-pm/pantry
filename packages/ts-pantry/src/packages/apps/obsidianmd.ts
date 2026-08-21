@@ -3,7 +3,7 @@
  *
  * @domain `obsidian.md`
  * @programs `obsidian`
- * @version `1.7.7` (3 versions available)
+ * @version `1.13.8` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install obsidian.md`
@@ -22,6 +22,7 @@ export const obsidianmdPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.13.8',
     '1.13.7',
     '1.13.6',
     '1.13.4',

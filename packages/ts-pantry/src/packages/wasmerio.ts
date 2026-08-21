@@ -3,7 +3,7 @@
  *
  * @domain `wasmer.io`
  * @programs `wasmer`
- * @version `7.0.1` (26 versions available)
+ * @version `7.3.0` (37 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install wasmer.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "wasmer"
  * console.log(pkg.description) // "🚀 Fast, secure, lightweight containers based o..."
  * console.log(pkg.programs)    // ["wasmer"]
- * console.log(pkg.versions[0]) // "7.0.1" (latest)
+ * console.log(pkg.versions[0]) // "7.3.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/wasmer-io.md
@@ -76,6 +76,7 @@ export const wasmerioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.3.0',
     '7.2.1',
     '7.2.0',
     '7.1.0',
