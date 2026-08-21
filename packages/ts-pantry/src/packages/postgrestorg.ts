@@ -3,7 +3,7 @@
  *
  * @domain `postgrest.org`
  * @programs `postgrest`
- * @version `14.7.0` (27 versions available)
+ * @version `16.2` (71 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install postgrest.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "postgrest"
  * console.log(pkg.description) // "Serves a fully RESTful API from any existing Po..."
  * console.log(pkg.programs)    // ["postgrest"]
- * console.log(pkg.versions[0]) // "14.7.0" (latest)
+ * console.log(pkg.versions[0]) // "16.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/postgrest-org.md
@@ -81,6 +81,7 @@ export const postgrestorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '16.2',
     '16.1',
     '16.0',
     '14.17',
