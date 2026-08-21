@@ -269,11 +269,11 @@ function updatePackageVersions(domain: string, newVersions: string[]): boolean {
     // `1.3.14`" while the array below it started at 1.4.0 — so anything reading
     // the header (docs site, editor hover, a human) got the stale answer.
     .replace(
-      /(\* @version `)[^`]*(` \()\d+( versions available\))/,
+      /(@version `)[^`]*(` \()\d+( versions available\))/,
       `$1${latest}$2${finalVersions.length}$3`,
     )
     .replace(
-      /(\* console\.log\(pkg\.versions\[0\]\) \/\/ ")[^"]*(" \(latest\))/,
+      /(console\.log\(pkg\.versions\[0\]\) \/\/ ")[^"]*(" \(latest\))/,
       `$1${latest}$2`,
     )
 
