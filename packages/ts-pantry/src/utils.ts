@@ -474,6 +474,21 @@ export function convertDomainToVarName(domain: string): string {
 }
 
 /**
+ * Strips the punctuation a domain-shaped name carries so it can be used as a
+ * plain property key: 'bun.sh' -> 'bunsh', 'aws/cdk' -> 'awscdk'.
+ *
+ * Returns an empty string when the result still isn't a valid identifier
+ * (names with spaces, names starting with a digit), so callers can skip it.
+ *
+ * @param name Alias or domain
+ * @returns An identifier-safe key, or '' if one can't be derived
+ */
+export function toPropertyKey(name: string): string {
+  const key = name.replace(/[.\-/]/g, '').toLowerCase()
+  return /^[a-z_$][\w$]*$/i.test(key) ? key : ''
+}
+
+/**
  * Converts a domain name to a standard format for file names
  * @param domain Domain name or path
  * @returns Filename-safe version (e.g., 'bun.sh' -> 'bunsh', 'agwa.name/git-crypt' -> 'agwaname-gitcrypt')

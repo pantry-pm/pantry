@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { getAllAliasOverrides } from './alias-overrides'
-import { convertDomainToVarName, guessOriginalDomain } from './utils'
+import { convertDomainToVarName, guessOriginalDomain, toPropertyKey } from './utils'
 
 // The packages directory path
 const PACKAGES_DIR = path.join(process.cwd(), 'src', 'packages')
@@ -1231,6 +1231,26 @@ export const packages: Packages = pantry
           pantryDecl += `  ${quotedAlias}: ${importAlias},\n`
           usedPropertyNames.add(alias)
         }
+      }
+
+      // An alias that is itself domain-shaped also needs the punctuation-free
+      // key, because that is the key the package had while that name was still
+      // its domain: every package gets `convertDomainToVarName(domain)` above,
+      // so `bun.sh` was reachable as `pantry.bunsh` until bun moved to bun.com
+      // and the old name demoted to an alias. The loop above only emits the
+      // literal `pantry['bun.sh']`, so `pantry.bunsh` silently disappears on
+      // the rename. The override table is where renames are recorded, so
+      // derive the sanitized key for every alias in it.
+      for (const [alias, targetDomain] of Object.entries(getAllAliasOverrides()).sort((a, b) => a[0].localeCompare(b[0]))) {
+        const propertyName = toPropertyKey(alias)
+        const importAlias = domainToImportAlias.get(targetDomain)
+
+        if (!propertyName || propertyName === alias || usedPropertyNames.has(propertyName) || !importAlias)
+          continue
+
+        interfaceDecl += `  ${propertyName}: typeof ${importAlias}\n`
+        pantryDecl += `  ${propertyName}: ${importAlias},\n`
+        usedPropertyNames.add(propertyName)
       }
 
       interfaceDecl += '}\n\n'

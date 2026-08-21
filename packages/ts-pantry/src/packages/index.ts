@@ -6389,6 +6389,8 @@ export interface Pantry {
   'zsh-completions': typeof zshcompletionsPackage
   'zsh-syntax-highlighting': typeof zshsyntaxhighlightingPackage
   zstd: typeof facebookcomzstdPackage
+  awscdk: typeof cdkPackage
+  bunsh: typeof bunPackage
 }
 
 export type Packages = Pantry
@@ -11033,6 +11035,8 @@ export const pantry: Pantry = {
   'zsh-completions': zshcompletionsPackage,
   'zsh-syntax-highlighting': zshsyntaxhighlightingPackage,
   zstd: facebookcomzstdPackage,
+  awscdk: cdkPackage,
+  bunsh: bunPackage,
 }
 
 export const packages: Packages = pantry
