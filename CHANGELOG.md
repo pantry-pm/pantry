@@ -1,3 +1,82 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.38...v0.11.39)
+
+## 🐛 Bug Fixes
+
+- **publish**: the generic registry path also queues ([ae6961c](https://github.com/pantry-pm/pantry/commit/ae6961c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **craft**: pin the canonical repository instead of leaning on a redirect ([c83cc61](https://github.com/pantry-pm/pantry/commit/c83cc61)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **publish**: a queued publish is a successful publish ([13371a1](https://github.com/pantry-pm/pantry/commit/13371a1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: a manifest install that lost a package exits non-zero ([c4010d1](https://github.com/pantry-pm/pantry/commit/c4010d1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ts-pantry**: keep the pre-rename property key on renamed packages ([5cf7e62](https://github.com/pantry-pm/pantry/commit/5cf7e62)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **bun**: the download URL names a platform, so bun installs again ([2b1a9b6](https://github.com/pantry-pm/pantry/commit/2b1a9b6)) _(by Chris <chris@stacksjs.com>)_
+- **installer**: resolve bun under the name the alias table produces ([4e657fc](https://github.com/pantry-pm/pantry/commit/4e657fc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: ship the built action, which every workflow using it needs ([e199ada](https://github.com/pantry-pm/pantry/commit/e199ada)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **pkg**: point types at the declaration the build emits ([f0772d1](https://github.com/pantry-pm/pantry/commit/f0772d1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💄 Styles
+
+- **version-fetcher**: anchor the docblock rewrites without a leading escaped asterisk ([d888674](https://github.com/pantry-pm/pantry/commit/d888674)) _(by Chris <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **registry**: run the npm client's tests, which never ran ([57318d7](https://github.com/pantry-pm/pantry/commit/57318d7)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.39 ([8186184](https://github.com/pantry-pm/pantry/commit/8186184)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update anthropic.com/claude-code, github.com/router-for-me/CLIProxyAPI ([8fd5f49](https://github.com/pantry-pm/pantry/commit/8fd5f49)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/tw93/mole to 1.52.0 ([b454499](https://github.com/pantry-pm/pantry/commit/b454499)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update watchexec.github.io to 2.6.1 ([7e2edff](https://github.com/pantry-pm/pantry/commit/7e2edff)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.158.0 ([a9fbdf4](https://github.com/pantry-pm/pantry/commit/a9fbdf4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.157.1 ([03e2aa7](https://github.com/pantry-pm/pantry/commit/03e2aa7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, seaweedfs.com, watchexec.github.io ([e15ea3d](https://github.com/pantry-pm/pantry/commit/e15ea3d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com to 26.818.41705 ([9ed173d](https://github.com/pantry-pm/pantry/commit/9ed173d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cython.org to 3.3.0 ([16ffc48](https://github.com/pantry-pm/pantry/commit/16ffc48)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.157.0 ([24c2a39](https://github.com/pantry-pm/pantry/commit/24c2a39)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, depot.dev, mailpit.axllent.org ([47db5fe](https://github.com/pantry-pm/pantry/commit/47db5fe)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/mail-os/mail to 0.3.5 ([4960781](https://github.com/pantry-pm/pantry/commit/4960781)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update planetscale.com, projen.io ([8fb8333](https://github.com/pantry-pm/pantry/commit/8fb8333)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/mail-os/mail to 0.3.4 ([c4783a1](https://github.com/pantry-pm/pantry/commit/c4783a1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update depot.dev, github.com/mail-os/mail, openexr.com ([aa01c5f](https://github.com/pantry-pm/pantry/commit/aa01c5f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update postgrest.org to 16.2 ([6e9a1fd](https://github.com/pantry-pm/pantry/commit/6e9a1fd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.43.1 ([5c95107](https://github.com/pantry-pm/pantry/commit/5c95107)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, dprint.dev, openshift.com, stripe.com, ziglang.org ([2bf60a6](https://github.com/pantry-pm/pantry/commit/2bf60a6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, projen.io, railway.app ([848c30b](https://github.com/pantry-pm/pantry/commit/848c30b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/router-for-me/CLIProxyAPI, railway.app ([dec89c9](https://github.com/pantry-pm/pantry/commit/dec89c9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, diabrowser.com, llm.datasette.io ([ccb2344](https://github.com/pantry-pm/pantry/commit/ccb2344)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([41b05c6](https://github.com/pantry-pm/pantry/commit/41b05c6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update jetbrains-mono-nerd-font, meslo-lg-nerd-font ([3bafab8](https://github.com/pantry-pm/pantry/commit/3bafab8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai to 1.18.21 ([9b0d1b8](https://github.com/pantry-pm/pantry/commit/9b0d1b8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update obsidian.md, wasmer.io ([f7ba383](https://github.com/pantry-pm/pantry/commit/f7ba383)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update argoproj.github.io/workflows, projen.io ([fde687d](https://github.com/pantry-pm/pantry/commit/fde687d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/router-for-me/CLIProxyAPI ([c0ada1c](https://github.com/pantry-pm/pantry/commit/c0ada1c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10549 ([7ea9eb7](https://github.com/pantry-pm/pantry/commit/7ea9eb7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, opencode.ai ([16e679d](https://github.com/pantry-pm/pantry/commit/16e679d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update seaweedfs.com to 4.43 ([6a56fde](https://github.com/pantry-pm/pantry/commit/6a56fde)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.156.0 ([fdb4618](https://github.com/pantry-pm/pantry/commit/fdb4618)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/mail-os/mail to 0.3.2 ([75a1f91](https://github.com/pantry-pm/pantry/commit/75a1f91)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 10545 ([7a54985](https://github.com/pantry-pm/pantry/commit/7a54985)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (cursor.com, diabrowser.com) ([f31ef9f](https://github.com/pantry-pm/pantry/commit/f31ef9f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, diabrowser.com, github.com/ggerganov/llama.cpp ([016286d](https://github.com/pantry-pm/pantry/commit/016286d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, cursor.com, github.com/ggerganov/llama.cpp ([d7d3ccf](https://github.com/pantry-pm/pantry/commit/d7d3ccf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bun.com, github.com/ggerganov/llama.cpp, projen.io ([c4e8825](https://github.com/pantry-pm/pantry/commit/c4e8825)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app codex.openai.com 26.818.22352 → 26.818.31338 ([d534bb5](https://github.com/pantry-pm/pantry/commit/d534bb5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com to 26.818.31338 ([49159f3](https://github.com/pantry-pm/pantry/commit/49159f3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update changie.dev, cli.github.com ([6a454ec](https://github.com/pantry-pm/pantry/commit/6a454ec)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update zarf.dev to 0.84.0 ([3a4769e](https://github.com/pantry-pm/pantry/commit/3a4769e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, openai.com/codex ([c0abe87](https://github.com/pantry-pm/pantry/commit/c0abe87)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, github.com/ggerganov/llama.cpp ([ed22e53](https://github.com/pantry-pm/pantry/commit/ed22e53)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([a3c1e93](https://github.com/pantry-pm/pantry/commit/a3c1e93)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update projen.io to 0.101.36 ([e28ca23](https://github.com/pantry-pm/pantry/commit/e28ca23)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update vale.sh to 3.18.0 ([01ff22a](https://github.com/pantry-pm/pantry/commit/01ff22a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, ollama.ai ([08b1165](https://github.com/pantry-pm/pantry/commit/08b1165)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: refresh version manifest ([a252cb1](https://github.com/pantry-pm/pantry/commit/a252cb1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update runatlantis.io to 0.47.1 ([ca0c896](https://github.com/pantry-pm/pantry/commit/ca0c896)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, planetscale.com, projen.io, tailscale.com ([9af4f53](https://github.com/pantry-pm/pantry/commit/9af4f53)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.37...v0.11.38)
 
 ## 🐛 Bug Fixes
