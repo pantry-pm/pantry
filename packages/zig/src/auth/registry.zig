@@ -138,7 +138,7 @@ fn urlEncodePackageName(allocator: std.mem.Allocator, package_name: []const u8) 
 /// Deliberately an explicit list rather than "any 2xx". The failure mode of
 /// being too generous here is a publish that did not happen being reported as
 /// one that did, which is the more expensive direction to be wrong in.
-fn publishSucceeded(status: std.http.Status) bool {
+pub fn publishSucceeded(status: std.http.Status) bool {
     return switch (status) {
         .ok, .created, .accepted => true,
         else => false,

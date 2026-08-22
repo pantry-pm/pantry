@@ -1,6 +1,7 @@
 const std = @import("std");
 const io_helper = @import("../io_helper.zig");
 const core = @import("core.zig");
+const auth_registry = @import("../auth/registry.zig");
 const http = std.http;
 const style = @import("../cli/style.zig");
 
@@ -366,12 +367,16 @@ pub const NpmRegistry = struct {
         var redirect_buffer: [4096]u8 = undefined;
         var response = try req.receiveHead(&redirect_buffer);
 
-        // Check response status
+        // Check response status.
+        //
+        // Success is `publishSucceeded`, shared with the OIDC/token publish path
+        // in auth/registry.zig rather than re-spelled here — this switch used to
+        // accept only `.ok` and `.created`, and the two paths disagreeing about
+        // whether a queued publish counts is exactly how the fix for one of them
+        // left the other broken.
+        if (auth_registry.publishSucceeded(response.head.status)) return;
+
         switch (response.head.status) {
-            .ok, .created => {
-                // Success
-                return;
-            },
             .unauthorized => return error.Unauthorized,
             .forbidden => {
                 // npm returns 403 for version conflicts — read body to check
