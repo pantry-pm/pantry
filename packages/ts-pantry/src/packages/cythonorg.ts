@@ -3,7 +3,7 @@
  *
  * @domain `cython.org`
  * @programs `cython`
- * @version `3.2.4` (31 versions available)
+ * @version `3.3.0` (45 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cython.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "cython"
  * console.log(pkg.description) // "Compiler for writing C extensions for the Pytho..."
  * console.log(pkg.programs)    // ["cython"]
- * console.log(pkg.versions[0]) // "3.2.4" (latest)
+ * console.log(pkg.versions[0]) // "3.3.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cython-org.md
@@ -74,6 +74,7 @@ export const cythonorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.3.0',
     '3.2.9',
     '3.2.8',
     '3.2.7',
