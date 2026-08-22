@@ -3,7 +3,7 @@
  *
  * @domain `watchexec.github.io`
  * @programs `watchexec`
- * @version `2.5.0` (11 versions available)
+ * @version `2.6.0` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install watchexec.github.io`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "watchexec"
  * console.log(pkg.description) // "Executes commands in response to file modificat..."
  * console.log(pkg.programs)    // ["watchexec"]
- * console.log(pkg.versions[0]) // "2.5.0" (latest)
+ * console.log(pkg.versions[0]) // "2.6.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/watchexec-github-io.md
@@ -60,6 +60,7 @@ export const watchexecgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.6.0',
     '2.5.1',
     '2.5.0',
     '2.4.3',
@@ -89,6 +90,13 @@ export const watchexecgithubioPackage = {
     '1.21.1',
     '1.21.0',
     '1.20.6',
+    'lib-v2.0.0-pre.14',
+    'lib-v2.0.0-pre.13',
+    'lib-v2.0.0-pre.12',
+    'lib-v2.0.0-pre.11',
+    'lib-v2.0.0-pre.10',
+    'lib-v2.0.0-pre.9',
+    'lib-v2.0.0-pre.8',
     'cli-v1.20.5',
     'cli-v1.20.4',
     'cli-v1.20.3',
@@ -104,13 +112,6 @@ export const watchexecgithubioPackage = {
     'cli-v1.18.7',
     'cli-v1.18.6',
     'cli-v1.18.5',
-    'lib-v2.0.0-pre.14',
-    'lib-v2.0.0-pre.13',
-    'lib-v2.0.0-pre.12',
-    'lib-v2.0.0-pre.11',
-    'lib-v2.0.0-pre.10',
-    'lib-v2.0.0-pre.9',
-    'lib-v2.0.0-pre.8',
   ] as const,
   aliases: [] as const,
 }
