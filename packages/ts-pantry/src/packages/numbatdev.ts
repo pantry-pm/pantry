@@ -3,7 +3,7 @@
  *
  * @domain `numbat.dev`
  * @programs `numbat`
- * @version `1.23.0` (17 versions available)
+ * @version `1.24.0` (23 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install numbat.dev`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "numbat"
  * console.log(pkg.description) // "A statically typed programming language for sci..."
  * console.log(pkg.programs)    // ["numbat"]
- * console.log(pkg.versions[0]) // "1.23.0" (latest)
+ * console.log(pkg.versions[0]) // "1.24.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/numbat-dev.md
@@ -60,6 +60,7 @@ export const numbatdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.24.0',
     '1.23.0',
     '1.22.0',
     '1.21.0',
