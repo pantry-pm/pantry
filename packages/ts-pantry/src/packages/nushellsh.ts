@@ -3,7 +3,7 @@
  *
  * @domain `nushell.sh`
  * @programs `nu`
- * @version `0.111.0` (56 versions available)
+ * @version `0.115.1` (64 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install nushell.sh`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "nu"
  * console.log(pkg.description) // "Modern shell for the GitHub era"
  * console.log(pkg.programs)    // ["nu"]
- * console.log(pkg.versions[0]) // "0.111.0" (latest)
+ * console.log(pkg.versions[0]) // "0.115.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/nushell-sh.md
@@ -67,6 +67,7 @@ export const nushellshPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.115.1',
     '0.115.0',
     '0.114.1',
     '0.114.0',

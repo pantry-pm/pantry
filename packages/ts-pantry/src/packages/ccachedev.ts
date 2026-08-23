@@ -3,7 +3,7 @@
  *
  * @domain `ccache.dev`
  * @programs `ccache`
- * @version `4.13.2` (17 versions available)
+ * @version `4.14` (59 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ccache.dev`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "ccache"
  * console.log(pkg.description) // "Object-file caching compiler wrapper"
  * console.log(pkg.programs)    // ["ccache"]
- * console.log(pkg.versions[0]) // "4.13.2" (latest)
+ * console.log(pkg.versions[0]) // "4.14" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/ccache-dev.md
@@ -78,6 +78,7 @@ export const ccachedevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.14',
     '4.13.6',
     '4.13.5',
     '4.13.4',
