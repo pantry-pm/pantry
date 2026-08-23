@@ -3,7 +3,7 @@
  *
  * @domain `rioterm.com`
  * @programs `rio`
- * @version `0.2.37` (22 versions available)
+ * @version `0.5.26` (96 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install rioterm.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "rio"
  * console.log(pkg.description) // "A hardware-accelerated GPU terminal emulator fo..."
  * console.log(pkg.programs)    // ["rio"]
- * console.log(pkg.versions[0]) // "0.2.37" (latest)
+ * console.log(pkg.versions[0]) // "0.5.26" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/rioterm-com.md
@@ -68,6 +68,7 @@ export const riotermcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.5.26',
     '0.5.25',
     '0.5.24',
     '0.5.23',
