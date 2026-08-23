@@ -3,7 +3,7 @@
  *
  * @domain `neovim.io`
  * @programs `nvim`
- * @version `0.11.6` (19 versions available)
+ * @version `0.12.5` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install neovim.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "nvim"
  * console.log(pkg.description) // "Ambitious Vim-fork focused on extensibility and..."
  * console.log(pkg.programs)    // ["nvim"]
- * console.log(pkg.versions[0]) // "0.11.6" (latest)
+ * console.log(pkg.versions[0]) // "0.12.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/neovim-io.md
@@ -75,6 +75,7 @@ export const neovimioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.12.5',
     '0.12.4',
     '0.12.3',
     '0.12.2',
