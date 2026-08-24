@@ -1,3 +1,48 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.41...v0.11.42)
+
+## ✨ Features
+
+- **packages**: add buddy ([375a6ef](https://github.com/pantry-pm/pantry/commit/375a6ef)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **registry**: stop scanner test teardown waiting on abandoned sockets ([91c6adf](https://github.com/pantry-pm/pantry/commit/91c6adf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **lint**: drop dead shouldRunStep and dedupe bin path normalisation ([b534f62](https://github.com/pantry-pm/pantry/commit/b534f62)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **installer**: install mirrored Zig dev builds from the registry ([03a7ed6](https://github.com/pantry-pm/pantry/commit/03a7ed6)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: decode percent-encoded binary paths before object lookup ([4096154](https://github.com/pantry-pm/pantry/commit/4096154)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- **installer**: skip the registry metadata fetch for stable Zig releases ([ba37e67](https://github.com/pantry-pm/pantry/commit/ba37e67)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💄 Styles
+
+- **zig**: satisfy zig fmt in oidc_test and services ([d67f610](https://github.com/pantry-pm/pantry/commit/d67f610)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.42 ([0f224d2](https://github.com/pantry-pm/pantry/commit/0f224d2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update package metadata ([763b4e1](https://github.com/pantry-pm/pantry/commit/763b4e1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update discord.com, ziglang.org ([b1288b3](https://github.com/pantry-pm/pantry/commit/b1288b3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dgraph.io, fly.io, railway.app ([9a0717a](https://github.com/pantry-pm/pantry/commit/9a0717a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pnpm.io to 11.24.0 ([86cf455](https://github.com/pantry-pm/pantry/commit/86cf455)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stripe.com to 1.50.5 ([f960a8e](https://github.com/pantry-pm/pantry/commit/f960a8e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pocketbase.io, zed.dev ([9c1aada](https://github.com/pantry-pm/pantry/commit/9c1aada)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai to 1.18.22 ([f89bb7e](https://github.com/pantry-pm/pantry/commit/f89bb7e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update planetscale.com to 0.325.0 ([8e74929](https://github.com/pantry-pm/pantry/commit/8e74929)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.43.2 ([f8e57ba](https://github.com/pantry-pm/pantry/commit/f8e57ba)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update maturin.rs, prefix.dev ([d4e7dcb](https://github.com/pantry-pm/pantry/commit/d4e7dcb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update rubocop.org to 1.90.0 ([6f8d0dd](https://github.com/pantry-pm/pantry/commit/6f8d0dd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update whatsapp.com to 2.26.34.12 ([7ebd87e](https://github.com/pantry-pm/pantry/commit/7ebd87e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update projen.io to 0.103.2 ([e2f2c90](https://github.com/pantry-pm/pantry/commit/e2f2c90)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update depot.dev, github.com/router-for-me/CLIProxyAPI, mise.jdx.dev ([5ab5611](https://github.com/pantry-pm/pantry/commit/5ab5611)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update watchexec.github.io to 2.7.0 ([19c7dd9](https://github.com/pantry-pm/pantry/commit/19c7dd9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com to 26.818.61809 ([9d72fa7](https://github.com/pantry-pm/pantry/commit/9d72fa7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.40...v0.11.41)
 
 ## 🐛 Bug Fixes
