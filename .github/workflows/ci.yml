@@ -29,21 +29,30 @@ jobs:
         uses: ./packages/action
 
       - name: Install Dependencies
+        id: install
         run: bun install
 
+      # These three check different things and do not depend on each other, so
+      # every one of them runs even when an earlier one fails. As plain
+      # sequential steps the first red step skipped the rest, which is why the
+      # Zig formatting below went unreported for as long as the TypeScript lint
+      # above it was failing.
       - name: Lint TypeScript/JavaScript
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run lint
 
       - name: Check package-manager and registry documentation contracts
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run docs:contracts:check
 
+      # Zig is a hard dependency of this repo, so a missing toolchain is a
+      # failure rather than a reason to quietly pass. The old `if command -v
+      # zig` guard turned "pantry could not install zig" into a silent skip.
       - name: Format Check Zig Code
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
-          if command -v zig &>/dev/null; then
-            find packages/zig/src -name "*.zig" -not -name "generated.zig" -type f -exec zig fmt --check {} +
-          else
-            echo "Zig not available — skipping format check"
-          fi
+          command -v zig >/dev/null || { echo "::error::zig not on PATH — cannot verify formatting"; exit 1; }
+          find packages/zig/src -name "*.zig" -not -name "generated.zig" -type f -exec zig fmt --check {} +
 
   typecheck:
     runs-on: ubuntu-latest
@@ -72,18 +81,28 @@ jobs:
         uses: ./packages/action
 
       - name: Install Dependencies
+        id: install
         run: bun install
 
       - name: Build TypeScript packages
+        id: build
         run: bun run build
 
       - name: Build pantry GitHub Action
+        id: build_action
         run: cd packages/action && bun run build
 
+      # Unit Test and Zig Tests cover disjoint code and must both report. Until
+      # now a failing `bun test` skipped the Zig suite outright — it had never
+      # run on main.
       - name: Unit Test
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.build_action.outcome == 'success' }}
         run: bun test
 
+      # Gated on `install` rather than on the TypeScript build on purpose: the
+      # Zig suite does not consume those artifacts.
       - name: Zig Tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           command -v zig >/dev/null
           cd packages/zig
