@@ -375,8 +375,12 @@ export async function installPackage(
     return { name: domain, version, installPath: pkgDir, binaries, globalLinks }
   }
 
-  const url = resolver.getDownloadUrl(version, platform)
-  const format = resolver.getArchiveFormat(platform)
+  // Prefer our own mirror when upstream is known to purge the artifact.
+  const mirror = domain === 'ziglang.org'
+    ? zigRegistryMirror(await registryMetadata(domain, { onRetry: options.onRetry }), version, platform)
+    : null
+  const url = mirror?.url ?? resolver.getDownloadUrl(version, platform)
+  const format = mirror?.format ?? resolver.getArchiveFormat(platform)
 
   if (!options.quiet) console.log(`  → ${domain}@${version} from ${new URL(url).hostname}`)
 
@@ -411,7 +415,7 @@ export async function installPackage(
 
     // Find the source directory (archives usually have a top-level folder)
     let sourceDir = extractDir
-    const prefix = resolver.getArchivePrefix?.(version, platform)
+    const prefix = mirror ? mirror.prefix : resolver.getArchivePrefix?.(version, platform)
     if (prefix) {
       const prefixPath = path.join(extractDir, prefix)
       if (fs.existsSync(prefixPath)) {
@@ -603,11 +607,11 @@ async function resolveZigShortDevVersion(shortVersion: string, platform: Platfor
   return upstream.startsWith(`${shortVersion}.`) ? upstream : null
 }
 
-interface RegistryVersionMetadata {
+export interface RegistryVersionMetadata {
   platforms?: Record<string, unknown>
 }
 
-interface RegistryMetadata {
+export interface RegistryMetadata {
   versions?: Record<string, RegistryVersionMetadata>
 }
 
@@ -623,10 +627,65 @@ export function registryVersionsForPlatform(metadata: RegistryMetadata | null, p
     .map(([version]) => version)
 }
 
-async function registryVersions(domain: string, platform: Platform, retryOptions: NetworkRetryOptions = {}): Promise<string[]> {
-  const metadata = await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`, 5, retryOptions)
+async function registryMetadata(domain: string, retryOptions: NetworkRetryOptions = {}): Promise<RegistryMetadata | null> {
+  return await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`, 5, retryOptions)
     .catch(() => null) as RegistryMetadata | null
-  return registryVersionsForPlatform(metadata, platform)
+}
+
+async function registryVersions(domain: string, platform: Platform, retryOptions: NetworkRetryOptions = {}): Promise<string[]> {
+  return registryVersionsForPlatform(await registryMetadata(domain, retryOptions), platform)
+}
+
+/** Where an archive is fetched from, and how to unwrap it once downloaded. */
+export interface DownloadSource {
+  url: string
+  format: 'tar.xz' | 'tar.gz' | 'zip'
+  /** Top-level directory inside the archive; '' when it extracts to the root. */
+  prefix: string
+}
+
+/**
+ * The registry mirror to install `ziglang.org@version` from, or null to use
+ * ziglang.org itself.
+ *
+ * ziglang.org deletes a `-dev` archive once master moves past it, which is
+ * precisely why version resolution picks the newest dev build *our registry
+ * mirrors*. Resolving against the mirror and then downloading from upstream
+ * left every mirrored-but-purged build resolving fine and 404ing on download —
+ * e.g. linux-arm64, whose newest mirrored dev build is long gone upstream.
+ *
+ * Tagged releases deliberately stay on ziglang.org: upstream keeps those
+ * indefinitely, so serving them ourselves would spend our own egress for
+ * nothing.
+ */
+export function zigRegistryMirror(
+  metadata: RegistryMetadata | null,
+  version: string,
+  platform: Platform,
+): DownloadSource | null {
+  if (!version.includes('-dev.') || !metadata) return null
+  const platformKey = registryPlatformKey(platform)
+  // The registry indexes some dev builds under `+<hash>` and others under
+  // `_<hash>`, and only one spelling may carry this platform's artifact.
+  const spellings = [
+    version.replace(/(-dev\.\d+)_([0-9A-Za-z-]+)$/, '$1+$2'),
+    version.replace(/(-dev\.\d+)\+([0-9A-Za-z-]+)$/, '$1_$2'),
+  ]
+  const mirrored = spellings.find(candidate =>
+    Object.hasOwn(metadata.versions?.[candidate]?.platforms || {}, platformKey),
+  )
+  if (!mirrored) return null
+
+  // `+` is a legal path character, so leave it unescaped: that spelling also
+  // resolves on registries deployed before the proxy learned to percent-decode.
+  const encoded = encodeURIComponent(mirrored).replace(/%2B/gi, '+')
+  return {
+    url: `${PANTRY_REGISTRY}/binaries/ziglang.org/${encoded}/${platformKey}/ziglang.org-${encoded}.tar.gz`,
+    format: 'tar.gz',
+    // Registry tarballs extract straight to the package root (`bin/`, `lib/`),
+    // with no `zig-<arch>-<os>-<version>/` wrapper to strip.
+    prefix: '',
+  }
 }
 
 /** Does `version` satisfy `op` + `target`? Shared by the bundled and live scans. */
