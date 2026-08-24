@@ -375,8 +375,10 @@ export async function installPackage(
     return { name: domain, version, installPath: pkgDir, binaries, globalLinks }
   }
 
-  // Prefer our own mirror when upstream is known to purge the artifact.
-  const mirror = domain === 'ziglang.org'
+  // Prefer our own mirror when upstream is known to purge the artifact. The
+  // `-dev.` test is repeated here so a stable release skips the metadata fetch
+  // entirely rather than paying a round-trip to be told it is not mirrored.
+  const mirror = domain === 'ziglang.org' && version.includes('-dev.')
     ? zigRegistryMirror(await registryMetadata(domain, { onRetry: options.onRetry }), version, platform)
     : null
   const url = mirror?.url ?? resolver.getDownloadUrl(version, platform)
