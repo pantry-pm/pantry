@@ -1,43 +1,39 @@
 import type { Recipe } from '../../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
-  domain: "github.com/krzkaczor/ny",
-  name: "ny",
+  domain: 'github.com/krzkaczor/ny',
+  name: 'ny',
   programs: [
-    "ny",
+    'ny',
   ],
   buildDependencies: {
-    'rust-lang.org/rustup': "*",
+    'rust-lang.org/rustup': '*',
   },
   distributable: {
-    url: "https://github.com/krzkaczor/ny/archive/refs/tags/v{{ version }}.tar.gz",
+    url: 'https://github.com/krzkaczor/ny/archive/refs/tags/v{{ version }}.tar.gz',
     stripComponents: 1,
   },
   build: {
     script: [
       {
-        run: "ln -sf {{deps.rust-lang.org/rustup.prefix}}/bin/rustup .\nrustup default nightly\nln -sf $HOME/.rustup/toolchains/*/bin/* .",
-        'working-directory': "$HOME/.cargo/bin",
+        run: 'ln -sf {{deps.rust-lang.org/rustup.prefix}}/bin/rustup .\nrustup default nightly\nln -sf $HOME/.rustup/toolchains/*/bin/* .',
+        'working-directory': '$HOME/.cargo/bin',
       },
-      "cargo install --locked --path . --root {{prefix}}",
+      'cargo install --locked --path . --root {{prefix}}',
     ],
     env: {
-      PATH: "$HOME/.cargo/bin:$PATH",
-      // ny needs nightly-only features (feature(proc_macro_diagnostic)) pulled in
-      // via mockall_derive. The buildkit may prepend a stable cargo to PATH ahead
-      // of the nightly symlinks, so the compile lands on stable and fails E0554.
-      // RUSTC_BOOTSTRAP=1 lets any rustc accept the unstable #![feature] gates.
-      RUSTC_BOOTSTRAP: "1",
+      PATH: '$HOME/.cargo/bin:$PATH',
+      RUSTC_BOOTSTRAP: '1',
     },
   },
   test: {
     script: [
-      "test \"$(ny --version)\" = \"ny {{ version }}\"",
-      "npm init -y",
-      "npm i is-even",
-      "ny add tldr",
-      "ny install",
-      "ny tldr ls",
+      'test "$(ny --version)" = "ny {{ version }}"',
+      'npm init -y',
+      'npm i is-even',
+      'ny add tldr',
+      'ny install',
+      'ny tldr ls',
     ],
   },
 }

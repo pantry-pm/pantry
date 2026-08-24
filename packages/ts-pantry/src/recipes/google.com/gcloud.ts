@@ -1,52 +1,54 @@
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
-  domain: "google.com/gcloud",
-  name: "gcloud",
+  domain: 'google.com/gcloud',
+  name: 'gcloud',
   programs: [
-    "gcloud",
-    "gsutil",
-    "bq",
+    'gcloud',
+    'gsutil',
+    'bq',
   ],
   dependencies: {
-    'python.org': "^3.11",
+    'python.org': '^3.11',
   },
   buildDependencies: {
-    'curl.se': "*",
+    'curl.se': '*',
   },
   distributable: undefined,
   build: {
     script: [
-      "mkdir -p {{prefix}}/libexec",
-      "curl -L $DISTRIBUTABLE_URL | tar -xz --strip-components=1",
-      "./install.sh $ARGS",
-      "cp -r .install bin lib platform {{prefix}}/libexec/",
+      'mkdir -p {{prefix}}/libexec',
+      'curl -L $DISTRIBUTABLE_URL | tar -xz --strip-components=1',
+      './install.sh $ARGS',
+      'cp -r .install bin lib platform {{prefix}}/libexec/',
       {
-        run: "ln -s ../libexec/bin/gcloud gcloud\nln -s ../libexec/bin/gsutil gsutil\nln -s ../libexec/bin/bq bq\nln -s ../libexec/bin/anthoscli anthoscli\nln -s ../libexec/bin/docker-credential-gcloud docker-credential-gcloud\n",
-        'working-directory': "${{prefix}}/bin",
+        run: 'ln -s ../libexec/bin/gcloud gcloud\nln -s ../libexec/bin/gsutil gsutil\nln -s ../libexec/bin/bq bq\nln -s ../libexec/bin/anthoscli anthoscli\nln -s ../libexec/bin/docker-credential-gcloud docker-credential-gcloud\n',
+        'working-directory': '${{prefix}}/bin',
       },
     ],
     env: {
       ARGS: [
-        "--usage-reporting false",
-        "--command-completion false",
-        "--path-update false",
-        "--quiet",
-        "--install-python false",
+        '--usage-reporting false',
+        '--command-completion false',
+        '--path-update false',
+        '--quiet',
+        '--install-python false',
       ],
       'linux/aarch64': {
-        DISTRIBUTABLE_URL: "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-linux-arm.tar.gz",
+        DISTRIBUTABLE_URL: 'https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-linux-arm.tar.gz',
       },
       'linux/x86-64': {
-        DISTRIBUTABLE_URL: "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-linux-x86_64.tar.gz",
+        DISTRIBUTABLE_URL: 'https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-linux-x86_64.tar.gz',
       },
       'darwin/aarch64': {
-        DISTRIBUTABLE_URL: "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-darwin-arm.tar.gz",
+        DISTRIBUTABLE_URL: 'https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-darwin-arm.tar.gz',
       },
       'darwin/x86-64': {
-        DISTRIBUTABLE_URL: "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-darwin-x86_64.tar.gz",
+        DISTRIBUTABLE_URL: 'https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-{{version}}-darwin-x86_64.tar.gz',
       },
     },
-    skip: ['verify-foreign-artifact'],
+    skip: [
+      'verify-foreign-artifact',
+    ],
   },
 }

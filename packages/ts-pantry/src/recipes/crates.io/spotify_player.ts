@@ -1,17 +1,17 @@
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
-  domain: "crates.io/spotify_player",
-  name: "spotify_player",
+  domain: 'crates.io/spotify_player',
+  name: 'spotify_player',
   programs: [
-    "spotify_player",
+    'spotify_player',
   ],
   dependencies: {
-    'openssl.org': "^1.1",
-    'github.com/libsixel/libsixel': "^1",
+    'openssl.org': '^1.1',
+    'github.com/libsixel/libsixel': '^1',
     linux: {
-      'alsa-project.org/alsa-lib': "^1",
-      'freedesktop.org/dbus': "^1",
+      'alsa-project.org/alsa-lib': '^1',
+      'freedesktop.org/dbus': '^1',
     },
   },
   buildDependencies: {
@@ -32,7 +32,9 @@ export const recipe: Recipe = {
       'tar xzf spotify_player.tar.gz',
       'install -Dm755 spotify_player {{prefix}}/bin/spotify_player',
     ],
-    skip: ['fix-machos'],
+    skip: [
+      'fix-machos',
+    ],
   },
   test: {
     script: [

@@ -24,7 +24,7 @@ export const recipe: Recipe = {
     script: [
       'mkdir -p {{prefix}}',
       {
-        run: 'sed -i \'1,10s/"version": ".*"/"version": "{{version}}"/\' package.json\n',
+        run: "sed -i '1,10s/\"version\": \".*\"/\"version\": \"{{version}}\"/' package.json\n",
         'working-directory': 'packages/eas-cli',
       },
       'yarn install',

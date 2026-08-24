@@ -4,8 +4,9 @@ export const recipe: Recipe = {
   propsDir: '../props/gnupg.org',
   domain: 'gnupg.org/v2.5',
   name: 'v2.5',
-  // pkgx: "currently not ready for darwin"; build/test only on linux
-  platforms: ['linux'],
+  platforms: [
+    'linux',
+  ],
   programs: [],
   dependencies: {
     'zlib.net': '^1.1',
@@ -39,7 +40,7 @@ export const recipe: Recipe = {
   build: {
     script: [
       {
-        run: 'sed -i -e \'/#include "exechelp.h"/a\\\n\\\n#if defined (__APPLE__)\\\nextern char** environ;\\\n#endif\' \\\nexechelp-posix.c\n',
+        run: "sed -i -e '/#include \"exechelp.h\"/a\\\n\\\n#if defined (__APPLE__)\\\nextern char** environ;\\\n#endif' \\\nexechelp-posix.c\n",
         'working-directory': 'common',
       },
       {

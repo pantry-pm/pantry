@@ -1,15 +1,21 @@
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
-  domain: "crates.io/rtx-cli",
-  name: "rtx-cli",
-  programs: ['mise', 'rtx'],
+  domain: 'crates.io/rtx-cli',
+  name: 'rtx-cli',
+  programs: [
+    'mise',
+    'rtx',
+  ],
   buildDependencies: {
     'curl.se': '*',
   },
   distributable: null,
   build: {
-    skip: ['fix-machos', 'fix-patchelf'],
+    skip: [
+      'fix-machos',
+      'fix-patchelf',
+    ],
     script: [
       'VERSION={{version}}',
       'case {{hw.platform}}+{{hw.arch}} in',

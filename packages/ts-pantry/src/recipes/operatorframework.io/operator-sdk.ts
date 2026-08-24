@@ -25,7 +25,7 @@ export const recipe: Recipe = {
   },
   test: {
     script: [
-      'operator-sdk version | grep \'operator-sdk version: "v{{version}}"\'',
+      "operator-sdk version | grep 'operator-sdk version: \"v{{version}}\"'",
       'mkdir -p example-operator',
       'cd example-operator',
       'operator-sdk init --project-name example-operator --domain example.com --repo github.com/example/example-operator',

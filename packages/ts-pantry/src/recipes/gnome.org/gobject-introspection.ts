@@ -28,8 +28,6 @@ export const recipe: Recipe = {
   build: {
     'working-directory': 'build',
     script: [
-      // The `tests` meson option was only introduced in 1.84.0; passing
-      // -Dtests=false to 1.82.0 errors with `Unknown option: "tests"`.
       {
         run: 'meson .. --prefix={{prefix}} --libdir={{prefix}}/lib --buildtype=release -Dgtk_doc=false -Dtests=false -Dpython=python3',
         if: '>=1.84.0',
@@ -41,7 +39,7 @@ export const recipe: Recipe = {
       'ninja -v',
       'ninja install',
       {
-        run: 'sed -i \'1s|^#!.*python.*|#!/usr/bin/env python3|\' g-ir-annotation-tool g-ir-scanner',
+        run: "sed -i '1s|^#!.*python.*|#!/usr/bin/env python3|' g-ir-annotation-tool g-ir-scanner",
         'working-directory': '${{prefix}}/bin',
       },
     ],
@@ -54,7 +52,7 @@ export const recipe: Recipe = {
       'git clone $FIXTURE test',
       'cd test',
       'git apply ../test_make.diff',
-      'sed -i \'s|(CC)|(CC) -Wl,-rpath,{{pkgx.prefix}}|\' Makefile',
+      "sed -i 's|(CC)|(CC) -Wl,-rpath,{{pkgx.prefix}}|' Makefile",
       'make',
       'test -f Tut-0.1.typelib',
     ],
