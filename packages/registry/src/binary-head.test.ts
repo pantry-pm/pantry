@@ -19,6 +19,8 @@ class MockBinaryStorage implements BinaryStorage {
   }
 }
 
+const PLUS_VERSION = '0.17.0-dev.1859+dcceb318e'
+
 describe('binary proxy HEAD', () => {
   let baseUrl: string
   let server: ReturnType<typeof createServer>
@@ -28,6 +30,18 @@ describe('binary proxy HEAD', () => {
     baseUrl = `http://localhost:${port}`
     const binaries = new MockBinaryStorage()
     binaries.put('binaries/curl.se/metadata.json', JSON.stringify({ name: 'curl.se', versions: {} }))
+    // A Zig-style dev build: the object key holds a literal '+'.
+    const tarball = `binaries/ziglang.org/${PLUS_VERSION}/linux-arm64/ziglang.org-${PLUS_VERSION}.tar.gz`
+    binaries.put('binaries/ziglang.org/metadata.json', JSON.stringify({
+      name: 'ziglang.org',
+      versions: {
+        [PLUS_VERSION]: {
+          platforms: { 'linux-arm64': { tarball, sha256: 'a'.repeat(64), size: 4 } },
+        },
+      },
+    }))
+    binaries.put(tarball, 'zig!')
+    binaries.put(`${tarball}.sha256`, 'a'.repeat(64))
     server = createServer(createLocalRegistry(baseUrl), port, undefined, undefined, binaries)
     server.start()
   })
@@ -60,5 +74,34 @@ describe('binary proxy HEAD', () => {
   it('advertises HEAD in the CORS method list', async () => {
     const res = await fetch(`${baseUrl}/binaries/curl.se/metadata.json`)
     expect(res.headers.get('access-control-allow-methods')).toContain('HEAD')
+  })
+
+  // A correct HTTP client escapes '+' in a path to '%2B'. Serving the encoded
+  // pathname straight to object storage looked for a key spelled '%2B' and
+  // 404'd, so `pantry install ziglang.org@0.17.0-dev` failed for every client
+  // that encoded properly while a client sending a raw '+' worked.
+  it('resolves a percent-encoded + to the same object as a literal +', async () => {
+    const key = (v: string): string => `/binaries/ziglang.org/${v}/linux-arm64/ziglang.org-${v}.tar.gz`
+
+    const literal = await fetch(`${baseUrl}${key(PLUS_VERSION)}`)
+    const encoded = await fetch(`${baseUrl}${key(PLUS_VERSION.replace('+', '%2B'))}`)
+
+    expect(literal.status).toBe(200)
+    expect(encoded.status).toBe(200)
+    expect(await encoded.text()).toBe(await literal.text())
+  })
+
+  it('resolves a percent-encoded + for the checksum sidecar too', async () => {
+    const encodedVersion = PLUS_VERSION.replace('+', '%2B')
+    const res = await fetch(
+      `${baseUrl}/binaries/ziglang.org/${encodedVersion}/linux-arm64/ziglang.org-${encodedVersion}.tar.gz.sha256`,
+    )
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('a'.repeat(64))
+  })
+
+  it('rejects a malformed escape rather than throwing', async () => {
+    const res = await fetch(`${baseUrl}/binaries/curl.se/%zz/metadata.json`)
+    expect(res.status).toBe(400)
   })
 })

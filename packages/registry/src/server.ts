@@ -5259,17 +5259,31 @@ async function handleBinaryProxy(
   const bodyless = req.method === 'HEAD'
 
   // Strip leading slash to get S3 key: /binaries/curl.se/metadata.json -> binaries/curl.se/metadata.json
-  const s3Key = path.slice(1)
+  //
+  // The pathname is still percent-encoded here, but object keys hold the raw
+  // characters — a Zig dev build really is stored under `0.17.0-dev.1859+dcceb318e`.
+  // Using the encoded pathname made a spec-compliant client (which escapes `+`
+  // to `%2B`) miss every such key and 404, while a client that left `+` literal
+  // succeeded. Decode first so both spellings resolve to the same object.
+  let s3Key: string
+  try {
+    s3Key = decodeURIComponent(path.slice(1))
+  }
+  catch {
+    // Malformed escapes (`%zz`, a trailing `%`) throw rather than 500 the request.
+    return Response.json({ error: 'Invalid path' }, { status: 400, headers: corsHeaders })
+  }
 
-  // Reject path traversal attempts
+  // Reject path traversal attempts. This runs on the DECODED key on purpose:
+  // checking the encoded form would let `%2e%2e` walk out of the prefix.
   if (s3Key.includes('..') || /[\x00-\x1f]/.test(s3Key)) {
     return Response.json({ error: 'Invalid path' }, { status: 400, headers: corsHeaders })
   }
 
   // Determine content type and cache policy
-  const isMetadata = path.endsWith('/metadata.json')
-  const isTarball = path.endsWith('.tar.gz')
-  const isChecksum = path.endsWith('.sha256')
+  const isMetadata = s3Key.endsWith('/metadata.json')
+  const isTarball = s3Key.endsWith('.tar.gz')
+  const isChecksum = s3Key.endsWith('.sha256')
   if (!isMetadata && !isTarball && !isChecksum)
     return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
 
