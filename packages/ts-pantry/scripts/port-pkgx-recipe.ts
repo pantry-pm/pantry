@@ -19,15 +19,35 @@ import { dirname, join } from 'node:path'
 const RAW = 'https://raw.githubusercontent.com/pkgxdev/pantry/main/projects'
 const RECIPES_DIR = join(import.meta.dir, '..', 'src', 'recipes')
 
+/**
+ * A string literal in the repo's quote style.
+ *
+ * This used to emit `JSON.stringify` output and assume `pickier --fix` would
+ * normalise the quotes later. Nothing ever ran that fix, so the generated
+ * recipes carried 134 of the repo's 135 quote warnings — enough noise to bury
+ * the two genuine lint errors that were failing CI.
+ */
+function tsString(value: string): string {
+  // JSON.stringify does the hard escaping (backslashes, control chars, newlines).
+  const json = JSON.stringify(value)
+  // Keep double quotes when the value itself contains a single quote: escaping it
+  // reads worse, and it is what avoid-escape quote rules prefer regardless.
+  if (value.includes('\''))
+    return json
+  return `'${json.slice(1, -1).replace(/\\"/g, '"')}'`
+}
+
 // ── serialize a JS value to readable TS source ─────────────────────────
 function ser(v: any, indent = 2): string {
   const pad = ' '.repeat(indent)
   const pad2 = ' '.repeat(indent + 2)
   if (v === null) return 'null'
   if (typeof v === 'number' || typeof v === 'boolean') return String(v)
-  // JSON.stringify gives robust escaping (quotes, backslashes, newlines) in valid
-  // double-quoted TS — pickier --fix later normalizes quote style.
-  if (typeof v === 'string') return JSON.stringify(v)
+  if (typeof v === 'string') return tsString(v)
+  // Must precede the object branch: a RegExp has no own enumerable keys, so the
+  // generic path below silently serialises /^v(.+)$/ as `{}` and the recipe
+  // loses its version pattern. 237 recipes carry one.
+  if (v instanceof RegExp) return String(v)
   if (Array.isArray(v)) {
     if (v.length === 0) return '[]'
     const items = v.map(x => `${pad2}${ser(x, indent + 2)}`).join(',\n')
