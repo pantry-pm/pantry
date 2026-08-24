@@ -5163,6 +5163,19 @@ function parseBinaryKey(key: string): { domain: string, version: string, platfor
   return { domain, version, platform }
 }
 
+/**
+ * Every spelling a version may be indexed under, original first.
+ *
+ * Build metadata is written `+<hash>` upstream and `_<hash>` wherever a `+` is
+ * inconvenient, and the registry accumulated both for the same build — 52 of
+ * ziglang.org's 74 versions carry a twin. Anything that compares a version out
+ * of a request path against a version out of the manifest has to treat the two
+ * as the same build, or the comparison silently answers about the wrong one.
+ */
+function binaryVersionSpellings(version: string): string[] {
+  return [...new Set([version, version.replace(/_/g, '+'), version.replace(/\+/g, '_')])]
+}
+
 function storedBinaryObjectKey(value: string): string {
   try {
     return decodeURIComponent(new URL(value).pathname.replace(/^\/+/, ''))
@@ -5204,8 +5217,12 @@ async function findActiveBinaryRecord(
   catch {
     return null
   }
+  // Match the quarantine on any spelling of the version. Comparing the request's
+  // spelling to the manifest's verbatim let a build quarantined as `1282+hash`
+  // be served to a client that asked for `1282_hash`.
+  const spellings = binaryVersionSpellings(parsed.version)
   if (metadata?.malwareQuarantines?.some((item: any) =>
-    item?.version === parsed.version
+    spellings.includes(item?.version)
     && Array.isArray(item.platforms)
     && item.platforms.includes(parsed.platform),
   ))

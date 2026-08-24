@@ -20,6 +20,8 @@ class MockBinaryStorage implements BinaryStorage {
 }
 
 const PLUS_VERSION = '0.17.0-dev.1859+dcceb318e'
+const QUARANTINED_UNDERSCORE = '0.17.0-dev.1282_c0f9b51d8'
+const QUARANTINED_PLUS = '0.17.0-dev.1282+c0f9b51d8'
 
 describe('binary proxy HEAD', () => {
   let baseUrl: string
@@ -42,6 +44,25 @@ describe('binary proxy HEAD', () => {
     }))
     binaries.put(tarball, 'zig!')
     binaries.put(`${tarball}.sha256`, 'a'.repeat(64))
+    // Indexed under `_`, quarantined under `+` — the same build either way.
+    const quarantined = `binaries/quarantined.test/${QUARANTINED_UNDERSCORE}/linux-arm64/quarantined.test-${QUARANTINED_UNDERSCORE}.tar.gz`
+    binaries.put('binaries/quarantined.test/metadata.json', JSON.stringify({
+      name: 'quarantined.test',
+      versions: {
+        [QUARANTINED_UNDERSCORE]: {
+          platforms: { 'linux-arm64': { tarball: quarantined, sha256: 'a'.repeat(64), size: 4 } },
+        },
+      },
+      malwareQuarantines: [{
+        version: QUARANTINED_PLUS,
+        platforms: ['linux-arm64'],
+        artifactSha256: 'b'.repeat(64),
+        engine: 'clamav',
+        scannedAt: '2026-08-24T00:00:00.000Z',
+        quarantinedAt: '2026-08-24T00:00:00.000Z',
+      }],
+    }))
+    binaries.put(quarantined, 'evil')
     server = createServer(createLocalRegistry(baseUrl), port, undefined, undefined, binaries)
     server.start()
   })
@@ -98,6 +119,16 @@ describe('binary proxy HEAD', () => {
     )
     expect(res.status).toBe(200)
     expect(await res.text()).toContain('a'.repeat(64))
+  })
+
+  // A build indexed under one build-metadata spelling and quarantined under the
+  // other was served anyway: the gate compared the request's spelling to the
+  // manifest's verbatim, so the quarantine simply did not match.
+  it('keeps a build quarantined under + blocked when it is requested as _', async () => {
+    const res = await fetch(
+      `${baseUrl}/binaries/quarantined.test/${QUARANTINED_UNDERSCORE}/linux-arm64/quarantined.test-${QUARANTINED_UNDERSCORE}.tar.gz`,
+    )
+    expect(res.status).not.toBe(200)
   })
 
   it('rejects a malformed escape rather than throwing', async () => {
