@@ -717,3 +717,33 @@ test "Decode Token Unsafe - Invalid Format" {
     try testing.expectError(error.InvalidToken, oidc.decodeTokenUnsafe(allocator, "only-one-part"));
     try testing.expectError(error.InvalidToken, oidc.decodeTokenUnsafe(allocator, "two.parts"));
 }
+
+// ============================================================================
+// OIDC publish failure classification
+// ============================================================================
+
+const classifyOidcFailure = lib.commands.package_commands.classifyOidcFailure;
+const OidcFailureKind = lib.commands.package_commands.OidcFailureKind;
+
+test "only registry rejections are definitive OIDC publish failures" {
+    // These three are the registry refusing the publish outright: a name too
+    // similar to an existing one, a version already taken, a manifest that
+    // failed validation. Nothing was published and no other credential helps.
+    try testing.expectEqual(OidcFailureKind.definitive, classifyOidcFailure(403));
+    try testing.expectEqual(OidcFailureKind.definitive, classifyOidcFailure(409));
+    try testing.expectEqual(OidcFailureKind.definitive, classifyOidcFailure(422));
+}
+
+test "auth, server and transport failures leave the publish outcome unknown" {
+    // npm commits a publish asynchronously, so a request that errored on our
+    // side says nothing about whether the version exists. The stacksjs/stacks
+    // 0.72.57 release is the case in point: two of 82 packages reported a
+    // failure here and both were on npm afterwards, carrying provenance that
+    // named that very run. Calling any of these "not published" is what made a
+    // successful release report itself red — and sent its author looking for a
+    // trusted-publishing misconfiguration that did not exist.
+    for ([_]u16{ 0, 401, 404, 408, 429, 500, 502, 503, 504 }) |status| {
+        try testing.expectEqual(OidcFailureKind.inconclusive, classifyOidcFailure(status));
+    }
+}
+

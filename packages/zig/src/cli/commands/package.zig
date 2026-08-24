@@ -1234,13 +1234,7 @@ fn publishSingleToNpm(
                 return CommandResult.err(allocator, err_msg);
             }
 
-            // Registry rejections that a different auth method won't fix are definitive:
-            // 403 "Package name too similar", 409 version conflict, 422 validation.
-            // A 404 during OIDC is NOT definitive — it means trusted publishing is
-            // not configured for this package (the OIDC identity isn't a registered
-            // publisher), so a token WITH publish access can still succeed. Fall
-            // through to token auth for 404 instead of hard-failing.
-            if (result.status_code == 403 or result.status_code == 409 or result.status_code == 422) {
+            if (classifyOidcFailure(result.status_code) == .definitive) {
                 const err_msg = result.error_message orelse "Publish rejected by registry";
                 style.print("\n{d} {s}\n", .{
                     result.status_code,
@@ -1249,10 +1243,51 @@ fn publishSingleToNpm(
                 return CommandResult.err(allocator, try allocator.dupe(u8, err_msg));
             }
 
-            // Auth issues (401, token exchange failures, etc.) — fall through to token authentication
-            style.print("OIDC publish failed. To use OIDC, configure trusted publishing for your package:\n", .{});
-            style.print("  https://www.npmjs.com/package/{s}/access\n\n", .{metadata.name});
-            style.print("Falling back to token authentication...\n", .{});
+            // A failed publish is not the same as an unpublished package.
+            //
+            // npm accepts the upload, then commits the version asynchronously.
+            // Under a large monorepo release the commit can land a minute or
+            // more after the request we were reading has already errored, so a
+            // response we could not read says nothing about whether the version
+            // exists. It did in the stacksjs/stacks 0.72.57 release: two of 82
+            // packages reported "OIDC publish failed", the run exited 1 — and
+            // both versions were on npm, carrying Sigstore provenance naming
+            // that very run as the builder. OIDC had worked; only our reading
+            // of it had not.
+            //
+            // So ask the registry before believing the error. Only on this
+            // path: a definitive rejection above never published anything, and
+            // the success path never gets here.
+            if (confirmVersionLanded(allocator, registry_url, metadata.name, metadata.version)) {
+                style.print(
+                    "\n{s}✓{s} {s}@{s} is on the registry — the publish landed, the response did not\n",
+                    .{ style.green, style.reset, metadata.name, metadata.version },
+                );
+                if (!options.ignore_scripts) {
+                    if (scripts_obj) |scripts| {
+                        _ = lib.lifecycle.runPostPublishScripts(allocator, scripts, package_dir);
+                    }
+                }
+                if (options.github_release) {
+                    createGitHubRelease(allocator, options);
+                }
+                return .{ .exit_code = 0 };
+            }
+
+            // Genuinely not published. Say what actually went wrong rather than
+            // asserting a cause: this branch takes every non-definitive status,
+            // and blaming trusted publishing for a 500 or a dropped connection
+            // sends people to a settings page that was never the problem.
+            if (result.error_message) |msg| {
+                style.print("\nOIDC publish failed ({d}): {s}\n", .{ result.status_code, msg });
+            } else {
+                style.print("\nOIDC publish failed ({d}).\n", .{result.status_code});
+            }
+            if (result.status_code == 401 or result.status_code == 404) {
+                style.print("If this package has no trusted publisher, configure one:\n", .{});
+                style.print("  https://www.npmjs.com/package/{s}/access\n", .{metadata.name});
+            }
+            style.print("\nFalling back to token authentication...\n", .{});
         }
     }
 
@@ -1600,6 +1635,96 @@ const OIDCPublishResult = struct {
     is_version_conflict: bool = false,
     status_code: u16 = 0,
 };
+
+/// What an OIDC publish failure tells us about the package's fate.
+pub const OidcFailureKind = enum {
+    /// The registry looked at the request and said no. Nothing was published,
+    /// and no other credential would change that.
+    definitive,
+    /// We do not know. The status says the request did not complete cleanly,
+    /// which is not the same as the version not existing — npm commits a
+    /// publish asynchronously, so an upload it accepted can land after the
+    /// connection carrying our answer has already broken.
+    inconclusive,
+};
+
+/// Classify an OIDC publish failure by status.
+///
+/// Only the three the registry uses to REJECT are definitive. Everything else —
+/// 401, 5xx, a timeout or dropped connection reported as 0 — leaves the outcome
+/// genuinely unknown, and the caller must ask the registry rather than assume.
+///
+/// 404 is the subtle one and belongs on the inconclusive side twice over: from
+/// the OIDC exchange it means this package has no trusted publisher, so a token
+/// may still work; and npm also answers 404 for a package a credential cannot
+/// see, which says nothing about whether the version exists.
+pub fn classifyOidcFailure(status_code: u16) OidcFailureKind {
+    return switch (status_code) {
+        403, 409, 422 => .definitive,
+        else => .inconclusive,
+    };
+}
+
+/// Whether `name@version` is on the registry, giving npm time to get there.
+///
+/// npm commits a publish asynchronously: the version can appear well after the
+/// request that uploaded it has returned, or failed to return. A single GET
+/// immediately after a failed publish therefore answers "no" to a question that
+/// becomes "yes" a minute later — which is the whole reason this exists, so it
+/// polls rather than asks once.
+///
+/// The budget is generous because of what it buys. Waiting two minutes on the
+/// failure path of one package costs a slow release; getting the answer wrong
+/// costs a red release for packages that shipped, and sends whoever reads it
+/// looking for a misconfiguration that is not there.
+///
+/// Errors are "not yet", never "no": an unreachable registry is exactly when we
+/// must not claim a package is missing. A genuine failure simply exhausts the
+/// budget and falls through to the token path, which is where it was headed
+/// anyway.
+/// How many times in a row the confirmation below has come back empty.
+///
+/// The patient wait is worth it for a flake or two in a large release. It is
+/// not worth it when the registry is genuinely refusing us: a release where
+/// every package fails would spend the full budget on each one and blow the
+/// job's timeout long before it finished reporting. After a few packages tell
+/// the same story, take the answer at face value and only glance.
+var consecutive_unconfirmed: u8 = 0;
+
+fn confirmVersionLanded(
+    allocator: std.mem.Allocator,
+    registry_url: []const u8,
+    package_name: []const u8,
+    version: []const u8,
+) bool {
+    const registry = @import("../../auth/registry.zig");
+    const patient = [_]u64{ 2_000, 5_000, 10_000, 15_000, 30_000, 30_000, 30_000 };
+    const brief = [_]u64{2_000};
+    const delays_ms: []const u64 = if (consecutive_unconfirmed >= 3) &brief else &patient;
+
+    var client = registry.RegistryClient.init(allocator, registry_url) catch return false;
+    defer client.deinit();
+
+    style.print(
+        "  {s}?{s} publish reported an error — checking whether {s}@{s} landed anyway...\n",
+        .{ style.dim, style.reset, package_name, version },
+    );
+
+    for (delays_ms) |delay_ms| {
+        io_helper.sleepMs(delay_ms);
+        if (client.versionExists(package_name, version)) |exists| {
+            if (exists) {
+                consecutive_unconfirmed = 0;
+                return true;
+            }
+        } else |_| {
+            // Registry unreachable or an unexpected status — keep waiting.
+        }
+    }
+
+    consecutive_unconfirmed +|= 1;
+    return false;
+}
 
 /// Attempt to publish using OIDC authentication with Sigstore provenance
 fn attemptOIDCPublish(
