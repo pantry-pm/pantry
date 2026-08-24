@@ -1,3 +1,33 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.39...v0.11.40)
+
+## 🐛 Bug Fixes
+
+- **publish**: ask the registry before calling a publish failed ([a76c514](https://github.com/pantry-pm/pantry/commit/a76c514)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.40 ([c5ba205](https://github.com/pantry-pm/pantry/commit/c5ba205)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/chainguard-dev/apko, moonrepo.dev/moon, openai.com/codex ([1583355](https://github.com/pantry-pm/pantry/commit/1583355)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update rioterm.com to 0.5.26 ([777b2c5](https://github.com/pantry-pm/pantry/commit/777b2c5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stats.app to 3.0.13 ([be30e8d](https://github.com/pantry-pm/pantry/commit/be30e8d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io to 5.2.7 ([2a3d803](https://github.com/pantry-pm/pantry/commit/2a3d803)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update numbat.dev to 1.24.0 ([0aa6f7c](https://github.com/pantry-pm/pantry/commit/0aa6f7c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, neovim.io ([9fafc06](https://github.com/pantry-pm/pantry/commit/9fafc06)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([99a8112](https://github.com/pantry-pm/pantry/commit/99a8112)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mise.jdx.dev to 2026.8.11 ([cbb4a6d](https://github.com/pantry-pm/pantry/commit/cbb4a6d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dozzle.dev to 10.7.4 ([409010b](https://github.com/pantry-pm/pantry/commit/409010b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pnpm.io to 11.23.0 ([f691007](https://github.com/pantry-pm/pantry/commit/f691007)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stats.app to 3.0.12 ([5b1497b](https://github.com/pantry-pm/pantry/commit/5b1497b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ccache.dev, nushell.sh ([984f4c7](https://github.com/pantry-pm/pantry/commit/984f4c7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pocketbase.io to 0.40.0 ([01f4af9](https://github.com/pantry-pm/pantry/commit/01f4af9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code to 2.1.241 ([a1ae1e5](https://github.com/pantry-pm/pantry/commit/a1ae1e5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update llm.datasette.io to 0.33 ([f63f4bd](https://github.com/pantry-pm/pantry/commit/f63f4bd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ziglang.org to 0.17.0-dev.1857+3c46da14d ([a089c54](https://github.com/pantry-pm/pantry/commit/a089c54)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.38...v0.11.39)
 
 ## 🐛 Bug Fixes
