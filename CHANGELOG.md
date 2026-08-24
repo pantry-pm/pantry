@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.40...v0.11.41)
+
+## 🐛 Bug Fixes
+
+- **registry**: stop publishing under a name another project owns ([1b6ffe8](https://github.com/pantry-pm/pantry/commit/1b6ffe8)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.41 ([0fcf671](https://github.com/pantry-pm/pantry/commit/0fcf671)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update goreleaser.com to 2.18.0 ([7b0d083](https://github.com/pantry-pm/pantry/commit/7b0d083)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.39...v0.11.40)
 
 ## 🐛 Bug Fixes
