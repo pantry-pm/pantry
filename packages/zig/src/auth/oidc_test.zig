@@ -746,4 +746,3 @@ test "auth, server and transport failures leave the publish outcome unknown" {
         try testing.expectEqual(OidcFailureKind.inconclusive, classifyOidcFailure(status));
     }
 }
-

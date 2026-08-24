@@ -1259,10 +1259,10 @@ pub fn portFromInstalledUnit(allocator: std.mem.Allocator, unit_path: []const u8
             // the flag and its value sit `/string` and `string`. They are
             // punctuation here, not arguments, and skipping them is what lets
             // one scanner read both unit formats.
-            const is_tag = std.mem.eql(u8, token, "string")
-                or std.mem.eql(u8, token, "/string")
-                or std.mem.eql(u8, token, "array")
-                or std.mem.eql(u8, token, "/array");
+            const is_tag = std.mem.eql(u8, token, "string") or
+                std.mem.eql(u8, token, "/string") or
+                std.mem.eql(u8, token, "array") or
+                std.mem.eql(u8, token, "/array");
 
             if (!is_tag) {
                 if (std.fmt.parseInt(u16, token, 10)) |value| {
