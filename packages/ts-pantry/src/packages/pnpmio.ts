@@ -3,7 +3,7 @@
  *
  * @domain `pnpm.io`
  * @programs `pnpm`, `pnpx`
- * @version `11.23.0` (88 versions available)
+ * @version `11.24.0` (89 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pnpm.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pnp"
  * console.log(pkg.description) // "Fast, disk space efficient package manager"
  * console.log(pkg.programs)    // ["pnpm", "pnpx"]
- * console.log(pkg.versions[0]) // "11.23.0" (latest)
+ * console.log(pkg.versions[0]) // "11.24.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pnpm-io.md
@@ -68,6 +68,7 @@ export const pnpmioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '11.24.0',
     '11.23.0',
     '11.22.0',
     '11.21.0',
