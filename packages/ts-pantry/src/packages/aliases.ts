@@ -132,6 +132,7 @@ export const aliases: Record<string, string> = {
   'btm': 'crates.io/bottom',
   'btop': 'github.com/aristocratos/btop',
   'btrfs-progs': 'github.com/kdave/btrfs-progs',
+  'buddy': 'buddy.sh',
   'buf': 'buf.build',
   'buildifier': 'github.com/bazelbuild/buildtools',
   'buildkit': 'github.com/moby/buildkit',

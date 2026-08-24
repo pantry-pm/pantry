@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1747
+//! Total packages: 1748
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1747 total)
+/// All known packages (1748 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -848,6 +848,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{"8.8.1"},
+}, .{
+    .name = "buddy",
+    .domain = "buddy.sh",
+    .description = "AI code review and dependency updates in one teammate — reviews pull requests and local changes, gates merges, repairs CI, and keeps dependencies current",
+    .homepage_url = "https://buddy.sh",
+    .programs = &[_][]const u8{"buddy"},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{ "curl.se", "info-zip.org/unzip" },
+    .aliases = &[_][]const u8{"buddy"},
+    .versions = &[_][]const u8{ "0.11.1", "0.11.0", "0.10.5", "0.10.4", "0.10.3", "0.10.2", "0.10.1", "0.10.0", "0.9.27", "0.9.26", "0.9.25", "0.9.24", "0.9.23", "0.9.22", "0.9.21", "0.9.20", "0.9.19", "0.9.18", "0.9.17", "0.9.16", "0.9.15", "0.9.14", "0.9.13", "0.9.12", "0.9.11", "0.9.9", "0.9.8", "0.9.7", "0.9.6", "0.9.5", "0.9.4", "0.8.10", "0.8.9", "0.8.8", "0.8.7", "0.8.6", "0.8.5", "0.8.4", "0.8.3", "0.8.2", "0.8.1", "0.8.0", "0.7.13", "0.7.12", "0.7.11", "0.7.10", "0.7.8", "0.7.7", "0.7.6", "0.7.5" },
 }, .{
     .name = "talhelper",
     .domain = "budimanjojo.github.io/talhelper",
