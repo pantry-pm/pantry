@@ -92,6 +92,20 @@ jobs:
         id: build_action
         run: cd packages/action && bun run build
 
+      # packages/action/dist is a COMMITTED bundle: workflows run dist/index.js,
+      # not src. A source fix that is never rebuilt ships nothing, silently —
+      # the Zig registry-mirror fix sat unbundled while three separate channels
+      # kept failing on the bug it had already fixed. The build is deterministic,
+      # so a dirty tree here means the bundle is stale.
+      - name: Action bundle is up to date with its source
+        if: ${{ !cancelled() && steps.build_action.outcome == 'success' }}
+        run: |
+          if ! git diff --quiet -- packages/action/dist; then
+            echo "::error::packages/action/dist is stale — run 'cd packages/action && bun run build' and commit the result"
+            git diff --stat -- packages/action/dist
+            exit 1
+          fi
+
       # Unit Test and Zig Tests cover disjoint code and must both report. Until
       # now a failing `bun test` skipped the Zig suite outright — it had never
       # run on main.
