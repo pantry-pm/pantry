@@ -131,6 +131,7 @@ import { borgbackuporgPackage } from './borgbackuporg'
 import { breakfastquaycomrubberbandPackage } from './breakfastquay.com/rubberband'
 import { browserusecomPackage } from './browser-usecom'
 import { brxken128githubiodexiosPackage } from './brxken128.github.io/dexios'
+import { buddyPackage } from './buddysh'
 import { budimanjojogithubiotalhelperPackage } from './budimanjojo.github.io/talhelper'
 import { bufbuildPackage } from './bufbuild'
 import { buildpacksioPackage } from './buildpacksio'
@@ -1925,6 +1926,7 @@ export interface Pantry {
   browserusecom: typeof browserusecomPackage
 
   brxken128githubiodexios: typeof brxken128githubiodexiosPackage
+  buddysh: typeof buddyPackage
 
   budimanjojogithubiotalhelper: typeof budimanjojogithubiotalhelperPackage
   bufbuild: typeof bufbuildPackage
@@ -4772,6 +4774,7 @@ export interface Pantry {
   btm: typeof cratesiobottomPackage
   btop: typeof btopPackage
   'btrfs-progs': typeof btrfsprogsPackage
+  buddy: typeof buddyPackage
   buf: typeof bufbuildPackage
   buildifier: typeof buildtoolsPackage
   buildkit: typeof buildkitPackage
@@ -6571,6 +6574,7 @@ export const pantry: Pantry = {
   browserusecom: browserusecomPackage,
 
   brxken128githubiodexios: brxken128githubiodexiosPackage,
+  buddysh: buddyPackage,
 
   budimanjojogithubiotalhelper: budimanjojogithubiotalhelperPackage,
   bufbuild: bufbuildPackage,
@@ -9418,6 +9422,7 @@ export const pantry: Pantry = {
   btm: cratesiobottomPackage,
   btop: btopPackage,
   'btrfs-progs': btrfsprogsPackage,
+  buddy: buddyPackage,
   buf: bufbuildPackage,
   buildifier: buildtoolsPackage,
   buildkit: buildkitPackage,
