@@ -275,12 +275,17 @@ function directoryBytes(dir: string): number {
   return total
 }
 
+/** Manifest paths are written package-relative ("./dist/x.js"); keys are not. */
+function packageRelative(value: string): string {
+  return value.replace(/^\.\//, '')
+}
+
 /** `bin` normalised to a command -> path map. */
 function binPaths(manifest: Manifest): Record<string, string> {
   const bin = manifest.bin
-  if (typeof bin === 'string') return { [manifest.name ?? 'default']: bin.replace(/^\.\//, '') }
+  if (typeof bin === 'string') return { [manifest.name ?? 'default']: packageRelative(bin) }
   if (bin && typeof bin === 'object') {
-    return Object.fromEntries(Object.entries(bin).map(([k, v]) => [k, String(v).replace(/^\.\//, '')]))
+    return Object.fromEntries(Object.entries(bin).map(([k, v]) => [k, packageRelative(String(v))]))
   }
   return {}
 }
@@ -290,7 +295,7 @@ function exportPaths(manifest: Manifest): string[] {
   const found = new Set<string>()
   const add = (value: unknown): void => {
     if (typeof value === 'string' && /\.[cm]?[jt]s$/.test(value) && !value.includes('*'))
-      found.add(value.replace(/^\.\//, ''))
+      found.add(packageRelative(value))
     else if (Array.isArray(value)) value.forEach(add)
     else if (value && typeof value === 'object') Object.values(value).forEach(add)
   }

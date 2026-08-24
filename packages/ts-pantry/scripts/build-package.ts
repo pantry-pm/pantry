@@ -810,33 +810,6 @@ catch (error: unknown) {
   }
 }
 
-function shouldRunStep(condition: string | undefined, platform: string, version: string): boolean {
-  if (!condition) return true
-
-  const [os, arch] = platform.split('-')
-  const osName = os === 'darwin' ? 'darwin' : 'linux'
-
-  // Platform conditions
-  if (condition === 'linux' && osName !== 'linux') return false
-  if (condition === 'darwin' && osName !== 'darwin') return false
-
-  // Platform/arch conditions like "darwin/x86-64"
-  if (condition.includes('/')) {
-    const [condOs, condArch] = condition.split('/')
-    const normalizedArch = (arch === 'arm64' || arch === 'aarch64') ? 'aarch64' : 'x86-64'
-    if (condOs !== osName) return false
-    if (condArch && condArch !== normalizedArch && condArch !== arch) return false
-  }
-
-  // Version conditions (simplified)
-  if (condition.startsWith('<') || condition.startsWith('>') || condition.startsWith('^') || condition.startsWith('~')) {
-    // For now, assume version conditions pass (can be enhanced later)
-    return true
-  }
-
-  return true
-}
-
 // Convert domain to pantry key (php.net -> phpnet)
 function domainToKey(domain: string): string {
   return domain.replace(/[.\-/]/g, '').toLowerCase()
