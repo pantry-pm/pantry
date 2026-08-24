@@ -3,7 +3,7 @@
  *
  * @domain `maturin.rs`
  * @programs `maturin`
- * @version `1.12.6` (41 versions available)
+ * @version `1.15.0` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install maturin.rs`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "maturin"
  * console.log(pkg.description) // "Build and publish crates with pyo3, cffi and un..."
  * console.log(pkg.programs)    // ["maturin"]
- * console.log(pkg.versions[0]) // "1.12.6" (latest)
+ * console.log(pkg.versions[0]) // "1.15.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/maturin-rs.md
@@ -60,6 +60,7 @@ export const maturinrsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.15.0',
     '1.14.1',
     '1.14.0',
     '1.13.3',
