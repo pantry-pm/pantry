@@ -3,7 +3,7 @@
  *
  * @domain `cnquery.io`
  * @programs `cnquery`
- * @version `13.1.1` (203 versions available)
+ * @version `13.36.0` (98 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cnquery.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "cnquery"
  * console.log(pkg.description) // "open source, cloud-native, graph-based asset in..."
  * console.log(pkg.programs)    // ["cnquery"]
- * console.log(pkg.versions[0]) // "13.1.1" (latest)
+ * console.log(pkg.versions[0]) // "13.36.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cnquery-io.md
@@ -67,6 +67,7 @@ export const cnqueryioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '13.36.0',
     '13.35.2',
     '13.35.1',
     '13.35.0',
