@@ -3,7 +3,7 @@
  *
  * @domain `php.net`
  * @programs `pear`, `pecl`, `phar`, `php`, `php-cgi`, ... (+3 more)
- * @version `8.5.9` (146 versions available)
+ * @version `8.5.10` (147 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install php.net`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "php"
  * console.log(pkg.description) // "General-purpose scripting language"
  * console.log(pkg.programs)    // ["pear", "pecl", ...]
- * console.log(pkg.versions[0]) // "8.5.9" (latest)
+ * console.log(pkg.versions[0]) // "8.5.10" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/php-net.md
@@ -120,6 +120,7 @@ export const phpPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.5.10',
     '8.5.9',
     '8.5.8',
     '8.5.7',
