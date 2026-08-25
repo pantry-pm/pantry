@@ -1,3 +1,38 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.42...v0.11.43)
+
+## 🐛 Bug Fixes
+
+- **recipes**: emit repo quote style, and stop dropping RegExp on serialize ([8aa24f0](https://github.com/pantry-pm/pantry/commit/8aa24f0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: match malware quarantines across build-metadata spellings ([ab7e0ee](https://github.com/pantry-pm/pantry/commit/ab7e0ee)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: rebuild the bundle so the Zig registry-mirror fix ships ([7a6f196](https://github.com/pantry-pm/pantry/commit/7a6f196)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **buddy**: discover versions by asset, not by tag ([ae367a4](https://github.com/pantry-pm/pantry/commit/ae367a4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💄 Styles
+
+- **recipes**: normalise generated recipes to the repo quote style ([3f1aa43](https://github.com/pantry-pm/pantry/commit/3f1aa43)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💚 Continuous Integration
+
+- fail when the committed action bundle is stale ([50280dd](https://github.com/pantry-pm/pantry/commit/50280dd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- report every independent check instead of stopping at the first failure ([3c4102e](https://github.com/pantry-pm/pantry/commit/3c4102e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.43 ([94474ea](https://github.com/pantry-pm/pantry/commit/94474ea)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update fly.io to 0.4.91 ([1ceb998](https://github.com/pantry-pm/pantry/commit/1ceb998)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io to 0.4.90 ([e8e88bf](https://github.com/pantry-pm/pantry/commit/e8e88bf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code to 2.1.243 ([5f51d1a](https://github.com/pantry-pm/pantry/commit/5f51d1a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, fly.io ([ba6ed61](https://github.com/pantry-pm/pantry/commit/ba6ed61)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com/code-server, github.com/canonical/charmcraft ([2bde69a](https://github.com/pantry-pm/pantry/commit/2bde69a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## 🎉 Miscellaneous
+
+- Revert "ci: fail when the committed action bundle is stale" ([a8fa621](https://github.com/pantry-pm/pantry/commit/a8fa621)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.41...v0.11.42)
 
 ## ✨ Features
