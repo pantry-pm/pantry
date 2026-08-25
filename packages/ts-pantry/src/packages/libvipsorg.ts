@@ -3,7 +3,7 @@
  *
  * @domain `libvips.org`
  * @programs `vips`, `vipsedit`, `vipsheader`, `vipsprofile`, `vipsthumbnail`
- * @version `8.18.1` (14 versions available)
+ * @version `8.18.6` (35 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install libvips.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "vips"
  * console.log(pkg.description) // "A fast image processing library with low memory..."
  * console.log(pkg.programs)    // ["vips", "vipsedit", ...]
- * console.log(pkg.versions[0]) // "8.18.1" (latest)
+ * console.log(pkg.versions[0]) // "8.18.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/libvips-org.md
@@ -104,6 +104,7 @@ export const libvipsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.18.6',
     '8.18.5',
     '8.18.4',
     '8.18.3',
