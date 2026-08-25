@@ -3,7 +3,7 @@
  *
  * @domain `llvm.org`
  * @programs `lld`, `clang`, `clang++`, `cc`, `c++`, ... (+9 more)
- * @version `22.1.1` (55 versions available)
+ * @version `23.1.0` (64 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install llvm.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "llvm"
  * console.log(pkg.description) // "The LLVM Project is a collection of modular and..."
  * console.log(pkg.programs)    // ["lld", "clang", ...]
- * console.log(pkg.versions[0]) // "22.1.1" (latest)
+ * console.log(pkg.versions[0]) // "23.1.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/llvm-org.md
@@ -90,6 +90,7 @@ export const llvmorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '23.1.0',
     '22.1.8',
     '22.1.7',
     '22.1.6',

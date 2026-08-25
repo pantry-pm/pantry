@@ -3,7 +3,7 @@
  *
  * @domain `iroh.computer`
  * @programs `iroh`
- * @version `0.97.0` (50 versions available)
+ * @version `1.1.0` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install iroh.computer`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "iroh"
  * console.log(pkg.description) // "peer-2-peer that just works"
  * console.log(pkg.programs)    // ["iroh"]
- * console.log(pkg.versions[0]) // "0.97.0" (latest)
+ * console.log(pkg.versions[0]) // "1.1.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/iroh-computer.md
@@ -68,6 +68,7 @@ export const irohcomputerPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.1.0',
     '1.0.3',
     '1.0.2',
     '1.0.1',
