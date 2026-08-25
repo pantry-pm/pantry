@@ -3,7 +3,7 @@
  *
  * @domain `laravel.com`
  * @programs `laravel`
- * @version `5.24.9` (36 versions available)
+ * @version `5.32.0` (66 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install laravel.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "laravel"
  * console.log(pkg.description) // "The Laravel application installer."
  * console.log(pkg.programs)    // ["laravel"]
- * console.log(pkg.versions[0]) // "5.24.9" (latest)
+ * console.log(pkg.versions[0]) // "5.32.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/laravel-com.md
@@ -76,6 +76,7 @@ export const laravelcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.32.0',
     '5.31.1',
     '5.31.0',
     '5.30.0',
