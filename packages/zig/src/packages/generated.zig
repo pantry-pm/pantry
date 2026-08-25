@@ -12507,7 +12507,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "cmake.org", "google.com/googletest" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "7.0.1", "7.0.0", "6.1.0", "6.0.2", "6.0.1", "6.0.0", "5.0.0", "4.0.0" },
+    .versions = &[_][]const u8{ "7.0.2", "7.0.1", "7.0.0", "6.1.0", "6.0.2", "6.0.1", "6.0.0", "5.0.0", "4.0.0" },
 }, .{
     .name = "mujs",
     .domain = "mujs.com",

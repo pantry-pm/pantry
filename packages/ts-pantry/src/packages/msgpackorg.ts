@@ -2,7 +2,7 @@
  * **msgpack** - MessagePack implementation for C and C++ / msgpack.org[C/C++]
  *
  * @domain `msgpack.org`
- * @version `6.0.2` (3 versions available)
+ * @version `7.0.2` (9 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install msgpack.org`
@@ -15,7 +15,7 @@
  * const pkg = pantry.msgpackorg
  * console.log(pkg.name)        // "msgpack"
  * console.log(pkg.description) // "MessagePack implementation for C and C++ / msgp..."
- * console.log(pkg.versions[0]) // "6.0.2" (latest)
+ * console.log(pkg.versions[0]) // "7.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/msgpack-org.md
@@ -59,6 +59,7 @@ export const msgpackorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.0.2',
     '7.0.1',
     '7.0.0',
     '6.1.0',
