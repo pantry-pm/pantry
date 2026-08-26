@@ -3,7 +3,7 @@
  *
  * @domain `srtalliance.org`
  * @programs `srt-ffplay`, `srt-file-transmit`, `srt-live-transmit`, `srt-tunnel`
- * @version `1.5.4` (3 versions available)
+ * @version `1.5.7` (22 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install srtalliance.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "srt"
  * console.log(pkg.description) // "Secure, Reliable, Transport"
  * console.log(pkg.programs)    // ["srt-ffplay", "srt-file-transmit", ...]
- * console.log(pkg.versions[0]) // "1.5.4" (latest)
+ * console.log(pkg.versions[0]) // "1.5.7" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/srtalliance-org.md
@@ -77,6 +77,7 @@ export const srtallianceorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.5.7',
     '1.5.6',
     '1.5.5',
     '1.5.4',
