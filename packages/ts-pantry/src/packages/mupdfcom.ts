@@ -3,7 +3,7 @@
  *
  * @domain `mupdf.com`
  * @programs `mupdf-gl`, `muraster`, `mutool`
- * @version `1.27.2` (41 versions available)
+ * @version `1.28.3` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mupdf.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "mupdf"
  * console.log(pkg.description) // "Lightweight PDF and XPS viewer"
  * console.log(pkg.programs)    // ["mupdf-gl", "muraster", ...]
- * console.log(pkg.versions[0]) // "1.27.2" (latest)
+ * console.log(pkg.versions[0]) // "1.28.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/mupdf-com.md
@@ -89,6 +89,7 @@ export const mupdfcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.28.3',
     '1.28.2',
     '1.28.1',
     '1.28.0',

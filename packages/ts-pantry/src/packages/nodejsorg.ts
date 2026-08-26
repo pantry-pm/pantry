@@ -3,7 +3,7 @@
  *
  * @domain `nodejs.org`
  * @programs `node`
- * @version `25.8.1` (177 versions available)
+ * @version `26.8.0` (207 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install nodejs.org`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "node"
  * console.log(pkg.description) // "Platform built on V8 to build network applications"
  * console.log(pkg.programs)    // ["node"]
- * console.log(pkg.versions[0]) // "25.8.1" (latest)
+ * console.log(pkg.versions[0]) // "26.8.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/nodejs-org.md
@@ -85,6 +85,7 @@ export const nodePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '26.8.0',
     '26.7.0',
     '26.6.0',
     '26.5.1',
@@ -109,6 +110,7 @@ export const nodePackage = {
     '25.2.0',
     '25.1.0',
     '25.0.0',
+    '24.20.0',
     '24.19.0',
     '24.18.1',
     '24.18.0',
