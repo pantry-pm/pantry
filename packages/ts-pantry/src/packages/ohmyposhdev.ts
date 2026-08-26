@@ -3,7 +3,7 @@
  *
  * @domain `ohmyposh.dev`
  * @programs `oh-my-posh`
- * @version `30.7.0` (108 versions available)
+ * @version `30.8.0` (109 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ohmyposh.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "oh-my-posh"
  * console.log(pkg.description) // "The most customisable and low-latency cross pla..."
  * console.log(pkg.programs)    // ["oh-my-posh"]
- * console.log(pkg.versions[0]) // "30.7.0" (latest)
+ * console.log(pkg.versions[0]) // "30.8.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/ohmyposh-dev.md
@@ -67,6 +67,7 @@ export const ohmyposhdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '30.8.0',
     '30.7.0',
     '30.6.5',
     '30.6.4',
