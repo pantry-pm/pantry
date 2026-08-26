@@ -1,5 +1,26 @@
 import type { Recipe } from '../../scripts/recipe-types'
 
+/**
+ * NOTE: this build script does not run in CI.
+ *
+ * duckdb.org is not in CUSTOM_BUILD_DOMAINS (scripts/build-all-packages.ts), so
+ * the publish pipeline mirrors pkgx's official prebuilt instead of compiling:
+ * every version logs "Mirrored duckdb.org@x from pkgx — no source build". The
+ * recipe is still what documents the source build and what a local or forced
+ * build uses, but nothing added to `ARGS` reaches the binary `pantry install`
+ * delivers.
+ *
+ * That matters for extensions specifically. Adding -DBUILD_HTTPFS_EXTENSION=1
+ * here looks like it would ship an httpfs-enabled CLI and does not; the shipped
+ * binary has no httpfs, and consumers must `INSTALL httpfs` into an
+ * `extension_directory` at setup time. Making the flag real would mean adding
+ * this domain to CUSTOM_BUILD_DOMAINS and source-building a large C++ project
+ * across every supported version and platform, which is not worth it when the
+ * extensions install at runtime in seconds. The two domains that are custom
+ * builds (php.net, postgresql.org) are there because their build-time options
+ * have no runtime equivalent. DuckDB's do.
+ */
+
 export const recipe: Recipe = {
   domain: 'duckdb.org',
   name: 'duckdb',
@@ -15,16 +36,10 @@ export const recipe: Recipe = {
     url: 'https://github.com/duckdb/duckdb/archive/refs/tags/v{{version}}.tar.gz',
     stripComponents: 1,
   },
-  // httpfs links against OpenSSL at runtime, so it is a runtime dependency,
-  // not just a build one.
-  dependencies: {
-    'openssl.org': '^1.1',
-  },
   buildDependencies: {
     'cmake.org': '^3',
     'git-scm.org': '*',
     'python.org': '^3',
-    'openssl.org': '^1.1',
   },
 
   build: {
@@ -45,9 +60,7 @@ export const recipe: Recipe = {
       'mv duckdb "{{prefix}}"/bin',
     ],
     env: {
-      // httpfs is compiled in statically so `LOAD httpfs` needs no network
-      // access at runtime (consumers read s3:// URLs without an INSTALL step).
-      'ARGS': ['-DCMAKE_INSTALL_PREFIX={{prefix}}', '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_ICU_EXTENSION=1', '-DBUILD_JSON_EXTENSION=1', '-DBUILD_PARQUET_EXTENSION=1', '-DBUILD_HTTPFS_EXTENSION=1', '-DOPENSSL_ROOT_DIR={{deps.openssl.org.prefix}}'],
+      'ARGS': ['-DCMAKE_INSTALL_PREFIX={{prefix}}', '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_ICU_EXTENSION=1', '-DBUILD_JSON_EXTENSION=1', '-DBUILD_PARQUET_EXTENSION=1'],
     },
   },
 }
