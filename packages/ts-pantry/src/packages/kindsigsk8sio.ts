@@ -3,7 +3,7 @@
  *
  * @domain `kind.sigs.k8s.io`
  * @programs `kind`
- * @version `0.31.0` (13 versions available)
+ * @version `0.33.0` (31 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kind.sigs.k8s.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "kind"
  * console.log(pkg.description) // "Kubernetes IN Docker - local clusters for testi..."
  * console.log(pkg.programs)    // ["kind"]
- * console.log(pkg.versions[0]) // "0.31.0" (latest)
+ * console.log(pkg.versions[0]) // "0.33.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/kind-sigs-k8s-io.md
@@ -67,6 +67,7 @@ export const kindsigsk8sioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.33.0',
     '0.32.0',
     '0.31.0',
     '0.30.0',

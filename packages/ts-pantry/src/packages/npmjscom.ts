@@ -3,7 +3,7 @@
  *
  * @domain `npmjs.com`
  * @programs `npm`, `npx`
- * @version `11.12.0` (81 versions available)
+ * @version `12.0.2` (96 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install npmjs.com`
@@ -23,7 +23,7 @@
  * console.log(pkg.name)        // "npmjs"
  * console.log(pkg.description) // "the package manager for JavaScript"
  * console.log(pkg.programs)    // ["npm", "npx"]
- * console.log(pkg.versions[0]) // "11.12.0" (latest)
+ * console.log(pkg.versions[0]) // "12.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/npmjs-com.md
@@ -76,6 +76,7 @@ export const npmPackage = {
     '12.0.2',
     '12.0.1',
     '12.0.0',
+    '11.19.1',
     '11.19.0',
     '11.18.0',
     '11.17.0',

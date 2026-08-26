@@ -3,7 +3,7 @@
  *
  * @domain `openshift.com`
  * @programs `oc`
- * @version `4.22.11` (1132 versions available)
+ * @version `4.22.11` (1133 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openshift.com`
@@ -254,6 +254,7 @@ export const openshiftcomPackage = {
     '4.18.3',
     '4.18.2',
     '4.18.1',
+    '4.17.57',
     '4.17.56',
     '4.17.55',
     '4.17.54',
