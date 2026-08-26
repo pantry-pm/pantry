@@ -11477,7 +11477,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{ "libreoffice", "soffice" },
-    .versions = &[_][]const u8{ "26.2.5", "26.2.4", "24.8.5", "24.8.4" },
+    .versions = &[_][]const u8{ "26.8.0", "26.2.5", "26.2.4", "24.8.5", "24.8.4" },
 }, .{
     .name = "libsdl",
     .domain = "libsdl.org",
