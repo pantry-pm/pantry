@@ -3,7 +3,7 @@
  *
  * @domain `dagger.io`
  * @programs `dagger`
- * @version `0.20.3` (116 versions available)
+ * @version `0.21.9` (131 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install dagger.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "dagger"
  * console.log(pkg.description) // "An engine to run your pipelines in containers"
  * console.log(pkg.programs)    // ["dagger"]
- * console.log(pkg.versions[0]) // "0.20.3" (latest)
+ * console.log(pkg.versions[0]) // "0.21.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/dagger-io.md
@@ -67,6 +67,7 @@ export const daggerioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.21.9',
     '0.21.8',
     '0.21.7',
     '0.21.6',
