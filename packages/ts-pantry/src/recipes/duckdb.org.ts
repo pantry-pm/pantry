@@ -15,10 +15,16 @@ export const recipe: Recipe = {
     url: 'https://github.com/duckdb/duckdb/archive/refs/tags/v{{version}}.tar.gz',
     stripComponents: 1,
   },
+  // httpfs links against OpenSSL at runtime, so it is a runtime dependency,
+  // not just a build one.
+  dependencies: {
+    'openssl.org': '^1.1',
+  },
   buildDependencies: {
     'cmake.org': '^3',
     'git-scm.org': '*',
     'python.org': '^3',
+    'openssl.org': '^1.1',
   },
 
   build: {
@@ -31,13 +37,17 @@ export const recipe: Recipe = {
       'git config user.name "pkgxbot"',
       'git commit --allow-empty -mnil',
       'git tag v{{version}}',
-      'cmake ..',
+      // $ARGS must be referenced explicitly or the extension flags never reach
+      // cmake (the previous plain `cmake ..` built no extensions at all).
+      'cmake .. $ARGS',
       'make --jobs {{hw.concurrency}}',
       'mkdir -p "{{prefix}}"/bin',
       'mv duckdb "{{prefix}}"/bin',
     ],
     env: {
-      'ARGS': ['-DCMAKE_INSTALL_PREFIX={{prefix}}', '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_ICU_EXTENSION=1', '-DBUILD_JSON_EXTENSION=1', '-DBUILD_PARQUET_EXTENSION=1'],
+      // httpfs is compiled in statically so `LOAD httpfs` needs no network
+      // access at runtime (consumers read s3:// URLs without an INSTALL step).
+      'ARGS': ['-DCMAKE_INSTALL_PREFIX={{prefix}}', '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_ICU_EXTENSION=1', '-DBUILD_JSON_EXTENSION=1', '-DBUILD_PARQUET_EXTENSION=1', '-DBUILD_HTTPFS_EXTENSION=1', '-DOPENSSL_ROOT_DIR={{deps.openssl.org.prefix}}'],
     },
   },
 }
