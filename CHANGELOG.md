@@ -1,3 +1,55 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.43...v0.11.44)
+
+## 🐛 Bug Fixes
+
+- **publish**: a staged npm version is a skip, not a failed release ([e076ae9](https://github.com/pantry-pm/pantry/commit/e076ae9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ts-pantry**: drop duckdb extension flags that never reach the binary ([5e3412a](https://github.com/pantry-pm/pantry/commit/5e3412a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ts-pantry**: apply duckdb cmake args, and build httpfs ([cd3c8e2](https://github.com/pantry-pm/pantry/commit/cd3c8e2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.44 ([2452ee0](https://github.com/pantry-pm/pantry/commit/2452ee0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update argoproj.github.io/cd, casdoor.org, encore.dev, getcomposer.org, huggingface.co, ohmyposh.dev, railway.app, scons.org, upx.github.io, whatsapp.com ([7e9c202](https://github.com/pantry-pm/pantry/commit/7e9c202)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, codex.openai.com, materialize.com, ollama.ai, openai.com/codex, railway.app ([de2498d](https://github.com/pantry-pm/pantry/commit/de2498d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cursor.com, fly.io, github.com/router-for-me/CLIProxyAPI, kind.sigs.k8s.io, nodejs.org, openai.com/codex, vale.sh, ziglang.org ([dd85555](https://github.com/pantry-pm/pantry/commit/dd85555)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stripe.com to 1.50.6 ([4c39529](https://github.com/pantry-pm/pantry/commit/4c39529)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([112416b](https://github.com/pantry-pm/pantry/commit/112416b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, mupdf.com, nodejs.org, pnpm.io, zed.dev ([86625ef](https://github.com/pantry-pm/pantry/commit/86625ef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update traefik.io to 3.7.12 ([e5df298](https://github.com/pantry-pm/pantry/commit/e5df298)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update terraform.io to 1.16.0 ([ed4ec44](https://github.com/pantry-pm/pantry/commit/ed4ec44)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.44.1 ([3859c33](https://github.com/pantry-pm/pantry/commit/3859c33)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update libreoffice.org to 26.8.0 ([2d86eb5](https://github.com/pantry-pm/pantry/commit/2d86eb5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update projen.io to 0.103.5 ([68937f8](https://github.com/pantry-pm/pantry/commit/68937f8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update planetscale.com, projen.io ([434e2b2](https://github.com/pantry-pm/pantry/commit/434e2b2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update srtalliance.org to 1.5.7 ([39a53f3](https://github.com/pantry-pm/pantry/commit/39a53f3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev to 30.8.0 ([d85c577](https://github.com/pantry-pm/pantry/commit/d85c577)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dagger.io, zed.dev ([fa205d7](https://github.com/pantry-pm/pantry/commit/fa205d7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, mise.jdx.dev, ollama.ai, rectangle.app ([8845b25](https://github.com/pantry-pm/pantry/commit/8845b25)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, mise.jdx.dev ([c1bd83f](https://github.com/pantry-pm/pantry/commit/c1bd83f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update projen.io to 0.103.3 ([3f96098](https://github.com/pantry-pm/pantry/commit/3f96098)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update php.net to 8.5.10 ([fb7e039](https://github.com/pantry-pm/pantry/commit/fb7e039)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update planetscale.com, railway.app ([079bd66](https://github.com/pantry-pm/pantry/commit/079bd66)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, iroh.computer, libcxx.llvm.org, llvm.org, openmp.llvm.org ([da9a849](https://github.com/pantry-pm/pantry/commit/da9a849)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/router-for-me/CLIProxyAPI ([d41aa73](https://github.com/pantry-pm/pantry/commit/d41aa73)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cmake.org to 4.4.3 ([79024b2](https://github.com/pantry-pm/pantry/commit/79024b2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ziglang.org to 0.17.0-dev.1862+40ebd8162 ([535fc10](https://github.com/pantry-pm/pantry/commit/535fc10)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org to 3.159.0 ([cef8a7b](https://github.com/pantry-pm/pantry/commit/cef8a7b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder.com, harlequin.sh, libvips.org ([d87aea8](https://github.com/pantry-pm/pantry/commit/d87aea8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update laravel.com, pcre.org/v2 ([cfafba4](https://github.com/pantry-pm/pantry/commit/cfafba4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update whatsapp.com to 2.26.34.15 ([f27828b](https://github.com/pantry-pm/pantry/commit/f27828b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev, railway.app ([fa15f03](https://github.com/pantry-pm/pantry/commit/fa15f03)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update plantuml.com to 1.2026.7 ([ad6a0ca](https://github.com/pantry-pm/pantry/commit/ad6a0ca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update insomnia.rest to 13.2.0 ([6049659](https://github.com/pantry-pm/pantry/commit/6049659)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cnquery.io to 13.36.0 ([b87ff73](https://github.com/pantry-pm/pantry/commit/b87ff73)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update opencode.ai to 1.18.23 ([ab7d5ec](https://github.com/pantry-pm/pantry/commit/ab7d5ec)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update tart.run, tox.wiki ([bffaef5](https://github.com/pantry-pm/pantry/commit/bffaef5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code to 2.1.245 ([897b53f](https://github.com/pantry-pm/pantry/commit/897b53f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update msgpack.org to 7.0.2 ([f1312a9](https://github.com/pantry-pm/pantry/commit/f1312a9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.42...v0.11.43)
 
 ## 🐛 Bug Fixes
