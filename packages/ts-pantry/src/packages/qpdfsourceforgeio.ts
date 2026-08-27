@@ -3,7 +3,7 @@
  *
  * @domain `qpdf.sourceforge.io`
  * @programs `qpdf`
- * @version `12.3.2` (13 versions available)
+ * @version `12.4.1` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install qpdf.sourceforge.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "qpdf"
  * console.log(pkg.description) // "qpdf: A content-preserving PDF document transfo..."
  * console.log(pkg.programs)    // ["qpdf"]
- * console.log(pkg.versions[0]) // "12.3.2" (latest)
+ * console.log(pkg.versions[0]) // "12.4.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/qpdf-sourceforge-io.md
@@ -84,6 +84,7 @@ export const qpdfsourceforgeioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '12.4.1',
     '12.4.0',
     '12.3.2',
     '12.3.1',

@@ -3,7 +3,7 @@
  *
  * @domain `tunnelblick.net`
  * @programs `tunnelblick`
- * @version `4.0.1` (2 versions available)
+ * @version `9.0` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tunnelblick.net`
@@ -22,6 +22,7 @@ export const tunnelblicknetPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '9.0',
     '8.0.3',
     '8.0.2',
     '8.0.1',
