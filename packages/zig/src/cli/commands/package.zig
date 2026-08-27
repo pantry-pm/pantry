@@ -716,6 +716,14 @@ fn updateLockfileAfterUninstall(allocator: std.mem.Allocator, lockfile_path: []c
 // Publish Command
 // ============================================================================
 
+/// Classifying npm's "this version is taken" rejections. Kept in its own
+/// file because it is pure string matching over a response body, and no test
+/// target reaches this module's own test blocks — publish_conflict.zig is
+/// where they actually run.
+const publish_conflict = @import("publish_conflict.zig");
+pub const ConflictKind = publish_conflict.ConflictKind;
+pub const classifyConflict = publish_conflict.classifyConflict;
+
 pub const PublishOptions = struct {
     /// Explicit CLI overrides. Null preserves publishConfig and registry defaults.
     access: ?[]const u8 = null,
@@ -1226,6 +1234,18 @@ fn publishSingleToNpm(
         } else {
             // OIDC failed - check if it's a definitive registry rejection or just an auth issue
             if (result.is_version_conflict) {
+                // `skip_existing` is the monorepo-release mode: the caller
+                // already agreed that a version which is on the registry is a
+                // SKIP, not a failure — that is what the pre-check above does.
+                // A conflict here means the pre-check's GET disagreed with the
+                // PUT, which happens when the version was published between
+                // the two, or is staged and not yet readable. Failing the run
+                // for it contradicts the pre-check and, mid-release, strands
+                // the packages that already went out.
+                if (options.skip_existing) {
+                    style.print("\n{s}↷{s} {s}@{s} already claimed on npm — skipping\n", .{ style.dim, style.reset, metadata.name, metadata.version });
+                    return .{ .exit_code = 0, .skipped = true };
+                }
                 const err_msg = try std.fmt.allocPrint(
                     allocator,
                     "Error: Version {s} already exists on npm.\nBump the version in package.json before publishing (e.g., 'npm version patch').",
@@ -1428,18 +1448,24 @@ fn publishSingleToNpm(
             }
         }
         // Also check response body text for version conflict indicators
-        if (!is_version_conflict) {
-            if (response.message) |msg| {
-                if (std.mem.indexOf(u8, msg, "cannot publish over the previously published version") != null or
-                    std.mem.indexOf(u8, msg, "Cannot publish over previously published version") != null or
-                    std.mem.indexOf(u8, msg, "You cannot publish over the previously published versions") != null)
-                {
-                    is_version_conflict = true;
-                }
-            }
-        }
+        // (403 for already-published, 409 for staged-but-not-yet-readable).
+        const conflict_kind = classifyConflict(
+            if (response.error_details) |d| d.code else null,
+            response.message,
+        );
+        if (conflict_kind != .none) is_version_conflict = true;
 
         if (is_version_conflict) {
+            // See the OIDC path above: under `skip_existing` a conflict is the
+            // pre-check losing a race, not a mistake worth failing over.
+            if (options.skip_existing) {
+                const why: []const u8 = if (conflict_kind == .staged)
+                    "staged on npm and not yet readable"
+                else
+                    "already published";
+                style.print("\n{s}↷{s} {s}@{s} {s} — skipping\n", .{ style.dim, style.reset, metadata.name, metadata.version, why });
+                return .{ .exit_code = 0, .skipped = true };
+            }
             style.print("\nError: Version {s} of {s} already exists on npm.\n", .{ metadata.version, metadata.name });
             style.print("Bump the version in package.json before publishing (e.g., 'npm version patch').\n", .{});
             const err_msg = try std.fmt.allocPrint(
@@ -1853,16 +1879,11 @@ fn attemptOIDCPublish(
             error_msg = try std.fmt.allocPrint(allocator, "Publish failed with status {d}", .{response.status_code});
         }
 
-        // Also detect version conflict from response body text (npm returns 403 for this)
+        // Also detect version conflict from response body text (npm returns
+        // 403 for an already-published version, 409 for a staged one).
         if (!is_version_conflict) {
-            if (response.message) |msg| {
-                if (std.mem.indexOf(u8, msg, "cannot publish over the previously published version") != null or
-                    std.mem.indexOf(u8, msg, "Cannot publish over previously published version") != null or
-                    std.mem.indexOf(u8, msg, "You cannot publish over the previously published versions") != null)
-                {
-                    is_version_conflict = true;
-                }
-            }
+            const code_str: ?[]const u8 = if (response.error_details) |d| d.code else null;
+            is_version_conflict = classifyConflict(code_str, response.message) != .none;
         }
 
         return .{
@@ -1977,16 +1998,11 @@ fn attemptOIDCPublishUnverified(
             error_msg = try std.fmt.allocPrint(allocator, "Publish failed with status {d}", .{response.status_code});
         }
 
-        // Also detect version conflict from response body text (npm returns 403 for this)
+        // Also detect version conflict from response body text (npm returns
+        // 403 for an already-published version, 409 for a staged one).
         if (!is_version_conflict) {
-            if (response.message) |msg| {
-                if (std.mem.indexOf(u8, msg, "cannot publish over the previously published version") != null or
-                    std.mem.indexOf(u8, msg, "Cannot publish over previously published version") != null or
-                    std.mem.indexOf(u8, msg, "You cannot publish over the previously published versions") != null)
-                {
-                    is_version_conflict = true;
-                }
-            }
+            const code_str: ?[]const u8 = if (response.error_details) |d| d.code else null;
+            is_version_conflict = classifyConflict(code_str, response.message) != .none;
         }
 
         return .{
