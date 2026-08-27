@@ -3,7 +3,7 @@
  *
  * @domain `linear.app`
  * @programs `linear`
- * @version `1.53.0` (3 versions available)
+ * @version `1.53.0` (7 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install linear.app`
@@ -25,6 +25,7 @@ export const linearappPackage = {
     '1.53.0',
     '1.52.0',
     '1.51.0',
+    '1.32.2',
     '1.32.1',
     '1.32.0',
     '1.31.1',

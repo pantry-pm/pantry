@@ -3,7 +3,7 @@
  *
  * @domain `scons.org`
  * @programs `scons`
- * @version `4.10.1` (9 versions available)
+ * @version `4.11.1` (17 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install scons.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "scons"
  * console.log(pkg.description) // "Substitute for classic 'make' tool with autocon..."
  * console.log(pkg.programs)    // ["scons"]
- * console.log(pkg.versions[0]) // "4.10.1" (latest)
+ * console.log(pkg.versions[0]) // "4.11.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/scons-org.md
@@ -69,6 +69,7 @@ export const sconsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.11.1',
     '4.11.0',
     '4.10.1',
     '4.10.0',

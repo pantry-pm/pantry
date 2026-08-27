@@ -3,7 +3,7 @@
  *
  * @domain `huggingface.co`
  * @programs `huggingface-cli`
- * @version `1.28.0` (81 versions available)
+ * @version `1.29.0` (82 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install huggingface.co`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "huggingface/cli"
  * console.log(pkg.description) // "The official Python client for the Huggingface ..."
  * console.log(pkg.programs)    // ["huggingface-cli"]
- * console.log(pkg.versions[0]) // "1.28.0" (latest)
+ * console.log(pkg.versions[0]) // "1.29.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/huggingface-co.md
@@ -74,6 +74,7 @@ export const huggingfacecoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.29.0',
     '1.28.0',
     '1.27.0',
     '1.26.1',
