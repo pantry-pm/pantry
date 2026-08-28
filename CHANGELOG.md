@@ -1,3 +1,20 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.44...v0.11.45)
+
+## 🐛 Bug Fixes
+
+- **installer**: install any registry-published package, not just the five with resolvers ([d746af9](https://github.com/pantry-pm/pantry/commit/d746af9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.45 ([dc3ed75](https://github.com/pantry-pm/pantry/commit/dc3ed75)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update anthropic.com/claude-code, arkade.dev, casdoor.org, circleci.com, cnquery.io, dozzle.dev, github.com/router-for-me/CLIProxyAPI, openpolicyagent.org, planetscale.com, projen.io, pulumi.io, railway.app, sentry.io, whatsapp.com, ziglang.org ([ff7cdec](https://github.com/pantry-pm/pantry/commit/ff7cdec)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, bytebase.com, codex.openai.com, d2lang.com, lmstudio.ai, opencode.ai, prefix.dev, railway.app ([0fbbc64](https://github.com/pantry-pm/pantry/commit/0fbbc64)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, casdoor.org, circleci.com, coder.com/code-server, codex.openai.com, dblab.danvergara.com, deno.land, diabrowser.com, fly.io, github.com/canonical/charmcraft, github.com/chainguard-dev/apko, github.com/router-for-me/CLIProxyAPI, grpc.io, harlequin.sh, istio.io, openpolicyagent.org, openshift.com, oras.land, qpdf.sourceforge.io, railway.app, terragrunt.gruntwork.io, tunnelblick.net, ziglang.org ([dd2dbce](https://github.com/pantry-pm/pantry/commit/dd2dbce)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.43...v0.11.44)
 
 ## 🐛 Bug Fixes
