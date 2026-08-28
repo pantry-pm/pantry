@@ -21,7 +21,18 @@ import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { compareVersions } from './generate-zig'
 
-const PANTRY_REGISTRY = (process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev').replace(/\/$/, '')
+/**
+ * Base URL of the binary registry.
+ *
+ * Read per call, not captured at module load. `PANTRY_REGISTRY_URL` is how a
+ * consumer points this SDK at a staging or local registry, and a module-level
+ * constant silently ignored anyone who set it after the first import —
+ * including a test file that is not the first one the runner happens to load.
+ * The read is a property lookup; the lazy version costs nothing.
+ */
+function registryBase(): string {
+  return (process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev').replace(/\/$/, '')
+}
 
 // ── Types ──
 
@@ -323,10 +334,9 @@ export async function installPackage(
   options: InstallOptions = {},
 ): Promise<InstallResult> {
   const platform = options.platform || detectPlatform()
-  const resolver = resolvers[domain]
-  if (!resolver) {
-    throw new Error(`Unknown package: ${domain}. Supported: ${Object.keys(resolvers).join(', ')}`)
-  }
+  // No built-in resolver is not "unknown" — it just means the package has no
+  // bespoke origin layout, and installs from the registry like most of them do.
+  const resolver: PackageResolver | undefined = resolvers[domain]
 
   // Resolve semver constraints (^, ~, >=, etc.) to concrete versions
   if (/^[\^~>=<]/.test(version)) {
@@ -357,14 +367,20 @@ export async function installPackage(
   const binDir = path.join(installDir, '.bin')
   const pkgDir = path.join(installDir, domain.replace(/\./g, '-'), version)
 
-  // Check if already installed
-  const binaries = resolver.getBinaries(platform)
-  if (binaries.length === 0) {
+  // Check if already installed. A built-in resolver names its binaries up
+  // front; a registry package's are whatever landed in `bin/`, so the presence
+  // of that directory is what "installed" means for it.
+  const declared = resolver?.getBinaries(platform)
+  if (resolver && (!declared || declared.length === 0)) {
     throw new Error(`No binaries defined for ${domain} on ${platform.os}-${platform.arch}`)
   }
-  const firstBin = path.join(pkgDir, binaries[0])
-  const firstBinInSubdir = path.join(pkgDir, 'bin', binaries[0])
-  if (fs.existsSync(firstBin) || fs.existsSync(firstBinInSubdir)) {
+
+  const cached = declared
+    ? fs.existsSync(path.join(pkgDir, declared[0])) || fs.existsSync(path.join(pkgDir, 'bin', declared[0]))
+    : installedRegistryBinaries(pkgDir).length > 0
+
+  if (cached) {
+    const binaries = declared ?? installedRegistryBinaries(pkgDir)
     if (!options.quiet) console.log(`  ✓ ${domain}@${version} (cached)`)
     // Re-assert the .bin links even when already installed, so the genuine
     // binary keeps ownership of `.bin/<name>` if another installer clobbered it.
@@ -375,14 +391,30 @@ export async function installPackage(
     return { name: domain, version, installPath: pkgDir, binaries, globalLinks }
   }
 
-  // Prefer our own mirror when upstream is known to purge the artifact. The
-  // `-dev.` test is repeated here so a stable release skips the metadata fetch
-  // entirely rather than paying a round-trip to be told it is not mirrored.
-  const mirror = domain === 'ziglang.org' && version.includes('-dev.')
-    ? zigRegistryMirror(await registryMetadata(domain, { onRetry: options.onRetry }), version, platform)
-    : null
-  const url = mirror?.url ?? resolver.getDownloadUrl(version, platform)
-  const format = mirror?.format ?? resolver.getArchiveFormat(platform)
+  // One metadata read serves both registry cases: the Zig dev-build mirror, and
+  // every package that has no built-in resolver at all.
+  const needsMetadata = !resolver || (domain === 'ziglang.org' && version.includes('-dev.'))
+  const metadata = needsMetadata ? await registryMetadata(domain, { onRetry: options.onRetry }) : null
+
+  // Prefer our own mirror when upstream is known to purge the artifact.
+  const mirror = resolver
+    ? (domain === 'ziglang.org' && version.includes('-dev.')
+        ? zigRegistryMirror(metadata, version, platform)
+        : null)
+    : registryDownloadSource(metadata, version, platform)
+
+  if (!resolver && !mirror) {
+    throw new Error(
+      `Cannot install ${domain}@${version}: no built-in resolver, and the registry `
+      + `publishes no ${registryPlatformKey(platform)} artifact for that version.`,
+    )
+  }
+
+  const url = mirror?.url ?? resolver!.getDownloadUrl(version, platform)
+  const format = mirror?.format ?? resolver!.getArchiveFormat(platform)
+  // The registry lists the digest alongside the artifact, so use it rather than
+  // paying a second request for the `.sha256` sidecar that says the same thing.
+  const publishedSha256 = (mirror as { sha256?: string } | null)?.sha256
 
   if (!options.quiet) console.log(`  → ${domain}@${version} from ${new URL(url).hostname}`)
 
@@ -391,8 +423,8 @@ export async function installPackage(
   const archivePath = path.join(tmpDir, `archive.${format}`)
 
   try {
-    let expectedSha256: string | undefined
-    if (url.startsWith(`${PANTRY_REGISTRY}/binaries/`)) {
+    let expectedSha256: string | undefined = publishedSha256
+    if (!expectedSha256 && url.startsWith(`${registryBase()}/binaries/`)) {
       const checksumPath = path.join(tmpDir, 'archive.sha256')
       await downloadFileReliably(`${url}.sha256`, checksumPath, {
         quiet: options.quiet,
@@ -417,7 +449,7 @@ export async function installPackage(
 
     // Find the source directory (archives usually have a top-level folder)
     let sourceDir = extractDir
-    const prefix = mirror ? mirror.prefix : resolver.getArchivePrefix?.(version, platform)
+    const prefix = mirror ? mirror.prefix : resolver!.getArchivePrefix?.(version, platform)
     if (prefix) {
       const prefixPath = path.join(extractDir, prefix)
       if (fs.existsSync(prefixPath)) {
@@ -434,6 +466,12 @@ export async function installPackage(
     // Copy to install directory
     fs.mkdirSync(pkgDir, { recursive: true })
     copyDirRecursive(sourceDir, pkgDir)
+
+    // A registry package's binaries are known only now, from what it shipped.
+    const binaries = declared ?? installedRegistryBinaries(pkgDir)
+    if (binaries.length === 0) {
+      throw new Error(`${domain}@${version} unpacked with no executables in bin/`)
+    }
 
     // Make binaries executable (non-Windows)
     if (platform.os !== 'windows') {
@@ -574,7 +612,16 @@ export async function resolveLatestVersion(domain: string, platform: Platform = 
     if (fallback) return fallback
     throw new Error('Failed to resolve latest github.com/mail-os/mail version')
   }
-  throw new Error(`Cannot resolve latest version for ${domain}`)
+  // Anything else pantry publishes: the registry is the only list that proves
+  // an artifact exists for this runner's platform, which is exactly the
+  // question "what is the latest version" is being asked in aid of.
+  const published = await registryVersions(domain, platform)
+  if (published.length > 0) return published.sort(compareVersions)[0]
+
+  throw new Error(
+    `Cannot resolve latest version for ${domain} `
+    + `(no built-in resolver, and the registry publishes nothing for ${registryPlatformKey(platform)})`,
+  )
 }
 
 /** Return the highest version from `packages/index.js` for `domain`, or "". */
@@ -609,8 +656,14 @@ async function resolveZigShortDevVersion(shortVersion: string, platform: Platfor
   return upstream.startsWith(`${shortVersion}.`) ? upstream : null
 }
 
+export interface RegistryPlatformMetadata {
+  /** Path of the tarball, relative to the registry root. */
+  tarball?: string
+  sha256?: string
+}
+
 export interface RegistryVersionMetadata {
-  platforms?: Record<string, unknown>
+  platforms?: Record<string, RegistryPlatformMetadata>
 }
 
 export interface RegistryMetadata {
@@ -630,12 +683,65 @@ export function registryVersionsForPlatform(metadata: RegistryMetadata | null, p
 }
 
 async function registryMetadata(domain: string, retryOptions: NetworkRetryOptions = {}): Promise<RegistryMetadata | null> {
-  return await fetchJSON(`${PANTRY_REGISTRY}/binaries/${encodeURI(domain)}/metadata.json`, 5, retryOptions)
+  return await fetchJSON(`${registryBase()}/binaries/${encodeURI(domain)}/metadata.json`, 5, retryOptions)
     .catch(() => null) as RegistryMetadata | null
 }
 
 async function registryVersions(domain: string, platform: Platform, retryOptions: NetworkRetryOptions = {}): Promise<string[]> {
   return registryVersionsForPlatform(await registryMetadata(domain, retryOptions), platform)
+}
+
+/**
+ * Install `domain@version` straight from the registry, for any package that
+ * has one published — no per-package resolver required.
+ *
+ * The five resolvers below this fetch from each project's own origin, which is
+ * right for the handful of toolchains that need bespoke URL shapes. Everything
+ * else pantry builds lands in the registry under one predictable layout, and
+ * before this the SDK simply refused it: `isSupported()` said no, the GitHub
+ * Action logged "not supported by TS installer SDK, skipping", and the next
+ * step failed on `command not found` — on Linux runners especially, since a
+ * macOS developer's local `pantry install` uses a different code path and
+ * succeeds. The binaries were sitting in the registry the whole time.
+ *
+ * The path is read from the metadata rather than reconstructed, so a registry
+ * that changes its layout does not silently 404 here.
+ */
+export function registryDownloadSource(
+  metadata: RegistryMetadata | null,
+  version: string,
+  platform: Platform,
+): (DownloadSource & { sha256?: string }) | null {
+  const published = metadata?.versions?.[version]?.platforms?.[registryPlatformKey(platform)]
+  if (!published?.tarball) return null
+
+  return {
+    url: `${registryBase()}/${published.tarball.replace(/^\/+/, '')}`,
+    format: 'tar.gz',
+    // Registry tarballs extract straight to the package root (`bin/`, `lib/`),
+    // with no versioned wrapper directory to strip.
+    prefix: '',
+    sha256: published.sha256?.toLowerCase(),
+  }
+}
+
+/**
+ * Executables a package installed from the registry provides.
+ *
+ * The built-in resolvers declare their binaries up front because they have to
+ * name a bespoke archive layout. A registry package needs no such declaration:
+ * every one of them puts its executables in `bin/`, so reading the directory
+ * is both simpler and incapable of drifting from what was actually shipped.
+ */
+export function installedRegistryBinaries(pkgDir: string): string[] {
+  try {
+    return fs.readdirSync(path.join(pkgDir, 'bin'))
+      .filter(name => !name.startsWith('.'))
+      .sort()
+  }
+  catch {
+    return []
+  }
 }
 
 /** Where an archive is fetched from, and how to unwrap it once downloaded. */
@@ -682,7 +788,7 @@ export function zigRegistryMirror(
   // resolves on registries deployed before the proxy learned to percent-decode.
   const encoded = encodeURIComponent(mirrored).replace(/%2B/gi, '+')
   return {
-    url: `${PANTRY_REGISTRY}/binaries/ziglang.org/${encoded}/${platformKey}/ziglang.org-${encoded}.tar.gz`,
+    url: `${registryBase()}/binaries/ziglang.org/${encoded}/${platformKey}/ziglang.org-${encoded}.tar.gz`,
     format: 'tar.gz',
     // Registry tarballs extract straight to the package root (`bin/`, `lib/`),
     // with no `zig-<arch>-<os>-<version>/` wrapper to strip.
@@ -794,7 +900,10 @@ async function fetchLiveVersions(domain: string, platform: Platform): Promise<st
     if (origin.length > 0) return origin
     return await registryVersions(domain, platform)
   }
-  return []
+  // For a registry-published package the registry *is* the live list, so a
+  // `^0.0.37`-style constraint resolves against what can actually be installed
+  // rather than against nothing.
+  return await registryVersions(domain, platform)
 }
 
 export type ZigDownloadIndex = Record<string, Record<string, unknown> & { version?: string }>
@@ -1155,6 +1264,29 @@ resolvers['bun.com'] = resolvers['bun.sh']
 
 export function isSupported(domain: string): boolean {
   return domain in resolvers
+}
+
+/**
+ * Whether this SDK can install `domain` on `platform`.
+ *
+ * Broader than {@link isSupported}, and asynchronous for the reason that
+ * matters: most installable packages have no built-in resolver, and the only
+ * way to know whether one is installable here is to ask the registry what it
+ * publishes for this platform. Callers that gate on the synchronous
+ * `isSupported` reject those packages before ever looking — which is how
+ * `craft-native.org` came to be skipped on Linux runners while its Linux
+ * tarball sat in the registry.
+ *
+ * A registry that cannot be reached answers `false` rather than throwing: the
+ * caller's next move is to report a skip, and a network blip should not fail
+ * the run outright.
+ */
+export async function isInstallable(
+  domain: string,
+  platform: Platform = detectPlatform(),
+): Promise<boolean> {
+  if (isSupported(domain)) return true
+  return (await registryVersions(domain, platform)).length > 0
 }
 
 /**

@@ -340,12 +340,19 @@ async function installSystemPackage(
   // Import from the pantry TS installer SDK
   const installer = await import('../../ts-pantry/src/installer')
 
-  const { installPackage, isSupported } = installer
+  const { installPackage, isInstallable } = installer
 
   const [rawName, rawVersion = ''] = spec.includes('@') ? spec.split('@', 2) : [spec, '']
   const domain = resolvePackageDomain(rawName)
-  if (!isSupported(domain)) {
-    core.warning(`${rawName} (resolved to ${domain}): not supported by TS installer SDK, skipping`)
+  // Asks the registry, not just the built-in resolver table. Gating on the
+  // synchronous `isSupported` skipped every package pantry builds and
+  // publishes but has no bespoke origin layout for — which on a Linux runner
+  // meant warning "not supported" about a tarball sitting in the registry.
+  if (!await isInstallable(domain, installer.detectPlatform())) {
+    core.warning(
+      `${rawName} (resolved to ${domain}): no installable ${installer.registryPlatformKey(installer.detectPlatform())} `
+      + `build — not a built-in package, and the registry publishes nothing for this platform. Skipping.`,
+    )
     return
   }
 

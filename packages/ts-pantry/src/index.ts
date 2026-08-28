@@ -6,6 +6,7 @@ export {
   globalBinDir,
   installPackage,
   installPackages,
+  isInstallable,
   isSupported,
   resolveLatestVersion,
 } from './installer'
