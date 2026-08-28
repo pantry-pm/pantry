@@ -3,7 +3,7 @@
  *
  * @domain `lmstudio.ai`
  * @programs `lm-studio`
- * @version `0.3.8` (2 versions available)
+ * @version `0.4.22-1` (7 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install lmstudio.ai`
@@ -22,6 +22,7 @@ export const lmstudioaiPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '0.4.22-1',
     '0.4.21-2',
     '0.4.20-1',
     '0.4.19-2',

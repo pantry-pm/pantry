@@ -3,7 +3,7 @@
  *
  * @domain `d2lang.com`
  * @programs `d2`
- * @version `0.7.1` (12 versions available)
+ * @version `0.8.2` (35 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install d2lang.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "d2"
  * console.log(pkg.description) // "D2 is a modern diagram scripting language that ..."
  * console.log(pkg.programs)    // ["d2"]
- * console.log(pkg.versions[0]) // "0.7.1" (latest)
+ * console.log(pkg.versions[0]) // "0.8.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/d2lang-com.md
@@ -67,6 +67,7 @@ export const d2langcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.8.2',
     '0.7.1',
     '0.7.0',
     '0.6.9',
