@@ -1637,7 +1637,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"ziglang.org"},
     .aliases = &[_][]const u8{"craft"},
-    .versions = &[_][]const u8{ "0.0.37", "0.0.23", "0.0.20", "0.0.19" },
+    .versions = &[_][]const u8{ "0.0.79", "0.0.37", "0.0.23", "0.0.20", "0.0.19" },
 }, .{
     .name = "aichat",
     .domain = "crates.io/aichat",
