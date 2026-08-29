@@ -3,7 +3,7 @@
  *
  * @domain `groonga.org`
  * @programs `groonga`, `groonga-suggest-create-dataset`
- * @version `16.0.0` (40 versions available)
+ * @version `16.1.0` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install groonga.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "groonga"
  * console.log(pkg.description) // "An embeddable fulltext search engine. Groonga i..."
  * console.log(pkg.programs)    // ["groonga", "groonga-suggest-create-dataset"]
- * console.log(pkg.versions[0]) // "16.0.0" (latest)
+ * console.log(pkg.versions[0]) // "16.1.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/groonga-org.md
@@ -83,6 +83,7 @@ export const groongaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '16.1.0',
     '16.0.9',
     '16.0.8',
     '16.0.5',
