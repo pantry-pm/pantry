@@ -3,7 +3,7 @@
  *
  * @domain `aux4.io`
  * @programs `aux4`
- * @version `5.2.8` (48 versions available)
+ * @version `5.2.9` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install aux4.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "aux4"
  * console.log(pkg.description) // "elevate your imagination"
  * console.log(pkg.programs)    // ["aux4"]
- * console.log(pkg.versions[0]) // "5.2.8" (latest)
+ * console.log(pkg.versions[0]) // "5.2.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/aux4-io.md
@@ -67,6 +67,7 @@ export const aux4ioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.2.9',
     '5.2.8',
     '5.2.7',
     '5.2.6',
