@@ -2,9 +2,23 @@ name: Update Packages
 
 on:
   schedule:
-    # Run every 20 minutes
+    # Nominally every 20 minutes. GitHub throttles scheduled workflows on busy
+    # accounts and in practice this fires every two to three hours, so the cron
+    # is the floor on freshness, not the ceiling — a release can sit
+    # uninstallable for hours. `repository_dispatch` below is how our own
+    # projects skip that wait.
     - cron: '*/20 * * * *'
   workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Single package domain to refresh (empty = every recipe)'
+        required: false
+        type: string
+  # Sent by a first-party project the moment it publishes a release, so its new
+  # version is installable in a minute rather than whenever the cron next runs.
+  # Payload: { "domain": "craft-native.org" }.
+  repository_dispatch:
+    types: [package-released]
 
 concurrency:
   group: update-packages
@@ -39,11 +53,24 @@ jobs:
 
       - name: Fetch versions from recipes (GitHub API)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PAT first. `secrets.GITHUB_TOKEN` is capped per repository per hour
+          # and this sweep spends 600+ requests of it in one run, several times
+          # an hour, alongside every other workflow here.
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          # A dispatch names one domain; the cron sweeps everything.
+          TARGET_DOMAIN: ${{ github.event.client_payload.domain || inputs.domain }}
         run: |
           cd packages/ts-pantry
-          echo "Fetching versions from native TS recipes..."
-          bun scripts/version-fetcher.ts 2>&1 || true
+          # No `|| true`. It hid every failure this script can have — including a
+          # rate-limited sweep, which reports "no versions found" for hundreds of
+          # packages and then commits that as though it had checked them.
+          if [[ -n "$TARGET_DOMAIN" ]]; then
+            echo "Refreshing $TARGET_DOMAIN (dispatched)..."
+            bun scripts/version-fetcher.ts --domain "$TARGET_DOMAIN"
+          else
+            echo "Fetching versions from native TS recipes..."
+            bun scripts/version-fetcher.ts
+          fi
         timeout-minutes: 15
 
       - name: Generate index

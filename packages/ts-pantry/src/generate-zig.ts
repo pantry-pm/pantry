@@ -333,7 +333,15 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
   formatZig(outputFile)
 }
 
-/** Run `zig fmt` on a generated file, best-effort (no-op if zig isn't available). */
+/**
+ * Run `zig fmt` on a generated file. Best-effort, but never silent.
+ *
+ * The unformatted output is valid Zig and compiles, so skipping this is safe —
+ * but the committed file is canonical `zig fmt` output, and generating it
+ * without the formatter rewrites nearly every line. That lands as a
+ * thirty-thousand-line diff on a run whose actual change was one version
+ * string, with nothing anywhere saying why. Saying why costs one line.
+ */
 function formatZig(file: string): void {
   try {
     const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
@@ -341,8 +349,10 @@ function formatZig(file: string): void {
     console.log(`✨ Formatted with zig fmt: ${file}`)
   }
   catch {
-    // zig not installed (e.g. CI without the toolchain) — leave the deterministic
-    // generator output as-is; it is valid Zig and compiles fine.
+    const message = `zig is not on PATH — ${file} is unformatted, so expect a whole-file diff. Install the toolchain (or run under the pantry action) for a minimal one.`
+    // GitHub renders `::warning::` in the run summary, where whoever is looking
+    // at the surprising diff will actually see it.
+    console.warn(process.env.GITHUB_ACTIONS ? `::warning::${message}` : `⚠️  ${message}`)
   }
 }
 

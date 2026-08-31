@@ -29,16 +29,36 @@ const concurrency = Math.max(1, Math.min(32, Number.parseInt(concurrencyArg || '
 
 // ── GitHub API ────────────────────────────────────────────────────────
 
+/**
+ * The upstream could not be asked — as distinct from having nothing to say.
+ *
+ * Both used to return `[]`, and the sweep counted that as "checked, no new
+ * versions, 0 errors". So a rate-limited run and a run where every package was
+ * genuinely current produced the same summary and the same green tick, and the
+ * only way to tell them apart was to read 600 lines of log for the word 403.
+ */
+export class UpstreamUnavailable extends Error {
+  constructor(readonly repo: string, readonly status: number, readonly rateLimited: boolean) {
+    super(`${repo}: GitHub API returned ${status}${rateLimited ? ' (rate limit exhausted)' : ''}`)
+    this.name = 'UpstreamUnavailable'
+  }
+}
+
+/** A 403/429 with no requests left is the transient one, and the dangerous one. */
+function isRateLimited(resp: Response): boolean {
+  if (resp.status !== 403 && resp.status !== 429) return false
+  const remaining = resp.headers.get('x-ratelimit-remaining')
+  return remaining === null || remaining === '0'
+}
+
 async function fetchGitHubReleases(repo: string, tagPattern?: RegExp, stable = true): Promise<string[]> {
   const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' }
   if (GITHUB_TOKEN) headers.Authorization = `token ${GITHUB_TOKEN}`
 
   const url = `https://api.github.com/repos/${repo}/releases?per_page=50`
   const resp = await fetch(url, { headers, signal: AbortSignal.timeout(30000) })
-  if (!resp.ok) {
-    console.error(`  GitHub API error for ${repo}: ${resp.status}`)
-    return []
-  }
+  if (!resp.ok)
+    throw new UpstreamUnavailable(repo, resp.status, isRateLimited(resp))
 
   const releases = await resp.json() as Array<{ tag_name: string, prerelease: boolean, draft: boolean }>
   const versions: string[] = []
@@ -76,7 +96,8 @@ async function fetchGitHubTags(repo: string, tagPattern?: RegExp): Promise<strin
 
   const url = `https://api.github.com/repos/${repo}/tags?per_page=50`
   const resp = await fetch(url, { headers, signal: AbortSignal.timeout(30000) })
-  if (!resp.ok) return []
+  if (!resp.ok)
+    throw new UpstreamUnavailable(repo, resp.status, isRateLimited(resp))
 
   const tags = await resp.json() as Array<{ name: string }>
   const versions: string[] = []
@@ -308,32 +329,44 @@ async function main() {
   }
   scan(recipesDir)
 
-  async function processRecipeFile(file: string): Promise<{ checked: number, updated: number, errors: number }> {
+  /** Set once any upstream answers "rate limit exhausted": the sweep is void. */
+  let rateLimitHit = false
+
+  async function processRecipeFile(file: string): Promise<{ checked: number, updated: number, errors: number, unavailable: number }> {
     try {
       const mod = await import(file)
       const recipe: Recipe = mod.recipe || mod.default
-      if (!recipe?.domain || !recipe?.versionSource) return { checked: 0, updated: 0, errors: 0 }
+      if (!recipe?.domain || !recipe?.versionSource) return { checked: 0, updated: 0, errors: 0, unavailable: 0 }
 
-      if (targetDomain && recipe.domain !== targetDomain) return { checked: 0, updated: 0, errors: 0 }
+      if (targetDomain && recipe.domain !== targetDomain) return { checked: 0, updated: 0, errors: 0, unavailable: 0 }
 
       const versions = await fetchVersions(recipe.versionSource)
       if (versions.length === 0) {
         console.log(`  ${recipe.domain}: no versions found`)
-        return { checked: 1, updated: 0, errors: 0 }
+        return { checked: 1, updated: 0, errors: 0, unavailable: 0 }
       }
 
       const changed = updatePackageVersions(recipe.domain, versions)
       if (changed) {
         console.log(`  ${recipe.domain}: updated to ${versions[0]} (${versions.length} versions)`)
-        return { checked: 1, updated: 1, errors: 0 }
+        return { checked: 1, updated: 1, errors: 0, unavailable: 0 }
       }
 
-      return { checked: 1, updated: 0, errors: 0 }
+      return { checked: 1, updated: 0, errors: 0, unavailable: 0 }
     }
     catch (err) {
+      // An upstream we could not reach is not the same as a recipe that failed
+      // to load, and neither is "no new versions". Counting them apart is the
+      // difference between a sweep that found nothing and a sweep that asked
+      // nothing — which used to look identical from the summary line.
+      if (err instanceof UpstreamUnavailable) {
+        console.error(`  UNAVAILABLE ${err.message}`)
+        if (err.rateLimited) rateLimitHit = true
+        return { checked: 1, updated: 0, errors: 0, unavailable: 1 }
+      }
       const basename = file.split('/').pop()
       console.error(`  ERROR loading ${basename}: ${(err as Error).message}`)
-      return { checked: 0, updated: 0, errors: 1 }
+      return { checked: 0, updated: 0, errors: 1, unavailable: 0 }
     }
   }
 
@@ -342,6 +375,7 @@ async function main() {
   let updated = 0
   let checked = 0
   let errors = 0
+  let unavailable = 0
   let nextIndex = 0
   const workers = Array.from({ length: Math.min(concurrency, recipeFiles.length) }, async () => {
     while (true) {
@@ -351,12 +385,36 @@ async function main() {
       checked += result.checked
       updated += result.updated
       errors += result.errors
+      unavailable += result.unavailable
     }
   })
 
   await Promise.all(workers)
 
-  console.log(`\nDone: ${checked} checked, ${updated} updated, ${errors} errors`)
+  console.log(`\nDone: ${checked} checked, ${updated} updated, ${errors} errors, ${unavailable} unreachable`)
+
+  // A rate-limited sweep has not checked anything; it has merely failed to ask.
+  // Committing its result would record "no new versions" for every package it
+  // never reached, and the next run would start from that as though it were a
+  // fact. Fail instead, so the run is visibly red and simply runs again.
+  if (rateLimitHit) {
+    console.error('\nGitHub rate limit exhausted — this sweep is incomplete and its result must not be trusted.')
+    console.error('Give the workflow a token with a higher limit (PAT_TOKEN), or run it less often.')
+    process.exitCode = 1
+    return
+  }
+
+  // Some upstreams are permanently gone (renamed repos, deleted projects), so a
+  // handful of unreachable ones is the steady state rather than a regression.
+  // A fifth of the catalog is not.
+  if (checked > 0 && unavailable > checked / 5) {
+    console.error(`\n${unavailable} of ${checked} upstreams were unreachable — too many to treat this sweep as complete.`)
+    process.exitCode = 1
+  }
 }
 
-main().catch(console.error)
+// Only when run as a script. Importing this file — a test reaching for
+// `UpstreamUnavailable`, say — used to kick off a full sweep of every recipe as
+// a side effect of the import.
+if (import.meta.main)
+  main().catch(console.error)

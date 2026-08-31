@@ -29,8 +29,12 @@ export const recipe: Recipe = {
         headers,
         signal: AbortSignal.timeout(30000),
       })
+      // Throw rather than return []: an empty list means "upstream published
+      // nothing installable", and the sweep records that as a clean check. A
+      // 403 is not that, and reporting it as that is how a rate-limited run
+      // comes out looking identical to a healthy one.
       if (!resp.ok)
-        return []
+        throw new Error(`craft-native/craft: GitHub API returned ${resp.status}`)
       const releases = await resp.json() as Array<{
         tag_name: string
         prerelease: boolean
