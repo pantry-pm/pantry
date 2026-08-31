@@ -262,14 +262,20 @@ it does not require any arrangement with us.
    { "domain": "your-package.org" }
    ```
 
-   The response reports `queued` and whether the indexing run was `dispatched`
-   immediately. A version published this way is installable in about a minute.
+   The response reports `queued`. The hourly sweep claims that queue and
+   indexes what it finds, so a version reported this way is installable within
+   the hour rather than whenever the sweep would next have noticed it upstream.
 
 Nothing breaks if you skip this. A package that never calls it is picked up by
-the sweep that runs hourly — which is how nearly every package in the
-catalog works today, because most upstreams have no idea we exist. The API is
-the path to recommend to anyone who *can* take it, not a requirement for being
-in the catalog.
+the same hourly sweep — which is how nearly every package in the catalog works
+today, because most upstreams have no idea we exist. The API is the path to
+recommend to anyone who *can* take it, not a requirement for being in the
+catalog.
+
+The registry deliberately does not start an indexing run itself. Doing so would
+mean holding a credential that can write to the pantry repository, on an
+internet-facing service, to convert a bound of an hour into a bound of a
+minute — which is not a trade worth making for package indexing.
 
 ## Analytics and build operations
 
@@ -280,14 +286,10 @@ and bounded build-log reads. State-changing routes `/analytics/events`,
 `/api/build-events`, `/api/build-logs`, and `/api/rebuild` validate bodies and
 apply the auth policy in their handler.
 
-`/api/rebuild` queues a domain and then attempts to dispatch the indexing run
-straight away, so being told is worth more than being discovered. The dispatch
-credential lives on the registry rather than with each publisher: writing to the
-pantry repository is a privilege one service needs, and asking every project
-that publishes to hold its own is how a first-party project came to hold none.
+`/api/rebuild` queues a domain; nothing in the registry starts a build from it.
 `POST /api/rebuild-queue/claim` returns the queue and empties it in the same
-request, so the run that takes the work is the only one acting on it and a
-dispatch that failed is not a release that was lost.
+request, so the run that takes the work is the only one acting on it and two
+overlapping sweeps cannot both claim the same domains.
 
 The SSE endpoint sends an initial snapshot, event updates, and heartbeat comments,
 then cleans up subscriptions and timers on disconnect. Builder ingestion bounds

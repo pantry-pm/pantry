@@ -1,18 +1,20 @@
 name: Update Packages
 
-# Two paths in, and the difference between them is who knows first.
+# Hourly, and that is the only clock in the system.
 #
-# The one to recommend is the API. A project posts to `/api/rebuild` on the
-# registry when it publishes — with a token it can mint itself by signing up at
-# pantry.dev, no arrangement with us needed — and the registry dispatches
-# `package-released` here. The version is indexed in about a minute, and it
-# costs one request from the only party that already knew.
+# A project that publishes tells the registry — `POST /api/rebuild` with a
+# token it can mint itself by signing up at pantry.dev, no arrangement with us
+# needed — and the domain waits in the registry's queue until this run claims
+# it. That is a bound of an hour, not a minute, and it is deliberate: the
+# registry starting a run the moment it was told would mean holding a
+# credential that can write to this repository, and a standing write credential
+# on an internet-facing service is a poor trade for the other fifty-nine
+# minutes.
 #
-# The sweep is for everyone else, which today is nearly everyone: curl, php,
-# postgres and several hundred others have never heard of us and are never
-# going to tell us anything. Dropping it would freeze every one of them at
-# whatever version they happened to be on, so it stays until a package moves
-# to the API rather than until we would prefer it had.
+# The sweep covers everyone who cannot tell us anything, which today is nearly
+# everyone: curl, php, postgres and several hundred others have never heard of
+# us. Dropping it would freeze every one of them at whatever version they
+# happened to be on.
 #
 # What did change is the cadence. At `*/20` this re-derived every recipe's
 # version list from the GitHub API — 600+ requests — three times an hour, to
@@ -32,10 +34,6 @@ on:
         description: 'Single package domain to refresh (empty = every recipe)'
         required: false
         type: string
-  # Sent by the registry when a publisher reports a release.
-  # Payload: { "domain": "craft-native.org" }.
-  repository_dispatch:
-    types: [package-released]
 
 concurrency:
   group: update-packages
@@ -68,15 +66,14 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      # Drain anything the registry queued but could not dispatch — its own
-      # notification failing, or a run that was already in flight under this
-      # workflow's concurrency group and got cancelled. The dispatch is the
-      # fast path; this is what stops a lost dispatch from being a lost
-      # release. Claim empties the queue, so two runs cannot both take the
-      # same domains.
+      # Take what publishers reported since the last run. This is the only
+      # thing that consumes those notifications, so a release sits in the queue
+      # for at most one sweep. Claim empties the queue in the same request, so
+      # two runs cannot both take the same domains and the queue cannot grow
+      # without bound.
       #
-      # Best-effort by construction: if the registry is unreachable this run
-      # still does the work it was dispatched for.
+      # Best-effort by construction: if the registry is unreachable, the sweep
+      # below still refreshes every recipe, this one included.
       - name: Claim released packages from the registry
         id: claimed
         env:
@@ -104,8 +101,8 @@ jobs:
           # and this sweep spends 600+ requests of it in one run, several times
           # an hour, alongside every other workflow here.
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-          # A dispatch names one domain; the cron sweeps everything.
-          TARGET_DOMAIN: ${{ github.event.client_payload.domain || inputs.domain }}
+          # A manual run may name one domain; the cron sweeps everything.
+          TARGET_DOMAIN: ${{ inputs.domain }}
           CLAIMED_DOMAINS: ${{ steps.claimed.outputs.domains }}
         run: |
           cd packages/ts-pantry
@@ -118,9 +115,13 @@ jobs:
           # sweep — and since notifications arrive continuously, a steady
           # trickle of them would have starved the sweep indefinitely, freezing
           # every package that has no way to notify us. Which is most of them.
+          #
+          # Scheduled runs are the norm now that nothing dispatches this
+          # workflow, so the sweep branch is the one that almost always runs.
           if [[ -n "$TARGET_DOMAIN" ]]; then
             # Targeted: this domain, plus anything queued that we are now the
-            # run for. No sweep — a notification should not cost 600 requests.
+            # run for. No sweep — refreshing one package should not cost 600
+            # requests.
             for domain in $TARGET_DOMAIN $CLAIMED_DOMAINS; do
               case " $seen " in *" $domain "*) continue ;; esac
               seen="$seen $domain"
