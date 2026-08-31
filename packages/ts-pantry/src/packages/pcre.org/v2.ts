@@ -3,7 +3,7 @@
  *
  * @domain `pcre.org/v2`
  * @programs `pcre2-config`, `pcre2grep`, `pcre2test`
- * @version `10.48-RC1` (33 versions available)
+ * @version `10.48` (34 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pcre.org/v2`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pcre2"
  * console.log(pkg.description) // "Perl compatible regular expressions library wit..."
  * console.log(pkg.programs)    // ["pcre2-config", "pcre2grep", ...]
- * console.log(pkg.versions[0]) // "10.48-RC1" (latest)
+ * console.log(pkg.versions[0]) // "10.48" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pcre-org/v2.md
@@ -70,6 +70,7 @@ export const pcreorgv2Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '10.48',
     '10.48-RC1',
     '10.47',
     '10.47.0',
