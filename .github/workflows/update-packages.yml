@@ -15,15 +15,17 @@ name: Update Packages
 # to the API rather than until we would prefer it had.
 #
 # What did change is the cadence. At `*/20` this re-derived every recipe's
-# version list from the GitHub API — 600+ requests — to rediscover what any
-# publisher on the API path had already told us, and GitHub throttled it to
-# every two or three hours anyway. Every six hours costs a twentieth of that
-# and is no slower for anything that depends on it, because the packages that
-# need minute-level freshness are the ones now telling us directly.
+# version list from the GitHub API — 600+ requests — three times an hour, to
+# rediscover what any publisher on the API path had already told us. Hourly is
+# a third of those requests and, because GitHub throttles scheduled workflows
+# on a busy account and was firing this every two or three hours regardless,
+# is not actually less often than what was happening. The cron is a floor on
+# freshness, not a promise of it; anything needing better than that has the
+# API.
 on:
   schedule:
     # The fallback for packages that cannot notify us. Not the fast path.
-    - cron: '0 */6 * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       domain:

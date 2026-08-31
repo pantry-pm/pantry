@@ -266,7 +266,7 @@ it does not require any arrangement with us.
    immediately. A version published this way is installable in about a minute.
 
 Nothing breaks if you skip this. A package that never calls it is picked up by
-the sweep that runs every six hours — which is how nearly every package in the
+the sweep that runs hourly — which is how nearly every package in the
 catalog works today, because most upstreams have no idea we exist. The API is
 the path to recommend to anyone who *can* take it, not a requirement for being
 in the catalog.
