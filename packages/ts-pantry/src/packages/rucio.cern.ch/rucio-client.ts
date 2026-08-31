@@ -3,7 +3,7 @@
  *
  * @domain `rucio.cern.ch/rucio-client`
  * @programs `rucio`, `rucio-admin`
- * @version `39.4.1` (51 versions available)
+ * @version `41.2.1` (78 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install rucio.cern.ch/rucio-client`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "rucio-client"
  * console.log(pkg.description) // "Rucio - Scientific Data Management"
  * console.log(pkg.programs)    // ["rucio", "rucio-admin"]
- * console.log(pkg.versions[0]) // "39.4.1" (latest)
+ * console.log(pkg.versions[0]) // "41.2.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/rucio-cern-ch/rucio-client.md
@@ -77,6 +77,7 @@ export const ruciocernchrucioclientPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '41.2.1',
     '41.2.0',
     '41.1.1',
     '41.1.0',
@@ -126,6 +127,7 @@ export const ruciocernchrucioclientPackage = {
     '36.3.0',
     '36.2.0',
     '36.1.0',
+    '35.9.2',
     '35.9.1.post2',
     '35.9.1.post1',
     '35.9.1',
