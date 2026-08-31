@@ -112,18 +112,26 @@ jobs:
           # No `|| true`. It hid every failure this script can have — including a
           # rate-limited sweep, which reports "no versions found" for hundreds of
           # packages and then commits that as though it had checked them.
+          # What this run does is decided by why it started, NOT by what is in
+          # the queue. Branching on the queue meant a scheduled run that found
+          # anything claimed refreshed only those domains and skipped its
+          # sweep — and since notifications arrive continuously, a steady
+          # trickle of them would have starved the sweep indefinitely, freezing
+          # every package that has no way to notify us. Which is most of them.
           if [[ -n "$TARGET_DOMAIN" ]]; then
-            echo "Refreshing $TARGET_DOMAIN (dispatched)..."
-            bun scripts/version-fetcher.ts --domain "$TARGET_DOMAIN"
-          elif [[ -n "$CLAIMED_DOMAINS" ]]; then
-            # A claimed domain is a package that told us it just published, so
-            # refresh those rather than spending a 600-request full sweep to
-            # rediscover what we were already told.
-            for domain in $CLAIMED_DOMAINS; do
-              echo "Refreshing $domain (claimed from the registry)..."
+            # Targeted: this domain, plus anything queued that we are now the
+            # run for. No sweep — a notification should not cost 600 requests.
+            for domain in $TARGET_DOMAIN $CLAIMED_DOMAINS; do
+              case " $seen " in *" $domain "*) continue ;; esac
+              seen="$seen $domain"
+              echo "Refreshing $domain..."
               bun scripts/version-fetcher.ts --domain "$domain"
             done
           else
+            # Scheduled, or a manual run with no domain. The sweep covers every
+            # recipe, claimed ones included, so they need nothing extra here —
+            # claiming them still matters, because it stops the queue growing
+            # without bound.
             echo "Fetching versions from native TS recipes..."
             bun scripts/version-fetcher.ts
           fi
