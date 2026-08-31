@@ -1,21 +1,26 @@
 name: Update Packages
 
+# Publishing tells us; we do not go looking.
+#
+# This ran every 20 minutes and re-derived the version list for every recipe
+# from the GitHub API — 600+ requests to rediscover what publishers already
+# knew, throttled by GitHub to every two or three hours in practice, so a
+# release could sit uninstallable for most of a day. The freshness it bought
+# was worse than the freshness of simply being told, and it cost a full sweep
+# to buy it.
+#
+# The supported path is the API: a project posts to `/api/rebuild` on the
+# registry with the same PANTRY_TOKEN it publishes with, and the registry
+# dispatches `package-released` here. That is the flow to document and
+# recommend; `workflow_dispatch` remains for a manual or backfill refresh.
 on:
-  schedule:
-    # Nominally every 20 minutes. GitHub throttles scheduled workflows on busy
-    # accounts and in practice this fires every two to three hours, so the cron
-    # is the floor on freshness, not the ceiling — a release can sit
-    # uninstallable for hours. `repository_dispatch` below is how our own
-    # projects skip that wait.
-    - cron: '*/20 * * * *'
   workflow_dispatch:
     inputs:
       domain:
         description: 'Single package domain to refresh (empty = every recipe)'
         required: false
         type: string
-  # Sent by a first-party project the moment it publishes a release, so its new
-  # version is installable in a minute rather than whenever the cron next runs.
+  # Sent by the registry when a publisher reports a release.
   # Payload: { "domain": "craft-native.org" }.
   repository_dispatch:
     types: [package-released]
@@ -51,17 +56,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      # A project that just published tells the registry, with the same
-      # PANTRY_TOKEN it already uses to publish. Claiming that queue here is
-      # what makes telling the registry worth doing: before this, requests
-      # accumulated in `/api/rebuild-queue` and nothing ever read them, so the
-      # only thing that ever refreshed a package was this cron sweeping all of
-      # them. Claim empties the queue, so two overlapping sweeps cannot both
-      # take the same work.
+      # Drain anything the registry queued but could not dispatch — its own
+      # notification failing, or a run that was already in flight under this
+      # workflow's concurrency group and got cancelled. The dispatch is the
+      # fast path; this is what stops a lost dispatch from being a lost
+      # release. Claim empties the queue, so two runs cannot both take the
+      # same domains.
       #
-      # Best-effort by construction: if the registry is unreachable the sweep
-      # below still runs, and a domain that was dropped is picked up by the
-      # next full pass rather than lost.
+      # Best-effort by construction: if the registry is unreachable this run
+      # still does the work it was dispatched for.
       - name: Claim released packages from the registry
         id: claimed
         env:

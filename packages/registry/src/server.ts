@@ -1002,7 +1002,11 @@ export function createHandler(
         const tier = await tierForUser(identity.userId)
         const priority = identity.userId === '_admin' || tierDefinition(tier).priorityBuilds
         const queued = getBuildStatus().requestRebuild(domain, priority)
-        return Response.json({ queued, domain, priority }, { headers: corsHeaders })
+        // Queue first, then try to start the run now. The queue is the record
+        // that survives a failed dispatch; the dispatch is what makes being
+        // told worth more than being discovered.
+        const dispatched = await dispatchIndexRun(domain)
+        return Response.json({ queued, domain, priority, dispatched }, { headers: corsHeaders })
       }
       // The build-driver reads (and optionally clears) the rebuild queue.
       if (path === '/api/rebuild-queue' && req.method === 'GET') {
@@ -2228,6 +2232,52 @@ async function validateToken(authHeader: string | null): Promise<{ valid: boolea
  * only state-changing endpoints (rebuild triggers, build-status/log ingestion)
  * go through here. Never throws — returns false on any failure.
  */
+/**
+ * Start the run that indexes a domain, the moment we are told about it.
+ *
+ * This is the half of "publishers tell us" that makes the other half worth
+ * doing. A notification that only lands in a queue is still waiting on whatever
+ * drains the queue, and while that was a cron, being told early bought nothing.
+ *
+ * The token lives here rather than in each publishing project. Writing to the
+ * pantry repository is a privilege exactly one service needs, and asking every
+ * project that publishes to hold its own GitHub credential for it is how
+ * craft-native.org ended up with none and silently never notifying anyone.
+ * Publishers authenticate to this registry with the token they already have to
+ * publish; this is the only place that needs more than that.
+ *
+ * Best-effort on purpose: the domain is queued before this runs, so a failure
+ * here loses nothing that a claim will not pick up.
+ */
+async function dispatchIndexRun(domain: string): Promise<boolean> {
+  const token = process.env.PANTRY_INDEX_DISPATCH_TOKEN
+  if (!token)
+    return false
+
+  const repository = process.env.PANTRY_INDEX_REPOSITORY || 'pantry-pm/pantry'
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repository}/dispatches`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'pantry-registry-index-dispatch',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        event_type: 'package-released',
+        client_payload: { domain },
+      }),
+      signal: AbortSignal.timeout(10000),
+    })
+    return res.status === 204
+  }
+  catch {
+    return false
+  }
+}
+
 async function isAuthorizedRequest(req: Request): Promise<boolean> {
   try {
     const authHeader = req.headers.get('authorization')

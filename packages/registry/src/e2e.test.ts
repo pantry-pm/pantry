@@ -966,6 +966,24 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
       expect(body.domain).toBe('curl.se')
     })
 
+    it('POST /api/rebuild reports whether it could start the run', async () => {
+      // No PANTRY_INDEX_DISPATCH_TOKEN in the test environment, so the
+      // dispatch is skipped — but the domain is still queued, which is the
+      // guarantee the claim path depends on.
+      const res = await fetch(`${baseUrl}/api/rebuild`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TEST_TOKEN}` },
+        body: JSON.stringify({ domain: 'dispatch-report.example' }),
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json() as { queued?: boolean, dispatched?: boolean }
+      expect(body.queued).toBe(true)
+      expect(body.dispatched).toBe(false)
+
+      const queue = await (await fetch(`${baseUrl}/api/rebuild-queue`)).json() as { queue?: string[] }
+      expect(queue.queue).toContain('dispatch-report.example')
+    })
+
     it('POST /api/rebuild-queue/claim rejects unauthenticated requests', async () => {
       const res = await fetch(`${baseUrl}/api/rebuild-queue/claim`, { method: 'POST' })
       expect(res.status).toBe(401)
