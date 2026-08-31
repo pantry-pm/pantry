@@ -1,19 +1,29 @@
 name: Update Packages
 
-# Publishing tells us; we do not go looking.
+# Two paths in, and the difference between them is who knows first.
 #
-# This ran every 20 minutes and re-derived the version list for every recipe
-# from the GitHub API — 600+ requests to rediscover what publishers already
-# knew, throttled by GitHub to every two or three hours in practice, so a
-# release could sit uninstallable for most of a day. The freshness it bought
-# was worse than the freshness of simply being told, and it cost a full sweep
-# to buy it.
+# The one to recommend is the API. A project posts to `/api/rebuild` on the
+# registry when it publishes — with a token it can mint itself by signing up at
+# pantry.dev, no arrangement with us needed — and the registry dispatches
+# `package-released` here. The version is indexed in about a minute, and it
+# costs one request from the only party that already knew.
 #
-# The supported path is the API: a project posts to `/api/rebuild` on the
-# registry with the same PANTRY_TOKEN it publishes with, and the registry
-# dispatches `package-released` here. That is the flow to document and
-# recommend; `workflow_dispatch` remains for a manual or backfill refresh.
+# The sweep is for everyone else, which today is nearly everyone: curl, php,
+# postgres and several hundred others have never heard of us and are never
+# going to tell us anything. Dropping it would freeze every one of them at
+# whatever version they happened to be on, so it stays until a package moves
+# to the API rather than until we would prefer it had.
+#
+# What did change is the cadence. At `*/20` this re-derived every recipe's
+# version list from the GitHub API — 600+ requests — to rediscover what any
+# publisher on the API path had already told us, and GitHub throttled it to
+# every two or three hours anyway. Every six hours costs a twentieth of that
+# and is no slower for anything that depends on it, because the packages that
+# need minute-level freshness are the ones now telling us directly.
 on:
+  schedule:
+    # The fallback for packages that cannot notify us. Not the fast path.
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       domain:

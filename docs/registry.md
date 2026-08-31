@@ -235,6 +235,42 @@ Fallback is a read behavior. A miss in Pantry does not cause an npm package to
 be copied or published into Pantry. Disabling fallback is the correct mode for
 operators who require the registry to serve only explicitly stored artifacts.
 
+## Telling the registry about a release
+
+The registry indexes a new version either because you told it or because a
+scheduled sweep found it. Telling it is faster and cheaper for both sides, and
+it does not require any arrangement with us.
+
+1. **Get a token.** Sign up at [pantry.dev](https://registry.pantry.dev/signup)
+   and create one from your account, or `POST /auth/tokens` with a session:
+
+   ```
+   POST /auth/tokens
+   { "name": "ci", "permissions": ["publish", "read"] }
+   ```
+
+   The raw token is shown once, at creation, and stored only as a SHA-256 hash.
+   It carries the `ptry_` prefix and works anywhere this registry takes a
+   Bearer token — publishing and the call below both accept it.
+
+2. **Tell the registry when you publish.** One request, from CI, after the
+   release is complete:
+
+   ```
+   POST /api/rebuild
+   Authorization: Bearer $PANTRY_TOKEN
+   { "domain": "your-package.org" }
+   ```
+
+   The response reports `queued` and whether the indexing run was `dispatched`
+   immediately. A version published this way is installable in about a minute.
+
+Nothing breaks if you skip this. A package that never calls it is picked up by
+the sweep that runs every six hours — which is how nearly every package in the
+catalog works today, because most upstreams have no idea we exist. The API is
+the path to recommend to anyone who *can* take it, not a requirement for being
+in the catalog.
+
 ## Analytics and build operations
 
 Public read routes include `/analytics/{name}`, `/analytics/top`, category period
@@ -243,6 +279,15 @@ views, `/api/packages`, `/api/build-status`, `/api/github-actions-status`,
 and bounded build-log reads. State-changing routes `/analytics/events`,
 `/api/build-events`, `/api/build-logs`, and `/api/rebuild` validate bodies and
 apply the auth policy in their handler.
+
+`/api/rebuild` queues a domain and then attempts to dispatch the indexing run
+straight away, so being told is worth more than being discovered. The dispatch
+credential lives on the registry rather than with each publisher: writing to the
+pantry repository is a privilege one service needs, and asking every project
+that publishes to hold its own is how a first-party project came to hold none.
+`POST /api/rebuild-queue/claim` returns the queue and empties it in the same
+request, so the run that takes the work is the only one acting on it and a
+dispatch that failed is not a release that was lost.
 
 The SSE endpoint sends an initial snapshot, event updates, and heartbeat comments,
 then cleans up subscriptions and timers on disconnect. Builder ingestion bounds
