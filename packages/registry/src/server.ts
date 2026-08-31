@@ -1008,6 +1008,28 @@ export function createHandler(
       if (path === '/api/rebuild-queue' && req.method === 'GET') {
         return Response.json({ queue: getBuildStatus().getQueue() }, { headers: corsHeaders })
       }
+      // Claim the queue: return it and empty it in one step, so the run that
+      // takes the work is the only one that acts on it.
+      //
+      // `requestRebuild` and `clearQueue` have both existed since the queue
+      // did, and nothing ever called the second one — there was no way to,
+      // over HTTP. So every request accumulated and none was ever acted on:
+      // the production queue had been holding `curl.se` indefinitely, and a
+      // release that asked to be indexed was simply added to that pile. A
+      // queue nobody drains is a queue nobody should be told to write to.
+      //
+      // Reading and clearing are one request rather than a GET then a DELETE
+      // because two sweeps overlapping would otherwise both act on the same
+      // domains, and the second would find them already gone.
+      if (path === '/api/rebuild-queue/claim' && req.method === 'POST') {
+        if (!(await isAuthorizedRequest(req)))
+          return Response.json({ error: 'Authentication required' }, { status: 401, headers: corsHeaders })
+        const status = getBuildStatus()
+        const claimed = status.getQueue()
+        if (claimed.length > 0)
+          status.clearQueue(claimed)
+        return Response.json({ claimed, count: claimed.length }, { headers: corsHeaders })
+      }
       // Requested-but-unavailable versions: versions a build attempted but that
       // don't exist upstream (no source tarball AND no prebuilt binary — every
       // attempt 404'd). These are NOT failures; they're surfaced so the dashboard

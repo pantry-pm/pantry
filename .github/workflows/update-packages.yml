@@ -51,6 +51,38 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      # A project that just published tells the registry, with the same
+      # PANTRY_TOKEN it already uses to publish. Claiming that queue here is
+      # what makes telling the registry worth doing: before this, requests
+      # accumulated in `/api/rebuild-queue` and nothing ever read them, so the
+      # only thing that ever refreshed a package was this cron sweeping all of
+      # them. Claim empties the queue, so two overlapping sweeps cannot both
+      # take the same work.
+      #
+      # Best-effort by construction: if the registry is unreachable the sweep
+      # below still runs, and a domain that was dropped is picked up by the
+      # next full pass rather than lost.
+      - name: Claim released packages from the registry
+        id: claimed
+        env:
+          PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+        run: |
+          domains=""
+          if [ -n "${PANTRY_TOKEN:-}" ]; then
+            body="$(curl -sS --max-time 20 -X POST https://registry.pantry.dev/api/rebuild-queue/claim \
+              -H "Authorization: Bearer $PANTRY_TOKEN" || echo '')"
+            domains="$(printf '%s' "$body" | jq -r '(.claimed // []) | join(" ")' 2>/dev/null || echo '')"
+          else
+            echo "::warning::No PANTRY_TOKEN — release notifications will not be claimed this run."
+          fi
+
+          if [ -n "$domains" ]; then
+            echo "Claimed from the registry: $domains"
+          else
+            echo "Nothing claimed."
+          fi
+          echo "domains=$domains" >> "$GITHUB_OUTPUT"
+
       - name: Fetch versions from recipes (GitHub API)
         env:
           # PAT first. `secrets.GITHUB_TOKEN` is capped per repository per hour
@@ -59,6 +91,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           # A dispatch names one domain; the cron sweeps everything.
           TARGET_DOMAIN: ${{ github.event.client_payload.domain || inputs.domain }}
+          CLAIMED_DOMAINS: ${{ steps.claimed.outputs.domains }}
         run: |
           cd packages/ts-pantry
           # No `|| true`. It hid every failure this script can have — including a
@@ -67,6 +100,14 @@ jobs:
           if [[ -n "$TARGET_DOMAIN" ]]; then
             echo "Refreshing $TARGET_DOMAIN (dispatched)..."
             bun scripts/version-fetcher.ts --domain "$TARGET_DOMAIN"
+          elif [[ -n "$CLAIMED_DOMAINS" ]]; then
+            # A claimed domain is a package that told us it just published, so
+            # refresh those rather than spending a 600-request full sweep to
+            # rediscover what we were already told.
+            for domain in $CLAIMED_DOMAINS; do
+              echo "Refreshing $domain (claimed from the registry)..."
+              bun scripts/version-fetcher.ts --domain "$domain"
+            done
           else
             echo "Fetching versions from native TS recipes..."
             bun scripts/version-fetcher.ts

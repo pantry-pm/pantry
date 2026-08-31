@@ -966,6 +966,32 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
       expect(body.domain).toBe('curl.se')
     })
 
+    it('POST /api/rebuild-queue/claim rejects unauthenticated requests', async () => {
+      const res = await fetch(`${baseUrl}/api/rebuild-queue/claim`, { method: 'POST' })
+      expect(res.status).toBe(401)
+    })
+
+    it('POST /api/rebuild-queue/claim returns the queue and empties it', async () => {
+      await fetch(`${baseUrl}/api/rebuild`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TEST_TOKEN}` },
+        body: JSON.stringify({ domain: 'claim-me.example' }),
+      })
+
+      const claim = await fetch(`${baseUrl}/api/rebuild-queue/claim`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TEST_TOKEN}` },
+      })
+      expect(claim.status).toBe(200)
+      const claimed = await claim.json() as { claimed?: string[] }
+      expect(claimed.claimed).toContain('claim-me.example')
+
+      // The point of claiming: the next run does not get the same work again.
+      const after = await fetch(`${baseUrl}/api/rebuild-queue`)
+      const queue = await after.json() as { queue?: string[] }
+      expect(queue.queue).not.toContain('claim-me.example')
+    })
+
     it('POST /api/build-events rejects unauthenticated requests', async () => {
       const res = await fetch(`${baseUrl}/api/build-events`, {
         method: 'POST',
