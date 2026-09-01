@@ -26,14 +26,21 @@ name: Update Packages
 # API.
 on:
   schedule:
-    # The fallback for packages that cannot notify us. Not the fast path.
+    # The fallback for packages that cannot notify us. Not the fast path —
+    # `drain-release-queue.yml` dispatches this workflow within minutes of a
+    # release, because a dispatch is not subject to the throttling below.
     - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       domain:
-        description: 'Single package domain to refresh (empty = every recipe)'
+        description: 'Package domain(s) to refresh, space-separated (empty = every recipe)'
         required: false
         type: string
+      claimed-only:
+        description: 'Refresh only what the registry queue hands us — no sweep. Used by drain-release-queue.'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: update-packages
@@ -104,6 +111,7 @@ jobs:
           # A manual run may name one domain; the cron sweeps everything.
           TARGET_DOMAIN: ${{ inputs.domain }}
           CLAIMED_DOMAINS: ${{ steps.claimed.outputs.domains }}
+          CLAIMED_ONLY: ${{ inputs.claimed-only }}
         run: |
           cd packages/ts-pantry
           # No `|| true`. It hid every failure this script can have — including a
@@ -116,9 +124,15 @@ jobs:
           # trickle of them would have starved the sweep indefinitely, freezing
           # every package that has no way to notify us. Which is most of them.
           #
-          # Scheduled runs are the norm now that nothing dispatches this
-          # workflow, so the sweep branch is the one that almost always runs.
-          if [[ -n "$TARGET_DOMAIN" ]]; then
+          # `claimed-only` does not reintroduce that. It is set by the trigger,
+          # by a run that exists solely to drain the queue; a scheduled run
+          # never sets it and always sweeps. Reading the queue to decide is
+          # still the thing we do not do.
+          #
+          # Something dispatches this workflow again now — see
+          # `drain-release-queue.yml`. A scheduled run remains the fallback, and
+          # still sweeps everything.
+          if [[ -n "$TARGET_DOMAIN" || "$CLAIMED_ONLY" == "true" ]]; then
             # Targeted: this domain, plus anything queued that we are now the
             # run for. No sweep — refreshing one package should not cost 600
             # requests.

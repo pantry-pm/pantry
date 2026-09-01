@@ -1,0 +1,93 @@
+name: Drain Release Queue
+
+# The fast path for a project that told us it published.
+#
+# `POST /api/rebuild` queues a domain, and until now only `update-packages.yml`
+# drained that queue — on `cron: '0 * * * *'`. GitHub throttles the schedule
+# event on a busy account, and it throttles it much harder than that cron reads:
+# measured over twelve consecutive firings, the mean gap was 298 minutes and the
+# worst was 546. A release waited about five hours on average to be noticed, and
+# craft-native.org 0.0.86 waited 2h52m of which 2h36m — 89% — was purely waiting
+# for the cron. The work itself took sixteen minutes.
+#
+# Two things make that unnecessary:
+#
+#   1. A dispatch is not throttled. Once something decides to start the run, it
+#      starts. So this workflow's whole job is to notice and dispatch.
+#   2. The expensive part was never the queue. `update-packages.yml` costs 600+
+#      GitHub API requests because it re-derives every recipe's versions for the
+#      packages that cannot notify us; refreshing the two or three domains that
+#      just published costs a handful. It already has that cheap path — nothing
+#      could reach it, because it was only selectable by naming a domain by hand.
+#
+# So this runs often and does almost nothing: one unauthenticated GET, and on
+# the rare tick where the queue is non-empty, one dispatch. It does NOT claim.
+# Claiming empties the queue, and the run that empties it should be the run that
+# acts on it — otherwise a dispatch that fails to start loses the domains.
+#
+# This is still a scheduled workflow and still subject to the same throttling.
+# The denser cron is deliberate: `build-orchestrator.yml` declares `*/30` and is
+# delivered every 110 minutes on average against this repo's `0 * * * *` being
+# delivered every 298, so a tighter declared schedule survives throttling
+# better. Cheap enough to ask for often, and the hourly sweep remains the
+# backstop if every tick of this is dropped.
+#
+# What this deliberately does NOT do is let the registry start the run itself.
+# That would mean a standing credential able to write to this repository, held
+# by an internet-facing service — the trade `update-packages.yml` declined, and
+# declining it is still right. CI pulls; the registry never pushes.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: drain-release-queue
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drain:
+    name: Dispatch a refresh if anything is queued
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      # Peek, do not claim. Unauthenticated by design — the queue is a list of
+      # domains, and reading it tells an observer only what has been released,
+      # which the releases themselves already say.
+      - name: Check the registry queue
+        id: queue
+        run: |
+          body="$(curl -sS --max-time 20 https://registry.pantry.dev/api/rebuild-queue || echo '')"
+          count="$(printf '%s' "$body" | jq -r '(.queue // []) | length' 2>/dev/null || echo 0)"
+          # A malformed or empty response reads as an empty queue, which costs
+          # one skipped tick. The hourly sweep still covers anything missed.
+          case "$count" in
+            ''|*[!0-9]*) count=0 ;;
+          esac
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then
+            echo "Queued: $(printf '%s' "$body" | jq -r '(.queue // []) | join(" ")' 2>/dev/null || echo '?')"
+          else
+            echo "Queue empty — nothing to dispatch."
+          fi
+
+      # The dispatched run claims the queue itself and refreshes only what it
+      # claimed. No sweep, so this costs a handful of API requests rather than
+      # 600 — which is what makes it affordable to trigger this often.
+      - name: Dispatch a claimed-only refresh
+        if: steps.queue.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run update-packages.yml \
+            --repo "${{ github.repository }}" \
+            -f claimed-only=true
+          echo "Dispatched update-packages.yml (claimed-only)."
