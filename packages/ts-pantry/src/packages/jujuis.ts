@@ -3,7 +3,7 @@
  *
  * @domain `juju.is`
  * @programs `juju`
- * @version `4.0.3` (31 versions available)
+ * @version `4.0.14` (65 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install juju.is`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "juju"
  * console.log(pkg.description) // "Orchestration engine that enables the deploymen..."
  * console.log(pkg.programs)    // ["juju"]
- * console.log(pkg.versions[0]) // "4.0.3" (latest)
+ * console.log(pkg.versions[0]) // "4.0.14" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/juju-is.md
@@ -74,6 +74,7 @@ export const jujuisPackage = {
     '4.0.3',
     '4.0.1',
     '4.0.0',
+    '3.6.28',
     '3.6.27',
     '3.6.25',
     '3.6.24',

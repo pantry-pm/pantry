@@ -3,7 +3,7 @@
  *
  * @domain `certbot.eff.org`
  * @programs `certbot`
- * @version `5.4.0` (27 versions available)
+ * @version `5.8.0` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install certbot.eff.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "certbot"
  * console.log(pkg.description) // "Certbot is EFF's tool to obtain certs from Let'..."
  * console.log(pkg.programs)    // ["certbot"]
- * console.log(pkg.versions[0]) // "5.4.0" (latest)
+ * console.log(pkg.versions[0]) // "5.8.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/certbot-eff-org.md
@@ -67,6 +67,7 @@ export const certbotefforgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.8.0',
     '5.7.0',
     '5.6.0',
     '5.5.0',
