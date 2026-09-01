@@ -1,7 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 
-export const ALL_BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64'] as const
+// The historical name for the shared vocabulary; see `./platforms`.
+import { ALL_PLATFORMS as ALL_BUILD_PLATFORMS } from './platforms'
+
+export { ALL_BUILD_PLATFORMS }
 
 function sourceFiles(root: string): string[] {
   const files: string[] = []

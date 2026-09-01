@@ -1,4 +1,6 @@
+import type { Platform } from '../platforms'
 import type { S3Client } from './aws-client'
+import { ALL_PLATFORMS, BUILDABLE_PLATFORMS, isRetiredPlatform, RETIRED_PLATFORMS } from '../platforms'
 import { ObjectSnapshot } from './object-snapshot'
 
 /**
@@ -13,33 +15,17 @@ import { ObjectSnapshot } from './object-snapshot'
  * and persists the live/recent/queue parts as one JSON object (same pattern as
  * the other object-backed stores). Coverage is derived/cached, not persisted.
  */
-export const BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64'] as const
-export type BuildPlatform = typeof BUILD_PLATFORMS[number]
-const PLATFORM_SET = new Set<string>(BUILD_PLATFORMS)
+export { BUILDABLE_PLATFORMS, RETIRED_PLATFORMS }
 
 /**
- * Platforms we still serve but no longer build.
- *
- * Intel macOS is retired on the build side — `orchestrate-builds.ts` and
- * `provision-build-workers.ts` both say so, and no workflow matrix has carried
- * a darwin-x86-64 leg since. Published Intel artifacts stay served (1,423
- * packages have one), so `platforms` keeps reporting them truthfully; what
- * changes is that nothing is judged INCOMPLETE for lacking a binary that will
- * never be produced again.
- *
- * The registry had not been told. Packages without an explicit recipe
- * constraint default to every build platform, so 1,658 claimed to support
- * Intel — and 290 of 1,730 published packages counted as incomplete, 179 of
- * them for that reason alone. Nearly two thirds of the signal was a platform
- * we retired on purpose, which is how a genuine half-landed release goes
- * unnoticed. Retire it here too and 111 remain: the ones actually missing
- * something that can still be built.
+ * Every platform key coverage can report, retired ones included — their
+ * artifacts are still served, so `platforms` still has to be able to show them.
+ * Completeness is measured against BUILDABLE_PLATFORMS instead; see
+ * `../platforms` for why the two differ.
  */
-export const RETIRED_PLATFORMS = ['darwin-x86-64'] as const
-const RETIRED_SET = new Set<string>(RETIRED_PLATFORMS)
-
-/** Build platforms still in production — what "complete" is measured against. */
-export const BUILDABLE_PLATFORMS: string[] = BUILD_PLATFORMS.filter(p => !RETIRED_SET.has(p))
+export const BUILD_PLATFORMS: readonly Platform[] = ALL_PLATFORMS
+export type BuildPlatform = Platform
+const PLATFORM_SET = new Set<string>(BUILD_PLATFORMS)
 
 /**
  * The platforms a package is judged on: its recipe constraint if it has one,
@@ -51,7 +37,7 @@ export const BUILDABLE_PLATFORMS: string[] = BUILD_PLATFORMS.filter(p => !RETIRE
  */
 function judgedPlatforms(constraint: string[] | undefined): string[] {
   const declared = constraint && constraint.length > 0 ? constraint : [...BUILDABLE_PLATFORMS]
-  const live = declared.filter(p => !RETIRED_SET.has(p))
+  const live = declared.filter(p => !isRetiredPlatform(p))
   return live.length > 0 ? live : declared
 }
 

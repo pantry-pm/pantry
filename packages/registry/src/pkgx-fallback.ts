@@ -23,7 +23,7 @@ import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { BoundedTtlCache } from './runtime-cache'
 
-const BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64'] as const
+import { ALL_PLATFORMS as BUILD_PLATFORMS } from './platforms'
 
 // Custom builds: we deliberately compile these with our own configure flags /
 // extensions, so pkgx's vanilla binary would silently drop them. NEVER serve these

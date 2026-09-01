@@ -30,6 +30,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { HetznerClient, resolveHetznerApiToken } from '@stacksjs/ts-cloud'
+import { BUILDABLE_PLATFORMS } from '../src/platforms'
 
 // ── constants ──────────────────────────────────────────────────────────────────
 const PRIMARY_ID = 136035759 // pantry-build-x86 — always-on template source
@@ -228,7 +229,9 @@ WantedBy=multi-user.target
 // recipe with no macOS or ARM hardware. Each box is assigned ONE foreign
 // platform (partitioned by box index) to avoid redundant racing.
 // darwin-x86-64 is retired: no new Intel artifacts (published ones stay served).
-const XDL_PLATFORMS = ['darwin-arm64', 'linux-arm64']
+// That fact lives in `src/platforms.ts` now, so this is every buildable platform
+// FOREIGN to these x86-64 Linux boxes — the native one needs no download fanout.
+const XDL_PLATFORMS = BUILDABLE_PLATFORMS.filter(p => p !== 'linux-x86-64')
 const XDL_DAEMON_SCRIPT = `#!/bin/bash
 # Cross-platform pkgx-mirror fanout: fills prebuilt artifacts for one FOREIGN
 # target platform from this Linux box by downloading pkgx's official prebuilt for

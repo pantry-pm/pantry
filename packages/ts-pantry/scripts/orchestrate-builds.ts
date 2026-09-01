@@ -24,6 +24,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { BUILDABLE_PLATFORMS } from '../src/platforms'
 
 const REPO = process.env.ORCH_REPO || 'pantry-pm/pantry'
 const STATE_PATH = process.env.ORCH_STATE_PATH || 'orchestrator-state.json'
@@ -32,7 +33,9 @@ const RUNNING_CAP = Number(process.env.ORCH_RUNNING_CAP || 3)
 const STALL_LIMIT = Number(process.env.ORCH_STALL_LIMIT || 3)
 const DRY_RUN = process.env.ORCH_DRY_RUN === '1'
 
-const ALL_PLATFORMS = ['darwin-arm64', 'linux-x86-64', 'linux-arm64'] as const
+// What this dispatches IS the buildable set — retiring a platform should take
+// it out of the rotation here without anyone remembering to edit this line.
+const ALL_PLATFORMS = BUILDABLE_PLATFORMS
 type Platform = (typeof ALL_PLATFORMS)[number]
 
 // Per-platform fan-out: [stripes, parallel-workers-per-runner]. linux-arm64 is
