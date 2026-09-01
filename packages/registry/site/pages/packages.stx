@@ -245,6 +245,11 @@
       function isComplete(p) {
         // built on every platform it supports (a macOS-only package is complete
         // with just its darwin binaries, not stuck < all 4)
+        //
+        // The API derives this now and sends `incomplete`, so prefer it and keep
+        // one answer rather than two that can drift. The subtraction stays as a
+        // fallback for a response served before that field existed.
+        if (typeof p.incomplete === 'boolean') return !!p.published && !p.incomplete
         return !!p.published && supportedOf(p).every(function (pl) { return p.platforms[pl] })
       }
       function statusOf(p, b) {

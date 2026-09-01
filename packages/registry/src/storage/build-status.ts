@@ -57,12 +57,31 @@ export interface PackageRow {
    *  "complete" when its latest version is built on every supported platform —
    *  so a macOS-only package is complete with just its darwin binaries. */
   supportedPlatforms: string[]
-  /** Newest version known from the catalog (may exceed latestVersion when a
-   *  published package has an unbuilt newer release ⇒ update available). */
+  /** Newest version known to exist — the catalog's newest, or the newest one
+   *  with binaries when the catalog has not caught up to it yet. May exceed
+   *  latestVersion (an unbuilt newer release ⇒ update available); it is never
+   *  below it, because a version we have published demonstrably exists. */
   newestVersion: string | null
   /** True when the package is published but a newer version exists than the
    *  newest one with binaries (i.e. an update is available to build). */
   hasUpdate: boolean
+  /** Supported platforms with no binary at `latestVersion`.
+   *
+   *  A version can be published for one platform and missing on another.
+   *  `platforms` reports all four BUILD_PLATFORMS, so telling "missing" from
+   *  "not targeted" means subtracting `supportedPlatforms` — which the
+   *  dashboard did for itself, in its own `isComplete`, and nothing served
+   *  over the API could. So the fact existed on one page and nowhere else:
+   *  craft-native.org 0.0.86 published linux-x86-64 and neither darwin, and
+   *  the API row read `lastState: 'built'`, `building: []`, `hasUpdate: false`
+   *  — three fields all saying there was nothing to do — while `pantry
+   *  install` on macOS answered "not found in registry". Deriving it here
+   *  puts the answer in one place and lets every caller read it. */
+  missingPlatforms: string[]
+  /** True when the package is published and `missingPlatforms` is non-empty:
+   *  the newest version with any binary is not built everywhere it should be.
+   *  Distinct from `hasUpdate`, which is about a newer version existing. */
+  incomplete: boolean
 }
 
 /**
@@ -696,10 +715,26 @@ export class BuildStatusStore {
       for (const p of BUILD_PLATFORMS)
         platforms[p] = latestPlats.has(p)
       // newest version the catalog knows about (vs `latest` = newest *published*)
-      const newestVersion = (this.knownVersions.get(domain) || []).reduce<string | null>(
+      const catalogNewest = (this.knownVersions.get(domain) || []).reduce<string | null>(
         (acc, v) => (acc === null || compareVersionLoose(v, acc) > 0 ? v : acc),
         null,
       )
+      // A version we have published is proof that version exists, whatever the
+      // catalog currently says. Reporting the catalog's answer verbatim let a
+      // row claim a newestVersion BELOW its own latestVersion — craft-native.org
+      // sat at latestVersion 0.0.86 against newestVersion 0.0.84 — which is
+      // incoherent on its face and reads as "nothing newer to build" for a
+      // reason that has nothing to do with whether anything is left to build.
+      const newestVersion = catalogNewest && latest
+        ? (compareVersionLoose(catalogNewest, latest) > 0 ? catalogNewest : latest)
+        : catalogNewest ?? latest
+      // Which supported platforms the latest published version is missing.
+      // `published` guards it so an unbuilt catalog entry is not reported as
+      // incomplete: it has no binaries at all, which `published: false` already
+      // says, and calling that "missing every platform" would drown the rows
+      // where a real build half-landed.
+      const supported = this.supportedPlatforms.get(domain) || [...BUILD_PLATFORMS]
+      const missingPlatforms = published ? supported.filter(p => !latestPlats.has(p)) : []
       packages.push({
         domain,
         latestVersion: latest,
@@ -709,9 +744,14 @@ export class BuildStatusStore {
         lastState: lastStateByDomain.get(domain),
         published,
         lastMessage: lastMessageByDomain.get(domain),
-        supportedPlatforms: this.supportedPlatforms.get(domain) || [...BUILD_PLATFORMS],
-        newestVersion: newestVersion ?? latest,
-        hasUpdate: published && !!newestVersion && !!latest && compareVersionLoose(newestVersion, latest) > 0,
+        supportedPlatforms: supported,
+        newestVersion,
+        // Deliberately the catalog's answer rather than the coherent one above:
+        // hasUpdate means "a version exists that we have not built", and a
+        // latest we published can never satisfy that.
+        hasUpdate: published && !!catalogNewest && !!latest && compareVersionLoose(catalogNewest, latest) > 0,
+        missingPlatforms,
+        incomplete: missingPlatforms.length > 0,
       })
     }
     packages.sort((a, b) => a.domain.localeCompare(b.domain))
