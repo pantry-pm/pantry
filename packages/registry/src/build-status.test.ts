@@ -112,7 +112,10 @@ describe('BuildStatusStore partial coverage', () => {
     expect(craft.latestVersion).toBe('0.0.86')
     expect(craft.platforms['linux-x86-64']).toBeTrue()
     expect(craft.platforms['darwin-arm64']).toBeFalse()
-    expect(craft.missingPlatforms).toEqual(['darwin-arm64', 'darwin-x86-64'])
+    // darwin-x86-64 is in the recipe's constraint but retired, so it is not
+    // held against the package: what was actually missing, and actually late,
+    // was darwin-arm64.
+    expect(craft.missingPlatforms).toEqual(['darwin-arm64'])
     expect(craft.incomplete).toBeTrue()
   })
 
@@ -183,5 +186,105 @@ describe('BuildStatusStore partial coverage', () => {
 
     expect(craft?.newestVersion).toBe('0.0.87')
     expect(craft?.hasUpdate).toBeTrue()
+  })
+})
+
+
+describe('BuildStatusStore retired platforms', () => {
+  function storeWith(keys: string[]) {
+    const objects = new Map<string, Buffer>()
+    const client = {
+      async getObjectBuffer(_bucket: string, key: string): Promise<Buffer> {
+        const value = objects.get(key)
+        if (!value) throw new Error('S3 GET failed: 404 Not Found')
+        return value
+      },
+      async putObject(input: { key: string, body: Buffer | string }): Promise<void> {
+        objects.set(input.key, Buffer.isBuffer(input.body) ? input.body : Buffer.from(input.body))
+      },
+      async list(): Promise<Array<{ Key: string, LastModified: string }>> {
+        return keys.map(Key => ({ Key, LastModified: '2026-09-01T00:00:00.000Z' }))
+      },
+    }
+    return new BuildStatusStore(client as any, 'pantry')
+  }
+
+  it('does not call a package incomplete for missing retired Intel macOS', async () => {
+    // Built everywhere still in production, missing only darwin-x86-64. Before
+    // the retirement was taught here this was 179 of the 290 incomplete rows.
+    const store = storeWith([
+      'binaries/bun.sh/1.2.3/darwin-arm64/bun.sh-1.2.3.tar.gz',
+      'binaries/bun.sh/1.2.3/linux-x86-64/bun.sh-1.2.3.tar.gz',
+      'binaries/bun.sh/1.2.3/linux-arm64/bun.sh-1.2.3.tar.gz',
+    ])
+    await store.load()
+    await store.refreshCoverage(true)
+    const result = await store.getPackages()
+    const bun = result.packages.find(pkg => pkg.domain === 'bun.sh')
+
+    expect(bun?.platforms['darwin-x86-64']).toBeFalse()
+    expect(bun?.missingPlatforms).toEqual([])
+    expect(bun?.incomplete).toBeFalse()
+    expect(bun?.supportedPlatforms).not.toContain('darwin-x86-64')
+  })
+
+  it('still reports a published Intel binary, because those stay served', async () => {
+    const store = storeWith([
+      'binaries/bun.sh/1.2.3/darwin-arm64/bun.sh-1.2.3.tar.gz',
+      'binaries/bun.sh/1.2.3/darwin-x86-64/bun.sh-1.2.3.tar.gz',
+      'binaries/bun.sh/1.2.3/linux-x86-64/bun.sh-1.2.3.tar.gz',
+      'binaries/bun.sh/1.2.3/linux-arm64/bun.sh-1.2.3.tar.gz',
+    ])
+    await store.load()
+    await store.refreshCoverage(true)
+    const result = await store.getPackages()
+    const bun = result.packages.find(pkg => pkg.domain === 'bun.sh')
+
+    // Retiring the platform must not hide artifacts that already exist.
+    expect(bun?.platforms['darwin-x86-64']).toBeTrue()
+    expect(bun?.incomplete).toBeFalse()
+  })
+
+  it('still catches a package missing a platform we do build', async () => {
+    // The signal the retirement is meant to protect: darwin-arm64 absent is
+    // real, and must survive the filter that drops Intel.
+    const store = storeWith([
+      'binaries/bun.sh/1.2.3/linux-x86-64/bun.sh-1.2.3.tar.gz',
+      'binaries/bun.sh/1.2.3/linux-arm64/bun.sh-1.2.3.tar.gz',
+    ])
+    await store.load()
+    await store.refreshCoverage(true)
+    const result = await store.getPackages()
+    const bun = result.packages.find(pkg => pkg.domain === 'bun.sh')
+
+    expect(bun?.missingPlatforms).toEqual(['darwin-arm64'])
+    expect(bun?.incomplete).toBeTrue()
+  })
+
+  it('drops a retired platform from an explicit recipe constraint', async () => {
+    const store = storeWith(['binaries/bun.sh/1.2.3/darwin-arm64/bun.sh-1.2.3.tar.gz'])
+    await store.load()
+    store.setSupportedPlatforms(new Map([['bun.sh', ['darwin-arm64', 'darwin-x86-64']]]))
+    await store.refreshCoverage(true)
+    const result = await store.getPackages()
+    const bun = result.packages.find(pkg => pkg.domain === 'bun.sh')
+
+    expect(bun?.supportedPlatforms).toEqual(['darwin-arm64'])
+    expect(bun?.incomplete).toBeFalse()
+  })
+
+  it('keeps an Intel-only constraint rather than judging it against nothing', async () => {
+    // Filtering to empty would make every check vacuously true, and reporting a
+    // package as complete because it supports no platform is the failure this
+    // change exists to prevent.
+    const store = storeWith(['binaries/bun.sh/1.2.3/linux-x86-64/bun.sh-1.2.3.tar.gz'])
+    await store.load()
+    store.setSupportedPlatforms(new Map([['bun.sh', ['darwin-x86-64']]]))
+    await store.refreshCoverage(true)
+    const result = await store.getPackages()
+    const bun = result.packages.find(pkg => pkg.domain === 'bun.sh')
+
+    expect(bun?.supportedPlatforms).toEqual(['darwin-x86-64'])
+    expect(bun?.incomplete).toBeTrue()
   })
 })

@@ -17,6 +17,44 @@ export const BUILD_PLATFORMS = ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64',
 export type BuildPlatform = typeof BUILD_PLATFORMS[number]
 const PLATFORM_SET = new Set<string>(BUILD_PLATFORMS)
 
+/**
+ * Platforms we still serve but no longer build.
+ *
+ * Intel macOS is retired on the build side — `orchestrate-builds.ts` and
+ * `provision-build-workers.ts` both say so, and no workflow matrix has carried
+ * a darwin-x86-64 leg since. Published Intel artifacts stay served (1,423
+ * packages have one), so `platforms` keeps reporting them truthfully; what
+ * changes is that nothing is judged INCOMPLETE for lacking a binary that will
+ * never be produced again.
+ *
+ * The registry had not been told. Packages without an explicit recipe
+ * constraint default to every build platform, so 1,658 claimed to support
+ * Intel — and 290 of 1,730 published packages counted as incomplete, 179 of
+ * them for that reason alone. Nearly two thirds of the signal was a platform
+ * we retired on purpose, which is how a genuine half-landed release goes
+ * unnoticed. Retire it here too and 111 remain: the ones actually missing
+ * something that can still be built.
+ */
+export const RETIRED_PLATFORMS = ['darwin-x86-64'] as const
+const RETIRED_SET = new Set<string>(RETIRED_PLATFORMS)
+
+/** Build platforms still in production — what "complete" is measured against. */
+export const BUILDABLE_PLATFORMS: string[] = BUILD_PLATFORMS.filter(p => !RETIRED_SET.has(p))
+
+/**
+ * The platforms a package is judged on: its recipe constraint if it has one,
+ * every buildable platform otherwise, minus anything retired.
+ *
+ * A constraint naming only retired platforms keeps its original list rather
+ * than becoming empty — "supports nothing" reads as complete everywhere that
+ * asks, and silently-complete is the failure this whole change exists to stop.
+ */
+function judgedPlatforms(constraint: string[] | undefined): string[] {
+  const declared = constraint && constraint.length > 0 ? constraint : [...BUILDABLE_PLATFORMS]
+  const live = declared.filter(p => !RETIRED_SET.has(p))
+  return live.length > 0 ? live : declared
+}
+
 // 'unavailable' = a builder requested a version that does not exist upstream (no
 // source tarball AND no prebuilt binary — every attempt 404'd). It is NOT a build
 // failure: it is never counted as failed or built and never penalises coverage.
@@ -733,7 +771,7 @@ export class BuildStatusStore {
       // incomplete: it has no binaries at all, which `published: false` already
       // says, and calling that "missing every platform" would drown the rows
       // where a real build half-landed.
-      const supported = this.supportedPlatforms.get(domain) || [...BUILD_PLATFORMS]
+      const supported = judgedPlatforms(this.supportedPlatforms.get(domain))
       const missingPlatforms = published ? supported.filter(p => !latestPlats.has(p)) : []
       packages.push({
         domain,
@@ -763,7 +801,7 @@ export class BuildStatusStore {
     let publishedVersions = 0
     let publishedArtifacts = 0
     for (const [domain, versions] of this.coverage) {
-      const supported = this.supportedPlatforms.get(domain) || [...BUILD_PLATFORMS]
+      const supported = judgedPlatforms(this.supportedPlatforms.get(domain))
       for (const plats of versions.values()) {
         if (plats.size === 0)
           continue
