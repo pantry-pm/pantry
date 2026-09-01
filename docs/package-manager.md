@@ -74,6 +74,7 @@ are not equivalent: forcing a refresh does not imply that state must be saved.
 | `--ignore-scripts` | Do not execute package lifecycle scripts. This reduces behavior, not integrity verification. |
 | `--offline` | Make no registry request; a missing resolution or tarball in local state is an error. |
 | `--filter <pattern>` | Restrict a workspace operation to matching packages. |
+| `--linker <isolated\|hoisted>` | Override the configured dependency layout and pass the same mode to delegated Bun installs. |
 | `--frozen-lockfile` | Reject a missing lockfile or any install result that would change it. |
 | `--no-cache` | Ignore the manifest cache; this is distinct from `--force` and deleting the content cache. |
 | `--dry-run` | Compute and report the plan without installing or persisting it. |

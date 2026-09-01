@@ -31,7 +31,7 @@ const markers: ContractMarker[] = [
     document: 'packageManagerDoc' as const,
     documentMarker: `pantry ${command}`,
   })),
-  ...['frozen-lockfile', 'offline', 'ignore-scripts', 'no-cache', 'dry-run', 'no-save', 'filter', 'production', 'dev', 'peer', 'force', 'global', 'user'].map(option => ({
+  ...['frozen-lockfile', 'offline', 'ignore-scripts', 'no-cache', 'dry-run', 'no-save', 'filter', 'linker', 'production', 'dev', 'peer', 'force', 'global', 'user'].map(option => ({
     label: `install option --${option}`,
     source: 'mainSource' as const,
     sourceMarker: `Option.init("${option}"`,

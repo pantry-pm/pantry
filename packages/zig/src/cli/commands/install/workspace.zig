@@ -1453,7 +1453,7 @@ pub fn installWorkspaceCommandWithOptions(
     // Delegate to bun/pnpm/yarn/npm for JS deps if package.json is present
     {
         const js_delegate = @import("../../../deps/js_delegate.zig");
-        _ = js_delegate.installJsDeps(allocator, workspace_root, options.verbose) catch |err| {
+        _ = js_delegate.installJsDeps(allocator, workspace_root, options.verbose, options.linker) catch |err| {
             if (options.verbose) {
                 style.print("Warning: JS delegation failed: {}\n", .{err});
             }

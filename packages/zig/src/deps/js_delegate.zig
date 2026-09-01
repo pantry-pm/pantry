@@ -1,6 +1,7 @@
 const std = @import("std");
 const io_helper = @import("../io_helper.zig");
 const style = @import("../cli/style.zig");
+const LinkerMode = @import("../config/pantry_config.zig").LinkerMode;
 
 /// Delegate JS dependency installation to bun/pnpm/yarn/npm when a package.json
 /// with JS deps is present alongside pantry's own system-dep file.
@@ -12,7 +13,7 @@ const style = @import("../cli/style.zig");
 ///
 /// Returns true when delegation actually ran a successful install; false when
 /// there was nothing to do (no package.json, no JS deps) or the install failed.
-pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verbose: bool) !bool {
+pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verbose: bool, linker: LinkerMode) !bool {
     const package_json_path = try std.fs.path.join(allocator, &.{ project_dir, "package.json" });
     defer allocator.free(package_json_path);
 
@@ -49,7 +50,7 @@ pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verb
     // JS PM can find node and its own helper bins even when the user invoked
     // `pantry install` from a shell where PATH doesn't include pantry/.bin yet.
     // Mirrors the lifecycle.zig PATH-wrapping pattern.
-    const wrapped_cmd = try buildWrappedCommand(allocator, project_dir, bin);
+    const wrapped_cmd = try buildWrappedCommand(allocator, project_dir, bin, pm, linker);
     defer allocator.free(wrapped_cmd);
 
     style.print("{s}  Installing JS deps via {s}{s}\n", .{ style.dim, pm, style.reset });
@@ -188,7 +189,7 @@ fn resolveBin(allocator: std.mem.Allocator, project_dir: []const u8, name: []con
 /// Build `export PATH='<pantry/.bin>:<old PATH>' && <bin> install` so the child
 /// process — and any lifecycle scripts it spawns — can find node/bun without
 /// requiring the user to have manually activated pantry's env.
-fn buildWrappedCommand(allocator: std.mem.Allocator, project_dir: []const u8, bin: []const u8) ![]u8 {
+fn buildWrappedCommand(allocator: std.mem.Allocator, project_dir: []const u8, bin: []const u8, pm: []const u8, linker: LinkerMode) ![]u8 {
     const current_path = io_helper.getenv("PATH") orelse "/usr/local/bin:/usr/bin:/bin";
 
     const path_val = try std.fmt.allocPrint(allocator, "{s}/pantry/.bin:{s}", .{ project_dir, current_path });
@@ -204,5 +205,25 @@ fn buildWrappedCommand(allocator: std.mem.Allocator, project_dir: []const u8, bi
         }
     }
 
+    if (std.mem.eql(u8, pm, "bun")) {
+        return try std.fmt.allocPrint(allocator, "export PATH='{s}' && '{s}' install --linker {s}", .{ escaped_path.items, bin, @tagName(linker) });
+    }
+
     return try std.fmt.allocPrint(allocator, "export PATH='{s}' && '{s}' install", .{ escaped_path.items, bin });
+}
+
+test "JS delegate forwards Pantry's linker mode to Bun" {
+    const allocator = std.testing.allocator;
+    const command = try buildWrappedCommand(allocator, "/tmp/pantry-project", "/usr/bin/bun", "bun", .hoisted);
+    defer allocator.free(command);
+
+    try std.testing.expect(std.mem.endsWith(u8, command, "'/usr/bin/bun' install --linker hoisted"));
+}
+
+test "JS delegate leaves other package managers' install arguments unchanged" {
+    const allocator = std.testing.allocator;
+    const command = try buildWrappedCommand(allocator, "/tmp/pantry-project", "/usr/bin/npm", "npm", .isolated);
+    defer allocator.free(command);
+
+    try std.testing.expect(std.mem.endsWith(u8, command, "'/usr/bin/npm' install"));
 }

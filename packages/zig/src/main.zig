@@ -45,6 +45,13 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const include_peer = ctx.hasOption("peer") or pantry_config.install.peer;
     const offline = ctx.hasOption("offline");
     const filter = ctx.getOption("filter");
+    const linker = if (ctx.getOption("linker")) |value|
+        lib.config.LinkerMode.fromString(value) orelse {
+            style.printForced("Error: --linker must be 'isolated' or 'hoisted'\n", .{});
+            std.process.exit(1);
+        }
+    else
+        pantry_config.install.linker;
 
     // --force flag is handled by install options below
 
@@ -106,7 +113,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .dry_run = dry_run,
         .no_save = no_save,
         .filter = filter,
-        .linker = pantry_config.install.linker,
+        .linker = linker,
         .modules_dir = pantry_config.install.modules_dir,
         .auto_link = pantry_config.install.auto_link,
         .link_search_paths = pantry_config.install.link_search_paths,
@@ -3161,6 +3168,9 @@ pub fn main() !void {
 
     const install_no_save_opt = cli.Option.init("no-save", "no-save", "Skip updating package.json or lockfile", .bool);
     _ = try install_cmd.addOption(install_no_save_opt);
+
+    const install_linker_opt = cli.Option.init("linker", "linker", "Dependency layout: isolated or hoisted", .string);
+    _ = try install_cmd.addOption(install_linker_opt);
 
     _ = install_cmd.setAction(installAction);
     _ = try root.addCommand(install_cmd);

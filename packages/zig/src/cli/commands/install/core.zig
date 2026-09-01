@@ -14,10 +14,15 @@ const lockfile_hooks = @import("lockfile_hooks.zig");
 const offline = @import("../../../install/offline.zig");
 const recovery = @import("../../../install/recovery.zig");
 const style = @import("../../style.zig");
+const dependency_parser = @import("../../../deps/parser.zig");
 
 const cache = lib.cache;
 const string = lib.string;
 const install = lib.install;
+
+fn shouldInstallWithNativePipeline(delegates_js_dependencies: bool, source: dependency_parser.DependencySource) bool {
+    return !delegates_js_dependencies or source == .pantry;
+}
 
 fn resolutionLockMatches(
     lock_file: *lib.deps.resolution.LockFile,
@@ -33,7 +38,7 @@ fn resolutionLockMatches(
 /// Fast path: check if all packages are already installed without doing expensive
 /// workspace detection, config loading, hook execution, etc.
 /// Returns a CommandResult if everything is up-to-date, null otherwise.
-fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i64, modules_dir: []const u8) !?types.CommandResult {
+fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i64, modules_dir: []const u8, linker: types.LinkerMode) !?types.CommandResult {
     const detector = @import("../../../deps/detector.zig");
     const parser = @import("../../../deps/parser.zig");
     const lockfile_reader = @import("../../../packages/lockfile.zig");
@@ -160,7 +165,7 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
     // (nothing changed) stays cheap.
     {
         const js_delegate = @import("../../../deps/js_delegate.zig");
-        _ = js_delegate.installJsDeps(allocator, effective_dir, false) catch {};
+        _ = js_delegate.installJsDeps(allocator, effective_dir, false, linker) catch {};
     }
 
     helpers.ensureBinSymlinks(allocator, effective_dir, modules_dir);
@@ -429,7 +434,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // This avoids expensive workspace detection, config loading, hooks, etc.
         // Skipped when --force is set (user wants to re-download everything)
         if (!opts.force) {
-            if (try tryFastUpToDate(allocator, cwd, start_time, opts.modules_dir)) |result| {
+            if (try tryFastUpToDate(allocator, cwd, start_time, opts.modules_dir, opts.linker)) |result| {
                 return result;
             }
         }
@@ -482,12 +487,14 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         var deps: []parser.PackageDependency = undefined;
         var deps_file_path: ?[]const u8 = null;
         var used_config = false;
+        var delegates_js_dependencies = false;
         defer if (deps_file_path) |path| allocator.free(path);
 
         if (lookup.deps_file) |deps_file| {
             if (parser.inferDependencies(allocator, deps_file)) |parsed_deps| {
                 deps_file_path = deps_file.path;
                 deps = parsed_deps;
+                delegates_js_dependencies = deps_file.format == .package_json or deps_file.format == .package_jsonc;
             } else |err| {
                 allocator.free(deps_file.path);
                 if (err == error.NoRuntimeAvailable) {
@@ -563,6 +570,15 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 if (std.mem.startsWith(u8, dep.name, "__") and std.mem.endsWith(u8, dep.name, "__")) {
                     continue;
                 }
+                // A conventional package.json belongs to its selected JS package
+                // manager. Installing those entries into pantry/ and then invoking
+                // bun/pnpm/yarn/npm duplicated the full dependency graph and made
+                // clean installs unnecessarily slow. Explicit Pantry dependencies
+                // (`pantry` / `system` fields) retain source=.pantry and still flow
+                // through the native pipeline before JS delegation runs once.
+                if (!shouldInstallWithNativePipeline(delegates_js_dependencies, dep.source)) {
+                    continue;
+                }
                 try filtered_deps.append(allocator, dep);
             }
         }
@@ -628,7 +644,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             // Run JS delegate for package.json deps
             {
                 const js_delegate = @import("../../../deps/js_delegate.zig");
-                const js_installed = js_delegate.installJsDeps(allocator, proj_dir_early, options.verbose) catch false;
+                const js_installed = js_delegate.installJsDeps(allocator, proj_dir_early, options.verbose, options.linker) catch false;
                 if (js_installed) {
                     const end_ts = io_helper.clockGettime();
                     const end_time = @as(i64, @intCast(end_ts.sec)) * 1000 + @as(i64, @intCast(@divFloor(end_ts.nsec, 1_000_000)));
@@ -1145,7 +1161,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // Delegate to bun/pnpm/yarn/npm for JS deps if package.json is present
         {
             const js_delegate = @import("../../../deps/js_delegate.zig");
-            _ = js_delegate.installJsDeps(allocator, proj_dir, opts.verbose) catch |err| {
+            _ = js_delegate.installJsDeps(allocator, proj_dir, opts.verbose, opts.linker) catch |err| {
                 if (opts.verbose) {
                     style.print("Warning: JS delegation failed: {}\n", .{err});
                 }
@@ -1632,6 +1648,19 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     }
 
     return .{ .exit_code = 0 };
+}
+
+test "package.json delegates ordinary JS dependency sources" {
+    try std.testing.expect(!shouldInstallWithNativePipeline(true, .registry));
+    try std.testing.expect(!shouldInstallWithNativePipeline(true, .npm));
+    try std.testing.expect(!shouldInstallWithNativePipeline(true, .github));
+    try std.testing.expect(!shouldInstallWithNativePipeline(true, .git));
+    try std.testing.expect(!shouldInstallWithNativePipeline(true, .url));
+}
+
+test "package.json keeps explicit Pantry dependencies native" {
+    try std.testing.expect(shouldInstallWithNativePipeline(true, .pantry));
+    try std.testing.expect(shouldInstallWithNativePipeline(false, .npm));
 }
 
 /// Install a companion deps file (e.g. deps.yaml) when a workspace manifest (package.json)
