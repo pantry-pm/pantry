@@ -3,7 +3,7 @@
  *
  * @domain `raycast.com`
  * @programs `raycast`
- * @version `1.104.20` (4 versions available)
+ * @version `1.104.26` (10 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install raycast.com`
@@ -22,6 +22,7 @@ export const raycastcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.104.26',
     '1.104.25',
     '1.104.24',
     '1.104.23',
