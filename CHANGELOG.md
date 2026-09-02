@@ -1,3 +1,63 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.45...v0.11.46)
+
+## ✨ Features
+
+- **registry**: index on notification, and drop the sweep that guessed ([4ff1f78](https://github.com/pantry-pm/pantry/commit/4ff1f78)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: let a publisher's own token be enough to get indexed ([eb1cbe4](https://github.com/pantry-pm/pantry/commit/eb1cbe4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **publish**: a dry run does not need credentials ([86f00c2](https://github.com/pantry-pm/pantry/commit/86f00c2)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: drain the release queue on an event GitHub actually delivers ([cec951f](https://github.com/pantry-pm/pantry/commit/cec951f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: delegate package json dependencies once ([4d1b539](https://github.com/pantry-pm/pantry/commit/4d1b539)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ci**: drain the release queue on its own clock, not the sweep's ([0c0b69f](https://github.com/pantry-pm/pantry/commit/0c0b69f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: stop judging packages against a platform we retired ([daff8e8](https://github.com/pantry-pm/pantry/commit/daff8e8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: say when a version is published on only some of its platforms ([4d87cd8](https://github.com/pantry-pm/pantry/commit/4d87cd8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: do not let notifications starve the sweep ([084fe90](https://github.com/pantry-pm/pantry/commit/084fe90)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: keep sweeping the packages that cannot tell us anything ([5d5a828](https://github.com/pantry-pm/pantry/commit/5d5a828)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **versions**: a sweep that could not ask reported that it had asked ([2ef093b](https://github.com/pantry-pm/pantry/commit/2ef093b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ♻️ Code Refactoring
+
+- one platform vocabulary per package, checked against each other ([9715f62](https://github.com/pantry-pm/pantry/commit/9715f62)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: drop the dispatch credential nobody needed ([7d52de3](https://github.com/pantry-pm/pantry/commit/7d52de3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.46 ([6981933](https://github.com/pantry-pm/pantry/commit/6981933)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update craft-native.org to 0.0.87 ([6e203f2](https://github.com/pantry-pm/pantry/commit/6e203f2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, openai.com/codex, opencode.ai, railway.app, ziglang.org ([235036f](https://github.com/pantry-pm/pantry/commit/235036f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update certbot.eff.org, circleci.com, cli.github.com, fly.io, gqlgen.com, ohmyposh.dev, stripe.com ([0ed0a5f](https://github.com/pantry-pm/pantry/commit/0ed0a5f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, casdoor.org, circleci.com, craft-native.org, cursor.com, element.io, projen.io, raycast.com ([bb2504d](https://github.com/pantry-pm/pantry/commit/bb2504d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, codex.openai.com, github.com/router-for-me/CLIProxyAPI, libgeos.org, mise.jdx.dev, odigos.io, scaleway.com, vaultproject.io, whatsapp.com ([bcb0676](https://github.com/pantry-pm/pantry/commit/bcb0676)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, coder.com, kpt.dev, tinygo.org, werf.io ([e837418](https://github.com/pantry-pm/pantry/commit/e837418)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, craft-native.org, harlequin.sh, openai.com/codex, pnpm.io, protobuf.dev, psycopg.org/psycopg3, railway.app, seaweedfs.com, slack.com, squawkhq.com, tox.wiki, valkey.io, ziglang.org ([7fd0d6e](https://github.com/pantry-pm/pantry/commit/7fd0d6e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **registry**: sweep hourly ([a343b6c](https://github.com/pantry-pm/pantry/commit/a343b6c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update craft-native.org to 0.0.84 ([eeaab85](https://github.com/pantry-pm/pantry/commit/eeaab85)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ansible.com, anthropic.com/claude-code, discord.com, fluxcd.io/flux2, fly.io, github.com/chainguard-dev/apko, istio.io, mise.jdx.dev, pcre.org/v2, wasmer.io ([084bbe8](https://github.com/pantry-pm/pantry/commit/084bbe8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update babashka.org, digitalocean.com/doctl, ohmyposh.dev, projen.io, rucio.cern.ch/rucio-client ([63ac93a](https://github.com/pantry-pm/pantry/commit/63ac93a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dozzle.dev, github.com/chainguard-dev/apko, ziglang.org ([0022eff](https://github.com/pantry-pm/pantry/commit/0022eff)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update mise.jdx.dev to 2026.8.15 ([4d8d413](https://github.com/pantry-pm/pantry/commit/4d8d413)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update dprint.dev, ohmyposh.dev, rioterm.com ([9ca5c88](https://github.com/pantry-pm/pantry/commit/9ca5c88)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update odigos.io to 1.35.2 ([264813d](https://github.com/pantry-pm/pantry/commit/264813d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, chezmoi.io, github.com/router-for-me/CLIProxyAPI, harlequin.sh ([fef3923](https://github.com/pantry-pm/pantry/commit/fef3923)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ohmyposh.dev, stats.app, ziglang.org ([6955a31](https://github.com/pantry-pm/pantry/commit/6955a31)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update aux4.io, karabiner-elements.pqrs.org ([16b6ce7](https://github.com/pantry-pm/pantry/commit/16b6ce7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, craft-native.org, github.com/tw93/mole ([7ab653d](https://github.com/pantry-pm/pantry/commit/7ab653d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.80 ([3c25b6a](https://github.com/pantry-pm/pantry/commit/3c25b6a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update re2c.org to 4.6 ([34cadff](https://github.com/pantry-pm/pantry/commit/34cadff)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.45.10 ([4fd0721](https://github.com/pantry-pm/pantry/commit/4fd0721)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update railway.app to 5.45.8 ([9280a29](https://github.com/pantry-pm/pantry/commit/9280a29)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.79 ([d416ece](https://github.com/pantry-pm/pantry/commit/d416ece)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update openai.com/codex, pnpm.io, projen.io, symfony.com, ziglang.org ([f2a0fa3](https://github.com/pantry-pm/pantry/commit/f2a0fa3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, aux4.io, codex.openai.com, cursor.com, harlequin.sh ([afcefb6](https://github.com/pantry-pm/pantry/commit/afcefb6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, groonga.org, lmstudio.ai, ollama.ai, tox.wiki ([e764257](https://github.com/pantry-pm/pantry/commit/e764257)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.44...v0.11.45)
 
 ## 🐛 Bug Fixes
