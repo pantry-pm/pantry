@@ -1454,9 +1454,10 @@ pub fn installWorkspaceCommandWithOptions(
     {
         const js_delegate = @import("../../../deps/js_delegate.zig");
         _ = js_delegate.installJsDeps(allocator, workspace_root, options.verbose, options.linker) catch |err| {
-            if (options.verbose) {
-                style.print("Warning: JS delegation failed: {}\n", .{err});
-            }
+            return .{
+                .exit_code = 1,
+                .message = try std.fmt.allocPrint(allocator, "JavaScript dependency installation failed: {s}", .{@errorName(err)}),
+            };
         };
     }
 

@@ -165,7 +165,12 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
     // (nothing changed) stays cheap.
     {
         const js_delegate = @import("../../../deps/js_delegate.zig");
-        _ = js_delegate.installJsDeps(allocator, effective_dir, false, linker) catch {};
+        _ = js_delegate.installJsDeps(allocator, effective_dir, false, linker) catch |err| {
+            return .{
+                .exit_code = 1,
+                .message = try std.fmt.allocPrint(allocator, "JavaScript dependency installation failed: {s}", .{@errorName(err)}),
+            };
+        };
     }
 
     helpers.ensureBinSymlinks(allocator, effective_dir, modules_dir);
@@ -644,7 +649,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             // Run JS delegate for package.json deps
             {
                 const js_delegate = @import("../../../deps/js_delegate.zig");
-                const js_installed = js_delegate.installJsDeps(allocator, proj_dir_early, options.verbose, options.linker) catch false;
+                const js_installed = js_delegate.installJsDeps(allocator, proj_dir_early, options.verbose, options.linker) catch |err| {
+                    return .{
+                        .exit_code = 1,
+                        .message = try std.fmt.allocPrint(allocator, "JavaScript dependency installation failed: {s}", .{@errorName(err)}),
+                    };
+                };
                 if (js_installed) {
                     const end_ts = io_helper.clockGettime();
                     const end_time = @as(i64, @intCast(end_ts.sec)) * 1000 + @as(i64, @intCast(@divFloor(end_ts.nsec, 1_000_000)));
@@ -1162,9 +1172,10 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         {
             const js_delegate = @import("../../../deps/js_delegate.zig");
             _ = js_delegate.installJsDeps(allocator, proj_dir, opts.verbose, opts.linker) catch |err| {
-                if (opts.verbose) {
-                    style.print("Warning: JS delegation failed: {}\n", .{err});
-                }
+                return .{
+                    .exit_code = 1,
+                    .message = try std.fmt.allocPrint(allocator, "JavaScript dependency installation failed: {s}", .{@errorName(err)}),
+                };
             };
         }
 

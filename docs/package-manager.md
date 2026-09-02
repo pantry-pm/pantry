@@ -104,6 +104,9 @@ The normal project operation follows this order:
 
 Partial failures return a non-zero command result. Quiet mode may remove progress
 noise but cannot convert a failure into success or hide its final reason.
+This includes a delegated Bun, pnpm, Yarn, or npm install: an unavailable
+package-manager executable, spawn failure, signal termination, or non-zero exit
+keeps `pantry install` non-zero and does not write the JS-install marker.
 
 ### Version-constraint semantics
 

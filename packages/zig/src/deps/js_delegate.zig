@@ -11,8 +11,10 @@ const LinkerMode = @import("../config/pantry_config.zig").LinkerMode;
 /// the appropriate JS package manager — it does not try to be a node_modules
 /// resolver itself.
 ///
-/// Returns true when delegation actually ran a successful install; false when
-/// there was nothing to do (no package.json, no JS deps) or the install failed.
+/// Returns true when delegation actually ran a successful install and false
+/// when there was nothing to do. A selected package manager that cannot run or
+/// exits unsuccessfully is an install error; callers must not report success
+/// with an incomplete node_modules tree.
 pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verbose: bool, linker: LinkerMode) !bool {
     const package_json_path = try std.fs.path.join(allocator, &.{ project_dir, "package.json" });
     defer allocator.free(package_json_path);
@@ -39,10 +41,8 @@ pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verb
 
     const bin_owned = try resolveBin(allocator, project_dir, pm);
     const bin = bin_owned orelse {
-        if (verbose) {
-            style.printWarn("Skipping JS deps: '{s}' not found on PATH (run `pantry install` first or install {s})\n", .{ pm, pm });
-        }
-        return false;
+        style.printWarn("Cannot install JS dependencies: '{s}' was not found (declare it in Pantry or add it to PATH)\n", .{pm});
+        return error.JsPackageManagerNotFound;
     };
     defer allocator.free(bin);
 
@@ -69,26 +69,25 @@ pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verb
         .argv = &[_][]const u8{ "sh", "-c", exec_cmd },
         .cwd = io_helper.toCwd(project_dir),
     }) catch |err| {
-        if (verbose) style.printWarn("{s} install failed to spawn: {}\n", .{ pm, err });
-        return false;
+        style.printWarn("{s} install failed to spawn: {}\n", .{ pm, err });
+        return error.JsInstallSpawnFailed;
     };
 
-    const success = switch (term) {
-        .exited => |code| blk: {
+    switch (term) {
+        .exited => |code| {
             if (code != 0) {
                 style.printWarn("{s} install exited with code {d}\n", .{ pm, code });
-                break :blk false;
+                return error.JsInstallFailed;
             }
-            break :blk true;
         },
-        else => blk: {
+        else => {
             style.printWarn("{s} install terminated abnormally\n", .{pm});
-            break :blk false;
+            return error.JsInstallFailed;
         },
-    };
+    }
 
-    if (success) writeMarker(allocator, project_dir);
-    return success;
+    writeMarker(allocator, project_dir);
+    return true;
 }
 
 /// Marker file we write after a successful delegate run. We use it (not the
@@ -226,4 +225,44 @@ test "JS delegate leaves other package managers' install arguments unchanged" {
     defer allocator.free(command);
 
     try std.testing.expect(std.mem.endsWith(u8, command, "'/usr/bin/npm' install"));
+}
+
+test "JS delegate propagates package manager failure without writing marker" {
+    if (comptime @import("builtin").os.tag == .windows) return;
+
+    const allocator = std.testing.allocator;
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const project_dir = path_buf[0..path_len];
+
+    try tmp_dir.dir.writeFile(io_helper.io, .{
+        .sub_path = "package.json",
+        .data = "{\"dependencies\":{\"left-pad\":\"1.3.0\"}}",
+    });
+    try tmp_dir.dir.writeFile(io_helper.io, .{
+        .sub_path = "package-lock.json",
+        .data = "{}",
+    });
+    try tmp_dir.dir.createDirPath(io_helper.io, "pantry/.bin");
+    const fake_npm = try tmp_dir.dir.createFile(io_helper.io, "pantry/.bin/npm", .{});
+    try fake_npm.writeStreamingAll(io_helper.io, "#!/bin/sh\nexit 42\n");
+    fake_npm.close(io_helper.io);
+    const fake_npm_path = try std.fs.path.join(allocator, &.{ project_dir, "pantry/.bin/npm" });
+    defer allocator.free(fake_npm_path);
+    var chmod_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    @memcpy(chmod_buf[0..fake_npm_path.len], fake_npm_path);
+    chmod_buf[fake_npm_path.len] = 0;
+    try std.testing.expect(std.c.chmod(&chmod_buf, 0o755) == 0);
+
+    try std.testing.expectError(
+        error.JsInstallFailed,
+        installJsDeps(allocator, project_dir, false, .hoisted),
+    );
+
+    const marker = try std.fs.path.join(allocator, &.{ project_dir, marker_relpath });
+    defer allocator.free(marker);
+    try std.testing.expectError(error.FileNotFound, io_helper.accessAbsolute(marker, .{}));
 }
