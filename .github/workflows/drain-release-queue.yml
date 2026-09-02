@@ -38,8 +38,58 @@ name: Drain Release Queue
 # declining it is still right. CI pulls; the registry never pushes.
 
 on:
+  # Declared dense, delivered rarely. Over 28 hours this asked for 168 firings
+  # and was given 2 — 1.2% — which is worse than the 298-minute mean measured
+  # on `0 * * * *`, not better. A denser cron does not buy delivery; it only
+  # makes the gap between what the file says and what happens wider. It stays
+  # because a delivered tick is free, and because it is the only trigger that
+  # fires when the repository is otherwise completely idle.
   schedule:
     - cron: '*/10 * * * *'
+
+  # The trigger that actually fires.
+  #
+  # GitHub throttles `schedule` on a busy account. It does not throttle
+  # `workflow_run`, and this repository is busy — which is the same fact read
+  # the other way round: the reason the cron is starved is that something else
+  # is always running, and every one of those runs ends. Measured over 92
+  # hours, from `gh run list`:
+  #
+  #   update-packages [schedule]   21 completions   mean gap 259 min, max 546
+  #   the list below              228 completions   mean gap  24 min, max 210
+  #
+  # So a release waited about four hours to be noticed and can now wait about
+  # twenty minutes, without a new credential, a new service, or a change to
+  # what any publisher does.
+  #
+  # The list is chosen for frequency, not for meaning. This workflow does not
+  # care what finished or whether it passed — `types: [completed]` covers
+  # failure and cancellation deliberately, because a failed run is as good a
+  # clock tick as a successful one. Anything that runs often and is not this
+  # workflow belongs here; the two deliberate omissions are `CI Failure Issue`,
+  # which is rare and only fires when something is already broken, and this
+  # workflow itself.
+  #
+  # `Update Packages` is in the list and cannot loop. The run this dispatches
+  # claims the queue, so the tick that its completion causes finds the queue
+  # empty and dispatches nothing. The chain is at most two deep, and the second
+  # link is the one that catches a release queued while the first was running.
+  workflow_run:
+    types: [completed]
+    workflows:
+      - Buddy Bot
+      - Health Monitor
+      - CI
+      - Deploy
+      - Update Packages
+      - Build Orchestrator
+      - Build Package Binaries
+      - Build Multi-Version Packages
+      - Publish Changed Packages
+      - Check Desktop App & Font Updates
+      - Sync Zig Dev
+      - Mirror (pkgx download-only)
+
   workflow_dispatch:
 
 concurrency:
