@@ -1557,15 +1557,19 @@ fn uploadViaHttp(
             .content_type = .{ .override = "multipart/form-data; boundary=" ++ boundary },
             .authorization = .{ .override = auth_value },
         },
-    }) catch {
+    }) catch |err| {
         alloc_writer.deinit();
+        // Same silence as `publish_commit.zig` had: `error.UploadFailed` alone
+        // cannot tell an unreachable registry from a rejected upload.
+        style.print("Upload failed before the server replied: {any}\n", .{err});
         return error.UploadFailed;
     };
 
     if (result.status != .ok and result.status != .created) {
         const err_data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
+        style.print("Upload rejected: HTTP {d}\n", .{@intFromEnum(result.status)});
         if (err_data.len > 0) {
-            style.print("Upload error: {s}\n", .{err_data});
+            style.print("{s}\n", .{err_data});
         }
         alloc_writer.deinit();
         return error.UploadFailed;

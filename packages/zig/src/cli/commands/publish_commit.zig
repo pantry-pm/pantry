@@ -191,7 +191,9 @@ pub fn publishCommitCommand(allocator: std.mem.Allocator, args: []const []const 
             });
         } else {
             failed += 1;
-            style.print("  {s}✗{s} Failed\n", .{ style.red, style.reset });
+            // Reason already printed by the branch that decided this — see
+            // `publishCommitPackage`. This is the tally, not the diagnosis.
+            style.print("  {s}✗{s} Failed (see above)\n", .{ style.red, style.reset });
         }
     }
 
@@ -760,16 +762,26 @@ fn uploadCommitViaHttp(
             .content_type = .{ .override = content_type },
             .authorization = .{ .override = auth_value },
         },
-    }) catch {
+    }) catch |err| {
         alloc_writer.deinit();
+        // The request never reached a reply — DNS, TLS, connection, timeout.
+        // This branch used to swallow `err` and return a bare failure, so the
+        // caller printed "✗ Failed" with nothing before it and a CI log ended
+        // there. The error name is the only thing that distinguishes an
+        // unreachable registry from a rejected one.
+        style.print("  {s}✗{s} Upload failed before the server replied: {any}\n", .{ style.red, style.reset, err });
         return .{ .success = false, .url = "" };
     };
 
     const resp_data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
 
     if (result.status != .ok and result.status != .created) {
+        // The status prints unconditionally. It used to print only the body,
+        // so a rejection that carried an empty one — every 401, 403 and 502
+        // that answers with headers alone — was as silent as no request at all.
+        style.print("  {s}✗{s} Upload rejected: HTTP {d}\n", .{ style.red, style.reset, @intFromEnum(result.status) });
         if (resp_data.len > 0) {
-            style.print("  Upload error: {s}\n", .{resp_data});
+            style.print("  {s}\n", .{resp_data});
         }
         alloc_writer.deinit();
         return .{ .success = false, .url = "" };
