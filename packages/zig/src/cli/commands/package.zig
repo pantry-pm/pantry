@@ -2472,6 +2472,28 @@ fn sortPackagesByDependencyOrder(
     const n = packages.len;
     if (n <= 1) return;
 
+    // Sort by name first, so the order does not depend on what readdir
+    // happened to return.
+    //
+    // Kahn's below cannot fully order a workspace whose graph has a cycle, and
+    // real workspaces have them - a devDependency back-edge is enough, and one
+    // framework this publishes has 41 of its 82 packages in a single strongly
+    // connected component. Whatever it cannot place is emitted in input order,
+    // so without this the release order was decided by the filesystem: the same
+    // workspace ordered one way on a laptop and another way in CI, and a
+    // release was not reproducible from one run to the next.
+    //
+    // No order is correct for packages inside a cycle. Publishing is not
+    // harmed by that - npm does not check that a dependency exists when it
+    // accepts a package - but a release that cannot be reproduced is worth
+    // fixing on its own.
+    const Pkg = @import("registry.zig").MonorepoPackage;
+    std.mem.sort(Pkg, packages, {}, struct {
+        fn lessThan(_: void, a: Pkg, b: Pkg) bool {
+            return std.mem.order(u8, a.name, b.name) == .lt;
+        }
+    }.lessThan);
+
     // Map workspace package names to their index
     var name_to_idx = std.StringHashMap(usize).init(allocator);
     defer name_to_idx.deinit();
@@ -2526,25 +2548,47 @@ fn sortPackagesByDependencyOrder(
         if (in_degree[i] == 0) queue.append(allocator, i) catch continue;
     }
 
-    while (queue.items.len > 0) {
-        const idx = queue.orderedRemove(0);
-        sorted[sorted_count] = idx;
-        sorted_count += 1;
+    // Drain what is ready; when nothing is ready and packages remain, cut the
+    // cycle and carry on.
+    //
+    // Appending the remainder wholesale, which is what this used to do, gives
+    // up on everything merely downstream of a cycle as well as on the cycle
+    // itself - and most of the workspace is downstream. Cutting one package at
+    // a time and re-draining lets everything that was only waiting on the cut
+    // fall back into proper order. On the framework this was written against
+    // it roughly halves the number of packages published before a dependency
+    // they declare.
+    //
+    // The cut is the remaining package with the fewest unmet dependencies:
+    // the one closest to being ready, so the least is lost by forcing it.
+    // Ties go to the lowest index, and the packages were sorted by name above,
+    // so the same workspace is cut the same way on every machine.
+    while (sorted_count < n) {
+        while (queue.items.len > 0) {
+            const idx = queue.orderedRemove(0);
+            sorted[sorted_count] = idx;
+            sorted_count += 1;
 
-        for (dependents[idx].items) |dep| {
-            in_degree[dep] -= 1;
-            if (in_degree[dep] == 0) {
-                queue.append(allocator, dep) catch continue;
+            for (dependents[idx].items) |dep| {
+                if (in_degree[dep] == 0) continue;
+                in_degree[dep] -= 1;
+                if (in_degree[dep] == 0) {
+                    queue.append(allocator, dep) catch continue;
+                }
             }
         }
-    }
 
-    // Append any remaining (circular deps) in original order
-    for (0..n) |i| {
-        if (in_degree[i] > 0) {
-            sorted[sorted_count] = i;
-            sorted_count += 1;
+        if (sorted_count >= n) break;
+
+        var fewest: ?usize = null;
+        for (0..n) |i| {
+            if (in_degree[i] == 0) continue;
+            if (fewest == null or in_degree[i] < in_degree[fewest.?]) fewest = i;
         }
+
+        const cut = fewest orelse break;
+        in_degree[cut] = 0;
+        queue.append(allocator, cut) catch break;
     }
 
     // Reorder packages in-place using the sorted indices
