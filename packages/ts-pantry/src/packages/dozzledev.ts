@@ -3,7 +3,7 @@
  *
  * @domain `dozzle.dev`
  * @programs `dozzle`
- * @version `10.8.0` (84 versions available)
+ * @version `10.9.0` (85 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install dozzle.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "dozzle"
  * console.log(pkg.description) // "Realtime log viewer for docker containers. "
  * console.log(pkg.programs)    // ["dozzle"]
- * console.log(pkg.versions[0]) // "10.8.0" (latest)
+ * console.log(pkg.versions[0]) // "10.9.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/dozzle-dev.md
@@ -71,6 +71,7 @@ export const dozzledevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '10.9.0',
     '10.8.0',
     '10.7.5',
     '10.7.4',
