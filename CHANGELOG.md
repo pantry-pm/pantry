@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.46...v0.11.47)
+
+## 🐛 Bug Fixes
+
+- **publish**: say why an upload failed ([4ab1499](https://github.com/pantry-pm/pantry/commit/4ab1499)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💄 Styles
+
+- **publish**: zig fmt the status prints ([f8967c6](https://github.com/pantry-pm/pantry/commit/f8967c6)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.47 ([922ac18](https://github.com/pantry-pm/pantry/commit/922ac18)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update codex.openai.com, dozzle.dev ([89916c0](https://github.com/pantry-pm/pantry/commit/89916c0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.45...v0.11.46)
 
 ## ✨ Features
