@@ -779,7 +779,7 @@ fn uploadCommitViaHttp(
         // The status prints unconditionally. It used to print only the body,
         // so a rejection that carried an empty one — every 401, 403 and 502
         // that answers with headers alone — was as silent as no request at all.
-        style.print("  {s}✗{s} Upload rejected: HTTP {d}\n", .{ style.red, style.reset, @intFromEnum(result.status) });
+        style.print("  {s}✗{s} Upload rejected: HTTP {d}\n", .{ style.red, style.reset, @backingInt(result.status) });
         if (resp_data.len > 0) {
             style.print("  {s}\n", .{resp_data});
         }

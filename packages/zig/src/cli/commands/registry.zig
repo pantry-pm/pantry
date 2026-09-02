@@ -1567,7 +1567,7 @@ fn uploadViaHttp(
 
     if (result.status != .ok and result.status != .created) {
         const err_data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
-        style.print("Upload rejected: HTTP {d}\n", .{@intFromEnum(result.status)});
+        style.print("Upload rejected: HTTP {d}\n", .{@backingInt(result.status)});
         if (err_data.len > 0) {
             style.print("{s}\n", .{err_data});
         }
