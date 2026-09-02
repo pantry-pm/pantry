@@ -888,7 +888,15 @@ fn publishSingleToRegistry(
     defer if (resolved_token) |t| t.deinit(allocator);
 
     // Publishing goes through the registry server (HTTP) — a token is required.
-    if (resolved_token == null) {
+    //
+    // A dry run is the exception, because it uploads nothing. Refusing one
+    // without a token made `--dry-run` useless exactly where it is worth
+    // most: on a machine that cannot publish. A contributor checking what
+    // their package would push, a CI matrix job rehearsing a release, a
+    // release tool asking "would this work" before it tags — none of them
+    // hold publish credentials, and all of them were told to run
+    // `pantry token set` to be shown a report that never leaves the machine.
+    if (resolved_token == null and !options.dry_run) {
         return CommandResult.err(
             allocator,
             \\Error: No authentication found.
@@ -900,7 +908,10 @@ fn publishSingleToRegistry(
             ,
         );
     }
-    const token: ?[]const u8 = resolved_token.?.value;
+
+    // Optional rather than unwrapped: the dry-run path above reaches here
+    // without one, and the upload at the end is the only consumer.
+    const token: ?[]const u8 = if (resolved_token) |t| t.value else null;
 
     // Rewrite workspace: protocol ranges in the published manifest (same
     // semantics as `bun publish`) BEFORE anything is packed or uploaded —
