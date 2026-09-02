@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.47...v0.11.48)
+
+## 🐛 Bug Fixes
+
+- **publish**: make the publish order reproducible ([0f7425d](https://github.com/pantry-pm/pantry/commit/0f7425d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.48 ([5d57a59](https://github.com/pantry-pm/pantry/commit/5d57a59)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.46...v0.11.47)
 
 ## 🐛 Bug Fixes
