@@ -2465,6 +2465,44 @@ fn createTarball(
 /// Sort monorepo packages by dependency order using topological sort (Kahn's algorithm).
 /// Packages that are depended on by others come first, so their `prepublishOnly` scripts
 /// run before dependents try to build against them.
+
+// Whether `peerDependenciesMeta` marks this peer optional.
+//
+// npm's shape is `{ "pkg": { "optional": true } }`; anything else, including a
+// missing entry, means the peer is required.
+fn isOptionalPeer(peer_meta: ?std.json.ObjectMap, name: []const u8) bool {
+    const meta = peer_meta orelse return false;
+    const entry = meta.get(name) orelse return false;
+    if (entry != .object) return false;
+    const flag = entry.object.get("optional") orelse return false;
+    return flag == .bool and flag.bool;
+}
+
+test "an optional peer does not constrain publish order" {
+    const allocator = std.testing.allocator;
+
+    const json =
+        \\{
+        \\  "peerDependencies": { "@scope/hard": "1.0.0", "@scope/soft": "1.0.0" },
+        \\  "peerDependenciesMeta": { "@scope/soft": { "optional": true } }
+        \\}
+    ;
+
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+
+    const meta = parsed.value.object.get("peerDependenciesMeta").?.object;
+
+    // The optional one is skipped; the required one still orders the publish.
+    try std.testing.expect(isOptionalPeer(meta, "@scope/soft"));
+    try std.testing.expect(!isOptionalPeer(meta, "@scope/hard"));
+
+    // A peer nobody mentioned in the meta map is required, and so is every
+    // peer when there is no meta map at all.
+    try std.testing.expect(!isOptionalPeer(meta, "@scope/absent"));
+    try std.testing.expect(!isOptionalPeer(null, "@scope/soft"));
+}
+
 fn sortPackagesByDependencyOrder(
     allocator: std.mem.Allocator,
     packages: []@import("registry.zig").MonorepoPackage,
@@ -2521,13 +2559,28 @@ fn sortPackagesByDependencyOrder(
 
         if (parsed.value != .object) continue;
 
+        // An optional peer need not be installed for the dependent to work,
+        // so it constrains neither resolution nor the order things publish in.
+        // Counting it puts packages in a cycle that are not really in one, and
+        // a cycle here means somebody gets published before a dependency it
+        // declares.
+        const peer_meta: ?std.json.ObjectMap = blk: {
+            const meta = parsed.value.object.get("peerDependenciesMeta") orelse break :blk null;
+            if (meta != .object) break :blk null;
+            break :blk meta.object;
+        };
+
         const dep_fields = [_][]const u8{ "dependencies", "devDependencies", "peerDependencies" };
         for (dep_fields) |field| {
             const deps_val = parsed.value.object.get(field) orelse continue;
             if (deps_val != .object) continue;
 
+            const is_peer = std.mem.eql(u8, field, "peerDependencies");
+
             var iter = deps_val.object.iterator();
             while (iter.next()) |entry| {
+                if (is_peer and isOptionalPeer(peer_meta, entry.key_ptr.*)) continue;
+
                 if (name_to_idx.get(entry.key_ptr.*)) |dep_idx| {
                     // Package i depends on dep_idx → dep_idx must come first
                     in_degree[i] += 1;
