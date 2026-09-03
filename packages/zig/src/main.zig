@@ -2043,6 +2043,25 @@ fn logsAction(ctx: *cli.BaseCommand.ParseContext) !void {
     std.process.exit(result.exit_code);
 }
 
+fn serviceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+
+    const service_name = ctx.getArgument(0) orelse {
+        style.print("Error: services:remove requires a service name argument\n", .{});
+        std.process.exit(1);
+    };
+
+    const args = [_][]const u8{service_name};
+    const result = try lib.commands.serviceRemoveCommand(allocator, &args);
+    defer result.deinit(allocator);
+
+    if (result.message) |msg| {
+        style.print("{s}\n", .{msg});
+    }
+
+    std.process.exit(result.exit_code);
+}
+
 fn servicePortsAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -3873,6 +3892,15 @@ pub fn main() !void {
     var service_ports_cmd = try cli.BaseCommand.init(allocator, "services:ports", "Show which project holds which service port");
     _ = service_ports_cmd.setAction(servicePortsAction);
     _ = try root.addCommand(service_ports_cmd);
+
+    var service_remove_cmd = try cli.BaseCommand.init(allocator, "services:remove", "Remove a service's unit and release its port");
+
+    const service_remove_arg = cli.Argument.init("service", "Service name", .string)
+        .withRequired(true);
+    _ = try service_remove_cmd.addArgument(service_remove_arg);
+
+    _ = service_remove_cmd.setAction(serviceRemoveAction);
+    _ = try root.addCommand(service_remove_cmd);
 
     // ========================================================================
     // Inspector Command (Package Inspector UI)

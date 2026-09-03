@@ -250,6 +250,21 @@ pub const Registry = struct {
         });
     }
 
+    /// Drop one project's assignment for one service. Returns whether there
+    /// was anything to drop.
+    pub fn releaseService(self: *Registry, project: []const u8, service: []const u8) bool {
+        for (self.assignments.items, 0..) |a, i| {
+            if (!std.mem.eql(u8, a.project, project)) continue;
+            if (!std.mem.eql(u8, a.service, service)) continue;
+            self.allocator.free(a.project);
+            self.allocator.free(a.service);
+            if (a.root) |r| self.allocator.free(r);
+            _ = self.assignments.orderedRemove(i);
+            return true;
+        }
+        return false;
+    }
+
     /// Drop every assignment for a project. Called when its units are pruned,
     /// so a deleted project's ports return to the pool.
     pub fn releaseProject(self: *Registry, project: []const u8) usize {
@@ -332,14 +347,8 @@ fn ownServiceIsRunning(allocator: std.mem.Allocator, project: []const u8, servic
 /// assignment on changes nothing for setups that already work; only a *new*
 /// project, or one that genuinely collides, gets a different number.
 pub fn installedPort(allocator: std.mem.Allocator, project: []const u8, service: []const u8) ?u16 {
-    const plat = platform.Platform.detect();
-    const dir = plat.userServiceDirectory(allocator) catch return null;
-    defer allocator.free(dir);
-
-    const unit = switch (plat) {
-        .macos => std.fmt.allocPrint(allocator, "{s}/com.pantry.{s}.{s}.plist", .{ dir, project, service }) catch return null,
-        else => std.fmt.allocPrint(allocator, "{s}/pantry-{s}-{s}.service", .{ dir, project, service }) catch return null,
-    };
+    var controller = platform.ServiceController.init(allocator);
+    const unit = controller.unitPath(service, project) catch return null;
     defer allocator.free(unit);
 
     io_helper.accessAbsolute(unit, .{}) catch return null;
@@ -415,6 +424,15 @@ pub fn reserve(
     defer reg.deinit();
     reg.put(project, service, port, project_root) catch return;
     reg.save() catch {};
+}
+
+/// Drop one service's assignment. Returns whether one was released.
+pub fn releaseOne(allocator: std.mem.Allocator, project: []const u8, service: []const u8) bool {
+    var reg = Registry.load(allocator);
+    defer reg.deinit();
+    const released = reg.releaseService(project, service);
+    if (released) reg.save() catch {};
+    return released;
 }
 
 /// Drop a project's assignments. Returns how many were released.
@@ -619,4 +637,34 @@ test "re-resolving a project returns the same port" {
     try std.testing.expectEqual(@as(?u16, 5532), reg.portFor("aaaaaaaa", "postgres"));
     // A project's own assignment never reads as a conflict with itself.
     try std.testing.expect(!spanClaimedByOther(&reg, "aaaaaaaa", "postgres", 5532));
+}
+
+test "releaseService drops one pair, not the project" {
+    const allocator = std.testing.allocator;
+    var reg = Registry{ .allocator = allocator, .path = null, .assignments = .empty };
+    defer reg.deinit();
+
+    try reg.put("d298bb3b", "postgres", 5532, "/Users/x/Code/pantry");
+    try reg.put("d298bb3b", "redis", 6379, "/Users/x/Code/pantry");
+
+    // Removing a project's postgres must not take its redis with it — the
+    // project is alive, only that one service is finished with.
+    try std.testing.expect(reg.releaseService("d298bb3b", "postgres"));
+    try std.testing.expectEqual(@as(?u16, null), reg.portFor("d298bb3b", "postgres"));
+    try std.testing.expectEqual(@as(?u16, 6379), reg.portFor("d298bb3b", "redis"));
+
+    // Releasing again is a no-op rather than an error.
+    try std.testing.expect(!reg.releaseService("d298bb3b", "postgres"));
+}
+
+test "a released port is available to the next project" {
+    const allocator = std.testing.allocator;
+    var reg = Registry{ .allocator = allocator, .path = null, .assignments = .empty };
+    defer reg.deinit();
+
+    try reg.put("aaaaaaaa", "postgres", 5532, null);
+    try std.testing.expect(spanClaimedByOther(&reg, "bbbbbbbb", "postgres", 5532));
+
+    _ = reg.releaseService("aaaaaaaa", "postgres");
+    try std.testing.expect(!spanClaimedByOther(&reg, "bbbbbbbb", "postgres", 5532));
 }

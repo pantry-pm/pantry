@@ -272,6 +272,7 @@ pub const serviceLogsCommand = services_commands.logsCommand;
 pub const servicePruneLogsCommand = services_commands.pruneLogsCommand;
 pub const servicesPruneCommand = services_commands.pruneServicesCommand;
 pub const servicePortsCommand = services_commands.servicePortsCommand;
+pub const serviceRemoveCommand = services_commands.removeServiceCommand;
 pub const serviceInspectCommand = services_commands.inspectCommand;
 pub const serviceExecCommand = services_commands.execCommand;
 pub const serviceSnapshotCommand = services_commands.snapshotCommand;

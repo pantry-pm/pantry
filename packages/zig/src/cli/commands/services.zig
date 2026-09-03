@@ -2531,6 +2531,69 @@ pub fn pruneServicesCommand(allocator: std.mem.Allocator, confirmed: bool) !Comm
     return .{ .exit_code = 0 };
 }
 
+/// `pantry services:remove <service>`
+///
+/// The other half of `start`. Starting a service writes a unit; nothing ever
+/// removed one. `stop` unloads the job but leaves the file, so the unit comes
+/// back at the next login, and `services:prune` only reaches units whose
+/// *project directory* is gone — which is no help when the project is alive
+/// and it is the service that is finished with.
+///
+/// The gap was not theoretical: a `pantry start postgres` run once in a repo
+/// that does not depend on postgres left a unit behind that exited 127 at
+/// every login for months, holding a port assignment for a server that could
+/// never start, with no command able to clear it.
+///
+/// Stops the service, deletes its unit, and releases its port. Data under
+/// `~/.local/share/pantry/data` is left alone — removing a service is not the
+/// same decision as discarding its database.
+pub fn removeServiceCommand(allocator: std.mem.Allocator, args: []const []const u8) !CommandResult {
+    if (args.len == 0) {
+        return CommandResult.err(allocator, "Error: No service specified\nUsage: pantry services:remove <service>");
+    }
+
+    const service_name = args[0];
+
+    // Scoped to the project the caller is standing in, like `status`: inside a
+    // project this removes that project's unit, outside it the global one.
+    const project_id = detectCwdProjectHash(allocator);
+    defer if (project_id) |pid| allocator.free(pid);
+
+    var controller = services.platform.ServiceController.init(allocator);
+    const unit_path = controller.unitPath(service_name, project_id) catch {
+        return CommandResult.err(allocator, "Could not determine this service's unit path");
+    };
+    defer allocator.free(unit_path);
+
+    service_io.accessAbsolute(unit_path, .{}) catch {
+        const msg = if (project_id) |pid|
+            try std.fmt.allocPrint(allocator, "No {s} service installed for this project ({s})", .{ service_name, pid })
+        else
+            try std.fmt.allocPrint(allocator, "No global {s} service installed", .{service_name});
+        return .{ .exit_code = 1, .message = msg };
+    };
+
+    // Unload before unlinking. Deleting a plist out from under a loaded job
+    // leaves it running with nothing left to stop it by.
+    controller.stop(service_name, project_id) catch {};
+
+    service_io.deleteFile(unit_path) catch |err| {
+        const msg = try std.fmt.allocPrint(allocator, "Could not remove {s}: {s}", .{ unit_path, @errorName(err) });
+        return .{ .exit_code = 1, .message = msg };
+    };
+
+    style.print("✓ Removed {s} service unit\n", .{service_name});
+
+    if (project_id) |pid| {
+        if (services.ports.releaseOne(allocator, pid, service_name)) {
+            style.print("  released its port assignment\n", .{});
+        }
+    }
+    style.print("  data under ~/.local/share/pantry/data was left in place\n", .{});
+
+    return .{ .exit_code = 0 };
+}
+
 /// `pantry services:ports`
 ///
 /// Which project holds which port. The collision that started all of this was

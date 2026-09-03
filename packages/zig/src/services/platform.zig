@@ -480,6 +480,27 @@ pub const ServiceController = struct {
         );
     }
 
+    /// The file a service's unit is written to on this platform, whether or
+    /// not it exists. Caller-owned.
+    ///
+    /// Public because two things outside the controller need the same path and
+    /// must not each rebuild it: the port registry, which reads the port out
+    /// of an installed unit, and `services:remove`, which deletes one. A unit
+    /// path spelled slightly differently in three places is a unit that can be
+    /// created but not found again.
+    pub fn unitPath(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) ![]const u8 {
+        return switch (self.platform) {
+            .macos => try self.getLaunchdServiceFile(service_name, project_id),
+            else => blk: {
+                const unit = try self.getSystemdUnit(service_name, project_id);
+                defer self.allocator.free(unit);
+                const dir = try self.systemdUnitDirectory();
+                defer self.allocator.free(dir);
+                break :blk try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ dir, unit });
+            },
+        };
+    }
+
     /// Caller-owned directory the systemd unit is written to for the active
     /// scope: `/etc/systemd/system` for system services, the per-user dir
     /// (`~/.config/systemd/user`) otherwise.
