@@ -26,6 +26,13 @@ pub const ServiceConfig = struct {
     health_check: ?[]const u8 = null,
     /// Project identifier for per-project isolation (first 8 hex chars of FNV-1a hash of project path)
     project_id: ?[]const u8 = null,
+    /// The project directory `project_id` hashes. Recorded in the generated
+    /// unit so a later `pantry services:prune` can tell a live project from a
+    /// deleted one — the hash is one-way, and a unit whose project is gone
+    /// otherwise looks exactly like a unit whose project is merely idle. That
+    /// is not a hypothetical distinction: a deleted worktree left a typesense
+    /// restarting against another project's port for days.
+    project_root: ?[]const u8 = null,
 
     pub fn deinit(self: *ServiceConfig, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
@@ -35,6 +42,7 @@ pub const ServiceConfig = struct {
         if (self.working_directory) |wd| allocator.free(wd);
         if (self.health_check) |hc| allocator.free(hc);
         if (self.project_id) |pid| allocator.free(pid);
+        if (self.project_root) |root| allocator.free(root);
 
         var it = self.env_vars.iterator();
         while (it.next()) |entry| {
@@ -1952,7 +1960,7 @@ pub const Services = struct {
         //
         // Derived from the API port so the two move together, which is the
         // property that makes one port per project enough.
-        const peering_port: u16 = if (port > 1) port - 1 else port + 1;
+        const peering_port: u16 = auxiliaryPort("typesense", port).?;
 
         const ts_bin = try resolveServiceBinary(allocator, "typesense-server", project_root, home);
         const start_cmd = if (have_real_key)
@@ -2747,6 +2755,22 @@ pub const Services = struct {
     // ========================================================================
 
     /// Get default port for a service
+    /// A second port the service binds beyond the one it is configured with.
+    ///
+    /// Typesense listens twice: the API port it is told about, and a peering
+    /// port for clustering. Left to itself it derives that peering port from
+    /// the *default* API port, 8107, not from whatever it was passed — so a
+    /// project moved to another API port still tried to bind 8107 and
+    /// collided with the first project. Naming it explicitly is what makes
+    /// one port per project sufficient; returning it here is what lets the
+    /// allocator check the whole span before handing a candidate out.
+    pub fn auxiliaryPort(service_name: []const u8, port: u16) ?u16 {
+        if (std.mem.eql(u8, service_name, "typesense")) {
+            return if (port > 1) port - 1 else port + 1;
+        }
+        return null;
+    }
+
     pub fn getDefaultPort(service_name: []const u8) ?u16 {
         // Databases
         if (std.mem.eql(u8, service_name, "postgresql") or std.mem.eql(u8, service_name, "postgres")) return 5432;

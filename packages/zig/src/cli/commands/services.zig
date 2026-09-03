@@ -506,7 +506,8 @@ fn servicesCommandHuman() CommandResult {
     style.print("  pantry service stop <service>       Stop a service (or group)\n", .{});
     style.print("  pantry service restart <service>    Restart a service (or group)\n", .{});
     style.print("  pantry service status <service>     Show service status\n", .{});
-    style.print("  pantry service logs <service>       View service logs\n", .{});
+    style.print("  pantry logs <service>              View service logs\n", .{});
+    style.print("  pantry logs --prune                Rotate oversized service logs\n", .{});
     style.print("  pantry service enable <service>     Enable auto-start\n", .{});
     style.print("  pantry service disable <service>    Disable auto-start\n", .{});
 
@@ -632,7 +633,17 @@ fn startSingleService(allocator: std.mem.Allocator, service_name: []const u8, pr
         const msg = try std.fmt.allocPrint(allocator, "Unknown service: {s}", .{service_name});
         return .{ .exit_code = 1, .message = msg };
     };
-    if (project_root) |root| service_config.project_id = try computeProjectHash(allocator, root);
+    if (project_root) |root| {
+        service_config.project_id = try computeProjectHash(allocator, root);
+        service_config.project_root = try allocator.dupe(u8, root);
+
+        // An explicit `--port` is the user pinning this service. Record it
+        // alongside the allocated ones so a later project is not handed the
+        // same number, and so `services:ports` shows the real picture.
+        if (port_override) |p| {
+            services.ports.reserve(allocator, service_config.project_id.?, root, service_config.name, p);
+        }
+    }
     const canonical_name = try allocator.dupe(u8, service_config.name);
     defer allocator.free(canonical_name);
     try manager.register(service_config);
@@ -808,6 +819,19 @@ pub fn statusCommand(allocator: std.mem.Allocator, args: []const []const u8) !Co
     style.print("Service: {s}\n", .{service_name});
     style.print("Status:  {s}\n", .{status.toString()});
 
+    // Checking on a service is the moment a runaway log is most likely to be
+    // sitting there unnoticed — the service that fills a disk is the one
+    // nobody restarts. Rotating only touches files already past the cap, and
+    // the recent tail is kept alongside, so this is bounded work with the
+    // last of the evidence preserved. Reported rather than done silently.
+    const swept = services.logs.rotateAll(allocator, services.logs.Policy.fromEnv(allocator));
+    if (swept.files_rotated > 0) {
+        style.print("Logs:    rotated {d} oversized file(s), reclaimed {d} MB\n", .{
+            swept.files_rotated,
+            swept.bytes_reclaimed / (1024 * 1024),
+        });
+    }
+
     return .{ .exit_code = 0 };
 }
 
@@ -873,9 +897,35 @@ pub fn disableCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
 // Logs Command
 // ============================================================================
 
+/// `pantry logs --prune`
+///
+/// Rotate every oversized log under `~/.local/share/pantry/logs`, including
+/// those of services whose unit no longer exists. Starting a service rotates
+/// its own logs, but the file that actually runs away belongs to a service
+/// nobody starts any more — it is the process manager restarting it, and
+/// pantry is not in that loop. This is the sweep that catches those.
+pub fn pruneLogsCommand(allocator: std.mem.Allocator) !CommandResult {
+    const policy = services.logs.Policy.fromEnv(allocator);
+    if (policy.disabled()) {
+        return CommandResult.err(allocator, "Log rotation is disabled (PANTRY_LOG_MAX_MB=0)");
+    }
+
+    const summary = services.logs.rotateAll(allocator, policy);
+    if (summary.files_rotated == 0) {
+        style.print("✓ No logs over {d} MB\n", .{policy.max_bytes / (1024 * 1024)});
+        return .{ .exit_code = 0 };
+    }
+
+    style.print("✓ Rotated {d} log file(s), reclaimed {d} MB\n", .{
+        summary.files_rotated,
+        summary.bytes_reclaimed / (1024 * 1024),
+    });
+    return .{ .exit_code = 0 };
+}
+
 pub fn logsCommand(allocator: std.mem.Allocator, args: []const []const u8, follow: bool) !CommandResult {
     if (args.len == 0) {
-        return CommandResult.err(allocator, "Error: No service specified\nUsage: pantry service logs <service> [--follow]");
+        return CommandResult.err(allocator, "Error: No service specified\nUsage: pantry logs <service> [--follow] | pantry logs --prune");
     }
 
     const service_name = args[0];
@@ -1044,7 +1094,7 @@ fn getServiceConfigRaw(allocator: std.mem.Allocator, name: []const u8, project_r
     }
 
     // Get default port for the service
-    const port = Services.getDefaultPort(name) orelse {
+    const default_port = Services.getDefaultPort(name) orelse {
         // Not one pantry ships. Before giving up, ask the project: a service
         // declared under `services.define` in deps.yaml is as real as a
         // built-in one, and this is where an application server and its queue
@@ -1053,6 +1103,20 @@ fn getServiceConfigRaw(allocator: std.mem.Allocator, name: []const u8, project_r
 
         return error.UnknownService;
     };
+
+    // The default is the *starting* point, not the answer. Every project
+    // asking for postgres used to be told 5432, which is correct for exactly
+    // one of them; the rest could never bind and were restarted forever. A
+    // project-scoped request gets a port assigned to that project — the same
+    // one every time, adopted from its installed unit if it already has one.
+    //
+    // Unscoped requests keep the plain default: a global service belongs to
+    // no directory, so there is nothing to assign it against.
+    const port = if (project_root) |root| blk: {
+        const project_id = computeProjectHash(allocator, root) catch break :blk default_port;
+        defer allocator.free(project_id);
+        break :blk services.ports.resolve(allocator, project_id, root, name, default_port);
+    } else default_port;
 
     // Map service names to their configuration functions
     // Databases
@@ -2252,4 +2316,300 @@ test "health checks resolve project-local Pantry binaries" {
     const global = try buildHealthCheckCommand(allocator, "redis-cli ping", null);
     defer allocator.free(global);
     try std.testing.expectEqualStrings("redis-cli ping", global);
+}
+
+// ============================================================================
+// Orphaned unit reaping
+// ============================================================================
+
+/// A unit whose project directory has been deleted.
+const OrphanUnit = struct {
+    /// Full path of the launchd plist / systemd unit.
+    path: []const u8,
+    /// Service name as it appears in the unit's filename.
+    service: []const u8,
+    /// Project isolation hash.
+    project_id: []const u8,
+    /// The recorded project directory, when the unit records one.
+    project_root: ?[]const u8,
+
+    fn deinit(self: *const OrphanUnit, allocator: std.mem.Allocator) void {
+        allocator.free(self.path);
+        allocator.free(self.service);
+        allocator.free(self.project_id);
+        if (self.project_root) |r| allocator.free(r);
+    }
+};
+
+/// Pull the project root a unit records.
+///
+/// Two sources, in order of trust:
+///
+///  1. `PANTRY_PROJECT_ROOT`, written into every unit pantry generates now.
+///  2. The service binary's own path, which for a project-scoped service is
+///     `<root>/pantry/.bin/<binary>`. Units written before (1) existed have
+///     nothing else, and this recovers the root for the ones that exec their
+///     binary directly. The `sh -c` wrapped services (postgres) mention only
+///     their data directory, so those stay unverifiable — reported rather
+///     than guessed at, since deleting a live project's unit to tidy up would
+///     be a much worse outcome than leaving a dead one in place.
+///
+/// Caller owns the result.
+fn readUnitProjectRoot(allocator: std.mem.Allocator, content: []const u8) ?[]const u8 {
+    // 1. launchd: <key>PANTRY_PROJECT_ROOT</key>\n<string>ROOT</string>
+    if (std.mem.indexOf(u8, content, "PANTRY_PROJECT_ROOT")) |key_at| {
+        const rest = content[key_at + "PANTRY_PROJECT_ROOT".len ..];
+        if (std.mem.indexOf(u8, rest, "<string>")) |open_at| {
+            // Only if it belongs to this key — the value tag follows closely.
+            if (open_at < 64) {
+                const value_start = open_at + "<string>".len;
+                if (std.mem.indexOf(u8, rest[value_start..], "</string>")) |close_at| {
+                    return allocator.dupe(u8, rest[value_start .. value_start + close_at]) catch null;
+                }
+            }
+        }
+        // 2. systemd: Environment="PANTRY_PROJECT_ROOT=ROOT"
+        if (rest.len > 1 and rest[0] == '=') {
+            const value = rest[1..];
+            const end = std.mem.indexOfAny(u8, value, "\"\n") orelse value.len;
+            if (end > 0) return allocator.dupe(u8, value[0..end]) catch null;
+        }
+    }
+
+    // 3. Fall back to `<root>/pantry/.bin/<binary>` in the exec line.
+    const marker = "/pantry/.bin/";
+    if (std.mem.indexOf(u8, content, marker)) |at| {
+        const before = content[0..at];
+        // Back up to the start of the path.
+        var start = before.len;
+        while (start > 0) : (start -= 1) {
+            const ch = before[start - 1];
+            if (ch == '<' or ch == '>' or ch == '"' or ch == '\'' or ch == ' ' or ch == '\n' or ch == '=') break;
+        }
+        const root = before[start..];
+        if (root.len > 1 and root[0] == '/') return allocator.dupe(u8, root) catch null;
+    }
+
+    return null;
+}
+
+/// Every project-scoped pantry unit installed for this user whose recorded
+/// project directory no longer exists. Caller owns the slice and its items.
+fn findOrphanedUnits(allocator: std.mem.Allocator) ![]OrphanUnit {
+    var orphans = std.ArrayList(OrphanUnit).empty;
+    errdefer {
+        for (orphans.items) |o| o.deinit(allocator);
+        orphans.deinit(allocator);
+    }
+
+    const plat = services.platform.Platform.detect();
+    const unit_dir = plat.userServiceDirectory(allocator) catch return orphans.toOwnedSlice(allocator);
+    defer allocator.free(unit_dir);
+
+    // `com.pantry.<id>.<service>.plist` on macOS, `pantry-<id>-<service>.service`
+    // under systemd. Only the project-scoped form can be orphaned — an
+    // unscoped unit belongs to no directory.
+    const prefix = switch (plat) {
+        .macos => "com.pantry.",
+        else => "pantry-",
+    };
+    const suffix = switch (plat) {
+        .macos => ".plist",
+        else => ".service",
+    };
+    const separator: u8 = switch (plat) {
+        .macos => '.',
+        else => '-',
+    };
+
+    var dir = service_io.openDirForIteration(unit_dir) catch return orphans.toOwnedSlice(allocator);
+    defer dir.close();
+
+    var iter = dir.iterate();
+    while (iter.next() catch null) |entry| {
+        if (!std.mem.startsWith(u8, entry.name, prefix)) continue;
+        if (!std.mem.endsWith(u8, entry.name, suffix)) continue;
+
+        const stem = entry.name[prefix.len .. entry.name.len - suffix.len];
+        const sep_at = std.mem.indexOfScalar(u8, stem, separator) orelse continue;
+        const project_id = stem[0..sep_at];
+        const service_name = stem[sep_at + 1 ..];
+        // Project ids are exactly 8 hex chars; anything else is an unscoped
+        // unit whose name merely contains a separator.
+        if (project_id.len != 8) continue;
+        if (service_name.len == 0) continue;
+
+        const path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ unit_dir, entry.name });
+        errdefer allocator.free(path);
+
+        const content = service_io.readFileAllocAbsolute(allocator, path, 1024 * 1024) catch {
+            allocator.free(path);
+            continue;
+        };
+        defer allocator.free(content);
+
+        const root = readUnitProjectRoot(allocator, content);
+        if (root) |r| {
+            // A project that still exists is not an orphan, whatever state
+            // its service is in.
+            if (service_io.accessAbsolute(r, .{})) {
+                allocator.free(r);
+                allocator.free(path);
+                continue;
+            } else |_| {}
+        } else {
+            // Unverifiable: no recorded root and no recoverable binary path.
+            allocator.free(path);
+            continue;
+        }
+
+        try orphans.append(allocator, .{
+            .path = path,
+            .service = try allocator.dupe(u8, service_name),
+            .project_id = try allocator.dupe(u8, project_id),
+            .project_root = root,
+        });
+    }
+
+    return orphans.toOwnedSlice(allocator);
+}
+
+/// `pantry services:prune [--yes]`
+///
+/// Units outlive the directories they were started from. Deleting a project —
+/// or, in the case that prompted this, a throwaway git worktree — leaves its
+/// launchd plist in place, and a `KeepAlive` service restarts forever against
+/// a port some other project now holds. Nothing brings a human back to it:
+/// the project is gone, so nobody runs `pantry` there again.
+///
+/// Lists by default; `--yes` unloads and removes.
+pub fn pruneServicesCommand(allocator: std.mem.Allocator, confirmed: bool) !CommandResult {
+    const orphans = findOrphanedUnits(allocator) catch {
+        return CommandResult.err(allocator, "Failed to read installed service units");
+    };
+    defer {
+        for (orphans) |o| o.deinit(allocator);
+        allocator.free(orphans);
+    }
+
+    if (orphans.len == 0) {
+        style.print("✓ No orphaned services\n", .{});
+        return .{ .exit_code = 0 };
+    }
+
+    style.print("Orphaned services (project directory no longer exists):\n\n", .{});
+    for (orphans) |o| {
+        style.print("  {s} ({s})\n", .{ o.service, o.project_id });
+        if (o.project_root) |r| style.print("    was: {s}\n", .{r});
+    }
+    style.print("\n", .{});
+
+    if (!confirmed) {
+        style.print("Run 'pantry services:prune --yes' to unload and remove them.\n", .{});
+        style.print("Service data under ~/.local/share/pantry/data is left untouched.\n", .{});
+        return .{ .exit_code = 0 };
+    }
+
+    var manager = ServiceManager.init(allocator);
+    defer manager.deinit();
+
+    var removed: usize = 0;
+    for (orphans) |o| {
+        // Unload first: deleting a plist out from under a loaded job leaves
+        // it running with nothing left to stop it by.
+        manager.controller.stop(o.service, o.project_id) catch {};
+        service_io.deleteFile(o.path) catch |err| {
+            style.print("  ! could not remove {s}: {s}\n", .{ o.path, @errorName(err) });
+            continue;
+        };
+        // The project is gone; its ports go back to the pool.
+        _ = services.ports.release(allocator, o.project_id);
+        removed += 1;
+    }
+
+    style.print("✓ Removed {d} orphaned service unit(s)\n", .{removed});
+    return .{ .exit_code = 0 };
+}
+
+/// `pantry services:ports`
+///
+/// Which project holds which port. The collision that started all of this was
+/// invisible for days partly because nothing could answer that question — the
+/// only way to see two projects had been handed 8108 was to read two plists.
+pub fn servicePortsCommand(allocator: std.mem.Allocator) !CommandResult {
+    var reg = services.ports.Registry.load(allocator);
+    defer reg.deinit();
+
+    if (reg.assignments.items.len == 0) {
+        style.print("No port assignments yet.\n", .{});
+        style.print("Ports are assigned the first time a project starts a service.\n", .{});
+        return .{ .exit_code = 0 };
+    }
+
+    style.print("Service ports by project:\n\n", .{});
+    for (reg.assignments.items) |a| {
+        const aux = services.ports.span(a.service, a.port)[1];
+        if (aux) |x| {
+            style.print("  {d: >5} (+{d})  {s: <14} {s}\n", .{ a.port, x, a.service, a.project });
+        } else {
+            style.print("  {d: >5}        {s: <14} {s}\n", .{ a.port, a.service, a.project });
+        }
+        if (a.root) |r| style.print("                        {s}\n", .{r});
+    }
+
+    return .{ .exit_code = 0 };
+}
+
+test "readUnitProjectRoot reads the launchd environment key" {
+    const allocator = std.testing.allocator;
+    const plist =
+        \\    <key>EnvironmentVariables</key>
+        \\    <dict>
+        \\        <key>PANTRY_PROJECT_ROOT</key>
+        \\        <string>/Users/x/Code/app</string>
+        \\        <key>PGPORT</key>
+        \\        <string>5432</string>
+        \\    </dict>
+    ;
+    const root = readUnitProjectRoot(allocator, plist) orelse return error.TestExpectedRoot;
+    defer allocator.free(root);
+    try std.testing.expectEqualStrings("/Users/x/Code/app", root);
+}
+
+test "readUnitProjectRoot reads the systemd environment line" {
+    const allocator = std.testing.allocator;
+    const unit =
+        \\[Service]
+        \\Environment="PANTRY_PROJECT_ROOT=/home/x/code/app"
+        \\Environment="PGPORT=5432"
+    ;
+    const root = readUnitProjectRoot(allocator, unit) orelse return error.TestExpectedRoot;
+    defer allocator.free(root);
+    try std.testing.expectEqualStrings("/home/x/code/app", root);
+}
+
+test "readUnitProjectRoot recovers the root from a bin path in older units" {
+    const allocator = std.testing.allocator;
+    // No PANTRY_PROJECT_ROOT — the shape every unit written before it had.
+    const plist =
+        \\    <array>
+        \\        <string>/Users/x/Code/app/pantry/.bin/typesense-server</string>
+        \\        <string>--api-port</string>
+        \\    </array>
+    ;
+    const root = readUnitProjectRoot(allocator, plist) orelse return error.TestExpectedRoot;
+    defer allocator.free(root);
+    try std.testing.expectEqualStrings("/Users/x/Code/app", root);
+}
+
+test "readUnitProjectRoot declines to guess when the unit records no root" {
+    const allocator = std.testing.allocator;
+    // The `sh -c` wrapped services name only their data directory. Guessing a
+    // root here would risk deleting a live project's unit.
+    const plist =
+        \\        <string>/bin/sh</string>
+        \\        <string>-c</string>
+        \\        <string>D="/Users/x/.local/share/pantry/data/aeeb124c/postgres"; exec postgres -D "$D"</string>
+    ;
+    try std.testing.expect(readUnitProjectRoot(allocator, plist) == null);
 }

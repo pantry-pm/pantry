@@ -52,8 +52,10 @@ const win32 = struct {
     const SetFilePointerEx = if (is_windows) @extern(*const fn (HANDLE, LARGE_INTEGER, ?*LARGE_INTEGER, DWORD) callconv(.winapi) BOOL, .{ .name = "SetFilePointerEx" }) else {};
     const CreateDirectoryA = if (is_windows) @extern(*const fn ([*:0]const u8, ?*anyopaque) callconv(.winapi) BOOL, .{ .name = "CreateDirectoryA" }) else {};
     const GetCurrentDirectoryA = if (is_windows) @extern(*const fn (DWORD, [*]u8) callconv(.winapi) DWORD, .{ .name = "GetCurrentDirectoryA" }) else {};
+    const SetEndOfFile = if (is_windows) @extern(*const fn (HANDLE) callconv(.winapi) BOOL, .{ .name = "SetEndOfFile" }) else {};
 
     const STD_INPUT_HANDLE: DWORD = @bitCast(@as(i32, -10));
+    const FILE_BEGIN: DWORD = 0;
     const FILE_END: DWORD = 2;
 };
 
@@ -514,6 +516,40 @@ pub fn appendToFile(path: []const u8, bytes: []const u8) !void {
         if (result == -1) return error.Unseekable;
     }
     try writeAllToFile(file, bytes);
+}
+
+/// Seek an open file to an absolute offset from the start.
+pub fn seekFromStart(file: File, offset: u64) !void {
+    if (comptime is_windows) {
+        const distance: win32.LARGE_INTEGER = @intCast(offset);
+        if (win32.SetFilePointerEx(file.handle, distance, null, win32.FILE_BEGIN) == win32.FALSE) {
+            return error.Unseekable;
+        }
+    } else {
+        const SEEK_SET = 0;
+        const result = std.posix.system.lseek(file.handle, @intCast(offset), SEEK_SET);
+        if (result == -1) return error.Unseekable;
+    }
+}
+
+/// Truncate a file to `len` bytes **in place**, keeping its inode.
+///
+/// In place is the whole point: launchd (`StandardOutPath`) and systemd
+/// (`StandardOutput=append:`) open the log once at spawn and hold that
+/// descriptor for the life of the process. Renaming or deleting the path
+/// leaves the running service writing into the file it can no longer be read
+/// from, and the disk never comes back. Truncating the inode the writer
+/// already holds is the only shrink a running service notices — its next
+/// append (both open O_APPEND) lands at the new end.
+pub fn truncateFile(path: []const u8, len: u64) !void {
+    const file = try openFile(path, .{ .mode = .write_only });
+    defer closeFile(file);
+    if (comptime is_windows) {
+        try seekFromStart(file, len);
+        if (win32.SetEndOfFile(file.handle) == win32.FALSE) return error.InputOutput;
+    } else {
+        if (c.ftruncate(file.handle, @intCast(len)) != 0) return error.InputOutput;
+    }
 }
 
 /// Close a file

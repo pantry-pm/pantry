@@ -3,6 +3,8 @@
 pub const definitions = @import("services/definitions.zig");
 pub const platform = @import("services/platform.zig");
 pub const manager = @import("services/manager.zig");
+pub const logs = @import("services/logs.zig");
+pub const ports = @import("services/ports.zig");
 
 // Re-export main types
 pub const ServiceConfig = definitions.ServiceConfig;
@@ -11,6 +13,7 @@ pub const Services = definitions.Services;
 pub const Platform = platform.Platform;
 pub const ServiceController = platform.ServiceController;
 pub const ServiceManager = manager.ServiceManager;
+pub const LogPolicy = logs.Policy;
 
 test {
     @import("std").testing.refAllDecls(@This());

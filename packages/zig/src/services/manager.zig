@@ -1,6 +1,7 @@
 const std = @import("std");
 const definitions = @import("definitions.zig");
 const platform = @import("platform.zig");
+const logs = @import("logs.zig");
 const io_helper = @import("../io_helper.zig");
 
 /// Write `s` to the buffer, escaping the five XML predefined entities so that
@@ -169,6 +170,17 @@ pub const ServiceManager = struct {
     pub fn start(self: *ServiceManager, service_name: []const u8) !void {
         const service = self.services.get(service_name) orelse return error.ServiceNotFound;
 
+        // Roll oversized logs while nothing holds them open. Once the process
+        // manager spawns the service it keeps the log descriptor for the
+        // process's life, so this instant — after the previous run has exited
+        // and before the next one starts — is the only free rotation there is.
+        _ = logs.rotateService(
+            self.allocator,
+            service.name,
+            service.project_id,
+            logs.Policy.fromEnv(self.allocator),
+        );
+
         // Generate service file if it doesn't exist
         try self.ensureServiceFile(service);
 
@@ -190,6 +202,12 @@ pub const ServiceManager = struct {
     /// Restart a service
     pub fn restart(self: *ServiceManager, service_name: []const u8) !void {
         const service = self.services.get(service_name) orelse return error.ServiceNotFound;
+        _ = logs.rotateService(
+            self.allocator,
+            service.name,
+            service.project_id,
+            logs.Policy.fromEnv(self.allocator),
+        );
         try self.controller.restart(service_name, service.project_id);
     }
 
@@ -297,6 +315,13 @@ pub const ServiceManager = struct {
 
             if (service.keep_alive) {
                 try io_helper.writeAllToFile(file, "    <key>KeepAlive</key>\n    <true/>\n");
+                // launchd's default respawn floor is 10s, which for a service
+                // that can never start (a port another project already holds)
+                // is six restarts a minute writing a full startup banner
+                // each — forever, since nothing about a KeepAlive job needs a
+                // human. Widening the floor doesn't fix the loop, but it
+                // costs a crash-looping service two thirds of its output.
+                try io_helper.writeAllToFile(file, "    <key>ThrottleInterval</key>\n    <integer>30</integer>\n");
             }
 
             if (service.auto_start) {
@@ -336,9 +361,20 @@ pub const ServiceManager = struct {
                 }
             }
 
-            // Environment variables
-            if (service.env_vars.count() > 0) {
+            // Environment variables. PANTRY_PROJECT_ROOT rides along so the
+            // unit records which directory it belongs to; `services:prune`
+            // reads it back to find units whose project no longer exists.
+            if (service.env_vars.count() > 0 or service.project_root != null) {
                 try io_helper.writeAllToFile(file, "    <key>EnvironmentVariables</key>\n    <dict>\n");
+
+                if (service.project_root) |root| {
+                    var root_buf = std.ArrayList(u8).empty;
+                    defer root_buf.deinit(self.allocator);
+                    try root_buf.appendSlice(self.allocator, "        <key>PANTRY_PROJECT_ROOT</key>\n        <string>");
+                    try writeXmlEscaped(&root_buf, self.allocator, root);
+                    try root_buf.appendSlice(self.allocator, "</string>\n");
+                    try io_helper.writeAllToFile(file, root_buf.items);
+                }
 
                 var it = service.env_vars.iterator();
                 while (it.next()) |entry| {
@@ -393,7 +429,15 @@ pub const ServiceManager = struct {
             defer self.allocator.free(desc_line);
             try io_helper.writeAllToFile(file, desc_line);
 
-            try io_helper.writeAllToFile(file, "After=network.target\n\n");
+            try io_helper.writeAllToFile(file, "After=network.target\n");
+
+            // Stop restarting a service that cannot start. Without a start
+            // limit, Restart=always turns an unsatisfiable service (a port
+            // already taken, a missing data dir) into an unbounded loop whose
+            // only trace is a log file that grows until the disk is gone.
+            // Ten attempts in five minutes is well past a transient failure.
+            try io_helper.writeAllToFile(file, "StartLimitIntervalSec=300\n");
+            try io_helper.writeAllToFile(file, "StartLimitBurst=10\n\n");
 
             try io_helper.writeAllToFile(file, "[Service]\n");
 
@@ -435,7 +479,15 @@ pub const ServiceManager = struct {
                 }
             }
 
-            // Environment variables
+            // Environment variables. See the launchd branch: the project root
+            // is recorded so `services:prune` can spot a unit whose project
+            // directory has been deleted.
+            if (service.project_root) |root| {
+                const root_line = try std.fmt.allocPrint(self.allocator, "Environment=\"PANTRY_PROJECT_ROOT={s}\"\n", .{root});
+                defer self.allocator.free(root_line);
+                try io_helper.writeAllToFile(file, root_line);
+            }
+
             var it = service.env_vars.iterator();
             while (it.next()) |entry| {
                 const env_line = try std.fmt.allocPrint(self.allocator, "Environment=\"{s}={s}\"\n", .{

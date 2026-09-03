@@ -2017,8 +2017,16 @@ fn disableAction(ctx: *cli.BaseCommand.ParseContext) !void {
 fn logsAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
+    // `--prune` sweeps every project's logs, so it takes no service name.
+    if (ctx.hasOption("prune")) {
+        const prune_result = try lib.commands.servicePruneLogsCommand(allocator);
+        defer prune_result.deinit(allocator);
+        if (prune_result.message) |msg| style.print("{s}\n", .{msg});
+        std.process.exit(prune_result.exit_code);
+    }
+
     const service_name = ctx.getArgument(0) orelse {
-        style.print("Error: logs requires a service name argument\n", .{});
+        style.print("Error: logs requires a service name argument (or --prune)\n", .{});
         std.process.exit(1);
     };
 
@@ -2026,6 +2034,32 @@ fn logsAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const args = [_][]const u8{service_name};
     const result = try lib.commands.serviceLogsCommand(allocator, &args, follow);
+    defer result.deinit(allocator);
+
+    if (result.message) |msg| {
+        style.print("{s}\n", .{msg});
+    }
+
+    std.process.exit(result.exit_code);
+}
+
+fn servicePortsAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+
+    const result = try lib.commands.servicePortsCommand(allocator);
+    defer result.deinit(allocator);
+
+    if (result.message) |msg| {
+        style.print("{s}\n", .{msg});
+    }
+
+    std.process.exit(result.exit_code);
+}
+
+fn servicesPruneAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+
+    const result = try lib.commands.servicesPruneCommand(allocator, ctx.hasOption("yes"));
     defer result.deinit(allocator);
 
     if (result.message) |msg| {
@@ -3811,16 +3845,34 @@ pub fn main() !void {
 
     var logs_cmd = try cli.BaseCommand.init(allocator, "logs", "View service logs");
 
+    // Not required: `pantry logs --prune` operates on every log there
+    // is rather than one service's.
     const logs_service_arg = cli.Argument.init("service", "Service name", .string)
-        .withRequired(true);
+        .withRequired(false);
     _ = try logs_cmd.addArgument(logs_service_arg);
 
     const logs_follow_opt = cli.Option.init("follow", "follow", "Follow log output", .bool)
         .withShort('f');
     _ = try logs_cmd.addOption(logs_follow_opt);
 
+    const logs_prune_opt = cli.Option.init("prune", "prune", "Rotate every log over the size cap (PANTRY_LOG_MAX_MB, default 10)", .bool);
+    _ = try logs_cmd.addOption(logs_prune_opt);
+
     _ = logs_cmd.setAction(logsAction);
     _ = try root.addCommand(logs_cmd);
+
+    var services_prune_cmd = try cli.BaseCommand.init(allocator, "services:prune", "Remove service units whose project directory is gone");
+
+    const services_prune_yes_opt = cli.Option.init("yes", "yes", "Actually unload and remove them (default: list only)", .bool)
+        .withShort('y');
+    _ = try services_prune_cmd.addOption(services_prune_yes_opt);
+
+    _ = services_prune_cmd.setAction(servicesPruneAction);
+    _ = try root.addCommand(services_prune_cmd);
+
+    var service_ports_cmd = try cli.BaseCommand.init(allocator, "services:ports", "Show which project holds which service port");
+    _ = service_ports_cmd.setAction(servicePortsAction);
+    _ = try root.addCommand(service_ports_cmd);
 
     // ========================================================================
     // Inspector Command (Package Inspector UI)
