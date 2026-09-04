@@ -31,8 +31,8 @@ import { ALL_PLATFORMS as BUILD_PLATFORMS } from './platforms'
 const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'php.net',
   'postgresql.org',
-  // Pantry links curl against OpenSSL 3. pkgx's current curl artifact still
-  // requires OpenSSL 1.1, so materializing it would create a broken install.
+  // Pantry owns curl's source-built release path and links it against OpenSSL 3.
+  // Never replace a missing Pantry artifact with a differently linked pkgx build.
   'curl.se',
   // mysql.com is compiled with `-DWITH_ICU=bundled`, `-DWITH_SSL` pointed at
   // pantry's openssl, and libtirpc for the Sun RPC headers glibc dropped.

@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'curl/curl',
-    tagPattern: /^curl (.+)$/,
+    tagPattern: /^curl-(\d+)_(\d+)_(\d+)$/,
   },
   distributable: {
     url: 'https://curl.se/download/curl-{{version}}.tar.bz2',

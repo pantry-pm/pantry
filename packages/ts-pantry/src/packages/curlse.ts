@@ -3,7 +3,7 @@
  *
  * @domain `curl.se`
  * @programs `curl`, `curl-config`
- * @version `8.17.0` (28 versions available)
+ * @version `8.22.0` (50 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install curl.se`
@@ -23,7 +23,7 @@
  * console.log(pkg.name)        // "cURL"
  * console.log(pkg.description) // "A command line tool and library for transferrin..."
  * console.log(pkg.programs)    // ["curl", "curl-config"]
- * console.log(pkg.versions[0]) // "8.17.0" (latest)
+ * console.log(pkg.versions[0]) // "8.22.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/curl-se.md
@@ -76,6 +76,11 @@ export const curlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.22.0',
+    '8.21.0',
+    '8.20.0',
+    '8.19.0',
+    '8.18.0',
     '8.17.0',
     '8.16.0',
     '8.15.0',
@@ -92,6 +97,7 @@ export const curlPackage = {
     '8.9.0',
     '8.8.0',
     '8.7.1',
+    '8.7.0',
     '8.6.0',
     '8.5.0',
     '8.4.0',
@@ -99,11 +105,27 @@ export const curlPackage = {
     '8.2.1',
     '8.2.0',
     '8.1.2',
+    '8.1.1',
     '8.1.0',
     '8.0.1',
     '8.0.0',
+    '7.88.1',
+    '7.88.0',
+    '7.87.0',
     '7.86.0',
     '7.85.0',
+    '7.84.0',
+    '7.83.1',
+    '7.83.0',
+    '7.82.0',
+    '7.81.0',
+    '7.80.0',
+    '7.79.1',
+    '7.79.0',
+    '7.78.0',
+    '7.77.0',
+    '7.76.1',
+    '7.76.0',
   ] as const,
   /**
   * Alternative names for this package.
