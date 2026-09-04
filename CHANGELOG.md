@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.52...v0.11.53)
+
+## 🐛 Bug Fixes
+
+- **install**: honor ignore-scripts for project setup ([009b5a6](https://github.com/pantry-pm/pantry/commit/009b5a6)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.53 ([d0a7401](https://github.com/pantry-pm/pantry/commit/d0a7401)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.51...v0.11.52)
 
 ## 🐛 Bug Fixes
