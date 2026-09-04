@@ -1,3 +1,13 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.51...v0.11.52)
+
+## 🐛 Bug Fixes
+
+- **remove**: preserve manifest trailing newline ([4d2271f](https://github.com/pantry-pm/pantry/commit/4d2271f)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.50...v0.11.51)
 
 ## 🐛 Bug Fixes
