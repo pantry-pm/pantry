@@ -140,7 +140,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     // binaries. Idempotent: services skip if already running, the DB skips if
     // it exists, and postSetup is guarded by a per-project marker so it never
     // re-seeds. `--force` re-runs postSetup.
-    if (result.exit_code == 0 and packages.items.len == 0 and !dry_run) {
+    if (lib.commands.shouldRunProjectPostInstall(result.exit_code, packages.items.len, dry_run, ignore_scripts)) {
         if (lib.shell.ShellCommands.init(allocator)) |sc_val| {
             var sc = sc_val;
             defer sc.deinit();

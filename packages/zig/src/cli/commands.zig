@@ -211,6 +211,7 @@ pub const statusCommand = services_commands.statusCommand;
 // ============================================================================
 
 pub const InstallOptions = install_commands.InstallOptions;
+pub const shouldRunProjectPostInstall = install_commands.shouldRunProjectPostInstall;
 pub const installCommand = install_commands.installCommand;
 pub const installCommandWithOptions = install_commands.installCommandWithOptions;
 pub const installWorkspaceCommand = install_commands.installWorkspaceCommand;

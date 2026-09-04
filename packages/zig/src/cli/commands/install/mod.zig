@@ -21,6 +21,7 @@ pub const CommandResult = types.CommandResult;
 pub const InstallOptions = types.InstallOptions;
 pub const InstallTask = types.InstallTask;
 pub const InstallTaskResult = types.InstallTaskResult;
+pub const shouldRunProjectPostInstall = types.shouldRunProjectPostInstall;
 
 // Re-export main install commands (from core.zig)
 pub const installCommand = core.installCommand;

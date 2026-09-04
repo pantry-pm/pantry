@@ -16,6 +16,7 @@ const common = @import("common.zig");
 const install = @import("install/mod.zig");
 
 pub const InstallOptions = install.InstallOptions;
+pub const shouldRunProjectPostInstall = install.shouldRunProjectPostInstall;
 pub const helpers = install.helpers;
 
 // Wrap install module functions to return common.CommandResult type

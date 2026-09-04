@@ -41,6 +41,14 @@ pub const InstallOptions = struct {
     link_search_paths: ?[]const u8 = null, // Comma-separated search dirs for auto-link (null = use defaults)
 };
 
+pub fn shouldRunProjectPostInstall(exit_code: u8, package_count: usize, dry_run: bool, ignore_scripts: bool) bool {
+    return exit_code == 0 and package_count == 0 and !dry_run and !ignore_scripts;
+}
+
+test "ignore-scripts suppresses project post-install" {
+    try std.testing.expect(!shouldRunProjectPostInstall(0, 0, false, true));
+}
+
 /// Result of a single package installation task
 pub const InstallTaskResult = struct {
     name: []const u8,
