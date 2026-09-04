@@ -1412,8 +1412,13 @@ pub fn installWorkspaceCommandWithOptions(
         try lockfile.addEntry(allocator, key, entry);
     }
 
-    // Write lockfile (unless --frozen-lockfile or --no-save)
-    if (options.frozen_lockfile) {
+    // A workspace with a separate companion deps file stages its workspace
+    // lock first so the caller can merge system packages and validate the
+    // complete result atomically against the committed lockfile.
+    if (options.lockfile_output_path) |output_path| {
+        const lockfile_writer = @import("../../../packages/lockfile.zig");
+        try lockfile_writer.writeLockfile(allocator, &lockfile, output_path);
+    } else if (options.frozen_lockfile) {
         // In frozen lockfile mode, check if lockfile would change
         const lockfile_writer = @import("../../../packages/lockfile.zig");
         if (existing_lockfile) |*existing| {

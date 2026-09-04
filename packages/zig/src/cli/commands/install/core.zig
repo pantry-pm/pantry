@@ -450,7 +450,28 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         // If we're in a workspace, handle that first
         if (lookup.workspace_file) |ws_file| {
-            const ws_result = workspace.installWorkspaceCommandWithOptions(allocator, ws_file.root_dir, ws_file.path, options);
+            const has_companion_deps = if (lookup.deps_file) |df|
+                !std.mem.eql(u8, df.path, ws_file.path)
+            else
+                false;
+            var staged_lockfile_path: ?[]const u8 = null;
+            defer if (staged_lockfile_path) |path| {
+                io_helper.deleteFile(path) catch {};
+                allocator.free(path);
+            };
+
+            var workspace_options = options;
+            if (options.frozen_lockfile and has_companion_deps) {
+                const lockfile_nonce = io_helper.clockGettime();
+                staged_lockfile_path = try std.fmt.allocPrint(
+                    allocator,
+                    "{s}/.pantry.lock.{d}-{d}.tmp",
+                    .{ ws_file.root_dir, lockfile_nonce.sec, lockfile_nonce.nsec },
+                );
+                workspace_options.lockfile_output_path = staged_lockfile_path;
+            }
+
+            const ws_result = workspace.installWorkspaceCommandWithOptions(allocator, ws_file.root_dir, ws_file.path, workspace_options);
             if (ws_result) |result| {
                 var final_result = result;
 
@@ -458,7 +479,15 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 // alongside package.json workspaces. Install that companion file too.
                 if (lookup.deps_file) |df| {
                     if (!std.mem.eql(u8, df.path, ws_file.path)) {
-                        if (installCompanionDepsFile(allocator, df, ws_file.root_dir, options)) |companion_result| {
+                        var companion_options = options;
+                        if (staged_lockfile_path != null) companion_options.frozen_lockfile = false;
+                        if (installCompanionDepsFile(
+                            allocator,
+                            df,
+                            ws_file.root_dir,
+                            companion_options,
+                            staged_lockfile_path,
+                        )) |companion_result| {
                             var companion = companion_result;
                             if (companion.exit_code != 0 and final_result.exit_code == 0) {
                                 final_result.exit_code = companion.exit_code;
@@ -470,6 +499,27 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                         } else |_| {}
                     }
                     allocator.free(df.path);
+                }
+
+                if (staged_lockfile_path) |generated_path| {
+                    const lockfile_module = @import("../../../packages/lockfile.zig");
+                    const committed_path = try std.fs.path.join(allocator, &.{ ws_file.root_dir, "pantry.lock" });
+                    defer allocator.free(committed_path);
+
+                    var committed = lockfile_module.readLockfile(allocator, committed_path) catch null;
+                    defer if (committed) |*lockfile| lockfile.deinit(allocator);
+                    var generated = lockfile_module.readLockfile(allocator, generated_path) catch null;
+                    defer if (generated) |*lockfile| lockfile.deinit(allocator);
+
+                    const lockfile_matches = if (committed) |*existing|
+                        if (generated) |*candidate| lockfile_module.lockfilesEqual(existing, candidate) else false
+                    else
+                        false;
+                    if (!lockfile_matches and final_result.exit_code == 0) {
+                        final_result.exit_code = 1;
+                        if (final_result.message) |message| allocator.free(message);
+                        final_result.message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)");
+                    }
                 }
 
                 defer {
@@ -1681,6 +1731,7 @@ fn installCompanionDepsFile(
     df: @import("../../../deps/detector.zig").DepsFile,
     project_root: []const u8,
     options: types.InstallOptions,
+    lockfile_path: ?[]const u8,
 ) !types.CommandResult {
     const parser = @import("../../../deps/parser.zig");
     const pipeline = @import("../../../install/pipeline.zig");
@@ -1792,6 +1843,7 @@ fn installCompanionDepsFile(
             deps,
             pipeline_result.results,
             options.frozen_lockfile,
+            lockfile_path,
         );
         if (options.frozen_lockfile and lockfile_changed) {
             return .{
@@ -1812,10 +1864,15 @@ fn syncCompanionLockfile(
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
     frozen: bool,
+    lockfile_path_override: ?[]const u8,
 ) !bool {
     const lockfile_writer = @import("../../../packages/lockfile.zig");
-    const lockfile_path = try std.fs.path.join(allocator, &.{ project_root, "pantry.lock" });
-    defer allocator.free(lockfile_path);
+    const owned_lockfile_path = if (lockfile_path_override == null)
+        try std.fs.path.join(allocator, &.{ project_root, "pantry.lock" })
+    else
+        null;
+    defer if (owned_lockfile_path) |path| allocator.free(path);
+    const lockfile_path = lockfile_path_override orelse owned_lockfile_path.?;
 
     var original: ?lib.packages.Lockfile = lockfile_writer.readLockfile(allocator, lockfile_path) catch null;
     defer if (original) |*lockfile| lockfile.deinit(allocator);
