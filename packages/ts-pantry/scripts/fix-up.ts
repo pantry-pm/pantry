@@ -8,7 +8,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync, writeFileSync, unlinkSync, renameSync, mkdirSync, symlinkSync, statSync, lstatSync, realpathSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { join, relative, dirname, extname, basename } from 'node:path'
 
 /**
@@ -315,7 +315,7 @@ catch {
         // Get existing rpaths and preserve $ORIGIN-relative ones (from brewkit)
         let existingRpaths: string[] = []
         try {
-          const rp = execSync(`patchelf --print-rpath "${filePath}" 2>/dev/null`, { encoding: 'utf-8' }).trim()
+          const rp = execFileSync('patchelf', ['--print-rpath', filePath], { encoding: 'utf-8' }).trim()
           if (rp) existingRpaths = rp.split(':')
         }
 catch { /* no rpath */ }
@@ -330,13 +330,17 @@ catch { /* no rpath */ }
         const mergedRpath = [...rpathSet].join(':')
 
         // Use --force-rpath: sets RPATH (not RUNPATH) — LD_LIBRARY_PATH takes precedence (brewkit)
-        execSync(`patchelf --force-rpath --set-rpath "${mergedRpath}" "${filePath}" 2>/dev/null`, { stdio: 'pipe' })
+        applyElfRpath(filePath, mergedRpath)
       }
 catch {
         // Not an ELF or patchelf failed, skip
       }
     })
   }
+}
+
+export function applyElfRpath(filePath: string, rpath: string, patchelf = 'patchelf'): void {
+  execFileSync(patchelf, ['--force-rpath', '--set-rpath', rpath, filePath], { stdio: 'pipe' })
 }
 
 /**

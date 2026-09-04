@@ -180,7 +180,7 @@ function recipeDefToNormalized(def: Recipe): Record<string, any> {
     },
     platforms: def.platforms,
     test: def.test
-      ? { script: def.test.script, env: def.test.env }
+      ? { script: def.test.script, env: def.test.env, required: def.test.required }
       : undefined,
   }
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { curlPackage } from '../src/packages/curlse'
 import { recipe } from '../src/recipes/curl.se'
+import { loadRecipe } from '../scripts/recipe-loader'
 
 describe('curl recipe dependencies', () => {
   it('discovers current releases from upstream curl tags', () => {
@@ -37,5 +38,11 @@ describe('curl recipe dependencies', () => {
     expect(JSON.stringify(linuxStep)).toContain('libcrypto.so.3')
     expect(recipe.test?.required).toBe(true)
     expect(recipe.test?.script).toContain('env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH {{prefix}}/bin/curl --version')
+  })
+
+  it('preserves its required health check through recipe normalization', async () => {
+    const loaded = await loadRecipe('curl.se')
+
+    expect(loaded.recipe.test?.required).toBe(true)
   })
 })
