@@ -1343,6 +1343,10 @@ finally {
   }
 }
 
+export function isRequiredHealthCheck(test: RecipeTest): boolean {
+  return typeof test === 'object' && !Array.isArray(test) && test.required === true
+}
+
 async function buildPackage(options: BuildOptions): Promise<void> {
   const { package: pkgName, version, platform, buildDir, prefix, depsDir, bucket, region } = options
   const [os, arch] = platform.split('-')
@@ -2039,6 +2043,9 @@ else if (recipe.test) {
       console.log('✅ Health check passed!')
     }
 catch (error: unknown) {
+      if (isRequiredHealthCheck(recipe.test))
+        throw error
+
       console.error(`⚠️  Health check failed: ${(error as Error).message}`)
       // Health check failure is a warning, not a build failure.
       // The binary is still functional — the test may have external deps

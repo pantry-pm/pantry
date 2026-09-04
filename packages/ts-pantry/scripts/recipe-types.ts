@@ -135,6 +135,8 @@ export interface Recipe {
   test?: {
     script: string[]
     env?: Record<string, string>
+    /** Fail the build when this package health check fails. */
+    required?: boolean
   }
 
   /** Props directory path (patches, config files) relative to recipe */

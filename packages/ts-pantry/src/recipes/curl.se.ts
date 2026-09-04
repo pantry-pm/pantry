@@ -42,8 +42,9 @@ export const recipe: Recipe = {
     },
   },
   test: {
+    required: true,
     script: [
-      'env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH curl --version',
+      'env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH {{prefix}}/bin/curl --version',
     ],
   },
 }

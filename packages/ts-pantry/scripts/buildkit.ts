@@ -77,6 +77,7 @@ export interface RecipeBuildConfig {
 /** Test configuration */
 export type RecipeTest = string | string[] | {
   script?: string | string[] | RecipeScriptStep[]
+  required?: boolean
   fixture?: string | {
     extname: string
     content: string
