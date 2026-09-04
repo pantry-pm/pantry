@@ -977,6 +977,7 @@ fn isTransientNetworkError(err: anyerror) bool {
         error.WriteFailed,
         error.ConnectionResetByPeer,
         error.ConnectionTimedOut,
+        error.Timeout,
         error.EndOfStream,
         error.NetworkUnreachable,
         // DNS hiccups on shared CI runners: getAddrInfo surfaces these when
@@ -992,6 +993,10 @@ fn isTransientNetworkError(err: anyerror) bool {
         => true,
         else => false,
     };
+}
+
+test "a bounded publish timeout is retryable" {
+    try std.testing.expect(isTransientNetworkError(error.Timeout));
 }
 
 /// Reason a package should be skipped when publishing to npm, or null to publish.
@@ -1205,14 +1210,16 @@ fn publishSingleToNpm(
 
     // Try OIDC authentication first if enabled
     if (options.use_oidc) {
-        const result = try attemptOIDCPublish(
+        var result = try attemptOIDCPublishWithTimeout(
             allocator,
             &registry_client,
             metadata.name,
             metadata.version,
             tarball_info.path,
             options.provenance,
+            npm_publish_timeout_ms,
         );
+        defer result.deinit(allocator);
 
         if (result.success) {
             if (options.provenance) {
@@ -1360,11 +1367,12 @@ fn publishSingleToNpm(
     var publish_attempt: u8 = 0;
     const response = blk: while (true) {
         publish_attempt += 1;
-        const r = registry_client.publishWithToken(
+        const r = registry_client.publishWithTokenTimeout(
             metadata.name,
             metadata.version,
             tarball_info.path,
             auth_token,
+            npm_publish_timeout_ms,
         ) catch |err| {
             // Transient network errors (WriteFailed, ConnectionResetByPeer,
             // EndOfStream, etc.) — treat like a retryable HTTP failure and
@@ -1660,7 +1668,118 @@ const OIDCPublishResult = struct {
     error_message: ?[]const u8 = null,
     is_version_conflict: bool = false,
     status_code: u16 = 0,
+
+    fn deinit(self: *OIDCPublishResult, allocator: std.mem.Allocator) void {
+        if (self.error_message) |message| allocator.free(message);
+        self.* = undefined;
+    }
 };
+
+/// One package upload should never be able to consume the whole release job.
+/// npm publish requests normally finish in seconds; two minutes still leaves
+/// ample room for a large tarball while bounding a socket whose peer accepted
+/// bytes and then stopped responding.
+const npm_publish_timeout_ms: u64 = 120_000;
+
+const OIDCPublishTaskResult = anyerror!OIDCPublishResult;
+
+fn attemptOIDCPublishTask(
+    allocator: std.mem.Allocator,
+    registry_client: *@import("../../auth/registry.zig").RegistryClient,
+    package_name: []const u8,
+    version: []const u8,
+    tarball_path: []const u8,
+    generate_provenance: bool,
+) OIDCPublishTaskResult {
+    return attemptOIDCPublish(
+        allocator,
+        registry_client,
+        package_name,
+        version,
+        tarball_path,
+        generate_provenance,
+    );
+}
+
+fn oidcPublishTimeoutTask(timeout_ms: u64) void {
+    const ns: i96 = @intCast(@as(u128, timeout_ms) * @as(u128, std.time.ns_per_ms));
+    io_helper.getIo().sleep(.{ .nanoseconds = ns }, .awake) catch {};
+}
+
+fn attemptOIDCPublishWithTimeout(
+    allocator: std.mem.Allocator,
+    registry_client: *@import("../../auth/registry.zig").RegistryClient,
+    package_name: []const u8,
+    version: []const u8,
+    tarball_path: []const u8,
+    generate_provenance: bool,
+    timeout_ms: u64,
+) !OIDCPublishResult {
+    if (timeout_ms == 0) {
+        return attemptOIDCPublish(
+            allocator,
+            registry_client,
+            package_name,
+            version,
+            tarball_path,
+            generate_provenance,
+        );
+    }
+
+    const Selection = union(enum) {
+        response: OIDCPublishTaskResult,
+        timeout: void,
+    };
+    var result_buffer: [2]Selection = undefined;
+    var select = std.Io.Select(Selection).init(io_helper.getIo(), &result_buffer);
+
+    try select.concurrent(.response, attemptOIDCPublishTask, .{
+        allocator,
+        registry_client,
+        package_name,
+        version,
+        tarball_path,
+        generate_provenance,
+    });
+    select.concurrent(.timeout, oidcPublishTimeoutTask, .{timeout_ms}) catch |err| {
+        while (select.cancel()) |selected| {
+            if (selected == .response) {
+                if (selected.response) |response| {
+                    var owned_response = response;
+                    owned_response.deinit(allocator);
+                } else |_| {}
+            }
+        }
+        return err;
+    };
+
+    const first = try select.await();
+    switch (first) {
+        .response => |response| {
+            while (select.cancel()) |_| {}
+            return response;
+        },
+        .timeout => {
+            while (select.cancel()) |selected| {
+                if (selected == .response) {
+                    if (selected.response) |response| {
+                        var owned_response = response;
+                        owned_response.deinit(allocator);
+                    } else |_| {}
+                }
+            }
+            return .{
+                .success = false,
+                .status_code = 0,
+                .error_message = try std.fmt.allocPrint(
+                    allocator,
+                    "OIDC publish timed out after {d}s",
+                    .{timeout_ms / 1000},
+                ),
+            };
+        },
+    }
+}
 
 /// What an OIDC publish failure tells us about the package's fate.
 pub const OidcFailureKind = enum {

@@ -256,24 +256,19 @@ pub const RegistryClient = struct {
     publish_tag: []const u8 = "latest",
     publish_otp: ?[]const u8 = null,
 
-    io: *std.Io.Threaded,
-
     pub fn init(allocator: std.mem.Allocator, registry_url: []const u8) !RegistryClient {
-        // Heap-allocate Io.Threaded so http_client.io reference remains valid
-        const io = try allocator.create(std.Io.Threaded);
-        io.* = .init_single_threaded;
         return RegistryClient{
             .allocator = allocator,
             .registry_url = registry_url,
-            .io = io,
-            .http_client = http.Client{ .allocator = allocator, .io = io.io() },
+            // Publish requests use Pantry's shared concurrent backend so a
+            // deadline can cancel a stalled socket rather than pinning the
+            // entire release until the CI job is killed.
+            .http_client = http.Client{ .allocator = allocator, .io = io_helper.getIo() },
         };
     }
 
     pub fn deinit(self: *RegistryClient) void {
         self.http_client.deinit();
-        self.io.deinit();
-        self.allocator.destroy(self.io);
     }
 
     /// Publish package using OIDC authentication with full token validation
@@ -743,6 +738,80 @@ pub const RegistryClient = struct {
             .error_details = error_details,
             .retry_after_seconds = retry_after_seconds,
         };
+    }
+
+    const PublishResult = anyerror!PublishResponse;
+
+    fn publishWithTokenTask(
+        self: *RegistryClient,
+        package_name: []const u8,
+        version: []const u8,
+        tarball_path: []const u8,
+        auth_token: []const u8,
+    ) PublishResult {
+        return self.publishWithToken(package_name, version, tarball_path, auth_token);
+    }
+
+    fn publishTimeoutTask(timeout_ms: u64) void {
+        const ns: i96 = @intCast(@as(u128, timeout_ms) * @as(u128, std.time.ns_per_ms));
+        io_helper.getIo().sleep(.{ .nanoseconds = ns }, .awake) catch {};
+    }
+
+    /// Publish with a bounded end-to-end deadline.
+    ///
+    /// npm can accept a PUT and then stop making progress while Pantry waits
+    /// for its response. In a monorepo release that used to strand every
+    /// package after the stalled one until the CI job timeout. The caller can
+    /// safely retry this timeout: it confirms whether the version landed
+    /// before attempting another upload.
+    pub fn publishWithTokenTimeout(
+        self: *RegistryClient,
+        package_name: []const u8,
+        version: []const u8,
+        tarball_path: []const u8,
+        auth_token: []const u8,
+        timeout_ms: u64,
+    ) !PublishResponse {
+        if (timeout_ms == 0) return self.publishWithToken(package_name, version, tarball_path, auth_token);
+
+        const Selection = union(enum) {
+            response: PublishResult,
+            timeout: void,
+        };
+        var result_buffer: [2]Selection = undefined;
+        var select = std.Io.Select(Selection).init(io_helper.getIo(), &result_buffer);
+
+        try select.concurrent(.response, publishWithTokenTask, .{ self, package_name, version, tarball_path, auth_token });
+        select.concurrent(.timeout, publishTimeoutTask, .{timeout_ms}) catch |err| {
+            while (select.cancel()) |result| {
+                if (result == .response) {
+                    if (result.response) |response| {
+                        var owned_response = response;
+                        owned_response.deinit(self.allocator);
+                    } else |_| {}
+                }
+            }
+            return err;
+        };
+
+        const first = try select.await();
+        switch (first) {
+            .response => |response| {
+                while (select.cancel()) |_| {}
+                return response;
+            },
+            .timeout => {
+                while (select.cancel()) |result| {
+                    if (result == .response) {
+                        if (result.response) |response| {
+                            var owned_response = response;
+                            owned_response.deinit(self.allocator);
+                        } else |_| {}
+                    }
+                }
+                return error.Timeout;
+            },
+        }
     }
 
     /// Add trusted publisher to package

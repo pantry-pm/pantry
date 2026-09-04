@@ -106,23 +106,16 @@ pub const FulcioClient = struct {
     allocator: std.mem.Allocator,
     base_url: []const u8,
     http_client: http.Client,
-    io: *std.Io.Threaded,
-
     pub fn init(allocator: std.mem.Allocator, base_url: ?[]const u8) !FulcioClient {
-        const io = try allocator.create(std.Io.Threaded);
-        io.* = std.Io.Threaded.init_single_threaded;
         return FulcioClient{
             .allocator = allocator,
             .base_url = base_url orelse FULCIO_URL,
-            .io = io,
-            .http_client = http.Client{ .allocator = allocator, .io = io.io() },
+            .http_client = http.Client{ .allocator = allocator, .io = io_helper.getIo() },
         };
     }
 
     pub fn deinit(self: *FulcioClient) void {
         self.http_client.deinit();
-        self.io.deinit();
-        self.allocator.destroy(self.io);
     }
 
     /// Request a signing certificate from Fulcio using OIDC token
@@ -281,23 +274,16 @@ pub const RekorClient = struct {
     allocator: std.mem.Allocator,
     base_url: []const u8,
     http_client: http.Client,
-    io: *std.Io.Threaded,
-
     pub fn init(allocator: std.mem.Allocator, base_url: ?[]const u8) !RekorClient {
-        const io = try allocator.create(std.Io.Threaded);
-        io.* = std.Io.Threaded.init_single_threaded;
         return RekorClient{
             .allocator = allocator,
             .base_url = base_url orelse REKOR_URL,
-            .io = io,
-            .http_client = http.Client{ .allocator = allocator, .io = io.io() },
+            .http_client = http.Client{ .allocator = allocator, .io = io_helper.getIo() },
         };
     }
 
     pub fn deinit(self: *RekorClient) void {
         self.http_client.deinit();
-        self.io.deinit();
-        self.allocator.destroy(self.io);
     }
 
     /// Submit a DSSE envelope to Rekor transparency log
