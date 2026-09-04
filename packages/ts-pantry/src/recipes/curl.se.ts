@@ -17,7 +17,7 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   dependencies: {
-    'openssl.org': '^1.1',
+    'openssl.org': '^3',
     'curl.se/ca-certs': '*',
     'zlib.net': '^1.2.11',
     'nghttp2.org': '*',
