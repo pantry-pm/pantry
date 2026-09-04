@@ -31,6 +31,9 @@ import { ALL_PLATFORMS as BUILD_PLATFORMS } from './platforms'
 const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'php.net',
   'postgresql.org',
+  // Pantry links curl against OpenSSL 3. pkgx's current curl artifact still
+  // requires OpenSSL 1.1, so materializing it would create a broken install.
+  'curl.se',
   // mysql.com is compiled with `-DWITH_ICU=bundled`, `-DWITH_SSL` pointed at
   // pantry's openssl, and libtirpc for the Sun RPC headers glibc dropped.
   // pkgx's vanilla build has none of that: its mysqld links an EXTERNAL
@@ -39,6 +42,10 @@ const CUSTOM_BUILD_DOMAINS = new Set<string>([
   // "libicuuc.so.71: cannot open shared object file".
   'mysql.com',
 ])
+
+export function isCustomBuildDomain(domain: string): boolean {
+  return CUSTOM_BUILD_DOMAINS.has(domain)
+}
 
 export interface MaterializeResult { tarballKey: string, sha256: string, size: number }
 interface PlatformBinary { tarball: string, sha256: string, size: number, uploadedAt: string }
@@ -100,7 +107,7 @@ const AVAIL_TTL_MS = 6 * 60 * 60 * 1000
 const _availCache = new BoundedTtlCache<string, boolean>(20_000, AVAIL_TTL_MS)
 
 export async function pkgxHasBinary(domain: string, version: string, platform: string): Promise<boolean> {
-  if (CUSTOM_BUILD_DOMAINS.has(domain))
+  if (isCustomBuildDomain(domain))
     return false
   const url = pkgxDistUrl(domain, version, platform)
   if (!url)
@@ -162,7 +169,7 @@ export async function augmentMetadataWithPkgx(
   published: PackageMetadata | null,
   catalogVersions: string[],
 ): Promise<PackageMetadata | null> {
-  if (CUSTOM_BUILD_DOMAINS.has(domain))
+  if (isCustomBuildDomain(domain))
     return published
   const sourceFingerprint = published
     ? `${published.updatedAt || ''}:${published.latestVersion || ''}:${Object.keys(published.versions || {}).length}`
@@ -236,7 +243,7 @@ export async function materializeFromPkgx(
   platform: string,
   publisher: BinaryArtifactPublisher,
 ): Promise<MaterializeResult | null> {
-  if (CUSTOM_BUILD_DOMAINS.has(domain))
+  if (isCustomBuildDomain(domain))
     return null
   const key = `${domain}@${version}#${platform}`
   const existing = _inflight.get(key)

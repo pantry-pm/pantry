@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'bun:test'
-import { augmentMetadataWithPkgx, isQuarantinedFallback } from './pkgx-fallback'
+import { augmentMetadataWithPkgx, isCustomBuildDomain, isQuarantinedFallback } from './pkgx-fallback'
 
 describe('pkgx metadata augmentation cache', () => {
+  it('never falls back to pkgx for Pantry custom builds', () => {
+    expect(isCustomBuildDomain('curl.se')).toBe(true)
+    expect(isCustomBuildDomain('bun.com')).toBe(false)
+  })
+
   it('invalidates cached augmentation when published metadata changes', async () => {
     const domain = `cache-refresh-${crypto.randomUUID()}.example`
     const first = await augmentMetadataWithPkgx(domain, {
