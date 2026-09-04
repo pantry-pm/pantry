@@ -24,6 +24,11 @@ on:
         required: false
         default: '3'
         type: string
+      popular-max-versions:
+        description: 'Max versions for popular packages. Set explicitly for targeted rebuilds.'
+        required: false
+        default: '20'
+        type: string
 
 concurrency:
   # Per-RUN group (not per-ref): update-packages.yml dispatches this once per
@@ -242,7 +247,8 @@ jobs:
           DOMAINS="${{ needs.detect.outputs.domains }}"
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
-          COMMON="-b $S3_BUCKET -r $S3_REGION --platform ${{ matrix.platform.name }} -p $PKGS --multi-version --max-versions $MAXV --force"
+          POPULAR_MAXV="${{ github.event.inputs.popular-max-versions || '20' }}"
+          COMMON="-b $S3_BUCKET -r $S3_REGION --platform ${{ matrix.platform.name }} -p $PKGS --multi-version --max-versions $MAXV --popular-max-versions $POPULAR_MAXV --force"
           if [ "${{ matrix.platform.name }}" = "darwin-arm64" ]; then
             # darwin FROM UBUNTU — two safe download passes, no cross-compile:
             #  1) --pkgx-mirror --mirror-only: download pkgx's darwin prebuilt (skip
@@ -318,6 +324,7 @@ jobs:
           set -o pipefail
           PKGS=$(echo "${{ needs.detect.outputs.darwin_native }}" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
+          POPULAR_MAXV="${{ github.event.inputs.popular-max-versions || '20' }}"
           # --source-only (download recipes are the fleet's job) + --pkgx-mirror
           # (download-first: grab pkgx's darwin prebuilt when it exists, else
           # compile natively). NO --force ⇒ skip what the ubuntu legs already
@@ -326,4 +333,4 @@ jobs:
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$S3_REGION" \
             --platform darwin-arm64 \
-            -p "$PKGS" --source-only --pkgx-mirror --multi-version --max-versions "$MAXV"
+            -p "$PKGS" --source-only --pkgx-mirror --multi-version --max-versions "$MAXV" --popular-max-versions "$POPULAR_MAXV"
