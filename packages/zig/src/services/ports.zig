@@ -58,17 +58,18 @@ pub const Assignment = struct {
 /// the port. This also catches ports held by processes pantry knows nothing
 /// about — a system postgres, a container, an editor's dev server.
 pub fn isPortFree(port: u16) bool {
-    const c = std.c;
-    const fd = c.socket(c.AF.INET, c.SOCK.STREAM, 0);
-    if (fd < 0) return true; // Can't tell; don't block allocation on it.
-    defer _ = c.close(fd);
-
-    var addr = std.mem.zeroes(c.sockaddr.in);
-    addr.family = c.AF.INET;
-    addr.port = std.mem.nativeToBig(u16, port);
-    addr.addr = std.mem.nativeToBig(u32, 0x7f000001); // 127.0.0.1
-
-    return c.bind(fd, @ptrCast(&addr), @sizeOf(c.sockaddr.in)) == 0;
+    const address = std.Io.net.IpAddress.parse("127.0.0.1", port) catch return true;
+    var server = address.listen(io_helper.getIo(), .{ .reuse_address = true }) catch |err| {
+        return switch (err) {
+            error.AddressInUse => false,
+            // A probe must not prevent service allocation merely because the
+            // host cannot answer it. This preserves the previous fail-open
+            // behavior for unsupported or temporarily unavailable networking.
+            else => true,
+        };
+    };
+    defer server.deinit(io_helper.getIo());
+    return true;
 }
 
 /// `~/.local/share/pantry/ports.json`, caller-owned.
