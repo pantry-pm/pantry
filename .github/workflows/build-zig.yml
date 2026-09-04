@@ -25,12 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Pantry and Zig from the registry
+      # Let the action install the complete workspace. Passing only Zig switches
+      # the action into explicit-package mode and omits zig-cli, zig-config, and
+      # zig-test-framework, which build.zig imports from the Pantry directory.
+      # deps.yaml already declares the rolling Zig 0.17 development toolchain.
+      - name: Setup Pantry and workspace dependencies
         uses: ./packages/action
-        with:
-          # Pantry intentionally tracks Zig 0.17 dev. This rolling spec resolves
-          # the latest mirrored build and the compile job catches API changes.
-          packages: ziglang.org@0.17.0-dev
 
       - name: Build for All Platforms
         run: |
