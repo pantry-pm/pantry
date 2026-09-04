@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.54...v0.11.55)
+
+## 💚 Continuous Integration
+
+- install workspace before cross-compiling ([be5514f](https://github.com/pantry-pm/pantry/commit/be5514f)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.55 ([797055e](https://github.com/pantry-pm/pantry/commit/797055e)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.53...v0.11.54)
 
 ## 🐛 Bug Fixes
