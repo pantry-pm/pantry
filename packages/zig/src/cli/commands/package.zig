@@ -522,6 +522,7 @@ fn removeFromConfigFile(allocator: std.mem.Allocator, cwd: []const u8, packages:
     defer output.deinit(allocator);
 
     try serializeJsonWithRemovals(allocator, &output, parsed.value, packages_to_remove);
+    try output.append(allocator, '\n');
 
     // Write the updated content back
     const file = try io_helper.createFile(config_path, .{ .truncate = true });
