@@ -36,6 +36,33 @@ fn workspaceDependencySource(dep: lib.deps.parser.PackageDependency) lib.package
     };
 }
 
+fn shouldResolveWorkspaceDependencyRemotely(
+    dependency_name: []const u8,
+    dependency_version: []const u8,
+    workspace_package_name: []const u8,
+    workspace_package_version: []const u8,
+) bool {
+    if (std.mem.startsWith(u8, dependency_version, "workspace:")) return false;
+    if (!std.mem.eql(u8, workspaceDependencyName(dependency_name), workspace_package_name)) return true;
+    return !(lib.packages.satisfiesConstraint(workspace_package_version, dependency_version) catch false);
+}
+
+fn workspaceDependencyIsLocal(
+    workspace_package_versions: *const std.StringHashMap([]const u8),
+    dependency_name: []const u8,
+    dependency_version: []const u8,
+) bool {
+    if (std.mem.startsWith(u8, dependency_version, "workspace:")) return true;
+    const clean_name = workspaceDependencyName(dependency_name);
+    const workspace_version = workspace_package_versions.get(clean_name) orelse return false;
+    return !shouldResolveWorkspaceDependencyRemotely(
+        clean_name,
+        dependency_version,
+        clean_name,
+        workspace_version,
+    );
+}
+
 fn workspaceCommandResult(allocator: std.mem.Allocator, failed_count: usize) !types.CommandResult {
     if (failed_count == 0) return .{ .exit_code = 0 };
     return .{
@@ -467,6 +494,40 @@ pub fn installWorkspaceCommandWithOptions(
         };
     }
 
+    // Index published workspace package names and versions before collecting
+    // dependencies. Package managers prefer a matching local workspace member
+    // for ordinary semver ranges as well as explicit `workspace:` references.
+    var workspace_package_versions = std.StringHashMap([]const u8).init(allocator);
+    defer {
+        var versions_iter = workspace_package_versions.iterator();
+        while (versions_iter.next()) |entry| {
+            allocator.free(entry.key_ptr.*);
+            allocator.free(entry.value_ptr.*);
+        }
+        workspace_package_versions.deinit();
+    }
+    for (workspace_config.members) |member| {
+        const member_pkg_path = try std.fs.path.join(allocator, &.{ member.abs_path, "package.json" });
+        defer allocator.free(member_pkg_path);
+
+        const member_content = io_helper.readFileAlloc(allocator, member_pkg_path, 1024 * 1024) catch continue;
+        defer allocator.free(member_content);
+        const member_parsed = std.json.parseFromSlice(std.json.Value, allocator, member_content, .{}) catch continue;
+        defer member_parsed.deinit();
+        if (member_parsed.value != .object) continue;
+
+        const name_value = member_parsed.value.object.get("name") orelse continue;
+        const version_value = member_parsed.value.object.get("version") orelse continue;
+        if (name_value != .string or version_value != .string) continue;
+        if (workspace_package_versions.contains(name_value.string)) continue;
+
+        const owned_name = try allocator.dupe(u8, name_value.string);
+        errdefer allocator.free(owned_name);
+        const owned_version = try allocator.dupe(u8, version_value.string);
+        errdefer allocator.free(owned_version);
+        try workspace_package_versions.put(owned_name, owned_version);
+    }
+
     // Apply filter if provided
     const filter_module = @import("../../../packages/filter.zig");
     var filter = if (options.filter) |filter_str| blk: {
@@ -513,7 +574,7 @@ pub fn installWorkspaceCommandWithOptions(
         if (root_deps) |deps| {
             defer allocator.free(deps);
             for (deps) |dep| {
-                if (std.mem.startsWith(u8, dep.version, "workspace:")) continue;
+                if (workspaceDependencyIsLocal(&workspace_package_versions, dep.name, dep.version)) continue;
 
                 const clean_dep_name = workspaceDependencyName(dep.name);
                 if (!deps_seen.contains(clean_dep_name)) {
@@ -609,6 +670,10 @@ pub fn installWorkspaceCommandWithOptions(
                         // Skip this dependency
                         continue;
                     }
+                }
+
+                if (workspaceDependencyIsLocal(&workspace_package_versions, resolved_dep.name, resolved_dep.version)) {
+                    continue;
                 }
 
                 // Dedup by clean package name only — flat pantry/ install resolves
@@ -1564,6 +1629,27 @@ test "workspace dependency source distinguishes npm names from system domains" {
     try std.testing.expectEqual(lib.packages.PackageSource.npm, workspaceDependencySource(explicit_npm_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.pantry, workspaceDependencySource(explicit_pantry_dep));
     try std.testing.expectEqual(lib.packages.PackageSource.http, workspaceDependencySource(url_dep));
+}
+
+test "matching workspace packages satisfy ordinary semver dependencies locally" {
+    try std.testing.expect(!shouldResolveWorkspaceDependencyRemotely(
+        "@stacksjs/actions",
+        "^0.74.22",
+        "@stacksjs/actions",
+        "0.74.22",
+    ));
+    try std.testing.expect(shouldResolveWorkspaceDependencyRemotely(
+        "@stacksjs/actions",
+        "^0.75.0",
+        "@stacksjs/actions",
+        "0.74.22",
+    ));
+    try std.testing.expect(shouldResolveWorkspaceDependencyRemotely(
+        "@stacksjs/actions",
+        "^0.74.22",
+        "@stacksjs/router",
+        "0.74.22",
+    ));
 }
 
 test "workspace command fails when any package installation failed" {
