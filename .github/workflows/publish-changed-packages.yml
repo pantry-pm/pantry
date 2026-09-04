@@ -88,44 +88,11 @@ jobs:
             BEFORE="${{ github.event.before }}"
             # New branch / unknown base ⇒ fall back to the last commit.
             case "$BEFORE" in ''|0000000000000000000000000000000000000000) BEFORE="${{ github.sha }}~1" ;; esac
-            FILES=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- \
-              'packages/ts-pantry/src/recipes/**' 'packages/ts-pantry/src/packages/**' || true)
-            DOMAINS=""
-            for f in $FILES; do
-              case "$f" in
-                # Use the recipe's declared `domain:` field — NOT the path. GUI
-                # app recipes live at recipes/apps/<domain>.ts, so a path-derived
-                # name is `apps/<domain>` (e.g. apps/raycast.com), which never
-                # matches the package — so app recipe changes were silently never
-                # rebuilt. The domain field also carries nested domains correctly
-                # (recipes/mariadb.com/server.ts declares mariadb.com/server). A
-                # recipe change alters build logic, so always (re)build it.
-                */recipes/*.ts)
-                  d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//")
-                  [ -n "$d" ] || d=$(echo "$f" | sed -E 's#.*/recipes/##; s#\.ts$##')
-                  ;;
-                # App/font versions are published by check-desktop-updates.yml on
-                # their required native host after comparing upstream to the live
-                # registry. Don't also rebuild metadata changes here. App recipe
-                # LOGIC changes (src/recipes/apps/**) still build here; those are
-                # version-independent so the desktop checker won't catch them.
-                */packages/apps/*.ts|*/packages/fonts/*.ts) d="" ;;
-                # Metadata files (e.g. redisio.ts) carry an explicit `domain:` field.
-                # Only (re)build when the published artifact would actually differ —
-                # i.e. the `versions:` line changed (a new version to build). Skip
-                # cosmetic metadata edits (description/aliases/field removals), so a
-                # repo-wide touch doesn't trigger thousands of pointless rebuilds.
-                */packages/*.ts)
-                  if git diff "$BEFORE" "${{ github.sha }}" -- "$f" | grep -qE '^[-+]\s*versions:'; then
-                    d=$(grep -oE "domain: '[^']+'" "$f" | head -1 | sed "s/domain: '//; s/'//")
-                  else
-                    d=""
-                  fi
-                  ;;
-                *) d="" ;;
-              esac
-              [ -n "$d" ] && DOMAINS="$DOMAINS"$'\n'"$d"
-            done
+            # Compare parsed version arrays rather than the declaration line.
+            # Version lists are multiline, so line-based detection misses the
+            # normal case where the updater inserts a new array item.
+            DOMAINS=$(bun packages/ts-pantry/scripts/changed-package-domains.ts \
+              "$BEFORE" "${{ github.sha }}")
           fi
           DOMAINS=$(echo "$DOMAINS" | sed '/^$/d' | sort -u | paste -sd' ' -)
           echo "Detected changed packages: ${DOMAINS:-<none>}"
