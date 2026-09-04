@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.53...v0.11.54)
+
+## 🐛 Bug Fixes
+
+- **ci**: validate combined workspace lockfile ([aca0472](https://github.com/pantry-pm/pantry/commit/aca0472)) _(by Chris <chris@stacksjs.com>)_
+- **workspaces**: prefer matching local packages ([e63ddea](https://github.com/pantry-pm/pantry/commit/e63ddea)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.54 ([0786f9d](https://github.com/pantry-pm/pantry/commit/0786f9d)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.52...v0.11.53)
 
 ## 🐛 Bug Fixes
