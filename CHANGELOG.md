@@ -1,3 +1,14 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.48...v0.11.50)
+
+## 🐛 Bug Fixes
+
+- **publish**: bound stalled registry requests ([b19f68f](https://github.com/pantry-pm/pantry/commit/b19f68f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **services**: probe ports portably ([0a5b2b5](https://github.com/pantry-pm/pantry/commit/0a5b2b5)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.47...v0.11.48)
 
 ## 🐛 Bug Fixes
