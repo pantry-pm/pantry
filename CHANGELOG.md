@@ -1,3 +1,32 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.50...v0.11.51)
+
+## 🐛 Bug Fixes
+
+- **remove**: persist manifest and lockfile changes ([8a58638](https://github.com/pantry-pm/pantry/commit/8a58638)) _(by Chris <chris@stacksjs.com>)_
+- **build**: preserve relocatable Linux rpaths ([468ded4](https://github.com/pantry-pm/pantry/commit/468ded4)) _(by Chris <chris@stacksjs.com>)_
+- **build**: enforce required package health checks ([82faa83](https://github.com/pantry-pm/pantry/commit/82faa83)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: make curl self-contained on Linux ([57de5a7](https://github.com/pantry-pm/pantry/commit/57de5a7)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: track current curl releases ([5e86b03](https://github.com/pantry-pm/pantry/commit/5e86b03)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: block pkgx curl fallback ([8706c00](https://github.com/pantry-pm/pantry/commit/8706c00)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: build curl against declared OpenSSL ([439a96f](https://github.com/pantry-pm/pantry/commit/439a96f)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: accept data-only foreign artifacts ([20a3695](https://github.com/pantry-pm/pantry/commit/20a3695)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: align curl with OpenSSL 3 ([e13c588](https://github.com/pantry-pm/pantry/commit/e13c588)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: detect multiline version updates ([be6671a](https://github.com/pantry-pm/pantry/commit/be6671a)) _(by Chris <chris@stacksjs.com>)_
+- **automation**: keep package version types synchronized ([e6eb380](https://github.com/pantry-pm/pantry/commit/e6eb380)) _(by Chris <chris@stacksjs.com>)_
+
+## 💚 Continuous Integration
+
+- **release**: support targeted popular rebuilds ([43eee7d](https://github.com/pantry-pm/pantry/commit/43eee7d)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- **deps**: pin Bun 1.4.1 ([8155429](https://github.com/pantry-pm/pantry/commit/8155429)) _(by Chris <chris@stacksjs.com>)_
+- **packages**: add Bun 1.4.1 ([14097a4](https://github.com/pantry-pm/pantry/commit/14097a4)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.48...v0.11.50)
 
 ## 🐛 Bug Fixes
