@@ -5,7 +5,7 @@ name: Publish Changed Packages
 # `update-packages.yml` (which dispatches this workflow explicitly). Runs
 # UBUNTU-ONLY and DOWNLOAD-FIRST: --pkgx-mirror mirrors pkgx's official prebuilt
 # and only source-builds packages pkgx lacks or that we deliberately customize
-# (php/postgres, on the native linux legs). macOS runners are never spun up
+# (such as php/postgres/curl, on the native linux legs). macOS runners are never spun up
 # here — darwin-arm64 is produced from ubuntu via --mirror-only.
 on:
   push:
@@ -132,7 +132,7 @@ jobs:
         # Download-first, ubuntu-only (this job never spins up a macOS runner):
         #  - linux legs: --pkgx-mirror ⇒ mirror pkgx's official prebuilt, and
         #    fall back to a SOURCE build only for packages pkgx lacks or that we
-        #    deliberately customize (php/postgres). Those compile natively here,
+        #    deliberately customize. Those compile natively here,
         #    so the legs need the build toolchain.
         #  - darwin-arm64 FROM UBUNTU: two download passes (pkgx --mirror-only,
         #    then --download-only for zig-style recipes) — see the build step.
@@ -257,7 +257,7 @@ jobs:
             bun scripts/build-all-packages.ts $COMMON --download-only
           else
             # linux legs: --pkgx-mirror mirrors pkgx's prebuilt and source-builds
-            # (natively) only what pkgx lacks or we customize (php/postgres).
+            # (natively) only what pkgx lacks or we customize.
             echo "Publishing (download-first) $PKGS -> ${{ matrix.platform.name }}"
             bun scripts/build-all-packages.ts $COMMON --pkgx-mirror
           fi

@@ -6,7 +6,7 @@ name: Mirror (pkgx download-only)
 # 20 most-popular versions of popular packages (languages/runtimes/databases/core
 # CLIs). All jobs run on CHEAP ubuntu runners: a download recipe is just a curl, so
 # one Linux box mirrors every target platform (darwin/arm included) via --platform.
-# Custom builds (php/postgres) are NOT mirrored — on their native platform they
+# Custom builds (such as php/postgres/curl) are NOT mirrored — on their native platform they
 # compile from source; on a foreign target they're skipped (built on their own runner).
 on:
   schedule:
@@ -54,7 +54,7 @@ jobs:
   # A single-platform dispatch narrows to that platform (a job-level `if` can't see
   # `matrix`, hence the dynamic matrix). Every job runs on a CHEAP Linux runner —
   # downloads fan out to any target platform; linux-arm64 uses an arm runner only so
-  # its own native custom builds (php/postgres) compile.
+  # its own native custom builds compile.
   setup:
     runs-on: ubuntu-latest
     outputs:

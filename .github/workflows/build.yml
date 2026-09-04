@@ -355,7 +355,7 @@ jobs:
           ARGS="-b $S3_BUCKET -r $AWS_REGION --platform ${{ matrix.platform.name }}"
           # Download-first: mirror pkgx's official prebuilt (seconds) instead of
           # compiling; falls back to source build when pkgx lacks it or it's a
-          # custom build (php/postgres). Makes even macOS runs cheap.
+          # custom source build. Makes even macOS runs cheap.
           ARGS="$ARGS --pkgx-mirror"
           # Latest-only by default to drain the UNBUILT backlog (breadth-first,
           # pre-teardown). Set the 'multi_version' dispatch input to 'true' to

@@ -299,7 +299,7 @@ jobs:
           FORCE="${{ github.event.inputs.force || 'false' }}"
           ARGS="-b $S3_BUCKET -r $AWS_REGION --platform ${{ matrix.platform.name }} --multi-version --max-versions $MAX_VERSIONS"
           # Download-first: mirror pkgx's official prebuilt instead of compiling.
-          # Source build only happens for custom-build domains (php/postgres/...)
+          # Source build only happens for custom-build domains.
           # or when pkgx has no artifact — keeps macOS runner time minimal.
           ARGS="$ARGS --pkgx-mirror"
 
@@ -565,7 +565,7 @@ jobs:
           FORCE="${{ github.event.inputs.force || 'false' }}"
           ARGS="-b $S3_BUCKET -r $AWS_REGION --batch ${{ matrix.batch }} --batch-size 25 --platform ${{ matrix.platform.name }} --multi-version --max-versions $MAX_VERSIONS"
           # Download-first: mirror pkgx's official prebuilt instead of compiling.
-          # Source build only happens for custom-build domains (php/postgres/...)
+          # Source build only happens for custom-build domains.
           # or when pkgx has no artifact — keeps macOS runner time minimal.
           ARGS="$ARGS --pkgx-mirror"
 

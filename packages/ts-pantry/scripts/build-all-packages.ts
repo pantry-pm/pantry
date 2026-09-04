@@ -26,11 +26,10 @@
  *   -h, --help               Show help
  */
 
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { execSync, spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { createHash } from 'node:crypto'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 import { reportBuild, reportBuildLog } from './report-build'
 import { uploadToS3 as uploadToS3Impl } from './upload-to-s3.ts'
@@ -1337,7 +1336,7 @@ let MIRROR_ONLY = false
 // (the N most-recent), NOT the major-spread used for expensive source builds.
 let DOWNLOAD_ONLY_MODE = false
 // True when the target --platform differs from the host (cross-platform fanout).
-// A CUSTOM build (php/postgres) compiles from source, which CANNOT cross-compile,
+// A CUSTOM build compiles from source, which CANNOT cross-compile,
 // so we skip custom domains on a foreign target in mirror mode (they're built on
 // their own native runner instead).
 let BUILD_IS_FOREIGN = false
@@ -1347,6 +1346,7 @@ let BUILD_IS_FOREIGN = false
 const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'php.net', // ~30 extension flags (fpm/gd/mbstring/pgsql/openssl/sodium/…) + php-config/phpize patching
   'postgresql.org', // build-time options/extensions we control
+  'curl.se', // Pantry links against OpenSSL 3; pkgx's build still requires OpenSSL 1.1
 ])
 
 // Map our platform string (darwin-arm64 / linux-x86-64) to pkgx's dist os/arch.
@@ -1750,7 +1750,7 @@ Options:
   --source-only            Only build source recipes (skip downloads — for paid native runners)
   --pkgx-mirror            Download the official prebuilt from pkgx (dist.pkgx.dev) instead of
                           compiling; falls back to source build if pkgx lacks it or it's a
-                          custom build (php/postgres). Vastly faster — dozens/min per worker.
+                          custom source build. Vastly faster — dozens/min per worker.
   -h, --help               Show help
 `)
     process.exit(0)
