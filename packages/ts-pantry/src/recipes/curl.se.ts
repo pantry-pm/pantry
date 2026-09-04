@@ -27,9 +27,23 @@ export const recipe: Recipe = {
     script: [
       './configure $ARGS',
       'make --jobs {{hw.concurrency}} install',
+      {
+        run: [
+          'cp -L {{deps.openssl.org.prefix}}/lib/libssl.so.3 {{prefix}}/lib/',
+          'cp -L {{deps.openssl.org.prefix}}/lib/libcrypto.so.3 {{prefix}}/lib/',
+          'cp -L {{deps.zlib.net.prefix}}/lib/libz.so.1 {{prefix}}/lib/',
+          'cp -L {{deps.nghttp2.org.prefix}}/lib/libnghttp2.so.14 {{prefix}}/lib/',
+        ],
+        if: 'linux',
+      },
     ],
     env: {
       'ARGS': ['--prefix={{prefix}}', '--with-openssl', '--without-libpsl', '--with-ca-fallback', '--with-nghttp2'],
     },
+  },
+  test: {
+    script: [
+      'env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH curl --version',
+    ],
   },
 }

@@ -28,4 +28,13 @@ describe('curl recipe dependencies', () => {
 
     expect(customBuilds).toContain(`'curl.se'`)
   })
+
+  it('bundles its Linux runtime libraries and tests without library path injection', () => {
+    const linuxStep = recipe.build.script.find(step => typeof step === 'object' && step.if === 'linux')
+
+    expect(linuxStep).toBeDefined()
+    expect(JSON.stringify(linuxStep)).toContain('libssl.so.3')
+    expect(JSON.stringify(linuxStep)).toContain('libcrypto.so.3')
+    expect(recipe.test?.script).toContain('env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH curl --version')
+  })
 })
