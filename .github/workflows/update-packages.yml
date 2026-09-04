@@ -160,6 +160,13 @@ jobs:
         run: cd packages/ts-pantry && bun bin/cli.ts generate-aliases
         timeout-minutes: 5
 
+      # PantryConfig uses this generated map for version autocomplete. Updating
+      # package metadata without refreshing it leaves newly discovered runtime
+      # versions installable but rejected by TypeScript consumers.
+      - name: Generate package version types
+        run: cd packages/ts-pantry && bun scripts/generate-package-types.ts
+        timeout-minutes: 5
+
       # The Zig CLI reads its package catalog from a committed, generated file
       # (packages/zig/src/packages/generated.zig). Regenerate it from the freshly
       # fetched recipe versions so the binary always sees current versions — this
@@ -178,7 +185,7 @@ jobs:
       - name: Check for changes
         id: git-check
         run: |
-          CHANGES=$(git status --porcelain packages/ts-pantry/src/packages/ packages/zig/src/packages/generated.zig 2>/dev/null || echo "")
+          CHANGES=$(git status --porcelain packages/ts-pantry/src/packages/ packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig 2>/dev/null || echo "")
           if [[ -z "$CHANGES" ]]; then
             echo "changes=false" >> $GITHUB_OUTPUT
             echo "No version changes detected"
