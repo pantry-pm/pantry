@@ -5,7 +5,7 @@
 // Uses buildkit to generate bash build scripts from YAML recipes (like brewkit)
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { execSync, spawn } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import { join, dirname } from 'node:path'
 import { parseArgs } from 'node:util'
 import { generateBuildScript, getSkips, type PackageRecipe, type NormalizedRecipe, type RecipeScriptStep, type RecipeTest } from './buildkit.ts'
@@ -2081,10 +2081,10 @@ function normalizePlatform(platform: string): [string, string] {
  * installed binary matches the expected magic (catches arch-mapping bugs — the
  * main risk of cross-building). Tolerates non-binary helpers (scripts, data).
  */
-function verifyForeignArtifact(prefix: string, platform: string): void {
-  const candidates = foreignArtifactCandidates(prefix)
+export function verifyForeignArtifact(prefix: string, platform: string): void {
+  const candidates = foreignInstallCandidates(prefix)
   if (candidates.length === 0)
-    throw new Error(`verifyForeignArtifact: no non-empty binaries found under ${prefix}/bin, ${prefix}/sbin, or a *.app bundle — the download/extract for ${platform} produced nothing`)
+    throw new Error(`verifyForeignArtifact: no non-empty files found under ${prefix}; the download/extract for ${platform} produced nothing`)
 
   const [os, arch] = normalizePlatform(platform)
 
@@ -2103,6 +2103,12 @@ function verifyForeignArtifact(prefix: string, platform: string): void {
     }
   }
 
+  const nativeArtifacts = inspected.filter(item => item.out.includes('Mach-O') || item.out.includes('ELF'))
+  if (!matched && nativeArtifacts.length === 0) {
+    console.log(`🔎 foreign-target sanity: ${platform} installed ${inspected.length} platform-independent data file(s) (OK)`)
+    return
+  }
+
   if (!matched) {
     console.error(`❌ foreign-target sanity FAILED for ${platform}: no installed binary matches ${expectFormat} + [${expectArch.join(', ')}]`)
     for (const { path, out } of inspected)
@@ -2111,6 +2117,32 @@ function verifyForeignArtifact(prefix: string, platform: string): void {
   }
 
   console.log(`🔎 foreign-target sanity: ${matched.path} → ${matched.out} (OK)`)
+}
+
+function foreignInstallCandidates(prefix: string): string[] {
+  const candidates = new Set(foreignArtifactCandidates(prefix))
+  const pending = [prefix]
+
+  while (pending.length > 0) {
+    const directory = pending.pop()!
+    let entries: string[] = []
+    try { entries = readdirSync(directory) }
+    catch { continue }
+
+    for (const name of entries) {
+      const path = join(directory, name)
+      try {
+        const stats = statSync(path)
+        if (stats.isDirectory())
+          pending.push(path)
+        else if (stats.isFile() && stats.size > 0)
+          candidates.add(path)
+      }
+      catch { /* skip dangling symlinks and unreadable entries */ }
+    }
+  }
+
+  return [...candidates]
 }
 
 function verifyForeignInstallPresent(prefix: string, platform: string): void {
@@ -2245,13 +2277,15 @@ async function main() {
   }
 }
 
-main().catch((error: unknown) => {
-  const err = error as Error & { _downloadFailure?: boolean }
-  console.error('❌ Build failed:', err.message)
-  // Exit code 42 = download failure (source 404/unavailable) — signals version fallback should try older versions
-  // Exit code 1 = build/other failure — no point trying older versions
-  if (err._downloadFailure) {
-    process.exit(42)
-  }
-  process.exit(1)
-})
+if (import.meta.main) {
+  main().catch((error: unknown) => {
+    const err = error as Error & { _downloadFailure?: boolean }
+    console.error('❌ Build failed:', err.message)
+    // Exit code 42 = download failure (source 404/unavailable) — signals version fallback should try older versions
+    // Exit code 1 = build/other failure — no point trying older versions
+    if (err._downloadFailure) {
+      process.exit(42)
+    }
+    process.exit(1)
+  })
+}
