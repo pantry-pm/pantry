@@ -125,6 +125,16 @@ pub fn removeCommand(allocator: std.mem.Allocator, args: []const []const u8, opt
             const pkg_dir = std.fmt.bufPrint(&pd_buf, "{s}/{s}", .{ modules_dir, pkg }) catch continue;
             io_helper.deleteTree(pkg_dir) catch {};
         }
+
+        if (options.save and deps_modified) {
+            try removeFromConfigFile(allocator, cwd, args);
+
+            const project_root = try @import("../../deps/detector.zig").resolveProjectRoot(allocator, cwd);
+            defer allocator.free(project_root);
+            const lockfile_path = try std.fs.path.join(allocator, &[_][]const u8{ project_root, "pantry.lock" });
+            defer allocator.free(lockfile_path);
+            try updateLockfileAfterUninstall(allocator, lockfile_path, args);
+        }
     }
 
     if (removed_packages.items.len == 0) {
