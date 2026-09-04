@@ -35,10 +35,10 @@ describe('bun domain aliasing', () => {
     const bun = (pantry as any).buncom
 
     expect(bun.domain).toBe('bun.com')
-    // 1.3.12 through 1.3.14 were released and missing here, which made
+    // 1.3.12 through 1.4.1 were released and missing here, which made
     // `bun: ^1.3.14` unsatisfiable: it failed with "No version of bun.sh
     // satisfies", on machines where 1.3.14 was the installed runtime.
-    for (const version of ['1.3.12', '1.3.13', '1.3.14'])
+    for (const version of ['1.3.12', '1.3.13', '1.3.14', '1.4.0', '1.4.1'])
       expect(bun.versions).toContain(version)
 
     // Deliberately not `expect(versions[0]).toBe('1.3.14')`. Pinning the head
@@ -46,8 +46,8 @@ describe('bun domain aliasing', () => {
     // written, so the next bun release turns a healthy update into a red build.
     // What matters is that discovery is still running: the newest entry must
     // be at least as new as the versions this test names.
-    expect(bun.versions.indexOf('1.3.14')).toBeLessThanOrEqual(bun.versions.indexOf('1.3.12'))
-    expect(bun.versions[0] >= '1.3.14').toBe(true)
+    expect(bun.versions.indexOf('1.4.1')).toBeLessThanOrEqual(bun.versions.indexOf('1.3.12'))
+    expect(Bun.semver.order(bun.versions[0], '1.4.1')).toBeGreaterThanOrEqual(0)
   })
 
   it('keeps the old lookup key working', () => {
