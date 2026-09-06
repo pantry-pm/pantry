@@ -7,6 +7,16 @@ on:
       - 'packages/registry/src/**'
       - 'packages/registry/dashboard/**'
       - 'packages/registry/site/**'
+      # Tests are not shipped, and deploying restarts the service — a several
+      # minute window of 502s on registry.pantry.dev and pantry.dev. Adding one
+      # test file under packages/registry/src/ was enough to take production
+      # down for the length of a deploy, which is a steep price for a file the
+      # server never loads. Negations are evaluated after the includes above,
+      # so a commit touching ONLY tests no longer matches; a commit touching
+      # both a test and real source still deploys, which is what we want.
+      - '!packages/registry/**/*.test.ts'
+      - '!packages/registry/**/*.spec.ts'
+      - '!packages/registry/**/__tests__/**'
       - 'public/install.sh'
       - 'docs/**'
       - 'infrastructure/rpx/**'
