@@ -439,18 +439,58 @@ function parseObjectIdentity(headers: Record<string, string>): string | undefine
     || headers.ETag
 }
 
-function newerVersion(candidate: string, current: string): boolean {
-  const a = candidate.split(/[.+_-]/)
-  const b = current.split(/[.+_-]/)
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const left = Number(a[i] || 0)
-    const right = Number(b[i] || 0)
-    if (Number.isFinite(left) && Number.isFinite(right) && left !== right)
-      return left > right
-    const lexical = (a[i] || '').localeCompare(b[i] || '')
-    if (lexical !== 0) return lexical > 0
+/**
+ * Split a version into its numeric core and its prerelease tail.
+ *
+ * `5.44.0-RC2` → { numeric: [5,44,0], prerelease: 'RC2' }
+ */
+function splitVersion(version: string): { numeric: number[], prerelease: string | null } {
+  const dash = version.search(/[-+_]/)
+  const core = dash === -1 ? version : version.slice(0, dash)
+  return {
+    numeric: core.split('.').map((part) => {
+      const n = Number.parseInt(part, 10)
+      return Number.isNaN(n) ? 0 : n
+    }),
+    prerelease: dash === -1 ? null : version.slice(dash + 1),
   }
-  return false
+}
+
+/**
+ * Is `candidate` a newer version than `current`?
+ *
+ * SemVer §11: at equal numerics a release outranks a prerelease. This used to
+ * split on [.+_-] and compare component-wise, so `5.44.0-RC2` against `5.44.0`
+ * reached a fourth component of 'RC2' vs '', found Number('RC2') non-finite,
+ * fell through to a lexical compare, and concluded the RELEASE CANDIDATE was
+ * newer. perl.org shipped `latestVersion: 5.44.0-RC2` for exactly that reason,
+ * with 5.44.0 published alongside it — so `pantry install perl.org` resolved to
+ * a release candidate.
+ *
+ * A package with only prereleases still gets its newest prerelease: the
+ * preference applies at EQUAL numerics, not across them.
+ */
+function newerVersion(candidate: string, current: string): boolean {
+  const a = splitVersion(candidate)
+  const b = splitVersion(current)
+  for (let i = 0; i < Math.max(a.numeric.length, b.numeric.length); i++) {
+    const left = a.numeric[i] ?? 0
+    const right = b.numeric[i] ?? 0
+    if (left !== right)
+      return left > right
+  }
+  if (a.prerelease === b.prerelease)
+    return false
+  // Same numerics: released beats unreleased; between two prereleases, compare
+  // the identifiers so RC2 still beats RC1.
+  if (a.prerelease === null) return true
+  if (b.prerelease === null) return false
+  return a.prerelease.localeCompare(b.prerelease, undefined, { numeric: true }) > 0
+}
+
+/** Newest first, by the same precedence rule as `newerVersion`. */
+export function sortVersionsNewestFirst(versions: string[]): string[] {
+  return [...versions].sort((a, b) => (newerVersion(a, b) ? -1 : newerVersion(b, a) ? 1 : 0))
 }
 
 export function binaryAttestationKey(tarballKey: string): string {
@@ -569,9 +609,7 @@ export function filterBinaryMetadataForCleanScans(
       delete metadata.versions[version]
   }
   if (!metadata.versions[metadata.latestVersion]) {
-    metadata.latestVersion = Object.keys(metadata.versions)
-      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
-      .at(0) || ''
+    metadata.latestVersion = sortVersionsNewestFirst(Object.keys(metadata.versions)).at(0) || ''
   }
   return metadata
 }
@@ -1837,9 +1875,7 @@ export class BinaryArtifactPublisher {
       )
     }
     if (!metadata.versions[metadata.latestVersion]) {
-      metadata.latestVersion = Object.keys(metadata.versions)
-        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
-        .at(0) || ''
+      metadata.latestVersion = sortVersionsNewestFirst(Object.keys(metadata.versions)).at(0) || ''
     }
     metadata.updatedAt = quarantinedAt
     await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
