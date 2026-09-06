@@ -29,6 +29,11 @@ on:
         required: false
         default: '20'
         type: string
+      rebuild-existing:
+        description: 'Re-upload versions already in S3 (--force). Needed after a recipe change; wasteful for a pure version bump.'
+        required: false
+        default: true
+        type: boolean
 
 concurrency:
   # Per-RUN group (not per-ref): update-packages.yml dispatches this once per
@@ -66,6 +71,9 @@ jobs:
     outputs:
       domains: ${{ steps.detect.outputs.domains }}
       darwin_native: ${{ steps.darwin.outputs.domains }}
+      # 'true' unless we positively established that this push touched no
+      # recipe file. Drives whether the publish legs pass --force.
+      rebuild_existing: ${{ steps.detect.outputs.rebuild_existing }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -102,6 +110,40 @@ jobs:
           DOMAINS=$(echo "$DOMAINS" | sed '/^$/d' | sort -u | paste -sd' ' -)
           echo "Detected changed packages: ${DOMAINS:-<none>}"
           echo "domains=$DOMAINS" >> "$GITHUB_OUTPUT"
+
+          # Should the legs re-upload versions that are ALREADY in S3?
+          #
+          # For a plain version bump: no. The new version is missing from S3 and
+          # gets built either way; --force only re-does the whole back catalogue.
+          # A single cmake.org bump had each of the three legs upload 20 versions
+          # when 3 were missing, turning a few minutes of work into 21-29.
+          #
+          # For a RECIPE change: yes, and this is why the flag exists. When
+          # curl.se moved from OpenSSL ^1.1 to ^3, every already-published curl
+          # needed rebuilding against the new recipe; skipping them would leave
+          # the registry serving artifacts built from a recipe that no longer
+          # exists.
+          #
+          # Fail-safe: default to forcing. We only drop --force when the diff
+          # positively shows no recipe file was touched — an unknown base, a
+          # manual dispatch, or any git failure keeps the rebuild. Guessing
+          # "no rebuild" wrongly is a silent staleness bug; guessing "rebuild"
+          # wrongly just costs runner minutes.
+          REBUILD=true
+          if [ "${{ github.event.inputs.rebuild-existing }}" = "false" ]; then
+            # A caller that knows it only bumped versions says so outright.
+            # update-packages.yml does exactly that: it commits src/packages/
+            # and nothing else, then dispatches this workflow.
+            REBUILD=false
+          elif [ -z "$MANUAL" ] && [ -n "${BEFORE:-}" ]; then
+            if RECIPE_DIFF=$(git diff --name-only "$BEFORE" "${{ github.sha }}" -- packages/ts-pantry/src/recipes/ 2>/dev/null); then
+              if [ -z "$RECIPE_DIFF" ]; then
+                REBUILD=false
+              fi
+            fi
+          fi
+          echo "Re-upload versions already in S3 (--force): $REBUILD"
+          echo "rebuild_existing=$REBUILD" >> "$GITHUB_OUTPUT"
 
       # Which changed domains genuinely need a NATIVE macOS build: source recipes
       # (not zig-style download recipes) that support darwin and aren't apps. The
@@ -255,7 +297,15 @@ jobs:
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
           POPULAR_MAXV="${{ github.event.inputs.popular-max-versions || '20' }}"
-          COMMON="-b $S3_BUCKET -r $S3_REGION --platform ${{ matrix.platform.name }} -p $PKGS --multi-version --max-versions $MAXV --popular-max-versions $POPULAR_MAXV --force"
+          # --force only when a recipe actually changed (see the detect job).
+          FORCE=""
+          if [ "${{ needs.detect.outputs.rebuild_existing }}" != "false" ]; then
+            FORCE="--force"
+            echo "Recipe change (or manual run): re-building versions already in S3."
+          else
+            echo "Version bump only: leaving versions already in S3 alone."
+          fi
+          COMMON="-b $S3_BUCKET -r $S3_REGION --platform ${{ matrix.platform.name }} -p $PKGS --multi-version --max-versions $MAXV --popular-max-versions $POPULAR_MAXV $FORCE"
           if [ "${{ matrix.platform.name }}" = "darwin-arm64" ]; then
             # darwin FROM UBUNTU — two safe download passes, no cross-compile:
             #  1) --pkgx-mirror --mirror-only: download pkgx's darwin prebuilt (skip

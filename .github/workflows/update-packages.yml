@@ -287,8 +287,13 @@ jobs:
           done <<< "$CHANGED"
 
           [ -z "$DOMAINS" ] && exit 0
+          # rebuild-existing=false: this workflow commits src/packages/ and
+          # nothing else, so every domain here is a pure version bump. The new
+          # version is missing from S3 and gets built regardless; --force would
+          # only re-upload the entire back catalogue alongside it (one cmake.org
+          # bump had each leg re-upload 20 versions to publish 3).
           echo "Dispatching publish-changed-packages (ubuntu-only) for: $DOMAINS"
-          gh workflow run publish-changed-packages.yml -f packages="$DOMAINS"
+          gh workflow run publish-changed-packages.yml -f packages="$DOMAINS" -f rebuild-existing=false
         timeout-minutes: 2
 
       - name: discord-failure-alert
