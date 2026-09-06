@@ -23,6 +23,14 @@ import { renderTemplate } from '@stacksjs/stx'
  * a complete 200 with every meta tag and font face in place, and the `.flex`
  * assertion below is what catches it. Breaking only one tree is not enough —
  * stx falls back to the other, which is its own finding.
+ *
+ * Known blind spot, stated so nobody trusts this further than it goes: on any
+ * machine where BOTH trees exist (CI, after the Setup Pantry action, and a dev
+ * checkout) a broken node_modules copy is masked by the pantry/ one and this
+ * test still passes. Production is not exposed to that — the deploy runs
+ * `bun install` and never `pantry install`, so the box carries only the pinned
+ * node_modules tree — but a green run here is not by itself proof that the
+ * pinned version specifically is sound.
  */
 const SITE = resolve(import.meta.dir, '..', 'site')
 const PAGE = resolve(SITE, 'pages', 'about.stx')
