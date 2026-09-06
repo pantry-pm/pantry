@@ -223,6 +223,43 @@ case — it works until someone notices.
   put Cloudflare in front, the in-process limiter keeps working: it reads
   `CF-Connecting-IP` first precisely because that header cannot be forged.
 
+## Where a package's versions come from (and what cannot override it)
+
+`src/recipes/<domain>.ts` → `versionSource` is the **single authority** for which
+versions a package has. Fix a version problem there and nowhere else; the fix is
+permanent by construction, not by convention:
+
+- `version-fetcher.ts` reads `versionSource` and merges the result into
+  `src/packages/<key>.ts`, newest first. It **merges and never removes**, so a
+  wrong pattern poisons a catalog permanently — which is why a fix should be
+  verified with `--dry-run --domain <d>` before it lands.
+- **pkgx cannot introduce a version.** `pkgx-sync.yml` scaffolds `src/packages/`
+  only for domains `discover-pkgx-new.ts` reports as absent (`!existsLocally`),
+  so a package we already have is never re-scaffolded, and nothing on that path
+  writes `src/recipes/` at all. `--pkgx-mirror` supplies *binaries* for versions
+  the catalog already lists; it does not decide what those versions are.
+- `sync-packages.ts` has its own hand-coded `getLatestVersion()` for the 19
+  binary-sync domains, but it only publishes artifacts — it does not write the
+  catalog. When it drifts ahead of the catalog (go.dev did, by a whole minor),
+  the recipe is what is wrong, not the registry.
+
+A `versionSource` that resolves nothing is therefore a silent freeze: the
+package keeps whatever was last committed, forever, and the sweep reports
+"0 errors". 81 recipes were in that state; the sweep now counts and lists them
+in its job summary, and `version-fetcher --dry-run` prints the same locally.
+The shapes that bite, all seen in that batch: a `tagPattern` that never matches
+(`boost-1.92.0` against `/^v(.+)$/`), a repo whose releases are *all* flagged
+prerelease (needs `stable: false`), a repo with no releases at all (needs
+`github-tags`), monorepo tags where the product's own tag must be anchored
+(`/^appium@.../` — an unanchored scan picks `@appium/support@7.x`), and
+newest-tag-is-an-rc on `github-tags`, which carries no prerelease flag (use a
+strictly-numeric capture so `3.15.0rc2` cannot match; keep it bounded —
+`(\d+(?:\.\d+){0,3})` — because the unbounded form is super-linear
+backtracking and pickier rejects it).
+
+Multi-group patterns are joined with dots, which is how underscore schemes work:
+`/^R_(\d+)_(\d+)_(\d+)$/` turns `R_2_8_4` into `2.8.4`.
+
 ## pkgx new-package sync
 
 `pkgx-sync.yml` (daily) watches `pkgxdev/pantry` for packages we don't have and opens **one PR per new package** (label `pkgx-sync`). `scripts/discover-pkgx-new.ts` diffs pkgx's project list against `packages/ts-pantry/src/packages/*.ts` (by `convertDomainToFileName`); the workflow scaffolds each new formula via `pantry fetch <domain>` on its own branch. Index/aliases are regenerated post-merge by `update-packages.yml` (so per-package PRs don't conflict). This complements `update-packages.yml`, which only bumps versions of **existing** packages.
