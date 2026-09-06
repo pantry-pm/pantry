@@ -72,6 +72,16 @@ export const recipe: Recipe = {
       // BUILD_TLS is read from the environment correctly (it lands in redis's
       // .make-settings), so it stays here.
       'BUILD_TLS': 'yes',
+      // Pin it off rather than letting redis decide. `ifneq ($(USE_SYSTEMD),no)`
+      // auto-detects libsystemd via pkg-config, and the ubuntu runner happens to
+      // have libsystemd-dev, so the published 8.10.1 came out with
+      // `DT_NEEDED libsystemd.so.0` — an external library we neither bundle nor
+      // declare, picked up purely from whatever was on the build host. It is not
+      // caught by the health check either: the check runs ON that host, where
+      // the library obviously resolves. The only thing it buys is `supervised
+      // systemd` mode, which a pantry-installed redis does not use, and the cost
+      // is a binary that will not start on anything without systemd.
+      'USE_SYSTEMD': 'no',
     },
   },
   // Required, and with the library-path variables stripped: on the build host
