@@ -157,19 +157,66 @@ function ghHeaders(): Record<string, string> {
   return h
 }
 
-async function latestGithub(repo: string, tagPattern?: RegExp): Promise<string | null> {
+/** Assets that only a phone can install. A release carrying nothing else is
+ * not a desktop release, however new its tag is. */
+const MOBILE_ONLY_ASSET = /\.(?:apk|aab|ipa)$/i
+
+function tagToVersion(tag: string, tagPattern?: RegExp): string {
+  if (tagPattern) {
+    const m = tag.match(tagPattern)
+    if (m && m[1])
+      return m[1]
+  }
+  return tag.replace(/^v/, '')
+}
+
+/** Newest upstream version that this pipeline could actually build.
+ *
+ * `releases/latest` alone is not that. Several apps publish platform-partial
+ * point releases to the same repo — Obsidian's v1.13.8 ships one `.apk` and no
+ * desktop asset at all — and taking its tag as "the latest desktop version"
+ * wedges the entire workflow: the build 404s on a `.dmg` upstream never
+ * published, `publish-macos` fails, and because `record` needs both publish
+ * jobs green, NO manifest commit lands for any app until upstream happens to
+ * ship a desktop build again. That is what kept this workflow red for weeks.
+ *
+ * The step back happens ONLY for a latest release that ships assets of which
+ * none are installable here. A release with no assets whatsoever carries no
+ * signal — plenty of vendors tag on GitHub and host the installer on their own
+ * CDN, VS Code being the obvious one — and stepping back there would walk years
+ * into the past to whichever ancient release still had a file attached. Those
+ * keep `releases/latest` exactly as before. */
+export async function latestGithub(repo: string, tagPattern?: RegExp): Promise<string | null> {
   try {
     const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: ghHeaders() })
     if (!res.ok)
       return null
-    const tag = (await res.json() as any).tag_name as string
+    const latest = await res.json() as any
+    const tag = latest?.tag_name as string
     if (!tag)
       return null
-    if (tagPattern) {
-      const m = tag.match(tagPattern)
-      return m && m[1] ? m[1] : tag.replace(/^v/, '')
+
+    const assets: any[] = Array.isArray(latest.assets) ? latest.assets : []
+    const installable = (a: any) => typeof a?.name === 'string' && !MOBILE_ONLY_ASSET.test(a.name)
+    // No assets at all, or at least one we can install: nothing to step back from.
+    if (assets.length === 0 || assets.some(installable))
+      return tagToVersion(tag, tagPattern)
+
+    const list = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { headers: ghHeaders() })
+    if (list.ok) {
+      const releases = await list.json() as any[]
+      if (Array.isArray(releases)) {
+        const usable = releases.find(r =>
+          r && !r.draft && !r.prerelease && Array.isArray(r.assets) && r.assets.some(installable),
+        )
+        if (usable?.tag_name)
+          return tagToVersion(usable.tag_name as string, tagPattern)
+      }
     }
-    return tag.replace(/^v/, '')
+
+    // Mobile-only latest with nothing better in reach: report it rather than
+    // nothing, so the entry still appears in the run's summary.
+    return tagToVersion(tag, tagPattern)
   }
   catch {
     return null
