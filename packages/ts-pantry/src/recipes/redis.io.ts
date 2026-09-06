@@ -37,10 +37,21 @@ export const recipe: Recipe = {
       // edit is scoped to that one target so `module_tests:` itself and the
       // `test:` target keep working for anyone running them.
       "sed -i.bak 's/^\\(all:.*\\) module_tests$/\\1/' src/Makefile",
-      'make install',
+      // PREFIX goes on the make COMMAND LINE, not in the environment. Redis
+      // 8.10.1's top-level Makefile ignores an environment PREFIX and installs
+      // to /usr/local/bin regardless. Locally that fails loudly with
+      // "mkdir: /usr/local/bin: Permission denied"; on a CI runner /usr/local
+      // IS writable, so `make install` exits 0 having put the binaries
+      // somewhere we never look, and the build fails one step later with
+      // "Build produced no files in /tmp/buildkit-install-redis.io" — with
+      // nothing in the log pointing at the cause. A command-line variable
+      // beats both the environment and any makefile assignment, so this cannot
+      // be overridden again.
+      'make install PREFIX={{prefix}}',
     ],
     env: {
-      'PREFIX': '${{prefix}}',
+      // BUILD_TLS is read from the environment correctly (it lands in redis's
+      // .make-settings), so it stays here.
       'BUILD_TLS': 'yes',
     },
   },
