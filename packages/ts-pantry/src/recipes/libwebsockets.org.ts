@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/warmcat/libwebsockets',
   programs: [],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'warmcat/libwebsockets',
   },
   distributable: {

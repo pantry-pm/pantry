@@ -8,9 +8,8 @@ export const recipe: Recipe = {
   github: 'https://github.com/python/mypy',
   programs: ['mypy', 'mypyc', 'dmypy'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'python/mypy',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/python/mypy/archive/refs/tags/{{version.tag}}.tar.gz',

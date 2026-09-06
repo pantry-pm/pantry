@@ -8,9 +8,8 @@ export const recipe: Recipe = {
   github: 'https://github.com/nim-lang/Nim',
   programs: ['nim', 'nim_dbg', 'testament', 'nimsuggest', 'nimgrep', 'nim-gdb', 'atlas', 'nimpretty', 'nimble'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'nim-lang/Nim',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://nim-lang.org/download/nim-{{version}}.tar.xz',

@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'sqlalchemy/mako',
-    tagPattern: /^rel_(.+)$/,
+    tagPattern: /^rel_(\d+)_(\d+)_(\d+)$/,
   },
   distributable: {
     url: 'https://github.com/sqlalchemy/mako/archive/rel_{{version.major}}_{{version.minor}}_{{version.patch}}.tar.gz',

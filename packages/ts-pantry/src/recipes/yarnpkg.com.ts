@@ -10,6 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'yarnpkg/berry',
+    tagPattern: /^\@yarnpkg\/cli\/(.+)$/,
   },
   distributable: {
     url: 'https://github.com/yarnpkg/berry/archive/refs/tags/@yarnpkg/cli/{{version}}.tar.gz',

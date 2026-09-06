@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'prettier/prettier',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://registry.npmjs.org/prettier/-/prettier-{{version}}.tgz',

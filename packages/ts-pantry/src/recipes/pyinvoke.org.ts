@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/pyinvoke/invoke',
   programs: ['invoke'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'pyinvoke/invoke',
   },
   distributable: {

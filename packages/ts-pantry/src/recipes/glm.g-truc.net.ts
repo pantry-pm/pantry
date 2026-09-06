@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'g-truc/glm',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     // v1.0.0+ ships only a "-light" zip; the plain glm-<tag>.zip 404s for those

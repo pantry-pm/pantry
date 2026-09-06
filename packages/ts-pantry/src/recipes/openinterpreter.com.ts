@@ -10,6 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'KillianLucas/open-interpreter',
+    stable: false,
   },
   distributable: {
     url: 'https://github.com/KillianLucas/open-interpreter/archive/refs/tags/v{{version}}.tar.gz',

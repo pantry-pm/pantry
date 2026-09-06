@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'htacg/tidy-html5',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/htacg/tidy-html5/archive/refs/tags/{{version}}.tar.gz',

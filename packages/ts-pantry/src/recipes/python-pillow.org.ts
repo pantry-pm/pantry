@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'python-pillow/Pillow',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/python-pillow/Pillow/archive/refs/tags/{{version.tag}}.tar.gz',

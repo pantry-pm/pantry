@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'bitcoin/bitcoin',
-    tagPattern: /^Bitcoin Core (.+)$/,
   },
   // Prebuilt download: Bitcoin Core publishes official signed per-platform
   // binary tarballs for every Pantry target platform. The source recipe pulls a

@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/perl/perl5',
   programs: ['corelist', 'cpan', 'enc2xs', 'encguess', 'h2ph', 'h2xs', 'instmodsh', 'json_pp', 'libnetcfg', 'perl', 'perlbug', 'perldoc', 'perlivp', 'perlthanks', 'piconv', 'pl2pm', 'pod2html', 'pod2man', 'pod2text', 'pod2usage', 'podchecker', 'prove', 'ptar', 'ptardiff', 'ptargrep', 'shasum', 'splain', 'streamzip', 'xsubpp', 'zipdetails'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'perl/perl5',
   },
   distributable: {

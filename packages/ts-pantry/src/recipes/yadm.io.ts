@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/yadm-dev/yadm',
   programs: ['yadm'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'TheLocehiliosan/yadm',
   },
   distributable: {

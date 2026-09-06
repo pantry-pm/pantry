@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/swig/swig',
   programs: ['swig', 'ccache-swig'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'swig/swig',
   },
   distributable: {

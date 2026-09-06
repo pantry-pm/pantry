@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'doxygen/doxygen',
-    tagPattern: /^Doxygen release (.+)$/,
+    tagPattern: /^Release_(\d+)_(\d+)_(\d+)$/,
   },
   distributable: {
     url: 'https://github.com/doxygen/doxygen/archive/refs/tags/Release_{{version.major}}_{{version.minor}}_{{version.patch}}.tar.gz',

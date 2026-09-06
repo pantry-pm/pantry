@@ -9,6 +9,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'sqlalchemy/alembic',
+    tagPattern: /^rel_(\d+)_(\d+)_(\d+)$/,
   },
   dependencies: {
     'pkgx.sh': '>=1',

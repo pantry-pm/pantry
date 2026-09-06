@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'pdm-project/pdm',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/pdm-project/pdm/archive/refs/tags/{{version}}.tar.gz',

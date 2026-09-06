@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'erlang/otp',
-    tagPattern: /^OTP (.+)$/,
+    tagPattern: /^OTP\-(.+)$/,
   },
   distributable: {
     url: 'https://github.com/erlang/otp/releases/download/OTP-{{version.raw}}/otp_src_{{version.raw}}.tar.gz',

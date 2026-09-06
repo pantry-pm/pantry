@@ -7,7 +7,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/carlobaldassi/liblqr',
   programs: [],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'carlobaldassi/liblqr',
   },
   distributable: {

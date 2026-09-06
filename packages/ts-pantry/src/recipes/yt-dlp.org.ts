@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'yt-dlp/yt-dlp',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/yt-dlp/yt-dlp/releases/download/{{version.raw}}/yt-dlp.tar.gz',

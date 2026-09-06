@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'rust-lang/rust',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://static.rust-lang.org/dist/rustc-{{version}}-src.tar.gz',

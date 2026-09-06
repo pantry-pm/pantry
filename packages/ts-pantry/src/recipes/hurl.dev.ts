@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'Orange-OpenSource/hurl',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/Orange-OpenSource/hurl/archive/refs/tags/{{version}}.tar.gz',

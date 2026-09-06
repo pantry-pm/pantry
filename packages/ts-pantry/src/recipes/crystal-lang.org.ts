@@ -11,7 +11,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'crystal-lang/crystal',
-    tagPattern: /^v(.+)$/,
   },
   dependencies: {
     'hboehm.info/gc': '^8',

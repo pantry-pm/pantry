@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'DanBloomberg/leptonica',
-    tagPattern: /^v(.+)$/,
   },
   dependencies: {
     'giflib.sourceforge.io': '5',

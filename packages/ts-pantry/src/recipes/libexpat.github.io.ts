@@ -10,6 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'libexpat/libexpat',
+    tagPattern: /^R_(\d+)_(\d+)_(\d+)$/,
   },
   distributable: {
     url: 'https://github.com/libexpat/libexpat/releases/download/R_{{version.major}}_{{version.minor}}_{{version.patch}}/expat-{{version}}.tar.xz',

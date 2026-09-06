@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'kluctl/kluctl',
-    tagPattern: /^kluctl-v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/kluctl/kluctl/archive/refs/tags/v{{version}}.tar.gz',

@@ -8,9 +8,9 @@ export const recipe: Recipe = {
   github: 'https://github.com/the-tcpdump-group/libpcap',
   programs: ['pcap-config'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'the-tcpdump-group/libpcap',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^libpcap\-(.+)$/,
   },
   distributable: {
     url: 'https://www.tcpdump.org/release/libpcap-{{version}}.tar.gz',

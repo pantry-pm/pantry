@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'aria2/aria2',
-    tagPattern: /^aria2 (.+)$/,
+    tagPattern: /^release\-(.+)$/,
   },
   distributable: {
     url: 'https://github.com/aria2/aria2/releases/download/release-{{version}}/aria2-{{version}}.tar.xz',

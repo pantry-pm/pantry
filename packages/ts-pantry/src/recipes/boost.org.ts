@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'boostorg/boost',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^boost\-(.+)$/,
   },
   distributable: {
     url: 'https://archives.boost.io/release/{{version}}/source/boost_{{version.major}}_{{version.minor}}_{{version.patch}}.tar.gz',

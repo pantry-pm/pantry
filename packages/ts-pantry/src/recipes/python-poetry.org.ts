@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'python-poetry/poetry',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/python-poetry/poetry/releases/download/{{version}}/poetry-{{version}}.tar.gz',

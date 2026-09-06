@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'pypa/virtualenv',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/pypa/virtualenv/archive/refs/tags/{{version}}.tar.gz',

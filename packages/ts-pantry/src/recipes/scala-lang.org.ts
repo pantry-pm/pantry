@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'scala/scala3',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/scala/scala3/archive/refs/tags/{{version.tag}}.tar.gz',

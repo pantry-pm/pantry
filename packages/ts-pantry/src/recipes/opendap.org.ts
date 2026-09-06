@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'OPENDAP/libdap4',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://www.opendap.org/pub/source/libdap-{{version}}.tar.gz',

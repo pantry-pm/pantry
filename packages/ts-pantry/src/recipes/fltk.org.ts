@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'fltk/fltk',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^release\-(.+)$/,
   },
   distributable: {
     url: 'https://github.com/fltk/fltk/releases/download/release-{{version}}/fltk-{{version}}-source.tar.gz',

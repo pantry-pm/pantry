@@ -11,7 +11,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'nigels-com/glew',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^glew\-(.+)$/,
   },
   distributable: {
     url: 'https://downloads.sourceforge.net/project/glew/glew/{{version}}/glew-{{version}}.tgz',

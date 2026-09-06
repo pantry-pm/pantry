@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/vim/vim',
   programs: ['vim', 'vi'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'vim/vim',
   },
   distributable: {

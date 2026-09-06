@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'libarchive/libarchive',
-    tagPattern: /^Libarchive (.+)$/,
   },
   distributable: {
     url: 'https://github.com/libarchive/libarchive/releases/download/v{{version}}/libarchive-{{version}}.tar.gz',

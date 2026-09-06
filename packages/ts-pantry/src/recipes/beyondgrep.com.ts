@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/beyondgrep/ack3',
   programs: ['ack'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'beyondgrep/ack3',
   },
   dependencies: {

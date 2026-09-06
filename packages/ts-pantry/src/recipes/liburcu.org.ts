@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/urcu/userspace-rcu',
   programs: [],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'urcu/userspace-rcu',
   },
   distributable: {

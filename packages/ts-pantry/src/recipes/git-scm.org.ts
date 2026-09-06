@@ -19,9 +19,8 @@ export const recipe: Recipe = {
     },
   },
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'git/git',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://mirrors.edge.kernel.org/pub/software/scm/git/git-{{version}}.tar.xz',

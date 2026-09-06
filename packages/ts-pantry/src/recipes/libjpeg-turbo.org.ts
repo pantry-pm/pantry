@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'libjpeg-turbo/libjpeg-turbo',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/{{version.tag}}/libjpeg-turbo-{{version.tag}}.tar.gz',

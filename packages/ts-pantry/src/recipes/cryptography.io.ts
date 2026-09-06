@@ -8,7 +8,7 @@ export const recipe: Recipe = {
   github: 'https://github.com/pyca/cryptography',
   programs: [],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'pyca/cryptography',
   },
   distributable: {

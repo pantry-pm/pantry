@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'browser-use/browser-use',
-    tagPattern: /^v(.+)$/,
   },
   dependencies: {
     'python.org': '~3.12', // no torch<2.3.0 for 3.13

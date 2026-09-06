@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'cocogitto/cocogitto',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/cocogitto/cocogitto/archive/refs/tags/{{version}}.tar.gz',

@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'ArtifexSoftware/jbig2dec',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs9531/jbig2dec-0.19.tar.gz',

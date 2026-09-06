@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'lz4/lz4',
-    tagPattern: /^LZ4 (.+)$/,
   },
   distributable: {
     url: 'https://github.com/lz4/lz4/archive/v{{version}}.tar.gz',

@@ -10,6 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'libsdl-org/SDL',
+    tagPattern: /^release\-(.+)$/,
   },
   distributable: {
     url: 'https://github.com/libsdl-org/SDL/archive/refs/tags/release-{{version}}.tar.gz',

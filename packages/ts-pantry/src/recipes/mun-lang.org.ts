@@ -11,7 +11,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'mun-lang/mun',
-    tagPattern: /^v(.+)$/,
+    stable: false,
   },
   distributable: {
     url: 'https://github.com/mun-lang/mun/archive/refs/tags/{{version.tag}}.tar.gz',
