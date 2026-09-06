@@ -5,9 +5,16 @@ name: Check Desktop App & Font Updates
 
 on:
   schedule:
-    # Every 2 hours. Runs cannot overlap, so a slow desktop upload never races a
-    # second updater or its manifest commit.
-    - cron: '17 */2 * * *'
+    # Daily. Runs cannot overlap, so a slow desktop upload never races a second
+    # updater or its manifest commit.
+    #
+    # This was `*/2` hours, which is 12 runs a day, and every one of them
+    # allocated a macos-latest runner unconditionally — ~360 Macs a month at 10x
+    # billing to discover, almost always, that no .dmg app had shipped anything.
+    # The macOS leg is now gated on the discovery pass actually finding work
+    # (see publish-macos), so a scheduled run costs one cheap ubuntu job unless
+    # a disk-image app genuinely released.
+    - cron: '17 7 * * *'
   workflow_dispatch:
     inputs:
       publish:
@@ -44,14 +51,33 @@ jobs:
   # is therefore a genuine check and cannot create a misleading manifest commit.
   check:
     runs-on: ubuntu-latest
+    outputs:
+      # The exact set of .dmg/macOS-tool packages that are out of date. Empty on
+      # almost every run, and publish-macos is gated on it being non-empty.
+      macos_pending: ${{ steps.scan.outputs.macos_pending }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Check desktop app and font versions
+        id: scan
         working-directory: packages/ts-pantry
-        run: bun scripts/check-desktop-updates.ts
+        env:
+          # `--force` has to reach the discovery pass too, or forcing a .dmg
+          # domain that is already current would compute an empty macOS slice
+          # and skip the very runner the operator asked for.
+          FORCE_DOMAINS: ${{ inputs.force }}
+        run: |
+          args=(--platform=macos --print-selected)
+          if [[ -n "$FORCE_DOMAINS" ]]; then
+            args+=("--force=$FORCE_DOMAINS")
+          fi
+          # The human-readable report goes to stderr and still shows in the log;
+          # only the selected-domain list comes back on stdout.
+          macos_pending="$(bun scripts/check-desktop-updates.ts "${args[@]}")"
+          echo "macos pending: ${macos_pending:-<none>}"
+          echo "macos_pending=$macos_pending" >> "$GITHUB_OUTPUT"
 
   # ZIP/archive recipes are portable and stay on the fast Linux runner.
   publish-ubuntu:
@@ -76,9 +102,17 @@ jobs:
 
   # DMG/pkg recipes use Apple's native tools. Unsupported Linux extraction was
   # the reason Karabiner and LibreOffice repeatedly failed without surfacing it.
+  #
+  # Gated, and this is the point of the gate: a Mac bills ~10x, and the check
+  # job above has already worked out exactly which disk-image packages are
+  # behind. When that list is empty — which is most runs — no macOS runner is
+  # allocated at all. This is the same shape as publish-changed-packages'
+  # `publish-darwin-native` job: compute the needed set, run only if non-empty.
   publish-macos:
     needs: check
-    if: github.event_name == 'schedule' || inputs.publish == true
+    if: >-
+      (github.event_name == 'schedule' || inputs.publish == true) &&
+      needs.check.outputs.macos_pending != ''
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -99,12 +133,19 @@ jobs:
   # This is the only writer. It gets a fresh checkout and re-reads the public
   # registry after both publish jobs finish. --require-current makes the step
   # fail before commit if even one upstream version lacks a published artifact.
+  #
+  # A SKIPPED macOS leg has to count as success or the gate above would wedge
+  # this job permanently: skipped means the check pass found no out-of-date
+  # disk-image package, which is precisely the state in which there is nothing
+  # for that runner to do. `--require-current` re-checks against the live
+  # registry anyway, so a package that went stale in the meantime still blocks
+  # the commit — the gate cannot let a stale manifest through.
   record:
     needs: [publish-ubuntu, publish-macos]
     if: >-
       always() &&
       needs.publish-ubuntu.result == 'success' &&
-      needs.publish-macos.result == 'success' &&
+      (needs.publish-macos.result == 'success' || needs.publish-macos.result == 'skipped') &&
       (github.event_name == 'schedule' || inputs.publish == true)
     runs-on: ubuntu-latest
     steps:

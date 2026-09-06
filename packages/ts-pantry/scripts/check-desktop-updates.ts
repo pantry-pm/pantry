@@ -29,6 +29,11 @@
  *   bun scripts/check-desktop-updates.ts --platform=ubuntu --publish
  *   bun scripts/check-desktop-updates.ts --platform=macos  --publish
  *
+ * `--print-selected` reports that same slice on stdout instead of building it,
+ * so CI can gate a whole job on whether the slice is empty:
+ *
+ *   bun scripts/check-desktop-updates.ts --platform=macos --print-selected
+ *
  * Scope: every `*.font.ts` recipe (fonts) plus darwin-only download recipes
  * with a github-releases source (desktop apps). CLI packages are untouched —
  * they have their own version pipeline (build-versions.yml).
@@ -49,6 +54,14 @@ const flags = new Set(args)
 const doCommit = flags.has('--commit')
 const doPublish = flags.has('--publish')
 const requireCurrent = flags.has('--require-current')
+/** Print the domains this run WOULD publish, comma-separated, to stdout — every
+ * other line this script writes goes to stderr, so the output is safe to
+ * capture straight into a workflow output. It exists so a job can decide
+ * whether to allocate a runner at all: `--platform=macos --print-selected`
+ * comes back empty on the overwhelming majority of runs, and the workflow
+ * skips its macOS leg rather than booting a 10x-billed Mac to discover there
+ * is nothing to build. */
+const printSelected = flags.has('--print-selected')
 
 /** Domains to (re)publish even when already at the latest published version —
  * `--force=roboto,pearcleaner.app`. Lets an operator re-run a publish after a
@@ -482,6 +495,9 @@ async function main(): Promise<void> {
   const toPublish = platform === 'all'
     ? outdated
     : outdated.filter(e => e.host === platform)
+  if (printSelected)
+    console.log(toPublish.map(e => e.domain).join(','))
+
   if (doPublish && toPublish.length > 0) {
     console.warn(`\nPublishing ${toPublish.length} package(s) for host=${platform}.`)
     const failures: string[] = []
