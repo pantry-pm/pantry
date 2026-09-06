@@ -2743,22 +2743,44 @@ else {
     // rescue the exit code. The gated darwin-native job deliberately omits
     // `--force`, so it could not fire there at all.
     if (isTargetedBuild) {
-      // Known-broken recipes are attempted on a targeted build (the filter
-      // above is bypassed for `-p`), and we already know they fail. Report
-      // them, but do not let them hold the exit code hostage.
       const domainOf = (key: string) => (multiVersion ? key.replace(/@[^@]*$/, '') : key)
-      const fatal = failed.filter(([key]) => !knownBrokenDomains.has(domainOf(key)))
+      const latestOf = new Map(packagesToBuild.map(p => [p.domain, p.latestVersion]))
+
+      // What makes a targeted publish fail is failing to publish the version it
+      // was dispatched FOR. Backfilling an old release is a different job with a
+      // different standard: lz4 1.9.1 is from 2019 and its Makefile passes
+      // `-soname` to Apple's linker, so no darwin build of it will ever succeed.
+      // Failing the run on that means a permanently red pipeline that says
+      // nothing about today's release — and a red pipeline nobody can fix is
+      // indistinguishable from no pipeline at all.
+      //
+      // So: the newest version of each requested domain is fatal, older ones are
+      // reported and tolerated. cmake.org 4.4.3 — the failure that started all
+      // this — was the newest, and still fails the run.
+      const isNewest = ([key, result]: [string, BuildResult & { version: string }]) => {
+        const latest = latestOf.get(domainOf(key))
+        return latest === undefined || result.version === latest
+      }
+      // Known-broken recipes are attempted on a targeted build (the filter above
+      // is bypassed for `-p`), and we already know they fail.
+      const eligible = failed.filter(([key]) => !knownBrokenDomains.has(domainOf(key)))
+      const fatal = eligible.filter(isNewest)
+      const backfill = eligible.filter(e => !isNewest(e))
+
+      if (backfill.length > 0) {
+        console.log(`\nOlder versions that failed to build (${backfill.length}) — reported, not fatal:`)
+        backfill.forEach(e => console.log(`   - ${formatEntry(e)}: ${e[1].error}`))
+      }
       if (fatal.length > 0) {
-        console.log(`\nTargeted build requested ${values.package} and ${fatal.length} of its build(s) failed:`)
+        console.log(`\nTargeted build requested ${values.package} and ${fatal.length} CURRENT version(s) failed:`)
         fatal.forEach(e => console.log(`   - ${formatEntry(e)}: ${e[1].error}`))
         console.log(`\nExiting non-zero: a targeted publish that cannot build the version`)
         console.log(`it was asked for has not done its job. Fix the recipe, or add the`)
         console.log(`domain to knownBrokenDomains if it is genuinely unbuildable.`)
         process.exit(1)
       }
-      if (failed.length > 0) {
-        console.log(`\nAll ${failed.length} failure(s) are known-broken recipes — not failing the run.`)
-      }
+      if (failed.length > 0)
+        console.log(`\nNo CURRENT version failed — not failing the run.`)
     }
 
     console.log(`Note: Individual build failures are expected for packages with complex`)

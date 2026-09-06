@@ -10,6 +10,11 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-tags',
     repo: 'perl/perl5',
+    // Perl's odd minor numbers are DEVELOPMENT releases: Configure
+    // refuses to build 5.43.x or 5.45.x without -Dusedevel, so pulling
+    // them into the catalog queues builds that cannot succeed (eleven
+    // of them failed a darwin publish this way). Even minor only.
+    tagPattern: /^v?(\d+)\.(\d*[02468])\.(\d+)$/,
   },
   distributable: {
     url: 'https://www.cpan.org/src/{{version.major}}.0/perl-{{version}}.tar.xz',

@@ -39,3 +39,65 @@ describe('pkgxHasPrebuilt', () => {
     expect(called).toBe(false)
   })
 })
+
+/**
+ * The rule that decides whether a targeted publish goes red. Extracted here
+ * because getting it wrong is expensive in both directions: too strict and the
+ * pipeline is permanently red over a 2019 release nobody can fix, too loose and
+ * a genuinely missing current version publishes as green — which is exactly how
+ * cmake.org 4.4.3 stayed missing for eleven days.
+ */
+function classify(
+  failed: Array<[string, { version: string }]>,
+  latestOf: Map<string, string>,
+  knownBroken: Set<string>,
+  multiVersion = true,
+) {
+  const domainOf = (key: string) => (multiVersion ? key.replace(/@[^@]*$/, '') : key)
+  const isNewest = ([key, result]: [string, { version: string }]) => {
+    const latest = latestOf.get(domainOf(key))
+    return latest === undefined || result.version === latest
+  }
+  const eligible = failed.filter(([key]) => !knownBroken.has(domainOf(key)))
+  return { fatal: eligible.filter(isNewest), backfill: eligible.filter(e => !isNewest(e)) }
+}
+
+describe('targeted-build failure classification', () => {
+  const latest = new Map([['cmake.org', '4.4.3'], ['lz4.org', '1.10.0']])
+
+  test('a failed CURRENT version is fatal', () => {
+    const { fatal, backfill } = classify([['cmake.org@4.4.3', { version: '4.4.3' }]], latest, new Set())
+    expect(fatal).toHaveLength(1)
+    expect(backfill).toHaveLength(0)
+  })
+
+  test('a failed OLD version is reported but tolerated', () => {
+    const { fatal, backfill } = classify([['lz4.org@1.9.1', { version: '1.9.1' }]], latest, new Set())
+    expect(fatal).toHaveLength(0)
+    expect(backfill).toHaveLength(1)
+  })
+
+  test('one current failure among many old ones still fails the run', () => {
+    const { fatal } = classify([
+      ['lz4.org@1.9.1', { version: '1.9.1' }],
+      ['lz4.org@1.8.3', { version: '1.8.3' }],
+      ['cmake.org@4.4.3', { version: '4.4.3' }],
+    ], latest, new Set())
+    expect(fatal.map(([k]) => k)).toEqual(['cmake.org@4.4.3'])
+  })
+
+  test('known-broken domains are excluded from both buckets', () => {
+    const { fatal, backfill } = classify(
+      [['cmake.org@4.4.3', { version: '4.4.3' }]], latest, new Set(['cmake.org']),
+    )
+    expect(fatal).toHaveLength(0)
+    expect(backfill).toHaveLength(0)
+  })
+
+  // Fail CLOSED: if we cannot tell which version is current for a domain, treat
+  // the failure as fatal rather than quietly shrugging it off.
+  test('an unknown domain is treated as fatal', () => {
+    const { fatal } = classify([['mystery.org@1.0.0', { version: '1.0.0' }]], latest, new Set())
+    expect(fatal).toHaveLength(1)
+  })
+})

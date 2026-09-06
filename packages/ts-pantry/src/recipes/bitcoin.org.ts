@@ -20,7 +20,13 @@ export const recipe: Recipe = {
   build: {
     script: [
       'VERSION={{version}}',
-      'DIST_VERSION="${VERSION%.0}"',
+      // Upstream's directory and filename both carry the FULL version:
+      // bitcoin-core-31.0/bitcoin-31.0-x86_64-linux-gnu.tar.gz. Stripping the
+      // trailing `.0` produced bitcoin-core-31/bitcoin-31-... which 404s, and
+      // always has — bitcoin-core-22 is a 404 the same way bitcoin-core-22.0 is
+      // a 200. Every `.0` release this recipe ever saw failed on it; it only
+      // surfaced when 31.0 reached the catalog.
+      'DIST_VERSION="$VERSION"',
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+aarch64) TARGET="arm64-apple-darwin" ;;',
       '  darwin+x86-64)  TARGET="x86_64-apple-darwin" ;;',
