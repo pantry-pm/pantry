@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'bun:test'
+import { afterEach, describe, expect, it, test } from 'bun:test'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { DEFAULT_STAGING_TTL_SECONDS } from '../../registry/src/binary-publishing'
 import { maxScanBudgetMs } from '../../registry/src/malware-scanning'
-import { completeBinaryUpload, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS } from '../scripts/binary-publish-client'
+import { completeBinaryUpload, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS, publishBinaryArtifact } from '../scripts/binary-publish-client'
 
 const auth = { Authorization: 'Bearer test' }
 
@@ -261,5 +264,86 @@ describe('the whole publish timeout chain is ordered', () => {
     // The claim is minted before the upload; the client's window only starts
     // once the bytes are staged. An eight minute upload has been observed.
     expect(stagingTtlMs - DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThanOrEqual(30 * 60_000)
+  })
+})
+
+describe('upload initiation', () => {
+  const tempFiles: string[] = []
+  afterEach(() => {
+    for (const file of tempFiles.splice(0)) rmSync(file, { force: true })
+  })
+
+  function artifact() {
+    const file = join(mkdtempSync(join(tmpdir(), 'pantry-initiate-')), 'a.tar.gz')
+    writeFileSync(file, 'artifact bytes')
+    tempFiles.push(file)
+    return file
+  }
+
+  function options(overrides: Record<string, unknown>) {
+    return {
+      domain: 'redis.io',
+      version: '8.4.6',
+      platforms: ['linux-arm64'],
+      filePath: artifact(),
+      filename: 'redis.io-8.4.6.tar.gz',
+      size: 14,
+      registryUrl: 'https://registry.example',
+      token: 'ptry_test',
+      sleep: async () => {},
+      ...overrides,
+    } as any
+  }
+
+  // The exact failure that lost a built, health-checked redis.io@8.4.6 on
+  // linux-arm64: the connection dropped while asking for a staging slot.
+  test('retries a connection failure instead of discarding the build', async () => {
+    let calls = 0
+    const fetchStub = async () => {
+      calls++
+      if (calls < 3) throw new Error('Unable to connect. Is the computer able to access the url?')
+      // Answered, but with no slot — so we stop here rather than running the
+      // real curl upload. The point under test is that the blip was ridden out
+      // and the third response was accepted on its merits.
+      return new Response(JSON.stringify({ code: 'NO_SLOT', error: 'no staging slot' }), { status: 200 })
+    }
+
+    await expect(publishBinaryArtifact(options({ fetch: fetchStub }))).rejects.toThrow(/NO_SLOT|no staging slot/)
+    expect(calls).toBe(3)
+  })
+
+  test('retries a 503 but not the response that follows it', async () => {
+    let calls = 0
+    const fetchStub = async () => {
+      calls++
+      if (calls === 1) return new Response(JSON.stringify({ error: 'upstream busy' }), { status: 503 })
+      return new Response(JSON.stringify({ code: 'NO_SLOT', error: 'no staging slot' }), { status: 200 })
+    }
+
+    await expect(publishBinaryArtifact(options({ fetch: fetchStub }))).rejects.toThrow(/NO_SLOT|no staging slot/)
+    expect(calls).toBe(2)
+  })
+
+  test('does not retry a rejected request', async () => {
+    let calls = 0
+    const fetchStub = async () => {
+      calls++
+      return new Response(JSON.stringify({ code: 'UNAUTHORIZED', error: 'bad token' }), { status: 401 })
+    }
+
+    await expect(publishBinaryArtifact(options({ fetch: fetchStub }))).rejects.toThrow(/UNAUTHORIZED|401/)
+    expect(calls).toBe(1)
+  })
+
+  test('gives up with a clear message once attempts run out', async () => {
+    let calls = 0
+    const fetchStub = async () => {
+      calls++
+      throw new Error('ECONNRESET')
+    }
+
+    await expect(publishBinaryArtifact(options({ fetch: fetchStub, initiateAttempts: 2 })))
+      .rejects.toThrow(/Could not reach the registry to start the upload after 2 attempts/)
+    expect(calls).toBe(2)
   })
 })

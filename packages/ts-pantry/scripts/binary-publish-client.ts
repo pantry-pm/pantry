@@ -11,6 +11,10 @@ export interface PublishBinaryArtifactOptions {
   size: number
   registryUrl?: string
   token?: string
+  /** Attempts for the initiate call. Injectable for tests. */
+  initiateAttempts?: number
+  fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+  sleep?: (milliseconds: number) => Promise<void>
 }
 
 export interface PublishedBinaryArtifact {
@@ -185,6 +189,66 @@ export async function completeBinaryUpload(
   throw new Error(`Binary upload completion remained ambiguous after ${attempts} attempts: ${lastError.message}`)
 }
 
+/** Attempts for the initiate call — seconds of backoff, not minutes: unlike
+ * completion, nothing is running registry-side yet, so there is nothing to
+ * wait out beyond a blip. */
+export const DEFAULT_INITIATE_ATTEMPTS: number = 4
+
+/** Worth trying again: the request never got an answer, or got one that says
+ * "later". A 4xx is the registry telling us something is wrong with the
+ * request itself — a bad token, a rejected payload — and repeating it just
+ * turns one clear error into four. */
+function initiateMayBeTransient(response: Response): boolean {
+  return response.status === 408 || response.status === 429 || response.status >= 500
+}
+
+/**
+ * Ask the registry for a staging slot, retrying a failure that has no verdict
+ * attached to it.
+ *
+ * The other two network calls in this publish path are already hardened — the
+ * upload itself runs `curl --retry 3 --retry-all-errors`, and completion polls
+ * with backoff — but this one was a bare `fetch`. A single connection blip
+ * therefore discarded a build that had compiled and passed its health check:
+ * redis.io@8.4.6 on linux-arm64 built, health-checked, and then died with
+ * "Unable to connect. Is the computer able to access the url?" while asking
+ * for the slot to upload into, failing the whole run over nothing.
+ */
+async function initiateBinaryUpload(
+  registryUrl: string,
+  auth: { Authorization: string },
+  body: string,
+  options: PublishBinaryArtifactOptions,
+): Promise<{ response: Response, initiated: any }> {
+  const attempts = Math.max(1, options.initiateAttempts ?? DEFAULT_INITIATE_ATTEMPTS)
+  const fetchInitiate = options.fetch ?? fetch
+  const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
+  let lastError: Error = new Error('binary upload initiation did not run')
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetchInitiate(`${registryUrl}/api/v1/binaries/uploads`, {
+        method: 'POST',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body,
+      })
+      const initiated = await responseJson(response)
+      if (response.ok || !initiateMayBeTransient(response))
+        return { response, initiated }
+      lastError = new Error(`${initiated.code || response.status}: ${initiated.error || response.statusText}`)
+    }
+    catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+    }
+
+    if (attempt >= attempts)
+      break
+    await sleep(Math.min(MAX_BACKOFF_MS, 1000 * 2 ** (attempt - 1)))
+  }
+
+  throw new Error(`Could not reach the registry to start the upload after ${attempts} attempts: ${lastError.message}`)
+}
+
 /**
  * Publish one native artifact through the registry's scan-before-promote API.
  *
@@ -199,19 +263,14 @@ export async function publishBinaryArtifact(
   const sha256 = await sha256File(options.filePath)
   const auth = { Authorization: `Bearer ${token}` }
 
-  const initiateResponse = await fetch(`${registryUrl}/api/v1/binaries/uploads`, {
-    method: 'POST',
-    headers: { ...auth, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      domain: options.domain,
-      version: options.version,
-      platforms: options.platforms,
-      filename: options.filename,
-      size: options.size,
-      sha256,
-    }),
-  })
-  const initiated = await responseJson(initiateResponse)
+  const { response: initiateResponse, initiated } = await initiateBinaryUpload(registryUrl, auth, JSON.stringify({
+    domain: options.domain,
+    version: options.version,
+    platforms: options.platforms,
+    filename: options.filename,
+    size: options.size,
+    sha256,
+  }), options)
   if (!initiateResponse.ok || !initiated.uploadId || !initiated.uploadUrl) {
     throw new Error(`${initiated.code || initiateResponse.status}: ${initiated.error || initiateResponse.statusText}`)
   }
