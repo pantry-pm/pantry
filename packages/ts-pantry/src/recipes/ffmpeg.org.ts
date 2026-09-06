@@ -8,9 +8,9 @@ export const recipe: Recipe = {
   github: 'https://github.com/FFmpeg/FFmpeg',
   programs: ['ffmpeg', 'ffplay', 'ffprobe'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'FFmpeg/FFmpeg',
-    tagPattern: /^n(.+)$/,
+    tagPattern: /^n(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://ffmpeg.org/releases/ffmpeg-{{version.raw}}.tar.gz',

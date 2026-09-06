@@ -8,9 +8,12 @@ export const recipe: Recipe = {
   github: 'https://github.com/ordinals/ord',
   programs: ['ord'],
   platforms: ['darwin/aarch64', 'linux/x86-64'],
+  // casey/ord is a FORK with no releases and no tags, so this resolved nothing
+  // and the package froze. The `github:` field above and the download URL below
+  // both already point at ordinals/ord — only the version source disagreed.
   versionSource: {
     type: 'github-releases',
-    repo: 'casey/ord',
+    repo: 'ordinals/ord',
   },
 
   build: {

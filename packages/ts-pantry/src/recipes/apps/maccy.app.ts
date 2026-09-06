@@ -11,7 +11,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'p0deje/Maccy',
-    tagPattern: /^v(.+)$/,
   },
 
   build: {
