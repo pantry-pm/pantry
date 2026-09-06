@@ -34,3 +34,21 @@ describe('version precedence', () => {
     expect(sortVersionsNewestFirst(['3.6.1_beta', '3.6.1'])[0]).toBe('3.6.1')
   })
 })
+
+/**
+ * latestVersion is re-derived from the published set on every publish, so a
+ * pointer left wrong by the old comparison repairs itself the next time
+ * anything publishes to that package — rather than needing someone to notice
+ * and republish the newest release by hand.
+ */
+describe('latestVersion re-derivation', () => {
+  const latestOf = (versions: string[]) => sortVersionsNewestFirst(versions).at(0)
+
+  it('repairs a pointer stuck on a release candidate', () => {
+    expect(latestOf(['5.42.1', '5.44.0', '5.44.0-RC1', '5.44.0-RC2'])).toBe('5.44.0')
+  })
+
+  it('does not let a backfilled old version become latest', () => {
+    expect(latestOf(['1.0.0', '2.0.0', '0.9.0'])).toBe('2.0.0')
+  })
+})

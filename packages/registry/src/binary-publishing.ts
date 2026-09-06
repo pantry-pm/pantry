@@ -1812,8 +1812,16 @@ export class BinaryArtifactPublisher {
     )
     if (state.metadata.malwareQuarantines?.length === 0)
       delete state.metadata.malwareQuarantines
-    if (!state.metadata.latestVersion || newerVersion(request.version, state.metadata.latestVersion))
-      state.metadata.latestVersion = request.version
+    // Re-derive from everything published rather than only ratcheting forward.
+    // Ratcheting cannot repair a latestVersion that is already wrong: perl.org
+    // was pinned to 5.44.0-RC2 by the precedence bug above, and publishing any
+    // older version left it there, so every affected package would have needed
+    // someone to notice and republish its newest release by hand. Taking the
+    // maximum of the published set is the same answer when the pointer is
+    // correct and the right answer when it is not — and it still refuses to let
+    // a backfilled old version become latest, because it is a maximum.
+    state.metadata.latestVersion
+      = sortVersionsNewestFirst(Object.keys(state.metadata.versions)).at(0) || request.version
     state.metadata.updatedAt = releasedAt
     await this.store.putObject(state.metadataKey, JSON.stringify(state.metadata, null, 2), 'application/json')
 
