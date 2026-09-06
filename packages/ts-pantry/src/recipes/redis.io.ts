@@ -48,11 +48,42 @@ export const recipe: Recipe = {
       // beats both the environment and any makefile assignment, so this cannot
       // be overridden again.
       'make install PREFIX={{prefix}}',
+      {
+        // Ship the OpenSSL 3 runtime alongside the binary, exactly as curl.se
+        // does. BUILD_TLS=yes links libssl/libcrypto, and this recipe builds
+        // against OpenSSL 3, so a source-built redis-server needs libssl.so.3.
+        // The package's declared RUNTIME dependency is openssl.org^1.1 —
+        // correct for the older versions, which are pkgx mirrors linking
+        // libssl.so.1.1, and wrong for anything we compile ourselves. One
+        // dependency list cannot describe both, so the artifact we control is
+        // made self-sufficient instead.
+        //
+        // This is not hypothetical: 8.10.1 published linking libssl.so.3 while
+        // 8.10.0 links libssl.so.1.1 and the metadata still says ^1.1.
+        run: [
+          'mkdir -p {{prefix}}/lib',
+          'cp -L {{deps.openssl.org.prefix}}/lib/libssl.so.3 {{prefix}}/lib/',
+          'cp -L {{deps.openssl.org.prefix}}/lib/libcrypto.so.3 {{prefix}}/lib/',
+        ],
+        if: 'linux',
+      },
     ],
     env: {
       // BUILD_TLS is read from the environment correctly (it lands in redis's
       // .make-settings), so it stays here.
       'BUILD_TLS': 'yes',
     },
+  },
+  // Required, and with the library-path variables stripped: on the build host
+  // the OpenSSL dep dir is still on the loader path, so a test that kept them
+  // would pass even when the artifact cannot stand on its own. Unsetting them
+  // is what makes this a real check that the bundled libs plus the rpath
+  // fix-up are enough — and it turns "ships a binary that cannot exec" from a
+  // silent publish into a failed build.
+  test: {
+    required: true,
+    script: [
+      'env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH {{prefix}}/bin/redis-server --version',
+    ],
   },
 }
