@@ -15,7 +15,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'biomejs/biome',
-    tagPattern: /(cli\/v|@biomejs\/biome@)(.+)$/,
+    tagPattern: /^@biomejs\/biome@(\d+(?:\.\d+){0,3})$/,
   },
   build: {
     script: [

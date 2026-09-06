@@ -7,9 +7,9 @@ export const recipe: Recipe = {
   github: 'https://github.com/krb5/krb5',
   programs: ['compile_et', 'gss-client', 'k5srvutil', 'kadmin', 'kdestroy', 'kinit', 'klist', 'kpasswd', 'krb5-config', 'kswitch', 'ktutil', 'kvno', 'sclient', 'sim_client', 'uuclient', 'gss-server', 'kadmin.local', 'kadmind', 'kdb5_util', 'kprop', 'kpropd', 'kproplog', 'krb5-send-pr', 'krb5kdc', 'sim_server', 'sserver', 'uuserver'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'krb5/krb5',
-    tagPattern: /^krb5-(.+?)(?:-final)?$/,
+    tagPattern: /^krb5-(\d+(?:\.\d+){0,3})-final$/,
   },
   distributable: {
     url: 'https://kerberos.org/dist/krb5/{{version.marketing}}/krb5-{{version.raw}}.tar.gz',

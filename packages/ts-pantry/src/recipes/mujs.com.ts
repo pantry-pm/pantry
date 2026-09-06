@@ -8,9 +8,8 @@ export const recipe: Recipe = {
   github: 'https://github.com/ccxvii/mujs',
   programs: ['mujs', 'mujs-pp'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'ccxvii/mujs',
-    tagPattern: /^v(.+)$/,
   },
   distributable: {
     url: 'https://mujs.com/downloads/mujs-{{version}}.tar.gz',

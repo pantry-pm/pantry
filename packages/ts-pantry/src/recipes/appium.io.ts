@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'appium/appium',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^appium@(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://registry.npmjs.org/appium/-/appium-{{version}}.tgz',

@@ -10,7 +10,6 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'jgm/pandoc',
-    tagPattern: /^pandoc (.+)$/,
   },
   // Prebuilt download: pandoc is a Haskell project that is painful to build
   // from source. Upstream (github.com/jgm/pandoc) ships official per-platform
