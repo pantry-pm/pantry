@@ -10,7 +10,7 @@
  *   bun scripts/version-fetcher.ts [--domain <domain>] [--dry-run] [--concurrency <N>]
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
+import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import type { VersionSource, Recipe } from './recipe-types'
 
@@ -343,6 +343,7 @@ async function main() {
       const versions = await fetchVersions(recipe.versionSource)
       if (versions.length === 0) {
         console.log(`  ${recipe.domain}: no versions found`)
+        noVersionDomains.push(recipe.domain)
         return { checked: 1, updated: 0, errors: 0, unavailable: 0 }
       }
 
@@ -374,6 +375,8 @@ async function main() {
 
   let updated = 0
   let checked = 0
+  // Recipes whose versionSource returned nothing — see the summary below.
+  const noVersionDomains: string[] = []
   let errors = 0
   let unavailable = 0
   let nextIndex = 0
@@ -391,7 +394,42 @@ async function main() {
 
   await Promise.all(workers)
 
-  console.log(`\nDone: ${checked} checked, ${updated} updated, ${errors} errors, ${unavailable} unreachable`)
+  console.log(`\nDone: ${checked} checked, ${updated} updated, ${errors} errors, ${unavailable} unreachable, ${noVersionDomains.length} resolved no version`)
+
+  // A version source that returns nothing is not the same as an upstream being
+  // unreachable, and until now it was neither counted nor surfaced — just one
+  // `no versions found` line among six hundred. The package silently freezes at
+  // whatever was last hand-committed, and nothing ever says so. go.dev sat on
+  // 1.26.1 that way for months, because golang/go publishes no GitHub releases
+  // at all and its `github-releases` source could never have worked.
+  //
+  // Surfaced as a warning, not a failure: ~80 recipes are in this state today
+  // (mostly tagPattern mismatches), so failing the sweep would make the run
+  // permanently red and train everyone to ignore it. The count belongs in the
+  // summary so the backlog is visible and can be driven down.
+  if (noVersionDomains.length > 0) {
+    const list = noVersionDomains.slice().sort()
+    console.log(`\nVersion sources that resolved nothing (${list.length}): ${list.join(', ')}`)
+    if (process.env.GITHUB_ACTIONS === 'true')
+      console.log(`::warning title=Version sources resolving nothing::${list.length} recipe(s) returned no versions; those packages are frozen at their last committed version. The run log lists them.`)
+
+    const summaryPath = process.env.GITHUB_STEP_SUMMARY
+    if (summaryPath) {
+      try {
+        appendFileSync(summaryPath, [
+          '## Version sources resolving nothing',
+          '',
+          `${list.length} of ${checked} recipes returned no versions, so those packages cannot auto-update.`,
+          '',
+          ...list.map(d => `- ${d}`),
+          '',
+        ].join('\n'))
+      }
+      catch {
+        // A summary we cannot write is not a reason to fail the sweep.
+      }
+    }
+  }
 
   // A rate-limited sweep has not checked anything; it has merely failed to ask.
   // Committing its result would record "no new versions" for every package it
