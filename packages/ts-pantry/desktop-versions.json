@@ -293,8 +293,8 @@
       "name": "Karabiner-Elements",
       "kind": "app",
       "host": "macos",
-      "latest": "16.2.0",
-      "published": "16.2.0",
+      "latest": "16.3.0",
+      "published": "16.3.0",
       "needsUpdate": false
     },
     {
@@ -545,8 +545,8 @@
       "name": "Stats",
       "kind": "app",
       "host": "macos",
-      "latest": "3.0.14",
-      "published": "3.0.14",
+      "latest": "3.0.15",
+      "published": "3.0.15",
       "needsUpdate": false
     },
     {
