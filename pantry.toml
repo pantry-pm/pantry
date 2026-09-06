@@ -1,0 +1,11 @@
+# Pantry's own project configuration.
+#
+# `pantry install` delegates JavaScript dependencies to bun, and this is the
+# one place where pantry's opinion about layout has to agree with bun's. It
+# must stay `hoisted` to match `bunfig.toml`: `better-dx` ships this repo's dev
+# tooling as peer dependencies, and several imports here (for example
+# `@stacksjs/clapp` in `packages/ts-pantry/bin/cli.ts`) resolve through the
+# hoisted root `node_modules`. An isolated layout relays those out and every
+# subsequent `bun` step in CI fails to resolve them.
+[install]
+linker = "hoisted"

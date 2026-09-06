@@ -15,7 +15,7 @@ const LinkerMode = @import("../config/pantry_config.zig").LinkerMode;
 /// when there was nothing to do. A selected package manager that cannot run or
 /// exits unsuccessfully is an install error; callers must not report success
 /// with an incomplete node_modules tree.
-pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verbose: bool, linker: LinkerMode) !bool {
+pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verbose: bool, linker: ?LinkerMode) !bool {
     const package_json_path = try std.fs.path.join(allocator, &.{ project_dir, "package.json" });
     defer allocator.free(package_json_path);
 
@@ -188,7 +188,15 @@ fn resolveBin(allocator: std.mem.Allocator, project_dir: []const u8, name: []con
 /// Build `export PATH='<pantry/.bin>:<old PATH>' && <bin> install` so the child
 /// process — and any lifecycle scripts it spawns — can find node/bun without
 /// requiring the user to have manually activated pantry's env.
-fn buildWrappedCommand(allocator: std.mem.Allocator, project_dir: []const u8, bin: []const u8, pm: []const u8, linker: LinkerMode) ![]u8 {
+///
+/// `linker` is forwarded to Bun ONLY when the project actually configured one
+/// in `pantry.toml` (or passed `--linker`). Forwarding pantry's own default
+/// meant every delegated `bun install` ran `--linker isolated`, which
+/// overrides the project's `bunfig.toml` and relays out an already-hoisted
+/// node_modules — breaking any import that relied on hoisting. When nothing
+/// is configured here, bun reads its own config, which is the correct owner
+/// of that decision.
+fn buildWrappedCommand(allocator: std.mem.Allocator, project_dir: []const u8, bin: []const u8, pm: []const u8, linker: ?LinkerMode) ![]u8 {
     const current_path = io_helper.getenv("PATH") orelse "/usr/local/bin:/usr/bin:/bin";
 
     const path_val = try std.fmt.allocPrint(allocator, "{s}/pantry/.bin:{s}", .{ project_dir, current_path });
@@ -205,18 +213,29 @@ fn buildWrappedCommand(allocator: std.mem.Allocator, project_dir: []const u8, bi
     }
 
     if (std.mem.eql(u8, pm, "bun")) {
-        return try std.fmt.allocPrint(allocator, "export PATH='{s}' && '{s}' install --linker {s}", .{ escaped_path.items, bin, @tagName(linker) });
+        if (linker) |mode| {
+            return try std.fmt.allocPrint(allocator, "export PATH='{s}' && '{s}' install --linker {s}", .{ escaped_path.items, bin, @tagName(mode) });
+        }
     }
 
     return try std.fmt.allocPrint(allocator, "export PATH='{s}' && '{s}' install", .{ escaped_path.items, bin });
 }
 
-test "JS delegate forwards Pantry's linker mode to Bun" {
+test "JS delegate forwards Pantry's linker mode to Bun when one is configured" {
     const allocator = std.testing.allocator;
     const command = try buildWrappedCommand(allocator, "/tmp/pantry-project", "/usr/bin/bun", "bun", .hoisted);
     defer allocator.free(command);
 
     try std.testing.expect(std.mem.endsWith(u8, command, "'/usr/bin/bun' install --linker hoisted"));
+}
+
+test "JS delegate leaves Bun's own linker config alone when none is configured" {
+    const allocator = std.testing.allocator;
+    const command = try buildWrappedCommand(allocator, "/tmp/pantry-project", "/usr/bin/bun", "bun", null);
+    defer allocator.free(command);
+
+    try std.testing.expect(std.mem.endsWith(u8, command, "'/usr/bin/bun' install"));
+    try std.testing.expect(std.mem.indexOf(u8, command, "--linker") == null);
 }
 
 test "JS delegate leaves other package managers' install arguments unchanged" {

@@ -7,7 +7,7 @@
 //! 1. pantry.toml in CWD
 //! 2. Walk up parent directories
 //! 3. ~/.config/pantry/pantry.toml (global fallback)
-//! 4. Defaults (isolated linker, peer=false)
+//! 4. Defaults (linker unset — the JS package manager's own config wins, peer=false)
 
 const std = @import("std");
 const toml = @import("toml.zig");
@@ -54,8 +54,14 @@ pub const PantryConfig = struct {
     }
 
     pub const InstallConfig = struct {
-        /// Linker strategy: isolated (default) or hoisted
-        linker: LinkerMode = .isolated,
+        /// Linker strategy: isolated or hoisted. `null` means "not configured
+        /// here" — pantry then leaves the choice to whatever the delegated JS
+        /// package manager already reads (bun's `bunfig.toml`, and so on).
+        /// Defaulting this to a concrete mode used to make every
+        /// `pantry install` pass `--linker isolated` to bun, silently
+        /// overriding a project's `bunfig.toml` `linker = "hoisted"` and
+        /// re-laying out its node_modules.
+        linker: ?LinkerMode = null,
         /// Whether to auto-install peer dependencies (default: false)
         peer: bool = false,
         /// Whether to install dev dependencies (default: true)
@@ -214,7 +220,7 @@ pub fn parseTomlContent(allocator: std.mem.Allocator, content: []const u8) !Pant
 
 test "default config" {
     const config = PantryConfig{};
-    try std.testing.expectEqual(LinkerMode.isolated, config.install.linker);
+    try std.testing.expect(config.install.linker == null);
     try std.testing.expectEqual(false, config.install.peer);
     try std.testing.expectEqual(true, config.install.dev);
     try std.testing.expectEqual(true, config.install.optional);
@@ -231,11 +237,28 @@ test "parse hoisted config" {
         \\peer = true
     );
 
-    try std.testing.expectEqual(LinkerMode.hoisted, config.install.linker);
+    try std.testing.expectEqual(LinkerMode.hoisted, config.install.linker.?);
     try std.testing.expectEqual(true, config.install.peer);
     // Other fields retain defaults
     try std.testing.expectEqual(true, config.install.dev);
     try std.testing.expectEqual(false, config.install.production);
+}
+
+// The repo's own pantry.toml opens with a comment block. If a leading comment
+// ever stopped the section header from being seen, `pantry install` would fall
+// back to "no linker configured", stop passing `--linker hoisted` to bun, and
+// quietly reintroduce the isolated layout this file exists to prevent.
+test "parse config whose section is preceded by a comment block" {
+    const allocator = std.testing.allocator;
+    const config = try parseTomlContent(allocator,
+        \\# Pantry's own project configuration.
+        \\#
+        \\# Must stay hoisted to match bunfig.toml.
+        \\[install]
+        \\linker = "hoisted"
+    );
+
+    try std.testing.expectEqual(LinkerMode.hoisted, config.install.linker.?);
 }
 
 test "parse production config" {
@@ -281,7 +304,7 @@ test "deinit frees heap-allocated fields" {
 test "parse empty file returns defaults" {
     const allocator = std.testing.allocator;
     const config = try parseTomlContent(allocator, "");
-    try std.testing.expectEqual(LinkerMode.isolated, config.install.linker);
+    try std.testing.expect(config.install.linker == null);
     try std.testing.expectEqual(false, config.install.peer);
 }
 
@@ -295,6 +318,6 @@ test "loadPantryToml returns defaults when no file exists" {
     const allocator = std.testing.allocator;
     // Use a path that definitely won't have pantry.toml
     const config = try loadPantryToml(allocator, "/tmp/nonexistent-pantry-test-path");
-    try std.testing.expectEqual(LinkerMode.isolated, config.install.linker);
+    try std.testing.expect(config.install.linker == null);
     try std.testing.expectEqual(false, config.install.peer);
 }

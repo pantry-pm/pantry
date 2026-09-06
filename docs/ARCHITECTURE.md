@@ -755,9 +755,14 @@ The `audit` command checks installed packages against known vulnerability databa
 [install]
 peer = false
 production = false
-linker = "isolated"      # "isolated" or "hoisted"
+linker = "isolated"      # "isolated" or "hoisted"; unset by default
 modules_dir = "pantry"   # default install directory name
 ```
+
+`linker` has no default. When it is unset, pantry says nothing about layout to
+the JavaScript package manager it delegates to, and bun reads its own
+`bunfig.toml`. Set it only to override that — pantry then passes the mode
+through as `bun install --linker <mode>`.
 
 **pantry.json**/**package.json** (dependencies):
 

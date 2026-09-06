@@ -45,7 +45,9 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const include_peer = ctx.hasOption("peer") or pantry_config.install.peer;
     const offline = ctx.hasOption("offline");
     const filter = ctx.getOption("filter");
-    const linker = if (ctx.getOption("linker")) |value|
+    // Optional on purpose: unset means "pantry has no opinion", and a
+    // delegated `bun install` is then left to read its own bunfig.toml.
+    const linker: ?lib.config.LinkerMode = if (ctx.getOption("linker")) |value|
         lib.config.LinkerMode.fromString(value) orelse {
             style.printForced("Error: --linker must be 'isolated' or 'hoisted'\n", .{});
             std.process.exit(1);

@@ -70,6 +70,18 @@ jobs:
         with:
           bun-version: latest
 
+      # Before `bun install`, never between it and the steps that need
+      # node_modules. This action installs the released pantry binary and runs
+      # `pantry install`, which lays out node_modules itself — when it ran in
+      # the middle of the job it relaid an already-hoisted tree as isolated and
+      # every `bun ...` step after it failed to resolve its imports. Every
+      # other workflow here already sets pantry up first; this one didn't, and
+      # it is the only one that broke.
+      - name: Setup Pantry & Zig (zig is needed to format generated.zig)
+        uses: ./packages/action
+
+      # Last word on node_modules. Any step below can rely on the hoisted
+      # layout that bunfig.toml (and pantry.toml) ask for.
       - name: Install dependencies
         run: bun install
 
@@ -171,9 +183,6 @@ jobs:
       # (packages/zig/src/packages/generated.zig). Regenerate it from the freshly
       # fetched recipe versions so the binary always sees current versions — this
       # used to be skipped, leaving the catalog months stale.
-      - name: Setup Pantry & Zig (to format generated.zig)
-        uses: ./packages/action
-
       - name: Regenerate Zig package catalog
         run: |
           cd packages/ts-pantry

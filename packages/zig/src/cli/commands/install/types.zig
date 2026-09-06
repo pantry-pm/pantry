@@ -35,7 +35,7 @@ pub const InstallOptions = struct {
     dry_run: bool = false, // Preview without installing
     no_save: bool = false, // Skip updating package.json or lockfile
     filter: ?[]const u8 = null, // Filter pattern for workspace packages
-    linker: LinkerMode = .isolated, // Linker strategy (default: isolated, opt-in: hoisted)
+    linker: ?LinkerMode = null, // Linker strategy forwarded to a delegated JS package manager; null = leave that manager's own config alone
     modules_dir: []const u8 = "pantry", // Install directory name (default: pantry, or node_modules for Node.js compat)
     auto_link: bool = true, // Auto-discover and link unresolved link: deps from common project dirs
     link_search_paths: ?[]const u8 = null, // Comma-separated search dirs for auto-link (null = use defaults)

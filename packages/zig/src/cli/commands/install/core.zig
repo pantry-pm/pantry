@@ -38,7 +38,7 @@ fn resolutionLockMatches(
 /// Fast path: check if all packages are already installed without doing expensive
 /// workspace detection, config loading, hook execution, etc.
 /// Returns a CommandResult if everything is up-to-date, null otherwise.
-fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i64, modules_dir: []const u8, linker: types.LinkerMode) !?types.CommandResult {
+fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i64, modules_dir: []const u8, linker: ?types.LinkerMode) !?types.CommandResult {
     const detector = @import("../../../deps/detector.zig");
     const parser = @import("../../../deps/parser.zig");
     const lockfile_reader = @import("../../../packages/lockfile.zig");
