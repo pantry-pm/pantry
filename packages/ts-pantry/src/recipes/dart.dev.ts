@@ -8,8 +8,28 @@ export const recipe: Recipe = {
   github: 'https://github.com/dart-lang/sdk',
   programs: ['dart', 'dartaotruntime'],
   versionSource: {
-    type: 'github-releases',
-    repo: 'dart-lang/sdk',
+    // dart-lang/sdk tags every internal package (`meta-v1.3.0-nullsafety.2`,
+    // `analyzer-0.33.6+1`) and its release tags are not what the build uses —
+    // the download below is keyed on the SDK version under dart-archive. Read
+    // that bucket directly so the two agree, the same shape ziglang.org uses.
+    type: 'custom',
+    async fetch() {
+      const resp = await fetch(
+        'https://storage.googleapis.com/storage/v1/b/dart-archive/o?prefix=channels/stable/release/&delimiter=/&maxResults=1000',
+        { headers: { 'User-Agent': 'pantry-version-fetcher' }, signal: AbortSignal.timeout(30000) },
+      )
+      if (!resp.ok)
+        return []
+      const listing = await resp.json() as { prefixes?: string[] }
+      return (listing.prefixes ?? [])
+        .map(prefix => prefix.split('/').filter(Boolean).pop() ?? '')
+        .filter(version => /^\d+\.\d+\.\d+$/.test(version))
+        .sort((a, b) => {
+          const x = a.split('.').map(Number)
+          const y = b.split('.').map(Number)
+          return (y[0] - x[0]) || (y[1] - x[1]) || (y[2] - x[2])
+        })
+    },
   },
 
   build: {

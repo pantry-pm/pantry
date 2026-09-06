@@ -9,8 +9,33 @@ export const recipe: Recipe = {
   programs: ['flutter', 'dart'],
   platforms: ['darwin', 'linux/x86-64'],
   versionSource: {
-    type: 'github-releases',
-    repo: 'flutter/flutter',
+    // flutter/flutter's releases are `3.19.0-0.1.pre` betas; the stable
+    // versions the DIST urls below are keyed on live in the same releases
+    // index the official installer reads.
+    type: 'custom',
+    async fetch() {
+      const resp = await fetch(
+        'https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json',
+        { headers: { 'User-Agent': 'pantry-version-fetcher' }, signal: AbortSignal.timeout(30000) },
+      )
+      if (!resp.ok)
+        return []
+      const index = await resp.json() as { releases?: Array<{ version?: string, channel?: string }> }
+      const seen = new Set<string>()
+      for (const release of index.releases ?? []) {
+        if (release.channel !== 'stable' || typeof release.version !== 'string')
+          continue
+        // Stable channel still carries the odd `-pre`; the tarballs we fetch
+        // are named for plain releases only.
+        if (/^\d+\.\d+\.\d+$/.test(release.version))
+          seen.add(release.version)
+      }
+      return [...seen].sort((a, b) => {
+        const x = a.split('.').map(Number)
+        const y = b.split('.').map(Number)
+        return (y[0] - x[0]) || (y[1] - x[1]) || (y[2] - x[2])
+      })
+    },
   },
   dependencies: {
     'git-scm.org': '*',
