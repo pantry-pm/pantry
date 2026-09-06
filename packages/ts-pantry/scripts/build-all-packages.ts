@@ -1349,6 +1349,11 @@ const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'curl.se', // Pantry links against OpenSSL 3; pkgx's build still requires OpenSSL 1.1
 ])
 
+/** Does this package match one of the `-p` selectors? */
+export function matchesRequestedPackage(domain: string, name: string, requested: string[]): boolean {
+  return requested.some(d => domain === d || name === d || domain.startsWith(`${d}/`))
+}
+
 // Is this exact artifact already on pkgx? A HEAD, so we never pull the body.
 //
 // Deliberately fail-CLOSED: anything other than a confirmed 200 — a 404, a
@@ -2451,12 +2456,20 @@ Options:
       console.log(`Excluded ${dropped} GUI app(s) from source build (built via --apps-only path)`)
   }
 
-  // Filter by specific packages if provided
+  // Filter by specific packages if provided.
+  //
+  // Match the domain exactly, the name exactly, or a PATH CHILD — `python.org`
+  // legitimately selects `python.org/typing_extensions`. What it must not do is
+  // substring-match: `p.domain.includes(d)` made `-p vim.org` select
+  // `macvim.org` and `lunarvim.org`, and `-p python.org` select `ipython.org`.
+  //
+  // That is not merely wasteful. A targeted publish now fails when a requested
+  // build fails, so an unrelated package dragged in by a substring could turn a
+  // vim.org publish red — and the darwin-native gate uses this same matcher, so
+  // it could allocate a Mac for packages nobody asked about.
   if (values.package) {
-    const domains = values.package.split(',').map(d => d.trim())
-    allPackages = allPackages.filter(p =>
-      domains.some(d => p.domain === d || p.domain.includes(d) || p.name === d)
-    )
+    const domains = values.package.split(',').map(d => d.trim()).filter(Boolean)
+    allPackages = allPackages.filter(p => matchesRequestedPackage(p.domain, p.name, domains))
   }
 
   // Apply batch slicing

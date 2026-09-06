@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { pkgxHasPrebuilt } from './build-all-packages'
+import { matchesRequestedPackage, pkgxHasPrebuilt } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -99,5 +99,33 @@ describe('targeted-build failure classification', () => {
   test('an unknown domain is treated as fatal', () => {
     const { fatal } = classify([['mystery.org@1.0.0', { version: '1.0.0' }]], latest, new Set())
     expect(fatal).toHaveLength(1)
+  })
+})
+
+describe('matchesRequestedPackage', () => {
+  const sel = (domain: string, name: string, ...req: string[]) =>
+    matchesRequestedPackage(domain, name, req)
+
+  test('matches the domain or the name exactly', () => {
+    expect(sel('cmake.org', 'cmake', 'cmake.org')).toBe(true)
+    expect(sel('cmake.org', 'cmake', 'cmake')).toBe(true)
+  })
+
+  test('matches a path child, which is a real selector', () => {
+    expect(sel('python.org/typing_extensions', 'typing_extensions', 'python.org')).toBe(true)
+    expect(sel('apache.org/apr', 'apr', 'apache.org')).toBe(true)
+  })
+
+  // The bug this replaced: `p.domain.includes(d)` pulled unrelated packages into
+  // a targeted publish, so a vim.org release could go red because macvim failed,
+  // and the darwin gate could allocate a Mac for packages nobody asked about.
+  test('does not match an unrelated package that merely contains the string', () => {
+    expect(sel('macvim.org', 'macvim', 'vim.org')).toBe(false)
+    expect(sel('lunarvim.org', 'lunarvim', 'vim.org')).toBe(false)
+    expect(sel('ipython.org', 'ipython', 'python.org')).toBe(false)
+  })
+
+  test('a path child does not match a longer sibling prefix', () => {
+    expect(sel('python.organisation.example', 'x', 'python.org')).toBe(false)
   })
 })
