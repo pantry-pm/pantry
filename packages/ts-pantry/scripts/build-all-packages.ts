@@ -1349,6 +1349,29 @@ const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'curl.se', // Pantry links against OpenSSL 3; pkgx's build still requires OpenSSL 1.1
 ])
 
+// Is this exact artifact already on pkgx? A HEAD, so we never pull the body.
+//
+// Deliberately fail-CLOSED: anything other than a confirmed 200 — a 404, a
+// timeout, a DNS blip, a non-mappable platform — answers "no". Every caller
+// uses this to decide whether some work can be SKIPPED, so an inconclusive
+// probe has to mean "do the work". Getting that backwards would silently drop
+// an artifact, which is the failure mode this whole area keeps producing.
+export async function pkgxHasPrebuilt(domain: string, version: string, platform: string): Promise<boolean> {
+  const m = pkgxDistArch(platform)
+  if (!m)
+    return false
+  try {
+    const res = await fetch(`https://dist.pkgx.dev/${domain}/${m.os}/${m.arch}/v${version}.tar.xz`, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(15_000),
+    })
+    return res.ok
+  }
+  catch {
+    return false
+  }
+}
+
 // Map our platform string (darwin-arm64 / linux-x86-64) to pkgx's dist os/arch.
 function pkgxDistArch(platform: string): { os: string, arch: string } | null {
   const dash = platform.indexOf('-')
@@ -1708,6 +1731,11 @@ async function main() {
       // so it answers "which of THESE domains need a build on THIS platform" —
       // used to gate the darwin-native macOS job in publish-changed-packages.
       'print-selected': { type: 'boolean', default: false },
+      // Drop domains from --print-selected whose every selected version is
+      // already available as a pkgx prebuilt for the target platform. Used to
+      // stop publish-changed-packages allocating a macOS runner for work the
+      // cheap ubuntu mirror leg is about to do anyway.
+      'exclude-pkgx-covered': { type: 'boolean', default: false },
       list: { type: 'boolean', short: 'l', default: false },
       'dry-run': { type: 'boolean', default: false },
       'apps-only': { type: 'boolean', default: false },
@@ -2466,7 +2494,26 @@ Options:
   // stdout; empty when nothing matches. Lets a caller cheaply decide whether a
   // native macOS build is even needed before allocating a (10x) mac runner.
   if (values['print-selected']) {
-    console.log(packagesToBuild.map(p => p.domain).join(' '))
+    let selected = packagesToBuild
+    if (values['exclude-pkgx-covered']) {
+      // Drop a domain only when EVERY version this run would build is already
+      // a pkgx prebuilt for the target. The caller uses the result to decide
+      // whether to allocate a native runner, so one unconfirmed version keeps
+      // the whole domain in the set — pkgxHasPrebuilt fails closed, so a flaky
+      // probe costs a redundant runner rather than a missing artifact.
+      const kept: typeof packagesToBuild = []
+      for (const pkg of packagesToBuild) {
+        const versions = await selectVersionsForBuild(pkg, maxVersions)
+        const covered = versions.length > 0
+          && (await Promise.all(versions.map(v => pkgxHasPrebuilt(pkg.domain, v, platform)))).every(Boolean)
+        if (covered)
+          console.error(`  pkgx already has every selected ${pkg.domain} version for ${platform} — no native runner needed`)
+        else
+          kept.push(pkg)
+      }
+      selected = kept
+    }
+    console.log(selected.map(p => p.domain).join(' '))
     process.exit(0)
   }
 
@@ -2720,7 +2767,12 @@ else {
   }
 }
 
-main().catch((error) => {
-  console.error('Build all packages failed:', error.message)
-  process.exit(1)
-})
+// Guarded so the module can be imported by tests without launching a build —
+// the same shape build-package.ts, check-desktop-updates.ts and the rest of
+// scripts/ already use.
+if (import.meta.main) {
+  main().catch((error) => {
+    console.error('Build all packages failed:', error.message)
+    process.exit(1)
+  })
+}
