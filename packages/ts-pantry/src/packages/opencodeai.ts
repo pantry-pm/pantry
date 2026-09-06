@@ -3,7 +3,7 @@
  *
  * @domain `opencode.ai`
  * @programs `opencode`
- * @version `1.18.26` (176 versions available)
+ * @version `1.18.29` (179 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install opencode.ai`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "opencode.ai"
  * console.log(pkg.description) // "The open source coding agent."
  * console.log(pkg.programs)    // ["opencode"]
- * console.log(pkg.versions[0]) // "1.18.26" (latest)
+ * console.log(pkg.versions[0]) // "1.18.29" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/opencode-ai.md
@@ -64,6 +64,9 @@ export const opencodeaiPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.18.29',
+    '1.18.28',
+    '1.18.27',
     '1.18.26',
     '1.18.25',
     '1.18.24',

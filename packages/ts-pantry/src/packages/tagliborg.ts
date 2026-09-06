@@ -3,7 +3,7 @@
  *
  * @domain `taglib.org`
  * @programs `taglib-config`
- * @version `2.2.1` (8 versions available)
+ * @version `2.3.2` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install taglib.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "taglib-config"
  * console.log(pkg.description) // "TagLib Audio Meta-Data Library"
  * console.log(pkg.programs)    // ["taglib-config"]
- * console.log(pkg.versions[0]) // "2.2.1" (latest)
+ * console.log(pkg.versions[0]) // "2.3.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/taglib-org.md
@@ -77,6 +77,7 @@ export const tagliborgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.2',
     '2.3.1',
     '2.3',
     '2.2.1',

@@ -3,7 +3,7 @@
  *
  * @domain `fastlane.tools`
  * @programs `fastlane`
- * @version `2.232.2` (31 versions available)
+ * @version `2.239.0` (59 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fastlane.tools`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "fastlane"
  * console.log(pkg.description) // "🚀 The easiest way to automate building and rel..."
  * console.log(pkg.programs)    // ["fastlane"]
- * console.log(pkg.versions[0]) // "2.232.2" (latest)
+ * console.log(pkg.versions[0]) // "2.239.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fastlane-tools.md
@@ -68,6 +68,7 @@ export const fastlanetoolsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.239.0',
     '2.238.0',
     '2.237.0',
     '2.236.1',

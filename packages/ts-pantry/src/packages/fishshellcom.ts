@@ -3,7 +3,7 @@
  *
  * @domain `fishshell.com`
  * @programs `fish`, `fish_indent`, `fish_key_reader`
- * @version `4.5.0` (25 versions available)
+ * @version `4.9.2` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fishshell.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "fish"
  * console.log(pkg.description) // "User-friendly command-line shell for UNIX-like ..."
  * console.log(pkg.programs)    // ["fish", "fish_indent", ...]
- * console.log(pkg.versions[0]) // "4.5.0" (latest)
+ * console.log(pkg.versions[0]) // "4.9.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fishshell-com.md
@@ -78,6 +78,9 @@ export const fishshellcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.9.2',
+    '4.9.1',
+    '4.9.0',
     '4.8.1',
     '4.8.0',
     '4.7.1',

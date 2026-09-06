@@ -3,7 +3,7 @@
  *
  * @domain `microcks.io`
  * @programs `microcks-cli`
- * @version `1.0.2` (9 versions available)
+ * @version `1.0.3` (18 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install microcks.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "microcks-cli"
  * console.log(pkg.description) // "Simple CLI for interacting with Microcks test APIs"
  * console.log(pkg.programs)    // ["microcks-cli"]
- * console.log(pkg.versions[0]) // "1.0.2" (latest)
+ * console.log(pkg.versions[0]) // "1.0.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/microcks-io.md
@@ -74,6 +74,7 @@ export const microcksioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.3',
     '1.0.2',
     '1.0.1',
     '1.0.0',

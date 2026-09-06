@@ -3,7 +3,7 @@
  *
  * @domain `vitess.io`
  * @programs `mysqlctl`, `mysqlctld`, `vtorc`, `vtctld`, `vtctldclient`, ... (+4 more)
- * @version `24.0.2` (71 versions available)
+ * @version `24.0.3` (73 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install vitess.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "vitess"
  * console.log(pkg.description) // "Horizontally scalable MySQL: a database cluste..."
  * console.log(pkg.programs)    // ["vtgate", "vttablet", ...]
- * console.log(pkg.versions[0]) // "24.0.2" (latest)
+ * console.log(pkg.versions[0]) // "24.0.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/vitess-io.md
@@ -91,9 +91,11 @@ export const vitessioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '24.0.3',
     '24.0.2',
     '24.0.1',
     '24.0.0',
+    '23.0.6',
     '23.0.5',
     '23.0.4',
     '23.0.3',

@@ -3,7 +3,7 @@
  *
  * @domain `spacetimedb.com`
  * @programs `spacetime`
- * @version `2023.12.8` (63 versions available)
+ * @version `2023.12.8` (64 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install spacetimedb.com`
@@ -77,6 +77,7 @@ export const spacetimedbcomPackage = {
   versions: [
     '2023.12.8',
     '2023.8.12',
+    '2.10.0',
     '2.9.0',
     '2.8.3',
     '2.8.2',

@@ -3,7 +3,7 @@
  *
  * @domain `watchexec.github.io`
  * @programs `watchexec`
- * @version `2.7.0` (54 versions available)
+ * @version `2.7.1` (55 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install watchexec.github.io`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "watchexec"
  * console.log(pkg.description) // "Executes commands in response to file modificat..."
  * console.log(pkg.programs)    // ["watchexec"]
- * console.log(pkg.versions[0]) // "2.7.0" (latest)
+ * console.log(pkg.versions[0]) // "2.7.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/watchexec-github-io.md
@@ -60,6 +60,7 @@ export const watchexecgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.7.1',
     '2.7.0',
     '2.6.1',
     '2.6.0',

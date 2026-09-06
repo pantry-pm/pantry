@@ -3,7 +3,7 @@
  *
  * @domain `traefik.io`
  * @programs `traefik`
- * @version `3.7.12` (86 versions available)
+ * @version `3.7.13` (88 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install traefik.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "traefik"
  * console.log(pkg.description) // "The Cloud Native Application Proxy"
  * console.log(pkg.programs)    // ["traefik"]
- * console.log(pkg.versions[0]) // "3.7.12" (latest)
+ * console.log(pkg.versions[0]) // "3.7.13" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/traefik-io.md
@@ -67,6 +67,7 @@ export const traefikioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.7.13',
     '3.7.12',
     '3.7.11',
     '3.7.10',
@@ -121,6 +122,7 @@ export const traefikioPackage = {
     '3.3.7',
     '3.3.6',
     '3.3.5',
+    '2.11.57',
     '2.11.56',
     '2.11.55',
     '2.11.54',

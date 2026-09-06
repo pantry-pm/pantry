@@ -3,7 +3,7 @@
  *
  * @domain `moonrepo.dev/moon`
  * @programs `moon`
- * @version `2.5.3` (114 versions available)
+ * @version `2.5.4` (115 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install moonrepo.dev/moon`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "moon"
  * console.log(pkg.description) // "A build system and monorepo management tool for..."
  * console.log(pkg.programs)    // ["moon"]
- * console.log(pkg.versions[0]) // "2.5.3" (latest)
+ * console.log(pkg.versions[0]) // "2.5.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/moonrepo-dev/moon.md
@@ -60,6 +60,7 @@ export const moonrepodevmoonPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.5.4',
     '2.5.3',
     '2.5.2',
     '2.5.1',

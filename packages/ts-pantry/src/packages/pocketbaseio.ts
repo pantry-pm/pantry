@@ -3,7 +3,7 @@
  *
  * @domain `pocketbase.io`
  * @programs `pocketbase`
- * @version `0.40.1` (86 versions available)
+ * @version `0.40.2` (88 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pocketbase.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pocketbase"
  * console.log(pkg.description) // "Open source backend for your next project in 1 ..."
  * console.log(pkg.programs)    // ["pocketbase"]
- * console.log(pkg.versions[0]) // "0.40.1" (latest)
+ * console.log(pkg.versions[0]) // "0.40.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pocketbase-io.md
@@ -67,6 +67,7 @@ export const pocketbaseioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.40.2',
     '0.40.1',
     '0.40.0',
     '0.39.11',
@@ -131,6 +132,7 @@ export const pocketbaseioPackage = {
     '0.26.3',
     '0.26.2',
     '0.26.1',
+    '0.22.54',
     '0.22.53',
     '0.22.52',
     '0.22.51',

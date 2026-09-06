@@ -3,7 +3,7 @@
  *
  * @domain `cmake.org`
  * @programs `cmake`, `ccmake`, `cpack`, `ctest`
- * @version `4.4.3` (94 versions available)
+ * @version `4.4.3` (96 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cmake.org`
@@ -81,11 +81,13 @@ export const cmakePackage = {
     '4.4.2',
     '4.4.1',
     '4.4.0',
+    '4.3.5',
     '4.3.4',
     '4.3.3',
     '4.3.2',
     '4.3.1',
     '4.3.0',
+    '4.2.8',
     '4.2.7',
     '4.2.6',
     '4.2.5',

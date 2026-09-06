@@ -3,7 +3,7 @@
  *
  * @domain `llm.datasette.io`
  * @programs `llm`
- * @version `0.33` (48 versions available)
+ * @version `0.34` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install llm.datasette.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "llm"
  * console.log(pkg.description) // "Access large language models from the command-line"
  * console.log(pkg.programs)    // ["llm"]
- * console.log(pkg.versions[0]) // "0.33" (latest)
+ * console.log(pkg.versions[0]) // "0.34" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/llm-datasette-io.md
@@ -67,6 +67,7 @@ export const llmdatasetteioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.34',
     '0.33',
     '0.32.1',
     '0.32',

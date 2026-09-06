@@ -3,7 +3,7 @@
  *
  * @domain `podman.io`
  * @programs `podman`, `podman-remote`, `podman-mac-helper`
- * @version `5.8.1` (47 versions available)
+ * @version `6.1.1` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install podman.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "podman"
  * console.log(pkg.description) // "Podman: A tool for managing OCI containers and ..."
  * console.log(pkg.programs)    // ["podman", "podman-remote", ...]
- * console.log(pkg.versions[0]) // "5.8.1" (latest)
+ * console.log(pkg.versions[0]) // "6.1.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/podman-io.md
@@ -80,6 +80,7 @@ export const podmanioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.1.1',
     '6.1.0',
     '6.0.2',
     '6.0.1',

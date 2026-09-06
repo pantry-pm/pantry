@@ -3,7 +3,7 @@
  *
  * @domain `rubygems.org`
  * @programs `bundle`, `bundler`, `gem`
- * @version `4.0.8` (69 versions available)
+ * @version `4.0.20` (58 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install rubygems.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "rubygems"
  * console.log(pkg.description) // "Powerful, clean, object-oriented scripting lang..."
  * console.log(pkg.programs)    // ["bundle", "bundler", ...]
- * console.log(pkg.versions[0]) // "4.0.8" (latest)
+ * console.log(pkg.versions[0]) // "4.0.20" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/rubygems-org.md
@@ -69,6 +69,7 @@ export const rubygemsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.0.20',
     '4.0.19',
     '4.0.18',
     '4.0.17',

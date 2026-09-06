@@ -3,7 +3,7 @@
  *
  * @domain `plakar.io`
  * @programs `plakar`
- * @version `1.0.6` (5 versions available)
+ * @version `1.1.5` (48 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install plakar.io`
@@ -16,7 +16,7 @@
  * const pkg = pantry.plakario
  * console.log(pkg.name)        // "plakar"
  * console.log(pkg.programs)    // ["plakar"]
- * console.log(pkg.versions[0]) // "1.0.6" (latest)
+ * console.log(pkg.versions[0]) // "1.1.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/plakar-io.md
@@ -65,6 +65,7 @@ export const plakarioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.1.5',
     '1.1.4',
     '1.1.3',
     '1.1.2',

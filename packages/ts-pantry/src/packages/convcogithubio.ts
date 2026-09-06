@@ -3,7 +3,7 @@
  *
  * @domain `convco.github.io`
  * @programs `convco`
- * @version `0.6.3` (10 versions available)
+ * @version `0.7.2` (36 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install convco.github.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "convco"
  * console.log(pkg.description) // "Conventional commits, changelog, versioning, va..."
  * console.log(pkg.programs)    // ["convco"]
- * console.log(pkg.versions[0]) // "0.6.3" (latest)
+ * console.log(pkg.versions[0]) // "0.7.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/convco-github-io.md
@@ -67,6 +67,7 @@ export const convcogithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.7.2',
     '0.7.1',
     '0.7.0',
     '0.6.4',
