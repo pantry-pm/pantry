@@ -3,7 +3,7 @@
  *
  * @domain `mupdf.com`
  * @programs `mupdf-gl`, `muraster`, `mutool`
- * @version `1.28.3` (53 versions available)
+ * @version `1.28.3` (79 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mupdf.com`
@@ -142,6 +142,32 @@ export const mupdfcomPackage = {
     '1.23.8',
     '1.23.7',
     '1.23.6',
+    '1.23.5',
+    '1.23.4',
+    '1.23.3',
+    '1.23.2',
+    '1.23.1',
+    '1.23.0',
+    '1.23.0-rc1',
+    '1.22.2',
+    '1.22.1',
+    '1.22.0',
+    '1.22.0-rc1',
+    '1.21.1',
+    '1.21.0',
+    '1.21.0-rc1',
+    '1.20.3',
+    '1.20.2',
+    '1.20.1',
+    '1.20.0',
+    '1.20.0-rc2',
+    '1.20.0-rc1',
+    '1.19.1',
+    '1.19.0',
+    '1.19.0-rc2',
+    '1.19.0-rc1',
+    '1.18.0',
+    '1.18.0-rc1',
   ] as const,
   aliases: [] as const,
 }

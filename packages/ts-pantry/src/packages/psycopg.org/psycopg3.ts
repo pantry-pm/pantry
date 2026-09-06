@@ -2,7 +2,7 @@
  * **psycopg3** - New generation PostgreSQL database adapter for the Python programming language
  *
  * @domain `psycopg.org/psycopg3`
- * @version `3.3.5` (27 versions available)
+ * @version `3.3.5` (65 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install psycopg.org/psycopg3`
@@ -87,6 +87,44 @@ export const psycopgorgpsycopg3Package = {
     '3.1.17',
     '3.1.16',
     '3.1.15',
+    '3.1.14',
+    '3.1.13',
+    '3.1.12',
+    '3.1.11',
+    '3.1.10',
+    '3.1.9',
+    '3.1.8',
+    '3.1.7',
+    '3.1.6',
+    '3.1.5',
+    '3.1.4',
+    '3.1.3',
+    '3.1.2',
+    '3.1.1',
+    '3.1',
+    '3.0.18',
+    '3.0.17',
+    '3.0.16',
+    '3.0.15',
+    '3.0.14',
+    '3.0.13',
+    '3.0.12',
+    '3.0.11',
+    '3.0.10',
+    '3.0.9',
+    '3.0.8',
+    '3.0.7',
+    '3.0.6',
+    '3.0.5',
+    '3.0.4',
+    '3.0.3',
+    '3.0.2',
+    '3.0.1',
+    '3.0',
+    '3.0.dev2',
+    '3.0.dev1',
+    '3.0.dev0',
+    '3.0.beta1',
   ] as const,
   aliases: [] as const,
 }

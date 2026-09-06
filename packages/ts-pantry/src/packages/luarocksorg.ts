@@ -3,7 +3,7 @@
  *
  * @domain `luarocks.org`
  * @programs `luarocks`, `luarocks-admin`
- * @version `3.13.0` (8 versions available)
+ * @version `3.13.0` (81 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install luarocks.org`
@@ -134,8 +134,30 @@ export const luarocksorgPackage = {
     '2.0.7.1',
     '2.0.7',
     '2.0.6',
+    '2.0.6-rc1',
     '2.0.5',
+    '2.0.5-rc1',
     '2.0.4.1',
+    '2.0.4',
+    '2.0.3',
+    '2.0.3-final',
+    '2.0.2',
+    '2.0.1',
+    '2.0',
+    '1.0.1',
+    '1.0',
+    '0.5.2',
+    '0.5.1',
+    '0.5',
+    '0.4.3',
+    '0.4.2',
+    '0.4.1',
+    '0.4',
+    '0.3.2',
+    '0.3.1',
+    '0.3',
+    '0.2',
+    '0.1',
   ] as const,
   aliases: [] as const,
 }

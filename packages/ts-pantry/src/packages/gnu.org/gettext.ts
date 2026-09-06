@@ -3,7 +3,7 @@
  *
  * @domain `gnu.org/gettext`
  * @programs `autopoint`, `envsubst`, `gettext`, `gettext.sh`, `gettextize`, ... (+17 more)
- * @version `1.0.0` (8 versions available)
+ * @version `1.0.0` (68 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/gettext`
@@ -149,6 +149,23 @@ export const gnuorggettextPackage = {
     '0.14.4',
     '0.14.3',
     '0.14.2',
+    '0.14.1',
+    '0.14',
+    '0.13.1',
+    '0.13',
+    '0.12.1',
+    '0.12',
+    '0.11.5',
+    '0.11.4',
+    '0.11.3',
+    '0.11.2',
+    '0.11.1',
+    '0.11',
+    '0.10.40',
+    '0.10.39',
+    '0.10.38',
+    '0.10.37',
+    '0.10.36',
   ] as const,
   aliases: [] as const,
 }

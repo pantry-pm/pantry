@@ -3,7 +3,7 @@
  *
  * @domain `postgresql.org`
  * @programs `clusterdb`, `createdb`, `dropdb`, `dropuser`, `ecpg`, ... (+23 more)
- * @version `18.0.0` (13 versions available)
+ * @version `18.6` (88 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install postgresql.org`
@@ -25,7 +25,7 @@
  * console.log(pkg.name)        // "postgresql"
  * console.log(pkg.description) // "Mirror of the official PostgreSQL GIT repositor..."
  * console.log(pkg.programs)    // ["clusterdb", "createdb", ...]
- * console.log(pkg.versions[0]) // "18.0.0" (latest)
+ * console.log(pkg.versions[0]) // "18.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/postgresql-org.md
@@ -154,11 +154,49 @@ export const postgresPackage = {
     '16.1.0',
     '16.0',
     '16.0.0',
+    '15.19',
     '15.18',
     '15.17',
     '15.16',
+    '15.15',
+    '15.14',
+    '15.13',
+    '15.12',
+    '15.11',
+    '15.10',
+    '15.9',
+    '15.8',
+    '15.7',
+    '15.6',
+    '15.5',
+    '15.4',
+    '15.3',
+    '15.2',
     '15.2.0',
+    '15.1',
+    '15.0',
+    '14.24',
+    '14.23',
+    '14.22',
+    '14.21',
+    '14.20',
+    '14.19',
+    '14.18',
+    '14.17',
+    '14.16',
+    '14.15',
+    '14.14',
+    '14.13',
+    '14.12',
+    '14.11',
+    '14.10',
+    '14.9',
+    '14.8',
+    '14.7',
     '14.7.0',
+    '14.6',
+    '14.5',
+    '14.4',
     '13.12.0',
     '13.11.0',
     '13.9.0',

@@ -3,7 +3,7 @@
  *
  * @domain `swig.org`
  * @programs `swig`, `ccache-swig`
- * @version `4.5.1` (50 versions available)
+ * @version `4.5.1` (68 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install swig.org`
@@ -118,6 +118,24 @@ export const swigorgPackage = {
     '1.3.37',
     '1.3.36',
     '1.3.35',
+    '1.3.34',
+    '1.3.33',
+    '1.3.32',
+    '1.3.31',
+    '1.3.30',
+    '1.3.29',
+    '1.3.28',
+    '1.3.27',
+    '1.3.26',
+    '1.3.25',
+    '1.3.24',
+    '1.3.23',
+    '1.3.22',
+    '1.3.18',
+    '1.3.17',
+    '1.3.15',
+    '1.3.7',
+    '1.3.6',
   ] as const,
   aliases: [] as const,
 }

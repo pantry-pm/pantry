@@ -3,7 +3,7 @@
  *
  * @domain `haskell.org`
  * @programs `ghc`, `ghc-{{version.marketing}}`, `ghc-{{version}}`, `ghc-pkg`, `ghc-pkg-{{version.marketing}}`, ... (+23 more)
- * @version `9.14.1` (21 versions available)
+ * @version `9.14.1` (38 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install haskell.org`
@@ -126,11 +126,25 @@ export const haskellorgPackage = {
     '9.6.4',
     '9.6.3',
     '9.6.2',
+    '9.6.1',
     '9.4.8',
     '9.4.7',
+    '9.4.6',
+    '9.4.5',
     '9.4.4',
+    '9.4.3',
+    '9.4.2',
+    '9.4.1',
     '9.2.8',
+    '9.2.7',
+    '9.2.6',
+    '9.2.5',
+    '9.2.4',
+    '9.2.3',
+    '9.2.2',
+    '9.2.1',
     '9.0.2',
+    '9.0.1',
     '8.10.7',
   ] as const,
   aliases: [] as const,

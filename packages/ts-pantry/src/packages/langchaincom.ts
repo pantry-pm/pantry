@@ -3,7 +3,7 @@
  *
  * @domain `langchain.com`
  * @programs `f2py`, `jsondiff`, `jsonpatch`, `jsonpointer`, `langchain-server`, ... (+2 more)
- * @version `0.1.16` (29 versions available)
+ * @version `langchain==0.3.28` (139 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install langchain.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "langchain"
  * console.log(pkg.description) // "🦜🔗 Build context-aware reasoning applications"
  * console.log(pkg.programs)    // ["f2py", "jsondiff", ...]
- * console.log(pkg.versions[0]) // "0.1.16" (latest)
+ * console.log(pkg.versions[0]) // "langchain==0.3.28" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/langchain-com.md
@@ -126,6 +126,54 @@ export const langchaincomPackage = {
     '0.0.333',
     '0.0.332',
     '0.0.331',
+    '0.0.330',
+    '0.0.329',
+    '0.0.327',
+    '0.0.326',
+    '0.0.325',
+    '0.0.324',
+    '0.0.323',
+    '0.0.322',
+    '0.0.321',
+    '0.0.320',
+    '0.0.319',
+    '0.0.318',
+    '0.0.317',
+    '0.0.316',
+    '0.0.315',
+    '0.0.314',
+    '0.0.313',
+    '0.0.312',
+    '0.0.311',
+    '0.0.310',
+    '0.0.309',
+    '0.0.308',
+    '0.0.307',
+    '0.0.306',
+    '0.0.305',
+    '0.0.304',
+    '0.0.303',
+    '0.0.302',
+    '0.0.301',
+    '0.0.300',
+    '0.0.299',
+    '0.0.298',
+    '0.0.297',
+    '0.0.296',
+    '0.0.295',
+    '0.0.294',
+    '0.0.293',
+    '0.0.292',
+    '0.0.291',
+    '0.0.290',
+    '0.0.289',
+    '0.0.288',
+    '0.0.287',
+    '0.0.286',
+    '0.0.285',
+    '0.0.284',
+    '0.0.283',
+    '0.0.281',
     'langchain-xai==1.2.2',
     'langchain-text-splitters==1.1.1',
     'langchain-tests==1.1.5',
@@ -133,17 +181,14 @@ export const langchaincomPackage = {
     'langchain-standard-tests==1.1.3',
     'langchain-openrouter==0.1.0',
     'langchain-openrouter==0.0.2',
-    'langchain-openai==1.1.9',
-    'langchain-openai==1.1.8',
     'langchain-openai==1.1.12',
     'langchain-openai==1.1.11',
     'langchain-openai==1.1.10',
+    'langchain-openai==1.1.9',
+    'langchain-openai==1.1.8',
     'langchain-mistralai==1.1.2',
     'langchain-huggingface==1.2.1',
     'langchain-groq==1.1.2',
-    'langchain-core==1.2.9',
-    'langchain-core==1.2.8',
-    'langchain-core==1.2.7',
     'langchain-core==1.2.21',
     'langchain-core==1.2.20',
     'langchain-core==1.2.19',
@@ -156,6 +201,9 @@ export const langchaincomPackage = {
     'langchain-core==1.2.12',
     'langchain-core==1.2.11',
     'langchain-core==1.2.10',
+    'langchain-core==1.2.9',
+    'langchain-core==1.2.8',
+    'langchain-core==1.2.7',
     'langchain-core==0.3.83',
     'langchain-core==0.3.82',
     'langchain-classic==1.0.3',

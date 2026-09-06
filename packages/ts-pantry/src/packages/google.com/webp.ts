@@ -3,7 +3,7 @@
  *
  * @domain `google.com/webp`
  * @programs `cwebp`, `dwebp`, `gif2webp`, `img2webp`, `vwebp`, ... (+2 more)
- * @version `1.6.0` (6 versions available)
+ * @version `1.6.0` (67 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install google.com/webp`
@@ -132,6 +132,24 @@ export const googlecomwebpPackage = {
     '0.4.4-rc2',
     '0.4.3',
     '0.4.3-rc1',
+    '0.4.2',
+    '0.4.2-rc2',
+    '0.4.1',
+    '0.4.1-rc1',
+    '0.4.0',
+    '0.4.0-rc1',
+    '0.3.1',
+    '0.3.1-rc2',
+    '0.3.1-rc1',
+    '0.3.0',
+    '0.3.0-rc7',
+    '0.3.0-rc6',
+    '0.2.1',
+    '0.2.0',
+    '0.2.0-rc1',
+    '0.1.99',
+    '0.1.3',
+    '0.1.2',
   ] as const,
   aliases: [] as const,
 }

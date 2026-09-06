@@ -3,7 +3,7 @@
  *
  * @domain `tcpdump.org`
  * @programs `pcap-config`
- * @version `1.10.7` (50 versions available)
+ * @version `1.10.7` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tcpdump.org`
@@ -119,6 +119,10 @@ export const tcpdumporgPackage = {
     '0.8-bp',
     '0.7.2',
     '0.7.1',
+    '0.6.2',
+    '0.6.1',
+    '0.5.2',
+    '0.5.1',
   ] as const,
   aliases: [] as const,
 }

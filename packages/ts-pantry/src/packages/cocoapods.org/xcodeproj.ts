@@ -3,7 +3,7 @@
  *
  * @domain `cocoapods.org/xcodeproj`
  * @programs `xcodeproj`
- * @version `1.27.0` (1 versions available)
+ * @version `1.28.1` (94 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cocoapods.org/xcodeproj`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "xcodeproj"
  * console.log(pkg.description) // "Create and modify Xcode projects from Ruby."
  * console.log(pkg.programs)    // ["xcodeproj"]
- * console.log(pkg.versions[0]) // "1.27.0" (latest)
+ * console.log(pkg.versions[0]) // "1.28.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cocoapods-org/xcodeproj.md
@@ -114,12 +114,54 @@ export const cocoapodsorgxcodeprojPackage = {
     '1.4.0',
     '1.3.3',
     '1.3.2',
+    '1.3.1',
+    '1.3.0',
+    '1.2.0',
+    '1.1.0',
+    '1.0.0',
+    '0.28.2',
+    '0.28.1',
+    '0.28.0',
+    '0.27.2',
+    '0.27.1',
+    '0.27.0',
+    '0.26.3',
+    '0.26.2',
+    '0.26.1',
+    '0.26.0',
+    '0.25.1',
+    '0.25.0',
+    '0.24.3',
+    '0.24.2',
+    '0.24.1',
+    '0.24.0',
+    '0.23.1',
+    '0.23.0',
+    '0.22.0',
+    '0.21.2',
+    '0.21.1',
+    '0.21.0',
+    '0.20.2',
     '0.20.1',
+    '0.20.0',
+    '0.19.4',
     '0.19.3',
     '0.19.2',
+    '0.19.1',
     '0.19.0',
+    '0.18.0',
+    '0.17.0',
+    '0.16.1',
+    '0.16.0',
     '0.15.3',
     '0.15.2',
+    '0.15.1',
+    '0.15.0',
+    '0.14.1',
+    '0.14.0',
+    '0.13.1',
+    '0.13.0',
+    '0.12.0',
   ] as const,
   aliases: [] as const,
 }

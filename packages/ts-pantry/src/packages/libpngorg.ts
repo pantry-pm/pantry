@@ -3,7 +3,7 @@
  *
  * @domain `libpng.org`
  * @programs `libpng-config`, `libpng16-config`, `png-fix-itxt`, `pngfix`
- * @version `1.6.55` (18 versions available)
+ * @version `1.6.58` (19 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install libpng.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "libpng"
  * console.log(pkg.description) // "LIBPNG: Portable Network Graphics support, offi..."
  * console.log(pkg.programs)    // ["libpng-config", "libpng16-config", ...]
- * console.log(pkg.versions[0]) // "1.6.55" (latest)
+ * console.log(pkg.versions[0]) // "1.6.58" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/libpng-org.md
@@ -70,6 +70,7 @@ export const libpngorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.6.58',
     '1.6.55',
     '1.6.54',
     '1.6.53',

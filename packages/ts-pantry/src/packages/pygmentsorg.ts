@@ -3,7 +3,7 @@
  *
  * @domain `pygments.org`
  * @programs `pygmentize`
- * @version `2.19.2` (9 versions available)
+ * @version `2.21.0` (68 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pygments.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pygmentize"
  * console.log(pkg.description) // "Pygments is a generic syntax highlighter writte..."
  * console.log(pkg.programs)    // ["pygmentize"]
- * console.log(pkg.versions[0]) // "2.19.2" (latest)
+ * console.log(pkg.versions[0]) // "2.21.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pygments-org.md
@@ -116,6 +116,25 @@ export const pygmentsorgPackage = {
     '1.6',
     '1.5',
     '1.4',
+    '1.3.1',
+    '1.3',
+    '1.2.2',
+    '1.2.1',
+    '1.2',
+    '1.1.1',
+    '1.1',
+    '1.0',
+    '0.11.1',
+    '0.11',
+    '0.10',
+    '0.9',
+    '0.8.1',
+    '0.8',
+    '0.7.1',
+    '0.7',
+    '0.6',
+    '0.5.1',
+    '0.5',
   ] as const,
   aliases: [] as const,
 }

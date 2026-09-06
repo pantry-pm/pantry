@@ -3,7 +3,7 @@
  *
  * @domain `edgedb.com`
  * @programs `edgedb`
- * @version `7.10.2` (45 versions available)
+ * @version `7.10.2` (76 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install edgedb.com`
@@ -112,6 +112,37 @@ export const edgedbcomPackage = {
     '4.0.0',
     '3.5.0',
     '3.4.0',
+    '3.3.0',
+    '3.2.0',
+    '3.1.3',
+    '3.1.2',
+    '3.1.1',
+    '3.1.0',
+    '3.0.0',
+    '2.3.1',
+    '2.3.0',
+    '2.2.6',
+    '2.2.5',
+    '2.2.4',
+    '2.2.3',
+    '2.2.2',
+    '2.2.1',
+    '2.2.0',
+    '2.1.0',
+    '2.0.5',
+    '2.0.4',
+    '2.0.3',
+    '2.0.2',
+    '2.0.1',
+    '2.0.0',
+    '1.2.3',
+    '1.2.2',
+    '1.2.1',
+    '1.2.0',
+    '1.1.2',
+    '1.1.1',
+    '1.1.0',
+    '1.0.0',
   ] as const,
   aliases: [] as const,
 }

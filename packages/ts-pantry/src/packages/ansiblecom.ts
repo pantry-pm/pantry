@@ -3,7 +3,7 @@
  *
  * @domain `ansible.com`
  * @programs `ansible`, `ansible-config`, `ansible-connection`, `ansible-console`, `ansible-doc`, ... (+6 more)
- * @version `2.21.4rc1` (153 versions available)
+ * @version `2.21.4rc1` (173 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ansible.com`
@@ -151,19 +151,39 @@ export const ansiblecomPackage = {
     '2.19.0b6',
     '2.19.0b5',
     '2.19.0b4',
+    '2.19.0b3',
+    '2.19.0b2',
+    '2.19.0b1',
+    '2.18.19',
+    '2.18.19rc1',
+    '2.18.18',
+    '2.18.18rc1',
     '2.18.17',
+    '2.18.17rc1',
     '2.18.16',
+    '2.18.16rc1',
     '2.18.15',
+    '2.18.15rc1',
     '2.18.14',
+    '2.18.14rc1',
     '2.18.13',
+    '2.18.13rc1',
     '2.18.12',
+    '2.18.12rc1',
     '2.18.11',
+    '2.18.11rc1',
     '2.18.10',
+    '2.18.10rc1',
     '2.18.9',
+    '2.18.9rc1',
     '2.18.8',
+    '2.18.8rc1',
     '2.18.7',
+    '2.18.7rc1',
     '2.18.6',
+    '2.18.6rc1',
     '2.18.5',
+    '2.18.5rc1',
     '2.18.4',
     '2.18.3',
     '2.18.2',

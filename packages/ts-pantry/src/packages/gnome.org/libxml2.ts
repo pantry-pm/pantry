@@ -3,7 +3,7 @@
  *
  * @domain `gnome.org/libxml2`
  * @programs `xml2-config`, `xmlcatalog`, `xmllint`
- * @version `2.15.4` (51 versions available)
+ * @version `2.15.4` (84 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnome.org/libxml2`
@@ -128,6 +128,39 @@ export const gnomeorglibxml2Package = {
     '2.9.14',
     '2.9.13',
     '2.9.12',
+    '2.9.11',
+    '2.9.10',
+    '2.9.10-rc1',
+    '2.9.9',
+    '2.9.9-rc2',
+    '2.9.9-rc1',
+    '2.9.8',
+    '2.9.8-rc1',
+    '2.9.7',
+    '2.9.7-rc1',
+    '2.9.6',
+    '2.9.6-rc1',
+    '2.9.5',
+    '2.9.5-rc2',
+    '2.9.5-rc1',
+    '2.9.4',
+    '2.9.4-rc2',
+    '2.9.4-rc1',
+    '2.9.3',
+    '2.9.2',
+    '2.9.2-rc2',
+    '2.9.2-rc1',
+    '2.9.1',
+    '2.9.0',
+    '2.9.0-rc2',
+    '2.8.0',
+    '2.8.0-rc2',
+    '2.8.0-rc1',
+    '2.7.8',
+    '2.7.7',
+    '2.7.6',
+    '2.7.5',
+    '2.7.4',
   ] as const,
   aliases: [] as const,
 }

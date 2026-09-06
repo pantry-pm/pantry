@@ -3,7 +3,7 @@
  *
  * @domain `beyondgrep.com`
  * @programs `ack`
- * @version `3.10.0` (49 versions available)
+ * @version `3.10.0` (58 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install beyondgrep.com`
@@ -116,6 +116,15 @@ export const beyondgrepcomPackage = {
     '2.10',
     '2.09_03',
     '2.09_02',
+    '2.09_01',
+    '2.08',
+    '2.06',
+    '2.05_01',
+    '2.04',
+    '2.03_03',
+    '2.03_01',
+    '2.02',
+    '2.00',
   ] as const,
   aliases: [] as const,
 }

@@ -2,7 +2,7 @@
  * **apr** - Mirror of Apache Portable Runtime
  *
  * @domain `apache.org/apr`
- * @version `1.7.6` (5 versions available)
+ * @version `1.7.6` (16 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install apache.org/apr`
@@ -56,6 +56,17 @@ export const apacheorgaprPackage = {
     '1.7.4',
     '1.7.3',
     '1.7.2',
+    '1.7.1',
+    '1.7.0',
+    '1.6.5',
+    '1.6.4',
+    '1.6.3',
+    '1.6.2',
+    '1.6.1',
+    '1.6.0',
+    '1.5.2',
+    '1.5.1',
+    '1.5.0',
   ] as const,
   aliases: [] as const,
 }

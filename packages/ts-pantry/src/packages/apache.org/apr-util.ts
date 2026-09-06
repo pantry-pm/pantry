@@ -3,7 +3,7 @@
  *
  * @domain `apache.org/apr-util`
  * @programs `apu-{{ version.major }}-config`
- * @version `1.6.3` (1 versions available)
+ * @version `1.6.5` (14 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install apache.org/apr-util`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "apu-{{ version.major }}-config"
  * console.log(pkg.description) // "Mirror of Apache Portable Runtime util"
  * console.log(pkg.programs)    // ["apu-{{ version.major }}-config"]
- * console.log(pkg.versions[0]) // "1.6.3" (latest)
+ * console.log(pkg.versions[0]) // "1.6.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/apache-org/apr-util.md
@@ -69,7 +69,20 @@ export const apacheorgaprutilPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.6.5',
+    '1.6.4',
     '1.6.3',
+    '1.6.2',
+    '1.6.1',
+    '1.6.0',
+    '1.5.4',
+    '1.5.3',
+    '1.5.2',
+    '1.5.1',
+    '1.5.0',
+    '1.4.2',
+    '1.4.1',
+    '1.4.0',
   ] as const,
   aliases: [] as const,
 }

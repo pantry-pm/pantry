@@ -3,7 +3,7 @@
  *
  * @domain `ffmpeg.org`
  * @programs `ffmpeg`, `ffplay`, `ffprobe`
- * @version `8.1.0` (33 versions available)
+ * @version `9.0.1` (89 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ffmpeg.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "ffmpeg"
  * console.log(pkg.description) // "Play, record, convert, and stream audio and video"
  * console.log(pkg.programs)    // ["ffmpeg", "ffplay", ...]
- * console.log(pkg.versions[0]) // "8.1.0" (latest)
+ * console.log(pkg.versions[0]) // "9.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/ffmpeg-org.md
@@ -77,37 +77,93 @@ export const ffmpegorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '9.0.1',
+    '9.0',
+    '8.1.2',
+    '8.1.1',
+    '8.1',
     '8.1.0',
+    '8.0.3',
+    '8.0.2',
+    '8.0.1',
+    '8.0',
     '8.0.0',
+    '7.1.5',
+    '7.1.4',
     '7.1.3',
     '7.1.2',
     '7.1.1',
+    '7.1',
     '7.1.0',
     '7.0.3',
     '7.0.2',
     '7.0.1',
+    '7.0',
     '7.0.0',
+    '6.1.6',
+    '6.1.5',
     '6.1.4',
     '6.1.3',
     '6.1.2',
     '6.1.1',
+    '6.1',
     '6.1.0',
     '6.0.1',
+    '6.0',
     '6.0.0',
+    '5.1.10',
+    '5.1.9',
     '5.1.8',
     '5.1.7',
     '5.1.6',
     '5.1.5',
     '5.1.4',
+    '5.1.3',
     '5.1.2',
+    '5.1.1',
+    '5.1',
+    '5.0.3',
+    '5.0.2',
+    '5.0.1',
+    '5.0',
+    '4.4.8',
+    '4.4.7',
     '4.4.6',
     '4.4.5',
+    '4.4.4',
+    '4.4.3',
+    '4.4.2',
+    '4.4.1',
+    '4.4',
     '4.3.9',
     '4.3.8',
     '4.3.7',
+    '4.3.6',
+    '4.3.5',
+    '4.3.4',
+    '4.3.3',
+    '4.3.2',
+    '4.3.1',
+    '4.3',
     '4.2.11',
     '4.2.10',
+    '4.2.9',
+    '4.2.8',
+    '4.2.7',
+    '4.2.6',
+    '4.2.5',
+    '4.2.4',
+    '4.2.3',
+    '4.2.2',
+    '4.2.1',
+    '4.2',
     '4.1.11',
+    '4.1.10',
+    '4.1.9',
+    '4.1.8',
+    '4.1.7',
+    '4.1.6',
+    '4.1.5',
     '3.4.14',
     '3.4.13',
   ] as const,

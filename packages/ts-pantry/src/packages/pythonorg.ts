@@ -3,7 +3,7 @@
  *
  * @domain `python.org`
  * @programs `python`, `python{{ version.major }}`, `python{{ version.marketing }}`
- * @version `3.14.7` (176 versions available)
+ * @version `3.14.7` (179 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install python.org`
@@ -120,6 +120,8 @@ export const pythonPackage = {
     '3.13.2',
     '3.13.1',
     '3.13.0',
+    '3.12.14',
+    '3.12.13',
     '3.12.12',
     '3.12.11',
     '3.12.10',
@@ -133,6 +135,7 @@ export const pythonPackage = {
     '3.12.2',
     '3.12.1',
     '3.12.0',
+    '3.11.16',
     '3.11.15',
     '3.11.14',
     '3.11.13',

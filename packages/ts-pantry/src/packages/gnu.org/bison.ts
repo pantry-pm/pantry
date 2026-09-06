@@ -3,7 +3,7 @@
  *
  * @domain `gnu.org/bison`
  * @programs `bison`, `yacc`
- * @version `3.8.2` (1 versions available)
+ * @version `3.8.2` (91 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/bison`
@@ -118,6 +118,47 @@ export const gnuorgbisonPackage = {
     '3.2.1.0',
     '3.2.1',
     '3.2',
+    '3.1.91',
+    '3.1.90',
+    '3.1',
+    '3.0.5',
+    '3.0.4',
+    '3.0.3',
+    '3.0.2',
+    '3.0.1',
+    '3.0',
+    '2.7.91',
+    '2.7.90',
+    '2.7.1',
+    '2.7',
+    '2.6.90',
+    '2.6.5',
+    '2.6.4',
+    '2.6.3',
+    '2.6.2',
+    '2.6.1',
+    '2.6',
+    '2.5.1',
+    '2.5.1_rc2',
+    '2.5',
+    '2.5_rc1',
+    '2.4.3',
+    '2.4.3_rc1',
+    '2.4.2',
+    '2.4.1',
+    '2.4.1b',
+    '2.4.1a',
+    '2.4',
+    '2.1',
+    '2.0',
+    '1.875',
+    '1.75',
+    '1.35',
+    '1.34',
+    '1.33',
+    '1.32',
+    '1.31',
+    '1.30',
   ] as const,
   aliases: [] as const,
 }

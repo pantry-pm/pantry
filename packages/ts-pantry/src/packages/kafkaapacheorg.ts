@@ -3,7 +3,7 @@
  *
  * @domain `kafka.apache.org`
  * @programs `connect-distributed.sh`, `connect-mirror-maker.sh`, `connect-plugin-path.sh`, `connect-standalone.sh`, `kafka-acls.sh`, ... (+36 more)
- * @version `4.3.1` (16 versions available)
+ * @version `4.3.1` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kafka.apache.org`
@@ -129,6 +129,11 @@ export const kafkaapacheorgPackage = {
     '3.8.1',
     '3.8.0',
     '3.7.2',
+    '3.7.1',
+    '3.7.0',
+    '3.6.2',
+    '3.6.1',
+    '3.6.0',
   ] as const,
   aliases: [] as const,
 }
