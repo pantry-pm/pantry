@@ -90,6 +90,24 @@ async function fetchGitHubReleases(repo: string, tagPattern?: RegExp, stable = t
   return versions
 }
 
+/**
+ * Domains whose version source cannot be made to work with a tag pattern, and
+ * why. These are EXPECTED to resolve nothing, so the sweep separates them from
+ * a genuine regression rather than lumping all of it into one number that only
+ * ever grows.
+ *
+ * Removing an entry is the point: each is a real piece of work, not a
+ * permanent excuse. Adding one requires the same standard — a reason a reader
+ * can check, not "this one is awkward".
+ */
+const KNOWN_NO_VERSION_SOURCE: Record<string, string> = {
+  'luajit.org': 'LuaJIT publishes no tags or releases at all — it ships rolling v2.1/v2.0 branches. Needs a rolling-version scheme, not a tag pattern.',
+  'min.io': 'Tags are RELEASE.2025-10-15T17-29-55Z, which no semver-shaped filter accepts, and distributable.url is hardcoded to one 2023 release — so a version source alone would produce versions nothing can build.',
+  'elizaOS.github.io': 'Every tag is a beta (v2.0.11-beta.7); there is no stable series to select.',
+  'cpanmin.us': 'The numeric tags belong to Menlo, a different product in the same repo; cpanminus\'s own releases are not distinguishable by pattern.',
+  'unicode.org': 'ICU tags `release-78.3` against a catalog shipping 78.3.0. Taking it would add a second, shorter spelling of a version we already have.',
+}
+
 /** Apply `tagPattern` (or the default v-strip) and keep only version-shaped
  * results. Factored out so the pager below can ask whether a page contained
  * anything usable, and so that question is answered by the same code that
@@ -435,10 +453,21 @@ async function main() {
   // permanently red and train everyone to ignore it. The count belongs in the
   // summary so the backlog is visible and can be driven down.
   if (noVersionDomains.length > 0) {
-    const list = noVersionDomains.slice().sort()
-    console.log(`\nVersion sources that resolved nothing (${list.length}): ${list.join(', ')}`)
-    if (process.env.GITHUB_ACTIONS === 'true')
-      console.log(`::warning title=Version sources resolving nothing::${list.length} recipe(s) returned no versions; those packages are frozen at their last committed version. The run log lists them.`)
+    const all = noVersionDomains.slice().sort()
+    const known = all.filter(d => KNOWN_NO_VERSION_SOURCE[d])
+    const list = all.filter(d => !KNOWN_NO_VERSION_SOURCE[d])
+
+    if (known.length > 0) {
+      console.log(`\nKnown-unresolvable version sources (${known.length}), each for a recorded reason:`)
+      for (const domain of known) console.log(`  ${domain}: ${KNOWN_NO_VERSION_SOURCE[domain]}`)
+    }
+    if (list.length > 0)
+      console.log(`\nVersion sources that resolved nothing (${list.length}): ${list.join(', ')}`)
+    // Only the UNEXPECTED ones are worth an annotation. A warning that fires
+    // every run for the same five known cases is one nobody reads, and it would
+    // hide the sixth.
+    if (list.length > 0 && process.env.GITHUB_ACTIONS === 'true')
+      console.log(`::warning title=Version sources resolving nothing::${list.length} recipe(s) returned no versions and are not in the known-unresolvable list; those packages are frozen at their last committed version. The run log names them.`)
 
     const summaryPath = process.env.GITHUB_STEP_SUMMARY
     if (summaryPath) {
@@ -446,10 +475,11 @@ async function main() {
         appendFileSync(summaryPath, [
           '## Version sources resolving nothing',
           '',
-          `${list.length} of ${checked} recipes returned no versions, so those packages cannot auto-update.`,
+          `${list.length} of ${checked} recipes returned no versions and are not known-unresolvable, so those packages cannot auto-update.`,
           '',
           ...list.map(d => `- ${d}`),
           '',
+          ...(known.length ? ['<details><summary>Known-unresolvable, with reasons</summary>', '', ...known.map(d => `- **${d}** — ${KNOWN_NO_VERSION_SOURCE[d]}`), '', '</details>', ''] : []),
         ].join('\n'))
       }
       catch {

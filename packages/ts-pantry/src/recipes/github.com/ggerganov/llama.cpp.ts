@@ -12,6 +12,10 @@ export const recipe: Recipe = {
     type: 'github-releases',
     repo: 'ggerganov/llama.cpp',
     tagPattern: /^b(\d+)$/,
+    // llama.cpp flags every one of its `b#####` builds as a GitHub prerelease,
+    // and that series IS its release stream — there is no other. The default
+    // stable-only filter therefore discarded all 50 and the package froze.
+    stable: false,
   },
   distributable: null,
   dependencies: {

@@ -245,8 +245,18 @@ permanent by construction, not by convention:
 
 A `versionSource` that resolves nothing is therefore a silent freeze: the
 package keeps whatever was last committed, forever, and the sweep reports
-"0 errors". 81 recipes were in that state; the sweep now counts and lists them
-in its job summary, and `version-fetcher --dry-run` prints the same locally.
+"0 errors". 81 recipes were in that state; 76 are fixed and the remaining 5 are
+listed in `KNOWN_NO_VERSION_SOURCE` with a reason each, so the sweep's warning
+fires only for a genuinely NEW one. `version-fetcher --dry-run` prints the same
+split locally. Removing an entry from that map is the point of it — it records
+work outstanding, not a permanent excuse.
+
+Two recipes were found reading a **fork they never build** (openssl.org pointed
+at quictls while downloading from www.openssl.org; ordinals.com pointed at the
+`casey/ord` fork while its own `github:` field and download URL said
+`ordinals/ord`). Both resolved nothing, which is the only reason neither
+produced a wrong artifact. Worth checking as a class: `versionSource.repo`
+should name the same project as `distributable.url`.
 The shapes that bite, all seen in that batch: a `tagPattern` that never matches
 (`boost-1.92.0` against `/^v(.+)$/`), a repo whose releases are *all* flagged
 prerelease (needs `stable: false`), a repo with no releases at all (needs
