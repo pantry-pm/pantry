@@ -3,7 +3,7 @@
  *
  * @domain `karabiner-elements.pqrs.org`
  * @programs `karabiner`
- * @version `16.2.0` (49 versions available)
+ * @version `16.3.0` (50 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install karabiner-elements.pqrs.org`
@@ -22,6 +22,7 @@ export const karabinerelementspqrsorgPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '16.3.0',
     '16.2.0',
     '16.1.0',
     '16.0.0',

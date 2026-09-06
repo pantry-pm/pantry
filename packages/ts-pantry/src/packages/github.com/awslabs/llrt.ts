@@ -3,7 +3,7 @@
  *
  * @domain `github.com/awslabs/llrt`
  * @programs `llrt`
- * @version `0.8.1` (17 versions available)
+ * @version `0.9.0-beta` (47 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/awslabs/llrt`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "llrt"
  * console.log(pkg.description) // "LLRT (Low Latency Runtime) is an experimental, ..."
  * console.log(pkg.programs)    // ["llrt"]
- * console.log(pkg.versions[0]) // "0.8.1" (latest)
+ * console.log(pkg.versions[0]) // "0.9.0-beta" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/awslabs/llrt.md
@@ -72,6 +72,7 @@ export const llrtPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.9.0-beta',
     '0.8.1',
     '0.8.1-beta',
     '0.8.0',
