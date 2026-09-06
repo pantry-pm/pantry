@@ -9,8 +9,9 @@ export const recipe: Recipe = {
   github: 'https://github.com/python/cpython',
   programs: ['python', 'python{{version.major}}', 'python{{version.marketing}}'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'python/cpython',
+    tagPattern: /^v?(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://www.python.org/ftp/python/{{version.raw}}/Python-{{version.raw}}.tar.xz',

@@ -10,7 +10,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'capstone-engine/capstone',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^v?(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://github.com/capstone-engine/capstone/archive/{{version.raw}}.tar.gz',
