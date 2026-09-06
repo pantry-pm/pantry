@@ -2673,19 +2673,45 @@ else {
   if (failed.length > 0) {
     const failRate = attempted > 0 ? (failed.length / attempted * 100).toFixed(0) : 0
     console.log(`\nFailure rate: ${failRate}% (${failed.length}/${attempted} attempted)`)
+    console.log(`\n${uploaded.length} uploaded, ${skipped.length} skipped, ${failed.length} failed`)
 
-    // For forced targeted builds (manual dispatch): exit non-zero if all fail.
-    // For non-forced builds (auto-triggered by version updates): always exit 0
-    // since individual package failures are expected (broken recipes, bad URLs, etc.)
-    if (isTargetedBuild && force) {
-      const totalSuccess = uploaded.length + skipped.length
-      if (totalSuccess === 0 && failed.length > 0) {
-        console.log(`\nAll targeted builds failed — exiting with error`)
+    // A BROAD SWEEP stays exit 0 on individual failures. It attempts every
+    // recipe we have, a handful are permanently broken upstream, and going red
+    // every run would train everyone to ignore the signal.
+    //
+    // A TARGETED build (`-p <domains>`) is the opposite case, and treating it
+    // the same is how cmake.org 4.4.3 stayed missing for eleven days.
+    // publish-changed-packages dispatches this with the exact domains whose
+    // versions just changed, so a failure there IS the result of the run — the
+    // new version did not get published. That run printed
+    // "19 uploaded, 0 skipped, 0 unavailable, 1 failed" and exited 0, so the
+    // job was green, the dashboard was green, and the only thing that ever
+    // noticed was the nightly integrity check — which is configured for exactly
+    // one package. Anything without a `requiredPlatforms` entry would have
+    // failed the same way and never been noticed at all.
+    //
+    // The old guard only fired on `isTargetedBuild && force` AND only when
+    // NOTHING succeeded, which is close to unreachable: a targeted build
+    // re-checks every catalog version, so the already-published ones skip and
+    // rescue the exit code. The gated darwin-native job deliberately omits
+    // `--force`, so it could not fire there at all.
+    if (isTargetedBuild) {
+      // Known-broken recipes are attempted on a targeted build (the filter
+      // above is bypassed for `-p`), and we already know they fail. Report
+      // them, but do not let them hold the exit code hostage.
+      const domainOf = (key: string) => (multiVersion ? key.replace(/@[^@]*$/, '') : key)
+      const fatal = failed.filter(([key]) => !knownBrokenDomains.has(domainOf(key)))
+      if (fatal.length > 0) {
+        console.log(`\nTargeted build requested ${values.package} and ${fatal.length} of its build(s) failed:`)
+        fatal.forEach(e => console.log(`   - ${formatEntry(e)}: ${e[1].error}`))
+        console.log(`\nExiting non-zero: a targeted publish that cannot build the version`)
+        console.log(`it was asked for has not done its job. Fix the recipe, or add the`)
+        console.log(`domain to knownBrokenDomains if it is genuinely unbuildable.`)
         process.exit(1)
       }
-    }
-    if (failed.length > 0) {
-      console.log(`\n${uploaded.length} uploaded, ${skipped.length} skipped, ${failed.length} failed`)
+      if (failed.length > 0) {
+        console.log(`\nAll ${failed.length} failure(s) are known-broken recipes — not failing the run.`)
+      }
     }
 
     console.log(`Note: Individual build failures are expected for packages with complex`)
