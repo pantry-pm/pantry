@@ -347,3 +347,49 @@ describe('upload initiation', () => {
     expect(calls).toBe(2)
   })
 })
+
+describe('retryable completion errors', () => {
+  const auth = { Authorization: 'Bearer test' }
+
+  // The registry sets `retryable` exactly when it answers 503, which is how it
+  // reports a scanner that could not reach a verdict. A publish died on one of
+  // these — the server asking to be asked again, the client calling it final.
+  it('keeps polling a 503 the registry marked retryable', async () => {
+    let calls = 0
+    const fetchStub = (async () => {
+      calls++
+      if (calls < 3) {
+        return new Response(
+          JSON.stringify({ code: 'MALWARE_SCAN_UNAVAILABLE', retryable: true, error: 'scanner unavailable' }),
+          { status: 503 },
+        )
+      }
+      return new Response(JSON.stringify({ success: true, scan: { verdict: 'clean' } }), { status: 200 })
+    }) as unknown as typeof fetch
+
+    const completed = await completeBinaryUpload('https://r.example', 'u1', auth, {
+      fetch: fetchStub,
+      sleep: async () => {},
+    })
+    expect(completed.success).toBe(true)
+    expect(calls).toBe(3)
+  })
+
+  // Failing closed on malware is the whole point of the scan gate.
+  it('does not retry a malware detection', async () => {
+    let calls = 0
+    const fetchStub = (async () => {
+      calls++
+      return new Response(
+        JSON.stringify({ code: 'MALWARE_DETECTED', retryable: false, scan: { verdict: 'blocked' } }),
+        { status: 422 },
+      )
+    }) as unknown as typeof fetch
+
+    await expect(completeBinaryUpload('https://r.example', 'u1', auth, {
+      fetch: fetchStub,
+      sleep: async () => {},
+    })).rejects.toThrow()
+    expect(calls).toBe(1)
+  })
+})

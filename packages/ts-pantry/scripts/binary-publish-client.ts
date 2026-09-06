@@ -126,6 +126,17 @@ function completionMayStillBeRunning(response: Response, completed: any): boolea
     response.status === 408
     || response.status === 425
     || response.status === 429
+    // The registry says so itself. It sets `retryable` exactly when the status
+    // is 503, which is how it reports MALWARE_SCAN_UNAVAILABLE — the scanner
+    // could not reach a verdict, as distinct from reaching a bad one. Without
+    // this the 5xx arm below misses it, because that arm only fires when there
+    // is NO code, and a publish died on
+    //   MALWARE_SCAN_UNAVAILABLE ... (retryable)
+    //   [scan verdict=error reason=artifact download failed with HTTP 403]
+    // — the server asking to be asked again while the client called it
+    // permanent. A real detection is 422 and is never marked retryable, so
+    // failing closed on malware is unaffected.
+    || completed?.retryable === true
     || (response.status >= 500 && !completed.code)
     || (response.status === 404 && completed.code === 'BINARY_STAGING_NOT_FOUND')
   )
