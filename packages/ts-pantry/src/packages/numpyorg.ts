@@ -3,7 +3,7 @@
  *
  * @domain `numpy.org`
  * @programs `f2py`
- * @version `2.4.3` (27 versions available)
+ * @version `2.5.3` (46 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install numpy.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "f2py"
  * console.log(pkg.description) // "The fundamental package for scientific computin..."
  * console.log(pkg.programs)    // ["f2py"]
- * console.log(pkg.versions[0]) // "2.4.3" (latest)
+ * console.log(pkg.versions[0]) // "2.5.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/numpy-org.md
@@ -76,6 +76,7 @@ export const numpyorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.5.3',
     '2.5.2',
     '2.5.1',
     '2.5.0',
