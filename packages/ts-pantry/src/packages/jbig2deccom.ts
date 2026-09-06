@@ -3,7 +3,7 @@
  *
  * @domain `jbig2dec.com`
  * @programs `jbig2dec`
- * @version `0.19.0` (1 versions available)
+ * @version `0.20` (2 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install jbig2dec.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "jbig2dec"
  * console.log(pkg.description) // "This is a mirror: the canonical repo is: git.gh..."
  * console.log(pkg.programs)    // ["jbig2dec"]
- * console.log(pkg.versions[0]) // "0.19.0" (latest)
+ * console.log(pkg.versions[0]) // "0.20" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/jbig2dec-com.md
@@ -68,6 +68,7 @@ export const jbig2deccomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.20',
     '0.19.0',
   ] as const,
   aliases: [] as const,

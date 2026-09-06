@@ -3,7 +3,7 @@
  *
  * @domain `openinterpreter.com`
  * @programs `interpreter`
- * @version `0.4.0` (22 versions available)
+ * @version `0.4.2` (42 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openinterpreter.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "open-interpreter"
  * console.log(pkg.description) // "A natural language interface for computers"
  * console.log(pkg.programs)    // ["interpreter"]
- * console.log(pkg.versions[0]) // "0.4.0" (latest)
+ * console.log(pkg.versions[0]) // "0.4.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/openinterpreter-com.md
@@ -68,7 +68,26 @@ export const openinterpretercomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.4.2',
+    '0.4.1',
     '0.4.0',
+    '0.3.14',
+    '0.3.13',
+    '0.3.12',
+    '0.3.10',
+    '0.3.9',
+    '0.3.7',
+    '0.3.6',
+    '0.3.4',
+    '0.3.3',
+    '0.3.2',
+    '0.3.1',
+    '0.3.0',
+    '0.2.6',
+    '0.2.5',
+    '0.2.4',
+    '0.2.3',
+    '0.2.2',
     '0.2.1',
     '0.2.0',
     '0.1.18',
@@ -79,6 +98,7 @@ export const openinterpretercomPackage = {
     '0.1.13',
     '0.1.12',
     '0.1.11',
+    '0.1.10',
     '0.1.9',
     '0.1.8',
     '0.1.7',

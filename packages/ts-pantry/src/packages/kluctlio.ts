@@ -3,7 +3,7 @@
  *
  * @domain `kluctl.io`
  * @programs `kluctl`
- * @version `2.27.0` (15 versions available)
+ * @version `2.28.2` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kluctl.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "kluctl"
  * console.log(pkg.description) // "The missing glue to put together large Kubernet..."
  * console.log(pkg.programs)    // ["kluctl"]
- * console.log(pkg.versions[0]) // "2.27.0" (latest)
+ * console.log(pkg.versions[0]) // "2.28.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/kluctl-io.md
@@ -70,6 +70,8 @@ export const kluctlioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.28.2',
+    '2.28.1',
     '2.27.0',
     '2.26.0',
     '2.25.1',
@@ -85,6 +87,38 @@ export const kluctlioPackage = {
     '2.22.1',
     '2.22.0',
     '2.21.2',
+    '2.21.1',
+    '2.21.0',
+    '2.20.8',
+    '2.20.7',
+    '2.20.6',
+    '2.20.4',
+    '2.20.3',
+    '2.20.2',
+    '2.20.1',
+    '2.19.4',
+    '2.19.3',
+    '2.19.2',
+    '2.19.1',
+    '2.19.0',
+    '2.18.4',
+    '2.18.3',
+    '2.18.2',
+    '2.18.1',
+    '2.18.0',
+    '2.17.1',
+    '2.17.0',
+    '2.16.1',
+    '2.16.0',
+    '2.15.0',
+    '2.14.1',
+    '2.13.1',
+    '2.13.0',
+    '2.12.7',
+    '2.12.6',
+    '2.12.5',
+    '2.12.4',
+    '2.12.3',
   ] as const,
   aliases: [] as const,
 }

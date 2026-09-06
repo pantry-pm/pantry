@@ -3,7 +3,7 @@
  *
  * @domain `cocogitto.io`
  * @programs `cog`
- * @version `7.0.0` (10 versions available)
+ * @version `7.0.0` (32 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cocogitto.io`
@@ -77,6 +77,28 @@ export const cocogittoioPackage = {
     '6.0.0',
     '5.6.0',
     '5.5.0',
+    '5.4.0',
+    '5.3.1',
+    '5.3.0',
+    '5.2.0',
+    '5.1.0',
+    '5.0.1',
+    '5.0.0',
+    '4.1.0',
+    '4.0.1',
+    '4.0.0',
+    '3.0.0',
+    '2.1.1',
+    '2.1.0',
+    '2.0.0',
+    '1.2.0',
+    '1.1.0',
+    '1.0.3',
+    '1.0.2',
+    '1.0.0',
+    '0.34.0',
+    '0.33.1',
+    '0.32.3',
   ] as const,
   aliases: [] as const,
 }

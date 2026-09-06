@@ -3,7 +3,7 @@
  *
  * @domain `perl.org`
  * @programs `corelist`, `cpan`, `enc2xs`, `encguess`, `h2ph`, ... (+25 more)
- * @version `5.42.1` (17 versions available)
+ * @version `5.45.2` (64 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install perl.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "perl"
  * console.log(pkg.description) // "Highly capable, feature-rich programming language"
  * console.log(pkg.programs)    // ["corelist", "cpan", ...]
- * console.log(pkg.versions[0]) // "5.42.1" (latest)
+ * console.log(pkg.versions[0]) // "5.45.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/perl-org.md
@@ -98,9 +98,56 @@ export const perlorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.45.2',
+    '5.45.1',
+    '5.45.0',
+    '5.44.0',
+    '5.44.0-RC2',
+    '5.44.0-RC1',
+    '5.43.11',
+    '5.43.10',
+    '5.43.9',
+    '5.43.8',
+    '5.43.7',
+    '5.43.6',
+    '5.43.5',
+    '5.43.4',
+    '5.43.3',
+    '5.43.2',
+    '5.43.1',
+    '5.43.0',
+    '5.42.3',
+    '5.42.3-RC1',
+    '5.42.2',
+    '5.42.2-RC1',
     '5.42.1',
+    '5.42.1-RC1',
     '5.42.0',
+    '5.42.0-RC3',
+    '5.42.0-RC2',
+    '5.42.0-RC1',
+    '5.41.13',
+    '5.41.12',
+    '5.41.11',
+    '5.41.10',
+    '5.41.9',
+    '5.41.8',
+    '5.41.7',
+    '5.41.6',
+    '5.41.5',
+    '5.41.4',
+    '5.41.3',
+    '5.41.2',
+    '5.41.1',
+    '5.41.0',
+    '5.40.5',
+    '5.40.5-RC1',
+    '5.40.4',
+    '5.40.4-RC1',
+    '5.40.3',
+    '5.40.3-RC1',
     '5.40.2',
+    '5.40.2-RC1',
     '5.40.1',
     '5.40.0',
     '5.38.5',

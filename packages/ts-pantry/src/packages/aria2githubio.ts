@@ -3,7 +3,7 @@
  *
  * @domain `aria2.github.io`
  * @programs `aria2c`
- * @version `1.37.0` (2 versions available)
+ * @version `1.37.0` (24 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install aria2.github.io`
@@ -79,6 +79,28 @@ export const aria2githubioPackage = {
   versions: [
     '1.37.0',
     '1.36.0',
+    '1.35.0',
+    '1.34.0',
+    '1.33.1',
+    '1.33.0',
+    '1.32.0',
+    '1.31.0',
+    '1.30.0',
+    '1.29.0',
+    '1.28.0',
+    '1.27.1',
+    '1.27.0',
+    '1.26.1',
+    '1.26.0',
+    '1.25.0',
+    '1.24.0',
+    '1.23.0',
+    '1.22.0',
+    '1.21.0',
+    '1.20.0',
+    '1.19.3',
+    '1.19.2',
+    '1.19.1',
   ] as const,
   aliases: [] as const,
 }

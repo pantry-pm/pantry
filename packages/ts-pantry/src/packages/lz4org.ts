@@ -3,7 +3,7 @@
  *
  * @domain `lz4.org`
  * @programs `lz4`
- * @version `1.10.0` (2 versions available)
+ * @version `1.10.0` (13 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install lz4.org`
@@ -62,6 +62,17 @@ export const lz4orgPackage = {
   versions: [
     '1.10.0',
     '1.9.4',
+    '1.9.3',
+    '1.9.2',
+    '1.9.1',
+    '1.8.3',
+    '1.8.2',
+    '1.8.1.2',
+    '1.8.0',
+    '1.7.5',
+    '1.7.4.2',
+    '1.7.4',
+    '1.7.3',
   ] as const,
   aliases: [] as const,
 }

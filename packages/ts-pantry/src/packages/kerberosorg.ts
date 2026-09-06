@@ -3,7 +3,7 @@
  *
  * @domain `kerberos.org`
  * @programs `compile_et`, `gss-client`, `k5srvutil`, `kadmin`, `kdestroy`, ... (+22 more)
- * @version `1.22.2` (9 versions available)
+ * @version `1.22.2` (38 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kerberos.org`
@@ -101,13 +101,42 @@ export const kerberosorgPackage = {
   versions: [
     '1.22.2',
     '1.22.1',
+    '1.22',
     '1.22.0',
     '1.21.3',
     '1.21.2',
     '1.21.1',
+    '1.21',
     '1.21.0',
     '1.20.2',
     '1.20.1',
+    '1.20',
+    '1.19.4',
+    '1.19.3',
+    '1.19.2',
+    '1.19.1',
+    '1.19',
+    '1.18.5',
+    '1.18.4',
+    '1.18.3',
+    '1.18.2',
+    '1.18.1',
+    '1.18',
+    '1.17.2',
+    '1.17.1',
+    '1.17',
+    '1.16.4',
+    '1.16.3',
+    '1.16.2',
+    '1.16.1',
+    '1.16',
+    '1.15.5',
+    '1.15.4',
+    '1.15.3',
+    '1.15.2',
+    '1.15.1',
+    '1.15',
+    '1.14.6',
   ] as const,
   aliases: [] as const,
 }

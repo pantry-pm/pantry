@@ -3,7 +3,7 @@
  *
  * @domain `xpra.org`
  * @programs `xpra`
- * @version `6.4.3` (19 versions available)
+ * @version `6.5.3` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install xpra.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "xpra"
  * console.log(pkg.description) // "Persistent remote applications for X11; screen ..."
  * console.log(pkg.programs)    // ["xpra"]
- * console.log(pkg.versions[0]) // "6.4.3" (latest)
+ * console.log(pkg.versions[0]) // "6.5.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/xpra-org.md
@@ -75,9 +75,15 @@ export const xpraorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.5.3',
+    '6.5.2',
+    '6.5.1',
+    '6.5',
+    '6.4.4',
     '6.4.3',
     '6.4.2',
     '6.4.1',
+    '6.4',
     '6.4.0',
     '6.3.6',
     '6.3.5',
@@ -85,15 +91,43 @@ export const xpraorgPackage = {
     '6.3.3',
     '6.3.2',
     '6.3.1',
+    '6.3',
     '6.3.0',
     '6.2.5',
     '6.2.4',
     '6.2.3',
     '6.2.2',
     '6.2.1',
+    '6.2',
     '6.2.0',
     '6.1.3',
     '6.1.2',
+    '6.1.1',
+    '6.1.0',
+    '6.0.2',
+    '6.0.1',
+    '6.0',
+    '5.1.6',
+    '5.1.5',
+    '5.1.4',
+    '5.1.3',
+    '5.1.2',
+    '5.1.1',
+    '5.1',
+    '5.0.12',
+    '5.0.11',
+    '5.0.10',
+    '5.0.9',
+    '5.0.8',
+    '5.0.7',
+    '5.0.6',
+    '5.0.5',
+    '5.0.4',
+    '5.0.3',
+    '3.1.9',
+    '3.1.8',
+    '3.1.7',
+    '3.1.6',
   ] as const,
   aliases: [] as const,
 }

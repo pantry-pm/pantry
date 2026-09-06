@@ -3,7 +3,7 @@
  *
  * @domain `doxygen.nl`
  * @programs `doxygen`
- * @version `1.16.1` (13 versions available)
+ * @version `1.18.0` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install doxygen.nl`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "doxygen"
  * console.log(pkg.description) // "Generate documentation for several programming ..."
  * console.log(pkg.programs)    // ["doxygen"]
- * console.log(pkg.versions[0]) // "1.16.1" (latest)
+ * console.log(pkg.versions[0]) // "1.18.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/doxygen-nl.md
@@ -72,6 +72,8 @@ export const doxygennlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.18.0',
+    '1.17.0',
     '1.16.1',
     '1.16.0',
     '1.15.0',
@@ -85,6 +87,12 @@ export const doxygennlPackage = {
     '1.9.8',
     '1.9.7',
     '1.9.6',
+    '1.9.5',
+    '1.9.4',
+    '1.9.3',
+    '1.9.2',
+    '1.9.1',
+    '1.9.0',
   ] as const,
   aliases: [] as const,
 }

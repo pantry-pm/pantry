@@ -3,7 +3,7 @@
  *
  * @domain `yarnpkg.com`
  * @programs `yarn`, `yarnpkg`
- * @version `4.13.0` (49 versions available)
+ * @version `4.18.0` (56 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install yarnpkg.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "yarn"
  * console.log(pkg.description) // "📦🐈 Active development trunk for Yarn ⚒"
  * console.log(pkg.programs)    // ["yarn", "yarnpkg"]
- * console.log(pkg.versions[0]) // "4.13.0" (latest)
+ * console.log(pkg.versions[0]) // "4.18.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/yarnpkg-com.md
@@ -76,6 +76,13 @@ export const yarnPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.18.0',
+    '4.17.1',
+    '4.17.0',
+    '4.16.0',
+    '4.15.0',
+    '4.14.1',
+    '4.14.0',
     '4.13.0',
     '4.12.0',
     '4.11.0',

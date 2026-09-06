@@ -3,7 +3,7 @@
  *
  * @domain `pyinvoke.org`
  * @programs `invoke`
- * @version `2.2.1` (3 versions available)
+ * @version `3.0.3` (48 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pyinvoke.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "invoke"
  * console.log(pkg.description) // "Pythonic task management & command execution."
  * console.log(pkg.programs)    // ["invoke"]
- * console.log(pkg.versions[0]) // "2.2.1" (latest)
+ * console.log(pkg.versions[0]) // "3.0.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pyinvoke-org.md
@@ -74,9 +74,54 @@ export const pyinvokeorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.0.3',
+    '3.0.2',
+    '3.0.1',
+    '3.0.0',
     '2.2.1',
     '2.2.0',
     '2.1.4',
+    '2.1.3',
+    '2.1.2',
+    '2.1.1',
+    '2.1.0',
+    '2.0.1',
+    '2.0.0',
+    '1.7.3',
+    '1.7.2',
+    '1.7.1',
+    '1.7.0',
+    '1.6.0',
+    '1.5.1',
+    '1.5.0',
+    '1.4.1',
+    '1.4.0',
+    '1.3.1',
+    '1.3.0',
+    '1.2.0',
+    '1.1.1',
+    '1.1.0',
+    '1.0.2',
+    '1.0.1',
+    '1.0.0',
+    '0.23.0',
+    '0.22.1',
+    '0.22.0',
+    '0.21.0',
+    '0.20.4',
+    '0.20.3',
+    '0.20.2',
+    '0.20.1',
+    '0.20.0',
+    '0.19.0',
+    '0.18.1',
+    '0.18.0',
+    '0.17.0',
+    '0.16.3',
+    '0.16.2',
+    '0.16.1',
+    '0.16.0',
+    '0.15.0',
   ] as const,
   aliases: [] as const,
 }

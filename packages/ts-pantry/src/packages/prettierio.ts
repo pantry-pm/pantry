@@ -3,7 +3,7 @@
  *
  * @domain `prettier.io`
  * @programs `prettier`
- * @version `3.8.1` (22 versions available)
+ * @version `3.9.6` (47 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install prettier.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "prettier"
  * console.log(pkg.description) // "Code formatter for JavaScript, CSS, JSON, Graph..."
  * console.log(pkg.programs)    // ["prettier"]
- * console.log(pkg.versions[0]) // "3.8.1" (latest)
+ * console.log(pkg.versions[0]) // "3.9.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/prettier-io.md
@@ -74,6 +74,16 @@ export const prettierioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.9.6',
+    '3.9.5',
+    '3.9.4',
+    '3.9.3',
+    '3.9.1',
+    '3.9.0',
+    '3.8.5',
+    '3.8.4',
+    '3.8.3',
+    '3.8.2',
     '3.8.1',
     '3.8.0',
     '3.7.4',
@@ -96,6 +106,21 @@ export const prettierioPackage = {
     '3.3.1',
     '3.3.0',
     '3.2.5',
+    '3.2.4',
+    '3.2.3',
+    '3.2.2',
+    '3.2.1',
+    '3.2.0',
+    '3.1.1',
+    '3.1.0',
+    '3.0.3',
+    '3.0.2',
+    '3.0.1',
+    '3.0.0',
+    '2.8.8',
+    '2.8.7',
+    '2.8.6',
+    '2.8.5',
   ] as const,
   aliases: [] as const,
 }

@@ -2,7 +2,7 @@
  * **liblqr.wikidot** - Liquid Rescale library
  *
  * @domain `liblqr.wikidot.com`
- * @version `0.4.3` (2 versions available)
+ * @version `0.4.3` (15 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install liblqr.wikidot.com`
@@ -60,6 +60,19 @@ export const liblqrwikidotcomPackage = {
   versions: [
     '0.4.3',
     '0.4.2',
+    '0.4.1',
+    '0.4.0',
+    '0.3.1',
+    '0.3.0',
+    '0.2.1',
+    '0.2.0',
+    '0.1.0',
+    '0.1.0-7',
+    '0.1.0-6',
+    '0.1.0-5',
+    '0.1.0-4',
+    '0.1.0-3',
+    '0.1.0-2',
   ] as const,
   aliases: [] as const,
 }

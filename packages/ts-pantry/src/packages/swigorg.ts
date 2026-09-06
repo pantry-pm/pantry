@@ -3,7 +3,7 @@
  *
  * @domain `swig.org`
  * @programs `swig`, `ccache-swig`
- * @version `4.4.1` (7 versions available)
+ * @version `4.5.1` (50 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install swig.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "swig"
  * console.log(pkg.description) // "SWIG is a software development tool that connec..."
  * console.log(pkg.programs)    // ["swig", "ccache-swig"]
- * console.log(pkg.versions[0]) // "4.4.1" (latest)
+ * console.log(pkg.versions[0]) // "4.5.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/swig-org.md
@@ -68,13 +68,56 @@ export const swigorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.5.1',
+    '4.5.0',
     '4.4.1',
     '4.4.0',
     '4.3.1',
     '4.3.0',
+    '4.3.0-beta1',
     '4.2.1',
     '4.2.0',
+    '4.2.0-beta1',
     '4.1.1',
+    '4.1.0',
+    '4.1.0-beta1',
+    '4.0.2',
+    '4.0.1',
+    '4.0.0',
+    '4.0.0-beta1',
+    '3.0.12',
+    '3.0.11',
+    '3.0.10',
+    '3.0.9',
+    '3.0.8',
+    '3.0.7',
+    '3.0.6',
+    '3.0.5',
+    '3.0.4',
+    '3.0.3',
+    '3.0.2',
+    '3.0.1',
+    '3.0.0',
+    '3.0.0-beta1',
+    '2.0.12',
+    '2.0.11',
+    '2.0.10',
+    '2.0.9',
+    '2.0.8',
+    '2.0.7',
+    '2.0.6',
+    '2.0.5',
+    '2.0.4',
+    '2.0.3',
+    '2.0.2',
+    '2.0.1',
+    '2.0.0',
+    '1.3.40',
+    '1.3.39',
+    '1.3.38',
+    '1.3.37',
+    '1.3.36',
+    '1.3.35',
   ] as const,
   aliases: [] as const,
 }

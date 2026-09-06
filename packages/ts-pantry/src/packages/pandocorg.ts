@@ -3,7 +3,7 @@
  *
  * @domain `pandoc.org`
  * @programs `pandoc`
- * @version `3.9.0.2` (39 versions available)
+ * @version `3.11` (58 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pandoc.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "pandoc"
  * console.log(pkg.description) // "Swiss-army knife of markup format conversion"
  * console.log(pkg.programs)    // ["pandoc"]
- * console.log(pkg.versions[0]) // "3.9.0.2" (latest)
+ * console.log(pkg.versions[0]) // "3.11" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pandoc-org.md
@@ -79,26 +79,38 @@ export const pandocorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.11',
+    '3.10.2',
+    '3.10.1',
+    '3.10',
     '3.9.0.2',
     '3.9.0.1',
+    '3.9',
     '3.9.0',
     '3.8.3',
     '3.8.2.1',
     '3.8.2',
     '3.8.1',
+    '3.8',
     '3.8.0',
     '3.7.0.2',
     '3.7.0.1',
+    '3.7',
     '3.7.0',
     '3.6.4',
     '3.6.3',
     '3.6.2',
     '3.6.1',
+    '3.6',
     '3.6.0',
+    '3.5',
     '3.5.0',
+    '3.4',
     '3.4.0',
+    '3.3',
     '3.3.0',
     '3.2.1',
+    '3.2',
     '3.2.0',
     '3.1.13',
     '3.1.12.3',
@@ -112,12 +124,19 @@ export const pandocorgPackage = {
     '3.1.8',
     '3.1.7',
     '3.1.6.2',
+    '3.1.6.1',
     '3.1.6',
     '3.1.5',
     '3.1.4',
     '3.1.3',
     '3.1.2',
+    '3.1.1',
+    '3.1',
+    '3.0.1',
+    '3.0',
     '2.19.2',
+    '2.19.1',
+    '2.19',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `opendap.org`
  * @programs `dap-config`, `dap-config-pkgconfig`, `getdap`, `getdap4`
- * @version `3.21.1` (2 versions available)
+ * @version `3.22.0` (26 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install opendap.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "opendap"
  * console.log(pkg.description) // "A new version of libdap that contains both DAP2..."
  * console.log(pkg.programs)    // ["dap-config", "dap-config-pkgconfig", ...]
- * console.log(pkg.versions[0]) // "3.21.1" (latest)
+ * console.log(pkg.versions[0]) // "3.22.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/opendap-org.md
@@ -88,8 +88,14 @@ export const opendaporgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.22.0',
     '3.21.1',
+    '3.21.0-27',
     '3.20.11',
+    '3.20.10',
+    '3.20.9',
+    '3.20.8',
+    '3.20.7',
     'ersion-3.20.6',
     'ersion-3.20.5',
     'ersion-3.20.4',

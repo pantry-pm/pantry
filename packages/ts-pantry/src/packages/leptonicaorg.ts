@@ -3,7 +3,7 @@
  *
  * @domain `leptonica.org`
  * @programs `convertfilestopdf`, `convertfilestops`, `convertformat`, `convertsegfilestopdf`, `convertsegfilestops`, ... (+5 more)
- * @version `1.87.0` (6 versions available)
+ * @version `1.87.0` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install leptonica.org`
@@ -94,6 +94,21 @@ export const leptonicaorgPackage = {
     '1.84.1',
     '1.84.0',
     '1.83.1',
+    '1.83.0',
+    '1.82.0',
+    '1.81.1',
+    '1.81.0',
+    '1.80.0',
+    '1.79.0',
+    '1.78.0',
+    '1.77.0',
+    '1.76.0',
+    '1.75.3',
+    '1.75.2',
+    '1.75.1',
+    '1.75.0',
+    '1.74.4',
+    '1.74.3',
   ] as const,
   aliases: [] as const,
 }

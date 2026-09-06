@@ -3,7 +3,7 @@
  *
  * @domain `fltk.org`
  * @programs `fluid`, `fltk-config`
- * @version `1.4.4` (7 versions available)
+ * @version `1.4.5` (9 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fltk.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "fltk"
  * console.log(pkg.description) // "FLTK - Fast Light Tool Kit - https://github.com..."
  * console.log(pkg.programs)    // ["fluid", "fltk-config"]
- * console.log(pkg.versions[0]) // "1.4.4" (latest)
+ * console.log(pkg.versions[0]) // "1.4.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fltk-org.md
@@ -73,10 +73,12 @@ export const fltkorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.5',
     '1.4.4',
     '1.4.3',
     '1.4.2',
     '1.4.1',
+    '1.4.0-1',
     '1.3.11',
     '1.3.10',
     '1.3.9',

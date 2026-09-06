@@ -3,7 +3,7 @@
  *
  * @domain `makotemplates.org`
  * @programs `mako-render`
- * @version `1.3.10` (12 versions available)
+ * @version `1.4.1` (50 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install makotemplates.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "mako-render"
  * console.log(pkg.description) // "Mako Templates for Python"
  * console.log(pkg.programs)    // ["mako-render"]
- * console.log(pkg.versions[0]) // "1.3.10" (latest)
+ * console.log(pkg.versions[0]) // "1.4.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/makotemplates-org.md
@@ -67,6 +67,10 @@ export const makotemplatesorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.1',
+    '1.4.0',
+    '1.3.12',
+    '1.3.11',
     '1.3.10',
     '1.3.9',
     '1.3.8',
@@ -79,6 +83,40 @@ export const makotemplatesorgPackage = {
     '1.3.1',
     '1.3.0',
     '1.2.4',
+    '1.2.3',
+    '1.2.2',
+    '1.2.1',
+    '1.2.0',
+    '1.1.6',
+    '1.1.5',
+    '1.1.4',
+    '1.1.3',
+    '1.1.2',
+    '1.1.1',
+    '1.1.0',
+    '1.0.14',
+    '1.0.13',
+    '1.0.12',
+    '1.0.11',
+    '1.0.10',
+    '1.0.9',
+    '1.0.8',
+    '1.0.7',
+    '1.0.6',
+    '1.0.5',
+    '1.0.4',
+    '1.0.3',
+    '1.0.2',
+    '1.0.1',
+    '1.0.0',
+    '0.9.1',
+    '0.9.0',
+    '0.8.1',
+    '0.8.0',
+    '0.7.3',
+    '0.7.2',
+    '0.7.1',
+    '0.7.0',
   ] as const,
   aliases: [] as const,
 }

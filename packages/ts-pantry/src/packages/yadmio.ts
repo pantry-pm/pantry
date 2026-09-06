@@ -3,7 +3,7 @@
  *
  * @domain `yadm.io`
  * @programs `yadm`
- * @version `3.5.0` (4 versions available)
+ * @version `3.5.0` (32 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install yadm.io`
@@ -72,6 +72,34 @@ export const yadmioPackage = {
     '3.4.0',
     '3.3.0',
     '3.2.2',
+    '3.2.1',
+    '3.2.0',
+    '3.1.1',
+    '3.1.0',
+    '3.0.2',
+    '3.0.1',
+    '3.0.0',
+    '2.5.0',
+    '2.4.0',
+    '2.3.0',
+    '2.2.0',
+    '2.1.0',
+    '2.0.1',
+    '2.0.0',
+    '1.12.0',
+    '1.11.1',
+    '1.11.0',
+    '1.10.0',
+    '1.09',
+    '1.08',
+    '1.07',
+    '1.06',
+    '1.05',
+    '1.04',
+    '1.03',
+    '1.02',
+    '1.01',
+    '1.00',
   ] as const,
   aliases: [] as const,
 }

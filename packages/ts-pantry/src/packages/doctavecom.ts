@@ -3,7 +3,7 @@
  *
  * @domain `doctave.com`
  * @programs `doctave`
- * @version `0.4.2` (1 versions available)
+ * @version `0.4.2` (8 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install doctave.com`
@@ -61,6 +61,13 @@ export const doctavecomPackage = {
   */
   versions: [
     '0.4.2',
+    '0.4.1',
+    '0.4.0',
+    '0.3.1',
+    '0.3.0',
+    '0.2.1',
+    '0.2.0',
+    '0.1.0',
   ] as const,
   aliases: [] as const,
 }
