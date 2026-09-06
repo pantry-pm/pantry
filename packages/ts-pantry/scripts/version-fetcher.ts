@@ -264,6 +264,52 @@ function findPackageFile(key: string, domain: string): string | undefined {
   return undefined
 }
 
+/**
+ * How many upstream versions a single sweep may add to one package.
+ *
+ * Override with VERSION_CATALOG_ADD_LIMIT for a deliberate backfill.
+ */
+const CATALOG_ADD_LIMIT = Math.max(1, Number.parseInt(process.env.VERSION_CATALOG_ADD_LIMIT || '20', 10) || 20)
+
+/** Newest first, by the same dotted-numeric ordering the catalog is written in. */
+export function sortVersionsDesc(versions: string[]): string[] {
+  return [...versions].sort((a, b) => {
+    const parse = (v: string) => (v.split('-')[0] ?? '').split('.').map((part) => {
+      const n = Number.parseInt(part, 10)
+      return Number.isNaN(n) ? 0 : n
+    })
+    const x = parse(a)
+    const y = parse(b)
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+      const diff = (y[i] ?? 0) - (x[i] ?? 0)
+      if (diff !== 0) return diff
+    }
+    // Equal numerics: a release outranks a prerelease.
+    const preA = a.includes('-')
+    const preB = b.includes('-')
+    if (preA !== preB) return preA ? 1 : -1
+    return 0
+  })
+}
+
+/**
+ * Merge upstream versions into a package's existing list.
+ *
+ * Adds at most `limit` of the newest incoming versions and removes nothing.
+ * Returns the union plus what was actually added, so the caller can skip
+ * rewriting a file that gained nothing.
+ */
+export function mergeCatalogVersions(
+  current: string[],
+  incoming: string[],
+  limit: number,
+): { versions: string[], added: string[] } {
+  const existing = new Set(current)
+  const candidates = sortVersionsDesc(incoming).slice(0, Math.max(1, limit))
+  const added = candidates.filter(v => !existing.has(v))
+  return { versions: [...new Set([...candidates, ...current])], added }
+}
+
 function updatePackageVersions(domain: string, newVersions: string[]): boolean {
   const key = domainToKey(domain)
   const filePath = findPackageFile(key, domain)
@@ -280,12 +326,28 @@ function updatePackageVersions(domain: string, newVersions: string[]): boolean {
     .map(v => v.trim().replace(/'/g, ''))
     .filter(Boolean)
 
-  // Merge: add new versions to existing, never remove existing versions
-  const existingSet = new Set(currentVersions)
-  const added = newVersions.filter(v => !existingSet.has(v))
-  if (added.length === 0) return false // No new versions
+  // Merge: add new versions to existing, never remove existing versions.
+  //
+  // But add at most CATALOG_ADD_LIMIT of them, newest first. Upstream can hand
+  // us fifty releases (or six hundred tags), and merging the lot means one
+  // sweep dumps a package's entire history into the catalog — which is how
+  // vim.org reached 2,998 entries and the catalogs together reached ~32,000,
+  // while a publish only ever builds --max-versions (3) or
+  // --popular-max-versions (20) of them. Everything past that is listed as
+  // installable and is not published.
+  //
+  // The intended shape is the recent window plus everything new from here on,
+  // with older versions filled in on demand — the registry already records what
+  // people actually ask for at /analytics/{name}/requested-versions. This is the
+  // cap that was missing from that design, not a new policy.
+  //
+  // It bounds GROWTH rather than trimming: nothing already listed is removed,
+  // because some of it is published and delisting a published version would
+  // break installs of it.
+  const merged = mergeCatalogVersions(currentVersions, newVersions, CATALOG_ADD_LIMIT)
+  if (merged.added.length === 0) return false // No new versions
 
-  const allVersions = [...new Set([...newVersions, ...currentVersions])]
+  const allVersions = merged.versions
   // Sort semantically (newest first)
   allVersions.sort((a, b) => {
     const parse = (v: string) => {
