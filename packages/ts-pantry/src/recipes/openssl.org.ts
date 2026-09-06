@@ -4,14 +4,27 @@ export const recipe: Recipe = {
   propsDir: 'props/openssl.org',
   domain: 'openssl.org',
   name: 'OpenSSL',
-  description: 'TLS/SSL and crypto library with QUIC APIs',
-  homepage: 'https://quictls.github.io/openssl',
-  github: 'https://github.com/quictls/openssl',
+  description: 'TLS/SSL and crypto library',
+  homepage: 'https://www.openssl.org',
+  github: 'https://github.com/openssl/openssl',
   programs: ['openssl', 'c_rehash'],
+  // Discover from the same project the distributable below actually downloads.
+  // This pointed at the quictls FORK while `distributable.url` fetched from
+  // www.openssl.org, so the two could never agree: quictls tags
+  // `openssl-3.3.0-quic1`, and
+  // https://www.openssl.org/source/openssl-3.3.0-quic1.tar.gz is a 404. The
+  // source resolved nothing at all, which is the only reason it never produced
+  // a broken build — the catalog's 3.x entries came from somewhere else.
+  // Upstream's own `openssl-3.6.4` tags resolve 200 against that same URL.
+  //
+  // The description/homepage/github said quictls too. Nothing here builds
+  // quictls: the tarball is upstream's, and the version-gated patches are
+  // pkgx's diffs against upstream. Saying otherwise invites someone to
+  // conclude we ship a fork with different QUIC behaviour.
   versionSource: {
     type: 'github-releases',
-    repo: 'quictls/openssl',
-    tagPattern: /^v(.+)$/,
+    repo: 'openssl/openssl',
+    tagPattern: /^openssl-(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://www.openssl.org/source/openssl-{{version.raw}}.tar.gz',
