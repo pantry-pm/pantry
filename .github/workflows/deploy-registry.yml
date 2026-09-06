@@ -496,14 +496,27 @@ jobs:
               --data-binary "@$REHEARSAL_DIR/eicar.tgz" \
               "$BINARY_UPLOAD_URL"
             BINARY_REHEARSAL_RESPONSE="$REHEARSAL_DIR/binary-response.json"
-            BINARY_REHEARSAL_STATUS=$(jq -cn --arg uploadId "$BINARY_UPLOAD_ID" '{uploadId:$uploadId}' \
-              | curl -sS \
-                -o "$BINARY_REHEARSAL_RESPONSE" \
-                -w '%{http_code}' \
-                -H "Authorization: Bearer $REGISTRY_TOKEN" \
-                -H 'Content-Type: application/json' \
-                --data-binary @- \
-                "http://localhost:${PORT}/api/v1/binaries/uploads/complete")
+            # Completion is asynchronous: the registry answers 425
+            # BINARY_COMPLETION_IN_PROGRESS while clamd is still scanning, and
+            # the verdict only appears once it finishes. Asking exactly once
+            # therefore fails the whole deploy whenever the scan is a moment
+            # slower than the request — which is a race the deploy loses at
+            # random, not a malware-detection problem. binary-publish-client.ts
+            # already treats 425 as "ask again"; this is the same rule.
+            for BINARY_ATTEMPT in 1 2 3 4 5 6 7 8 9 10; do
+              BINARY_REHEARSAL_STATUS=$(jq -cn --arg uploadId "$BINARY_UPLOAD_ID" '{uploadId:$uploadId}' \
+                | curl -sS \
+                  -o "$BINARY_REHEARSAL_RESPONSE" \
+                  -w '%{http_code}' \
+                  -H "Authorization: Bearer $REGISTRY_TOKEN" \
+                  -H 'Content-Type: application/json' \
+                  --data-binary @- \
+                  "http://localhost:${PORT}/api/v1/binaries/uploads/complete")
+              # Anything other than "still scanning" is the verdict, good or bad.
+              [ "$BINARY_REHEARSAL_STATUS" = 425 ] || break
+              echo "EICAR scan still running (attempt $BINARY_ATTEMPT), waiting..."
+              sleep "$BINARY_ATTEMPT"
+            done
             if [ "$BINARY_REHEARSAL_STATUS" != 422 ] ||
               ! jq -e '.code == "MALWARE_DETECTED"
                 and .scan.verdict == "blocked"' "$BINARY_REHEARSAL_RESPONSE" >/dev/null; then
