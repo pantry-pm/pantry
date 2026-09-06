@@ -14,8 +14,8 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.5.0",
-      "published": "11.5.0",
+      "latest": "11.6.0",
+      "published": "11.6.0",
       "needsUpdate": false
     },
     {
@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.134.0",
-      "published": "1.134.0",
+      "latest": "1.136.1",
+      "published": "1.136.1",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.818.31338",
-      "published": "26.818.31338",
+      "latest": "26.901.51231",
+      "published": "26.901.51231",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.17.8",
-      "published": "3.17.8",
+      "latest": "3.19.13",
+      "published": "3.19.13",
       "needsUpdate": false
     },
     {
@@ -122,8 +122,8 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.45.1",
-      "published": "1.45.1",
+      "latest": "1.47.2",
+      "published": "1.47.2",
       "needsUpdate": false
     },
     {
@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.408",
-      "published": "0.0.408",
+      "latest": "0.0.410",
+      "published": "0.0.410",
       "needsUpdate": false
     },
     {
@@ -140,8 +140,8 @@
       "name": "Element",
       "kind": "app",
       "host": "macos",
-      "latest": "1.12.26",
-      "published": "1.12.26",
+      "latest": "1.12.27",
+      "published": "1.12.27",
       "needsUpdate": false
     },
     {
@@ -248,8 +248,8 @@
       "name": "Insomnia",
       "kind": "app",
       "host": "macos",
-      "latest": "13.1.0",
-      "published": "13.1.0",
+      "latest": "13.2.0",
+      "published": "13.2.0",
       "needsUpdate": false
     },
     {
@@ -284,8 +284,8 @@
       "name": "JetBrainsMono Nerd Font",
       "kind": "font",
       "host": "ubuntu",
-      "latest": "3.5.0",
-      "published": "3.5.0",
+      "latest": "3.5.1",
+      "published": "3.5.1",
       "needsUpdate": false
     },
     {
@@ -293,8 +293,8 @@
       "name": "Karabiner-Elements",
       "kind": "app",
       "host": "macos",
-      "latest": "16.1.0",
-      "published": "16.1.0",
+      "latest": "16.2.0",
+      "published": "16.2.0",
       "needsUpdate": false
     },
     {
@@ -329,8 +329,8 @@
       "name": "LibreOffice",
       "kind": "app",
       "host": "macos",
-      "latest": "26.2.5",
-      "published": "26.2.5",
+      "latest": "26.8.0",
+      "published": "26.8.0",
       "needsUpdate": false
     },
     {
@@ -338,8 +338,8 @@
       "name": "Linear",
       "kind": "app",
       "host": "macos",
-      "latest": "1.32.1",
-      "published": "1.32.1",
+      "latest": "1.32.4",
+      "published": "1.32.4",
       "needsUpdate": false
     },
     {
@@ -347,8 +347,8 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "macos",
-      "latest": "0.4.21-2",
-      "published": "0.4.21-2",
+      "latest": "0.4.23-1",
+      "published": "0.4.23-1",
       "needsUpdate": false
     },
     {
@@ -392,8 +392,8 @@
       "name": "MesloLG Nerd Font",
       "kind": "font",
       "host": "ubuntu",
-      "latest": "3.5.0",
-      "published": "3.5.0",
+      "latest": "3.5.1",
+      "published": "3.5.1",
       "needsUpdate": false
     },
     {
@@ -482,8 +482,8 @@
       "name": "Raycast",
       "kind": "app",
       "host": "macos",
-      "latest": "1.104.25",
-      "published": "1.104.25",
+      "latest": "1.104.28",
+      "published": "1.104.28",
       "needsUpdate": false
     },
     {
@@ -491,8 +491,8 @@
       "name": "Rectangle",
       "kind": "app",
       "host": "macos",
-      "latest": "0.99",
-      "published": "0.99",
+      "latest": "1.100",
+      "published": "1.100",
       "needsUpdate": false
     },
     {
@@ -518,8 +518,8 @@
       "name": "Slack",
       "kind": "app",
       "host": "macos",
-      "latest": "4.51.191",
-      "published": "4.51.191",
+      "latest": "4.52.155",
+      "published": "4.52.155",
       "needsUpdate": false
     },
     {
@@ -545,8 +545,8 @@
       "name": "Stats",
       "kind": "app",
       "host": "macos",
-      "latest": "3.0.11",
-      "published": "3.0.11",
+      "latest": "3.0.14",
+      "published": "3.0.14",
       "needsUpdate": false
     },
     {
@@ -590,8 +590,8 @@
       "name": "Tunnelblick",
       "kind": "app",
       "host": "macos",
-      "latest": "8.0.3",
-      "published": "8.0.3",
+      "latest": "9.0.1",
+      "published": "9.0.1",
       "needsUpdate": false
     },
     {
@@ -617,8 +617,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.33.19",
-      "published": "2.26.33.19",
+      "latest": "2.26.35.23",
+      "published": "2.26.35.23",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "Zed",
       "kind": "app",
       "host": "macos",
-      "latest": "1.16.1",
-      "published": "1.16.1",
+      "latest": "1.18.1",
+      "published": "1.18.1",
       "needsUpdate": false
     }
   ]
