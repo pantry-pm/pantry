@@ -9,6 +9,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-tags',
     repo: 'apache/apr',
+    tagPattern: /^(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     // dlcdn.apache.org only keeps the latest release; archive.apache.org keeps

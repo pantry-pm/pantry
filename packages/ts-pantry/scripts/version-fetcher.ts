@@ -90,35 +90,62 @@ async function fetchGitHubReleases(repo: string, tagPattern?: RegExp, stable = t
   return versions
 }
 
-async function fetchGitHubTags(repo: string, tagPattern?: RegExp): Promise<string[]> {
-  const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' }
-  if (GITHUB_TOKEN) headers.Authorization = `token ${GITHUB_TOKEN}`
-
-  const url = `https://api.github.com/repos/${repo}/tags?per_page=50`
-  const resp = await fetch(url, { headers, signal: AbortSignal.timeout(30000) })
-  if (!resp.ok)
-    throw new UpstreamUnavailable(repo, resp.status, isRateLimited(resp))
-
-  const tags = await resp.json() as Array<{ name: string }>
-  const versions: string[] = []
-
+/** Apply `tagPattern` (or the default v-strip) and keep only version-shaped
+ * results. Factored out so the pager below can ask whether a page contained
+ * anything usable, and so that question is answered by the same code that
+ * produces the final list rather than a copy of it. */
+function matchTags(tags: Array<{ name: string }>, tagPattern?: RegExp): string[] {
+  const out: string[] = []
   for (const tag of tags) {
     let version = tag.name
     if (tagPattern) {
       const match = version.match(tagPattern)
-      // Join all capture groups so multi-part tag schemes work, e.g. PostgreSQL's
-      // `REL_17_10` with /^REL_(\d+)_(\d+)$/ → "17.10". Single-group patterns are
-      // unchanged (one group → just that group).
-      if (match) version = match.length > 2 ? match.slice(1).filter(Boolean).join('.') : match[1]
-      else continue
+      if (!match) continue
+      version = match.length > 2 ? match.slice(1).filter(Boolean).join('.') : match[1]
     }
-    else {
-      version = version.replace(/^v/, '')
+    else { version = version.replace(/^v/, '') }
+    if (version && (/^\d[\d.]*\d$/.test(version) || /^\d[\d.]*\d[._-]\w+$/.test(version))) out.push(version)
+  }
+  return out
+}
+
+/** Extra tag pages to try when the first yields nothing usable. See below. */
+const TAG_PAGE_LIMIT = 6
+
+async function fetchGitHubTags(repo: string, tagPattern?: RegExp): Promise<string[]> {
+  const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' }
+  if (GITHUB_TOKEN) headers.Authorization = `token ${GITHUB_TOKEN}`
+
+  // GitHub's tag listing is not ordered by version or by date, and for some
+  // repos the first page is unusable: apache/apr opens with
+  // `apache-1_3-merge-2-pre` and `STRIKER_2_0_51_RC2`, and glennrp/libpng's
+  // first fifty tags are all `v1.7.0beta*` while the releases we want are
+  // v1.6.x further in. A single page therefore returned nothing and the
+  // package froze.
+  //
+  // Page on ONLY while nothing has matched. The common case — a repo whose
+  // first page is fine — still costs exactly one request, so this adds no load
+  // to the 600-recipe sweep; it just stops giving up early on the repos that
+  // need it.
+  const tags: Array<{ name: string }> = []
+  for (let page = 1; page <= TAG_PAGE_LIMIT; page++) {
+    const url = `https://api.github.com/repos/${repo}/tags?per_page=100&page=${page}`
+    const resp = await fetch(url, { headers, signal: AbortSignal.timeout(30000) })
+    if (!resp.ok) {
+      // A later page failing is not fatal when earlier ones gave us tags.
+      if (page === 1)
+        throw new UpstreamUnavailable(repo, resp.status, isRateLimited(resp))
+      break
     }
-    if (version && (/^\d[\d.]*\d$/.test(version) || /^\d[\d.]*\d[._-]\w+$/.test(version))) versions.push(version)
+    const batch = await resp.json() as Array<{ name: string }>
+    if (!batch.length)
+      break
+    tags.push(...batch)
+    if (matchTags(batch, tagPattern).length > 0)
+      break
   }
 
-  return versions
+  return matchTags(tags, tagPattern)
 }
 
 // ── Version Discovery ─────────────────────────────────────────────────

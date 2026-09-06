@@ -20,6 +20,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-tags',
     repo: 'apache/apr-util',
+    tagPattern: /^(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://dlcdn.apache.org/apr/apr-util-{{version}}.tar.bz2',

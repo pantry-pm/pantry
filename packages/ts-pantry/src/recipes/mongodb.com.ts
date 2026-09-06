@@ -8,9 +8,9 @@ export const recipe: Recipe = {
   github: 'https://github.com/mongodb/mongo',
   programs: ['install_compass', 'mongod', 'mongos'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'mongodb/mongo',
-    tagPattern: /^r(.+)$/,
+    tagPattern: /^r(\d+(?:\.\d+){0,3})$/,
   },
   distributable: null,
   dependencies: {

@@ -8,9 +8,9 @@ export const recipe: Recipe = {
   github: 'https://github.com/glennrp/libpng',
   programs: ['libpng-config', 'libpng16-config', 'png-fix-itxt', 'pngfix'],
   versionSource: {
-    type: 'github-releases',
+    type: 'github-tags',
     repo: 'glennrp/libpng',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^v(\d+(?:\.\d+){0,3})$/,
   },
   distributable: {
     url: 'https://downloads.sourceforge.net/project/libpng/libpng{{version.major}}{{version.minor}}/{{version}}/libpng-{{version}}.tar.xz',
