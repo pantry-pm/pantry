@@ -21,7 +21,31 @@
     "python.org"
   ],
   "requiredPlatforms": {
-    "cmake.org": ["darwin-arm64", "linux-x86-64"]
+    "cmake.org": [
+      "darwin-arm64",
+      "linux-x86-64"
+    ],
+    "getcomposer.org": [
+      "linux-arm64",
+      "linux-x86-64"
+    ],
+    "meilisearch.com": [
+      "darwin-arm64",
+      "linux-arm64",
+      "linux-x86-64"
+    ],
+    "redis.io": [
+      "darwin-arm64",
+      "linux-arm64",
+      "linux-x86-64"
+    ],
+    "valkey.io": [
+      "darwin-arm64",
+      "linux-arm64",
+      "linux-x86-64"
+    ]
   },
-  "allowEmptyDomains": ["github.com/mail-os/mail"]
+  "allowEmptyDomains": [
+    "github.com/mail-os/mail"
+  ]
 }
