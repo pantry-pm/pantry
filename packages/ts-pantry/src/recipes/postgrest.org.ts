@@ -11,7 +11,8 @@ export const recipe: Recipe = {
   // from source). Upstream ships official per-platform release archives
   // (`postgrest-v<ver>-<suffix>.tar.xz`). The suffix naming shifted at v13:
   //   linux x86-64 : linux-static-x86-64 (v13+) | linux-static-x64 (<=v12)
-  //   linux aarch64: ubuntu-aarch64      (all versions, v10+)
+  //   linux aarch64: linux-static-aarch64 (v16+) | ubuntu-aarch64 (v14) |
+  //                  none at all (v13, v15 — upstream shipped no aarch64)
   //   darwin x86-64: macos-x86-64        (v13+) | macos-x64         (<=v12)
   //   darwin aarch64: macos-aarch64      (v13+ only — native arm64; older
   //                                       releases ship only a Rosetta x64 macos
@@ -27,7 +28,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+aarch64) SUFFIXES="macos-aarch64" ;;',
       '  darwin+x86-64)  SUFFIXES="macos-x86-64 macos-x64" ;;',
-      '  linux+aarch64)  SUFFIXES="ubuntu-aarch64" ;;',
+      '  linux+aarch64)  SUFFIXES="linux-static-aarch64 ubuntu-aarch64" ;;',
       '  linux+x86-64)   SUFFIXES="linux-static-x86-64 linux-static-x64" ;;',
       'esac',
       '',
@@ -37,7 +38,11 @@ export const recipe: Recipe = {
       'for S in $SUFFIXES; do',
       '  if curl -fSL "${BASE}-${S}.tar.xz" | tar xJ -C {{prefix}}/bin; then OK=1; break; fi',
       'done',
-      '[ "$OK" = "1" ] || { echo "no prebuilt asset found"; exit 1; }',
+      '# 42, not 1: upstream genuinely ships no aarch64 asset for some releases',
+      '# (v13.0 and v15.0 have none at all), which is a phantom version rather',
+      '# than a build failure — the caller falls back to an older version and',
+      '# the miss does not count against coverage.',
+      '[ "$OK" = "1" ] || { echo "no prebuilt asset found for {{hw.platform}}/{{hw.arch}} at {{version}}"; exit 42; }',
       'chmod +x {{prefix}}/bin/postgrest',
     ],
   },

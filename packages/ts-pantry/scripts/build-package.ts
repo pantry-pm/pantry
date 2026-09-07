@@ -1957,6 +1957,18 @@ else {
   }
 catch (error: unknown) {
     console.error('❌ Build script failed')
+    // A recipe that has established upstream ships nothing for this
+    // platform/version says so by exiting 42, the same code this process uses
+    // for its own download failures. That is a phantom version, not a build
+    // failure: it must not count against coverage, and the caller should try
+    // an older version rather than give up on the package.
+    //
+    // Without it the only signal was a 404 in the script's stderr, which works
+    // for a recipe that lets curl fail but not for one that checks several
+    // candidate assets and reports the miss itself — postgrest.org and
+    // haskell.org/cabal both do exactly that.
+    if ((error as { status?: number }).status === DOWNLOAD_FAILURE_EXIT_CODE)
+      (error as Error & { _downloadFailure?: boolean })._downloadFailure = true
     // Dump config.log if it exists (key for diagnosing "C compiler cannot create executables")
     const configLog = join(buildDir, 'config.log')
     if (existsSync(configLog)) {
@@ -2284,6 +2296,16 @@ async function main() {
   }
 }
 
+/**
+ * Exit code meaning "the source for this version does not exist upstream".
+ *
+ * Distinct from 1 (a genuine build failure) because the two need opposite
+ * responses: a phantom version should fall back to an older one and not count
+ * against coverage, while a build failure should stop and be reported.
+ * Recipes may return it themselves; see the build-script catch above.
+ */
+export const DOWNLOAD_FAILURE_EXIT_CODE = 42
+
 if (import.meta.main) {
   main().catch((error: unknown) => {
     const err = error as Error & { _downloadFailure?: boolean }
@@ -2291,7 +2313,7 @@ if (import.meta.main) {
     // Exit code 42 = download failure (source 404/unavailable) — signals version fallback should try older versions
     // Exit code 1 = build/other failure — no point trying older versions
     if (err._downloadFailure) {
-      process.exit(42)
+      process.exit(DOWNLOAD_FAILURE_EXIT_CODE)
     }
     process.exit(1)
   })

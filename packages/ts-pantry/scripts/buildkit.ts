@@ -1819,7 +1819,14 @@ else {
   sections.push('    env -u LD_LIBRARY_PATH -u LD_PRELOAD sudo rm -rf /usr/lib/python3/dist-packages/setuptools* \\')
   sections.push('                /usr/lib/python3/dist-packages/wheel* \\')
   sections.push('                /usr/lib/python3/dist-packages/pkg_resources* \\')
-  sections.push('                /usr/lib/python3/dist-packages/_distutils_hack* 2>/dev/null || true')
+  sections.push('                /usr/lib/python3/dist-packages/_distutils_hack* \\')
+  // distutils-precedence.pth is what IMPORTS _distutils_hack, at interpreter
+  // startup, from that same directory. Removing the module and leaving the
+  // .pth behind makes every subsequent `python3` in the build print
+  // `ModuleNotFoundError: No module named '_distutils_hack'` — which is how
+  // mergestat.com/mergestat-lite failed on every linux run. A .pth that
+  // imports a module we just deleted is wrong regardless of what it breaks.
+  sections.push('                /usr/lib/python3/dist-packages/distutils-precedence.pth 2>/dev/null || true')
   sections.push('    python3 -m pip install --break-system-packages "setuptools<78" wheel 2>/dev/null || true')
   sections.push('  fi')
   sections.push('fi')
