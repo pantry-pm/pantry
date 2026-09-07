@@ -3,7 +3,7 @@
  *
  * @domain `pnpm.io`
  * @programs `pnpm`, `pnpx`
- * @version `12.3.4` (99 versions available)
+ * @version `12.3.4` (100 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pnpm.io`
@@ -77,6 +77,7 @@ export const pnpmioPackage = {
     '12.2.0',
     '12.1.0',
     '12.0.0',
+    '11.26.0',
     '11.25.0',
     '11.24.0',
     '11.23.0',
