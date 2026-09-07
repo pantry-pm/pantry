@@ -35,6 +35,16 @@ on:
 env:
   # Authenticated build-status reporting → pantry.dev/packages (401s without it).
   PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+  # How long each job keeps STARTING packages. The budget stops new work; it
+  # does not interrupt work already in flight, so the 90 minutes left under the
+  # 300-minute job timeout are the tail for whatever was running when it
+  # expired (a source build is itself capped at 60 minutes).
+  #
+  # Hardcoded at 100 in the script, justified by a 110-minute step timeout that
+  # no longer exists — two thirds of every job's allowance went unbuilt, which
+  # on the darwin download stripes meant the sweep was truncated rather than
+  # finished.
+  PANTRY_BATCH_BUDGET_MIN: '210'
   # Object storage (provider-agnostic; defaults to AWS S3 if vars unset).
   STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
   S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}
@@ -149,7 +159,21 @@ jobs:
             --platform "${{ matrix.name }}" \
             --stripe "${{ matrix.stripe }}" \
             --mirror-only --multi-version \
-            --max-versions "$MAXV" --popular-max-versions "$POPV"
+            --max-versions "$MAXV" --popular-max-versions "$POPV" \
+            --timing-json "$RUNNER_TEMP/timings.json"
+
+      # Which packages cost the sweep its wall clock. The job summary carries
+      # the top of the table; this keeps the full per-phase record, which is
+      # what turned "darwin stripe 3/4 took 176 minutes" into "two solr uploads
+      # took 148 of them".
+      - name: Upload timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timings-mirror-${{ matrix.name }}-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/timings.json
+          if-no-files-found: ignore
+          retention-days: 14
 
   # SEPARATE parallel job for zig-style self-download recipes (ziglang, bun, gh,
   # ripgrep, …) — they curl their OWN per-platform asset, so --mirror-only skips them.
@@ -213,4 +237,14 @@ jobs:
             --platform "${{ matrix.name }}" \
             --stripe "${{ matrix.stripe }}" \
             --download-only --multi-version \
-            --max-versions "$MAXV" --popular-max-versions "$POPV"
+            --max-versions "$MAXV" --popular-max-versions "$POPV" \
+            --timing-json "$RUNNER_TEMP/timings.json"
+
+      - name: Upload timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timings-download-${{ matrix.name }}-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/timings.json
+          if-no-files-found: ignore
+          retention-days: 14

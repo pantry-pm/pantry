@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { assignStripe, matchesRequestedPackage, pkgxHasPrebuilt } from './build-all-packages'
+import { assignStripe, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -184,5 +184,39 @@ describe('assignStripe', () => {
     const list = pkgs([1, 1, 1, 1, 1, 1])
     const s0 = assignStripe(list, 0, 2, cost).map(p => p.domain)
     expect(s0).toEqual([...s0].sort())
+  })
+})
+
+describe('summariseTimings', () => {
+  const ledger: PackageTiming[] = [
+    { key: 'solr.apache.org@9.9.0', domain: 'solr.apache.org', version: '9.9.0', platform: 'darwin-arm64', status: 'failed' as const, totalMs: 73.8 * 60_000, phases: { package: 60_000, upload: 73 * 60_000 } },
+    { key: 'solr.apache.org@9.10.0', domain: 'solr.apache.org', version: '9.10.0', platform: 'darwin-arm64', status: 'failed' as const, totalMs: 73.8 * 60_000, phases: { package: 60_000, upload: 73 * 60_000 } },
+    { key: 'bun.sh@1.3.14', domain: 'bun.sh', version: '1.3.14', platform: 'darwin-arm64', status: 'uploaded' as const, totalMs: 90_000, phases: { mirror: 40_000, upload: 45_000 } },
+    { key: 'jq.dev@1.8.1', domain: 'jq.dev', version: '1.8.1', platform: 'darwin-arm64', status: 'skipped' as const, totalMs: 300, phases: { exists: 250 } },
+  ]
+
+  test('ranks by wall clock so the cost driver is the first line, not an inference', () => {
+    const { console: text } = summariseTimings(ledger, 176 * 60_000, 3)
+    const slowest = text.split('\n').filter(line => line.includes('min  '))
+    expect(slowest).toHaveLength(3)
+    expect(slowest[0]).toContain('solr.apache.org@9.9.0')
+    expect(slowest[2]).toContain('bun.sh@1.3.14')
+    // Phases under a second are noise; the ones that cost minutes are named.
+    expect(slowest[0]).toContain('upload 4380s')
+  })
+
+  test('reports how much of the wall clock the packages account for', () => {
+    // The unexplained remainder is the signal: a stripe reporting 15 seconds of
+    // timed work across 176 minutes is a measurement gap, not a fast stripe.
+    const { console: text } = summariseTimings(ledger, 176 * 60_000)
+    expect(text).toContain('Wall clock: 176.0 min')
+    expect(text).toContain('attributed to packages: 149.1 min (85%)')
+  })
+
+  test('survives an empty run without dividing by zero', () => {
+    const { console: text, markdown } = summariseTimings([], 0)
+    expect(text).toContain('Wall clock: 0.0 min')
+    expect(text).toContain('(—)')
+    expect(markdown.join('\n')).toContain('### Timing')
   })
 })

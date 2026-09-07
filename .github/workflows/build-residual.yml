@@ -78,5 +78,5 @@ jobs:
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$AWS_REGION" \
             --platform "${{ matrix.platform.name }}" \
-            -p "$PKGS" \
+            -p "$PKGS" --allow-empty \
             --pkgx-mirror --multi-version --max-versions 5

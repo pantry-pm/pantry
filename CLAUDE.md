@@ -218,6 +218,59 @@ Two rules that are easy to undo by accident:
 `/binaries/` answers `HEAD`. Use it for existence/freshness checks rather than a
 GET that throws the body away.
 
+## Publish latency: the scan queue is what costs a sweep its afternoon
+
+A mirror stripe that took 176 minutes spent 148 of them on **two 370MB
+`solr.apache.org` uploads, 73.8 minutes each**, both ending in "Binary upload
+completion remained ambiguous". None of that was compiling or transferring. The
+shape repeats whenever a publish window is busy, so three rules hold it shut:
+
+- **Mint the scan's presigned URL AFTER admission, never before**
+  (`ScanUrlSource` is a thunk for exactly this reason). The URL's lifetime is
+  sized against `scanBudgetMs`; `ClamAvScanner.scanUrl` then queues behind
+  `maxConcurrentScans` (2). Minting at call time charges the queue wait against
+  the signature, and the download 403s partway through — reported as
+  `MALWARE_SCAN_UNAVAILABLE ... artifact download failed with HTTP 403`, which
+  is indistinguishable from a dead scanner.
+- **An overloaded scanner must not put the artifact into backoff.**
+  `recordScanFailure` earns a 15m → 6h per-digest wait, which is right for a
+  scan that reached no verdict and wrong for one that never ran. Overload is
+  identified by `isScannerOverloadReason` and answered with a 90s `Retry-After`.
+- **The admission queue is bounded by TIME as well as depth**
+  (`CLAMD_MAX_ADMISSION_WAIT_MS`, 10 min). 32 waiters × 2 slots × a 45-minute
+  budget is a twelve-hour queue; the publisher stops after one hour, and the
+  scan it was waiting for then finishes into a void with the artifact
+  unpublished. Shedding is the honest answer.
+
+The publisher side matches: `completeBinaryUpload` honours `retryAfterSeconds` /
+`Retry-After` and **stops immediately when the declared wait exceeds its own
+deadline**, instead of polling out the remainder of an hour for an answer the
+registry already decided.
+
+## Finding the cost driver: per-package timings, not log archaeology
+
+`build-all-packages.ts` records every attempt in a timing ledger — `totalMs`
+plus a phase split (`exists`, `mirror`, `build`, `package`, `upload`) — and
+prints a `⏱` line per package as it finishes, a "Slowest packages" table in the
+run summary and the job summary, and the full record to `--timing-json`
+(`PANTRY_TIMING_JSON`; `mirror.yml` uploads it as a `timings-*` artifact).
+
+Read the **"attributed to packages"** share first. A stripe reporting a few
+seconds of timed work across a 176-minute job is a measurement gap, not a fast
+stripe — that gap is what pointed at the phase nobody was timing. Keep every
+new early return inside `buildPackage` (the wrapper `buildAndUpload` times it),
+and never print a completion line without its duration.
+
+`PANTRY_BATCH_BUDGET_MIN` (default 100, `mirror.yml` sets 210) is how long a run
+keeps *starting* packages. It does not interrupt work in flight, so leave a tail
+under the job's `timeout-minutes` for the package still running. It was pinned
+to 100 against a step timeout that no longer existed, which silently truncated
+every sweep at a third of its allowance.
+
+A targeted run (`-p`) that selects nothing now **exits 1** — "asked for X, built
+nothing" was reported as success. Pass `--allow-empty` where an empty selection
+is legitimate (build-residual dispatches one list across a platform matrix).
+
 ### Measuring it: `GET /api/egress`
 
 **Host network metrics cannot see artifact egress and never will.** Downloads are

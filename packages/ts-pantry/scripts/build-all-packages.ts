@@ -26,7 +26,7 @@
  *   -h, --help               Show help
  */
 
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execSync, spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -1292,6 +1292,126 @@ async function tryBuildVersion(
   })
 }
 
+/**
+ * Where a package's wall clock actually went.
+ *
+ * Runs were only ever summarised as counts plus one elapsed line per package,
+ * so "which package cost the sweep its afternoon" had to be reconstructed by
+ * diffing log timestamps after the fact — and only for runs whose logs were
+ * still around. That archaeology is how two 370MB solr uploads were found
+ * burning 73.8 minutes each, 84% of a 176-minute stripe, on a scan backoff.
+ * Recorded per phase so the answer names the phase, not just the package.
+ */
+export interface PhaseTimings { [phase: string]: number }
+
+export interface PackageTiming {
+  key: string
+  domain: string
+  version: string
+  platform: string
+  status: BuildResult['status']
+  totalMs: number
+  phases: PhaseTimings
+  error?: string
+}
+
+const timingLedger: PackageTiming[] = []
+
+/** Time an async step into `phases`, accumulating repeat visits. */
+async function timePhase<T>(phases: PhaseTimings, name: string, fn: () => Promise<T>): Promise<T> {
+  const startedAt = Date.now()
+  try {
+    return await fn()
+  }
+  finally {
+    phases[name] = (phases[name] ?? 0) + (Date.now() - startedAt)
+  }
+}
+
+/** Synchronous counterpart, for the exec-based packaging and cleanup steps. */
+function timePhaseSync<T>(phases: PhaseTimings, name: string, fn: () => T): T {
+  const startedAt = Date.now()
+  try {
+    return fn()
+  }
+  finally {
+    phases[name] = (phases[name] ?? 0) + (Date.now() - startedAt)
+  }
+}
+
+function formatPhases(phases: PhaseTimings): string {
+  return Object.entries(phases)
+    .filter(([, ms]) => ms >= 1000)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, ms]) => `${name} ${Math.round(ms / 1000)}s`)
+    .join(' · ')
+}
+
+/**
+ * Turn the run's timing ledger into the two things a cost question needs: the
+ * packages that dominated the wall clock, and how much of that wall clock the
+ * per-package numbers actually account for.
+ *
+ * The second half matters as much as the first. A stripe once reported 15
+ * seconds of timed work across a 176-minute job, and the only honest reading
+ * of that gap — 176 minutes the sweep could not explain — was what pointed at
+ * the phase that was not being measured.
+ */
+export function summariseTimings(
+  ledger: PackageTiming[],
+  wallMs: number,
+  topN = 15,
+): { console: string, markdown: string[] } {
+  const accountedMs = ledger.reduce((total, entry) => total + entry.totalMs, 0)
+  const slowest = [...ledger].sort((a, b) => b.totalMs - a.totalMs).slice(0, topN)
+
+  const byPhase: PhaseTimings = {}
+  for (const entry of ledger) {
+    for (const [name, ms] of Object.entries(entry.phases))
+      byPhase[name] = (byPhase[name] ?? 0) + ms
+  }
+
+  const minutes = (ms: number) => (ms / 60000).toFixed(1)
+  const share = (ms: number) => (wallMs > 0 ? `${Math.round((ms / wallMs) * 100)}%` : '—')
+
+  const out: string[] = []
+  out.push('')
+  out.push('═'.repeat(60))
+  out.push('Timing')
+  out.push('═'.repeat(60))
+  out.push(`Wall clock: ${minutes(wallMs)} min · attributed to packages: ${minutes(accountedMs)} min (${share(accountedMs)})`)
+  if (Object.keys(byPhase).length > 0) {
+    out.push(`By phase: ${Object.entries(byPhase)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, ms]) => `${name} ${minutes(ms)}m`)
+      .join(' · ')}`)
+  }
+  if (slowest.length > 0) {
+    out.push('')
+    out.push(`Slowest packages (top ${slowest.length} of ${ledger.length}):`)
+    for (const entry of slowest) {
+      const breakdown = formatPhases(entry.phases)
+      out.push(`   ${minutes(entry.totalMs).padStart(6)} min  ${entry.key} [${entry.status}]${breakdown ? ` — ${breakdown}` : ''}`)
+    }
+  }
+
+  const markdown: string[] = []
+  markdown.push(`### Timing`)
+  markdown.push('')
+  markdown.push(`Wall clock **${minutes(wallMs)} min**, attributed to packages **${minutes(accountedMs)} min** (${share(accountedMs)}).`)
+  markdown.push('')
+  if (slowest.length > 0) {
+    markdown.push(`| Package | Status | Minutes | Phases |`)
+    markdown.push(`|---------|--------|---------|--------|`)
+    for (const entry of slowest) {
+      markdown.push(`| ${entry.key} | ${entry.status} | ${minutes(entry.totalMs)} | ${formatPhases(entry.phases) || '—'} |`)
+    }
+    markdown.push('')
+  }
+
+  return { console: out.join('\n'), markdown }
+}
+
 interface BuildResult {
   // 'unavailable' = the requested version's source genuinely does not exist
   // upstream (tarball 404 / git tag missing). These are PHANTOM versions that
@@ -1491,12 +1611,73 @@ function installDirHasFiles(dir: string): boolean {
   return false
 }
 
+/**
+ * Times `buildPackage` and files the result in the run's timing ledger.
+ *
+ * A wrapper rather than bookkeeping inside the build, because the build has a
+ * dozen early returns and every one of them has to be measured — the two that
+ * were not (the packaging/upload failure path, and every skip) are exactly the
+ * ones that hid a 74-minute stall behind a line that printed no duration.
+ */
 async function buildAndUpload(
   pkg: BuildablePackage,
   bucket: string,
   region: string,
   platform: string,
   force: boolean,
+): Promise<BuildResult> {
+  const phases: PhaseTimings = {}
+  const startedAt = Date.now()
+  let result: BuildResult
+  try {
+    result = await buildPackage(pkg, bucket, region, platform, force, phases)
+  }
+  catch (error) {
+    // Never swallowed — recorded, then rethrown, so an unexpected throw is
+    // still visible in the cost table it would otherwise vanish from.
+    timingLedger.push({
+      key: `${pkg.domain}@${pkg.latestVersion}`,
+      domain: pkg.domain,
+      version: pkg.latestVersion,
+      platform,
+      status: 'failed',
+      totalMs: Date.now() - startedAt,
+      phases,
+      error: (error as Error).message,
+    })
+    throw error
+  }
+
+  const totalMs = Date.now() - startedAt
+  timingLedger.push({
+    key: `${pkg.domain}@${pkg.latestVersion}`,
+    domain: pkg.domain,
+    version: pkg.latestVersion,
+    platform,
+    status: result.status,
+    totalMs,
+    phases,
+    error: result.error,
+  })
+
+  // Streamed, not only summarised: a job killed at its timeout never reaches
+  // the summary, and the stall that killed it is precisely what we need to
+  // read. Quiet for the hundreds of instant "already in S3" skips.
+  if (totalMs >= 5_000 || result.status !== 'skipped') {
+    const breakdown = formatPhases(phases)
+    console.log(`   ⏱  ${pkg.domain} ${result.status} in ${Math.round(totalMs / 1000)}s${breakdown ? ` — ${breakdown}` : ''}`)
+  }
+
+  return result
+}
+
+async function buildPackage(
+  pkg: BuildablePackage,
+  bucket: string,
+  region: string,
+  platform: string,
+  force: boolean,
+  phases: PhaseTimings,
 ): Promise<BuildResult> {
   const { domain, name, versions } = pkg
   let version = pkg.latestVersion
@@ -1536,7 +1717,7 @@ else {
 
   // Check if already in S3 (check latest real version first, then try others)
   if (!force) {
-    const exists = await checkExistsInS3(domain, version, platform, bucket, region)
+    const exists = await timePhase(phases, 'exists', () => checkExistsInS3(domain, version, platform, bucket, region))
     if (exists) {
       console.log(`   ✓ Already in S3 for ${platform}, skipping`)
       return { status: 'skipped' }
@@ -1591,14 +1772,14 @@ else {
     for (const candidateVersion of versionCandidates) {
       if (!force) {
         // eslint-disable-next-line no-await-in-loop
-        const exists = await checkExistsInS3(domain, candidateVersion, platform, bucket, region)
+        const exists = await timePhase(phases, 'exists', () => checkExistsInS3(domain, candidateVersion, platform, bucket, region))
         if (exists) { console.log(`   ✓ Already in S3 for ${platform}, skipping`); return { status: 'skipped' } }
       }
       // tryPkgxMirror reports the "mirroring from pkgx" event ITSELF, but only once
       // the download confirms pkgx actually ships this artifact — so packages pkgx
       // doesn't host (our apps/deps, source builds) are never mislabeled as mirrored.
       // eslint-disable-next-line no-await-in-loop
-      if (await tryPkgxMirror(domain, candidateVersion, platform, installDir, buildkitRoot)) {
+      if (await timePhase(phases, 'mirror', () => tryPkgxMirror(domain, candidateVersion, platform, installDir, buildkitRoot))) {
         usedVersion = candidateVersion
         mirrored = true
         console.log(`   ⬇️  Mirrored ${domain}@${candidateVersion} from pkgx (${platform}) — no source build`)
@@ -1621,7 +1802,7 @@ else {
       if (candidateVersion !== version) {
         // Check if this fallback version already in S3
         if (!force) {
-          const exists = await checkExistsInS3(domain, candidateVersion, platform, bucket, region)
+          const exists = await timePhase(phases, 'exists', () => checkExistsInS3(domain, candidateVersion, platform, bucket, region))
           if (exists) {
             console.log(`   ✓ Fallback version ${candidateVersion} already in S3, skipping`)
             return { status: 'skipped' }
@@ -1634,7 +1815,7 @@ else {
       reportBuild(domain, candidateVersion, platform, 'building', { message: `building ${candidateVersion} on ${platform}` })
 
       attemptedAny = true
-      await tryBuildVersion(domain, candidateVersion, platform, buildDir, installDir, depsDir, bucket, region)
+      await timePhase(phases, 'build', () => tryBuildVersion(domain, candidateVersion, platform, buildDir, installDir, depsDir, bucket, region))
 
       usedVersion = candidateVersion
       lastError = null
@@ -1702,18 +1883,21 @@ catch (error: any) {
     mkdirSync(artifactDir, { recursive: true })
 
     const tarball = `${domain.replace(/\//g, '-')}-${usedVersion}.tar.gz`
-    execSync(`tar -czf "${join(artifactDir, tarball)}" -C "${installDir}" .`)
-    execSync(`cd "${artifactDir}" && shasum -a 256 "${tarball}" > "${tarball}.sha256"`)
+    timePhaseSync(phases, 'package', () => {
+      execSync(`tar -czf "${join(artifactDir, tarball)}" -C "${installDir}" .`)
+      execSync(`cd "${artifactDir}" && shasum -a 256 "${tarball}" > "${tarball}.sha256"`)
+    })
 
-    // Upload to S3
+    // Upload to S3 (includes the registry's staged upload, malware scan and
+    // promotion — the phase that hid the solr stall).
     console.log(`   Uploading to S3...`)
-    await uploadToS3Impl({
+    await timePhase(phases, 'upload', () => uploadToS3Impl({
       package: domain,
       version: usedVersion,
       artifactsDir,
       bucket,
       region,
-    })
+    }))
 
     // Cleanup
     try { execSync(`rm -rf "${buildDir}"`, { stdio: 'pipe' }) }
@@ -1734,7 +1918,9 @@ catch (error: any) {
     return { status: 'uploaded' }
   }
 catch (error: any) {
-    console.error(`   ❌ Failed packaging/upload: ${error.message}`)
+    // With the duration: this line reported a 74-minute stall as if it were
+    // instant, which is why the cost had to be reconstructed from timestamps.
+    console.error(`   ❌ Failed packaging/upload after ${Math.round((Date.now() - pkgStartTime) / 1000)}s: ${error.message}`)
     reportBuild(domain, usedVersion || version, platform, 'failed', { error: error.message })
     try { execSync(`rm -rf "${buildDir}"`, { stdio: 'pipe' }) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
@@ -1785,6 +1971,17 @@ async function main() {
       'source-only': { type: 'boolean', default: false },
       'pkgx-mirror': { type: 'boolean', default: false },
       'mirror-only': { type: 'boolean', default: false },
+      // Machine-readable per-package timings for the whole run. The console
+      // summary answers "what was slow this run"; this answers "what is slow
+      // across runs" without re-scraping logs. Also settable as
+      // PANTRY_TIMING_JSON so a workflow can turn it on without touching every
+      // invocation.
+      'timing-json': { type: 'string' },
+      // For callers whose -p list legitimately selects nothing on some
+      // platforms (build-residual dispatches one fixed list across a matrix,
+      // where a darwin-only app is correctly skipped on linux). Everywhere
+      // else, "asked for X, built nothing" is a failure worth seeing.
+      'allow-empty': { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h' },
     },
     strict: true,
@@ -1821,6 +2018,9 @@ Options:
   --pkgx-mirror            Download the official prebuilt from pkgx (dist.pkgx.dev) instead of
                           compiling; falls back to source build if pkgx lacks it or it's a
                           custom source build. Vastly faster — dozens/min per worker.
+  --timing-json <path>     Write per-package, per-phase timings for the run as JSON
+                          (also PANTRY_TIMING_JSON)
+  --allow-empty            Exit 0 when -p selects no packages (default: exit 1)
   -h, --help               Show help
 `)
     process.exit(0)
@@ -2587,6 +2787,17 @@ Options:
   }
 
   if (packagesToBuild.length === 0) {
+    // An empty SWEEP is a real outcome — everything is already published. An
+    // empty TARGETED run is not: `-p something` that matches nothing did no
+    // work and said so on stdout with exit 0, which a workflow step reads as
+    // success. `-p bun.sh` does exactly this (bun is a binary-sync domain and
+    // is filtered out before this point), so the failure mode is not
+    // hypothetical.
+    if (values.package && !values['allow-empty']) {
+      console.error(`No packages matched --package "${values.package}" for ${platform}`)
+      console.error('(pass --allow-empty if selecting nothing is a valid outcome here)')
+      process.exit(1)
+    }
     console.log('No packages to build in this batch')
     process.exit(0)
   }
@@ -2645,7 +2856,15 @@ else {
   // Build each package
   const results: Record<string, BuildResult & { version: string }> = {}
   const batchStartTime = Date.now()
-  const BATCH_TIME_BUDGET_MS = 100 * 60 * 1000 // 100 min — leave 10 min buffer before 110 min step timeout
+  // How long this process will keep STARTING packages. It is not a kill switch:
+  // a package already in flight runs to its own completion, which is how a
+  // 100-minute budget produced a 176-minute job.
+  //
+  // Was a bare 100 minutes, justified by a 110-minute step timeout that no
+  // longer exists — the mirror sweep's jobs allow 300. A budget two thirds
+  // below the job's actual allowance is not a safety margin, it is coverage
+  // left unbuilt every run, so the number is now the caller's to state.
+  const BATCH_TIME_BUDGET_MS = Math.max(1, Number(process.env.PANTRY_BATCH_BUDGET_MIN) || 100) * 60 * 1000
 
   for (const pkg of packagesToBuild) {
     const elapsed = Date.now() - batchStartTime
@@ -2728,6 +2947,26 @@ else {
   if (values['download-only'])
     console.log(`download-only mode: built ${uploaded.length} download recipes, skipped ${downloadOnlySkipped} source recipes`)
 
+  const timingReport = summariseTimings(timingLedger, Date.now() - batchStartTime)
+  console.log(timingReport.console)
+
+  const timingJsonPath = (values['timing-json'] as string | undefined) || process.env.PANTRY_TIMING_JSON
+  if (timingJsonPath) {
+    try {
+      writeFileSync(timingJsonPath, `${JSON.stringify({
+        platform,
+        stripe: values.stripe ?? null,
+        startedAt: new Date(batchStartTime).toISOString(),
+        wallMs: Date.now() - batchStartTime,
+        packages: timingLedger,
+      }, null, 2)}\n`)
+      console.log(`Per-package timings written to ${timingJsonPath}`)
+    }
+    catch (error) {
+      console.warn(`Warning: could not write ${timingJsonPath}: ${(error as Error).message}`)
+    }
+  }
+
   // Write GitHub Actions Job Summary so failures are visible on the run page
   const summaryPath = process.env.GITHUB_STEP_SUMMARY
   if (summaryPath) {
@@ -2753,6 +2992,8 @@ else {
       }
       lines.push('')
     }
+
+    lines.push(...timingReport.markdown)
 
     if (uploaded.length > 0) {
       lines.push(`<details><summary>Uploaded Packages (${uploaded.length})</summary>`)
