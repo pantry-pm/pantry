@@ -242,10 +242,21 @@ configuration produce them every time — so:
   `MaxFiles` was 100000 in `deploy-registry.yml` and `registry_ops.zig` against
   1000000 there; solr.apache.org and neo4j.com had been unpublishable on that
   gap since June. `publication-boundaries.test.ts` now pins both.
-- `Heuristics.Limits.Exceeded.MaxFileSize` (openai.com/codex, haskell.org) is
-  the remaining case: a single member larger than `MaxFileSize`. The codebase's
-  answer is the backfill's entry-wise `scanOversizedGzipTar`, which the publish
-  path does not have. Those still fail — now in ~1 minute rather than ~60.
+- `Heuristics.Limits.Exceeded.MaxFileSize` cannot be fixed by raising a limit —
+  a member above the engine's per-file ceiling is unscannable whole at any
+  setting. The publish path falls back to **entry-wise scanning**
+  (`scanArchiveEntries`, `packages/registry/src/archive-entry-scan.ts`), the
+  same technique `backfill-malware-scans.ts` uses for retained artifacts and
+  now the same code: two copies would drift apart from the engine's limits.
+  This is MORE coverage than the pass that gave up, since it opens exactly the
+  members that pass skipped — a member the engine errors on still fails closed,
+  and one it blocks blocks the archive.
+- **The isolated worker stages the artifact on disk before scanning**, because
+  the fallback reads the archive a second time and the alternative is paying
+  its egress twice. `PANTRY_SCANNER_SCRATCH_DIR` must therefore point at DISK
+  and must reach the transient unit (it is in the `--setenv` list): the default
+  is the host's `/tmp`, and where that is a tmpfs the staged file is charged to
+  the worker's own `MemoryMax=1G` and kills the scans this exists to enable.
 
 Three more rules hold the *other* stall shapes shut:
 
