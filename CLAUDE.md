@@ -116,6 +116,30 @@ Fleet wiring (`provision-build-workers.ts`): each box is assigned **one foreign 
 
 **macOS Intel (darwin-x86-64) is retired for builds.** No workflow, orchestrator platform list, or fleet assignment may produce new darwin-x86-64 artifacts — do not re-add it to any matrix. Already-published darwin-x86-64 binaries/apps stay on the registry and remain served (`packages/registry/src/server.ts` keeps the platform key for listing/downloads).
 
+**Test darwin on the dev Mac, not on a GitHub runner.** The development machine
+IS an Apple Silicon Mac, and `build-package.ts --platform darwin-arm64` runs
+there directly — so a darwin build, a recipe change, a linker error or a patch
+that may not apply should be reproduced locally FIRST. Dispatching a workflow to
+find out costs 10x and takes an order of magnitude longer to answer. Worked
+examples from the session that established this rule:
+
+```bash
+# Does the recipe build on darwin at all?
+PANTRY_BUILD_REPORT=0 bun packages/ts-pantry/scripts/build-package.ts \
+  --package redis.io --version 8.10.1 --platform darwin-arm64 \
+  --build-dir /tmp/rb --prefix /tmp/ri
+
+# Cross-produce a foreign artifact from the same Mac (download recipes only)
+#   → verifyForeignArtifact checks the ELF/Mach-O magic instead of executing it
+... --package meilisearch.com --version 1.53.1 --platform linux-x86-64 ...
+```
+
+A/B against the real upstream tarball is usually enough and takes minutes: that
+is how redis's `module_tests`/`-Wl,-rpath` failure, its env-vs-command-line
+PREFIX bug, and OpenSSL 4.0.2's patch applying cleanly were all settled without
+allocating a single macOS runner. Reach for a Mac runner only to PUBLISH, never
+to diagnose.
+
 **No WASTEFUL unsupervised macOS — macOS runs only when a Mac is genuinely required.** macOS runners bill ~10×. The rule is: **no broad/scheduled macOS sweeps**, and any macOS job that runs automatically must be **tightly gated to only the specific packages that truly need a Mac**. The `schedule:` cron has been removed from every Mac-spawning sweep — `build.yml`, `build-versions.yml`, `build-residual.yml`, `sync-binaries.yml`, and `build-orchestrator.yml` (also disabled in the Actions tab); they keep `workflow_dispatch` for supervised runs. There are exactly **two** automatic macOS paths, and both are gated on a set the workflow computes first: `publish-changed-packages.yml`'s `publish-darwin-native` job (see below), which spins up a Mac ONLY when a changed package is a genuine darwin source recipe pkgx can't provide, and `check-desktop-updates.yml`'s `publish-macos` job, which spins one up ONLY when a disk-image app is actually behind. Both compute the needed set in a cheap ubuntu job and run `if` that set is non-empty, so darwin updates publish properly without a firehose. Do NOT add a broad `schedule:`/`push:` macOS matrix; if a new automatic Mac job is unavoidable, gate it the same way (compute the exact needed set, run `if` that set is non-empty). darwin-arm64 coverage that does NOT need a Mac stays automated on the cheap ubuntu runners:
 
 - **darwin-arm64 DOWNLOAD recipes** → `mirror.yml` (every 6h, download-only, all platforms) + the Hetzner xdl fleet (continuous). No Mac.
