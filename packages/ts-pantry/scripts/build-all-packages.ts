@@ -1349,6 +1349,43 @@ const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'curl.se', // Pantry links against OpenSSL 3; pkgx's build still requires OpenSSL 1.1
 ])
 
+/**
+ * Split packages across `n` stripes by COST rather than by index.
+ *
+ * Interleaving (`idx % n === i`) spreads packages evenly and work unevenly. On
+ * the 2026-09-07T11:54 mirror run the four darwin download stripes came in at
+ * 25, 32, 139 and 176 minutes — a 7x spread, with two stripes carrying 85% of
+ * the 372 minutes. Package count says nothing about how many versions each one
+ * has to fetch, and versions are what the time goes on.
+ *
+ * Longest-processing-time-first: take the most expensive package still
+ * unassigned and give it to whichever stripe is currently lightest. That is the
+ * classic greedy bound for this, and it is deterministic — which matters,
+ * because every stripe computes the whole assignment independently and must
+ * agree with its siblings on who owns what. Ties therefore break on domain,
+ * never on discovery order.
+ */
+export function assignStripe<T extends { domain: string }>(
+  packages: T[],
+  index: number,
+  count: number,
+  costOf: (pkg: T) => number,
+): T[] {
+  const ordered = [...packages].sort((a, b) => (costOf(b) - costOf(a)) || a.domain.localeCompare(b.domain))
+  const load = Array.from({ length: count }, () => 0)
+  const owner = new Map<string, number>()
+  for (const pkg of ordered) {
+    let lightest = 0
+    for (let bin = 1; bin < count; bin++) {
+      if (load[bin] < load[lightest]) lightest = bin
+    }
+    owner.set(pkg.domain, lightest)
+    load[lightest] += costOf(pkg)
+  }
+  // Keep the caller's original ordering within the stripe.
+  return packages.filter(pkg => owner.get(pkg.domain) === index)
+}
+
 /** Does this package match one of the `-p` selectors? */
 export function matchesRequestedPackage(domain: string, name: string, requested: string[]): boolean {
   return requested.some(d => domain === d || name === d || domain.startsWith(`${d}/`))
@@ -2498,8 +2535,13 @@ Options:
       console.error(`Invalid --stripe ${values.stripe} (expected i/n with 0<=i<n)`)
       process.exit(1)
     }
-    packagesToBuild = allPackages.filter((_, idx) => idx % n === i)
-    logDiscovery(`Stripe ${i}/${n}: ${packagesToBuild.length} of ${allPackages.length} packages (interleaved)`)
+    // Cost is the number of versions this run would attempt, which is what the
+    // time actually goes on. +1 so a zero-version package still occupies a slot.
+    packagesToBuild = assignStripe(allPackages, i, n, (pkg) => {
+      const cap = POPULAR_PACKAGES.has(pkg.domain) ? Math.max(maxVersions, POPULAR_MAX_VERSIONS) : maxVersions
+      return Math.min(pkg.versions?.length ?? 1, cap) + 1
+    })
+    logDiscovery(`Stripe ${i}/${n}: ${packagesToBuild.length} of ${allPackages.length} packages (cost-balanced)`)
   }
 
   // --print-selected: emit the resolved domain set (post -p / --source-only /

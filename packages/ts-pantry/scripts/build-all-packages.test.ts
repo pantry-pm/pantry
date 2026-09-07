@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { matchesRequestedPackage, pkgxHasPrebuilt } from './build-all-packages'
+import { assignStripe, matchesRequestedPackage, pkgxHasPrebuilt } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -127,5 +127,62 @@ describe('matchesRequestedPackage', () => {
 
   test('a path child does not match a longer sibling prefix', () => {
     expect(sel('python.organisation.example', 'x', 'python.org')).toBe(false)
+  })
+})
+
+describe('assignStripe', () => {
+  const pkgs = (costs: number[]) => costs.map((c, i) => ({ domain: `d${String(i).padStart(3, '0')}.org`, cost: c }))
+  const cost = (p: { cost: number }) => p.cost
+  const allStripes = (list: ReturnType<typeof pkgs>, n: number) =>
+    Array.from({ length: n }, (_, i) => assignStripe(list, i, n, cost))
+
+  test('partitions exactly — every package once, none lost', () => {
+    const list = pkgs([9, 1, 8, 2, 7, 3, 6, 4, 5, 10, 1, 1])
+    const stripes = allStripes(list, 4)
+    const seen = stripes.flat().map(p => p.domain).sort()
+    expect(seen).toEqual(list.map(p => p.domain).sort())
+    expect(new Set(seen).size).toBe(list.length)
+  })
+
+  // The point of the change: index-interleaving put 85% of the darwin download
+  // work into two of four stripes. What matters is the WORST stripe, since the
+  // run waits for it — not how evenly the rest sit.
+  test('shortens the worst stripe compared with interleaving', () => {
+    // Every 4th package is heavy, which is exactly the case interleaving
+    // handles worst: stripe 0 collects all of them.
+    const list = pkgs([100, 1, 1, 1, 100, 1, 1, 1, 100, 1, 1, 1])
+    const total = (s: Array<{ cost: number }>) => s.reduce((sum, p) => sum + p.cost, 0)
+
+    const balanced = Math.max(...allStripes(list, 4).map(total))
+    const interleaved = Math.max(...[0, 1, 2, 3].map(i => total(list.filter((_, idx) => idx % 4 === i))))
+
+    expect(interleaved).toBe(300) // all three heavy packages land together
+    expect(balanced).toBe(100) // one each; the theoretical optimum here
+    expect(balanced).toBeLessThan(interleaved)
+  })
+
+  test('spreads an evenly-weighted set evenly', () => {
+    const list = pkgs(Array.from({ length: 40 }, () => 5))
+    const loads = allStripes(list, 4).map(s => s.reduce((sum, p) => sum + p.cost, 0))
+    expect(Math.max(...loads) - Math.min(...loads)).toBe(0)
+  })
+
+  // Each stripe computes the whole assignment independently, so they must agree.
+  test('is deterministic regardless of input order', () => {
+    const list = pkgs([5, 5, 5, 5, 3, 3, 3, 3])
+    const shuffled = [...list].reverse()
+    expect(assignStripe(list, 1, 3, cost).map(p => p.domain).sort())
+      .toEqual(assignStripe(shuffled, 1, 3, cost).map(p => p.domain).sort())
+  })
+
+  test('a single stripe takes everything', () => {
+    const list = pkgs([1, 2, 3])
+    expect(assignStripe(list, 0, 1, cost)).toHaveLength(3)
+  })
+
+  test('preserves the caller ordering within a stripe', () => {
+    const list = pkgs([1, 1, 1, 1, 1, 1])
+    const s0 = assignStripe(list, 0, 2, cost).map(p => p.domain)
+    expect(s0).toEqual([...s0].sort())
   })
 })
