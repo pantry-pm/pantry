@@ -59,6 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.gen.outputs.matrix }}
+      download_matrix: ${{ steps.gen.outputs.download_matrix }}
     steps:
       - id: gen
         shell: bash
@@ -77,6 +78,16 @@ jobs:
           INC=$(echo "$BASE" | jq -c '[.[] | . as $p | range(0; $p.stripes) | {name: $p.name, os: $p.os, stripe: "\(.)/\($p.stripes)"}]')
           echo "matrix={\"include\":$INC}" >> "$GITHUB_OUTPUT"
           echo "Generated $(echo "$INC" | jq length) mirror jobs"
+
+          # The download job needs the same PLATFORM narrowing. Its matrix used
+          # to be static YAML, so `-f platform=darwin-arm64` narrowed the mirror
+          # half and left the download half running all three platforms — a
+          # "single platform" dispatch quietly did 3x the download work asked
+          # for. Two stripes each, which is what the static list had after
+          # striping.
+          DL=$(echo "$BASE" | jq -c '[.[] | . as $p | range(0; 2) | {name: $p.name, os: $p.os, stripe: "\(.)/2"}]')
+          echo "download_matrix={\"include\":$DL}" >> "$GITHUB_OUTPUT"
+          echo "Generated $(echo "$DL" | jq length) download jobs"
 
   mirror:
     name: Mirror ${{ matrix.name }} ${{ matrix.stripe }}
@@ -150,18 +161,12 @@ jobs:
   # Two stripes per platform, matching the mirror job above, which is already
   # striped for the same reason.
   download:
-    name: Download ${{ matrix.platform.name }} ${{ matrix.platform.stripe }}
+    name: Download ${{ matrix.name }} ${{ matrix.stripe }}
+    needs: setup
     strategy:
       fail-fast: false
-      matrix:
-        platform:
-          - { name: linux-x86-64, os: ubuntu-latest, stripe: '0/2' }
-          - { name: linux-x86-64, os: ubuntu-latest, stripe: '1/2' }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, stripe: '0/2' }
-          - { name: linux-arm64, os: ubuntu-24.04-arm, stripe: '1/2' }
-          - { name: darwin-arm64, os: ubuntu-latest, stripe: '0/2' }
-          - { name: darwin-arm64, os: ubuntu-latest, stripe: '1/2' }
-    runs-on: ${{ matrix.platform.os }}
+      matrix: ${{ fromJSON(needs.setup.outputs.download_matrix) }}
+    runs-on: ${{ matrix.os }}
     # 120 was truncating the sweep, not bounding a runaway. On 2026-09-07T03:34
     # three of eleven jobs were killed at exactly 2h00 mid-upload — `Mirror
     # linux-x86-64 1/4`, `Mirror linux-arm64 1/2` and `Download darwin-arm64` —
@@ -173,7 +178,7 @@ jobs:
     # going regardless, so this cannot pile up.
     timeout-minutes: 300
     concurrency:
-      group: download-${{ matrix.platform.name }}-${{ matrix.platform.stripe }}
+      group: download-${{ matrix.name }}-${{ matrix.stripe }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -199,7 +204,7 @@ jobs:
           POPV="${{ github.event.inputs.popular-max-versions || '20' }}"
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$AWS_REGION" \
-            --platform "${{ matrix.platform.name }}" \
-            --stripe "${{ matrix.platform.stripe }}" \
+            --platform "${{ matrix.name }}" \
+            --stripe "${{ matrix.stripe }}" \
             --download-only --multi-version \
             --max-versions "$MAXV" --popular-max-versions "$POPV"
