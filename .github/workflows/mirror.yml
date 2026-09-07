@@ -67,12 +67,18 @@ jobs:
           PLATFORM: ${{ github.event.inputs.platform }}
           STRIPES: ${{ github.event.inputs.stripes }}
         run: |
-          BASE='[{"name":"linux-x86-64","os":"ubuntu-latest","stripes":4},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2},{"name":"darwin-arm64","os":"ubuntu-latest","stripes":2}]'
+          # `stripes` splits the MIRROR pass, `dl_stripes` the DOWNLOAD pass —
+          # they are different amounts of work and darwin is the outlier. With
+          # two download stripes, darwin's halves measured 209 and 138 minutes
+          # (2026-09-07T06:11 run) against 25-53 for linux-x86-64: roughly 347
+          # minutes of darwin download work in total, which unstriped exceeds
+          # even the 6-hourly cron. Four stripes puts it near 87 minutes each.
+          BASE='[{"name":"linux-x86-64","os":"ubuntu-latest","stripes":4,"dl_stripes":2},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2,"dl_stripes":2},{"name":"darwin-arm64","os":"ubuntu-latest","stripes":2,"dl_stripes":4}]'
           if [ -n "$PLATFORM" ]; then
             BASE=$(echo "$BASE" | jq -c --arg p "$PLATFORM" '[.[] | select(.name == $p)]')
           fi
           if [ -n "$STRIPES" ]; then
-            BASE=$(echo "$BASE" | jq -c --argjson s "$STRIPES" '[.[] | .stripes = $s]')
+            BASE=$(echo "$BASE" | jq -c --argjson s "$STRIPES" '[.[] | .stripes = $s | .dl_stripes = $s]')
           fi
           # Expand each platform into N stripe jobs: {name, os, stripe:"i/n"}.
           INC=$(echo "$BASE" | jq -c '[.[] | . as $p | range(0; $p.stripes) | {name: $p.name, os: $p.os, stripe: "\(.)/\($p.stripes)"}]')
@@ -85,7 +91,7 @@ jobs:
           # "single platform" dispatch quietly did 3x the download work asked
           # for. Two stripes each, which is what the static list had after
           # striping.
-          DL=$(echo "$BASE" | jq -c '[.[] | . as $p | range(0; 2) | {name: $p.name, os: $p.os, stripe: "\(.)/2"}]')
+          DL=$(echo "$BASE" | jq -c '[.[] | . as $p | range(0; $p.dl_stripes) | {name: $p.name, os: $p.os, stripe: "\(.)/\($p.dl_stripes)"}]')
           echo "download_matrix={\"include\":$DL}" >> "$GITHUB_OUTPUT"
           echo "Generated $(echo "$DL" | jq length) download jobs"
 
