@@ -218,12 +218,36 @@ Two rules that are easy to undo by accident:
 `/binaries/` answers `HEAD`. Use it for existence/freshness checks rather than a
 GET that throws the body away.
 
-## Publish latency: the scan queue is what costs a sweep its afternoon
+## Publish latency: what a stalled publish is actually waiting for
 
 A mirror stripe that took 176 minutes spent 148 of them on **two 370MB
 `solr.apache.org` uploads, 73.8 minutes each**, both ending in "Binary upload
-completion remained ambiguous". None of that was compiling or transferring. The
-shape repeats whenever a publish window is busy, so three rules hold it shut:
+completion remained ambiguous". None of that was compiling or transferring.
+
+**`GET /api/build-status` carries the verdict, reason and duration** for every
+recent failure — read it before theorising from log gaps. For solr it said
+`reason=scanner coverage limit exceeded: Heuristics.Limits.Exceeded.MaxFiles
+durationMs=855417`: clamd scanned for 14 minutes, hit its own `MaxFiles`, and
+reported incomplete coverage. The publisher then polled that **130 times** over
+the rest of its hour, because a coverage limit was dressed as a retryable 503.
+
+Coverage limits are DETERMINISTIC — identical bytes against identical engine
+configuration produce them every time — so:
+
+- **`isScanCoverageLimitReason` ⇒ 422 `MALWARE_SCAN_COVERAGE_LIMIT`, never a
+  retryable 503, and no digest backoff.** The artifact is rejected once, naming
+  the limit to raise, and a config change takes effect on the very next attempt.
+- **Production clamd must not be stricter than the backfill's clamd**
+  (`.github/actions/setup-clamav`), which scans these same artifacts.
+  `MaxFiles` was 100000 in `deploy-registry.yml` and `registry_ops.zig` against
+  1000000 there; solr.apache.org and neo4j.com had been unpublishable on that
+  gap since June. `publication-boundaries.test.ts` now pins both.
+- `Heuristics.Limits.Exceeded.MaxFileSize` (openai.com/codex, haskell.org) is
+  the remaining case: a single member larger than `MaxFileSize`. The codebase's
+  answer is the backfill's entry-wise `scanOversizedGzipTar`, which the publish
+  path does not have. Those still fail — now in ~1 minute rather than ~60.
+
+Three more rules hold the *other* stall shapes shut:
 
 - **Mint the scan's presigned URL AFTER admission, never before**
   (`ScanUrlSource` is a thunk for exactly this reason). The URL's lifetime is

@@ -74,6 +74,11 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_clam MaxScanSize 8G')
     expect(workflow).toContain('set_clam MaxFileSize 2G')
     expect(workflow).toContain('set_clam AlertExceedsMax yes')
+    // Production must not be stricter than the backfill's clamd, which scans
+    // the same artifacts. At 100000 the publish path reported
+    // Heuristics.Limits.Exceeded.MaxFiles for solr.apache.org and neo4j.com —
+    // a fail-closed non-verdict, retried every sweep since June.
+    expect(workflow).toContain('set_clam MaxFiles 1000000')
     expect(workflow).toContain('set_clam ConcurrentDatabaseReload no')
     expect(workflow).toContain("LEGACY_RESCAN_MAX_BYTES: ${{ vars.PANTRY_LEGACY_RESCAN_MAX_BYTES || '8589934592' }}")
     expect(workflow).toContain('LEGACY_RESCAN_MAX_BYTES="$8"')
@@ -177,6 +182,8 @@ describe('first-party publication boundaries', () => {
     expect(setup).toContain('set_clam MaxThreads 2')
     expect(setup).toContain('set_clam MaxQueue 4')
     expect(setup).toContain('set_clam MaxScanTime 2700000')
+    // Kept in step with deploy-registry.yml — the two provision the same box.
+    expect(setup).toContain('set_clam MaxFiles 1000000')
     expect(setup).toContain('set_clam ConcurrentDatabaseReload no')
     expect(setup).toContain('clamav-daemon clamav-freshclam util-linux')
     expect(setup).toContain('clamav-daemon.service.d')

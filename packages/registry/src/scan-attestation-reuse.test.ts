@@ -190,6 +190,31 @@ describe('scan failure backoff', () => {
     expect(scanner.scans).toBe(1)
   })
 
+  it('rejects an incompletely-scanned artifact instead of asking for a retry', async () => {
+    // clamd's own limits are deterministic: the same bytes against the same
+    // configuration hit MaxFiles every time. Dressed as a retryable 503 this
+    // cost 130 polls and most of an hour per attempt — four times a day since
+    // June, for solr.apache.org and neo4j.com. The publisher must fail once,
+    // naming the limit, so the engine config is what gets fixed.
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    scanner.verdict = 'error'
+    scanner.reason = 'scanner coverage limit exceeded: Heuristics.Limits.Exceeded.MaxFiles'
+    const publisher = new BinaryArtifactPublisher(store, scanner, { tokenSecret: 'test-secret-that-is-long-enough' })
+    const bytes = Buffer.from('an archive with more entries than clamd will open')
+
+    await expect(publish(publisher, store, bytes, '1.2.3'))
+      .rejects.toThrow(/could not be scanned in full/)
+    expect(scanner.scans).toBe(1)
+
+    // No backoff either: raising the limit must take effect on the next
+    // attempt, not fifteen minutes later.
+    scanner.verdict = 'clean'
+    scanner.reason = undefined
+    expect((await publish(publisher, store, bytes, '1.2.4')).scan.verdict).toBe('clean')
+    expect(scanner.scans).toBe(2)
+  })
+
   it('does not charge the artifact a backoff for the scanner being busy', async () => {
     // Load is not evidence about the bytes. Treating a shed scan as a failed
     // one meant a busy publish window locked the artifact out for 15 minutes

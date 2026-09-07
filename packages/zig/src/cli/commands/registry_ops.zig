@@ -374,7 +374,10 @@ const provision_script =
     \\set_clam MaxFileSize 2G
     \\set_clam AlertExceedsMax yes
     \\set_clam MaxRecursion 30
-    \\set_clam MaxFiles 100000
+    \\# 100000 rejected our largest archives as
+    \\# Heuristics.Limits.Exceeded.MaxFiles. Matches setup-clamav, whose
+    \\# clamd scans those same artifacts.
+    \\set_clam MaxFiles 1000000
     \\# Must not sit below Registry's largest per-artifact scan budget
     \\# (MAX_SCAN_TIMEOUT_MS, 45 min), or the engine aborts scans Registry is
     \\# still waiting for. This was 225s, sized against an HTTP timeout ladder

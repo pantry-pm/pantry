@@ -175,7 +175,15 @@ jobs:
             set_clam MaxFileSize 2G
             set_clam AlertExceedsMax yes
             set_clam MaxRecursion 30
-            set_clam MaxFiles 100000
+            # 100000 was too low for our largest archives and, because
+            # AlertExceedsMax is on, clamd reported the shortfall as
+            # Heuristics.Limits.Exceeded.MaxFiles — a fail-closed non-verdict.
+            # solr.apache.org and neo4j.com have been unpublishable on that
+            # limit since June, each attempt spending ~15 minutes scanning
+            # before hitting it. 1000000 is the value the backfill workflow's
+            # clamd (.github/actions/setup-clamav) already uses to scan these
+            # same artifacts successfully.
+            set_clam MaxFiles 1000000
             # This used to be 225s, sized to sit below every enclosing HTTP
             # timeout (Registry 240s < Bun 255s < rpx 300s) so each layer had
             # time to return a structured fail-closed response.

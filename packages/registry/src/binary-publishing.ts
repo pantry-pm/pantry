@@ -10,6 +10,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import type { S3Client } from './storage/aws-client'
 import {
+  isScanCoverageLimitReason,
   isScannerOverloadReason,
   publicScanResult,
   recordMalwareScanResult,
@@ -1029,6 +1030,18 @@ export class BinaryArtifactPublisher {
       // so charging them a 15-minute backoff punishes an artifact for the
       // server being busy — and the publisher, which had to be told to come
       // back later anyway, then serves that backoff on the retry.
+      // Deterministic, so retrying the identical bytes cannot change it: the
+      // engine covered what its limits allowed and reported the shortfall.
+      // Reported as a retryable 503 it bought 130 polls and most of an hour
+      // per attempt. It is a rejection, and it names the limit to raise.
+      if (scan.verdict === 'error' && isScanCoverageLimitReason(scan.reason)) {
+        throw new BinaryPublishError(
+          'Binary artifact could not be scanned in full; raise the engine limit named in the scan reason',
+          422,
+          'MALWARE_SCAN_COVERAGE_LIMIT',
+          scan,
+        )
+      }
       if (scan.verdict === 'error' && isScannerOverloadReason(scan.reason)) {
         throw new BinaryPublishError(
           'Binary artifact malware scanning is busy; retry shortly',
