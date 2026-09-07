@@ -1238,6 +1238,23 @@ async function tryBuildVersion(
 
     let pending = ''
     let batch: string[] = []
+    // Last few output lines, kept so a failure can say WHY.
+    //
+    // The rejection below carried only "exited with code 1", which is what the
+    // run summary, the job-summary failure table and the timing ledger all
+    // showed — thirteen failures in one stripe, none of them naming a cause,
+    // every one requiring the job log to be opened. It doubles as
+    // classification: isSourceUnavailableError looks for a 404 or
+    // DOWNLOAD_FAILED in the message, markers that only ever appeared in the
+    // child's output, so a phantom version that exited 1 rather than 42 was
+    // being reported as a genuine build failure.
+    const tail: string[] = []
+    const rememberLine = (line: string) => {
+      const trimmed = line.trim()
+      if (!trimmed) return
+      tail.push(trimmed.slice(0, 200))
+      if (tail.length > 15) tail.shift()
+    }
     const flush = () => {
       if (batch.length) {
         const lines = batch
@@ -1254,7 +1271,10 @@ async function tryBuildVersion(
       pending += s
       const parts = pending.split('\n')
       pending = parts.pop() ?? ''
-      for (const line of parts) batch.push(line)
+      for (const line of parts) {
+        batch.push(line)
+        rememberLine(line)
+      }
       if (batch.length >= 40) flush()
     }
     child.stdout?.on('data', onData)
@@ -1271,7 +1291,10 @@ async function tryBuildVersion(
     child.on('error', (err) => { cleanupTimers(); reject(err) })
     child.on('close', (code) => {
       cleanupTimers()
-      if (pending) batch.push(pending)
+      if (pending) {
+        batch.push(pending)
+        rememberLine(pending)
+      }
       flush()
       if (timedOut) {
         const err = new Error(`build-package.ts timed out after ${PER_PACKAGE_TIMEOUT_MS / 60000} min (killed)`) as Error & { status?: number | null }
@@ -1284,7 +1307,10 @@ async function tryBuildVersion(
       else {
         // Mimic execSync's error shape so the caller's exit-code-42 (download
         // failure → try older version) fallback logic still works.
-        const err = new Error(`build-package.ts exited with code ${code}`) as Error & { status?: number | null }
+        const context = tail.join(' | ').slice(0, 1200)
+        const err = new Error(
+          `build-package.ts exited with code ${code}${context ? `: ${context}` : ''}`,
+        ) as Error & { status?: number | null }
         err.status = code
         reject(err)
       }
@@ -1430,7 +1456,7 @@ interface BuildResult {
  * authoritative signal that a version's source does not exist upstream. We also
  * pattern-match the message as a fallback for older/wrapped error shapes.
  */
-function isSourceUnavailableError(error: any): boolean {
+export function isSourceUnavailableError(error: any): boolean {
   if (error?.status === 42)
     return true
   const errMsg = (error?.message as string) || ''

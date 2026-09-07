@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { assignStripe, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
+import { assignStripe, isSourceUnavailableError, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -218,5 +218,26 @@ describe('summariseTimings', () => {
     expect(text).toContain('Wall clock: 0.0 min')
     expect(text).toContain('(—)')
     expect(markdown.join('\n')).toContain('### Timing')
+  })
+})
+
+describe('isSourceUnavailableError', () => {
+  test('reads the marker out of the message the child actually printed', () => {
+    // The markers only ever appear in build-package.ts's OUTPUT, and the
+    // rejection used to carry just the exit code — so a version whose tarball
+    // 404s but which exits 1 rather than 42 was reported as a build failure
+    // and counted against coverage, instead of as a phantom version.
+    expect(isSourceUnavailableError({
+      status: 1,
+      message: 'build-package.ts exited with code 1: curl: (22) The requested URL returned error: 404',
+    })).toBe(true)
+    expect(isSourceUnavailableError({ status: 42, message: 'build-package.ts exited with code 42' })).toBe(true)
+  })
+
+  test('still calls a genuine compile failure a failure', () => {
+    expect(isSourceUnavailableError({
+      status: 1,
+      message: 'build-package.ts exited with code 1: ld: symbol(s) not found for architecture arm64',
+    })).toBe(false)
   })
 })
