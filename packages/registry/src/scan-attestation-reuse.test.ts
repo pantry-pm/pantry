@@ -42,6 +42,7 @@ class CountingScanner implements MalwareScanner {
   readonly required = true
   scans = 0
   verdict: MalwareScanResult['verdict'] = 'clean'
+  reason: string | undefined
 
   async scan(data: ArrayBuffer, _context: MalwareScanContext): Promise<MalwareScanResult> {
     this.scans++
@@ -51,6 +52,7 @@ class CountingScanner implements MalwareScanner {
       scannedAt: new Date().toISOString(),
       durationMs: 1,
       artifactSha256: createHash('sha256').update(Buffer.from(data)).digest('hex'),
+      ...(this.reason ? { reason: this.reason } : {}),
     }
   }
 
@@ -186,6 +188,28 @@ describe('scan failure backoff', () => {
 
     await expect(publish(publisher, store, bytes, '1.2.4')).rejects.toThrow(/retry in \d+s/)
     expect(scanner.scans).toBe(1)
+  })
+
+  it('does not charge the artifact a backoff for the scanner being busy', async () => {
+    // Load is not evidence about the bytes. Treating a shed scan as a failed
+    // one meant a busy publish window locked the artifact out for 15 minutes
+    // and the publisher, told to retry, spent that window polling the backoff
+    // its own retry had earned.
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    scanner.verdict = 'error'
+    scanner.reason = 'scanner busy: not admitted within 600s (2 in flight, 7 still queued)'
+    const publisher = new BinaryArtifactPublisher(store, scanner, { tokenSecret: 'test-secret-that-is-long-enough' })
+    const bytes = Buffer.from('an artifact published into a busy window')
+
+    await expect(publish(publisher, store, bytes, '1.2.3')).rejects.toThrow(/busy; retry shortly/)
+
+    // The next attempt reaches the scanner instead of a backoff refusal.
+    scanner.verdict = 'clean'
+    scanner.reason = undefined
+    const result = await publish(publisher, store, bytes, '1.2.4')
+    expect(result.scan.verdict).toBe('clean')
+    expect(scanner.scans).toBe(2)
   })
 
   it('clears the backoff once a scan reaches a verdict', async () => {

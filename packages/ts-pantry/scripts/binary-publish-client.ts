@@ -121,6 +121,25 @@ function completionError(response: Response, completed: any): Error {
   )
 }
 
+/**
+ * How long the registry asked us to wait, if it said.
+ *
+ * A publisher that ignores this polls a backoff it cannot see the end of. The
+ * registry declares a per-digest backoff (15m, then 6h) after a scan fails to
+ * reach a verdict; polling through that at the 30s ceiling is 30 useless
+ * requests and, on a mirror sweep, ~45 minutes of a runner held open for an
+ * answer that was already decided.
+ */
+function retryAfterMs(response: Response, completed: any): number | null {
+  const fromBody = Number(completed?.retryAfterSeconds)
+  if (Number.isFinite(fromBody) && fromBody > 0)
+    return fromBody * 1000
+  const header = Number(response.headers?.get?.('Retry-After'))
+  if (Number.isFinite(header) && header > 0)
+    return header * 1000
+  return null
+}
+
 function completionMayStillBeRunning(response: Response, completed: any): boolean {
   return (
     response.status === 408
@@ -171,7 +190,12 @@ export async function completeBinaryUpload(
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
   let lastError: Error = new Error('binary upload completion did not run')
 
+  const startedAt = Date.now()
+  let attemptsMade = 0
+
   for (let attempt = 1; attempt <= attempts; attempt++) {
+    attemptsMade = attempt
+    let waitMs = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(attempt - 1, 5))
     try {
       const response = await fetchUpload(`${registryUrl}/api/v1/binaries/uploads/complete`, {
         method: 'POST',
@@ -185,6 +209,9 @@ export async function completeBinaryUpload(
       lastError = completionError(response, completed)
       if (!completionMayStillBeRunning(response, completed))
         throw new PermanentCompletionError(lastError.message)
+      // The registry knows when it will be willing to answer; our own backoff
+      // is only a guess in the absence of that.
+      waitMs = Math.max(waitMs, retryAfterMs(response, completed) ?? 0)
     }
     catch (error) {
       if (error instanceof PermanentCompletionError)
@@ -194,10 +221,23 @@ export async function completeBinaryUpload(
 
     if (attempt >= attempts || Date.now() >= deadline)
       break
-    await sleep(Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(attempt - 1, 5)))
+    // Waiting past the deadline only to fail there is the expensive half of a
+    // failed publish: two 370MB uploads sat through 45 minutes of a backoff
+    // apiece before reporting the verdict the first poll already carried.
+    if (Date.now() + waitMs > deadline) {
+      lastError = new Error(
+        `${lastError.message} — registry asked for ${Math.round(waitMs / 1000)}s more `
+        + `than the ${Math.round((deadline - startedAt) / 60000)} min completion budget allows`,
+      )
+      break
+    }
+    await sleep(waitMs)
   }
 
-  throw new Error(`Binary upload completion remained ambiguous after ${attempts} attempts: ${lastError.message}`)
+  throw new Error(
+    `Binary upload completion remained ambiguous after ${attemptsMade} attempts `
+    + `over ${Math.round((Date.now() - startedAt) / 1000)}s: ${lastError.message}`,
+  )
 }
 
 /** Attempts for the initiate call — seconds of backoff, not minutes: unlike

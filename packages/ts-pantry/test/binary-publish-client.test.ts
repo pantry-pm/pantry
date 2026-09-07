@@ -140,6 +140,70 @@ describe('completion waits long enough for a large artifact to be scanned', () =
     }
   })
 
+  it('stops rather than polling out a backoff longer than its own budget', async () => {
+    // The registry declares a per-digest backoff after a scan fails to reach a
+    // verdict. Polling through it at the 30s ceiling is ~90 requests for an
+    // answer already decided — and on a mirror sweep it is 45 minutes of a
+    // runner held open, which is what two 370MB solr uploads each spent.
+    let now = 0
+    const realNow = Date.now
+    Date.now = () => now
+    let calls = 0
+    try {
+      const fetch = (async () => {
+        calls++
+        now += 1_000
+        return {
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { get: () => null },
+          json: async () => ({
+            code: 'MALWARE_SCAN_UNAVAILABLE',
+            error: 'Binary artifact malware scanning is temporarily unavailable; retry in 900s',
+            retryable: true,
+            retryAfterSeconds: 900,
+          }),
+        }
+      }) as any
+      await expect(completeBinaryUpload('https://registry.test', 'u', { Authorization: 'Bearer t' }, {
+        fetch,
+        sleep: async () => { throw new Error('must not sleep past the deadline') },
+        deadlineMs: 60_000,
+      })).rejects.toThrow('than the 1 min completion budget allows')
+      expect(calls).toBe(1)
+    }
+    finally {
+      Date.now = realNow
+    }
+  })
+
+  it('waits the registry-declared backoff when it fits inside the budget', async () => {
+    const slept: number[] = []
+    let calls = 0
+    const fetch = (async () => {
+      calls++
+      if (calls === 1) {
+        return {
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { get: (name: string) => (name === 'Retry-After' ? '120' : null) },
+          json: async () => ({ code: 'MALWARE_SCAN_UNAVAILABLE', error: 'busy', retryable: true }),
+        }
+      }
+      return { ok: true, status: 200, statusText: 'OK', json: async () => ({ success: true }) }
+    }) as any
+
+    const result = await completeBinaryUpload('https://registry.test', 'u', { Authorization: 'Bearer t' }, {
+      fetch,
+      sleep: async (ms: number) => { slept.push(ms) },
+    })
+    expect(result.success).toBe(true)
+    // The header wins over the client's own 1s first backoff.
+    expect(slept).toEqual([120_000])
+  })
+
   it('still fails fast on a permanent error', async () => {
     // A budget increase must not turn a real rejection into a long hang.
     const fetch = (async () => ({

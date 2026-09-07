@@ -12,10 +12,12 @@ import {
   type BinaryPublishCompleted,
 } from './binary-publishing'
 import {
+  scanBudgetMs,
   type MalwareScanContext,
   type MalwareScanResult,
   type MalwareScanner,
   type MalwareScannerHealth,
+  type ScanUrlSource,
 } from './malware-scanning'
 import { createLocalRegistry } from './registry'
 import { createServer } from './server'
@@ -197,12 +199,19 @@ class UrlTestScanner extends TestScanner {
     throw new Error('stream scan must not run when isolated URL scanning is available')
   }
 
+  /** URLs the store had already minted at the moment `scanUrl` was entered. */
+  mintedBeforeScan: number[] = []
+  mintedBefore: (() => number) | null = null
+
   async scanUrl(
-    url: string,
+    url: ScanUrlSource,
     context: MalwareScanContext,
     expected: { sha256: string, size: number },
   ): Promise<MalwareScanResult> {
-    this.urls.push(url)
+    // Mirrors the real scanner: the URL is resolved only once the scan is
+    // admitted, which here is "once scanUrl has been entered".
+    this.mintedBeforeScan.push(this.mintedBefore?.() ?? 0)
+    this.urls.push(typeof url === 'function' ? url() : url)
     this.contexts.push(context)
     return {
       verdict: 'clean',
@@ -256,6 +265,7 @@ describe('binary scan-before-promote publisher', () => {
   it('isolates native object scanning behind a short-lived download URL', async () => {
     const store = new UrlArtifactStore()
     const scanner = new UrlTestScanner()
+    scanner.mintedBefore = () => store.urls.length
     const publisher = new BinaryArtifactPublisher(store, scanner, {
       tokenSecret: 'test-secret-that-is-long-enough',
     })
@@ -271,7 +281,14 @@ describe('binary scan-before-promote publisher', () => {
     expect(result.action).toBe('attested')
     expect(scanner.urls).toEqual(store.urls)
     expect(scanner.urls).toHaveLength(1)
-    expect(scanner.urls[0]).toContain('expires=600')
+    // Minted lazily. A presigned URL starts expiring when it is created, and
+    // the scanner does not download until it has been admitted through its
+    // concurrency gate — so minting at call time charges the queue wait
+    // against the signature and the download 403s partway through.
+    expect(scanner.mintedBeforeScan).toEqual([0])
+    // ...and it outlives the budget the scan itself is given.
+    const expires = Number(new URL(scanner.urls[0]).searchParams.get('expires'))
+    expect(expires).toBeGreaterThan(scanBudgetMs(bytes.byteLength) / 1000)
     expect(scanner.contexts[0]).toMatchObject({
       surface: 'binary',
       name: 'example.com/tool',

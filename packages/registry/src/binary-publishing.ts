@@ -10,6 +10,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import type { S3Client } from './storage/aws-client'
 import {
+  isScannerOverloadReason,
   publicScanResult,
   recordMalwareScanResult,
   scanPackageArtifact,
@@ -20,6 +21,14 @@ import {
   type MalwareScanner,
   type PublishSurface,
 } from './malware-scanning'
+
+/**
+ * How soon a publisher shed for scanner load should come back.
+ *
+ * Short on purpose: the queue it was shed from drains in minutes, and unlike a
+ * scan that reached no verdict there is nothing about these bytes to wait out.
+ */
+const SCANNER_BUSY_RETRY_AFTER_SECONDS = 90
 
 const DEFAULT_MAX_BINARY_BYTES = 1024 * 1024 * 1024
 /**
@@ -298,6 +307,15 @@ export class BinaryPublishError extends Error {
     readonly status: number,
     readonly code: string,
     readonly scan?: MalwareScanResult,
+    /**
+     * How long the caller should actually wait before asking again.
+     *
+     * A blanket `Retry-After: 60` invited a publisher to poll every minute
+     * through a backoff it had no way to see the length of — which is how a
+     * publish spent the remainder of its hour re-asking a question the server
+     * had already decided not to answer for another quarter of one.
+     */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message)
   }
@@ -957,9 +975,15 @@ export class BinaryArtifactPublisher {
           `Binary artifact malware scanning is temporarily unavailable; retry in ${retryInSeconds}s`,
           503,
           'MALWARE_SCAN_UNAVAILABLE',
+          undefined,
+          // Told to the client rather than only written into the message, so a
+          // publisher whose own deadline is shorter than the backoff can stop
+          // now instead of polling out the difference.
+          retryInSeconds,
         )
       }
       else if (this.store.createDownloadUrl && this.scanner.scanUrl) {
+        const createDownloadUrl = this.store.createDownloadUrl.bind(this.store)
         scan = await scanPackageArtifactUrl(
           this.scanner,
           // Outlives the scan it is for. These were independent - a fixed
@@ -967,7 +991,14 @@ export class BinaryArtifactPublisher {
           // expires mid-download fails the scan with the same
           // "scanner unavailable" verdict as a genuinely dead scanner, which
           // is indistinguishable from the outside.
-          this.store.createDownloadUrl(sealedKey, Math.ceil(scanBudgetMs(claim.size) / 1000) + 120),
+          //
+          // A thunk, so the URL is minted once the scan has been admitted
+          // through the concurrency gate rather than when it joins the queue.
+          // Sizing it against the scan budget only works if the clock starts
+          // with the scan: two 370MB solr uploads queued behind other publishes
+          // came back "download failed with HTTP 403" after burning the whole
+          // budget in the queue.
+          () => createDownloadUrl(sealedKey, Math.ceil(scanBudgetMs(claim.size) / 1000) + 120),
           context,
           { sha256: claim.sha256, size: claim.size },
         )
@@ -993,6 +1024,20 @@ export class BinaryArtifactPublisher {
 
       // Any verdict at all — including "blocked" — is a decisive answer, so the
       // artifact leaves backoff. Only a scan that never got there extends it.
+      //
+      // An overloaded scanner is the exception: it never looked at the bytes,
+      // so charging them a 15-minute backoff punishes an artifact for the
+      // server being busy — and the publisher, which had to be told to come
+      // back later anyway, then serves that backoff on the retry.
+      if (scan.verdict === 'error' && isScannerOverloadReason(scan.reason)) {
+        throw new BinaryPublishError(
+          'Binary artifact malware scanning is busy; retry shortly',
+          503,
+          'MALWARE_SCAN_UNAVAILABLE',
+          scan,
+          SCANNER_BUSY_RETRY_AFTER_SECONDS,
+        )
+      }
       if (scan.verdict === 'error')
         this.recordScanFailure(claim.sha256)
       else
@@ -1071,9 +1116,11 @@ export class BinaryArtifactPublisher {
     }
     let scan: MalwareScanResult
     if (this.store.createDownloadUrl && this.scanner.scanUrl) {
+      const createDownloadUrl = this.store.createDownloadUrl.bind(this.store)
       scan = await scanPackageArtifactUrl(
         this.scanner,
-        this.store.createDownloadUrl(planned.tarball, 10 * 60),
+        // Minted after admission — see ScanUrlSource.
+        () => createDownloadUrl(planned.tarball, Math.ceil(scanBudgetMs(planned.size) / 1000) + 120),
         context,
         { sha256: planned.sha256, size: planned.size },
       )
@@ -2117,13 +2164,19 @@ export function binaryPublishErrorResponse(
   error: BinaryPublishError,
   headers: Record<string, string> = {},
 ): Response {
+  const retryAfterSeconds = error.status === 503
+    ? Math.max(1, Math.ceil(error.retryAfterSeconds ?? 60))
+    : undefined
   return Response.json({
     error: error.message,
     code: error.code,
     retryable: error.status === 503,
+    retryAfterSeconds,
     scan: error.scan ? publicScanResult(error.scan) : undefined,
   }, {
     status: error.status,
-    headers: error.status === 503 ? { ...headers, 'Retry-After': '60' } : headers,
+    headers: retryAfterSeconds === undefined
+      ? headers
+      : { ...headers, 'Retry-After': String(retryAfterSeconds) },
   })
 }
