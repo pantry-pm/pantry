@@ -2453,7 +2453,7 @@ Options:
     allPackages = allPackages.filter(p => !p.isApp)
     const dropped = before - allPackages.length
     if (dropped > 0)
-      console.log(`Excluded ${dropped} GUI app(s) from source build (built via --apps-only path)`)
+      logDiscovery(`Excluded ${dropped} GUI app(s) from source build (built via --apps-only path)`)
   }
 
   // Filter by specific packages if provided.
@@ -2483,7 +2483,7 @@ Options:
     const start = batchIndex * batchSize
     const end = start + batchSize
     packagesToBuild = allPackages.slice(start, end)
-    console.log(`Batch ${batchIndex}: packages ${start}-${Math.min(end, allPackages.length) - 1} of ${allPackages.length}`)
+    logDiscovery(`Batch ${batchIndex}: packages ${start}-${Math.min(end, allPackages.length) - 1} of ${allPackages.length}`)
   }
   else if (values.stripe !== undefined) {
     // Interleaved striping: select every n-th package (index % n === i). Unlike
@@ -2499,7 +2499,7 @@ Options:
       process.exit(1)
     }
     packagesToBuild = allPackages.filter((_, idx) => idx % n === i)
-    console.log(`Stripe ${i}/${n}: ${packagesToBuild.length} of ${allPackages.length} packages (interleaved)`)
+    logDiscovery(`Stripe ${i}/${n}: ${packagesToBuild.length} of ${allPackages.length} packages (interleaved)`)
   }
 
   // --print-selected: emit the resolved domain set (post -p / --source-only /

@@ -129,20 +129,33 @@ jobs:
   # ripgrep, …) — they curl their OWN per-platform asset, so --mirror-only skips them.
   # This MUST be its own job: when it was a 2nd pass inside the mirror job, the long
   # --mirror-only pass ate the whole runner budget and download recipes (e.g. bun)
-  # never ran → stuck at 1 version. The download set is small, so no striping needed.
+  # never ran → stuck at 1 version.
+  #
+  # Striped, because "the download set is small, so no striping needed" stopped
+  # being true. Unstriped, `Download darwin-arm64` hit the 120-minute timeout on
+  # roughly half of all runs — 03:34, 10:10, 15:07 and 20:08 on 2026-09-06 all
+  # died at exactly 2h00 — while the linux legs finished around 1h45 and only
+  # just made it. A timed-out job shows as `cancelled`, which is why this read
+  # as noise rather than as the sweep being cut short every other run.
+  #
+  # Two stripes per platform, matching the mirror job above, which is already
+  # striped for the same reason.
   download:
-    name: Download ${{ matrix.platform.name }}
+    name: Download ${{ matrix.platform.name }} ${{ matrix.platform.stripe }}
     strategy:
       fail-fast: false
       matrix:
         platform:
-          - { name: linux-x86-64, os: ubuntu-latest }
-          - { name: linux-arm64, os: ubuntu-24.04-arm }
-          - { name: darwin-arm64, os: ubuntu-latest }
+          - { name: linux-x86-64, os: ubuntu-latest, stripe: '0/2' }
+          - { name: linux-x86-64, os: ubuntu-latest, stripe: '1/2' }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, stripe: '0/2' }
+          - { name: linux-arm64, os: ubuntu-24.04-arm, stripe: '1/2' }
+          - { name: darwin-arm64, os: ubuntu-latest, stripe: '0/2' }
+          - { name: darwin-arm64, os: ubuntu-latest, stripe: '1/2' }
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 120
     concurrency:
-      group: download-${{ matrix.platform.name }}
+      group: download-${{ matrix.platform.name }}-${{ matrix.platform.stripe }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -169,5 +182,6 @@ jobs:
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$AWS_REGION" \
             --platform "${{ matrix.platform.name }}" \
+            --stripe "${{ matrix.platform.stripe }}" \
             --download-only --multi-version \
             --max-versions "$MAXV" --popular-max-versions "$POPV"
