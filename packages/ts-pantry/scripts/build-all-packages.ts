@@ -1249,9 +1249,25 @@ async function tryBuildVersion(
     // child's output, so a phantom version that exited 1 rather than 42 was
     // being reported as a genuine build failure.
     const tail: string[] = []
+    // build-package.ts dumps the generated script and config.log to stderr
+    // AFTER the real error, as debugging aid. A naive tail therefore captures
+    // the dump and not the cause — the first version of this reported
+    // `GS_PATCH="${GS_REST#"$GS_MINOR"}" | GS_TAG=...` for every ghostscript
+    // failure, which is the recipe's own source code. Skip the dumps and keep
+    // the output that preceded them.
+    let insideDump = false
     const rememberLine = (line: string) => {
       const trimmed = line.trim()
       if (!trimmed) return
+      if (DEBUG_DUMP_START.some(marker => trimmed.startsWith(marker))) {
+        insideDump = true
+        return
+      }
+      if (DEBUG_DUMP_END.some(marker => trimmed.startsWith(marker))) {
+        insideDump = false
+        return
+      }
+      if (insideDump) return
       tail.push(trimmed.slice(0, 200))
       if (tail.length > 15) tail.shift()
     }
@@ -1456,6 +1472,23 @@ interface BuildResult {
  * authoritative signal that a version's source does not exist upstream. We also
  * pattern-match the message as a fallback for older/wrapped error shapes.
  */
+/**
+ * Markers bounding build-package.ts's post-failure debug dumps.
+ *
+ * Kept in step by `build-failure-context.test.ts`, which reads build-package.ts
+ * and asserts it still prints them — a marker that drifts silently turns the
+ * failure context back into a recital of the recipe's own source.
+ */
+export const DEBUG_DUMP_START: string[] = [
+  '--- Generated build script (tail) ---',
+  '--- config.log',
+]
+export const DEBUG_DUMP_END: string[] = [
+  '--- End script ---',
+  '--- End config.log ---',
+  '--- End compiler test section ---',
+]
+
 export function isSourceUnavailableError(error: any): boolean {
   if (error?.status === 42)
     return true

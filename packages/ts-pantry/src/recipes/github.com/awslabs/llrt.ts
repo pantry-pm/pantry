@@ -12,8 +12,14 @@ export const recipe: Recipe = {
     'llrt',
   ],
   versionSource: {
+    // The tag is `v0.9.0-beta`; the script below re-appends `-beta` to build
+    // the download URL, so the catalog must hold the BARE version. Without
+    // this pattern the default v-strip left `0.9.0-beta` in the catalog and
+    // the URL became `v0.9.0-beta-beta`, which 404s — every llrt version
+    // published after the pattern was dropped failed on every platform.
     type: 'github-releases',
     repo: 'awslabs/llrt',
+    tagPattern: /^v(\d+\.\d+\.\d+)-beta$/,
   },
   build: {
     script: [
