@@ -70,8 +70,11 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('set_env PANTRY_SCANNER_SCRATCH_DIR /opt/pantry-registry/scan-scratch')
     expect(workflow).toContain('install -d -m 700 /opt/pantry-registry/scan-scratch')
     expect(workflow).toContain('command -v systemd-run')
-    expect(workflow).toContain('set_clam MaxThreads 2')
-    expect(workflow).toContain('set_clam MaxQueue 4')
+    // These move with DEFAULT_MAX_CONCURRENT_ISOLATED_SCANS or not at all:
+    // extra worker slots against clamd's old two threads only relocate the
+    // queue, where the wait surfaces as a timeout instead of as throughput.
+    expect(workflow).toContain('set_clam MaxThreads 4')
+    expect(workflow).toContain('set_clam MaxQueue 8')
     // Must be at least Registry's largest per-artifact budget. Below it, the
     // engine aborts scans Registry is still waiting for - which is exactly
     // what capped the 183MB vitess package at 225s of engine time.
@@ -190,8 +193,8 @@ describe('first-party publication boundaries', () => {
 
   it('keeps CLI provisioning within the registry host resource budget', () => {
     const setup = source('packages/zig/src/cli/commands/registry_ops.zig')
-    expect(setup).toContain('set_clam MaxThreads 2')
-    expect(setup).toContain('set_clam MaxQueue 4')
+    expect(setup).toContain('set_clam MaxThreads 4')
+    expect(setup).toContain('set_clam MaxQueue 8')
     expect(setup).toContain('set_clam MaxScanTime 2700000')
     // Kept in step with deploy-registry.yml — the two provision the same box.
     expect(setup).toContain('set_clam MaxFiles 1000000')

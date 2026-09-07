@@ -383,8 +383,10 @@ const provision_script =
     \\# still waiting for. This was 225s, sized against an HTTP timeout ladder
     \\# that no longer applies now that a scan outlives its request.
     \\set_clam MaxScanTime 2700000
-    \\set_clam MaxThreads 2
-    \\set_clam MaxQueue 4
+    \\# Moved together with DEFAULT_MAX_CONCURRENT_ISOLATED_SCANS (4); raising
+    \\# either alone only queues inside clamd.
+    \\set_clam MaxThreads 4
+    \\set_clam MaxQueue 8
     \\set_clam ConcurrentDatabaseReload no
     \\clam_capacity_dir=/etc/systemd/system/clamav-daemon.service.d
     \\install -d -m 0755 "$clam_capacity_dir"

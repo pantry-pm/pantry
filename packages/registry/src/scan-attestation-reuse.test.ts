@@ -43,6 +43,7 @@ class CountingScanner implements MalwareScanner {
   scans = 0
   verdict: MalwareScanResult['verdict'] = 'clean'
   reason: string | undefined
+  retryAfterSeconds: number | undefined
 
   async scan(data: ArrayBuffer, _context: MalwareScanContext): Promise<MalwareScanResult> {
     this.scans++
@@ -53,6 +54,7 @@ class CountingScanner implements MalwareScanner {
       durationMs: 1,
       artifactSha256: createHash('sha256').update(Buffer.from(data)).digest('hex'),
       ...(this.reason ? { reason: this.reason } : {}),
+      ...(this.retryAfterSeconds ? { retryAfterSeconds: this.retryAfterSeconds } : {}),
     }
   }
 
@@ -188,6 +190,24 @@ describe('scan failure backoff', () => {
 
     await expect(publish(publisher, store, bytes, '1.2.4')).rejects.toThrow(/retry in \d+s/)
     expect(scanner.scans).toBe(1)
+  })
+
+  it('passes the scanner queue estimate through to the publisher', async () => {
+    // The publisher's flat 90 s fallback is only for a scanner that offers no
+    // estimate. When one is offered it wins, because it is the number that
+    // decides whether the client waits or gives up and frees the slot.
+    const store = new MemoryArtifactStore()
+    const scanner = new CountingScanner()
+    scanner.verdict = 'error'
+    scanner.reason = 'scanner busy: not admitted within 600s (4 in flight, 6 still queued)'
+    scanner.retryAfterSeconds = 420
+    const publisher = new BinaryArtifactPublisher(store, scanner, { tokenSecret: 'test-secret-that-is-long-enough' })
+    const bytes = Buffer.from('an artifact shed by a deep queue')
+
+    await expect(publish(publisher, store, bytes, '1.2.3')).rejects.toMatchObject({
+      code: 'MALWARE_SCAN_UNAVAILABLE',
+      retryAfterSeconds: 420,
+    })
   })
 
   it('rejects an incompletely-scanned artifact instead of asking for a retry', async () => {

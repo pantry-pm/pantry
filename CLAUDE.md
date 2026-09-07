@@ -295,10 +295,26 @@ Three more rules hold the *other* stall shapes shut:
   scan that reached no verdict and wrong for one that never ran. Overload is
   identified by `isScannerOverloadReason` and answered with a 90s `Retry-After`.
 - **The admission queue is bounded by TIME as well as depth**
-  (`CLAMD_MAX_ADMISSION_WAIT_MS`, 10 min). 32 waiters × 2 slots × a 45-minute
-  budget is a twelve-hour queue; the publisher stops after one hour, and the
-  scan it was waiting for then finishes into a void with the artifact
-  unpublished. Shedding is the honest answer.
+  (`CLAMD_MAX_ADMISSION_WAIT_MS`, 10 min). 32 waiters against a handful of
+  slots and a 45-minute budget is a many-hour queue; the publisher stops after
+  one hour, and the scan it was waiting for then finishes into a void with the
+  artifact unpublished. Shedding is the honest answer.
+- **A shed must carry a retry interval that reflects the QUEUE**, not a
+  constant (`queueDrainSeconds`, from `malwareScanMetrics().durationMs.average`
+  and the current depth). A flat 90s against a 600s admission cap is a
+  busy-loop: the publisher comes straight back, waits out the cap again, and is
+  shed again — measured at 57 attempts over 3511s for one artifact, all of it
+  contending for slots it was never going to get. With a real interval, a
+  publisher whose budget cannot cover it gives up at once and stops competing.
+- **Scan concurrency and clamd's `MaxThreads`/`MaxQueue` move together or not
+  at all.** `DEFAULT_MAX_CONCURRENT_ISOLATED_SCANS` is 4 against `MaxThreads 4`
+  / `MaxQueue 8`; raising either alone was tried and only relocated the queue
+  into clamd, where the wait surfaces as a timeout instead of as throughput.
+  The 2-slot configuration measured **83% utilisation** in one sweep — 372
+  slot-minutes of successful scanning against ~450 available — which is where
+  queueing delay explodes, and a further 264 minutes were lost to publishes
+  shed while waiting. Staging the artifact on disk is what made the raise
+  affordable: a worker is now flat at ~94 MB rather than peaking near 529 MB.
 
 The publisher side matches: `completeBinaryUpload` honours `retryAfterSeconds` /
 `Retry-After` and **stops immediately when the declared wait exceeds its own

@@ -205,8 +205,14 @@ jobs:
             # response path keeps its own ladder: 120s response budget < Bun
             # 255s < rpx 300s.
             set_clam MaxScanTime 2700000
-            set_clam MaxThreads 2
-            set_clam MaxQueue 4
+            # Moved together with DEFAULT_MAX_CONCURRENT_ISOLATED_SCANS (4).
+            # Raising either alone is what made the earlier attempt useless:
+            # extra worker slots just queue inside clamd, where the wait shows
+            # up as a timeout rather than as throughput. A sweep measured 83%
+            # utilisation of the two old slots and lost 264 minutes to
+            # publishes shed while waiting.
+            set_clam MaxThreads 4
+            set_clam MaxQueue 8
             set_clam ConcurrentDatabaseReload no
 
             # Large archive scans are intentionally CPU and I/O intensive. Run

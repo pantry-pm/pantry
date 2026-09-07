@@ -1067,7 +1067,11 @@ export class BinaryArtifactPublisher {
           503,
           'MALWARE_SCAN_UNAVAILABLE',
           scan,
-          SCANNER_BUSY_RETRY_AFTER_SECONDS,
+          // The scanner's own estimate of how long its queue takes to drain,
+          // when it has one. A flat interval made a shed publisher re-queue on
+          // a timer shorter than the admission wait, so it was shed again, and
+          // again — 57 attempts over 3511s for a single artifact.
+          scan.retryAfterSeconds ?? SCANNER_BUSY_RETRY_AFTER_SECONDS,
         )
       }
       if (scan.verdict === 'error')
