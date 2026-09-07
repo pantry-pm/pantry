@@ -269,6 +269,13 @@ configuration produce them every time — so:
   and must reach the transient unit (it is in the `--setenv` list): the default
   is the host's `/tmp`, and where that is a tmpfs the staged file is charged to
   the worker's own `MemoryMax=1G` and kills the scans this exists to enable.
+  **Staging is an enhancement, never a requirement**: `prepareScratchDirectory`
+  preflights the free space and returns null when the volume cannot hold the
+  artifact, and the worker then streams straight into clamd exactly as it did
+  before, losing only the entry-wise retry. A host whose disk is too small must
+  lose a capability, not the ability to publish at all. The preflight is a
+  space check rather than a try/catch because a write that fails halfway has
+  already consumed the download, and recovering costs a second one.
   Entry-wise scanning itself is cheap in memory — measured on the real
   llvm.org 23.1.0 darwin-arm64 artifact (1576 MB compressed, 5.68 GB unpacked,
   11,116 members, largest 192 MB): 15 s to walk, peak RSS 94 MB. It is the

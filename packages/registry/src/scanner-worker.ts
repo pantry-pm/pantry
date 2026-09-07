@@ -10,7 +10,7 @@
  * promotion, and quarantine writes.
  */
 
-import { createReadStream, createWriteStream, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { createReadStream, createWriteStream, mkdirSync, mkdtempSync, rmSync, statfsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { scanArchiveWithEntryFallback, writeVerifiedArtifact } from './archive-entry-scan'
@@ -46,6 +46,37 @@ function positiveInt(value: string | undefined, fallback: number): number {
  * paced between windows. That limits the transfer AND bounds memory to one
  * window. Pacing the consumer does neither.
  */
+
+/**
+ * A directory with room for `size` bytes, or null to scan without staging.
+ *
+ * The space check is a preflight rather than a try/catch around the write,
+ * because a write that fails halfway has already consumed the response body —
+ * and recovering from that costs a second full download of the artifact,
+ * against a bucket allowance we have exhausted once already.
+ */
+export function prepareScratchDirectory(size: number): string | null {
+  const root = process.env.PANTRY_SCANNER_SCRATCH_DIR || tmpdir()
+  try {
+    mkdirSync(root, { recursive: true })
+    // 10% headroom: the artifact, plus whatever else shares the volume moving
+    // underneath us while it is written.
+    const stats = statfsSync(root)
+    const available = stats.bavail * stats.bsize
+    if (Number.isFinite(available) && available < size * 1.1) {
+      console.error(
+        `Scanner scratch at ${root} has ${available} bytes free for a ${size}-byte artifact; `
+        + 'scanning without staging (entry-wise retry unavailable)',
+      )
+      return null
+    }
+    return mkdtempSync(join(root, 'pantry-isolated-scan-'))
+  }
+  catch (error) {
+    console.error(`Scanner scratch at ${root} unusable (${(error as Error).message}); scanning without staging`)
+    return null
+  }
+}
 
 async function main(): Promise<void> {
   const input = JSON.parse(await Bun.stdin.text()) as WorkerInput
@@ -101,17 +132,29 @@ async function main(): Promise<void> {
   // second copy, so the only alternatives are re-downloading the artifact —
   // paying its egress twice, against a bucket allowance we have already
   // exhausted once — or abandoning the retry. A bounded file on local disk is
-  // the cheap side of that trade: the publish path caps artifacts at 1 GiB and
-  // the scanner admits two at a time, so this is at most 2 GiB of scratch, and
-  // it is removed in `finally` whatever happens.
+  // the cheap side of that trade: DEFAULT_MAX_BINARY_BYTES caps artifacts at
+  // 4 GiB and the scanner admits two at a time, so the volume needs 8 GiB in
+  // the worst case, and each file is removed in `finally` whatever happens.
   //
   // PANTRY_SCANNER_SCRATCH_DIR must point at DISK. The default, the host's
   // /tmp, is a tmpfs on some distributions, and a tmpfs file is charged to
   // this unit's cgroup — against a MemoryMax of 1G, staging a 1 GiB artifact
   // there would kill the worker outright.
-  const scratchRoot = process.env.PANTRY_SCANNER_SCRATCH_DIR || tmpdir()
-  mkdirSync(scratchRoot, { recursive: true })
-  const directory = mkdtempSync(join(scratchRoot, 'pantry-isolated-scan-'))
+  //
+  // Staging is an ENHANCEMENT, never a requirement. If the directory cannot be
+  // made or the volume has no room, scanning falls back to streaming the
+  // download straight into clamd — exactly what this worker did before — and
+  // loses only the entry-wise retry. Making it mandatory would mean a host
+  // whose disk is too small stops publishing ENTIRELY, trading a capability
+  // for an outage.
+  const directory = prepareScratchDirectory(input.expected.size)
+  if (!directory) {
+    process.stdout.write(JSON.stringify(
+      await scanner.scanStream(responseStream, context, input.expected),
+    ))
+    return
+  }
+
   const archive = join(directory, 'artifact.tar.gz')
   try {
     const artifactSha256 = await writeVerifiedArtifact(
