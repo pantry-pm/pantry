@@ -85,7 +85,16 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    # 120 was truncating the sweep, not bounding a runaway. On 2026-09-07T03:34
+    # three of eleven jobs were killed at exactly 2h00 mid-upload — `Mirror
+    # linux-x86-64 1/4`, `Mirror linux-arm64 1/2` and `Download darwin-arm64` —
+    # while their siblings finished anywhere between 12 and 110 minutes. The work
+    # is simply larger than the cap now.
+    #
+    # 300 keeps a full hour of headroom under the 6-hourly cron, and
+    # cancel-in-progress means the next scheduled run supersedes anything still
+    # going regardless, so this cannot pile up.
+    timeout-minutes: 300
     concurrency:
       # One in-flight job per platform+stripe; a newer run supersedes the old one.
       group: mirror-${{ matrix.name }}-${{ matrix.stripe }}
@@ -153,7 +162,16 @@ jobs:
           - { name: darwin-arm64, os: ubuntu-latest, stripe: '0/2' }
           - { name: darwin-arm64, os: ubuntu-latest, stripe: '1/2' }
     runs-on: ${{ matrix.platform.os }}
-    timeout-minutes: 120
+    # 120 was truncating the sweep, not bounding a runaway. On 2026-09-07T03:34
+    # three of eleven jobs were killed at exactly 2h00 mid-upload — `Mirror
+    # linux-x86-64 1/4`, `Mirror linux-arm64 1/2` and `Download darwin-arm64` —
+    # while their siblings finished anywhere between 12 and 110 minutes. The work
+    # is simply larger than the cap now.
+    #
+    # 300 keeps a full hour of headroom under the 6-hourly cron, and
+    # cancel-in-progress means the next scheduled run supersedes anything still
+    # going regardless, so this cannot pile up.
+    timeout-minutes: 300
     concurrency:
       group: download-${{ matrix.platform.name }}-${{ matrix.platform.stripe }}
       cancel-in-progress: true
