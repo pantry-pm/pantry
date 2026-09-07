@@ -140,6 +140,15 @@ PREFIX bug, and OpenSSL 4.0.2's patch applying cleanly were all settled without
 allocating a single macOS runner. Reach for a Mac runner only to PUBLISH, never
 to diagnose.
 
+**But the dev Mac's toolchain is AHEAD of the runners', so a local failure is
+not proof of a CI failure.** This machine is on Xcode 27 / Apple clang 21;
+`publish-darwin-native` runs macos-14 with Xcode 16.2. perl 5.44.0 is the worked
+example: it dies here with `panic: del_backref` while miniperl bootstraps, and
+builds and publishes perfectly on the runner. So a local **success** is strong
+evidence, and a local **failure** means "reproduce the toolchain or check the
+runner" — never "the recipe is broken". The reverse gap matters too: something
+that needs a newer SDK may pass here and fail there.
+
 **No WASTEFUL unsupervised macOS — macOS runs only when a Mac is genuinely required.** macOS runners bill ~10×. The rule is: **no broad/scheduled macOS sweeps**, and any macOS job that runs automatically must be **tightly gated to only the specific packages that truly need a Mac**. The `schedule:` cron has been removed from every Mac-spawning sweep — `build.yml`, `build-versions.yml`, `build-residual.yml`, `sync-binaries.yml`, and `build-orchestrator.yml` (also disabled in the Actions tab); they keep `workflow_dispatch` for supervised runs. There are exactly **two** automatic macOS paths, and both are gated on a set the workflow computes first: `publish-changed-packages.yml`'s `publish-darwin-native` job (see below), which spins up a Mac ONLY when a changed package is a genuine darwin source recipe pkgx can't provide, and `check-desktop-updates.yml`'s `publish-macos` job, which spins one up ONLY when a disk-image app is actually behind. Both compute the needed set in a cheap ubuntu job and run `if` that set is non-empty, so darwin updates publish properly without a firehose. Do NOT add a broad `schedule:`/`push:` macOS matrix; if a new automatic Mac job is unavoidable, gate it the same way (compute the exact needed set, run `if` that set is non-empty). darwin-arm64 coverage that does NOT need a Mac stays automated on the cheap ubuntu runners:
 
 - **darwin-arm64 DOWNLOAD recipes** → `mirror.yml` (every 6h, download-only, all platforms) + the Hetzner xdl fleet (continuous). No Mac.
