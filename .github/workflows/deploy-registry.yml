@@ -170,7 +170,10 @@ jobs:
             }
             set_clam TCPAddr 127.0.0.1
             set_clam TCPSocket 3310
-            set_clam StreamMaxLength 1G
+            # Must clear the largest single INSTREAM. An artifact at or above
+            # OVERSIZED_ARCHIVE_BYTES is scanned member by member, so the
+            # binding case is the largest whole archive below that threshold.
+            set_clam StreamMaxLength 2G
             set_clam MaxScanSize 8G
             set_clam MaxFileSize 2G
             set_clam AlertExceedsMax yes
@@ -310,7 +313,10 @@ jobs:
             set_env CLAMD_PORT 3310
             set_env CLAMD_TIMEOUT_MS 240000
             set_env CLAMD_HEALTH_TIMEOUT_MS 5000
-            set_env CLAMD_MAX_BYTES 1073741824
+            # Tracks DEFAULT_MAX_BINARY_BYTES. Below it the scanner refuses
+            # artifacts the publish path accepts, which is a fail-closed
+            # rejection of packages we already serve (flutter.dev is 2140 MB).
+            set_env CLAMD_MAX_BYTES 4294967296
             set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true
             set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 1G
             # Disk, explicitly. The scanner worker stages each artifact here

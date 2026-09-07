@@ -31,7 +31,26 @@ import {
  */
 const SCANNER_BUSY_RETRY_AFTER_SECONDS = 90
 
-const DEFAULT_MAX_BINARY_BYTES = 1024 * 1024 * 1024
+/**
+ * Largest artifact the registry will accept.
+ *
+ * 1 GiB was not protecting anything: `flutter.dev` (2140 MB) and `llvm.org`
+ * (1714 MB) are already published and served at twice it, so the cap was
+ * refusing NEW versions of packages whose existing versions it hands out on
+ * every install — an inconsistency, not a policy. Every new version of either
+ * failed as INVALID_BINARY_SIZE.
+ *
+ * 4 GiB accepts what we already serve, with headroom, and still bounds the
+ * worst case. It is not a free number — read it together with:
+ *   - OVERSIZED_ARCHIVE_BYTES, above which scanning goes member-by-member
+ *     rather than spending a whole budget on a pass that cannot finish;
+ *   - the scanner worker's scratch directory, which stages one artifact per
+ *     concurrent scan (2 x this, on disk);
+ *   - clamd's StreamMaxLength, which must clear the largest single INSTREAM;
+ *   - egress, where a 2 GB artifact is 2 GB of a 5 TB monthly allowance every
+ *     time anyone installs it.
+ */
+const DEFAULT_MAX_BINARY_BYTES = 4 * 1024 * 1024 * 1024
 /**
  * How long a signed staging claim stays usable.
  *

@@ -84,6 +84,12 @@ describe('first-party publication boundaries', () => {
     // Heuristics.Limits.Exceeded.MaxFiles for solr.apache.org and neo4j.com —
     // a fail-closed non-verdict, retried every sweep since June.
     expect(workflow).toContain('set_clam MaxFiles 1000000')
+    // These three move together or not at all. The scanner refusing what the
+    // publish path accepts is a fail-closed rejection of packages we already
+    // serve — flutter.dev is 2140 MB and llvm.org 1714 MB, both published long
+    // before the 1 GiB cap started refusing their newer versions.
+    expect(workflow).toContain('set_env CLAMD_MAX_BYTES 4294967296')
+    expect(workflow).toContain('set_clam StreamMaxLength 2G')
     expect(workflow).toContain('set_clam ConcurrentDatabaseReload no')
     expect(workflow).toContain("LEGACY_RESCAN_MAX_BYTES: ${{ vars.PANTRY_LEGACY_RESCAN_MAX_BYTES || '8589934592' }}")
     expect(workflow).toContain('LEGACY_RESCAN_MAX_BYTES="$8"')
@@ -189,6 +195,8 @@ describe('first-party publication boundaries', () => {
     expect(setup).toContain('set_clam MaxScanTime 2700000')
     // Kept in step with deploy-registry.yml — the two provision the same box.
     expect(setup).toContain('set_clam MaxFiles 1000000')
+    expect(setup).toContain('set_env CLAMD_MAX_BYTES 4294967296')
+    expect(setup).toContain('set_clam StreamMaxLength 2G')
     expect(setup).toContain('set_clam ConcurrentDatabaseReload no')
     expect(setup).toContain('clamav-daemon clamav-freshclam util-linux')
     expect(setup).toContain('clamav-daemon.service.d')

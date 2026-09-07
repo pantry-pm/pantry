@@ -770,7 +770,11 @@ describe('binary scan-before-promote publisher', () => {
 
   it('supports an explicit oversized legacy migration bound without raising the publish limit', async () => {
     const store = new UrlArtifactStore()
-    const legacySize = 3_000_000_000
+    // Above the publish cap (4 GiB) and below the legacy rescan bound (8 GiB),
+    // which is the whole point: a migration bound must not become a publish
+    // limit. Was 3 GB, which stopped straddling the two when the publish cap
+    // rose to accept the artifacts we already serve.
+    const legacySize = 5_000_000_000
     store.headObject = async () => ({
       'content-length': String(legacySize),
       etag: 'stable-legacy-object',

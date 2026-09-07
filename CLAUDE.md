@@ -251,12 +251,28 @@ configuration produce them every time — so:
   This is MORE coverage than the pass that gave up, since it opens exactly the
   members that pass skipped — a member the engine errors on still fails closed,
   and one it blocks blocks the archive.
+- **The artifact cap is 4 GiB, and every limit around it moves with it**
+  (`DEFAULT_MAX_BINARY_BYTES`, `CLAMD_MAX_BYTES`, clamd `StreamMaxLength`). At
+  1 GiB it was not protecting anything: `flutter.dev` (2140 MB) and `llvm.org`
+  (1714 MB) are already published and served at twice it, so the cap only
+  refused NEW versions of packages we hand out on every install. A scanner
+  limit below the publish limit is a fail-closed rejection of our own catalog.
+- **`OVERSIZED_ARCHIVE_BYTES` (1 GiB) is derived from the measured scan rate**,
+  not chosen: solr's 386 MB scanned in 1,061,297 ms ≈ 2.7 s/MB, and 2700 s of
+  budget divided by that is ~1 GB. Above it the whole-archive pass is skipped
+  entirely — it would spend the entire budget to return a foregone
+  `Heuristics.Limits.Exceeded`. Re-derive it if the budget or the engine's
+  throughput changes.
 - **The isolated worker stages the artifact on disk before scanning**, because
   the fallback reads the archive a second time and the alternative is paying
   its egress twice. `PANTRY_SCANNER_SCRATCH_DIR` must therefore point at DISK
   and must reach the transient unit (it is in the `--setenv` list): the default
   is the host's `/tmp`, and where that is a tmpfs the staged file is charged to
   the worker's own `MemoryMax=1G` and kills the scans this exists to enable.
+  Entry-wise scanning itself is cheap in memory — measured on the real
+  llvm.org 23.1.0 darwin-arm64 artifact (1576 MB compressed, 5.68 GB unpacked,
+  11,116 members, largest 192 MB): 15 s to walk, peak RSS 94 MB. It is the
+  staged FILE that needs room, not the process.
 
 Three more rules hold the *other* stall shapes shut:
 

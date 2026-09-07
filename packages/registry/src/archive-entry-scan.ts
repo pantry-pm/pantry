@@ -34,6 +34,23 @@ import type { MalwareScanContext, MalwareScanResult, MalwareScanner } from './ma
  * exist so a hostile archive cannot make this loop run forever. Exceeding one
  * is an error, never a clean verdict.
  */
+/**
+ * Size at which the whole-archive pass stops being worth attempting.
+ *
+ * Derived, not chosen. `solr.apache.org` at 386 MB scanned clean in 1,061,297
+ * ms — about 2.7 s per compressed megabyte — and the largest budget any scan
+ * gets is MAX_SCAN_TIMEOUT_MS (45 min). 2700 s / 2.7 s per MB puts the
+ * break-even at roughly 1 GB: above it the single pass is a foregone
+ * `Heuristics.Limits.Exceeded` (clamd's MaxScanTime lands in the same family)
+ * that costs the entire budget to arrive at.
+ *
+ * Below it, one INSTREAM beats thousands. Above it, going straight to members
+ * is both faster and more thorough — measured on the real llvm.org 23.1.0
+ * darwin-arm64 artifact (1576 MB compressed, 5.68 GB unpacked): 11,116
+ * members, largest 192 MB, walked in 15 s at a peak RSS of 94 MB.
+ */
+export const OVERSIZED_ARCHIVE_BYTES: number = 1024 * 1024 * 1024
+
 export const MAX_ARCHIVE_ENTRY_COUNT: number = 1_000_000
 export const MAX_ARCHIVE_UNPACKED_BYTES: number = 16 * 1024 * 1024 * 1024
 
@@ -151,10 +168,27 @@ export async function scanArchiveWithEntryFallback(
   context: MalwareScanContext,
   scanner: Pick<MalwareScanner, 'scanStream'>,
   expected: { sha256: string, size: number },
-  options: { openArchive: () => AsyncIterable<Uint8Array> | NodeJS.ReadableStream },
+  options: {
+    openArchive: () => AsyncIterable<Uint8Array> | NodeJS.ReadableStream
+    /** At or above this size, skip the whole-archive pass entirely. */
+    oversizedBytes?: number
+  },
 ): Promise<MalwareScanResult> {
   if (!scanner.scanStream)
     throw new Error('archive scanning requires a streaming scanner')
+
+  // Above this size the whole-archive pass is not a scan, it is a way of
+  // spending the entire budget to be told the archive was too big to cover.
+  // clamd's own MaxScanTime and MaxScanSize both land in the same
+  // Heuristics.Limits.Exceeded family, so the outcome is known in advance —
+  // go straight to the member-by-member pass, as the backfill already does
+  // for retained artifacts of this size.
+  const oversizedBytes = options.oversizedBytes ?? OVERSIZED_ARCHIVE_BYTES
+  if (expected.size >= oversizedBytes) {
+    return scanArchiveEntries(archivePath, context, scanner, {
+      artifactSha256: expected.sha256,
+    })
+  }
 
   const whole = await scanner.scanStream(options.openArchive() as AsyncIterable<Uint8Array>, context, expected)
 

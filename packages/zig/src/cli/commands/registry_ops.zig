@@ -369,7 +369,7 @@ const provision_script =
     \\}
     \\set_clam TCPAddr 127.0.0.1
     \\set_clam TCPSocket 3310
-    \\set_clam StreamMaxLength 1G
+    \\set_clam StreamMaxLength 2G
     \\set_clam MaxScanSize 8G
     \\set_clam MaxFileSize 2G
     \\set_clam AlertExceedsMax yes
@@ -462,7 +462,7 @@ const provision_script =
     \\set_env CLAMD_PORT 3310
     \\set_env CLAMD_TIMEOUT_MS 240000
     \\set_env CLAMD_HEALTH_TIMEOUT_MS 5000
-    \\set_env CLAMD_MAX_BYTES 1073741824
+    \\set_env CLAMD_MAX_BYTES 4294967296
     \\set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true
     \\set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 1G
     \\# Disk, explicitly: the worker stages each artifact here so an archive

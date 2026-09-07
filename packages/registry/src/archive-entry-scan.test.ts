@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { PassThrough } from 'node:stream'
-import { scanArchiveEntries, scanArchiveWithEntryFallback, writeVerifiedArtifact } from './archive-entry-scan'
+import { OVERSIZED_ARCHIVE_BYTES, scanArchiveEntries, scanArchiveWithEntryFallback, writeVerifiedArtifact } from './archive-entry-scan'
 import type { MalwareScanContext, MalwareScanResult } from './malware-scanning'
 
 function tarHeader(name: string, size: number): Buffer {
@@ -227,9 +227,18 @@ describe('scanArchiveWithEntryFallback', () => {
   const context: MalwareScanContext = { surface: 'binary', name: 'solr.apache.org', version: '9.9.0' }
   const expected = { sha256: 'b'.repeat(64), size: 1234 }
 
-  /** Answers the whole-archive pass one way and each member another. */
+  /**
+   * Answers the whole-archive pass one way and each member another.
+   *
+   * Told apart by the digest, not by call order: a member is scanned with an
+   * all-zero sha256 (it has none anyone attested to) while the whole-archive
+   * pass carries the artifact's own. Ordering would have quietly mislabelled
+   * the first member as the whole pass once the oversized path started
+   * skipping that pass altogether.
+   */
   class TwoPassScanner {
     calls = 0
+    wholePasses = 0
     whole: MalwareScanResult
     member: MalwareScanResult['verdict'] = 'clean'
     constructor(whole: MalwareScanResult) { this.whole = whole }
@@ -241,7 +250,10 @@ describe('scanArchiveWithEntryFallback', () => {
     ): Promise<MalwareScanResult> {
       this.calls += 1
       for await (const _chunk of data as AsyncIterable<Uint8Array>) { /* drain */ }
-      if (this.calls === 1) return this.whole
+      if (request.sha256 !== '0'.repeat(64)) {
+        this.wholePasses += 1
+        return this.whole
+      }
       return {
         verdict: this.member,
         engine: 'clamav',
@@ -275,6 +287,28 @@ describe('scanArchiveWithEntryFallback', () => {
     expect(result.artifactSha256).toBe(expected.sha256)
   })
 
+  it('skips the whole-archive pass entirely for an oversized artifact', async () => {
+    // A 2 GiB archive cannot be covered inside clamd's MaxScanTime, so the
+    // first pass is a foregone Heuristics.Limits.Exceeded that costs the whole
+    // budget to arrive at. Going straight to members is faster AND more
+    // thorough — the same call the backfill makes for retained artifacts.
+    const scanner = new TwoPassScanner({ ...coverageLimit, verdict: 'blocked', signature: 'must-not-be-used' })
+    const file = write([{ name: 'a', body: 'x' }, { name: 'b', body: 'y' }])
+
+    const result = await scanArchiveWithEntryFallback(
+      file,
+      context,
+      scanner,
+      { sha256: expected.sha256, size: OVERSIZED_ARCHIVE_BYTES },
+      { openArchive: () => createReadStream(file) },
+    )
+
+    expect(result.verdict).toBe('clean')
+    // Two members, and no whole-archive pass before them.
+    expect(scanner.wholePasses).toBe(0)
+    expect(scanner.calls).toBe(2)
+  })
+
   it('leaves every other verdict exactly as the engine gave it', async () => {
     // A detection must not be re-litigated by a second pass, and a scanner
     // that is merely broken must not be retried into a clean verdict.
@@ -289,6 +323,7 @@ describe('scanArchiveWithEntryFallback', () => {
         openArchive: () => createReadStream(file),
       })
       expect(result).toEqual(whole)
+      expect(scanner.wholePasses).toBe(1)
       expect(scanner.calls).toBe(1)
     }
   })
