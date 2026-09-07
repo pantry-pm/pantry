@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { DEFAULT_STAGING_TTL_SECONDS } from '../../registry/src/binary-publishing'
-import { maxScanBudgetMs } from '../../registry/src/malware-scanning'
+import { maxScanAdmissionWaitMs, maxScanBudgetMs } from '../../registry/src/malware-scanning'
 import { completeBinaryUpload, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS, publishBinaryArtifact } from '../scripts/binary-publish-client'
 
 const auth = { Authorization: 'Bearer test' }
@@ -272,6 +272,14 @@ describe('the publish client outlasts the scan it is waiting for', () => {
   // void - the work was done and nothing was left listening for the verdict.
   it('waits longer than the registry will ever spend scanning', () => {
     expect(DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThan(maxScanBudgetMs())
+  })
+
+  it('outlasts the queue wait as well as the scan itself', () => {
+    // The scan budget is not the whole server-side wait: a scan queues for one
+    // of two admission slots first. That queue used to be unbounded, so no
+    // client deadline could be sound; now that it is bounded, the sum is the
+    // number this has to beat.
+    expect(DEFAULT_CLIENT_DEADLINE_MS).toBeGreaterThan(maxScanBudgetMs() + maxScanAdmissionWaitMs())
   })
 
   it('leaves room for the upload and polling on top of the scan', () => {
