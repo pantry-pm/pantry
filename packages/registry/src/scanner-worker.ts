@@ -10,6 +10,10 @@
  * promotion, and quarantine writes.
  */
 
+import { createReadStream, createWriteStream, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { scanArchiveWithEntryFallback, writeVerifiedArtifact } from './archive-entry-scan'
 import { ClamAvScanner } from './malware-scanning'
 
 interface WorkerInput {
@@ -87,11 +91,55 @@ async function main(): Promise<void> {
       }
     },
   }
-  const result = await scanner.scanStream(responseStream, {
-    surface: 'binary',
-    name: '_isolated',
-  }, input.expected)
-  process.stdout.write(JSON.stringify(result))
+  const context = { surface: 'binary', name: '_isolated' } as const
+
+  // The artifact is written to this worker's own temp directory before it is
+  // scanned, rather than streamed straight into clamd.
+  //
+  // The reason is the fallback below: an archive clamd could not cover in one
+  // pass has to be read a SECOND time, member by member. Streaming leaves no
+  // second copy, so the only alternatives are re-downloading the artifact —
+  // paying its egress twice, against a bucket allowance we have already
+  // exhausted once — or abandoning the retry. A bounded file on local disk is
+  // the cheap side of that trade: the publish path caps artifacts at 1 GiB and
+  // the scanner admits two at a time, so this is at most 2 GiB of scratch, and
+  // it is removed in `finally` whatever happens.
+  //
+  // PANTRY_SCANNER_SCRATCH_DIR must point at DISK. The default, the host's
+  // /tmp, is a tmpfs on some distributions, and a tmpfs file is charged to
+  // this unit's cgroup — against a MemoryMax of 1G, staging a 1 GiB artifact
+  // there would kill the worker outright.
+  const scratchRoot = process.env.PANTRY_SCANNER_SCRATCH_DIR || tmpdir()
+  mkdirSync(scratchRoot, { recursive: true })
+  const directory = mkdtempSync(join(scratchRoot, 'pantry-isolated-scan-'))
+  const archive = join(directory, 'artifact.tar.gz')
+  try {
+    const artifactSha256 = await writeVerifiedArtifact(
+      responseStream,
+      createWriteStream(archive, { flags: 'wx' }),
+      input.expected.size,
+    )
+
+    // Checked here rather than left to the scan. scanStream would also catch
+    // it, but only as a scanner error — and "the bytes are not the bytes you
+    // claimed" deserves to say so, because the entry-wise fallback below
+    // attests its verdict against the DECLARED digest and must never do that
+    // for an artifact that did not match.
+    if (artifactSha256 !== input.expected.sha256)
+      throw new Error('artifact download digest did not match the declared sha256')
+
+    const result = await scanArchiveWithEntryFallback(
+      archive,
+      context,
+      scanner,
+      input.expected,
+      { openArchive: () => createReadStream(archive) },
+    )
+    process.stdout.write(JSON.stringify(result))
+  }
+  finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
 }
 
 if (import.meta.main) {

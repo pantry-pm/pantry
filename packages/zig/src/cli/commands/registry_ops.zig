@@ -465,6 +465,11 @@ const provision_script =
     \\set_env CLAMD_MAX_BYTES 1073741824
     \\set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true
     \\set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 1G
+    \\# Disk, explicitly: the worker stages each artifact here so an archive
+    \\# clamd could not cover in one pass can be re-read member by member. A
+    \\# tmpfs /tmp would charge that file to the worker's own MemoryMax.
+    \\install -d -m 700 /opt/pantry-registry/scan-scratch
+    \\set_env PANTRY_SCANNER_SCRATCH_DIR /opt/pantry-registry/scan-scratch
     \\set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
     \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
     \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then

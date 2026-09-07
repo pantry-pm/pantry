@@ -313,6 +313,13 @@ jobs:
             set_env CLAMD_MAX_BYTES 1073741824
             set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true
             set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 1G
+            # Disk, explicitly. The scanner worker stages each artifact here
+            # before scanning it, so that an archive clamd could not cover in
+            # one pass can be re-read member by member without downloading it
+            # a second time. On a host where /tmp is a tmpfs that file would
+            # be charged to the worker's own MemoryMax=1G and kill it.
+            install -d -m 700 /opt/pantry-registry/scan-scratch
+            set_env PANTRY_SCANNER_SCRATCH_DIR /opt/pantry-registry/scan-scratch
             set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
             set_env PANTRY_EGRESS_BUDGET_TB "$EGRESS_BUDGET_TB"
             if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$ENV_FILE"; then

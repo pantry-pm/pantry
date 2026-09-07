@@ -64,6 +64,11 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain("vars.PANTRY_LEGACY_SCAN_ATTESTATION_CUTOFF || ''")
     expect(workflow).toContain('set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true')
     expect(workflow).toContain('set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 1G')
+    // Disk-backed, and forwarded into the isolated unit. The worker stages the
+    // artifact so a coverage-limited archive can be re-read member by member;
+    // on a tmpfs /tmp that file counts against MemoryMax and kills the worker.
+    expect(workflow).toContain('set_env PANTRY_SCANNER_SCRATCH_DIR /opt/pantry-registry/scan-scratch')
+    expect(workflow).toContain('install -d -m 700 /opt/pantry-registry/scan-scratch')
     expect(workflow).toContain('command -v systemd-run')
     expect(workflow).toContain('set_clam MaxThreads 2')
     expect(workflow).toContain('set_clam MaxQueue 4')
@@ -205,6 +210,7 @@ describe('first-party publication boundaries', () => {
     expect(setup).toContain('set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255')
     expect(setup).toContain('set_env PANTRY_SCANNER_SYSTEMD_ISOLATION true')
     expect(setup).toContain('set_env PANTRY_SCANNER_WORKER_MEMORY_MAX 1G')
+    expect(setup).toContain('set_env PANTRY_SCANNER_SCRATCH_DIR /opt/pantry-registry/scan-scratch')
     expect(setup).toContain('command -v systemd-run')
   })
 })
