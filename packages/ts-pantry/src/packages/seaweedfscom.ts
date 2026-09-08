@@ -3,7 +3,7 @@
  *
  * @domain `seaweedfs.com`
  * @programs `weed`
- * @version `4.45` (90 versions available)
+ * @version `4.46` (91 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install seaweedfs.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "SeaweedFS"
  * console.log(pkg.description) // "SeaweedFS is a fast distributed storage system ..."
  * console.log(pkg.programs)    // ["weed"]
- * console.log(pkg.versions[0]) // "4.45" (latest)
+ * console.log(pkg.versions[0]) // "4.46" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/seaweedfs-com.md
@@ -67,6 +67,7 @@ export const seaweedfscomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.46',
     '4.45',
     '4.44',
     '4.43',
