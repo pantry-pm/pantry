@@ -3,7 +3,7 @@
  *
  * @domain `jumppad.dev`
  * @programs `jumppad`
- * @version `0.28.0` (56 versions available)
+ * @version `0.28.1` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install jumppad.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "jumppad"
  * console.log(pkg.description) // "Modern cloud native development environments"
  * console.log(pkg.programs)    // ["jumppad"]
- * console.log(pkg.versions[0]) // "0.28.0" (latest)
+ * console.log(pkg.versions[0]) // "0.28.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/jumppad-dev.md
@@ -70,6 +70,7 @@ export const jumppaddevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.28.1',
     '0.28.0',
     '0.27.1',
     '0.27.0',
