@@ -2113,6 +2113,44 @@ function normalizePlatform(platform: string): [string, string] {
  * installed binary matches the expected magic (catches arch-mapping bugs — the
  * main risk of cross-building). Tolerates non-binary helpers (scripts, data).
  */
+/**
+ * How many distinct machine architectures appear across these `file` outputs.
+ *
+ * A wrong download yields one. A bundle shipped for many platforms yields
+ * many, and that difference is the whole basis for telling them apart.
+ */
+export function distinctArchitectures(inspected: Array<{ out: string }>): number {
+  // Matched against what `file -bL` actually prints, taken from cassandra's own
+  // sigar bundle rather than guessed: "64-bit PowerPC or cisco 7500", "SPARC",
+  // "Intel 80386", "64-bit XCOFF executable" — the human names, not the tuple
+  // spellings in the filenames.
+  const ARCHITECTURES: Array<[RegExp, string]> = [
+    [/\bx86[-_]64\b/i, 'x86-64'],
+    [/\bIntel 80386\b|\bi386\b/i, 'i386'],
+    [/\baarch64\b|\bARM aarch64\b/i, 'aarch64'],
+    [/\barm64\b/i, 'arm64'],
+    [/\bARM\b(?!\s*aarch64)/i, 'arm'],
+    [/\bPowerPC\b|\bppc\b/i, 'powerpc'],
+    [/\bSPARC\b/i, 'sparc'],
+    [/\bIA-?64\b|\bItanium\b/i, 'ia64'],
+    [/\bXCOFF\b/i, 'xcoff'],
+    [/\bS\/390\b|\bs390x\b/i, 's390x'],
+    [/\bMIPS\b/i, 'mips'],
+    [/\bRISC-?V\b/i, 'riscv'],
+    [/\bPA-RISC\b/i, 'parisc'],
+  ]
+  const seen = new Set<string>()
+  for (const { out } of inspected) {
+    for (const [pattern, name] of ARCHITECTURES) {
+      if (pattern.test(out)) {
+        seen.add(name)
+        break
+      }
+    }
+  }
+  return seen.size
+}
+
 export function verifyForeignArtifact(prefix: string, platform: string): void {
   const candidates = foreignInstallCandidates(prefix)
   if (candidates.length === 0)
@@ -2138,6 +2176,27 @@ export function verifyForeignArtifact(prefix: string, platform: string): void {
   const nativeArtifacts = inspected.filter(item => item.out.includes('Mach-O') || item.out.includes('ELF'))
   if (!matched && nativeArtifacts.length === 0) {
     console.log(`🔎 foreign-target sanity: ${platform} installed ${inspected.length} platform-independent data file(s) (OK)`)
+    return
+  }
+
+  // A deliberate multi-architecture bundle is not a wrong download.
+  //
+  // This check exists to catch an arch-mapping bug, and such a bug produces
+  // native files of exactly ONE architecture — the one we fetched by mistake.
+  // A package that ships several at once is doing something else on purpose:
+  // cassandra.apache.org bundles lib/sigar-bin/libsigar-{amd64-linux,
+  // ppc64-aix,ia64-linux,…}.so, none of which matches darwin-arm64, while its
+  // actual programs (bin/cassandra, bin/nodetool, bin/cqlsh) are shell and
+  // Python scripts. Demanding a target match there rejected a correct artifact.
+  //
+  // Counting distinct architectures is what separates the two, so this stays
+  // strict about the case it was written for: one foreign arch still fails.
+  if (!matched && distinctArchitectures(nativeArtifacts) >= 3) {
+    console.log(
+      `🔎 foreign-target sanity: ${platform} installed a multi-architecture native bundle `
+      + `(${nativeArtifacts.length} files, ${distinctArchitectures(nativeArtifacts)} architectures) `
+      + 'alongside platform-independent programs (OK)',
+    )
     return
   }
 
