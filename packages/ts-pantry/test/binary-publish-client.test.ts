@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { DEFAULT_STAGING_TTL_SECONDS } from '../../registry/src/binary-publishing'
 import { maxScanAdmissionWaitMs, maxScanBudgetMs } from '../../registry/src/malware-scanning'
-import { completeBinaryUpload, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS, publishBinaryArtifact } from '../scripts/binary-publish-client'
+import { completeBinaryUpload, completionError, DEFAULT_CLIENT_ATTEMPTS, DEFAULT_CLIENT_DEADLINE_MS, MAX_BACKOFF_MS, publishBinaryArtifact } from '../scripts/binary-publish-client'
 
 const auth = { Authorization: 'Bearer test' }
 
@@ -463,5 +463,45 @@ describe('retryable completion errors', () => {
       sleep: async () => {},
     })).rejects.toThrow()
     expect(calls).toBe(1)
+  })
+})
+
+describe('a rejection has to say what matched', () => {
+  // The server strips `reason` from a detection so an untrusted publisher
+  // cannot probe the engine, but it keeps `signature` — and every route that
+  // returns this body sits behind auth, so it reaches only the publisher who
+  // owns the artifact. The client printed everything EXCEPT signature, which
+  // left a block reading "verdict=blocked durationMs=2680": a match happened,
+  // nothing about what matched. getmonero.org has been unpublishable on darwin
+  // that way while its linux builds of the same versions scan clean.
+  const blocked = {
+    error: 'Binary artifact blocked by malware scanning',
+    code: 'MALWARE_DETECTED',
+    scan: {
+      verdict: 'blocked',
+      engine: 'clamav',
+      // The field names the server actually sends (MalwareScanResult).
+      signature: 'Unix.Trojan.Example-1234',
+      engineVersion: 'ClamAV 1.5.3',
+      databaseVersion: '28079',
+      durationMs: 2680,
+      artifactSha256: 'a'.repeat(64),
+    },
+  }
+
+  it('names the signature, engine and database in the failure', () => {
+    const message = completionError({ status: 422 } as Response, blocked).message
+    expect(message).toContain('signature=Unix.Trojan.Example-1234')
+    expect(message).toContain('engine=ClamAV 1.5.3')
+    expect(message).toContain('db=28079')
+    expect(message).toContain('verdict=blocked')
+  })
+
+  it('omits what the server withheld rather than printing undefined', () => {
+    const { signature, engineVersion, databaseVersion, ...rest } = blocked.scan
+    const message = completionError({ status: 422 } as Response, { ...blocked, scan: rest }).message
+    expect(message).not.toContain('undefined')
+    expect(message).not.toContain('signature=')
+    expect(message).toContain('verdict=blocked')
   })
 })

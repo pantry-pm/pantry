@@ -105,15 +105,28 @@ export const MAX_BACKOFF_MS: number = 30_000
 export const DEFAULT_CLIENT_ATTEMPTS: number
   = Math.ceil(DEFAULT_CLIENT_DEADLINE_MS / MAX_BACKOFF_MS) + 10
 
-function completionError(response: Response, completed: any): Error {
+export function completionError(response: Response, completed: any): Error {
   const retryable = completed.retryable ? ' (retryable)' : ''
   // Include what the scanner reported. A bare MALWARE_SCAN_UNAVAILABLE says
   // only "fail closed", so working out WHY a 183MB artifact failed meant
   // querying the registry's metrics endpoint after the fact and inferring the
   // cause from durationMs. The verdict, reason and duration are right here.
+  // signature is what a `blocked` verdict is ABOUT, and it was the one field
+  // not printed. The server strips `reason` for a detection (so an untrusted
+  // publisher cannot probe the engine) but keeps `signature` — which reaches
+  // only an authenticated publisher, since every route that returns this body
+  // sits behind auth. Without it a rejection reads
+  //   MALWARE_DETECTED ... [scan verdict=blocked durationMs=2680]
+  // which says a match happened and nothing about what matched, so the owner
+  // of the artifact cannot tell a true positive from a false one.
+  // getmonero.org has been unpublishable on darwin that way while its linux
+  // builds of the same versions scan clean.
   const scan = completed.scan
     ? ` [scan verdict=${completed.scan.verdict}`
+      + `${completed.scan.signature ? ` signature=${completed.scan.signature}` : ''}`
       + `${completed.scan.reason ? ` reason=${completed.scan.reason}` : ''}`
+      + `${completed.scan.engineVersion ? ` engine=${completed.scan.engineVersion}` : ''}`
+      + `${completed.scan.databaseVersion ? ` db=${completed.scan.databaseVersion}` : ''}`
       + `${completed.scan.durationMs ? ` durationMs=${completed.scan.durationMs}` : ''}]`
     : ''
   return new Error(
