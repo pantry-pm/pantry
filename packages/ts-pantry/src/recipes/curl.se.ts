@@ -21,12 +21,21 @@ export const recipe: Recipe = {
     'curl.se/ca-certs': '*',
     'zlib.net': '^1.2.11',
     'nghttp2.org': '*',
-    // configure detects libidn2 and records `Requires.private: libidn2` in the
-    // installed libcurl.pc, so every DOWNSTREAM pkg-config query for libcurl
-    // needs libidn2.pc too. It was not declared, so php.net's configure failed
-    // with "Package 'libidn2', required by 'libcurl', not found" — a curl
-    // packaging gap that only ever surfaced as a php failure.
+    // Everything the SHIPPED libcurl.pc names in Requires.private, so a
+    // downstream `pkg-config libcurl` can resolve. Read off the published
+    // 8.22.0 linux-x86-64 artifact rather than guessed:
+    //
+    //   Requires.private: libidn2,zlib,libbrotlidec,libbrotlicommon,libzstd,
+    //                     openssl,libnghttp2
+    //
+    // configure links whatever it finds on the build host and records it there,
+    // so an undeclared one is invisible until some other package asks
+    // pkg-config for libcurl. php.net failed first on libidn2 and then, once
+    // that was declared, on libbrotlidec — one at a time, because the list was
+    // never read in full.
     'gnu.org/libidn2': '*',
+    'github.com/google/brotli': '*',
+    'facebook.com/zstd': '*',
   },
 
   build: {

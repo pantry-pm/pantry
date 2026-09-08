@@ -72,9 +72,17 @@ export const recipe: Recipe = {
         'working-directory': '${{prefix}}/ghc/{{version}}/bin',
       },
       {
+        // ghcup only writes .ghcup/env for some versions/layouts, and this step
+        // assumed it always exists — `sed: can't read env` then failed the
+        // whole build AFTER a successful GHC install. It was invisible while
+        // every attempt died earlier at "Unable to find a download"; fixing
+        // that exposed it. Nothing depends on the rewrite happening, only on
+        // it happening when there is a file to rewrite.
         run: [
-          'sed -i.bak -e "s|$PKGX_DIR|\\${PKGX_DIR:-\\$HOME/.pkgx}|g" env',
-          'rm env.bak',
+          'if [ -f env ]; then',
+          '  sed -i.bak -e "s|$PKGX_DIR|\\${PKGX_DIR:-\\$HOME/.pkgx}|g" env',
+          '  rm -f env.bak',
+          'fi',
         ].join('\n'),
         'working-directory': '${{prefix}}/.ghcup',
       },
