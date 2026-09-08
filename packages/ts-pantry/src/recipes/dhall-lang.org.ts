@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+aarch64) ASSET="aarch64-darwin" ;;',
       '  darwin+x86-64)  ASSET="x86_64-darwin"  ;;',
       '  linux+x86-64)   ASSET="x86_64-linux"   ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}} (no upstream prebuilt)" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}} (no upstream prebuilt)" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo dhall.tar.bz2 "https://github.com/dhall-lang/dhall-haskell/releases/download/${VERSION}/dhall-${VERSION}-${ASSET}.tar.bz2"',

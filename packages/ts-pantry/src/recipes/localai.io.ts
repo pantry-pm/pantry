@@ -29,7 +29,7 @@ export const recipe: Recipe = {
       '  linux+x86-64)   ASSET="linux-amd64"  ;;',
       '  linux+aarch64)  ASSET="linux-arm64"  ;;',
       '  darwin+aarch64) ASSET="darwin-arm64" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'URL="https://github.com/mudler/LocalAI/releases/download/v${VERSION}/local-ai-v${VERSION}-${ASSET}"',
       'curl -Lfo local-ai "$URL"',

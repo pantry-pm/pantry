@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64) TRIPLE="x86_64-apple-darwin" ;;',
       '  linux/x86-64) TRIPLE="x86_64-unknown-linux-gnu" ;;',
       '  linux/aarch64) TRIPLE="aarch64-unknown-linux-gnu" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'curl -fSL -o /tmp/quickwit.tar.gz "https://github.com/quickwit-oss/quickwit/releases/download/v{{version}}/quickwit-v{{version}}-${TRIPLE}.tar.gz"',
       'mkdir -p /tmp/quickwit-extract {{prefix}}/bin',

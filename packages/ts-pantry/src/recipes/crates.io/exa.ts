@@ -24,7 +24,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+x86-64) ASSET="macos-x86_64" ;;',
       '  linux+x86-64)  ASSET="linux-x86_64" ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}} (exa ships x86-64 only)" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}} (exa ships x86-64 only)" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo exa.zip "https://github.com/ogham/exa/releases/download/v${VERSION}/exa-${ASSET}-v${VERSION}.zip"',

@@ -15,7 +15,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="hadolint-macos-x86_64" ;;',
       '  linux+aarch64)  ASSET="hadolint-linux-arm64" ;;',
       '  linux+x86-64)   ASSET="hadolint-linux-x86_64" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo hadolint "https://github.com/hadolint/hadolint/releases/download/${VERSION}/${ASSET}"',
       'install -Dm755 hadolint {{prefix}}/bin/hadolint',

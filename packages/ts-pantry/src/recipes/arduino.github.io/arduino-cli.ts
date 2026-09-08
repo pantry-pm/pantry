@@ -19,7 +19,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="arduino-cli_${VERSION}_macOS_64bit.tar.gz" ;;',
       '  linux+aarch64)  ASSET="arduino-cli_${VERSION}_Linux_ARM64.tar.gz" ;;',
       '  linux+x86-64)   ASSET="arduino-cli_${VERSION}_Linux_64bit.tar.gz" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo arduino-cli.tar.gz "https://github.com/arduino/arduino-cli/releases/download/v${VERSION}/${ASSET}"',
       'mkdir -p {{prefix}}/bin',

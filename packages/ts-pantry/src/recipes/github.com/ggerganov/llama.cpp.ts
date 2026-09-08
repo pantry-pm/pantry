@@ -33,7 +33,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64) ASSET="llama-b${BASE}-bin-macos-x64.tar.gz" ;;',
       '  linux+x86-64) ASSET="llama-b${BASE}-bin-ubuntu-x64.tar.gz" ;;',
       '  linux+aarch64) ASSET="llama-b${BASE}-bin-ubuntu-arm64.tar.gz" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       // Build dependencies prepend their libraries to LD_LIBRARY_PATH. Invoking
       // the dependency-provided curl under that environment can load a libcurl

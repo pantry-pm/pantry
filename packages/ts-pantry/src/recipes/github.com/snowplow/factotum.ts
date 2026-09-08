@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+aarch64) ASSET=factotum_{{version}}_darwin_arm64.zip ;;',
       '  linux+x86-64) ASSET=factotum_{{version}}_linux_x86_64.zip ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo "$ASSET" "https://github.com/snowplow/factotum/releases/download/{{version}}/$ASSET"',
       'unzip -q "$ASSET"',

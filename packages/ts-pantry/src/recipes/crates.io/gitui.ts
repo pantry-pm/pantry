@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="gitui-mac-x86.tar.gz" ;;',
       '  linux+aarch64)  ASSET="gitui-linux-aarch64.tar.gz" ;;',
       '  linux+x86-64)   ASSET="gitui-linux-x86_64.tar.gz" ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/gitui-org/gitui/releases/download/v${VERSION}/${ASSET}"',

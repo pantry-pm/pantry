@@ -50,7 +50,18 @@ export const recipe: Recipe = {
       },
       'curl --proto \'=https\' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh',
       'PATH={{prefix}}/.ghcup/bin:$PATH',
-      'ghcup install ghc {{version}}',
+      // ghcup is the installer, but versionSource is ghc/ghc's own tags — so
+      // the catalog can list a GHC that ghcup has no binary distribution for,
+      // and "Unable to find a download for Tool ghc" is an upstream gap, not a
+      // broken build. Distinguished from a real failure (network, disk) by the
+      // marker, so only the genuine phantom exits 42.
+      'if ! ghcup install ghc {{version}} 2>&1 | tee "$SRCROOT/ghcup-install.log"; then',
+      '  if grep -q "Unable to find a download" "$SRCROOT/ghcup-install.log"; then',
+      '    echo "ghcup publishes no binary distribution for GHC {{version}}" >&2',
+      '    exit 42',
+      '  fi',
+      '  exit 1',
+      'fi',
       'ghcup set ghc {{version}}',
       {
         run: 'ln -s .ghcup/* .',

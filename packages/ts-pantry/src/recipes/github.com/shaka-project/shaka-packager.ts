@@ -21,7 +21,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64) SUFFIX=osx-x64 ;;',
       '  linux+x86-64) SUFFIX=linux-x64 ;;',
       '  linux+aarch64) SUFFIX=linux-arm64 ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'mkdir -p {{prefix}}/bin',
       'for PROGRAM in packager mpd_generator; do',

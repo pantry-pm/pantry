@@ -32,7 +32,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TARGET="x86_64-apple-darwin" ;;',
       '  linux+aarch64)  TARGET="aarch64-linux-gnu" ;;',
       '  linux+x86-64)   TARGET="x86_64-linux-gnu" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://bitcoincore.org/bin/bitcoin-core-${DIST_VERSION}/bitcoin-${DIST_VERSION}-${TARGET}.tar.gz"',

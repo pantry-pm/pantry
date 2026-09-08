@@ -25,7 +25,7 @@ export const recipe: Recipe = {
       '  darwin+aarch64) TARGET="aarch64-apple-darwin"        ;;',
       '  linux+aarch64)  TARGET="aarch64-unknown-linux-musl"  ;;',
       '  linux+x86-64)   TARGET="x86_64-unknown-linux-musl"   ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}} (no upstream prebuilt)" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}} (no upstream prebuilt)" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo git-branchless.tar.gz "https://github.com/arxanas/git-branchless/releases/download/v${VERSION}/git-branchless-v${VERSION}-${TARGET}.tar.gz"',

@@ -18,7 +18,7 @@ export const recipe: Recipe = {
       'case {{hw.arch}} in',
       '  aarch64) ARCH=arm64 ;;',
       '  x86-64) ARCH=x86_64 ;;',
-      '  *) echo "unsupported arch {{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported arch {{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'PKG=mas-{{version}}-$ARCH.pkg',
       'curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 300 -o "$PKG" "https://github.com/mas-cli/mas/releases/download/v{{version}}/$PKG"',

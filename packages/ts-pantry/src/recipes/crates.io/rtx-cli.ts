@@ -23,7 +23,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="mise-v${VERSION}-macos-x64.tar.gz" ;;',
       '  linux+aarch64)  ASSET="mise-v${VERSION}-linux-arm64-musl.tar.gz" ;;',
       '  linux+x86-64)   ASSET="mise-v${VERSION}-linux-x64-musl.tar.gz" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo mise.tar.gz "https://github.com/jdx/mise/releases/download/v${VERSION}/${ASSET}"',
       'tar xzf mise.tar.gz -C {{prefix}} --strip-components=1',

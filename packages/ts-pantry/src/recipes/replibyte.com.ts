@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+x86-64) ASSET=replibyte_v{{version}}_x86_64-apple-darwin.zip ;;',
       '  linux+x86-64) ASSET=replibyte_v{{version}}_x86_64-unknown-linux-musl.tar.gz ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}} (upstream ships darwin/x86-64 and linux/x86-64 only)" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}} (upstream ships darwin/x86-64 and linux/x86-64 only)" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo "$ASSET" "https://github.com/Qovery/Replibyte/releases/download/v{{version}}/$ASSET"',
       'case "$ASSET" in',

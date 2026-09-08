@@ -32,7 +32,7 @@ export const recipe: Recipe = {
       '  linux+aarch64)  PAT="linux-arm64"  ;;',
       '  darwin+x86-64)  PAT="osx-x86_64"   ;;',
       '  darwin+aarch64) PAT="osx-arm64"    ;;',
-      '  *) echo "unsupported platform {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '# Asset name embeds a commit hash; resolve the real download URL from the API.',
       'URL=$(curl -fsSL "https://api.github.com/repos/imazen/imageflow/releases/tags/v${VERSION}" \\',

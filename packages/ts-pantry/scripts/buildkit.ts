@@ -606,6 +606,39 @@ export function generateBuildScript(
 
   // Default compiler flags (from brewkit's flags())
   // Set BEFORE recipe env so recipes can override if needed
+  // Keep only the warning flags THIS compiler understands.
+  //
+  // The dialect differs between the two: -Wno-error=incompatible-function-
+  // pointer-types is clang-only and gcc hard-errors on it ("no option
+  // '-Wincompatible-function-pointer-types'"). The branches below pick by
+  // TARGET os, and the target does not determine the compiler — a
+  // darwin-targeted build on a linux runner is gcc, which is exactly how
+  // poppler.freedesktop.org died in CMake's very first testCCompiler step.
+  //
+  // Probing is a few milliseconds once and removes the whole class, including
+  // the reverse case (a clang-only linux runner) and older compilers that
+  // predate a flag we assume.
+  //
+  // Asymmetric on purpose: clang accepts an unknown -Wno-error=X silently, so
+  // the probe is a no-op there, while gcc hard-errors — which is precisely the
+  // side that was breaking. Adding -Werror=unknown-warning-option to make clang
+  // strict too would drop flags that are currently harmless, for no gain.
+  sections.push('# Filter compiler flags to those the compiler accepts')
+  sections.push('__keep_cflags() {')
+  sections.push('  local probe="${TMPDIR:-/tmp}/_ccflag_probe"')
+  sections.push('  local kept="" f')
+  sections.push('  printf \'int main(void){return 0;}\\n\' > "$probe.c" 2>/dev/null || { echo "$*"; return 0; }')
+  sections.push('  for f in "$@"; do')
+  // A flag the compiler rejects makes the probe exit non-zero; anything else
+  // (no compiler at all, unwritable tmp) falls through to keeping the flag,
+  // so this can only ever remove flags that are provably unusable.
+  sections.push('    if "${CC:-cc}" "$f" -c "$probe.c" -o "$probe.o" >/dev/null 2>&1; then kept="$kept $f"; fi')
+  sections.push('  done')
+  sections.push('  rm -f "$probe.c" "$probe.o" 2>/dev/null || true')
+  sections.push('  echo "$kept"')
+  sections.push('}')
+  sections.push('if ! command -v "${CC:-cc}" >/dev/null 2>&1; then __keep_cflags() { echo "$*"; }; fi')
+  sections.push('')
   sections.push('# Default compiler flags')
   if (osName === 'darwin') {
     // Use the system's actual macOS version — brew libraries are built for the runner's
@@ -618,8 +651,8 @@ export function generateBuildScript(
     // (install_name_tool treats duplicate rpaths as fatal errors).
     // Modern Clang treats these warnings as errors by default, breaking older packages
     // (e.g. pixman 0.40 has incompatible function pointer types)
-    sections.push('export CFLAGS="-Wno-error=incompatible-function-pointer-types -Wno-error=int-conversion -Wno-error=implicit-function-declaration ${CFLAGS:-}"')
-    sections.push('export CXXFLAGS="-Wno-error=incompatible-function-pointer-types ${CXXFLAGS:-}"')
+    sections.push('export CFLAGS="$(__keep_cflags -Wno-error=incompatible-function-pointer-types -Wno-error=int-conversion -Wno-error=implicit-function-declaration) ${CFLAGS:-}"')
+    sections.push('export CXXFLAGS="$(__keep_cflags -Wno-error=incompatible-function-pointer-types) ${CXXFLAGS:-}"')
   }
 else if (osName === 'linux') {
     // Modern GCC/Clang treat certain warnings as errors (C23 defaults) — relax them.
@@ -628,7 +661,7 @@ else if (osName === 'linux') {
     // warning flags, causing a large arm64-only failure cohort (ncurses, libnl, etc.).
     // Note: -Wno-error=incompatible-function-pointer-types is Clang-only; GCC has
     // -Wno-error=incompatible-pointer-types instead (GCC errors on the Clang form)
-    sections.push('export CFLAGS="-fPIC -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-pointer-types ${CFLAGS:-}"')
+    sections.push('export CFLAGS="-fPIC $(__keep_cflags -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-pointer-types) ${CFLAGS:-}"')
     sections.push('export CXXFLAGS="-fPIC ${CXXFLAGS:-}"')
   }
   sections.push('')

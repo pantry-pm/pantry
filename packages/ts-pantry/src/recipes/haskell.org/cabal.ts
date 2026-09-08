@@ -30,7 +30,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  SUFFIXES="x86_64-apple-darwin x86_64-darwin" ;;',
       '  linux+x86-64)   SUFFIXES="x86_64-linux-unknown x86_64-linux-deb10" ;;',
       '  linux+aarch64)  SUFFIXES="aarch64-linux-unknown aarch64-linux-deb10" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'ASSET=""',
       'for suffix in $SUFFIXES; do',

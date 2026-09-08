@@ -21,7 +21,10 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+x86-64) OS="macos" ;;',
       '  linux+x86-64)  OS="linux" ;;',
-      '  *) echo "mergestat-lite only ships prebuilt amd64 binaries upstream" >&2; exit 1 ;;',
+      // 42, not 1: the recipe has established upstream ships nothing for this
+      // arch. That is a phantom version, not a broken build — reported as a
+      // failure it counted against coverage on every linux-arm64 sweep.
+      '  *) echo "mergestat-lite only ships prebuilt amd64 binaries upstream" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/mergestat/mergestat-lite/releases/download/v${VERSION}/mergestat-${OS}-amd64.tar.gz"',

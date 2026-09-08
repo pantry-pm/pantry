@@ -30,7 +30,7 @@ export const recipe: Recipe = {
       '  darwin+aarch64) echo "no darwin/arm64 asset upstream" >&2; exit 42 ;;',
       '  linux+x86-64)   ASSET="ctop-${VERSION}-linux-amd64"  ;;',
       '  linux+aarch64)  ASSET="ctop-${VERSION}-linux-arm64"  ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       // The upstream git-tag prefix is inconsistent across releases (0.7.6 is

@@ -30,7 +30,7 @@ export const recipe: Recipe = {
       '  linux+aarch64)  TRIPLE="aarch64-unknown-linux-gnu" ;;',
       '  darwin+aarch64) TRIPLE="aarch64-apple-darwin"      ;;',
       '  darwin+x86-64)  TRIPLE="x86_64-apple-darwin"       ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="${BASE}/lighthouse-v${VERSION}-${TRIPLE}.tar.gz"',

@@ -27,7 +27,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64)  PLATFORM=macos; ARCH=amd64;   SUFFIX= ;;',
       '  linux/aarch64)  PLATFORM=linux; ARCH=aarch64; SUFFIX=-static ;;',
       '  linux/x86-64)   PLATFORM=linux; ARCH=amd64;   SUFFIX=-static ;;',
-      '  *) echo "Unsupported platform: {{hw.platform}}/{{hw.arch}}" && exit 1 ;;',
+      '  *) echo "Unsupported platform: {{hw.platform}}/{{hw.arch}}" && exit 42 ;;',
       'esac',
       'URL="https://github.com/babashka/babashka/releases/download/{{version.tag}}/babashka-{{version}}-${PLATFORM}-${ARCH}${SUFFIX}.tar.gz"',
       'curl -fSL "$URL" | tar zxvf -',

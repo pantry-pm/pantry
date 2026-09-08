@@ -78,7 +78,7 @@ export const recipe: Recipe = {
       '  darwin+aarch64) ASSET="craft-darwin-arm64.zip" ;;',
       '  darwin+x86-64)  ASSET="craft-darwin-x64.zip"   ;;',
       '  linux+x86-64)   ASSET="craft-linux-x64.zip"    ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/craft-native/craft/releases/download/v${VERSION}/${ASSET}"',

@@ -21,6 +21,12 @@ export const recipe: Recipe = {
     'curl.se/ca-certs': '*',
     'zlib.net': '^1.2.11',
     'nghttp2.org': '*',
+    // configure detects libidn2 and records `Requires.private: libidn2` in the
+    // installed libcurl.pc, so every DOWNSTREAM pkg-config query for libcurl
+    // needs libidn2.pc too. It was not declared, so php.net's configure failed
+    // with "Package 'libidn2', required by 'libcurl', not found" — a curl
+    // packaging gap that only ever surfaced as a php failure.
+    'gnu.org/libidn2': '*',
   },
 
   build: {

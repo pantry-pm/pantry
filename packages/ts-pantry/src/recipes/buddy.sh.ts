@@ -74,7 +74,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="buddy-darwin-x64"   ;;',
       '  linux+aarch64)  ASSET="buddy-linux-arm64"  ;;',
       '  linux+x86-64)   ASSET="buddy-linux-x64"    ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo buddy.zip "https://github.com/stacksjs/buddy/releases/download/v{{version}}/${ASSET}.zip"',

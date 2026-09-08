@@ -23,7 +23,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64) PID=osx-64 ;;',
       '  linux+x86-64) PID=linux-64 ;;',
       '  linux+aarch64) PID=linux-aarch64 ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'TAG="{{version}}-0"',
       'ASSET="micromamba-${PID}.tar.bz2"',

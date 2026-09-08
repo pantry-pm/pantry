@@ -21,7 +21,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="amber-macos-x86_64" ;;',
       '  linux+aarch64)  ASSET="amber-linux-gnu-aarch64" ;;',
       '  linux+x86-64)   ASSET="amber-linux-gnu-x86_64" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo amber.tar.xz "https://github.com/amber-lang/amber/releases/download/${VERSION}/${ASSET}.tar.xz"',
       'tar Jxf amber.tar.xz',

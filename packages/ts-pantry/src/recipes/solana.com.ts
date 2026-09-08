@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}/{{hw.arch}} in',
       '  darwin/aarch64) SOL_ARCH="aarch64-apple-darwin" ;;',
       '  linux/x86-64) SOL_ARCH="x86_64-unknown-linux-gnu" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       '# Newer releases live under anza-xyz/agave; older ones under solana-labs/solana.',
       'AGAVE_URL="https://github.com/anza-xyz/agave/releases/download/v${SOL_VERSION}/solana-release-${SOL_ARCH}.tar.bz2"',

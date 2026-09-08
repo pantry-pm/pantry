@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TARGET="darwin-amd64" ;;',
       '  linux+aarch64)  TARGET="linux-arm64"  ;;',
       '  linux+x86-64)   TARGET="linux-amd64"  ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/diggerhq/digger/releases/download/v${VERSION}/digger-cli-${TARGET}"',

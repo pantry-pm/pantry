@@ -40,7 +40,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  SLUG="darwin-x64"   ;;',
       '  linux+x86-64)   SLUG="linux-x64"    ;;',
       '  linux+aarch64)  SLUG="linux-arm64"  ;;',
-      '  *) echo "claude-code: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "claude-code: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       // Each per-platform package ships a single self-contained binary at

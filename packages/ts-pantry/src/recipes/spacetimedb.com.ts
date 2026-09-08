@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64) TRIPLE="x86_64-apple-darwin" ;;',
       '  linux/x86-64) TRIPLE="x86_64-unknown-linux-gnu" ;;',
       '  linux/aarch64) TRIPLE="aarch64-unknown-linux-gnu" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'curl -fSL -o /tmp/spacetime.tar.gz "https://github.com/clockworklabs/SpacetimeDB/releases/download/v{{version}}/spacetime-${TRIPLE}.tar.gz"',
       'mkdir -p /tmp/spacetime-extract {{prefix}}/bin',

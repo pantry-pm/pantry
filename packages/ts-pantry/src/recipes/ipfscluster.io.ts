@@ -16,7 +16,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64) ARCH="darwin-amd64" ;;',
       '  linux/x86-64) ARCH="linux-amd64" ;;',
       '  linux/aarch64) ARCH="linux-arm64" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'mkdir -p {{prefix}}/bin /tmp/ipfs-extract',
       'for TOOL in ipfs-cluster-service ipfs-cluster-ctl ipfs-cluster-follow; do',

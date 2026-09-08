@@ -19,7 +19,7 @@ export const recipe: Recipe = {
       'case {{hw.arch}} in',
       '  aarch64) ARCH=arm64 ;;',
       '  x86-64) ARCH=amd64 ;;',
-      '  *) echo "unsupported arch {{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported arch {{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl --fail --location --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 300 -o mole.tar.gz "https://github.com/tw93/mole/archive/refs/tags/V{{version}}.tar.gz"',
       'mkdir source',

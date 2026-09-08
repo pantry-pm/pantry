@@ -23,7 +23,7 @@ export const recipe: Recipe = {
       '  darwin+aarch64) ASSET="CLIProxyAPI_${VERSION}_darwin_aarch64" ;;',
       '  linux+x86-64)  ASSET="CLIProxyAPI_${VERSION}_linux_amd64"    ;;',
       '  linux+aarch64) ASSET="CLIProxyAPI_${VERSION}_linux_aarch64"  ;;',
-      '  *) echo "CLIProxyAPI: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "CLIProxyAPI: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       // Release tags carry a `v` prefix; the asset names embed the bare version.

@@ -22,6 +22,15 @@ export const recipe: Recipe = {
     type: 'github-releases',
     repo: 'nomic-ai/gpt4all',
   },
+  // The Qt Installer Framework binary links libxkbcommon-x11 at LOAD time,
+  // before QT_QPA_PLATFORM=minimal can spare it the X11 plugin — so the
+  // installer died at `error while loading shared libraries:
+  // libxkbcommon-x11.so.0` on every linux run. Declaring it puts the
+  // library on the loader path instead of relying on the runner image.
+  dependencies: {
+    'xkbcommon.org': '*',
+  },
+
   build: {
     script: [
       'VERSION={{version}}',

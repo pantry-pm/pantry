@@ -37,7 +37,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TARGET="osx-x64"     ;;',
       '  linux+aarch64)  TARGET="linux-arm64" ;;',
       '  linux+x86-64)   TARGET="linux-x64"   ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/git-ecosystem/git-credential-manager/releases/download/v${VERSION}/gcm-${TARGET}-${VERSION}.tar.gz"',

@@ -31,7 +31,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TARGET="x86_64-macos"   ;;',
       '  linux+aarch64)  TARGET="aarch64-linux"  ;;',
       '  linux+x86-64)   TARGET="x86_64-linux"   ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo termusic.tar.xz "https://github.com/tramhao/termusic/releases/download/v${VERSION}/termusic-v${VERSION}-${TARGET}.tar.xz"',

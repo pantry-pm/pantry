@@ -19,7 +19,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+aarch64) ASSET=amp-aarch64-apple-darwin ;;',
       '  linux+x86-64) ASSET=amp-x86_64-unknown-linux-musl ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}} (upstream ships darwin/aarch64 and linux/x86-64 only)" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}} (upstream ships darwin/aarch64 and linux/x86-64 only)" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo amp "https://github.com/jmacdonald/amp/releases/download/{{version.raw}}/$ASSET"',
       'mkdir -p {{prefix}}/bin',

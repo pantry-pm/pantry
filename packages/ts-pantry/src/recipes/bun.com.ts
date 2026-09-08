@@ -44,7 +44,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="bun-darwin-x64"     ;;',
       '  linux+aarch64)  ASSET="bun-linux-aarch64"  ;;',
       '  linux+x86-64)   ASSET="bun-linux-x64"      ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo bun.zip "https://github.com/oven-sh/bun/releases/download/bun-v{{version}}/${ASSET}.zip"',

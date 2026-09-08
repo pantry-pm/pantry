@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64) ASSET=starpls-darwin-amd64.tar.gz ;;',
       '  linux+x86-64) ASSET=starpls-linux-amd64.tar.gz ;;',
       '  linux+aarch64) ASSET=starpls-linux-aarch64.tar.gz ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo "$ASSET" "https://github.com/withered-magic/starpls/releases/download/v{{version}}/$ASSET"',
       'tar -xzf "$ASSET"',

@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       'case {{hw.platform}}/{{hw.arch}} in',
       '  darwin/aarch64) TINYGO_ARCH="darwin-arm64" ;;',
       '  linux/x86-64) TINYGO_ARCH="linux-amd64" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'TINYGO_URL="https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/tinygo${TINYGO_VERSION}.${TINYGO_ARCH}.tar.gz"',
       'curl -fSL "$TINYGO_URL" | tar -xz --strip-components=1 -C /tmp/tinygo-extract',

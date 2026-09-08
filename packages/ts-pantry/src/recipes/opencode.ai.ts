@@ -21,7 +21,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64) ASSET=opencode-darwin-x64.zip ;;',
       '  linux+x86-64) ASSET=opencode-linux-x64-musl.tar.gz ;;',
       '  linux+aarch64) ASSET=opencode-linux-arm64-musl.tar.gz ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo "$ASSET" "https://github.com/anomalyco/opencode/releases/download/v{{version}}/$ASSET"',
       'case "$ASSET" in',

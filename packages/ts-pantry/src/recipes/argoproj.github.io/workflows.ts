@@ -20,7 +20,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="argo-darwin-amd64" ;;',
       '  linux+aarch64)  ASSET="argo-linux-arm64" ;;',
       '  linux+x86-64)   ASSET="argo-linux-amd64" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo argo.gz "https://github.com/argoproj/argo-workflows/releases/download/v${VERSION}/${ASSET}.gz"',
       'gzip -dc argo.gz > argo',

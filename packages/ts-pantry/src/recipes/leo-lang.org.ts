@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+aarch64) TRIPLE="aarch64-apple-darwin" ;;',
       '  darwin+x86-64)  TRIPLE="x86_64-apple-darwin" ;;',
       '  linux+x86-64)   TRIPLE="x86_64-unknown-linux-gnu" ;;',
-      '  *) echo "leo: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "leo: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       '# upstream asset prefix is not stable across releases',

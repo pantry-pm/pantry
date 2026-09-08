@@ -24,7 +24,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="darwin-amd64" ;;',
       '  linux+aarch64)  ASSET="linux-arm64"  ;;',
       '  linux+x86-64)   ASSET="linux-amd64"  ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo doctl.tar.gz "https://github.com/digitalocean/doctl/releases/download/v${VERSION}/doctl-${VERSION}-${ASSET}.tar.gz"',

@@ -19,7 +19,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64) SUFFIX="darwin_amd64" ;;',
       '  linux/x86-64) SUFFIX="linux_amd64" ;;',
       '  linux/aarch64) SUFFIX="linux_arm64" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'TARBALL="plakar_{{version}}_${SUFFIX}.tar.gz"',
       'curl -fSL -o /tmp/plakar.tar.gz "https://github.com/PlakarKorp/plakar/releases/download/v{{version}}/${TARBALL}"',

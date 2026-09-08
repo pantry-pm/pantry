@@ -42,7 +42,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64) SDK="dartsdk-macos-x64-release.zip" ;;',
       '  linux/x86-64) SDK="dartsdk-linux-x64-release.zip" ;;',
       '  linux/aarch64) SDK="dartsdk-linux-arm64-release.zip" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'curl -fSL -o /tmp/dartsdk.zip "https://storage.googleapis.com/dart-archive/channels/stable/release/{{version}}/sdk/${SDK}"',
       'mkdir -p {{prefix}}/libexec {{prefix}}/bin',

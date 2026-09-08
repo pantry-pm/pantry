@@ -23,7 +23,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TARGET="x86_64-apple-darwin" ;;',
       '  linux+aarch64)  TARGET="aarch64-unknown-linux-musl" ;;',
       '  linux+x86-64)   TARGET="x86_64-unknown-linux-musl" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo wasm-pack.tar.gz "https://github.com/rustwasm/wasm-pack/releases/download/v${VERSION}/wasm-pack-v${VERSION}-${TARGET}.tar.gz"',
       'tar xzf wasm-pack.tar.gz',

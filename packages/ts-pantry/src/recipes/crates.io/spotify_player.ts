@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TARGET="x86_64-apple-darwin" ;;',
       '  linux+aarch64)  TARGET="aarch64-unknown-linux-gnu" ;;',
       '  linux+x86-64)   TARGET="x86_64-unknown-linux-gnu" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo spotify_player.tar.gz "https://github.com/aome510/spotify-player/releases/download/v${VERSION}/spotify_player-${TARGET}.tar.gz"',
       'tar xzf spotify_player.tar.gz',

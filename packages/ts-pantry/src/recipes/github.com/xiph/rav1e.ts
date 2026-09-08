@@ -16,7 +16,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="rav1e-${VERSION}-macos.zip"; ARCHIVE="rav1e.zip" ;;',
       '  linux+aarch64)  ASSET="rav1e-${VERSION}-linux-aarch64.tar.gz"; ARCHIVE="rav1e.tar.gz" ;;',
       '  linux+x86-64)   ASSET="rav1e-${VERSION}-linux-generic.tar.gz"; ARCHIVE="rav1e.tar.gz" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo "$ARCHIVE" "https://github.com/xiph/rav1e/releases/download/v${VERSION}/${ASSET}"',
       'case "$ARCHIVE" in',

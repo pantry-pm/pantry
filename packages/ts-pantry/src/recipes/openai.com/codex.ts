@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  TRIPLE="x86_64-apple-darwin" ;;',
       '  linux+aarch64)  TRIPLE="aarch64-unknown-linux-gnu" ;;',
       '  linux+x86-64)   TRIPLE="x86_64-unknown-linux-gnu" ;;',
-      '  *) echo "codex: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "codex: no prebuilt binary for {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/openai/codex/releases/download/rust-v${VERSION}/codex-${TRIPLE}.tar.gz"',

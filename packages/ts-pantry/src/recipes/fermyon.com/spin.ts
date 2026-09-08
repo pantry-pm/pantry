@@ -15,7 +15,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="macos-amd64" ;;',
       '  linux+aarch64)  ASSET="linux-aarch64" ;;',
       '  linux+x86-64)   ASSET="linux-amd64" ;;',
-      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'curl -Lfo spin.tar.gz "https://github.com/fermyon/spin/releases/download/v${VERSION}/spin-v${VERSION}-${ASSET}.tar.gz"',

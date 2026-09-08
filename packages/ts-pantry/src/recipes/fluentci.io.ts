@@ -19,7 +19,7 @@ export const recipe: Recipe = {
       '  darwin/x86-64) TRIPLE="x86_64-apple-darwin" ;;',
       '  linux/x86-64) TRIPLE="x86_64-unknown-linux-gnu" ;;',
       '  linux/aarch64) TRIPLE="aarch64-unknown-linux-gnu" ;;',
-      '  *) echo "Unsupported platform" && exit 1 ;;',
+      '  *) echo "Unsupported platform" && exit 42 ;;',
       'esac',
       'curl -fSL -o /tmp/fluentci.tar.gz "https://github.com/fluentci-io/fluentci/releases/download/v{{version}}/fluentci_v{{version}}_${TRIPLE}.tar.gz"',
       'mkdir -p /tmp/fluentci-extract {{prefix}}/bin',

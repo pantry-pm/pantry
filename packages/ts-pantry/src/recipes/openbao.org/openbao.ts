@@ -26,7 +26,7 @@ export const recipe: Recipe = {
       '  darwin+x86-64)  ASSET="bao_${VERSION}_Darwin_x86_64.tar.gz" ;;',
       '  linux+aarch64)  ASSET="bao_${VERSION}_Linux_arm64.tar.gz" ;;',
       '  linux+x86-64)   ASSET="bao_${VERSION}_Linux_x86_64.tar.gz" ;;',
-      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 1 ;;',
+      '  *) echo "unsupported platform: {{hw.platform}}+{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       '',
       'URL="https://github.com/openbao/openbao/releases/download/v${VERSION}/${ASSET}"',
