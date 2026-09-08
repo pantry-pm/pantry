@@ -848,21 +848,34 @@ else if (key.includes('.') || key.includes('/')) {
 }
 
 // Parse dependency string to get domain
-function parseDep(dep: string): string {
+export function parseDep(dep: string): string {
   let domain = dep
-  // Remove platform prefix
-  if (domain.includes(':')) {
-    domain = domain.split(':')[1]
+  // Remove platform prefix. Anchored to the two real prefixes, like
+  // parseDepConstraint: a bare `split(':')[1]` mangles any other colon and
+  // returns undefined for a dep that has none.
+  if (/^(?:darwin|linux):/i.test(domain)) {
+    domain = domain.split(':').slice(1).join(':')
   }
   // Remove version constraints
   domain = domain.replace(/[\^~<>=@].*$/, '')
   // Remove comments
   domain = domain.replace(/#.*$/, '').trim()
+  // ...including a bare, space-separated one. parseDepConstraint already reads
+  // `freetype.org 2` as the constraint "2", but this left the " 2" ON THE
+  // DOMAIN — so the lookup asked S3 for `binaries/freetype.org 2/metadata.json`,
+  // got a 404, and reported "not in S3, falling back to system path → /usr".
+  // Silently: the dep resolved to a prefix with no freetype in it, and
+  // ghostscript.com then failed configure with "No usable Freetype source or
+  // library found" on every platform, every sweep. zlib.net, bzip2 and libxml2
+  // were being dropped the same way in the same build.
+  //
+  // The two parsers have to agree on where the domain ends; a test pins that.
+  domain = domain.replace(/\s+\d[\d.]*$/, '').trim()
   return domain
 }
 
 // Extract version constraint from dependency string (e.g., "python.org: ~3.11" → "~3.11")
-function parseDepConstraint(dep: string): string | null {
+export function parseDepConstraint(dep: string): string | null {
   let spec = dep
   // Remove platform prefix
   if (spec.includes(':') && /^(?:darwin|linux):/i.test(spec)) {
