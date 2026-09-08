@@ -436,11 +436,21 @@ export async function installPackage(
       expectedSha256 = checksum.toLowerCase()
     }
 
-    await downloadFileReliably(url, archivePath, {
-      quiet: options.quiet,
-      onRetry: options.onRetry,
-      expectedSha256,
-    })
+    try {
+      await downloadFileReliably(url, archivePath, {
+        quiet: options.quiet,
+        onRetry: options.onRetry,
+        expectedSha256,
+      })
+    }
+    catch (error) {
+      // A purged Zig dev build fails here as a bare 404 that names neither the
+      // cause nor the fix. Say both, while we still have the metadata that
+      // knows which builds are mirrored.
+      const hint = mirror ? null : zigPurgedDevBuildHint(metadata, domain, version, platform)
+      if (!hint) throw error
+      throw new Error(`${error instanceof Error ? error.message : String(error)}\n\n${hint}`)
+    }
 
     // Extract
     const extractDir = path.join(tmpDir, 'extracted')
@@ -794,6 +804,43 @@ export function zigRegistryMirror(
     // with no `zig-<arch>-<os>-<version>/` wrapper to strip.
     prefix: '',
   }
+}
+
+/**
+ * Why a pinned Zig dev build just 404'd, and which ones to pin instead.
+ *
+ * ziglang.org serves only the current master build, so an exact `-dev` pin
+ * works for a few weeks and then stops existing. What the pin's owner sees is a
+ * bare `HTTP 404 downloading https://ziglang.org/builds/...`, which reads as a
+ * network blip or a typo rather than "upstream deleted this and is never
+ * bringing it back" — and in CI it arrives at the first step, having explained
+ * nothing about why a pipeline that passed last month now cannot start.
+ *
+ * We mirror dev builds precisely so a pin can outlive that pruning, so when the
+ * pinned build is not among them the fix is to pin one that is. Returns null
+ * when this is not that failure, in which case the original error stands.
+ */
+export function zigPurgedDevBuildHint(
+  metadata: RegistryMetadata | null,
+  domain: string,
+  version: string,
+  platform: Platform,
+): string | null {
+  if (domain !== 'ziglang.org' || !version.includes('-dev.')) return null
+
+  const platformKey = registryPlatformKey(platform)
+  // `compareVersions` is newest-first by construction, so no reverse here.
+  const mirrored = registryVersionsForPlatform(metadata, platform)
+    .filter(candidate => candidate.includes('-dev.'))
+    .sort(compareVersions)
+
+  return [
+    `ziglang.org keeps only the current master build, so the pinned dev build ${version} no longer exists upstream.`,
+    `The pantry registry mirrors dev builds so a pin can outlive that pruning, but it carries no ${platformKey} artifact for this one.`,
+    mirrored.length > 0
+      ? `Pin one it does carry, newest first: ${mirrored.slice(0, 3).join(', ')}.`
+      : `It currently mirrors no ${platformKey} dev build either — pin a tagged release instead.`,
+  ].join('\n')
 }
 
 /** Does `version` satisfy `op` + `target`? Shared by the bundled and live scans. */

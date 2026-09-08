@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { registryVersionsForPlatform, sqliteOfficialDownloadUrl, ziglangOfficialDownload, zigRegistryMirror } from '../src/installer'
+import { registryVersionsForPlatform, sqliteOfficialDownloadUrl, ziglangOfficialDownload, zigPurgedDevBuildHint, zigRegistryMirror } from '../src/installer'
 
 describe('registry platform version resolution', () => {
   const metadata = {
@@ -86,6 +86,45 @@ describe('Zig registry mirror selection', () => {
   it('falls back to upstream when the registry has no artifact for the target', () => {
     expect(zigRegistryMirror(metadata, '0.17.0-dev.1859_dcceb318e', { os: 'linux', arch: 'aarch64' })).toBeNull()
     expect(zigRegistryMirror(null, '0.17.0-dev.1859_dcceb318e', { os: 'linux', arch: 'x86_64' })).toBeNull()
+  })
+})
+
+// A pin upstream has deleted fails as a bare 404 that reads like a network
+// blip. mail-os/mail lost two 21-minute release runs to one before anyone
+// worked out that ziglang.org simply does not keep dev builds.
+describe('purged Zig dev build diagnosis', () => {
+  const metadata = {
+    versions: {
+      '0.17.0-dev.1282+c0f9b51d8': { platforms: { 'linux-x86-64': {} } },
+      '0.17.0-dev.2033_af24fd11a': { platforms: { 'linux-x86-64': {} } },
+      '0.17.0-dev.1859_dcceb318e': { platforms: { 'linux-x86-64': {} } },
+      '0.15.2': { platforms: { 'linux-x86-64': {} } },
+    },
+  }
+  const linux = { os: 'linux', arch: 'x86_64' } as const
+
+  it('names the cause and the mirrored builds to pin instead, newest first', () => {
+    const hint = zigPurgedDevBuildHint(metadata, 'ziglang.org', '0.17.0-dev.1509_bb296ab9b', linux)
+    expect(hint).toContain('keeps only the current master build')
+    expect(hint).toContain('0.17.0-dev.1509_bb296ab9b no longer exists upstream')
+    expect(hint).toContain(
+      'Pin one it does carry, newest first: 0.17.0-dev.2033_af24fd11a, 0.17.0-dev.1859_dcceb318e, 0.17.0-dev.1282+c0f9b51d8.',
+    )
+    // A tagged release is not a candidate: it would not fix a dev-build pin.
+    expect(hint).not.toContain('0.15.2')
+  })
+
+  it('says so when the mirror carries no dev build for the target at all', () => {
+    expect(zigPurgedDevBuildHint(metadata, 'ziglang.org', '0.17.0-dev.1509_bb296ab9b', { os: 'linux', arch: 'aarch64' }))
+      .toContain('mirrors no linux-arm64 dev build either')
+    expect(zigPurgedDevBuildHint(null, 'ziglang.org', '0.17.0-dev.1509_bb296ab9b', linux))
+      .toContain('pin a tagged release instead')
+  })
+
+  // Every other 404 keeps its own error; this hint would only mislead.
+  it('stays out of the way of unrelated failures', () => {
+    expect(zigPurgedDevBuildHint(metadata, 'ziglang.org', '0.15.2', linux)).toBeNull()
+    expect(zigPurgedDevBuildHint(metadata, 'bun.sh', '1.3.0-dev.1', linux)).toBeNull()
   })
 })
 
