@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { assignStripe, isAppRecipePath, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
+import { assignStripe, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -300,5 +300,38 @@ describe('isAppRecipePath', () => {
     expect(isAppRecipePath('appsflyer.com')).toBe(false)
     expect(isAppRecipePath('github.com/nomic-ai')).toBe(false)
     expect(isAppRecipePath('')).toBe(false)
+  })
+})
+
+describe('isPublishedArtifactRecord', () => {
+  // The existence check was `!!platforms[platform]` — key presence. The
+  // registry carries stub records whose tarball URL serves nothing (77 for
+  // llvm.org, 41 for flutter.dev, 30 for haskell.org), so the sweep believed
+  // those platforms were done and skipped them on every run, forever.
+  test('rejects the stub shape a failed upload leaves behind', () => {
+    expect(isPublishedArtifactRecord({
+      tarball: 'binaries/llvm.org/20.1.5/darwin-arm64/llvm.org-20.1.5.tar.gz',
+      sha256: '',
+      size: 0,
+      uploadedAt: '',
+    })).toBe(false)
+  })
+
+  test('accepts a record only a completed upload could have written', () => {
+    expect(isPublishedArtifactRecord({
+      tarball: 'binaries/llvm.org/23.1.0/darwin-arm64/llvm.org-23.1.0.tar.gz',
+      sha256: 'a'.repeat(64),
+      size: 1577000000,
+      uploadedAt: '2026-09-08T01:29:45.697Z',
+    })).toBe(true)
+  })
+
+  test('rejects partial damage, not just the all-empty case', () => {
+    const good = { sha256: 'a'.repeat(64), size: 10, uploadedAt: '2026-09-08T01:29:45.697Z' }
+    expect(isPublishedArtifactRecord({ ...good, size: 0 })).toBe(false)
+    expect(isPublishedArtifactRecord({ ...good, sha256: '' })).toBe(false)
+    expect(isPublishedArtifactRecord({ ...good, uploadedAt: '' })).toBe(false)
+    expect(isPublishedArtifactRecord(undefined)).toBe(false)
+    expect(isPublishedArtifactRecord(null)).toBe(false)
   })
 })

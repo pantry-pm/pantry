@@ -144,6 +144,23 @@ export function isAppRecipePath(prefix: string): boolean {
   return prefix === 'apps' || prefix.startsWith('apps/')
 }
 
+/**
+ * Does this metadata record describe an artifact that actually exists?
+ *
+ * A stub — written when a platform key is registered but the upload never
+ * completes — has an empty digest, zero size and no upload timestamp. It is
+ * indistinguishable from a real record by key presence alone, which is how
+ * both the sweep and any client came to believe in artifacts that serve
+ * nothing.
+ */
+export function isPublishedArtifactRecord(record: unknown): boolean {
+  if (!record || typeof record !== 'object') return false
+  const { sha256, size, uploadedAt } = record as { sha256?: unknown, size?: unknown, uploadedAt?: unknown }
+  return typeof sha256 === 'string' && sha256.length > 0
+    && typeof size === 'number' && size > 0
+    && typeof uploadedAt === 'string' && uploadedAt.length > 0
+}
+
 function domainToKey(domain: string): string {
   return domain.replace(/[.\-/]/g, '').toLowerCase()
 }
@@ -1196,7 +1213,16 @@ async function checkExistsInS3(domain: string, version: string, platform: string
       const metadataKey = `binaries/${domain}/metadata.json`
       const metadata = await s3.getObject(bucket, metadataKey)
       const parsed = JSON.parse(metadata)
-      return !!(parsed.versions?.[version]?.platforms?.[platform])
+      // A PRESENT key is not a published artifact. The registry carries
+      // platform records that are pure stubs — `{tarball, sha256: "", size: 0,
+      // uploadedAt: ""}` — whose tarball URL serves nothing: 77 of them for
+      // llvm.org, 41 for flutter.dev, 30 for haskell.org. Treating the key as
+      // proof of existence made the sweep skip every one of them forever, so
+      // those platforms could never fill no matter how many runs went by.
+      //
+      // Require the fields that only a completed upload can set.
+      const record = parsed.versions?.[version]?.platforms?.[platform]
+      return isPublishedArtifactRecord(record)
     }
 catch (err: any) {
       const isNotFound = err?.message?.includes('404') || err?.message?.includes('NoSuchKey') || err?.message?.includes('Not Found')
