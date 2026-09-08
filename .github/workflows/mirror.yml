@@ -86,6 +86,15 @@ jobs:
           BASE='[{"name":"linux-x86-64","os":"ubuntu-latest","stripes":4,"dl_stripes":2},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2,"dl_stripes":2},{"name":"darwin-arm64","os":"ubuntu-latest","stripes":2,"dl_stripes":4}]'
           if [ -n "$PLATFORM" ]; then
             BASE=$(echo "$BASE" | jq -c --arg p "$PLATFORM" '[.[] | select(.name == $p)]')
+            # An unrecognised value selected nothing, and an empty matrix is not
+            # an error to GitHub — the run just skipped every job and reported
+            # failure with only `setup` green, which reads like an
+            # infrastructure fault rather than a typo. `-f platform=all` does
+            # exactly this; the way to ask for all three is to omit the input.
+            if [ "$(echo "$BASE" | jq 'length')" = "0" ]; then
+              echo "::error::platform '$PLATFORM' is not one of linux-x86-64, linux-arm64, darwin-arm64. Omit the input to mirror all three."
+              exit 1
+            fi
           fi
           if [ -n "$STRIPES" ]; then
             BASE=$(echo "$BASE" | jq -c --argjson s "$STRIPES" '[.[] | .stripes = $s | .dl_stripes = $s]')
