@@ -34,12 +34,13 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'OS=$(uname -s | tr "[:upper:]" "[:lower:]")',
-      'ARCH=$(uname -m)',
-      'case "$OS/$ARCH" in',
-      '  darwin/arm64) SDK="dartsdk-macos-arm64-release.zip" ;;',
-      '  darwin/x86_64) SDK="dartsdk-macos-x64-release.zip" ;;',
-      '  linux/x86_64) SDK="dartsdk-linux-x64-release.zip" ;;',
+      // TARGET, not host: `uname` on the ubuntu box that fans out darwin
+      // artifacts reports linux, so this would fetch the wrong SDK and publish
+      // it under a platform key it does not match.
+      'case {{hw.platform}}/{{hw.arch}} in',
+      '  darwin/aarch64) SDK="dartsdk-macos-arm64-release.zip" ;;',
+      '  darwin/x86-64) SDK="dartsdk-macos-x64-release.zip" ;;',
+      '  linux/x86-64) SDK="dartsdk-linux-x64-release.zip" ;;',
       '  linux/aarch64) SDK="dartsdk-linux-arm64-release.zip" ;;',
       '  *) echo "Unsupported platform" && exit 1 ;;',
       'esac',

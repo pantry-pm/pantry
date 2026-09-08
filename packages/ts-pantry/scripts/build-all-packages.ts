@@ -82,8 +82,50 @@ interface BuildablePackage {
  * @param hasBuildScript   whether the recipe has any build.script
  * @param sourceText       raw recipe/YAML text to scan for download signals
  */
+/**
+ * Markers of a script that COMPILES, which no download recipe does.
+ *
+ * A download recipe's whole premise is that any box can produce any platform's
+ * artifact, because "building" it is just curl + repackage. That premise fails
+ * the moment the script compiles: `--platform darwin-arm64` on an ubuntu runner
+ * then tries to cross-compile and dies at `configure: error: C compiler cannot
+ * create executables`.
+ *
+ * Curling is not the distinguishing feature — plenty of source recipes fetch
+ * their own tarball. ghostscript.com does exactly that, was therefore selected
+ * by --download-only, and failed 23 times in one sweep for a platform it was
+ * never able to target.
+ */
+const COMPILE_MARKERS: RegExp[] = [
+  // The text being matched is the RECIPE SOURCE, where each command is a
+  // quoted string in an array — so a command at "line start" is actually
+  // preceded by indentation and a quote. Missing that is why the first version
+  // of this vetoed nothing at all.
+  /(?:^|[\n;&|])\s*['"`]?\s*\.\/configure\b/,
+  /(?:^|[\n;&|])\s*['"`]?\s*make\b/,
+  /\bcmake\b/,
+  /\bmeson\b/,
+  /\bninja\b/,
+  /\bautoreconf\b/,
+  /\.\/(?:bootstrap|autogen\.sh)\b/,
+  /\bcargo\s+(?:build|install)\b/,
+  /\bgo\s+(?:build|install)\b/,
+  /\bxcodebuild\b/,
+  /\bscons\b/,
+  /\bmsbuild\b/,
+  /\bpython[\d.]*\s+setup\.py\b/,
+]
+
+export function scriptCompiles(sourceText: string): boolean {
+  return COMPILE_MARKERS.some(marker => marker.test(sourceText))
+}
+
 function detectDownloadRecipe(hasDistributable: boolean, hasBuildScript: boolean, sourceText: string): boolean {
   if (hasDistributable || !hasBuildScript)
+    return false
+  // A compiling script is a SOURCE recipe however it obtains its input, and
+  // must stay on its native channel.
+  if (scriptCompiles(sourceText))
     return false
   return /\{\{\s*hw\.platform\s*\}\}/.test(sourceText)
     || /hw\.platform/.test(sourceText)

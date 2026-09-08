@@ -14,11 +14,13 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'OS=$(uname -s | tr "[:upper:]" "[:lower:]")',
-      'ARCH=$(uname -m)',
-      'case "$ARCH" in',
-      '  arm64|aarch64) ARCH="arm64" ;;',
-      '  x86_64) ARCH="amd64" ;;',
+      // TARGET, not host — see dart.dev. `uname` here published whatever the
+      // runner happened to be under whichever platform key was asked for.
+      'OS={{hw.platform}}',
+      'case {{hw.arch}} in',
+      '  aarch64) ARCH="arm64" ;;',
+      '  x86-64)  ARCH="amd64" ;;',
+      '  *) echo "unsupported arch {{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'mkdir -p {{prefix}}/bin',
       'curl -fSL "https://github.com/foundry-rs/foundry/releases/download/v{{version}}/foundry_v{{version}}_${OS}_${ARCH}.tar.gz" | tar xz -C {{prefix}}/bin',

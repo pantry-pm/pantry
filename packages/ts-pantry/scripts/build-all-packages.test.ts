@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { assignStripe, isSourceUnavailableError, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
+import { assignStripe, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -239,5 +239,47 @@ describe('isSourceUnavailableError', () => {
       status: 1,
       message: 'build-package.ts exited with code 1: ld: symbol(s) not found for architecture arm64',
     })).toBe(false)
+  })
+})
+
+describe('scriptCompiles', () => {
+  // --download-only exists because a download recipe can be produced for any
+  // platform from any box. That is only true while the script does not compile.
+  // Detection keyed on `curl`, so ghostscript.com — which curls a SOURCE
+  // tarball and then runs ./configure && make — was selected for darwin-arm64
+  // on an ubuntu runner and died at "C compiler cannot create executables",
+  // 23 times in one sweep.
+  test('vetoes a recipe that curls source and then builds it', () => {
+    const ghostscriptish = [
+      "      'curl -fSL \"$GS_URL\" | tar xJ',",
+      "      './configure $ARGS',",
+      "      'make --jobs 4 install',",
+    ].join('\n')
+    expect(scriptCompiles(ghostscriptish)).toBe(true)
+  })
+
+  test('matches commands as they appear in recipe source, quoted and indented', () => {
+    // The text is TypeScript source, so every command is a quoted array entry.
+    // Anchoring to line start alone matched nothing at all.
+    expect(scriptCompiles("      './configure --prefix=x',")).toBe(true)
+    expect(scriptCompiles("      'make install',")).toBe(true)
+    expect(scriptCompiles("      'cmake -B build',")).toBe(true)
+    expect(scriptCompiles("      'cargo build --release',")).toBe(true)
+    expect(scriptCompiles("      'go build ./cmd/x',")).toBe(true)
+  })
+
+  test('leaves a genuine download recipe alone', () => {
+    const ctopish = [
+      "      'case {{hw.platform}}+{{hw.arch}} in',",
+      "      '  linux+aarch64)  ASSET=\"ctop-linux-arm64\" ;;',",
+      "      'curl -Lfo ctop \"${BASE}/${ASSET}\"',",
+      "      'install -Dm755 ctop {{prefix}}/bin/ctop',",
+    ].join('\n')
+    expect(scriptCompiles(ctopish)).toBe(false)
+  })
+
+  test('does not mistake mkdir or a makefile mention for a build', () => {
+    expect(scriptCompiles("      'mkdir -p {{prefix}}/bin',")).toBe(false)
+    expect(scriptCompiles('      // upstream ships no makefile,')).toBe(false)
   })
 })

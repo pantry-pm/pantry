@@ -22,7 +22,12 @@ export const recipe: Recipe = {
       'VERSION={{version}}',
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+x86-64)  ASSET="ctop-${VERSION}-darwin-amd64" ;;',
-      '  darwin+aarch64) ASSET="ctop-${VERSION}-darwin-amd64" ;;', // no arm64 build — Rosetta 2
+      // Upstream ships no darwin arm64 binary. Serving the amd64 one under the
+      // darwin-arm64 key would make the platform key a lie — it runs under
+      // Rosetta, but "darwin-arm64" would not be what the user got — and
+      // verifyForeignArtifact rejects it on exactly that ground, so nothing was
+      // published anyway. 42 says the honest thing: upstream has nothing here.
+      '  darwin+aarch64) echo "no darwin/arm64 asset upstream" >&2; exit 42 ;;',
       '  linux+x86-64)   ASSET="ctop-${VERSION}-linux-amd64"  ;;',
       '  linux+aarch64)  ASSET="ctop-${VERSION}-linux-arm64"  ;;',
       '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 1 ;;',
