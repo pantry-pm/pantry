@@ -27,14 +27,6 @@ import { isScanCoverageLimitReason } from './malware-scanning'
 import type { MalwareScanContext, MalwareScanResult, MalwareScanner } from './malware-scanning'
 
 /**
- * Entry and byte ceilings for the unpacked archive.
- *
- * These are decompression-bomb guards, not coverage limits: they are far above
- * anything we publish (the largest artifact we accept is 1 GiB compressed) and
- * exist so a hostile archive cannot make this loop run forever. Exceeding one
- * is an error, never a clean verdict.
- */
-/**
  * Size at which the whole-archive pass stops being worth attempting.
  *
  * Derived, not chosen. `solr.apache.org` at 386 MB scanned clean in 1,061,297
@@ -51,6 +43,14 @@ import type { MalwareScanContext, MalwareScanResult, MalwareScanner } from './ma
  */
 export const OVERSIZED_ARCHIVE_BYTES: number = 1024 * 1024 * 1024
 
+/**
+ * Entry and byte ceilings for the unpacked archive.
+ *
+ * Decompression-bomb guards, not coverage limits: they sit far above anything
+ * we publish (the largest artifact accepted is 4 GiB compressed) and exist so
+ * a hostile archive cannot make this loop run forever. Exceeding one is an
+ * error, never a clean verdict.
+ */
 export const MAX_ARCHIVE_ENTRY_COUNT: number = 1_000_000
 export const MAX_ARCHIVE_UNPACKED_BYTES: number = 16 * 1024 * 1024 * 1024
 

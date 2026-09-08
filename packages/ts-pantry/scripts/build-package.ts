@@ -909,7 +909,7 @@ function parseSemver(v: string): {
 }
 
 // Check if a version satisfies a constraint (supports ~, ^, >=, <, ranges)
-function versionSatisfies(version: string, constraint: string): boolean {
+export function versionSatisfies(version: string, constraint: string): boolean {
   const v = parseSemver(version)
 
   // Handle compound constraints like ">=3<3.12" or ">=1.70<2"

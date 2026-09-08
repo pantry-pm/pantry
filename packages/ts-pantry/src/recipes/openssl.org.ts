@@ -37,9 +37,26 @@ export const recipe: Recipe = {
       { run: 'patch -p1 <props/x509_def.c.diff', if: '<3.4.0' },
       { run: 'patch -p1 <props/x509_def.c.post3.4.0.diff', if: '>=3.4.0' },
       // $ARCH is the OpenSSL Configure target, set per-arch via build.env below.
-      './Configure --prefix={{prefix}} $ARCH no-tests $ARGS --openssldir={{prefix}}/ssl',
+      // --libdir=lib, not OpenSSL's default.
+      //
+      // For linux-x86_64 OpenSSL installs into lib64/, and something later in
+      // the pipeline moves the shared objects down into lib/ — leaving lib64
+      // an empty stub in the artifact and dropping lib/pkgconfig/*.pc on the
+      // floor with it. The published 3.6.4 tarball has libssl.so.3 and 142
+      // headers and NOT ONE .pc file, so `pkg-config openssl` finds nothing
+      // and a consumer falls back to probing: curl.se then compiled against
+      // these headers and linked against the runner's system libssl 3.0,
+      // failing at `undefined reference to SSL_get0_group_name` (a 3.2+
+      // symbol that IS exported by the libssl we ship) for every version at
+      // once. Installing into lib/ directly keeps the metadata with the
+      // libraries it describes.
+      './Configure --prefix={{prefix}} --libdir=lib $ARCH no-tests $ARGS --openssldir={{prefix}}/ssl',
       'make --jobs {{hw.concurrency}}',
       'make install_sw # `_sw` avoids installing docs',
+      // An OpenSSL without pkg-config metadata is not usable by the packages
+      // that depend on it, and the failure surfaces far away and much later.
+      'test -f {{prefix}}/lib/pkgconfig/libssl.pc || { echo "openssl artifact is missing lib/pkgconfig/libssl.pc" >&2; exit 1; }',
+      'test -f {{prefix}}/lib/pkgconfig/openssl.pc || { echo "openssl artifact is missing lib/pkgconfig/openssl.pc" >&2; exit 1; }',
       // Install the default openssl.cnf shipped in the source tree.
       { run: 'cp $SRCROOT/apps/openssl.cnf .', 'working-directory': '{{prefix}}/ssl' },
     ],
