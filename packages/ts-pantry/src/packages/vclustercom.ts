@@ -3,7 +3,7 @@
  *
  * @domain `vcluster.com`
  * @programs `vcluster`
- * @version `0.37.0` (45 versions available)
+ * @version `0.37.0` (46 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install vcluster.com`
@@ -80,6 +80,7 @@ export const vclustercomPackage = {
   */
   versions: [
     '0.37.0',
+    '0.36.2',
     '0.36.1',
     '0.36.0',
     '0.35.4',
