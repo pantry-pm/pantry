@@ -1,4 +1,4 @@
-import type { Recipe } from '../../../../scripts/recipe-types'
+import type { Recipe } from '../../../../../scripts/recipe-types'
 
 // DOWNLOAD recipe: the old recipe source-built a FROZEN 2023 fork
 // (zanussbaum/gpt4all.cpp) and was wrongly skip-listed as "abandoned". Real

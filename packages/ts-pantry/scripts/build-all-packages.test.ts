@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { assignStripe, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
+import { assignStripe, isAppRecipePath, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -281,5 +281,24 @@ describe('scriptCompiles', () => {
   test('does not mistake mkdir or a makefile mention for a build', () => {
     expect(scriptCompiles("      'mkdir -p {{prefix}}/bin',")).toBe(false)
     expect(scriptCompiles('      // upstream ships no makefile,')).toBe(false)
+  })
+})
+
+describe('isAppRecipePath', () => {
+  // "App" used to mean "declares no linux platform" — a proxy that misreads a
+  // GUI application shipping a linux build. gpt4all publishes a Qt Installer
+  // Framework .run alongside its .dmg, so the proxy called it a CLI package and
+  // the source sweep attempted it five times a run, each failing on an X11
+  // library a CLI runner has no reason to carry. Location is what
+  // check-desktop-updates.ts already treats as authoritative.
+  test('recognises apps at any nesting depth', () => {
+    expect(isAppRecipePath('apps')).toBe(true)
+    expect(isAppRecipePath('apps/github.com/nomic-ai')).toBe(true)
+  })
+
+  test('does not capture unrelated prefixes that merely start with the letters', () => {
+    expect(isAppRecipePath('appsflyer.com')).toBe(false)
+    expect(isAppRecipePath('github.com/nomic-ai')).toBe(false)
+    expect(isAppRecipePath('')).toBe(false)
   })
 })

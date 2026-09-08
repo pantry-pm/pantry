@@ -134,6 +134,16 @@ function detectDownloadRecipe(hasDistributable: boolean, hasBuildScript: boolean
     || /\bfetch\b/.test(sourceText)
 }
 
+/**
+ * Is this recipe's directory prefix inside recipes/apps/?
+ *
+ * The nesting matters: gpt4all lives at apps/github.com/nomic-ai/gpt4all.ts,
+ * so matching only the exact string "apps" would miss it.
+ */
+export function isAppRecipePath(prefix: string): boolean {
+  return prefix === 'apps' || prefix.startsWith('apps/')
+}
+
 function domainToKey(domain: string): string {
   return domain.replace(/[.\-/]/g, '').toLowerCase()
 }
@@ -341,9 +351,20 @@ catch {
           if (!isCompatible) continue
         }
 
-        // Apps are packages with only darwin/windows platforms (no linux)
+        // A recipe under recipes/apps/ IS an app, wherever it runs.
+        //
+        // The platform heuristic below is a proxy — "ships no linux build" —
+        // and it is wrong for a GUI application that happens to ship one.
+        // github.com/nomic-ai/gpt4all is a desktop app whose upstream publishes
+        // a Qt Installer Framework .run for linux alongside its .dmg, so the
+        // proxy called it a CLI package and the source sweep attempted it five
+        // times a run, each failing on an X11 library a CLI runner has no
+        // reason to carry. Location is what check-desktop-updates.ts treats as
+        // authoritative (it lists every .ts under recipes/apps/), so the two
+        // agree on what an app is instead of disagreeing.
         const appPlatforms = platforms || []
-        const isApp = appPlatforms.length > 0 && !appPlatforms.some((p: string) => p.includes('linux'))
+        const isApp = isAppRecipePath(prefix)
+          || (appPlatforms.length > 0 && !appPlatforms.some((p: string) => p.includes('linux')))
         const depDomains = [...(pkg.dependencies || []), ...(pkg.buildDependencies || [])]
           .map((d: string) => d.replace(/@.*$/, '').replace(/\^.*$/, '').replace(/>=.*$/, '').replace(/:.*$/, '').trim())
           .filter(Boolean)

@@ -531,8 +531,21 @@ async function main(): Promise<void> {
       needsUpdate,
     })),
   }
-  writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`)
-  console.warn(`Wrote ${MANIFEST}`)
+  // A query does not write. `--print-selected` is the cheap discovery pass that
+  // decides whether to allocate a macOS runner at all, and it was falling
+  // through to rewrite the tracked manifest as a side effect — recording
+  // `latest: null` for every app whenever the upstream version lookups fail
+  // (no token, a rate limit, a flaky network). A manifest full of nulls makes
+  // every app compare as current, which would silently freeze desktop updates
+  // for as long as nobody noticed. The `record` job writes it deliberately,
+  // with `--require-current --commit`.
+  if (printSelected) {
+    console.warn(`Skipped writing ${MANIFEST} (--print-selected is a query)`)
+  }
+  else {
+    writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`)
+    console.warn(`Wrote ${MANIFEST}`)
+  }
 
   if (requireCurrent && outdated.length > 0) {
     const stale = outdated.map(e => `${e.domain} (${e.published ?? '—'} → ${e.latest})`).join(', ')

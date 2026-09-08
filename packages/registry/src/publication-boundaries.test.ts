@@ -142,6 +142,18 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('Scanner outage rehearsal: retryable 503, zero writes, recovered')
   })
 
+  it('keeps the desktop discovery pass from rewriting the manifest it reads', () => {
+    // --print-selected is the cheap ubuntu job that decides whether to allocate
+    // a macOS runner. It fell through to writeFileSync, so a run whose upstream
+    // lookups failed (no token, rate limit) recorded `latest: null` for every
+    // app — and a manifest of nulls compares as "everything current", freezing
+    // desktop updates silently. The `record` job writes it deliberately.
+    const script = source('packages/ts-pantry/scripts/check-desktop-updates.ts')
+    expect(script).toContain('--print-selected is a query')
+    expect(script).toContain('if (printSelected) {')
+    expect(script).toContain('bun scripts/check-desktop-updates.ts --require-current --commit')
+  })
+
   it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
     const workflow = source('.github/workflows/backfill-malware-scans.yml')
     const backfill = source('packages/ts-pantry/scripts/backfill-malware-scans.ts')
