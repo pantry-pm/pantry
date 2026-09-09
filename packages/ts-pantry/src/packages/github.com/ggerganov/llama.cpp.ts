@@ -3,7 +3,7 @@
  *
  * @domain `github.com/ggerganov/llama.cpp`
  * @programs `llama-cli`, `llama.cpp`
- * @version `10877` (5453 versions available)
+ * @version `10881` (5455 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/ggerganov/llama.cpp`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "LLaMA.cpp"
  * console.log(pkg.description) // "LLM inference in C/C++"
  * console.log(pkg.programs)    // ["llama-cli", "llama.cpp"]
- * console.log(pkg.versions[0]) // "10877" (latest)
+ * console.log(pkg.versions[0]) // "10881" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/ggerganov/llama-cpp.md
@@ -73,6 +73,8 @@ export const llamacppPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '10881',
+    '10878',
     '10877',
     '10876',
     '10875',

@@ -3,7 +3,7 @@
  *
  * @domain `elementsproject.org`
  * @programs `bench_bitcoin`, `elements-cli`, `elements-tx`, `elements-util`, `elements-wallet`, ... (+2 more)
- * @version `23.3.2` (11 versions available)
+ * @version `23.3.4` (34 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install elementsproject.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "elementsproject"
  * console.log(pkg.description) // "Open Source implementation of advanced blockcha..."
  * console.log(pkg.programs)    // ["bench_bitcoin", "elements-cli", ...]
- * console.log(pkg.versions[0]) // "23.3.2" (latest)
+ * console.log(pkg.versions[0]) // "23.3.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/elementsproject-org.md
@@ -83,6 +83,7 @@ export const elementsprojectorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '23.3.4',
     '23.3.3',
     '23.3.2',
     '23.3.1',

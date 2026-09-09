@@ -3,7 +3,7 @@
  *
  * @domain `railway.app`
  * @programs `railway`
- * @version `5.49.6` (223 versions available)
+ * @version `5.50.2` (224 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install railway.app`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "railway"
  * console.log(pkg.description) // "Develop and deploy code with zero configuration"
  * console.log(pkg.programs)    // ["railway"]
- * console.log(pkg.versions[0]) // "5.49.6" (latest)
+ * console.log(pkg.versions[0]) // "5.50.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/railway-app.md
@@ -68,6 +68,7 @@ export const railwayappPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.50.2',
     '5.49.6',
     '5.49.5',
     '5.49.4',
