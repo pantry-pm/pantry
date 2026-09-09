@@ -72,6 +72,8 @@ fn workspaceCommandResult(allocator: std.mem.Allocator, failed_count: usize) !ty
 }
 const helpers = @import("helpers.zig");
 const style = @import("../../style.zig");
+const generated_packages = @import("../../../packages/generated.zig");
+const install_pipeline = @import("../../../install/pipeline.zig");
 
 /// Result of a single workspace remote package install
 const WorkspaceInstallResult = struct {
@@ -407,6 +409,75 @@ const WorkspaceThreadContext = struct {
         }
     }
 };
+
+/// Copy a lockfile entry, so the regenerated lock owns its own memory.
+fn dupeLockfileEntry(allocator: std.mem.Allocator, entry: *const lib.packages.LockfileEntry) !lib.packages.LockfileEntry {
+    return .{
+        .name = try allocator.dupe(u8, entry.name),
+        .version = try allocator.dupe(u8, entry.version),
+        .source = entry.source,
+        .url = if (entry.url) |u| try allocator.dupe(u8, u) else null,
+        .resolved = if (entry.resolved) |r| try allocator.dupe(u8, r) else null,
+        .integrity = if (entry.integrity) |i| try allocator.dupe(u8, i) else null,
+        // Deliberately not carried: the maps describe how this pin was reached,
+        // and a foreign-OS pin was not reached from here. The identity - name,
+        // version, tarball, integrity - is the part that has to survive.
+        .dependencies = null,
+        .peer_dependencies = null,
+        .bin = null,
+        .optional_peers = null,
+    };
+}
+
+/// Restore pins for packages only another platform installs.
+///
+/// The regenerated lock holds what this host resolved. Anything the catalog
+/// guards behind a different OS was never a candidate, so it is missing - not
+/// because it left the dependency graph, but because this machine is not
+/// allowed to fetch it. Those come back from the previous lock.
+///
+/// The catalog is what makes this safe to distinguish from pruning: a pin is
+/// carried forward only when some package in the new lock still declares it
+/// behind a foreign OS guard. A record nothing points at any more is obsolete
+/// on every platform, and is left out exactly as before.
+fn carryForwardForeignOsPins(
+    allocator: std.mem.Allocator,
+    lockfile: *lib.packages.Lockfile,
+    existing: *const lib.packages.Lockfile,
+) !void {
+    // Domains the new lock legitimately does not know about, gathered from the
+    // catalog entry of everything it does.
+    // Which pins are foreign-OS, asked of the lock that still has them.
+    //
+    // Read from `existing` rather than the regenerated lock, because the
+    // regenerated one does not carry system packages at all at this point -
+    // those are merged afterwards by the companion step, so looking there finds
+    // nothing and the whole pass becomes a no-op.
+    var wanted = std.StringHashMap(void).init(allocator);
+    defer wanted.deinit();
+
+    var declared_it = existing.packages.iterator();
+    while (declared_it.next()) |entry| {
+        if (entry.value_ptr.source != .pantry) continue;
+        const info = generated_packages.getPackageByDomain(entry.value_ptr.name) orelse continue;
+        for (info.dependencies) |spec| {
+            const foreign = install_pipeline.parseForeignOsDepSpec(spec) orelse continue;
+            try wanted.put(foreign.domain, {});
+        }
+    }
+
+    if (wanted.count() == 0) return;
+
+    var existing_it = existing.packages.iterator();
+    while (existing_it.next()) |entry| {
+        if (entry.value_ptr.source != .pantry) continue;
+        if (!wanted.contains(entry.value_ptr.name)) continue;
+        if (lockfile.packages.contains(entry.key_ptr.*)) continue;
+
+        const copied = try dupeLockfileEntry(allocator, entry.value_ptr);
+        try lockfile.addEntry(allocator, entry.key_ptr.*, copied);
+    }
+}
 
 pub fn installWorkspaceCommand(
     allocator: std.mem.Allocator,
@@ -1410,6 +1481,23 @@ pub fn installWorkspaceCommandWithOptions(
         const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_dep_name, entry_version });
         defer allocator.free(key);
         try lockfile.addEntry(allocator, key, entry);
+    }
+
+    // Keep the pins this host is not allowed to resolve.
+    //
+    // The lockfile describes the dependency graph, and that graph contains
+    // packages guarded for another platform - `linux:gnu.org/gcc/libstdcxx^14`
+    // and the eight others alongside it. `parsePantryDepSpec` skips those while
+    // installing, correctly: there is nothing here to fetch. But this lock is
+    // built from scratch out of what *was* installed, so skipping them while
+    // recording deleted them, and a pantry.lock committed from one platform
+    // could not survive an install on the other (pantry-pm/pantry#231).
+    //
+    // Only pins something still depends on are kept. A record the catalog no
+    // longer points at from any platform is obsolete and still disappears,
+    // which is the property that keeps regeneration able to prune.
+    if (existing_lockfile) |*existing| {
+        try carryForwardForeignOsPins(allocator, &lockfile, existing);
     }
 
     // A workspace with a separate companion deps file stages its workspace

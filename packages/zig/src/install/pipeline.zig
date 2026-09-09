@@ -91,6 +91,59 @@ pub fn verifyIntegrity(allocator: std.mem.Allocator, bytes: []const u8, integrit
     return false;
 }
 
+test "parsePantryDepSpec and parseForeignOsDepSpec partition every spec" {
+    // A spec is for this host, or for another one, or unusable. The two parsers
+    // must never both claim one, and between them must not lose a usable spec.
+    const this_os = switch (builtin.os.tag) {
+        .linux => "linux",
+        .macos => "darwin",
+        .windows => "windows",
+        else => "",
+    };
+    const other_os = if (std.mem.eql(u8, this_os, "linux")) "darwin" else "linux";
+
+    var native_buf: [64]u8 = undefined;
+    const native = try std.fmt.bufPrint(&native_buf, "{s}:gnu.org/gcc/libstdcxx^14", .{this_os});
+    var foreign_buf: [64]u8 = undefined;
+    const foreign = try std.fmt.bufPrint(&foreign_buf, "{s}:gnu.org/gcc/libstdcxx^14", .{other_os});
+
+    // Guarded for this host: installable, not foreign.
+    try std.testing.expect(parsePantryDepSpec(native) != null);
+    try std.testing.expect(parseForeignOsDepSpec(native) == null);
+
+    // Guarded for another host: foreign, not installable.
+    try std.testing.expect(parsePantryDepSpec(foreign) == null);
+    const parsed_foreign = parseForeignOsDepSpec(foreign) orelse return error.TestExpectedForeign;
+    try std.testing.expectEqualStrings("gnu.org/gcc/libstdcxx", parsed_foreign.domain);
+    try std.testing.expectEqualStrings("^14", parsed_foreign.version);
+
+    // Unguarded: installable everywhere, and never foreign.
+    try std.testing.expect(parsePantryDepSpec("openssl.org^3") != null);
+    try std.testing.expect(parseForeignOsDepSpec("openssl.org^3") == null);
+}
+
+test "parseForeignOsDepSpec keeps the comment and version handling of the native parser" {
+    const other_os = if (builtin.os.tag == .linux) "darwin" else "linux";
+
+    var buf: [96]u8 = undefined;
+    const spec = try std.fmt.bufPrint(&buf, "{s}:gnu.org/gcc/libstdcxx@15 # since 20250814.0", .{other_os});
+    const parsed = parseForeignOsDepSpec(spec) orelse return error.TestExpectedForeign;
+
+    try std.testing.expectEqualStrings("gnu.org/gcc/libstdcxx", parsed.domain);
+    try std.testing.expectEqualStrings("15", parsed.version);
+}
+
+test "parseForeignOsDepSpec rejects what nobody can use" {
+    // Malformed is not the same as foreign. A caller asking "which pins does
+    // this host legitimately not know about" must not be handed junk.
+    try std.testing.expect(parseForeignOsDepSpec("") == null);
+    try std.testing.expect(parseForeignOsDepSpec("   ") == null);
+    try std.testing.expect(parseForeignOsDepSpec("# just a comment") == null);
+    try std.testing.expect(parseForeignOsDepSpec("linux/x86-64") == null);
+    // A colon that is not an OS guard is a domain, and belongs to this host.
+    try std.testing.expect(parseForeignOsDepSpec("example.com:8080/pkg") == null);
+}
+
 test "verifyIntegrity sha256 hex happy path" {
     const allocator = std.testing.allocator;
     const body = "hello world";
@@ -241,10 +294,34 @@ const ResolveThreadCtx = struct {
 /// Returns null when the spec targets a different OS. Returned slices point
 /// into `spec_in` (a static catalog string), so callers dupe before storing.
 fn parsePantryDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
+    const parsed = parseDepSpecForOs(spec_in) orelse return null;
+    return if (parsed.foreign) null else .{ .domain = parsed.domain, .version = parsed.version };
+}
+
+/// The same spec, but only when it is guarded for an OS this host is *not*.
+///
+/// `parsePantryDepSpec` answers null for those, which is right for installing -
+/// there is nothing to fetch. It is wrong for *recording*: the lockfile
+/// describes the dependency graph, and that graph contains the Linux-only
+/// libstdc++ whether or not this machine can install it. Discarding it on
+/// regeneration is what made a committed pantry.lock unable to survive an
+/// install on a second platform (pantry-pm/pantry#231).
+///
+/// Returns null for a spec meant for this host, and for a malformed one -
+/// callers want "which pins does this host legitimately not know about", and a
+/// spec nobody can parse is not one of them.
+pub fn parseForeignOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
+    const parsed = parseDepSpecForOs(spec_in) orelse return null;
+    return if (parsed.foreign) .{ .domain = parsed.domain, .version = parsed.version } else null;
+}
+
+fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8, foreign: bool } {
     var spec = spec_in;
     if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
     spec = std.mem.trim(u8, spec, " \t");
     if (spec.len == 0) return null;
+
+    var foreign = false;
 
     // `linux:` / `darwin:` / `windows:` OS guard.
     if (std.mem.indexOfScalar(u8, spec, ':')) |colon| {
@@ -257,7 +334,7 @@ fn parsePantryDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version
                 .windows => "windows",
                 else => "",
             };
-            if (!std.mem.eql(u8, prefix, cur)) return null;
+            foreign = !std.mem.eql(u8, prefix, cur);
             spec = std.mem.trim(u8, spec[colon + 1 ..], " \t");
         }
     }
@@ -282,7 +359,7 @@ fn parsePantryDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version
         v = std.mem.trim(u8, v, " \t");
         if (v.len > 0) version = v;
     }
-    return .{ .domain = domain, .version = version };
+    return .{ .domain = domain, .version = version, .foreign = foreign };
 }
 
 /// Append `domain`'s transitive system (pantry) dependencies — read from the
