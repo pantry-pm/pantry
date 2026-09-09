@@ -921,7 +921,21 @@ pub fn installWorkspaceCommandWithOptions(
             style.green_bold, ws_count,       style.reset,
             ws_label,
         });
-        return .{ .exit_code = 0 };
+
+        // Unless a staged lock is the reason this run exists.
+        //
+        // `--frozen-lockfile` on a workspace that also has a companion deps
+        // file asks for the lock this install *would* generate, and compares
+        // it against the committed one. Returning here writes nothing, so that
+        // comparison finds no generated lock and reports the committed one out
+        // of date - on a project where nothing has changed, and only on the
+        // runs where everything is already installed, which is every CI run
+        // after the first (pantry-pm/pantry#233).
+        //
+        // Falling through costs nothing: every dependency has just been found
+        // up to date, so the passes below skip them all and the work left is
+        // building the lock that was asked for.
+        if (options.lockfile_output_path == null) return .{ .exit_code = 0 };
     }
 
     if (ws_skipped_count > 0) {
@@ -1482,6 +1496,7 @@ pub fn installWorkspaceCommandWithOptions(
         defer allocator.free(key);
         try lockfile.addEntry(allocator, key, entry);
     }
+
 
     // Keep the pins this host is not allowed to resolve.
     //
