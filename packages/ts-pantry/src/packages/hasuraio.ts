@@ -3,7 +3,7 @@
  *
  * @domain `hasura.io`
  * @programs `hasura`
- * @version `2.48.13` (62 versions available)
+ * @version `2.50.3` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install hasura.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "hasura"
  * console.log(pkg.description) // "Blazing fast, instant realtime GraphQL APIs on ..."
  * console.log(pkg.programs)    // ["hasura"]
- * console.log(pkg.versions[0]) // "2.48.13" (latest)
+ * console.log(pkg.versions[0]) // "2.50.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/hasura-io.md
@@ -70,6 +70,7 @@ export const hasuraioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.50.3',
     '2.50.1',
     '2.50.0',
     '2.49.5',
