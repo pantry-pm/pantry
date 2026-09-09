@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.136.1",
-      "published": "1.136.1",
+      "latest": "1.136.2",
+      "published": "1.136.2",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.901.51231",
-      "published": "26.901.51231",
+      "latest": "26.903.61454",
+      "published": "26.903.61454",
       "needsUpdate": false
     },
     {
@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.410",
-      "published": "0.0.410",
+      "latest": "0.0.411",
+      "published": "0.0.411",
       "needsUpdate": false
     },
     {
@@ -187,6 +187,15 @@
       "host": "macos",
       "latest": null,
       "published": "2.10.38",
+      "needsUpdate": false
+    },
+    {
+      "domain": "github.com/nomic-ai/gpt4all",
+      "name": "gpt4all",
+      "kind": "app",
+      "host": "macos",
+      "latest": "3.10.0",
+      "published": "2023.3.29",
       "needsUpdate": false
     },
     {
@@ -347,8 +356,8 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "macos",
-      "latest": "0.4.23-1",
-      "published": "0.4.23-1",
+      "latest": "0.4.24-1",
+      "published": "0.4.24-1",
       "needsUpdate": false
     },
     {
@@ -617,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.36.13",
-      "published": "2.26.36.13",
+      "latest": "2.26.36.18",
+      "published": "2.26.36.18",
       "needsUpdate": false
     },
     {
