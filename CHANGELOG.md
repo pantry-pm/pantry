@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.56...v0.11.57)
+
+## 🐛 Bug Fixes
+
+- **install**: stage the lock even when everything is already up to date (#233) ([00d26c1](https://github.com/pantry-pm/pantry/commit/00d26c1)) _(by Chris <chris@stacksjs.com>)_ ([#233](https://github.com/pantry-pm/pantry/issues/233), [#233](https://github.com/pantry-pm/pantry/issues/233))
+
+## 🔧 Chores
+
+- release v0.11.57 ([daa97db](https://github.com/pantry-pm/pantry/commit/daa97db)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.55...v0.11.56)
 
 ## ✨ Features
