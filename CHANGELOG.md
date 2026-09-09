@@ -1,3 +1,128 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.55...v0.11.56)
+
+## ✨ Features
+
+- **scanning**: scan archives clamd cannot cover in one pass, member by member ([10e7c39](https://github.com/pantry-pm/pantry/commit/10e7c39)) _(by Chris <chris@stacksjs.com>)_
+- **build**: per-package, per-phase timings so cost drivers are measurable ([1eb8540](https://github.com/pantry-pm/pantry/commit/1eb8540)) _(by Chris <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **install**: keep foreign-platform pins when regenerating a workspace lock (#231) ([67d16b0](https://github.com/pantry-pm/pantry/commit/67d16b0)) _(by Chris <chris@stacksjs.com>)_ ([#231](https://github.com/pantry-pm/pantry/issues/231), [#231](https://github.com/pantry-pm/pantry/issues/231), [#231](https://github.com/pantry-pm/pantry/issues/231))
+- **openssl**: keep pkg-config metadata with the libraries it describes ([291b7c2](https://github.com/pantry-pm/pantry/commit/291b7c2)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: tell the publisher WHAT matched when a scan blocks ([5a81d5c](https://github.com/pantry-pm/pantry/commit/5a81d5c)) _(by Chris <chris@stacksjs.com>)_
+- **curl**: ship the libraries libcurl.so actually needs ([b9b9f51](https://github.com/pantry-pm/pantry/commit/b9b9f51)) _(by Chris <chris@stacksjs.com>)_
+- **build**: a present metadata key is not a published artifact ([1333ba1](https://github.com/pantry-pm/pantry/commit/1333ba1)) _(by Chris <chris@stacksjs.com>)_
+- **build**: make recipe location decide what an app is, and move gpt4all there ([0cf6392](https://github.com/pantry-pm/pantry/commit/0cf6392)) _(by Chris <chris@stacksjs.com>)_
+- **build**: read curl's whole pkg-config requirement list, not one at a time ([de91003](https://github.com/pantry-pm/pantry/commit/de91003)) _(by Chris <chris@stacksjs.com>)_
+- **build**: stop rejecting packages that ship natives for many platforms ([6452405](https://github.com/pantry-pm/pantry/commit/6452405)) _(by Chris <chris@stacksjs.com>)_
+- **installer**: say why a purged Zig dev build 404s ([19d1322](https://github.com/pantry-pm/pantry/commit/19d1322)) _(by Chris <chris@stacksjs.com>)_
+- **build**: clear the rest of the sweep's failures ([9b858be](https://github.com/pantry-pm/pantry/commit/9b858be)) _(by Chris <chris@stacksjs.com>)_
+- **build**: keep source recipes out of the cross-platform download pass ([3c317f2](https://github.com/pantry-pm/pantry/commit/3c317f2)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: make a mistyped mirror platform say so instead of skipping everything ([c35451f](https://github.com/pantry-pm/pantry/commit/c35451f)) _(by Chris <chris@stacksjs.com>)_
+- **build**: stop dropping every dependency written "domain version" ([cbbd239](https://github.com/pantry-pm/pantry/commit/cbbd239)) _(by Chris <chris@stacksjs.com>)_
+- **build**: let a recipe say "upstream has nothing", and stop lying to python ([6220d60](https://github.com/pantry-pm/pantry/commit/6220d60)) _(by Chris <chris@stacksjs.com>)_
+- **build**: surface the real error, and fix the recipes it exposed ([75f37f2](https://github.com/pantry-pm/pantry/commit/75f37f2)) _(by Chris <chris@stacksjs.com>)_
+- **scanning**: give the scanner enough slots, and shed with a real interval ([8d95366](https://github.com/pantry-pm/pantry/commit/8d95366)) _(by Chris <chris@stacksjs.com>)_
+- **scanning**: never let a small disk turn a capability into an outage ([2fb04f6](https://github.com/pantry-pm/pantry/commit/2fb04f6)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: raise the artifact cap to what we already serve ([bfeb570](https://github.com/pantry-pm/pantry/commit/bfeb570)) _(by Chris <chris@stacksjs.com>)_
+- **build**: report why a build failed, not just that it did ([213513a](https://github.com/pantry-pm/pantry/commit/213513a)) _(by Chris <chris@stacksjs.com>)_
+- **scanning**: stop retrying a scan limit that cannot change its answer ([ea29adf](https://github.com/pantry-pm/pantry/commit/ea29adf)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: stop a busy scan queue costing a sweep its afternoon ([5b4ab4b](https://github.com/pantry-pm/pantry/commit/5b4ab4b)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: four download stripes for darwin — two was not enough ([29b26fd](https://github.com/pantry-pm/pantry/commit/29b26fd)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: make `-f platform=` narrow the download half too ([3164463](https://github.com/pantry-pm/pantry/commit/3164463)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: raise the mirror timeouts — 120 was truncating the sweep ([648af55](https://github.com/pantry-pm/pantry/commit/648af55)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: stripe the mirror download job, and keep --print-selected clean ([9e484d3](https://github.com/pantry-pm/pantry/commit/9e484d3)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: honour the registry's own "retryable" on a completion error ([2910954](https://github.com/pantry-pm/pantry/commit/2910954)) _(by Chris <chris@stacksjs.com>)_
+- **perl**: drop release candidates from the catalog ([a3e7580](https://github.com/pantry-pm/pantry/commit/a3e7580)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: let latestVersion repair itself ([69a487f](https://github.com/pantry-pm/pantry/commit/69a487f)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: let the EICAR rehearsal wait for the scan it is testing ([9e68d17](https://github.com/pantry-pm/pantry/commit/9e68d17)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: a release candidate must not outrank its own release ([ea0a51b](https://github.com/pantry-pm/pantry/commit/ea0a51b)) _(by Chris <chris@stacksjs.com>)_
+- **version-fetcher**: bound how many versions a sweep adds to a catalog ([59a4dca](https://github.com/pantry-pm/pantry/commit/59a4dca)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: stop a targeted publish dragging in unrelated packages ([9a8ae5e](https://github.com/pantry-pm/pantry/commit/9a8ae5e)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: three real failures the fail-loud change surfaced, and one refinement ([3d560b9](https://github.com/pantry-pm/pantry/commit/3d560b9)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: unfreeze llama.cpp, and make the remaining five actionable ([d390371](https://github.com/pantry-pm/pantry/commit/d390371)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: repoint two forks and unfreeze four more version sources ([1a16b41](https://github.com/pantry-pm/pantry/commit/1a16b41)) _(by Chris <chris@stacksjs.com>)_
+- **version-fetcher**: page tag listings only when the first page is unusable ([366002b](https://github.com/pantry-pm/pantry/commit/366002b)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: give dart and flutter the feeds their downloads are keyed on ([b8e5cb7](https://github.com/pantry-pm/pantry/commit/b8e5cb7)) _(by Chris <chris@stacksjs.com>)_
+- **openssl**: discover versions from the project we actually build ([bfc8200](https://github.com/pantry-pm/pantry/commit/bfc8200)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: hand-fix five version sources the solver could not judge ([c344311](https://github.com/pantry-pm/pantry/commit/c344311)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: resolve three more version sources blocked by prerelease tags ([ecbc6ad](https://github.com/pantry-pm/pantry/commit/ecbc6ad)) _(by Chris <chris@stacksjs.com>)_
+- **recipes**: repair 55 version sources that resolved nothing ([18fc1f0](https://github.com/pantry-pm/pantry/commit/18fc1f0)) _(by Chris <chris@stacksjs.com>)_
+- **publish**: retry the upload-initiate call, not just the two after it ([224d60b](https://github.com/pantry-pm/pantry/commit/224d60b)) _(by Chris <chris@stacksjs.com>)_
+- **redis**: don't inherit libsystemd from whatever the runner happens to have ([239fa5d](https://github.com/pantry-pm/pantry/commit/239fa5d)) _(by Chris <chris@stacksjs.com>)_
+- **redis**: ship the OpenSSL 3 runtime with the binary, and prove it execs ([f163107](https://github.com/pantry-pm/pantry/commit/f163107)) _(by Chris <chris@stacksjs.com>)_
+- **redis**: pass PREFIX on the make command line, not in the environment ([1f185de](https://github.com/pantry-pm/pantry/commit/1f185de)) _(by Chris <chris@stacksjs.com>)_
+- **go**: read versions from go.dev/dl, and stop hiding dead version sources ([34d1db6](https://github.com/pantry-pm/pantry/commit/34d1db6)) _(by Chris <chris@stacksjs.com>)_
+- **redis**: stop the darwin build dying on test fixtures it never ships ([d679a1e](https://github.com/pantry-pm/pantry/commit/d679a1e)) _(by Chris <chris@stacksjs.com>)_
+- **meilisearch**: give the recipe a DIST it actually defines ([2ba7088](https://github.com/pantry-pm/pantry/commit/2ba7088)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: fail a targeted publish that could not build what it was asked for ([41b3e53](https://github.com/pantry-pm/pantry/commit/41b3e53)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: allocate a Mac for desktop updates only when one is needed ([aa3cad9](https://github.com/pantry-pm/pantry/commit/aa3cad9)) _(by Chris <chris@stacksjs.com>)_
+
+## ⚡ Performance Improvements
+
+- **ci**: only re-upload the back catalogue when a recipe changed ([5a4c54c](https://github.com/pantry-pm/pantry/commit/5a4c54c)) _(by Chris <chris@stacksjs.com>)_
+- **ci**: don't allocate a Mac for darwin work pkgx already covers ([1ad3695](https://github.com/pantry-pm/pantry/commit/1ad3695)) _(by Chris <chris@stacksjs.com>)_
+
+## ♻️ Code Refactoring
+
+- **ci**: balance stripes by cost — but this does not explain the 7x ([ca640e3](https://github.com/pantry-pm/pantry/commit/ca640e3)) _(by Chris <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- record the entry-wise scan fallback and its scratch-dir requirement ([a239827](https://github.com/pantry-pm/pantry/commit/a239827)) _(by Chris <chris@stacksjs.com>)_
+- note the dev Mac's toolchain runs ahead of the runners' ([fad5bb4](https://github.com/pantry-pm/pantry/commit/fad5bb4)) _(by Chris <chris@stacksjs.com>)_
+- test darwin on the dev Mac, not on a GitHub runner ([f648f37](https://github.com/pantry-pm/pantry/commit/f648f37)) _(by Chris <chris@stacksjs.com>)_
+- record where a package's versions come from, and what cannot override it ([28cdce1](https://github.com/pantry-pm/pantry/commit/28cdce1)) _(by Chris <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **publish**: pin the client deadline to queue wait + scan budget ([cdd311b](https://github.com/pantry-pm/pantry/commit/cdd311b)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: state the site-CSS guard's blind spot ([d170c67](https://github.com/pantry-pm/pantry/commit/d170c67)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: guard the site CSS that fails silently by design ([42c549d](https://github.com/pantry-pm/pantry/commit/42c549d)) _(by Chris <chris@stacksjs.com>)_
+
+## 💚 Continuous Integration
+
+- don't redeploy production because someone added a test ([fa16a57](https://github.com/pantry-pm/pantry/commit/fa16a57)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.56 ([af216c9](https://github.com/pantry-pm/pantry/commit/af216c9)) _(by Chris <chris@stacksjs.com>)_
+- update anthropic.com/claude-code, circleci.com, flutter.dev, github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp, nomadproject.io, projen.io, vim.org, zed.dev ([e19245a](https://github.com/pantry-pm/pantry/commit/e19245a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, circleci.com, cursor.com, elementsproject.org, github.com/ggerganov/llama.cpp, gohugo.io, lavinmq.com, nodejs.org, railway.app, steampipe.io, terraform.io ([6cc15c3](https://github.com/pantry-pm/pantry/commit/6cc15c3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 6 apps ([a5cbafa](https://github.com/pantry-pm/pantry/commit/a5cbafa)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, keephq.dev, projen.io ([029749c](https://github.com/pantry-pm/pantry/commit/029749c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, dblab.danvergara.com, github.com/ggerganov/llama.cpp, lmstudio.ai, opencode.ai, tox.wiki ([b798252](https://github.com/pantry-pm/pantry/commit/b798252)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, codex.openai.com, hasura.io, virtualenv.pypa.io, ziglang.org ([4f28442](https://github.com/pantry-pm/pantry/commit/4f28442)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, coder.com/code-server, github.com/chainguard-dev/apko, mongodb.com, vim.org ([efa52df](https://github.com/pantry-pm/pantry/commit/efa52df)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ansible.com, discord.com, dotnet.microsoft.com, fishshell.com, fly.io, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, ohmyposh.dev, tox.wiki, vcluster.com, vim.org ([ac5d448](https://github.com/pantry-pm/pantry/commit/ac5d448)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update ghostscript.com, github.com/ggerganov/llama.cpp, jumppad.dev, mise.jdx.dev, pnpm.io, railway.app, wasmer.io, whatsapp.com ([36694bd](https://github.com/pantry-pm/pantry/commit/36694bd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, cnquery.io, coder.com, github.com/ggerganov/llama.cpp, libcxx.llvm.org, llvm.org, openmp.llvm.org, syncthing.net, whatsapp.com ([d1fbe10](https://github.com/pantry-pm/pantry/commit/d1fbe10)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/mail-os/mail, planetscale.com, railway.app, seaweedfs.com, ziglang.org ([53b75e0](https://github.com/pantry-pm/pantry/commit/53b75e0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update d2lang.com, github.com/awslabs/llrt, llm.datasette.io, mise.jdx.dev, railway.app ([2cab5da](https://github.com/pantry-pm/pantry/commit/2cab5da)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update fly.io, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, jumppad.dev, ohmyposh.dev, vim.org ([51fdc5f](https://github.com/pantry-pm/pantry/commit/51fdc5f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.90 ([d2151b5](https://github.com/pantry-pm/pantry/commit/d2151b5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, neo4j.com, prefix.dev, rucio.cern.ch/rucio-client ([3f69461](https://github.com/pantry-pm/pantry/commit/3f69461)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.88 ([48ee69c](https://github.com/pantry-pm/pantry/commit/48ee69c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish app whatsapp.com 2.26.35.23 → 2.26.36.13 ([92330b3](https://github.com/pantry-pm/pantry/commit/92330b3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, kotlinlang.org, meilisearch.com, railway.app, soldeer.xyz, whatsapp.com ([e25cfa5](https://github.com/pantry-pm/pantry/commit/e25cfa5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, ziglang.org ([3a44af9](https://github.com/pantry-pm/pantry/commit/3a44af9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp ([83ca05a](https://github.com/pantry-pm/pantry/commit/83ca05a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, perl.org ([2433f98](https://github.com/pantry-pm/pantry/commit/2433f98)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update apache.org/apr-util, dart.dev, ffmpeg.org, flutter.dev, github.com/ggerganov/llama.cpp, handbrake.fr, libpng.org, maccy.app, mongodb.com, openssl.org, ordinals.com, pocketbase.io, vim.org, zotregistry.dev ([5acfbf9](https://github.com/pantry-pm/pantry/commit/5acfbf9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update alembic.sqlalchemy.org, appium.io, beyondgrep.com, biomejs.dev, bitcoin.org, boost.org, cryptography.io, doxygen.nl, erlang.org, flit.pypa.io, fltk.org, hurl.dev, jbig2dec.com, kafka.apache.org, kluctl.io, libarchive.org, libexpat.github.io, libsdl.org, libwebsockets.org, makotemplates.org, memcached.org, nghttp2.org, opendap.org, openinterpreter.com, pandoc.org, pdm.fming.dev, perl.org, prettier.io, pyinvoke.org, python.org, swig.org, tcpdump.org, vim.org, virtualenv.pypa.io, xpra.org, yarnpkg.com ([a4c1537](https://github.com/pantry-pm/pantry/commit/a4c1537)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, dozzle.dev, numpy.org ([d5c26e2](https://github.com/pantry-pm/pantry/commit/d5c26e2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update odigos.io, stats.app, terratag.io ([65ac6df](https://github.com/pantry-pm/pantry/commit/65ac6df)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 2 apps (karabiner-elements.pqrs.org, stats.app) ([9fa24fc](https://github.com/pantry-pm/pantry/commit/9fa24fc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/awslabs/llrt, github.com/router-for-me/CLIProxyAPI, go.dev, karabiner-elements.pqrs.org, projen.io, watchexec.github.io, ziglang.org ([4d4bfe7](https://github.com/pantry-pm/pantry/commit/4d4bfe7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **registry**: guard five packages' platform coverage, not one ([48301df](https://github.com/pantry-pm/pantry/commit/48301df)) _(by Chris <chris@stacksjs.com>)_
+- update anthropic.com/claude-code to 2.1.263 ([ff062f3](https://github.com/pantry-pm/pantry/commit/ff062f3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **desktop**: publish 19 apps & 2 fonts ([156f11e](https://github.com/pantry-pm/pantry/commit/156f11e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update alttab.app, anthropic.com/claude-code, bun.com, cgal.org, circleci.com, cli.github.com, codex.openai.com, convco.github.io, cursor.com, diabrowser.com, dozzle.dev, dprint.dev, fastlane.tools, fishshell.com, flipt.io, fly.io, github.com/router-for-me/CLIProxyAPI, gnome.org/libxml2, goreleaser.com, harlequin.sh, huggingface.co, llm.datasette.io, mailpit.axllent.org, microcks.io, mise.jdx.dev, moonrepo.dev/moon, nginx.org, ohmyposh.dev, ollama.ai, openai.com/codex, opencode.ai, openpolicyagent.org, openshift.com, plakar.io, planetscale.com, plantuml.com, pnpm.io, pocketbase.io, podman.io, prefix.dev, projen.io, pulumi.io, railway.app, raycast.com, rclone.org, rubygems.org, stripe.com, taglib.org, talos.dev, temporal.io, terraform.io, traefik.io, tunnelblick.net, vale.sh, vitess.io, watchexec.github.io, whatsapp.com, zarf.dev, zed.dev, ziglang.org ([057f2af](https://github.com/pantry-pm/pantry/commit/057f2af)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.54...v0.11.55)
 
 ## 💚 Continuous Integration
