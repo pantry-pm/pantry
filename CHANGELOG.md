@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.57...v0.11.58)
+
+## 🐛 Bug Fixes
+
+- **install**: follow what a foreign-platform pin itself depends on (#231) ([eb96d43](https://github.com/pantry-pm/pantry/commit/eb96d43)) _(by Chris <chris@stacksjs.com>)_ ([#231](https://github.com/pantry-pm/pantry/issues/231), [#231](https://github.com/pantry-pm/pantry/issues/231))
+
+## 🔧 Chores
+
+- release v0.11.58 ([165e65d](https://github.com/pantry-pm/pantry/commit/165e65d)) _(by Chris <chris@stacksjs.com>)_
+- update mise.jdx.dev, openai.com/codex, railway.app, tart.run, vale.sh ([83f80ca](https://github.com/pantry-pm/pantry/commit/83f80ca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.56...v0.11.57)
 
 ## 🐛 Bug Fixes
