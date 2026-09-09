@@ -315,6 +315,17 @@ pub fn parseForeignOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, 
     return if (parsed.foreign) .{ .domain = parsed.domain, .version = parsed.version } else null;
 }
 
+/// The spec's domain and version whatever OS it is guarded for, if any.
+///
+/// Used when walking what a foreign-platform pin itself depends on: those deps
+/// are usually unguarded, because the package they belong to already only
+/// exists on that platform. Asking "is this for another OS" of them answers no
+/// and loses them.
+pub fn parseAnyOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
+    const parsed = parseDepSpecForOs(spec_in) orelse return null;
+    return .{ .domain = parsed.domain, .version = parsed.version };
+}
+
 fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8, foreign: bool } {
     var spec = spec_in;
     if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
