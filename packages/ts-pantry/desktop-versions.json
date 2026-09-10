@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.136.2",
-      "published": "1.136.2",
+      "latest": "1.137.0",
+      "published": "1.137.0",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.903.61454",
-      "published": "26.903.61454",
+      "latest": "26.903.71938",
+      "published": "26.903.71938",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.19.13",
-      "published": "3.19.13",
+      "latest": "3.19.19",
+      "published": "3.19.19",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.36.18",
-      "published": "2.26.36.18",
+      "latest": "2.26.36.21",
+      "published": "2.26.36.21",
       "needsUpdate": false
     },
     {
@@ -635,8 +635,8 @@
       "name": "Zed",
       "kind": "app",
       "host": "macos",
-      "latest": "1.18.1",
-      "published": "1.18.1",
+      "latest": "1.19.2",
+      "published": "1.19.2",
       "needsUpdate": false
     }
   ]
