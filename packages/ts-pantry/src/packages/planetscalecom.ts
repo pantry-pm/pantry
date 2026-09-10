@@ -3,7 +3,7 @@
  *
  * @domain `planetscale.com`
  * @programs `pscale`
- * @version `0.331.0` (104 versions available)
+ * @version `0.332.0` (105 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install planetscale.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pscale"
  * console.log(pkg.description) // "The CLI for PlanetScale Database"
  * console.log(pkg.programs)    // ["pscale"]
- * console.log(pkg.versions[0]) // "0.331.0" (latest)
+ * console.log(pkg.versions[0]) // "0.332.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/planetscale-com.md
@@ -67,6 +67,7 @@ export const planetscalecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.332.0',
     '0.331.0',
     '0.330.0',
     '0.329.0',
