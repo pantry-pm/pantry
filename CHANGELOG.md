@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.58...v0.11.59)
+
+## 🐛 Bug Fixes
+
+- **install**: seed the foreign-OS closure from what was just resolved (#232) ([7eff49a](https://github.com/pantry-pm/pantry/commit/7eff49a)) _(by Chris <chris@stacksjs.com>)_ ([#231](https://github.com/pantry-pm/pantry/issues/231), [#232](https://github.com/pantry-pm/pantry/issues/232), [#232](https://github.com/pantry-pm/pantry/issues/232), [#231](https://github.com/pantry-pm/pantry/issues/231), [#232](https://github.com/pantry-pm/pantry/issues/232))
+
+## 🔧 Chores
+
+- release v0.11.59 ([8431497](https://github.com/pantry-pm/pantry/commit/8431497)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.57...v0.11.58)
 
 ## 🐛 Bug Fixes
