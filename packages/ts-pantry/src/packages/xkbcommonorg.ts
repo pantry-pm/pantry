@@ -3,7 +3,7 @@
  *
  * @domain `xkbcommon.org`
  * @programs `xkbcli`
- * @version `1.13.0` (16 versions available)
+ * @version `1.14.0-beta2` (24 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install xkbcommon.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "xkbcli"
  * console.log(pkg.description) // "keymap handling library for toolkits and window..."
  * console.log(pkg.programs)    // ["xkbcli"]
- * console.log(pkg.versions[0]) // "1.13.0" (latest)
+ * console.log(pkg.versions[0]) // "1.14.0-beta2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/xkbcommon-org.md
@@ -78,6 +78,7 @@ export const xkbcommonorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.14.0-beta2',
     '1.14.0-beta1',
     '1.13.2',
     '1.13.1',

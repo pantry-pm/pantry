@@ -3,7 +3,7 @@
  *
  * @domain `fly.io`
  * @programs `fly`, `flyctl`
- * @version `0.4.101` (588 versions available)
+ * @version `0.4.102` (589 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fly.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "fly"
  * console.log(pkg.description) // "Command line tools for fly.io services"
  * console.log(pkg.programs)    // ["fly", "flyctl"]
- * console.log(pkg.versions[0]) // "0.4.101" (latest)
+ * console.log(pkg.versions[0]) // "0.4.102" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fly-io.md
@@ -68,6 +68,7 @@ export const flyioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.4.102',
     '0.4.101',
     '0.4.100',
     '0.4.99',
