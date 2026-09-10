@@ -3,7 +3,7 @@
  *
  * @domain `kubebuilder.io`
  * @programs `kubebuilder`
- * @version `4.13.0` (28 versions available)
+ * @version `4.16.0` (50 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kubebuilder.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "kubebuilder"
  * console.log(pkg.description) // "Kubebuilder - SDK for building Kubernetes APIs ..."
  * console.log(pkg.programs)    // ["kubebuilder"]
- * console.log(pkg.versions[0]) // "4.13.0" (latest)
+ * console.log(pkg.versions[0]) // "4.16.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/kubebuilder-io.md
@@ -69,6 +69,7 @@ export const kubebuilderioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.16.0',
     '4.15.0',
     '4.14.0',
     '4.13.1',
