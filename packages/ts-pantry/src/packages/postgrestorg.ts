@@ -3,7 +3,7 @@
  *
  * @domain `postgrest.org`
  * @programs `postgrest`
- * @version `16.2` (71 versions available)
+ * @version `16.2` (72 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install postgrest.org`
@@ -84,6 +84,7 @@ export const postgrestorgPackage = {
     '16.2',
     '16.1',
     '16.0',
+    '14.18',
     '14.17',
     '14.16',
     '14.15',
