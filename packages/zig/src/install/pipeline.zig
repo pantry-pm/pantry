@@ -133,28 +133,34 @@ test "parseForeignOsDepSpec keeps the comment and version handling of the native
     try std.testing.expectEqualStrings("15", parsed.version);
 }
 
-test "foreignOsClosure reaches a foreign pin only through the package that declares it" {
-    // The seeding mistake this guards against (pantry-pm/pantry#231): a
-    // foreign-OS pin is a leaf. Nothing in the set of foreign pins declares the
-    // guard that made them foreign - the package that does is one this host
-    // installs natively, so it is in the install results and not in the
-    // lockfile the merge step starts from. Seeding the closure from the
-    // lockfile alone therefore finds nothing, and every foreign pin then looks
-    // like a stale record and is swept.
+test "platformDependentClosure is symmetric, and reaches a pin only through its declarer" {
+    // Two properties, both learned the hard way (pantry-pm/pantry#232).
     //
-    // The pair is discovered from the catalog rather than hard-coded, so the
-    // test says the same thing on every platform: on macOS it is `git-scm.org`
-    // declaring `linux:gnu.org/gettext^0.21`, and on Linux whichever pair the
-    // catalog happens to guard the other way.
+    // SYMMETRY. An OS guard on a version constraint makes a package resolve
+    // differently per platform, in BOTH directions. The first version of this
+    // asked "is the guard for an OS I am not", which is right on the host the
+    // guard excludes and wrong on the host it names: `git-scm.org` declares
+    // `linux:gnu.org/gettext^0.21`, so on macOS gettext looks foreign and is
+    // kept, while on Linux it looks perfectly native and the macOS pin is swept
+    // as a stale duplicate. A macOS install then dropped one record and a Linux
+    // install dropped the other. Asking "is it guarded at all" is the same
+    // question on both.
+    //
+    // LEAF-NESS. A guarded pin does not declare its own guard - the package
+    // that declares it is one the host resolves natively - so a closure seeded
+    // only from the pins finds nothing, and every one of them then looks stale.
+    //
+    // The pair is discovered from the catalog rather than hard-coded, so this
+    // asserts the same thing on every platform.
     const allocator = std.testing.allocator;
 
     var declaring: ?[]const u8 = null;
     var pin: ?[]const u8 = null;
     outer: for (generated.packages) |info| {
         for (info.dependencies) |spec| {
-            if (parseForeignOsDepSpec(spec)) |foreign| {
+            if (parseOsGuardedDepSpec(spec)) |guarded| {
                 declaring = info.domain;
-                pin = foreign.domain;
+                pin = guarded.domain;
                 break :outer;
             }
         }
@@ -162,19 +168,49 @@ test "foreignOsClosure reaches a foreign pin only through the package that decla
     const declaring_domain = declaring orelse return error.SkipZigTest;
     const pin_domain = pin.?;
 
-    // Seeded from the package that declares the guard, the pin is reached.
-    var from_declaring = try foreignOsClosure(allocator, &.{declaring_domain});
+    // Reached from the package that declares the guard.
+    var from_declaring = try platformDependentClosure(allocator, &.{declaring_domain});
     defer from_declaring.deinit();
     try std.testing.expect(from_declaring.contains(pin_domain));
 
-    // Seeded from the pin itself it is not, because a package does not declare
+    // Not reached from the pin itself, because a package does not declare
     // itself. That asymmetry is why the caller has to seed from what it just
     // resolved as well as from what the lockfile already holds.
-    var from_pin = try foreignOsClosure(allocator, &.{pin_domain});
+    var from_pin = try platformDependentClosure(allocator, &.{pin_domain});
     defer from_pin.deinit();
     try std.testing.expect(!from_pin.contains(pin_domain));
 }
 
+test "platformDependentClosure answers the same on either side of a guard" {
+    // The symmetry above, asserted without needing to run on two machines: a
+    // guard is native on one host and foreign on the other, and this must reach
+    // the domain in both cases. `parseForeignOsDepSpec` agrees with
+    // `parseOsGuardedDepSpec` on exactly one of the two, which is the bug.
+    const native_prefix = switch (builtin.os.tag) {
+        .linux => "linux",
+        .macos => "darwin",
+        .windows => "windows",
+        else => return error.SkipZigTest,
+    };
+    const foreign_prefix = if (std.mem.eql(u8, native_prefix, "linux")) "darwin" else "linux";
+
+    var native_buf: [64]u8 = undefined;
+    const native = try std.fmt.bufPrint(&native_buf, "{s}:gnu.org/gettext^0.21", .{native_prefix});
+    var foreign_buf: [64]u8 = undefined;
+    const foreign = try std.fmt.bufPrint(&foreign_buf, "{s}:gnu.org/gettext^0.21", .{foreign_prefix});
+
+    // Guarded either way, so platform-dependent either way.
+    try std.testing.expectEqualStrings("gnu.org/gettext", parseOsGuardedDepSpec(native).?.domain);
+    try std.testing.expectEqualStrings("gnu.org/gettext", parseOsGuardedDepSpec(foreign).?.domain);
+
+    // Where the old question disagreed with itself.
+    try std.testing.expect(parseForeignOsDepSpec(native) == null);
+    try std.testing.expect(parseForeignOsDepSpec(foreign) != null);
+
+    // And an unguarded spec is not platform-dependent at all.
+    try std.testing.expect(parseOsGuardedDepSpec("gnu.org/gettext") == null);
+    try std.testing.expect(parseOsGuardedDepSpec("openssl.org^3") == null);
+}
 test "parseForeignOsDepSpec rejects what nobody can use" {
     // Malformed is not the same as foreign. A caller asking "which pins does
     // this host legitimately not know about" must not be handed junk.
@@ -357,24 +393,45 @@ pub fn parseForeignOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, 
     return if (parsed.foreign) .{ .domain = parsed.domain, .version = parsed.version } else null;
 }
 
+/// The same spec, but only when it carries an OS guard - whichever OS that is.
+///
+/// This is the question the lockfile actually needs answered, and it is not the
+/// same as `parseForeignOsDepSpec`. An OS guard on a VERSION CONSTRAINT means
+/// the package resolves differently per platform, in both directions:
+/// `git-scm.org` declares `linux:gnu.org/gettext^0.21`, so Linux resolves
+/// gettext to 0.21.1 and macOS - where the guard does not apply, and no other
+/// constraint does - resolves it to 1.0.0. Both records belong in a
+/// cross-platform lock.
+///
+/// Asking "is this guarded for an OS I am not" gets that right on macOS and
+/// wrong on Linux, where the guard is the native one and nothing marks the
+/// macOS version as belonging to somebody else. Asking "is this guarded at all"
+/// is symmetric, which is what a lockfile that has to survive a round trip
+/// needs (pantry-pm/pantry#232).
+pub fn parseOsGuardedDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
+    const parsed = parseDepSpecForOs(spec_in) orelse return null;
+    return if (parsed.guarded) .{ .domain = parsed.domain, .version = parsed.version } else null;
+}
+
 /// The spec's domain and version whatever OS it is guarded for, if any.
 ///
-/// Used when walking what a foreign-platform pin itself depends on: those deps
-/// are usually unguarded, because the package they belong to already only
-/// exists on that platform. Asking "is this for another OS" of them answers no
-/// and loses them.
+/// Used when walking what a platform-dependent pin itself depends on: those
+/// deps are usually unguarded, because the package they belong to already only
+/// exists on that platform. Asking "is this guarded" of them answers no and
+/// loses them.
 pub fn parseAnyOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
     const parsed = parseDepSpecForOs(spec_in) orelse return null;
     return .{ .domain = parsed.domain, .version = parsed.version };
 }
 
-fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8, foreign: bool } {
+fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8, foreign: bool, guarded: bool } {
     var spec = spec_in;
     if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
     spec = std.mem.trim(u8, spec, " \t");
     if (spec.len == 0) return null;
 
     var foreign = false;
+    var guarded = false;
 
     // `linux:` / `darwin:` / `windows:` OS guard.
     if (std.mem.indexOfScalar(u8, spec, ':')) |colon| {
@@ -387,6 +444,7 @@ fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version:
                 .windows => "windows",
                 else => "",
             };
+            guarded = true;
             foreign = !std.mem.eql(u8, prefix, cur);
             spec = std.mem.trim(u8, spec[colon + 1 ..], " \t");
         }
@@ -412,20 +470,33 @@ fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version:
         v = std.mem.trim(u8, v, " \t");
         if (v.len > 0) version = v;
     }
-    return .{ .domain = domain, .version = version, .foreign = foreign };
+    return .{ .domain = domain, .version = version, .foreign = foreign, .guarded = guarded };
 }
 
-/// Every package a set of installed ones needs *only* on another platform.
+/// Every package whose resolved version depends on which platform installs it.
 ///
-/// Seeded from the foreign-OS-guarded dependencies of `seeds`, then walked
-/// through what those need in turn - guarded or not, because a package that
-/// only exists on Linux does not guard its own dependencies a second time.
-/// `linux:gnu.org/gcc/libstdcxx@14` is the seed; gmp, mpfr, mpc and binutils
-/// arrive on the walk.
+/// Seeded from the OS-GUARDED dependencies of `seeds` - guarded for any OS,
+/// not only for one this host is not - then walked through what those need in
+/// turn, guarded or not, because a package that only exists on Linux does not
+/// guard its own dependencies a second time. `linux:gnu.org/gcc/libstdcxx@14`
+/// is a seed; gmp, mpfr, mpc and binutils arrive on the walk.
+///
+/// The symmetry is what makes a lock survive a round trip, and it is the part
+/// that took two goes to get right. A guard for ANOTHER OS marks a package this
+/// host cannot install, which is the obvious case. A guard for THIS one marks a
+/// package this host resolves under a constraint the other host does not have,
+/// which is the same problem seen from the other side: `git-scm.org` declares
+/// `linux:gnu.org/gettext^0.21`, so Linux pins gettext 0.21.1 and macOS pins
+/// 1.0.0, and a lock naming only one of them is a lock that cannot cross
+/// (pantry-pm/pantry#232).
+///
+/// A domain nothing declares any more is in neither set, so an obsolete record
+/// is still pruned - which is what keeps this from being "carry everything
+/// forward".
 ///
 /// The caller owns the returned map. Keys point into the static catalog, so
 /// they outlive it and need no freeing.
-pub fn foreignOsClosure(allocator: std.mem.Allocator, seeds: []const []const u8) !std.StringHashMap(void) {
+pub fn platformDependentClosure(allocator: std.mem.Allocator, seeds: []const []const u8) !std.StringHashMap(void) {
     var wanted = std.StringHashMap(void).init(allocator);
     errdefer wanted.deinit();
 
@@ -435,9 +506,9 @@ pub fn foreignOsClosure(allocator: std.mem.Allocator, seeds: []const []const u8)
     for (seeds) |domain| {
         const info = generated.getPackageByDomain(domain) orelse continue;
         for (info.dependencies) |spec| {
-            const foreign = parseForeignOsDepSpec(spec) orelse continue;
-            if ((try wanted.getOrPut(foreign.domain)).found_existing) continue;
-            try frontier.append(allocator, foreign.domain);
+            const guarded = parseOsGuardedDepSpec(spec) orelse continue;
+            if ((try wanted.getOrPut(guarded.domain)).found_existing) continue;
+            try frontier.append(allocator, guarded.domain);
         }
     }
 

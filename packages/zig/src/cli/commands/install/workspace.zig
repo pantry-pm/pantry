@@ -429,17 +429,19 @@ fn dupeLockfileEntry(allocator: std.mem.Allocator, entry: *const lib.packages.Lo
     };
 }
 
-/// Restore pins for packages only another platform installs.
+/// Restore pins another platform resolves differently.
 ///
-/// The regenerated lock holds what this host resolved. Anything the catalog
-/// guards behind a different OS was never a candidate, so it is missing - not
-/// because it left the dependency graph, but because this machine is not
-/// allowed to fetch it. Those come back from the previous lock.
+/// The regenerated lock holds what THIS host resolved. Two kinds of record are
+/// missing from it, and neither left the dependency graph: one the catalog
+/// guards behind a different OS, which this machine was never allowed to fetch;
+/// and one another OS resolves to a different version, because a guard applying
+/// there and not here changes the constraint. Both come back from the previous
+/// lock.
 ///
 /// The catalog is what makes this safe to distinguish from pruning: a pin is
 /// carried forward only when some package in the new lock still declares it
-/// behind a foreign OS guard. A record nothing points at any more is obsolete
-/// on every platform, and is left out exactly as before.
+/// behind an OS guard. A record nothing points at any more is obsolete on every
+/// platform, and is left out exactly as before.
 fn carryForwardForeignOsPins(
     allocator: std.mem.Allocator,
     lockfile: *lib.packages.Lockfile,
@@ -460,7 +462,7 @@ fn carryForwardForeignOsPins(
         try seeds.append(allocator, entry.value_ptr.name);
     }
 
-    var wanted = try install_pipeline.foreignOsClosure(allocator, seeds.items);
+    var wanted = try install_pipeline.platformDependentClosure(allocator, seeds.items);
     defer wanted.deinit();
 
     if (wanted.count() == 0) return;

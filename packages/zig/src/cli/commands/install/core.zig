@@ -1907,8 +1907,8 @@ fn mergeCompanionLockfileEntries(
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
 ) !void {
-    // Packages this host needs only on another platform, so the sweep below
-    // can tell a stale pin from a foreign one.
+    // Packages whose resolved version depends on which platform installs them,
+    // so the sweep below can tell a stale pin from another platform's.
     //
     // Seeded from `results` as well as the lockfile, and both halves are load
     // bearing. What the lockfile holds here is only what the workspace step
@@ -1934,9 +1934,9 @@ fn mergeCompanionLockfileEntries(
             try foreign_seeds.append(allocator, seed_name);
         }
     }
-    var foreign_os_pins = try @import("../../../install/pipeline.zig")
-        .foreignOsClosure(allocator, foreign_seeds.items);
-    defer foreign_os_pins.deinit();
+    var platform_pins = try @import("../../../install/pipeline.zig")
+        .platformDependentClosure(allocator, foreign_seeds.items);
+    defer platform_pins.deinit();
 
     // Record the requested constraints on the root workspace. This gives the
     // fast path a stable source-of-truth without discarding system deps declared
@@ -1979,14 +1979,15 @@ fn mergeCompanionLockfileEntries(
             // Unless it is another platform's pin of the same package.
             //
             // Superseding an older pin is what this sweep is for. But two
-            // platforms can legitimately need two versions: on Linux, git
+            // platforms can legitimately need two versions: `git-scm.org`
             // declares `linux:gnu.org/gettext^0.21`, so gettext resolves to
-            // 0.21.1 there and to 1.0.0 on macOS, where that guard does not
-            // apply. Both are correct, the lock keys by name@version so both
-            // fit, and removing by name alone deleted whichever one the
-            // running host did not resolve - which is a lock that cannot
-            // survive the trip to the other platform (pantry-pm/pantry#231).
-            if (foreign_os_pins.contains(entry.value_ptr.name)
+            // 0.21.1 on Linux and to 1.0.0 on macOS, where that guard does not
+            // apply and nothing else constrains it. Both are correct, the lock
+            // keys by name@version so both fit, and removing by name alone
+            // deleted whichever one the running host did not resolve - a lock
+            // that cannot survive the trip to the other platform
+            // (pantry-pm/pantry#231, #232).
+            if (platform_pins.contains(entry.value_ptr.name)
                 and !std.mem.eql(u8, entry.value_ptr.version, result.version)) continue;
 
             try keys_to_remove.append(allocator, try allocator.dupe(u8, entry.key_ptr.*));
