@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.59...v0.11.60)
+
+## 🐛 Bug Fixes
+
+- **install**: a version guard is platform-dependent in both directions (#232) ([03186d7](https://github.com/pantry-pm/pantry/commit/03186d7)) _(by Chris <chris@stacksjs.com>)_ ([#232](https://github.com/pantry-pm/pantry/issues/232), [#232](https://github.com/pantry-pm/pantry/issues/232))
+
+## 🔧 Chores
+
+- release v0.11.60 ([18fca74](https://github.com/pantry-pm/pantry/commit/18fca74)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.58...v0.11.59)
 
 ## 🐛 Bug Fixes
