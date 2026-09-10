@@ -133,6 +133,48 @@ test "parseForeignOsDepSpec keeps the comment and version handling of the native
     try std.testing.expectEqualStrings("15", parsed.version);
 }
 
+test "foreignOsClosure reaches a foreign pin only through the package that declares it" {
+    // The seeding mistake this guards against (pantry-pm/pantry#231): a
+    // foreign-OS pin is a leaf. Nothing in the set of foreign pins declares the
+    // guard that made them foreign - the package that does is one this host
+    // installs natively, so it is in the install results and not in the
+    // lockfile the merge step starts from. Seeding the closure from the
+    // lockfile alone therefore finds nothing, and every foreign pin then looks
+    // like a stale record and is swept.
+    //
+    // The pair is discovered from the catalog rather than hard-coded, so the
+    // test says the same thing on every platform: on macOS it is `git-scm.org`
+    // declaring `linux:gnu.org/gettext^0.21`, and on Linux whichever pair the
+    // catalog happens to guard the other way.
+    const allocator = std.testing.allocator;
+
+    var declaring: ?[]const u8 = null;
+    var pin: ?[]const u8 = null;
+    outer: for (generated.packages) |info| {
+        for (info.dependencies) |spec| {
+            if (parseForeignOsDepSpec(spec)) |foreign| {
+                declaring = info.domain;
+                pin = foreign.domain;
+                break :outer;
+            }
+        }
+    }
+    const declaring_domain = declaring orelse return error.SkipZigTest;
+    const pin_domain = pin.?;
+
+    // Seeded from the package that declares the guard, the pin is reached.
+    var from_declaring = try foreignOsClosure(allocator, &.{declaring_domain});
+    defer from_declaring.deinit();
+    try std.testing.expect(from_declaring.contains(pin_domain));
+
+    // Seeded from the pin itself it is not, because a package does not declare
+    // itself. That asymmetry is why the caller has to seed from what it just
+    // resolved as well as from what the lockfile already holds.
+    var from_pin = try foreignOsClosure(allocator, &.{pin_domain});
+    defer from_pin.deinit();
+    try std.testing.expect(!from_pin.contains(pin_domain));
+}
+
 test "parseForeignOsDepSpec rejects what nobody can use" {
     // Malformed is not the same as foreign. A caller asking "which pins does
     // this host legitimately not know about" must not be handed junk.
@@ -371,6 +413,44 @@ fn parseDepSpecForOs(spec_in: []const u8) ?struct { domain: []const u8, version:
         if (v.len > 0) version = v;
     }
     return .{ .domain = domain, .version = version, .foreign = foreign };
+}
+
+/// Every package a set of installed ones needs *only* on another platform.
+///
+/// Seeded from the foreign-OS-guarded dependencies of `seeds`, then walked
+/// through what those need in turn - guarded or not, because a package that
+/// only exists on Linux does not guard its own dependencies a second time.
+/// `linux:gnu.org/gcc/libstdcxx@14` is the seed; gmp, mpfr, mpc and binutils
+/// arrive on the walk.
+///
+/// The caller owns the returned map. Keys point into the static catalog, so
+/// they outlive it and need no freeing.
+pub fn foreignOsClosure(allocator: std.mem.Allocator, seeds: []const []const u8) !std.StringHashMap(void) {
+    var wanted = std.StringHashMap(void).init(allocator);
+    errdefer wanted.deinit();
+
+    var frontier = std.ArrayList([]const u8).empty;
+    defer frontier.deinit(allocator);
+
+    for (seeds) |domain| {
+        const info = generated.getPackageByDomain(domain) orelse continue;
+        for (info.dependencies) |spec| {
+            const foreign = parseForeignOsDepSpec(spec) orelse continue;
+            if ((try wanted.getOrPut(foreign.domain)).found_existing) continue;
+            try frontier.append(allocator, foreign.domain);
+        }
+    }
+
+    while (frontier.pop()) |domain| {
+        const info = generated.getPackageByDomain(domain) orelse continue;
+        for (info.dependencies) |spec| {
+            const parsed = parseAnyOsDepSpec(spec) orelse continue;
+            if ((try wanted.getOrPut(parsed.domain)).found_existing) continue;
+            try frontier.append(allocator, parsed.domain);
+        }
+    }
+
+    return wanted;
 }
 
 /// Append `domain`'s transitive system (pantry) dependencies — read from the

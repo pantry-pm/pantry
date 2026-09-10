@@ -451,40 +451,17 @@ fn carryForwardForeignOsPins(
     // regenerated one does not carry system packages at all at this point -
     // those are merged afterwards by the companion step, so looking there finds
     // nothing and the whole pass becomes a no-op.
-    var wanted = std.StringHashMap(void).init(allocator);
-    defer wanted.deinit();
-
-    var frontier = std.ArrayList([]const u8).empty;
-    defer frontier.deinit(allocator);
+    var seeds = std.ArrayList([]const u8).empty;
+    defer seeds.deinit(allocator);
 
     var declared_it = existing.packages.iterator();
     while (declared_it.next()) |entry| {
         if (entry.value_ptr.source != .pantry) continue;
-        const info = generated_packages.getPackageByDomain(entry.value_ptr.name) orelse continue;
-        for (info.dependencies) |spec| {
-            const foreign = install_pipeline.parseForeignOsDepSpec(spec) orelse continue;
-            if ((try wanted.getOrPut(foreign.domain)).found_existing) continue;
-            try frontier.append(allocator, foreign.domain);
-        }
+        try seeds.append(allocator, entry.value_ptr.name);
     }
 
-    // And everything those pins need in turn.
-    //
-    // `linux:gnu.org/gcc/libstdcxx@14` is guarded and so is found above; gmp,
-    // mpfr, mpc and binutils are not - they are ordinary dependencies of a
-    // package that only exists on Linux. Stopping at the guarded ones keeps
-    // two records of seven and drops the rest, which is a lock that still does
-    // not survive the trip.
-    while (frontier.pop()) |domain| {
-        const info = generated_packages.getPackageByDomain(domain) orelse continue;
-        for (info.dependencies) |spec| {
-            // Any OS: a foreign pin's own dependencies are usually unguarded,
-            // because the package they belong to already only exists there.
-            const parsed = install_pipeline.parseAnyOsDepSpec(spec) orelse continue;
-            if ((try wanted.getOrPut(parsed.domain)).found_existing) continue;
-            try frontier.append(allocator, parsed.domain);
-        }
-    }
+    var wanted = try install_pipeline.foreignOsClosure(allocator, seeds.items);
+    defer wanted.deinit();
 
     if (wanted.count() == 0) return;
 

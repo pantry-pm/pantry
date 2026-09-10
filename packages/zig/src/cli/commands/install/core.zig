@@ -1907,6 +1907,37 @@ fn mergeCompanionLockfileEntries(
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
 ) !void {
+    // Packages this host needs only on another platform, so the sweep below
+    // can tell a stale pin from a foreign one.
+    //
+    // Seeded from `results` as well as the lockfile, and both halves are load
+    // bearing. What the lockfile holds here is only what the workspace step
+    // carried forward - the foreign pins themselves - and a foreign pin is a
+    // leaf: nothing in that set declares the guard that makes it foreign. The
+    // package that does declare it is the one this host just resolved, so it
+    // arrives in `results` and nowhere else. Seeding from the lock alone left
+    // `git-scm.org` out of the closure, which is the only package that says
+    // `linux:gnu.org/gettext^0.21`, and gettext's Linux pin was then swept as
+    // if it were stale.
+    var foreign_seeds = std.ArrayList([]const u8).empty;
+    defer foreign_seeds.deinit(allocator);
+    {
+        var seed_it = lockfile.packages.iterator();
+        while (seed_it.next()) |entry| {
+            if (entry.value_ptr.source == .pantry)
+                try foreign_seeds.append(allocator, entry.value_ptr.name);
+        }
+        for (results) |result| {
+            if (!result.success or result.name.len == 0) continue;
+            const seed_name = helpers.resolvePackageAlias(helpers.normalizePackageName(result.name));
+            if (std.mem.indexOfScalar(u8, seed_name, '.') == null) continue;
+            try foreign_seeds.append(allocator, seed_name);
+        }
+    }
+    var foreign_os_pins = try @import("../../../install/pipeline.zig")
+        .foreignOsClosure(allocator, foreign_seeds.items);
+    defer foreign_os_pins.deinit();
+
     // Record the requested constraints on the root workspace. This gives the
     // fast path a stable source-of-truth without discarding system deps declared
     // directly in package.json.
@@ -1943,8 +1974,22 @@ fn mergeCompanionLockfileEntries(
 
         var package_it = lockfile.packages.iterator();
         while (package_it.next()) |entry| {
-            if (std.mem.eql(u8, entry.value_ptr.name, clean_name))
-                try keys_to_remove.append(allocator, try allocator.dupe(u8, entry.key_ptr.*));
+            if (!std.mem.eql(u8, entry.value_ptr.name, clean_name)) continue;
+
+            // Unless it is another platform's pin of the same package.
+            //
+            // Superseding an older pin is what this sweep is for. But two
+            // platforms can legitimately need two versions: on Linux, git
+            // declares `linux:gnu.org/gettext^0.21`, so gettext resolves to
+            // 0.21.1 there and to 1.0.0 on macOS, where that guard does not
+            // apply. Both are correct, the lock keys by name@version so both
+            // fit, and removing by name alone deleted whichever one the
+            // running host did not resolve - which is a lock that cannot
+            // survive the trip to the other platform (pantry-pm/pantry#231).
+            if (foreign_os_pins.contains(entry.value_ptr.name)
+                and !std.mem.eql(u8, entry.value_ptr.version, result.version)) continue;
+
+            try keys_to_remove.append(allocator, try allocator.dupe(u8, entry.key_ptr.*));
         }
 
         for (keys_to_remove.items) |key| {
