@@ -3,7 +3,7 @@
  *
  * @domain `alttab.app`
  * @programs `alttab`
- * @version `11.6.0` (67 versions available)
+ * @version `11.6.1` (68 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install alttab.app`
@@ -22,6 +22,7 @@ export const alttabappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '11.6.1',
     '11.6.0',
     '11.5.0',
     '11.4.4',
