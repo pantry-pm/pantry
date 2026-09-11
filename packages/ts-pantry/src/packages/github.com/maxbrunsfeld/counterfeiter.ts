@@ -3,7 +3,7 @@
  *
  * @domain `github.com/maxbrunsfeld/counterfeiter`
  * @programs `counterfeiter`
- * @version `6.12.1` (12 versions available)
+ * @version `6.13.0` (27 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/maxbrunsfeld/counterfeiter`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "counterfeiter"
  * console.log(pkg.description) // "A tool for generating self-contained, type-safe..."
  * console.log(pkg.programs)    // ["counterfeiter"]
- * console.log(pkg.versions[0]) // "6.12.1" (latest)
+ * console.log(pkg.versions[0]) // "6.13.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/maxbrunsfeld/counterfeiter.md
@@ -73,6 +73,7 @@ export const counterfeiterPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.13.0',
     '6.12.2',
     '6.12.1',
     '6.12.0',
