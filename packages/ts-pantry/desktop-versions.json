@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.903.71938",
-      "published": "26.903.71938",
+      "latest": "26.908.31748",
+      "published": "26.908.31748",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.19.19",
-      "published": "3.19.19",
+      "latest": "3.20.10",
+      "published": "3.20.10",
       "needsUpdate": false
     },
     {
@@ -122,8 +122,8 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.47.2",
-      "published": "1.47.2",
+      "latest": "1.48.0",
+      "published": "1.48.0",
       "needsUpdate": false
     },
     {
@@ -491,8 +491,8 @@
       "name": "Raycast",
       "kind": "app",
       "host": "macos",
-      "latest": "1.104.28",
-      "published": "1.104.28",
+      "latest": "1.104.29",
+      "published": "1.104.29",
       "needsUpdate": false
     },
     {
