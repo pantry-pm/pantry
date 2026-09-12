@@ -3,7 +3,7 @@
  *
  * @domain `getzola.org`
  * @programs `zola`
- * @version `0.22.1` (9 versions available)
+ * @version `0.23.5` (56 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install getzola.org`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "zola"
  * console.log(pkg.description) // "A fast static site generator in a single binary..."
  * console.log(pkg.programs)    // ["zola"]
- * console.log(pkg.versions[0]) // "0.22.1" (latest)
+ * console.log(pkg.versions[0]) // "0.23.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/getzola-org.md
@@ -60,6 +60,7 @@ export const getzolaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.23.5',
     '0.23.4',
     '0.23.3',
     '0.23.2',
