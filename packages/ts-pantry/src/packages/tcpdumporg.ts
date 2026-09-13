@@ -3,7 +3,7 @@
  *
  * @domain `tcpdump.org`
  * @programs `pcap-config`
- * @version `1.10.7` (54 versions available)
+ * @version `1.11.0` (55 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tcpdump.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pcap-config"
  * console.log(pkg.description) // "the LIBpcap interface to various kernel packet ..."
  * console.log(pkg.programs)    // ["pcap-config"]
- * console.log(pkg.versions[0]) // "1.10.7" (latest)
+ * console.log(pkg.versions[0]) // "1.11.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/tcpdump-org.md
@@ -69,6 +69,7 @@ export const tcpdumporgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.11.0',
     '1.10.7',
     '1.10.6',
     '1.10.5',
