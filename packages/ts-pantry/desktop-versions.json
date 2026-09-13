@@ -14,8 +14,8 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.6.0",
-      "published": "11.6.0",
+      "latest": "11.6.1",
+      "published": "11.6.1",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.908.31748",
-      "published": "26.908.31748",
+      "latest": "26.908.40834",
+      "published": "26.908.40834",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.20.10",
-      "published": "3.20.10",
+      "latest": "3.20.17",
+      "published": "3.20.17",
       "needsUpdate": false
     },
     {
@@ -554,8 +554,8 @@
       "name": "Stats",
       "kind": "app",
       "host": "macos",
-      "latest": "3.0.15",
-      "published": "3.0.15",
+      "latest": "3.0.16",
+      "published": "3.0.16",
       "needsUpdate": false
     },
     {
