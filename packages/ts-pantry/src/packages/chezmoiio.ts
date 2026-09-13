@@ -3,7 +3,7 @@
  *
  * @domain `chezmoi.io`
  * @programs `chezmoi`
- * @version `2.72.1` (105 versions available)
+ * @version `2.72.2` (106 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install chezmoi.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "chezmoi"
  * console.log(pkg.description) // "Manage your dotfiles across multiple diverse ma..."
  * console.log(pkg.programs)    // ["chezmoi"]
- * console.log(pkg.versions[0]) // "2.72.1" (latest)
+ * console.log(pkg.versions[0]) // "2.72.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/chezmoi-io.md
@@ -70,6 +70,7 @@ export const chezmoiioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.72.2',
     '2.72.1',
     '2.72.0',
     '2.71.1',
