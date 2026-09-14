@@ -3,7 +3,7 @@
  *
  * @domain `robotframework.org`
  * @programs `robot`
- * @version `7.4.2` (7 versions available)
+ * @version `7.5` (23 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install robotframework.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "robot"
  * console.log(pkg.description) // "Generic automation framework for acceptance tes..."
  * console.log(pkg.programs)    // ["robot"]
- * console.log(pkg.versions[0]) // "7.4.2" (latest)
+ * console.log(pkg.versions[0]) // "7.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/robotframework-org.md
@@ -76,6 +76,7 @@ export const robotframeworkorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.5',
     '7.4.2',
     '7.4.1',
     '7.4',
