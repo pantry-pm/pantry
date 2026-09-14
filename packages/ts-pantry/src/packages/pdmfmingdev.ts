@@ -3,7 +3,7 @@
  *
  * @domain `pdm.fming.dev`
  * @programs `pdm`
- * @version `2.29.0` (91 versions available)
+ * @version `2.29.1` (92 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pdm.fming.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pdm"
  * console.log(pkg.description) // "A modern Python package and dependency manager ..."
  * console.log(pkg.programs)    // ["pdm"]
- * console.log(pkg.versions[0]) // "2.29.0" (latest)
+ * console.log(pkg.versions[0]) // "2.29.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pdm-fming-dev.md
@@ -67,6 +67,7 @@ export const pdmfmingdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.29.1',
     '2.29.0',
     '2.28.2',
     '2.28.1',
