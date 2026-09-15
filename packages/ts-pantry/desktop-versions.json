@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.908.40834",
-      "published": "26.908.40834",
+      "latest": "26.908.70816",
+      "published": "26.908.70816",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.20.17",
-      "published": "3.20.17",
+      "latest": "3.20.21",
+      "published": "3.20.21",
       "needsUpdate": false
     },
     {
@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.411",
-      "published": "0.0.411",
+      "latest": "0.0.412",
+      "published": "0.0.412",
       "needsUpdate": false
     },
     {
@@ -248,7 +248,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -410,8 +410,8 @@
       "name": "MonitorControl",
       "kind": "app",
       "host": "macos",
-      "latest": "4.3.3",
-      "published": "4.3.3",
+      "latest": "4.4.0",
+      "published": "4.4.0",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.37.12",
-      "published": "2.26.37.12",
+      "latest": "2.26.37.15",
+      "published": "2.26.37.15",
       "needsUpdate": false
     },
     {
