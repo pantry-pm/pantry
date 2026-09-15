@@ -3,7 +3,7 @@
  *
  * @domain `proj.org`
  * @programs `proj`
- * @version `9.8.0` (14 versions available)
+ * @version `9.9.0` (44 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install proj.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "proj"
  * console.log(pkg.description) // "PROJ - Cartographic Projections and Coordinate ..."
  * console.log(pkg.programs)    // ["proj"]
- * console.log(pkg.versions[0]) // "9.8.0" (latest)
+ * console.log(pkg.versions[0]) // "9.9.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/proj-org.md
@@ -82,6 +82,7 @@ export const projorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '9.9.0',
     '9.8.1',
     '9.8.0',
     '9.7.1',
