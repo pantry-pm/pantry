@@ -3,7 +3,7 @@
  *
  * @domain `ipfs.tech`
  * @programs `ipfs`
- * @version `0.40.1` (36 versions available)
+ * @version `0.43.1` (26 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ipfs.tech`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "ipfs"
  * console.log(pkg.description) // "Peer-to-peer hypermedia protocol"
  * console.log(pkg.programs)    // ["ipfs"]
- * console.log(pkg.versions[0]) // "0.40.1" (latest)
+ * console.log(pkg.versions[0]) // "0.43.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/ipfs-tech.md
@@ -68,6 +68,7 @@ export const ipfstechPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.43.1',
     '0.43.0',
     '0.42.0',
     '0.41.0',
