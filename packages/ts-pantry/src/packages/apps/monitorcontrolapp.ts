@@ -3,7 +3,7 @@
  *
  * @domain `monitorcontrol.app`
  * @programs `monitorcontrol`
- * @version `4.3.0` (2 versions available)
+ * @version `4.4.0` (26 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install monitorcontrol.app`
@@ -22,6 +22,7 @@ export const monitorcontrolappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '4.4.0',
     '4.3.3',
     '4.3.2',
     '4.3.0',
