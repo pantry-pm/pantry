@@ -3,7 +3,7 @@
  *
  * @domain `flit.pypa.io`
  * @programs `flit`
- * @version `4.0.2` (50 versions available)
+ * @version `4.1.0` (51 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install flit.pypa.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "flit"
  * console.log(pkg.description) // "Simplified packaging of Python modules"
  * console.log(pkg.programs)    // ["flit"]
- * console.log(pkg.versions[0]) // "4.0.2" (latest)
+ * console.log(pkg.versions[0]) // "4.1.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/flit-pypa-io.md
@@ -67,6 +67,7 @@ export const flitpypaioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.1.0',
     '4.0.2',
     '4.0.1',
     '4.0.0',

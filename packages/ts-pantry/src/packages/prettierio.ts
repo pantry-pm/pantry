@@ -3,7 +3,7 @@
  *
  * @domain `prettier.io`
  * @programs `prettier`
- * @version `3.9.6` (47 versions available)
+ * @version `3.9.7` (48 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install prettier.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "prettier"
  * console.log(pkg.description) // "Code formatter for JavaScript, CSS, JSON, Graph..."
  * console.log(pkg.programs)    // ["prettier"]
- * console.log(pkg.versions[0]) // "3.9.6" (latest)
+ * console.log(pkg.versions[0]) // "3.9.7" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/prettier-io.md
@@ -74,6 +74,7 @@ export const prettierioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.9.7',
     '3.9.6',
     '3.9.5',
     '3.9.4',
