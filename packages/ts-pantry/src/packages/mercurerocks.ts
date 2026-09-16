@@ -3,7 +3,7 @@
  *
  * @domain `mercure.rocks`
  * @programs `mercure`
- * @version `0.21.11` (26 versions available)
+ * @version `1.0.0` (61 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mercure.rocks`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "mercure"
  * console.log(pkg.description) // "🪽 An open, easy, fast, reliable and battery-ef..."
  * console.log(pkg.programs)    // ["mercure"]
- * console.log(pkg.versions[0]) // "0.21.11" (latest)
+ * console.log(pkg.versions[0]) // "1.0.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/mercure-rocks.md
@@ -68,6 +68,7 @@ export const mercurerocksPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.0',
     '0.24.2',
     '0.24.1',
     '0.24.0',
@@ -103,6 +104,8 @@ export const mercurerocksPackage = {
     '0.18.0',
     '0.17.1',
     '0.17.0',
+    'helm-chart-0.21.11',
+    'helm-chart-0.21.10',
     'helm-chart-0.21.9',
     'helm-chart-0.21.8',
     'helm-chart-0.21.7',
@@ -111,8 +114,6 @@ export const mercurerocksPackage = {
     'helm-chart-0.21.4',
     'helm-chart-0.21.3',
     'helm-chart-0.21.2',
-    'helm-chart-0.21.11',
-    'helm-chart-0.21.10',
     'helm-chart-0.21.1',
     'helm-chart-0.20.2',
     'helm-chart-0.20.1',
