@@ -3,7 +3,7 @@
  *
  * @domain `podman.io`
  * @programs `podman`, `podman-remote`, `podman-mac-helper`
- * @version `6.1.2` (58 versions available)
+ * @version `6.1.2` (59 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install podman.io`
@@ -86,6 +86,7 @@ export const podmanioPackage = {
     '6.0.2',
     '6.0.1',
     '6.0.0',
+    '5.8.7',
     '5.8.6',
     '5.8.5',
     '5.8.4',

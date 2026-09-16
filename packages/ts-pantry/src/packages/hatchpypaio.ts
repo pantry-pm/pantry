@@ -3,7 +3,7 @@
  *
  * @domain `hatch.pypa.io`
  * @programs `hatch`
- * @version `1.16.5` (27 versions available)
+ * @version `1.18.1` (31 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install hatch.pypa.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "hatch"
  * console.log(pkg.description) // "Modern, extensible Python project management"
  * console.log(pkg.programs)    // ["hatch"]
- * console.log(pkg.versions[0]) // "1.16.5" (latest)
+ * console.log(pkg.versions[0]) // "1.18.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/hatch-pypa-io.md
@@ -67,6 +67,7 @@ export const hatchpypaioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.18.1',
     '1.18.0',
     '1.17.1',
     '1.17.0',

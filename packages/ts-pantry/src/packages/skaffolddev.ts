@@ -3,7 +3,7 @@
  *
  * @domain `skaffold.dev`
  * @programs `skaffold`
- * @version `2.18.1` (21 versions available)
+ * @version `2.25.0` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install skaffold.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "skaffold"
  * console.log(pkg.description) // "Easy and Repeatable Kubernetes Development"
  * console.log(pkg.programs)    // ["skaffold"]
- * console.log(pkg.versions[0]) // "2.18.1" (latest)
+ * console.log(pkg.versions[0]) // "2.25.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/skaffold-dev.md
@@ -67,6 +67,7 @@ export const skaffolddevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.25.0',
     '2.24.0',
     '2.23.0',
     '2.22.0',
