@@ -3,7 +3,7 @@
  *
  * @domain `tox.wiki`
  * @programs `tox`
- * @version `4.61.4` (75 versions available)
+ * @version `4.61.5` (76 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tox.wiki`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "tox"
  * console.log(pkg.description) // "Command line driven CI frontend and development..."
  * console.log(pkg.programs)    // ["tox"]
- * console.log(pkg.versions[0]) // "4.61.4" (latest)
+ * console.log(pkg.versions[0]) // "4.61.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/tox-wiki.md
@@ -74,6 +74,7 @@ export const toxwikiPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.61.5',
     '4.61.4',
     '4.61.3',
     '4.61.2',

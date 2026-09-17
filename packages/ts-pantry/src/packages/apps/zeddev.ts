@@ -3,7 +3,7 @@
  *
  * @domain `zed.dev`
  * @programs `zed`
- * @version `1.20.1` (80 versions available)
+ * @version `1.20.2` (81 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zed.dev`
@@ -22,6 +22,7 @@ export const zeddevPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.20.2',
     '1.20.1',
     '1.19.2',
     '1.18.1',
