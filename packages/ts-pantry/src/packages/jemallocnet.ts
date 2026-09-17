@@ -2,7 +2,7 @@
  * **jemalloc** - pkgx package
  *
  * @domain `jemalloc.net`
- * @version `5.3.0` (1 versions available)
+ * @version `5.4.0` (47 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install jemalloc.net`
@@ -15,7 +15,7 @@
  *
  * const pkg = pantry.jemallocnet
  * console.log(pkg.name)        // "jemalloc"
- * console.log(pkg.versions[0]) // "5.3.0" (latest)
+ * console.log(pkg.versions[0]) // "5.4.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/jemalloc-net.md
@@ -59,6 +59,7 @@ export const jemallocnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.4.0',
     '5.3.1',
     '5.3.0',
     '5.2.1',
