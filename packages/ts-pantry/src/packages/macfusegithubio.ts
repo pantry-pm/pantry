@@ -2,7 +2,7 @@
  * **macfuse.github** - macFUSE umbrella repository
  *
  * @domain `macfuse.github.io`
- * @version `5.1.3` (6 versions available)
+ * @version `5.4.0` (33 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install macfuse.github.io`
@@ -15,7 +15,7 @@
  * const pkg = pantry.macfusegithubio
  * console.log(pkg.name)        // "macfuse.github"
  * console.log(pkg.description) // "macFUSE umbrella repository"
- * console.log(pkg.versions[0]) // "5.1.3" (latest)
+ * console.log(pkg.versions[0]) // "5.4.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/macfuse-github-io.md
@@ -58,6 +58,7 @@ export const macfusegithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.4.0',
     '5.3.3',
     '5.2.0',
     '5.1.3',
