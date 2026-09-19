@@ -14,8 +14,8 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.6.1",
-      "published": "11.6.1",
+      "latest": "11.7.0",
+      "published": "11.7.0",
       "needsUpdate": false
     },
     {
@@ -32,8 +32,8 @@
       "name": "bw",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2026.8.0",
-      "published": "2026.8.0",
+      "latest": "2026.9.0",
+      "published": "2026.9.0",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.911.61220",
-      "published": "26.911.61220",
+      "latest": "26.915.31945",
+      "published": "26.915.31945",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.20.21",
-      "published": "3.20.21",
+      "latest": "3.21.13",
+      "published": "3.21.13",
       "needsUpdate": false
     },
     {
@@ -122,8 +122,8 @@
       "name": "Dia",
       "kind": "app",
       "host": "macos",
-      "latest": "1.48.0",
-      "published": "1.48.0",
+      "latest": "1.49.1",
+      "published": "1.49.1",
       "needsUpdate": false
     },
     {
@@ -221,8 +221,8 @@
       "name": "Hidden Bar",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.10",
-      "published": "1.10",
+      "latest": "1.11.1",
+      "published": "1.11.1",
       "needsUpdate": false
     },
     {
@@ -248,7 +248,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -356,8 +356,8 @@
       "name": "LM Studio",
       "kind": "app",
       "host": "macos",
-      "latest": "0.4.24-1",
-      "published": "0.4.24-1",
+      "latest": "0.4.25-1",
+      "published": "0.4.25-1",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.37.15",
-      "published": "2.26.37.15",
+      "latest": "2.26.37.22",
+      "published": "2.26.37.22",
       "needsUpdate": false
     },
     {
