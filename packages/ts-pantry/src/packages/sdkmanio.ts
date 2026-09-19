@@ -3,7 +3,7 @@
  *
  * @domain `sdkman.io`
  * @programs `sdkman-init.sh`
- * @version `5.22.0` (5 versions available)
+ * @version `5.23.1` (44 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install sdkman.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "sdkman-init.sh"
  * console.log(pkg.description) // "The SDKMAN! Command Line Interface"
  * console.log(pkg.programs)    // ["sdkman-init.sh"]
- * console.log(pkg.versions[0]) // "5.22.0" (latest)
+ * console.log(pkg.versions[0]) // "5.23.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/sdkman-io.md
@@ -67,6 +67,7 @@ export const sdkmanioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.23.1',
     '5.23.0',
     '5.22.5',
     '5.22.4',
