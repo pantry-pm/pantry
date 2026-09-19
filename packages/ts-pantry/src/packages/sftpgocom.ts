@@ -3,7 +3,7 @@
  *
  * @domain `sftpgo.com`
  * @programs `sftpgo`
- * @version `2.7.1` (10 versions available)
+ * @version `2.7.6` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install sftpgo.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "sftpgo"
  * console.log(pkg.description) // "Full-featured and highly configurable SFTP, HTT..."
  * console.log(pkg.programs)    // ["sftpgo"]
- * console.log(pkg.versions[0]) // "2.7.1" (latest)
+ * console.log(pkg.versions[0]) // "2.7.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/sftpgo-com.md
@@ -68,6 +68,7 @@ export const sftpgocomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.7.6',
     '2.7.5',
     '2.7.4',
     '2.7.3',
