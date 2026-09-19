@@ -3,7 +3,7 @@
  *
  * @domain `conftest.dev`
  * @programs `conftest`
- * @version `0.70.0` (55 versions available)
+ * @version `0.70.1` (56 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install conftest.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "conftest"
  * console.log(pkg.description) // "Write tests against structured configuration da..."
  * console.log(pkg.programs)    // ["conftest"]
- * console.log(pkg.versions[0]) // "0.70.0" (latest)
+ * console.log(pkg.versions[0]) // "0.70.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/conftest-dev.md
@@ -67,6 +67,7 @@ export const conftestdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.70.1',
     '0.70.0',
     '0.69.0',
     '0.68.2',
