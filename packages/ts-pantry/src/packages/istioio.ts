@@ -3,7 +3,7 @@
  *
  * @domain `istio.io`
  * @programs `istioctl`
- * @version `1.31.1` (53 versions available)
+ * @version `1.31.1` (55 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install istio.io`
@@ -69,11 +69,13 @@ export const istioioPackage = {
   versions: [
     '1.31.1',
     '1.31.0',
+    '1.30.5',
     '1.30.4',
     '1.30.3',
     '1.30.2',
     '1.30.1',
     '1.30.0',
+    '1.29.8',
     '1.29.7',
     '1.29.6',
     '1.29.5',
