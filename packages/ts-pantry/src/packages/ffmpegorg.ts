@@ -3,7 +3,7 @@
  *
  * @domain `ffmpeg.org`
  * @programs `ffmpeg`, `ffplay`, `ffprobe`
- * @version `9.0.2` (90 versions available)
+ * @version `9.0.2` (91 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ffmpeg.org`
@@ -80,6 +80,7 @@ export const ffmpegorgPackage = {
     '9.0.2',
     '9.0.1',
     '9.0',
+    '8.1.3',
     '8.1.2',
     '8.1.1',
     '8.1',

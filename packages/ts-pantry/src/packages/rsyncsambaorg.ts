@@ -3,7 +3,7 @@
  *
  * @domain `rsync.samba.org`
  * @programs `rsync`, `rsync-ssl`
- * @version `3.4.1` (4 versions available)
+ * @version `3.5.1` (9 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install rsync.samba.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "rsync"
  * console.log(pkg.description) // "An open source utility that provides fast incre..."
  * console.log(pkg.programs)    // ["rsync", "rsync-ssl"]
- * console.log(pkg.versions[0]) // "3.4.1" (latest)
+ * console.log(pkg.versions[0]) // "3.5.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/rsync-samba-org.md
@@ -70,6 +70,7 @@ export const rsyncsambaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.5.1',
     '3.5.0',
     '3.4.4',
     '3.4.3',
