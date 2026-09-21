@@ -14,8 +14,8 @@
       "name": "AltTab",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "11.7.0",
-      "published": "11.7.0",
+      "latest": "11.7.1",
+      "published": "11.7.1",
       "needsUpdate": false
     },
     {
@@ -248,7 +248,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": "1.4.4",
+      "latest": null,
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -554,8 +554,8 @@
       "name": "Stats",
       "kind": "app",
       "host": "macos",
-      "latest": "3.0.16",
-      "published": "3.0.16",
+      "latest": "3.0.17",
+      "published": "3.0.17",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.37.22",
-      "published": "2.26.37.22",
+      "latest": "2.26.38.12",
+      "published": "2.26.38.12",
       "needsUpdate": false
     },
     {
