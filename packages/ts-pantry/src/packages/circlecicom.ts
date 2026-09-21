@@ -3,7 +3,7 @@
  *
  * @domain `circleci.com`
  * @programs `circleci`
- * @version `1.0.50814` (187 versions available)
+ * @version `1.0.50849` (189 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install circleci.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "circleci"
  * console.log(pkg.description) // "Enables you to reproduce the CircleCI environme..."
  * console.log(pkg.programs)    // ["circleci"]
- * console.log(pkg.versions[0]) // "1.0.50814" (latest)
+ * console.log(pkg.versions[0]) // "1.0.50849" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/circleci-com.md
@@ -67,6 +67,8 @@ export const circlecicomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.50849',
+    '1.0.50831',
     '1.0.50814',
     '1.0.50781',
     '1.0.50757',

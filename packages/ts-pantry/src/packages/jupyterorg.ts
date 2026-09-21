@@ -3,7 +3,7 @@
  *
  * @domain `jupyter.org`
  * @programs `jlpm`, `jupyter`, `jupyter-bundlerextension`, `jupyter-dejavu`, `jupyter-events`, ... (+19 more)
- * @version `4.5.6` (64 versions available)
+ * @version `4.6.4` (74 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install jupyter.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "jupyter"
  * console.log(pkg.description) // "JupyterLab computational environment."
  * console.log(pkg.programs)    // ["jlpm", "jupyter", ...]
- * console.log(pkg.versions[0]) // "4.5.6" (latest)
+ * console.log(pkg.versions[0]) // "4.6.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/jupyter-org.md
@@ -91,10 +91,12 @@ export const jupyterorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.6.4',
     '4.6.3',
     '4.6.2',
     '4.6.1',
     '4.6.0',
+    '4.5.11',
     '4.5.10',
     '4.5.9',
     '4.5.8',

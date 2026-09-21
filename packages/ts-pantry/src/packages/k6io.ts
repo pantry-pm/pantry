@@ -3,7 +3,7 @@
  *
  * @domain `k6.io`
  * @programs `k6`
- * @version `1.6.1` (36 versions available)
+ * @version `2.3.0` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install k6.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "k6"
  * console.log(pkg.description) // "A modern load testing tool, using Go and JavaSc..."
  * console.log(pkg.programs)    // ["k6"]
- * console.log(pkg.versions[0]) // "1.6.1" (latest)
+ * console.log(pkg.versions[0]) // "2.3.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/k6-io.md
@@ -67,6 +67,7 @@ export const k6ioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.0',
     '2.2.0',
     '2.1.0',
     '2.0.0',
