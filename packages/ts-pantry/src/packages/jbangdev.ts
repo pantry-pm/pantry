@@ -3,7 +3,7 @@
  *
  * @domain `jbang.dev`
  * @programs `jbang`
- * @version `0.137.0` (41 versions available)
+ * @version `0.142.0` (56 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install jbang.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "jbang"
  * console.log(pkg.description) // "Unleash the power of Java - JBang Lets Students..."
  * console.log(pkg.programs)    // ["jbang"]
- * console.log(pkg.versions[0]) // "0.137.0" (latest)
+ * console.log(pkg.versions[0]) // "0.142.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/jbang-dev.md
@@ -67,6 +67,7 @@ export const jbangdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.142.0',
     '0.141.0',
     '0.140.1',
     '0.139.3',

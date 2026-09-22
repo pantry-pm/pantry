@@ -3,7 +3,7 @@
  *
  * @domain `php.net`
  * @programs `pear`, `pecl`, `phar`, `php`, `php-cgi`, ... (+3 more)
- * @version `8.5.11` (148 versions available)
+ * @version `8.5.11` (149 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install php.net`
@@ -155,6 +155,7 @@ export const phpPackage = {
     '8.5.0RC3',
     '8.5.0RC2',
     '8.5.0RC1',
+    '8.4.26',
     '8.4.25',
     '8.4.24',
     '8.4.23',
