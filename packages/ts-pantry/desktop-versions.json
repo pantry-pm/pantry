@@ -131,8 +131,8 @@
       "name": "Discord",
       "kind": "app",
       "host": "macos",
-      "latest": "0.0.412",
-      "published": "0.0.412",
+      "latest": "0.0.413",
+      "published": "0.0.413",
       "needsUpdate": false
     },
     {
@@ -248,7 +248,7 @@
       "name": "Inkscape",
       "kind": "app",
       "host": "macos",
-      "latest": null,
+      "latest": "1.4.4",
       "published": "1.4.4",
       "needsUpdate": false
     },
@@ -527,8 +527,8 @@
       "name": "Slack",
       "kind": "app",
       "host": "macos",
-      "latest": "4.52.155",
-      "published": "4.52.155",
+      "latest": "4.52.162",
+      "published": "4.52.162",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.38.12",
-      "published": "2.26.38.12",
+      "latest": "2.26.38.15",
+      "published": "2.26.38.15",
       "needsUpdate": false
     },
     {
