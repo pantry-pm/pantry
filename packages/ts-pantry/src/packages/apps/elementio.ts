@@ -3,7 +3,7 @@
  *
  * @domain `element.io`
  * @programs `element`
- * @version `1.12.28` (9 versions available)
+ * @version `1.12.29` (10 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install element.io`
@@ -22,6 +22,7 @@ export const elementioPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.12.29',
     '1.12.28',
     '1.12.27',
     '1.12.26',

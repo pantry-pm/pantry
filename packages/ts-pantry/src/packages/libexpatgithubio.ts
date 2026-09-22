@@ -3,7 +3,7 @@
  *
  * @domain `libexpat.github.io`
  * @programs `xmlwf`
- * @version `2.8.4` (50 versions available)
+ * @version `2.8.5` (51 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install libexpat.github.io`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "xmlwf"
  * console.log(pkg.description) // ":herb: Fast streaming XML parser written in C99..."
  * console.log(pkg.programs)    // ["xmlwf"]
- * console.log(pkg.versions[0]) // "2.8.4" (latest)
+ * console.log(pkg.versions[0]) // "2.8.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/libexpat-github-io.md
@@ -60,6 +60,7 @@ export const libexpatgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.8.5',
     '2.8.4',
     '2.8.3',
     '2.8.2',
