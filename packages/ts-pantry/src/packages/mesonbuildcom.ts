@@ -3,7 +3,7 @@
  *
  * @domain `mesonbuild.com`
  * @programs `meson`
- * @version `1.10.2` (37 versions available)
+ * @version `1.12.1` (42 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mesonbuild.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "meson"
  * console.log(pkg.description) // "Fast and user friendly build system"
  * console.log(pkg.programs)    // ["meson"]
- * console.log(pkg.versions[0]) // "1.10.2" (latest)
+ * console.log(pkg.versions[0]) // "1.12.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/mesonbuild-com.md
@@ -74,6 +74,7 @@ export const mesonbuildcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.12.1',
     '1.12.0',
     '1.11.2',
     '1.11.1',
