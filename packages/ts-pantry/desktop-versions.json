@@ -86,8 +86,8 @@
       "name": "Visual Studio Code",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "1.138.0",
-      "published": "1.138.0",
+      "latest": "1.139.0",
+      "published": "1.139.0",
       "needsUpdate": false
     },
     {
@@ -95,8 +95,8 @@
       "name": "Codex",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "26.915.31945",
-      "published": "26.915.31945",
+      "latest": "26.917.62051",
+      "published": "26.917.62051",
       "needsUpdate": false
     },
     {
@@ -104,8 +104,8 @@
       "name": "Cursor",
       "kind": "app",
       "host": "macos",
-      "latest": "3.21.16",
-      "published": "3.21.16",
+      "latest": "3.21.18",
+      "published": "3.21.18",
       "needsUpdate": false
     },
     {
@@ -140,8 +140,8 @@
       "name": "Element",
       "kind": "app",
       "host": "macos",
-      "latest": "1.12.28",
-      "published": "1.12.28",
+      "latest": "1.12.29",
+      "published": "1.12.29",
       "needsUpdate": false
     },
     {
@@ -257,8 +257,8 @@
       "name": "Insomnia",
       "kind": "app",
       "host": "macos",
-      "latest": "13.2.0",
-      "published": "13.2.0",
+      "latest": "13.3.0",
+      "published": "13.3.0",
       "needsUpdate": false
     },
     {
@@ -626,8 +626,8 @@
       "name": "WhatsApp",
       "kind": "app",
       "host": "ubuntu",
-      "latest": "2.26.38.15",
-      "published": "2.26.38.15",
+      "latest": "2.26.38.18",
+      "published": "2.26.38.18",
       "needsUpdate": false
     },
     {
