@@ -3,7 +3,7 @@
  *
  * @domain `babashka.org`
  * @programs `bb`
- * @version `1.13.223` (56 versions available)
+ * @version `1.13.224` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install babashka.org`
@@ -16,7 +16,7 @@
  * const pkg = pantry.babashkaorg
  * console.log(pkg.name)        // "babashka"
  * console.log(pkg.programs)    // ["bb"]
- * console.log(pkg.versions[0]) // "1.13.223" (latest)
+ * console.log(pkg.versions[0]) // "1.13.224" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/babashka-org.md
@@ -65,6 +65,7 @@ export const babashkaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.13.224',
     '1.13.223',
     '1.13.222',
     '1.13.221',

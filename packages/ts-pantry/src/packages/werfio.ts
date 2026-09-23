@@ -3,7 +3,7 @@
  *
  * @domain `werf.io`
  * @programs `werf`
- * @version `3.4.0` (89 versions available)
+ * @version `3.4.0` (90 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install werf.io`
@@ -76,6 +76,7 @@ export const werfioPackage = {
     '3.2.0',
     '3.1.0',
     '3.0.1',
+    '2.79.0',
     '2.78.1',
     '2.78.0',
     '2.77.2',
