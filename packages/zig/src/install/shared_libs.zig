@@ -123,17 +123,24 @@ pub fn register(allocator: std.mem.Allocator, packages_root: []const u8) !?Regis
     defer io_helper.closeFile(file);
     try io_helper.writeAllToFile(file, content);
 
-    const ldconfig_ok = blk: {
-        const result = io_helper.childRun(allocator, &.{"ldconfig"}) catch break :blk false;
+    return .{ .dirs = dirs.items.len, .ldconfig_ok = runLdconfig(allocator) };
+}
+
+/// ldconfig lives in /sbin, and the PATH pantry spawns with has only the
+/// bin directories: a bare `ldconfig` was never found. Absolute paths first.
+const ldconfig_paths = [_][]const u8{ "/sbin/ldconfig", "/usr/sbin/ldconfig", "ldconfig" };
+
+fn runLdconfig(allocator: std.mem.Allocator) bool {
+    for (ldconfig_paths) |path| {
+        const result = io_helper.childRun(allocator, &.{path}) catch continue;
         defer allocator.free(result.stdout);
         defer allocator.free(result.stderr);
-        break :blk switch (result.term) {
+        return switch (result.term) {
             .exited => |code| code == 0,
             else => false,
         };
-    };
-
-    return .{ .dirs = dirs.items.len, .ldconfig_ok = ldconfig_ok };
+    }
+    return false;
 }
 
 test "isVersionDir: version directories only" {

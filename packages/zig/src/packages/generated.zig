@@ -8344,7 +8344,7 @@ pub const packages = [_]PackageInfo{ .{
     .description = "Open source routing engine for OpenStreetMap, with tools for time-dependent routing, isochrones, map matching and elevation",
     .homepage_url = "https://valhalla.github.io/valhalla/",
     .programs = &[_][]const u8{ "valhalla_service", "valhalla_build_tiles", "valhalla_build_config", "valhalla_build_elevation", "valhalla_build_admins", "valhalla_build_timezones", "valhalla_build_extract", "valhalla_add_elevation", "valhalla_run_route" },
-    .dependencies = &[_][]const u8{ "protobuf.dev", "abseil.io^20250127", "zlib.net", "lz4.org", "curl.se", "sqlite.org", "gaia-gis.it/libspatialite", "libgeos.org", "luajit.org", "github.com/kevinkreiser/prime_server>=0.11", "zeromq.org^4.2", "zeromq.org/czmq^4", "python.org^3" },
+    .dependencies = &[_][]const u8{ "protobuf.dev~34.1", "abseil.io^20250127", "zlib.net", "lz4.org", "curl.se", "sqlite.org", "gaia-gis.it/libspatialite", "libgeos.org", "luajit.org", "github.com/kevinkreiser/prime_server>=0.11", "zeromq.org^4.2", "zeromq.org/czmq^4", "python.org^3" },
     .build_dependencies = &[_][]const u8{ "boost.org>=1.71", "cmake.org", "freedesktop.org/pkg-config", "git-scm.org^2" },
     .aliases = &[_][]const u8{"valhalla"},
     .versions = &[_][]const u8{"3.9.0"},

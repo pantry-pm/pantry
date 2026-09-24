@@ -61,7 +61,7 @@ export const valhallaPackage = {
   * Runtime dependencies for this package.
   */
   dependencies: [
-    'protobuf.dev',
+    'protobuf.dev~34.1',
     'abseil.io^20250127',
     'zlib.net',
     'lz4.org',

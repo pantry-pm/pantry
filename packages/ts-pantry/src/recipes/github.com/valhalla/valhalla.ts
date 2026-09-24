@@ -44,7 +44,10 @@ export const recipe: Recipe = {
     ref: '{{version}}',
   },
   dependencies: {
-    'protobuf.dev': '*',
+    // libprotobuf's soname carries the full version (libprotobuf.so.34.1.0),
+    // so the one it was built against. '*' also resolved to the catalog's
+    // 36.2, which the registry does not have.
+    'protobuf.dev': '~34.1',
     // The abseil protobuf.dev was built against (libabsl_*.so.2501): valhalla
     // links libprotobuf, and a newer abseil is a different soname. The latest
     // (20260817) also has no linux-arm64 binary, which sent that build to the
