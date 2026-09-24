@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.61...v0.11.62)
+
+## ✨ Features
+
+- **packages**: add readosm; valhalla links protobuf's abseil and the registry sqlite ([ec4697a](https://github.com/pantry-pm/pantry/commit/ec4697a)) _(by Chris <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- find ldconfig in /sbin; valhalla needs the protobuf it was built against ([c186d06](https://github.com/pantry-pm/pantry/commit/c186d06)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: keep latestVersion on a complete, stable release ([38c11d1](https://github.com/pantry-pm/pantry/commit/38c11d1)) _(by Chris <chris@stacksjs.com>)_
+- **install**: resolve latest to the newest complete, stable version ([2fa2659](https://github.com/pantry-pm/pantry/commit/2fa2659)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.62 ([a672592](https://github.com/pantry-pm/pantry/commit/a672592)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.60...v0.11.61)
 
 ## ✨ Features
