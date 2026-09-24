@@ -24,6 +24,21 @@ else
   GREEN='' DIM='' BOLD='' RESET=''
 fi
 
+
+# Unzip `$1` into `$2` with the first tool available.
+extract_zip() {
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -qo "$1" -d "$2"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -m zipfile -e "$1" "$2"
+  elif command -v bsdtar >/dev/null 2>&1; then
+    bsdtar -xf "$1" -C "$2"
+  elif command -v busybox >/dev/null 2>&1; then
+    busybox unzip -qo "$1" -d "$2"
+  else
+    return 1
+  fi
+}
 info() { printf "${DIM}%s${RESET}\n" "$1"; }
 success() { printf "${GREEN}${BOLD}%s${RESET}\n" "$1"; }
 error() { printf "\033[0;31m%s\033[0m\n" "$1" >&2; exit 1; }
@@ -86,9 +101,11 @@ main() {
   curl -fsSL -o "${TMP_DIR}/${zip_name}" "$url" \
     || error "Download failed. Check https://github.com/${REPO}/releases for available builds."
 
-  # Extract
-  unzip -qo "${TMP_DIR}/${zip_name}" -d "${TMP_DIR}" \
-    || error "Extraction failed"
+  # Extract. A fresh server image often has no unzip (Ubuntu's cloud images
+  # do not), and asking for an apt install before the package manager exists
+  # is backwards — so use whatever can read a zip.
+  extract_zip "${TMP_DIR}/${zip_name}" "${TMP_DIR}" \
+    || error "Extraction failed: install unzip, or python3, bsdtar or busybox"
 
   # Install
   mkdir -p "$PANTRY_INSTALL_DIR"
