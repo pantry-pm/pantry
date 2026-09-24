@@ -76,6 +76,18 @@ export const primeserverPackage = {
   */
   versions: [
     '0.13.1',
+    '0.13.0',
+    '0.12.0',
+    '0.11.0',
+    '0.10.0',
+    '0.9.0',
+    '0.8.0',
+    '0.7.2',
+    '0.7.0',
+    '0.6.7',
+    '0.6.6',
+    '0.6.5',
+    '0.6.4',
   ] as const,
   /**
   * Alternative names for this package.

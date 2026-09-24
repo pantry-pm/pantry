@@ -3,7 +3,7 @@
  *
  * @domain `materialize.com`
  * @programs `mz`
- * @version `26.41.0` (66 versions available)
+ * @version `26.43.0` (71 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install materialize.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "mz"
  * console.log(pkg.description) // "Real-time Data Integration and Transformation: ..."
  * console.log(pkg.programs)    // ["mz"]
- * console.log(pkg.versions[0]) // "26.41.0" (latest)
+ * console.log(pkg.versions[0]) // "26.43.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/materialize-com.md
@@ -81,9 +81,14 @@ export const materializecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '26.43.0',
+    '26.42.0',
+    '26.41.2',
     '26.41.0',
+    '26.40.2',
     '26.40.0',
     '26.39.0',
+    '26.38.2',
     '26.38.0',
     '26.37.0',
     '26.36.0',
