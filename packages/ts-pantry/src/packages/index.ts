@@ -491,6 +491,7 @@ import { fxwtfPackage } from './fxwtf'
 import { gaiagisitfossilfreexlPackage } from './gaia-gis.it/fossil/freexl'
 import { gaiagisitlibspatialitePackage } from './gaia-gis.it/libspatialite'
 import { gaiagisitreadosmPackage } from './gaia-gis.it/readosm'
+import { gaiagisitspatialitetoolsPackage } from './gaia-gis.it/spatialite-tools'
 import { gdalorgPackage } from './gdalorg'
 import { geoffgreerfmagPackage } from './geoff.greer.fm/ag'
 import { getclipboardappPackage } from './getclipboardapp'
@@ -2540,6 +2541,8 @@ export interface Pantry {
   gaiagisitlibspatialite: typeof gaiagisitlibspatialitePackage
 
   gaiagisitreadosm: typeof gaiagisitreadosmPackage
+  spatialite_tools: typeof gaiagisitspatialitetoolsPackage
+  gaiagisitspatialitetools: typeof gaiagisitspatialitetoolsPackage
   gdalorg: typeof gdalorgPackage
   ag: typeof geoffgreerfmagPackage
   geoffgreerfmag: typeof geoffgreerfmagPackage
@@ -6054,6 +6057,8 @@ export interface Pantry {
   spacer: typeof spacerPackage
   spacetime: typeof spacetimedbcomPackage
   sparsecat: typeof sparsecatPackage
+  spatialite: typeof gaiagisitspatialitetoolsPackage
+  'spatialite-tools': typeof gaiagisitspatialitetoolsPackage
   spdlog: typeof spdlogPackage
   'spec-kit': typeof speckitPackage
   speedtest: typeof speedtestcliPackage
@@ -7201,6 +7206,8 @@ export const pantry: Pantry = {
   gaiagisitlibspatialite: gaiagisitlibspatialitePackage,
 
   gaiagisitreadosm: gaiagisitreadosmPackage,
+  spatialite_tools: gaiagisitspatialitetoolsPackage,
+  gaiagisitspatialitetools: gaiagisitspatialitetoolsPackage,
   gdalorg: gdalorgPackage,
   ag: geoffgreerfmagPackage,
   geoffgreerfmag: geoffgreerfmagPackage,
@@ -10715,6 +10722,8 @@ export const pantry: Pantry = {
   spacer: spacerPackage,
   spacetime: spacetimedbcomPackage,
   sparsecat: sparsecatPackage,
+  spatialite: gaiagisitspatialitetoolsPackage,
+  'spatialite-tools': gaiagisitspatialitetoolsPackage,
   spdlog: spdlogPackage,
   'spec-kit': speckitPackage,
   speedtest: speedtestcliPackage,

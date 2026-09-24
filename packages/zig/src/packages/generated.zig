@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1752
+//! Total packages: 1753
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1752 total)
+/// All known packages (1753 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -4458,6 +4458,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{"gnu.org/make"},
     .aliases = &[_][]const u8{"readosm"},
     .versions = &[_][]const u8{"1.1.0"},
+}, .{
+    .name = "spatialite-tools",
+    .domain = "gaia-gis.it/spatialite-tools",
+    .description = "Command-line tools for SpatiaLite: the spatialite SQL shell, spatialite_tool, and OpenStreetMap loaders",
+    .homepage_url = "https://www.gaia-gis.it/fossil/spatialite-tools",
+    .programs = &[_][]const u8{ "spatialite", "spatialite_tool", "spatialite_convert", "spatialite_dxf", "spatialite_gml", "spatialite_network", "spatialite_osm_filter", "spatialite_osm_map", "spatialite_osm_net", "spatialite_osm_overpass", "spatialite_osm_raw", "spatialite_xml2utf8", "spatialite_xml_collapse", "spatialite_xml_load", "spatialite_xml_print", "spatialite_xml_validator", "shp_doctor", "shp_sanitize", "spatialite_dem", "exif_loader" },
+    .dependencies = &[_][]const u8{ "gaia-gis.it/libspatialite>=5.1", "gaia-gis.it/readosm^1.1", "gaia-gis.it/fossil/freexl", "sqlite.org^3", "libexpat.github.io^2", "gnome.org/libxml2^2", "proj.org", "libgeos.org", "gnu.org/readline^8", "zlib.net^1" },
+    .build_dependencies = &[_][]const u8{ "gnu.org/make", "freedesktop.org/pkg-config" },
+    .aliases = &[_][]const u8{ "spatialite-tools", "spatialite" },
+    .versions = &[_][]const u8{"5.1.0"},
 }, .{
     .name = "gdal",
     .domain = "gdal.org",

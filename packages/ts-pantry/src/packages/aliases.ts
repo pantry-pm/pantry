@@ -1400,6 +1400,8 @@ export const aliases: Record<string, string> = {
   'spacer': 'github.com/samwho/spacer',
   'spacetime': 'spacetimedb.com',
   'sparsecat': 'github.com/svenwiltink/sparsecat',
+  'spatialite': 'gaia-gis.it/spatialite-tools',
+  'spatialite-tools': 'gaia-gis.it/spatialite-tools',
   'spdlog': 'github.com/gabime/spdlog',
   'spec-kit': 'github.com/github/spec-kit',
   'speedtest': 'github.com/sivel/speedtest-cli',
