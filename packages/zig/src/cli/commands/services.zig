@@ -853,9 +853,15 @@ pub fn enableCommand(allocator: std.mem.Allocator, args: []const []const u8) !Co
     defer allocator.free(canonical_name);
     try manager.register(service_config);
 
+    // `start` from a project directory writes `pantry-<project>-<name>`; this
+    // asked systemd for `pantry-<name>` and failed with "does not exist" for
+    // every project service (valhalla in /srv/valhalla). Scope it the same way.
+    const project_id = detectCwdProjectHash(allocator);
+    defer if (project_id) |pid| allocator.free(pid);
+
     style.print("Enabling {s} (auto-start on boot)...\n", .{service_name});
 
-    manager.controller.enable(canonical_name, null) catch |err| {
+    manager.controller.enable(canonical_name, project_id) catch |err| {
         const msg = try std.fmt.allocPrint(allocator, "Failed to enable {s}: {}", .{ service_name, err });
         return .{ .exit_code = 1, .message = msg };
     };
@@ -882,9 +888,15 @@ pub fn disableCommand(allocator: std.mem.Allocator, args: []const []const u8) !C
     defer allocator.free(canonical_name);
     try manager.register(service_config);
 
+    // `start` from a project directory writes `pantry-<project>-<name>`; this
+    // asked systemd for `pantry-<name>` and failed with "does not exist" for
+    // every project service (valhalla in /srv/valhalla). Scope it the same way.
+    const project_id = detectCwdProjectHash(allocator);
+    defer if (project_id) |pid| allocator.free(pid);
+
     style.print("Disabling {s} (won't auto-start on boot)...\n", .{service_name});
 
-    manager.controller.disable(canonical_name, null) catch |err| {
+    manager.controller.disable(canonical_name, project_id) catch |err| {
         const msg = try std.fmt.allocPrint(allocator, "Failed to disable {s}: {}", .{ service_name, err });
         return .{ .exit_code = 1, .message = msg };
     };

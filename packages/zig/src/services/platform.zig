@@ -391,13 +391,17 @@ pub const ServiceController = struct {
     }
 
     fn systemdEnable(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name, project_id);
+        // The project unit when there is one, else the global one — the same
+        // resolution as stop, so it names the unit `start` actually wrote.
+        const service_unit = try self.resolveSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
         if (!try self.runSystemctl("enable", service_unit)) return error.ServiceEnableFailed;
     }
 
     fn systemdDisable(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
-        const service_unit = try self.getSystemdUnit(service_name, project_id);
+        // The project unit when there is one, else the global one — the same
+        // resolution as stop, so it names the unit `start` actually wrote.
+        const service_unit = try self.resolveSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
         if (!try self.runSystemctl("disable", service_unit)) return error.ServiceDisableFailed;
     }
