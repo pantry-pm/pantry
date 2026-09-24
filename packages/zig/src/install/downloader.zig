@@ -2,6 +2,7 @@ const std = @import("std");
 const io_helper = @import("../io_helper.zig");
 const lib = @import("../lib.zig");
 const style = @import("../cli/style.zig");
+pub const registry_versions = @import("registry_versions.zig");
 
 pub const DownloadError = error{
     HttpRequestFailed,
@@ -524,8 +525,6 @@ pub fn lookupS3Registry(
     domain: []const u8,
     version_constraint: []const u8,
 ) ?S3PackageResult {
-    const semver = @import("../packages/semver.zig");
-
     // Build metadata URL
     var metadata_url_buf: [256]u8 = undefined;
     const metadata_url = std.fmt.bufPrint(
@@ -586,17 +585,6 @@ pub fn lookupS3Registry(
     const versions_obj = root.object.get("versions") orelse return null;
     if (versions_obj != .object) return null;
 
-    // Handle "latest" and "*" by picking the newest version available
-    const is_any = std.mem.eql(u8, version_constraint, "latest") or
-        std.mem.eql(u8, version_constraint, "*") or
-        version_constraint.len == 0;
-
-    // Parse the version constraint (skip if matching any)
-    const constraint = if (!is_any)
-        semver.parseConstraint(version_constraint) catch return null
-    else
-        undefined;
-
     // Detect current platform
     const platform = comptime blk: {
         const os_str = switch (@import("builtin").os.tag) {
@@ -612,48 +600,11 @@ pub fn lookupS3Registry(
         break :blk os_str ++ "-" ++ arch_str;
     };
 
-    // Find the best matching version that also has a tarball for this platform.
-    // Some packages have partial historical coverage; choosing a newer version
-    // first and only then checking platform would skip usable older releases.
-    var best_version: ?[]const u8 = null;
-    var best_parsed: ?semver.Version = null;
-    var best_platform_info: ?std.json.Value = null;
-    var it = versions_obj.object.iterator();
-    while (it.next()) |entry| {
-        const ver = entry.key_ptr.*;
-        if (!is_any and !semver.satisfiesConstraint(ver, constraint)) continue;
-
-        const version_info = entry.value_ptr.*;
-        if (version_info != .object) continue;
-        const platforms_obj = version_info.object.get("platforms") orelse continue;
-        if (platforms_obj != .object) continue;
-        const platform_info = platforms_obj.object.get(platform) orelse continue;
-        if (platform_info != .object) continue;
-
-        const parsed_ver = semver.parseVersion(ver) catch continue;
-        if (best_parsed) |best| {
-            // Compare: pick the newer version
-            const newer_dev = parsed_ver.major == best.major and
-                parsed_ver.minor == best.minor and
-                parsed_ver.patch == best.patch and
-                (zigDevBuildNumber(ver) orelse 0) > (zigDevBuildNumber(best_version.?) orelse 0);
-            if (newer_dev or parsed_ver.major > best.major or
-                (parsed_ver.major == best.major and parsed_ver.minor > best.minor) or
-                (parsed_ver.major == best.major and parsed_ver.minor == best.minor and parsed_ver.patch > best.patch))
-            {
-                best_version = ver;
-                best_parsed = parsed_ver;
-                best_platform_info = platform_info;
-            }
-        } else {
-            best_version = ver;
-            best_parsed = parsed_ver;
-            best_platform_info = platform_info;
-        }
-    }
-
-    const matched_version = best_version orelse return null;
-    const platform_info = best_platform_info orelse return null;
+    // Only versions with a tarball for this platform are candidates, and
+    // `latest` skips placeholders and prereleases — see registry_versions.zig.
+    const selection = registry_versions.select(versions_obj.object, version_constraint, platform) orelse return null;
+    const matched_version = selection.version;
+    const platform_info = selection.platform_info;
 
     const tarball_path_val = platform_info.object.get("tarball") orelse return null;
     const tarball_path = if (tarball_path_val == .string) tarball_path_val.string else return null;

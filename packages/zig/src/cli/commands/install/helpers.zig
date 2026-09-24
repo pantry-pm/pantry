@@ -228,18 +228,31 @@ const current_platform = blk: {
 /// First tries the registry REST API, then falls back to direct S3 metadata.json lookup.
 /// Returns package info if found, null if not found or query fails.
 pub fn lookupPantryRegistry(allocator: std.mem.Allocator, name: []const u8) !?PantryPackageInfo {
-    // Try registry REST API first (native HTTP, no subprocess)
-    const api_result = lookupViaRegistryApi(allocator, name, current_platform, null);
-    if (api_result) |info| return info;
-
-    // Fallback: try direct S3 metadata.json lookup
-    return lookupViaS3Metadata(allocator, name, current_platform, null);
+    return lookupPantryRegistryImpl(allocator, name, null);
 }
 
 /// Variant with shared HTTP client for connection pooling (used from workspace install threads).
 pub fn lookupPantryRegistryWithClient(allocator: std.mem.Allocator, name: []const u8, client: *std.http.Client) !?PantryPackageInfo {
-    const api_result = lookupViaRegistryApi(allocator, name, current_platform, client);
-    if (api_result) |info| return info;
+    return lookupPantryRegistryImpl(allocator, name, client);
+}
+
+fn lookupPantryRegistryImpl(allocator: std.mem.Allocator, name: []const u8, client: ?*std.http.Client) ?PantryPackageInfo {
+    // Try registry REST API first (native HTTP, no subprocess)
+    var api_result = lookupViaRegistryApi(allocator, name, current_platform, client);
+    if (api_result) |info| {
+        // The API answers with the registry's single latestVersion, which has
+        // pointed at a prerelease (libgeos.org answered 3.15.0beta2 with 3.15.0
+        // published). Ask the binary metadata, which is chosen per version and
+        // platform, and keep the API's answer only if that has nothing better.
+        if (!install.downloader.registry_versions.isPrerelease(info.version)) return info;
+        if (lookupViaS3Metadata(allocator, name, current_platform, client)) |meta_info| {
+            api_result.?.deinit(allocator);
+            return meta_info;
+        }
+        return api_result;
+    }
+
+    // Fallback: try direct S3 metadata.json lookup
     return lookupViaS3Metadata(allocator, name, current_platform, client);
 }
 
@@ -317,21 +330,16 @@ fn lookupViaS3Metadata(allocator: std.mem.Allocator, name: []const u8, platform:
     const meta_root = meta_parsed.value;
     if (meta_root != .object) return null;
 
-    // Use latestVersion from the metadata
-    const latest_version_val = meta_root.object.get("latestVersion") orelse return null;
-    const version = if (latest_version_val == .string) latest_version_val.string else return null;
-
+    // Choose from the versions themselves rather than trusting latestVersion:
+    // the pointer has sat on a prerelease (libgeos.org at 3.15.0rc1 beside
+    // 3.15.0), and it says nothing about whether THIS platform's upload is
+    // complete or only a placeholder.
     const versions_obj = meta_root.object.get("versions") orelse return null;
     if (versions_obj != .object) return null;
 
-    const version_info = versions_obj.object.get(version) orelse return null;
-    if (version_info != .object) return null;
-
-    const platforms_obj = version_info.object.get("platforms") orelse return null;
-    if (platforms_obj != .object) return null;
-
-    const platform_info = platforms_obj.object.get(platform) orelse return null;
-    if (platform_info != .object) return null;
+    const selection = install.downloader.registry_versions.select(versions_obj.object, "latest", platform) orelse return null;
+    const version = selection.version;
+    const platform_info = selection.platform_info;
 
     const tarball_path_val = platform_info.object.get("tarball") orelse return null;
     const tarball_path = if (tarball_path_val == .string) tarball_path_val.string else return null;

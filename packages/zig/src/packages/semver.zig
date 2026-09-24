@@ -180,13 +180,136 @@ fn versionComponentCount(version_str: []const u8) usize {
     return count;
 }
 
-/// True if a version string carries a pre-release tag (e.g. "2.10.0-RC1",
-/// "1.2.0-beta.3"). Standard semver: a "-" after the major.minor.patch core marks
-/// a pre-release. We treat the whole string as pre-release if any "-" appears after
-/// an optional leading "v" — release versions never contain one.
-pub fn isPrerelease(version_str: []const u8) bool {
+/// Split a version into its numeric core ("3.15.0") and whatever follows it
+/// ("rc1", "-dev.1422+e863bf3be", "w"), after an optional leading "v".
+fn splitCore(version_str: []const u8) struct { core: []const u8, rest: []const u8 } {
     const v = if (std.mem.startsWith(u8, version_str, "v")) version_str[1..] else version_str;
-    return std.mem.indexOfScalar(u8, v, '-') != null;
+    var end: usize = 0;
+    while (end < v.len and (std.ascii.isDigit(v[end]) or v[end] == '.')) : (end += 1) {}
+    while (end > 0 and v[end - 1] == '.') end -= 1;
+    return .{ .core = v[0..end], .rest = v[end..] };
+}
+
+/// The suffix with one leading separator dropped: "-RC2" -> "RC2", "_beta" -> "beta".
+fn suffixTag(rest: []const u8) []const u8 {
+    if (rest.len > 0 and (rest[0] == '-' or rest[0] == '+' or rest[0] == '_' or rest[0] == '.')) return rest[1..];
+    return rest;
+}
+
+/// True if a version string carries a pre-release tag (e.g. "2.10.0-RC1",
+/// "1.2.0-beta.3", "3.15.0rc1"). Standard semver marks a pre-release with a "-"
+/// after the numeric core, and release versions never contain one. Upstreams
+/// that skip the dash — libgeos.org ships "3.15.0beta1" and "3.15.0rc1" — still
+/// name the channel, so an alpha/beta/rc/dev/pre tag counts as well. Any other
+/// letter suffix stays a release: openssl's "1.1.1w" is not a prerelease.
+pub fn isPrerelease(version_str: []const u8) bool {
+    const parts = splitCore(version_str);
+    if (std.mem.indexOfScalar(u8, parts.rest, '-') != null) return true;
+    if (parts.rest.len > 0 and parts.rest[0] == '+') return false;
+    const tag = suffixTag(parts.rest);
+    for ([_][]const u8{ "alpha", "beta", "rc", "dev", "pre" }) |marker| {
+        if (std.ascii.startsWithIgnoreCase(tag, marker)) return true;
+    }
+    return false;
+}
+
+test "isPrerelease recognizes tags written without a dash" {
+    try std.testing.expect(isPrerelease("3.15.0beta1"));
+    try std.testing.expect(isPrerelease("3.15.0rc1"));
+    try std.testing.expect(isPrerelease("3.15.0RC1"));
+    try std.testing.expect(isPrerelease("2.0.0alpha"));
+    try std.testing.expect(isPrerelease("1.0pre3"));
+    try std.testing.expect(isPrerelease("3.6.1_beta"));
+    try std.testing.expect(isPrerelease("2.0.0.rc1"));
+    try std.testing.expect(isPrerelease("5.44.0-RC2"));
+    try std.testing.expect(isPrerelease("0.17.0-dev.1422+e863bf3be"));
+    try std.testing.expect(isPrerelease("v1.2.0-beta.3"));
+
+    try std.testing.expect(!isPrerelease("3.15.0"));
+    try std.testing.expect(!isPrerelease("1.1.1w"));
+    try std.testing.expect(!isPrerelease("9.9p1"));
+    try std.testing.expect(!isPrerelease("1.2.3+build.5"));
+    try std.testing.expect(!isPrerelease("v2.4"));
+}
+
+test "a stable range does not match a dashless prerelease" {
+    const constraint = try parseConstraint("^3.14");
+    try std.testing.expect(satisfiesConstraint("3.14.1", constraint));
+    try std.testing.expect(satisfiesConstraint("3.15.0", constraint));
+    try std.testing.expect(!satisfiesConstraint("3.15.0beta1", constraint));
+    try std.testing.expect(!satisfiesConstraint("3.15.0rc1", constraint));
+    // …but naming the prerelease exactly still selects it, and only it.
+    const exact = try parseConstraint("3.15.0rc1");
+    try std.testing.expect(satisfiesConstraint("3.15.0rc1", exact));
+    try std.testing.expect(!satisfiesConstraint("3.15.0beta1", exact));
+    try std.testing.expect(!satisfiesConstraint("3.15.0", exact));
+}
+
+test "compareVersions orders releases, prereleases and suffixes" {
+    const order = std.math.Order;
+    try std.testing.expectEqual(order.gt, compareVersions("3.15.0", "3.15.0rc1"));
+    try std.testing.expectEqual(order.gt, compareVersions("3.15.0rc1", "3.15.0beta3"));
+    try std.testing.expectEqual(order.gt, compareVersions("3.15.0beta2", "3.15.0beta1"));
+    try std.testing.expectEqual(order.gt, compareVersions("3.15.0beta1", "3.14.9"));
+    try std.testing.expectEqual(order.gt, compareVersions("5.44.0-RC2", "5.44.0-RC1"));
+    try std.testing.expectEqual(order.gt, compareVersions("1.10.0", "1.9.10"));
+    try std.testing.expectEqual(order.gt, compareVersions("1.2.3.4", "1.2.3"));
+    try std.testing.expectEqual(order.gt, compareVersions("1.1.1w", "1.1.1v"));
+    try std.testing.expectEqual(order.gt, compareVersions("1.1.1a", "1.1.1"));
+    try std.testing.expectEqual(order.gt, compareVersions("0.17.0-dev.1422+e863bf3be", "0.17.0-dev.986_f3544a707"));
+    try std.testing.expectEqual(order.gt, compareVersions("0.17.0-dev.1", "0.16.0"));
+    try std.testing.expectEqual(order.eq, compareVersions("v1.2.3", "1.2.3"));
+    try std.testing.expectEqual(order.lt, compareVersions("3.14.6", "3.14.7"));
+}
+
+/// Order two concrete version strings. Numeric components first (every one,
+/// not only the first three), then a release above its own prereleases, then
+/// the suffixes compared with digit runs as numbers — so rc1 > beta3,
+/// RC2 > RC1, dev.1422 > dev.986 and openssl's 1.1.1w > 1.1.1v.
+pub fn compareVersions(a: []const u8, b: []const u8) std.math.Order {
+    const left = splitCore(a);
+    const right = splitCore(b);
+
+    var left_it = std.mem.splitScalar(u8, left.core, '.');
+    var right_it = std.mem.splitScalar(u8, right.core, '.');
+    while (true) {
+        const l = left_it.next();
+        const r = right_it.next();
+        if (l == null and r == null) break;
+        const ln = if (l) |s| std.fmt.parseInt(u64, s, 10) catch 0 else 0;
+        const rn = if (r) |s| std.fmt.parseInt(u64, s, 10) catch 0 else 0;
+        if (ln != rn) return std.math.order(ln, rn);
+    }
+
+    const left_pre = isPrerelease(a);
+    const right_pre = isPrerelease(b);
+    if (left_pre != right_pre) return if (left_pre) .lt else .gt;
+
+    return compareNatural(suffixTag(left.rest), suffixTag(right.rest));
+}
+
+/// Case-insensitive comparison that reads runs of digits as numbers.
+fn compareNatural(a: []const u8, b: []const u8) std.math.Order {
+    var i: usize = 0;
+    var j: usize = 0;
+    while (i < a.len and j < b.len) {
+        if (std.ascii.isDigit(a[i]) and std.ascii.isDigit(b[j])) {
+            const i_start = i;
+            const j_start = j;
+            while (i < a.len and std.ascii.isDigit(a[i])) : (i += 1) {}
+            while (j < b.len and std.ascii.isDigit(b[j])) : (j += 1) {}
+            const an = std.fmt.parseInt(u64, a[i_start..i], 10) catch 0;
+            const bn = std.fmt.parseInt(u64, b[j_start..j], 10) catch 0;
+            if (an != bn) return std.math.order(an, bn);
+            continue;
+        }
+        const ac = std.ascii.toLower(a[i]);
+        const bc = std.ascii.toLower(b[j]);
+        if (ac != bc) return std.math.order(ac, bc);
+        i += 1;
+        j += 1;
+    }
+    return std.math.order(a.len - i, b.len - j);
 }
 
 fn prereleaseNumber(version_str: []const u8) ?u64 {
