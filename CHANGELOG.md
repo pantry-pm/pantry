@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.63...v0.11.64)
+
+## 🐛 Bug Fixes
+
+- **install**: retry a failed JS install when pantry deps are up to date ([b03cfd6](https://github.com/pantry-pm/pantry/commit/b03cfd6)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.64 ([b36d56b](https://github.com/pantry-pm/pantry/commit/b36d56b)) _(by Chris <chris@stacksjs.com>)_
+- update circleci.com, cnquery.io, digitalocean.com/doctl, github.com/ggerganov/llama.cpp, huggingface.co, libuv.org, openpolicyagent.org, plakar.io, vlc.app, whatsapp.com ([b15ca30](https://github.com/pantry-pm/pantry/commit/b15ca30)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.62...v0.11.63)
 
 ## ✨ Features
