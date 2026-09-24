@@ -1496,7 +1496,6 @@ pub fn installWorkspaceCommandWithOptions(
         try lockfile.addEntry(allocator, key, entry);
     }
 
-
     // Keep the pins this host is not allowed to resolve.
     //
     // The lockfile describes the dependency graph, and that graph contains

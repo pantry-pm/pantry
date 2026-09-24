@@ -1987,8 +1987,7 @@ fn mergeCompanionLockfileEntries(
             // deleted whichever one the running host did not resolve - a lock
             // that cannot survive the trip to the other platform
             // (pantry-pm/pantry#231, #232).
-            if (platform_pins.contains(entry.value_ptr.name)
-                and !std.mem.eql(u8, entry.value_ptr.version, result.version)) continue;
+            if (platform_pins.contains(entry.value_ptr.name) and !std.mem.eql(u8, entry.value_ptr.version, result.version)) continue;
 
             try keys_to_remove.append(allocator, try allocator.dupe(u8, entry.key_ptr.*));
         }
