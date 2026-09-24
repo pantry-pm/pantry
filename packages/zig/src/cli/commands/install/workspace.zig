@@ -478,6 +478,34 @@ fn carryForwardForeignOsPins(
     }
 }
 
+/// Hand the JS and PHP trees to the package managers that own them (bun/pnpm/
+/// yarn/npm, composer). Each delegate skips itself when its tree is current,
+/// so this is safe to call on every install, including one where every
+/// pantry-resolved dependency was already up to date. Returns a failed
+/// result for the caller to return, or null to carry on.
+fn delegateEcosystemInstalls(
+    allocator: std.mem.Allocator,
+    workspace_root: []const u8,
+    options: types.InstallOptions,
+) !?types.CommandResult {
+    const composer_delegate = @import("../../../deps/composer_delegate.zig");
+    _ = composer_delegate.installPhpDeps(allocator, workspace_root, options.verbose) catch |err| {
+        if (options.verbose) {
+            style.print("Warning: Composer delegation failed: {}\n", .{err});
+        }
+    };
+
+    const js_delegate = @import("../../../deps/js_delegate.zig");
+    _ = js_delegate.installJsDeps(allocator, workspace_root, options.verbose, options.linker) catch |err| {
+        return .{
+            .exit_code = 1,
+            .message = try std.fmt.allocPrint(allocator, "JavaScript dependency installation failed: {s}", .{@errorName(err)}),
+        };
+    };
+
+    return null;
+}
+
 pub fn installWorkspaceCommand(
     allocator: std.mem.Allocator,
     workspace_root: []const u8,
@@ -934,7 +962,19 @@ pub fn installWorkspaceCommandWithOptions(
         // Falling through costs nothing: every dependency has just been found
         // up to date, so the passes below skip them all and the work left is
         // building the lock that was asked for.
-        if (options.lockfile_output_path == null) return .{ .exit_code = 0 };
+        //
+        // Every dependency *pantry* resolves being current says nothing about
+        // the JS or PHP tree, which bun and composer own. Returning before
+        // their delegates meant a `bun install` that failed once - a registry
+        // listing a version whose tarball still 404s, minutes into a release -
+        // was never retried: every later `pantry install` printed "up to date"
+        // over a node_modules missing the packages it failed on. The delegates
+        // carry their own staleness checks, so running them here is a no-op
+        // when that tree is current.
+        if (options.lockfile_output_path == null) {
+            if (try delegateEcosystemInstalls(allocator, workspace_root, options)) |failure| return failure;
+            return .{ .exit_code = 0 };
+        }
     }
 
     if (ws_skipped_count > 0) {
@@ -1611,26 +1651,7 @@ pub fn installWorkspaceCommandWithOptions(
         };
     }
 
-    // Delegate to Composer for PHP deps if composer.json is present
-    {
-        const composer_delegate = @import("../../../deps/composer_delegate.zig");
-        _ = composer_delegate.installPhpDeps(allocator, workspace_root, options.verbose) catch |err| {
-            if (options.verbose) {
-                style.print("Warning: Composer delegation failed: {}\n", .{err});
-            }
-        };
-    }
-
-    // Delegate to bun/pnpm/yarn/npm for JS deps if package.json is present
-    {
-        const js_delegate = @import("../../../deps/js_delegate.zig");
-        _ = js_delegate.installJsDeps(allocator, workspace_root, options.verbose, options.linker) catch |err| {
-            return .{
-                .exit_code = 1,
-                .message = try std.fmt.allocPrint(allocator, "JavaScript dependency installation failed: {s}", .{@errorName(err)}),
-            };
-        };
-    }
+    if (try delegateEcosystemInstalls(allocator, workspace_root, options)) |failure| return failure;
 
     // Flush batched analytics (single HTTP request in background thread)
     install.flushAnalytics(allocator);
@@ -1770,4 +1791,52 @@ test "workspace command fails when any package installation failed" {
     defer failure.deinit(allocator);
     try std.testing.expectEqual(@as(u8, 1), failure.exit_code);
     try std.testing.expectEqualStrings("2 workspace package(s) failed to install", failure.message.?);
+}
+
+test "ecosystem delegates report a failed JS install instead of success" {
+    // The early "everything up to date" return runs these too, so a JS tree
+    // left broken by an earlier failed install is retried rather than
+    // reported as current. This pins the helper's contract: a package manager
+    // that fails surfaces as a failed command, never as null (carry on).
+    if (comptime @import("builtin").os.tag == .windows) return;
+
+    const allocator = std.testing.allocator;
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const project_dir = path_buf[0..path_len];
+
+    try tmp_dir.dir.writeFile(io_helper.io, .{
+        .sub_path = "package.json",
+        .data = "{\"dependencies\":{\"left-pad\":\"1.3.0\"}}",
+    });
+    try tmp_dir.dir.writeFile(io_helper.io, .{ .sub_path = "package-lock.json", .data = "{}" });
+    try tmp_dir.dir.createDirPath(io_helper.io, "pantry/.bin");
+    const fake_npm = try tmp_dir.dir.createFile(io_helper.io, "pantry/.bin/npm", .{});
+    try fake_npm.writeStreamingAll(io_helper.io, "#!/bin/sh\nexit 42\n");
+    fake_npm.close(io_helper.io);
+    const fake_npm_path = try std.fs.path.join(allocator, &.{ project_dir, "pantry/.bin/npm" });
+    defer allocator.free(fake_npm_path);
+    var chmod_buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    @memcpy(chmod_buf[0..fake_npm_path.len], fake_npm_path);
+    chmod_buf[fake_npm_path.len] = 0;
+    try std.testing.expect(std.c.chmod(&chmod_buf, 0o755) == 0);
+
+    var failure = (try delegateEcosystemInstalls(allocator, project_dir, .{})) orelse return error.TestExpectedFailure;
+    defer failure.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 1), failure.exit_code);
+    try std.testing.expectEqualStrings("JavaScript dependency installation failed: JsInstallFailed", failure.message.?);
+}
+
+test "ecosystem delegates carry on when there is nothing to install" {
+    const allocator = std.testing.allocator;
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+
+    try std.testing.expect((try delegateEcosystemInstalls(allocator, path_buf[0..path_len], .{})) == null);
 }
