@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1749
+//! Total packages: 1750
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1749 total)
+/// All known packages (1750 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -6448,6 +6448,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "go.dev@^1.18", "gnu.org/patch", "crates.io/semverator@^0" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "4.0.2", "3.25.0", "3.24.0" },
+}, .{
+    .name = "prime_server",
+    .domain = "github.com/kevinkreiser/prime_server",
+    .description = "Non-blocking web server API for distributed service-oriented applications",
+    .homepage_url = "https://github.com/kevinkreiser/prime_server",
+    .programs = &[_][]const u8{ "prime_httpd", "prime_proxyd", "prime_workerd", "prime_serverd", "prime_echod", "prime_filed" },
+    .dependencies = &[_][]const u8{ "zeromq.org^4.2", "zeromq.org/czmq^4", "curl.se" },
+    .build_dependencies = &[_][]const u8{ "cmake.org", "freedesktop.org/pkg-config", "git-scm.org^2" },
+    .aliases = &[_][]const u8{ "prime_server", "prime-server" },
+    .versions = &[_][]const u8{"0.13.1"},
 }, .{
     .name = "tokesura",
     .domain = "github.com/kevinmichaelchen/tokesura",

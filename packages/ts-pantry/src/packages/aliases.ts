@@ -1183,6 +1183,8 @@ export const aliases: Record<string, string> = {
   'pre-commit': 'pre-commit.com',
   'prettier': 'prettier.io',
   'prettyping': 'denilson.sa.nom.br/prettyping',
+  'prime_server': 'github.com/kevinkreiser/prime_server',
+  'prime-server': 'github.com/kevinkreiser/prime_server',
   'process-compose': 'f1bonacc1.github.io/process-compose',
   'procps': 'gitlab.com/procps-ng/procps',
   'proj': 'proj.org',

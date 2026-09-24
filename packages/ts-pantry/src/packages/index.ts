@@ -715,6 +715,7 @@ import { rustykaspaPackage } from './github.com/kaspanet/rusty-kaspa'
 import { btrfsprogsPackage } from './github.com/kdave/btrfs-progs'
 import { zapPackage } from './github.com/keith/zap'
 import { gobindataPackage } from './github.com/kevinburke/go-bindata'
+import { primeserverPackage } from './github.com/kevinkreiser/prime_server'
 import { tokesuraPackage } from './github.com/kevinmichaelchen/tokesura'
 import { swiftoutdatedPackage } from './github.com/kiliankoe/swift-outdated'
 import { tfimportgenPackage } from './github.com/kishaningithub/tf-import-gen'
@@ -2974,6 +2975,8 @@ export interface Pantry {
   githubcomkeith: typeof zapPackage
   go_bindata: typeof gobindataPackage
   githubcomkevinburke: typeof gobindataPackage
+
+  githubcomkevinkreiser: typeof primeserverPackage
 
   githubcomkevinmichaelchen: typeof tokesuraPackage
   swift_outdated: typeof swiftoutdatedPackage
@@ -5828,6 +5831,8 @@ export interface Pantry {
   'pre-commit': typeof precommitcomPackage
   prettier: typeof prettierioPackage
   prettyping: typeof denilsonsanombrprettypingPackage
+  prime_server: typeof primeserverPackage
+  'prime-server': typeof primeserverPackage
   'process-compose': typeof f1bonacc1githubioprocesscomposePackage
   procps: typeof gitlabcomprocpsngprocpsPackage
   proj: typeof projorgPackage
@@ -7625,6 +7630,8 @@ export const pantry: Pantry = {
   githubcomkeith: zapPackage,
   go_bindata: gobindataPackage,
   githubcomkevinburke: gobindataPackage,
+
+  githubcomkevinkreiser: primeserverPackage,
 
   githubcomkevinmichaelchen: tokesuraPackage,
   swift_outdated: swiftoutdatedPackage,
@@ -10479,6 +10486,8 @@ export const pantry: Pantry = {
   'pre-commit': precommitcomPackage,
   prettier: prettierioPackage,
   prettyping: denilsonsanombrprettypingPackage,
+  prime_server: primeserverPackage,
+  'prime-server': primeserverPackage,
   'process-compose': f1bonacc1githubioprocesscomposePackage,
   procps: gitlabcomprocpsngprocpsPackage,
   proj: projorgPackage,
