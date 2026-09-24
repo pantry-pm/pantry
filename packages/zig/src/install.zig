@@ -12,6 +12,7 @@ pub const offline = @import("install/offline.zig");
 pub const patches = @import("install/patches.zig");
 pub const mas = @import("install/mas.zig");
 pub const desktop_apps = @import("install/desktop_apps.zig");
+pub const shared_libs = @import("install/shared_libs.zig");
 
 // Re-export main types
 pub const Installer = installer.Installer;

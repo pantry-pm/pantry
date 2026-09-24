@@ -204,6 +204,8 @@ fn installGlobalDepsCommandWithOptions(allocator: std.mem.Allocator, user_local:
         }
     } else |_| {}
 
+    registerSharedLibraries(allocator, global_dir);
+
     style.printGlobalComplete(global_dir);
 
     return .{ .exit_code = 0 };
@@ -302,7 +304,24 @@ pub fn installPackagesGloballyCommand(allocator: std.mem.Allocator, packages: []
         }
     }
 
+    registerSharedLibraries(allocator, global_dir);
+
     style.printGlobalComplete(global_dir);
 
     return .{ .exit_code = 0 };
+}
+
+/// A system-wide install lists every package's `lib/` for the dynamic
+/// loader (see install/shared_libs.zig): registry binaries only look in their
+/// own `lib/`, so a program linking another package's library failed to
+/// start. Non-fatal — the packages are installed either way.
+fn registerSharedLibraries(allocator: std.mem.Allocator, global_dir: []const u8) void {
+    if (!std.mem.eql(u8, global_dir, "/usr/local")) return;
+    const shared_libs = @import("../../../install/shared_libs.zig");
+    const registration = (shared_libs.register(allocator, "/usr/local/packages") catch |err| {
+        style.printWarn("Could not list shared libraries in {s}: {s}\n", .{ shared_libs.conf_path, @errorName(err) });
+        return;
+    }) orelse return;
+    if (!registration.ldconfig_ok)
+        style.printWarn("Listed {d} library directories in {s}, but ldconfig failed; run `ldconfig` as root\n", .{ registration.dirs, shared_libs.conf_path });
 }
