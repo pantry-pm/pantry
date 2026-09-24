@@ -37,3 +37,9 @@ pantry
 /.stx
 .cloud-migration
 /packages/ts-pantry/artifacts
+
+# Package domains are directories (github.com, gitlab.com, …). The common
+# global template ignores `*.com` (DOS executables), which silently hides
+# every recipe and catalog entry under such a domain from `git add`.
+!*.com
+!*.com/

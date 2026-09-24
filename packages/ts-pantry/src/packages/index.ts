@@ -1741,6 +1741,7 @@ import { youtubedlorgPackage } from './youtube-dlorg'
 import { ytdlporgPackage } from './yt-dlporg'
 import { yuigithubioyuicompressorPackage } from './yui.github.io/yuicompressor'
 import { zarfdevPackage } from './zarfdev'
+import { czmqPackage } from './zeromq.org/czmq'
 import { zeromqorgPackage } from './zeromqorg'
 import { ziglangorgPackage } from './ziglangorg'
 import { zlibnetminizipPackage } from './zlib.net/minizip'
@@ -4636,6 +4637,8 @@ export interface Pantry {
 
   yuigithubioyuicompressor: typeof yuigithubioyuicompressorPackage
   zarfdev: typeof zarfdevPackage
+
+  zeromqorgczmq: typeof czmqPackage
   zeromqorg: typeof zeromqorgPackage
   ziglangorg: typeof ziglangorgPackage
 
@@ -4909,6 +4912,7 @@ export interface Pantry {
   cvt: typeof xorglibcvtPackage
   'cyrus-sasl': typeof cyrusimaporgcyrussaslPackage
   cython: typeof cythonorgPackage
+  czmq: typeof czmqPackage
   daemontools: typeof cryptodaemontoolsPackage
   daff: typeof paulfitzgithubiodaffPackage
   dagger: typeof daggerioPackage
@@ -9284,6 +9288,8 @@ export const pantry: Pantry = {
 
   yuigithubioyuicompressor: yuigithubioyuicompressorPackage,
   zarfdev: zarfdevPackage,
+
+  zeromqorgczmq: czmqPackage,
   zeromqorg: zeromqorgPackage,
   ziglangorg: ziglangorgPackage,
 
@@ -9557,6 +9563,7 @@ export const pantry: Pantry = {
   cvt: xorglibcvtPackage,
   'cyrus-sasl': cyrusimaporgcyrussaslPackage,
   cython: cythonorgPackage,
+  czmq: czmqPackage,
   daemontools: cryptodaemontoolsPackage,
   daff: paulfitzgithubiodaffPackage,
   dagger: daggerioPackage,

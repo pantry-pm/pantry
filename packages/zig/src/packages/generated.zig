@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1748
+//! Total packages: 1749
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1748 total)
+/// All known packages (1749 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -17428,6 +17428,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "4.3.5", "4.3.4", "4.3.3", "4.3.2", "4.3.1", "4.3.0", "4.2.5", "4.2.4", "4.2.3", "4.2.2", "4.2.1", "4.2.0" },
+}, .{
+    .name = "czmq",
+    .domain = "zeromq.org/czmq",
+    .description = "High-level C binding for ZeroMQ",
+    .homepage_url = "https://zeromq.org",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{"zeromq.org^4.2"},
+    .build_dependencies = &[_][]const u8{"freedesktop.org/pkg-config"},
+    .aliases = &[_][]const u8{"czmq"},
+    .versions = &[_][]const u8{"4.2.1"},
 }, .{
     .name = "zig",
     .domain = "ziglang.org",

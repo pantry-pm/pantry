@@ -267,6 +267,7 @@ export const aliases: Record<string, string> = {
   'cvt': 'x.org/libcvt',
   'cyrus-sasl': 'cyrusimap.org/cyrus-sasl',
   'cython': 'cython.org',
+  'czmq': 'zeromq.org/czmq',
   'daemontools': 'cr.yp.to/daemontools',
   'daff': 'paulfitz.github.io/daff',
   'dagger': 'dagger.io',
