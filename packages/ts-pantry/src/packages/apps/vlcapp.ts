@@ -3,7 +3,7 @@
  *
  * @domain `vlc.app`
  * @programs `vlc`
- * @version `3.0.21` (3 versions available)
+ * @version `3.0.24` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install vlc.app`
@@ -22,6 +22,7 @@ export const vlcappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.0.24',
     '3.0.23',
     '3.0.21',
     '3.0.20',
