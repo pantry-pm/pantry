@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.62...v0.11.63)
+
+## ✨ Features
+
+- **build**: pin versions with domain@version; relocate mirrored CMake paths ([e19542e](https://github.com/pantry-pm/pantry/commit/e19542e)) _(by Chris <chris@stacksjs.com>)_
+- **packages**: add spatialite-tools ([4d430ee](https://github.com/pantry-pm/pantry/commit/4d430ee)) _(by Chris <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **services**: enable and disable the project's unit, not a global one ([67ba5ab](https://github.com/pantry-pm/pantry/commit/67ba5ab)) _(by Chris <chris@stacksjs.com>)_
+- **libtiff**: disable jbig; republish without the runner's libraries ([b35eec6](https://github.com/pantry-pm/pantry/commit/b35eec6)) _(by Chris <chris@stacksjs.com>)_
+
+## 💄 Styles
+
+- **install**: zig fmt core.zig and workspace.zig ([b74daf5](https://github.com/pantry-pm/pantry/commit/b74daf5)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.63 ([89a8e7d](https://github.com/pantry-pm/pantry/commit/89a8e7d)) _(by Chris <chris@stacksjs.com>)_
+- update github.com/ggerganov/llama.cpp, huggingface.co, ollama.ai, postgrest.org ([076eff3](https://github.com/pantry-pm/pantry/commit/076eff3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, github.com/router-for-me/CLIProxyAPI, materialize.com, railway.app, tox.wiki, virtualenv.pypa.io ([41cc42f](https://github.com/pantry-pm/pantry/commit/41cc42f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.61...v0.11.62)
 
 ## ✨ Features
