@@ -1596,6 +1596,7 @@ export const aliases: Record<string, string> = {
   'v2.5': 'gnupg.org/v2.5',
   'vala': 'gnome.org/vala',
   'vale': 'vale.sh',
+  'valhalla': 'github.com/valhalla/valhalla',
   'valkey': 'valkey.io',
   'vals': 'github.com/helmfile/vals',
   'vamp': 'vamp-plugins.org',

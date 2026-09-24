@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1750
+//! Total packages: 1751
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1750 total)
+/// All known packages (1751 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -8328,6 +8328,16 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "gnu.org/bison", "gnu.org/patch", "darwin:llvm.org" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "2.41.3", "2.41.2", "2.41.1", "2.41.0", "2.40.4", "2.40.3", "2.40.2", "2.40.1", "2.40.0", "2.39.4", "2.39.3", "2.39.2", "2.39.1", "2.39.0", "2.38.1" },
+}, .{
+    .name = "valhalla",
+    .domain = "github.com/valhalla/valhalla",
+    .description = "Open source routing engine for OpenStreetMap, with tools for time-dependent routing, isochrones, map matching and elevation",
+    .homepage_url = "https://valhalla.github.io/valhalla/",
+    .programs = &[_][]const u8{ "valhalla_service", "valhalla_build_tiles", "valhalla_build_config", "valhalla_build_elevation", "valhalla_build_admins", "valhalla_build_timezones", "valhalla_build_extract", "valhalla_add_elevation", "valhalla_run_route" },
+    .dependencies = &[_][]const u8{ "protobuf.dev", "abseil.io", "zlib.net", "lz4.org", "curl.se", "sqlite.org", "gaia-gis.it/libspatialite", "libgeos.org", "luajit.org", "github.com/kevinkreiser/prime_server>=0.11", "zeromq.org^4.2", "zeromq.org/czmq^4", "python.org^3" },
+    .build_dependencies = &[_][]const u8{ "boost.org>=1.71", "cmake.org", "freedesktop.org/pkg-config", "git-scm.org^2" },
+    .aliases = &[_][]const u8{"valhalla"},
+    .versions = &[_][]const u8{"3.9.0"},
 }, .{
     .name = "ifacemaker",
     .domain = "github.com/vburenin/ifacemaker",

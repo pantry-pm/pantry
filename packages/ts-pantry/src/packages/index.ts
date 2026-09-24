@@ -884,6 +884,7 @@ import { swiftcreatexcframeworkPackage } from './github.com/unsignedapps/swift-c
 import { mscpPackage } from './github.com/upa/mscp'
 import { urllib3Package } from './github.com/urllib3/urllib3'
 import { utillinuxPackage } from './github.com/util-linux/util-linux'
+import { valhallaPackage } from './github.com/valhalla/valhalla'
 import { ifacemakerPackage } from './github.com/vburenin/ifacemaker'
 import { regextuiPackage } from './github.com/vitor-mariano/regex-tui'
 import { tdnfPackage } from './github.com/vmware/tdnf'
@@ -3313,6 +3314,8 @@ export interface Pantry {
   githubcomurllib3: typeof urllib3Package
   util_linux: typeof utillinuxPackage
   githubcomutillinux: typeof utillinuxPackage
+
+  githubcomvalhalla: typeof valhallaPackage
 
   githubcomvburenin: typeof ifacemakerPackage
   regex_tui: typeof regextuiPackage
@@ -6244,6 +6247,7 @@ export interface Pantry {
   'v2.5': typeof gnupgorgv25Package
   vala: typeof gnomeorgvalaPackage
   vale: typeof valeshPackage
+  valhalla: typeof valhallaPackage
   valkey: typeof valkeyioPackage
   vals: typeof valsPackage
   vamp: typeof vamppluginsorgPackage
@@ -7968,6 +7972,8 @@ export const pantry: Pantry = {
   githubcomurllib3: urllib3Package,
   util_linux: utillinuxPackage,
   githubcomutillinux: utillinuxPackage,
+
+  githubcomvalhalla: valhallaPackage,
 
   githubcomvburenin: ifacemakerPackage,
   regex_tui: regextuiPackage,
@@ -10899,6 +10905,7 @@ export const pantry: Pantry = {
   'v2.5': gnupgorgv25Package,
   vala: gnomeorgvalaPackage,
   vale: valeshPackage,
+  valhalla: valhallaPackage,
   valkey: valkeyioPackage,
   vals: valsPackage,
   vamp: vamppluginsorgPackage,
