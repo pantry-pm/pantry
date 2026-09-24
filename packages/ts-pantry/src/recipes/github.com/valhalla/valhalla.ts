@@ -70,6 +70,10 @@ export const recipe: Recipe = {
       // distributable.ref checked out the release; the vendored libraries
       // are submodules. Tests and bindings stay unfetched.
       'git submodule update --init --recursive --depth 1 third_party/rapidjson third_party/dirent third_party/date third_party/libosmium third_party/protozero third_party/microtar third_party/cpp-statsd-client third_party/cxxopts third_party/just_gtfs third_party/tz third_party/unordered_dense third_party/vtzero third_party/flatbush',
+      // CMake insists on spatialite_tool and spatialite, but only the test
+      // suite's tz.sqlite uses them, and tests are off. Warn instead.
+      // (valhalla_build_timezones needs them at runtime: spatialite-tools.)
+      'sed -i.orig \'s/message(FATAL_ERROR "spatialite-tools not found/message(WARNING "spatialite-tools not found/\' CMakeLists.txt',
       'cmake -S . -B build $ARGS',
       'cmake --build build --parallel {{hw.concurrency}}',
       'cmake --install build',
@@ -79,6 +83,9 @@ export const recipe: Recipe = {
         '-DCMAKE_BUILD_TYPE=Release',
         '-DCMAKE_INSTALL_PREFIX={{prefix}}',
         '-DCMAKE_INSTALL_LIBDIR=lib',
+        // protobuf's CMake config looks for abseil; say where it is.
+        '-DCMAKE_PREFIX_PATH={{deps.abseil.io.prefix}}',
+        '-Dabsl_DIR={{deps.abseil.io.prefix}}/lib/cmake/absl',
         '-DENABLE_TESTS=OFF',
         '-DENABLE_BENCHMARKS=OFF',
         '-DENABLE_PYTHON_BINDINGS=OFF',
