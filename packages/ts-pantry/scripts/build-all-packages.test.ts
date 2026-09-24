@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { assignStripe, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, pkgxHasPrebuilt, summariseTimings, type PackageTiming } from './build-all-packages'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { applyVersionPins, assignStripe, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, parseRequestedPackages, pkgxHasPrebuilt, relocateMirroredPaths, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -333,5 +336,80 @@ describe('isPublishedArtifactRecord', () => {
     expect(isPublishedArtifactRecord({ ...good, uploadedAt: '' })).toBe(false)
     expect(isPublishedArtifactRecord(undefined)).toBe(false)
     expect(isPublishedArtifactRecord(null)).toBe(false)
+  })
+})
+
+describe('parseRequestedPackages', () => {
+  test('plain domains select as before', () => {
+    const r = parseRequestedPackages('cmake.org, zlib.net')
+    expect(r.selectors).toEqual(['cmake.org', 'zlib.net'])
+    expect(r.pins.size).toBe(0)
+  })
+
+  test('domain@version pins, and repeating an entry pins several', () => {
+    const r = parseRequestedPackages('abseil.io@20250127.2,abseil.io@20240722.2,github.com/valhalla/valhalla')
+    expect(r.selectors).toEqual(['abseil.io', 'github.com/valhalla/valhalla'])
+    expect(r.pins.get('abseil.io')).toEqual(['20250127.2', '20240722.2'])
+    expect(r.pins.has('github.com/valhalla/valhalla')).toBe(false)
+  })
+})
+
+describe('applyVersionPins', () => {
+  const pkg = (domain: string, name: string) => ({ domain, name, versions: ['20260817.0', '20250127.2'], latestVersion: '20260817.0' })
+
+  test('narrows the named package to exactly the pinned versions', () => {
+    const pinned = applyVersionPins(pkg('abseil.io', 'abseil'), new Map([['abseil.io', ['20250127.2']]]))
+    expect(pinned.versions).toEqual(['20250127.2'])
+    expect(pinned.latestVersion).toBe('20250127.2')
+  })
+
+  test('leaves unpinned packages and path children alone', () => {
+    const pins = new Map([['python.org', ['3.12.0']]])
+    const child = pkg('python.org/typing_extensions', 'typing_extensions')
+    expect(applyVersionPins(child, pins)).toBe(child)
+  })
+})
+
+describe('relocateMirroredPaths', () => {
+  // The lines pkgx ships in abseil.io 20250127.2.0 (verbatim apart from the
+  // library list): relative to pkgx's root, then back down through the domain.
+  test('points a pkgx prebuilt\'s CMake and pkg-config files at their own prefix', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'relocate-'))
+    try {
+      mkdirSync(join(dir, 'lib', 'cmake', 'absl'), { recursive: true })
+      mkdirSync(join(dir, 'lib', 'pkgconfig'), { recursive: true })
+      const targets = join(dir, 'lib', 'cmake', 'absl', 'abslTargets.cmake')
+      const release = join(dir, 'lib', 'cmake', 'absl', 'abslTargets-release.cmake')
+      const pc = join(dir, 'lib', 'pkgconfig', 'absl_base.pc')
+      writeFileSync(targets, 'set(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../../../../abseil.io/v20250127.2.0")\n')
+      writeFileSync(release, '  IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../../../../../abseil.io/v20250127.2.0/lib/libabsl_log_severity.so.2501.0.0"\n')
+      writeFileSync(pc, 'prefix=${pcfiledir}/../../../../abseil.io/v20250127.2.0\n')
+
+      expect(relocateMirroredPaths(dir, 'abseil.io', 'v20250127.2.0')).toBe(3)
+      expect(readFileSync(targets, 'utf-8')).toBe('set(_IMPORT_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../../..")\n')
+      expect(readFileSync(release, 'utf-8')).toBe('  IMPORTED_LOCATION_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../../../lib/libabsl_log_severity.so.2501.0.0"\n')
+      expect(readFileSync(pc, 'utf-8')).toBe('prefix=${pcfiledir}/../..\n')
+    }
+    finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('leaves other packages\' paths and longer version names alone', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'relocate-'))
+    try {
+      mkdirSync(join(dir, 'lib', 'cmake', 'x'), { recursive: true })
+      const file = join(dir, 'lib', 'cmake', 'x', 'xTargets.cmake')
+      const text = [
+        '"${CMAKE_CURRENT_LIST_DIR}/../../../../../zlib.net/v1.3.1/lib/libz.so"',
+        '"${CMAKE_CURRENT_LIST_DIR}/../../../../../abseil.io/v20250127.2.0.1/lib"',
+      ].join('\n')
+      writeFileSync(file, text)
+      expect(relocateMirroredPaths(dir, 'abseil.io', 'v20250127.2.0')).toBe(0)
+      expect(readFileSync(file, 'utf-8')).toBe(text)
+    }
+    finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

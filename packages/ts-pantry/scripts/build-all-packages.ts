@@ -28,7 +28,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execSync, spawn } from 'node:child_process'
-import { join } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 import { reportBuild, reportBuildLog } from './report-build'
@@ -1659,6 +1659,59 @@ export function matchesRequestedPackage(domain: string, name: string, requested:
   return requested.some(d => domain === d || name === d || domain.startsWith(`${d}/`))
 }
 
+/**
+ * A `-p` list in which an entry may pin versions: `abseil.io@20250127.2`.
+ *
+ * Version selection only ever reaches the newest few versions (recent ones on
+ * the mirror legs, one per major on source builds), so an old artifact that
+ * was published broken could not be rebuilt: abseil.io 20250127.2 — the one
+ * protobuf.dev 34.1 links — shipped CMake files pointing five directories up,
+ * and a max-versions=6 dispatch rebuilt 20260817.0 … 20260107.0.0 and stopped.
+ * A pin says exactly which version to build. Repeat the entry for several
+ * (`abseil.io@20250127.2,abseil.io@20240722.2`).
+ */
+export interface RequestedPackages {
+  /** What `-p` matches against, with any `@version` removed. */
+  selectors: string[]
+  /** Pinned versions per selector, in the order given. */
+  pins: Map<string, string[]>
+}
+
+export function parseRequestedPackages(value: string): RequestedPackages {
+  const selectors: string[] = []
+  const pins = new Map<string, string[]>()
+  for (const entry of value.split(',').map(e => e.trim()).filter(Boolean)) {
+    const at = entry.indexOf('@')
+    const selector = at > 0 ? entry.slice(0, at) : entry
+    const version = at > 0 ? entry.slice(at + 1).trim() : ''
+    if (!selectors.includes(selector))
+      selectors.push(selector)
+    if (version) {
+      const list = pins.get(selector) ?? []
+      if (!list.includes(version))
+        list.push(version)
+      pins.set(selector, list)
+    }
+  }
+  return { selectors, pins }
+}
+
+/**
+ * Narrow a package to its pinned versions, so every selection path (recent,
+ * important, single-version) builds exactly those. A pin applies to the
+ * package it names — the domain or the name — and not to path children:
+ * `python.org@3.12.0` must not pin `python.org/typing_extensions`.
+ */
+export function applyVersionPins<T extends { domain: string, name: string, versions: string[], latestVersion: string }>(
+  pkg: T,
+  pins: Map<string, string[]>,
+): T {
+  const pinned = pins.get(pkg.domain) ?? pins.get(pkg.name)
+  if (!pinned?.length)
+    return pkg
+  return { ...pkg, versions: [...pinned], latestVersion: pinned[0] }
+}
+
 // Is this exact artifact already on pkgx? A HEAD, so we never pull the body.
 //
 // Deliberately fail-CLOSED: anything other than a confirmed 200 — a 404, a
@@ -1730,6 +1783,7 @@ async function tryPkgxMirror(domain: string, version: string, platform: string, 
     if (!existsSync(prefixRoot))
       return false
     execSync(`rm -rf "${installDir}" && mkdir -p "${installDir}" && cp -a "${prefixRoot}/." "${installDir}/"`, { stdio: 'pipe' })
+    relocateMirroredPaths(installDir, domain, basename(prefixRoot))
     return true
   }
   catch {
@@ -1739,6 +1793,55 @@ async function tryPkgxMirror(domain: string, version: string, platform: string, 
     try { execSync(`rm -rf "${dl}" "${ex}"`, { stdio: 'pipe' }) }
     catch { /* best-effort cleanup */ }
   }
+}
+
+/**
+ * Make a pkgx prebuilt's CMake and pkg-config files point at their own package.
+ *
+ * pkgx writes these relative to ITS root: from lib/cmake/absl, up five
+ * directories to ~/.pkgx, then down through `abseil.io/v20250127.2.0`. That
+ * holds only in pkgx's `<root>/<domain>/v<version>` layout. Ours differs — a
+ * build's deps sit at `buildkit-deps-…/<domain>/<version>` (no `v`), and the
+ * version directory need not match pkgx's (`v20250127.2` vs `.2.0`) — so the
+ * mirrored abseil sent CMake to `…/../../../../../lib/libabsl_*.so`, a file
+ * that exists nowhere, and every CMake consumer of it failed. Rewritten here
+ * to climb only to the package's own prefix, as a source build's fix-up does.
+ * Exported for tests.
+ */
+export function relocateMirroredPaths(installDir: string, domain: string, versionDir: string): number {
+  const escape = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const tail = `(?:/\\.\\.)+/${escape(domain)}/${escape(versionDir)}(?=[/"'\\s;)]|$)`
+  const rules = [
+    { dir: join(installDir, 'lib', 'cmake'), ext: '.cmake', variable: '${CMAKE_CURRENT_LIST_DIR}', pattern: new RegExp(`\\$\\{CMAKE_CURRENT_LIST_DIR\\}${tail}`, 'g') },
+    { dir: join(installDir, 'lib', 'pkgconfig'), ext: '.pc', variable: '${pcfiledir}', pattern: new RegExp(`\\$\\{pcfiledir\\}${tail}`, 'g') },
+    { dir: join(installDir, 'share', 'pkgconfig'), ext: '.pc', variable: '${pcfiledir}', pattern: new RegExp(`\\$\\{pcfiledir\\}${tail}`, 'g') },
+  ]
+  let changed = 0
+  const walk = (dir: string, visit: (file: string) => void): void => {
+    if (!existsSync(dir))
+      return
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name)
+      if (entry.isDirectory())
+        walk(full, visit)
+      else if (entry.isFile())
+        visit(full)
+    }
+  }
+  for (const rule of rules) {
+    walk(rule.dir, (file) => {
+      if (!file.endsWith(rule.ext))
+        return
+      const orig = readFileSync(file, 'utf-8')
+      const up = relative(dirname(file), installDir) || '.'
+      const text = orig.replace(rule.pattern, () => `${rule.variable}/${up}`)
+      if (text !== orig) {
+        writeFileSync(file, text)
+        changed++
+      }
+    })
+  }
+  return changed
 }
 
 // Does installDir contain at least one real file or symlink? Walks manually and
@@ -2151,7 +2254,8 @@ Options:
   --batch <N>              Batch index (0-based)
   --batch-size <N>         Packages per batch (default: 50)
   --platform <platform>    Override platform (e.g., darwin-arm64)
-  -p, --package <domains>  Comma-separated specific packages
+  -p, --package <domains>  Comma-separated specific packages, where domain@version builds
+                          exactly that version (repeat the entry for several)
   -f, --force              Re-upload even if exists
   --multi-version          Build multiple important versions per package
   --max-versions <N>       Max versions per package (default: 5, requires --multi-version)
@@ -2852,9 +2956,18 @@ Options:
   // build fails, so an unrelated package dragged in by a substring could turn a
   // vim.org publish red — and the darwin-native gate uses this same matcher, so
   // it could allocate a Mac for packages nobody asked about.
-  if (values.package) {
-    const domains = values.package.split(',').map(d => d.trim()).filter(Boolean)
-    allPackages = allPackages.filter(p => matchesRequestedPackage(p.domain, p.name, domains))
+  const requested = values.package ? parseRequestedPackages(values.package) : null
+  if (requested) {
+    allPackages = allPackages
+      .filter(p => matchesRequestedPackage(p.domain, p.name, requested.selectors))
+      .map((p) => {
+        const pinnedPkg = applyVersionPins(p, requested.pins)
+        if (pinnedPkg !== p) {
+          const unknown = pinnedPkg.versions.filter(v => !p.versions.includes(v))
+          logDiscovery(`Pinned ${p.domain} to ${pinnedPkg.versions.join(', ')}${unknown.length ? ` (not in the catalog, building anyway: ${unknown.join(', ')})` : ''}`)
+        }
+        return pinnedPkg
+      })
   }
 
   // Apply batch slicing
@@ -2941,6 +3054,19 @@ Options:
     // success. `-p bun.sh` does exactly this (bun is a binary-sync domain and
     // is filtered out before this point), so the failure mode is not
     // hypothetical.
+    // ...unless every requested package is real and simply not this leg's
+    // work: a linux-only recipe on the darwin leg, a source recipe on the
+    // --download-only pass. That is the platform list doing its job, and it
+    // turned every publish of such a package red (valhalla, readosm, abseil).
+    // A name that matches no recipe on any platform still fails.
+    if (requested && !values['allow-empty']) {
+      const anywhere = discoverPackages()
+      const unknown = requested.selectors.filter(s => !anywhere.some(p => matchesRequestedPackage(p.domain, p.name, [s])))
+      if (unknown.length === 0) {
+        console.log(`Nothing to build for ${platform}: ${requested.selectors.join(', ')} ${requested.selectors.length === 1 ? 'is' : 'are'} not built on this platform or in this mode`)
+        process.exit(0)
+      }
+    }
     if (values.package && !values['allow-empty']) {
       console.error(`No packages matched --package "${values.package}" for ${platform}`)
       console.error('(pass --allow-empty if selecting nothing is a valid outcome here)')

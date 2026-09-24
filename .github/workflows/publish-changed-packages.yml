@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       packages:
-        description: 'Domains to build (space/comma separated). Empty = autodetect from the push diff.'
+        description: 'Domains to build (space/comma separated). domain@version builds exactly that version, e.g. abseil.io@20250127.2. Empty = autodetect from the push diff.'
         required: false
         type: string
       max-versions:
