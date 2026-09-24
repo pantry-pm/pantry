@@ -22,6 +22,7 @@ import {
   type MalwareScanner,
   type PublishSurface,
 } from './malware-scanning'
+import { latestPublishedVersion } from './version-precedence'
 
 /**
  * How soon a publisher shed for scanner load should come back.
@@ -477,59 +478,8 @@ function parseObjectIdentity(headers: Record<string, string>): string | undefine
     || headers.ETag
 }
 
-/**
- * Split a version into its numeric core and its prerelease tail.
- *
- * `5.44.0-RC2` → { numeric: [5,44,0], prerelease: 'RC2' }
- */
-function splitVersion(version: string): { numeric: number[], prerelease: string | null } {
-  const dash = version.search(/[-+_]/)
-  const core = dash === -1 ? version : version.slice(0, dash)
-  return {
-    numeric: core.split('.').map((part) => {
-      const n = Number.parseInt(part, 10)
-      return Number.isNaN(n) ? 0 : n
-    }),
-    prerelease: dash === -1 ? null : version.slice(dash + 1),
-  }
-}
-
-/**
- * Is `candidate` a newer version than `current`?
- *
- * SemVer §11: at equal numerics a release outranks a prerelease. This used to
- * split on [.+_-] and compare component-wise, so `5.44.0-RC2` against `5.44.0`
- * reached a fourth component of 'RC2' vs '', found Number('RC2') non-finite,
- * fell through to a lexical compare, and concluded the RELEASE CANDIDATE was
- * newer. perl.org shipped `latestVersion: 5.44.0-RC2` for exactly that reason,
- * with 5.44.0 published alongside it — so `pantry install perl.org` resolved to
- * a release candidate.
- *
- * A package with only prereleases still gets its newest prerelease: the
- * preference applies at EQUAL numerics, not across them.
- */
-function newerVersion(candidate: string, current: string): boolean {
-  const a = splitVersion(candidate)
-  const b = splitVersion(current)
-  for (let i = 0; i < Math.max(a.numeric.length, b.numeric.length); i++) {
-    const left = a.numeric[i] ?? 0
-    const right = b.numeric[i] ?? 0
-    if (left !== right)
-      return left > right
-  }
-  if (a.prerelease === b.prerelease)
-    return false
-  // Same numerics: released beats unreleased; between two prereleases, compare
-  // the identifiers so RC2 still beats RC1.
-  if (a.prerelease === null) return true
-  if (b.prerelease === null) return false
-  return a.prerelease.localeCompare(b.prerelease, undefined, { numeric: true }) > 0
-}
-
-/** Newest first, by the same precedence rule as `newerVersion`. */
-export function sortVersionsNewestFirst(versions: string[]): string[] {
-  return [...versions].sort((a, b) => (newerVersion(a, b) ? -1 : newerVersion(b, a) ? 1 : 0))
-}
+// Precedence lives in version-precedence.ts; re-exported for existing importers.
+export { sortVersionsNewestFirst } from './version-precedence'
 
 export function binaryAttestationKey(tarballKey: string): string {
   return `${tarballKey}.scan.json`
@@ -646,9 +596,7 @@ export function filterBinaryMetadataForCleanScans(
     if (Object.keys(platforms).length === 0)
       delete metadata.versions[version]
   }
-  if (!metadata.versions[metadata.latestVersion]) {
-    metadata.latestVersion = sortVersionsNewestFirst(Object.keys(metadata.versions)).at(0) || ''
-  }
+  metadata.latestVersion = latestPublishedVersion(metadata.versions) || ''
   return metadata
 }
 
@@ -657,6 +605,10 @@ export function publicBinaryMetadata(
 ): BinaryPackageMetadata {
   const metadata = structuredClone(input)
   delete metadata.malwareQuarantines
+  // Serve the pointer re-derived from what is actually published, so one
+  // stored before this rule existed (libgeos.org on 3.15.0rc1 beside 3.15.0)
+  // is right on the next read rather than on the package's next publish.
+  metadata.latestVersion = latestPublishedVersion(metadata.versions) || metadata.latestVersion
   return metadata
 }
 
@@ -1897,14 +1849,16 @@ export class BinaryArtifactPublisher {
       delete state.metadata.malwareQuarantines
     // Re-derive from everything published rather than only ratcheting forward.
     // Ratcheting cannot repair a latestVersion that is already wrong: perl.org
-    // was pinned to 5.44.0-RC2 by the precedence bug above, and publishing any
+    // was pinned to 5.44.0-RC2 by an old precedence bug, and publishing any
     // older version left it there, so every affected package would have needed
     // someone to notice and republish its newest release by hand. Taking the
     // maximum of the published set is the same answer when the pointer is
     // correct and the right answer when it is not — and it still refuses to let
-    // a backfilled old version become latest, because it is a maximum.
+    // a backfilled old version become latest, because it is a maximum. The
+    // maximum is over stable versions with a complete upload when there are
+    // any: see latestPublishedVersion.
     state.metadata.latestVersion
-      = sortVersionsNewestFirst(Object.keys(state.metadata.versions)).at(0) || request.version
+      = latestPublishedVersion(state.metadata.versions) || request.version
     state.metadata.updatedAt = releasedAt
     await this.store.putObject(state.metadataKey, JSON.stringify(state.metadata, null, 2), 'application/json')
 
@@ -1965,9 +1919,7 @@ export class BinaryArtifactPublisher {
         },
       )
     }
-    if (!metadata.versions[metadata.latestVersion]) {
-      metadata.latestVersion = sortVersionsNewestFirst(Object.keys(metadata.versions)).at(0) || ''
-    }
+    metadata.latestVersion = latestPublishedVersion(metadata.versions) || ''
     metadata.updatedAt = quarantinedAt
     await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
     await this.store.deleteObject(tarball)
@@ -2145,8 +2097,7 @@ export class BinaryArtifactPublisher {
     metadata.versions[claim.version] ||= { platforms: {} }
     metadata.versions[claim.version].platforms ||= {}
     Object.assign(metadata.versions[claim.version].platforms, records)
-    if (!metadata.latestVersion || newerVersion(claim.version, metadata.latestVersion))
-      metadata.latestVersion = claim.version
+    metadata.latestVersion = latestPublishedVersion(metadata.versions) || claim.version
     metadata.updatedAt = uploadedAt
     await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
 

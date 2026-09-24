@@ -20,6 +20,7 @@ import { ObjectMetadataStorage } from './storage/object-metadata'
 import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { LocalStorage, S3Storage, sanitizePackageName } from './storage/s3'
 import { assertCleanMalwareScan } from './malware-scanning'
+import { isPrereleaseVersion, pickLatestVersion } from './version-precedence'
 
 /** Reject version strings containing shell-unsafe or path-unsafe characters. */
 function isSafeVersion(v: string): boolean {
@@ -131,7 +132,14 @@ export class Registry {
     if (!pkg)
       return null
 
-    return this.metadataStorage.getPackageVersion(name, pkg.latestVersion)
+    // A pointer stored before prerelease tags without a dash were recognized
+    // can sit on one with the release published beside it (libgeos.org on
+    // 3.15.0beta2 next to 3.15.0). Only then is the version list worth reading.
+    let latest = pkg.latestVersion
+    if (isPrereleaseVersion(latest))
+      latest = pickLatestVersion(await this.metadataStorage.listVersions(name)) || latest
+
+    return this.metadataStorage.getPackageVersion(name, latest)
   }
 
   /**
