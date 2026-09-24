@@ -45,7 +45,11 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'protobuf.dev': '*',
-    'abseil.io': '*',
+    // The abseil protobuf.dev was built against (libabsl_*.so.2501): valhalla
+    // links libprotobuf, and a newer abseil is a different soname. The latest
+    // (20260817) also has no linux-arm64 binary, which sent that build to the
+    // runner's /usr.
+    'abseil.io': '^20250127',
     'zlib.net': '*',
     'lz4.org': '*',
     'curl.se': '*',
@@ -86,6 +90,10 @@ export const recipe: Recipe = {
         // protobuf's CMake config looks for abseil; say where it is.
         '-DCMAKE_PREFIX_PATH={{deps.abseil.io.prefix}}',
         '-Dabsl_DIR={{deps.abseil.io.prefix}}/lib/cmake/absl',
+        // Valhalla's FindSQLite3 searches the system first and found the
+        // runner's /usr/lib copy; link the registry's.
+        '-DSQLITE3_INCLUDE_DIR={{deps.sqlite.org.prefix}}/include',
+        '-DSQLITE3_LIBRARY={{deps.sqlite.org.prefix}}/lib/libsqlite3.so',
         '-DENABLE_TESTS=OFF',
         '-DENABLE_BENCHMARKS=OFF',
         '-DENABLE_PYTHON_BINDINGS=OFF',

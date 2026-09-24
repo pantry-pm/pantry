@@ -62,7 +62,7 @@ export const valhallaPackage = {
   */
   dependencies: [
     'protobuf.dev',
-    'abseil.io',
+    'abseil.io^20250127',
     'zlib.net',
     'lz4.org',
     'curl.se',

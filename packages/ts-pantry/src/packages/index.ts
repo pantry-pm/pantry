@@ -490,6 +490,7 @@ import { furycoPackage } from './furyco'
 import { fxwtfPackage } from './fxwtf'
 import { gaiagisitfossilfreexlPackage } from './gaia-gis.it/fossil/freexl'
 import { gaiagisitlibspatialitePackage } from './gaia-gis.it/libspatialite'
+import { gaiagisitreadosmPackage } from './gaia-gis.it/readosm'
 import { gdalorgPackage } from './gdalorg'
 import { geoffgreerfmagPackage } from './geoff.greer.fm/ag'
 import { getclipboardappPackage } from './getclipboardapp'
@@ -2537,6 +2538,8 @@ export interface Pantry {
   gaiagisitfossil: typeof gaiagisitfossilfreexlPackage
 
   gaiagisitlibspatialite: typeof gaiagisitlibspatialitePackage
+
+  gaiagisitreadosm: typeof gaiagisitreadosmPackage
   gdalorg: typeof gdalorgPackage
   ag: typeof geoffgreerfmagPackage
   geoffgreerfmag: typeof geoffgreerfmagPackage
@@ -5904,6 +5907,7 @@ export interface Pantry {
   re2: typeof re2Package
   re2c: typeof re2corgPackage
   readline: typeof gnuorgreadlinePackage
+  readosm: typeof gaiagisitreadosmPackage
   'reattach-to-user-namespace': typeof tmuxmacosxpasteboardPackage
   rebar3: typeof rebar3orgPackage
   rectangle: typeof rectangleappPackage
@@ -7195,6 +7199,8 @@ export const pantry: Pantry = {
   gaiagisitfossil: gaiagisitfossilfreexlPackage,
 
   gaiagisitlibspatialite: gaiagisitlibspatialitePackage,
+
+  gaiagisitreadosm: gaiagisitreadosmPackage,
   gdalorg: gdalorgPackage,
   ag: geoffgreerfmagPackage,
   geoffgreerfmag: geoffgreerfmagPackage,
@@ -10562,6 +10568,7 @@ export const pantry: Pantry = {
   re2: re2Package,
   re2c: re2corgPackage,
   readline: gnuorgreadlinePackage,
+  readosm: gaiagisitreadosmPackage,
   'reattach-to-user-namespace': tmuxmacosxpasteboardPackage,
   rebar3: rebar3orgPackage,
   rectangle: rectangleappPackage,

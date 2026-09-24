@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1751
+//! Total packages: 1752
 
 const std = @import("std");
 
@@ -17,7 +17,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1751 total)
+/// All known packages (1752 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -4449,6 +4449,16 @@ pub const packages = [_]PackageInfo{ .{
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "5.1.0", "5.0.1" },
 }, .{
+    .name = "readosm",
+    .domain = "gaia-gis.it/readosm",
+    .description = "C library for reading OpenStreetMap input files (.osm and .osm.pbf)",
+    .homepage_url = "https://www.gaia-gis.it/fossil/readosm",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{ "libexpat.github.io^2", "zlib.net^1" },
+    .build_dependencies = &[_][]const u8{"gnu.org/make"},
+    .aliases = &[_][]const u8{"readosm"},
+    .versions = &[_][]const u8{"1.1.0"},
+}, .{
     .name = "gdal",
     .domain = "gdal.org",
     .description = "GDAL is an open source MIT licensed translator library for raster and vector geospatial data formats.",
@@ -8334,7 +8344,7 @@ pub const packages = [_]PackageInfo{ .{
     .description = "Open source routing engine for OpenStreetMap, with tools for time-dependent routing, isochrones, map matching and elevation",
     .homepage_url = "https://valhalla.github.io/valhalla/",
     .programs = &[_][]const u8{ "valhalla_service", "valhalla_build_tiles", "valhalla_build_config", "valhalla_build_elevation", "valhalla_build_admins", "valhalla_build_timezones", "valhalla_build_extract", "valhalla_add_elevation", "valhalla_run_route" },
-    .dependencies = &[_][]const u8{ "protobuf.dev", "abseil.io", "zlib.net", "lz4.org", "curl.se", "sqlite.org", "gaia-gis.it/libspatialite", "libgeos.org", "luajit.org", "github.com/kevinkreiser/prime_server>=0.11", "zeromq.org^4.2", "zeromq.org/czmq^4", "python.org^3" },
+    .dependencies = &[_][]const u8{ "protobuf.dev", "abseil.io^20250127", "zlib.net", "lz4.org", "curl.se", "sqlite.org", "gaia-gis.it/libspatialite", "libgeos.org", "luajit.org", "github.com/kevinkreiser/prime_server>=0.11", "zeromq.org^4.2", "zeromq.org/czmq^4", "python.org^3" },
     .build_dependencies = &[_][]const u8{ "boost.org>=1.71", "cmake.org", "freedesktop.org/pkg-config", "git-scm.org^2" },
     .aliases = &[_][]const u8{"valhalla"},
     .versions = &[_][]const u8{"3.9.0"},

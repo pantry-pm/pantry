@@ -1253,6 +1253,7 @@ export const aliases: Record<string, string> = {
   're2': 'github.com/google/re2',
   're2c': 're2c.org',
   'readline': 'gnu.org/readline',
+  'readosm': 'gaia-gis.it/readosm',
   'reattach-to-user-namespace': 'github.com/ChrisJohnsen/tmux-MacOSX-pasteboard',
   'rebar3': 'rebar3.org',
   'rectangle': 'rectangle.app',
