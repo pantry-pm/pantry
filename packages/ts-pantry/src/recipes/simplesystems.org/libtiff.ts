@@ -37,6 +37,10 @@ export const recipe: Recipe = {
         // every pkg-config consumer (openslide, gdal, …) that lacks those .pc files.
         '--disable-lerc',
         '--disable-libdeflate',
+        // Same for JBIG-KIT: the runner's libjbig.so.0 ended up in libtiff's
+        // NEEDED list, and spatialite (via libspatialite) would not start on a
+        // machine without it.
+        '--disable-jbig',
         '--with-jpeg-include-dir={{deps.libjpeg-turbo.org.prefix}}/include',
         '--with-jpeg-lib-dir={{deps.libjpeg-turbo.org.prefix}}/lib',
         '--without-x',
