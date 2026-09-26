@@ -3,7 +3,7 @@
  *
  * @domain `rectangle.app`
  * @programs `rectangle`
- * @version `2.0` (56 versions available)
+ * @version `2.0.1` (57 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install rectangle.app`
@@ -22,6 +22,7 @@ export const rectangleappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '2.0.1',
     '2.0',
     '1.100',
     '0.99',
