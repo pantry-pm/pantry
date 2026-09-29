@@ -51,6 +51,7 @@ export const meilisearchcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.54.2',
     '1.54.1',
     '1.54.0',
     '1.53.2',
