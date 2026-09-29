@@ -3,7 +3,7 @@
  *
  * @domain `augeas.net`
  * @programs `augmatch`, `augparse`, `augprint`, `augtool`, `fadot`
- * @version `1.14.1` (2 versions available)
+ * @version `1.15.0` (13 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install augeas.net`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "augeas"
  * console.log(pkg.description) // "A configuration editing tool and API"
  * console.log(pkg.programs)    // ["augmatch", "augparse", ...]
- * console.log(pkg.versions[0]) // "1.14.1" (latest)
+ * console.log(pkg.versions[0]) // "1.15.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/augeas-net.md
@@ -86,6 +86,7 @@ export const augeasnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.15.0',
     '1.14.1',
     '1.14.0',
     '1.13.0',

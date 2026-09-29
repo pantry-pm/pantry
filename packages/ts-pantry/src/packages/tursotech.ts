@@ -3,7 +3,7 @@
  *
  * @domain `turso.tech`
  * @programs `turso`
- * @version `1.0.18` (97 versions available)
+ * @version `1.0.33` (111 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install turso.tech`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "turso"
  * console.log(pkg.description) // "Command line interface to Turso."
  * console.log(pkg.programs)    // ["turso"]
- * console.log(pkg.versions[0]) // "1.0.18" (latest)
+ * console.log(pkg.versions[0]) // "1.0.33" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/turso-tech.md
@@ -67,6 +67,7 @@ export const tursotechPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.33',
     '1.0.32',
     '1.0.31',
     '1.0.30',
