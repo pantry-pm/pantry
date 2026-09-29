@@ -3,7 +3,7 @@
  *
  * @domain `dprint.dev`
  * @programs `dprint`
- * @version `0.57.4` (63 versions available)
+ * @version `0.58.0` (64 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install dprint.dev`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "dprint"
  * console.log(pkg.description) // "Pluggable and configurable code formatting plat..."
  * console.log(pkg.programs)    // ["dprint"]
- * console.log(pkg.versions[0]) // "0.57.4" (latest)
+ * console.log(pkg.versions[0]) // "0.58.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/dprint-dev.md
@@ -60,6 +60,7 @@ export const dprintdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.58.0',
     '0.57.4',
     '0.57.3',
     '0.57.2',

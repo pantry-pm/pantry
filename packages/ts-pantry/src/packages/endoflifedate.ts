@@ -3,7 +3,7 @@
  *
  * @domain `endoflife.date`
  * @programs `eol`
- * @version `0.24.1` (12 versions available)
+ * @version `0.26.0` (31 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install endoflife.date`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "eol"
  * console.log(pkg.description) // "CLI to show end-of-life dates for a number of p..."
  * console.log(pkg.programs)    // ["eol"]
- * console.log(pkg.versions[0]) // "0.24.1" (latest)
+ * console.log(pkg.versions[0]) // "0.26.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/endoflife-date.md
@@ -75,6 +75,7 @@ export const endoflifedatePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.26.0',
     '0.25.0',
     '0.24.1',
     '0.24.0',

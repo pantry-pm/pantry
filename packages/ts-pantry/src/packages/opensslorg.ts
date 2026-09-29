@@ -3,7 +3,7 @@
  *
  * @domain `openssl.org`
  * @programs `openssl`, `c_rehash`
- * @version `4.0.3` (70 versions available)
+ * @version `4.0.3` (72 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openssl.org`
@@ -84,11 +84,13 @@ export const opensslPackage = {
     '4.0.2',
     '4.0.1',
     '4.0.0',
+    '3.6.5',
     '3.6.4',
     '3.6.3',
     '3.6.2',
     '3.6.1',
     '3.6.0',
+    '3.5.9',
     '3.5.8',
     '3.5.7',
     '3.5.6',
