@@ -3,7 +3,7 @@
  *
  * @domain `zrok.io`
  * @programs `zrok`, `copyto`, `pastefrom`
- * @version `2.0.5` (53 versions available)
+ * @version `2.0.5` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zrok.io`
@@ -77,6 +77,7 @@ export const zrokioPackage = {
     '2.0.2',
     '2.0.1',
     '2.0.0',
+    '1.1.13',
     '1.1.12',
     '1.1.11',
     '1.1.10',
