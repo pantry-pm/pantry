@@ -3,7 +3,7 @@
  *
  * @domain `juju.is`
  * @programs `juju`
- * @version `4.0.15` (66 versions available)
+ * @version `4.0.15` (67 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install juju.is`
@@ -75,6 +75,7 @@ export const jujuisPackage = {
     '4.0.3',
     '4.0.1',
     '4.0.0',
+    '3.6.29',
     '3.6.28',
     '3.6.27',
     '3.6.25',

@@ -2,7 +2,7 @@
  * **cryptography** - cryptography is a package designed to expose cryptographic primitives and recipes to Python developers.
  *
  * @domain `cryptography.io`
- * @version `50.0.1` (100 versions available)
+ * @version `50.0.2` (101 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cryptography.io`
@@ -16,7 +16,7 @@
  * const pkg = pantry.cryptographyio
  * console.log(pkg.name)        // "cryptography"
  * console.log(pkg.description) // "cryptography is a package designed to expose cr..."
- * console.log(pkg.versions[0]) // "50.0.1" (latest)
+ * console.log(pkg.versions[0]) // "50.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cryptography-io.md
@@ -61,6 +61,7 @@ export const cryptographyioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '50.0.2',
     '50.0.1',
     '50.0.0',
     '49.0.0',
