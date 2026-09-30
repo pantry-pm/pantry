@@ -3,7 +3,7 @@
  *
  * @domain `digger.dev`
  * @programs `digger`
- * @version `0.6.151` (71 versions available)
+ * @version `0.6.152` (72 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install digger.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "digger"
  * console.log(pkg.description) // "Digger is an open source IaC orchestration tool..."
  * console.log(pkg.programs)    // ["digger"]
- * console.log(pkg.versions[0]) // "0.6.151" (latest)
+ * console.log(pkg.versions[0]) // "0.6.152" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/digger-dev.md
@@ -67,6 +67,7 @@ export const diggerdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.6.152',
     '0.6.151',
     '0.6.150',
     '0.6.149',

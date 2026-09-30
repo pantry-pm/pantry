@@ -3,7 +3,7 @@
  *
  * @domain `github.com/chainguard-dev/apko`
  * @programs `apko`
- * @version `1.4.5` (174 versions available)
+ * @version `1.4.6` (175 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/chainguard-dev/apko`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "apko"
  * console.log(pkg.description) // "Build OCI images from APK packages directly wit..."
  * console.log(pkg.programs)    // ["apko"]
- * console.log(pkg.versions[0]) // "1.4.5" (latest)
+ * console.log(pkg.versions[0]) // "1.4.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/chainguard-dev/apko.md
@@ -60,6 +60,7 @@ export const apkoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.6',
     '1.4.5',
     '1.4.4',
     '1.4.3',
