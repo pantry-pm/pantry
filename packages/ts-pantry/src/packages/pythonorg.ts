@@ -3,7 +3,7 @@
  *
  * @domain `python.org`
  * @programs `python`, `python{{ version.major }}`, `python{{ version.marketing }}`
- * @version `3.14.7` (179 versions available)
+ * @version `3.14.8` (181 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install python.org`
@@ -25,7 +25,7 @@
  * console.log(pkg.name)        // "python"
  * console.log(pkg.description) // "The Python programming language"
  * console.log(pkg.programs)    // ["python", "python{{ version.major }}", ...]
- * console.log(pkg.versions[0]) // "3.14.7" (latest)
+ * console.log(pkg.versions[0]) // "3.14.8" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/python-org.md
@@ -96,6 +96,7 @@ export const pythonPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.14.8',
     '3.14.7',
     '3.14.6',
     '3.14.5',
@@ -104,6 +105,7 @@ export const pythonPackage = {
     '3.14.2',
     '3.14.1',
     '3.14.0',
+    '3.13.16',
     '3.13.15',
     '3.13.14',
     '3.13.13',
