@@ -3,7 +3,7 @@
  *
  * @domain `taskfile.dev`
  * @programs `task`
- * @version `3.49.1` (43 versions available)
+ * @version `3.54.0` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install taskfile.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "task"
  * console.log(pkg.description) // "A task runner / simpler Make alternative writte..."
  * console.log(pkg.programs)    // ["task"]
- * console.log(pkg.versions[0]) // "3.49.1" (latest)
+ * console.log(pkg.versions[0]) // "3.54.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/taskfile-dev.md
@@ -67,6 +67,7 @@ export const taskfiledevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.54.0',
     '3.53.1',
     '3.52.0',
     '3.51.1',

@@ -3,7 +3,7 @@
  *
  * @domain `transmit.panic.com`
  * @programs `transmit`
- * @version `5.10.7` (2 versions available)
+ * @version `5.11.7` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install transmit.panic.com`
@@ -22,6 +22,7 @@ export const transmitpaniccomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '5.11.7',
     '5.11.6',
     '5.10.7',
     '5.10.6',
