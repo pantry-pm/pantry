@@ -3,7 +3,7 @@
  *
  * @domain `tilt.dev`
  * @programs `tilt`
- * @version `0.37.0` (30 versions available)
+ * @version `0.37.8` (58 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tilt.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "tilt"
  * console.log(pkg.description) // "Define your dev environment as code. For micros..."
  * console.log(pkg.programs)    // ["tilt"]
- * console.log(pkg.versions[0]) // "0.37.0" (latest)
+ * console.log(pkg.versions[0]) // "0.37.8" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/tilt-dev.md
@@ -69,6 +69,7 @@ export const tiltdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.37.8',
     '0.37.7',
     '0.37.6',
     '0.37.5',
