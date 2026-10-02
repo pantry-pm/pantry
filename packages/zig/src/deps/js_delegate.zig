@@ -32,7 +32,7 @@ pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verb
     // Fast no-op: if node_modules/ exists and is newer than package.json and
     // any lockfile, JS deps are already in sync and we can skip without ever
     // spawning the PM. Matches composer_delegate's "vendor + lock" check.
-    if (try isUpToDate(allocator, project_dir, package_json_path)) {
+    if (try isUpToDate(allocator, project_dir, package_json_path, parsed.value.object)) {
         if (verbose) style.print("{s}  JS deps up to date{s}\n", .{ style.dim, style.reset });
         return false;
     }
@@ -96,17 +96,90 @@ pub fn installJsDeps(allocator: std.mem.Allocator, project_dir: []const u8, verb
 /// `pantry install` after a `touch package.json` to needlessly re-spawn bun.
 const marker_relpath = "node_modules/.pantry-js-installed";
 
-/// JS deps considered up-to-date when our marker file exists and its mtime
-/// is >= package.json mtime. We can't stat node_modules itself for mtime
-/// (io_helper.statFile returns 0 for directories), and we can't trust the
-/// JS PM's lockfile because no-op installs don't always touch it.
-fn isUpToDate(allocator: std.mem.Allocator, project_dir: []const u8, package_json_path: []const u8) !bool {
+/// JS lockfiles the delegated package manager reads. Any of them changing -
+/// typically through `git pull` - means node_modules may no longer match.
+const js_lockfiles = [_][]const u8{ "bun.lock", "bun.lockb", "package-lock.json", "yarn.lock", "pnpm-lock.yaml" };
+
+/// JS deps are considered up to date when our marker file exists and is at
+/// least as new as every input the package manager resolves from: the root
+/// package.json, whichever JS lockfile exists, and every workspace member's
+/// package.json.
+///
+/// The lockfile is an INPUT here, never the marker: a no-op install may not
+/// touch it, so it cannot record that an install happened - but a lockfile
+/// newer than our last install (a pull that bumped bun.lock while package.json
+/// stayed put) must re-run the install, or node_modules keeps the old tree
+/// while the lockfile names the new one (stacksjs/stacks#2848).
+///
+/// We can't stat node_modules itself for mtime (io_helper.statFile returns 0
+/// for directories), hence the marker file.
+fn isUpToDate(allocator: std.mem.Allocator, project_dir: []const u8, package_json_path: []const u8, package_json: std.json.ObjectMap) !bool {
     const marker = try std.fs.path.join(allocator, &.{ project_dir, marker_relpath });
     defer allocator.free(marker);
 
     const marker_stat = io_helper.statFile(marker) catch return false;
+    const marker_mtime = marker_stat.mtime;
+
     const pkg_stat = io_helper.statFile(package_json_path) catch return false;
-    return marker_stat.mtime >= pkg_stat.mtime;
+    if (pkg_stat.mtime > marker_mtime) return false;
+
+    for (js_lockfiles) |lockfile| {
+        const lock_path = try std.fs.path.join(allocator, &.{ project_dir, lockfile });
+        defer allocator.free(lock_path);
+        const lock_stat = io_helper.statFile(lock_path) catch continue;
+        if (lock_stat.mtime > marker_mtime) return false;
+    }
+
+    return workspaceManifestsOlderThan(allocator, project_dir, package_json, marker_mtime);
+}
+
+/// Every workspace member's package.json is no newer than `mtime`. Members
+/// come from the root package.json's `workspaces` (array, or `{ packages }`),
+/// expanded by the same discovery `pantry install` uses for workspaces. When
+/// discovery fails we cannot vouch for the tree, so report stale: a needless
+/// no-op install is cheap, a stale node_modules is not.
+fn workspaceManifestsOlderThan(allocator: std.mem.Allocator, project_dir: []const u8, package_json: std.json.ObjectMap, mtime: i128) bool {
+    var patterns = std.ArrayList([]const u8).empty;
+    defer patterns.deinit(allocator);
+    collectWorkspacePatterns(allocator, package_json, &patterns) catch return false;
+    if (patterns.items.len == 0) return true;
+
+    const workspace_discovery = @import("../packages/workspace.zig");
+    const members = workspace_discovery.discoverMembers(allocator, project_dir, patterns.items) catch return false;
+    defer {
+        for (members) |*member| member.deinit(allocator);
+        allocator.free(members);
+    }
+
+    for (members) |member| {
+        const manifest = std.fs.path.join(allocator, &.{ member.abs_path, "package.json" }) catch return false;
+        defer allocator.free(manifest);
+        const stat = io_helper.statFile(manifest) catch continue;
+        if (stat.mtime > mtime) return false;
+    }
+    return true;
+}
+
+/// Workspace globs from package.json: `"workspaces": [...]` or
+/// `"workspaces": { "packages": [...] }`. Negated globs (`!pkg`) are skipped;
+/// checking an excluded member too only errs toward a reinstall. The strings
+/// borrow from `package_json`.
+fn collectWorkspacePatterns(allocator: std.mem.Allocator, package_json: std.json.ObjectMap, out: *std.ArrayList([]const u8)) !void {
+    const workspaces = package_json.get("workspaces") orelse return;
+    const list = switch (workspaces) {
+        .array => |arr| arr,
+        .object => |obj| blk: {
+            const pkgs = obj.get("packages") orelse return;
+            if (pkgs != .array) return;
+            break :blk pkgs.array;
+        },
+        else => return,
+    };
+    for (list.items) |item| {
+        if (item != .string or item.string.len == 0) continue;
+        if (item.string[0] == '!') continue;
+        try out.append(allocator, item.string);
+    }
 }
 
 fn writeMarker(allocator: std.mem.Allocator, project_dir: []const u8) void {
@@ -284,4 +357,113 @@ test "JS delegate propagates package manager failure without writing marker" {
     const marker = try std.fs.path.join(allocator, &.{ project_dir, marker_relpath });
     defer allocator.free(marker);
     try std.testing.expectError(error.FileNotFound, io_helper.accessAbsolute(marker, .{}));
+}
+
+/// Test helper: set a file's mtime to `seconds` past the epoch.
+fn setMtimeForTest(dir: std.Io.Dir, sub_path: []const u8, seconds: i64) !void {
+    try dir.setTimestamps(io_helper.io, sub_path, .{
+        .modify_timestamp = .{ .new = .{ .nanoseconds = @as(i96, seconds) * std.time.ns_per_s } },
+    });
+}
+
+/// Test helper: a project with a package.json, its marker, and whatever
+/// extra files the case needs, every file at a controlled mtime.
+const StalenessFixture = struct {
+    tmp: std.testing.TmpDir,
+    path_buf: [std.fs.max_path_bytes]u8 = undefined,
+    path_len: usize = 0,
+
+    fn init(package_json: []const u8) !StalenessFixture {
+        var fixture = StalenessFixture{ .tmp = std.testing.tmpDir(.{}) };
+        errdefer fixture.tmp.cleanup();
+        fixture.path_len = try fixture.tmp.dir.realPath(io_helper.io, &fixture.path_buf);
+        try fixture.write("package.json", package_json, 1_000);
+        try fixture.tmp.dir.createDirPath(io_helper.io, "node_modules");
+        try fixture.write(marker_relpath, "", 2_000);
+        return fixture;
+    }
+
+    fn deinit(self: *StalenessFixture) void {
+        self.tmp.cleanup();
+    }
+
+    fn dir(self: *StalenessFixture) []const u8 {
+        return self.path_buf[0..self.path_len];
+    }
+
+    fn write(self: *StalenessFixture, sub_path: []const u8, data: []const u8, mtime: i64) !void {
+        if (std.fs.path.dirname(sub_path)) |parent| try self.tmp.dir.createDirPath(io_helper.io, parent);
+        try self.tmp.dir.writeFile(io_helper.io, .{ .sub_path = sub_path, .data = data });
+        try setMtimeForTest(self.tmp.dir, sub_path, mtime);
+    }
+
+    fn upToDate(self: *StalenessFixture) !bool {
+        const allocator = std.testing.allocator;
+        const package_json_path = try std.fs.path.join(allocator, &.{ self.dir(), "package.json" });
+        defer allocator.free(package_json_path);
+        const content = try io_helper.readFileAlloc(allocator, package_json_path, 1024 * 1024);
+        defer allocator.free(content);
+        const parsed = try std.json.parseFromSlice(std.json.Value, allocator, content, .{});
+        defer parsed.deinit();
+        return isUpToDate(allocator, self.dir(), package_json_path, parsed.value.object);
+    }
+};
+
+test "JS deps are up to date when the marker is newer than every input" {
+    var fixture = try StalenessFixture.init("{\"dependencies\":{\"left-pad\":\"1.3.0\"}}");
+    defer fixture.deinit();
+    try fixture.write("bun.lock", "{}", 1_500);
+    try std.testing.expect(try fixture.upToDate());
+}
+
+test "JS deps are stale when package.json is newer than the marker" {
+    var fixture = try StalenessFixture.init("{\"dependencies\":{\"left-pad\":\"1.3.0\"}}");
+    defer fixture.deinit();
+    try setMtimeForTest(fixture.tmp.dir, "package.json", 3_000);
+    try std.testing.expect(!try fixture.upToDate());
+}
+
+test "JS deps are stale when a pulled lockfile is newer than the marker" {
+    // stacksjs/stacks#2848: `git pull` brought a new bun.lock (better-dx
+    // 0.2.25 -> 0.2.26) without touching package.json, and node_modules kept
+    // the old version because only package.json was compared.
+    const lockfiles = [_][]const u8{ "bun.lock", "bun.lockb", "package-lock.json", "yarn.lock", "pnpm-lock.yaml" };
+    for (lockfiles) |lockfile| {
+        var fixture = try StalenessFixture.init("{\"dependencies\":{\"left-pad\":\"1.3.0\"}}");
+        defer fixture.deinit();
+        try fixture.write(lockfile, "{}", 3_000);
+        if (try fixture.upToDate()) {
+            std.debug.print("lockfile {s} newer than the marker was ignored\n", .{lockfile});
+            return error.TestUnexpectedResult;
+        }
+    }
+}
+
+test "JS deps are stale when a workspace member's package.json is newer than the marker" {
+    var fixture = try StalenessFixture.init(
+        \\{"workspaces":["storage/framework","storage/framework/core/*"],"devDependencies":{"better-dx":"^0.2.24"}}
+    );
+    defer fixture.deinit();
+    try fixture.write("storage/framework/package.json", "{\"name\":\"framework\"}", 1_000);
+    try fixture.write("storage/framework/core/actions/package.json", "{\"name\":\"@stacksjs/actions\"}", 1_000);
+    try fixture.write("storage/framework/core/router/package.json", "{\"name\":\"@stacksjs/router\"}", 1_000);
+    try std.testing.expect(try fixture.upToDate());
+
+    try setMtimeForTest(fixture.tmp.dir, "storage/framework/core/router/package.json", 3_000);
+    try std.testing.expect(!try fixture.upToDate());
+
+    try setMtimeForTest(fixture.tmp.dir, "storage/framework/core/router/package.json", 1_000);
+    try setMtimeForTest(fixture.tmp.dir, "storage/framework/package.json", 3_000);
+    try std.testing.expect(!try fixture.upToDate());
+}
+
+test "JS deps staleness reads the {packages: [...]} workspaces form" {
+    var fixture = try StalenessFixture.init(
+        \\{"workspaces":{"packages":["packages/*"],"nohoist":["**/x"]},"dependencies":{"left-pad":"1.3.0"}}
+    );
+    defer fixture.deinit();
+    try fixture.write("packages/a/package.json", "{\"name\":\"a\"}", 1_000);
+    try std.testing.expect(try fixture.upToDate());
+    try setMtimeForTest(fixture.tmp.dir, "packages/a/package.json", 3_000);
+    try std.testing.expect(!try fixture.upToDate());
 }
