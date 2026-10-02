@@ -996,6 +996,9 @@ pub fn installWorkspaceCommandWithOptions(
         // carry their own staleness checks, so running them here is a no-op
         // when that tree is current.
         if (options.lockfile_output_path == null) {
+            // Nothing was installed, but a pantry/.bin name an earlier run
+            // left to install order still gets its deterministic owner.
+            install.bin_ownership.resolveBinCollisions(allocator, workspace_root, options.modules_dir);
             if (try delegateEcosystemInstalls(allocator, workspace_root, options)) |failure| return failure;
             return .{ .exit_code = 0 };
         }
@@ -1664,6 +1667,10 @@ pub fn installWorkspaceCommandWithOptions(
     if (linked_count > 0) {
         style.printWorkspaceLinked(linked_count);
     }
+
+    // Workspace packages are bin providers too, and they outrank anything
+    // transitive, so settle contested pantry/.bin names once they are linked.
+    install.bin_ownership.resolveBinCollisions(allocator, workspace_root, options.modules_dir);
 
     // Sync build.zig.zon with installed zig deps
     {

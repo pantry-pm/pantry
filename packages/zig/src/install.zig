@@ -3,6 +3,7 @@ pub const installer = @import("install/installer.zig");
 pub const parallel = @import("install/parallel.zig");
 pub const validator = @import("install/validator.zig");
 pub const symlink = @import("install/symlink.zig");
+pub const bin_ownership = @import("install/bin_ownership.zig");
 pub const wrapper = @import("install/wrapper.zig");
 pub const rollback = @import("install/rollback.zig");
 pub const runtime = @import("install/runtime.zig");

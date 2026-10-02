@@ -1363,6 +1363,11 @@ pub fn ensureBinSymlinks(allocator: std.mem.Allocator, proj_dir: []const u8, mod
     // If the project pins Zig, make sure the shell shim follows that request
     // even when multiple Zig toolchains are already present in pantry/.
     ensureConfiguredZigSymlink(allocator, proj_dir, pantry_dir, bin_link_dir);
+
+    // Two npm packages declaring the same bin name: give it to the one the
+    // project's dependency graph ranks first, never to whichever was shimmed
+    // last (pantry-pm/pantry#235).
+    install.bin_ownership.resolveBinCollisions(allocator, proj_dir, modules_dir);
 }
 
 /// Create alias symlinks for known multi-name binaries.
