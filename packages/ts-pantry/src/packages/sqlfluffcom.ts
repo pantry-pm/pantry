@@ -3,7 +3,7 @@
  *
  * @domain `sqlfluff.com`
  * @programs `sqlfluff`
- * @version `4.0.4` (30 versions available)
+ * @version `4.4.0` (46 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install sqlfluff.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "sqlfluff"
  * console.log(pkg.description) // "A modular SQL linter and auto-formatter with su..."
  * console.log(pkg.programs)    // ["sqlfluff"]
- * console.log(pkg.versions[0]) // "4.0.4" (latest)
+ * console.log(pkg.versions[0]) // "4.4.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/sqlfluff-com.md
@@ -67,6 +67,7 @@ export const sqlfluffcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.4.0',
     '4.3.0',
     '4.2.2',
     '4.2.1',
