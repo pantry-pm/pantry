@@ -9,6 +9,7 @@ const extractor = @import("extractor.zig");
 const libfixer = @import("libfixer.zig");
 const validator = @import("validator.zig");
 const semver = @import("../packages/semver.zig");
+const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
 
 const pantryError = errors.pantryError;
@@ -245,6 +246,19 @@ const NpmCache = struct {
     }
 };
 
+/// pantry.lock's pin, unless bun.lock prefers a different version for the
+/// same range - then null, so resolution selects bun.lock's version instead.
+fn pantryLockPin(
+    locked: ?@import("../deps/resolution/lockfile.zig").LockedVersion,
+    bun_pin: ?[]const u8,
+) ?@import("../deps/resolution/lockfile.zig").LockedVersion {
+    const pin = locked orelse return null;
+    if (bun_pin) |preferred| {
+        if (!std.mem.eql(u8, preferred, pin.version)) return null;
+    }
+    return pin;
+}
+
 /// Package installer
 pub const Installer = struct {
     /// Package cache
@@ -265,6 +279,10 @@ pub const Installer = struct {
     hoisted_versions: *HoisteVersionCache,
     /// Lockfile for lockfile-first resolution (skip npm registry queries when locked)
     lockfile: ?*@import("../deps/resolution/lockfile.zig").LockFile = null,
+    /// bun.lock pins. When the project also has a bun.lock, an npm range is
+    /// resolved to bun.lock's version whenever that version satisfies it, so
+    /// pantry/ and node_modules/ hold the same tree (stacksjs/stacks#2848).
+    bun_pins: ?*const bun_lock.BunLockPins = null,
     /// Shared HTTP client for connection pooling (reuses TCP/TLS connections across requests)
     /// std.http.Client has a built-in 32-connection pool with mutex protection.
     http_client: *std.http.Client,
@@ -278,6 +296,10 @@ pub const Installer = struct {
         map: std.StringHashMap([]const u8),
         mutex: io_helper.Mutex,
         alloc: std.mem.Allocator,
+        /// bun.lock pins (see `Installer.bun_pins`). A hoisted version that
+        /// satisfies a range is not good enough when bun.lock pins a
+        /// different version that also satisfies it.
+        bun_pins: ?*const bun_lock.BunLockPins = null,
 
         fn init(allocator: std.mem.Allocator) HoisteVersionCache {
             return .{
@@ -301,6 +323,11 @@ pub const Installer = struct {
             self.mutex.lock();
             defer self.mutex.unlock();
             const installed_version = self.map.get(name) orelse return false;
+            if (self.bun_pins) |pins| {
+                if (pins.preferredVersion(name, version_constraint)) |pinned| {
+                    return std.mem.eql(u8, installed_version, pinned);
+                }
+            }
             const npm_zig = @import("../registry/npm.zig");
             const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch return true;
             return constraint.satisfies(installed_version);
@@ -310,7 +337,18 @@ pub const Installer = struct {
         pub fn put(self: *HoisteVersionCache, name: []const u8, version: []const u8) void {
             self.mutex.lock();
             defer self.mutex.unlock();
-            if (self.map.contains(name)) return; // First version wins (hoisted)
+            if (self.map.getEntry(name)) |entry| {
+                // First version wins (hoisted) - unless this one is bun.lock's
+                // pin replacing a stale version, e.g. the old pantry.lock pin
+                // recorded from disk before the pinned version was installed.
+                const pins = self.bun_pins orelse return;
+                const pinned = pins.get(name) orelse return;
+                if (!std.mem.eql(u8, version, pinned) or std.mem.eql(u8, entry.value_ptr.*, pinned)) return;
+                const owned_version = self.alloc.dupe(u8, version) catch return;
+                self.alloc.free(entry.value_ptr.*);
+                entry.value_ptr.* = owned_version;
+                return;
+            }
             const owned_name = self.alloc.dupe(u8, name) catch return;
             const owned_version = self.alloc.dupe(u8, version) catch {
                 self.alloc.free(owned_name);
@@ -427,6 +465,33 @@ pub const Installer = struct {
     /// Set lockfile for lockfile-first resolution (skips npm registry on subsequent installs)
     pub fn setLockfile(self: *Installer, lf: *@import("../deps/resolution/lockfile.zig").LockFile) void {
         self.lockfile = lf;
+    }
+
+    /// Set the project's bun.lock pins so npm resolution agrees with Bun's tree.
+    /// Must be called before any concurrent resolution; the pins are read-only.
+    pub fn setBunLockPins(self: *Installer, pins: *const bun_lock.BunLockPins) void {
+        self.bun_pins = pins;
+        self.hoisted_versions.bun_pins = pins;
+    }
+
+    /// bun.lock's version for `name@range` when it pins one that satisfies the
+    /// range, else null.
+    pub fn preferredBunPin(self: *const Installer, name: []const u8, range: []const u8) ?[]const u8 {
+        const pins = self.bun_pins orelse return null;
+        return pins.preferredVersion(name, range);
+    }
+
+    /// The version to take from registry metadata: bun.lock's pin when it
+    /// satisfies the range and the registry lists it, else the highest match.
+    fn pickNpmVersion(self: *Installer, npm_response: std.json.Value, name: []const u8, version_constraint: []const u8) ![]const u8 {
+        if (self.preferredBunPin(name, version_constraint)) |pinned| {
+            if (npm_response.object.get("versions")) |versions| {
+                if (versions == .object) {
+                    if (versions.object.getKey(pinned)) |key| return key;
+                }
+            }
+        }
+        return self.resolveNpmVersion(npm_response, version_constraint);
     }
 
     /// Pre-resolve all npm dependencies via the pantry registry's bulk resolution endpoint.
@@ -2196,9 +2261,13 @@ pub const Installer = struct {
         }
 
         // --- Lockfile-first resolution: skip npm registry entirely if locked ---
+        // bun.lock's pin outranks pantry.lock's: when it satisfies the range
+        // and differs from pantry.lock's, skip this shortcut so the registry
+        // path below selects it.
+        const bun_pin = self.preferredBunPin(name, version_constraint);
         if (self.lockfile) |lf| {
             const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (lockfile_zig.getLockedVersion(lf, name)) |locked| {
+            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
                 // Verify the locked version satisfies the constraint
                 const npm_zig = @import("../registry/npm.zig");
                 const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
@@ -2277,7 +2346,7 @@ pub const Installer = struct {
         if (parsed.value != .object) return error.InvalidNpmResponse;
 
         // Resolve version
-        const target_version = try self.resolveNpmVersion(parsed.value, version_constraint);
+        const target_version = try self.pickNpmVersion(parsed.value, name, version_constraint);
 
         // Get tarball URL from versions[target_version].dist.tarball
         const versions_obj = parsed.value.object.get("versions") orelse return error.NoVersions;
@@ -2336,9 +2405,13 @@ pub const Installer = struct {
         // (falls through if no L2 hit)
 
         // --- Lockfile-first resolution ---
+        // bun.lock's pin outranks pantry.lock's: when it satisfies the range
+        // and differs from pantry.lock's, skip this shortcut so the registry
+        // path below selects it.
+        const bun_pin = self.preferredBunPin(name, version_constraint);
         if (self.lockfile) |lf| {
             const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (lockfile_zig.getLockedVersion(lf, name)) |locked| {
+            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
                 const npm_zig = @import("../registry/npm.zig");
                 const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
                 const satisfies = if (constraint) |c| c.satisfies(locked.version) else true;
@@ -2412,7 +2485,7 @@ pub const Installer = struct {
 
         if (parsed.value != .object) return error.InvalidNpmResponse;
 
-        const target_version = try self.resolveNpmVersion(parsed.value, version_constraint);
+        const target_version = try self.pickNpmVersion(parsed.value, name, version_constraint);
 
         const versions_obj = parsed.value.object.get("versions") orelse return error.NoVersions;
         if (versions_obj != .object) return error.InvalidNpmResponse;
@@ -4440,6 +4513,153 @@ test "cached npm resolution exposes caller-owned lockfile metadata" {
     try std.testing.expectEqualStrings("0.15.15", resolution.version);
     try std.testing.expectEqualStrings("sha512-fixture", resolution.integrity.?);
     try std.testing.expect(installer.getCachedNpmResolution("bunfig", "^1") == null);
+}
+
+/// Registry metadata fixture for the bun.lock tests: three in-range versions.
+const better_dx_registry_fixture =
+    \\{"name":"better-dx","dist-tags":{"latest":"0.2.27"},"versions":{
+    \\"0.2.25":{"dist":{"tarball":"https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz","integrity":"sha512-25"},"dependencies":{"buddy-bot":"^0.10.5"}},
+    \\"0.2.26":{"dist":{"tarball":"https://registry.npmjs.org/better-dx/-/better-dx-0.2.26.tgz","integrity":"sha512-26"},"dependencies":{"@buddysh/buddy":"^0.11.2"}},
+    \\"0.2.27":{"dist":{"tarball":"https://registry.npmjs.org/better-dx/-/better-dx-0.2.27.tgz","integrity":"sha512-27"}}}}
+;
+
+fn testBunPins(allocator: std.mem.Allocator, better_dx: []const u8) !bun_lock.BunLockPins {
+    var pins = bun_lock.BunLockPins{ .allocator = allocator };
+    errdefer pins.deinit();
+    try pins.pins.put(allocator, try allocator.dupe(u8, "better-dx"), try allocator.dupe(u8, better_dx));
+    return pins;
+}
+
+test "npm resolution prefers bun.lock's in-range pin over pantry.lock's pin and the latest match" {
+    // stacksjs/stacks#2848: pantry.lock pinned better-dx 0.2.25, bun.lock 0.2.26,
+    // the registry has 0.2.27, and the range is ^0.2.24. Bun installed 0.2.26 in
+    // node_modules/, so pantry must install 0.2.26 in pantry/.
+    const allocator = std.testing.allocator;
+    const resolution_lockfile = @import("../deps/resolution/lockfile.zig");
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    var lock = resolution_lockfile.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("better-dx", "0.2.25", "https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz", "sha512-25");
+    installer.setLockfile(&lock);
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+
+    var pins = try testBunPins(allocator, "0.2.26");
+    defer pins.deinit();
+    installer.setBunLockPins(&pins);
+
+    const resolved = try installer.resolveNpmPackage("better-dx", "^0.2.24");
+    defer {
+        allocator.free(resolved.version);
+        allocator.free(resolved.tarball_url);
+        if (resolved.integrity) |i| allocator.free(i);
+    }
+    try std.testing.expectEqualStrings("0.2.26", resolved.version);
+    try std.testing.expectEqualStrings("https://registry.npmjs.org/better-dx/-/better-dx-0.2.26.tgz", resolved.tarball_url);
+    try std.testing.expectEqualStrings("sha512-26", resolved.integrity.?);
+
+    // The pipeline's resolver walks the pinned version's own dependencies.
+    const with_deps = try installer.resolveNpmPackageWithDeps("better-dx", "~0.2.24");
+    defer {
+        allocator.free(with_deps.version);
+        allocator.free(with_deps.tarball_url);
+        if (with_deps.integrity) |i| allocator.free(i);
+        for (with_deps.dependencies) |dep| {
+            allocator.free(dep.name);
+            allocator.free(dep.version_constraint);
+        }
+        allocator.free(with_deps.dependencies);
+    }
+    try std.testing.expectEqualStrings("0.2.26", with_deps.version);
+    try std.testing.expectEqual(@as(usize, 1), with_deps.dependencies.len);
+    try std.testing.expectEqualStrings("@buddysh/buddy", with_deps.dependencies[0].name);
+}
+
+test "npm resolution ignores a bun.lock pin outside the range" {
+    const allocator = std.testing.allocator;
+    const resolution_lockfile = @import("../deps/resolution/lockfile.zig");
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    var lock = resolution_lockfile.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("better-dx", "0.2.25", "https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz", "sha512-25");
+    installer.setLockfile(&lock);
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+
+    // bun.lock pins 0.2.26 but the range is exactly 0.2.25: pantry.lock's pin stands.
+    var pins = try testBunPins(allocator, "0.2.26");
+    defer pins.deinit();
+    installer.setBunLockPins(&pins);
+
+    const resolved = try installer.resolveNpmPackage("better-dx", "0.2.25");
+    defer {
+        allocator.free(resolved.version);
+        allocator.free(resolved.tarball_url);
+        if (resolved.integrity) |i| allocator.free(i);
+    }
+    try std.testing.expectEqualStrings("0.2.25", resolved.version);
+}
+
+test "npm resolution without a bun.lock keeps pantry.lock's pin" {
+    const allocator = std.testing.allocator;
+    const resolution_lockfile = @import("../deps/resolution/lockfile.zig");
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    var lock = resolution_lockfile.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("better-dx", "0.2.25", "https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz", "sha512-25");
+    installer.setLockfile(&lock);
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+
+    const resolved = try installer.resolveNpmPackage("better-dx", "^0.2.24");
+    defer {
+        allocator.free(resolved.version);
+        allocator.free(resolved.tarball_url);
+        if (resolved.integrity) |i| allocator.free(i);
+    }
+    try std.testing.expectEqualStrings("0.2.25", resolved.version);
+}
+
+test "hoisted cache does not accept an in-range version bun.lock does not pin" {
+    const allocator = std.testing.allocator;
+    var hcache = Installer.HoisteVersionCache.init(allocator);
+    defer hcache.deinit();
+    var pins = try testBunPins(allocator, "0.2.26");
+    defer pins.deinit();
+    hcache.bun_pins = &pins;
+
+    // The stale pantry.lock version recorded from disk.
+    hcache.put("better-dx", "0.2.25");
+    try std.testing.expect(!hcache.checkSatisfies("better-dx", "^0.2.24"));
+    // A range the pin does not satisfy falls back to plain semver.
+    try std.testing.expect(hcache.checkSatisfies("better-dx", "0.2.25"));
+
+    // Installing bun.lock's version replaces the stale entry.
+    hcache.put("better-dx", "0.2.26");
+    try std.testing.expect(hcache.checkSatisfies("better-dx", "^0.2.24"));
+    // Any other version still loses to the first one recorded.
+    hcache.put("better-dx", "0.2.27");
+    try std.testing.expect(hcache.checkSatisfies("better-dx", "^0.2.24"));
+}
+
+test "pantryLockPin yields to a differing bun.lock pin" {
+    const locked: @import("../deps/resolution/lockfile.zig").LockedVersion = .{ .version = "0.2.25", .resolved = "", .integrity = null };
+    try std.testing.expectEqualStrings("0.2.25", pantryLockPin(locked, null).?.version);
+    try std.testing.expectEqualStrings("0.2.25", pantryLockPin(locked, "0.2.25").?.version);
+    try std.testing.expect(pantryLockPin(locked, "0.2.26") == null);
+    try std.testing.expect(pantryLockPin(null, "0.2.26") == null);
 }
 
 test "HoisteVersionCache tryReserve is single-winner" {

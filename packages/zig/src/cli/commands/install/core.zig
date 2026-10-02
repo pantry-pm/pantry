@@ -870,6 +870,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // Wire up lockfile for lockfile-first resolution (skip npm registry on subsequent installs)
         shared_installer.setLockfile(&lock_file);
 
+        // Prefer bun.lock's pins for npm ranges they satisfy, so a project
+        // locked by both pantry and Bun gets one tree (stacksjs/stacks#2848).
+        var bun_pins = lib.deps.resolution.BunLockPins.load(allocator, proj_dir);
+        defer if (bun_pins) |*pins| pins.deinit();
+        if (bun_pins) |*pins| shared_installer.setBunLockPins(pins);
+
         defer shared_installer.deinit();
 
         // Batch install from lockfile: if lockfile has all packages resolved,

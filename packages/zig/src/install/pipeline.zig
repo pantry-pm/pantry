@@ -1769,13 +1769,16 @@ pub fn run(
             // Only check npm packages — system/pantry packages aren't in ./pantry/
             if (dep.source != .npm) continue;
             npm_count += 1;
+            // With a bun.lock pin in range, only that exact version counts as
+            // present: an older in-range copy is the drift this must repair.
+            const bun_pin = inst.preferredBunPin(dep.name, dep.version);
             if (installedNpmPackageMatches(
                 allocator,
                 project_root,
                 inst.modules_dir,
                 dep.name,
-                dep.version,
-                true,
+                bun_pin orelse dep.version,
+                bun_pin == null,
             )) present_count += 1;
         }
 

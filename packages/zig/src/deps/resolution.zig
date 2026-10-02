@@ -12,6 +12,7 @@ pub const conflict = @import("resolution/conflict.zig");
 pub const peer = @import("resolution/peer.zig");
 pub const optional = @import("resolution/optional.zig");
 pub const lockfile = @import("resolution/lockfile.zig");
+pub const bun_lock = @import("resolution/bun_lock.zig");
 
 // Re-export commonly used types
 pub const ResolutionStrategy = conflict.ResolutionStrategy;
@@ -26,6 +27,7 @@ pub const OptionalDependencyManager = optional.OptionalDependencyManager;
 
 pub const LockFile = lockfile.LockFile;
 pub const LockedPackage = lockfile.LockedPackage;
+pub const BunLockPins = bun_lock.BunLockPins;
 
 /// Complete dependency resolution context
 pub const ResolutionContext = struct {

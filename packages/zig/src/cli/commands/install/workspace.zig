@@ -36,6 +36,21 @@ fn workspaceDependencySource(dep: lib.deps.parser.PackageDependency) lib.package
     };
 }
 
+/// bun.lock pins a version of this npm dependency that satisfies its range
+/// and differs from what pantry.lock recorded, so the dependency cannot be
+/// skipped as up to date: it has to be re-resolved to bun.lock's version.
+fn bunLockSupersedesLock(
+    installer: *const install.Installer,
+    existing: *lib.packages.Lockfile,
+    dep: lib.deps.parser.PackageDependency,
+    clean_name: []const u8,
+) bool {
+    if (workspaceDependencySource(dep) != .npm) return false;
+    const pinned = installer.preferredBunPin(clean_name, dep.version) orelse return false;
+    const locked = findLockfileEntryByName(existing, clean_name) orelse return true;
+    return !std.mem.eql(u8, locked.version, pinned);
+}
+
 fn shouldResolveWorkspaceDependencyRemotely(
     dependency_name: []const u8,
     dependency_version: []const u8,
@@ -884,6 +899,14 @@ pub fn installWorkspaceCommandWithOptions(
         shared_installer.setLockfile(lf);
     }
 
+    // When Bun also locks this workspace, resolve npm ranges to bun.lock's pins
+    // so pantry/ and node_modules/ install the same versions.
+    var ws_bun_pins = lib.deps.resolution.BunLockPins.load(allocator, workspace_root);
+    defer if (ws_bun_pins) |*pins| pins.deinit();
+    if (ws_bun_pins) |*pins| {
+        shared_installer.setBunLockPins(pins);
+    }
+
     // ── FAST PATH: batch install from lockfile ──
     // If lockfile has packages resolved but they're missing from disk (e.g. after
     // clean checkout), extract them all in parallel without any resolution/registry queries.
@@ -932,6 +955,7 @@ pub fn installWorkspaceCommandWithOptions(
             const cm_ptr: ?*const helpers.LockfileConstraintMap = if (ws_constraint_map) |*cm| cm else null;
             for (all_deps) |dep| {
                 const clean_name = workspaceDependencyName(dep.name);
+                if (bunLockSupersedesLock(&shared_installer, lf, dep, clean_name)) continue;
                 if (helpers.canSkipCanonicalFromLockfileWithNameSet(ns, clean_name, dep.version, cm_ptr, workspace_root, options.modules_dir)) {
                     ws_skipped_count += 1;
                 }
