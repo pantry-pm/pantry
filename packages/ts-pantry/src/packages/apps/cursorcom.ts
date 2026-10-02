@@ -3,7 +3,7 @@
  *
  * @domain `cursor.com`
  * @programs `cursor`
- * @version `3.22.12` (40 versions available)
+ * @version `3.23.12` (41 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cursor.com`
@@ -22,6 +22,7 @@ export const cursorcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.23.12',
     '3.22.12',
     '3.22.7',
     '3.21.18',
