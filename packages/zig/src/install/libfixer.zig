@@ -117,6 +117,15 @@ pub fn fixMacOSLibraryPaths(
             if (io_helper.accessAbsolute(absolute_lib_path, .{})) |_| {
                 break :blk @as([]const u8, absolute_lib_path);
             } else |_| {}
+            // pkgx-layout artifacts name their dependencies by registry path,
+            // `@rpath/sourceware.org/bzip2/v1.0.8/lib/libbz2.1.0.8.dylib`, which
+            // resolves against the root the packages are installed under. A
+            // project install (`<proj>/pantry/<domain>/v<ver>`) has no
+            // `/packages/` segment for the search below to anchor on, so
+            // xorriso's darwin build installed and then could not load libbz2.
+            if (std.mem.startsWith(u8, dep.original_ref, "@rpath/")) {
+                if (findRpathRefInAncestors(lib_dir, dep.original_ref["@rpath/".len..], &xpkg_buf)) |p| break :blk p;
+            }
             if (findDylibInPackages(allocator, lib_dir, dep.lib_name, &xpkg_buf)) |p| break :blk p;
             // Nowhere to point it — leave the reference as-is.
             continue;
@@ -135,6 +144,23 @@ pub fn fixMacOSLibraryPaths(
         defer allocator.free(fix_result.stdout);
         defer allocator.free(fix_result.stderr);
     }
+}
+
+/// Resolve an `@rpath`-relative registry path (`<domain>/v<ver>/lib/<name>`)
+/// against the ancestors of a package's lib dir, nearest first, returning the
+/// first that exists. The packages root is a few levels up — how many depends
+/// on how many slashes the package's own domain has — so each is tried.
+pub fn findRpathRefInAncestors(lib_dir: []const u8, rel: []const u8, out: []u8) ?[]const u8 {
+    if (rel.len == 0 or rel[0] == '/' or std.mem.indexOf(u8, rel, "..") != null) return null;
+    var dir = lib_dir;
+    var depth: usize = 0;
+    while (depth < 8) : (depth += 1) {
+        dir = std.fs.path.dirname(dir) orelse return null;
+        if (dir.len <= 1) return null;
+        const candidate = std.fmt.bufPrint(out, "{s}/{s}", .{ dir, rel }) catch return null;
+        if (io_helper.accessAbsolute(candidate, .{})) |_| return candidate else |_| {}
+    }
+    return null;
 }
 
 /// Given a package's lib dir (`<...>/packages/<domain>/v<ver>/lib`), locate a
@@ -443,4 +469,32 @@ fn codesignDirectory(allocator: std.mem.Allocator, dir_path: []const u8) void {
         allocator.free(result.stdout);
         allocator.free(result.stderr);
     }
+}
+
+test "an @rpath registry reference resolves against a project install's root" {
+    const testing = std.testing;
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+
+    // <proj>/pantry/<domain>/v<ver>/lib, as `pantry install` lays it out.
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const bz_lib = try std.fmt.bufPrint(&buf, "{s}/pantry/sourceware.org/bzip2/v1.0.8/lib", .{root});
+    try io_helper.makePath(bz_lib);
+    var file_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const bz = try std.fmt.bufPrint(&file_buf, "{s}/libbz2.1.0.8.dylib", .{bz_lib});
+    io_helper.closeFile(try io_helper.createFileAbsolute(bz, .{}));
+
+    var lib_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const xorriso_lib = try std.fmt.bufPrint(&lib_buf, "{s}/pantry/gnu.org/xorriso/v1.5.4/lib", .{root});
+    try io_helper.makePath(xorriso_lib);
+
+    var out: [std.fs.max_path_bytes]u8 = undefined;
+    const found = findRpathRefInAncestors(xorriso_lib, "sourceware.org/bzip2/v1.0.8/lib/libbz2.1.0.8.dylib", &out) orelse
+        return error.TestExpectedResolution;
+    try testing.expectEqualStrings(bz, found);
+
+    try testing.expect(findRpathRefInAncestors(xorriso_lib, "example.com/missing/v1/lib/libx.dylib", &out) == null);
+    try testing.expect(findRpathRefInAncestors(xorriso_lib, "../../etc/passwd", &out) == null);
 }
