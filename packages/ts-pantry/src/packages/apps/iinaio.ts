@@ -3,7 +3,7 @@
  *
  * @domain `iina.io`
  * @programs `iina`
- * @version `1.3.5` (2 versions available)
+ * @version `1.5.0` (33 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install iina.io`
@@ -22,6 +22,7 @@ export const iinaioPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.5.0',
     '1.4.4',
     '1.4.3',
     '1.4.2',
