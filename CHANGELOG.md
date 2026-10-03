@@ -1,3 +1,33 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.66...v0.11.67)
+
+## ✨ Features
+
+- **install**: install the database a project's .env names ([195c2d8](https://github.com/pantry-pm/pantry/commit/195c2d8)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#36](https://github.com/pantry-pm/pantry/issues/36))
+
+## 🐛 Bug Fixes
+
+- **install**: resolve @rpath registry references in project installs ([ddc2d45](https://github.com/pantry-pm/pantry/commit/ddc2d45)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#198](https://github.com/pantry-pm/pantry/issues/198))
+- **shell**: auto-install on cd only for projects pantry manages ([6bc0652](https://github.com/pantry-pm/pantry/commit/6bc0652)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#204](https://github.com/pantry-pm/pantry/issues/204))
+- **publish**: match ignore files with gitignore semantics, not rsync's ([0b8c101](https://github.com/pantry-pm/pantry/commit/0b8c101)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#202](https://github.com/pantry-pm/pantry/issues/202))
+- **action**: fail setup when the required Bun install fails ([67a8616](https://github.com/pantry-pm/pantry/commit/67a8616)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#234](https://github.com/pantry-pm/pantry/issues/234))
+
+## ✅ Tests
+
+- **publish:commit**: pin private and workspace-root resolution for direct paths ([4b9bc72](https://github.com/pantry-pm/pantry/commit/4b9bc72)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#203](https://github.com/pantry-pm/pantry/issues/203))
+
+## 🔧 Chores
+
+- release v0.11.67 ([5ed0cba](https://github.com/pantry-pm/pantry/commit/5ed0cba)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update dozzle.dev, github.com/ggerganov/llama.cpp, mise.jdx.dev, vim.org, ziglang.org ([ea2d18b](https://github.com/pantry-pm/pantry/commit/ea2d18b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update arkade.dev, diabrowser.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, github.com/tw93/mole, libreoffice.org, mercure.rocks, ohmyposh.dev ([d1c261e](https://github.com/pantry-pm/pantry/commit/d1c261e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update buddy.sh, caddyserver.com, casdoor.org, codex.openai.com, github.com/ggerganov/llama.cpp, iina.io, mailpit.axllent.org, openexr.com, zrok.io ([79ac486](https://github.com/pantry-pm/pantry/commit/79ac486)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.107 ([936219f](https://github.com/pantry-pm/pantry/commit/936219f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **benchmark**: move the install fixtures to vitest ^4.1.11 ([abd3309](https://github.com/pantry-pm/pantry/commit/abd3309)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.65...v0.11.66)
 
 ## 🐛 Bug Fixes
