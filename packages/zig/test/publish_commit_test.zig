@@ -731,3 +731,135 @@ test "workspace protocol rewrite - staged manifest rewritten, on-disk source unt
     defer allocator.free(source_content);
     try testing.expectEqualStrings(original, source_content);
 }
+
+// ============================================================================
+// publish:commit path resolution (#203)
+//
+// `pantry publish:commit '.'` from a monorepo root used to publish the
+// private root and tar the whole repo, ignoring the children's `files`.
+// ============================================================================
+
+const publish_commit = lib.commands.publish_commit_commands;
+
+fn freePackages(allocator: std.mem.Allocator, packages: *std.ArrayList(publish_commit.PackageInfo)) void {
+    for (packages.items) |*pkg| pkg.deinit(allocator);
+    packages.deinit(allocator);
+}
+
+fn writeJoined(allocator: std.mem.Allocator, root: []const u8, rel: []const u8, content: []const u8) !void {
+    const full = try std.fs.path.join(allocator, &[_][]const u8{ root, rel });
+    defer allocator.free(full);
+    if (std.fs.path.dirname(full)) |parent| try ws_io.makePath(parent);
+    try writeTestFile(full, content);
+}
+
+/// The ts-watches shape: a private root declaring `workspaces`, one public
+/// child with a `files` list, one private child.
+fn makeMonorepoFixture(allocator: std.mem.Allocator) ![]const u8 {
+    const root = try makeTestDir(allocator, "pantry-pc-monorepo");
+    errdefer ws_io.deleteTree(root) catch {};
+    try writeJoined(allocator, root, "package.json",
+        \\{ "name": "ts-watches", "private": true, "version": "0.1.0", "workspaces": ["packages/*"] }
+    );
+    try writeJoined(allocator, root, "packages/ts-watches/package.json",
+        \\{ "name": "ts-watches", "version": "0.1.0", "files": ["README.md", "dist"] }
+    );
+    try writeJoined(allocator, root, "packages/ts-watches/README.md", "# ts-watches\n");
+    try writeJoined(allocator, root, "packages/ts-watches/dist/index.js", "export {}\n");
+    try writeJoined(allocator, root, "packages/ts-watches/src/index.ts", "export {}\n");
+    try writeJoined(allocator, root, "packages/ts-watches/node_modules/dep/index.js", "x\n");
+    try writeJoined(allocator, root, "packages/internal/package.json",
+        \\{ "name": "internal", "version": "0.0.1", "private": true }
+    );
+    try writeJoined(allocator, root, "node_modules/big/index.js", "x\n");
+    return root;
+}
+
+test "publish:commit '.' at a private workspace root resolves to its public members" {
+    const allocator = testing.allocator;
+    const root = try makeMonorepoFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+
+    var packages: std.ArrayList(publish_commit.PackageInfo) = .empty;
+    defer freePackages(allocator, &packages);
+    try publish_commit.resolveGlobPattern(allocator, root, ".", &packages);
+    // `./` spelling resolves the same way.
+    try publish_commit.resolveGlobPattern(allocator, root, "./", &packages);
+
+    try testing.expectEqual(@as(usize, 2), packages.items.len);
+    const expected_path = try std.fs.path.join(allocator, &[_][]const u8{ root, "packages", "ts-watches" });
+    defer allocator.free(expected_path);
+    for (packages.items) |pkg| {
+        try testing.expectEqualStrings("ts-watches", pkg.name);
+        try testing.expectEqualStrings(expected_path, pkg.path);
+    }
+}
+
+test "publish:commit skips a private package given as a direct path" {
+    const allocator = testing.allocator;
+    const root = try makeMonorepoFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+
+    var packages: std.ArrayList(publish_commit.PackageInfo) = .empty;
+    defer freePackages(allocator, &packages);
+    try publish_commit.resolveGlobPattern(allocator, root, "./packages/internal", &packages);
+    try testing.expectEqual(@as(usize, 0), packages.items.len);
+
+    // A private root with nothing to expand is skipped, never tarred whole.
+    const lone = try makeTestDir(allocator, "pantry-pc-private-root");
+    defer allocator.free(lone);
+    defer ws_io.deleteTree(lone) catch {};
+    try writeJoined(allocator, lone, "package.json",
+        \\{ "name": "root", "private": true, "workspaces": ["packages/*"] }
+    );
+    try publish_commit.resolveGlobPattern(allocator, lone, ".", &packages);
+    try testing.expectEqual(@as(usize, 0), packages.items.len);
+}
+
+test "publish:commit tarball of a workspace member honours its files field" {
+    const allocator = testing.allocator;
+    const root = try makeMonorepoFixture(allocator);
+    defer allocator.free(root);
+    defer ws_io.deleteTree(root) catch {};
+
+    var packages: std.ArrayList(publish_commit.PackageInfo) = .empty;
+    defer freePackages(allocator, &packages);
+    try publish_commit.resolveGlobPattern(allocator, root, ".", &packages);
+    try testing.expectEqual(@as(usize, 1), packages.items.len);
+    const pkg = packages.items[0];
+
+    const config = try ws_io.readFileAlloc(allocator, pkg.config_path, 1024 * 1024);
+    defer allocator.free(config);
+    const tarball = try lib.commands.registry_commands.createTarball(allocator, pkg.path, pkg.name, "abc1234", config);
+    defer allocator.free(tarball);
+    defer ws_io.deleteFile(tarball) catch {};
+
+    const listing = try ws_io.childRun(allocator, &[_][]const u8{ "tar", "-tzf", tarball });
+    defer allocator.free(listing.stdout);
+    defer allocator.free(listing.stderr);
+
+    var entries: std.ArrayList([]const u8) = .empty;
+    defer entries.deinit(allocator);
+    var it = std.mem.tokenizeScalar(u8, listing.stdout, '\n');
+    while (it.next()) |line| {
+        const trimmed = std.mem.trimEnd(u8, line, "/");
+        if (std.mem.eql(u8, trimmed, "package")) continue;
+        try entries.append(allocator, trimmed);
+    }
+    for (entries.items) |e| {
+        const allowed = std.mem.eql(u8, e, "package/package.json") or
+            std.mem.eql(u8, e, "package/README.md") or
+            std.mem.startsWith(u8, e, "package/dist");
+        if (!allowed) {
+            std.debug.print("unexpected tarball entry: {s}\n", .{e});
+            return error.TestUnexpectedResult;
+        }
+    }
+    var has_dist = false;
+    for (entries.items) |e| {
+        if (std.mem.eql(u8, e, "package/dist/index.js")) has_dist = true;
+    }
+    try testing.expect(has_dist);
+}

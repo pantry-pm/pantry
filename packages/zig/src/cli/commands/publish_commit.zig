@@ -227,7 +227,7 @@ pub fn publishCommitCommand(allocator: std.mem.Allocator, args: []const []const 
 // Internal Types
 // ============================================================================
 
-const PackageInfo = struct {
+pub const PackageInfo = struct {
     name: []const u8,
     path: []const u8,
     config_path: []const u8,
@@ -349,7 +349,7 @@ fn getGitRepoUrl(allocator: std.mem.Allocator) ![]const u8 {
 
 /// Resolve a glob pattern to a list of package directories.
 /// Supports patterns like './packages/*', './storage/framework/core/*'
-fn resolveGlobPattern(
+pub fn resolveGlobPattern(
     allocator: std.mem.Allocator,
     cwd: []const u8,
     pattern: []const u8,
@@ -364,7 +364,9 @@ fn resolveGlobPattern(
     // Check if pattern ends with /* (directory glob)
     if (std.mem.endsWith(u8, clean_pattern, "/*")) {
         const dir_prefix = clean_pattern[0 .. clean_pattern.len - 2];
-        const base_dir = try std.fs.path.join(allocator, &[_][]const u8{ cwd, dir_prefix });
+        // resolve, not join: `.`/`..` segments would otherwise leak into every
+        // package path (`<root>/./packages/x`) the rest of publishing sees.
+        const base_dir = try std.fs.path.resolve(allocator, &[_][]const u8{ cwd, dir_prefix });
         defer allocator.free(base_dir);
 
         var dir = io_helper.openDirForIteration(base_dir) catch |err| {
@@ -450,7 +452,7 @@ fn resolveGlobPattern(
         }
     } else {
         // Treat as a direct path to a single package
-        const pkg_path = try std.fs.path.join(allocator, &[_][]const u8{ cwd, clean_pattern });
+        const pkg_path = try std.fs.path.resolve(allocator, &[_][]const u8{ cwd, clean_pattern });
         errdefer allocator.free(pkg_path);
 
         const config_path = try std.fs.path.join(allocator, &[_][]const u8{ pkg_path, "package.json" });
