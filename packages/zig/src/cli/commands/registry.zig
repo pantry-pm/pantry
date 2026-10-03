@@ -13,6 +13,7 @@ const common = @import("common.zig");
 const style = @import("../style.zig");
 const advanced_glob = @import("../../packages/advanced_glob.zig");
 const workspace_publish = @import("workspace_publish.zig");
+const publish_ignore = @import("publish_ignore.zig");
 const token_commands = @import("token.zig");
 const http = std.http;
 
@@ -1264,9 +1265,11 @@ fn createTarballDefault(
     const dst_path = try std.fmt.allocPrint(allocator, "{s}/", .{staging_pkg});
     defer allocator.free(dst_path);
 
-    // Read ignore patterns from .pantryignore or .gitignore
-    var ignore_patterns: [128][]const u8 = undefined;
-    var ignore_count: usize = 0;
+    // Ignore rules use gitignore semantics, matched here rather than by
+    // rsync (whose pattern language differs between GNU rsync and macOS's
+    // openrsync — see publish_ignore.zig and #202).
+    var rules = publish_ignore.IgnoreRules.init(allocator);
+    defer rules.deinit();
 
     // Always exclude these (npm standard)
     const always_exclude = [_][]const u8{
@@ -1284,22 +1287,9 @@ fn createTarballDefault(
         "bun.lockb",
         "pnpm-lock.yaml",
     };
-    for (always_exclude) |pattern| {
-        if (ignore_count < ignore_patterns.len) {
-            ignore_patterns[ignore_count] = pattern;
-            ignore_count += 1;
-        }
-    }
+    for (always_exclude) |pattern| _ = try rules.add(pattern);
 
     // Try to read ignore files in priority order: .pantryignore > .npmignore > .gitignore
-    var dynamic_patterns: [64][]u8 = undefined;
-    var dynamic_count: usize = 0;
-    defer {
-        for (0..dynamic_count) |i| {
-            allocator.free(dynamic_patterns[i]);
-        }
-    }
-
     style.print("  Scanning for ignore files in: {s}\n", .{package_dir});
 
     const ignore_file_content = blk: {
@@ -1354,59 +1344,26 @@ fn createTarballDefault(
     if (ignore_file_content) |content| {
         var lines = std.mem.splitScalar(u8, content, '\n');
         while (lines.next()) |line| {
-            // Skip empty lines and comments
-            const trimmed = std.mem.trim(u8, line, " \t\r");
-            if (trimmed.len == 0 or trimmed[0] == '#') continue;
-
-            // Skip negation patterns (we don't support them yet)
-            if (trimmed[0] == '!') continue;
-
-            // Add the pattern
-            if (ignore_count < ignore_patterns.len and dynamic_count < dynamic_patterns.len) {
-                const pattern_copy = try allocator.dupe(u8, trimmed);
-                dynamic_patterns[dynamic_count] = pattern_copy;
-                ignore_patterns[ignore_count] = pattern_copy;
-                ignore_count += 1;
-                dynamic_count += 1;
-                style.print("    + exclude: {s}\n", .{trimmed});
+            if (try rules.add(line)) |rule| {
+                const trimmed = std.mem.trim(u8, line, " \t\r");
+                if (rule.negate)
+                    style.print("    + include: {s}\n", .{trimmed})
+                else
+                    style.print("    + exclude: {s}\n", .{trimmed});
             }
         }
     }
 
-    // Build rsync command with all exclude patterns
-    var rsync_args: [256][]const u8 = undefined;
-    var arg_count: usize = 0;
+    // Resolve the rules against the real tree; rsync only sees anchored
+    // literal paths, which every rsync implementation reads the same way.
+    const exclude_list_path = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, "rsync-excludes" });
+    defer allocator.free(exclude_list_path);
+    const excluded = try publish_ignore.writeExcludeFile(allocator, &rules, package_dir, exclude_list_path);
+    style.print("  Excluding {d} path(s)\n", .{excluded});
+    const exclude_from = try std.fmt.allocPrint(allocator, "--exclude-from={s}", .{exclude_list_path});
+    defer allocator.free(exclude_from);
 
-    rsync_args[arg_count] = "rsync";
-    arg_count += 1;
-    rsync_args[arg_count] = "-a";
-    arg_count += 1;
-
-    // Add all exclude patterns
-    var exclude_flags: [128][]u8 = undefined;
-    var exclude_flag_count: usize = 0;
-    defer {
-        for (0..exclude_flag_count) |i| {
-            allocator.free(exclude_flags[i]);
-        }
-    }
-
-    for (ignore_patterns[0..ignore_count]) |pattern| {
-        if (arg_count < rsync_args.len - 2 and exclude_flag_count < exclude_flags.len) {
-            const flag = try std.fmt.allocPrint(allocator, "--exclude={s}", .{pattern});
-            exclude_flags[exclude_flag_count] = flag;
-            rsync_args[arg_count] = flag;
-            arg_count += 1;
-            exclude_flag_count += 1;
-        }
-    }
-
-    rsync_args[arg_count] = src_path;
-    arg_count += 1;
-    rsync_args[arg_count] = dst_path;
-    arg_count += 1;
-
-    const cp_result = try io_helper.childRun(allocator, rsync_args[0..arg_count]);
+    const cp_result = try io_helper.childRun(allocator, &[_][]const u8{ "rsync", "-a", exclude_from, src_path, dst_path });
     defer allocator.free(cp_result.stdout);
     defer allocator.free(cp_result.stderr);
 

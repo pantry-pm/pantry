@@ -15,4 +15,6 @@ test {
     // actually executes: reading 202 as a failure cost a failed npm job on
     // every release until it was found by hand.
     _ = @import("auth/registry.zig");
+    // Ignore-file matching for publish tarballs (#202).
+    _ = @import("cli/commands/publish_ignore.zig");
 }

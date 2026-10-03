@@ -7,6 +7,7 @@ const common = @import("common.zig");
 const token_commands = @import("token.zig");
 const style = @import("../style.zig");
 const workspace_publish = @import("workspace_publish.zig");
+const publish_ignore = @import("publish_ignore.zig");
 
 const CommandResult = common.CommandResult;
 
@@ -2350,11 +2351,63 @@ fn createTarball(
         const dst_path = try std.fmt.allocPrint(allocator, "{s}/", .{staging_pkg});
         defer allocator.free(dst_path);
 
-        // Read additional exclusion patterns from .pantryignore or .npmignore
-        var extra_excludes: [64][]u8 = undefined;
-        var extra_exclude_count: usize = 0;
-        defer for (extra_excludes[0..extra_exclude_count]) |e| allocator.free(e);
+        // Ignore rules use gitignore semantics, matched here rather than by
+        // rsync, whose pattern language differs between GNU rsync and macOS's
+        // openrsync (see publish_ignore.zig and #202).
+        var rules = publish_ignore.IgnoreRules.init(allocator);
+        defer rules.deinit();
 
+        // Default exclusions
+        const default_excludes = [_][]const u8{
+            ".git",
+            ".gitignore",
+            ".gitattributes",
+            ".gitmodules",
+            ".svn",
+            ".hg",
+            "CVS",
+            ".npmignore",
+            ".pantryignore",
+            ".npmrc",
+            ".yarnrc",
+            ".yarnrc.yml",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+            "bun.lockb",
+            "shrinkwrap.yaml",
+            "pantry.lock",
+            "node_modules",
+            "pantry",
+            ".nyc_output",
+            "coverage",
+            ".coverage",
+            "*.tgz",
+            "*.tar.xz",
+            ".DS_Store",
+            "Thumbs.db",
+            "._*",
+            "*.swp",
+            "*.orig",
+            ".idea",
+            ".vscode",
+            "*.sublime-*",
+            ".github",
+            ".gitlab-ci.yml",
+            ".travis.yml",
+            ".circleci",
+            ".env",
+            ".env.*",
+            "*.pem",
+            "*.key",
+            "*.log",
+            "npm-debug.log",
+            "deps.yaml",
+            ".claude",
+        };
+        for (default_excludes) |pattern| _ = try rules.add(pattern);
+
+        // Additional patterns from .pantryignore or .npmignore
         const ignore_content = blk: {
             // Priority: .pantryignore > .npmignore
             const pantryignore_path = std.fs.path.join(allocator, &[_][]const u8{ package_dir, ".pantryignore" }) catch break :blk null;
@@ -2381,94 +2434,18 @@ fn createTarball(
         };
         defer if (ignore_content) |c| allocator.free(c);
 
-        // Parse ignore file patterns
         if (ignore_content) |content| {
             var lines = std.mem.splitScalar(u8, content, '\n');
-            while (lines.next()) |line| {
-                const trimmed = std.mem.trim(u8, line, " \t\r");
-                if (trimmed.len == 0 or trimmed[0] == '#' or trimmed[0] == '!') continue;
-                if (extra_exclude_count < extra_excludes.len) {
-                    extra_excludes[extra_exclude_count] = std.fmt.allocPrint(allocator, "--exclude={s}", .{trimmed}) catch continue;
-                    extra_exclude_count += 1;
-                }
-            }
+            while (lines.next()) |line| _ = try rules.add(line);
         }
 
-        // Build rsync args with both default and custom exclusions
-        var rsync_args: [128][]const u8 = undefined;
-        var rsync_argc: usize = 0;
+        const exclude_list_path = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, "rsync-excludes" });
+        defer allocator.free(exclude_list_path);
+        _ = try publish_ignore.writeExcludeFile(allocator, &rules, package_dir, exclude_list_path);
+        const exclude_from = try std.fmt.allocPrint(allocator, "--exclude-from={s}", .{exclude_list_path});
+        defer allocator.free(exclude_from);
 
-        rsync_args[rsync_argc] = "rsync";
-        rsync_argc += 1;
-        rsync_args[rsync_argc] = "-a";
-        rsync_argc += 1;
-
-        // Add custom exclusions first
-        for (extra_excludes[0..extra_exclude_count]) |e| {
-            rsync_args[rsync_argc] = e;
-            rsync_argc += 1;
-        }
-
-        // Default exclusions
-        const default_excludes = [_][]const u8{
-            "--exclude=.git",
-            "--exclude=.gitignore",
-            "--exclude=.gitattributes",
-            "--exclude=.gitmodules",
-            "--exclude=.svn",
-            "--exclude=.hg",
-            "--exclude=CVS",
-            "--exclude=.npmignore",
-            "--exclude=.pantryignore",
-            "--exclude=.npmrc",
-            "--exclude=.yarnrc",
-            "--exclude=.yarnrc.yml",
-            "--exclude=package-lock.json",
-            "--exclude=yarn.lock",
-            "--exclude=pnpm-lock.yaml",
-            "--exclude=bun.lockb",
-            "--exclude=shrinkwrap.yaml",
-            "--exclude=pantry.lock",
-            "--exclude=node_modules",
-            "--exclude=pantry",
-            "--exclude=.nyc_output",
-            "--exclude=coverage",
-            "--exclude=.coverage",
-            "--exclude=*.tgz",
-            "--exclude=*.tar.xz",
-            "--exclude=.DS_Store",
-            "--exclude=Thumbs.db",
-            "--exclude=._*",
-            "--exclude=*.swp",
-            "--exclude=*.orig",
-            "--exclude=.idea",
-            "--exclude=.vscode",
-            "--exclude=*.sublime-*",
-            "--exclude=.github",
-            "--exclude=.gitlab-ci.yml",
-            "--exclude=.travis.yml",
-            "--exclude=.circleci",
-            "--exclude=.env",
-            "--exclude=.env.*",
-            "--exclude=*.pem",
-            "--exclude=*.key",
-            "--exclude=*.log",
-            "--exclude=npm-debug.log",
-            "--exclude=deps.yaml",
-            "--exclude=.claude",
-            "--exclude=pantry",
-        };
-        for (default_excludes) |e| {
-            rsync_args[rsync_argc] = e;
-            rsync_argc += 1;
-        }
-
-        rsync_args[rsync_argc] = src_path;
-        rsync_argc += 1;
-        rsync_args[rsync_argc] = dst_path;
-        rsync_argc += 1;
-
-        const cp_result = try io_helper.childRun(allocator, rsync_args[0..rsync_argc]);
+        const cp_result = try io_helper.childRun(allocator, &[_][]const u8{ "rsync", "-a", exclude_from, src_path, dst_path });
         defer allocator.free(cp_result.stdout);
         defer allocator.free(cp_result.stderr);
 
