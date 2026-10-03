@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.65...v0.11.66)
+
+## 🐛 Bug Fixes
+
+- **action**: matrix legs share one draft release instead of each creating one ([0e578ac](https://github.com/pantry-pm/pantry/commit/0e578ac)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.66 ([f082cc9](https://github.com/pantry-pm/pantry/commit/f082cc9)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update buddy.sh, codex.openai.com, eksctl.io, github.com/ggerganov/llama.cpp, libsdl.org, localai.io, markupsafe.palletsprojects.com, materialize.com, planetscale.com, pnpm.io, ziglang.org ([2e583bb](https://github.com/pantry-pm/pantry/commit/2e583bb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.64...v0.11.65)
 
 ## 🐛 Bug Fixes
