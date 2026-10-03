@@ -10,6 +10,7 @@ import type { ReleaseClient } from './release-draft'
 import { findReleaseForTag, settleCreatedDraft } from './release-draft'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
+import { setupBunRuntime } from './bun-runtime'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { installRequiredSystemPackages, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
@@ -836,20 +837,13 @@ export async function run(): Promise<void> {
       // it so downstream steps can run `bun …` without a separate setup-bun.
       // (Without this, setup-only returned before any bun install, so a
       // workflow that only wanted the CLI got `bun: command not found`.)
-      try {
-        await installSystemPackage('bun.sh', pantryDir, readLockedVersions())
-        const bunPath = path.join(pantryBinDir, 'bun')
-        const bunxPath = path.join(pantryBinDir, 'bunx')
-        if (fs.existsSync(bunPath)) {
-          try { fs.unlinkSync(bunxPath) }
-          catch { /* doesn't exist */ }
-          fs.symlinkSync(bunPath, bunxPath)
-          core.exportVariable('BUN_INSTALL', pantryDir)
-        }
-      }
-      catch (err) {
-        core.warning(`bun setup (install:false): ${err instanceof Error ? err.message : 'failed'}`)
-      }
+      // A failed install fails the setup here, with the download error,
+      // instead of a warning and a downstream `bun: command not found`.
+      await setupBunRuntime({
+        install: () => installSystemPackage('bun.sh', pantryDir, readLockedVersions()),
+        binDir: pantryBinDir,
+        onLinked: () => core.exportVariable('BUN_INSTALL', pantryDir),
+      })
 
       // Configure PATH so pantry-installed bins (incl. bun) are available
       if (fs.existsSync(pantryBinDir))
