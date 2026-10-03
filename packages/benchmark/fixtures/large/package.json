@@ -16,7 +16,7 @@
     "postcss": "^8.5.1",
     "eslint": "^9.19.0",
     "prettier": "^3.4.2",
-    "vitest": "^3.0.5",
+    "vitest": "^4.1.11",
     "@testing-library/react": "^16.2.0",
     "zod": "^3.24.1",
     "react-hook-form": "^7.54.2"
