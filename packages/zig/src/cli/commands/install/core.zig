@@ -7,6 +7,7 @@ const io_helper = @import("../../../io_helper.zig");
 const lib = @import("../../../lib.zig");
 const types = @import("types.zig");
 const helpers = @import("helpers.zig");
+const env_deps = @import("env_deps.zig");
 const workspace = @import("workspace.zig");
 const global = @import("global.zig");
 
@@ -136,6 +137,16 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
             checked_count += 1;
         }
         if (checked_count == 0) return null;
+    }
+
+    // 4a. Services the project's .env names (DB_CONNECTION=pgsql, ...) count
+    // as dependencies too, or a changed driver would never be installed.
+    {
+        const inferred = env_deps.infer(allocator, cwd, deps, .{ .report = false }) catch &.{};
+        defer env_deps.freeDeps(allocator, inferred);
+        for (inferred) |dep| {
+            if (!helpers.canSkipFromLockfile(&lockfile.packages, dep.name, dep.version, cwd, allocator, modules_dir)) return null;
+        }
     }
 
     // 4b. Verify integrity hashes for locked packages (if present)
@@ -637,6 +648,17 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 try filtered_deps.append(allocator, dep);
             }
         }
+
+        // Services the project's .env names (DB_CONNECTION=pgsql -> postgresql.org,
+        // ...), unless the dependency file already declares them (#36).
+        const env_inferred = env_deps.infer(
+            allocator,
+            if (deps_file_path) |path| std.fs.path.dirname(path) orelse cwd else cwd,
+            deps,
+            .{ .frozen_lockfile = opts.frozen_lockfile },
+        ) catch &.{};
+        defer env_deps.freeDeps(allocator, env_inferred);
+        try filtered_deps.appendSlice(allocator, env_inferred);
 
         // Load overrides/resolutions from package.json if it exists
         var override_map = lib.deps.overrides.OverrideMap.init(allocator);
@@ -1742,14 +1764,24 @@ fn installCompanionDepsFile(
     const parser = @import("../../../deps/parser.zig");
     const pipeline = @import("../../../install/pipeline.zig");
 
-    const deps = parser.inferDependencies(allocator, df) catch return .{ .exit_code = 0 };
+    const declared_deps = parser.inferDependencies(allocator, df) catch return .{ .exit_code = 0 };
     defer {
-        for (deps) |*dep| {
+        for (declared_deps) |*dep| {
             var owned_dep = dep.*;
             owned_dep.deinit(allocator);
         }
-        allocator.free(deps);
+        allocator.free(declared_deps);
     }
+
+    // Services the project's .env names, unless declared (#36). A non-null
+    // lockfile_path means a --frozen-lockfile run staging its lock: infer only
+    // what the committed lock already records, or the comparison fails.
+    const env_inferred = env_deps.infer(allocator, project_root, declared_deps, .{
+        .frozen_lockfile = options.frozen_lockfile or lockfile_path != null,
+    }) catch &.{};
+    defer env_deps.freeDeps(allocator, env_inferred);
+    const deps = if (env_inferred.len == 0) declared_deps else try std.mem.concat(allocator, parser.PackageDependency, &.{ declared_deps, env_inferred });
+    defer if (env_inferred.len > 0) allocator.free(deps);
     if (deps.len == 0) return .{ .exit_code = 0 };
 
     const proj_basename = std.fs.path.basename(project_root);

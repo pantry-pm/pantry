@@ -103,6 +103,30 @@ Custom service fields:
 
 Custom services referenced in `autoStart` are started automatically on environment activation, just like built-in services. They are managed using the same launchd/systemd infrastructure.
 
+### Services Inferred from `.env`
+
+Laravel and Stacks projects pick their database in `.env` rather than in a
+dependency file. `pantry install` reads these keys and installs the matching
+package, so a fresh checkout does not install cleanly and then fail to start:
+
+| `.env` | Installs |
+|---|---|
+| `DB_CONNECTION=pgsql` / `postgres` / `postgresql` | `postgresql.org` |
+| `DB_CONNECTION=mysql` | `mysql.com` |
+| `DB_CONNECTION=mariadb` | `mariadb.com/server` |
+| `DB_CONNECTION=sqlite` / `sqlite3` | `sqlite.org` |
+| `CACHE_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION`, `QUEUE_DRIVER` or `SESSION_DRIVER` `=redis` | `redis.io` |
+
+- **An explicit declaration always wins.** If `deps.yaml` / `pantry.jsonc`
+  names the package in any spelling (`postgres: 17`, `postgresql.org@17`), its
+  pin is used and nothing is inferred.
+- pantry prints each package it adds and the key that caused it, e.g.
+  `+ postgresql.org (from DB_CONNECTION=pgsql in .env; PANTRY_ENV_DEPS=0 to skip)`.
+  Only those keys are read, and no other `.env` value is printed.
+- Under `--frozen-lockfile` a package is inferred only if `pantry.lock`
+  already records it, so CI never drifts from the committed lock.
+- Set `PANTRY_ENV_DEPS=0` to turn inference off.
+
 ### Service Groups
 
 Start, stop, or restart multiple related services at once using group names:
