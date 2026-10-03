@@ -1,12 +1,15 @@
 # Pantry Shell Integration (Zig)
 # Optimized for instant cd with shell-side caching
 #
-# Routing rule: this integration ONLY ever invokes `pantry install`. It never
-# calls `bun install`, `npm install`, etc. directly. `pantry install` is the
-# router — it handles pantry system deps (zig, redis, etc.), workspaces, and
-# delegates to the appropriate JS package manager (bun/pnpm/yarn/npm) for npm
-# deps via deps/js_delegate.zig. If you see "bun install" running after a cd,
-# that is pantry's delegate, not this script.
+# Routing rule (#204): this integration never calls `bun install`, `npm
+# install`, etc. itself, and it only auto-runs `pantry install` for a project
+# pantry manages — one with pantry.lock or a pantry dependency file (deps.yaml,
+# pantry.jsonc, pantry.config.ts, ...). A project with only package.json (or
+# Cargo.toml, go.mod, ...) belongs to its own package manager: entering it
+# activates nothing new and installs nothing. `pantry shell:route <dir>` makes
+# that call (src/shell/install_route.zig); it runs only when a project has no
+# environment yet, and its answer is memoised per (dependency file mtime,
+# pantry.lock mtime), so no prompt pays for it twice.
 
 __PANTRY_CACHE_FILE="${HOME}/.pantry/cache/shell-env.cache"
 
@@ -380,14 +383,27 @@ __pantry_switch_environment() {
 
     # No env found but dep file exists - auto-install unless PANTRY_NO_AUTO_INSTALL is set
     if [[ -n "$dep_file" && -z "${PANTRY_NO_AUTO_INSTALL:-}" ]]; then
-        # Don't re-run the installer for a deps file that already produced no
-        # env (failed install, or nothing to activate). __PANTRY_LAST_NO_ENV
-        # alone can't protect here — it holds one dir, so alternating between
-        # two project dirs would re-trigger `pantry install` on every cd.
-        # Keyed on (dep file, mtime): editing the deps file retries at once.
+        # Don't re-run the installer (or re-ask shell:route) for a deps file
+        # that already produced no env: a failed install, nothing to activate,
+        # or a project that is not pantry's to install. The memo is a SET of
+        # every such file seen this session — one remembered entry let two
+        # alternating projects re-trigger it on every cd. Keyed on the deps
+        # file's mtime AND pantry.lock's, so editing either retries at once
+        # (a lockfile appearing is what turns a project into a pantry one).
         __pantry_mtime "$dep_file"
-        local dep_m="$REPLY"
-        if [[ "$dep_file" == "${__PANTRY_NOINSTALL_FILE:-}" && "$dep_m" == "${__PANTRY_NOINSTALL_MTIME:-}" ]]; then
+        local dep_m="$REPLY" lock_m=0 proj_dir="${dep_file%/*}"
+        if [[ -f "$proj_dir/pantry.lock" ]]; then
+            __pantry_mtime "$proj_dir/pantry.lock"; lock_m="$REPLY"
+        fi
+        local memo_key="<${dep_file}|${dep_m}|${lock_m}>"
+        if [[ "${__PANTRY_NOINSTALL_SET:-}" == *"$memo_key"* ]]; then
+            __PANTRY_LAST_NO_ENV="$PWD"
+            return 0
+        fi
+        # Routing rule (see the top of this file): not a pantry project, so
+        # its own package manager owns installing it.
+        if ! pantry shell:route "$proj_dir" >/dev/null 2>&1; then
+            __PANTRY_NOINSTALL_SET="${__PANTRY_NOINSTALL_SET:-}$memo_key"
             __PANTRY_LAST_NO_ENV="$PWD"
             return 0
         fi
@@ -412,8 +428,7 @@ __pantry_switch_environment() {
         fi
         # Reached only when the install failed or produced nothing to
         # activate — remember so we don't re-install until the file changes.
-        __PANTRY_NOINSTALL_FILE="$dep_file"
-        __PANTRY_NOINSTALL_MTIME="$dep_m"
+        __PANTRY_NOINSTALL_SET="${__PANTRY_NOINSTALL_SET:-}$memo_key"
     fi
 
     # Remember this dir to skip repeated lookups

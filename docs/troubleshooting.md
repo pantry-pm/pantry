@@ -253,10 +253,19 @@ ls -la {dependencies,pkgx,deps}.{yaml,yml} .{pantry,pkgx,deps}.{yaml,yml} 2>/dev
 ## Output & Auto-install Control
 
 When you `cd` into a project that isn't set up yet, the shell integration runs
-`pantry install` for you. By default this is **quiet**: a single transient
-`pantry: setting up <name>…` line, then `pantry: <name> ready`. The full
-installer log is written to `~/.pantry/last-install.log` and only the tail is
-shown if setup fails. Activation itself (PATH/env changes) is silent.
+`pantry install` for you and streams its progress, the way `bun install` would.
+
+It does that **only for a project pantry manages**: one with `pantry.lock` or a
+pantry dependency file (`deps.yaml`, `pantry.json(c)`, `pantry.yaml`,
+`dependencies.yaml`, `pkgx.yaml`, `config/deps.ts`, `pantry.config.ts`, ...).
+A project with only `package.json` (or `Cargo.toml`, `go.mod`, ...) belongs to
+its own package manager, so entering it installs nothing; run its installer
+yourself, or `pantry install` to let pantry take it over. The hooks never call
+`bun install`, `npm install` and friends themselves. The check is
+`pantry shell:route <dir>` (prints `pantry` or `project`), asked only when a
+project has no environment yet and remembered per shell session until the
+dependency file or `pantry.lock` changes. zsh, bash, fish, PowerShell and Den
+all follow this rule; the nushell hook never auto-installs.
 
 Knobs (all optional):
 

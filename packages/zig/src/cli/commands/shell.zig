@@ -129,6 +129,18 @@ pub fn shellLookupCommand(allocator: std.mem.Allocator, dir: []const u8) !Comman
     return .{ .exit_code = 1 };
 }
 
+/// `pantry shell:route <dir>`: should the shell integration run `pantry
+/// install` for this project? Prints `pantry` (exit 0) or `project` (exit 1,
+/// leave it to the project's own package manager). See shell/install_route.zig.
+pub fn shellRouteCommand(allocator: std.mem.Allocator, dir: []const u8) !CommandResult {
+    const install_route = @import("../../shell/install_route.zig");
+    const route = install_route.routeForDir(dir);
+    return .{
+        .exit_code = if (route == .pantry) 0 else 1,
+        .message = try allocator.dupe(u8, route.name()),
+    };
+}
+
 /// Handle unknown shell subcommands with a helpful suggestion message.
 pub fn shellUnknownSubcommand(allocator: std.mem.Allocator, subcommand: []const u8) !CommandResult {
     const msg = try std.fmt.allocPrint(

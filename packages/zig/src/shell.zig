@@ -3,6 +3,7 @@ pub const integration = @import("shell/integration.zig");
 pub const generator = @import("shell/generator.zig");
 pub const commands = @import("shell/commands.zig");
 pub const integrate = @import("shell/integrate.zig");
+pub const install_route = @import("shell/install_route.zig");
 
 // Re-export main types (legacy)
 pub const Shell = integration.Shell;

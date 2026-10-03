@@ -1791,6 +1791,24 @@ fn shellLookupAction(ctx: *cli.BaseCommand.ParseContext) !void {
     std.process.exit(result.exit_code);
 }
 
+fn shellRouteAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+
+    const dir = ctx.getArgument(0) orelse {
+        style.print("Error: shell:route requires a directory argument\n", .{});
+        std.process.exit(2);
+    };
+
+    const result = try lib.commands.shellRouteCommand(allocator, dir);
+    defer result.deinit(allocator);
+
+    if (result.message) |msg| {
+        style.print("{s}\n", .{msg});
+    }
+
+    std.process.exit(result.exit_code);
+}
+
 fn shellActivateAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -3112,6 +3130,17 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
         std.process.exit(result.exit_code);
     }
 
+    // Asked by the shell hooks before an auto-install (#204).
+    if (args.len == 3 and std.mem.eql(u8, args[1], "shell:route") and
+        args[2].len > 0 and args[2][0] != '-')
+    {
+        const result = lib.commands.shellRouteCommand(allocator, args[2]) catch return;
+        if (result.message) |msg| {
+            style.print("{s}\n", .{msg});
+        }
+        std.process.exit(result.exit_code);
+    }
+
     if (args.len == 2 and std.mem.eql(u8, args[1], "dev:shellcode")) {
         const result = lib.commands.shellCodeCommand(allocator) catch return;
         if (result.message) |msg| {
@@ -3778,6 +3807,13 @@ pub fn main() !void {
 
     _ = shell_lookup_cmd.setAction(shellLookupAction);
     _ = try root.addCommand(shell_lookup_cmd);
+
+    var shell_route_cmd = try cli.BaseCommand.init(allocator, "shell:route", "Whether the shell hook installs a project with pantry (internal)");
+    const shell_route_dir_arg = cli.Argument.init("dir", "Project directory", .string)
+        .withRequired(true);
+    _ = try shell_route_cmd.addArgument(shell_route_dir_arg);
+    _ = shell_route_cmd.setAction(shellRouteAction);
+    _ = try root.addCommand(shell_route_cmd);
 
     var shell_activate_cmd = try cli.BaseCommand.init(allocator, "shell:activate", "Activate environment (internal)");
 

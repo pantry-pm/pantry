@@ -180,6 +180,7 @@ pub const envLookupCommand = env_commands.envLookupCommand;
 pub const shellIntegrateCommand = shell_commands.shellIntegrateCommand;
 pub const shellCodeCommand = shell_commands.shellCodeCommand;
 pub const shellLookupCommand = shell_commands.shellLookupCommand;
+pub const shellRouteCommand = shell_commands.shellRouteCommand;
 pub const shellActivateCommand = shell_commands.shellActivateCommand;
 
 // ============================================================================

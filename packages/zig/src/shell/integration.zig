@@ -195,8 +195,14 @@ fn generatePowershellHook(allocator: std.mem.Allocator) ![]const u8 {
         \\    }
         \\    if (-not $dep) { return }
         \\    if (Select-String -Path $dep -Quiet -Pattern '^\s*"?autoActivate"?\s*:\s*"?false"?') { return }
-        \\    $stamp = "$dep|$((Get-Item $dep).LastWriteTimeUtc.Ticks)"
+        \\    $lock = Join-Path $pwdPath 'pantry.lock'
+        \\    $lockTicks = if (Test-Path $lock -PathType Leaf) { (Get-Item $lock).LastWriteTimeUtc.Ticks } else { 0 }
+        \\    $stamp = "$dep|$((Get-Item $dep).LastWriteTimeUtc.Ticks)|$lockTicks"
         \\    if ($global:__PantryNoInstall -eq $stamp) { return }
+        \\    # Only a pantry project (pantry.lock or a pantry deps file) is installed
+        \\    # by pantry; anything else belongs to its own package manager.
+        \\    & pantry shell:route $pwdPath *> $null
+        \\    if ($LASTEXITCODE -ne 0) { $global:__PantryNoInstall = $stamp; return }
         \\    Write-Host "pantry: installing dependencies for $(Split-Path $pwdPath -Leaf)" -ForegroundColor Cyan
         \\    & pantry install
         \\    try { $lookup = & pantry shell:lookup $pwdPath 2>$null } catch { $lookup = $null }
@@ -313,6 +319,10 @@ fn generateDenHook(allocator: std.mem.Allocator) ![]const u8 {
         \\    # fails is not reinstalled on every prompt.
         \\    [ "$__PANTRY_NOINSTALL" = "${__ps_lookup#*|}" ] && return 0
         \\    __PANTRY_NOINSTALL="${__ps_lookup#*|}"
+        \\    # Only a pantry project (pantry.lock or a pantry deps file) is
+        \\    # installed by pantry; anything else belongs to its own package
+        \\    # manager. Memoised above, per project, like the install itself.
+        \\    pantry shell:route "${__ps_lookup#*|}" >/dev/null 2>&1 || return 0
         \\    printf 'pantry: installing dependencies for %s\n' "${PWD##*/}"
         \\    pantry install
         \\    __ps_lookup="$(pantry shell:lookup "$PWD" 2>/dev/null)"
@@ -428,14 +438,22 @@ fn generateFishHook(allocator: std.mem.Allocator) ![]const u8 {
         \\  set -l dep (__pantry_dep_here "$PWD"); or return
         \\  grep -qiE '^[[:space:]]*"?autoActivate"?[[:space:]]*:[[:space:]]*"?false"?' "$dep" 2>/dev/null; and return
         \\  set -l m (command stat -f %m "$dep" 2>/dev/null; or command stat -c %Y "$dep" 2>/dev/null)
-        \\  test "$__pantry_noinstall" = "$dep|$m"; and return
+        \\  set -l lockm 0
+        \\  test -f "$PWD/pantry.lock"; and set lockm (command stat -f %m "$PWD/pantry.lock" 2>/dev/null; or command stat -c %Y "$PWD/pantry.lock" 2>/dev/null)
+        \\  test "$__pantry_noinstall" = "$dep|$m|$lockm"; and return
+        \\  # Only a pantry project (pantry.lock or a pantry deps file) is installed
+        \\  # by pantry; anything else belongs to its own package manager.
+        \\  if not pantry shell:route "$PWD" >/dev/null 2>&1
+        \\    set -g __pantry_noinstall "$dep|$m|$lockm"
+        \\    return
+        \\  end
         \\  printf '\033[36m⚡ pantry\033[0m installing dependencies for \033[1m%s\033[0m\n' (basename "$PWD") >&2
         \\  pantry install
         \\  set -l lookup (pantry shell:lookup "$PWD" 2>/dev/null)
         \\  if test -n "$lookup"; and __pantry_activate_from $lookup
         \\    echo "pantry: "(basename "$PWD")" ready" >&2
         \\  else
-        \\    set -g __pantry_noinstall "$dep|$m"
+        \\    set -g __pantry_noinstall "$dep|$m|$lockm"
         \\  end
         \\end
         \\
