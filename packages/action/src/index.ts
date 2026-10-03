@@ -6,6 +6,8 @@ import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadRelea
 import { deliverReleaseToAppStore } from './release-app-store'
 import { setupAppleSigning } from './apple-signing'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
+import type { ReleaseClient } from './release-draft'
+import { findReleaseForTag, settleCreatedDraft } from './release-draft'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { ensurePackageExecutorAliases } from './executor-aliases'
@@ -1718,20 +1720,30 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   if (!token)
     throw new Error('GitHub token is required for creating releases (set release-token or GITHUB_TOKEN)')
   const octokit = github.getOctokit(token)
-  let existingRelease: Awaited<ReturnType<typeof octokit.rest.repos.getReleaseByTag>>['data'] | undefined
-  try {
-    const response = await retryGitHubReleaseOperation(
-      `Lookup of release ${tag}`,
-      () => octokit.rest.repos.getReleaseByTag({ owner, repo, tag }),
-      { onRetry: message => core.warning(message) },
-    )
-    existingRelease = response.data
+  // Draft-aware: the tag lookup never returns drafts, so legs of one release
+  // matrix each created their own (see release-draft.ts).
+  const releaseClient: ReleaseClient = {
+    getPublishedByTag: async (releaseTag) => {
+      try {
+        const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag: releaseTag })
+        return response.data
+      }
+      catch (err) {
+        if ((err as { status?: number }).status === 404)
+          return undefined
+        throw err
+      }
+    },
+    listRecent: async () => (await octokit.rest.repos.listReleases({ owner, repo, per_page: 100 })).data,
+    deleteRelease: async (id) => {
+      await octokit.rest.repos.deleteRelease({ owner, repo, release_id: id })
+    },
   }
-  catch (err) {
-    const status = (err as { status?: number }).status
-    if (status !== 404)
-      throw err
-  }
+  const existingRelease = await retryGitHubReleaseOperation(
+    `Lookup of release ${tag}`,
+    () => findReleaseForTag(releaseClient, tag),
+    { onRetry: message => core.warning(message) },
+  )
 
   if (existingRelease) {
     const existing = existingRelease
@@ -1779,10 +1791,18 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
         throw error
       }
     }, { onRetry: message => core.warning(message) })
-    releaseId = created.id
-    releaseUrl = created.html_url
-    publishCreatedDraft = !inputs.releaseDraft
-    core.info(`Created draft release: ${tag} (${releaseId})`)
+    const settled = await retryGitHubReleaseOperation(
+      `Reconciliation of release ${tag}`,
+      () => settleCreatedDraft(releaseClient, tag, created),
+      { onRetry: message => core.warning(message) },
+    )
+    releaseId = settled.release.id
+    releaseUrl = settled.release.html_url
+    // Only the leg whose draft is shared publishes it.
+    publishCreatedDraft = settled.own && !inputs.releaseDraft
+    core.info(settled.own
+      ? `Created draft release: ${tag} (${releaseId})`
+      : `Another leg created the draft for ${tag} at the same time; using it (${releaseId})`)
   }
 
   // Re-running a migrated workflow must also clean up raw binaries uploaded by
