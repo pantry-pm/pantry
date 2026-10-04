@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { spawnSync } from 'node:child_process'
 import { generateKeyPairSync } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -10,6 +11,31 @@ import {
   provisionMacApp,
   waitForAppStoreBuilds,
 } from '../src/app-store-connect'
+
+/** A private key, a CSR for it, and a certificate (as Apple returns it) for the same key. */
+function keyMaterial(directory: string, name: string): { csr: string, certificateContent: string } {
+  const key = join(directory, `${name}.key`)
+  const run = (args: string[]) => {
+    const result = spawnSync('openssl', args, { encoding: 'utf8' })
+    if (result.status !== 0)
+      throw new Error(result.stderr)
+    return result.stdout
+  }
+  run(['genrsa', '-out', key, '2048'])
+  const csr = run(['req', '-new', '-key', key, '-subj', `/CN=${name}`])
+  const der = spawnSync('openssl', ['req', '-new', '-x509', '-key', key, '-subj', `/CN=${name}`, '-days', '1', '-outform', 'DER'])
+  return { csr, certificateContent: Buffer.from(der.stdout).toString('base64') }
+}
+
+function rejectUnsupported(url: URL): Response | undefined {
+  // Apple rejects both of these with a 400; the mocks must too, or a request
+  // shape Apple refuses passes here and fails on first live use.
+  if (url.pathname.endsWith('/bundleIdCapabilities') && url.searchParams.has('limit'))
+    return Response.json({ errors: [{ status: '400', detail: 'The parameter \'limit\' can not be used with this request' }] }, { status: 400 })
+  if (url.pathname.endsWith('/profiles') && url.searchParams.has('filter[bundleId]'))
+    return Response.json({ errors: [{ status: '400', detail: '\'bundleId\' is not a valid filter type' }] }, { status: 400 })
+  return undefined
+}
 
 describe('Pantry App Store Connect automation', () => {
   let directory: string
@@ -76,13 +102,15 @@ describe('Pantry App Store Connect automation', () => {
   })
 
   test('creates the requested resources and profile using only the app certificate', async () => {
+    const app = keyMaterial(directory, 'app')
+    const installer = keyMaterial(directory, 'installer')
     const writes: Array<{ path: string, body: any }> = []
     const result = await provisionMacApp({
       identifier: 'com.example.desktop',
       name: 'Example Desktop',
       capabilities: ['APP_GROUPS'],
-      appCertificateCsr: 'app csr',
-      installerCertificateCsr: 'installer csr',
+      appCertificateCsr: app.csr,
+      installerCertificateCsr: installer.csr,
       keyId: 'KEY123',
       issuerId: 'issuer',
       keyPath,
@@ -93,6 +121,9 @@ describe('Pantry App Store Connect automation', () => {
         const body = init?.body ? JSON.parse(String(init.body)) : undefined
         if (init?.method === 'POST')
           writes.push({ path: url.pathname, body })
+        const rejected = rejectUnsupported(url)
+        if (rejected)
+          return rejected
         if (url.pathname.endsWith('/bundleIds') && url.search)
           return Response.json({ data: [] })
         if (url.pathname.endsWith('/bundleIds') && init?.method === 'POST')
@@ -112,7 +143,7 @@ describe('Pantry App Store Connect automation', () => {
               attributes: {
                 ...body.data.attributes,
                 activated: true,
-                certificateContent: Buffer.from(certificateType).toString('base64'),
+                certificateContent: certificateType === 'MAC_APP_DISTRIBUTION' ? app.certificateContent : installer.certificateContent,
               },
             },
           }, { status: 201 })
@@ -148,6 +179,92 @@ describe('Pantry App Store Connect automation', () => {
     expect(writes.at(-1)?.body.data.relationships.certificates).toEqual({
       data: [{ type: 'certificates', id: 'app-cert' }],
     })
+  })
+
+  test('reuses only a certificate issued for the CSR key, and a profile only for its own bundle', async () => {
+    const mine = keyMaterial(directory, 'mine')
+    const foreign = keyMaterial(directory, 'foreign')
+    const installer = keyMaterial(directory, 'installer')
+    const created: string[] = []
+    const certificate = (id: string, content: string) => ({
+      type: 'certificates',
+      id,
+      attributes: { activated: true, expirationDate: '2999-01-01T00:00:00Z', certificateContent: content },
+    })
+    const result = await provisionMacApp({
+      identifier: 'com.example.desktop',
+      name: 'Example Desktop',
+      appCertificateCsr: mine.csr,
+      installerCertificateCsr: installer.csr,
+      keyId: 'KEY123',
+      issuerId: 'issuer',
+      keyPath,
+      baseUrl: 'https://example.test/v1',
+      checkOnly: false,
+      fetch: (async (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(String(input))
+        const body = init?.body ? JSON.parse(String(init.body)) : undefined
+        const rejected = rejectUnsupported(url)
+        if (rejected)
+          return rejected
+        if (url.pathname.endsWith('/bundleIds'))
+          return Response.json({ data: [{ type: 'bundleIds', id: 'bundle-123', attributes: { identifier: 'com.example.desktop', platform: 'MAC_OS' } }] })
+        if (url.pathname.endsWith('/bundleIdCapabilities'))
+          return Response.json({ data: [] })
+        if (url.pathname.endsWith('/certificates') && init?.method === 'POST') {
+          created.push(body.data.attributes.certificateType)
+          return Response.json({ data: certificate('installer-new', installer.certificateContent) }, { status: 201 })
+        }
+        if (url.pathname.endsWith('/certificates')) {
+          // A foreign app certificate expiring later sorts first; it must still lose.
+          return Response.json({
+            data: url.searchParams.get('filter[certificateType]') === 'MAC_APP_DISTRIBUTION'
+              ? [certificate('app-mine', mine.certificateContent), { ...certificate('app-foreign', foreign.certificateContent), attributes: { ...certificate('', foreign.certificateContent).attributes, expirationDate: '3999-01-01T00:00:00Z' } }]
+              : [certificate('installer-foreign', foreign.certificateContent)],
+          })
+        }
+        if (url.pathname.endsWith('/profiles') && init?.method === 'POST')
+          return Response.json({ data: { type: 'profiles', id: 'profile-new', attributes: { name: body.data.attributes.name, profileState: 'ACTIVE' } } }, { status: 201 })
+        if (url.pathname.endsWith('/profiles')) {
+          return Response.json({
+            data: [{
+              type: 'profiles',
+              id: 'profile-other-bundle',
+              attributes: { name: 'Example Desktop Mac App Store', profileState: 'ACTIVE' },
+              relationships: {
+                bundleId: { data: { type: 'bundleIds', id: 'bundle-999' } },
+                certificates: { data: [{ type: 'certificates', id: 'app-mine' }] },
+              },
+            }],
+          })
+        }
+        if (url.pathname.endsWith('/apps'))
+          return Response.json({ data: [] })
+        throw new Error(`Unexpected request: ${url}`)
+      }) as typeof fetch,
+    })
+
+    expect(result.certificates.map(item => [item.type, item.id, item.created])).toEqual([
+      ['MAC_APP_DISTRIBUTION', 'app-mine', false],
+      ['MAC_INSTALLER_DISTRIBUTION', 'installer-new', true],
+    ])
+    expect(created).toEqual(['MAC_INSTALLER_DISTRIBUTION'])
+    expect(result.actions).toContain('Create MAC_INSTALLER_DISTRIBUTION certificate (the active ones were issued for a different private key)')
+    expect(result.profile).toMatchObject({ id: 'profile-new', created: true })
+  })
+
+  test('refuses a CSR it cannot read instead of matching nothing', async () => {
+    await expect(provisionMacApp({
+      identifier: 'com.example.desktop',
+      name: 'Example Desktop',
+      appCertificateCsr: 'not a certificate request',
+      keyId: 'KEY123',
+      issuerId: 'issuer',
+      keyPath,
+      baseUrl: 'https://example.test/v1',
+      checkOnly: true,
+      fetch: (async () => Response.json({ data: [] })) as typeof fetch,
+    })).rejects.toThrow('CSR could not be read')
   })
 
   test('aligns versions and attaches processed builds without product-specific logic', async () => {

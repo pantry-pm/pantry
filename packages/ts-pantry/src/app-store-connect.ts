@@ -1,4 +1,5 @@
-import { createPrivateKey, sign } from 'node:crypto'
+import { spawnSync } from 'node:child_process'
+import { createPrivateKey, createPublicKey, sign, X509Certificate } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 
 const APP_STORE_CONNECT_BASE_URL = 'https://api.appstoreconnect.apple.com/v1'
@@ -269,7 +270,9 @@ export class AppStoreConnectClient {
   }
 
   async listBundleIdCapabilities(bundleIdId: string): Promise<Array<AppStoreConnectResource<BundleIdCapabilityAttributes>>> {
-    const response = await this.request<ApiListResponse<BundleIdCapabilityAttributes>>(`/bundleIds/${bundleIdId}/bundleIdCapabilities?limit=200`)
+    // This relationship returns every capability at once and rejects `limit`
+    // with a 400, unlike the top-level collections.
+    const response = await this.request<ApiListResponse<BundleIdCapabilityAttributes>>(`/bundleIds/${bundleIdId}/bundleIdCapabilities`)
     return response.data
   }
 
@@ -315,15 +318,16 @@ export class AppStoreConnectClient {
   }
 
   async listProfiles(bundleIdId: string): Promise<Array<AppStoreConnectResource<ProfileAttributes>>> {
+    // `/profiles` has no bundleId filter (Apple answers it with a 400), so
+    // list the type and match on the included bundleId relationship.
     const query = new URLSearchParams({
-      'filter[bundleId]': bundleIdId,
       'filter[profileType]': 'MAC_APP_STORE',
-      'fields[profiles]': 'name,platform,profileContent,uuid,createdDate,expirationDate,profileState,profileType,certificates',
-      'include': 'certificates',
+      'fields[profiles]': 'name,platform,profileContent,uuid,createdDate,expirationDate,profileState,profileType,bundleId,certificates',
+      'include': 'bundleId,certificates',
       'limit': '200',
     })
     const response = await this.request<ApiListResponse<ProfileAttributes>>(`/profiles?${query}`)
-    return response.data
+    return response.data.filter(profile => relationshipIds(profile, 'bundleId').includes(bundleIdId))
   }
 
   async createMacAppStoreProfile(name: string, bundleIdId: string, certificateId: string): Promise<AppStoreConnectResource<ProfileAttributes>> {
@@ -604,6 +608,35 @@ function activeCertificate(
     .sort((left, right) => Date.parse(right.attributes.expirationDate || '9999-12-31') - Date.parse(left.attributes.expirationDate || '9999-12-31'))[0]
 }
 
+function spkiFromPem(pem: string): string | undefined {
+  try {
+    return createPublicKey(pem).export({ type: 'spki', format: 'der' }).toString('base64')
+  }
+  catch {
+    return undefined
+  }
+}
+
+/** The public key a CSR asks Apple to certify, as base64 SPKI DER. */
+export function certificateRequestPublicKey(csrContent: string): string | undefined {
+  const result = spawnSync('openssl', ['req', '-pubkey', '-noout'], { input: csrContent, encoding: 'utf8' })
+  if (result.error || result.status !== 0)
+    return undefined
+  return spkiFromPem(result.stdout)
+}
+
+/** The public key in an App Store Connect certificateContent, as base64 SPKI DER. */
+export function certificatePublicKey(certificateContent: string | undefined): string | undefined {
+  if (!certificateContent)
+    return undefined
+  try {
+    return new X509Certificate(Buffer.from(certificateContent, 'base64')).publicKey.export({ type: 'spki', format: 'der' }).toString('base64')
+  }
+  catch {
+    return undefined
+  }
+}
+
 function relationshipIds(resource: AppStoreConnectResource<Record<string, unknown>>, relationship: string): string[] {
   const data = resource.relationships?.[relationship]?.data as
     | { type: string, id: string }
@@ -652,7 +685,15 @@ export async function provisionMacApp(options: MacAppProvisionOptions): Promise<
     ['MAC_INSTALLER_DISTRIBUTION', options.installerCertificateCsr],
   ]
   for (const [certificateType, csrContent] of certificateInputs) {
-    const existing = activeCertificate(await client.listCertificates(certificateType))
+    const listed = await client.listCertificates(certificateType)
+    // With a CSR, only a certificate issued for its key is usable: one made
+    // from another machine's key can sign nothing here and cannot be exported.
+    const csrKey = csrContent ? certificateRequestPublicKey(csrContent) : undefined
+    if (csrContent && !csrKey)
+      throw new Error(`[pantry] ${certificateType} CSR could not be read; is it a PEM certificate request?`)
+    const existing = activeCertificate(csrKey
+      ? listed.filter(certificate => certificatePublicKey(certificate.attributes.certificateContent) === csrKey)
+      : listed)
     if (existing) {
       certificateResults.push({
         type: certificateType,
@@ -664,7 +705,9 @@ export async function provisionMacApp(options: MacAppProvisionOptions): Promise<
       })
       continue
     }
-    actions.push(`Create ${certificateType} certificate`)
+    actions.push(csrKey && activeCertificate(listed)
+      ? `Create ${certificateType} certificate (the active ones were issued for a different private key)`
+      : `Create ${certificateType} certificate`)
     if (!checkOnly) {
       if (!csrContent)
         throw new Error(`[pantry] ${certificateType} certificate is missing; provide its CSR to apply the provisioning plan`)
