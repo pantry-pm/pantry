@@ -124,7 +124,19 @@ pub fn fixMacOSLibraryPaths(
             // `/packages/` segment for the search below to anchor on, so
             // xorriso's darwin build installed and then could not load libbz2.
             if (std.mem.startsWith(u8, dep.original_ref, "@rpath/")) {
-                if (findRpathRefInAncestors(lib_dir, dep.original_ref["@rpath/".len..], &xpkg_buf)) |p| break :blk p;
+                const rel = dep.original_ref["@rpath/".len..];
+                if (findRpathRefInAncestors(lib_dir, rel, &xpkg_buf)) |p| break :blk p;
+                // The reference pins the exact version the artifact was built
+                // against, and the dependency's constraint is usually a range:
+                // php.net 8.5.8 links `sourceware.org/libffi/v3.6.0/lib/
+                // libffi.8.dylib`, declares `libffi>=3.4.7`, and gets 3.8.0, so
+                // php could not start. The same soname under the same major is
+                // the same ABI, and `v<major>` is the link pantry keeps to the
+                // installed release of that major.
+                var major_buf: [std.fs.max_path_bytes]u8 = undefined;
+                if (majorVersionRef(rel, &major_buf)) |major_rel| {
+                    if (findRpathRefInAncestors(lib_dir, major_rel, &xpkg_buf)) |p| break :blk p;
+                }
             }
             if (findDylibInPackages(allocator, lib_dir, dep.lib_name, &xpkg_buf)) |p| break :blk p;
             // Nowhere to point it — leave the reference as-is.
@@ -159,6 +171,26 @@ pub fn findRpathRefInAncestors(lib_dir: []const u8, rel: []const u8, out: []u8) 
         if (dir.len <= 1) return null;
         const candidate = std.fmt.bufPrint(out, "{s}/{s}", .{ dir, rel }) catch return null;
         if (io_helper.accessAbsolute(candidate, .{})) |_| return candidate else |_| {}
+    }
+    return null;
+}
+
+/// `<domain>/v<major>.<minor>.../<rest>` as `<domain>/v<major>/<rest>`, or null
+/// when the path has no dotted version segment. The domain can have slashes
+/// of its own (`sourceware.org/libffi`), so the first segment shaped like
+/// `v<digit>...` with a dot in it is the version.
+pub fn majorVersionRef(rel: []const u8, out: []u8) ?[]const u8 {
+    var start: usize = 0;
+    while (start < rel.len) {
+        const end = std.mem.indexOfScalarPos(u8, rel, start, '/') orelse return null;
+        const segment = rel[start..end];
+        if (segment.len >= 3 and segment[0] == 'v' and std.ascii.isDigit(segment[1])) {
+            const dot = std.mem.indexOfScalar(u8, segment, '.') orelse return null;
+            const major = segment[1..dot];
+            for (major) |c| if (!std.ascii.isDigit(c)) return null;
+            return std.fmt.bufPrint(out, "{s}v{s}{s}", .{ rel[0..start], major, rel[end..] }) catch null;
+        }
+        start = end + 1;
     }
     return null;
 }
@@ -426,28 +458,38 @@ pub fn fixDirectoryLibraryPaths(
     // re-sign step below. Using `catch return` here meant those dylibs were left
     // with broken ad-hoc signatures, and on Apple Silicon dyld then SIGKILLs any
     // binary that loads them (git, codex, …).
-    if (io_helper.openDirAbsoluteForIteration(bin_dir)) |*dir_ptr| {
-        var dir = dir_ptr.*;
-        defer dir.close();
+    //
+    // sbin/ holds daemons (php-fpm, mysqld in some layouts) whose references
+    // need the same rewrite: php.net's sbin/php-fpm kept its dangling
+    // `@rpath/sourceware.org/libffi/v3.6.0/...` after bin/php was fixed, and
+    // dyld refused to start it.
+    var sbin_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const sbin_dir = std.fmt.bufPrint(&sbin_buf, "{s}/sbin", .{package_dir}) catch return;
+    for ([_][]const u8{ bin_dir, sbin_dir }) |exec_dir| {
+        if (io_helper.openDirAbsoluteForIteration(exec_dir)) |*dir_ptr| {
+            var dir = dir_ptr.*;
+            defer dir.close();
 
-        var it = dir.iterate();
-        while (it.next() catch null) |entry| {
-            if (entry.kind != .file) continue;
+            var it = dir.iterate();
+            while (it.next() catch null) |entry| {
+                if (entry.kind != .file) continue;
 
-            var bp_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const binary_path = std.fmt.bufPrint(&bp_buf, "{s}/{s}", .{ bin_dir, entry.name }) catch continue;
+                var bp_buf: [std.fs.max_path_bytes]u8 = undefined;
+                const binary_path = std.fmt.bufPrint(&bp_buf, "{s}/{s}", .{ exec_dir, entry.name }) catch continue;
 
-            // Add rpath entries for finding dependencies
-            addRpathEntries(allocator, binary_path, package_dir) catch {};
+                // Add rpath entries for finding dependencies
+                addRpathEntries(allocator, binary_path, package_dir) catch {};
 
-            // Fix library paths (both @rpath/ and hardcoded absolute paths)
-            fixMacOSLibraryPaths(allocator, binary_path, lib_dir) catch {};
-        }
-    } else |_| {}
+                // Fix library paths (both @rpath/ and hardcoded absolute paths)
+                fixMacOSLibraryPaths(allocator, binary_path, lib_dir) catch {};
+            }
+        } else |_| {}
+    }
 
     // Re-sign all modified binaries and dylibs. This MUST run even when bin/ is
     // absent — see the note above.
     codesignDirectory(allocator, bin_dir);
+    codesignDirectory(allocator, sbin_dir);
     codesignDirectory(allocator, lib_dir);
 }
 
@@ -497,4 +539,49 @@ test "an @rpath registry reference resolves against a project install's root" {
 
     try testing.expect(findRpathRefInAncestors(xorriso_lib, "example.com/missing/v1/lib/libx.dylib", &out) == null);
     try testing.expect(findRpathRefInAncestors(xorriso_lib, "../../etc/passwd", &out) == null);
+}
+
+test "majorVersionRef keeps the domain and file, and drops all but the major" {
+    var out: [256]u8 = undefined;
+    try std.testing.expectEqualStrings(
+        "sourceware.org/libffi/v3/lib/libffi.8.dylib",
+        majorVersionRef("sourceware.org/libffi/v3.6.0/lib/libffi.8.dylib", &out).?,
+    );
+    try std.testing.expectEqualStrings("zlib.net/v1/lib/libz.1.dylib", majorVersionRef("zlib.net/v1.3.2/lib/libz.1.dylib", &out).?);
+    // Already a major link, or no version at all: nothing to fall back to.
+    try std.testing.expect(majorVersionRef("zlib.net/v1/lib/libz.1.dylib", &out) == null);
+    try std.testing.expect(majorVersionRef("libz.1.dylib", &out) == null);
+}
+
+test "an @rpath reference to a version not installed resolves through its major link" {
+    const testing = std.testing;
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+
+    // libffi 3.8.0 is installed, with the v3 link pantry keeps beside it.
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const ffi_lib = try std.fmt.bufPrint(&buf, "{s}/pantry/sourceware.org/libffi/v3.8.0/lib", .{root});
+    try io_helper.makePath(ffi_lib);
+    var file_buf: [std.fs.max_path_bytes]u8 = undefined;
+    io_helper.closeFile(try io_helper.createFileAbsolute(try std.fmt.bufPrint(&file_buf, "{s}/libffi.8.dylib", .{ffi_lib}), .{}));
+    var link_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const link = try std.fmt.bufPrint(&link_buf, "{s}/pantry/sourceware.org/libffi/v3", .{root});
+    try io_helper.symLink("v3.8.0", link);
+
+    var lib_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const php_lib = try std.fmt.bufPrint(&lib_buf, "{s}/pantry/php.net/v8.5.8/lib", .{root});
+    try io_helper.makePath(php_lib);
+
+    // php was built against 3.6.0, which is not here.
+    const rel = "sourceware.org/libffi/v3.6.0/lib/libffi.8.dylib";
+    var out: [std.fs.max_path_bytes]u8 = undefined;
+    try testing.expect(findRpathRefInAncestors(php_lib, rel, &out) == null);
+
+    var major_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const found = findRpathRefInAncestors(php_lib, majorVersionRef(rel, &major_buf).?, &out) orelse
+        return error.TestExpectedResolution;
+    var want_buf: [std.fs.max_path_bytes]u8 = undefined;
+    try testing.expectEqualStrings(try std.fmt.bufPrint(&want_buf, "{s}/pantry/sourceware.org/libffi/v3/lib/libffi.8.dylib", .{root}), found);
 }
