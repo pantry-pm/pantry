@@ -263,7 +263,7 @@ describe('Pantry App Store Connect automation', () => {
       keyPath,
       baseUrl: 'https://example.test/v1',
       checkOnly: true,
-      fetch: (async () => Response.json({ data: [] })) as typeof fetch,
+      fetch: (async (_input: string | URL | Request, _init?: RequestInit) => Response.json({ data: [] })) as typeof fetch,
     })).rejects.toThrow('CSR could not be read')
   })
 
