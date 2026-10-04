@@ -8,7 +8,7 @@
  *
  * @install `pantry install github.com/ocrmypdf/OCRmyPDF`
  * @homepage https://ocrmypdf.readthedocs.io/en/latest/
- * @dependencies `pkgx.sh>=1`, `qpdf.sourceforge.io^12 # as of 16.10.1`
+ * @dependencies `pkgx.sh>=1`, `qpdf.sourceforge.io^12`
  * @buildDependencies `python.org@~3.11` - required only when building from source
  *
  * @example
@@ -61,7 +61,7 @@ export const ocrmypdfPackage = {
   */
   dependencies: [
     'pkgx.sh>=1',
-    'qpdf.sourceforge.io^12 # as of 16.10.1',
+    'qpdf.sourceforge.io^12',
   ] as const,
   /**
   * Build dependencies for this package.

@@ -8,7 +8,7 @@
  *
  * @install `pantry install rust-lang.org/cargo`
  * @homepage https://doc.rust-lang.org/cargo
- * @dependencies `zlib.net^1`, `libgit2.org~1.7 # links to libgit2.so.1.7`, `curl.se/ca-certs`, ... (+2 more) (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `zlib.net^1`, `libgit2.org~1.7`, `curl.se/ca-certs`, ... (+2 more) (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `gnu.org/tar`, `tukaani.org/xz` - required only when building from source
  *
  * @example
@@ -62,7 +62,7 @@ export const rustlangorgcargoPackage = {
   */
   dependencies: [
     'zlib.net^1',
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
     'curl.se/ca-certs',
     'linux:llvm.org',
     'linux:curl.se',

@@ -8,7 +8,7 @@
  *
  * @install `pantry install tsl0922.github.io/ttyd`
  * @homepage https://tsl0922.github.io/ttyd/
- * @dependencies `libuv.org@1`, `github.com/json-c/json-c^0.16`, `libwebsockets.org~4.3 # ABI version changes in 4.4`, ... (+1 more)
+ * @dependencies `libuv.org@1`, `github.com/json-c/json-c^0.16`, `libwebsockets.org~4.3`, ... (+1 more)
  * @buildDependencies `cmake.org@3` - required only when building from source
  *
  * @example
@@ -62,7 +62,7 @@ export const tsl0922githubiottydPackage = {
   dependencies: [
     'libuv.org@1',
     'github.com/json-c/json-c^0.16',
-    'libwebsockets.org~4.3 # ABI version changes in 4.4',
+    'libwebsockets.org~4.3',
     'zlib.net@1',
   ] as const,
   /**

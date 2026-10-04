@@ -8,7 +8,7 @@
  *
  * @install `pantry install coder.com/code-server`
  * @homepage https://coder.com
- * @dependencies `nodejs.org^22 # since 4.101.0`, `linux:gnome.org/libsecret^0.21`, `linux:x.org/x11^1.8`, ... (+2 more) (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `nodejs.org^22`, `linux:gnome.org/libsecret^0.21`, `linux:x.org/x11^1.8`, ... (+2 more) (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `npmjs.com`, `python.org@>=3.11` - required only when building from source
  *
  * @example
@@ -61,7 +61,7 @@ export const codercomcodeserverPackage = {
   * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'nodejs.org^22 # since 4.101.0',
+    'nodejs.org^22',
     'linux:gnome.org/libsecret^0.21',
     'linux:x.org/x11^1.8',
     'linux:x.org/xkbfile^1.1',

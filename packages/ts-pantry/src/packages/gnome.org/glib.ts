@@ -77,7 +77,7 @@ export const gnomeorgglibPackage = {
     'sourceware.org/libffi@3',
     'pcre.org@8',
     'pcre.org/v2@10',
-    'python.org^3 # several of the bins are scripts',
+    'python.org^3',
   ] as const,
   /**
   * Build dependencies for this package.

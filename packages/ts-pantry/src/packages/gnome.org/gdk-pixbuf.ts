@@ -8,7 +8,7 @@
  *
  * @install `pantry install gnome.org/gdk-pixbuf`
  * @homepage https://gtk.org
- * @dependencies `ijg.org^9.6 # needs fixed major; sadly this includes the character > v9f`, `gnome.org/glib@2`, `libpng.org@1`, ... (+1 more)
+ * @dependencies `ijg.org^9.6`, `gnome.org/glib@2`, `libpng.org@1`, ... (+1 more)
  * @buildDependencies `mesonbuild.com@1`, `python.org@>=3<3.12` - required only when building from source
  *
  * @example
@@ -63,10 +63,10 @@ export const gnomeorggdkpixbufPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'ijg.org^9.6 # needs fixed major; sadly this includes the character > v9f',
+    'ijg.org^9.6',
     'gnome.org/glib@2',
     'libpng.org@1',
-    'freedesktop.org/shared-mime-info^2 #FIXME only on Linux',
+    'freedesktop.org/shared-mime-info^2',
   ] as const,
   /**
   * Build dependencies for this package.

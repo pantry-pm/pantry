@@ -8,7 +8,7 @@
  *
  * @install `pantry install crates.io/mdcat`
  * @homepage https://crates.io/crates/mdcat
- * @dependencies `openssl.org^1.1`, `curl.se^8 # since 2.7.0`
+ * @dependencies `openssl.org^1.1`, `curl.se^8`
  *
  * @example
  * ```typescript
@@ -60,7 +60,7 @@ export const cratesiomdcatPackage = {
   */
   dependencies: [
     'openssl.org^1.1',
-    'curl.se^8 # since 2.7.0',
+    'curl.se^8',
   ] as const,
   buildDependencies: [] as const,
   /**

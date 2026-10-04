@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/lu-zero/cargo-c`
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`, `libssh2.org`, `openssl.org^1.1`, ... (+2 more)
+ * @dependencies `libgit2.org~1.7`, `libssh2.org`, `openssl.org^1.1`, ... (+2 more)
  *
  * @example
  * ```typescript
@@ -61,11 +61,11 @@ export const cargocPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
     'libssh2.org',
     'openssl.org^1.1',
     'zlib.net',
-    'curl.se^8 # as of v0.10.20 for libcurl',
+    'curl.se^8',
   ] as const,
   buildDependencies: [] as const,
   /**

@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/Cyfrin/safe-tx-hashes-util`
- * @dependencies `gnu.org/bash>=4`, `gnu.org/gcc/libstdcxx^14 # solc wants GLIBCXX_3.4.26`
+ * @dependencies `gnu.org/bash>=4`, `gnu.org/gcc/libstdcxx^14`
  *
  * @example
  * ```typescript
@@ -58,7 +58,7 @@ export const safetxhashesutilPackage = {
   */
   dependencies: [
     'gnu.org/bash>=4',
-    'gnu.org/gcc/libstdcxx^14 # solc wants GLIBCXX_3.4.26',
+    'gnu.org/gcc/libstdcxx^14',
   ] as const,
   buildDependencies: [] as const,
   /**

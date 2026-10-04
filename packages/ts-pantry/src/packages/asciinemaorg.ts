@@ -8,7 +8,7 @@
  *
  * @install `pantry install asciinema.org`
  * @homepage https://asciinema.org
- * @dependencies `python.org^3.12 # v2`
+ * @dependencies `python.org^3.12`
  *
  * @example
  * ```typescript
@@ -59,7 +59,7 @@ export const asciinemaorgPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'python.org^3.12 # v2',
+    'python.org^3.12',
   ] as const,
   buildDependencies: [] as const,
   /**

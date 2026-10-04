@@ -8,7 +8,7 @@
  *
  * @install `pantry install gnu.org/gettext`
  * @homepage https://www.gnu.org/software/gettext/
- * @dependencies `gnome.org/libxml2~2.13 # 2.14 changes the API`, `tukaani.org/xz^5 # autopoint needs this to unpack archives`
+ * @dependencies `gnome.org/libxml2~2.13`, `tukaani.org/xz^5`
  * @buildDependencies `perl.org@~5.42`, `darwin:gnu.org/libiconv` (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -81,8 +81,8 @@ export const gnuorggettextPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'gnome.org/libxml2~2.13 # 2.14 changes the API',
-    'tukaani.org/xz^5 # autopoint needs this to unpack archives',
+    'gnome.org/libxml2~2.13',
+    'tukaani.org/xz^5',
   ] as const,
   /**
   * Build dependencies for this package.

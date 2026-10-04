@@ -8,7 +8,7 @@
  *
  * @install `pantry install mariadb.com/server`
  * @homepage https://mariadb.org/
- * @dependencies `sourceware.org/bzip2^1`, `github.com/besser82/libxcrypt^4`, `gnome.org/libxml2~2.13 # 2.14 changed the api version`, ... (+5 more)
+ * @dependencies `sourceware.org/bzip2^1`, `github.com/besser82/libxcrypt^4`, `gnome.org/libxml2~2.13`, ... (+5 more)
  * @buildDependencies `cmake.org`, `gnu.org/bison`, `gnu.org/coreutils`, ... (+2 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -145,7 +145,7 @@ export const mariadbcomserverPackage = {
   dependencies: [
     'sourceware.org/bzip2^1',
     'github.com/besser82/libxcrypt^4',
-    'gnome.org/libxml2~2.13 # 2.14 changed the api version',
+    'gnome.org/libxml2~2.13',
     'invisible-island.net/ncurses^6',
     'zlib.net^1',
     'openssl.org^1.1',

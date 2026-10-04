@@ -63,7 +63,7 @@ export const ctagsioPackage = {
     'digip.org/jansson^2',
     'pyyaml.org/libyaml^0.2',
     'pcre.org/v2^10',
-    'gnome.org/libxml2~2.13 # 2.14 changes the API',
+    'gnome.org/libxml2~2.13',
   ] as const,
   /**
   * Build dependencies for this package.

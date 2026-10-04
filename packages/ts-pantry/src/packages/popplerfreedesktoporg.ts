@@ -76,7 +76,7 @@ export const popplerfreedesktoporgPackage = {
     'freedesktop.org/fontconfig>=2.13',
     'freetype.org>=2.10',
     'gnome.org/glib>=2.64',
-    'gnome.org/libxml2~2.13 # since 25.4.0, 2.14 changed the API version',
+    'gnome.org/libxml2~2.13',
     'libjpeg-turbo.org',
     'libpng.org',
     'openjpeg.org',
@@ -88,7 +88,7 @@ export const popplerfreedesktoporgPackage = {
     'gnupg.org/libgpg-error@1',
     'gnupg.org/libassuan@2',
     'littlecms.com^2.9',
-    'linux:gnu.org/gcc/libstdcxx^14 # apparently, clang c++20 std isn',
+    'linux:gnu.org/gcc/libstdcxx^14',
   ] as const,
   /**
   * Build dependencies for this package.

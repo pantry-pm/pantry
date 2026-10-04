@@ -8,7 +8,7 @@
  *
  * @install `pantry install darwinsys.com/file`
  * @homepage https://darwinsys.com/file/
- * @dependencies `zlib.net^1 #FIXME this is actually an optional dep`
+ * @dependencies `zlib.net^1`
  * @buildDependencies `gnu.org/patch` - required only when building from source
  *
  * @example
@@ -60,7 +60,7 @@ export const darwinsyscomfilePackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'zlib.net^1 #FIXME this is actually an optional dep',
+    'zlib.net^1',
   ] as const,
   /**
   * Build dependencies for this package.

@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install pkgx.sh/brewkit`
- * @dependencies `deno.land~1.39 # 1.40 shouts unskippable deprecation warnings`, `gnu.org/bash^5`, `pkgx.sh>=1`
+ * @dependencies `deno.land~1.39`, `gnu.org/bash^5`, `pkgx.sh>=1`
  *
  * @example
  * ```typescript
@@ -58,7 +58,7 @@ export const pkgxshbrewkitPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'deno.land~1.39 # 1.40 shouts unskippable deprecation warnings',
+    'deno.land~1.39',
     'gnu.org/bash^5',
     'pkgx.sh>=1',
   ] as const,

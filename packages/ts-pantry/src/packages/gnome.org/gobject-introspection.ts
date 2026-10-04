@@ -8,7 +8,7 @@
  *
  * @install `pantry install gnome.org/gobject-introspection`
  * @homepage https://gi.readthedocs.io/en/latest/
- * @dependencies `gnome.org/glib@2`, `sourceware.org/libffi@3`, `gnu.org/bison^3 #NOTE macOS provides v2`, ... (+2 more)
+ * @dependencies `gnome.org/glib@2`, `sourceware.org/libffi@3`, `gnu.org/bison^3`, ... (+2 more)
  * @buildDependencies `mesonbuild.com@^1.2` - required only when building from source
  *
  * @example
@@ -66,7 +66,7 @@ export const gnomeorggobjectintrospectionPackage = {
   dependencies: [
     'gnome.org/glib@2',
     'sourceware.org/libffi@3',
-    'gnu.org/bison^3 #NOTE macOS provides v2',
+    'gnu.org/bison^3',
     'python.org>=3<3.12',
     'github.com/westes/flex@2',
   ] as const,

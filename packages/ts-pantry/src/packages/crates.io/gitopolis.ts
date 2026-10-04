@@ -62,7 +62,7 @@ export const cratesiogitopolisPackage = {
     'openssl.org^1.1',
     'zlib.net^1',
     'git-scm.org^2',
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   /**
   * Build dependencies for this package.

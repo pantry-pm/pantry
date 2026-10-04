@@ -8,7 +8,7 @@
  *
  * @install `pantry install mercurial-scm.org`
  * @homepage https://mercurial-scm.org/
- * @dependencies `python.org~3.13 # as of 7.1`
+ * @dependencies `python.org~3.13`
  * @buildDependencies `gnu.org/make` - required only when building from source
  *
  * @example
@@ -61,7 +61,7 @@ export const mercurialscmorgPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'python.org~3.13 # as of 7.1',
+    'python.org~3.13',
   ] as const,
   /**
   * Build dependencies for this package.

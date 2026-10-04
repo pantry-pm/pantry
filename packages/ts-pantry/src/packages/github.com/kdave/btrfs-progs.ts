@@ -72,7 +72,7 @@ export const btrfsprogsPackage = {
     'python.org~3.14',
     'sourceforge.net/e2fsprogs^1.47',
     'oberhumer.com/lzo^2.10',
-    'systemd.io^255 # for libudev',
+    'systemd.io^255',
     'github.com/util-linux/util-linux^2.39',
     'zlib.net^1.3',
     'facebook.com/zstd^1.5',

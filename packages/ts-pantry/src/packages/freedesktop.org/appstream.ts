@@ -64,10 +64,10 @@ export const freedesktoporgappstreamPackage = {
     'gnome.org/glib@2',
     'github.com/hughsie/libxmlb@0',
     'pyyaml.org/libyaml@0',
-    'github.com/pantoniou/libfyaml^0 # since 1.1.0',
+    'github.com/pantoniou/libfyaml^0',
     'curl.se@8',
     'gnome.org/libxml2@2',
-    'darwin:openldap.org^2 # 1.0.4 needs it with curl',
+    'darwin:openldap.org^2',
     'linux:systemd.io',
   ] as const,
   /**

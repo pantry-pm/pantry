@@ -8,7 +8,7 @@
  *
  * @install `pantry install gnu.org/help2man`
  * @homepage https://www.gnu.org/software/help2man/
- * @dependencies `gnu.org/gettext^0`, `perl.org~5.42 # perl modules require matching minors; must match gettext`
+ * @dependencies `gnu.org/gettext^0`, `perl.org~5.42`
  * @buildDependencies `cpanmin.us` - required only when building from source
  * @companions `PERL5LIB^{{prefix}}/lib/perl5:{{prefix}}/libexec/lib/perl5:$PERL5LIB`
  *
@@ -68,7 +68,7 @@ export const gnuorghelp2manPackage = {
   */
   dependencies: [
     'gnu.org/gettext^0',
-    'perl.org~5.42 # perl modules require matching minors; must match gettext',
+    'perl.org~5.42',
   ] as const,
   /**
   * Build dependencies for this package.

@@ -2000,6 +2000,40 @@ export async function scanPantryPackages(pantryDir = 'src/pantry'): Promise<stri
 }
 
 /**
+ * The value of a YAML scalar as written after `key:` on one line: the content
+ * of a quoted scalar, or a plain scalar with its inline comment removed.
+ *
+ * package.yml writes notes beside versions (`tcl-lang.org: =8.6.16 # 9.0.2
+ * introduced a build issue on darwin`). The line regexes below used to keep
+ * everything up to the next quote, so the note became part of the version and
+ * flowed into every package file and generated.zig. A `#` only starts a
+ * comment after whitespace, and never inside quotes.
+ */
+export function parseYamlScalar(raw: string): string {
+  const value = raw.trim()
+  const q = value[0]
+  if (q === '"' || q === '\'') {
+    for (let i = 1; i < value.length; i++) {
+      const c = value[i]
+      if (q === '"' && c === '\\') {
+        i++
+        continue
+      }
+      if (c !== q)
+        continue
+      if (q === '\'' && value[i + 1] === '\'') {
+        i++
+        continue
+      }
+      const inner = value.slice(1, i)
+      return q === '\'' ? inner.replace(/''/g, '\'') : inner.replace(/\\(.)/g, '$1')
+    }
+  }
+  const comment = value.search(/(^|\s)#/)
+  return (comment >= 0 ? value.slice(0, comment) : value).trim()
+}
+
+/**
  * Reads package.yml file and extracts basic package information
  * @param packageName The package name (e.g., 'github.com/user/repo')
  * @param pantryDir Path to the pantry directory
@@ -2070,10 +2104,10 @@ export async function readPantryPackageInfo(packageName: string, pantryDir = 'sr
         // If we're in an OS section, look for packages with more indentation
         if (inOsSection) {
           // Parse lines like "    freetype.org: '*'" (4+ spaces)
-          const osDepMatch = line.match(/^\s{4,}([^\s:]+):\s*['"]?([^'"]+)['"]?/)
+          const osDepMatch = line.match(/^\s{4,}([^\s:#]+):\s*(\S.*)$/)
           if (osDepMatch) {
             const pkg = osDepMatch[1]
-            const version = osDepMatch[2].trim()
+            const version = parseYamlScalar(osDepMatch[2])
 
             // Add OS prefix to indicate conditional dependency
             const osPrefix = `${currentOs}:`
@@ -2109,10 +2143,10 @@ export async function readPantryPackageInfo(packageName: string, pantryDir = 'sr
         }
         else {
           // Parse regular dependencies (direct under dependencies:)
-          const depMatch = line.match(/^\s{2,3}([^\s:]+):\s*['"]?([^'"]+)['"]?/)
+          const depMatch = line.match(/^\s{2,3}([^\s:#]+):\s*(\S.*)$/)
           if (depMatch) {
             const pkg = depMatch[1]
-            const version = depMatch[2].trim()
+            const version = parseYamlScalar(depMatch[2])
 
             // Skip OS sections that we already handled
             if (['linux', 'darwin', 'windows'].includes(pkg)) {
@@ -2172,10 +2206,10 @@ export async function readPantryPackageInfo(packageName: string, pantryDir = 'sr
         }
 
         // Parse lines like "nodejs.org: '>=5'" or "curl.se: '*'" (actual package dependencies)
-        const runtimeMatch = line.match(/^\s+([^\s:]+):\s*['"]?([^'"]+)['"]?/)
+        const runtimeMatch = line.match(/^\s+([^\s:#]+):\s*(\S.*)$/)
         if (runtimeMatch) {
           const pkg = runtimeMatch[1]
-          const version = runtimeMatch[2].trim()
+          const version = parseYamlScalar(runtimeMatch[2])
 
           // Skip if this looks like an environment variable (all caps with underscores)
           if (/^[A-Z_]+$/.test(pkg)) {

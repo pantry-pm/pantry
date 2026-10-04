@@ -8,7 +8,7 @@
  *
  * @install `pantry install openexr.com`
  * @homepage https://www.openexr.com/
- * @dependencies `zlib.net^1`, `openexr.com/imath`, `linux:gnu.org/gcc/libstdcxx^14 # needed since 3.4.0` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `zlib.net^1`, `openexr.com/imath`, `linux:gnu.org/gcc/libstdcxx^14` (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `cmake.org`, `linux:gnu.org/gcc@14` (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -70,7 +70,7 @@ export const openexrcomPackage = {
   dependencies: [
     'zlib.net^1',
     'openexr.com/imath',
-    'linux:gnu.org/gcc/libstdcxx^14 # needed since 3.4.0',
+    'linux:gnu.org/gcc/libstdcxx^14',
   ] as const,
   /**
   * Build dependencies for this package.

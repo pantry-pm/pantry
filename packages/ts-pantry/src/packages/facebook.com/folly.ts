@@ -6,7 +6,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install facebook.com/folly`
- * @dependencies `boost.org<1.89 # doesn`, `gflags.github.io~2.2 # looking for glog`, `google.com/glog<0.7`, ... (+17 more) (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `boost.org<1.89`, `gflags.github.io~2.2`, `google.com/glog<0.7`, ... (+17 more) (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `cmake.org@^3.0.2`, `linux:gnu.org/gcc@14` (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -52,8 +52,8 @@ export const facebookcomfollyPackage = {
   * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'boost.org<1.89 # doesn',
-    'gflags.github.io~2.2 # looking for glog',
+    'boost.org<1.89',
+    'gflags.github.io~2.2',
     'google.com/glog<0.7',
     'libevent.org',
     'lz4.org@1',
@@ -68,9 +68,9 @@ export const facebookcomfollyPackage = {
     'zlib.net^1',
     'github.com/fastfloat/fast_float@7',
     'darwin:sourceware.org/bzip2',
-    'linux:libcxx.llvm.org^18 # libunwind, since 2024.5.13.0',
-    'linux:jemalloc.net^5 # since 2024.5.13.0',
-    'linux:elfutils.org^0 # for dwarf.h, since 2024.5.13.0',
+    'linux:libcxx.llvm.org^18',
+    'linux:jemalloc.net^5',
+    'linux:elfutils.org^0',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,
   /**

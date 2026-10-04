@@ -90,7 +90,7 @@ export const swiftorgPackage = {
     'linux:gnu.org/binutils',
     'linux:gnupg.org^2',
     'linux:gnome.org/libxml2',
-    'linux:libgit2.org~1.7 # links to libgit2.so.1.7',
+    'linux:libgit2.org~1.7',
     'linux:curl.se',
     'linux:sqlite.org^3',
   ] as const,

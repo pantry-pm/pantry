@@ -9,7 +9,7 @@
  * @install `pantry install go.dev`
  * @name `go`
  * @homepage https://go.dev
- * @dependencies `openssl.org^1  # for ca-certificates`
+ * @dependencies `openssl.org^1`
  * @buildDependencies `gnu.org/m4@1`, `go.dev` - required only when building from source
  *
  * @example
@@ -66,7 +66,7 @@ export const goPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1  # for ca-certificates',
+    'openssl.org^1',
   ] as const,
   /**
   * Build dependencies for this package.

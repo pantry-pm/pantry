@@ -8,7 +8,7 @@
  *
  * @install `pantry install gnu.org/texinfo`
  * @homepage https://www.gnu.org/software/texinfo/
- * @dependencies `perl.org~5.42 # requires stable minor; must match gettext`
+ * @dependencies `perl.org~5.42`
  * @buildDependencies `gnu.org/gettext` - required only when building from source
  *
  * @example
@@ -68,7 +68,7 @@ export const gnuorgtexinfoPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'perl.org~5.42 # requires stable minor; must match gettext',
+    'perl.org~5.42',
   ] as const,
   /**
   * Build dependencies for this package.

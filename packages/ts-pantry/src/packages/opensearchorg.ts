@@ -8,7 +8,7 @@
  *
  * @install `pantry install opensearch.org`
  * @homepage https://opensearch.org/docs/latest/opensearch/index/
- * @dependencies `openjdk.org^21 # since v3`, `openmp.llvm.org^19`
+ * @dependencies `openjdk.org^21`, `openmp.llvm.org^19`
  * @buildDependencies `cmake.org@3`, `gnu.org/wget`, `gnu.org/gcc@^11`, ... (+1 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -63,7 +63,7 @@ export const opensearchorgPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openjdk.org^21 # since v3',
+    'openjdk.org^21',
     'openmp.llvm.org^19',
   ] as const,
   /**

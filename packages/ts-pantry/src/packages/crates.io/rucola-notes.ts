@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install crates.io/rucola-notes`
- * @dependencies `openssl.org^1.1 # as of 0.6.0`
+ * @dependencies `openssl.org^1.1`
  *
  * @example
  * ```typescript
@@ -58,7 +58,7 @@ export const cratesiorucolanotesPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1.1 # as of 0.6.0',
+    'openssl.org^1.1',
   ] as const,
   buildDependencies: [] as const,
   /**

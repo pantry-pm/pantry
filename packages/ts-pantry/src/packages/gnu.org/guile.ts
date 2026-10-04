@@ -67,7 +67,7 @@ export const gnuorgguilePackage = {
     'gnu.org/gmp^6',
     'gnu.org/libtool^2',
     'gnu.org/libunistring^1',
-    'freedesktop.org/pkg-config^0.29 # guile-config is a wrapper around pkg-config.',
+    'freedesktop.org/pkg-config^0.29',
     'gnu.org/readline^8',
     'gnu.org/gperf^3',
     'sourceware.org/libffi^3',

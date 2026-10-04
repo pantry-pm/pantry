@@ -6,7 +6,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install videolan.org/libbluray`
- * @dependencies `freedesktop.org/fontconfig`, `freetype.org`, `gnome.org/libxml2~2.13 # API changed in 2.14`
+ * @dependencies `freedesktop.org/fontconfig`, `freetype.org`, `gnome.org/libxml2~2.13`
  * @buildDependencies `gnu.org/automake`, `gnu.org/autoconf`, `gnu.org/libtool`, ... (+1 more) - required only when building from source
  *
  * @example
@@ -52,7 +52,7 @@ export const videolanorglibblurayPackage = {
   dependencies: [
     'freedesktop.org/fontconfig',
     'freetype.org',
-    'gnome.org/libxml2~2.13 # API changed in 2.14',
+    'gnome.org/libxml2~2.13',
   ] as const,
   /**
   * Build dependencies for this package.

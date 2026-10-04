@@ -61,7 +61,7 @@ export const facebookcomfb303Package = {
     'google.com/glog^0.6',
     'libsodium.org^1.0.19',
     'openssl.org^1.1',
-    'github.com/Cyan4973/xxHash^0.8 # since 2024.10.14.0',
+    'github.com/Cyan4973/xxHash^0.8',
     'linux:zlib.net^1',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,

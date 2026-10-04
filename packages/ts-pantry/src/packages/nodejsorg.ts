@@ -9,7 +9,7 @@
  * @install `pantry install nodejs.org`
  * @name `node`
  * @homepage https://nodejs.org/
- * @dependencies `unicode.org^73 # v25`, `openssl.org@1.1`, `zlib.net@1`, ... (+1 more) (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `unicode.org^73`, `openssl.org@1.1`, `zlib.net@1`, ... (+1 more) (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `python.org@~3.9`, `linux:gnu.org/gcc` (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -66,7 +66,7 @@ export const nodePackage = {
   * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'unicode.org^73 # v25',
+    'unicode.org^73',
     'openssl.org@1.1',
     'zlib.net@1',
     'linux:gnu.org/gcc/libstdcxx',

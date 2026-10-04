@@ -8,7 +8,7 @@
  *
  * @install `pantry install deepwisdom.ai`
  * @homepage https://deepwisdom.ai/
- * @dependencies `pkgx.sh>=1`, `git-scm.org^2 # v0.7.0 requires it`
+ * @dependencies `pkgx.sh>=1`, `git-scm.org^2`
  * @buildDependencies `python.org@>=3.9<3.12` - required only when building from source
  *
  * @example
@@ -61,7 +61,7 @@ export const deepwisdomaiPackage = {
   */
   dependencies: [
     'pkgx.sh>=1',
-    'git-scm.org^2 # v0.7.0 requires it',
+    'git-scm.org^2',
   ] as const,
   /**
   * Build dependencies for this package.

@@ -8,7 +8,7 @@
  *
  * @install `pantry install nginx.org`
  * @homepage https://nginx.org/
- * @dependencies `pcre.org^8.45 # switch to pcre.org/pcre2 once it`, `zlib.net^1.2.13`, `openssl.org^1.1.1k`
+ * @dependencies `pcre.org^8.45`, `zlib.net^1.2.13`, `openssl.org^1.1.1k`
  *
  * @example
  * ```typescript
@@ -59,7 +59,7 @@ export const nginxorgPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'pcre.org^8.45 # switch to pcre.org/pcre2 once it',
+    'pcre.org^8.45',
     'zlib.net^1.2.13',
     'openssl.org^1.1.1k',
   ] as const,

@@ -8,7 +8,7 @@
  *
  * @install `pantry install dhruvkb.dev/pls`
  * @homepage https://pls.cli.rs/
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `libgit2.org~1.7`
  *
  * @example
  * ```typescript
@@ -59,7 +59,7 @@ export const dhruvkbdevplsPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   buildDependencies: [] as const,
   /**

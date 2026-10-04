@@ -63,7 +63,7 @@ export const scrcpyPackage = {
     'ffmpeg.org',
     'libusb.info',
     'libsdl.org',
-    'linux:webmproject.org/libvpx<1.15.1 # since 3.3, .9 lib api',
+    'linux:webmproject.org/libvpx<1.15.1',
     'darwin:sourceware.org/bzip2',
     'darwin:zlib.net',
   ] as const,

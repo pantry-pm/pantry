@@ -7,7 +7,7 @@
  *
  * @install `pantry install abseil.io`
  * @homepage https://abseil.io
- * @dependencies `linux:gnu.org/gcc/libstdcxx^14 # since 20250814.0` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `linux:gnu.org/gcc/libstdcxx^14` (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `cmake.org@^3`, `linux:gnu.org/gcc@^14` (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -53,7 +53,7 @@ export const abseilioPackage = {
   * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'linux:gnu.org/gcc/libstdcxx^14 # since 20250814.0',
+    'linux:gnu.org/gcc/libstdcxx^14',
   ] as const,
   /**
   * Build dependencies for this package.

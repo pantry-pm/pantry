@@ -63,7 +63,7 @@ export const postgrestorgPackage = {
     'postgresql.org/libpq@17',
     'zlib.net~1.3',
     'gnu.org/gcc/libstdcxx@14',
-    'gnome.org/libxml2~2.13 # 2.14 changes library api version',
+    'gnome.org/libxml2~2.13',
   ] as const,
   /**
   * Build dependencies for this package.

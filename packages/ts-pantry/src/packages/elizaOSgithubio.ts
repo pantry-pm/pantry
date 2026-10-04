@@ -63,7 +63,7 @@ export const elizaosgithubioPackage = {
     'python.org>=2.7',
     'nodejs.org~23.3',
     'pnpm.io',
-    'bun.sh^1.2 # since 1.0.5',
+    'bun.sh^1.2',
   ] as const,
   /**
   * Build dependencies for this package.

@@ -458,7 +458,32 @@ fn stripYamlQuotes(value: []const u8) []const u8 {
     return value;
 }
 
+/// A YAML scalar as a dependency value: the content of a quoted scalar, or a
+/// plain scalar with its inline comment removed.
+///
+/// Quotes come first. Stripping the comment before unquoting cut a quoted
+/// value at a `#` it contains: `"1.0 # rc"` became `"1.0`, which then had no
+/// closing quote to remove and came through quote and all.
 fn parseDepsScalar(value: []const u8) []const u8 {
+    if (value.len >= 2 and (value[0] == '"' or value[0] == '\'')) {
+        const q = value[0];
+        var i: usize = 1;
+        while (i < value.len) : (i += 1) {
+            const c = value[i];
+            if (q == '"' and c == '\\') {
+                i += 1; // skip the escaped character
+                continue;
+            }
+            if (c != q) continue;
+            // `''` is an escaped quote inside a single-quoted scalar.
+            if (q == '\'' and i + 1 < value.len and value[i + 1] == '\'') {
+                i += 1;
+                continue;
+            }
+            // Whatever follows the closing quote is whitespace and a comment.
+            return value[1..i];
+        }
+    }
     return stripYamlQuotes(stripInlineComment(value));
 }
 
@@ -618,6 +643,24 @@ test "stripInlineComment strips YAML inline comments" {
     try t.expectEqualStrings("foo#bar", stripInlineComment("foo#bar")); // no whitespace before '#': part of value
     try t.expectEqualStrings("1.2.3", stripInlineComment("1.2.3   #   trailing whitespace"));
     try t.expectEqualStrings("", stripInlineComment(""));
+}
+
+test "parseDepsScalar: inline comments after versions, quoted or not" {
+    const t = std.testing;
+    // Plain scalars: a comment after the version goes, a `#` inside it stays.
+    try t.expectEqualStrings("^1.2", parseDepsScalar("^1.2 # since 3.0"));
+    try t.expectEqualStrings("=8.6.16", parseDepsScalar("=8.6.16 # 9.0.2 introduced a build issue on darwin"));
+    try t.expectEqualStrings("1.0#rc", parseDepsScalar("1.0#rc"));
+    try t.expectEqualStrings("", parseDepsScalar("# only a comment"));
+    // Quoted scalars: the comment after the closing quote goes...
+    try t.expectEqualStrings("~3.11", parseDepsScalar("'~3.11' # pinned for the venv"));
+    try t.expectEqualStrings(">=1.3", parseDepsScalar("\">=1.3\"   # minimum"));
+    try t.expectEqualStrings(">=1.3", parseDepsScalar("\">=1.3\""));
+    // ...and a `#` inside the quotes is part of the value.
+    try t.expectEqualStrings("1.0 # rc", parseDepsScalar("\"1.0 # rc\" # trailing"));
+    try t.expectEqualStrings("a#b", parseDepsScalar("'a#b'"));
+    try t.expectEqualStrings("it''s # here", parseDepsScalar("'it''s # here' # comment"));
+    try t.expectEqualStrings("x\\\" # y", parseDepsScalar("\"x\\\" # y\" # z"));
 }
 
 test "parseDepsFile" {

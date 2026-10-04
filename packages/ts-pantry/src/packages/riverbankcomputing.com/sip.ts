@@ -8,7 +8,7 @@
  *
  * @install `pantry install riverbankcomputing.com/sip`
  * @homepage https://python-sip.readthedocs.io/en/latest/
- * @dependencies `python.org~3.11`, `llvm.org<17 # needs gcc to sip-install`
+ * @dependencies `python.org~3.11`, `llvm.org<17`
  * @buildDependencies `gnu.org/make` - required only when building from source
  *
  * @example
@@ -66,7 +66,7 @@ export const riverbankcomputingcomsipPackage = {
   */
   dependencies: [
     'python.org~3.11',
-    'llvm.org<17 # needs gcc to sip-install',
+    'llvm.org<17',
   ] as const,
   /**
   * Build dependencies for this package.

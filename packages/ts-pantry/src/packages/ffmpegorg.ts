@@ -67,7 +67,7 @@ export const ffmpegorgPackage = {
     'harfbuzz.org^8',
     'videolan.org/x264^0.164',
     'videolan.org/x265^3',
-    'webmproject.org/libvpx~1.14 # libvpx abi changes in 1.15',
+    'webmproject.org/libvpx~1.14',
     'opus-codec.org^1',
     'google.com/webp^1',
   ] as const,

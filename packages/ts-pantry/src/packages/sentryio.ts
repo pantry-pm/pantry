@@ -8,7 +8,7 @@
  *
  * @install `pantry install sentry.io`
  * @homepage https://docs.sentry.io/cli/
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`, `curl.se^8 # links to libcurl`
+ * @dependencies `libgit2.org~1.7`, `curl.se^8`
  *
  * @example
  * ```typescript
@@ -59,8 +59,8 @@ export const sentryioPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
-    'curl.se^8 # links to libcurl',
+    'libgit2.org~1.7',
+    'curl.se^8',
   ] as const,
   buildDependencies: [] as const,
   /**

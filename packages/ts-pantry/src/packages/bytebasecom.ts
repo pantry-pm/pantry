@@ -8,7 +8,7 @@
  *
  * @install `pantry install bytebase.com`
  * @homepage https://www.bytebase.com
- * @dependencies `nodejs.org~24.1 # 24.4 has oom errors`
+ * @dependencies `nodejs.org~24.1`
  * @buildDependencies `go.dev@~1.24.2`, `pnpm.io`, `linux:kerberos.org@1`, ... (+2 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -60,7 +60,7 @@ export const bytebasecomPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'nodejs.org~24.1 # 24.4 has oom errors',
+    'nodejs.org~24.1',
   ] as const,
   /**
   * Build dependencies for this package.

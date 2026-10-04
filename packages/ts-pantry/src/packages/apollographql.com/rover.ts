@@ -8,7 +8,7 @@
  *
  * @install `pantry install apollographql.com/rover`
  * @homepage https://www.apollographql.com/docs/rover/
- * @dependencies `openssl.org^1.1`, `zlib.net^1`, `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `openssl.org^1.1`, `zlib.net^1`, `libgit2.org~1.7`
  * @buildDependencies `linux:perl.org@^5` (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -62,7 +62,7 @@ export const apollographqlcomroverPackage = {
   dependencies: [
     'openssl.org^1.1',
     'zlib.net^1',
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   /**
   * Build dependencies for this package.

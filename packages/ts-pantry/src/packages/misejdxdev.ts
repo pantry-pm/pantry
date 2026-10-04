@@ -8,7 +8,7 @@
  *
  * @install `pantry install mise.jdx.dev`
  * @homepage https://mise.jdx.dev
- * @dependencies `openssl.org^1.1 # newer mise after 1.35.2 versions require openssl`, `libgit2.org^1 # newer mise after 2024.5.12 versions require libgit2`
+ * @dependencies `openssl.org^1.1`, `libgit2.org^1`
  * @buildDependencies `cmake.org@3` - required only when building from source
  *
  * @example
@@ -61,8 +61,8 @@ export const misejdxdevPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'openssl.org^1.1 # newer mise after 1.35.2 versions require openssl',
-    'libgit2.org^1 # newer mise after 2024.5.12 versions require libgit2',
+    'openssl.org^1.1',
+    'libgit2.org^1',
   ] as const,
   /**
   * Build dependencies for this package.

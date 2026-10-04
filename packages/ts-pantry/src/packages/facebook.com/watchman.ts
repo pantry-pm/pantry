@@ -77,7 +77,7 @@ export const facebookcomwatchmanPackage = {
     'openssl.org^1.1',
     'pcre.org/v2^10',
     'python.org~3.11',
-    'linux:libcxx.llvm.org^18 # libunwind',
+    'linux:libcxx.llvm.org^18',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,
   /**

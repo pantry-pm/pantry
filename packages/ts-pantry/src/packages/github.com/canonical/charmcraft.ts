@@ -8,7 +8,7 @@
  *
  * @install `pantry install github.com/canonical/charmcraft`
  * @homepage https://charmhub.io
- * @dependencies `pkgx.sh>=1`, `libgit2.org~1.9 # as of v4.1.0`
+ * @dependencies `pkgx.sh>=1`, `libgit2.org~1.9`
  * @buildDependencies `python.org@~3.13` - required only when building from source
  *
  * @example
@@ -61,7 +61,7 @@ export const charmcraftPackage = {
   */
   dependencies: [
     'pkgx.sh>=1',
-    'libgit2.org~1.9 # as of v4.1.0',
+    'libgit2.org~1.9',
   ] as const,
   /**
   * Build dependencies for this package.

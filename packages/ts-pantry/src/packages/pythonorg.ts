@@ -81,7 +81,7 @@ export const pythonPackage = {
     'invisible-island.net/ncurses@6',
     'facebook.com/zstd>=1.5',
     'linux:tcl-lang.org',
-    'darwin:tcl-lang.org=8.6.16 # 9.0.2 introduced a build issue on darwin',
+    'darwin:tcl-lang.org=8.6.16',
   ] as const,
   /**
   * Build dependencies for this package.

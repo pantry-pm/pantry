@@ -97,7 +97,7 @@ export const postgresPackage = {
     'gnu.org/readline',
     'zlib.net',
     'lz4.org',
-    'gnome.org/libxml2~2.13 # abi changed in 2.14',
+    'gnome.org/libxml2~2.13',
     'gnome.org/libxslt',
     'unicode.org^73',
   ] as const,

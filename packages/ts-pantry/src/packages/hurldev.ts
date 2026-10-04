@@ -8,7 +8,7 @@
  *
  * @install `pantry install hurl.dev`
  * @homepage https://hurl.dev
- * @dependencies `gnome.org/libxml2~2.13 # 2.14 changed the API`, `curl.se`
+ * @dependencies `gnome.org/libxml2~2.13`, `curl.se`
  *
  * @example
  * ```typescript
@@ -60,7 +60,7 @@ export const hurldevPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'gnome.org/libxml2~2.13 # 2.14 changed the API',
+    'gnome.org/libxml2~2.13',
     'curl.se',
   ] as const,
   buildDependencies: [] as const,

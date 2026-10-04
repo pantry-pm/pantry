@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install crates.io/bat`
- * @dependencies `zlib.net^1`, `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `zlib.net^1`, `libgit2.org~1.7`
  *
  * @example
  * ```typescript
@@ -59,7 +59,7 @@ export const cratesiobatPackage = {
   */
   dependencies: [
     'zlib.net^1',
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   buildDependencies: [] as const,
   /**

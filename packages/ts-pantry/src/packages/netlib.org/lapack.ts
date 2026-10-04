@@ -6,7 +6,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install netlib.org/lapack`
- * @dependencies `gnu.org/gcc^11 # libgfortran`
+ * @dependencies `gnu.org/gcc^11`
  * @buildDependencies `gnu.org/binutils`, `cmake.org@~3.24` - required only when building from source
  *
  * @example
@@ -51,7 +51,7 @@ export const netliborglapackPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'gnu.org/gcc^11 # libgfortran',
+    'gnu.org/gcc^11',
   ] as const,
   /**
   * Build dependencies for this package.

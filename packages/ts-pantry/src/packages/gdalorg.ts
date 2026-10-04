@@ -107,7 +107,7 @@ export const gdalorgPackage = {
     'postgresql.org/libpq',
     'gaia-gis.it/libspatialite',
     'simplesystems.org/libtiff',
-    'gnome.org/libxml2~2.13 # 2.14 changed the soname',
+    'gnome.org/libxml2~2.13',
     'numpy.org',
     'openexr.com',
     'openjpeg.org',
@@ -130,7 +130,7 @@ export const gdalorgPackage = {
     'github.com/ebiggers/libdeflate',
     'linux:curl.se',
     'linux:github.com/util-linux/util-linux',
-    'linux:apache.org/thrift=0.22.0 # since 3.11.1',
+    'linux:apache.org/thrift=0.22.0',
   ] as const,
   /**
   * Build dependencies for this package.

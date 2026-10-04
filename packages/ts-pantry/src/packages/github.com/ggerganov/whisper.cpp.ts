@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/ggerganov/whisper.cpp`
- * @dependencies `libsdl.org`, `linux:openmp.llvm.org^18 # as of 1.7.0`, `linux:gnu.org/gcc/libstdcxx@14` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `libsdl.org`, `linux:openmp.llvm.org^18`, `linux:gnu.org/gcc/libstdcxx@14` (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `gnu.org/patch`, `gnu.org/coreutils`, `cmake.org@3` - required only when building from source
  *
  * @example
@@ -62,7 +62,7 @@ export const whispercppPackage = {
   */
   dependencies: [
     'libsdl.org',
-    'linux:openmp.llvm.org^18 # as of 1.7.0',
+    'linux:openmp.llvm.org^18',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,
   /**

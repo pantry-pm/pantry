@@ -8,7 +8,7 @@
  *
  * @install `pantry install onefetch.dev`
  * @homepage https://onefetch.dev/
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `libgit2.org~1.7`
  * @buildDependencies `cmake.org@^3` - required only when building from source
  *
  * @example
@@ -60,7 +60,7 @@ export const onefetchdevPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   /**
   * Build dependencies for this package.

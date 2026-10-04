@@ -229,6 +229,15 @@ async function loadRecipeDeps(recipesDir: string, domain: string): Promise<strin
   }
 }
 
+/** A dependency spec without a trailing note: `git-scm.org^2 # v0.7.0 requires it`
+ * → `git-scm.org^2`. package.yml writes notes beside versions and the package
+ * files carried them through; every Zig consumer then had to strip them on its
+ * own, and installer.zig took any spec containing `#` to be optional. */
+export function stripSpecComment(spec: string): string {
+  const hash = spec.search(/\s#/)
+  return (hash >= 0 ? spec.slice(0, hash) : spec).trim()
+}
+
 /** Union metadata deps with recipe deps, deduping by `os:domain` (metadata wins
  * on conflict; recipe-only deps — e.g. php's `postgresql.org` — are appended). */
 function mergeDeps(metaDeps: string[], recipeDeps: string[]): string[] {
@@ -296,10 +305,10 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
         // libpq, so php.net must depend on postgresql.org even though pkgx's
         // upstream metadata omits it).
         dependencies: mergeDeps(
-          Array.isArray(pkgData.dependencies) ? pkgData.dependencies : [],
+          Array.isArray(pkgData.dependencies) ? pkgData.dependencies.map(stripSpecComment) : [],
           await loadRecipeDeps(recipesDir, pkgData.domain),
         ),
-        buildDependencies: Array.isArray(pkgData.buildDependencies) ? pkgData.buildDependencies : [],
+        buildDependencies: Array.isArray(pkgData.buildDependencies) ? pkgData.buildDependencies.map(stripSpecComment) : [],
         aliases: mergeAliases(pkgData.domain, Array.isArray(pkgData.aliases) ? pkgData.aliases : []),
         versions: sortedVersions,
       })

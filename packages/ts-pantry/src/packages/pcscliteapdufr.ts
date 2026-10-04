@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install pcsclite.apdu.fr`
- * @dependencies `libusb.info^1`, `linux:systemd.io^254 # libudev` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `libusb.info^1`, `linux:systemd.io^254` (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `cmake.org@^3`, `mesonbuild.com@^1`, `github.com/westes/flex`, ... (+1 more) - required only when building from source
  *
  * @example
@@ -60,7 +60,7 @@ export const pcscliteapdufrPackage = {
   */
   dependencies: [
     'libusb.info^1',
-    'linux:systemd.io^254 # libudev',
+    'linux:systemd.io^254',
   ] as const,
   /**
   * Build dependencies for this package.

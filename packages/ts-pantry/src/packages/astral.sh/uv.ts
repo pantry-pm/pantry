@@ -8,7 +8,7 @@
  *
  * @install `pantry install astral.sh/uv`
  * @homepage https://docs.astral.sh/uv
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `libgit2.org~1.7`
  * @buildDependencies `linux:nixos.org/patchelf@^0.18`, `linux:sqlite.org`, `cmake.org@^3.28`, ... (+1 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -61,7 +61,7 @@ export const astralshuvPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   /**
   * Build dependencies for this package.

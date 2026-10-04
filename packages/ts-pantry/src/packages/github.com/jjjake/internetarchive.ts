@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/jjjake/internetarchive`
- * @dependencies `python.org~3.11`, `gnu.org/which^2 # our stubs use which`
+ * @dependencies `python.org~3.11`, `gnu.org/which^2`
  *
  * @example
  * ```typescript
@@ -59,7 +59,7 @@ export const internetarchivePackage = {
   */
   dependencies: [
     'python.org~3.11',
-    'gnu.org/which^2 # our stubs use which',
+    'gnu.org/which^2',
   ] as const,
   buildDependencies: [] as const,
   /**

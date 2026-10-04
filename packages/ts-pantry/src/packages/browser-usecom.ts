@@ -7,7 +7,7 @@
  *
  * @install `pantry install browser-use.com`
  * @homepage https://browser-use.com/
- * @dependencies `python.org~3.12 # no torch<2.3.0 for 3.13`
+ * @dependencies `python.org~3.12`
  *
  * @example
  * ```typescript
@@ -51,7 +51,7 @@ export const browserusecomPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'python.org~3.12 # no torch<2.3.0 for 3.13',
+    'python.org~3.12',
   ] as const,
   buildDependencies: [] as const,
   /**

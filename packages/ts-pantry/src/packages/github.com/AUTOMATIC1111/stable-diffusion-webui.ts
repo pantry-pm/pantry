@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/AUTOMATIC1111/stable-diffusion-webui`
- * @dependencies `python.org~3.10`, `tea.xyz^0  # our scripts use tea/cli`, `git-scm.org^2`
+ * @dependencies `python.org~3.10`, `tea.xyz^0`, `git-scm.org^2`
  * @buildDependencies `pip.pypa.io`, `gnu.org/wget`, `protobuf.dev@>=21` - required only when building from source
  *
  * @example
@@ -60,7 +60,7 @@ export const stablediffusionwebuiPackage = {
   */
   dependencies: [
     'python.org~3.10',
-    'tea.xyz^0  # our scripts use tea/cli',
+    'tea.xyz^0',
     'git-scm.org^2',
   ] as const,
   /**

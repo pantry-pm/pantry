@@ -74,7 +74,7 @@ export const grpcioPackage = {
     'github.com/google/re2',
     'zlib.net',
     'linux:gnu.org/gcc/libstdcxx',
-    'linux:protobuf.dev^30.0.0 # as of 1.72.0',
+    'linux:protobuf.dev^30.0.0',
   ] as const,
   /**
   * Build dependencies for this package.

@@ -7,7 +7,7 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install crates.io/eureka`
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `libgit2.org~1.7`
  *
  * @example
  * ```typescript
@@ -58,7 +58,7 @@ export const cratesioeurekaPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   buildDependencies: [] as const,
   /**

@@ -78,7 +78,7 @@ export const apacheorgarrowPackage = {
     'facebook.com/zstd',
     'darwin:c-ares.org@1',
     'darwin:libcxx.llvm.org~17',
-    'linux:protobuf.dev^30.0.0 # match grpc.io, so gdal.org can build, we bundle on darwin',
+    'linux:protobuf.dev^30.0.0',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,
   /**

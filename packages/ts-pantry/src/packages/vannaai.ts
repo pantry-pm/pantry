@@ -7,7 +7,7 @@
  *
  * @install `pantry install vanna.ai`
  * @homepage https://vanna.ai/docs/
- * @dependencies `python.org~3.12`, `linux:openmp.llvm.org^17 # needed by chromadb` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `python.org~3.12`, `linux:openmp.llvm.org^17` (includes OS-specific dependencies with `os:package` format)
  *
  * @example
  * ```typescript
@@ -53,7 +53,7 @@ export const vannaaiPackage = {
   */
   dependencies: [
     'python.org~3.12',
-    'linux:openmp.llvm.org^17 # needed by chromadb',
+    'linux:openmp.llvm.org^17',
   ] as const,
   buildDependencies: [] as const,
   /**

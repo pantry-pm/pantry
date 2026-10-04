@@ -8,7 +8,7 @@
  *
  * @install `pantry install crates.io/git-absorb`
  * @homepage https://crates.io/crates/git-absorb
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `libgit2.org~1.7`
  *
  * @example
  * ```typescript
@@ -59,7 +59,7 @@ export const cratesiogitabsorbPackage = {
   * These are required when running the package.
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   buildDependencies: [] as const,
   /**

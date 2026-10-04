@@ -8,7 +8,7 @@
  *
  * @install `pantry install crates.io/git-delta`
  * @homepage https://dandavison.github.io/delta/
- * @dependencies `libgit2.org~1.7 # links to libgit2.so.1.7`, `darwin:zlib.net^1` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `libgit2.org~1.7`, `darwin:zlib.net^1` (includes OS-specific dependencies with `os:package` format)
  *
  * @example
  * ```typescript
@@ -60,7 +60,7 @@ export const cratesiogitdeltaPackage = {
   * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
     'darwin:zlib.net^1',
   ] as const,
   buildDependencies: [] as const,

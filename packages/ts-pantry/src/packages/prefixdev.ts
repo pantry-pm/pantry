@@ -8,7 +8,7 @@
  *
  * @install `pantry install prefix.dev`
  * @homepage https://pixi.sh
- * @dependencies `openssl.org^1.1`, `libgit2.org~1.7 # links to libgit2.so.1.7`
+ * @dependencies `openssl.org^1.1`, `libgit2.org~1.7`
  *
  * @example
  * ```typescript
@@ -60,7 +60,7 @@ export const prefixdevPackage = {
   */
   dependencies: [
     'openssl.org^1.1',
-    'libgit2.org~1.7 # links to libgit2.so.1.7',
+    'libgit2.org~1.7',
   ] as const,
   buildDependencies: [] as const,
   /**

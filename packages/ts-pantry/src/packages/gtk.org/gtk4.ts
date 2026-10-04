@@ -8,7 +8,7 @@
  *
  * @install `pantry install gtk.org/gtk4`
  * @homepage https://gtk.org/
- * @dependencies `gnome.org/gdk-pixbuf^2.42`, `gnome.org/glib^2.78`, `gnome.org/librsvg^2.60 # since 4.19.2`, ... (+16 more) (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `gnome.org/gdk-pixbuf^2.42`, `gnome.org/glib^2.78`, `gnome.org/librsvg^2.60`, ... (+16 more) (includes OS-specific dependencies with `os:package` format)
  * @buildDependencies `docbook.org`, `docbook.org/xsl`, `gnu.org/gettext`, ... (+5 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
  *
  * @example
@@ -73,7 +73,7 @@ export const gtkorggtk4Package = {
   dependencies: [
     'gnome.org/gdk-pixbuf^2.42',
     'gnome.org/glib^2.78',
-    'gnome.org/librsvg^2.60 # since 4.19.2',
+    'gnome.org/librsvg^2.60',
     'ebassi.github.io/graphene^1.10',
     'freedesktop.org/icon-theme^0.17',
     'libjpeg-turbo.org^2',
@@ -89,7 +89,7 @@ export const gtkorggtk4Package = {
     'linux:x.org/xcursor^1.2',
     'linux:xkbcommon.org^1.6',
     'linux:cairographics.org^1.18',
-    'linux:wayland.freedesktop.org/protocols^1.43 # since 4.19.1',
+    'linux:wayland.freedesktop.org/protocols^1.43',
   ] as const,
   /**
   * Build dependencies for this package.

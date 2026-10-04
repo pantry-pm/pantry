@@ -60,7 +60,7 @@ export const mesa3dorgPackage = {
     'zlib.net',
     'x.org/xrandr',
     'darwin:gnu.org/gettext',
-    'linux:gnome.org/libxml2~2.13 # since 25.0.3, 2.14 changed the API version',
+    'linux:gnome.org/libxml2~2.13',
     'linux:elfutils.org',
     'linux:khronos.org/glslang',
     'linux:info-zip.org/zip',
