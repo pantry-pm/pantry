@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.68...v0.11.69)
+
+## ✨ Features
+
+- **packages**: add sqld (libsql-server), and make turso.tech depend on it ([08fb6be](https://github.com/pantry-pm/pantry/commit/08fb6be)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#241](https://github.com/pantry-pm/pantry/issues/241))
+
+## 🐛 Bug Fixes
+
+- **build**: remove a .la link whose target was removed first ([89ca07c](https://github.com/pantry-pm/pantry/commit/89ca07c)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#238](https://github.com/pantry-pm/pantry/issues/238))
+- **install**: install the host's platform build from optionalDependencies ([5af1f3b](https://github.com/pantry-pm/pantry/commit/5af1f3b)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#240](https://github.com/pantry-pm/pantry/issues/240))
+
+## ✅ Tests
+
+- **app-store-connect**: give the unreadable-CSR mock fetch's signature ([f71d717](https://github.com/pantry-pm/pantry/commit/f71d717)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.69 ([9a8b4d3](https://github.com/pantry-pm/pantry/commit/9a8b4d3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update github.com/ggerganov/llama.cpp to 11382 ([4573414](https://github.com/pantry-pm/pantry/commit/4573414)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.67...v0.11.68)
 
 ## 🐛 Bug Fixes
