@@ -1568,6 +1568,7 @@ export const aliases: Record<string, string> = {
   'tunnelblick': 'tunnelblick.net',
   'Tunnelblick': 'tunnelblick.net',
   'turso': 'turso.tech',
+  'libsql-server': 'turso.tech/sqld',
   'tuxpaint': 'tuxpaint.org',
   'twine': 'github.com/pypa/twine',
   'typesense': 'typesense.org',

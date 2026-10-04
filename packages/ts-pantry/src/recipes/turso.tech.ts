@@ -15,6 +15,10 @@ export const recipe: Recipe = {
   distributable: {
     url: 'git+https://github.com/tursodatabase/turso-cli',
   },
+  // `turso dev` starts a local sqld and fails without one on PATH.
+  dependencies: {
+    'turso.tech/sqld': '*',
+  },
   buildDependencies: {
     'go.dev': '^1.20',
   },
