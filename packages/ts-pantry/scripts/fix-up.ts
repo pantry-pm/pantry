@@ -406,7 +406,7 @@ function fixCmakeFiles(prefix: string): void {
  * From brewkit's remove_la_files()
  * Only removes top-level lib/*.la — subdirectory .la may be module descriptors
  */
-function removeLaFiles(prefix: string): void {
+export function removeLaFiles(prefix: string): void {
   const libDir = join(prefix, 'lib')
   if (!existsSync(libDir)) return
 
@@ -414,7 +414,18 @@ function removeLaFiles(prefix: string): void {
   for (const file of files) {
     if (!file.endsWith('.la')) continue
     const filePath = join(libDir, file)
-    const stat = statSync(filePath)
+    // libpng installs libpng.la as a link to libpng16.la. Once the target is
+    // gone (readdir order decides which comes first) a plain stat throws
+    // ENOENT, which failed libpng 1.6.59's linux-arm64 build outright; the
+    // dangling link is removed along with what it pointed at.
+    const stat = statSync(filePath, { throwIfNoEntry: false })
+    if (!stat) {
+      if (lstatSync(filePath, { throwIfNoEntry: false })?.isSymbolicLink()) {
+        console.log(`  Removing .la: ${file} (dangling link)`)
+        unlinkSync(filePath)
+      }
+      continue
+    }
     if (stat.isFile()) {
       console.log(`  Removing .la: ${file}`)
       unlinkSync(filePath)
