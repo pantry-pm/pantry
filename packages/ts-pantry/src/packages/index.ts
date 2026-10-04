@@ -1629,8 +1629,8 @@ import { trufflesecuritycomtrufflehogPackage } from './trufflesecurity.com/truff
 import { tsl0922githubiottydPackage } from './tsl0922.github.io/ttyd'
 import { tuistioxcbeautifyPackage } from './tuist.io/xcbeautify'
 import { tukaaniorgxzPackage } from './tukaani.org/xz'
-import { tursotechPackage } from './tursotech'
 import { tursotechsqldPackage } from './turso.tech/sqld'
+import { tursotechPackage } from './tursotech'
 import { tuxpaintorgPackage } from './tuxpaintorg'
 import { typescriptlangorgPackage } from './typescriptlangorg'
 import { typesenseorgPackage } from './typesenseorg'
@@ -4463,8 +4463,9 @@ export interface Pantry {
   tuistioxcbeautify: typeof tuistioxcbeautifyPackage
   xz: typeof tukaaniorgxzPackage
   tukaaniorgxz: typeof tukaaniorgxzPackage
-  tursotech: typeof tursotechPackage
+  sqld: typeof tursotechsqldPackage
   tursotechsqld: typeof tursotechsqldPackage
+  tursotech: typeof tursotechPackage
   tuxpaintorg: typeof tuxpaintorgPackage
   typescriptlangorg: typeof typescriptlangorgPackage
   typesenseorg: typeof typesenseorgPackage
@@ -5501,6 +5502,7 @@ export interface Pantry {
   libsoup: typeof libsouporgPackage
   libspatialite: typeof gaiagisitlibspatialitePackage
   libspng: typeof libspngorgPackage
+  'libsql-server': typeof tursotechsqldPackage
   libsrtp: typeof ciscocomlibsrtpPackage
   libssh: typeof libsshorgPackage
   libssh2: typeof libssh2orgPackage
@@ -6227,7 +6229,6 @@ export interface Pantry {
   tunnelblick: typeof tunnelblicknetPackage
   Tunnelblick: typeof tunnelblicknetPackage
   turso: typeof tursotechPackage
-  'libsql-server': typeof tursotechsqldPackage
   tuxpaint: typeof tuxpaintorgPackage
   twine: typeof twinePackage
   typesense: typeof typesenseorgPackage
@@ -9130,8 +9131,9 @@ export const pantry: Pantry = {
   tuistioxcbeautify: tuistioxcbeautifyPackage,
   xz: tukaaniorgxzPackage,
   tukaaniorgxz: tukaaniorgxzPackage,
-  tursotech: tursotechPackage,
+  sqld: tursotechsqldPackage,
   tursotechsqld: tursotechsqldPackage,
+  tursotech: tursotechPackage,
   tuxpaintorg: tuxpaintorgPackage,
   typescriptlangorg: typescriptlangorgPackage,
   typesenseorg: typesenseorgPackage,
@@ -10168,6 +10170,7 @@ export const pantry: Pantry = {
   libsoup: libsouporgPackage,
   libspatialite: gaiagisitlibspatialitePackage,
   libspng: libspngorgPackage,
+  'libsql-server': tursotechsqldPackage,
   libsrtp: ciscocomlibsrtpPackage,
   libssh: libsshorgPackage,
   libssh2: libssh2orgPackage,
@@ -10894,7 +10897,6 @@ export const pantry: Pantry = {
   tunnelblick: tunnelblicknetPackage,
   Tunnelblick: tunnelblicknetPackage,
   turso: tursotechPackage,
-  'libsql-server': tursotechsqldPackage,
   tuxpaint: tuxpaintorgPackage,
   twine: twinePackage,
   typesense: typesenseorgPackage,
