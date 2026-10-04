@@ -950,7 +950,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         var failed_count: usize = 0;
 
         for (pipeline_result.results) |result| {
-            if (result.name.len == 0) continue;
+            // Another platform's optional build: locked, not installed.
+            if (result.name.len == 0 or result.lock_only) continue;
             if (result.success) {
                 style.printInstalled(result.name, result.version);
                 success_count += 1;
@@ -1178,6 +1179,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 } else if (!opts.no_save) {
                     try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
                 }
+                // Nothing of it is on disk to record below.
+                if (result.lock_only) continue;
 
                 // Record successful package installation in checkpoint
                 checkpoint.recordPackage(clean_name) catch |err| {
@@ -1854,7 +1857,7 @@ fn installCompanionDepsFile(
 
     var failed_count: usize = 0;
     for (pipeline_result.results) |result| {
-        if (result.name.len == 0) continue;
+        if (result.name.len == 0 or result.lock_only) continue;
         if (result.success) {
             style.printInstalled(result.name, result.version);
         } else {

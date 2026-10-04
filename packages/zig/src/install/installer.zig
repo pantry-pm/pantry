@@ -8,6 +8,7 @@ const downloader = @import("downloader.zig");
 const extractor = @import("extractor.zig");
 const libfixer = @import("libfixer.zig");
 const pkgx_shebang = @import("pkgx_shebang.zig");
+const npm_platform = @import("npm_platform.zig");
 const validator = @import("validator.zig");
 const semver = @import("../packages/semver.zig");
 const registry_versions_mod = @import("registry_versions.zig");
@@ -1685,6 +1686,10 @@ pub const Installer = struct {
         tarball_url: []const u8,
         integrity: ?[]const u8 = null,
         dependencies: []DepEntry,
+        /// False when the version's `os`/`cpu`/`libc` exclude this machine:
+        /// a platform package (`@esbuild/linux-x64` on a Mac) that belongs in
+        /// the lock but not on disk.
+        platform_ok: bool = true,
 
         pub const DepEntry = struct {
             name: []const u8,
@@ -1750,7 +1755,7 @@ pub const Installer = struct {
         is_optional: bool,
     ) ?[]const u8 {
         if (self.verbose) std.debug.print("[verbose:transitive] installSingleTransitiveDep: {s} @ {s} (optional={})\n", .{ name, version_constraint, is_optional });
-        return self.installSingleTransitiveDepInner(name, version_constraint, project_root) catch |err| {
+        return self.installSingleTransitiveDepInner(name, version_constraint, project_root, is_optional) catch |err| {
             if (self.verbose) std.debug.print("[verbose:transitive] FAILED: {s} @ {s}: {}\n", .{ name, version_constraint, err });
             if (!is_optional and !style.isCI()) {
                 style.print("    ! {s}: {}\n", .{ name, err });
@@ -1765,6 +1770,7 @@ pub const Installer = struct {
         name: []const u8,
         version_constraint: []const u8,
         project_root: []const u8,
+        is_optional: bool,
     ) !?[]const u8 {
         // 0. Fast path: check in-memory hoisted cache (no filesystem I/O needed)
         if (self.hoisted_versions.checkSatisfies(name, version_constraint)) return null;
@@ -1822,8 +1828,25 @@ pub const Installer = struct {
         if (!(self.installing_stack.tryPut(install_key) catch return null)) return null;
         defer self.installing_stack.remove(install_key);
 
-        // 3. Resolve via npm registry directly
-        const npm_info = self.resolveNpmPackage(name, version_constraint) catch return null;
+        // 3. Resolve via npm registry directly. An optional dependency is
+        // usually one of a family of per-platform builds (`@esbuild/*`,
+        // `@sqld/*`); its metadata says which machine it is for, and only
+        // that one is downloaded.
+        const npm_info: NpmResolution = if (is_optional) blk: {
+            var with_deps = self.resolveNpmPackageWithDeps(name, version_constraint) catch return null;
+            for (with_deps.dependencies) |dep| {
+                self.allocator.free(dep.name);
+                self.allocator.free(dep.version_constraint);
+            }
+            self.allocator.free(with_deps.dependencies);
+            with_deps.dependencies = &.{};
+            if (!with_deps.platform_ok) {
+                if (self.verbose) std.debug.print("[verbose:transitive] {s}@{s} is for another platform, skipping\n", .{ name, with_deps.version });
+                with_deps.deinit(self.allocator);
+                return null;
+            }
+            break :blk .{ .version = with_deps.version, .tarball_url = with_deps.tarball_url, .integrity = with_deps.integrity };
+        } else self.resolveNpmPackage(name, version_constraint) catch return null;
         defer self.allocator.free(npm_info.version);
         defer self.allocator.free(npm_info.tarball_url);
         defer if (npm_info.integrity) |int| self.allocator.free(int);
@@ -1886,8 +1909,12 @@ pub const Installer = struct {
 
         if (parsed.value != .object) return;
 
-        // Process dependencies and peerDependencies (skip devDependencies)
-        const sections = [_][]const u8{ "dependencies", "peerDependencies" };
+        // Process dependencies, optionalDependencies and peerDependencies
+        // (skip devDependencies). optionalDependencies carry the per-platform
+        // native builds (`@esbuild/darwin-arm64`, `@sqld/darwin-arm64`, ...)
+        // that a package's bin cannot run without; installSingleTransitiveDep
+        // keeps the ones for this machine.
+        const sections = [_][]const u8{ "dependencies", "optionalDependencies", "peerDependencies" };
         const peer_meta = parsed.value.object.get("peerDependenciesMeta");
 
         for (sections) |section_key| {
@@ -1895,6 +1922,7 @@ pub const Installer = struct {
             if (deps_val != .object) continue;
 
             const is_peer_section = std.mem.eql(u8, section_key, "peerDependencies");
+            const is_optional_section = std.mem.eql(u8, section_key, "optionalDependencies");
 
             var it = deps_val.object.iterator();
             while (it.next()) |entry| {
@@ -1926,8 +1954,8 @@ pub const Installer = struct {
                 // Fast path: check in-memory hoisted cache before any I/O
                 if (self.hoisted_versions.checkSatisfies(actual_name, dep_version)) continue;
 
-                // Determine if this is an optional peer dependency
-                var is_optional = false;
+                // Determine if this is an optional (or optional peer) dependency
+                var is_optional = is_optional_section;
                 if (is_peer_section) {
                     if (peer_meta) |meta| {
                         if (meta == .object) {
@@ -2418,40 +2446,25 @@ pub const Installer = struct {
         // Build version key after L2 check since we need the resolved version
         // (falls through if no L2 hit)
 
-        // --- Lockfile-first resolution ---
+        // --- Lockfile pin ---
+        // pantry.lock's version is kept when it still satisfies the range,
+        // but the registry metadata is read regardless: it is the only record
+        // of what that version depends on and which platform it is for. This
+        // used to answer from the lock alone with no dependencies, so any
+        // install with a pantry.lock present installed the top-level npm
+        // packages and nothing beneath them - chalk without ansi-styles,
+        // esbuild without @esbuild/darwin-arm64.
+        //
         // bun.lock's pin outranks pantry.lock's: when it satisfies the range
-        // and differs from pantry.lock's, skip this shortcut so the registry
-        // path below selects it.
-        const bun_pin = self.preferredBunPin(name, version_constraint);
+        // and differs from pantry.lock's, pantryLockPin yields nothing and
+        // pickNpmVersion selects bun's.
+        var lock_pinned: ?[]const u8 = null;
         if (self.lockfile) |lf| {
             const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
+            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), self.preferredBunPin(name, version_constraint))) |locked| {
                 const npm_zig = @import("../registry/npm.zig");
                 const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
-                const satisfies = if (constraint) |c| c.satisfies(locked.version) else true;
-
-                if (satisfies) {
-                    const tarball_url = if (locked.resolved.len > 0 and !std.mem.startsWith(u8, locked.resolved, "registry:"))
-                        try self.allocator.dupe(u8, locked.resolved)
-                    else
-                        try std.fmt.allocPrint(self.allocator, "https://registry.npmjs.org/{s}/-/{s}-{s}.tgz", .{
-                            name,
-                            if (std.mem.indexOf(u8, name, "/")) |slash_idx| name[slash_idx + 1 ..] else name,
-                            locked.version,
-                        });
-
-                    // Lockfile LockedVersion doesn't store transitive deps, so return empty.
-                    // The pipeline will still discover transitive deps via registry metadata
-                    // on subsequent BFS waves if needed.
-                    const empty_deps = try self.allocator.alloc(NpmResolutionWithDeps.DepEntry, 0);
-
-                    return NpmResolutionWithDeps{
-                        .version = try self.allocator.dupe(u8, locked.version),
-                        .tarball_url = tarball_url,
-                        .integrity = if (locked.integrity) |i| (self.allocator.dupe(u8, i) catch null) else null,
-                        .dependencies = empty_deps,
-                    };
-                }
+                if (if (constraint) |c| c.satisfies(locked.version) else true) lock_pinned = locked.version;
             }
         }
 
@@ -2499,10 +2512,13 @@ pub const Installer = struct {
 
         if (parsed.value != .object) return error.InvalidNpmResponse;
 
-        const target_version = try self.pickNpmVersion(parsed.value, name, version_constraint);
-
         const versions_obj = parsed.value.object.get("versions") orelse return error.NoVersions;
         if (versions_obj != .object) return error.InvalidNpmResponse;
+
+        const target_version = if (lock_pinned) |pinned|
+            versions_obj.object.getKey(pinned) orelse try self.pickNpmVersion(parsed.value, name, version_constraint)
+        else
+            try self.pickNpmVersion(parsed.value, name, version_constraint);
 
         const version_data = versions_obj.object.get(target_version) orelse return error.VersionNotFound;
         if (version_data != .object) return error.InvalidNpmResponse;
@@ -2523,14 +2539,18 @@ pub const Installer = struct {
             break :blk null;
         };
 
-        // Extract dependencies + peerDependencies from version_data
+        // Extract dependencies, optionalDependencies and peerDependencies
+        // from version_data. The optional ones are the per-platform native
+        // builds; each is resolved like any other dep and then kept off disk
+        // unless its `os`/`cpu`/`libc` match (see `platform_ok`).
         var deps_list = std.ArrayList(NpmResolutionWithDeps.DepEntry).empty;
 
-        const dep_sections = [_][]const u8{ "dependencies", "peerDependencies" };
+        const dep_sections = [_][]const u8{ "dependencies", "optionalDependencies", "peerDependencies" };
         const peer_meta = version_data.object.get("peerDependenciesMeta");
 
         for (dep_sections) |section| {
             const is_peer = std.mem.eql(u8, section, "peerDependencies");
+            const is_optional_section = std.mem.eql(u8, section, "optionalDependencies");
             const deps_val = version_data.object.get(section) orelse continue;
             if (deps_val != .object) continue;
 
@@ -2544,7 +2564,7 @@ pub const Installer = struct {
                 if (std.mem.startsWith(u8, dep_version, "workspace:")) continue;
 
                 // Check if peer dep is optional
-                var is_optional = is_peer; // all peers are optional by default
+                var is_optional = is_peer or is_optional_section; // all peers are optional by default
                 if (is_peer and peer_meta != null) {
                     if (peer_meta.?.object.get(dep_name)) |meta| {
                         if (meta == .object) {
@@ -2571,6 +2591,7 @@ pub const Installer = struct {
             .tarball_url = try self.allocator.dupe(u8, tarball_val.string),
             .integrity = if (integrity_str) |s| try self.allocator.dupe(u8, s) else null,
             .dependencies = deps_list.toOwnedSlice(self.allocator) catch &.{},
+            .platform_ok = npm_platform.allowsCurrentHost(version_data),
         };
     }
 
@@ -2590,6 +2611,21 @@ pub const Installer = struct {
             constraint_str.len == 0)
         {
             return getDistTagLatest(npm_response);
+        }
+
+        // A version the registry has, named exactly, is that version. The
+        // range check below ignores prerelease tags, so `0.24.1-pre.42` - how
+        // sqld pins its `@sqld/*` platform builds - matched every
+        // 0.24.1-pre.N and came back as whichever the iteration met first.
+        {
+            var exact = constraint_str;
+            if (exact.len > 0 and exact[0] == '=') exact = exact[1..];
+            if (exact.len > 0 and exact[0] == 'v') exact = exact[1..];
+            if (npm_response.object.get("versions")) |versions| {
+                if (versions == .object) {
+                    if (versions.object.getKey(exact)) |key| return key;
+                }
+            }
         }
 
         // Parse the constraint
@@ -2616,9 +2652,13 @@ pub const Installer = struct {
                 } else {
                     const cur_parsed = npm_zig.SemverConstraint.parseVersion(ver) catch continue;
                     if (best_parsed) |bp| {
+                        const same_core = cur_parsed.major == bp.major and cur_parsed.minor == bp.minor and cur_parsed.patch == bp.patch;
                         if (cur_parsed.major > bp.major or
                             (cur_parsed.major == bp.major and cur_parsed.minor > bp.minor) or
-                            (cur_parsed.major == bp.major and cur_parsed.minor == bp.minor and cur_parsed.patch > bp.patch))
+                            (cur_parsed.major == bp.major and cur_parsed.minor == bp.minor and cur_parsed.patch > bp.patch) or
+                            // Same release, so the prerelease tag decides:
+                            // 1.0.0 over 1.0.0-rc.2 over 1.0.0-rc.1.
+                            (same_core and semver.compareVersions(ver, best_version.?) == .gt))
                         {
                             best_version = ver;
                             best_parsed = cur_parsed;
@@ -4841,4 +4881,89 @@ fn analyticsFlushWorker(allocator: std.mem.Allocator, events: []const AnalyticsE
     buf.appendSlice(allocator, "]") catch return;
 
     _ = io_helper.httpPostJson(allocator, "https://registry.pantry.dev/analytics/events", buf.items) catch return;
+}
+
+/// sqld 0.24.1-pre.42 as the npm registry publishes it: the CLI package names
+/// one optional build per platform, and each build says where it runs.
+const sqld_registry_fixture =
+    \\{"name":"sqld","dist-tags":{"latest":"0.24.1-pre.42"},"versions":{"0.24.1-pre.42":{
+    \\"dist":{"tarball":"https://registry.npmjs.org/sqld/-/sqld-0.24.1-pre.42.tgz","integrity":"sha512-sqld"},
+    \\"bin":{"sqld":".bin/sqld"},
+    \\"optionalDependencies":{"@sqld/darwin-arm64":"0.24.1-pre.42","@sqld/darwin-x64":"0.24.1-pre.42","@sqld/linux-arm64":"0.24.1-pre.42","@sqld/linux-x64":"0.24.1-pre.42"}}}}
+;
+
+fn sqldPlatformFixture(comptime os: []const u8, comptime cpu: []const u8) []const u8 {
+    return "{\"name\":\"@sqld/" ++ os ++ "-" ++ cpu ++ "\",\"dist-tags\":{\"latest\":\"0.24.1-pre.42\"},\"versions\":{\"0.24.1-pre.42\":{" ++
+        "\"dist\":{\"tarball\":\"https://registry.npmjs.org/@sqld/" ++ os ++ "-" ++ cpu ++ "/-/" ++ os ++ "-" ++ cpu ++ "-0.24.1-pre.42.tgz\"}," ++
+        "\"os\":[\"" ++ os ++ "\"],\"cpu\":[\"" ++ cpu ++ "\"]}}}";
+}
+
+test "optionalDependencies are resolved, and only this machine's platform build is installable" {
+    const allocator = std.testing.allocator;
+    const resolution_lockfile = @import("../deps/resolution/lockfile.zig");
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    installer.npm_cache.putRegistryJson("sqld", sqld_registry_fixture);
+    const platforms = [_]struct { name: []const u8, json: []const u8, os: []const u8, cpu: []const u8 }{
+        .{ .name = "@sqld/darwin-arm64", .json = sqldPlatformFixture("darwin", "arm64"), .os = "darwin", .cpu = "arm64" },
+        .{ .name = "@sqld/darwin-x64", .json = sqldPlatformFixture("darwin", "x64"), .os = "darwin", .cpu = "x64" },
+        .{ .name = "@sqld/linux-arm64", .json = sqldPlatformFixture("linux", "arm64"), .os = "linux", .cpu = "arm64" },
+        .{ .name = "@sqld/linux-x64", .json = sqldPlatformFixture("linux", "x64"), .os = "linux", .cpu = "x64" },
+    };
+    for (platforms) |p| installer.npm_cache.putRegistryJson(p.name, p.json);
+
+    // A lock (written on some other machine) that records every platform's
+    // build must not make a foreign one look installable here.
+    var lock = resolution_lockfile.LockFile.init(allocator);
+    defer lock.deinit();
+    for (platforms) |p| try lock.addPackage(p.name, "0.24.1-pre.42", "", null);
+    // And the parent's own pin must not cost it its dependencies: answering
+    // from the lock alone returned none, so a reinstall over an existing
+    // pantry.lock never reached any package beneath the top level.
+    try lock.addPackage("sqld", "0.24.1-pre.42", "registry:sqld@0.24.1-pre.42", null);
+    installer.setLockfile(&lock);
+
+    var parent = try installer.resolveNpmPackageWithDeps("sqld", "0.24.1-pre.42");
+    defer parent.deinit(installer.allocator);
+    try std.testing.expect(parent.platform_ok);
+    try std.testing.expectEqual(@as(usize, 4), parent.dependencies.len);
+    for (parent.dependencies) |dep| {
+        try std.testing.expect(dep.is_optional);
+        try std.testing.expectEqualStrings("0.24.1-pre.42", dep.version_constraint);
+    }
+
+    const host = npm_platform.Host.current();
+    var host_matches: usize = 0;
+    for (platforms) |p| {
+        var r = try installer.resolveNpmPackageWithDeps(p.name, "0.24.1-pre.42");
+        defer r.deinit(installer.allocator);
+        const want = std.mem.eql(u8, p.os, host.os) and std.mem.eql(u8, p.cpu, host.cpu);
+        try std.testing.expectEqual(want, r.platform_ok);
+        if (r.platform_ok) host_matches += 1;
+    }
+    // On the platforms the fixture covers, exactly one build is ours.
+    const covered = (std.mem.eql(u8, host.os, "darwin") or std.mem.eql(u8, host.os, "linux")) and
+        (std.mem.eql(u8, host.cpu, "arm64") or std.mem.eql(u8, host.cpu, "x64"));
+    try std.testing.expectEqual(@as(usize, if (covered) 1 else 0), host_matches);
+}
+
+test "an exact prerelease resolves to itself, not the first prerelease of its release" {
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    const json =
+        \\{"name":"@sqld/darwin-arm64","dist-tags":{"latest":"0.24.1-pre.42"},"versions":{
+        \\"0.24.1-pre.1":{},"0.24.1-pre.9":{},"0.24.1-pre.42":{},"0.24.1-pre.10":{}}}
+    ;
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{});
+    defer parsed.deinit();
+    try std.testing.expectEqualStrings("0.24.1-pre.42", try installer.resolveNpmVersion(parsed.value, "0.24.1-pre.42"));
+    try std.testing.expectEqualStrings("0.24.1-pre.9", try installer.resolveNpmVersion(parsed.value, "=0.24.1-pre.9"));
 }

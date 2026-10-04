@@ -1146,6 +1146,8 @@ pub fn installWorkspaceCommandWithOptions(
                         try allocator.dupe(u8, result.version),
                     );
                 }
+                // Another platform's optional build: locked, not installed.
+                if (result.lock_only) continue;
                 style.printInstalled(result.name, result.version);
                 success_count += 1;
                 if (result.from_cache) cached_count += 1;

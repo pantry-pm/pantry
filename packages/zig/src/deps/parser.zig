@@ -578,7 +578,8 @@ pub fn parseDepsFile(allocator: std.mem.Allocator, file_path: []const u8) ![]Pac
             }
 
             if (std.mem.indexOf(u8, trimmed, ":")) |colon_pos| {
-                const key = std.mem.trim(u8, trimmed[0..colon_pos], " \t");
+                // A scoped npm name has to be quoted in YAML (`"@biomejs/biome": 2`).
+                const key = stripYamlQuotes(std.mem.trim(u8, trimmed[0..colon_pos], " \t"));
                 const value = parseDepsScalar(std.mem.trim(u8, trimmed[colon_pos + 1 ..], " \t"));
 
                 // Determine if this is a new package or a property of current package

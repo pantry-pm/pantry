@@ -277,6 +277,13 @@ pub const ResolvedPackage = struct {
     source: packages.PackageSource,
     github_owner: ?[]const u8 = null,
     github_repo: ?[]const u8 = null,
+    /// Reached only through `optionalDependencies`: a failure to install it
+    /// does not fail the install.
+    optional: bool = false,
+    /// A platform package for another machine (`@esbuild/linux-x64` on a
+    /// Mac). Recorded in the lock, as bun.lock records every platform's, but
+    /// not downloaded.
+    lock_only: bool = false,
 };
 
 pub const PackageResult = struct {
@@ -285,6 +292,9 @@ pub const PackageResult = struct {
     success: bool,
     error_msg: ?[]const u8 = null,
     from_cache: bool = false,
+    /// See `ResolvedPackage.lock_only`: belongs in the lock, not on disk, and
+    /// is not reported as installed.
+    lock_only: bool = false,
 };
 
 pub const PipelineResult = struct {
@@ -310,6 +320,8 @@ pub const PipelineDep = struct {
     source: packages.PackageSource,
     github_owner: ?[]const u8 = null,
     github_repo: ?[]const u8 = null,
+    /// Reached through an `optionalDependencies` entry.
+    optional: bool = false,
 };
 
 fn canUseNpmFastPath(top_level_count: usize, npm_count: usize, missing_npm_count: usize) bool {
@@ -721,12 +733,14 @@ fn resolveFullTree(
                             .tarball_url = result.tarball_url,
                             .integrity = result.integrity,
                             .source = .npm,
+                            .optional = current_wave.items[ri].optional,
+                            .lock_only = !result.platform_ok,
                         });
                         // Fix: name should be the dep name, not the version
                         resolved.items[resolved.items.len - 1].name = try allocator.dupe(u8, name_key);
 
                         // Record in hoisted cache for dedup in later waves
-                        inst.hoisted_versions.put(name_key, result.version);
+                        if (result.platform_ok) inst.hoisted_versions.put(name_key, result.version);
                     } else {
                         // Already resolved, free the result
                         allocator.free(result.version);
@@ -739,10 +753,12 @@ fn resolveFullTree(
                     if (result.integrity) |i| allocator.free(i);
                 }
 
-                // Enqueue transitive deps for next wave
+                // Enqueue transitive deps for next wave. A package for
+                // another platform is not installed, so neither is anything
+                // it needs.
                 for (result.dependencies) |dep| {
                     // Skip already-resolved
-                    if (seen.contains(dep.name)) {
+                    if (!result.platform_ok or seen.contains(dep.name)) {
                         allocator.free(dep.name);
                         allocator.free(dep.version_constraint);
                         continue;
@@ -753,11 +769,12 @@ fn resolveFullTree(
                         allocator.free(dep.version_constraint);
                         continue;
                     }
-                    // Skip optional deps that fail (silently)
+                    // Optional deps are tolerated if they fail (see run()).
                     next_wave.append(allocator, .{
                         .name = dep.name,
                         .version = dep.version_constraint,
                         .source = .npm,
+                        .optional = dep.is_optional,
                     }) catch {
                         allocator.free(dep.name);
                         allocator.free(dep.version_constraint);
@@ -901,6 +918,11 @@ const DownloadThreadCtx = struct {
             // Dupe name+version so results outlive the resolved list
             const owned_name = alloc.dupe(u8, pkg.name) catch "";
             const owned_version = alloc.dupe(u8, pkg.version) catch "";
+
+            if (pkg.lock_only) {
+                ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = true, .from_cache = true, .lock_only = true };
+                continue;
+            }
 
             // .pantry source: system binaries from registry.pantry.dev.
             // Delegate to installer.install() which handles S3 lookup,
@@ -1946,11 +1968,22 @@ pub fn run(
     var installed: usize = 0;
     var cached: usize = 0;
     var failed: usize = 0;
-    for (results) |r| {
+    for (results, 0..) |*r, ri| {
+        if (r.lock_only) continue;
         if (r.success) {
             if (r.from_cache) cached += 1 else installed += 1;
-        } else {
-            if (r.name.len > 0) failed += 1;
+        } else if (r.name.len > 0) {
+            if (resolved.items[ri].optional) {
+                // npm and bun both carry on past an optional dependency that
+                // will not install; it is neither reported nor locked.
+                if (verbose) std.debug.print("[verbose:pipeline] optional {s}@{s} did not install, skipping\n", .{ r.name, r.version });
+                if (r.error_msg) |msg| allocator.free(msg);
+                allocator.free(r.name);
+                if (r.version.len > 0) allocator.free(r.version);
+                r.* = .{ .name = "", .version = "", .success = false };
+                continue;
+            }
+            failed += 1;
         }
     }
 
