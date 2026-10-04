@@ -641,7 +641,10 @@ test "Zig prerelease ranges are resolved through registry metadata" {
     const allocator = std.testing.allocator;
     const resolved = try resolveZigDevVersion(allocator, "^0.17.0-dev");
     defer allocator.free(resolved);
-    try std.testing.expect(std.mem.startsWith(u8, resolved, "0.17.0-dev."));
+    // Zig 0.17.0 shipped, and ziglang.org's index then lists the release
+    // and master (0.18.0-dev) but no 0.17 dev build, so the range lands on
+    // the release. Either way it is a concrete 0.17.0 version.
+    try std.testing.expect(std.mem.startsWith(u8, resolved, "0.17.0"));
     try std.testing.expect(!std.mem.eql(u8, resolved, "^0.17.0-dev"));
 }
 
