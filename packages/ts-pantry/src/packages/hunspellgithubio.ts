@@ -3,7 +3,7 @@
  *
  * @domain `hunspell.github.io`
  * @programs `analyze`, `chmorph`, `hunspell`, `hunzip`, `hzip`, ... (+2 more)
- * @version `1.7.4` (15 versions available)
+ * @version `1.7.5` (16 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install hunspell.github.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "hunspell"
  * console.log(pkg.description) // "Spell checker and morphological analyzer"
  * console.log(pkg.programs)    // ["analyze", "chmorph", ...]
- * console.log(pkg.versions[0]) // "1.7.4" (latest)
+ * console.log(pkg.versions[0]) // "1.7.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/hunspell-github-io.md
@@ -75,6 +75,7 @@ export const hunspellgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.7.5',
     '1.7.4',
     '1.7.3',
     '1.7.2',
