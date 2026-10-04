@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { applyVersionPins, assignStripe, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, parseRequestedPackages, pkgxHasPrebuilt, relocateMirroredPaths, summariseTimings, type PackageTiming } from './build-all-packages'
+import { applyVersionPins, assignStripe, selectRecentVersions, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, parseRequestedPackages, pkgxHasPrebuilt, relocateMirroredPaths, summariseTimings, type PackageTiming } from './build-all-packages'
 
 describe('pkgxHasPrebuilt', () => {
   const realFetch = globalThis.fetch
@@ -411,5 +411,38 @@ describe('relocateMirroredPaths', () => {
     finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('selectRecentVersions', () => {
+  // python.org as the catalog lists it: twenty-two 3.14/3.13 patches ahead of 3.12.
+  const python = {
+    domain: 'python.org',
+    versions: [
+      ...Array.from({ length: 9 }, (_, i) => `3.14.${8 - i}`),
+      ...Array.from({ length: 13 }, (_, i) => `3.13.${16 - i}`),
+      '3.12.14', '3.12.13', '3.11.16', '3.11.15', '3.10.20', '3.9.25', '3.8.20', '2.7.18',
+    ],
+  }
+
+  test('keeps a slot for older minor lines, so ~3.11 has something to resolve to', () => {
+    const picked = selectRecentVersions(python, 20)
+    expect(picked).toHaveLength(20)
+    expect(picked.slice(0, 15)).toEqual(python.versions.slice(0, 15))
+    for (const v of ['3.12.14', '3.11.16', '3.10.20', '3.9.25', '3.8.20'])
+      expect(picked).toContain(v)
+    // Only the newest patch of an older line.
+    expect(picked).not.toContain('3.11.15')
+  })
+
+  test('a short list is taken whole, and order stays newest-first', () => {
+    expect(selectRecentVersions({ domain: 'x.org', versions: ['2.1.0', '2.0.0', '1.9.0'] }, 5)).toEqual(['2.1.0', '2.0.0', '1.9.0'])
+    const picked = selectRecentVersions(python, 5)
+    expect(picked).toEqual(['3.14.8', '3.14.7', '3.14.6', '3.14.5', '3.13.16'])
+  })
+
+  test('falls back to recency when every release is on one line', () => {
+    const single = { domain: 'y.org', versions: ['1.0.9', '1.0.8', '1.0.7', '1.0.6', '1.0.5', '1.0.4'] }
+    expect(selectRecentVersions(single, 4)).toEqual(['1.0.9', '1.0.8', '1.0.7', '1.0.6'])
   })
 })

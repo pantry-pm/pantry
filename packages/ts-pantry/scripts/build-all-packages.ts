@@ -1066,10 +1066,38 @@ function selectImportantVersions(pkg: BuildablePackage, maxVersions: number): st
  * actually install. Skips sentinels (999.999.999, 0.0.0) and unbuildable
  * versions (SKIP_VERSIONS).
  */
-function selectRecentVersions(pkg: BuildablePackage, maxVersions: number): string[] {
-  return pkg.versions
+export function selectRecentVersions(pkg: Pick<BuildablePackage, 'domain' | 'versions'>, maxVersions: number): string[] {
+  const valid = pkg.versions
     .filter(v => v !== '999.999.999' && v !== '0.0.0' && !isVersionSkipped(pkg.domain, v))
-    .slice(0, maxVersions)
+  if (valid.length <= maxVersions)
+    return valid
+
+  // A quarter of the budget goes to the newest patch of older minor lines.
+  // Recency alone filled python.org's twenty slots with 3.14.x and 3.13.x, so
+  // 3.11 was never mirrored - and every pkgx-built Python CLI pins the minor
+  // it was built against (aws-cli's bin/aws says `pkgx python@3.11`, its venv
+  // holds cpython-311 modules). A `~3.11` constraint needs a 3.11 to land on.
+  const lineOf = (v: string): string => v.split('.').slice(0, 2).join('.')
+  const recent = valid.slice(0, maxVersions - Math.floor(maxVersions / 4))
+  const covered = new Set(recent.map(lineOf))
+  const lines: string[] = []
+  for (const v of valid) {
+    if (lines.length >= maxVersions - recent.length)
+      break
+    const line = lineOf(v)
+    if (covered.has(line))
+      continue
+    covered.add(line)
+    lines.push(v)
+  }
+  // Recent releases fill whatever the older lines did not use.
+  const picked = new Set([...recent, ...lines])
+  for (const v of valid) {
+    if (picked.size >= maxVersions)
+      break
+    picked.add(v)
+  }
+  return valid.filter(v => picked.has(v))
 }
 
 // Popular packages keep a DEEPER version history (POPULAR_MAX_VERSIONS, default 20)
