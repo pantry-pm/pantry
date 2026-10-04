@@ -1,3 +1,28 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.67...v0.11.68)
+
+## 🐛 Bug Fixes
+
+- **build**: mirror the newest patch of older minor lines too ([ec4ac59](https://github.com/pantry-pm/pantry/commit/ec4ac59)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#237](https://github.com/pantry-pm/pantry/issues/237))
+- **packages**: strip inline YAML comments from dependency versions ([9550283](https://github.com/pantry-pm/pantry/commit/9550283)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#239](https://github.com/pantry-pm/pantry/issues/239))
+- **install**: point pkgx shebangs at the interpreter pantry installed ([24509be](https://github.com/pantry-pm/pantry/commit/24509be)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#236](https://github.com/pantry-pm/pantry/issues/236))
+- **install**: repoint @rpath references to a version not installed, and fix sbin ([9661334](https://github.com/pantry-pm/pantry/commit/9661334)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: resolve sub-dependencies against what the registry and the plan have ([1d46d5f](https://github.com/pantry-pm/pantry/commit/1d46d5f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **app-store-connect**: request shapes Apple accepts, and certificates that match the CSR key ([e62249c](https://github.com/pantry-pm/pantry/commit/e62249c)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#2199](https://github.com/pantry-pm/pantry/issues/2199))
+
+## ✅ Tests
+
+- **install**: accept the 0.17.0 release for a ^0.17.0-dev range ([eb7a092](https://github.com/pantry-pm/pantry/commit/eb7a092)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.68 ([cb63201](https://github.com/pantry-pm/pantry/commit/cb63201)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update anthropic.com/claude-code, codex.openai.com, dprint.dev, github.com/ggerganov/llama.cpp, tox.wiki ([c18f366](https://github.com/pantry-pm/pantry/commit/c18f366)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update pnpm.io to 12.9.1 ([8865d65](https://github.com/pantry-pm/pantry/commit/8865d65)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.66...v0.11.67)
 
 ## ✨ Features
