@@ -7,6 +7,7 @@ const errors = @import("../core/error.zig");
 const downloader = @import("downloader.zig");
 const extractor = @import("extractor.zig");
 const libfixer = @import("libfixer.zig");
+const pkgx_shebang = @import("pkgx_shebang.zig");
 const validator = @import("validator.zig");
 const semver = @import("../packages/semver.zig");
 const registry_versions_mod = @import("registry_versions.zig");
@@ -990,6 +991,13 @@ pub const Installer = struct {
             if (install_path.len > 0) {
                 libfixer.fixDirectoryLibraryPaths(self.allocator, install_path) catch {};
             }
+        }
+
+        // Scripts mirrored from pkgx name their interpreter as `#!/usr/bin/env
+        // -S pkgx python@3.11`, which nothing here can run. Point them at the
+        // interpreter in this tree, installing a satisfying one if needed.
+        if (install_path.len > 0) {
+            pkgx_shebang.fixInstalledPackage(self, install_path, domain, resolved_spec.version, options);
         }
 
         const end_ts_ = io_helper.clockGettime();
