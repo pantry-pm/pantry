@@ -1828,6 +1828,19 @@ pub fn run(
     // load their shared libraries. Independent of which resolver ran above.
     expandTransitivePantryDeps(allocator, &resolved, verbose);
 
+    // Each pantry package also installs its own dependencies; tell the
+    // installer which versions this run already chose, so those reuse them
+    // instead of adding a second version (see Installer.planned_pantry).
+    var planned_pantry = std.StringHashMap([]const u8).init(allocator);
+    defer planned_pantry.deinit();
+    for (resolved.items) |pkg| {
+        if (pkg.source != .pantry) continue;
+        planned_pantry.put(pkg.name, pkg.version) catch {};
+    }
+    const previous_plan = inst.planned_pantry;
+    inst.planned_pantry = &planned_pantry;
+    defer inst.planned_pantry = previous_plan;
+
     const phase1_ts = io_helper.clockGettime();
     const phase1_ms = @as(i64, @intCast(phase1_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(phase1_ts.nsec)), 1_000_000);
     if (verbose) {

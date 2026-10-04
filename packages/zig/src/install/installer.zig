@@ -9,6 +9,7 @@ const extractor = @import("extractor.zig");
 const libfixer = @import("libfixer.zig");
 const validator = @import("validator.zig");
 const semver = @import("../packages/semver.zig");
+const registry_versions_mod = @import("registry_versions.zig");
 const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
 
@@ -288,6 +289,11 @@ pub const Installer = struct {
     http_client: *std.http.Client,
     /// Verbose debug logging (set once, checked throughout all install paths)
     verbose: bool = false,
+    /// The pantry packages the install pipeline already chose, domain -> exact
+    /// version, set for the length of a pipeline run. A sub-dependency that one
+    /// of these satisfies installs at that version rather than its own newest
+    /// (see `plannedVersionFor`). Read-only while workers run.
+    planned_pantry: ?*const std.StringHashMap([]const u8) = null,
 
     /// Thread-safe cache tracking which packages are installed at the hoisted level.
     /// Eliminates redundant filesystem checks when the same transitive dep is encountered
@@ -4332,12 +4338,13 @@ pub const Installer = struct {
         var check_dir = io_helper.cwd().openDir(io_helper.io, global_pkg_dir, .{}) catch |err| {
             if (err != error.FileNotFound) return err;
             // Not installed, continue
+            const planned = if (self.planned_pantry) |plan| plannedVersionFor(plan, domain, version) else null;
             const spec = PackageSpec{
                 .name = name,
-                .version = resolved_version,
+                .version = planned orelse dependencyInstallVersion(version, resolved_version),
             };
 
-            if (self.verbose) style.print("    → Installing dependency: {s}@{s}\n", .{ name, resolved_version });
+            if (self.verbose) style.print("    → Installing dependency: {s}@{s}\n", .{ name, spec.version });
 
             // Install the dependency (this will recursively install its dependencies)
             const result = self.install(spec, options) catch |e| {
@@ -4354,6 +4361,69 @@ pub const Installer = struct {
         if (self.verbose) style.print("    ✓ Dependency already installed: {s}@{s}\n", .{ name, resolved_version });
     }
 };
+
+/// The version a sub-dependency is installed at: its constraint, as declared.
+///
+/// `semver.resolveVersion` picks from generated.zig, which lists every
+/// upstream release whether or not the binary registry has built it yet. php.net
+/// declares `libpng.org^1`, generated.zig said 1.6.59 while 1.6.58 was the newest
+/// darwin-arm64 artifact, and so php, webp and composer all failed with
+/// "libpng.org@1.6.59 not found in registry" - beside a 1.6.58 the same install
+/// had just put on disk. Handing `install()` the constraint lets it ask the
+/// registry for the newest complete artifact that satisfies it
+/// (`registry_versions.select`), and fall back to generated.zig only when the
+/// registry has none. A bare name ("latest") resolves the same way.
+///
+/// `resolved` is used only when the constraint is empty.
+fn dependencyInstallVersion(constraint: []const u8, resolved: []const u8) []const u8 {
+    return if (constraint.len == 0) resolved else constraint;
+}
+
+/// The version the pipeline already chose for `domain`, when it satisfies
+/// `constraint`, else null.
+///
+/// The pipeline flattens a project's pantry packages one version per domain,
+/// a declared one first. Each package then installs its own dependencies as
+/// well, and those used to pick their own version: getcomposer.org depends on
+/// plain `php.net`, so a project declaring `php.net: ~8.4` also got php 8.5.8,
+/// whose `php` replaced 8.4's in pantry/.bin, and `php -v` said 8.5. Reusing
+/// the planned version keeps one php, the declared one.
+fn plannedVersionFor(plan: *const std.StringHashMap([]const u8), domain: []const u8, constraint: []const u8) ?[]const u8 {
+    const planned = plan.get(domain) orelse return null;
+    return if (plannedSatisfies(planned, constraint)) planned else null;
+}
+
+fn plannedSatisfies(planned: []const u8, constraint: []const u8) bool {
+    // Only an exact version can stand in for a dependency.
+    _ = semver.parseVersion(planned) catch return false;
+    if (registry_versions_mod.isUnversioned(constraint)) return true;
+    const c = semver.parseConstraint(constraint) catch return false;
+    return semver.satisfiesConstraint(planned, c);
+}
+
+test "a planned version stands in for a dependency it satisfies" {
+    var plan = std.StringHashMap([]const u8).init(std.testing.allocator);
+    defer plan.deinit();
+    try plan.put("php.net", "8.4.22");
+    try plan.put("mysql.com", "^8");
+
+    // composer's bare `php.net`, and ranges the declared 8.4.22 is inside.
+    try std.testing.expectEqualStrings("8.4.22", plannedVersionFor(&plan, "php.net", "latest").?);
+    try std.testing.expectEqualStrings("8.4.22", plannedVersionFor(&plan, "php.net", "^8").?);
+    try std.testing.expectEqualStrings("8.4.22", plannedVersionFor(&plan, "php.net", ">=8.1").?);
+    // A dependency that needs something else still gets its own.
+    try std.testing.expect(plannedVersionFor(&plan, "php.net", ">=8.5") == null);
+    // A plan entry that is still a range decides nothing.
+    try std.testing.expect(plannedVersionFor(&plan, "mysql.com", "latest") == null);
+    try std.testing.expect(plannedVersionFor(&plan, "zlib.net", "^1") == null);
+}
+
+test "a sub-dependency installs at its constraint, not generated.zig's newest" {
+    try std.testing.expectEqualStrings("^1", dependencyInstallVersion("^1", "1.6.59"));
+    try std.testing.expectEqualStrings(">=10.30", dependencyInstallVersion(">=10.30", "10.47.0"));
+    try std.testing.expectEqualStrings("latest", dependencyInstallVersion("latest", "8.5.11"));
+    try std.testing.expectEqualStrings("1.6.58", dependencyInstallVersion("", "1.6.58"));
+}
 
 test "Installer basic operations" {
     const allocator = std.testing.allocator;

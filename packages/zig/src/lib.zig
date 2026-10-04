@@ -60,4 +60,5 @@ test {
     _ = @import("cli/commands/install/env_deps.zig");
     _ = @import("shell/install_route.zig");
     _ = @import("install/libfixer.zig");
+    _ = @import("install/installer.zig");
 }
