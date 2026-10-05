@@ -3,7 +3,7 @@
  *
  * @domain `lavinmq.com`
  * @programs `lavinmq`, `lavinmqctl`, `lavinmqperf`
- * @version `2.10.0` (45 versions available)
+ * @version `2.10.1` (47 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install lavinmq.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "lavinmq"
  * console.log(pkg.description) // "Lightweight and fast AMQP (0-9-1) server"
  * console.log(pkg.programs)    // ["lavinmq", "lavinmqctl", ...]
- * console.log(pkg.versions[0]) // "2.10.0" (latest)
+ * console.log(pkg.versions[0]) // "2.10.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/lavinmq-com.md
@@ -82,7 +82,9 @@ export const lavinmqcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.10.1',
     '2.10.0',
+    '2.9.4',
     '2.9.3',
     '2.9.2',
     '2.9.1',

@@ -3,7 +3,7 @@
  *
  * @domain `ansible.com`
  * @programs `ansible`, `ansible-config`, `ansible-connection`, `ansible-console`, `ansible-doc`, ... (+6 more)
- * @version `2.22.0b2` (179 versions available)
+ * @version `2.22.0b2` (181 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ansible.com`
@@ -86,6 +86,7 @@ export const ansiblecomPackage = {
   versions: [
     '2.22.0b2',
     '2.22.0b1',
+    '2.21.5',
     '2.21.5rc1',
     '2.21.4',
     '2.21.4rc1',
@@ -100,6 +101,7 @@ export const ansiblecomPackage = {
     '2.21.0b3',
     '2.21.0b2',
     '2.21.0b1',
+    '2.20.10',
     '2.20.10rc1',
     '2.20.9',
     '2.20.9rc1',
