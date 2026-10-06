@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.70...v0.11.71)
+
+## 🐛 Bug Fixes
+
+- **install**: repair the links an older pantry left in a project's tree ([4296b0c](https://github.com/pantry-pm/pantry/commit/4296b0c)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.71 ([d0a4c8a](https://github.com/pantry-pm/pantry/commit/d0a4c8a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.69...v0.11.70)
 
 ## 🐛 Bug Fixes
