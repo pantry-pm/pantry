@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.72...v0.11.73)
+
+## 🐛 Bug Fixes
+
+- **panx**: install the executor cache as node_modules so its packages resolve ([99b4c79](https://github.com/pantry-pm/pantry/commit/99b4c79)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.73 ([ec5ab03](https://github.com/pantry-pm/pantry/commit/ec5ab03)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.71...v0.11.72)
 
 ## 🐛 Bug Fixes
