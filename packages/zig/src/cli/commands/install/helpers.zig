@@ -1188,6 +1188,8 @@ fn createBinSymlinks(allocator: std.mem.Allocator, proj_dir: []const u8, package
     const bin_is_heap = proj_dir.len + modules_dir.len + 6 > std.fs.max_path_bytes;
     defer if (bin_is_heap) allocator.free(bin_link_dir);
     try io_helper.makePath(bin_link_dir);
+    // pantry/ itself: links from .bin to packages inside it are written relative.
+    const tree_root = std.fs.path.dirname(bin_link_dir) orelse bin_link_dir;
 
     var pkg_json_buf: [std.fs.max_path_bytes]u8 = undefined;
     const pkg_json_path = std.fmt.bufPrint(&pkg_json_buf, "{s}/package.json", .{package_path}) catch
@@ -1197,24 +1199,24 @@ fn createBinSymlinks(allocator: std.mem.Allocator, proj_dir: []const u8, package
 
     const content = io_helper.readFileAlloc(allocator, pkg_json_path, 1024 * 1024) catch {
         // No package.json — fall back to scanning bin/ directory (non-npm packages)
-        try scanBinDirectory(allocator, package_path, bin_link_dir, verbose);
+        try scanBinDirectory(allocator, package_path, bin_link_dir, tree_root, verbose);
         return;
     };
     defer allocator.free(content);
 
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch {
-        try scanBinDirectory(allocator, package_path, bin_link_dir, verbose);
+        try scanBinDirectory(allocator, package_path, bin_link_dir, tree_root, verbose);
         return;
     };
     defer parsed.deinit();
 
     if (parsed.value != .object) {
-        try scanBinDirectory(allocator, package_path, bin_link_dir, verbose);
+        try scanBinDirectory(allocator, package_path, bin_link_dir, tree_root, verbose);
         return;
     }
 
     const bin_val = parsed.value.object.get("bin") orelse {
-        try scanBinDirectory(allocator, package_path, bin_link_dir, verbose);
+        try scanBinDirectory(allocator, package_path, bin_link_dir, tree_root, verbose);
         return;
     };
 
@@ -1235,7 +1237,7 @@ fn createBinSymlinks(allocator: std.mem.Allocator, proj_dir: []const u8, package
 
         makeExecutable(source);
         io_helper.deleteFile(link) catch {};
-        io_helper.symLink(source, link) catch |err| {
+        install.symlink.symLinkInTree(allocator, tree_root, source, link) catch |err| {
             if (verbose) style.print("    Warning: Failed to create symlink {s}: {}\n", .{ link, err });
         };
     } else if (bin_val == .object) {
@@ -1252,7 +1254,7 @@ fn createBinSymlinks(allocator: std.mem.Allocator, proj_dir: []const u8, package
 
             makeExecutable(source);
             io_helper.deleteFile(link) catch {};
-            io_helper.symLink(source, link) catch |err| {
+            install.symlink.symLinkInTree(allocator, tree_root, source, link) catch |err| {
                 if (verbose) style.print("    Warning: Failed to create symlink {s}: {}\n", .{ link, err });
             };
         }
@@ -1270,7 +1272,7 @@ fn makeExecutable(path: []const u8) void {
 
 /// Fallback: scan bin/ and sbin/ directories for non-npm packages (Pantry registry, GitHub, etc.)
 /// If a symlink already exists from a different package, it is preserved (first-installed wins).
-fn scanBinDirectory(allocator: std.mem.Allocator, package_path: []const u8, bin_link_dir: []const u8, verbose: bool) !void {
+fn scanBinDirectory(allocator: std.mem.Allocator, package_path: []const u8, bin_link_dir: []const u8, tree_root: []const u8, verbose: bool) !void {
     const subdirs = [_][]const u8{ "bin", "sbin" };
     for (subdirs) |subdir| {
         const pkg_bin_dir = try std.fs.path.join(allocator, &[_][]const u8{ package_path, subdir });
@@ -1297,7 +1299,7 @@ fn scanBinDirectory(allocator: std.mem.Allocator, package_path: []const u8, bin_
 
             makeExecutable(bin_src);
             io_helper.deleteFile(bin_dst) catch {};
-            io_helper.symLink(bin_src, bin_dst) catch |err| {
+            install.symlink.symLinkInTree(allocator, tree_root, bin_src, bin_dst) catch |err| {
                 if (verbose) style.print("    Warning: Failed to create symlink {s}: {}\n", .{ bin_dst, err });
             };
         }
@@ -1317,14 +1319,19 @@ fn isHexString(s: []const u8) bool {
 /// than the one at `current_package_path`. Returns true if the symlink exists and belongs
 /// to a different package directory.
 fn symlinkFromDifferentPackage(allocator: std.mem.Allocator, link_path: []const u8, current_package_path: []const u8) bool {
-    const existing_target = io_helper.readLinkAlloc(allocator, link_path) catch return false;
+    // Relative targets (how pantry writes links inside its own tree) are
+    // resolved against the link's directory before comparing.
+    const existing_target = install.symlink.resolvedLinkTarget(allocator, link_path) orelse return false;
     defer allocator.free(existing_target);
+
+    // A link that no longer resolves belongs to nobody: let it be replaced.
+    io_helper.access(link_path, .{}) catch return false;
 
     // Extract package directory: strip trailing /bin/<name> or /sbin/<name>
     const existing_pkg = extractPkgDir(existing_target) orelse return false;
     const current_pkg = extractPkgDir(current_package_path) orelse current_package_path;
 
-    return !std.mem.eql(u8, existing_pkg, current_pkg);
+    return !install.symlink.samePath(existing_pkg, current_pkg);
 }
 
 /// Extract the package directory from a path by stripping /bin/... or /sbin/... suffix.
@@ -1352,7 +1359,7 @@ pub fn ensureBinSymlinks(allocator: std.mem.Allocator, proj_dir: []const u8, mod
 
     // Walk the pantry directory tree looking for bin/ and sbin/ directories.
     // Handles arbitrary nesting depth (e.g. php.net/v8.5.3/bin/ or github.com/org/pkg/v1.0.0/bin/).
-    scanForBinDirs(allocator, pantry_dir, bin_link_dir, 0);
+    scanForBinDirs(allocator, pantry_dir, bin_link_dir, pantry_dir, 0);
 
     // Create alias symlinks for known multi-name binaries.
     // bun.sh ships only `bin/bun`, but the binary dispatches to `bunx` behavior
@@ -1399,7 +1406,7 @@ fn createBinAliases(allocator: std.mem.Allocator, bin_link_dir: []const u8) void
 /// Recursively scan a directory for bin/ and sbin/ subdirectories.
 /// When found, symlink all executables into bin_link_dir.
 /// max_depth prevents infinite recursion (packages nest at most ~4 levels deep).
-fn scanForBinDirs(allocator: std.mem.Allocator, dir_path: []const u8, bin_link_dir: []const u8, depth: usize) void {
+fn scanForBinDirs(allocator: std.mem.Allocator, dir_path: []const u8, bin_link_dir: []const u8, tree_root: []const u8, depth: usize) void {
     if (depth > 6) return; // Safety limit
 
     var dir = io_helper.openDirAbsoluteForIteration(dir_path) catch return;
@@ -1415,16 +1422,16 @@ fn scanForBinDirs(allocator: std.mem.Allocator, dir_path: []const u8, bin_link_d
 
         if (std.mem.eql(u8, entry.name, "bin") or std.mem.eql(u8, entry.name, "sbin")) {
             // Found a bin directory — symlink its executables
-            symlinkBinEntries(allocator, child_path, bin_link_dir);
+            symlinkBinEntries(allocator, child_path, bin_link_dir, tree_root);
         } else {
             // Recurse into subdirectory
-            scanForBinDirs(allocator, child_path, bin_link_dir, depth + 1);
+            scanForBinDirs(allocator, child_path, bin_link_dir, tree_root, depth + 1);
         }
     }
 }
 
 /// Symlink all executable files from a bin directory into bin_link_dir.
-fn symlinkBinEntries(allocator: std.mem.Allocator, bin_dir: []const u8, bin_link_dir: []const u8) void {
+fn symlinkBinEntries(allocator: std.mem.Allocator, bin_dir: []const u8, bin_link_dir: []const u8, tree_root: []const u8) void {
     var dir = io_helper.openDirAbsoluteForIteration(bin_dir) catch return;
     defer dir.close();
 
@@ -1443,7 +1450,7 @@ fn symlinkBinEntries(allocator: std.mem.Allocator, bin_dir: []const u8, bin_link
         io_helper.accessAbsolute(bin_dst, .{}) catch {
             io_helper.deleteFile(bin_dst) catch {};
             makeExecutable(bin_src);
-            io_helper.symLink(bin_src, bin_dst) catch {};
+            install.symlink.symLinkInTree(allocator, tree_root, bin_src, bin_dst) catch {};
             continue;
         };
     }
@@ -1461,7 +1468,7 @@ fn ensureConfiguredZigSymlink(allocator: std.mem.Allocator, proj_dir: []const u8
 
     makeExecutable(zig_bin);
     io_helper.deleteFile(link_path) catch {};
-    io_helper.symLink(zig_bin, link_path) catch {};
+    install.symlink.symLinkInTree(allocator, pantry_dir, zig_bin, link_path) catch {};
 }
 
 /// Record a system (pantry-source) dependency in deps.yaml.

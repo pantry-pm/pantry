@@ -272,10 +272,12 @@ fn buildGraph(arena: std.mem.Allocator, proj_dir: []const u8, modules_dir: []con
 }
 
 /// The executable an existing `pantry/.bin` entry runs: a symlink's target,
-/// or the quoted path in a script shim (`exec bun "<path>"`, `exec "<path>"`).
+/// or the quoted path in a script shim (`exec bun "<path>"`, `exec "<path>"`),
+/// normalized. A shim inside the tree names its target relative to its own
+/// directory (`exec "$d/../pkg/cli.js"`); that is resolved against the shim's
+/// directory, the way the shim resolves it at run time.
 fn shimTarget(arena: std.mem.Allocator, shim_path: []const u8) ?[]const u8 {
     if (io_helper.readLinkAlloc(arena, shim_path)) |target| {
-        if (std.fs.path.isAbsolute(target)) return target;
         const dir = std.fs.path.dirname(shim_path) orelse return target;
         return std.fs.path.resolve(arena, &.{ dir, target }) catch target;
     } else |_| {}
@@ -284,7 +286,12 @@ fn shimTarget(arena: std.mem.Allocator, shim_path: []const u8) ?[]const u8 {
     const exec_at = std.mem.lastIndexOf(u8, content, "exec ") orelse return null;
     const open = std.mem.indexOfScalarPos(u8, content, exec_at, '"') orelse return null;
     const close = std.mem.indexOfScalarPos(u8, content, open + 1, '"') orelse return null;
-    return content[open + 1 .. close];
+    const quoted = content[open + 1 .. close];
+    if (std.mem.startsWith(u8, quoted, "$d/")) {
+        const dir = std.fs.path.dirname(shim_path) orelse return null;
+        return std.fs.path.resolve(arena, &.{ dir, quoted["$d/".len..] }) catch null;
+    }
+    return std.fs.path.resolve(arena, &.{quoted}) catch quoted;
 }
 
 fn belongsTo(target: []const u8, modules_root: []const u8, package: []const u8) bool {
@@ -343,7 +350,8 @@ fn resolveBinCollisionsImpl(arena: std.mem.Allocator, proj_dir: []const u8, modu
 
         const shim_path = try std.fs.path.join(arena, &.{ shim_dir, bin });
         if (shimTarget(arena, shim_path)) |current| {
-            if (std.mem.eql(u8, current, owner.target)) continue;
+            const wanted = try std.fs.path.resolve(arena, &.{owner.target});
+            if (std.mem.eql(u8, current, wanted)) continue;
             var held_by_contender = false;
             for (all_providers.items) |p| {
                 if (belongsTo(current, graph.modules_root, p.package)) held_by_contender = true;
@@ -352,7 +360,7 @@ fn resolveBinCollisionsImpl(arena: std.mem.Allocator, proj_dir: []const u8, modu
             if (!held_by_contender) continue;
         }
 
-        symlink.createShim(arena, bin, owner.target, shim_dir) catch continue;
+        symlink.createShim(arena, bin, owner.target, shim_dir, graph.modules_root) catch continue;
 
         var others = std.ArrayList(u8).empty;
         for (all_providers.items) |p| {
@@ -432,13 +440,15 @@ const BinFixture = struct {
         defer testing.allocator.free(target);
         const dir = try self.abs("pantry/.bin");
         defer testing.allocator.free(dir);
-        try symlink.createShim(testing.allocator, bin, target, dir);
+        const tree = try self.abs("pantry");
+        defer testing.allocator.free(tree);
+        try symlink.createShim(testing.allocator, bin, target, dir, tree);
     }
     fn expectShim(self: *BinFixture, bin: []const u8, sub_path: []const u8) !void {
         var arena = std.heap.ArenaAllocator.init(testing.allocator);
         defer arena.deinit();
         const shim_path = try std.fmt.allocPrint(arena.allocator(), "{s}/pantry/.bin/{s}", .{ self.root(), bin });
-        const want = try std.fmt.allocPrint(arena.allocator(), "{s}/{s}", .{ self.root(), sub_path });
+        const want = try std.fs.path.resolve(arena.allocator(), &.{ self.root(), sub_path });
         try testing.expectEqualStrings(want, shimTarget(arena.allocator(), shim_path).?);
     }
 

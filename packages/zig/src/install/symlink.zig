@@ -32,6 +32,135 @@ pub fn createSymlinkCrossPlatform(target_path: []const u8, link_path: []const u8
     }
 }
 
+/// What to store in a link at `link_path` so that it reaches `target_path`.
+///
+/// When both live inside one pantry tree (`tree_root`, e.g. `<project>/pantry`
+/// or a global install base), the answer is the target's path relative to the
+/// link's directory: `v1 -> v1.3.2`, `.bin/git -> ../git-scm.org/v2.53.0/bin/git`.
+/// An absolute target bakes in whichever path the tree was reached through,
+/// so a tree installed via a symlink or a git worktree that shares it, or
+/// later moved, is left full of links into a path that may no longer exist.
+/// That is how a `pantry install` in a worktree sharing the main checkout's
+/// pantry repointed some 250 of its links at the worktree, and deleting the
+/// worktree broke git, bun and every dylib reached through a `v<major>` link.
+///
+/// The relative form is only returned once the filesystem confirms it
+/// reaches the same file as `target_path`; otherwise, with no `tree_root`, a
+/// target outside it, or on Windows (where links are copies), `target_path`
+/// is returned as given. Caller owns the returned slice.
+pub fn treeLinkTarget(
+    allocator: std.mem.Allocator,
+    tree_root: ?[]const u8,
+    target_path: []const u8,
+    link_path: []const u8,
+) ![]u8 {
+    if (builtin.os.tag != .windows) {
+        if (tree_root) |root| {
+            var arena_state = std.heap.ArenaAllocator.init(allocator);
+            defer arena_state.deinit();
+            if (relativeWithinTree(arena_state.allocator(), root, target_path, link_path)) |rel| {
+                return allocator.dupe(u8, rel);
+            }
+        }
+    }
+    return allocator.dupe(u8, target_path);
+}
+
+/// Create a symlink at `link_path` to `target_path`, written relative when
+/// both are inside `tree_root` (see `treeLinkTarget`).
+pub fn symLinkInTree(
+    allocator: std.mem.Allocator,
+    tree_root: ?[]const u8,
+    target_path: []const u8,
+    link_path: []const u8,
+) !void {
+    const target = try treeLinkTarget(allocator, tree_root, target_path, link_path);
+    defer allocator.free(target);
+    try io_helper.symLink(target, link_path);
+}
+
+/// `target_path` relative to `link_path`'s directory, or null when either
+/// lies outside `tree_root` or the relative path does not reach the target.
+fn relativeWithinTree(
+    arena: std.mem.Allocator,
+    tree_root: []const u8,
+    target_path: []const u8,
+    link_path: []const u8,
+) ?[]const u8 {
+    const root = absolutePath(arena, tree_root) orelse return null;
+    const target = absolutePath(arena, target_path) orelse return null;
+    const link = absolutePath(arena, link_path) orelse return null;
+    if (!pathWithin(target, root) or !pathWithin(link, root)) return null;
+
+    const link_dir = std.fs.path.dirname(link) orelse return null;
+    const rel = std.fs.path.relativePosix(arena, "/", link_dir, target) catch return null;
+    if (rel.len == 0) return null;
+
+    // The relative path is computed from the names; the kernel resolves it from
+    // the directory the link physically sits in. Confirm the two agree (they
+    // would not if the link's own directory were a symlink elsewhere).
+    var dir_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var reached_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var target_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const real_dir = physicalPath(link_dir, &dir_buf) orelse return null;
+    const reached = std.fs.path.resolvePosix(arena, &.{ real_dir, rel }) catch return null;
+    const real_reached = physicalPath(reached, &reached_buf) orelse return null;
+    const real_target = physicalPath(target, &target_buf) orelse return null;
+    if (!std.mem.eql(u8, real_reached, real_target)) return null;
+    return rel;
+}
+
+/// `path` with every symlink followed (realpath(3)), or null when it does not
+/// resolve. The result is written into `out`.
+fn physicalPath(path: []const u8, out: *[std.fs.max_path_bytes]u8) ?[]const u8 {
+    if (builtin.os.tag == .windows) return null;
+    var path_z: [std.fs.max_path_bytes:0]u8 = undefined;
+    if (path.len >= path_z.len) return null;
+    @memcpy(path_z[0..path.len], path);
+    path_z[path.len] = 0;
+    const resolved = std.c.realpath(&path_z, out) orelse return null;
+    return std.mem.sliceTo(resolved, 0);
+}
+
+/// `path` made absolute against the working directory and normalized.
+fn absolutePath(arena: std.mem.Allocator, path: []const u8) ?[]const u8 {
+    if (std.fs.path.isAbsolute(path)) return std.fs.path.resolvePosix(arena, &.{path}) catch null;
+    const cwd_path = io_helper.getCwdAlloc(arena) catch return null;
+    return std.fs.path.resolvePosix(arena, &.{ cwd_path, path }) catch null;
+}
+
+/// True when normalized absolute `path` is `root` or lies beneath it.
+fn pathWithin(path: []const u8, root: []const u8) bool {
+    if (!std.mem.startsWith(u8, path, root)) return false;
+    if (path.len == root.len) return true;
+    if (root.len > 0 and root[root.len - 1] == '/') return true;
+    return path[root.len] == '/';
+}
+
+/// The path an existing link at `link_path` points to, with a relative
+/// target resolved against the link's directory (lexically, the way the
+/// target was written). Null when `link_path` is not a symlink.
+/// Caller owns the returned slice.
+pub fn resolvedLinkTarget(allocator: std.mem.Allocator, link_path: []const u8) ?[]u8 {
+    const raw = io_helper.readLinkAlloc(allocator, link_path) catch return null;
+    defer allocator.free(raw);
+    if (std.fs.path.isAbsolute(raw)) return allocator.dupe(u8, raw) catch null;
+    const dir = std.fs.path.dirname(link_path) orelse ".";
+    return std.fs.path.resolve(allocator, &.{ dir, raw }) catch null;
+}
+
+/// True when `a` and `b` name the same location: the same normalized path,
+/// or the same physical path once symlinks are followed (one may have been
+/// written through a symlinked parent the other was not).
+pub fn samePath(a: []const u8, b: []const u8) bool {
+    if (std.mem.eql(u8, a, b)) return true;
+    var buf_a: [std.fs.max_path_bytes]u8 = undefined;
+    var buf_b: [std.fs.max_path_bytes]u8 = undefined;
+    const real_a = physicalPath(a, &buf_a) orelse return false;
+    const real_b = physicalPath(b, &buf_b) orelse return false;
+    return std.mem.eql(u8, real_a, real_b);
+}
+
 /// Create symlink for a package binary (with explicit binary path)
 /// If a symlink already exists from a different package, it is preserved (first-installed wins).
 pub fn createBinarySymlinkFromPath(
@@ -95,15 +224,17 @@ pub fn createBinarySymlinkFromPath(
     // path, so the wrapper sees its true location. Real Mach-O/ELF binaries are
     // still plain symlinks.
     if (isShebangScript(bin_path)) {
-        if (writeForwardingShim(symlink_path, bin_path)) {
+        if (writeForwardingShim(allocator, symlink_path, bin_path, install_base)) {
             if (!style.isCI()) style.print("  ✓ Created shim: {s} -> {s}\n", .{ bin_name, bin_path });
             return;
         }
         // Fall through to a plain symlink if the shim couldn't be written.
     }
 
-    // Create symlink (cross-platform)
-    createSymlinkCrossPlatform(bin_path, symlink_path) catch |err| {
+    // Create symlink (cross-platform); relative when it stays in the tree.
+    const link_target = try treeLinkTarget(allocator, install_base, bin_path, symlink_path);
+    defer allocator.free(link_target);
+    createSymlinkCrossPlatform(link_target, symlink_path) catch |err| {
         if (!style.isCI()) style.print("  ✗ Failed to create symlink: {}\n", .{err});
         return error.SymlinkCreationFailed;
     };
@@ -124,12 +255,50 @@ pub fn isShebangScript(path: []const u8) bool {
     return magic[0] == '#' and magic[1] == '!';
 }
 
+/// Shell that sets `d` to the directory a shim really lives in: `$0`, after
+/// following any symlinks to the shim file itself. `$0` is the path the shim
+/// was invoked by (the full path, for a PATH lookup), so a target relative to
+/// `$d` is found wherever the tree is and however it was reached. Parameter
+/// expansion keeps the common case (no symlink) free of subprocesses.
+const shim_locate_self =
+    \\s=$0
+    \\while [ -h "$s" ]; do
+    \\  l=$(readlink "$s")
+    \\  case $l in
+    \\    /*) s=$l ;;
+    \\    *) case $s in */*) s=${s%/*}/$l ;; *) s=$l ;; esac ;;
+    \\  esac
+    \\done
+    \\case $s in */*) d=${s%/*} ;; *) d=. ;; esac
+    \\
+;
+
+/// The shim body that execs `target` (with `prefix`, e.g. `bun `, before it).
+/// A relative `target` (from `treeLinkTarget`) is resolved against the shim's
+/// own directory; an absolute one is exec'd as is. Caller owns the result.
+fn shimScript(allocator: std.mem.Allocator, prefix: []const u8, target: []const u8) ![]u8 {
+    // Concatenated rather than formatted: the prelude's `${s%/*}` would read
+    // as a format placeholder.
+    if (std.fs.path.isAbsolute(target)) {
+        return std.mem.concat(allocator, u8, &.{ "#!/bin/sh\nexec ", prefix, "\"", target, "\" \"$@\"\n" });
+    }
+    return std.mem.concat(allocator, u8, &.{ "#!/bin/sh\n", shim_locate_self, "exec ", prefix, "\"$d/", target, "\" \"$@\"\n" });
+}
+
 /// Write a tiny `#!/bin/sh` shim at `shim_path` that `exec`s `target_path "$@"`.
 /// Used instead of a symlink for script wrappers so the wrapped script sees its
-/// real location via `$0`. Returns true on success.
-pub fn writeForwardingShim(shim_path: []const u8, target_path: []const u8) bool {
-    var buf: [std.fs.max_path_bytes + 64]u8 = undefined;
-    const content = std.fmt.bufPrint(&buf, "#!/bin/sh\nexec \"{s}\" \"$@\"\n", .{target_path}) catch return false;
+/// real location via `$0`. Inside `tree_root` the target is written relative to
+/// the shim (see `treeLinkTarget`). Returns true on success.
+pub fn writeForwardingShim(
+    allocator: std.mem.Allocator,
+    shim_path: []const u8,
+    target_path: []const u8,
+    tree_root: ?[]const u8,
+) bool {
+    const target = treeLinkTarget(allocator, tree_root, target_path, shim_path) catch return false;
+    defer allocator.free(target);
+    const content = shimScript(allocator, "", target) catch return false;
+    defer allocator.free(content);
 
     const file = io_helper.createFileAbsolute(shim_path, .{ .truncate = true }) catch return false;
     io_helper.writeAllToFile(file, content) catch {
@@ -153,16 +322,19 @@ fn symlinkOwnedByDifferentPackage(
     symlink_path: []const u8,
     new_target: []const u8,
 ) bool {
-    // Read the existing symlink target
-    const existing_target = io_helper.readLinkAlloc(allocator, symlink_path) catch return false;
+    // Read the existing symlink target (a relative one is resolved against
+    // the link's directory, so pantry-written relative links compare too)
+    const existing_target = resolvedLinkTarget(allocator, symlink_path) orelse return false;
     defer allocator.free(existing_target);
+    const new_resolved = std.fs.path.resolve(allocator, &.{new_target}) catch return false;
+    defer allocator.free(new_resolved);
 
     // Extract the package directory from paths (everything up to /bin/ or /sbin/)
     const existing_pkg = extractPackageDir(existing_target) orelse return false;
-    const new_pkg = extractPackageDir(new_target) orelse return false;
+    const new_pkg = extractPackageDir(new_resolved) orelse return false;
 
     // If they're from different package directories, the existing one takes precedence
-    return !std.mem.eql(u8, existing_pkg, new_pkg);
+    return !samePath(existing_pkg, new_pkg);
 }
 
 /// Return the owning package name (last path component of its version dir) of an
@@ -172,8 +344,12 @@ fn symlinkOwnedByExistingPackage(
     allocator: std.mem.Allocator,
     symlink_path: []const u8,
 ) ?[]u8 {
-    const existing_target = io_helper.readLinkAlloc(allocator, symlink_path) catch return null;
+    const existing_target = resolvedLinkTarget(allocator, symlink_path) orelse return null;
     defer allocator.free(existing_target);
+
+    // A link that no longer resolves (its tree moved, or it was written
+    // through a path that is gone) belongs to nobody: let it be replaced.
+    io_helper.cwd().access(io_helper.io, symlink_path, .{}) catch return null;
 
     const pkg_dir = extractPackageDir(existing_target) orelse return null;
     // pkg_dir looks like ".../packages/redis.io/v8.6.1" — take the parent segment as owner
@@ -259,8 +435,12 @@ pub fn createVersionSymlink(
     // Remove existing symlink if present
     io_helper.deleteFile(symlink_path) catch {};
 
-    // Create symlink (cross-platform)
-    createSymlinkCrossPlatform(target_path, symlink_path) catch {
+    // Create symlink (cross-platform). The alias and its target are siblings,
+    // so the link is just `v{full}`, wherever the tree lives.
+    const package_root = std.fs.path.dirname(symlink_path) orelse return error.InvalidPath;
+    const link_target = try treeLinkTarget(allocator, package_root, target_path, symlink_path);
+    defer allocator.free(link_target);
+    createSymlinkCrossPlatform(link_target, symlink_path) catch {
         return error.SymlinkCreationFailed;
     };
 
@@ -551,7 +731,7 @@ pub fn removePackageSymlinks(
     }
 
     // Remove version symlink
-    var parts = std.mem.split(u8, version, ".");
+    var parts = std.mem.splitScalar(u8, version, '.');
     if (parts.next()) |major| {
         const version_symlink = try std.fmt.allocPrint(
             allocator,
@@ -592,11 +772,14 @@ pub fn detectShimType(file_path: []const u8) ShimType {
 /// Create a cross-platform shim for a binary
 /// For JS/TS files: creates shell/cmd scripts that invoke bun
 /// For native files: creates symlink (Unix) or copy (Windows)
+/// A target inside `tree_root` (normally the pantry dir holding `shim_dir`)
+/// is referenced relative to the shim, so the tree stays relocatable.
 pub fn createShim(
     allocator: std.mem.Allocator,
     bin_name: []const u8,
     target_path: []const u8,
     shim_dir: []const u8,
+    tree_root: ?[]const u8,
 ) !void {
     const shim_type = detectShimType(target_path);
 
@@ -617,11 +800,13 @@ pub fn createShim(
             // Remove existing shim if present
             io_helper.deleteFile(shim_path) catch {};
 
-            try createSymlinkCrossPlatform(target_path, shim_path);
+            const link_target = try treeLinkTarget(allocator, tree_root, target_path, shim_path);
+            defer allocator.free(link_target);
+            try createSymlinkCrossPlatform(link_target, shim_path);
         },
         .node, .shell => {
             // For JS/shell files, create wrapper scripts
-            try createScriptShim(allocator, bin_name, target_path, shim_dir, shim_type);
+            try createScriptShim(allocator, bin_name, target_path, shim_dir, shim_type, tree_root);
         },
     }
 }
@@ -633,6 +818,7 @@ fn createScriptShim(
     target_path: []const u8,
     shim_dir: []const u8,
     shim_type: ShimType,
+    tree_root: ?[]const u8,
 ) !void {
     // Create Unix shell script
     const unix_shim_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ shim_dir, bin_name });
@@ -642,18 +828,11 @@ fn createScriptShim(
     io_helper.deleteFile(unix_shim_path) catch {};
 
     // Generate Unix shim content
+    const shim_target = try treeLinkTarget(allocator, tree_root, target_path, unix_shim_path);
+    defer allocator.free(shim_target);
     const unix_content = switch (shim_type) {
-        .node => try std.fmt.allocPrint(allocator,
-            \\#!/bin/sh
-            \\basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
-            \\exec bun "{s}" "$@"
-            \\
-        , .{target_path}),
-        .shell => try std.fmt.allocPrint(allocator,
-            \\#!/bin/sh
-            \\exec "{s}" "$@"
-            \\
-        , .{target_path}),
+        .node => try shimScript(allocator, "bun ", shim_target),
+        .shell => try shimScript(allocator, "", shim_target),
         .native => unreachable,
     };
     defer allocator.free(unix_content);
@@ -735,6 +914,7 @@ pub fn createShimsFromBinConfig(
     package_dir: []const u8,
     bin_config: std.json.Value,
     shim_dir: []const u8,
+    tree_root: ?[]const u8,
 ) !void {
     if (bin_config != .object) return;
 
@@ -750,7 +930,7 @@ pub fn createShimsFromBinConfig(
         defer allocator.free(bin_path);
 
         // Create shim
-        createShim(allocator, bin_name, bin_path, shim_dir) catch {};
+        createShim(allocator, bin_name, bin_path, shim_dir, tree_root) catch {};
     }
 }
 
@@ -761,6 +941,7 @@ pub fn createShimFromBinString(
     package_dir: []const u8,
     bin_path: []const u8,
     shim_dir: []const u8,
+    tree_root: ?[]const u8,
 ) !void {
     // Get just the package name without scope
     const bin_name = normalizeBinName(package_name);
@@ -770,7 +951,7 @@ pub fn createShimFromBinString(
     const full_path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ package_dir, bin_path });
     defer allocator.free(full_path);
 
-    try createShim(allocator, bin_name, full_path, shim_dir);
+    try createShim(allocator, bin_name, full_path, shim_dir, tree_root);
 }
 
 test "discoverBinaries" {
@@ -838,6 +1019,7 @@ test "createShimsFromBinConfig normalizes scoped bin object keys" {
         test_dir ++ "/pkg",
         parsed.value,
         test_dir ++ "/.bin",
+        test_dir,
     );
 
     try io_helper.cwd().access(io_helper.io, test_dir ++ "/.bin/tool", .{});

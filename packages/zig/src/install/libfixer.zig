@@ -2,6 +2,7 @@ const std = @import("std");
 const io_helper = @import("../io_helper.zig");
 const Paths = @import("../core/platform.zig").Paths;
 const style = @import("../cli/style.zig");
+const symlink = @import("symlink.zig");
 
 /// Fix macOS library paths using install_name_tool
 /// This discovers @rpath dependencies using otool and fixes them to use absolute paths
@@ -9,6 +10,21 @@ pub fn fixMacOSLibraryPaths(
     allocator: std.mem.Allocator,
     binary_path: []const u8,
     lib_dir: []const u8,
+) !void {
+    return fixMacOSLibraryPathsInTree(allocator, binary_path, lib_dir, null);
+}
+
+/// `fixMacOSLibraryPaths`, writing a reference to a library inside
+/// `tree_root` as `@loader_path/<relative path>` rather than the absolute path
+/// the tree was installed through. An absolute reference breaks the moment
+/// that path does: a project installed through a git worktree's symlinked
+/// `pantry` left curl loading libcurl from the worktree, so deleting the
+/// worktree broke curl in the main checkout.
+pub fn fixMacOSLibraryPathsInTree(
+    allocator: std.mem.Allocator,
+    binary_path: []const u8,
+    lib_dir: []const u8,
+    tree_root: ?[]const u8,
 ) !void {
     const builtin = @import("builtin");
 
@@ -143,12 +159,16 @@ pub fn fixMacOSLibraryPaths(
             continue;
         };
 
+        var ref_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const new_ref = loaderRelativeRef(allocator, tree_root, target, binary_path, &ref_buf) orelse target;
+        if (std.mem.eql(u8, new_ref, dep.original_ref)) continue;
+
         // Fix the library path using install_name_tool
         const fix_result = io_helper.childRun(allocator, &[_][]const u8{
             "install_name_tool",
             "-change",
             dep.original_ref,
-            target,
+            new_ref,
             binary_path,
         }) catch {
             continue;
@@ -156,6 +176,48 @@ pub fn fixMacOSLibraryPaths(
         defer allocator.free(fix_result.stdout);
         defer allocator.free(fix_result.stderr);
     }
+}
+
+/// `@loader_path/<path of lib from binary's dir>` when `binary_path` and
+/// `lib_path` are both inside `tree_root` (see `symlink.treeLinkTarget`),
+/// written into `out`; null to keep the absolute path.
+fn loaderRelativeRef(
+    allocator: std.mem.Allocator,
+    tree_root: ?[]const u8,
+    lib_path: []const u8,
+    binary_path: []const u8,
+    out: []u8,
+) ?[]const u8 {
+    const rel = symlink.treeLinkTarget(allocator, tree_root, lib_path, binary_path) catch return null;
+    defer allocator.free(rel);
+    if (std.fs.path.isAbsolute(rel)) return null;
+    return std.fmt.bufPrint(out, "@loader_path/{s}", .{rel}) catch null;
+}
+
+/// The directory `binary_path` sits in, as seen from itself: `@loader_path`
+/// (macOS) or `$ORIGIN` (ELF) joined with `dir`'s path relative to it. A
+/// package's own lib dir moves with the package, so this is always relative.
+fn originRelativeDir(
+    allocator: std.mem.Allocator,
+    origin: []const u8,
+    binary_path: []const u8,
+    dir: []const u8,
+) ?[]u8 {
+    const from = std.fs.path.dirname(binary_path) orelse return null;
+    const rel = std.fs.path.relative(allocator, "/", null, from, dir) catch return null;
+    defer allocator.free(rel);
+    if (rel.len == 0) return allocator.dupe(u8, origin) catch null;
+    return std.fmt.allocPrint(allocator, "{s}/{s}", .{ origin, rel }) catch null;
+}
+
+test "originRelativeDir points a binary at its package's lib dir from where it sits" {
+    const a = std.testing.allocator;
+    const from_bin = originRelativeDir(a, "@loader_path", "/p/pantry/curl.se/v8.22.0/bin/curl", "/p/pantry/curl.se/v8.22.0/lib").?;
+    defer a.free(from_bin);
+    try std.testing.expectEqualStrings("@loader_path/../lib", from_bin);
+    const from_lib = originRelativeDir(a, "$ORIGIN", "/p/pantry/curl.se/v8.22.0/lib/libcurl.so.4", "/p/pantry/curl.se/v8.22.0/lib").?;
+    defer a.free(from_lib);
+    try std.testing.expectEqualStrings("$ORIGIN", from_lib);
 }
 
 /// Resolve an `@rpath`-relative registry path (`<domain>/v<ver>/lib/<name>`)
@@ -252,9 +314,13 @@ fn addRpathEntries(
     // Add rpath entries for:
     // 1. The package's own lib directory
     // 2. The global pantry directory (for finding openssl.org, nodejs.org, etc.)
+    // The package's own lib dir is named relative to the binary
+    // (`@loader_path/../lib`), so it survives the package moving.
     var rp_buf1: [std.fs.max_path_bytes]u8 = undefined;
+    const pkg_lib = std.fmt.bufPrint(&rp_buf1, "{s}/lib", .{package_dir}) catch return;
+    const rp1 = originRelativeDir(allocator, "@loader_path", binary_path, pkg_lib) orelse return;
+    defer allocator.free(rp1);
     var rp_buf2: [std.fs.max_path_bytes]u8 = undefined;
-    const rp1 = std.fmt.bufPrint(&rp_buf1, "{s}/lib", .{package_dir}) catch return;
     const rp2 = std.fmt.bufPrint(&rp_buf2, "{s}", .{global}) catch return;
     const rpath_entries = [_][]const u8{ rp1, rp2 };
 
@@ -349,8 +415,15 @@ pub fn fixLinuxRpaths(
         if (magic[0] != 0x7f or magic[1] != 'E' or magic[2] != 'L' or magic[3] != 'F') return;
     }
 
-    // Build the rpath list: "$ORIGIN/../lib:<abs lib dir>"
-    const rpath = try std.fmt.allocPrint(allocator, "$ORIGIN/../lib:{s}", .{lib_dir});
+    // Build the rpath list: "$ORIGIN/../lib" plus the package's lib dir as
+    // seen from this binary (`$ORIGIN` for a library inside it). Both are
+    // relative to the binary, so the package keeps working when moved.
+    const own_lib = originRelativeDir(allocator, "$ORIGIN", binary_path, lib_dir) orelse return;
+    defer allocator.free(own_lib);
+    const rpath = if (std.mem.eql(u8, own_lib, "$ORIGIN/../lib"))
+        try allocator.dupe(u8, own_lib)
+    else
+        try std.fmt.allocPrint(allocator, "$ORIGIN/../lib:{s}", .{own_lib});
     defer allocator.free(rpath);
 
     // Try `patchelf --force-rpath --set-rpath <rpath> <binary>`. We use
@@ -373,6 +446,17 @@ pub fn fixLinuxRpaths(
 pub fn fixDirectoryLibraryPaths(
     allocator: std.mem.Allocator,
     package_dir: []const u8,
+) !void {
+    return fixDirectoryLibraryPathsInTree(allocator, package_dir, null);
+}
+
+/// `fixDirectoryLibraryPaths` for a package installed in the pantry tree at
+/// `tree_root` (`<project>/pantry`): references to libraries elsewhere in
+/// that tree are written relative to the referencing binary.
+pub fn fixDirectoryLibraryPathsInTree(
+    allocator: std.mem.Allocator,
+    package_dir: []const u8,
+    tree_root: ?[]const u8,
 ) !void {
     const builtin = @import("builtin");
     // Linux-only path: walk bin/ and lib/ and patch ELF rpaths
@@ -448,7 +532,7 @@ pub fn fixDirectoryLibraryPaths(
             addRpathEntries(allocator, dylib_path, package_dir) catch {};
 
             // Fix library paths for this dylib (inter-dylib deps)
-            fixMacOSLibraryPaths(allocator, dylib_path, lib_dir) catch {};
+            fixMacOSLibraryPathsInTree(allocator, dylib_path, lib_dir, tree_root orelse package_dir) catch {};
         }
     }
 
@@ -481,7 +565,7 @@ pub fn fixDirectoryLibraryPaths(
                 addRpathEntries(allocator, binary_path, package_dir) catch {};
 
                 // Fix library paths (both @rpath/ and hardcoded absolute paths)
-                fixMacOSLibraryPaths(allocator, binary_path, lib_dir) catch {};
+                fixMacOSLibraryPathsInTree(allocator, binary_path, lib_dir, tree_root orelse package_dir) catch {};
             }
         } else |_| {}
     }

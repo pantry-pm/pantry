@@ -990,7 +990,9 @@ pub const Installer = struct {
             // before deps existed. Idempotent: rpath re-adds are refused and
             // install-name -change is a no-op when already correct.
             if (install_path.len > 0) {
-                libfixer.fixDirectoryLibraryPaths(self.allocator, install_path) catch {};
+                const tree_root = self.projectTreeRoot(options);
+                defer if (tree_root) |root| self.allocator.free(root);
+                libfixer.fixDirectoryLibraryPathsInTree(self.allocator, install_path, tree_root) catch {};
             }
         }
 
@@ -3214,8 +3216,11 @@ pub const Installer = struct {
         try io_helper.makePath(project_pkg_dir);
         try self.copyDirectoryStructure(package_source, project_pkg_dir);
 
-        // Fix library paths for macOS
-        try libfixer.fixDirectoryLibraryPaths(self.allocator, project_pkg_dir);
+        // Fix library paths for macOS; references to other packages in this
+        // project's pantry/ are written relative to the referencing binary.
+        const tree_root = self.projectTreeRoot(options);
+        defer if (tree_root) |root| self.allocator.free(root);
+        try libfixer.fixDirectoryLibraryPathsInTree(self.allocator, project_pkg_dir, tree_root);
 
         // Remove macOS quarantine/provenance xattrs so launchd can run service binaries
         if (comptime @import("builtin").os.tag == .macos) {
@@ -3277,6 +3282,13 @@ pub const Installer = struct {
             "{s}/packages/{s}/v{s}",
             .{ global, domain, version },
         );
+    }
+
+    /// The project's pantry dir (`<project>/pantry`) for a project install, or
+    /// null for a global one. Caller owns the result.
+    fn projectTreeRoot(self: *Installer, options: InstallOptions) ?[]u8 {
+        const project_root = options.project_root orelse return null;
+        return std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ project_root, self.modules_dir }) catch null;
     }
 
     /// Get project-local package directory (pantry)
@@ -3346,7 +3358,7 @@ pub const Installer = struct {
             // symlinked, so the wrapper's `$0` resolves to its real path. See
             // symlink.zig for why a flat symlink breaks them.
             const symlink_module = @import("symlink.zig");
-            if (symlink_module.isShebangScript(source) and symlink_module.writeForwardingShim(link, source)) continue;
+            if (symlink_module.isShebangScript(source) and symlink_module.writeForwardingShim(self.allocator, link, source, null)) continue;
 
             // Create symlink
             io_helper.symLink(source, link) catch |err| {
@@ -3361,14 +3373,15 @@ pub const Installer = struct {
     /// Create one version-alias symlink (e.g. `vMAJOR` or `vMAJOR.MINOR`) next
     /// to a concrete install dir. Best effort — never fatal, and never clobbers
     /// a real directory (deleteFile only unlinks symlinks; on a real dir it
-    /// fails and we leave it).
+    /// fails and we leave it). The alias and its target are siblings, so the
+    /// link is written as just `vVERSION` and survives the tree moving.
     fn linkVersionAlias(self: *Installer, parent: []const u8, target_dir: []const u8, full_version: []const u8, alias_version: []const u8) void {
         // Don't alias a version onto itself (e.g. a bare "1" install).
         if (std.mem.eql(u8, alias_version, full_version)) return;
         const link = std.fmt.allocPrint(self.allocator, "{s}/v{s}", .{ parent, alias_version }) catch return;
         defer self.allocator.free(link);
         io_helper.deleteFile(link) catch {};
-        io_helper.symLink(target_dir, link) catch {};
+        @import("symlink.zig").symLinkInTree(self.allocator, parent, target_dir, link) catch {};
     }
 
     /// Create `vMAJOR` and `vMAJOR.MINOR` compat symlinks pointing at the
@@ -3403,6 +3416,12 @@ pub const Installer = struct {
         defer self.allocator.free(project_bin_dir);
 
         try io_helper.makePath(project_bin_dir);
+
+        // Links from pantry/.bin into packages under pantry/ are written
+        // relative to this root, so the tree keeps working however it is
+        // reached (a symlink, a worktree sharing it) or wherever it moves.
+        const tree_root = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ project_root, self.modules_dir });
+        defer self.allocator.free(tree_root);
 
         // Major/minor version compat symlinks (vMAJOR, vMAJOR.MINOR → vVERSION)
         // so dependents' dylib rpaths that use a truncated version resolve.
@@ -3477,7 +3496,7 @@ pub const Installer = struct {
                         io_helper.deleteFile(link) catch {};
 
                         // Create symlink
-                        io_helper.symLink(source, link) catch |err| {
+                        @import("symlink.zig").symLinkInTree(self.allocator, tree_root, source, link) catch |err| {
                             if (!style.isCI()) style.print("Warning: Failed to create symlink for {s}: {}\n", .{ bin_name, err });
                             continue;
                         };
@@ -3527,11 +3546,11 @@ pub const Installer = struct {
             // execs the real path (so $0 is correct); real binaries keep the
             // cheaper symlink.
             if (symlink.isShebangScript(bin_info.path)) {
-                if (!symlink.writeForwardingShim(link, bin_info.path)) {
-                    io_helper.symLink(bin_info.path, link) catch {};
+                if (!symlink.writeForwardingShim(self.allocator, link, bin_info.path, tree_root)) {
+                    symlink.symLinkInTree(self.allocator, tree_root, bin_info.path, link) catch {};
                 }
             } else {
-                io_helper.symLink(bin_info.path, link) catch |err| {
+                symlink.symLinkInTree(self.allocator, tree_root, bin_info.path, link) catch |err| {
                     if (!style.isCI()) style.print("Warning: Failed to create symlink for {s}: {}\n", .{ bin_info.name, err });
                 };
             }
@@ -3558,6 +3577,10 @@ pub const Installer = struct {
         if (self.verbose) std.debug.print("[verbose:shims] shim_dir={s}\n", .{shim_dir});
 
         try io_helper.makePath(shim_dir);
+
+        // Shims reference packages under pantry/ relative to themselves.
+        const tree_root = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ project_root, self.modules_dir });
+        defer self.allocator.free(tree_root);
 
         // Read package.json from install directory
         const pkg_json_path = try std.fmt.allocPrint(
@@ -3597,6 +3620,7 @@ pub const Installer = struct {
                 install_dir,
                 bin_value.string,
                 shim_dir,
+                tree_root,
             ) catch |err| {
                 if (self.verbose) std.debug.print("[verbose:shims] failed to create shim for {s}: {s}\n", .{ package_name, @errorName(err) });
             };
@@ -3607,6 +3631,7 @@ pub const Installer = struct {
                 install_dir,
                 bin_value,
                 shim_dir,
+                tree_root,
             ) catch |err| {
                 if (self.verbose) std.debug.print("[verbose:shims] failed to create shims for {s}: {s}\n", .{ package_name, @errorName(err) });
             };
@@ -4966,4 +4991,80 @@ test "an exact prerelease resolves to itself, not the first prerelease of its re
     defer parsed.deinit();
     try std.testing.expectEqualStrings("0.24.1-pre.42", try installer.resolveNpmVersion(parsed.value, "0.24.1-pre.42"));
     try std.testing.expectEqualStrings("0.24.1-pre.9", try installer.resolveNpmVersion(parsed.value, "=0.24.1-pre.9"));
+}
+
+test "project links stay inside pantry/ when it is installed through a worktree's symlink that then disappears" {
+    // A git worktree whose `pantry` resolved to the main checkout's pantry
+    // ran `pantry install`; the version aliases, .bin links and .bin shims it
+    // rewrote pointed into the worktree, so deleting the worktree broke git,
+    // bun, and every dylib loaded through `zlib.net/v1`.
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp_dir.dir.realPath(io_helper.io, &root_buf)];
+    const at = struct {
+        fn path(a: std.mem.Allocator, base: []const u8, sub: []const u8) []const u8 {
+            return std.fmt.allocPrint(a, "{s}/{s}", .{ base, sub }) catch @panic("oom");
+        }
+    }.path;
+
+    const files = [_]struct { sub: []const u8, body: []const u8 }{
+        .{ .sub = "main/pantry/zlib.net/v1.3.2/lib/libz.dylib", .body = "" },
+        // git's wrapper finds its data through $0, which is why it is shimmed.
+        .{ .sub = "main/pantry/git-scm.org/v2.53.0/bin/git", .body = "#!/bin/sh\ncat \"$(dirname \"$0\")/../share/msg\"\n" },
+        .{ .sub = "main/pantry/git-scm.org/v2.53.0/share/msg", .body = "git-ok\n" },
+        // No `#!`: linked like a native binary; sh still runs it.
+        .{ .sub = "main/pantry/bun.sh/v1.3.14/bin/bun", .body = "echo \"$@\"\n" },
+    };
+    for (files) |entry| {
+        const path = at(arena, root, entry.sub);
+        try io_helper.makePath(std.fs.path.dirname(path).?);
+        const file = try io_helper.createFile(path, .{});
+        try io_helper.writeAllToFile(file, entry.body);
+        io_helper.closeFile(file);
+        const z = try arena.dupeSentinel(u8, path, 0);
+        _ = std.c.chmod(z, 0o755);
+    }
+    try io_helper.makePath(at(arena, root, "wt"));
+    try io_helper.symLink(at(arena, root, "main/pantry"), at(arena, root, "wt/pantry"));
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    const wt = at(arena, root, "wt");
+    try installer.createProjectSymlinks(wt, "zlib.net", "1.3.2", at(arena, root, "wt/pantry/zlib.net/v1.3.2"));
+    try installer.createProjectSymlinks(wt, "git-scm.org", "2.53.0", at(arena, root, "wt/pantry/git-scm.org/v2.53.0"));
+    try installer.createProjectSymlinks(wt, "bun.sh", "1.3.14", at(arena, root, "wt/pantry/bun.sh/v1.3.14"));
+
+    // Relative, and never through the worktree.
+    try std.testing.expectEqualStrings("v1.3.2", try io_helper.readLinkAlloc(arena, at(arena, root, "main/pantry/zlib.net/v1")));
+    try std.testing.expectEqualStrings("v1.3.2", try io_helper.readLinkAlloc(arena, at(arena, root, "main/pantry/zlib.net/v1.3")));
+    try std.testing.expectEqualStrings("../bun.sh/v1.3.14/bin/bun", try io_helper.readLinkAlloc(arena, at(arena, root, "main/pantry/.bin/bun")));
+    const shim = try io_helper.readFileAlloc(arena, at(arena, root, "main/pantry/.bin/git"), 4096);
+    try std.testing.expect(std.mem.indexOf(u8, shim, "\"$d/../git-scm.org/v2.53.0/bin/git\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, shim, root) == null);
+
+    try io_helper.deleteFile(at(arena, root, "wt/pantry"));
+    try io_helper.deleteTree(wt);
+    try io_helper.rename(at(arena, root, "main"), at(arena, root, "moved"));
+
+    try io_helper.accessAbsolute(at(arena, root, "moved/pantry/zlib.net/v1/lib/libz.dylib"), .{});
+    try io_helper.accessAbsolute(at(arena, root, "moved/pantry/zlib.net/v1.3/lib/libz.dylib"), .{});
+    const cases = [_]struct { cmd: []const u8, out: []const u8 }{
+        .{ .cmd = "moved/pantry/.bin/git", .out = "git-ok\n" },
+        .{ .cmd = "moved/pantry/.bin/bun hi", .out = "hi\n" },
+    };
+    for (cases) |case| {
+        const result = try io_helper.childRunWithOptions(arena, &.{ "/bin/sh", "-c", case.cmd }, .{ .cwd = root });
+        try std.testing.expect(result.term == .exited and result.term.exited == 0);
+        try std.testing.expectEqualStrings(case.out, result.stdout);
+    }
 }

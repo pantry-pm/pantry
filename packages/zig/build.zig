@@ -471,6 +471,22 @@ pub fn build(b: *std.Build) void {
     });
     const run_auto_link_tests = b.addRunArtifact(auto_link_tests);
 
+    // Relocatable tree tests (pantry-internal links survive the tree moving
+    // or the path it was installed through disappearing)
+    const relocatable_tree_test_mod = b.createModule(.{
+        .root_source_file = b.path("test/relocatable_tree_test.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .imports = &.{
+            .{ .name = "lib", .module = lib_mod },
+        },
+    });
+    const relocatable_tree_tests = b.addTest(.{
+        .root_module = relocatable_tree_test_mod,
+    });
+    const run_relocatable_tree_tests = b.addRunArtifact(relocatable_tree_tests);
+
     // Shell integration benchmark
     const shell_bench_mod = b.createModule(.{
         .root_source_file = b.path("bench/shell_bench.zig"),
@@ -508,9 +524,13 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_version_tests.step);
     test_step.dependOn(&run_workspace_tests.step);
     test_step.dependOn(&run_auto_link_tests.step);
+    test_step.dependOn(&run_relocatable_tree_tests.step);
 
     const auto_link_step = b.step("test:auto-link", "Run auto-link tests");
     auto_link_step.dependOn(&run_auto_link_tests.step);
+
+    const relocatable_tree_step = b.step("test:relocatable", "Run relocatable pantry tree tests");
+    relocatable_tree_step.dependOn(&run_relocatable_tree_tests.step);
 
     const services_step = b.step("test:services", "Run services tests");
     services_step.dependOn(&run_services_tests.step);
@@ -549,6 +569,7 @@ pub fn build(b: *std.Build) void {
     test_all_step.dependOn(&run_pm_commands_tests.step);
     test_all_step.dependOn(&run_token_tests.step);
     test_all_step.dependOn(&run_auto_link_tests.step);
+    test_all_step.dependOn(&run_relocatable_tree_tests.step);
 
     // Coverage report
     const coverage_cmd = b.addSystemCommand(&[_][]const u8{
