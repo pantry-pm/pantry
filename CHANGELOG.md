@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.71...v0.11.72)
+
+## 🐛 Bug Fixes
+
+- **panx**: resolve buddy to the Stacks CLI, run scoped packages, and stop writing into the cwd ([20a3cee](https://github.com/pantry-pm/pantry/commit/20a3cee)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **install**: say when the global bin dir is not on PATH ([21b7e00](https://github.com/pantry-pm/pantry/commit/21b7e00)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.72 ([c8b233e](https://github.com/pantry-pm/pantry/commit/c8b233e)) _(by Chris <chris@stacksjs.com>)_
+- update casdoor.org, circleci.com, coder.com, crates.io/qsv, github.com/ggerganov/llama.cpp, github.com/valhalla/valhalla, libcxx.llvm.org, llvm.org, ohmyposh.dev, openmp.llvm.org, railway.app, terratag.io, watchexec.github.io, werf.io, zotregistry.dev ([e6aa747](https://github.com/pantry-pm/pantry/commit/e6aa747)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, arkade.dev, circleci.com, cnquery.io, conftest.dev, getmonero.org, github.com/ggerganov/llama.cpp, github.com/snowplow/factotum, mediaarea.net, pnpm.io, scaleway.com, sdkman.io, syncthing.net, traefik.io, ziglang.org ([6eec38b](https://github.com/pantry-pm/pantry/commit/6eec38b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.118 ([1fafaa6](https://github.com/pantry-pm/pantry/commit/1fafaa6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, codex.openai.com, cursor.com, github.com/ggerganov/llama.cpp, railway.app ([605f4b0](https://github.com/pantry-pm/pantry/commit/605f4b0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.115 ([586c761](https://github.com/pantry-pm/pantry/commit/586c761)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.70...v0.11.71)
 
 ## 🐛 Bug Fixes
