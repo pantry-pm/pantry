@@ -509,6 +509,14 @@ pub fn printGlobalComplete(dir: []const u8) void {
     print("\n{s}{s}{s} Packages installed to: {s}\n", .{ green, check, reset, dir });
 }
 
+/// The global bin dir is missing from PATH, so what was just installed
+/// cannot be run yet. Say so, and give the two ways to fix it.
+pub fn printBinNotOnPath(bin_dir: []const u8) void {
+    print("\n{s}{s}{s} {s} is not on your PATH, so these commands won't be found yet.\n", .{ yellow, warn, reset, bin_dir });
+    print("  Run {s}pantry shell:integrate{s}, or add it yourself:\n", .{ bold, reset });
+    print("    {s}export PATH=\"{s}:$PATH\"{s}\n", .{ dim, bin_dir, reset });
+}
+
 // ── Download Progress ───────────────────────────────────────────────────────
 
 /// Print download progress (standard mode - overwrites same line)

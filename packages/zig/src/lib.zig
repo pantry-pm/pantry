@@ -58,6 +58,7 @@ test {
     // refAllDecls does not pull a file's own tests in; name the ones that
     // nothing else imports for their own sake.
     _ = @import("cli/commands/install/env_deps.zig");
+    _ = @import("cli/commands/install/global.zig");
     _ = @import("shell/install_route.zig");
     _ = @import("install/libfixer.zig");
     _ = @import("install/pkgx_shebang.zig");

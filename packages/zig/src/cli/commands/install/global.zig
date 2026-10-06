@@ -207,6 +207,7 @@ fn installGlobalDepsCommandWithOptions(allocator: std.mem.Allocator, user_local:
     registerSharedLibraries(allocator, global_dir);
 
     style.printGlobalComplete(global_dir);
+    warnIfBinNotOnPath(allocator, global_dir);
 
     return .{ .exit_code = 0 };
 }
@@ -307,8 +308,41 @@ pub fn installPackagesGloballyCommand(allocator: std.mem.Allocator, packages: []
     registerSharedLibraries(allocator, global_dir);
 
     style.printGlobalComplete(global_dir);
+    warnIfBinNotOnPath(allocator, global_dir);
 
     return .{ .exit_code = 0 };
+}
+
+/// Installed commands are only reachable once `<global_dir>/bin` is on PATH.
+/// The shell hook adds the user-local dir, but in a shell without the hook
+/// the install reported success and `node` (say) was still "command not
+/// found", with nothing explaining why. Non-fatal: it only prints a hint.
+fn warnIfBinNotOnPath(allocator: std.mem.Allocator, global_dir: []const u8) void {
+    const bin_dir = std.fmt.allocPrint(allocator, "{s}/bin", .{global_dir}) catch return;
+    defer allocator.free(bin_dir);
+    if (isOnPath(io_helper.getenv("PATH") orelse "", bin_dir)) return;
+    style.printBinNotOnPath(bin_dir);
+}
+
+/// Whether `dir` is one of the entries in a `:`-separated PATH value,
+/// ignoring trailing slashes on either side.
+fn isOnPath(path_env: []const u8, dir: []const u8) bool {
+    const want = std.mem.trimEnd(u8, dir, "/");
+    var it = std.mem.splitScalar(u8, path_env, ':');
+    while (it.next()) |entry| {
+        if (entry.len == 0) continue;
+        if (std.mem.eql(u8, std.mem.trimEnd(u8, entry, "/"), want)) return true;
+    }
+    return false;
+}
+
+test "isOnPath matches whole PATH entries" {
+    try std.testing.expect(isOnPath("/usr/bin:/home/u/.local/share/pantry/global/bin:/bin", "/home/u/.local/share/pantry/global/bin"));
+    try std.testing.expect(isOnPath("/usr/local/bin/", "/usr/local/bin"));
+    try std.testing.expect(isOnPath("/usr/local/bin", "/usr/local/bin/"));
+    try std.testing.expect(!isOnPath("/usr/local/bin/sub:/opt/usr/local/bin", "/usr/local/bin"));
+    try std.testing.expect(!isOnPath("", "/usr/local/bin"));
+    try std.testing.expect(!isOnPath("::", "/usr/local/bin"));
 }
 
 /// A system-wide install lists every package's `lib/` for the dynamic
