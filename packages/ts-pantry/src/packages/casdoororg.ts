@@ -3,7 +3,7 @@
  *
  * @domain `casdoor.org`
  * @programs `casdoor`
- * @version `4.15.0` (337 versions available)
+ * @version `4.17.0` (339 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install casdoor.org`
@@ -16,7 +16,7 @@
  * const pkg = pantry.casdoororg
  * console.log(pkg.name)        // "casdoor"
  * console.log(pkg.programs)    // ["casdoor"]
- * console.log(pkg.versions[0]) // "4.15.0" (latest)
+ * console.log(pkg.versions[0]) // "4.17.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/casdoor-org.md
@@ -67,6 +67,8 @@ export const casdoororgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.17.0',
+    '4.16.0',
     '4.15.0',
     '4.14.0',
     '4.13.0',

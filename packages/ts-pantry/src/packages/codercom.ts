@@ -3,7 +3,7 @@
  *
  * @domain `coder.com`
  * @programs `coder`
- * @version `2.37.4` (133 versions available)
+ * @version `2.38.0` (134 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install coder.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "coder"
  * console.log(pkg.description) // "Tool for provisioning self-hosted development e..."
  * console.log(pkg.programs)    // ["coder"]
- * console.log(pkg.versions[0]) // "2.37.4" (latest)
+ * console.log(pkg.versions[0]) // "2.38.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/coder-com.md
@@ -67,6 +67,7 @@ export const codercomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.38.0',
     '2.37.4',
     '2.37.3',
     '2.37.2',
