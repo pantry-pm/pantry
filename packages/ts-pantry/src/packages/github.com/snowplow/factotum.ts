@@ -3,7 +3,7 @@
  *
  * @domain `github.com/snowplow/factotum`
  * @programs `factotum`
- * @version `0.7.0` (3 versions available)
+ * @version `0.7.1` (12 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/snowplow/factotum`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "factotum"
  * console.log(pkg.description) // "A system to programmatically run data pipelines"
  * console.log(pkg.programs)    // ["factotum"]
- * console.log(pkg.versions[0]) // "0.7.0" (latest)
+ * console.log(pkg.versions[0]) // "0.7.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/snowplow/factotum.md
@@ -67,6 +67,7 @@ export const factotumPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.7.1',
     '0.7.0',
     '0.7.0-rc2',
     '0.7.0-rc1',

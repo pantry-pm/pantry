@@ -20,6 +20,7 @@ export const mediaareanetPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '26.10',
     '26.05',
     '26.01',
     '25.10',
