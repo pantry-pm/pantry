@@ -65,4 +65,5 @@ test {
     _ = @import("install/npm_platform.zig");
     _ = @import("install/installer.zig");
     _ = @import("install/tree_repair.zig");
+    _ = @import("cli/commands/px.zig");
 }
