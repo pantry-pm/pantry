@@ -295,9 +295,20 @@ pub fn writeForwardingShim(
     target_path: []const u8,
     tree_root: ?[]const u8,
 ) bool {
+    return writeShim(allocator, shim_path, "", target_path, tree_root);
+}
+
+/// `writeForwardingShim` with `prefix` (e.g. `bun `) before the target.
+pub fn writeShim(
+    allocator: std.mem.Allocator,
+    shim_path: []const u8,
+    prefix: []const u8,
+    target_path: []const u8,
+    tree_root: ?[]const u8,
+) bool {
     const target = treeLinkTarget(allocator, tree_root, target_path, shim_path) catch return false;
     defer allocator.free(target);
-    const content = shimScript(allocator, "", target) catch return false;
+    const content = shimScript(allocator, prefix, target) catch return false;
     defer allocator.free(content);
 
     const file = io_helper.createFileAbsolute(shim_path, .{ .truncate = true }) catch return false;

@@ -39,6 +39,32 @@ fn resolutionLockMatches(
 /// Fast path: check if all packages are already installed without doing expensive
 /// workspace detection, config loading, hook execution, etc.
 /// Returns a CommandResult if everything is up-to-date, null otherwise.
+/// Repair the links in the project's `pantry/` (its workspace root's, inside
+/// a workspace). Links pantry writes are relative since 0.11.70; this fixes the
+/// ones an older pantry left behind, which a skipped package never rewrote.
+fn repairProjectTree(allocator: std.mem.Allocator, cwd: []const u8, modules_dir: []const u8) void {
+    const detector = @import("../../../deps/detector.zig");
+    const tree_repair = @import("../../../install/tree_repair.zig");
+
+    const ws = detector.findWorkspaceFile(allocator, cwd) catch null;
+    defer if (ws) |w| {
+        allocator.free(w.path);
+        allocator.free(w.root_dir);
+    };
+    const root = if (ws) |w| w.root_dir else cwd;
+    const tree = if (std.fs.path.isAbsolute(modules_dir))
+        allocator.dupe(u8, modules_dir) catch return
+    else
+        std.fmt.allocPrint(allocator, "{s}/{s}", .{ root, modules_dir }) catch return;
+    defer allocator.free(tree);
+
+    const stats = tree_repair.repairTree(allocator, tree);
+    const changed = stats.relinked + stats.retargeted + stats.removed;
+    if (changed > 0) {
+        style.print("  Repaired {d} link(s) in {s}: {d} made relative, {d} re-pointed, {d} dangling removed\n", .{ changed, modules_dir, stats.relinked, stats.retargeted, stats.removed });
+    }
+}
+
 fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i64, modules_dir: []const u8, linker: ?types.LinkerMode) !?types.CommandResult {
     const detector = @import("../../../deps/detector.zig");
     const parser = @import("../../../deps/parser.zig");
@@ -441,6 +467,9 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         const cwd = try io_helper.getCwdAlloc(allocator);
         defer allocator.free(cwd);
+        // Whatever path the install takes, up-to-date included, leave the
+        // tree's links relative and none of them dangling (see tree_repair).
+        defer repairProjectTree(allocator, cwd, opts.modules_dir);
 
         // Start timing for install operation (millisecond precision)
         const start_ts = io_helper.clockGettime();
