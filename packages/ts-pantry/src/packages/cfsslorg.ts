@@ -3,7 +3,7 @@
  *
  * @domain `cfssl.org`
  * @programs `cfssl`, `cfssl-bundle`, `cfssl-certinfo`, `cfssl-newkey`, `cfssl-scan`, ... (+3 more)
- * @version `1.7.0` (16 versions available)
+ * @version `1.7.1` (17 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cfssl.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "cfssl"
  * console.log(pkg.description) // "CFSSL: Cloudflare's PKI and TLS toolkit"
  * console.log(pkg.programs)    // ["cfssl", "cfssl-bundle", ...]
- * console.log(pkg.versions[0]) // "1.7.0" (latest)
+ * console.log(pkg.versions[0]) // "1.7.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cfssl-org.md
@@ -74,6 +74,7 @@ export const cfsslorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.7.1',
     '1.7.0',
     '1.6.5',
     '1.6.4',
