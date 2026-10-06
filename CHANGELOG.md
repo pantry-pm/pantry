@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.69...v0.11.70)
+
+## 🐛 Bug Fixes
+
+- **install**: write pantry-internal links relative so a moved or shared tree keeps working ([96bd688](https://github.com/pantry-pm/pantry/commit/96bd688)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.70 ([75e5a5d](https://github.com/pantry-pm/pantry/commit/75e5a5d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update coder.com, depot.dev, digitalocean.com/doctl, discord.com, dozzle.dev, fly.io, fx.wtf, github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, gleam.run, libexpat.github.io, obsidian.md, openai.com/codex, rectangle.app, slack.com, vcluster.com, vim.org ([ad662f9](https://github.com/pantry-pm/pantry/commit/ad662f9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci.com, crates.io/hyperfine, dblab.danvergara.com, github.com/ggerganov/llama.cpp, github.com/tw93/mole, lavinmq.com, mercure.rocks, mise.jdx.dev, mongodb.com/shell, rucio.cern.ch/rucio-client, tox.wiki, whatsapp.com, ziglang.org ([89f4976](https://github.com/pantry-pm/pantry/commit/89f4976)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/chainguard-dev/apko, github.com/ggerganov/llama.cpp, github.com/mail-os/mail, moonrepo.dev/moon ([6fdc06e](https://github.com/pantry-pm/pantry/commit/6fdc06e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI ([1be1776](https://github.com/pantry-pm/pantry/commit/1be1776)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.113 ([2cfa570](https://github.com/pantry-pm/pantry/commit/2cfa570)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.112 ([8a80bd3](https://github.com/pantry-pm/pantry/commit/8a80bd3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex.openai.com, craft-native.org, github.com/ggerganov/llama.cpp, hunspell.github.io, symfony.com, vapoursynth.com ([bf73c9e](https://github.com/pantry-pm/pantry/commit/bf73c9e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, mise.jdx.dev, nushell.sh, odigos.io, squawkhq.com, templ.guide, ziglang.org ([6bfd2fa](https://github.com/pantry-pm/pantry/commit/6bfd2fa)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, github.com/ggerganov/llama.cpp, stats.app ([d03ff4f](https://github.com/pantry-pm/pantry/commit/d03ff4f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.109 ([d31d5a4](https://github.com/pantry-pm/pantry/commit/d31d5a4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.68...v0.11.69)
 
 ## ✨ Features
