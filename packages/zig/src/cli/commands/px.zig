@@ -75,7 +75,8 @@ pub fn resolveTarget(spec: []const u8) Target {
 
 /// The directory a package is installed into when nothing local or global
 /// provides it: `<cache>/panx/<package>[@<version>]`, with `/` made safe.
-/// One per package and version, so runs reuse it and never collide.
+/// One per package and version, so runs reuse it and never collide. Its
+/// packages live in node_modules/ (see installIntoCache).
 fn cacheDirFor(allocator: std.mem.Allocator, target: Target) ![]const u8 {
     const cache_root = try lib.Paths.cache(allocator);
     defer allocator.free(cache_root);
@@ -138,7 +139,13 @@ fn installIntoCache(allocator: std.mem.Allocator, cache_dir: []const u8, spec: [
 
     const install = @import("install.zig");
     const install_args = [_][]const u8{spec};
-    const result = try install.installCommandWithOptions(allocator, &install_args, install.InstallOptions{});
+    // node_modules, not pantry/: the binaries panx runs are mostly JS
+    // packages, and Bun and Node resolve their imports by walking up to a
+    // node_modules directory. In a pantry/ layout nothing resolves, Bun falls
+    // back to auto-installing each import into its own cache, and the command
+    // works or fails depending on that cache and the registry at the time
+    // (`buddy new` failed on '@stacksjs/cli' minutes after a release).
+    const result = try install.installCommandWithOptions(allocator, &install_args, install.InstallOptions{ .modules_dir = "node_modules" });
     defer if (result.message) |msg| allocator.free(msg);
     return result.exit_code;
 }
