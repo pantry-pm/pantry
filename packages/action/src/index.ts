@@ -12,7 +12,7 @@ import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { setupBunRuntime } from './bun-runtime'
 import { ensurePackageExecutorAliases } from './executor-aliases'
-import { installRequiredSystemPackages, needsJsInstall, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
+import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantryConfigMaySetLinker, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
 import { mergeServicePackages, nativeServiceEnvironment, parseRedisVersion, parseServiceSpecs, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 import * as fs from 'node:fs'
@@ -873,6 +873,9 @@ export async function run(): Promise<void> {
       `pantry-v3-${resolvedVer}-${platform.os}-${platform.arch}-`,
     ]
     let cacheHit = false
+    // Whether `pantry install` ran in this step, and so may have re-pointed
+    // system-package links that need re-asserting afterwards
+    let ranPantryInstall = false
 
     // Try restoring from cache
     try {
@@ -964,7 +967,31 @@ export async function run(): Promise<void> {
         // The cache holds pantry/, not node_modules: JS deps the install hands
         // to bun (or npm, pnpm, yarn) are missing from every fresh checkout.
         const jsMissing = needsJsInstall(process.cwd())
-        if (missingWorkspace.length > 0 || jsMissing) {
+        if (jsMissing && missingWorkspace.length === 0 && !pantryConfigMaySetLinker(process.cwd())) {
+          // Everything else is in place, so do only what `pantry install`
+          // would do now: run the package manager. Its own cache is in
+          // pantry/ (BUN_INSTALL), so this is a link step, not a download.
+          const pm = jsPackageManager(process.cwd())
+          core.info(`Cache hit — installing JS deps with ${pm}`)
+          const pmEnv = { ...installEnv, PATH: `${pantryBinDir}${path.delimiter}${process.env.PATH ?? ''}` }
+          const code = await exec.exec(pm, ['install'], { env: pmEnv as { [key: string]: string }, ignoreReturnCode: true })
+            .catch(() => null)
+          if (code === 0) {
+            fs.writeFileSync(path.join('node_modules', '.pantry-js-installed'), '')
+          }
+          else {
+            // Not on PATH, or it failed: let `pantry install` do it in full
+            core.info(`${pm} install ${code === null ? 'could not start' : `exited with code ${code}`} — running pantry install`)
+            ranPantryInstall = true
+            await exec.exec('pantry', ['install', '--no-save'], {
+              env: installEnv as { [key: string]: string },
+            }).catch(() => {
+              core.warning('pantry workspace install failed')
+            })
+          }
+        }
+        else if (missingWorkspace.length > 0 || jsMissing) {
+          ranPantryInstall = true
           core.info(missingWorkspace.length > 0
             ? `Cache hit but missing workspace deps: ${missingWorkspace.join(', ')} — running pantry install`
             : 'Cache hit — installing JS deps into node_modules')
@@ -1001,6 +1028,7 @@ export async function run(): Promise<void> {
 
       if (shouldInstallWorkspace(inputs.packages, inputs.setupOnly)) {
         // Also run workspace install for JS deps (package.json)
+        ranPantryInstall = true
         core.startGroup('Installing workspace dependencies')
         await exec.exec('pantry', ['install', '--no-save'], {
           env: installEnv as { [key: string]: string },
@@ -1030,7 +1058,9 @@ export async function run(): Promise<void> {
     // (no-op download when present) and re-links `.bin/<name>` to the real
     // binary, so the stub never wins. Fixes the Intel-macOS bootstrap without
     // any per-workflow workaround.
-    {
+    // Only `pantry install` re-points those links, so a run that skipped it
+    // (a cache hit) has nothing to re-assert.
+    if (ranPantryInstall) {
       const reassertDeps = selectSystemPackages(inputs.packages, inputs.setupOnly, extractSystemDeps)
       await installRequiredSystemPackages(
         reassertDeps,

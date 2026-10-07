@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { installRequiredSystemPackages, needsJsInstall, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
+import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantryConfigMaySetLinker, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 
 describe('Pantry Action install mode', () => {
   test('service-only setup does not install project dependencies', () => {
@@ -46,6 +46,28 @@ describe('Pantry Action install mode', () => {
       expect(needsJsInstall(dir)).toBe(false)
       fs.writeFileSync(path.join(dir, 'package.json'), '{ not json')
       expect(needsJsInstall(dir)).toBe(false)
+    }
+    finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  // A cache hit runs the package manager itself, so it must pick the one
+  // `pantry install` would, and leave a configured linker to pantry install.
+  test('picks the JS package manager as pantry install does', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pantry-pm-'))
+    try {
+      expect(jsPackageManager(dir)).toBe('bun')
+      fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@9.0.0' }))
+      expect(jsPackageManager(dir)).toBe('pnpm')
+      fs.writeFileSync(path.join(dir, 'yarn.lock'), '')
+      expect(jsPackageManager(dir)).toBe('yarn')
+      fs.writeFileSync(path.join(dir, 'bun.lock'), '')
+      expect(jsPackageManager(dir)).toBe('bun')
+
+      expect(pantryConfigMaySetLinker(dir)).toBe(false)
+      fs.writeFileSync(path.join(dir, 'pantry.toml'), '[install]\nlinker = "hoisted"\n')
+      expect(pantryConfigMaySetLinker(dir)).toBe(true)
     }
     finally {
       fs.rmSync(dir, { recursive: true, force: true })

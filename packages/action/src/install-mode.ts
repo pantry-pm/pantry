@@ -49,3 +49,47 @@ export function needsJsInstall(projectDir: string): boolean {
   })
   return hasJsDeps && !fs.existsSync(path.join(projectDir, 'node_modules', '.pantry-js-installed'))
 }
+
+/**
+ * The JS package manager `pantry install` hands a project's JS deps to: the
+ * one whose lockfile is present, else the `packageManager` field, else bun.
+ * Mirrors `pickPackageManager` in the CLI's js_delegate.zig.
+ */
+export function jsPackageManager(projectDir: string): 'bun' | 'pnpm' | 'yarn' | 'npm' {
+  const lockfiles = [
+    ['bun.lock', 'bun'],
+    ['bun.lockb', 'bun'],
+    ['pnpm-lock.yaml', 'pnpm'],
+    ['yarn.lock', 'yarn'],
+    ['package-lock.json', 'npm'],
+  ] as const
+  for (const [lockfile, pm] of lockfiles) {
+    if (fs.existsSync(path.join(projectDir, lockfile)))
+      return pm
+  }
+  try {
+    const field = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'))?.packageManager
+    const name = typeof field === 'string' ? field.split('@')[0] : ''
+    if (name === 'bun' || name === 'pnpm' || name === 'yarn' || name === 'npm')
+      return name
+  }
+  catch {}
+  return 'bun'
+}
+
+/**
+ * Whether a pantry config file might choose the JS linker (`install.linker`),
+ * which only `pantry install` knows how to read and pass on. Without one, the
+ * package manager decides its own layout, exactly as under `pantry install`.
+ */
+export function pantryConfigMaySetLinker(projectDir: string): boolean {
+  const configs = ['pantry.toml', 'pantry.jsonc', 'pantry.json', 'pantry.config.ts', '.config/pantry.ts', 'config/pantry.ts']
+  return configs.some((file) => {
+    try {
+      return fs.readFileSync(path.join(projectDir, file), 'utf-8').includes('linker')
+    }
+    catch {
+      return false
+    }
+  })
+}
