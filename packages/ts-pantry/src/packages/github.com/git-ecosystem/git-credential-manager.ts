@@ -3,7 +3,7 @@
  *
  * @domain `github.com/git-ecosystem/git-credential-manager`
  * @programs `git-credential-manager`
- * @version `2.7.3` (5 versions available)
+ * @version `3.0.1` (42 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/git-ecosystem/git-credential-manager`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "git-credential-manager"
  * console.log(pkg.description) // "Secure, cross-platform Git credential storage w..."
  * console.log(pkg.programs)    // ["git-credential-manager"]
- * console.log(pkg.versions[0]) // "2.7.3" (latest)
+ * console.log(pkg.versions[0]) // "3.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/git-ecosystem/git-credential-manager.md
@@ -78,6 +78,7 @@ export const gitcredentialmanagerPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.0.1',
     '2.9.1',
     '2.9.0',
     '2.8.0',
