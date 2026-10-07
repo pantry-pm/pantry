@@ -4657,6 +4657,81 @@ test "npm resolution without a bun.lock keeps pantry.lock's pin" {
     try std.testing.expectEqualStrings("0.2.25", resolved.version);
 }
 
+/// stacksjs/stacks: pantry.lock pinned @stacksjs/stx 0.2.395 under `^0.2.395`
+/// and stx 0.2.396 was then published. A plain `pantry install` has to keep the
+/// pin - only `pantry update` or `--force` moves it - on both resolver paths.
+fn expectLockPinKept(installer: *Installer) !void {
+    const allocator = std.testing.allocator;
+
+    const resolved = try installer.resolveNpmPackage("better-dx", "^0.2.24");
+    defer {
+        allocator.free(resolved.version);
+        allocator.free(resolved.tarball_url);
+        if (resolved.integrity) |i| allocator.free(i);
+    }
+    try std.testing.expectEqualStrings("0.2.25", resolved.version);
+    try std.testing.expectEqualStrings("https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz", resolved.tarball_url);
+
+    // A different range spelling, so the L2 entry above cannot answer it.
+    const with_deps = try installer.resolveNpmPackageWithDeps("better-dx", "~0.2.24");
+    defer {
+        allocator.free(with_deps.version);
+        allocator.free(with_deps.tarball_url);
+        if (with_deps.integrity) |i| allocator.free(i);
+        for (with_deps.dependencies) |dep| {
+            allocator.free(dep.name);
+            allocator.free(dep.version_constraint);
+        }
+        allocator.free(with_deps.dependencies);
+    }
+    try std.testing.expectEqualStrings("0.2.25", with_deps.version);
+    try std.testing.expectEqualStrings("sha512-25", with_deps.integrity.?);
+    // The pinned version's own dependencies, not the newest release's.
+    try std.testing.expectEqual(@as(usize, 1), with_deps.dependencies.len);
+    try std.testing.expectEqualStrings("buddy-bot", with_deps.dependencies[0].name);
+}
+
+test "a satisfying pantry.lock pin survives a newer in-range release" {
+    const allocator = std.testing.allocator;
+    const resolution_lockfile = @import("../deps/resolution/lockfile.zig");
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    var lock = resolution_lockfile.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("better-dx", "0.2.25", "https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz", "sha512-25");
+    installer.setLockfile(&lock);
+    // The registry's latest is 0.2.27, which the range also admits.
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+
+    try expectLockPinKept(&installer);
+}
+
+test "a satisfying pin both lockfiles agree on survives a newer in-range release" {
+    const allocator = std.testing.allocator;
+    const resolution_lockfile = @import("../deps/resolution/lockfile.zig");
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    var lock = resolution_lockfile.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("better-dx", "0.2.25", "https://registry.npmjs.org/better-dx/-/better-dx-0.2.25.tgz", "sha512-25");
+    installer.setLockfile(&lock);
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+
+    var pins = try testBunPins(allocator, "0.2.25");
+    defer pins.deinit();
+    installer.setBunLockPins(&pins);
+
+    try expectLockPinKept(&installer);
+}
+
 test "hoisted cache does not accept an in-range version bun.lock does not pin" {
     const allocator = std.testing.allocator;
     var hcache = Installer.HoisteVersionCache.init(allocator);
