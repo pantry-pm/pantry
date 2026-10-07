@@ -1,3 +1,6 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
 export function selectSystemPackages(explicitPackages: string, setupOnly: boolean, detectedPackages: () => string[]): string[] {
   const explicit = explicitPackages.split(/\s+/).filter(Boolean)
   if (explicit.length) return explicit
@@ -21,4 +24,28 @@ export async function installRequiredSystemPackages(
       throw new Error(`Required system package ${packageSpec} failed to install: ${detail}`)
     }
   }
+}
+
+/**
+ * Whether the project's JS dependencies still need installing. `pantry install`
+ * hands them to the project's JS package manager, which puts them in
+ * node_modules - outside the `pantry/` directory the action caches - and marks
+ * the install with `node_modules/.pantry-js-installed`. A cache hit on a fresh
+ * checkout therefore restores everything but node_modules, and has to run the
+ * install again to get it. Mirrors `hasJsDeps` in the CLI's js_delegate.zig:
+ * domain-style names (`bun.sh`, `ziglang.org`) are system deps, not JS ones.
+ */
+export function needsJsInstall(projectDir: string): boolean {
+  let pkg: Record<string, unknown>
+  try {
+    pkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf-8'))
+  }
+  catch {
+    return false
+  }
+  const hasJsDeps = ['dependencies', 'devDependencies', 'optionalDependencies'].some((section) => {
+    const deps = pkg?.[section]
+    return deps !== null && typeof deps === 'object' && Object.keys(deps).some(name => !name.includes('.'))
+  })
+  return hasJsDeps && !fs.existsSync(path.join(projectDir, 'node_modules', '.pantry-js-installed'))
 }

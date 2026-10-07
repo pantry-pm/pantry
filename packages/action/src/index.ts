@@ -12,7 +12,7 @@ import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
 import { setupBunRuntime } from './bun-runtime'
 import { ensurePackageExecutorAliases } from './executor-aliases'
-import { installRequiredSystemPackages, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
+import { installRequiredSystemPackages, needsJsInstall, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import type { ServiceSpec } from './services'
 import { mergeServicePackages, nativeServiceEnvironment, parseRedisVersion, parseServiceSpecs, readServiceLog, redisLaunchArgs, waitForRedisPid } from './services'
 import * as fs from 'node:fs'
@@ -961,8 +961,13 @@ export async function run(): Promise<void> {
           const depDir = path.join(pantryDir, dep)
           return !fs.existsSync(depDir)
         })
-        if (missingWorkspace.length > 0) {
-          core.info(`Cache hit but missing workspace deps: ${missingWorkspace.join(', ')} — running pantry install`)
+        // The cache holds pantry/, not node_modules: JS deps the install hands
+        // to bun (or npm, pnpm, yarn) are missing from every fresh checkout.
+        const jsMissing = needsJsInstall(process.cwd())
+        if (missingWorkspace.length > 0 || jsMissing) {
+          core.info(missingWorkspace.length > 0
+            ? `Cache hit but missing workspace deps: ${missingWorkspace.join(', ')} — running pantry install`
+            : 'Cache hit — installing JS deps into node_modules')
           await exec.exec('pantry', ['install', '--no-save'], {
             env: installEnv as { [key: string]: string },
           }).catch(() => {
