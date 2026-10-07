@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.74...v0.11.75)
+
+## ✨ Features
+
+- **install**: say when an install moves a pantry.lock pin ([dacd6c6](https://github.com/pantry-pm/pantry/commit/dacd6c6)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ♻️ Code Refactoring
+
+- **install**: drop the unused bulk npm resolver ([940c088](https://github.com/pantry-pm/pantry/commit/940c088)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ✅ Tests
+
+- **install**: a satisfying pantry.lock pin survives a newer release ([8f15af7](https://github.com/pantry-pm/pantry/commit/8f15af7)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#2848](https://github.com/pantry-pm/pantry/issues/2848))
+
+## 🔧 Chores
+
+- release v0.11.75 ([2e9c28d](https://github.com/pantry-pm/pantry/commit/2e9c28d)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update arkade.dev, depot.dev, digger.dev, digitalocean.com/doctl, dprint.dev, github.com/ggerganov/llama.cpp, github.com/git-ecosystem/git-credential-manager, github.com/router-for-me/CLIProxyAPI, lavinmq.com, libzip.org, mise.jdx.dev, moonrepo.dev/moon, nodejs.org, odigos.io, openai.com/codex, pulumi.io, runatlantis.io, scaleway.com, vaultproject.io ([d9b5012](https://github.com/pantry-pm/pantry/commit/d9b5012)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, codex.openai.com, digger.dev, github.com/ggerganov/llama.cpp, projen.io ([8747191](https://github.com/pantry-pm/pantry/commit/8747191)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.73...v0.11.74)
 
 ## 🐛 Bug Fixes
