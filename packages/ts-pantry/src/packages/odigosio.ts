@@ -3,7 +3,7 @@
  *
  * @domain `odigos.io`
  * @programs `odigos`
- * @version `1.38.0` (94 versions available)
+ * @version `1.38.0` (95 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install odigos.io`
@@ -70,6 +70,7 @@ export const odigosioPackage = {
     '1.38.0',
     '1.37.1',
     '1.37.0',
+    '1.36.1',
     '1.36.0',
     '1.35.3',
     '1.35.2',
