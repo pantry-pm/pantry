@@ -867,10 +867,10 @@ export async function run(): Promise<void> {
     const lockHash = lockfile ? hashFile(lockfile) : 'no-lock'
     // Avoid hashing the same file twice when lockfile == depsFile
     const depsHash = (depsFileForKey && depsFileForKey !== lockfile) ? hashFile(depsFileForKey) : 'none'
-    const cacheKey = `pantry-v2-${resolvedVer}-${platform.os}-${platform.arch}-${lockHash}-${depsHash}-${cachePackages || 'all'}`
+    const cacheKey = `pantry-v3-${resolvedVer}-${platform.os}-${platform.arch}-${lockHash}-${depsHash}-${cachePackages || 'all'}`
     // Restore keys: try same OS/arch with any lock hash
     const restoreKeys = [
-      `pantry-v2-${resolvedVer}-${platform.os}-${platform.arch}-`,
+      `pantry-v3-${resolvedVer}-${platform.os}-${platform.arch}-`,
     ]
     let cacheHit = false
 

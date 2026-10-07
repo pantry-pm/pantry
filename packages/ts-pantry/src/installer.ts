@@ -365,7 +365,10 @@ export async function installPackage(
 
   const installDir = options.installDir || path.join(process.cwd(), 'pantry')
   const binDir = path.join(installDir, '.bin')
-  const pkgDir = path.join(installDir, domain.replace(/\./g, '-'), version)
+  // The layout `pantry install` uses, `<domain>/v<version>`: each installer
+  // then finds the other's copy already in place, so a package is fetched and
+  // stored once rather than once per installer.
+  const pkgDir = path.join(installDir, domain, `v${version}`)
 
   // Check if already installed. A built-in resolver names its binaries up
   // front; a registry package's are whatever landed in `bin/`, so the presence
