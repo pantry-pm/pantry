@@ -502,126 +502,8 @@ pub const Installer = struct {
         return self.resolveNpmVersion(npm_response, version_constraint);
     }
 
-    /// Pre-resolve all npm dependencies via the pantry registry's bulk resolution endpoint.
-    /// Makes a single HTTP POST to /npm/resolve with all deps, and pre-populates the
-    /// L2 npm cache with resolved versions + tarball URLs. This eliminates individual
-    /// HTTP requests to registry.npmjs.org during transitive resolution.
-    pub const BulkDep = struct { name: []const u8, version: []const u8 };
-
-    pub fn bulkResolveViaPantryRegistry(
-        self: *Installer,
-        deps: []const BulkDep,
-    ) void {
-        if (deps.len == 0) return;
-
-        // Build JSON request body: {"dependencies":{"react":"^16","lodash":"^4",...}}
-        // Perf: Pre-calculate size to avoid ArrayList resizing
-        var estimated_size: usize = 20; // {"dependencies":{}}
-        for (deps) |dep| {
-            estimated_size += dep.name.len + dep.version.len + 8; // "name":"version",
-        }
-        var body_buf = std.ArrayList(u8).initCapacity(self.allocator, estimated_size) catch {
-            var fallback: std.ArrayList(u8) = .empty;
-            return fallback.deinit(self.allocator);
-        };
-        defer body_buf.deinit(self.allocator);
-        body_buf.appendSlice(self.allocator, "{\"dependencies\":{") catch return;
-
-        var first = true;
-        for (deps) |dep| {
-            if (!first) body_buf.append(self.allocator, ',') catch continue;
-            first = false;
-            body_buf.append(self.allocator, '"') catch continue;
-            body_buf.appendSlice(self.allocator, dep.name) catch continue;
-            body_buf.appendSlice(self.allocator, "\":\"") catch continue;
-            body_buf.appendSlice(self.allocator, dep.version) catch continue;
-            body_buf.append(self.allocator, '"') catch continue;
-        }
-        body_buf.appendSlice(self.allocator, "}}") catch return;
-
-        // Keep bulk resolution isolated from the installer's download pool so
-        // a timed-out registry connection cannot poison later npm downloads.
-        const registry_url = "https://registry.pantry.dev/npm/resolve";
-        const response = io_helper.httpPostJsonTimeout(self.allocator, registry_url, body_buf.items, 5000) catch return;
-        defer self.allocator.free(response);
-
-        if (response.len == 0) return;
-
-        // Parse response and populate L2 npm cache
-        const parsed = std.json.parseFromSlice(std.json.Value, self.allocator, response, .{}) catch return;
-        defer parsed.deinit();
-
-        if (parsed.value != .object) return;
-        const resolved_obj = parsed.value.object.get("resolved") orelse return;
-        if (resolved_obj != .object) return;
-
-        var it = resolved_obj.object.iterator();
-        while (it.next()) |entry| {
-            const pkg_name = entry.key_ptr.*;
-            const pkg_val = entry.value_ptr.*;
-            if (pkg_val != .object) continue;
-
-            const version = if (pkg_val.object.get("version")) |v| (if (v == .string) v.string else continue) else continue;
-            const tarball = if (pkg_val.object.get("tarball")) |t| (if (t == .string) t.string else continue) else continue;
-            const integrity = if (pkg_val.object.get("integrity")) |i| (if (i == .string) i.string else null) else null;
-
-            // Cache as L2 resolution entry for all common constraint patterns
-            // Perf: Use stack buffer for cache keys (avoids 4 allocPrint per package)
-            var cache_key_buf: [512]u8 = undefined;
-            const cache_keys = [_][]const u8{ "latest", "*", "" };
-            for (cache_keys) |suffix| {
-                const key = std.fmt.bufPrint(&cache_key_buf, "{s}@{s}", .{ pkg_name, suffix }) catch continue;
-                self.npm_cache.putResolution(key, version, tarball, integrity);
-            }
-            // Also cache the exact resolved version
-            {
-                const key = std.fmt.bufPrint(&cache_key_buf, "{s}@{s}", .{ pkg_name, version }) catch continue;
-                self.npm_cache.putResolution(key, version, tarball, integrity);
-            }
-            // Cache with the ORIGINAL constraint from the input deps (e.g. "^1.2.3", "~2.0.0")
-            // so that hasNpmResolution() and resolveNpmPackage() hit L2 cache instead of
-            // making per-package HTTP requests to npm/pantry registries.
-            for (deps) |dep| {
-                if (std.mem.eql(u8, dep.name, pkg_name)) {
-                    const key = std.fmt.bufPrint(&cache_key_buf, "{s}@{s}", .{ pkg_name, dep.version }) catch break;
-                    self.npm_cache.putResolution(key, version, tarball, integrity);
-                    break;
-                }
-            }
-
-            // Cache transitive dependency constraints from the response.
-            // Each resolved package may have a "dependencies" object mapping dep names
-            // to their version constraints (e.g. {"loose-envify": "^1.1.0"}).
-            // By looking up those dep names in the resolved tree and caching their
-            // constraint keys, we avoid per-package npm registry queries during
-            // transitive dependency resolution.
-            if (pkg_val.object.get("dependencies")) |deps_val| {
-                if (deps_val == .object) {
-                    var deps_it = deps_val.object.iterator();
-                    while (deps_it.next()) |dep_entry| {
-                        const dep_name = dep_entry.key_ptr.*;
-                        const dep_constraint = dep_entry.value_ptr.*;
-                        if (dep_constraint != .string) continue;
-
-                        // Look up the resolved version for this transitive dep
-                        if (resolved_obj.object.get(dep_name)) |resolved_dep| {
-                            if (resolved_dep != .object) continue;
-                            const dep_ver = if (resolved_dep.object.get("version")) |v| (if (v == .string) v.string else continue) else continue;
-                            const dep_tarball = if (resolved_dep.object.get("tarball")) |t| (if (t == .string) t.string else continue) else continue;
-                            const dep_integrity = if (resolved_dep.object.get("integrity")) |i| (if (i == .string) i.string else null) else null;
-
-                            // Cache as dep_name@constraint (e.g. "loose-envify@^1.1.0")
-                            const dep_key = std.fmt.bufPrint(&cache_key_buf, "{s}@{s}", .{ dep_name, dep_constraint.string }) catch continue;
-                            self.npm_cache.putResolution(dep_key, dep_ver, dep_tarball, dep_integrity);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     /// Check if a package has been pre-resolved in the npm cache
-    /// (e.g. via bulkResolveViaPantryRegistry or lockfile-first resolution).
+    /// (e.g. via lockfile-first resolution).
     /// Used to skip expensive pantry registry lookups when resolution is already cached.
     /// Non-allocating: just checks existence in the cache.
     pub fn hasNpmResolution(self: *Installer, name: []const u8, version: []const u8) bool {
@@ -630,8 +512,8 @@ pub const Installer = struct {
         return self.npm_cache.containsResolution(cache_key);
     }
 
-    /// Return caller-owned resolution metadata already obtained by the bulk or
-    /// per-package npm resolver. Lockfile writers use this to persist the exact
+    /// Return caller-owned resolution metadata already obtained by the npm
+    /// resolver. Lockfile writers use this to persist the exact
     /// tarball and integrity without issuing a duplicate registry request.
     pub fn getCachedNpmResolution(self: *Installer, name: []const u8, version: []const u8) ?NpmResolution {
         var cache_key_buf: [512]u8 = undefined;
