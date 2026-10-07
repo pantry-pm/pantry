@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.73...v0.11.74)
+
+## 🐛 Bug Fixes
+
+- **action**: install toolchains where pantry install does ([31c3a22](https://github.com/pantry-pm/pantry/commit/31c3a22)) _(by Chris <chris@stacksjs.com>)_
+- **action**: install JS deps on a cache hit ([8978f22](https://github.com/pantry-pm/pantry/commit/8978f22)) _(by Chris <chris@stacksjs.com>)_
+
+## ⚡ Performance Improvements
+
+- **action**: on a cache hit, run only the JS install ([0d612c1](https://github.com/pantry-pm/pantry/commit/0d612c1)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.74 ([25ff108](https://github.com/pantry-pm/pantry/commit/25ff108)) _(by Chris <chris@stacksjs.com>)_
+- update craft-native.org to 0.0.120 ([e5c05aa](https://github.com/pantry-pm/pantry/commit/e5c05aa)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **action**: rebuild dist ([ea55f33](https://github.com/pantry-pm/pantry/commit/ea55f33)) _(by Chris <chris@stacksjs.com>)_
+- update codex.openai.com, github.com/router-for-me/CLIProxyAPI, projen.io ([2787cc6](https://github.com/pantry-pm/pantry/commit/2787cc6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **action**: rebuild dist ([0de606e](https://github.com/pantry-pm/pantry/commit/0de606e)) _(by Chris <chris@stacksjs.com>)_
+- update craft-native.org to 0.0.119 ([e9facdd](https://github.com/pantry-pm/pantry/commit/e9facdd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- **action**: rebuild dist ([4fd7d56](https://github.com/pantry-pm/pantry/commit/4fd7d56)) _(by Chris <chris@stacksjs.com>)_
+- update alttab.app, anthropic.com/claude-code, argoproj.github.io/cd, cfssl.org, cnquery.io, direnv.net, fly.io, github.com/ggerganov/llama.cpp, ollama.ai, opencode.ai, pnpm.io, projen.io, symfony.com, vim.org ([d3fc1f2](https://github.com/pantry-pm/pantry/commit/d3fc1f2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.72...v0.11.73)
 
 ## 🐛 Bug Fixes
