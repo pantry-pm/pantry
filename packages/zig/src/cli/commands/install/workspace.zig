@@ -1374,6 +1374,10 @@ pub fn installWorkspaceCommandWithOptions(
     }
 
     // --- Add package entries with resolved data ---
+    // A dependency several members declare is visited once per declaration;
+    // report a moved pin once.
+    var moved_pins = std.StringHashMap(void).init(allocator);
+    defer moved_pins.deinit();
     for (all_deps_buffer[0..all_deps_count]) |dep| {
         const clean_dep_name = workspaceDependencyName(dep.name);
 
@@ -1533,6 +1537,18 @@ pub fn installWorkspaceCommandWithOptions(
             std.mem.eql(u8, entry.version, entry_version)
         else
             false;
+        if (compatible_existing_entry) |previous| {
+            if (!can_reuse_existing) {
+                const seen = try moved_pins.getOrPut(clean_dep_name);
+                if (!seen.found_existing) {
+                    const via_bun_lock = if (shared_installer.preferredBunPin(clean_dep_name, dep.version)) |pin|
+                        std.mem.eql(u8, pin, entry_version)
+                    else
+                        false;
+                    style.printLockPinMoved(clean_dep_name, previous.version, entry_version, via_bun_lock);
+                }
+            }
+        }
         const resolved_url = if (resolution) |r|
             r.tarball_url
         else if (can_reuse_existing)

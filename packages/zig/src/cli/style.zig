@@ -429,6 +429,22 @@ pub fn printError(comptime fmt: []const u8, args: anytype) void {
     printForced(fmt, args);
 }
 
+/// Say that an install moved a pantry.lock pin. A plain install keeps a pin
+/// that still satisfies its range, so a moved one has a cause worth naming -
+/// most often bun.lock, whose in-range pin pantry follows so pantry/ and
+/// node_modules/ hold one tree (stacksjs/stacks#2848). Unannounced, the move
+/// read as pantry re-resolving to the newest release.
+pub fn printLockPinMoved(name: []const u8, from: []const u8, to: []const u8, via_bun_lock: bool) void {
+    print("{s}pantry.lock: {s} {s} -> {s}{s}{s}\n", .{
+        dim,
+        name,
+        from,
+        to,
+        if (via_bun_lock) " (pinned by bun.lock)" else "",
+        reset,
+    });
+}
+
 /// Print a generic info line (dim)
 pub fn printInfo(comptime fmt: []const u8, args: anytype) void {
     print("{s}", .{dim});

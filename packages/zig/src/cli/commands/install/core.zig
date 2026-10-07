@@ -1206,6 +1206,10 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                     if (!resolutionLockMatches(&lock_file, clean_name, result.version, resolved_url))
                         frozen_lockfile_changed = true;
                 } else if (!opts.no_save) {
+                    if (lockfile_hooks.getLockedVersionForPackage(&lock_file, clean_name)) |previous| {
+                        if (!std.mem.eql(u8, previous.version, result.version))
+                            style.printLockPinMoved(clean_name, previous.version, result.version, false);
+                    }
                     try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
                 }
                 // Nothing of it is on disk to record below.
