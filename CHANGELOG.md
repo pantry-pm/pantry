@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.76...v0.11.77)
+
+## 🐛 Bug Fixes
+
+- **install**: ffmpeg, yt-dlp and TLS work from a fresh install ([a12476f](https://github.com/pantry-pm/pantry/commit/a12476f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.77 ([7a97699](https://github.com/pantry-pm/pantry/commit/7a97699)) _(by Chris <chris@stacksjs.com>)_
+- update anthropic.com/claude-code, bytebase.com, circleci.com, cnquery.io, diabrowser.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, go.dev, huggingface.co, mercure.rocks, pocketbase.io, projen.io, virtualenv.pypa.io, werf.io, ziglang.org ([edddc2c](https://github.com/pantry-pm/pantry/commit/edddc2c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.75...v0.11.76)
 
 ## ✨ Features
