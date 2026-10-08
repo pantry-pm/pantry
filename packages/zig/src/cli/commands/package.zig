@@ -3229,235 +3229,396 @@ fn generateProvenance(
 // ============================================================================
 
 pub const TrustedPublisherAddOptions = struct {
-    package: []const u8,
-    type: []const u8, // "github-action", "gitlab-ci", etc.
-    owner: []const u8,
+    /// The package. Null: every publishable package of the monorepo here
+    /// (packages/), or the package in this directory.
+    package: ?[]const u8 = null,
+    type: []const u8 = "github-action", // "github-action" or "gitlab-ci"
+    /// The repository's owner. Optional when `repository` is `owner/repo`.
+    owner: ?[]const u8 = null,
     repository: []const u8,
+    /// The workflow that publishes: a path or just its file name.
     workflow: ?[]const u8 = null,
     environment: ?[]const u8 = null,
     registry: []const u8 = "https://registry.npmjs.org",
+    /// A one-time password, if you have one ready; otherwise pantry asks.
+    otp: ?[]const u8 = null,
 };
 
-/// Add a trusted publisher to a package
+const npm_trust = @import("../../auth/npm_trust.zig");
+
+/// The packages a trust command acts on: the one named, or else every
+/// publishable package of the monorepo here, or else the package here.
+fn trustTargets(allocator: std.mem.Allocator, named: ?[]const u8) ![][]const u8 {
+    var names: std.ArrayList([]const u8) = .empty;
+    errdefer {
+        for (names.items) |n| allocator.free(n);
+        names.deinit(allocator);
+    }
+    if (named) |name| {
+        try names.append(allocator, try allocator.dupe(u8, name));
+        return names.toOwnedSlice(allocator);
+    }
+    const cwd = try io_helper.realpathAlloc(allocator, ".");
+    defer allocator.free(cwd);
+    const registry_cmds = @import("registry.zig");
+    if (registry_cmds.detectMonorepoPackages(allocator, cwd, null) catch null) |pkgs| {
+        defer {
+            for (pkgs) |*pkg| {
+                var p = pkg.*;
+                p.deinit(allocator);
+            }
+            allocator.free(pkgs);
+        }
+        for (pkgs) |pkg| try names.append(allocator, try allocator.dupe(u8, pkg.name));
+        std.mem.sort([]const u8, names.items, {}, struct {
+            fn lessThan(_: void, a: []const u8, b: []const u8) bool {
+                return std.mem.lessThan(u8, a, b);
+            }
+        }.lessThan);
+        return names.toOwnedSlice(allocator);
+    }
+    const config_path = common.findConfigFile(allocator, cwd) catch return names.toOwnedSlice(allocator);
+    defer allocator.free(config_path);
+    const content = io_helper.readFileAlloc(allocator, config_path, 1024 * 1024) catch return names.toOwnedSlice(allocator);
+    defer allocator.free(content);
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, content, .{}) catch return names.toOwnedSlice(allocator);
+    defer parsed.deinit();
+    if (parsed.value == .object) {
+        if (parsed.value.object.get("name")) |n| {
+            if (n == .string) try names.append(allocator, try allocator.dupe(u8, n.string));
+        }
+    }
+    return names.toOwnedSlice(allocator);
+}
+
+fn freeTrustTargets(allocator: std.mem.Allocator, names: [][]const u8) void {
+    for (names) |n| allocator.free(n);
+    allocator.free(names);
+}
+
+/// The npm token trust commands authenticate with, or the message for its absence.
+fn trustAuthToken(allocator: std.mem.Allocator) ![]u8 {
+    return readNpmAuthToken(allocator, false) catch |err| {
+        if (err == error.EnvironmentVariableNotFound or err == error.FileNotFound) return error.NoNpmToken;
+        return err;
+    };
+}
+
+const no_npm_token_message = "Error: No npm auth token found. Log in with `npm login`, or set NPM_TOKEN (or NODE_AUTH_TOKEN / BUN_AUTH_TOKEN), or add NPM_TOKEN to ~/.pantry/credentials.";
+
+/// One trust request, with npm's two-factor step taken care of: approved in
+/// the browser when npm offers that, typed in otherwise. `otp` carries the
+/// password between calls, so a monorepo asks once while npm accepts it.
+fn trustCall(
+    allocator: std.mem.Allocator,
+    client: *@import("../../auth/registry.zig").RegistryClient,
+    method: std.http.Method,
+    package_name: []const u8,
+    id: ?[]const u8,
+    body: ?[]const u8,
+    auth_token: []const u8,
+    otp: *?[]const u8,
+) !npm_trust.Response {
+    var attempt: u8 = 0;
+    while (true) : (attempt += 1) {
+        var response = try npm_trust.request(client, method, package_name, id, body, auth_token, otp.*);
+        if (!response.needs_otp or attempt >= 3) return response;
+
+        // A password npm turned down is spent.
+        if (otp.*) |old| {
+            allocator.free(old);
+            otp.* = null;
+        }
+        if (npm_trust.webAuth(allocator, response.body)) |found| {
+            var web = found;
+            defer web.deinit(allocator);
+            response.deinit(allocator);
+            style.print("\n  npm wants two-factor approval. Approve it in your browser:\n    {s}\n", .{web.auth_url});
+            _ = openInBrowser(allocator, web.auth_url);
+            style.print("  Waiting for approval...\n", .{});
+            otp.* = npm_trust.awaitWebAuth(client, web.done_url, auth_token, 300) catch |err| {
+                style.print("  Browser approval didn't complete ({any}).\n", .{err});
+                return err;
+            };
+            continue;
+        }
+        response.deinit(allocator);
+        if (io_helper.getEnvVarOwned(allocator, "CI")) |ci| {
+            allocator.free(ci);
+            return error.OtpRequired;
+        } else |_| {}
+        style.print("\n  npm wants a one-time password. Enter the code from your authenticator: ", .{});
+        var buf: [64]u8 = undefined;
+        const read = io_helper.readStdin(&buf) catch return error.OtpRequired;
+        const code = std.mem.trim(u8, buf[0..read], &std.ascii.whitespace);
+        if (code.len == 0) return error.OtpRequired;
+        otp.* = try allocator.dupe(u8, code);
+    }
+}
+
+fn openInBrowser(allocator: std.mem.Allocator, url: []const u8) bool {
+    const argv: []const []const u8 = switch (@import("builtin").os.tag) {
+        .macos => &.{ "open", url },
+        .windows => &.{ "cmd", "/c", "start", url },
+        else => &.{ "xdg-open", url },
+    };
+    const result = io_helper.childRun(allocator, argv) catch return false;
+    allocator.free(result.stdout);
+    allocator.free(result.stderr);
+    return result.term == .exited and result.term.exited == 0;
+}
+
+/// Trust a CI workflow to publish a package with OIDC, through npm's trusted
+/// publishing API (the one `npm trust` uses). Without --package, every
+/// publishable package of the monorepo here is set up the same way, behind
+/// a single two-factor approval when npm allows it.
 pub fn trustedPublisherAddCommand(
     allocator: std.mem.Allocator,
     args: []const []const u8,
     options: TrustedPublisherAddOptions,
 ) !CommandResult {
     _ = args;
-
-    const oidc = @import("../../auth/oidc.zig");
     const registry = @import("../../auth/registry.zig");
 
-    style.print("Adding trusted publisher for {s}...\n", .{options.package});
-    style.print("  Type: {s}\n", .{options.type});
-    style.print("  Owner: {s}\n", .{options.owner});
-    style.print("  Repository: {s}\n", .{options.repository});
-    if (options.workflow) |w| {
-        style.print("  Workflow: {s}\n", .{w});
+    if (!npm_trust.isGitHub(options.type) and !npm_trust.isGitLab(options.type)) {
+        return CommandResult.err(allocator, "Error: pantry sets up GitHub Actions (github-action) and GitLab CI (gitlab-ci) publishers. For CircleCI, use `npm trust circleci`.");
     }
-    if (options.environment) |e| {
-        style.print("  Environment: {s}\n", .{e});
+    const workflow = options.workflow orelse {
+        return CommandResult.err(allocator, if (npm_trust.isGitHub(options.type))
+            "Error: --workflow is required: the workflow that publishes, e.g. release.yml"
+        else
+            "Error: --workflow is required: the pipeline file that publishes, e.g. .gitlab-ci.yml");
+    };
+    const repository = if (std.mem.indexOfScalar(u8, options.repository, '/') != null)
+        try allocator.dupe(u8, options.repository)
+    else if (options.owner) |owner|
+        try std.fmt.allocPrint(allocator, "{s}/{s}", .{ owner, options.repository })
+    else
+        return CommandResult.err(allocator, "Error: --owner is required, or give --repository as owner/repo");
+    defer allocator.free(repository);
+
+    const packages = trustTargets(allocator, options.package) catch {
+        return CommandResult.err(allocator, "Error: Could not read the packages here");
+    };
+    defer freeTrustTargets(allocator, packages);
+    if (packages.len == 0) {
+        return CommandResult.err(allocator, "Error: No package here to set up. Pass --package, or run this in a package or a monorepo with packages/.");
+    }
+    for (packages) |name| {
+        if (npm_trust.nameProblem(name)) |problem| {
+            const msg = try std.fmt.allocPrint(allocator, "Error: \"{s}\" can't be an npm package name: {s}", .{ name, problem });
+            return CommandResult.err(allocator, msg);
+        }
     }
 
-    const auth_token = readNpmAuthToken(allocator, false) catch |err| {
-        if (err == error.EnvironmentVariableNotFound or err == error.FileNotFound) {
-            return CommandResult.err(
-                allocator,
-                "Error: No npm auth token found. Set NPM_TOKEN, NODE_AUTH_TOKEN, or BUN_AUTH_TOKEN, or add NPM_TOKEN to ~/.pantry/credentials.",
-            );
-        }
+    const body = npm_trust.configBody(allocator, options.type, repository, workflow, options.environment) catch {
+        return CommandResult.err(allocator, "Error: Could not build the trust configuration");
+    };
+    defer allocator.free(body);
+
+    style.print("Trusting {s} ({s}) to publish with OIDC:\n", .{ repository, npm_trust.workflowFile(workflow) });
+    if (options.environment) |e| style.print("  Environment: {s}\n", .{e});
+    for (packages) |name| style.print("  {s}\n", .{name});
+
+    const auth_token = trustAuthToken(allocator) catch |err| {
+        if (err == error.NoNpmToken) return CommandResult.err(allocator, no_npm_token_message);
         return CommandResult.err(allocator, "Error: Failed to read npm auth token");
     };
     defer allocator.free(auth_token);
 
-    // Create trusted publisher configuration
-    const publisher = oidc.TrustedPublisher{
-        .type = options.type,
-        .owner = options.owner,
-        .repository = options.repository,
-        .workflow = options.workflow,
-        .environment = options.environment,
-        .allowed_refs = null, // Can be extended to support allowed_refs
-    };
+    var client = try registry.RegistryClient.init(allocator, options.registry);
+    defer client.deinit();
 
-    // Initialize registry client
-    var registry_client = try registry.RegistryClient.init(allocator, options.registry);
-    defer registry_client.deinit();
+    var otp: ?[]const u8 = if (options.otp) |o| try allocator.dupe(u8, o) else null;
+    defer if (otp) |o| allocator.free(o);
 
-    // Add trusted publisher
-    registry_client.addTrustedPublisher(
-        options.package,
-        &publisher,
-        auth_token,
-    ) catch |err| {
-        const err_msg = try std.fmt.allocPrint(
-            allocator,
-            "Error: Failed to add trusted publisher: {any}",
-            .{err},
-        );
-        return CommandResult.err(allocator, err_msg);
-    };
+    var failed: usize = 0;
+    for (packages) |name| {
+        var response = trustCall(allocator, &client, .POST, name, null, body, auth_token, &otp) catch |err| {
+            failed += 1;
+            if (err == error.OtpRequired) {
+                style.print("  ✗ {s}: npm needs a one-time password; pass --otp <code>\n", .{name});
+            } else {
+                style.print("  ✗ {s}: {any}\n", .{ name, err });
+            }
+            continue;
+        };
+        defer response.deinit(allocator);
+        if (response.ok()) {
+            style.print("  ✓ {s}\n", .{name});
+            continue;
+        }
+        const message = try npm_trust.message(allocator, response.body);
+        defer allocator.free(message);
+        if (response.status == 409) {
+            style.print("  ✓ {s} (already trusted: {s})\n", .{ name, message });
+            continue;
+        }
+        failed += 1;
+        style.print("  ✗ {s}: {d} {s}\n", .{ name, response.status, message });
+        if (response.status == 401) {
+            style.print("    npm didn't accept the token. Log in with `npm login`, or set NPM_TOKEN to a token of an account that owns the package.\n", .{});
+        } else if (response.status == 404) {
+            style.print("    npm answers 404 for a package that isn't on npm yet, or that this account can't administer.\n", .{});
+        }
+    }
 
-    style.print("✓ Trusted publisher added successfully\n", .{});
-    style.print("\nYou can now publish {s} from {s}/{s} using OIDC authentication.\n", .{
-        options.package,
-        options.owner,
-        options.repository,
-    });
-
+    if (failed > 0) {
+        const msg = try std.fmt.allocPrint(allocator, "{d} of {d} package(s) not set up", .{ failed, packages.len });
+        return CommandResult.err(allocator, msg);
+    }
+    style.print("\nPublishing from {s} with `pantry publish --npm` now uses OIDC, with provenance.\n", .{repository});
     return .{ .exit_code = 0 };
 }
 
 pub const TrustedPublisherListOptions = struct {
-    package: []const u8,
+    /// Null: every publishable package here, as for publisher:add.
+    package: ?[]const u8 = null,
     registry: []const u8 = "https://registry.npmjs.org",
     json: bool = false,
+    otp: ?[]const u8 = null,
 };
 
-/// List trusted publishers for a package
+/// List the workflows trusted to publish a package.
 pub fn trustedPublisherListCommand(
     allocator: std.mem.Allocator,
     args: []const []const u8,
     options: TrustedPublisherListOptions,
 ) !CommandResult {
     _ = args;
-
     const registry = @import("../../auth/registry.zig");
 
-    const auth_token = readNpmAuthToken(allocator, false) catch |err| {
-        if (err == error.EnvironmentVariableNotFound or err == error.FileNotFound) {
-            return CommandResult.err(
-                allocator,
-                "Error: No npm auth token found. Set NPM_TOKEN, NODE_AUTH_TOKEN, or BUN_AUTH_TOKEN, or add NPM_TOKEN to ~/.pantry/credentials.",
-            );
-        }
+    const packages = trustTargets(allocator, options.package) catch {
+        return CommandResult.err(allocator, "Error: Could not read the packages here");
+    };
+    defer freeTrustTargets(allocator, packages);
+    if (packages.len == 0) return CommandResult.err(allocator, "Error: No package here. Pass --package.");
+
+    const auth_token = trustAuthToken(allocator) catch |err| {
+        if (err == error.NoNpmToken) return CommandResult.err(allocator, no_npm_token_message);
         return CommandResult.err(allocator, "Error: Failed to read npm auth token");
     };
     defer allocator.free(auth_token);
 
-    // Initialize registry client
-    var registry_client = try registry.RegistryClient.init(allocator, options.registry);
-    defer registry_client.deinit();
+    var client = try registry.RegistryClient.init(allocator, options.registry);
+    defer client.deinit();
+    var otp: ?[]const u8 = if (options.otp) |o| try allocator.dupe(u8, o) else null;
+    defer if (otp) |o| allocator.free(o);
 
-    // List trusted publishers
-    const publishers = registry_client.listTrustedPublishers(
-        options.package,
-        auth_token,
-    ) catch |err| {
-        const err_msg = try std.fmt.allocPrint(
-            allocator,
-            "Error: Failed to list trusted publishers: {any}",
-            .{err},
-        );
-        return CommandResult.err(allocator, err_msg);
+    var failed: usize = 0;
+    if (options.json) style.print("{{", .{});
+    for (packages, 0..) |name, n| {
+        var response = trustCall(allocator, &client, .GET, name, null, null, auth_token, &otp) catch |err| {
+            failed += 1;
+            if (!options.json) style.print("{s}: {any}\n", .{ name, err });
+            continue;
+        };
+        defer response.deinit(allocator);
+        if (options.json) {
+            style.print("{s}\"{s}\": {s}", .{ if (n > 0) "," else "", name, if (response.ok()) response.body else "null" });
+            if (!response.ok()) failed += 1;
+            continue;
+        }
+        if (!response.ok()) {
+            failed += 1;
+            const message = try npm_trust.message(allocator, response.body);
+            defer allocator.free(message);
+            style.print("{s}: {d} {s}\n", .{ name, response.status, message });
+            continue;
+        }
+        printTrustConfigs(allocator, name, response.body);
+    }
+    if (options.json) style.print("}}\n", .{});
+    return .{ .exit_code = if (failed > 0) 1 else 0 };
+}
+
+fn printTrustConfigs(allocator: std.mem.Allocator, name: []const u8, body: []const u8) void {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        style.print("{s}: {s}\n", .{ name, body });
+        return;
     };
-    defer {
-        for (publishers) |*pub_item| {
-            var mut_pub = pub_item.*;
-            mut_pub.deinit(allocator);
-        }
-        allocator.free(publishers);
+    defer parsed.deinit();
+    const items: []const std.json.Value = switch (parsed.value) {
+        .array => |a| a.items,
+        .object => &[_]std.json.Value{parsed.value},
+        else => &.{},
+    };
+    if (items.len == 0) {
+        style.print("{s}: no trusted publishers\n", .{name});
+        return;
     }
-
-    if (options.json) {
-        // Output JSON format
-        style.print("[\n", .{});
-        for (publishers, 0..) |pub_item, i| {
-            style.print("  {{\n", .{});
-            style.print("    \"type\": \"{s}\",\n", .{pub_item.type});
-            style.print("    \"owner\": \"{s}\",\n", .{pub_item.owner});
-            style.print("    \"repository\": \"{s}\"", .{pub_item.repository});
-            if (pub_item.workflow) |w| {
-                style.print(",\n    \"workflow\": \"{s}\"", .{w});
+    style.print("{s}:\n", .{name});
+    for (items) |item| {
+        if (item != .object) continue;
+        const get = struct {
+            fn str(v: ?std.json.Value) []const u8 {
+                const value = v orelse return "";
+                return if (value == .string) value.string else "";
             }
-            if (pub_item.environment) |e| {
-                style.print(",\n    \"environment\": \"{s}\"", .{e});
-            }
-            style.print("\n  }}", .{});
-            if (i < publishers.len - 1) {
-                style.print(",", .{});
-            }
-            style.print("\n", .{});
-        }
-        style.print("]\n", .{});
-    } else {
-        // Output table format
-        if (publishers.len == 0) {
-            style.print("No trusted publishers configured for {s}\n", .{options.package});
-            style.print("\nUse 'pantry publisher:add' to add a trusted publisher.\n", .{});
-        } else {
-            style.print("Trusted Publishers for {s}:\n\n", .{options.package});
-            for (publishers, 0..) |pub_item, i| {
-                style.print("{}. Type: {s}\n", .{ i + 1, pub_item.type });
-                style.print("   Owner: {s}\n", .{pub_item.owner});
-                style.print("   Repository: {s}\n", .{pub_item.repository});
-                if (pub_item.workflow) |w| {
-                    style.print("   Workflow: {s}\n", .{w});
+        }.str;
+        const claims = item.object.get("claims");
+        const c: ?std.json.ObjectMap = if (claims) |cl| (if (cl == .object) cl.object else null) else null;
+        const where = if (c) |m| (if (get(m.get("repository")).len > 0) get(m.get("repository")) else get(m.get("project_path"))) else "";
+        var file: []const u8 = "";
+        if (c) |m| {
+            for ([_][]const u8{ "workflow_ref", "ci_config_ref_uri" }) |key| {
+                if (m.get(key)) |ref| {
+                    if (ref == .object) file = get(ref.object.get("file"));
                 }
-                if (pub_item.environment) |e| {
-                    style.print("   Environment: {s}\n", .{e});
-                }
-                style.print("\n", .{});
             }
         }
+        style.print("  {s}  {s} {s} {s}", .{ get(item.object.get("id")), get(item.object.get("type")), where, file });
+        if (c) |m| {
+            const env = get(m.get("environment"));
+            if (env.len > 0) style.print(" (environment {s})", .{env});
+        }
+        style.print("\n", .{});
     }
-
-    return .{ .exit_code = 0 };
 }
 
 pub const TrustedPublisherRemoveOptions = struct {
     package: []const u8,
     publisher_id: []const u8,
     registry: []const u8 = "https://registry.npmjs.org",
+    otp: ?[]const u8 = null,
 };
 
-/// Remove a trusted publisher from a package
+/// Stop trusting a workflow to publish a package, by the id publisher:list shows.
 pub fn trustedPublisherRemoveCommand(
     allocator: std.mem.Allocator,
     args: []const []const u8,
     options: TrustedPublisherRemoveOptions,
 ) !CommandResult {
     _ = args;
-
     const registry = @import("../../auth/registry.zig");
 
-    style.print("Removing trusted publisher {s} from {s}...\n", .{
-        options.publisher_id,
-        options.package,
-    });
-
-    const auth_token = readNpmAuthToken(allocator, false) catch |err| {
-        if (err == error.EnvironmentVariableNotFound or err == error.FileNotFound) {
-            return CommandResult.err(
-                allocator,
-                "Error: No npm auth token found. Set NPM_TOKEN, NODE_AUTH_TOKEN, or BUN_AUTH_TOKEN, or add NPM_TOKEN to ~/.pantry/credentials.",
-            );
-        }
+    if (npm_trust.nameProblem(options.package)) |problem| {
+        const msg = try std.fmt.allocPrint(allocator, "Error: \"{s}\" can't be an npm package name: {s}", .{ options.package, problem });
+        return CommandResult.err(allocator, msg);
+    }
+    const auth_token = trustAuthToken(allocator) catch |err| {
+        if (err == error.NoNpmToken) return CommandResult.err(allocator, no_npm_token_message);
         return CommandResult.err(allocator, "Error: Failed to read npm auth token");
     };
     defer allocator.free(auth_token);
 
-    // Initialize registry client
-    var registry_client = try registry.RegistryClient.init(allocator, options.registry);
-    defer registry_client.deinit();
+    var client = try registry.RegistryClient.init(allocator, options.registry);
+    defer client.deinit();
+    var otp: ?[]const u8 = if (options.otp) |o| try allocator.dupe(u8, o) else null;
+    defer if (otp) |o| allocator.free(o);
 
-    // Remove trusted publisher
-    registry_client.removeTrustedPublisher(
-        options.package,
-        options.publisher_id,
-        auth_token,
-    ) catch |err| {
-        const err_msg = try std.fmt.allocPrint(
-            allocator,
-            "Error: Failed to remove trusted publisher: {any}",
-            .{err},
-        );
-        return CommandResult.err(allocator, err_msg);
+    var response = trustCall(allocator, &client, .DELETE, options.package, options.publisher_id, null, auth_token, &otp) catch |err| {
+        const msg = try std.fmt.allocPrint(allocator, "Error: Failed to remove trusted publisher: {any}", .{err});
+        return CommandResult.err(allocator, msg);
     };
-
-    style.print("✓ Trusted publisher removed successfully\n", .{});
-
+    defer response.deinit(allocator);
+    if (!response.ok()) {
+        const message = try npm_trust.message(allocator, response.body);
+        defer allocator.free(message);
+        const msg = try std.fmt.allocPrint(allocator, "Error: {d} {s}", .{ response.status, message });
+        return CommandResult.err(allocator, msg);
+    }
+    style.print("✓ Removed trusted publisher {s} from {s}\n", .{ options.publisher_id, options.package });
     return .{ .exit_code = 0 };
 }
 

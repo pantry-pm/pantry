@@ -19,4 +19,6 @@ test {
     _ = @import("cli/commands/publish_ignore.zig");
     // Which monorepo packages wait for a failed sibling, and npm's missing scopes.
     _ = @import("cli/commands/publish_plan.zig");
+    // npm's trusted publishing API: request shapes, browser approval, names.
+    _ = @import("auth/npm_trust.zig");
 }

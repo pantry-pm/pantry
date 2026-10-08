@@ -874,16 +874,11 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
 fn publisherAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
-    const package_name = ctx.getOption("package") orelse {
-        style.print("Error: --package is required\n", .{});
-        std.process.exit(1);
-    };
-
+    // Without --package: every publishable package here (a monorepo's
+    // packages/), or the package in this directory.
+    const package_name = ctx.getOption("package");
     const publisher_type = ctx.getOption("type") orelse "github-action";
-    const owner = ctx.getOption("owner") orelse {
-        style.print("Error: --owner is required\n", .{});
-        std.process.exit(1);
-    };
+    const owner = ctx.getOption("owner");
     const repository = ctx.getOption("repository") orelse {
         style.print("Error: --repository is required\n", .{});
         std.process.exit(1);
@@ -900,6 +895,7 @@ fn publisherAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .workflow = workflow,
         .environment = environment,
         .registry = registry,
+        .otp = ctx.getOption("otp"),
     };
 
     const result = try lib.commands.trustedPublisherAddCommand(allocator, &[_][]const u8{}, options);
@@ -918,10 +914,7 @@ fn publisherAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
 fn publisherListAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
-    const package_name = ctx.getOption("package") orelse {
-        style.print("Error: --package is required\n", .{});
-        std.process.exit(1);
-    };
+    const package_name = ctx.getOption("package");
 
     const json_output = ctx.hasOption("json");
     const registry = ctx.getOption("registry") orelse "https://registry.npmjs.org";
@@ -930,6 +923,7 @@ fn publisherListAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .package = package_name,
         .registry = registry,
         .json = json_output,
+        .otp = ctx.getOption("otp"),
     };
 
     const result = try lib.commands.trustedPublisherListCommand(allocator, &[_][]const u8{}, options);
@@ -964,6 +958,7 @@ fn publisherRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .package = package_name,
         .publisher_id = publisher_id,
         .registry = registry,
+        .otp = ctx.getOption("otp"),
     };
 
     const result = try lib.commands.trustedPublisherRemoveCommand(allocator, &[_][]const u8{}, options);
@@ -4504,24 +4499,24 @@ pub fn main() !void {
     // ========================================================================
     var publisher_add_cmd = try cli.BaseCommand.init(allocator, "publisher:add", "Add a trusted publisher for OIDC authentication");
 
-    const pub_add_package_opt = cli.Option.init("package", "package", "Package name", .string)
-        .withRequired(true);
+    const pub_add_package_opt = cli.Option.init("package", "package", "Package name (default: every publishable package here)", .string);
     _ = try publisher_add_cmd.addOption(pub_add_package_opt);
 
     const pub_add_type_opt = cli.Option.init("type", "type", "Publisher type (github-action, gitlab-ci, bitbucket-pipeline, circleci)", .string)
         .withDefault("github-action");
     _ = try publisher_add_cmd.addOption(pub_add_type_opt);
 
-    const pub_add_owner_opt = cli.Option.init("owner", "owner", "Repository owner/organization", .string)
-        .withRequired(true);
+    const pub_add_owner_opt = cli.Option.init("owner", "owner", "Repository owner/organization (or give --repository as owner/repo)", .string);
     _ = try publisher_add_cmd.addOption(pub_add_owner_opt);
 
-    const pub_add_repo_opt = cli.Option.init("repository", "repository", "Repository name", .string)
+    const pub_add_repo_opt = cli.Option.init("repository", "repository", "Repository name, or owner/repo", .string)
         .withRequired(true);
     _ = try publisher_add_cmd.addOption(pub_add_repo_opt);
 
-    const pub_add_workflow_opt = cli.Option.init("workflow", "workflow", "Workflow file path (e.g., .github/workflows/publish.yml)", .string);
+    const pub_add_workflow_opt = cli.Option.init("workflow", "workflow", "The workflow that publishes (e.g., release.yml or .github/workflows/release.yml)", .string);
     _ = try publisher_add_cmd.addOption(pub_add_workflow_opt);
+
+    _ = try publisher_add_cmd.addOption(cli.Option.init("otp", "otp", "One-time password (otherwise npm's two-factor step is asked for)", .string));
 
     const pub_add_env_opt = cli.Option.init("environment", "environment", "GitHub environment name", .string);
     _ = try publisher_add_cmd.addOption(pub_add_env_opt);
@@ -4535,9 +4530,9 @@ pub fn main() !void {
 
     var publisher_list_cmd = try cli.BaseCommand.init(allocator, "publisher:list", "List trusted publishers for a package");
 
-    const pub_list_package_opt = cli.Option.init("package", "package", "Package name", .string)
-        .withRequired(true);
+    const pub_list_package_opt = cli.Option.init("package", "package", "Package name (default: every publishable package here)", .string);
     _ = try publisher_list_cmd.addOption(pub_list_package_opt);
+    _ = try publisher_list_cmd.addOption(cli.Option.init("otp", "otp", "One-time password", .string));
 
     const pub_list_json_opt = cli.Option.init("json", "json", "Output in JSON format", .bool);
     _ = try publisher_list_cmd.addOption(pub_list_json_opt);
@@ -4558,6 +4553,7 @@ pub fn main() !void {
     const pub_remove_id_opt = cli.Option.init("publisher-id", "publisher-id", "Publisher ID to remove", .string)
         .withRequired(true);
     _ = try publisher_remove_cmd.addOption(pub_remove_id_opt);
+    _ = try publisher_remove_cmd.addOption(cli.Option.init("otp", "otp", "One-time password", .string));
 
     const pub_remove_registry_opt = cli.Option.init("registry", "registry", "Registry URL", .string)
         .withDefault("https://registry.npmjs.org");
