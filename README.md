@@ -359,6 +359,29 @@ pantry start postgres mysql
 - Config file: `pantry.config.ts` → `services.database`
 - Per-project databases automatically created with your credentials
 
+### Publishing to npm
+
+Publish to npm without the npm CLI. At a monorepo root, `pantry publish --npm`
+publishes every non-private package in `packages/`, dependencies first.
+`workspace:` and `catalog:` ranges are rewritten, versions already on npm are
+skipped, and a package whose dependency failed in the same run is held back.
+
+```bash
+# Log in once, in the browser (saves the token to ~/.npmrc)
+pantry login
+
+# Publish every package, or just the one you're in
+pantry publish --npm --access public
+
+# Let a GitHub workflow publish with OIDC, no npm token needed
+pantry publisher:add --repository my-org/my-repo --workflow release.yml
+```
+
+In the workflow, give the job `permissions: id-token: write` and run
+`pantry publish --npm --access public`. See
+[Publishing to npm](https://pantry.dev/NPM_OIDC_PUBLISHING) and
+[Set up OIDC publishing for a monorepo](https://pantry.dev/NPM_OIDC_QUICKSTART).
+
 ### Commit Publishing
 
 Publish packages directly from git commits — a built-in replacement for `pkg-pr-new`:
@@ -521,6 +544,7 @@ Explore advanced dependency management topics:
 - [Plans & Fees](https://pantry.dev/pricing) _(Free / Pro $9 / Team $29 — private packages, build insurance, priority builds)_
 - [Run Your Own Registry](https://pantry.dev/self-hosting) _(one command, and it's private by default — only authenticated members can download)_
 - [Extending the Registry](https://pantry.dev/registry-extensions) _(custom routes and access policies without forking server.ts)_
+- [Publishing to npm](https://pantry.dev/NPM_OIDC_PUBLISHING) _(monorepos, OIDC trusted publishing, `pantry login`)_
 - [Commit Publishing](https://pantry.dev/features/commit-publishing) _(pkg-pr-new alternative)_
 - [Service Management](https://pantry.dev/features/service-management)
 - [Project Environment Configuration](https://pantry.dev/features/package-management)

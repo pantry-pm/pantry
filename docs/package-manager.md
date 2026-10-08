@@ -188,11 +188,13 @@ immutable-registry guarantees.
 | Command | Destination and contract |
 | --- | --- |
 | `pantry publish` | Publish archives to the Pantry registry. The default is `https://registry.pantry.dev`; a bearer token is required. |
+| `pantry publish --npm` | Publish to npm (`https://registry.npmjs.org`, or `publishConfig.registry`), with OIDC or token authentication. At a monorepo root, publishes every non-private package under `packages/`; path and glob arguments select packages instead. |
 | `pantry npm:publish` | Publish npm-compatible packages to npm or an explicitly selected compatible registry, with token or OIDC authentication. |
 | `pantry publish:check` | Validate names and registry collisions without publishing; offline mode performs syntactic checks only. |
 | `pantry publish:commit` | Publish temporary, commit-addressed monorepo packages and return installable URLs. Existing names can be skipped unless forced. |
 | `pantry publish:binary` | Publish a platform-specific native binary and metadata to Pantry object storage. |
-| `pantry publisher:add`, `publisher:list`, `publisher:remove` | Manage npm-style trusted publisher configuration for OIDC flows. |
+| `pantry login` | Log in to npm in the browser and save the session token to the user npmrc. |
+| `pantry publisher:add`, `publisher:list`, `publisher:remove` | Manage npm trusted publishers through npm's trust API (`/-/package/<name>/trust`), the one `npm trust` uses. |
 | `pantry sign` / `pantry verify` | Create or verify package signatures with configured Ed25519 key material. |
 
 Pantry-registry publication and npm publication are intentionally different
@@ -207,6 +209,20 @@ workspace and catalog ranges are rewritten to registry-installable versions, and
 the tarball summary is computed before authentication. `--dry-run` stops after
 that preparation boundary: it does not request OIDC credentials, read a token,
 or upload bytes.
+
+At a monorepo root, the npm pipeline publishes every non-private package under
+`packages/` in dependency order (`dependencies`, `devDependencies`, and
+required `peerDependencies`, ties broken by name). Before packing, it asks the
+registry whether `name@version` exists and skips the package if it does;
+`--force-republish` disables that check. A package whose `dependencies`,
+`peerDependencies`, or `optionalDependencies` include a sibling that did not
+publish in the same run is held back rather than published uninstallable, and
+the run exits non-zero. Root `README.md`, `LICENSE`, and `LICENSE.md` are
+copied into packages that lack them for the duration of the publish. Packages
+with a `build.zig` are skipped unless `package.json` sets `"pantry": { "npm": true }`.
+
+Tarballs list regular files only, sorted, without extended attributes or
+AppleDouble (`._*`) entries, so archives packed on macOS are accepted by npm.
 
 The effective dist-tag and access level use explicit precedence:
 
@@ -224,16 +240,24 @@ OIDC trusted publishing is attempted first by default. On success, provenance is
 attached unless `--no-provenance` is set. `--no-oidc` skips the exchange and uses
 token authentication directly. A missing trusted-publisher relationship may
 fall back to a token, while immutable-version conflicts and registry validation
-errors fail without retrying through another identity. `--otp <code>` adds npm's
+errors (403, 409, 422) fail without retrying through another identity. When an
+OIDC attempt fails after the upload was sent, or times out, Pantry polls the
+registry for up to about two minutes to see whether the version landed before
+reporting failure; when nothing was uploaded (no CI provider, or npm refused
+the token exchange), it goes straight to token authentication. A token
+publish rejected with npm's `Scope not found` is reported as a missing
+organization or membership, with a pointer to `https://www.npmjs.com/org/create`. `--otp <code>` adds npm's
 `npm-otp` header to token publication; Pantry never writes or prints the code.
 
 Token discovery is deterministic:
 
 1. `NPM_TOKEN`, `NODE_AUTH_TOKEN`, or `BUN_AUTH_TOKEN`;
 2. project `.npmrc`;
-3. `NPM_CONFIG_USERCONFIG`, when set, otherwise `~/.npmrc`;
+3. `NPM_CONFIG_USERCONFIG`, when set, otherwise `~/.npmrc` (where `pantry login`
+   writes `//registry.npmjs.org/:_authToken`, mode `0600`);
 4. `NPM_TOKEN` or `npm_token` in `~/.pantry/credentials`;
-5. an interactive prompt when the process is not running in CI.
+5. an interactive prompt when the process is not running in CI; the entered
+   token is saved to `~/.pantry/credentials` and the project `.env`.
 
 npmrc parsing accepts `_authToken`, registry-scoped keys such as
 `//registry.npmjs.org/:_authToken`, matching single or double quotes, and a
@@ -242,7 +266,13 @@ user configuration. Missing referenced environment variables do not expose the
 placeholder or silently select a lower-precedence credential. Tokens and OTPs
 are excluded from diagnostics.
 
-Package/version conflicts remain immutable. Rate-limit and transient server
+Trust commands need a login session from `pantry login`: npm refuses tokens
+that bypass two-factor for trust changes. Two-factor is satisfied by browser
+approval when npm offers it, an interactive code prompt otherwise, or `--otp`.
+
+Package/version conflicts remain immutable. In the default skip-existing mode, a
+conflict caused by a version that appeared between the pre-check and the upload
+is reported as a skip, not a failure. Rate-limit and transient server
 responses may be retried with bounded exponential backoff; authentication,
 validation, and version-conflict responses are returned as failures. Lifecycle
 scripts remain subject to the explicit script policy, and publication success is

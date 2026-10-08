@@ -26,6 +26,7 @@ This is a high-performance Zig refactor of the TypeScript/Bun implementation, ac
 - **Automatic Updates** - Detects version changes in config files and auto-installs/updates
 - **Dependency Resolution** - Smart dependency resolution with conflict detection
 - **Package Publishing** - Publish to custom registries with `publish` command
+- **npm Publishing** - `publish --npm` publishes a package or a whole monorepo to npm, with OIDC trusted publishing (`login`, `publisher:add`); see [Publishing to npm](../../docs/NPM_OIDC_PUBLISHING.md)
 - **Commit Publishing** - Publish packages from git commits with `publish:commit` (pkg-pr-new alternative)
 - **Package Signing** - Ed25519 signature verification for secure package distribution
 - **Dependency Tree** - Visualize dependencies with colored tree output or JSON

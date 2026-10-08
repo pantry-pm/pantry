@@ -1,195 +1,84 @@
-# OIDC Quick Start Guide
+# OIDC quick start: one package
 
-Get started with OIDC authentication in Pantry in under 5 minutes!
+Publish a single npm package from GitHub Actions without an npm token. For a
+monorepo, follow [Set up OIDC publishing for a monorepo](./NPM_OIDC_QUICKSTART.md)
+instead; the steps are the same, run from the repository root.
 
-## Prerequisites
+## 1. Log in and publish once
 
-- A package published to npm (or ready to publish)
-- Access to your package on npm (maintainer/owner)
-- GitHub Actions, GitLab CI, or another supported CI/CD provider
-
-## Step 1: Configure Trusted Publisher (One-Time Setup)
-
-First, you need to tell npm that your GitHub repository is allowed to publish your package.
-
-### Using Web UI (Recommended for First-Time Setup)
-
-1. Go to <https://www.npmjs.com/package/your-package/access>
-2. Click "Publishing Access"
-3. Click "Add Trusted Publisher"
-4. Select "GitHub Actions"
-5. Fill in:
-   - **Owner**: Your GitHub username or org (e.g., `my-org`)
-   - **Repository**: Your repo name (e.g., `my-package`)
-   - **Workflow**: `.github/workflows/publish.yml`
-   - **Environment** (optional): `production`
-
-### Using Pantry CLI
+npm can't trust a workflow for a package that doesn't exist yet. If the package
+isn't on npm, publish the first version from your machine:
 
 ```bash
-# Set your npm token (only needed for this setup step)
-export NPM_TOKEN=your_npm_token
-
-# Add trusted publisher
-pantry publisher add \
-  --package your-package \
-  --type github-action \
-  --owner your-org \
-  --repository your-repo \
-  --workflow .github/workflows/publish.yml
+pantry login
+pantry publish --npm --access public
 ```
 
-## Step 2: Create GitHub Actions Workflow
+`pantry login` opens npm in your browser and saves a login session to
+`~/.npmrc`. Unset `NPM_TOKEN` first if it's set: pantry uses it before the
+npmrc.
 
-Create `.github/workflows/publish.yml` in your repository:
+## 2. Trust the workflow
+
+In the package directory:
+
+```bash
+pantry publisher:add --repository my-org/my-package --workflow publish.yml
+```
+
+Approve the two-factor request in your browser, or enter the code when asked.
+Pass `--otp <code>` if the shell can't prompt.
+
+## 3. Add the workflow
+
+`.github/workflows/publish.yml`:
 
 ```yaml
-name: Publish Package
+name: Publish
 
 on:
   release:
-    types: [created]
-
-permissions:
-  id-token: write  # IMPORTANT: Required for OIDC
-  contents: read
+    types: [published]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for OIDC
+
     steps:
+      - uses: actions/checkout@v6
 
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-
-        uses: actions/setup-node@v4
+      - uses: pantry-pm/pantry/packages/action@main
         with:
-          node-version: '20'
+          install: 'false'
 
-      - name: Install dependencies
-
-        run: npm install
-
-      - name: Build
-
-        run: npm run build
-
-      - name: Publish with OIDC
-
-        run: npx pantry publish
+      - run: pantry publish --npm --access public
 ```
 
-**Key Points:**
+The file name must match `--workflow`. Use `--npm`: without it,
+`pantry publish` targets the Pantry registry.
 
-- `id-token: write` permission is **required**
-- No `NPM_TOKEN` secret needed!
-- Works automatically in CI
+## 4. Release
 
-## Step 3: Test It
+Create a GitHub release. The workflow publishes with OIDC and attaches
+provenance. A version that's already on npm is skipped, so re-running the
+workflow is safe.
 
-### Create a Release
+## Common problems
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+| Problem | Fix |
+| --- | --- |
+| `No npm auth token found` from `publisher:add` | Run `pantry login`. |
+| `This token skips two-factor…` | Unset `NPM_TOKEN` and run `pantry login`. |
+| `404 … isn't on npm yet` from `publisher:add` | Publish the package once (step 1). |
+| `OIDC publish failed (401)` in CI | The repository, workflow file name, or environment doesn't match. Run `pantry publisher:list`. |
+| `Could not get OIDC token from environment` | Add `id-token: write` to the job's permissions. |
 
-Or use GitHub's web UI to create a release.
+## Next
 
-### Watch the Workflow
-
-Go to your repository's Actions tab and watch the publish workflow run. You should see:
-
-```
-✓ Detected OIDC provider: GitHub Actions
-✓ OIDC Claims validated
-✓ Package published successfully using OIDC
-✓ Generated provenance: your-package-1.0.0.provenance.json
-```
-
-## Step 4: Verify Publication
-
-Check that your package was published:
-
-```bash
-npm view your-package@1.0.0
-```
-
-You should see the new version!
-
-## That's It
-
-Your package is now published using OIDC authentication. No secrets to manage, no tokens to rotate!
-
-## Next Steps
-
-- [Read the full OIDC documentation](./OIDC_AUTHENTICATION.md)
-- [Learn about provenance](./OIDC_AUTHENTICATION.md#provenance)
-- [Configure multiple trusted publishers](./OIDC_AUTHENTICATION.md#multiple-trusted-publishers)
-- [Set up environment protection](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
-
-## Common Issues
-
-### "OIDC token not available"
-
-**Solution**: Make sure you added `id-token: write` to your workflow permissions:
-
-```yaml
-permissions:
-  id-token: write
-  contents: read
-```
-
-### "Claims mismatch"
-
-**Solution**: Verify your trusted publisher configuration matches exactly:
-
-- Repository owner must match
-- Repository name must match
-- Workflow path must match (including `.github/workflows/`)
-
-### "Permission denied"
-
-**Solution**: Check that:
-
-1. You're a maintainer of the package on npm
-2. The trusted publisher is correctly configured
-3. Your workflow is running from the correct repository
-
-## GitLab CI Quick Start
-
-For GitLab CI, the process is similar:
-
-```yaml
-# .gitlab-ci.yml
-publish:
-  stage: deploy
-  image: node:20
-  only:
-
-    - tags
-
-  script:
-
-    - npm install
-    - npm run build
-    - npx pantry publish
-
-```
-
-Configure the trusted publisher:
-
-```bash
-pantry publisher add \
-  --package your-package \
-  --type gitlab-ci \
-  --owner your-group \
-  --repository your-project
-```
-
-## Need Help
-
-- Check the [full documentation](./OIDC_AUTHENTICATION.md)
-- Open an issue on [GitHub](https://github.com/pantry-sh/pantry/issues)
-- Join our [Discord community](https://discord.gg/pantry)
+- [Publishing to npm](./NPM_OIDC_PUBLISHING.md): every option, authentication
+  order, and troubleshooting.
+- [Trusted publishing](./OIDC_AUTHENTICATION.md): `publisher:add`,
+  `publisher:list`, `publisher:remove`.

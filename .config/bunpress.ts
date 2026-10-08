@@ -70,6 +70,8 @@ const config = {
             { text: 'Paid Packages', link: '/paid-packages' },
             { text: 'Plans & Fees', link: '/pricing' },
             { text: 'Build Insurance & SBOMs', link: '/build-insurance' },
+            { text: 'Publishing to npm', link: '/NPM_OIDC_PUBLISHING' },
+            { text: 'OIDC Quickstart', link: '/NPM_OIDC_QUICKSTART' },
             { text: 'Commit Publishing', link: '/features/commit-publishing' },
           ],
         },

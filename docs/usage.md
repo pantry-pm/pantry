@@ -58,17 +58,18 @@ Here are the main commands available in pantry:
 | `cache:clear` | Clear all cached packages and downloads |
 | `clean` | Remove all pantry-installed packages and environments |
 | **Publishing** | |
-| `publish` | Publish package to Pantry registry (S3) |
+| `publish` | Publish package to Pantry registry (S3); with `--npm`, publish to npm |
 | `publish:commit` | Publish from the current git commit (pkg-pr-new alternative) |
 | `npm:publish` | Publish package to npm (supports OIDC) |
+| `login` | Log in to npm in the browser; saves the token to `~/.npmrc` |
 | **Security & Signing** | |
 | `verify` | Verify package signature |
 | `sign` | Sign a package |
 | `generate-key` | Generate Ed25519 keypair for signing |
 | **OIDC & Publishers** | |
-| `oidc setup` | Set up OIDC trusted publisher authentication |
-| `publisher:add` | Add a trusted publisher |
-| `publisher:list` | List trusted publishers |
+| `oidc setup` | Print instructions for adding a trusted publisher on npmjs.com |
+| `publisher:add` | Trust a CI workflow to publish to npm with OIDC |
+| `publisher:list` | List a package's trusted publishers |
 | `publisher:remove` | Remove a trusted publisher |
 | **Project Setup** | |
 | `init` | Initialize a new pantry.json file |
@@ -77,7 +78,7 @@ Here are the main commands available in pantry:
 | `unlink` | Unregister or unlink a local package |
 | **Miscellaneous** | |
 | `doctor` | Run system diagnostics |
-| `whoami` | Display the currently authenticated user |
+| `whoami` | Display the user in `~/.pantryrc` (Pantry registry, not npm) |
 | `version` | Show version information |
 | `help` | Display help information |
 
@@ -829,6 +830,39 @@ After installation, pantry provides instructions for making zsh your default she
 # Make zsh your default shell
 chsh -s /path/to/installed/zsh
 ```
+
+## Publishing to npm
+
+`pantry publish --npm` publishes to npm without the npm CLI. In a package
+directory it publishes that package; at a monorepo root it publishes every
+non-private package under `packages/`, dependencies first, skipping versions
+that are already on npm.
+
+```bash
+# Log in once, in the browser
+pantry login
+
+# See what would be published
+pantry publish --npm --dry-run
+
+# Publish
+pantry publish --npm --access public
+
+# Publish selected packages only
+pantry publish --npm ./packages/core './packages/plugins/*'
+```
+
+In CI, pantry publishes with OIDC when the workflow has `id-token: write` and
+the package trusts it. Set that up once from your machine:
+
+```bash
+pantry login
+pantry publisher:add --repository my-org/my-repo --workflow release.yml
+```
+
+See [Publishing to npm](./NPM_OIDC_PUBLISHING.md) for every option, and
+[Set up OIDC publishing for a monorepo](./NPM_OIDC_QUICKSTART.md) for the
+full walkthrough.
 
 ## Commit Publishing
 

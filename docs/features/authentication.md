@@ -2,6 +2,8 @@
 
 pantry.dev supports user accounts with API token-based authentication for publishing packages. This guide covers how to sign up, create tokens, and use them.
 
+This page is about the Pantry registry. For npm (`pantry publish --npm`, `pantry login`, OIDC trusted publishing), see [Publishing to npm](../NPM_OIDC_PUBLISHING.md).
+
 ## Overview
 
 The pantry registry supports two authentication methods:
@@ -62,7 +64,7 @@ Use your API token in the `Authorization` header:
 
 ```bash
 # Using pantry CLI
-PANTRY_TOKEN=ptry_a1b2c3d4... pantry publish --npm --access public
+PANTRY_TOKEN=ptry_a1b2c3d4... pantry publish --access public
 
 # Using curl directly
 curl -X POST https://registry.pantry.dev/publish \
@@ -307,7 +309,7 @@ HTTP/1.1 201 Created
 
   env:
     PANTRY_TOKEN: ${{ secrets.PANTRY_API_TOKEN }}
-  run: pantry publish --npm --access public
+  run: pantry publish --access public
 ```
 
 ### Environment Variables

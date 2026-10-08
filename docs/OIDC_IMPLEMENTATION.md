@@ -1,5 +1,12 @@
 # OIDC Implementation for Pantry Package Manager
 
+> [!NOTE]
+> This page records how OIDC support was first built. Some of it is out of
+> date: trusted publishers are now managed through npm's trust API (the one
+> `npm trust` uses), and they need a `pantry login` session. For current usage,
+> see [Publishing to npm](./NPM_OIDC_PUBLISHING.md) and
+> [Trusted publishing](./OIDC_AUTHENTICATION.md).
+
 ## Overview
 
 This implementation adds comprehensive OpenID Connect (OIDC) authentication support to the Pantry package manager, enabling secure, tokenless publishing from CI/CD environments similar to [npm's trusted publishers](https://docs.npmjs.com/trusted-publishers).
@@ -83,13 +90,13 @@ pub const PublishOptions = struct {
 
 ```bash
 # Add trusted publisher
-pantry publisher add --package <name> --type <type> --owner <owner> --repository <repo>
+pantry publisher:add [--package <name>] [--type <type>] --repository <owner/repo> --workflow <file>
 
 # List trusted publishers
-pantry publisher list --package <name> [--json]
+pantry publisher:list [--package <name>] [--json]
 
 # Remove trusted publisher
-pantry publisher remove --package <name> --publisher-id <id>
+pantry publisher:remove --package <name> --publisher-id <id>
 ```
 
 **Command Implementation:**
@@ -193,7 +200,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: npm install
       - run: npm test
-      - run: pantry publish  # OIDC automatic!
+      - run: pantry publish --npm  # OIDC automatic!
 
 ```
 
@@ -201,9 +208,9 @@ jobs:
 
 ```bash
 # One-time setup
-export NPM_TOKEN=your_token
+pantry login
 
-pantry publisher add \
+pantry publisher:add \
   --package my-package \
   --type github-action \
   --owner my-org \
@@ -212,26 +219,26 @@ pantry publisher add \
   --environment production
 
 # Verify
-pantry publisher list --package my-package
+pantry publisher:list --package my-package
 ```
 
 ### Publishing Options
 
 ```bash
 # Default (OIDC enabled, provenance enabled)
-pantry publish
+pantry publish --npm
 
 # Dry run
-pantry publish --dry-run
+pantry publish --npm --dry-run
 
 # Disable OIDC (use token)
-pantry publish --no-oidc
+pantry publish --npm --no-oidc
 
 # Custom registry
-pantry publish --registry https://registry.pantry.dev
+pantry npm:publish --registry https://npm.example.com
 
 # Disable provenance
-pantry publish --no-provenance
+pantry publish --npm --no-provenance
 ```
 
 ## Architecture

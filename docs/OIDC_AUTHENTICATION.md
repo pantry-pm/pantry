@@ -1,568 +1,233 @@
-# OIDC Authentication for Pantry
+# Trusted publishing (OIDC)
 
-Pantry supports **OpenID Connect (OIDC)** authentication for publishing packages, similar to [npm's trusted publishers](https://docs.npmjs.com/trusted-publishers). This allows you to publish packages from CI/CD environments without managing long-lived authentication tokens.
+Trusted publishing lets a CI workflow publish to npm without an npm token. You
+tell npm which workflow may publish a package. In that workflow,
+`pantry publish --npm` gets an identity token from the CI provider, npm checks
+it against your settings and hands back a short-lived publish token for that
+one package, and pantry publishes with Sigstore provenance.
 
-## Table of Contents
+pantry manages these settings with three commands:
 
-- [Overview](#overview)
-- [Benefits](#benefits)
-- [Supported Providers](#supported-providers)
-- [Quick Start](#quick-start)
-- [Configuration](#configuration)
-- [Publishing with OIDC](#publishing-with-oidc)
-- [Managing Trusted Publishers](#managing-trusted-publishers)
-- [Security](#security)
-- [Provenance](#provenance)
-- [Troubleshooting](#troubleshooting)
+- `pantry publisher:add` trusts a workflow to publish.
+- `pantry publisher:list` shows what's trusted.
+- `pantry publisher:remove` stops trusting one.
 
-## Overview
+They use npm's trust API (`/-/package/<name>/trust`), the same one `npm trust`
+uses, so settings made with either tool show up in both and on npmjs.com.
 
-OIDC authentication enables secure, tokenless publishing by leveraging short-lived tokens issued by CI/CD providers. These tokens contain verified claims about the repository, workflow, and environment, ensuring that only authorized workflows can publish your packages.
+For a full setup from scratch, see
+[Set up OIDC publishing for a monorepo](./NPM_OIDC_QUICKSTART.md).
 
-### How It Works
+## How it works
 
-1. **CI/CD Provider Issues Token**: When your workflow runs, the CI/CD provider (e.g., GitHub Actions) issues a short-lived OIDC token containing claims about the workflow.
+1. You run `pantry login` once, then `pantry publisher:add`. npm records that
+   the workflow file `release.yml` in `my-org/my-lib` may publish the package.
+2. The workflow runs with `permissions: id-token: write`.
+3. `pantry publish --npm` requests an identity token from GitHub for the
+   audience `npm:registry.npmjs.org`.
+4. npm checks the token's repository, workflow file, and environment against
+   the trusted publisher, and returns a publish token for that package.
+5. pantry signs provenance with Sigstore and publishes. The publish token
+   expires shortly after.
 
-2. **Pantry Validates Token**: Pantry validates the token's signature and claims against your configured trusted publishers.
+If any step fails, pantry falls back to an npm token if one is available. See
+[When OIDC fails](./NPM_OIDC_PUBLISHING.md#when-oidc-fails).
 
-3. **Package Published**: If validation succeeds, the package is published to the registry.
+## Requirements
 
-## Benefits
+- **A login session.** Every trust command needs two-factor, and npm refuses
+  automation and granular tokens that bypass two-factor for account changes
+  such as these. Run `pantry login` first. An `NPM_TOKEN`, `NODE_AUTH_TOKEN`,
+  or `BUN_AUTH_TOKEN` in the environment is used before the login, so unset it.
+- **The package exists on npm.** npm answers 404 for a package that isn't
+  published yet. Publish it once with your login, then add the publisher.
+- **Your account can administer the package.**
+- **A supported CI.** pantry sets up GitHub Actions and GitLab CI/CD
+  publishers. For CircleCI, use `npm trust circleci`.
 
-- **No Long-Lived Tokens**: Eliminates the need to store NPM_TOKEN in secrets
-- **Enhanced Security**: Short-lived tokens (typically 1 hour) that can't be reused
-- **Workflow Verification**: Ensures packages are only published from specific workflows
-- **Environment Protection**: Can restrict publishing to specific environments
-- **Audit Trail**: Full transparency of what workflow published each version
-- **Provenance**: Automatic generation of SLSA provenance attestations
+## `pantry publisher:add`
 
-## Supported Providers
+```bash
+pantry publisher:add --repository <owner/repo> --workflow <file> [options]
+```
 
-Pantry supports OIDC authentication from the following CI/CD providers:
+Trusts a workflow to publish packages with OIDC.
 
-| Provider | Status | Environment Detection |
-|----------|--------|-----------------------|
-| **GitHub Actions** | ✅ Fully Supported | `GITHUB_ACTIONS=true` |
-| **GitLab CI** | ✅ Fully Supported | `GITLAB_CI=true` |
-| **Bitbucket Pipelines** | ✅ Fully Supported | `BITBUCKET_BUILD_NUMBER` |
-| **CircleCI** | ✅ Fully Supported | `CIRCLECI=true` |
+| Option | What it does |
+| --- | --- |
+| `--repository <owner/repo>` | Required. The repository, as `owner/repo`. For GitLab, the project path. |
+| `--owner <owner>` | The owner, if `--repository` is only the repository name. |
+| `--workflow <file>` | Required. The workflow that publishes: `release.yml` or `.github/workflows/release.yml`. npm stores the file name only, so a path is cut down to its last segment. For GitLab, the pipeline file, such as `.gitlab-ci.yml`. |
+| `--environment <name>` | Only trust jobs that run in this environment. |
+| `--type <type>` | `github-action` (default) or `gitlab-ci`. |
+| `--package <name>` | Set up this package only. |
+| `--otp <code>` | One-time password, when you can't answer a prompt. |
+| `--registry <url>` | Default: `https://registry.npmjs.org`. |
 
-## Quick Start
+### Which packages
 
-### GitHub Actions Example
+- With `--package`, that package.
+- Without it, at a monorepo root, every publishable package under `packages/`:
+  the same non-private packages `pantry publish --npm` publishes.
+- Without it, in a single package's directory, that package.
 
-1. **Enable OIDC in Your Workflow**
+```bash
+# Every package of the monorepo here
+pantry publisher:add --repository my-org/my-lib --workflow release.yml
+
+# One package, with --owner and a path
+pantry publisher:add --package @my-lib/react \
+  --owner my-org --repository my-lib \
+  --workflow .github/workflows/release.yml
+
+# Only jobs in the "npm" environment
+pantry publisher:add --repository my-org/my-lib --workflow release.yml --environment npm
+
+# GitLab
+pantry publisher:add --type gitlab-ci --repository my-group/my-project --workflow .gitlab-ci.yml
+```
+
+### Two-factor
+
+npm requires two-factor for each trust change:
+
+- When npm offers browser approval, pantry opens the approval page, prints its
+  URL, and waits up to five minutes.
+- Otherwise pantry asks for the code from your authenticator.
+- In CI, or any shell that can't answer a prompt, pass `--otp <code>`. Without
+  it, each package fails with `npm needs a one-time password; pass --otp <code>`.
+
+The code or approval is reused for the next package, so a monorepo usually
+needs one approval.
+
+### Output
+
+Each package gets a line:
+
+```text
+Trusting my-org/my-lib (release.yml) to publish with OIDC:
+  @my-lib/react
+  my-lib
+  ✓ @my-lib/react
+  ✓ my-lib (already trusted: …)
+
+Publishing from my-org/my-lib with `pantry publish --npm` now uses OIDC, with provenance.
+```
+
+A package that already has this trusted publisher is reported as already
+trusted and counts as success. The command exits non-zero if any package
+wasn't set up, with npm's reason on that package's line, plus a hint when:
+
+- the token bypasses two-factor: log in with `pantry login` and run it again;
+- npm didn't accept the token (401): log in with `pantry login`;
+- npm answered 404: the package isn't on npm yet, or this account can't
+  administer it.
+
+A package name with a non-ASCII character, such as a fullwidth `＠` pasted from
+a web page, is rejected before anything is sent.
+
+## `pantry publisher:list`
+
+```bash
+pantry publisher:list [--package <name>] [--json]
+```
+
+Shows each trusted publisher's id, type, repository, workflow file, and
+environment. Without `--package`, it lists every publishable package here, as
+`publisher:add` does.
+
+```text
+@my-lib/react:
+  <id>  github my-org/my-lib release.yml (environment npm)
+my-lib: no trusted publishers
+```
+
+| Option | What it does |
+| --- | --- |
+| `--package <name>` | List this package only. |
+| `--json` | Print npm's answers as one JSON object keyed by package name. A package that failed is `null`. |
+| `--otp <code>` | One-time password, if npm asks for one. |
+| `--registry <url>` | Default: `https://registry.npmjs.org`. |
+
+## `pantry publisher:remove`
+
+```bash
+pantry publisher:remove --package <name> --publisher-id <id> [--otp <code>]
+```
+
+Stops trusting a publisher. Take the id from `pantry publisher:list`.
+
+```bash
+pantry publisher:list --package @my-lib/react
+pantry publisher:remove --package @my-lib/react --publisher-id <id>
+```
+
+| Option | What it does |
+| --- | --- |
+| `--package <name>` | Required. |
+| `--publisher-id <id>` | Required. |
+| `--otp <code>` | One-time password, when you can't answer a prompt. |
+| `--registry <url>` | Default: `https://registry.npmjs.org`. |
+
+Two-factor works as it does for `publisher:add`.
+
+## The workflow
+
+GitHub Actions needs `id-token: write`:
 
 ```yaml
-# .github/workflows/publish.yml
-name: Publish Package
-
-on:
-  release:
-    types: [created]
-
 permissions:
-  id-token: write  # Required for OIDC
   contents: read
+  id-token: write
 
+steps:
+  - uses: actions/checkout@v6
+  - uses: pantry-pm/pantry/packages/action@main
+    with:
+      install: 'false'
+  - run: pantry publish --npm --access public
+```
+
+If you set `--environment`, run the job in it:
+
+```yaml
 jobs:
-  publish:
+  npm:
     runs-on: ubuntu-latest
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Install Pantry
-
-        run: curl -fsSL https://pantry.sh/install | bash
-
-      - name: Publish to npm
-
-        run: pantry publish
-# No NPM_TOKEN needed! OIDC handles authentication
+    environment: npm
 ```
 
-2. **Configure Trusted Publisher** (one-time setup)
+For GitLab, pantry reads the identity token from `CI_JOB_JWT_V2`:
 
-You'll need to configure your package to accept OIDC tokens from your repository:
-
-```bash
-# Using NPM_TOKEN for initial setup (only needed once)
-export NPM_TOKEN=your_token
-
-pantry publisher add \
-  --package my-package \
-  --type github-action \
-  --owner my-org \
-  --repository my-repo \
-  --workflow .github/workflows/publish.yml \
-  --environment production
+```yaml
+publish:
+  id_tokens:
+    CI_JOB_JWT_V2:
+      aud: npm:registry.npmjs.org
+  script:
+    - pantry publish --npm --access public
 ```
 
-3. **Publish!**
-
-Now your workflow can publish without any stored secrets:
-
-```bash
-pantry publish  # Automatically uses OIDC
-```
-
-## Configuration
-
-### Trusted Publisher Configuration
-
-A trusted publisher defines which CI/CD workflows are authorized to publish your package:
-
-```typescript
-interface TrustedPublisher {
-  type: string;              // "github-action", "gitlab-ci", etc.
-  owner: string;             // Repository owner/organization
-  repository: string;        // Repository name
-  workflow?: string;         // Workflow file path (GitHub)
-  environment?: string;      // Environment name (optional)
-  allowed_refs?: string[];   // Allowed branches/tags (optional)
-}
-```
-
-### GitHub Actions Configuration
-
-```bash
-pantry publisher add \
-  --package @my-org/my-package \
-  --type github-action \
-  --owner my-org \
-  --repository my-repo \
-  --workflow .github/workflows/publish.yml \
-  --environment production \
-  --allowed-refs refs/heads/main,refs/tags/v*
-```
-
-### GitLab CI Configuration
-
-```bash
-pantry publisher add \
-  --package @my-org/my-package \
-  --type gitlab-ci \
-  --owner my-org \
-  --repository my-project \
-  --allowed-refs refs/heads/main
-```
-
-### Bitbucket Pipelines Configuration
-
-```bash
-pantry publisher add \
-  --package @my-org/my-package \
-  --type bitbucket \
-  --owner my-workspace \
-  --repository my-repo
-```
-
-## Publishing with OIDC
-
-### Publish Command
-
-```bash
-# Publish using OIDC (default)
-pantry publish
-
-# Disable OIDC and use traditional token auth
-pantry publish --no-oidc
-
-# Dry run to test without publishing
-pantry publish --dry-run
-
-# Specify custom registry
-pantry publish --registry https://registry.pantry.dev
-
-# Disable provenance generation
-pantry publish --no-provenance
-```
-
-### Publish Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--dry-run` | Test without actually publishing | `false` |
-| `--registry <url>` | Custom registry URL | `<https://registry.npmjs.org>` |
-| `--use-oidc` | Enable OIDC authentication | `true` |
-| `--provenance` | Generate provenance metadata | `true` |
-| `--access <level>` | Package access level | `public` |
-| `--tag <name>` | Publish with a dist-tag | `latest` |
-
-## Managing Trusted Publishers
-
-### Add a Trusted Publisher
-
-```bash
-pantry publisher add \
-  --package my-package \
-  --type github-action \
-  --owner my-org \
-  --repository my-repo
-```
-
-### List Trusted Publishers
-
-```bash
-# Table format
-pantry publisher list --package my-package
-
-# JSON format
-pantry publisher list --package my-package --json
-```
-
-Example output:
-
-```
-Trusted Publishers for my-package:
-
-1. Type: github-action
-
-   Owner: my-org
-   Repository: my-repo
-   Workflow: .github/workflows/publish.yml
-   Environment: production
-
-2. Type: gitlab-ci
-
-   Owner: my-org
-   Repository: my-project
-```
-
-### Remove a Trusted Publisher
-
-```bash
-pantry publisher remove \
-  --package my-package \
-  --publisher-id <id>
-```
-
-## Security
-
-### Token Validation
-
-Pantry validates OIDC tokens through multiple security checks:
-
-1. **Signature Verification**: Token signature is verified against the provider's public keys (JWKS)
-2. **Expiration**: Token must not be expired
-3. **Issuer**: Token must come from a trusted OIDC provider
-4. **Audience**: Token audience must match the registry
-5. **Claims Matching**: Repository, workflow, and environment claims must match the configured trusted publisher
-
-### Claims Verification
-
-#### GitHub Actions Claims
-
-```json
-{
-  "iss": "https://token.actions.githubusercontent.com",
-  "sub": "repo:owner/repo:ref:refs/heads/main",
-  "aud": "pantry",
-  "repository_owner": "owner",
-  "repository": "owner/repo",
-  "job_workflow_ref": "owner/repo/.github/workflows/publish.yml@refs/heads/main",
-  "ref": "refs/heads/main",
-  "sha": "abc123..."
-}
-```
-
-#### GitLab CI Claims
-
-```json
-{
-  "iss": "https://gitlab.com",
-  "sub": "project_path:owner/repo:ref_type:branch:ref:main",
-  "aud": "pantry",
-  "namespace_path": "owner",
-  "project_path": "owner/repo",
-  "ref": "main",
-  "pipeline_source": "push"
-}
-```
-
-### Best Practices
-
-1. **Use Environment Protection**: Configure GitHub/GitLab environments with required reviewers
-2. **Restrict Allowed Refs**: Only allow publishing from main branch or version tags
-3. **Monitor Publishes**: Review the audit log for unexpected publishes
-4. **Use Provenance**: Enable provenance generation for supply chain security
-5. **Workflow Restrictions**: Specify the exact workflow file that can publish
+See [Publishing to npm](./NPM_OIDC_PUBLISHING.md#github-actions) for a complete
+monorepo release workflow.
 
 ## Provenance
 
-Pantry automatically generates [SLSA](https://slsa.dev/) provenance attestations when publishing with OIDC.
-
-### Provenance Format
-
-Pantry generates provenance in the [in-toto](https://in-toto.io/) format:
-
-```json
-{
-  "_type": "https://in-toto.io/Statement/v0.1",
-  "subject": [{
-    "name": "my-package@1.0.0",
-    "digest": {
-      "sha256": "abc123..."
-    }
-  }],
-  "predicateType": "https://slsa.dev/provenance/v0.2",
-  "predicate": {
-    "builder": {
-      "id": "https://token.actions.githubusercontent.com"
-    },
-    "buildType": "https://slsa.dev/build-type/v1",
-    "invocation": {
-      "configSource": {
-        "uri": "git+https://github.com/owner/repo",
-        "digest": {
-          "sha1": "abc123..."
-        }
-      }
-    },
-    "metadata": {
-      "buildInvocationId": "workflow-run-id",
-      "completeness": {
-        "parameters": true,
-        "environment": true,
-        "materials": true
-      },
-      "reproducible": false
-    }
-  }
-}
-```
-
-### Verifying Provenance
-
-Provenance files are generated alongside the package tarball:
-
-```bash
-my-package-1.0.0.tgz
-my-package-1.0.0.provenance.json
-```
-
-## Troubleshooting
-
-### OIDC Token Not Available
-
-**Error**: `OIDC authentication not available`
-
-**Solutions**:
-
-- Ensure `id-token: write` permission is set in your workflow
-- Verify you're running in a supported CI/CD environment
-- Check that the environment variable is accessible
-
-### Token Expired
-
-**Error**: `ExpiredToken`
-
-**Solutions**:
-
-- OIDC tokens typically expire after 1 hour
-- Ensure the publish step runs soon after checkout
-- Check if your workflow is running for an extended time
-
-### Claims Mismatch
-
-**Error**: `ClaimsMismatch`
-
-**Solutions**:
-
-- Verify the trusted publisher configuration matches your workflow
-- Check repository owner/name match exactly
-- Ensure workflow path is correct (include `.github/workflows/`)
-- Verify ref restrictions if using `allowed_refs`
-
-### Missing Permissions
-
-**Error**: `Error: Failed to request OIDC token`
-
-**Solutions**:
-
-- Add `id-token: write` to workflow permissions
-- Ensure you're using actions/checkout@v4 or later
-- Check organization/repository settings allow OIDC
-
-### Registry Not Supported
-
-**Error**: `Registry does not support OIDC`
-
-**Solutions**:
-
-- Verify the registry URL is correct
-- Check if the registry has OIDC support enabled
-- Fall back to traditional token auth with `--no-oidc`
-
-## Examples
-
-### GitHub Actions - Release Workflow
-
-```yaml
-name: Release and Publish
-
-on:
-  push:
-    tags:
-
-      - 'v*'
-
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-
-        run: npm install
-
-      - name: Run tests
-
-        run: npm test
-
-      - name: Build
-
-        run: npm run build
-
-      - name: Publish to npm
-
-        run: pantry publish
-```
-
-### GitLab CI - Automated Publishing
-
-```yaml
-# .gitlab-ci.yml
-publish:
-  stage: deploy
-  image: node:20
-  only:
-
-    - tags
-
-  script:
-
-    - curl -fsSL https://pantry.sh/install | bash
-    - pantry publish
-
-  environment:
-    name: production
-```
-
-### Multi-Registry Publishing
-
-```yaml
-
-- name: Publish to npm
-
-  run: pantry publish --registry https://registry.npmjs.org
-
-- name: Publish to GitHub Packages
-
-  run: pantry publish --registry https://npm.pkg.github.com
-```
-
-## Advanced Configuration
-
-### Custom Audiences
-
-By default, Pantry requests OIDC tokens with the audience `pantry`. You can customize this:
-
-```bash
-# Request token with custom audience
-OIDC_AUDIENCE=custom-registry pantry publish
-```
-
-### Multiple Trusted Publishers
-
-You can configure multiple trusted publishers for the same package:
-
-```bash
-# GitHub Actions
-pantry publisher add --package my-pkg --type github-action --owner org1 --repository repo1
-
-# GitLab CI
-pantry publisher add --package my-pkg --type gitlab-ci --owner org2 --repository repo2
-
-# List all
-pantry publisher list --package my-pkg
-```
-
-### Conditional OIDC Usage
-
-```yaml
-
-- name: Publish
-
-  run: |
-    if [ -n "$GITHUB_ACTIONS" ]; then
-# Use OIDC in CI
-      pantry publish
-    else
-# Use traditional token locally
-      pantry publish --no-oidc
-    fi
-  env:
-    NPM_TOKEN: ${{ secrets.NPM_TOKEN }}  # Only for local/fallback
-```
-
-## API Reference
-
-### Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GITHUB_ACTIONS` | Indicates GitHub Actions environment | `true` |
-| `ACTIONS_ID_TOKEN_REQUEST_URL` | OIDC token request URL (GitHub) | `<https://...>` |
-| `ACTIONS_ID_TOKEN_REQUEST_TOKEN` | Request token (GitHub) | `***` |
-| `CI_JOB_JWT_V2` | OIDC token (GitLab) | `eyJ...` |
-| `BITBUCKET_STEP_OIDC_TOKEN` | OIDC token (Bitbucket) | `eyJ...` |
-| `CIRCLE_OIDC_TOKEN` | OIDC token (CircleCI) | `eyJ...` |
-| `NPM_TOKEN` | Fallback authentication token | `npm_...` |
-
-### CLI Commands
-
-```bash
-# Publishing
-pantry publish [options]
-
-# Trusted Publisher Management
-pantry publisher add [options]
-pantry publisher list --package <name> [--json]
-pantry publisher remove --package <name> --publisher-id <id>
-
-# Help
-pantry publish --help
-pantry publisher --help
-```
-
-## Resources
-
-- [OIDC Specification](https://openid.net/connect/)
-- [SLSA Provenance](https://slsa.dev/provenance)
-- [GitHub Actions OIDC](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
-- [GitLab CI OIDC](https://docs.gitlab.com/ee/ci/cloud_services/index.html)
-- [npm Trusted Publishers](https://docs.npmjs.com/trusted-publishers)
-- [Supply Chain Security](https://www.cisa.gov/supply-chain)
-
-## Support
-
-For issues or questions:
-
-- GitHub Issues: <https://github.com/pantry-sh/pantry/issues>
-- Documentation: <https://pantry.sh/docs>
-- Community: <https://discord.gg/pantry>
+With OIDC, pantry signs a provenance statement with Sigstore and sends it with
+the publish. npm shows it on the package page, linked to the workflow run that
+built the version. `--no-provenance` publishes with OIDC but without it.
+Publishing with a token never attaches provenance.
+
+## `pantry oidc setup`
+
+`pantry oidc setup` reads the package name, the GitHub repository, and a
+workflow file from the current directory and prints instructions for adding
+the trusted publisher on npmjs.com by hand. It changes nothing. Use
+`pantry publisher:add` to make the change directly.
+
+## Related
+
+- [Publishing to npm](./NPM_OIDC_PUBLISHING.md)
+- [Set up OIDC publishing for a monorepo](./NPM_OIDC_QUICKSTART.md)
+- [Moving from npm tokens to OIDC](./OIDC_MIGRATION_GUIDE.md)
+- [npm: trusted publishers](https://docs.npmjs.com/trusted-publishers)

@@ -1,5 +1,12 @@
 # OIDC Implementation Summary
 
+> [!NOTE]
+> This page records how OIDC support was first built. Some of it is out of
+> date: trusted publishers are now managed through npm's trust API (the one
+> `npm trust` uses), and they need a `pantry login` session. For current usage,
+> see [Publishing to npm](./NPM_OIDC_PUBLISHING.md) and
+> [Trusted publishing](./OIDC_AUTHENTICATION.md).
+
 This document provides a technical overview of the OIDC authentication implementation in Pantry.
 
 ## Implementation Overview
@@ -10,7 +17,7 @@ Pantry now supports OpenID Connect (OIDC) authentication for publishing packages
 
 ### Core Components
 
-```
+```text
 pantry/
 ├── packages/zig/src/auth/
 │   ├── oidc.zig          # OIDC token handling and validation
@@ -172,26 +179,26 @@ Generates [SLSA](https://slsa.dev/) provenance in [in-toto](https://in-toto.io/)
 
 ```bash
 # Publish with OIDC (default)
-pantry publish
+pantry publish --npm
 
 # Publish with dry-run
-pantry publish --dry-run
+pantry publish --npm --dry-run
 
 # Disable OIDC, use token auth
-pantry publish --no-oidc
+pantry publish --npm --no-oidc
 
 # Custom registry
-pantry publish --registry https://registry.pantry.dev
+pantry npm:publish --registry https://npm.example.com
 
 # Disable provenance
-pantry publish --no-provenance
+pantry publish --npm --no-provenance
 ```
 
 ### Trusted Publisher Management
 
 ```bash
 # Add trusted publisher
-pantry publisher add \
+pantry publisher:add \
   --package <name> \
   --type github-action \
   --owner <org> \
@@ -200,11 +207,11 @@ pantry publisher add \
   --environment <env>
 
 # List trusted publishers
-pantry publisher list --package <name>
-pantry publisher list --package <name> --json
+pantry publisher:list --package <name>
+pantry publisher:list --package <name> --json
 
 # Remove trusted publisher
-pantry publisher remove --package <name> --publisher-id <id>
+pantry publisher:remove --package <name> --publisher-id <id>
 ```
 
 ## Security Considerations

@@ -1,87 +1,45 @@
-name: Publish to npm with OIDC
+# Publish to npm from GitHub Actions with OIDC: no npm token, and every
+# package gets Sigstore provenance.
+#
+# Once, before the first run, tell npm this workflow may publish:
+#
+#   pantry login
+#   pantry publisher:add --repository owner/repo --workflow npm-publish.yml
+#
+# Without --package, publisher:add sets up every publishable package of the
+# monorepo it's run in. See docs/NPM_OIDC_PUBLISHING.md.
+
+name: Publish to npm
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch: # Allow manual trigger for testing
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # Run by hand to publish what a release left out
 
 jobs:
-  publish-npm:
+  npm:
     runs-on: ubuntu-latest
 
-    # IMPORTANT: Required for OIDC authentication
     permissions:
-      id-token: write  # Required to request OIDC token
-      contents: read   # Required to checkout code
+      id-token: write # npm exchanges the workflow's OIDC token for a publish token
+      contents: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Pantry
+      - uses: pantry-pm/pantry/packages/action@main
+        with:
+          install: 'false'
+
+      - name: Install and build
         run: |
-          # Install pantry
-          curl -fsSL https://pantry.sh/install.sh | bash
+          bun install
+          bun run build
 
-          # Or build from source if in pantry repo
-          # zig build
-          # export PATH="$PWD/zig-out/bin:$PATH"
-
-      - name: Publish to npm with OIDC
-        run: pantry publish
-        env:
-          # No NPM_TOKEN needed! OIDC handles authentication
-          NODE_AUTH_TOKEN: "" # Not needed with OIDC
-
-      # Alternative: Publish with explicit registry configuration
-      - name: Publish to npm with OIDC (explicit registry)
-        run: pantry publish --registry https://registry.npmjs.org
-        if: false # Disabled by default (example only)
-
-      # For debugging: Test with dry-run first
-      - name: Dry run publish
-        run: pantry publish --dry-run
-        if: false # Disabled by default (example only)
-
-  # Example: Publish to multiple registries
-  publish-multi-registry:
-    runs-on: ubuntu-latest
-    if: false # Disabled by default (example only)
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pantry
-        run: curl -fsSL https://pantry.sh/install.sh | bash
-
-      - name: Publish to npm
-        run: pantry publish --registry https://registry.npmjs.org
-
-      - name: Publish to Pantry registry (future)
-        run: pantry publish --registry https://registry.pantry.dev
-        continue-on-error: true # Continue if pantry registry not yet available
-
-  # Example: Environment-specific publishing
-  publish-with-environment:
-    runs-on: ubuntu-latest
-    if: false # Disabled by default (example only)
-
-    # Use GitHub environments for additional security
-    environment: npm-production
-
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Pantry
-        run: curl -fsSL https://pantry.sh/install.sh | bash
-
-      - name: Publish to npm
-        run: pantry publish
+      # From the repo root, every non-private package in packages/ goes up
+      # in dependency order, `workspace:` ranges pinned to real versions.
+      # Versions already on npm are skipped, so a rerun only publishes what's
+      # missing. Built above, so packages don't rebuild themselves.
+      - name: Publish
+        run: pantry publish --npm --access public --ignore-scripts

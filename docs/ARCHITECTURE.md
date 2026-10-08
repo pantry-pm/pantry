@@ -50,7 +50,7 @@ pantry is a modern dependency manager that provides:
 
 The project is organized as a monorepo with five packages:
 
-```
+```text
 packages/
   zig/           Main CLI binary (Zig)
   ts-pantry/     TypeScript package metadata scraper/generator
@@ -77,7 +77,10 @@ cli/
   commands/
     install.zig        install, add, install --global
     install/           Sub-modules: core, global, helpers, lockfile_hooks, workspace, types
-    package.zig        remove, update, outdated, uninstall, publish, why
+    package.zig        remove, update, outdated, uninstall, publish, publisher:add/list/remove, why
+    publish_plan.zig   Monorepo release decisions: held-back packages, missing npm scopes
+    workspace_publish.zig  workspace:/catalog: range rewriting for published manifests
+    login.zig          login (npm browser login, writes the user npmrc)
     registry.zig       search, info, list, whoami, registry publish
     scripts.zig        run (script execution from package.json)
     services.zig       start, stop, restart, status, enable, disable, logs, inspect, exec, snapshot, restore
@@ -189,6 +192,7 @@ registry/
 
 auth/
   oidc.zig             OIDC token handling for CI/CD publishing
+  npm_trust.zig        npm trust API (/-/package/<name>/trust), two-factor, web login polling
   signing.zig          Package signing (Ed25519)
   sigstore.zig         Sigstore integration
   registry.zig         Registry authentication
@@ -480,7 +484,7 @@ Action handlers extract arguments/options from the `ParseContext`, call into the
 
 **Scripts**: `run`, `dev`, `build`, `test`, `px`, `scripts`
 
-**Publishing**: `publish`, `npm:publish`, `publisher:add/list/remove`, `publish-commit`
+**Publishing**: `publish` (with `--npm` for npm), `npm:publish`, `login`, `publisher:add/list/remove`, `publish:commit`
 
 **Security**: `audit`, `verify`, `sign`, `generate-key`, `oidc setup`
 
