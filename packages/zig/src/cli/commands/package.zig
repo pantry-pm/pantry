@@ -1255,9 +1255,12 @@ fn publishSingleToNpm(
         defer result.deinit(allocator);
 
         if (result.success) {
-            if (options.provenance) {
+            if (result.provenance) {
                 style.print("\n✓ Sigstore provenance attached\n", .{});
                 style.print("✓ Published {s}@{s} with provenance\n", .{ metadata.name, metadata.version });
+            } else if (options.provenance) {
+                style.print("\n✓ Published {s}@{s}\n", .{ metadata.name, metadata.version });
+                style.print("  {s}⚠{s} without provenance: signing it failed\n", .{ style.yellow, style.reset });
             } else {
                 style.print("\n✓ Published {s}@{s}\n", .{ metadata.name, metadata.version });
             }
@@ -1710,6 +1713,9 @@ const OIDCPublishResult = struct {
     error_message: ?[]const u8 = null,
     is_version_conflict: bool = false,
     status_code: u16 = 0,
+    /// Whether the upload carried a Sigstore provenance bundle. Signing can
+    /// fail without failing the publish, and then it went up without one.
+    provenance: bool = false,
     /// Whether an upload was made, or may have been. Every failure before the
     /// upload — no CI provider, no OIDC token, one npm would not exchange —
     /// leaves this false, and then there is no landed version to look for.
@@ -2062,7 +2068,7 @@ fn attemptOIDCPublish(
         };
     }
 
-    return .{ .success = true };
+    return .{ .success = true, .provenance = sigstore_bundle != null };
 }
 
 /// Fallback: Attempt OIDC publish without local signature verification
@@ -2182,7 +2188,7 @@ fn attemptOIDCPublishUnverified(
         };
     }
 
-    return .{ .success = true };
+    return .{ .success = true, .provenance = sigstore_bundle != null };
 }
 
 /// Info about a created tarball for clean publish output

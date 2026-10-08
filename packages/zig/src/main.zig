@@ -3538,7 +3538,7 @@ pub fn main() !void {
     const npm_no_provenance_opt = cli.Option.init("no-provenance", "no-provenance", "Disable Sigstore provenance for OIDC publishing", .bool);
     _ = try npm_publish_cmd.addOption(npm_no_provenance_opt);
 
-    const npm_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package names or directory names to skip", .string);
+    const npm_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package directory names to skip (e.g. docs,playground)", .string);
     _ = try npm_publish_cmd.addOption(npm_skip_opt);
 
     const npm_github_release_opt = cli.Option.init("github-release", "github-release", "Create a GitHub release after publishing", .bool);
@@ -4520,7 +4520,7 @@ pub fn main() !void {
     const pub_add_package_opt = cli.Option.init("package", "package", "Package name (default: every publishable package here)", .string);
     _ = try publisher_add_cmd.addOption(pub_add_package_opt);
 
-    const pub_add_type_opt = cli.Option.init("type", "type", "Publisher type (github-action, gitlab-ci, bitbucket-pipeline, circleci)", .string)
+    const pub_add_type_opt = cli.Option.init("type", "type", "Publisher type: github-action or gitlab-ci (for CircleCI use `npm trust circleci`)", .string)
         .withDefault("github-action");
     _ = try publisher_add_cmd.addOption(pub_add_type_opt);
 
@@ -4613,7 +4613,7 @@ pub fn main() !void {
     const pub_no_provenance_opt = cli.Option.init("no-provenance", "no-provenance", "Disable Sigstore provenance for npm OIDC publishing", .bool);
     _ = try publish_cmd.addOption(pub_no_provenance_opt);
 
-    const pub_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package names or directory names to skip", .string);
+    const pub_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package directory names to skip (e.g. docs,playground)", .string);
     _ = try publish_cmd.addOption(pub_skip_opt);
 
     const pub_github_release_opt = cli.Option.init("github-release", "github-release", "Create a GitHub release after publishing", .bool);

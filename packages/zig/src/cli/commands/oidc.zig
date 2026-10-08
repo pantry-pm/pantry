@@ -176,7 +176,7 @@ fn printSetupInstructions(allocator: std.mem.Allocator, package_name: []const u8
 
     style.print("────────────────────────────────────────────────────────────\n", .{});
     style.print("Once configured, you can publish without any secrets:\n\n", .{});
-    style.print("  pantry publish --access public\n\n", .{});
+    style.print("  pantry publish --npm --access public\n\n", .{});
 
     style.print("Your workflow needs these permissions:\n\n", .{});
     style.print("  permissions:\n", .{});
