@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.77...v0.11.78)
+
+## 🐛 Bug Fixes
+
+- **publisher**: set up trusted publishing through npm's real API ([1045d49](https://github.com/pantry-pm/pantry/commit/1045d49)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.78 ([ad9ff13](https://github.com/pantry-pm/pantry/commit/ad9ff13)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.76...v0.11.77)
 
 ## 🐛 Bug Fixes
