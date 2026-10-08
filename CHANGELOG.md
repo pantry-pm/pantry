@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.75...v0.11.76)
+
+## ✨ Features
+
+- **publish**: hold back packages whose sibling failed, and stop waiting on nothing ([3b36eda](https://github.com/pantry-pm/pantry/commit/3b36eda)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **publish**: pack tarballs npm accepts from a Mac ([2e8b60a](https://github.com/pantry-pm/pantry/commit/2e8b60a)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.76 ([5273df1](https://github.com/pantry-pm/pantry/commit/5273df1)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update coder.com/code-server, github.com/ggerganov/llama.cpp, groonga.org, kotlinlang.org, railway.app ([2939dbe](https://github.com/pantry-pm/pantry/commit/2939dbe)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.123 ([630046b](https://github.com/pantry-pm/pantry/commit/630046b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, materialize.com, nodejs.org, ollama.ai, pandoc.org, squawkhq.com ([f90baeb](https://github.com/pantry-pm/pantry/commit/f90baeb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.122 ([3a7f5b1](https://github.com/pantry-pm/pantry/commit/3a7f5b1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, circleci.com, crates.io/hyperfine, dprint.dev, fly.io, github.com/router-for-me/CLIProxyAPI, gleam.run, streamlink.github.io, stripe.com, tailscale.com, turso.tech, vim.org, zed.dev ([7da4b65](https://github.com/pantry-pm/pantry/commit/7da4b65)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.121 ([8000bcd](https://github.com/pantry-pm/pantry/commit/8000bcd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.74...v0.11.75)
 
 ## ✨ Features
