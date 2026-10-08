@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.78...v0.11.79)
+
+## ✨ Features
+
+- **login**: log in to npm in the browser, without npm ([8cf1369](https://github.com/pantry-pm/pantry/commit/8cf1369)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.79 ([693a660](https://github.com/pantry-pm/pantry/commit/693a660)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.77...v0.11.78)
 
 ## 🐛 Bug Fixes
