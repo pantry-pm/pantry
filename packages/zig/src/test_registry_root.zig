@@ -17,4 +17,6 @@ test {
     _ = @import("auth/registry.zig");
     // Ignore-file matching for publish tarballs (#202).
     _ = @import("cli/commands/publish_ignore.zig");
+    // Which monorepo packages wait for a failed sibling, and npm's missing scopes.
+    _ = @import("cli/commands/publish_plan.zig");
 }

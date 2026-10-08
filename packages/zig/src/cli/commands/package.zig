@@ -7,6 +7,7 @@ const common = @import("common.zig");
 const token_commands = @import("token.zig");
 const style = @import("../style.zig");
 const workspace_publish = @import("workspace_publish.zig");
+const publish_plan = @import("publish_plan.zig");
 const publish_ignore = @import("publish_ignore.zig");
 
 const CommandResult = common.CommandResult;
@@ -843,9 +844,27 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
         var failed: usize = 0;
         var succeeded: usize = 0;
         var skipped: usize = 0;
+        // Packages that did not publish in this run, so the ones that install
+        // them can wait rather than go up uninstallable (publish_plan.zig).
+        var failed_names: std.ArrayList([]const u8) = .empty;
+        defer failed_names.deinit(allocator);
 
         for (pkgs) |pkg| {
             style.print("\nPublishing {s}...\n", .{pkg.name});
+
+            if (io_helper.readFileAlloc(allocator, pkg.config_path, 10 * 1024 * 1024)) |manifest| {
+                defer allocator.free(manifest);
+                if (publish_plan.heldBackBy(allocator, manifest, failed_names.items)) |dependency| {
+                    style.print(
+                        "  {s}↷{s} held back: it installs {s}, which didn't publish. Fix that and run again; what's already on npm is skipped.\n",
+                        .{ style.yellow, style.reset, dependency },
+                    );
+                    style.print("----------------------------------------\n", .{});
+                    failed += 1;
+                    failed_names.append(allocator, pkg.name) catch {};
+                    continue;
+                }
+            } else |_| {}
 
             // Propagate root files (README, LICENSE) to package if missing
             var copied_files: [root_files.len]?[]const u8 = @splat(null);
@@ -897,6 +916,7 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
                     }
                 } else {
                     failed += 1;
+                    failed_names.append(allocator, pkg.name) catch {};
                     if (r.message) |msg| style.print("  Error: {s}\n", .{msg});
                     if (r.rate_limited) {
                         rate_limited = true;
@@ -907,6 +927,7 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
                 res.deinit(allocator);
             } else |err| {
                 failed += 1;
+                failed_names.append(allocator, pkg.name) catch {};
                 style.print("  Error: {any}\n", .{err});
             }
             style.print("----------------------------------------\n", .{});
@@ -1296,8 +1317,11 @@ fn publishSingleToNpm(
             //
             // So ask the registry before believing the error. Only on this
             // path: a definitive rejection above never published anything, and
-            // the success path never gets here.
-            if (confirmVersionLanded(allocator, registry_url, metadata.name, metadata.version)) {
+            // the success path never gets here. Nor does a failure that came
+            // before the upload — no CI provider, a token npm would not
+            // exchange for a package with no trusted publisher — which used to
+            // wait two minutes per package for a version that was never sent.
+            if (result.sent and confirmVersionLanded(allocator, registry_url, metadata.name, metadata.version)) {
                 style.print(
                     "\n{s}✓{s} {s}@{s} is on the registry — the publish landed, the response did not\n",
                     .{ style.green, style.reset, metadata.name, metadata.version },
@@ -1541,6 +1565,12 @@ fn publishSingleToNpm(
             style.print("  pantry publisher:add --package {s} --owner <owner> --repository <repo> --workflow .github/workflows/release.yml\n", .{metadata.name});
             style.print("Verify tokens at: https://www.npmjs.com/settings/tokens\n", .{});
         }
+        if (publish_plan.missingScope(metadata.name, error_summary)) |scope| {
+            style.print("\nThe {s} scope doesn't exist on npm, or this account isn't a member of it.\n", .{scope});
+            style.print("No token can publish there until it does: create the organization at\n", .{});
+            style.print("  https://www.npmjs.com/org/create\n", .{});
+            style.print("and add the account that publishes.\n", .{});
+        }
 
         style.print("Registry: {s}\n", .{registry_url});
 
@@ -1680,6 +1710,10 @@ const OIDCPublishResult = struct {
     error_message: ?[]const u8 = null,
     is_version_conflict: bool = false,
     status_code: u16 = 0,
+    /// Whether an upload was made, or may have been. Every failure before the
+    /// upload — no CI provider, no OIDC token, one npm would not exchange —
+    /// leaves this false, and then there is no landed version to look for.
+    sent: bool = false,
 
     fn deinit(self: *OIDCPublishResult, allocator: std.mem.Allocator) void {
         if (self.error_message) |message| allocator.free(message);
@@ -1780,9 +1814,11 @@ fn attemptOIDCPublishWithTimeout(
                     } else |_| {}
                 }
             }
+            // The upload may be in flight still: it counts as sent.
             return .{
                 .success = false,
                 .status_code = 0,
+                .sent = true,
                 .error_message = try std.fmt.allocPrint(
                     allocator,
                     "OIDC publish timed out after {d}s",
@@ -2022,6 +2058,7 @@ fn attemptOIDCPublish(
             .error_message = error_msg,
             .is_version_conflict = is_version_conflict,
             .status_code = @intCast(response.status_code),
+            .sent = !response.not_sent,
         };
     }
 
@@ -2141,6 +2178,7 @@ fn attemptOIDCPublishUnverified(
             .error_message = error_msg,
             .is_version_conflict = is_version_conflict,
             .status_code = @intCast(response.status_code),
+            .sent = !response.not_sent,
         };
     }
 

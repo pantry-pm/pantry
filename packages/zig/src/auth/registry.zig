@@ -506,6 +506,7 @@ pub const RegistryClient = struct {
             return PublishResponse{
                 .success = false,
                 .status_code = 401,
+                .not_sent = true,
                 .message = try self.allocator.dupe(u8, "Failed to exchange OIDC token with npm"),
                 .error_details = .{
                     .code = code,
@@ -1335,6 +1336,10 @@ pub const PublishResponse = struct {
     success: bool,
     status_code: u16,
     message: ?[]const u8 = null,
+    /// The upload was never made: the failure came first (an OIDC token npm
+    /// would not exchange), so the version cannot have landed and there is
+    /// nothing to wait for.
+    not_sent: bool = false,
     /// Detailed error information for debugging
     error_details: ?ErrorDetails = null,
     /// Server-suggested retry delay in seconds (from `retry_after` field of
