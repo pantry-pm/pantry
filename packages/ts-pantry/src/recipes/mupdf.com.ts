@@ -24,7 +24,7 @@ export const recipe: Recipe = {
     'info-zip.org/unzip': '^6',
     'github.com/google/brotli': '^1',
     'freetype.org': '^2',
-    'harfbuzz.org': '^9',
+    'harfbuzz.org': '>=9',
     'mujs.com': '^1',
     'openjpeg.org': '^2',
     'jbig2dec.com': '^0',

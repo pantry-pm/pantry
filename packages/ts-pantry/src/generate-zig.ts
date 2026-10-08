@@ -238,11 +238,20 @@ export function stripSpecComment(spec: string): string {
   return (hash >= 0 ? spec.slice(0, hash) : spec).trim()
 }
 
-/** Union metadata deps with recipe deps, deduping by `os:domain` (metadata wins
- * on conflict; recipe-only deps — e.g. php's `postgresql.org` — are appended). */
-function mergeDeps(metaDeps: string[], recipeDeps: string[]): string[] {
-  const seen = new Set(metaDeps.map(depKey))
-  const merged = [...metaDeps]
+/**
+ * Union metadata deps with recipe deps, deduping by `os:domain`. On a
+ * conflict the recipe wins: it is what the binary in the registry was built
+ * against, and the upstream metadata is often a pin from an older build.
+ * ffmpeg's metadata said `harfbuzz.org^8` while the registry only ever built
+ * harfbuzz 14, so `pantry install ffmpeg` failed on "harfbuzz.org@8.5.0 not
+ * found in registry"; nginx, redis and mariadb were built with openssl 3 and
+ * their metadata asked for 1.1. Recipe-only deps (php's `postgresql.org`) are
+ * appended, metadata-only ones kept.
+ */
+export function mergeDeps(metaDeps: string[], recipeDeps: string[]): string[] {
+  const fromRecipe = new Map(recipeDeps.map(spec => [depKey(spec), spec]))
+  const merged = metaDeps.map(spec => fromRecipe.get(depKey(spec)) ?? spec)
+  const seen = new Set(merged.map(depKey))
   for (const spec of recipeDeps) {
     const key = depKey(spec)
     if (!seen.has(key)) {

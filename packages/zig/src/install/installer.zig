@@ -7,6 +7,7 @@ const errors = @import("../core/error.zig");
 const downloader = @import("downloader.zig");
 const extractor = @import("extractor.zig");
 const libfixer = @import("libfixer.zig");
+const ca_certs = @import("ca_certs.zig");
 const pkgx_shebang = @import("pkgx_shebang.zig");
 const npm_platform = @import("npm_platform.zig");
 const validator = @import("validator.zig");
@@ -876,6 +877,12 @@ pub const Installer = struct {
                 defer if (tree_root) |root| self.allocator.free(root);
                 libfixer.fixDirectoryLibraryPathsInTree(self.allocator, install_path, tree_root) catch {};
             }
+        }
+
+        // An OpenSSL finds its CA bundle at `<prefix>/ssl/cert.pem`, which only
+        // curl.se/ca-certs provides; link the two whichever arrives second.
+        if (install_path.len > 0 and (std.mem.eql(u8, domain, "openssl.org") or std.mem.eql(u8, domain, "curl.se/ca-certs"))) {
+            if (ca_certs.treeRootOf(install_path, domain)) |root| ca_certs.linkBundles(self.allocator, root);
         }
 
         // Scripts mirrored from pkgx name their interpreter as `#!/usr/bin/env

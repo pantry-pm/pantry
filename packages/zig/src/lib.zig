@@ -61,6 +61,7 @@ test {
     _ = @import("cli/commands/install/global.zig");
     _ = @import("shell/install_route.zig");
     _ = @import("install/libfixer.zig");
+    _ = @import("install/ca_certs.zig");
     _ = @import("install/pkgx_shebang.zig");
     _ = @import("install/npm_platform.zig");
     _ = @import("install/installer.zig");

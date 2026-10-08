@@ -20,7 +20,9 @@ export const recipe: Recipe = {
     'lame.sourceforge.io': '>=3.98.3',
     'libsdl.org': '^2',
     'freetype.org': '^2',
-    'harfbuzz.org': '^8',
+    // HarfBuzz keeps one ABI (libharfbuzz.so.0) across majors, and the
+    // registry builds 14.x; ^8 matched nothing it had.
+    'harfbuzz.org': '>=8',
     'videolan.org/x264': '^0.164',
     'videolan.org/x265': '^3',
     'webmproject.org/libvpx': '~1.14',

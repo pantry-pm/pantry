@@ -31,6 +31,12 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
 
+  // The certificates it trusts: props/x509_def.c.diff makes it look for
+  // them at <prefix>/ssl/cert.pem, which the installer links to this bundle.
+  dependencies: {
+    'curl.se/ca-certs': '*',
+  },
+
   build: {
     script: [
       // Version-gated patches (pkgx ships separate diffs across the 3.4.0 line).

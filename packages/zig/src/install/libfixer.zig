@@ -159,8 +159,18 @@ pub fn fixMacOSLibraryPathsInTree(
             continue;
         };
 
+        // An `@rpath/` reference stays one when the target is another installed
+        // package: `@rpath/<domain>/v<major>/lib/<name>`, through the major link
+        // pantry keeps, resolved by the artifact's own `@loader_path/../../..`
+        // rpath. The `@loader_path/../../../harfbuzz.org/v14.6.0/...` it used
+        // to become is longer than the reference it replaces, and a dylib
+        // linked without header padding has no room for it: install_name_tool
+        // refused, the error was ignored, and ffmpeg's libavfilter kept looking
+        // for `harfbuzz.org/v8`, which the registry no longer has.
+        var rpath_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const rpath_ref: ?[]const u8 = if (std.mem.startsWith(u8, dep.original_ref, "@rpath/")) packagesRpathRef(target, &rpath_buf) else null;
         var ref_buf: [std.fs.max_path_bytes]u8 = undefined;
-        const new_ref = loaderRelativeRef(allocator, tree_root, target, binary_path, &ref_buf) orelse target;
+        const new_ref = rpath_ref orelse (loaderRelativeRef(allocator, tree_root, target, binary_path, &ref_buf) orelse target);
         if (std.mem.eql(u8, new_ref, dep.original_ref)) continue;
 
         // Fix the library path using install_name_tool
@@ -176,6 +186,26 @@ pub fn fixMacOSLibraryPathsInTree(
         defer allocator.free(fix_result.stdout);
         defer allocator.free(fix_result.stderr);
     }
+}
+
+/// `@rpath/<domain>/v<major>/<rest>` for a library under a `/packages/` root,
+/// through the `v<major>` link when it exists there, else the exact version;
+/// null when `target` is not under a packages root.
+pub fn packagesRpathRef(target: []const u8, out: []u8) ?[]const u8 {
+    const marker = "/packages/";
+    // The last one: the tree itself can sit under a path with `/packages/` in it.
+    const idx = std.mem.lastIndexOf(u8, target, marker) orelse return null;
+    const root = target[0 .. idx + marker.len - 1];
+    const rel = target[idx + marker.len ..];
+    var major_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var probe_buf: [std.fs.max_path_bytes]u8 = undefined;
+    if (majorVersionRef(rel, &major_buf)) |major_rel| {
+        const probe = std.fmt.bufPrint(&probe_buf, "{s}/{s}", .{ root, major_rel }) catch return null;
+        if (io_helper.accessAbsolute(probe, .{})) |_| {
+            return std.fmt.bufPrint(out, "@rpath/{s}", .{major_rel}) catch null;
+        } else |_| {}
+    }
+    return std.fmt.bufPrint(out, "@rpath/{s}", .{rel}) catch null;
 }
 
 /// `@loader_path/<path of lib from binary's dir>` when `binary_path` and
@@ -264,7 +294,8 @@ pub fn majorVersionRef(rel: []const u8, out: []u8) ?[]const u8 {
 /// `<packages-root>/**/lib/<basename>` to a bounded depth.
 fn findDylibInPackages(allocator: std.mem.Allocator, lib_dir: []const u8, basename: []const u8, out: []u8) ?[]const u8 {
     const marker = "/packages/";
-    const idx = std.mem.indexOf(u8, lib_dir, marker) orelse return null;
+    // The last one: a pantry tree under `~/Code/x/packages/...` has two.
+    const idx = std.mem.lastIndexOf(u8, lib_dir, marker) orelse return null;
     const packages_root = lib_dir[0 .. idx + marker.len - 1]; // includes "/packages"
     return searchLibDirs(allocator, packages_root, basename, out, 0);
 }
@@ -668,4 +699,27 @@ test "an @rpath reference to a version not installed resolves through its major 
         return error.TestExpectedResolution;
     var want_buf: [std.fs.max_path_bytes]u8 = undefined;
     try testing.expectEqualStrings(try std.fmt.bufPrint(&want_buf, "{s}/pantry/sourceware.org/libffi/v3/lib/libffi.8.dylib", .{root}), found);
+}
+
+test "a library found in another package is referenced through @rpath and its major link" {
+    const testing = std.testing;
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+
+    // harfbuzz 14.6.0 is installed with its v14 link; ffmpeg was built against v8.
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const hb_lib = try std.fmt.bufPrint(&buf, "{s}/packages/harfbuzz.org/v14.6.0/lib", .{root});
+    try io_helper.makePath(hb_lib);
+    var file_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const dylib = try std.fmt.bufPrint(&file_buf, "{s}/libharfbuzz.dylib", .{hb_lib});
+    io_helper.closeFile(try io_helper.createFileAbsolute(dylib, .{}));
+    var link_buf: [std.fs.max_path_bytes]u8 = undefined;
+    try io_helper.symLink("v14.6.0", try std.fmt.bufPrint(&link_buf, "{s}/packages/harfbuzz.org/v14", .{root}));
+
+    var out: [std.fs.max_path_bytes]u8 = undefined;
+    try testing.expectEqualStrings("@rpath/harfbuzz.org/v14/lib/libharfbuzz.dylib", packagesRpathRef(dylib, &out).?);
+    // No shorter than what it replaces would need, and nothing outside a packages root.
+    try testing.expect(packagesRpathRef("/opt/homebrew/lib/libharfbuzz.dylib", &out) == null);
 }
