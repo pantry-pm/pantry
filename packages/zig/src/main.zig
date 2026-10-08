@@ -814,6 +814,18 @@ fn listAction(ctx: *cli.BaseCommand.ParseContext) !void {
     std.process.exit(result.exit_code);
 }
 
+fn loginAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.loginCommand(allocator, .{
+        .registry = ctx.getOption("registry") orelse "https://registry.npmjs.org",
+    });
+    defer result.deinit(allocator);
+    if (result.message) |msg| {
+        style.print("{s}\n", .{msg});
+    }
+    std.process.exit(result.exit_code);
+}
+
 fn whoamiAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -2826,6 +2838,7 @@ fn printHelp() void {
 
     // Other
     style.print("    " ++ bold_cyan ++ "Other:" ++ style.reset ++ "\n", .{});
+    style.print("      " ++ style.cyan ++ "login" ++ style.reset ++ "               Log in to npm in the browser\n", .{});
     style.print("      " ++ style.cyan ++ "whoami" ++ style.reset ++ "              Show current user\n", .{});
     style.print("      " ++ style.cyan ++ "upgrade" ++ style.reset ++ "             Upgrade pantry to the latest version\n", .{});
     style.print("      " ++ style.cyan ++ "upgrade --canary" ++ style.reset ++ "    Upgrade to the latest canary release\n", .{});
@@ -3490,6 +3503,11 @@ pub fn main() !void {
     // ========================================================================
     // Whoami Command
     // ========================================================================
+    var login_cmd = try cli.BaseCommand.init(allocator, "login", "Log in to npm in the browser (no npm needed); saves the token to ~/.npmrc");
+    _ = try login_cmd.addOption(cli.Option.init("registry", "registry", "Registry URL", .string).withDefault("https://registry.npmjs.org"));
+    _ = login_cmd.setAction(loginAction);
+    _ = try root.addCommand(login_cmd);
+
     var whoami_cmd = try cli.BaseCommand.init(allocator, "whoami", "Display the currently authenticated user");
     _ = whoami_cmd.setAction(whoamiAction);
     _ = try root.addCommand(whoami_cmd);

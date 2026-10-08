@@ -3304,7 +3304,7 @@ fn trustAuthToken(allocator: std.mem.Allocator) ![]u8 {
     };
 }
 
-const no_npm_token_message = "Error: No npm auth token found. Log in with `npm login`, or set NPM_TOKEN (or NODE_AUTH_TOKEN / BUN_AUTH_TOKEN), or add NPM_TOKEN to ~/.pantry/credentials.";
+const no_npm_token_message = "Error: No npm auth token found. Log in with `pantry login`, or set NPM_TOKEN (or NODE_AUTH_TOKEN / BUN_AUTH_TOKEN).";
 
 /// One trust request, with npm's two-factor step taken care of: approved in
 /// the browser when npm offers that, typed in otherwise. `otp` carries the
@@ -3336,7 +3336,7 @@ fn trustCall(
             style.print("\n  npm wants two-factor approval. Approve it in your browser:\n    {s}\n", .{web.auth_url});
             _ = openInBrowser(allocator, web.auth_url);
             style.print("  Waiting for approval...\n", .{});
-            otp.* = npm_trust.awaitWebAuth(client, web.done_url, auth_token, 300) catch |err| {
+            otp.* = npm_trust.awaitWebAuth(client, web.done_url, auth_token, 300, &.{}) catch |err| {
                 style.print("  Browser approval didn't complete ({any}).\n", .{err});
                 return err;
             };
@@ -3456,8 +3456,10 @@ pub fn trustedPublisherAddCommand(
         }
         failed += 1;
         style.print("  ✗ {s}: {d} {s}\n", .{ name, response.status, message });
-        if (response.status == 401) {
-            style.print("    npm didn't accept the token. Log in with `npm login`, or set NPM_TOKEN to a token of an account that owns the package.\n", .{});
+        if (response.tokenBypasses2fa()) {
+            style.print("    This token skips two-factor, and npm no longer takes those for trust settings. Log in with `pantry login` and run this again.\n", .{});
+        } else if (response.status == 401) {
+            style.print("    npm didn't accept the token. Log in with `pantry login` and run this again.\n", .{});
         } else if (response.status == 404) {
             style.print("    npm answers 404 for a package that isn't on npm yet, or that this account can't administer.\n", .{});
         }

@@ -99,6 +99,8 @@ pub const infoCommand = registry_commands.infoCommand;
 pub const listCommand = registry_commands.listCommand;
 pub const listCommandWithFormat = registry_commands.listCommandWithFormat;
 pub const whoamiCommand = registry_commands.whoamiCommand;
+pub const loginCommand = @import("commands/login.zig").loginCommand;
+pub const LoginOptions = @import("commands/login.zig").LoginOptions;
 
 // Registry publish command (uploads to Pantry registry S3)
 pub const RegistryPublishOptions = registry_commands.RegistryPublishOptions;

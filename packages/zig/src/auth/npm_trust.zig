@@ -35,10 +35,21 @@ pub const Response = struct {
     /// npm wants a one-time password: 401 with `otp` in `WWW-Authenticate`,
     /// or a body that says so.
     needs_otp: bool = false,
+    /// npm's `npm-notice` header, which is where it says why a token was
+    /// turned away when the body doesn't.
+    notice: ?[]const u8 = null,
 
     pub fn deinit(self: *Response, allocator: std.mem.Allocator) void {
         allocator.free(self.body);
+        if (self.notice) |n| allocator.free(n);
         self.* = undefined;
+    }
+
+    /// The token skips two-factor, which npm no longer accepts for account
+    /// changes such as trust settings. Only a login session will do.
+    pub fn tokenBypasses2fa(self: Response) bool {
+        const notice = self.notice orelse return false;
+        return self.status == 403 and std.ascii.findIgnoreCase(notice, "2fa") != null;
     }
 
     pub fn ok(self: Response) bool {
@@ -65,25 +76,35 @@ pub fn request(
     else
         try std.fmt.allocPrint(allocator, "{s}/-/package/{s}/trust", .{ client.registry_url, encoded });
     defer allocator.free(url);
-    return send(client, method, url, body, auth_token, otp);
+    return send(client, method, url, body, auth_token, otp, &.{});
 }
 
-fn send(
+/// One request to the registry: authorized when there's a token (logging
+/// in has none yet), with a JSON body and a one-time password if given, and
+/// any `extra` headers (npm's web login wants `npm-auth-type: web`).
+pub fn send(
     client: *registry.RegistryClient,
     method: http.Method,
     url: []const u8,
     body: ?[]const u8,
-    auth_token: []const u8,
+    auth_token: ?[]const u8,
     otp: ?[]const u8,
+    extra: []const http.Header,
 ) !Response {
     const allocator = client.allocator;
-    const auth = try std.fmt.allocPrint(allocator, "Bearer {s}", .{auth_token});
-    defer allocator.free(auth);
+    const auth = if (auth_token) |token| try std.fmt.allocPrint(allocator, "Bearer {s}", .{token}) else null;
+    defer if (auth) |a| allocator.free(a);
 
-    var headers: [4]http.Header = undefined;
+    var headers: [8]http.Header = undefined;
     var count: usize = 0;
-    headers[count] = .{ .name = "Authorization", .value = auth };
-    count += 1;
+    for (extra[0..@min(extra.len, 4)]) |h| {
+        headers[count] = h;
+        count += 1;
+    }
+    if (auth) |a| {
+        headers[count] = .{ .name = "Authorization", .value = a };
+        count += 1;
+    }
     headers[count] = .{ .name = "Accept", .value = "application/json" };
     count += 1;
     if (body != null) {
@@ -110,9 +131,13 @@ fn send(
     // The head's bytes don't outlive the body read: take what's needed first.
     var retry_after: ?u32 = null;
     var otp_header = false;
+    var notice: ?[]const u8 = null;
+    errdefer if (notice) |n| allocator.free(n);
     var it = response.head.iterateHeaders();
     while (it.next()) |header| {
-        if (std.ascii.eqlIgnoreCase(header.name, "retry-after")) {
+        if (std.ascii.eqlIgnoreCase(header.name, "npm-notice") and notice == null) {
+            notice = try allocator.dupe(u8, header.value);
+        } else if (std.ascii.eqlIgnoreCase(header.name, "retry-after")) {
             retry_after = std.fmt.parseInt(u32, std.mem.trim(u8, header.value, " "), 10) catch null;
         } else if (std.ascii.eqlIgnoreCase(header.name, "www-authenticate")) {
             otp_header = std.ascii.findIgnoreCase(header.value, "otp") != null;
@@ -120,7 +145,13 @@ fn send(
     }
     const status: u16 = @backingInt(response.head.status);
 
-    const raw = response.reader(&.{}).allocRemaining(allocator, std.Io.Limit.limited(1024 * 1024)) catch |err| switch (err) {
+    // A real transfer buffer: an empty one reads a chunked body as empty,
+    // which is how npm's login answers. And gzip undone here, as npm sends it.
+    var transfer: [16 * 1024]u8 = undefined;
+    var decompress: http.Decompress = undefined;
+    const window = try allocator.alloc(u8, std.compress.flate.max_window_len);
+    defer allocator.free(window);
+    const raw = response.readerDecompressing(&transfer, &decompress, window).allocRemaining(allocator, std.Io.Limit.limited(1024 * 1024)) catch |err| switch (err) {
         error.StreamTooLong => return error.ResponseTooLarge,
         else => |e| return e,
     };
@@ -134,6 +165,7 @@ fn send(
         .body = try allocator.dupe(u8, decoded),
         .retry_after = retry_after,
         .needs_otp = needs_otp,
+        .notice = notice,
     };
 }
 
@@ -184,10 +216,16 @@ pub const WebAuth = struct {
 /// The `authUrl` and `doneUrl` of an EOTP answer, if it has them; else the
 /// account uses codes from an authenticator.
 pub fn webAuth(allocator: std.mem.Allocator, body: []const u8) ?WebAuth {
+    return urlPair(allocator, body, "authUrl");
+}
+
+/// The page to open (`open_key`: `authUrl` for a two-factor step,
+/// `loginUrl` for logging in) and the `doneUrl` to poll, from npm's answer.
+pub fn urlPair(allocator: std.mem.Allocator, body: []const u8, open_key: []const u8) ?WebAuth {
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch return null;
     defer parsed.deinit();
     if (parsed.value != .object) return null;
-    const auth_url = parsed.value.object.get("authUrl") orelse return null;
+    const auth_url = parsed.value.object.get(open_key) orelse return null;
     const done_url = parsed.value.object.get("doneUrl") orelse return null;
     if (auth_url != .string or done_url != .string) return null;
     if (!std.mem.startsWith(u8, auth_url.string, "https://") or !std.mem.startsWith(u8, done_url.string, "https://")) return null;
@@ -202,11 +240,11 @@ pub fn webAuth(allocator: std.mem.Allocator, body: []const u8) ?WebAuth {
 /// Wait for the browser approval: poll `doneUrl` while it answers 202, as
 /// long as it says to between polls, until it hands back the token that
 /// stands in for a one-time password. Gives up after `timeout_s`.
-pub fn awaitWebAuth(client: *registry.RegistryClient, done_url: []const u8, auth_token: []const u8, timeout_s: u32) ![]const u8 {
+pub fn awaitWebAuth(client: *registry.RegistryClient, done_url: []const u8, auth_token: ?[]const u8, timeout_s: u32, extra: []const http.Header) ![]const u8 {
     const allocator = client.allocator;
     var waited: u32 = 0;
     while (true) {
-        var response = try send(client, .GET, done_url, null, auth_token, null);
+        var response = try send(client, .GET, done_url, null, auth_token, null, extra);
         defer response.deinit(allocator);
         if (response.status == 200) {
             const parsed = try std.json.parseFromSlice(std.json.Value, allocator, response.body, .{});

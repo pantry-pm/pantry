@@ -21,4 +21,6 @@ test {
     _ = @import("cli/commands/publish_plan.zig");
     // npm's trusted publishing API: request shapes, browser approval, names.
     _ = @import("auth/npm_trust.zig");
+    // `pantry login`: the npmrc it writes.
+    _ = @import("cli/commands/login.zig");
 }
