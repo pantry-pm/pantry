@@ -3,7 +3,7 @@
  *
  * @domain `go.dev`
  * @programs `go`, `gofmt`
- * @version `1.27.1` (280 versions available)
+ * @version `1.27.2` (282 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install go.dev`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "go"
  * console.log(pkg.description) // "The Go programming language"
  * console.log(pkg.programs)    // ["go", "gofmt"]
- * console.log(pkg.versions[0]) // "1.27.1" (latest)
+ * console.log(pkg.versions[0]) // "1.27.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/go-dev.md
@@ -81,8 +81,10 @@ export const goPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.27.2',
     '1.27.1',
     '1.27.0',
+    '1.26.9',
     '1.26.8',
     '1.26.7',
     '1.26.6',
