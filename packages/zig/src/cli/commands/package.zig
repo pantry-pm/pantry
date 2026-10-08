@@ -2501,14 +2501,7 @@ fn createTarball(
     }
 
     // Create tarball with "package" directory at root
-    const result = try io_helper.childRun(allocator, &[_][]const u8{
-        "tar",
-        "-czf",
-        tarball_path,
-        "-C",
-        staging_base,
-        "package",
-    });
+    const result = try packStaged(allocator, staging_base, tarball_path);
     defer allocator.free(result.stdout);
     defer allocator.free(result.stderr);
 
@@ -2567,6 +2560,70 @@ fn createTarball(
         .shasum = shasum,
         .integrity = integrity,
     };
+}
+
+/// Archive `staging_base/package` as npm expects a package tarball: its files
+/// under `package/`, and nothing else.
+///
+/// `tar -czf out -C base package` is not that on macOS. Its bsdtar stores
+/// extended attributes, and macOS puts `com.apple.provenance` on every file a
+/// process writes — so each entry gained an AppleDouble twin (`._package`,
+/// `package/._dist`, …), hidden from `tar -t`, and the first of them sits
+/// outside `package/`. npm refuses the whole upload: `415 invalid path:
+/// package/`. Every publish from a Mac failed that way, while Linux CI, on
+/// GNU tar, never saw it.
+///
+/// So the archive lists the files themselves, sorted, without directory
+/// entries (as npm's own tarballs do), with extended attributes off and
+/// AppleDouble disabled. A tar too minimal for those flags (BusyBox) gets the
+/// plain command, which on those systems has nothing to add anyway.
+fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_path: []const u8) !io_helper.ChildRunResult {
+    const list_path = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, ".pantry-files" });
+    defer allocator.free(list_path);
+
+    hardened: {
+        const found = io_helper.childRunWithOptions(allocator, &[_][]const u8{ "find", "package", "-type", "f" }, .{ .cwd = staging_base }) catch break :hardened;
+        defer allocator.free(found.stdout);
+        defer allocator.free(found.stderr);
+        if (found.term != .exited or found.term.exited != 0) break :hardened;
+
+        var files: std.ArrayList([]const u8) = .empty;
+        defer files.deinit(allocator);
+        var lines = std.mem.splitScalar(u8, found.stdout, '\n');
+        while (lines.next()) |line| {
+            if (line.len > 0) files.append(allocator, line) catch break :hardened;
+        }
+        if (files.items.len == 0) break :hardened;
+        std.mem.sort([]const u8, files.items, {}, struct {
+            fn lessThan(_: void, a: []const u8, b: []const u8) bool {
+                return std.mem.lessThan(u8, a, b);
+            }
+        }.lessThan);
+
+        var list: std.ArrayList(u8) = .empty;
+        defer list.deinit(allocator);
+        for (files.items) |file| {
+            list.appendSlice(allocator, file) catch break :hardened;
+            list.append(allocator, '\n') catch break :hardened;
+        }
+        {
+            const file = io_helper.createFile(list_path, .{ .truncate = true }) catch break :hardened;
+            defer io_helper.closeFile(file);
+            io_helper.writeAllToFile(file, list.items) catch break :hardened;
+        }
+        defer io_helper.deleteFile(list_path) catch {};
+
+        const packed_files = io_helper.childRunWithOptions(allocator, &[_][]const u8{
+            "/usr/bin/env",   "COPYFILE_DISABLE=1", "tar",        "--no-xattrs",
+            "--no-recursion", "-czf",               tarball_path, "-T",
+            ".pantry-files",
+        }, .{ .cwd = staging_base }) catch break :hardened;
+        if (packed_files.term == .exited and packed_files.term.exited == 0) return packed_files;
+        allocator.free(packed_files.stdout);
+        allocator.free(packed_files.stderr);
+    }
+
+    return io_helper.childRun(allocator, &[_][]const u8{ "tar", "-czf", tarball_path, "-C", staging_base, "package" });
 }
 
 /// Sort monorepo packages by dependency order using topological sort (Kahn's algorithm).
