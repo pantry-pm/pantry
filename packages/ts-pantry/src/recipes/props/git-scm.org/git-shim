@@ -3,7 +3,21 @@
 set -e
 
 d="$(cd "$(dirname "$0")/../.." && pwd)"
-pkgx_dir="$(cd "$d/../.." && pwd)"
+pkgx_dir="$(cd "$d/.." && pwd)"
+
+# Native packages share a relocatable installation tree. ELF dependency paths
+# from the build host are not available after installation, so provide the
+# installed libraries before launching Git (including curl's dependencies).
+if [ "$(uname -s)" = Linux ]; then
+    libraries="${LD_LIBRARY_PATH:-}"
+    for dependency_lib in "$pkgx_dir"/*/v*/lib "$pkgx_dir"/*/*/v*/lib "$pkgx_dir"/*/*/*/v*/lib; do
+        [ -d "$dependency_lib" ] || continue
+        libraries="${libraries:+$libraries:}$dependency_lib"
+    done
+    if [ -n "$libraries" ]; then
+        export LD_LIBRARY_PATH="$libraries"
+    fi
+fi
 
 # Only set GIT_SSL_CAINFO if no system CA store exists
 if [ -z "$GIT_SSL_CAINFO" ]; then

@@ -86,4 +86,8 @@ export const recipe: Recipe = {
       INSTALL_STRIP: '-s',
     },
   },
+  test: {
+    required: true,
+    script: ['env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH {{prefix}}/bin/git --version'],
+  },
 }
