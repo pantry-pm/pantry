@@ -330,7 +330,7 @@ jobs:
   # published PROPERLY rather than silently skipped by the ubuntu legs. It is
   # TIGHTLY GATED: it runs only when `detect` finds such domains (so pure
   # pkgx/download updates — the common case — allocate NO macOS runner at all),
-  # and it builds ONLY those domains, download-first (--pkgx-mirror, no --force),
+  # and it builds ONLY those domains, download-first (--pkgx-mirror),
   # so anything the ubuntu legs already published is skipped and only true
   # pkgx-misses actually compile. This is the one narrow, necessary macOS path.
   publish-darwin-native:
@@ -382,12 +382,14 @@ jobs:
           PKGS=$(echo "${{ needs.detect.outputs.darwin_native }}" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
           POPULAR_MAXV="${{ github.event.inputs.popular-max-versions || '20' }}"
-          # --source-only (download recipes are the fleet's job) + --pkgx-mirror
-          # (download-first: grab pkgx's darwin prebuilt when it exists, else
-          # compile natively). NO --force ⇒ skip what the ubuntu legs already
-          # published; only genuine pkgx-misses actually compile here.
+          # Recipe changes must replace existing native artifacts too. Custom
+          # builds keep their source patches even when pkgx has a prebuilt.
+          FORCE_ARGS=()
+          if [ "${{ needs.detect.outputs.rebuild_existing }}" != "false" ]; then
+            FORCE_ARGS+=(--force)
+          fi
           echo "Native darwin-arm64 source build + publish: $PKGS"
           bun scripts/build-all-packages.ts \
             -b "$S3_BUCKET" -r "$S3_REGION" \
             --platform darwin-arm64 \
-            -p "$PKGS" --source-only --pkgx-mirror --multi-version --max-versions "$MAXV" --popular-max-versions "$POPULAR_MAXV"
+            -p "$PKGS" --source-only --pkgx-mirror --multi-version --max-versions "$MAXV" --popular-max-versions "$POPULAR_MAXV" "${FORCE_ARGS[@]}"
