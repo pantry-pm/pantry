@@ -1640,6 +1640,7 @@ let BUILD_IS_FOREIGN = false
 // Domains we build from source even in mirror mode, because our recipe diverges
 // from pkgx's vanilla build (custom configure flags / extensions / patches).
 const CUSTOM_BUILD_DOMAINS = new Set<string>([
+  'git-scm.org', // alias detection uses libexec/git to avoid recursive PATH wrapper calls
   'php.net', // ~30 extension flags (fpm/gd/mbstring/pgsql/openssl/sodium/…) + php-config/phpize patching
   'postgresql.org', // build-time options/extensions we control
   'curl.se', // Pantry links against OpenSSL 3; pkgx's build still requires OpenSSL 1.1
@@ -3047,6 +3048,10 @@ Options:
       // probe costs a redundant runner rather than a missing artifact.
       const kept: typeof packagesToBuild = []
       for (const pkg of packagesToBuild) {
+        if (CUSTOM_BUILD_DOMAINS.has(pkg.domain)) {
+          kept.push(pkg)
+          continue
+        }
         const versions = await selectVersionsForBuild(pkg, maxVersions)
         const covered = versions.length > 0
           && (await Promise.all(versions.map(v => pkgxHasPrebuilt(pkg.domain, v, platform)))).every(Boolean)

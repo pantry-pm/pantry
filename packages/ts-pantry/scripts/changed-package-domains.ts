@@ -4,9 +4,9 @@ const REPO_ROOT = join(import.meta.dir, '..', '..', '..')
 const PACKAGE_ROOT = 'packages/ts-pantry/src/packages/'
 const RECIPE_ROOT = 'packages/ts-pantry/src/recipes/'
 
-function git(args: string[]): string | null {
+function git(args: string[], cwd = REPO_ROOT): string | null {
   const result = Bun.spawnSync(['git', ...args], {
-    cwd: REPO_ROOT,
+    cwd,
     stdout: 'pipe',
     stderr: 'pipe',
   })
@@ -27,20 +27,35 @@ export function versionsChanged(before: string | null, after: string | null): bo
   return JSON.stringify(packageVersions(before)) !== JSON.stringify(packageVersions(after))
 }
 
-function sourceAt(ref: string, path: string): string | null {
-  return git(['show', `${ref}:${path}`])
+function sourceAt(ref: string, path: string, cwd: string): string | null {
+  return git(['show', `${ref}:${path}`], cwd)
 }
 
-export function changedPackageDomains(beforeRef: string, afterRef: string): string[] {
+export function changedPackageDomains(beforeRef: string, afterRef: string, cwd = REPO_ROOT): string[] {
   const changed = git([
     'diff', '--name-only', beforeRef, afterRef, '--',
     `${RECIPE_ROOT}**`, `${PACKAGE_ROOT}**`,
-  ])
+  ], cwd)
   if (!changed) return []
 
   const domains = new Set<string>()
   for (const path of changed.split('\n').filter(Boolean)) {
-    const after = sourceAt(afterRef, path)
+    // A recipe asset belongs to the closest matching recipe, including domains
+    // with slash segments. Rebuild its owner for deleted assets too.
+    if (path.startsWith(`${RECIPE_ROOT}props/`)) {
+      const parts = path.slice(`${RECIPE_ROOT}props/`.length).split('/')
+      for (let count = parts.length - 1; count > 0; count--) {
+        const recipe = `${RECIPE_ROOT}${parts.slice(0, count).join('/')}.ts`
+        const source = sourceAt(afterRef, recipe, cwd) ?? sourceAt(beforeRef, recipe, cwd)
+        const domain = source && packageDomain(source)
+        if (domain) {
+          domains.add(domain)
+          break
+        }
+      }
+      continue
+    }
+    const after = sourceAt(afterRef, path, cwd)
     if (after == null) continue
 
     if (path.startsWith(RECIPE_ROOT)) {
@@ -52,7 +67,7 @@ export function changedPackageDomains(beforeRef: string, afterRef: string): stri
     if (!path.startsWith(PACKAGE_ROOT) || path.startsWith(`${PACKAGE_ROOT}apps/`) || path.startsWith(`${PACKAGE_ROOT}fonts/`))
       continue
 
-    if (versionsChanged(sourceAt(beforeRef, path), after)) {
+    if (versionsChanged(sourceAt(beforeRef, path, cwd), after)) {
       const domain = packageDomain(after)
       if (domain) domains.add(domain)
     }

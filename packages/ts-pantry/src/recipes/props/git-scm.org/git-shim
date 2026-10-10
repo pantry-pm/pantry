@@ -77,7 +77,7 @@ _provides() {
 }
 
 _is_alias() {
-  git config --get-regexp '^alias\.' | awk '{ print $1 }' | sed 's/alias\.//' | grep -qx "$cmd"
+  "$libexec/git" config --get-regexp '^alias\.' | awk '{ print $1 }' | sed 's/alias\.//' | grep -qx "$cmd"
 }
 
 if [ -z "$cmd" ]; then
