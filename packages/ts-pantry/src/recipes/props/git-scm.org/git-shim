@@ -5,6 +5,14 @@ set -e
 d="$(cd "$(dirname "$0")/../.." && pwd)"
 pkgx_dir="$(cd "$d/.." && pwd)"
 
+# Git sources gettext.sh. Source the dependency's real shell library, whose
+# functions must return to Git, rather than a command launcher under .bin.
+for gettext_bin in "$pkgx_dir"/gnu.org/gettext/v*/bin; do
+    [ -f "$gettext_bin/gettext.sh" ] || continue
+    export PATH="$gettext_bin:$PATH"
+    break
+done
+
 # Native packages share a relocatable installation tree. ELF dependency paths
 # from the build host are not available after installation, so provide the
 # installed libraries before launching Git (including curl's dependencies).

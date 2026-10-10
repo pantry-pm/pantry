@@ -47,3 +47,25 @@ test('Git launcher resolves relocated Linux libraries while preserving an explic
   }
   finally { rmSync(directory, { recursive: true, force: true }) }
 })
+
+test('Git shell helpers source the real gettext library and return to their caller', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pantry-git-gettext-'))
+  try {
+    const prefix = join(directory, 'pantry/git-scm.org/v2.53.0')
+    const gettext = join(directory, 'pantry/gnu.org/gettext/v0.21.1/bin')
+    const trap = join(directory, 'trap')
+    for (const path of [join(prefix, 'bin'), join(prefix, 'libexec'), gettext, trap]) mkdirSync(path, { recursive: true })
+    const shim = join(prefix, 'bin/git')
+    writeFileSync(shim, readFileSync(join(import.meta.dir, '../src/recipes/props/git-scm.org/git-shim')))
+    writeFileSync(join(gettext, 'gettext.sh'), 'gettext_fixture() { printf "sourced-library"; }\n')
+    writeFileSync(join(trap, 'gettext.sh'), 'echo launched-library >&2\nexit 7\n')
+    writeFileSync(join(prefix, 'libexec/git'), '#!/bin/sh\n. gettext.sh\ngettext_fixture\nprintf ":returned"\n')
+    for (const path of [shim, join(prefix, 'libexec/git')]) chmodSync(path, 0o755)
+    const child = Bun.spawn([shim, '--version'], { env: { ...process.env, PATH: `${trap}:/usr/bin:/bin` }, stdout: 'pipe', stderr: 'pipe' })
+    const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
+    expect(code).toBe(0)
+    expect(stderr).toBe('')
+    expect(stdout).toBe('sourced-library:returned')
+  }
+  finally { rmSync(directory, { recursive: true, force: true }) }
+})

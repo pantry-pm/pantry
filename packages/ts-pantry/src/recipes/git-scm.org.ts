@@ -104,7 +104,11 @@ export const recipe: Recipe = {
           mkdir -p "$runtime/dependencies/library-$index/v1"
           ln -s "$lib" "$runtime/dependencies/library-$index/v1/lib"
         done
+        mkdir -p "$runtime/gnu.org/gettext/v{{deps.gnu.org/gettext.version}}"
+        ln -s "{{deps.gnu.org/gettext.prefix}}/bin" "$runtime/gnu.org/gettext/v{{deps.gnu.org/gettext.version}}/bin"
         env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" --version
+        env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" init "$runtime/repo"
+        env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" -C "$runtime/repo" submodule foreach --recursive true
       else
         "{{prefix}}/bin/git" --version
       fi`,
