@@ -76,7 +76,7 @@ export const recipe: Recipe = {
       {
         run: [
           'rm bin/git',
-          'cp $SRCROOT/props/git-shim bin/git',
+          'install -m755 "$SRCROOT/props/git-shim" bin/git',
         ],
         'working-directory': '{{prefix}}',
       },
