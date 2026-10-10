@@ -3,7 +3,7 @@
  *
  * @domain `fury.co`
  * @programs `fury`
- * @version `0.25.0` (13 versions available)
+ * @version `1.0.0` (14 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fury.co`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "fury"
  * console.log(pkg.description) // "Gemfury CLI"
  * console.log(pkg.programs)    // ["fury"]
- * console.log(pkg.versions[0]) // "0.25.0" (latest)
+ * console.log(pkg.versions[0]) // "1.0.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fury-co.md
@@ -67,6 +67,7 @@ export const furycoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.0',
     '0.25.0',
     '0.24.1',
     '0.24.0',
