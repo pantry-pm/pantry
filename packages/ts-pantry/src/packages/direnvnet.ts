@@ -3,7 +3,7 @@
  *
  * @domain `direnv.net`
  * @programs `direnv`
- * @version `2.38.1` (51 versions available)
+ * @version `2.38.2` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install direnv.net`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "direnv"
  * console.log(pkg.description) // "Load/unload environment variables based on $PWD"
  * console.log(pkg.programs)    // ["direnv"]
- * console.log(pkg.versions[0]) // "2.38.1" (latest)
+ * console.log(pkg.versions[0]) // "2.38.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/direnv-net.md
@@ -67,6 +67,7 @@ export const direnvnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.38.2',
     '2.38.1',
     '2.37.1',
     '2.37.0',
