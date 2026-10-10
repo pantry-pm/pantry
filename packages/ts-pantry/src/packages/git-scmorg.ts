@@ -72,7 +72,7 @@ export const gitscmorgPackage = {
     'curl.se/ca-certs',
     'perl.org',
     'libexpat.github.io~2',
-    'linux:gnu.org/gettext^0.21',
+    'gnu.org/gettext^0.21',
     'linux:gnu.org/libiconv',
   ] as const,
   /**

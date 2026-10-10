@@ -13,8 +13,8 @@ export const recipe: Recipe = {
     'curl.se/ca-certs': '*',
     'perl.org': '*',
     'libexpat.github.io': '~2',
+    'gnu.org/gettext': '^0.21',
     linux: {
-      'gnu.org/gettext': '^0.21',
       'gnu.org/libiconv': '*',
     },
   },
@@ -50,7 +50,7 @@ export const recipe: Recipe = {
 
       {
         run: [
-          'make CFLAGS="-g -O2 -Wall -I../../.." LDFLAGS="$LDFLAGS -lz -liconv"',
+          'make CFLAGS="$CFLAGS -g -O2 -Wall -I../../.." LDFLAGS="$LDFLAGS -lz -liconv -lintl"',
           'install -Dm755 git-credential-osxkeychain {{prefix}}/bin',
           'make clean',
         ],
