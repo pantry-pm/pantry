@@ -337,7 +337,9 @@ jobs:
     name: Publish darwin-arm64 source (native macOS)
     needs: detect
     if: needs.detect.outputs.darwin_native != ''
-    runs-on: macos-14
+    # Current dependency binaries use APIs supplied by macOS 15 (for example
+    # gettext's strchrnul). The native host must satisfy their runtime floor.
+    runs-on: macos-15
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v6
