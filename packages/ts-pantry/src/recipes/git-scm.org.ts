@@ -88,6 +88,26 @@ export const recipe: Recipe = {
   },
   test: {
     required: true,
-    script: ['env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH {{prefix}}/bin/git --version'],
+    script: [
+      // Build dependencies have temporary paths. Reproduce the installation
+      // layout before checking Linux's loader without the build environment.
+      `if [ "$(uname -s)" = Linux ]; then
+        runtime="$(mktemp -d)"
+        trap 'rm -rf "$runtime"' EXIT
+        mkdir -p "$runtime/git-scm.org/v{{version}}"
+        cp -a "{{prefix}}/." "$runtime/git-scm.org/v{{version}}/"
+        IFS=: read -r -a runtime_libs <<< "\${LD_LIBRARY_PATH:-}"
+        index=0
+        for lib in "\${runtime_libs[@]}"; do
+          [ -d "$lib" ] || continue
+          index=$((index + 1))
+          mkdir -p "$runtime/dependencies/library-$index/v1"
+          ln -s "$lib" "$runtime/dependencies/library-$index/v1/lib"
+        done
+        env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" --version
+      else
+        "{{prefix}}/bin/git" --version
+      fi`,
+    ],
   },
 }
