@@ -59,6 +59,7 @@ export const mailPackage = {
     'sqlite.org',
   ] as const,
   versions: [
+    '0.3.21',
     '0.3.20',
     '0.3.19',
     '0.3.18',
