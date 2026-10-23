@@ -54,6 +54,17 @@ export interface InstallOptions {
   /** Receive bounded transport-retry diagnostics. */
   onRetry?: (message: string) => void
   /**
+   * Receive diagnostics that change which version is installed — currently a
+   * version source that could not be consulted.
+   *
+   * Separate from `quiet`, which suppresses progress output: a caller that
+   * silences progress (the GitHub Action passes `quiet: true` for exactly
+   * that) still needs to hear that a pin resolved off a stale snapshot,
+   * because CI is where that happens. Unset falls back to `console.warn`,
+   * which `quiet` does suppress.
+   */
+  onWarn?: (message: string) => void
+  /**
    * Mirror this package's binaries to a stable user-level directory so they
    * appear on PATH after a one-time `pantry shell-init`. When `true` the
    * default global bin dir (`globalBinDir()`) is used; pass a path to override.
@@ -395,7 +406,7 @@ export async function resolvePackageVersion(
   domain: string,
   version: string,
   platform: Platform = detectPlatform(),
-  options: Pick<InstallOptions, 'onRetry'> = {},
+  options: Pick<InstallOptions, 'onRetry' | 'quiet' | 'onWarn'> = {},
 ): Promise<string> {
   if (domain === 'git-scm.org' && platform.os === 'windows') {
     if (['latest', '*', ''].includes(version))
@@ -411,7 +422,10 @@ export async function resolvePackageVersion(
 
   // Resolve semver constraints (^, ~, >=, etc.) to concrete versions
   if (/^[\^~>=<]/.test(version)) {
-    version = await resolveVersionConstraint(domain, version, platform)
+    version = await resolveInstallerVersionConstraint(domain, version, platform, {
+      quiet: options.quiet,
+      onWarn: options.onWarn,
+    })
   }
   else if (version === 'latest' || version === '*' || !version) {
     version = await resolveLatestVersion(domain, platform)
@@ -687,9 +701,16 @@ export async function resolveLatestVersion(domain: string, platform: Platform = 
     const resp = await fetchJSON('https://api.github.com/repos/oven-sh/bun/releases/latest').catch(() => null)
     const tag = (resp as { tag_name?: string } | null)?.tag_name?.replace(/^bun-v/, '') || ''
     if (tag) return tag
+    // The registry mirrors bun's releases per platform, so it answers "latest"
+    // correctly during a rate-limited hour. It sits ahead of the bundled
+    // catalog because the catalog is frozen at whichever release this pantry
+    // build shipped with — `latest` resolving to a months-old version is a
+    // wrong answer that looks exactly like a right one.
+    const mirrored = (await registryVersions(domain, platform).catch(() => [])).sort(compareVersions)[0]
+    if (mirrored) return mirrored
     const fallback = await latestFromPackageMetadata(domain)
     if (fallback) return fallback
-    throw new Error('Failed to resolve latest bun.sh version (GitHub API unreachable, no bundled metadata)')
+    throw new Error('Failed to resolve latest bun.sh version (GitHub API unreachable, registry publishes none, no bundled metadata)')
   }
   if (domain === 'ziglang.org') {
     const versions = await registryVersions(domain, platform)
@@ -702,6 +723,8 @@ export async function resolveLatestVersion(domain: string, platform: Platform = 
     const lts = versions.find(v => v.lts)
     const v = (lts?.version || versions[0]?.version || '').replace(/^v/, '')
     if (v) return v
+    const mirrored = (await registryVersions(domain, platform).catch(() => [])).sort(compareVersions)[0]
+    if (mirrored) return mirrored
     const fallback = await latestFromPackageMetadata(domain)
     if (fallback) return fallback
     throw new Error('Failed to resolve latest nodejs.org version')
@@ -1056,27 +1079,118 @@ export function satisfiesInstallerConstraint(version: string, constraint: Instal
   return false
 }
 
+// ── Version sources ──
+
+/** What one version source was asked, and what it answered. */
+export interface VersionSourceOutcome {
+  /** Short identifier for diagnostics, e.g. `api.github.com/…/releases`. */
+  source: string
+  /** The versions it returned; `[]` when it errored. */
+  versions: readonly string[]
+  /** Why it could not be consulted, when it could not be. */
+  error?: string
+}
+
 /**
- * Live version list for the domains that publish one, newest-first.
+ * Whether a secondary source is worth consulting after `primary` answered.
+ *
+ * The errored case is the one that matters: `[]` from a 403 is
+ * indistinguishable from `[]` from "upstream published nothing", and reading
+ * the first as the second is what turned a satisfiable pin into a hard
+ * "no version satisfies" failure.
+ */
+export function shouldConsultFallbackSource(primary: VersionSourceOutcome): boolean {
+  return Boolean(primary.error) || primary.versions.length === 0
+}
+
+/** Run one version source, recording its failure instead of throwing it. */
+async function versionSource(source: string, load: () => Promise<string[]>): Promise<VersionSourceOutcome> {
+  try {
+    return { source, versions: await load() }
+  }
+  catch (error) {
+    return { source, versions: [], error: errorMessage(error) }
+  }
+}
+
+function registrySourceName(domain: string, platform: Platform): string {
+  return `${registryBase()}/binaries/${domain} (${registryPlatformKey(platform)})`
+}
+
+/** Every version any source returned, de-duplicated and newest-first. */
+export function mergeVersionOutcomes(outcomes: readonly VersionSourceOutcome[]): string[] {
+  return [...new Set(outcomes.flatMap(outcome => [...outcome.versions]))].sort(compareInstallerVersionsDesc)
+}
+
+/** One line per source: what it was, and what it answered. */
+export function describeVersionSources(outcomes: readonly VersionSourceOutcome[]): string {
+  return outcomes.map((outcome) => {
+    if (outcome.error) return `  - ${outcome.source}: unavailable (${outcome.error})`
+    const newest = [...outcome.versions].sort(compareInstallerVersionsDesc)[0]
+    const count = `${outcome.versions.length} version${outcome.versions.length === 1 ? '' : 's'}`
+    return `  - ${outcome.source}: ${count}${newest ? `, newest ${newest}` : ''}`
+  }).join('\n')
+}
+
+/**
+ * Why `constraint` could not be met, naming every source that was consulted
+ * and every one that could not be.
+ *
+ * The message this replaces read "checked 143 versions, newest 1.4.0" — a
+ * count that matched no registry endpoint and named no source, so the single
+ * fact that explained the failure (the live lookup had 403'd, leaving the
+ * bundled snapshot to answer alone) was the fact it omitted.
+ */
+export function unsatisfiableConstraintMessage(
+  domain: string,
+  constraint: string,
+  outcomes: readonly VersionSourceOutcome[],
+): string {
+  const degraded = outcomes.filter(outcome => outcome.error)
+  return [
+    `No version of ${domain} satisfies "${constraint}".`,
+    ...(degraded.length > 0
+      ? [`${degraded.length} of ${outcomes.length} version sources could not be consulted, so this list is incomplete — the pin may well be satisfiable.`]
+      : []),
+    'Version sources consulted:',
+    describeVersionSources(outcomes),
+  ].join('\n')
+}
+
+/**
+ * Live version lists for the domains that publish one, as per-source outcomes.
  *
  * The bundled catalog in `packages/index.js` is a point-in-time snapshot: it
  * goes stale the moment upstream cuts a release (bun.sh tops out at 1.3.0
  * there while 1.3.14 is current), so a constraint like `^1.3.14` matched
  * nothing and we silently installed "latest" instead. Consulting upstream
  * keeps a correct `deps.yaml` pin from depending on when this package was
- * last published. Returns [] for domains with no live source — the bundled
- * list is then the only answer.
+ * last published.
+ *
+ * Each domain gets a fallback source behind its origin, because returning the
+ * outcomes rather than a bare list is only half the fix: a source that cannot
+ * be reached has to be *replaced*, not just reported.
  */
-async function fetchLiveVersions(domain: string, platform: Platform): Promise<string[]> {
+async function fetchLiveVersions(domain: string, platform: Platform): Promise<VersionSourceOutcome[]> {
   if (isBunDomain(domain)) {
-    const resp = await fetchJSON('https://api.github.com/repos/oven-sh/bun/releases?per_page=100').catch(() => null)
-    const releases = (resp as Array<{ tag_name?: string }> | null) || []
-    return releases.map(r => (r.tag_name || '').replace(/^bun-v/, '')).filter(Boolean)
+    const upstream = await versionSource('api.github.com/repos/oven-sh/bun/releases', async () => {
+      const resp = await fetchJSON('https://api.github.com/repos/oven-sh/bun/releases?per_page=100') as Array<{ tag_name?: string }> | null
+      return (resp || []).map(r => (r.tag_name || '').replace(/^bun-v/, '')).filter(Boolean)
+    })
+    // Unauthenticated api.github.com is 60 req/hr per IP and CI runners share
+    // egress addresses, so a 403 here is routine rather than exceptional. The
+    // registry mirrors the same releases per platform, which is what keeps a
+    // rate-limited hour from resolving off the bundled snapshot instead.
+    if (!shouldConsultFallbackSource(upstream)) return [upstream]
+    return [upstream, await versionSource(registrySourceName(domain, platform), () => registryVersions(domain, platform))]
   }
   if (domain === 'nodejs.org') {
-    const resp = await fetchJSON('https://nodejs.org/dist/index.json').catch(() => null)
-    const versions = (resp as Array<{ version?: string }> | null) || []
-    return versions.map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
+    const upstream = await versionSource('nodejs.org/dist/index.json', async () => {
+      const resp = await fetchJSON('https://nodejs.org/dist/index.json') as Array<{ version?: string }> | null
+      return (resp || []).map(v => (v.version || '').replace(/^v/, '')).filter(Boolean)
+    })
+    if (!shouldConsultFallbackSource(upstream)) return [upstream]
+    return [upstream, await versionSource(registrySourceName(domain, platform), () => registryVersions(domain, platform))]
   }
   if (domain === 'ziglang.org') {
     // The installer downloads zig from ziglang.org itself, and ziglang.org
@@ -1086,15 +1200,17 @@ async function fetchLiveVersions(domain: string, platform: Platform): Promise<st
     // job that refreshes the mirror could not install zig to run, so the
     // stale pin could never heal itself. Origin first; the registry is the
     // fallback for when the origin index is unreachable.
-    const index = await fetchJSON('https://ziglang.org/download/index.json').catch(() => null) as ZigDownloadIndex | null
-    const origin = zigOriginVersions(index, platform)
-    if (origin.length > 0) return origin
-    return await registryVersions(domain, platform)
+    const origin = await versionSource('ziglang.org/download/index.json', async () => {
+      const index = await fetchJSON('https://ziglang.org/download/index.json') as ZigDownloadIndex | null
+      return zigOriginVersions(index, platform)
+    })
+    if (!shouldConsultFallbackSource(origin)) return [origin]
+    return [origin, await versionSource(registrySourceName(domain, platform), () => registryVersions(domain, platform))]
   }
   // For a registry-published package the registry *is* the live list, so a
   // `^0.0.37`-style constraint resolves against what can actually be installed
   // rather than against nothing.
-  return await registryVersions(domain, platform)
+  return [await versionSource(registrySourceName(domain, platform), () => registryVersions(domain, platform))]
 }
 
 export type ZigDownloadIndex = Record<string, Record<string, unknown> & { version?: string }>
@@ -1119,44 +1235,67 @@ export function resolveInstallerConstraintFromCandidates(constraint: string, can
   return [...new Set(candidates)].sort(compareInstallerVersionsDesc).find(version => satisfiesInstallerConstraint(version, parsed)) || null
 }
 
-/**
- * Resolve a semver constraint (^1.0.0, ~1.2.0, >=1.0.0, etc.) to the best matching concrete version.
- */
-async function resolveVersionConstraint(domain: string, constraint: string, platform: Platform): Promise<string> {
-  if (!parseInstallerConstraint(constraint)) return resolveLatestVersion(domain, platform)
-
-  // Get available versions from package metadata
-  let bundledVersions: readonly string[]
+/** Versions `packages/index.js` was built with, for `domain`. Point-in-time. */
+async function bundledCatalogVersions(domain: string): Promise<string[]> {
   try {
     const pkgKey = domain.replace(/[^a-z0-9]/gi, '').toLowerCase()
     const { packages } = await import('./packages/index.js').catch(() => import('./index.js'))
-    const pkg = (packages as any)[pkgKey]
-    bundledVersions = pkg?.versions || []
+    const pkg = (packages as unknown as Record<string, { versions?: readonly string[] }>)[pkgKey]
+    return [...(pkg?.versions || [])]
   }
   catch {
-    bundledVersions = []
+    return []
   }
+}
+
+/**
+ * Resolve a semver constraint (^1.0.0, ~1.2.0, >=1.0.0, etc.) to the best matching concrete version.
+ *
+ * Named apart from `dependency-resolver`'s same-purpose export because the
+ * package index re-exports both modules with `export *`.
+ */
+export async function resolveInstallerVersionConstraint(
+  domain: string,
+  constraint: string,
+  platform: Platform,
+  options: Pick<InstallOptions, 'quiet' | 'onWarn'> = {},
+): Promise<string> {
+  if (!parseInstallerConstraint(constraint)) return resolveLatestVersion(domain, platform)
 
   // Union of upstream + bundled, sorted so the first match is the highest one.
   // Merging rather than preferring either list keeps resolution working when
   // upstream is unreachable (bundled-only) and when it's ahead (live-only).
-  const live = await fetchLiveVersions(domain, platform)
-  // The Pantry registry is authoritative for Zig binaries. Bundled recipe
+  //
+  // The Pantry registry is authoritative for Zig binaries: bundled recipe
   // versions do not prove that a particular target artifact was published.
-  const candidates = domain === 'ziglang.org'
-    ? live.sort(compareInstallerVersionsDesc)
-    : [...new Set([...live, ...bundledVersions])].sort(compareInstallerVersionsDesc)
-  const resolved = resolveInstallerConstraintFromCandidates(constraint, candidates)
-  if (resolved) return resolved
+  const live = await fetchLiveVersions(domain, platform)
+  const outcomes: VersionSourceOutcome[] = domain === 'ziglang.org'
+    ? live
+    : [...live, { source: 'bundled catalog (this pantry build)', versions: await bundledCatalogVersions(domain) }]
+
+  const resolved = resolveInstallerConstraintFromCandidates(constraint, mergeVersionOutcomes(outcomes))
+  const degraded = outcomes.filter(outcome => outcome.error)
+
+  if (resolved) {
+    // Resolving while a source is down means the answer came from whatever
+    // was left — possibly the bundled snapshot, which can be releases behind.
+    // Say so: silently installing an older version than upstream has is the
+    // half of this bug that never announces itself as a failure.
+    if (degraded.length > 0) {
+      const warn = options.onWarn || (options.quiet ? undefined : console.warn)
+      warn?.(
+        `${domain}: resolved "${constraint}" to ${resolved} with ${degraded.length} of `
+        + `${outcomes.length} version sources unavailable; a newer match may exist upstream\n`
+        + describeVersionSources(outcomes),
+      )
+    }
+    return resolved
+  }
 
   // Nothing upstream or bundled satisfies the pin. Installing "latest" here
   // would hand back a version the caller explicitly did not ask for, which is
   // worse than stopping: a `^1.2` pin quietly became 1.3.x.
-  throw new Error(
-    `No version of ${domain} satisfies "${constraint}" `
-    + `(checked ${candidates.length} version${candidates.length === 1 ? '' : 's'}`
-    + `${candidates.length > 0 ? `, newest ${candidates[0]}` : ''}).`,
-  )
+  throw new Error(unsatisfiableConstraintMessage(domain, constraint, outcomes))
 }
 
 // ── Helpers ──
@@ -1411,8 +1550,16 @@ function fetchJSONOnce(url: string, maxRedirects: number, deadline = Date.now() 
     }
     // Rebuild credentials on every redirect. A path, query, subdomain, HTTP
     // endpoint or non-default port cannot acquire the GitHub API credential.
+    //
+    // PANTRY_GITHUB_TOKEN comes first so a caller can authenticate these reads
+    // without setting GITHUB_TOKEN — which is NOT present on an Actions runner
+    // unless the workflow passes it through, and which other code paths read
+    // for their own purposes (the action's release step among them). The
+    // Setup Pantry action sets it from its `github-token` input, whose default
+    // is the job's own token; unauthenticated reads share a 60 req/hr quota
+    // across the whole runner pool's IP range.
     if (target.origin === 'https://api.github.com' && !target.username && !target.password) {
-      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+      const token = process.env.PANTRY_GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.GH_TOKEN
       if (token) headers.Authorization = `Bearer ${token}`
     }
     let response: http.IncomingMessage | undefined

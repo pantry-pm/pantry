@@ -43,6 +43,10 @@ inputs:
     description: Pantry registry token for publishing (e.g. from secrets.PANTRY_TOKEN). Exported as PANTRY_TOKEN and PANTRY_REGISTRY_TOKEN for subsequent steps.
     required: false
     default: ''
+  github-token:
+    description: GitHub token used to authenticate upstream version lookups (api.github.com). Unauthenticated reads share a 60 req/hr quota across the runner pool's IP range, which is routinely exhausted and makes a valid version pin look unsatisfiable. Set to '' to opt out.
+    required: false
+    default: ${{ github.token }}
   discord-webhook:
     description: Discord webhook URL for release notifications. Sends a rich embed after successful publish.
     required: false

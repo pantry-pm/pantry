@@ -13,6 +13,8 @@ export async function installResolvedSystemPackages(
     platform?: installer.Platform
     nativeInstall: (specs: string[]) => Promise<number>
     onRetry?: (message: string) => void
+    /** Diagnostics that change which version is installed; `quiet` does not suppress these. */
+    onWarn?: (message: string) => void
   },
 ): Promise<Map<string, string>> {
   const versions = new Map<string, string>()
@@ -20,12 +22,19 @@ export async function installResolvedSystemPackages(
   for (const { domain, version } of requests) {
     if (installer.isSupported(domain, options.platform)) {
       const installed = await installer.installPackage(domain, version, {
-        installDir: options.installDir, platform: options.platform, quiet: true, onRetry: options.onRetry,
+        installDir: options.installDir,
+        platform: options.platform,
+        quiet: true,
+        onRetry: options.onRetry,
+        onWarn: options.onWarn,
       })
       versions.set(domain, installed.version)
       continue
     }
-    const resolved = await installer.resolvePackageVersion(domain, version, options.platform)
+    const resolved = await installer.resolvePackageVersion(domain, version, options.platform, {
+      onRetry: options.onRetry,
+      onWarn: options.onWarn,
+    })
     const previous = native.get(domain)
     if (previous && previous !== resolved)
       throw new Error(`Conflicting required versions for ${domain}: ${previous} and ${resolved}`)
@@ -51,6 +60,7 @@ export async function installResolvedSystemPackage(
     platform?: installer.Platform
     nativeInstall: (spec: string) => Promise<number>
     onRetry?: (message: string) => void
+    onWarn?: (message: string) => void
   },
 ): Promise<string> {
   const versions = await installResolvedSystemPackages([{ domain, version }], {
