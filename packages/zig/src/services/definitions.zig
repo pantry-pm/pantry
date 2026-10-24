@@ -617,7 +617,9 @@ pub const Services = struct {
 
         // mysqld needs an initialized datadir; bare `mysqld --port` exits on a
         // fresh machine. Initialize once (no root password), then run foreground.
-        const data_dir = try serviceDataDir(allocator, home, "mysql");
+        const scope = if (project_root) |root| try projectScopeId(allocator, root) else null;
+        defer if (scope) |id| allocator.free(id);
+        const data_dir = try serviceDataDirScoped(allocator, home, "mysql", scope);
         defer allocator.free(data_dir);
 
         const mysqld = try resolveServiceBinary(allocator, "mysqld", project_root, home);
@@ -666,9 +668,10 @@ pub const Services = struct {
             \\
         , .{ data_dir, pantry_root, pantry_root, mysqld, port });
         defer allocator.free(script);
-        // Write start.sh OUTSIDE the datadir — the init block does `rm -rf
-        // "$DATADIR"/*`, which would delete the script mid-run if it lived there.
-        const script_dir = try serviceDataDir(allocator, home, "mysql-run");
+        // Both the script and data belong to this project. A shared script
+        // lets merely inspecting another project rewrite a running unit's
+        // next startup port and data directory.
+        const script_dir = try serviceDataDirScoped(allocator, home, "mysql-run", scope);
         defer allocator.free(script_dir);
         const script_path = try writeServiceFile(allocator, script_dir, "start.sh", script);
         defer allocator.free(script_path);

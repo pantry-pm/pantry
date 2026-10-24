@@ -267,6 +267,27 @@ test "ServiceConfig creation - Typesense" {
     try std.testing.expect(std.mem.indexOf(u8, svc.start_command, "8108") != null);
 }
 
+test "MySQL WithContext - projects isolate data and startup scripts" {
+    const allocator = std.testing.allocator;
+    var a = try definitions.Services.mysqlWithContext(allocator, 3306, "/tmp/pantry-mysql-project-a");
+    defer a.deinit(allocator);
+    var b = try definitions.Services.mysqlWithContext(allocator, 3307, "/tmp/pantry-mysql-project-b");
+    defer b.deinit(allocator);
+    var again = try definitions.Services.mysqlWithContext(allocator, 3306, "/tmp/pantry-mysql-project-a");
+    defer again.deinit(allocator);
+
+    try std.testing.expect(!std.mem.eql(u8, a.working_directory.?, b.working_directory.?));
+    try std.testing.expect(!std.mem.eql(u8, a.start_command, b.start_command));
+    try std.testing.expectEqualStrings(a.working_directory.?, again.working_directory.?);
+    try std.testing.expectEqualStrings(a.start_command, again.start_command);
+    // Keep the global service's existing storage path: scoping a project must
+    // not move or reinitialize an operator's global database.
+    var global = try definitions.Services.mysql(allocator, 3306);
+    defer global.deinit(allocator);
+    try std.testing.expect(!std.mem.eql(u8, a.working_directory.?, global.working_directory.?));
+    try std.testing.expect(!std.mem.eql(u8, a.start_command, global.start_command));
+}
+
 test "Typesense WithContext - two projects do not share one data dir" {
     const allocator = std.testing.allocator;
 

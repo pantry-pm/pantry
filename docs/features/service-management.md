@@ -18,6 +18,19 @@ Service management in pantry includes:
 
 ## Quick Start
 
+### MySQL project isolation
+
+When run inside a project, MySQL uses that project's hashed data directory and
+startup script. Two projects can run on different ports without sharing tables,
+socket files or generated startup commands. `pantry inspect mysql` shows the
+paths and port for the current project.
+
+Older versions shared the global MySQL directory and startup script even when
+the service unit had a project name. Existing global data is retained in place;
+it is not automatically copied into a project's new directory. Back up and
+restore any databases that belong to that project before switching an existing
+installation. Running MySQL outside a project keeps the global data directory.
+
 ```bash
 # Start a database service
 pantry start postgres
