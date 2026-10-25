@@ -33,6 +33,10 @@
       "types": "./dist/src/testing/index.d.ts",
       "import": "./dist/src/testing/index.js"
     },
+    "./native": {
+      "types": "./dist/src/native/index.d.ts",
+      "import": "./dist/src/native/index.js"
+    },
     "./*": {
       "import": "./dist/*"
     }

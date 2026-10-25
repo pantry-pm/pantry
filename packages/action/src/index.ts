@@ -5,6 +5,7 @@ import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release
 import { installBootstrap } from './bootstrap'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { deliverReleaseToAppStore } from './release-app-store'
+import { deliverReleaseToGooglePlay, prepareNativeRelease, readNativeAppConfig } from '../../ts-pantry/src/native'
 import { setupAppleSigning } from './apple-signing'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import type { ReleaseClient } from './release-draft'
@@ -366,6 +367,7 @@ function extractSystemDeps(): string[] {
     try {
       const content = stripJsoncComments(fs.readFileSync(f, 'utf-8'))
       const parsed = JSON.parse(content)
+      if (!parsed.dependencies) continue
       const deps = parsed.dependencies || {}
       return Object.entries(deps)
         .filter(([n]) => n.includes('.') || isKnownAlias(n))
@@ -661,6 +663,7 @@ export async function run(): Promise<void> {
       else core.warning('GitHub build dependency archive cache unavailable; local caching remains enabled')
     }
     const inputs: ActionInputs = {
+      nativeApp: (core.getInput('native-app') || undefined) as ActionInputs['nativeApp'],
       version: core.getInput('version') || 'latest',
       packages: core.getInput('packages') || '',
       services: core.getInput('services') || '',
@@ -801,6 +804,7 @@ export async function run(): Promise<void> {
         await publishPackage(inputs.publish, inputs.registryUrl, resolvePackageCwd(cwd, inputs.packageDir))
         await sendNotifications(inputs)
       }
+      await configureNativeRelease(inputs)
       if (inputs.release)
         await createGitHubRelease(inputs)
       core.info('Setup complete')
@@ -1030,6 +1034,8 @@ export async function run(): Promise<void> {
     // Launch only after Pantry has installed the complete service dependency
     // graph and all executable-link reconciliation has finished.
     await startRequestedServices(requestedServices, pantryBinDir, platform)
+
+    await configureNativeRelease(inputs)
 
     // ── Publish ──
     if (inputs.publish) {
@@ -1458,6 +1464,76 @@ async function configureAppleSigning(inputs: ActionInputs): Promise<void> {
   }
 }
 
+function nativeReleaseClient(token: string, owner: string, repo: string): ReleaseClient {
+  const octokit = github.getOctokit(token)
+  return {
+    getPublishedByTag: async (releaseTag) => {
+      try {
+        const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag: releaseTag })
+        return response.data
+      }
+      catch (err) {
+        if ((err as { status?: number }).status === 404)
+          return undefined
+        throw err
+      }
+    },
+    listRecent: async () => (await octokit.rest.repos.listReleases({ owner, repo, per_page: 100 })).data,
+    deleteRelease: async (id) => {
+      await octokit.rest.repos.deleteRelease({ owner, repo, release_id: id })
+    },
+  }
+}
+
+/** App repositories declare policy; Pantry owns the complete build/release flow. */
+async function configureNativeRelease(inputs: ActionInputs): Promise<void> {
+  if (!inputs.nativeApp) return
+  if (!['check', 'release'].includes(inputs.nativeApp)) throw new Error('native-app must be check or release')
+  if (inputs.releaseDryRun) throw new Error('Native releases require real build and provider checks; use native-app: check for validation')
+  const root = process.cwd()
+  if (inputs.nativeApp === 'release') {
+    const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version
+    const explicitTag = core.getInput('release-tag')
+    inputs.releaseTag = explicitTag || `v${version}`
+    if (inputs.releaseTag !== `v${version}`) throw new Error('Native release tag must match package.json version')
+    inputs.releaseChangelog = core.getInput('release-changelog') || 'auto'
+    inputs.releaseChecksums = core.getInput('release-checksums') || 'sha256'
+    const { owner, repo } = github.context.repo
+    const existing = await findReleaseForTag(nativeReleaseClient(inputs.releaseToken, owner, repo), inputs.releaseTag)
+    if (existing && !existing.draft) throw new Error(`Published native release ${inputs.releaseTag} is immutable; bump the app version`)
+  }
+  readNativeAppConfig(root, true)
+  const source = fs.readFileSync(path.join(root, 'pantry.json'))
+  const craftConfig = path.join(root, 'craft.config.ts')
+  const identity = crypto.createHash('sha256').update(source).update(fs.existsSync(craftConfig) ? fs.readFileSync(craftConfig) : '').digest('hex')
+  const key = `pantry-native-v1-${process.platform}-${process.arch}-${identity}`
+  const directories = [path.join(root, '.pantry/native/runtimes')]
+  let restored: string | undefined
+  try { restored = await cache.restoreCache(directories, key) }
+  catch (error) { core.info(`Native cache unavailable: ${String(error)}`) }
+  const result = await prepareNativeRelease(root, inputs.nativeApp)
+  if (!restored && fs.existsSync(directories[0]!)) {
+    try { await cache.saveCache(directories, key) }
+    catch (error) { core.info(`Native cache save unavailable: ${String(error)}`) }
+  }
+  core.setOutput('native-artifacts', result.files.join('\n'))
+  core.setOutput('native-version', result.version)
+  if (inputs.nativeApp === 'check') return
+  inputs.release = true
+  inputs.releaseFiles = result.files.join('\n')
+  inputs.releaseTag = inputs.releaseTag || `v${result.version}`
+  inputs.releaseDraft = result.config.release?.draft ?? false
+  if (result.appStorePackage) {
+    inputs.releaseAppStore = true
+    inputs.releaseAppStorePackage = result.appStorePackage
+    inputs.releaseAppStoreBundleId = result.artifact!.bundleId
+    inputs.releaseAppStoreVersion = result.version
+    inputs.releaseAppStoreBuildNumber = result.artifact!.buildNumber
+    inputs.releaseAppStoreRetryExisting = false
+  }
+  if (result.config.android) inputs.nativeGooglePlay = { ...result.config.android, bundle: path.resolve(root, result.config.android.bundle) }
+}
+
 async function runReleaseTargets(options: {
   inputs: ActionInputs
   releaseFiles: string[]
@@ -1470,6 +1546,14 @@ async function runReleaseTargets(options: {
 }): Promise<string[]> {
   const { inputs, releaseFiles, releaseDirectory, manifest, manifestPath, releaseNotes, owner, repo } = options
   const receiptFiles: string[] = []
+
+  if (inputs.nativeGooglePlay) {
+    const receipt = await deliverReleaseToGooglePlay({ ...inputs.nativeGooglePlay, serviceAccount: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || '' })
+    const receiptPath = path.join(releaseDirectory, 'google-play-receipt.json')
+    fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 })
+    receiptFiles.push(receiptPath)
+    core.setOutput('release-google-play-receipt', receiptPath)
+  }
 
   if (inputs.releaseAppStore) {
     core.startGroup(inputs.releaseDryRun ? 'Plan Mac App Store delivery' : 'Mac App Store delivery')
@@ -1648,23 +1732,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   const octokit = github.getOctokit(token)
   // Draft-aware: the tag lookup never returns drafts, so legs of one release
   // matrix each created their own (see release-draft.ts).
-  const releaseClient: ReleaseClient = {
-    getPublishedByTag: async (releaseTag) => {
-      try {
-        const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag: releaseTag })
-        return response.data
-      }
-      catch (err) {
-        if ((err as { status?: number }).status === 404)
-          return undefined
-        throw err
-      }
-    },
-    listRecent: async () => (await octokit.rest.repos.listReleases({ owner, repo, per_page: 100 })).data,
-    deleteRelease: async (id) => {
-      await octokit.rest.repos.deleteRelease({ owner, repo, release_id: id })
-    },
-  }
+  const releaseClient = nativeReleaseClient(token, owner, repo)
   const existingRelease = await retryGitHubReleaseOperation(
     `Lookup of release ${tag}`,
     () => findReleaseForTag(releaseClient, tag),

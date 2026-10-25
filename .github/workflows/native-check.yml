@@ -1,0 +1,30 @@
+name: Native app checks
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        default: macos-15
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build and verify with Pantry
+        uses: pantry-pm/pantry/packages/action@v0.11.127
+        with:
+          native-app: check
+      - name: Preserve built artifacts and test evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-${{ runner.os }}-${{ runner.arch }}
+          path: dist/
+          if-no-files-found: ignore
+          retention-days: 7

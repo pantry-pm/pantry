@@ -134,3 +134,79 @@ when the prepared version should enter App Review. `submitAppStore` prepares an
 already-uploaded version by bundle ID and version, and preserves active review
 submissions when a release command is retried. These APIs work for macOS and iOS
 apps, independently of the application framework or an extension container.
+
+## Native application releases
+
+Pantry owns native runtime provisioning, temporary signing credentials,
+notarization, App Store packaging and delivery, Google Play delivery, and
+verified GitHub release assets. Buddy owns compilation. App repositories keep
+application metadata in `craft.config.ts` and declare release policy in
+`pantry.json`; they do not need platform scripts or entitlement XML.
+
+```json
+{
+  "native": {
+    "runtime": {
+      "revision": "d675077c317c486d8b5743f3432c40ddf1cd693a",
+      "version": "0.0.295"
+    },
+    "checks": {
+      "before": [["bun", "run", "lint"], ["bun", "run", "test:unit"]],
+      "after": [["bun", "run", "test:native"]]
+    },
+    "macos": {
+      "notarize": true,
+      "entitlements": { "direct": { "com.apple.security.cs.allow-jit": true } }
+    }
+  }
+}
+```
+
+Use the versioned `pantry-pm/pantry/.github/workflows/native-app.yml` reusable
+workflow with `release: true` on version tags, and the versioned
+`native-check.yml` workflow for read-only CI.
+Pass `secrets: inherit` for releases. The workflow installs dependencies from the
+lockfile, runs all declared checks, provisions the immutable Craft source with
+its locked Zig compiler and first-party pins, builds through Buddy, and checks
+the actual bundle's identity, size, Mach-O executable and native launch. Native
+checks remain app-owned and run against the real artifact. Release tags must
+match `package.json`. Releases reject the local `CRAFT_BIN` development override.
+
+Direct macOS releases require `APPLE_APPLICATION_CERTIFICATE` (base64 P12),
+`APPLE_CERTIFICATE_PASSWORD`, and, for restricted capabilities,
+`APPLE_PROVISIONING_PROFILE_BASE64`. Notarization accepts App Store Connect
+`APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and
+`APP_STORE_CONNECT_PRIVATE_KEY`, or the `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` alternative. Local runs can use
+`APPLE_NOTARY_KEYCHAIN_PROFILE` or `APP_STORE_CONNECT_API_KEY_PATH` instead.
+Only Apple's Accepted status allows stapling; the stapled file is hashed for the
+release receipt. A configured target with missing credentials fails before the
+build. Check runs receive no publishing secrets.
+
+Enable `native.macos.appStore: true` to build a separate sandboxed distribution
+and signed PKG. Declare `entitlements.appStore` including a true
+`com.apple.security.app-sandbox`; provide
+`APPLE_APP_STORE_APPLICATION_CERTIFICATE`, `APPLE_APP_STORE_INSTALLER_CERTIFICATE`,
+and `APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64` in addition to the Connect API
+credentials. The API upload is validated and a receipt is attached. This is
+App Store Connect delivery, not an assertion that Apple approved a review.
+Apple enrollment, account agreements and initial account credentials remain
+account-owner setup; Pantry's existing provisioning APIs handle certificates,
+bundle IDs, profiles and Connect resources.
+
+Android apps declare `native.android` with `bundle` (an AAB path), `packageName`,
+`track`, and explicit `status` (`draft`, `completed`, or `inProgress` with a
+`userFraction` between zero and one). Their `native.build` is an argument array
+for the project's native compiler. Pantry signs with `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`, or
+verifies the compiler's already-signed AAB. `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+provides the publisher account. Pantry checks the upload SHA-256 and version
+code, updates the configured track in an edit, validates it, and commits only
+after those steps pass. Failed or validation-only edits are deleted. A commit
+never implicitly cancels another in-progress store review. Play app enrollment
+and granting the service account access are initial account-owner setup.
+
+For local validation use `ts-pantry native:check`; for signed release artifact
+preparation use `ts-pantry native:prepare-release`. The public
+`ts-pantry/native` entry exports the same runtime, build, signing, notarization,
+App Store and Google Play operations used by Buddy and the GitHub Action.

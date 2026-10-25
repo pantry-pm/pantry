@@ -1,4 +1,6 @@
 export interface ActionInputs {
+  nativeApp?: 'check' | 'release'
+  nativeGooglePlay?: { bundle: string, packageName: string, track: string, status: 'draft' | 'completed' | 'inProgress', userFraction?: number }
   version: string
   packages: string
   services: string

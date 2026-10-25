@@ -1,0 +1,93 @@
+name: Native app
+
+on:
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+      runner:
+        type: string
+        default: macos-15
+    secrets:
+      APPLE_APPLICATION_CERTIFICATE:
+        required: false
+      APPLE_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_PROVISIONING_PROFILE_BASE64:
+        required: false
+      APPLE_APP_STORE_APPLICATION_CERTIFICATE:
+        required: false
+      APPLE_APP_STORE_INSTALLER_CERTIFICATE:
+        required: false
+      APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64:
+        required: false
+      APP_STORE_CONNECT_API_KEY_ID:
+        required: false
+      APP_STORE_CONNECT_ISSUER_ID:
+        required: false
+      APP_STORE_CONNECT_PRIVATE_KEY:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_APP_SPECIFIC_PASSWORD:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:
+        required: false
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Build, verify and deliver with Pantry
+        uses: pantry-pm/pantry/packages/action@v0.11.127
+        with:
+          native-app: ${{ inputs.release && 'release' || 'check' }}
+          release-token: ${{ github.token }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          APPLE_APPLICATION_CERTIFICATE: ${{ inputs.release && secrets.APPLE_APPLICATION_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ inputs.release && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_APP_STORE_APPLICATION_CERTIFICATE: ${{ inputs.release && secrets.APPLE_APP_STORE_APPLICATION_CERTIFICATE || '' }}
+          APPLE_APP_STORE_INSTALLER_CERTIFICATE: ${{ inputs.release && secrets.APPLE_APP_STORE_INSTALLER_CERTIFICATE || '' }}
+          APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ inputs.release && secrets.APP_STORE_CONNECT_API_KEY_ID || '' }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ inputs.release && secrets.APP_STORE_CONNECT_ISSUER_ID || '' }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ inputs.release && secrets.APP_STORE_CONNECT_PRIVATE_KEY || '' }}
+          APPLE_ID: ${{ inputs.release && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ inputs.release && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ inputs.release && secrets.APPLE_TEAM_ID || '' }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ inputs.release && secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || '' }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ inputs.release && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          ANDROID_KEY_PASSWORD: ${{ inputs.release && secrets.ANDROID_KEY_PASSWORD || '' }}
+          ANDROID_KEY_ALIAS: ${{ inputs.release && secrets.ANDROID_KEY_ALIAS || '' }}
+      - name: Preserve built artifacts and test evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-${{ runner.os }}-${{ runner.arch }}
+          path: dist/
+          if-no-files-found: ignore
+          retention-days: 7

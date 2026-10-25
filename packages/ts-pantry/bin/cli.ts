@@ -1749,6 +1749,20 @@ cli
 // app-store:* — provider-neutral Apple provisioning and certificate automation
 // ─────────────────────────────────────────────────────────────────────────────
 cli
+  .command('native:check', 'Build and verify the native app declared in pantry.json')
+  .action(async () => {
+    const { prepareNativeRelease } = await import('../src/native')
+    console.log(JSON.stringify(await prepareNativeRelease(process.cwd(), 'check'), null, 2))
+  })
+
+cli
+  .command('native:prepare-release', 'Sign, verify, notarize and package configured native release targets')
+  .action(async () => {
+    const { prepareNativeRelease } = await import('../src/native')
+    console.log(JSON.stringify(await prepareNativeRelease(process.cwd(), 'release'), null, 2))
+  })
+
+cli
   .command('app-store:csr', 'Generate private keys and CSRs for Mac App Store certificates')
   .option('--name <name>', 'App name used in certificate request common names')
   .option('--output <dir>', 'Output directory (default: .pantry/apple)')
