@@ -12,7 +12,7 @@ import type { ReleaseClient } from './release-draft'
 import { findReleaseForTag, settleCreatedDraft } from './release-draft'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
-import { setupBunRuntime } from './bun-runtime'
+import { requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantryConfigMaySetLinker, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import { installResolvedSystemPackages } from './system-packages'
@@ -783,15 +783,17 @@ export async function run(): Promise<void> {
     // If setup-only with no packages, skip to publish/release (if any)
     if (inputs.setupOnly && !inputs.packages && !inputs.services) {
       // `install: false` skips `pantry install` of *project* deps, but the
-      // action's core contract is to provide the bun runtime — always install
-      // it so downstream steps can run `bun …` without a separate setup-bun.
+      // action's core contract is to provide Bun. Retain an activated project
+      // compiler on follow-up signing/release calls instead of replacing it
+      // with latest, and bootstrap from its declared spec when none is active.
       // (Without this, setup-only returned before any bun install, so a
       // workflow that only wanted the CLI got `bun: command not found`.)
       // A failed install fails the setup here, with the download error,
       // instead of a warning and a downstream `bun: command not found`.
       await setupBunRuntime({
-        install: () => installSystemPackages(['bun.sh'], pantryDir, readLockedVersions(), path.join(installDir, platform.binaryName)),
+        install: () => installSystemPackages([requiredBunPackageSpec(extractSystemDeps())], pantryDir, readLockedVersions(), path.join(installDir, platform.binaryName)),
         binDir: pantryBinDir,
+        preserveExisting: process.env.BUN_INSTALL === pantryDir,
         onLinked: () => core.exportVariable('BUN_INSTALL', pantryDir),
       })
 
