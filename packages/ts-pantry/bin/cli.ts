@@ -1749,6 +1749,15 @@ cli
 // app-store:* — provider-neutral Apple provisioning and certificate automation
 // ─────────────────────────────────────────────────────────────────────────────
 cli
+  .command('native:release', 'Qualify, version, commit and push a native app release through Pantry')
+  .option('--bump <bump>', 'patch, minor or major (default: patch)')
+  .option('--dry-run', 'Validate and preview without changing the version or publishing')
+  .action(async (options: { bump?: string, dryRun?: boolean }) => {
+    const { releaseNativeApp } = await import('../src/native/release')
+    await releaseNativeApp(process.cwd(), { bump: (options.bump || 'patch') as 'patch' | 'minor' | 'major', dryRun: options.dryRun })
+  })
+
+cli
   .command('native:check', 'Build and verify the native app declared in pantry.json')
   .action(async () => {
     const { prepareNativeRelease } = await import('../src/native')

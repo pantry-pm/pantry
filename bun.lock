@@ -70,6 +70,7 @@
         "ts-pantry": "./dist/bin/cli.js",
       },
       "dependencies": {
+        "@stacksjs/bumpx": "0.2.26",
         "@stacksjs/env": "^0.75.311",
       },
       "devDependencies": {

@@ -226,3 +226,11 @@ App Store and Google Play operations used by Buddy and the GitHub Action.
 certificate fingerprint through Security.framework. Its P12 password is supplied
 through the child environment, and unrelated identities are never exported.
 It supports migrating a local signing identity into Buddy-encrypted CI settings.
+
+`buddy release --bump patch|minor|major` delegates native app qualification and
+versioning to `releaseNativeApp`. It requires clean source on `main`, runs the
+configured artifact and native checks first, then uses the shared bumpx
+publisher to commit, tag and push normally. The tag invokes the Pantry delivery
+workflow. `ts-pantry native:release --bump patch` exposes the same operation;
+`--dry-run` previews the version change after qualification without committing,
+tagging or pushing.

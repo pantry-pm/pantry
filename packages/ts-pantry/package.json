@@ -37,6 +37,10 @@
       "types": "./dist/src/native/index.d.ts",
       "import": "./dist/src/native/index.js"
     },
+    "./native/release": {
+      "types": "./dist/src/native/release.d.ts",
+      "import": "./dist/src/native/release.js"
+    },
     "./*": {
       "import": "./dist/*"
     }
@@ -99,6 +103,7 @@
     "pantry:rescan-binaries": "bun scripts/backfill-malware-scans.ts"
   },
   "dependencies": {
+    "@stacksjs/bumpx": "0.2.26",
     "@stacksjs/env": "^0.75.311"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { encryptValue, generateKeypair } from '@stacksjs/env/crypto'
 import type { NativeCommand } from '../src/native'
 import { auditNativeEnvironment, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, readNativeAppConfig, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle } from '../src/native'
+import { releaseNativeApp } from '../src/native/release'
 
 const directories: string[] = []
 function temporary(): string {
@@ -55,6 +56,19 @@ describe('Buddy encrypted release environments', () => {
 })
 
 describe('native configuration and builds', () => {
+  test('a failed qualification cannot create a release commit, tag or push', async () => {
+    const root = temporary()
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.0.0' }))
+    writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { checks: { before: [['bun', 'run', 'lint']] } } }))
+    const calls: string[][] = []
+    await expect(releaseNativeApp(root, { bump: 'patch' }, { command: async (name, args) => {
+      calls.push([name, ...args])
+      if (name === 'git') return { ...ok, stdout: args[0] === 'rev-parse' ? 'a'.repeat(40) : args[0] === 'branch' ? 'main' : '' }
+      return args.includes('lint') ? { ...ok, exitCode: 1, stderr: 'qualification failed' } : ok
+    } })).rejects.toThrow('qualification failed')
+    expect(calls.filter(args => args[0] === 'git').map(args => args[1])).toEqual(['rev-parse', 'branch', 'status'])
+    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version).toBe('1.0.0')
+  })
   test('rejects mutable runtime pins, invalid commands and rollout configuration', () => {
     const root = temporary()
     const write = (native: unknown) => writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native }))
