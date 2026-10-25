@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.130...v0.11.131)
+
+## 🐛 Bug Fixes
+
+- retry interrupted Apple notarization ticket requests ([274256e](https://github.com/pantry-pm/pantry/commit/274256e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- limit targeted version checks to their recipe ([bcac3f6](https://github.com/pantry-pm/pantry/commit/bcac3f6)) _(by Chris Breuer <chris@stacksjs.com>)_
+- preserve Craft webview runtimes in Pantry packages ([370f618](https://github.com/pantry-pm/pantry/commit/370f618)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.131 ([66af52d](https://github.com/pantry-pm/pantry/commit/66af52d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.350 ([466d976](https://github.com/pantry-pm/pantry/commit/466d976)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update LLaMA.cpp, SeaweedFS, xplr ([ec6fa1d](https://github.com/pantry-pm/pantry/commit/ec6fa1d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.348 ([f3c651a](https://github.com/pantry-pm/pantry/commit/f3c651a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.129...v0.11.130)
 
 ## 🐛 Bug Fixes
