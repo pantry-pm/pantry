@@ -3,7 +3,7 @@
  *
  * @domain `stats.app`
  * @programs `stats`
- * @version `3.0.22` (84 versions available)
+ * @version `3.0.23` (85 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install stats.app`
@@ -22,6 +22,7 @@ export const statsappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.0.23',
     '3.0.22',
     '3.0.21',
     '3.0.20',
