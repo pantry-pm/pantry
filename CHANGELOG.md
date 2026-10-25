@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.129...v0.11.130)
+
+## 🐛 Bug Fixes
+
+- keep native release checks portable and workspace locks canonical ([80bb35d](https://github.com/pantry-pm/pantry/commit/80bb35d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **action**: preserve Bun across signing-only steps ([165819b](https://github.com/pantry-pm/pantry/commit/165819b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.130 ([873c837](https://github.com/pantry-pm/pantry/commit/873c837)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/native-app-publishing ([19093c4](https://github.com/pantry-pm/pantry/commit/19093c4)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.128...v0.11.129)
 
 ## ✨ Features
