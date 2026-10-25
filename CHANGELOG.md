@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.127...HEAD)
+
+## ✨ Features
+
+- **app-store**: reuse approved encryption declarations for builds ([756043c](https://github.com/pantry-pm/pantry/commit/756043c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **test**: give publication responses owned byte buffers ([4ab4560](https://github.com/pantry-pm/pantry/commit/4ab4560)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use product names in automated update commits ([a5ba034](https://github.com/pantry-pm/pantry/commit/a5ba034)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **benchmark**: require patched Zod in the install fixture ([e3dc1ea](https://github.com/pantry-pm/pantry/commit/e3dc1ea)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- update dblab.danvergara.com, dotnet.microsoft.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, vim.org ([003aa1d](https://github.com/pantry-pm/pantry/commit/003aa1d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.346 ([1226790](https://github.com/pantry-pm/pantry/commit/1226790)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update babashka.org, github.com/ggerganov/llama.cpp, github.com/tw93/mole, mercure.rocks, stats.app, vim.org ([81b4a90](https://github.com/pantry-pm/pantry/commit/81b4a90)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.345 ([bccf087](https://github.com/pantry-pm/pantry/commit/bccf087)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, craft-native.org, github.com/ggerganov/llama.cpp, vim.org ([11a7943](https://github.com/pantry-pm/pantry/commit/11a7943)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.126...v0.11.127)
 
 ## 🐛 Bug Fixes
