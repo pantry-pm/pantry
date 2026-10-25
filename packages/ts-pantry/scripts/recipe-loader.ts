@@ -127,7 +127,7 @@ function recipeIndex(): Map<string, string> {
 }
 
 /** Find a native TS recipe file for a domain */
-function findRecipeFile(domain: string): string | null {
+export function findRecipeFile(domain: string): string | null {
   const recipesDir = join(tsPackagesDir, 'recipes')
   // Try exact file: src/recipes/domain.ts
   const flat = join(recipesDir, `${domain}.ts`)
