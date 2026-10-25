@@ -2628,6 +2628,7 @@ fn transientGetTransport(err: anyerror) bool {
         error.EndOfStream,
         error.UnexpectedEndOfStream,
         error.TemporaryNameServerFailure,
+        error.NameServerFailure,
         error.TlsInitializationFailed,
         => true,
         else => false,
@@ -2754,6 +2755,19 @@ fn httpGetResponseWithClient(client: *std.http.Client, allocator: std.mem.Alloca
             },
         }
     }
+}
+
+test "safe GET DNS server recovery shares the existing attempt budget" {
+    var budget: HttpGetRetryBudget = .{ .initial_delay_ms = 0 };
+    try std.testing.expect(!try budget.transport(error.UnknownHostName));
+    try std.testing.expect(!try budget.transport(error.Canceled));
+    try std.testing.expectEqual(@as(u32, 0), budget.used);
+    try std.testing.expect(try budget.transport(error.NameServerFailure));
+    try std.testing.expectEqual(@as(u32, 1), budget.used);
+    try std.testing.expect(try budget.transport(error.TemporaryNameServerFailure));
+    try std.testing.expectEqual(@as(u32, 2), budget.used);
+    try std.testing.expect(!try budget.transport(error.NameServerFailure));
+    try std.testing.expectEqual(@as(u32, 2), budget.used);
 }
 
 test "safe GET transport recovery leaves cancellation and permanent failures terminal" {
