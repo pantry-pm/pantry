@@ -12,7 +12,7 @@ export async function releaseNativeApp(root: string, options: { bump: NativeRele
   const git = async (args: string[]) => succeeded('Native release Git check', await command('git', args, { cwd: root })).stdout.trim()
   const source = await git(['rev-parse', 'HEAD'])
   if (await git(['branch', '--show-current']) !== 'main') throw new Error('Native releases must be cut from main')
-  if (await git(['status', '--porcelain', '--untracked-files=no'])) throw new Error('Commit native app source before releasing')
+  if (await git(['status', '--porcelain', '--untracked-files=normal'])) throw new Error('Commit native app source before releasing')
   await prepareNativeRelease(root, 'check', { command })
   await versionBump({ cwd: root, release: options.bump, expectedSource: source, recursive: true, commit: !options.dryRun, tag: !options.dryRun, push: !options.dryRun, dryRun: options.dryRun, yes: true })
 }

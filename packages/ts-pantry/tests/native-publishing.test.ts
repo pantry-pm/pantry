@@ -134,7 +134,7 @@ describe('Apple native publishing', () => {
         return ok
       },
     })
-    await expect(exportAppleKeychainIdentity({ fingerprint: 'AB'.repeat(20), password: 'generated archive password', output })).rejects.toThrow('overwrite')
+    await expect(exportAppleKeychainIdentity({ fingerprint: 'AB'.repeat(20), password: 'generated archive password', output }, { platform: 'darwin' })).rejects.toThrow('overwrite')
   })
   test('requires Accepted, staples before hashing, and removes API key files', async () => {
     const root = temporary()
