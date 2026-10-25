@@ -1,3 +1,34 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.126...v0.11.127)
+
+## 🐛 Bug Fixes
+
+- **download**: recover DNS server failures within the GET budget ([6688186](https://github.com/pantry-pm/pantry/commit/6688186)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#251](https://github.com/pantry-pm/pantry/issues/251))
+- **craft**: preserve the public macOS runtime during installation ([9ed678e](https://github.com/pantry-pm/pantry/commit/9ed678e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- isolate mysql data and startup scripts per project ([171f3ab](https://github.com/pantry-pm/pantry/commit/171f3ab)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **action**: preserve managed Bun executor activation ([f2e40c9](https://github.com/pantry-pm/pantry/commit/f2e40c9)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ci**: preserve empty mirror arguments on system Bash ([80c2719](https://github.com/pantry-pm/pantry/commit/80c2719)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.127 ([fd0f652](https://github.com/pantry-pm/pantry/commit/fd0f652)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft-native.org to 0.0.341 ([e23de64](https://github.com/pantry-pm/pantry/commit/e23de64)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, runatlantis.io, seaweedfs.com, ziglang.org ([5e9c1e9](https://github.com/pantry-pm/pantry/commit/5e9c1e9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.340 ([9d127f5](https://github.com/pantry-pm/pantry/commit/9d127f5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.338 ([96ac1ee](https://github.com/pantry-pm/pantry/commit/96ac1ee)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 11869 ([aed2177](https://github.com/pantry-pm/pantry/commit/aed2177)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, mise.jdx.dev, ollama.ai, oras.land ([e69bc13](https://github.com/pantry-pm/pantry/commit/e69bc13)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org, dozzle.dev, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, vim.org ([fd1b257](https://github.com/pantry-pm/pantry/commit/fd1b257)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update biomejs.dev, github.com/ggerganov/llama.cpp, github.com/tw93/mole, sdkman.io, ziglang.org ([4d5d430](https://github.com/pantry-pm/pantry/commit/4d5d430)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.329 ([a8f38fc](https://github.com/pantry-pm/pantry/commit/a8f38fc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.328 ([c7f8892](https://github.com/pantry-pm/pantry/commit/c7f8892)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 11852 ([ccf43d4](https://github.com/pantry-pm/pantry/commit/ccf43d4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, coder.com/code-server, codex.openai.com, github.com/ggerganov/llama.cpp ([a93c4c1](https://github.com/pantry-pm/pantry/commit/a93c4c1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.125...v0.11.126)
 
 ## 🐛 Bug Fixes
