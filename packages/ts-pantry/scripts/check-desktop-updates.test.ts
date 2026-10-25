@@ -20,7 +20,10 @@ describe('desktop update flow', () => {
       host: 'ubuntu' as const,
     }
 
-    expect(commitSubject([entry])).toBe('chore(desktop): publish app example.com 1.0.0 → 2.0.0')
+    expect(commitSubject([entry])).toBe('chore(desktop): publish app Example 1.0.0 → 2.0.0')
+    expect(commitSubject([{ ...entry, previousPublished: null }])).toBe('chore(desktop): publish app Example 2.0.0')
+    expect(commitSubject([{ ...entry, name: '  ' }])).toBe('chore(desktop): publish app example.com 1.0.0 → 2.0.0')
+    expect(commitSubject([entry, { ...entry, domain: 'font.example', name: 'Font', kind: 'font' }])).toBe('chore(desktop): publish 1 app & 1 font (Example, Font)')
   })
 })
 

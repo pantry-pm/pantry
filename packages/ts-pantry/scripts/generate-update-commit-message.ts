@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 
 interface PackageUpdate {
   domain: string
@@ -22,9 +22,10 @@ const headRef = args.get('head') || 'worktree'
 const messageFile = args.get('message-file') || ''
 
 function git(args: string[]): string {
-  return execSync(['git', ...args].map(arg => JSON.stringify(arg)).join(' '), {
+  return execFileSync('git', args, {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'pipe'],
   })
 }
 
@@ -44,15 +45,16 @@ function readAt(ref: string, path: string): string {
 function changedFiles(): string[] {
   const paths = ['packages/ts-pantry/src/packages/', 'packages/zig/src/packages/generated.zig']
   if (headRef === 'worktree') {
-    return git(['status', '--porcelain', ...paths])
-      .split('\n')
-      .map(line => line.slice(3).trim())
-      .filter(Boolean)
+    // Compare against the requested base, including staged and unstaged edits.
+    // NUL delimiters preserve spaces, quotes and other characters in filenames.
+    return [...new Set([
+      ...git(['diff', '--name-only', '--no-renames', '-z', baseRef, '--', ...paths]).split('\0'),
+      ...git(['ls-files', '--others', '--exclude-standard', '-z', '--', ...paths]).split('\0'),
+    ].filter(Boolean))]
   }
 
-  return git(['diff', '--name-only', baseRef, headRef, '--', ...paths])
-    .split('\n')
-    .map(line => line.trim())
+  return git(['diff', '--name-only', '--no-renames', '-z', baseRef, headRef, '--', ...paths])
+    .split('\0')
     .filter(Boolean)
 }
 
@@ -109,23 +111,23 @@ if (files.includes('packages/zig/src/packages/generated.zig')) {
   for (const [domain, next] of current.entries()) {
     if (updates.has(domain)) continue
     const prior = previous.get(domain)
-    if (!prior || prior.version === next.version) continue
+    if (prior?.version === next.version) continue
     updates.set(domain, {
       domain,
       name: next.name,
-      oldVersion: prior.version,
+      oldVersion: prior?.version || '',
       newVersion: next.version,
     })
   }
 }
 
-const packageUpdates = [...updates.values()].sort((a, b) => a.domain.localeCompare(b.domain))
-const packageLabels = packageUpdates.map(update => update.domain)
+const packageUpdates = [...updates.values()].sort((a, b) => a.name.localeCompare(b.name) || a.domain.localeCompare(b.domain))
+const packageLabels = packageUpdates.map(update => update.name)
 
 function subject(): string {
   if (packageLabels.length === 1) {
     const update = packageUpdates[0]
-    return `chore: update ${update.domain} to ${update.newVersion}`
+    return `chore: update ${update.name} to ${update.newVersion}`
   }
   if (packageLabels.length > 1) {
     return `chore: update ${packageLabels.join(', ')}`
@@ -141,7 +143,7 @@ const workflow = process.env.GITHUB_WORKFLOW || 'Update Packages'
 
 const bodyLines = [
   packageUpdates.length > 0 ? 'Updated packages:' : 'Refreshed generated package metadata.',
-  ...packageUpdates.map(update => `- ${update.domain}: ${update.oldVersion || 'new'} -> ${update.newVersion}`),
+  ...packageUpdates.map(update => `- ${update.name}${update.name === update.domain ? '' : ` (${update.domain})`}: ${update.oldVersion || 'new'} -> ${update.newVersion}`),
   '',
   `Workflow: ${workflow}`,
   ...(runUrl ? [`Triggered by: ${runUrl}`] : []),
