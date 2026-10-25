@@ -160,6 +160,49 @@ describe('Apple native publishing', () => {
     await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async () => ({ ...ok, stdout: JSON.stringify({ id: 'rejected-id', status: 'Invalid' }) }))).rejects.toThrow('did not accept')
     expect(() => resolveNotaryCredentials({ APP_STORE_CONNECT_API_KEY_ID: 'partial' })).toThrow('complete')
   })
+  test('retries interrupted ticket transport without resubmitting notarization', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'signed')
+    const calls: string[] = []
+    const attempts = new Map<string, number>()
+    const receipt = await notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async (_name, args) => {
+      const operation = args.slice(0, 2).join(' ')
+      calls.push(operation)
+      const attempt = (attempts.get(operation) ?? 0) + 1
+      attempts.set(operation, attempt)
+      if (args[0] === 'notarytool') return { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) }
+      if (attempt === 1) return { ...ok, exitCode: 68, stderr: 'Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."' }
+      return ok
+    })
+    expect(receipt.status).toBe('Accepted')
+    expect(calls).toEqual(['notarytool submit', 'stapler staple', 'stapler staple', 'stapler validate', 'stapler validate'])
+  })
+  test('never retries invalid tickets or treats a bare stapler failure as transport', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'signed')
+    for (const failure of [{ exitCode: 77, stderr: 'The ticket has been revoked' }, { exitCode: 68, stderr: 'The validate action failed! Error 68.' }]) {
+      const calls: string[] = []
+      await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async (_name, args) => {
+        calls.push(args.slice(0, 2).join(' '))
+        return args[0] === 'notarytool' ? { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) } : { ...ok, ...failure }
+      })).rejects.toThrow('Staple notarization failed')
+      expect(calls).toEqual(['notarytool submit', 'stapler staple'])
+    }
+  })
+  test('fails closed after exhausting ticket-service transport retries', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'signed')
+    let validationAttempts = 0
+    await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async (_name, args) => {
+      if (args[0] === 'notarytool') return { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) }
+      if (args[1] === 'validate') {
+        validationAttempts++
+        return { ...ok, exitCode: 68, stderr: 'Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."' }
+      }
+      return ok
+    })).rejects.toThrow('Validate notarization failed (68)')
+    expect(validationAttempts).toBe(5)
+  }, 25_000)
   test('a false sandbox entitlement cannot produce an App Store package', async () => {
     const root = temporary()
     const app = join(root, 'Example.app')

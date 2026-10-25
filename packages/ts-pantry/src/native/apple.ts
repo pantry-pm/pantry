@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { runNativeCommand, succeeded } from './command'
 
 export type NotaryCredentials = { keychainProfile: string } | { apiKeyId: string, issuerId: string, privateKey: string } | { appleId: string, password: string, teamId: string }
@@ -26,6 +27,22 @@ export function resolveNotaryCredentials(env: NodeJS.ProcessEnv = process.env): 
 /** Require Apple's Accepted status, then staple and validate the ticket. */
 export interface NotarizationReceipt { schemaVersion: number, file: string, submissionId: string, status: string, sha256: string, completedAt: string }
 
+async function runStapler(action: 'staple' | 'validate', file: string, command: NativeCommand): Promise<void> {
+  const label = action === 'staple' ? 'Staple notarization' : 'Validate notarization'
+  for (let attempt = 0; ; attempt++) {
+    const result = await command('xcrun', ['stapler', action, file])
+    // Apple's ticket service can sever a connection after issuing the ticket.
+    // Retry only identified transport failures, never an invalid/revoked ticket
+    // or a bare stapler exit code. A release still requires successful validation.
+    const transportFailure = /NSURLErrorDomain\s+Code=-(?:1001|1003|1004|1005|1009)\b/.test(`${result.stdout}\n${result.stderr}`)
+    if (result.exitCode === 0 || !transportFailure || attempt === 4) {
+      succeeded(label, result)
+      return
+    }
+    await delay(1000 * 2 ** attempt)
+  }
+}
+
 export async function notarizeNativeArtifact(file: string, credentials: NotaryCredentials, command: NativeCommand = runNativeCommand): Promise<NotarizationReceipt> {
   if (!existsSync(file) || !/\.(dmg|pkg|zip)$/i.test(file)) throw new Error('Notarization requires an existing DMG, PKG or ZIP')
   const directory = mkdtempSync(join(tmpdir(), 'pantry-notary-'))
@@ -44,8 +61,8 @@ export async function notarizeNativeArtifact(file: string, credentials: NotaryCr
     // ZIPs cannot carry a stapled ticket. Their signed app must be stapled by
     // the caller before archiving; native release pipelines use DMGs or PKGs.
     if (!file.toLowerCase().endsWith('.zip')) {
-      succeeded('Staple notarization', await command('xcrun', ['stapler', 'staple', file]))
-      succeeded('Validate notarization', await command('xcrun', ['stapler', 'validate', file]))
+      await runStapler('staple', file, command)
+      await runStapler('validate', file, command)
     }
     return { schemaVersion: 1, file: basename(file), submissionId: submission.id, status: submission.status, sha256: createHash('sha256').update(readFileSync(file)).digest('hex'), completedAt: new Date().toISOString() }
   }
