@@ -80,6 +80,8 @@ export interface AppStoreMetadata {
   usesIdfa?: boolean
   /** Export-compliance answer applied to uploaded builds. @default false */
   usesNonExemptEncryption?: boolean
+  /** Apple-approved declaration to reuse for builds containing non-exempt encryption. */
+  encryptionDeclarationId?: string
   ageRating?: AppStoreAgeRating
   reviewContact: AppStoreReviewContact
   /** Screenshot files keyed by Apple's display type. Paths are relative to the project root. */
@@ -557,6 +559,10 @@ async function updateVersion(client: AppStoreConnectClient, version: AppStoreVer
     }),
   })
   if (version.buildId) {
+    if (config.encryptionDeclarationId) {
+      await attachAppStoreEncryptionDeclaration(client, version.buildId, config.encryptionDeclarationId)
+      return
+    }
     const encryption = config.usesNonExemptEncryption ?? false
     const build = await client.request<ResourceResponse<{ usesNonExemptEncryption?: boolean }>>(`/builds/${version.buildId}?fields[builds]=usesNonExemptEncryption`)
     if (build.data.attributes.usesNonExemptEncryption === undefined || build.data.attributes.usesNonExemptEncryption === null) {
@@ -572,6 +578,35 @@ async function updateVersion(client: AppStoreConnectClient, version: AppStoreVer
       })
     }
   }
+}
+
+/** Attach an Apple-approved declaration, retaining Apple's export-compliance review gate. */
+export async function attachAppStoreEncryptionDeclaration(
+  client: AppStoreConnectClient,
+  buildId: string,
+  declarationId: string,
+): Promise<void> {
+  const declaration = await client.request<ResourceResponse<{ appEncryptionDeclarationState: string }>>(`/appEncryptionDeclarations/${encodeURIComponent(declarationId)}?include=app`)
+  if (declaration.data.attributes.appEncryptionDeclarationState !== 'APPROVED')
+    throw new Error('[pantry] App Store encryption declaration must be APPROVED before attaching a build')
+  const build = await client.request<ResourceResponse<{ usesNonExemptEncryption?: boolean }>>(`/builds/${encodeURIComponent(buildId)}?include=app,appEncryptionDeclaration`)
+  const declarationApp = declaration.data.relationships?.app?.data
+  const buildApp = build.data.relationships?.app?.data
+  if (!declarationApp || Array.isArray(declarationApp) || !buildApp || Array.isArray(buildApp) || declarationApp.id !== buildApp.id)
+    throw new Error('[pantry] App Store encryption declaration and build must belong to the same app')
+  const selected = build.data.relationships?.appEncryptionDeclaration?.data
+  if (selected && !Array.isArray(selected) && selected.id === declarationId)
+    return
+  if (build.data.attributes.usesNonExemptEncryption === false)
+    throw new Error('[pantry] Refusing to attach a non-exempt declaration to a build marked exempt')
+  await client.request(`/builds/${encodeURIComponent(buildId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ data: {
+      type: 'builds', id: buildId,
+      attributes: { usesNonExemptEncryption: true },
+      relationships: { appEncryptionDeclaration: { data: { type: 'appEncryptionDeclarations', id: declarationId } } },
+    } }),
+  })
 }
 
 async function submitVersions(client: AppStoreConnectClient, appId: string, versions: AppStoreVersion[]): Promise<string[]> {
@@ -642,6 +677,10 @@ export async function prepareAppStoreSubmission(
   versions: AppStoreVersion[],
   options: AppStoreSubmissionOptions = {},
 ): Promise<AppStoreSubmissionResult> {
+  if (store.encryptionDeclarationId && store.usesNonExemptEncryption !== true)
+    throw new Error('[pantry] An encryption declaration requires usesNonExemptEncryption: true')
+  if (store.usesNonExemptEncryption === true && !store.encryptionDeclarationId)
+    throw new Error('[pantry] Non-exempt encryption requires an Apple-approved encryptionDeclarationId')
   const cwd = options.cwd ?? process.cwd()
   const timeoutMs = options.screenshotTimeoutMs ?? 10 * 60_000
   const pollIntervalMs = options.screenshotPollIntervalMs ?? 5_000
