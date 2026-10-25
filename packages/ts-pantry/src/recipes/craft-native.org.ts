@@ -85,7 +85,13 @@ export const recipe: Recipe = {
       'curl -Lfo craft.zip "$URL"',
       'unzip -o craft.zip',
       '',
-      'install -Dm755 craft {{prefix}}/bin/craft',
+      'mkdir -p {{prefix}}/bin',
+      'install -m755 craft {{prefix}}/bin/craft',
+      // Preserve the public-only macOS provider beside the direct CLI. Linux
+      // and older upstream archives do not supply this optional capability.
+      'if [ -f craft-app-store ]; then',
+      '  install -m755 craft-app-store {{prefix}}/bin/craft-app-store',
+      'fi',
     ],
   },
 }

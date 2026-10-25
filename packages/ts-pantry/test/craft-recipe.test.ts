@@ -8,6 +8,9 @@
 // URLs 404. Pin the canonical owner instead of relying on the redirect.
 
 import { describe, expect, it } from 'bun:test'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { pantry } from '../src/index'
 import { recipe } from '../src/recipes/craft-native.org'
 
@@ -66,9 +69,9 @@ describe('craft-native.org download script', () => {
       expect(defined).toContain(name)
   })
 
-  it('installs the one program it advertises', () => {
+  it('advertises the direct CLI', () => {
     expect(pkg.programs).toEqual(['craft'])
-    expect(script).toContain('install -Dm755 craft {{prefix}}/bin/craft')
+    expect(script).toContain('install -m755 craft {{prefix}}/bin/craft')
   })
 })
 
@@ -85,4 +88,27 @@ describe('craft-native.org version gate', () => {
       expect(body).toContain(asset)
     }
   })
+})
+
+
+describe('Craft provider installation', () => {
+  for (const hasStoreRuntime of [false, true]) {
+    it(`preserves the ${hasStoreRuntime ? 'direct and App Store' : 'direct-only'} archive capabilities`, () => {
+      const root = mkdtempSync(join(tmpdir(), 'pantry-craft-providers-'))
+      try {
+        const prefix = join(root, 'installed')
+        writeFileSync(join(root, 'craft'), 'direct runtime')
+        if (hasStoreRuntime) writeFileSync(join(root, 'craft-app-store'), 'public runtime')
+        const install = script.slice(script.indexOf('unzip -o craft.zip') + 'unzip -o craft.zip'.length)
+          .replaceAll('{{prefix}}', prefix)
+        const result = Bun.spawnSync(['bash', '-e', '-c', install], { cwd: root })
+        expect(result.exitCode).toBe(0)
+        expect(readFileSync(join(prefix, 'bin/craft'), 'utf8')).toBe('direct runtime')
+        expect(existsSync(join(prefix, 'bin/craft-app-store'))).toBe(hasStoreRuntime)
+        if (hasStoreRuntime)
+          expect(readFileSync(join(prefix, 'bin/craft-app-store'), 'utf8')).toBe('public runtime')
+      }
+      finally { rmSync(root, { recursive: true, force: true }) }
+    })
+  }
 })
