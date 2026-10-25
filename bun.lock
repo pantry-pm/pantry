@@ -69,6 +69,9 @@
       "bin": {
         "ts-pantry": "./dist/bin/cli.js",
       },
+      "dependencies": {
+        "@stacksjs/env": "^0.75.311",
+      },
       "devDependencies": {
         "@stacksjs/bunpress": "^0.2.8",
         "@stacksjs/clapp": "^0.2.10",
@@ -178,11 +181,15 @@
 
     "@stacksjs/dtsx": ["@stacksjs/dtsx@0.11.5", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0" }, "bin": { "dtsx": "./dist/bin/cli.js" } }, "sha512-BW8+/zkpK7uA6vMnKUMs2uvHJeiau/HTz8bDJb5ecdAltdn6w0hb+U6lCwdc3zypp1Q1m/10Cay9rrMn/D4e1A=="],
 
+    "@stacksjs/env": ["@stacksjs/env@0.75.311", "", { "dependencies": { "@stacksjs/path": "0.75.311" } }, "sha512-n9o71zkF51BkV2vYKtIQcRchIpeLmz0XpX1EInC4CXabLpIXnaMX90XxvsRZCW0yH69ysPqvjUkMV4s0hCXL/g=="],
+
     "@stacksjs/gitlint": ["@stacksjs/gitlint@0.1.7", "", { "bin": { "gitlint": "./dist/bin/cli.js" } }, "sha512-7d43l2r5gSLXK8YKflvkwZvN/huoJqbUSmDN+OY3CGHjb4ItimV6GJ/8JyFJwGI7tDEc5VgNGL0JYyIbk2IQ6g=="],
 
     "@stacksjs/logsmith": ["@stacksjs/logsmith@0.2.11", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0", "bunfig": "^0.15.6", "pickier": "^0.1.9" }, "bin": { "@stacksjs/logsmith": "./dist/bin/cli.js", "logsmith": "./dist/bin/cli.js" } }, "sha512-wqqAxewpsHVDzpC+IRy+yYyGXGlv1j5GCqYTh8fL7d3LLhnRPN72PEQywM357burtORvdkFHfOzk3Ih1SMvuiw=="],
 
     "@stacksjs/pantry-inspector": ["@stacksjs/pantry-inspector@workspace:packages/inspector"],
+
+    "@stacksjs/path": ["@stacksjs/path@0.75.311", "", {}, "sha512-ZHkGuZFIm//uWpUjN1DFgIjIDGhCH1iSAx9lzTsKva9fZhR8t+aC5qDapA3fWnUnvu9qS4/MfSWQHMh31aa66Q=="],
 
     "@stacksjs/registry": ["@stacksjs/registry@workspace:packages/registry"],
 

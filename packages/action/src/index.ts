@@ -1511,7 +1511,10 @@ async function configureNativeRelease(inputs: ActionInputs): Promise<void> {
   let restored: string | undefined
   try { restored = await cache.restoreCache(directories, key) }
   catch (error) { core.info(`Native cache unavailable: ${String(error)}`) }
-  const result = await prepareNativeRelease(root, inputs.nativeApp)
+  const result = await prepareNativeRelease(root, inputs.nativeApp, {
+    onSecret: value => core.setSecret(value),
+    onEnvironment: values => { Object.assign(process.env, values) },
+  })
   if (!restored && fs.existsSync(directories[0]!)) {
     try { await cache.saveCache(directories, key) }
     catch (error) { core.info(`Native cache save unavailable: ${String(error)}`) }
@@ -1530,6 +1533,9 @@ async function configureNativeRelease(inputs: ActionInputs): Promise<void> {
     inputs.releaseAppStoreVersion = result.version
     inputs.releaseAppStoreBuildNumber = result.artifact!.buildNumber
     inputs.releaseAppStoreRetryExisting = false
+    inputs.releaseAppStoreApiKeyId = process.env.APP_STORE_CONNECT_API_KEY_ID || inputs.releaseAppStoreApiKeyId
+    inputs.releaseAppStoreIssuerId = process.env.APP_STORE_CONNECT_ISSUER_ID || inputs.releaseAppStoreIssuerId
+    inputs.releaseAppStorePrivateKey = process.env.APP_STORE_CONNECT_PRIVATE_KEY || inputs.releaseAppStorePrivateKey
   }
   if (result.config.android) inputs.nativeGooglePlay = { ...result.config.android, bundle: path.resolve(root, result.config.android.bundle) }
 }

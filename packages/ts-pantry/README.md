@@ -146,6 +146,7 @@ application metadata in `craft.config.ts` and declare release policy in
 ```json
 {
   "native": {
+    "environment": "production",
     "runtime": {
       "revision": "d675077c317c486d8b5743f3432c40ddf1cd693a",
       "version": "0.0.295"
@@ -165,7 +166,17 @@ application metadata in `craft.config.ts` and declare release policy in
 Use the versioned `pantry-pm/pantry/.github/workflows/native-app.yml` reusable
 workflow with `release: true` on version tags, and the versioned
 `native-check.yml` workflow for read-only CI.
-Pass `secrets: inherit` for releases. The workflow installs dependencies from the
+Pass `secrets: inherit` for releases. Create `.env.production` with
+`buddy env:set KEY --stdin --file .env.production`, commit its authenticated
+ciphertext, and keep `.env.keys` ignored. The release workflow receives only
+`DOTENV_PRIVATE_KEY_PRODUCTION`; the other provider credentials below belong
+in the encrypted file. Pantry uses the same whole-file reader and scoped key
+resolver as Buddy, masks decrypted values before running commands, and never
+writes plaintext credentials back to the repository. CI audits ciphertext
+without receiving the decryption key. Missing, wrong or partial decryption
+fails before signing or publication.
+
+The workflow installs dependencies from the
 lockfile, runs all declared checks, provisions the immutable Craft source with
 its locked Zig compiler and first-party pins, builds through Buddy, and checks
 the actual bundle's identity, size, Mach-O executable and native launch. Native
@@ -174,7 +185,7 @@ match `package.json`. Releases reject the local `CRAFT_BIN` development override
 
 Direct macOS releases require `APPLE_APPLICATION_CERTIFICATE` (base64 P12),
 `APPLE_CERTIFICATE_PASSWORD`, and, for restricted capabilities,
-`APPLE_PROVISIONING_PROFILE_BASE64`. Notarization accepts App Store Connect
+`APPLE_PROVISIONING_PROFILE_BASE64` in the encrypted environment. Notarization accepts App Store Connect
 `APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and
 `APP_STORE_CONNECT_PRIVATE_KEY`, or the `APPLE_ID`,
 `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` alternative. Local runs can use
@@ -210,3 +221,8 @@ For local validation use `ts-pantry native:check`; for signed release artifact
 preparation use `ts-pantry native:prepare-release`. The public
 `ts-pantry/native` entry exports the same runtime, build, signing, notarization,
 App Store and Google Play operations used by Buddy and the GitHub Action.
+
+`exportAppleKeychainIdentity` exports exactly one existing macOS identity by
+certificate fingerprint through Security.framework. Its P12 password is supplied
+through the child environment, and unrelated identities are never exported.
+It supports migrating a local signing identity into Buddy-encrypted CI settings.

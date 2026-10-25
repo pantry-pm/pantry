@@ -1,6 +1,7 @@
 import { createHash, createSign } from 'node:crypto'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { basename } from 'node:path'
+import { finished } from 'node:stream/promises'
 import { isAndroidPackageName } from './config'
 
 export interface GooglePlayReleaseOptions {
@@ -63,10 +64,20 @@ export async function deliverReleaseToGooglePlay(options: GooglePlayReleaseOptio
     const digest = createHash('sha256')
     for await (const chunk of createReadStream(options.bundle)) digest.update(chunk)
     const sha256 = digest.digest('hex')
-    const upload = await request(`${origin}/upload${editPath}/bundles?uploadType=media`, {
+    const body = createReadStream(options.bundle)
+    const closed = finished(body).then(() => undefined, error => error as NodeJS.ErrnoException)
+    let upload: Response
+    try {
+    upload = await request(`${origin}/upload${editPath}/bundles?uploadType=media`, {
       method: 'POST', headers: { Authorization: headers.Authorization, 'Content-Type': 'application/octet-stream', 'Content-Length': String(statSync(options.bundle).size) },
-      body: createReadStream(options.bundle) as unknown as NonNullable<RequestInit['body']>, duplex: 'half', signal: AbortSignal.timeout(120_000),
+      body: body as unknown as NonNullable<RequestInit['body']>, duplex: 'half', signal: AbortSignal.timeout(120_000),
     } as RequestInit)
+    }
+    finally {
+      body.destroy()
+      const error = await closed
+      if (error && error.code !== 'ERR_STREAM_PREMATURE_CLOSE') throw error
+    }
     if (!upload.ok) throw new Error(`Google Play bundle upload failed (${upload.status}): ${await upload.text()}`)
     const bundle = await upload.json() as { versionCode?: number, sha256?: string }
     if (!Number.isSafeInteger(bundle.versionCode) || bundle.versionCode! <= 0 || bundle.sha256?.toLowerCase() !== sha256)

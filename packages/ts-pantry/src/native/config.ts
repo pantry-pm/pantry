@@ -14,6 +14,7 @@ export function isAndroidPackageName(value: string): boolean {
   return parts.length > 1 && parts.every(part => /^[A-Za-z]\w*$/.test(part))
 }
 export interface NativeAppConfig {
+  environment?: string
   runtime?: { revision: string, version: string }
   build?: string[]
   checks?: { before?: string[][], after?: string[][] }
@@ -45,6 +46,7 @@ export function readNativeAppConfig(root: string, required = false): NativeAppCo
     if (required) throw new Error('pantry.json must declare native app settings')
     return undefined
   }
+  if (config.environment !== undefined && (typeof config.environment !== 'string' || !/^[a-z][a-z0-9-]*$/.test(config.environment))) throw new Error('Invalid native release environment name')
   if (config.runtime && (!/^[a-f0-9]{40}$/.test(config.runtime.revision) || !/^\d+\.\d+\.\d+$/.test(config.runtime.version)))
     throw new Error('Craft requires an immutable 40-character Git revision and an exact version')
   for (const command of [config.build, ...config.checks?.before ?? [], ...config.checks?.after ?? []]) {

@@ -5,6 +5,7 @@ import process from 'node:process'
 import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { signNativeAndroidBundle } from './android'
+import { auditNativeEnvironment, loadNativeEnvironment } from './environment'
 import { notarizeNativeArtifact, packageNativeAppStore, resolveNotaryCredentials } from './apple'
 import { removeAppleSigningKeychain, setupAppleSigning } from './apple-signing'
 import { readNativeArtifact } from './build'
@@ -45,10 +46,18 @@ export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: n
 }
 
 /** Shared local/CI pipeline. It prepares artifacts; providers deliver only after checks pass. */
-export async function prepareNativeRelease(root: string, mode: 'check' | 'release', dependencies: { command?: NativeCommand, env?: NodeJS.ProcessEnv } = {}): Promise<NativePipelineResult> {
+export async function prepareNativeRelease(root: string, mode: 'check' | 'release', dependencies: { command?: NativeCommand, env?: NodeJS.ProcessEnv, onSecret?: (value: string) => void, onEnvironment?: (values: Record<string, string>) => void } = {}): Promise<NativePipelineResult> {
   const config = readNativeAppConfig(root, true)!
   const command = dependencies.command ?? runNativeCommand
   const env = { ...(dependencies.env ?? process.env) }
+  if (config.environment) {
+    auditNativeEnvironment(root, config.environment)
+    if (mode === 'release') {
+      const values = loadNativeEnvironment(root, config.environment, dependencies.onSecret)
+      Object.assign(env, values, { APP_ENV: config.environment, NODE_ENV: config.environment, DOTENV_ENV: config.environment })
+      dependencies.onEnvironment?.(values)
+    }
+  }
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version?: string }
   if (!pkg.version || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(pkg.version)) throw new Error('A native release requires a semantic package version')
   env.PANTRY_BUILD_NUMBER = env.PANTRY_BUILD_NUMBER || env.GITHUB_RUN_NUMBER || pkg.version

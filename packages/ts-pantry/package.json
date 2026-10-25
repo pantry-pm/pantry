@@ -98,6 +98,9 @@
     "pantry:upload": "bun scripts/upload-to-s3.ts",
     "pantry:rescan-binaries": "bun scripts/backfill-malware-scans.ts"
   },
+  "dependencies": {
+    "@stacksjs/env": "^0.75.311"
+  },
   "devDependencies": {
     "@stacksjs/bunpress": "^0.2.8",
     "@stacksjs/clapp": "^0.2.10",

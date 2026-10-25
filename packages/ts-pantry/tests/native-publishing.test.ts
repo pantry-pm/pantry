@@ -3,8 +3,9 @@ import { createHash, generateKeyPairSync } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { encryptValue, generateKeypair } from '@stacksjs/env/crypto'
 import type { NativeCommand } from '../src/native'
-import { deliverReleaseToGooglePlay, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, readNativeAppConfig, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle } from '../src/native'
+import { auditNativeEnvironment, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, readNativeAppConfig, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle } from '../src/native'
 
 const directories: string[] = []
 function temporary(): string {
@@ -14,6 +15,44 @@ function temporary(): string {
 }
 afterEach(() => { for (const root of directories.splice(0)) rmSync(root, { recursive: true, force: true }) })
 const ok = { exitCode: 0, stdout: '', stderr: '' }
+
+describe('Buddy encrypted release environments', () => {
+  test('reads the production file with Buddy keys, masks values and preserves multiline keys', () => {
+    const root = temporary()
+    const keys = generateKeypair()
+    const value = '-----BEGIN PRIVATE KEY-----\nprivate material\n-----END PRIVATE KEY-----\n'
+    writeFileSync(join(root, '.env.production'), `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nAPP_STORE_CONNECT_PRIVATE_KEY="${encryptValue(value, keys.publicKey)}"\n`)
+    writeFileSync(join(root, '.env.keys'), `DOTENV_PRIVATE_KEY_PRODUCTION="${keys.privateKey}"\n`, { mode: 0o600 })
+    const masked: string[] = []
+    expect(loadNativeEnvironment(root, 'production', secret => masked.push(secret))).toEqual({ APP_STORE_CONNECT_PRIVATE_KEY: value })
+    expect(masked).toEqual([value])
+    rmSync(join(root, '.env.keys'))
+    // Fork CI can validate ciphertext without receiving a production key.
+    expect(() => auditNativeEnvironment(root, 'production')).not.toThrow()
+    expect(() => loadNativeEnvironment(root, 'production')).toThrow('Cannot read')
+    const previous = process.env.DOTENV_PRIVATE_KEY_PRODUCTION
+    try {
+      process.env.DOTENV_PRIVATE_KEY_PRODUCTION = keys.privateKey
+      expect(loadNativeEnvironment(root, 'production')).toEqual({ APP_STORE_CONNECT_PRIVATE_KEY: value })
+    }
+    finally {
+      if (previous === undefined) delete process.env.DOTENV_PRIVATE_KEY_PRODUCTION
+      else process.env.DOTENV_PRIVATE_KEY_PRODUCTION = previous
+    }
+  })
+  test('rejects plaintext, private-key assignments and wrong keys without printing values', () => {
+    const root = temporary()
+    const keys = generateKeypair()
+    const file = join(root, '.env.production')
+    writeFileSync(file, `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nTOKEN="secret-must-not-be-logged"\n`)
+    expect(() => auditNativeEnvironment(root, 'production')).toThrow('Buddy-encrypted: TOKEN')
+    writeFileSync(file, `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nDOTENV_PRIVATE_KEY_PRODUCTION="${encryptValue('private', keys.publicKey)}"\n`)
+    expect(() => auditNativeEnvironment(root, 'production')).toThrow('must never be committed')
+    writeFileSync(file, `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nTOKEN="${encryptValue('secret-must-not-be-logged', keys.publicKey)}"\n`)
+    writeFileSync(join(root, '.env.keys'), `DOTENV_PRIVATE_KEY_PRODUCTION="${generateKeypair().privateKey}"\n`)
+    expect(() => loadNativeEnvironment(root, 'production')).toThrow('Cannot read')
+  })
+})
 
 describe('native configuration and builds', () => {
   test('rejects mutable runtime pins, invalid commands and rollout configuration', () => {
@@ -67,6 +106,22 @@ describe('native configuration and builds', () => {
 })
 
 describe('Apple native publishing', () => {
+  test('exports only an exact identity through Security.framework with no password on argv', async () => {
+    const root = temporary()
+    const output = join(root, 'identity.p12')
+    await exportAppleKeychainIdentity({ fingerprint: 'AB'.repeat(20), password: 'generated archive password', output }, {
+      platform: 'darwin',
+      command: async (name, args, options) => {
+        expect(name).toBe('xcrun')
+        expect(args).toEqual(['swift', '-'])
+        expect(options!.env!.PANTRY_IDENTITY_FINGERPRINT).toBe('AB'.repeat(20))
+        expect(options!.input).toContain('SecItemExport(matches[0]')
+        writeFileSync(output, 'encrypted identity')
+        return ok
+      },
+    })
+    await expect(exportAppleKeychainIdentity({ fingerprint: 'AB'.repeat(20), password: 'generated archive password', output })).rejects.toThrow('overwrite')
+  })
   test('requires Accepted, staples before hashing, and removes API key files', async () => {
     const root = temporary()
     const dmg = join(root, 'Example.dmg')
