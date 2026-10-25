@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.128...v0.11.129)
+
+## ✨ Features
+
+- qualify native app versions through Pantry releases ([1de5660](https://github.com/pantry-pm/pantry/commit/1de5660)) _(by Chris Breuer <chris@stacksjs.com>)_
+- decrypt native release credentials through Buddy environments ([5e104ae](https://github.com/pantry-pm/pantry/commit/5e104ae)) _(by Chris Breuer <chris@stacksjs.com>)_
+- own native app builds and publishing in Pantry ([5e31816](https://github.com/pantry-pm/pantry/commit/5e31816)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.129 ([6c1a544](https://github.com/pantry-pm/pantry/commit/6c1a544)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/native-app-publishing ([070c9ff](https://github.com/pantry-pm/pantry/commit/070c9ff)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.127...HEAD)
 
 ## ✨ Features
