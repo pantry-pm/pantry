@@ -3,7 +3,7 @@
  *
  * @domain `github.com/krzysztofzablocki/Sourcery`
  * @programs `sourcery`
- * @version `2.3.0` (20 versions available)
+ * @version `2.4.0` (51 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/krzysztofzablocki/Sourcery`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "Sourcery"
  * console.log(pkg.description) // "Meta-programming for Swift, stop writing boiler..."
  * console.log(pkg.programs)    // ["sourcery"]
- * console.log(pkg.versions[0]) // "2.3.0" (latest)
+ * console.log(pkg.versions[0]) // "2.4.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/krzysztofzablocki/Sourcery.md
@@ -60,6 +60,7 @@ export const sourceryPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.4.0',
     '2.3.0',
     '2.2.7',
     '2.2.6',

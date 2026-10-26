@@ -3,7 +3,7 @@
  *
  * @domain `odigos.io`
  * @programs `odigos`
- * @version `1.38.3` (106 versions available)
+ * @version `1.38.4` (109 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install odigos.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "odigos"
  * console.log(pkg.description) // "Distributed tracing without code changes. 🚀 In..."
  * console.log(pkg.programs)    // ["odigos"]
- * console.log(pkg.versions[0]) // "1.38.3" (latest)
+ * console.log(pkg.versions[0]) // "1.38.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/odigos-io.md
@@ -67,15 +67,18 @@ export const odigosioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.38.4',
     '1.38.3',
     '1.38.2',
     '1.38.1',
     '1.38.0',
+    '1.37.5',
     '1.37.4',
     '1.37.3',
     '1.37.2',
     '1.37.1',
     '1.37.0',
+    '1.36.7',
     '1.36.6',
     '1.36.5',
     '1.36.4',
