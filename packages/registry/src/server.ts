@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
+import { PackageVersionExistsError } from './publication'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
 import { handleZigRoutes, createZigStorage } from './zig-routes'
 import type { ZigPackageStorage } from './zig'
@@ -1245,7 +1246,7 @@ export function createHandler(
 
       // Publish
       if (path === '/publish' && req.method === 'POST') {
-        return handlePublish(req, registry, corsHeaders, malwareScanner)
+        return await handlePublish(req, registry, corsHeaders, malwareScanner)
       }
 
       // Stripe webhook
@@ -1904,6 +1905,8 @@ export function createHandler(
       return htmlResponse(await renderSitePage('404.stx', { title: 'Not Found' }), 404)
     }
     catch (error) {
+      if (error instanceof PackageVersionExistsError)
+        return Response.json({ error: 'Version already exists' }, { status: 409, headers: corsHeaders })
       console.error('Server error:', error)
       return Response.json(
         { error: 'Internal server error' },

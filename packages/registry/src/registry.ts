@@ -21,6 +21,11 @@ import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { LocalStorage, S3Storage, sanitizePackageName } from './storage/s3'
 import { assertCleanMalwareScan } from './malware-scanning'
 import { isPrereleaseVersion, pickLatestVersion } from './version-precedence'
+import { PackageVersionExistsError } from './publication'
+
+function checksumOf(bytes: ArrayBuffer): string {
+  return `sha256:${new Bun.CryptoHasher('sha256').update(bytes).digest('hex')}`
+}
 
 /** Reject version strings containing shell-unsafe or path-unsafe characters. */
 function isSafeVersion(v: string): boolean {
@@ -207,7 +212,26 @@ export class Registry {
         if (metadata.tarballUrl.startsWith(this.config.baseUrl)) {
           const safeName = sanitizePackageName(name)
           const key = `packages/pantry/${safeName}/${version}/${safeName}-${version}.tgz`
-          return this.tarballStorage.download(key)
+          // Content-addressed keys keep concurrent uploads and flattened scope
+          // names from replacing each other's bytes. Legacy reads are checked
+          // against their recorded digest before anything can be served.
+          const digest = metadata.checksum?.match(/^sha256:([a-f0-9]{64})$/)?.[1]
+          if (!digest)
+            throw new Error('Package artifact has no SHA-256 checksum')
+          let bytes: ArrayBuffer
+          try {
+            bytes = await this.tarballStorage.download(`packages/pantry/${safeName}/${version}/${digest}.tgz`)
+          }
+          catch (error) {
+            const code = (error as { code?: string }).code
+            const status = (error as { statusCode?: number }).statusCode
+            if (code !== 'ENOENT' && !(status === 404 && (code === 'NoSuchKey' || code === 'NotFound')))
+              throw error
+            bytes = await this.tarballStorage.download(key)
+          }
+          if (checksumOf(bytes) !== metadata.checksum)
+            throw new Error('Package artifact checksum does not match its version')
+          return bytes
         }
 
         // Otherwise, fetch from the URL (validate HTTPS to prevent SSRF)
@@ -242,7 +266,10 @@ export class Registry {
     if (!isSafeVersion(metadata.version)) {
       throw new Error(`Invalid package version: ${metadata.version}`)
     }
-    const key = `packages/pantry/${safeName}/${metadata.version}/${safeName}-${metadata.version}.tgz`
+    if (await this.metadataStorage.getPackageVersion(metadata.name, metadata.version))
+      throw new PackageVersionExistsError(metadata.name, metadata.version)
+    const checksum = checksumOf(tarball)
+    const key = `packages/pantry/${safeName}/${metadata.version}/${checksum.slice(7)}.tgz`
 
     // Upload tarball. The storage-returned URL points at the raw key
     // path, which is NOT a public route — only the
@@ -254,11 +281,6 @@ export class Registry {
     await this.tarballStorage.upload(key, tarball)
     const tarballUrl = `${this.config.baseUrl}/packages/${encodeURIComponent(metadata.name)}/${metadata.version}/tarball`
 
-    // Calculate checksum
-    const hashBuffer = await crypto.subtle.digest('SHA-256', tarball)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const checksum = `sha256:${hashArray.map(b => b.toString(16).padStart(2, '0')).join('')}`
-
     // Store metadata
     await this.metadataStorage.putVersion(metadata.name, metadata.version, {
       ...metadata,
@@ -266,7 +288,7 @@ export class Registry {
       checksum,
       publishedAt: new Date().toISOString(),
       size: tarball.byteLength,
-    })
+    }, { ifAbsent: true })
 
     if (publishedBy && publishedBy !== '_admin') {
       await this.metadataStorage.setPackagePublisher(metadata.name, publishedBy)

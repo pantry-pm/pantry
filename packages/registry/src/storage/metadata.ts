@@ -10,6 +10,7 @@ import type {
   SearchResult,
 } from '../types'
 import { compareVersions, preferAsLatest } from '../version-precedence'
+import { PackageVersionExistsError } from '../publication'
 
 /**
  * In-memory metadata storage for development/testing
@@ -63,8 +64,12 @@ export class InMemoryMetadataStorage implements MetadataStorage {
     this.onMutate()
   }
 
-  async putVersion(name: string, version: string, metadata: PackageMetadata): Promise<void> {
+  async putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void> {
     let pkg = this.packages.get(name)
+    // No await between this check and insertion. File and object snapshot
+    // backends deliberately have one serving process.
+    if (options?.ifAbsent && pkg?.versions[version])
+      throw new PackageVersionExistsError(name, version)
 
     if (!pkg) {
       pkg = {

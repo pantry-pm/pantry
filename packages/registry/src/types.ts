@@ -411,7 +411,7 @@ export interface MetadataStorage {
   getPackage(name: string): Promise<PackageRecord | null>
   getPackageVersion(name: string, version: string): Promise<PackageMetadata | null>
   putPackage(record: PackageRecord): Promise<void>
-  putVersion(name: string, version: string, metadata: PackageMetadata): Promise<void>
+  putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void>
   search(query: string, limit?: number): Promise<SearchResult[]>
   listVersions(name: string): Promise<string[]>
   incrementDownloads(name: string, version: string): Promise<void>

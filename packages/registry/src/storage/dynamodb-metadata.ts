@@ -23,6 +23,7 @@ import type {
 } from '../types'
 import { compareVersions, preferAsLatest } from '../version-precedence'
 import { DynamoDBClient } from './dynamodb-client'
+import { PackageVersionExistsError } from '../publication'
 
 /**
  * Build a bounded searchText field: dedupe keywords, cap array + total length
@@ -194,7 +195,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
     }
   }
 
-  async putVersion(name: string, version: string, metadata: PackageMetadata): Promise<void> {
+  async putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void> {
     const now = new Date().toISOString()
 
     // Check if package exists
@@ -243,6 +244,31 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         existingItem = retry.Item
       }
     }
+    // The immutable version insert is the publication commit point.
+    try {
+      await this.db.putItem({
+        ...(options?.ifAbsent ? { ConditionExpression: 'attribute_not_exists(PK)' } : {}),
+        TableName: this.tableName,
+        Item: DynamoDBClient.marshal({
+          PK: `PACKAGE#${name}`,
+          SK: `VERSION#${version}`,
+          version,
+          tarballUrl: metadata.tarballUrl || '',
+          checksum: metadata.checksum || '',
+          publishedAt: metadata.publishedAt || now,
+          size: metadata.size || 0,
+          contentPolicy: metadata.contentPolicy,
+          disclosure: metadata.disclosure,
+          malwareScan: metadata.malwareScan,
+        }),
+      })
+    }
+    catch (error) {
+      if (options?.ifAbsent && String((error as { awsType?: string }).awsType ?? '').includes('ConditionalCheckFailed'))
+        throw new PackageVersionExistsError(name, version)
+      throw error
+    }
+
     if (existingItem) {
       // Compare-and-set on updatedAt so concurrent publishes can't clobber
       // each other's latestVersion/searchText. Retry once on contention.
@@ -296,23 +322,6 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         }
       }
     }
-
-    // Put version
-    await this.db.putItem({
-      TableName: this.tableName,
-      Item: DynamoDBClient.marshal({
-        PK: `PACKAGE#${name}`,
-        SK: `VERSION#${version}`,
-        version,
-        tarballUrl: metadata.tarballUrl || '',
-        checksum: metadata.checksum || '',
-        publishedAt: metadata.publishedAt || now,
-        size: metadata.size || 0,
-        contentPolicy: metadata.contentPolicy,
-        disclosure: metadata.disclosure,
-        malwareScan: metadata.malwareScan,
-      }),
-    })
   }
 
   async search(query: string, limit = 20): Promise<SearchResult[]> {
