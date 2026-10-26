@@ -274,9 +274,10 @@ then deletes that keychain when the job ends — including when the job fails.
 ```
 
 Certificates are base64-encoded `.p12` files (`base64 -i cert.p12 | pbcopy`).
-The identity names are discovered from the imported certificates and published
-as outputs and `APPLE_*` environment variables, so the build step never has to
-hardcode a certificate common name. Generate the certificates and profile with
+The exact certificate fingerprints are discovered from the imported identities
+and published as outputs and `APPLE_*` environment variables, so duplicate
+common names in other keychains cannot make signing ambiguous. Human-readable
+identity names remain in the logs. Generate the certificates and profile with
 `pantry app-store:csr` and `pantry app-store:provision --apply`.
 
 ### GitHub, Mac App Store, and S3 releases

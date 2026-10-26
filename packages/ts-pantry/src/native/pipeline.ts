@@ -6,7 +6,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { basename, dirname, join } from 'node:path'
 import { signNativeAndroidBundle } from './android'
 import { auditNativeEnvironment, loadNativeEnvironment } from './environment'
-import { notarizeNativeArtifact, packageNativeAppStore, resolveNotaryCredentials } from './apple'
+import { assessNativeMacArtifact, notarizeNativeArtifact, packageNativeAppStore, resolveNotaryCredentials, signNativeDiskImage } from './apple'
 import { removeAppleSigningKeychain, setupAppleSigning } from './apple-signing'
 import { readNativeArtifact } from './build'
 import { runNativeCommand, succeeded } from './command'
@@ -75,7 +75,7 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
     if (mode === 'release' && config.macos && env.APPLE_APPLICATION_CERTIFICATE) {
       const result = await setupAppleSigning({ applicationCertificate: env.APPLE_APPLICATION_CERTIFICATE, certificatePassword: env.APPLE_CERTIFICATE_PASSWORD || '', provisioningProfile: env.APPLE_PROVISIONING_PROFILE_BASE64 })
       signing.push(result.keychainPath)
-      env.APPLE_SIGNING_IDENTITY = result.applicationIdentity
+      env.APPLE_SIGNING_IDENTITY = result.applicationFingerprint
       if (result.provisioningProfilePath) env.APPLE_PROVISIONING_PROFILE_PATH = result.provisioningProfilePath
     }
     await run(['bun', 'install', '--frozen-lockfile'])
@@ -96,9 +96,12 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
       succeeded('Release signature', await command('codesign', ['--verify', '--deep', '--strict', artifact.appPath ?? artifact.path]))
       const identity = succeeded('Release identity', await command('codesign', ['-dv', '--verbose=4', artifact.appPath ?? artifact.path]))
       if (!`${identity.stdout}${identity.stderr}`.includes('Authority=Developer ID Application:')) throw new Error('Direct macOS releases require a Developer ID signature')
+      if (artifact.path.toLowerCase().endsWith('.dmg')) await signNativeDiskImage(artifact.path, env.APPLE_SIGNING_IDENTITY!, command)
     }
     if (notary) {
       const receipt = await notarizeNativeArtifact(files[0]!, notary, command)
+      if (artifact?.appPath) await assessNativeMacArtifact(artifact.appPath, command)
+      if (!files[0]!.toLowerCase().endsWith('.zip')) await assessNativeMacArtifact(files[0]!, command)
       const receiptPath = join(dirname(files[0]!), 'notarization-receipt.json')
       writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`)
       files.push(receiptPath)
@@ -108,14 +111,14 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
       const result = await setupAppleSigning({ applicationCertificate: env.APPLE_APP_STORE_APPLICATION_CERTIFICATE!, installerCertificate: env.APPLE_APP_STORE_INSTALLER_CERTIFICATE, certificatePassword: env.APPLE_CERTIFICATE_PASSWORD || '', provisioningProfile: env.APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64 })
       signing.push(result.keychainPath)
       env.PANTRY_DISTRIBUTION = 'app-store'
-      env.APPLE_SIGNING_IDENTITY = result.applicationIdentity
+      env.APPLE_SIGNING_IDENTITY = result.applicationFingerprint
       env.APPLE_PROVISIONING_PROFILE_PATH = result.provisioningProfilePath
       rmSync(insideProject(root, '.pantry/native/app-store'), { recursive: true, force: true })
       await run(['bun', 'run', 'build'])
       const store = readNativeArtifact(root)
       await validateNativeMacApp(store, config.macos.maxBundleSize, command)
       appStorePackage = join(dirname(files[0]!), `${basename(store.appPath ?? store.path, '.app')}-${pkg.version}.pkg`)
-      await packageNativeAppStore(store.appPath ?? store.path, appStorePackage, result.installerIdentity!, command)
+      await packageNativeAppStore(store.appPath ?? store.path, appStorePackage, result.installerFingerprint!, command)
       files.push(appStorePackage)
     }
     return { config, version: pkg.version, files, ...(artifact ? { artifact } : {}), ...(appStorePackage ? { appStorePackage } : {}) }

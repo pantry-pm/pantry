@@ -190,8 +190,12 @@ Direct macOS releases require `APPLE_APPLICATION_CERTIFICATE` (base64 P12),
 `APP_STORE_CONNECT_PRIVATE_KEY`, or the `APPLE_ID`,
 `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` alternative. Local runs can use
 `APPLE_NOTARY_KEYCHAIN_PROFILE` or `APP_STORE_CONNECT_API_KEY_PATH` instead.
-Only Apple's Accepted status allows stapling; the stapled file is hashed for the
-release receipt. A configured target with missing credentials fails before the
+Pantry selects the imported certificates by fingerprint, signs the outer DMG
+with a secure timestamp, and requires Gatekeeper to accept both the app and
+the notarized DMG. Only Apple's Accepted status allows stapling; explicit
+ticket-service transport failures receive bounded retries, while invalid or
+revoked tickets fail immediately. The stapled file is hashed for the release
+receipt. A configured target with missing credentials fails before the
 build. Check runs receive no publishing secrets.
 
 Enable `native.macos.appStore: true` to build a separate sandboxed distribution

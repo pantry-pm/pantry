@@ -1446,13 +1446,13 @@ async function configureAppleSigning(inputs: ActionInputs): Promise<void> {
     // The post step deletes the keychain even if the job fails.
     core.saveState('apple-signing-keychain', result.keychainPath)
 
-    core.setOutput('apple-signing-identity', result.applicationIdentity)
-    core.exportVariable('APPLE_SIGNING_IDENTITY', result.applicationIdentity)
+    core.setOutput('apple-signing-identity', result.applicationFingerprint)
+    core.exportVariable('APPLE_SIGNING_IDENTITY', result.applicationFingerprint)
     core.info(`Application identity: ${result.applicationIdentity}`)
 
     if (result.installerIdentity) {
-      core.setOutput('apple-signing-installer-identity', result.installerIdentity)
-      core.exportVariable('APPLE_INSTALLER_SIGNING_IDENTITY', result.installerIdentity)
+      core.setOutput('apple-signing-installer-identity', result.installerFingerprint)
+      core.exportVariable('APPLE_INSTALLER_SIGNING_IDENTITY', result.installerFingerprint!)
       core.info(`Installer identity: ${result.installerIdentity}`)
     }
 

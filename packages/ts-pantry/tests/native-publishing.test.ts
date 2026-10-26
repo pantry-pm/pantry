@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { encryptValue, generateKeypair } from '@stacksjs/env/crypto'
 import type { NativeCommand } from '../src/native'
-import { auditNativeEnvironment, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, readNativeAppConfig, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle } from '../src/native'
+import { assessNativeMacArtifact, auditNativeEnvironment, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, readNativeAppConfig, recordNativeArtifact, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle, signNativeDiskImage } from '../src/native'
 import { releaseNativeApp } from '../src/native/release'
 
 const directories: string[] = []
@@ -120,6 +120,75 @@ describe('native configuration and builds', () => {
 })
 
 describe('Apple native publishing', () => {
+  test('requires the outer DMG to have a timestamped Developer ID Application signature', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'image')
+    const calls: string[][] = []
+    await signNativeDiskImage(dmg, 'Developer ID Application: Example', async (name, args) => {
+      calls.push([name, ...args])
+      return { ...ok, stderr: args.includes('-dv') ? 'Authority=Developer ID Application: Example\nTimestamp=Oct 25, 2026\n' : '' }
+    })
+    expect(calls[0]).toEqual(['codesign', '--force', '--sign', 'Developer ID Application: Example', '--timestamp', dmg])
+    expect(calls[1]).toEqual(['codesign', '--verify', '--strict', dmg])
+    for (const signature of ['Authority=Developer ID Application: Example', 'Authority=Apple Development: Example\nTimestamp=Oct 25, 2026']) {
+      await expect(signNativeDiskImage(dmg, 'identity', async () => ({ ...ok, stderr: signature }))).rejects.toThrow('timestamped Developer ID Application')
+    }
+  })
+  test('uses Gatekeeper’s correct artifact policy and rejects unnotarized success output', async () => {
+    const root = temporary()
+    for (const [extension, policy] of [['app', ['--type', 'exec']], ['dmg', ['--type', 'open', '--context', 'context:primary-signature']], ['pkg', ['--type', 'install']]] as const) {
+      const file = join(root, `Example.${extension}`)
+      writeFileSync(file, 'distribution')
+      await assessNativeMacArtifact(file, async (name, args) => {
+        expect(name).toBe('spctl')
+        expect(args).toEqual(['--assess', ...policy, '--verbose=2', file])
+        return { ...ok, stderr: 'accepted\nsource=Notarized Developer ID\n' }
+      })
+      await expect(assessNativeMacArtifact(file, async () => ({ ...ok, stderr: 'source=Developer ID' }))).rejects.toThrow('did not recognize')
+    }
+  })
+  for (const rejectContainer of [false, true]) {
+    test(`the release pipeline ${rejectContainer ? 'stops on a rejected DMG' : 'signs and assesses the app and DMG before returning a release'}`, async () => {
+      const root = temporary()
+      const app = join(root, 'dist/Example.app')
+      const dmg = join(root, 'dist/Example.dmg')
+      const executable = join(app, 'Contents/MacOS/Example')
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.0.0' }))
+      writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { build: ['fixture-build'], macos: { notarize: true } } }))
+      const calls: string[][] = []
+      const command: NativeCommand = async (name, args) => {
+        calls.push([name, ...args])
+        if (name === 'fixture-build') {
+          mkdirSync(join(app, 'Contents/MacOS'), { recursive: true })
+          mkdirSync(join(app, 'Contents/Resources'), { recursive: true })
+          for (const file of ['Contents/Info.plist', 'Contents/Resources/index.html', 'Contents/Resources/craft.json']) writeFileSync(join(app, file), 'fixture')
+          writeFileSync(executable, Buffer.from('cffaedfe', 'hex'))
+          writeFileSync(dmg, 'unsigned image')
+          recordNativeArtifact(root, { path: dmg, appPath: app, name: 'Example', bundleId: 'com.example.app', version: '1.0.0', buildNumber: '1.0.0', target: 'macos' })
+        }
+        if (name === 'plutil') return { ...ok, stdout: JSON.stringify({ CFBundleIdentifier: 'com.example.app', CFBundleShortVersionString: '1.0.0', CFBundleVersion: '1.0.0' }) }
+        if (name === executable) return { ...ok, stdout: 'ready' }
+        if (name === 'codesign' && args.includes('-dv')) return { ...ok, stderr: 'Authority=Developer ID Application: Example\nTimestamp=Oct 25, 2026\n' }
+        if (name === 'xcrun' && args[0] === 'notarytool') return { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) }
+        if (name === 'spctl') return rejectContainer && args.at(-1) === dmg ? { ...ok, exitCode: 3, stderr: 'rejected\nsource=no usable signature' } : { ...ok, stderr: 'accepted\nsource=Notarized Developer ID' }
+        return ok
+      }
+      const result = prepareNativeRelease(root, 'release', { env: { APPLE_SIGNING_IDENTITY: 'Developer ID Application: Example', APPLE_NOTARY_KEYCHAIN_PROFILE: 'fixture' }, command })
+      if (rejectContainer) {
+        await expect(result).rejects.toThrow('Gatekeeper assessment failed (3)')
+        expect(existsSync(join(root, 'dist/notarization-receipt.json'))).toBe(false)
+      }
+      else {
+        expect((await result).files).toEqual([dmg, join(root, 'dist/notarization-receipt.json')])
+      }
+      const sign = calls.findIndex(call => call[0] === 'codesign' && call.includes('--sign') && call.at(-1) === dmg)
+      const notary = calls.findIndex(call => call[0] === 'xcrun' && call[1] === 'notarytool')
+      expect(sign).toBeGreaterThan(-1)
+      expect(sign).toBeLessThan(notary)
+      expect(calls.filter(call => call[0] === 'spctl').map(call => call.at(-1))).toEqual([app, dmg])
+      expect(calls.findIndex(call => call[0] === 'spctl')).toBeGreaterThan(notary)
+    })
+  }
   test('exports only an exact identity through Security.framework with no password on argv', async () => {
     const root = temporary()
     const output = join(root, 'identity.p12')

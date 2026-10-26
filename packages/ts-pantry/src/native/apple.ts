@@ -27,6 +27,26 @@ export function resolveNotaryCredentials(env: NodeJS.ProcessEnv = process.env): 
 /** Require Apple's Accepted status, then staple and validate the ticket. */
 export interface NotarizationReceipt { schemaVersion: number, file: string, submissionId: string, status: string, sha256: string, completedAt: string }
 
+/** Sign the outer distribution container as well as the app it contains. */
+export async function signNativeDiskImage(file: string, identity: string, command: NativeCommand = runNativeCommand): Promise<void> {
+  if (!existsSync(file) || !file.toLowerCase().endsWith('.dmg') || !identity) throw new Error('Disk image signing requires an existing DMG and a Developer ID Application identity')
+  succeeded('Sign disk image', await command('codesign', ['--force', '--sign', identity, '--timestamp', file]))
+  succeeded('Disk image signature', await command('codesign', ['--verify', '--strict', file]))
+  const signature = succeeded('Disk image identity', await command('codesign', ['-dv', '--verbose=4', file]))
+  const metadata = `${signature.stdout}\n${signature.stderr}`
+  if (!metadata.includes('Authority=Developer ID Application:') || !/^Timestamp=/m.test(metadata)) throw new Error('Disk image requires a timestamped Developer ID Application signature')
+}
+
+/** Notary acceptance alone does not establish the download's Gatekeeper policy. */
+export async function assessNativeMacArtifact(file: string, command: NativeCommand = runNativeCommand): Promise<void> {
+  const args = file.toLowerCase().endsWith('.dmg') ? ['--type', 'open', '--context', 'context:primary-signature']
+    : file.toLowerCase().endsWith('.app') ? ['--type', 'exec']
+      : file.toLowerCase().endsWith('.pkg') ? ['--type', 'install'] : undefined
+  if (!existsSync(file) || !args) throw new Error('Gatekeeper assessment requires an existing app, DMG or PKG')
+  const result = succeeded('Gatekeeper assessment', await command('spctl', ['--assess', ...args, '--verbose=2', file]))
+  if (!`${result.stdout}\n${result.stderr}`.includes('source=Notarized Developer ID')) throw new Error('Gatekeeper did not recognize the notarized Developer ID distribution')
+}
+
 async function runStapler(action: 'staple' | 'validate', file: string, command: NativeCommand): Promise<void> {
   const label = action === 'staple' ? 'Staple notarization' : 'Validate notarization'
   for (let attempt = 0; ; attempt++) {

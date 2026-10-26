@@ -31,8 +31,11 @@ export interface AppleSigningResult {
   keychainPath: string
   /** Identity for `codesign`, e.g. "3rd Party Mac Developer Application: Acme (TEAMID)" */
   applicationIdentity: string
+  /** Exact certificate selector; avoids ambiguous common names in local keychains. */
+  applicationFingerprint: string
   /** Identity for `productbuild`, when an installer certificate was supplied */
   installerIdentity?: string
+  installerFingerprint?: string
   /** Path to the written provisioning profile, when one was supplied */
   provisioningProfilePath?: string
 }
@@ -58,6 +61,13 @@ interface SigningDependencies {
  */
 export function parseSigningIdentities(output: string): string[] {
   return [...output.matchAll(/^\s*\d+\)\s+[0-9A-F]+\s+"([^"]+)"/gim)].map(match => match[1])
+}
+
+function identityFingerprint(output: string, identity: string): string {
+  const fingerprints = new Set([...output.matchAll(/^\s*\d+\)\s+([0-9A-F]{40})\s+"([^"]+)"/gim)]
+    .filter(match => match[2] === identity).map(match => match[1]!.toUpperCase()))
+  if (fingerprints.size !== 1) throw new Error(`Imported signing identity requires a unique certificate fingerprint: ${identity}`)
+  return [...fingerprints][0]!
 }
 
 /**
@@ -181,7 +191,8 @@ export async function setupAppleSigning(
     return {
       keychainPath,
       applicationIdentity,
-      ...(installerIdentity ? { installerIdentity } : {}),
+      applicationFingerprint: identityFingerprint(found.stdout, applicationIdentity),
+      ...(installerIdentity ? { installerIdentity, installerFingerprint: identityFingerprint(found.stdout, installerIdentity) } : {}),
       ...(provisioningProfilePath ? { provisioningProfilePath } : {}),
     }
   }
