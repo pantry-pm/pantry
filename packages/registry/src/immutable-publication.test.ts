@@ -39,7 +39,7 @@ describe('immutable package publication', () => {
     const instance = await registry()
     const handler = createHandler(instance, new InMemoryAnalytics(), new InMemoryZigStorage(), 'https://registry.example')
     const info = await handler(new Request('https://registry.example/api/registry-info'))
-    expect((await info.json()).npmFallback).toBe(false)
+    expect((await info.json() as { npmFallback: boolean }).npmFallback).toBe(false)
   })
   test('HTTP races return one creation and one conflict, with the winning bytes still downloadable', async () => {
     const instance = await registry()
