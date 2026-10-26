@@ -3,7 +3,7 @@
  *
  * @domain `kernel.org/perf`
  * @programs `perf`
- * @version `7.2.12` (11 versions available)
+ * @version `7.2.13` (13 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kernel.org/perf`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "perf"
  * console.log(pkg.description) // "Native Linux performance counters, sampling and..."
  * console.log(pkg.programs)    // ["perf"]
- * console.log(pkg.versions[0]) // "7.2.12" (latest)
+ * console.log(pkg.versions[0]) // "7.2.13" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/kernel-org/perf.md
@@ -81,8 +81,10 @@ export const perfPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.2.13',
     '7.2.12',
     '7.2.11',
+    '6.18.59',
     '6.18.58',
     '6.18.57',
     '6.12.114',

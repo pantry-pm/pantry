@@ -3,7 +3,7 @@
  *
  * @domain `fluxcd.io/flux2`
  * @programs `flux`
- * @version `2.9.6` (52 versions available)
+ * @version `2.10.0` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fluxcd.io/flux2`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "flux"
  * console.log(pkg.description) // "Open and extensible continuous delivery solutio..."
  * console.log(pkg.programs)    // ["flux"]
- * console.log(pkg.versions[0]) // "2.9.6" (latest)
+ * console.log(pkg.versions[0]) // "2.10.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fluxcd-io/flux2.md
@@ -60,6 +60,7 @@ export const fluxcdioflux2Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.10.0',
     '2.9.6',
     '2.9.5',
     '2.9.4',
