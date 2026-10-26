@@ -2,7 +2,7 @@ import type { NativeCommand } from './command'
 import type { NativeAppConfig } from './config'
 import process from 'node:process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { runNativeCommand, succeeded } from './command'
 
@@ -23,6 +23,22 @@ export function lockedCraftCompilerVersion(lock: { workspaces?: Record<string, {
   const version = lock.workspaces?.['']?.system?.['ziglang.org']
   if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(version)) throw new Error('Craft must lock an exact Zig compiler version')
   return version
+}
+
+export type CraftDependencyPlan = { kind: 'manifest' } | { kind: 'legacy-pins', sources: { repository: string, revision: string, directory: string }[] }
+
+/** Follow the dependency contract committed by the pinned Craft revision. */
+export function craftDependencyPlan(checkout: string): CraftDependencyPlan {
+  if (!existsSync(join(checkout, 'packages/zig/build.zig.zon'))) throw new Error('Craft dependency manifest is missing')
+  const pinsPath = join(checkout, '.github/actions/first-party-zig-deps/pins.env')
+  if (!existsSync(pinsPath)) return { kind: 'manifest' }
+  const pins = readFileSync(pinsPath, 'utf8')
+  const sources = [['zig-js', 'zig_js'], ['zig-regex', 'zig_regex'], ['zig-gc', 'zig_gc']].map(([directory, key]) => {
+    const revision = pins.match(new RegExp(`^${key}=([a-f0-9]{40})$`, 'm'))?.[1]
+    if (!revision) throw new Error(`Missing upstream dependency pin: ${key}`)
+    return { repository: `zig-utils/${directory}`, revision, directory: directory! }
+  })
+  return { kind: 'legacy-pins', sources }
 }
 
 /** Build source with upstream dependency pins and the compiler in its lockfile. */
@@ -59,22 +75,28 @@ export async function provisionNativeRuntime(root: string, config: NativeAppConf
   }
   // Verify source identity even on a cache hit; a binary alone is not provenance.
   await clone('craft-native/craft', revision, checkout)
-  const pins = readFileSync(join(checkout, '.github/actions/first-party-zig-deps/pins.env'), 'utf8')
-  for (const [name, key] of [['zig-js', 'zig_js'], ['zig-regex', 'zig_regex'], ['zig-gc', 'zig_gc']]) {
-    const pin = pins.match(new RegExp(`^${key}=([a-f0-9]{40})$`, 'm'))?.[1]
-    if (!pin) throw new Error(`Missing upstream dependency pin: ${key}`)
-    await clone(`zig-utils/${name}`, pin, join(workspace, 'Libraries', name!))
+  const dependencies = craftDependencyPlan(checkout)
+  if (dependencies.kind === 'legacy-pins') {
+    for (const source of dependencies.sources)
+      await clone(source.repository, source.revision, join(workspace, 'Libraries', source.directory))
   }
   if (!existsSync(binary) || !existsSync(stamp) || readFileSync(stamp, 'utf8') !== profile) {
+    // A failed rebuild must never leave a previous success stamp usable.
+    rmSync(stamp, { force: true })
     const lock = JSON.parse(readFileSync(join(checkout, 'pantry.lock'), 'utf8'))
     const zigVersion = lockedCraftCompilerVersion(lock)
     await run(['pantry', 'install', `ziglang.org@${zigVersion}`, '--no-save', '--ignore-scripts'], checkout, env, true)
     const zig = join(checkout, 'pantry/ziglang.org', `v${zigVersion}`, 'bin/zig')
     if (!existsSync(zig)) throw new Error(`Locked Zig compiler is missing: ${zig}`)
+    const buildEnv = { ...env, CRAFT_ZIG: zig }
+    // Current Craft declares immutable URLs and native hashes in its package
+    // manifest. Use the locked compiler's normal resolver, as upstream CI does.
+    if (dependencies.kind === 'manifest')
+      await run(['bun', 'scripts/zig.ts', '--core', 'build', '--fetch'], checkout, buildEnv, true)
     const sdk = (await run(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], checkout)).stdout.trim()
     if (!sdk) throw new Error('The macOS SDK is required')
     const target = profile.split('target=')[1]!
-    await run(['bun', 'scripts/zig.ts', '--core', '--versioned', 'build', '-Doptimize=ReleaseSmall', '-Djs-runtime=false', `-Dtarget=${target}`, `-Dmacos-sdk=${sdk}`], checkout, { ...env, CRAFT_ZIG: zig }, true)
+    await run(['bun', 'scripts/zig.ts', '--core', '--versioned', 'build', '-Doptimize=ReleaseSmall', '-Djs-runtime=false', `-Dtarget=${target}`, `-Dmacos-sdk=${sdk}`], checkout, buildEnv, true)
     writeFileSync(stamp, profile)
   }
   const found = await run([binary, '--version'], checkout)

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { encryptValue, generateKeypair } from '@stacksjs/env/crypto'
 import type { NativeCommand } from '../src/native'
-import { assessNativeMacArtifact, auditNativeEnvironment, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, readNativeAppConfig, recordNativeArtifact, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle, signNativeDiskImage } from '../src/native'
+import { assessNativeMacArtifact, auditNativeEnvironment, craftDependencyPlan, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, provisionNativeRuntime, readNativeAppConfig, recordNativeArtifact, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle, signNativeDiskImage } from '../src/native'
 import { releaseNativeApp } from '../src/native/release'
 
 const directories: string[] = []
@@ -87,6 +87,70 @@ describe('native configuration and builds', () => {
     expect(nativeRuntimeCacheKey(config, '13.0', 'arm64')).not.toBe(nativeRuntimeCacheKey(config, '13.0', 'x64'))
     expect(lockedCraftCompilerVersion({ workspaces: { '': { system: { 'ziglang.org': '0.18.0-dev.146+35accc06e' } } } })).toBe('0.18.0-dev.146+35accc06e')
     expect(() => lockedCraftCompilerVersion({ workspaces: { '': { system: { 'ziglang.org': '^0.18' } } } })).toThrow('exact Zig')
+  })
+  test('supports Craft manifests without requiring the retired dependency pins file', () => {
+    const root = temporary()
+    mkdirSync(join(root, 'packages/zig'), { recursive: true })
+    writeFileSync(join(root, 'packages/zig/build.zig.zon'), '.{ .dependencies = .{} }')
+    expect(craftDependencyPlan(root)).toEqual({ kind: 'manifest' })
+    mkdirSync(join(root, '.github/actions/first-party-zig-deps'), { recursive: true })
+    const pins = join(root, '.github/actions/first-party-zig-deps/pins.env')
+    writeFileSync(pins, `zig_js=${'a'.repeat(40)}\nzig_regex=${'b'.repeat(40)}\nzig_gc=${'c'.repeat(40)}\n`)
+    const plan = craftDependencyPlan(root)
+    expect(plan.kind).toBe('legacy-pins')
+    if (plan.kind === 'legacy-pins') expect(plan.sources.map(source => source.revision)).toEqual(['a'.repeat(40), 'b'.repeat(40), 'c'.repeat(40)])
+    writeFileSync(pins, 'zig_js=main\n')
+    expect(() => craftDependencyPlan(root)).toThrow('Missing upstream dependency pin')
+    rmSync(join(root, 'packages/zig/build.zig.zon'))
+    expect(() => craftDependencyPlan(root)).toThrow('dependency manifest is missing')
+  })
+  test.skipIf(process.platform !== 'darwin')('resolves current Craft packages with its locked compiler before compiling and verifies cache provenance', async () => {
+    const root = temporary()
+    const config = { runtime: { revision: 'd'.repeat(40), version: '0.0.355' } }
+    const checkout = join(root, '.pantry/native/runtimes', nativeRuntimeCacheKey(config, '13.0'), 'Tools/craft')
+    const compilerVersion = '0.18.0-dev.146+35accc06e'
+    const calls: { name: string, args: string[], env?: NodeJS.ProcessEnv }[] = []
+    const command: NativeCommand = async (name, args, options) => {
+      calls.push({ name, args, env: options?.env })
+      if (name === 'git') {
+        if (args[0] === 'init') mkdirSync(join(checkout, '.git'), { recursive: true })
+        if (args[0] === 'checkout') {
+          mkdirSync(join(checkout, 'packages/zig'), { recursive: true })
+          writeFileSync(join(checkout, 'packages/zig/build.zig.zon'), '.{ .dependencies = .{} }')
+          writeFileSync(join(checkout, 'pantry.lock'), JSON.stringify({ workspaces: { '': { system: { 'ziglang.org': compilerVersion } } } }))
+        }
+        return { ...ok, stdout: args[0] === 'rev-parse' ? config.runtime.revision : '' }
+      }
+      if (name === 'pantry') {
+        const compiler = join(checkout, 'pantry/ziglang.org', `v${compilerVersion}`, 'bin/zig')
+        mkdirSync(join(compiler, '..'), { recursive: true })
+        writeFileSync(compiler, 'fixture compiler')
+      }
+      if (name === 'xcrun') return { ...ok, stdout: '/Developer/SDKs/MacOSX.sdk' }
+      if (name === 'bun' && args.includes('-Doptimize=ReleaseSmall')) {
+        mkdirSync(join(checkout, 'packages/zig/zig-out/bin'), { recursive: true })
+        writeFileSync(join(checkout, 'packages/zig/zig-out/bin/craft'), 'fixture artifact')
+      }
+      return { ...ok, stdout: name.endsWith('/craft') ? 'craft version 0.0.355' : '' }
+    }
+    const binary = await provisionNativeRuntime(root, config, '13.0', { command, env: {} })
+    expect(binary).toBe(join(checkout, 'packages/zig/zig-out/bin/craft'))
+    const fetch = calls.find(call => call.name === 'bun' && call.args.includes('--fetch'))!
+    const build = calls.find(call => call.name === 'bun' && call.args.includes('-Doptimize=ReleaseSmall'))!
+    expect(fetch.args).toEqual(['scripts/zig.ts', '--core', 'build', '--fetch'])
+    expect(fetch.env?.CRAFT_ZIG).toBe(join(checkout, 'pantry/ziglang.org', `v${compilerVersion}`, 'bin/zig'))
+    expect(build.env?.CRAFT_ZIG).toBe(fetch.env?.CRAFT_ZIG)
+    expect(calls.indexOf(fetch)).toBeLessThan(calls.indexOf(build))
+    expect(calls.filter(call => call.name === 'git' && call.args[0] === 'remote')).toHaveLength(1)
+    calls.length = 0
+    await provisionNativeRuntime(root, config, '13.0', { command, env: {} })
+    expect(calls.map(call => [call.name, call.args[0]])).toEqual([['git', 'rev-parse'], ['git', 'status'], [binary!, '--version']])
+    await expect(provisionNativeRuntime(root, config, '13.0', { env: {}, command: async (name, args, options) => args[0] === 'status' ? { ...ok, stdout: ' M packages/zig/build.zig.zon' } : command(name, args, options) })).rejects.toThrow('Modified runtime source')
+    rmSync(binary!)
+    calls.length = 0
+    await expect(provisionNativeRuntime(root, config, '13.0', { env: {}, command: async (name, args, options) => name === 'bun' && args.includes('--fetch') ? { ...ok, exitCode: 1, stderr: 'dependency fetch failed' } : command(name, args, options) })).rejects.toThrow('dependency fetch failed')
+    expect(existsSync(join(checkout, '.pantry-runtime-profile'))).toBe(false)
+    expect(calls.some(call => call.args.includes('-Doptimize=ReleaseSmall'))).toBe(false)
   })
   test('build inputs stay temporary and preserve the native runtime override', async () => {
     const root = temporary()

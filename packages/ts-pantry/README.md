@@ -148,8 +148,8 @@ application metadata in `craft.config.ts` and declare release policy in
   "native": {
     "environment": "production",
     "runtime": {
-      "revision": "d675077c317c486d8b5743f3432c40ddf1cd693a",
-      "version": "0.0.295"
+      "revision": "1fb96b37dc6c30a431570c0902df5aa8a70c911c",
+      "version": "0.0.355"
     },
     "checks": {
       "before": [["bun", "run", "lint"], ["bun", "run", "test:unit"]],
@@ -178,9 +178,11 @@ fails before signing or publication.
 
 The workflow installs dependencies from the
 lockfile, runs all declared checks, provisions the immutable Craft source with
-its locked Zig compiler and first-party pins, builds through Buddy, and checks
-the actual bundle's identity, size, Mach-O executable and native launch. Native
-checks remain app-owned and run against the real artifact. Release tags must
+its locked Zig compiler, resolves and hash-verifies current dependencies through
+Zig's native package manifest, builds through Buddy, and checks
+the actual bundle's identity, size, Mach-O executable and native launch. Pinned
+older Craft revisions keep their declared sibling-source pins; malformed pins
+fail rather than switching dependency contracts. Native checks remain app-owned and run against the real artifact. Release tags must
 match `package.json`. Releases reject the local `CRAFT_BIN` development override.
 
 Direct macOS releases require `APPLE_APPLICATION_CERTIFICATE` (base64 P12),
