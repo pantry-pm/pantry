@@ -1,3 +1,31 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.133...v0.11.134)
+
+## ✨ Features
+
+- **registry**: report the engine fallback policy to forge integrations ([3f1635c](https://github.com/pantry-pm/pantry/commit/3f1635c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **native**: validate Store bundles without local execution ([13d61ae](https://github.com/pantry-pm/pantry/commit/13d61ae)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: preserve immutable package versions under concurrent uploads ([15fa230](https://github.com/pantry-pm/pantry/commit/15fa230)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.134 ([f0387a5](https://github.com/pantry-pm/pantry/commit/f0387a5)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.360 ([d31d452](https://github.com/pantry-pm/pantry/commit/d31d452)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update CLIProxyAPI, Cursor, depot, Discord, doctl, fastlane, flux, git-credential-manager, LLaMA.cpp, Maccy, perf, talosctl, Tunnelblick, vim ([3d45d2c](https://github.com/pantry-pm/pantry/commit/3d45d2c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.359 ([0baccdd](https://github.com/pantry-pm/pantry/commit/0baccdd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update julia, LLaMA.cpp, meilisearch, odigos, projen, redis, Sourcery, templ, vim, wails, zig ([e77cd25](https://github.com/pantry-pm/pantry/commit/e77cd25)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.358 ([b641259](https://github.com/pantry-pm/pantry/commit/b641259)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update grpc, oc, python ([2ad7b88](https://github.com/pantry-pm/pantry/commit/2ad7b88)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.355 ([a4649f5](https://github.com/pantry-pm/pantry/commit/a4649f5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.354 ([3664012](https://github.com/pantry-pm/pantry/commit/3664012)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.352 ([b71011b](https://github.com/pantry-pm/pantry/commit/b71011b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.132...v0.11.133)
 
 ## 🐛 Bug Fixes
