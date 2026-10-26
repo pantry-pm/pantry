@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.134...v0.11.135)
+
+## 🐛 Bug Fixes
+
+- **registry**: type the registry policy response in publication tests ([4e5741c](https://github.com/pantry-pm/pantry/commit/4e5741c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.135 ([3460281](https://github.com/pantry-pm/pantry/commit/3460281)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.133...v0.11.134)
 
 ## ✨ Features
