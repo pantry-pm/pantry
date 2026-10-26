@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.132...v0.11.133)
+
+## 🐛 Bug Fixes
+
+- resolve current Craft runtime dependencies through Zig ([76f2595](https://github.com/pantry-pm/pantry/commit/76f2595)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.133 ([fa5afba](https://github.com/pantry-pm/pantry/commit/fa5afba)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.351 ([10b0076](https://github.com/pantry-pm/pantry/commit/10b0076)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.131...v0.11.132)
 
 ## 🐛 Bug Fixes
