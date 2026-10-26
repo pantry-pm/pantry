@@ -3,7 +3,7 @@
  *
  * @domain `openbao.org/openbao`
  * @programs `bao`, `bao-setup`
- * @version `2.7.1` (29 versions available)
+ * @version `2.7.2` (31 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openbao.org/openbao`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "openbao"
  * console.log(pkg.description) // "OpenBao exists to provide a software solution t..."
  * console.log(pkg.programs)    // ["bao", "bao-setup"]
- * console.log(pkg.versions[0]) // "2.7.1" (latest)
+ * console.log(pkg.versions[0]) // "2.7.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/openbao-org/openbao.md
@@ -69,8 +69,10 @@ export const openbaoorgopenbaoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.7.2',
     '2.7.1',
     '2.7.0',
+    '2.6.5',
     '2.6.4',
     '2.6.3',
     '2.6.2',
