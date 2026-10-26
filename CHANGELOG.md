@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.131...v0.11.132)
+
+## 🐛 Bug Fixes
+
+- sign native disk images and require Gatekeeper acceptance ([9eee01f](https://github.com/pantry-pm/pantry/commit/9eee01f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.132 ([3117ed3](https://github.com/pantry-pm/pantry/commit/3117ed3)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft, LLaMA.cpp, mitmproxy ([ecb9bef](https://github.com/pantry-pm/pantry/commit/ecb9bef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.130...v0.11.131)
 
 ## 🐛 Bug Fixes
