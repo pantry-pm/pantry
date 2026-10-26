@@ -26,7 +26,8 @@ export function nativeBundleSize(directory: string): number {
   return stat.isDirectory() ? readdirSync(directory).reduce((size, name) => size + nativeBundleSize(join(directory, name)), 0) : stat.size
 }
 
-export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand): Promise<void> {
+/** Structural validation is shared by locally runnable and Store distribution bundles. */
+export async function validateNativeMacBundle(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand): Promise<void> {
   const app = artifact.appPath ?? artifact.path
   if (!app.endsWith('.app') || !existsSync(app)) throw new Error('Native build must produce a macOS application bundle')
   const plist = join(app, 'Contents/Info.plist')
@@ -41,6 +42,12 @@ export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: n
   const metadata = JSON.parse(succeeded('Read bundle metadata', await command('plutil', ['-convert', 'json', '-o', '-', plist])).stdout)
   if (metadata.CFBundleIdentifier !== artifact.bundleId || metadata.CFBundleShortVersionString !== artifact.version || String(metadata.CFBundleVersion) !== artifact.buildNumber)
     throw new Error('Built app identity/version does not match the release manifest')
+}
+
+/** Launch only locally runnable builds; Store distribution profiles require Store delivery. */
+export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand): Promise<void> {
+  await validateNativeMacBundle(artifact, maxBytes, command)
+  const executable = join(artifact.appPath ?? artifact.path, 'Contents/MacOS', artifact.name)
   const benchmark = succeeded('Native launch check', await command(executable, ['--benchmark']))
   if (!`${benchmark.stdout}${benchmark.stderr}`.includes('ready')) throw new Error('Native app did not report ready')
 }
@@ -116,7 +123,12 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
       rmSync(insideProject(root, '.pantry/native/app-store'), { recursive: true, force: true })
       await run(['bun', 'run', 'build'])
       const store = readNativeArtifact(root)
-      await validateNativeMacApp(store, config.macos.maxBundleSize, command)
+      // The direct build above must launch successfully. A Mac App Store
+      // distribution profile cannot authorize local execution; productbuild
+      // checks its signature and sandbox, then Apple validates the package.
+      await validateNativeMacBundle(store, config.macos.maxBundleSize, command)
+      if (!artifact || store.bundleId !== artifact.bundleId || store.version !== artifact.version || store.buildNumber !== artifact.buildNumber)
+        throw new Error('App Store bundle must match the qualified direct release identity and version')
       appStorePackage = join(dirname(files[0]!), `${basename(store.appPath ?? store.path, '.app')}-${pkg.version}.pkg`)
       await packageNativeAppStore(store.appPath ?? store.path, appStorePackage, result.installerFingerprint!, command)
       files.push(appStorePackage)
