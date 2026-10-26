@@ -782,7 +782,7 @@ export function createHandler(
       // even on a private registry: a client that gets a 401 needs somewhere to
       // find out why, and `curl <registry>/api/registry-info` is that place.
       if (path === '/api/registry-info' && req.method === 'GET') {
-        return Response.json(registryInfo(process.env, baseUrl), {
+        return Response.json({ ...registryInfo(process.env, baseUrl), npmFallback: registry.npmFallbackEnabled }, {
           headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
         })
       }

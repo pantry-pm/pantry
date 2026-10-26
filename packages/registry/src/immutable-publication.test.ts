@@ -35,6 +35,12 @@ afterEach(async () => {
 })
 
 describe('immutable package publication', () => {
+  test('reports the actual engine fallback policy to forge integrations', async () => {
+    const instance = await registry()
+    const handler = createHandler(instance, new InMemoryAnalytics(), new InMemoryZigStorage(), 'https://registry.example')
+    const info = await handler(new Request('https://registry.example/api/registry-info'))
+    expect((await info.json()).npmFallback).toBe(false)
+  })
   test('HTTP races return one creation and one conflict, with the winning bytes still downloadable', async () => {
     const instance = await registry()
     const previous = process.env.PANTRY_REGISTRY_TOKEN

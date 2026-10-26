@@ -55,6 +55,9 @@ export class Registry {
   private tarballStorage: TarballStorage
   private metadataStorage: MetadataStorage
 
+  /** Embedders can verify that a dedicated registry never resolves foreign packages. */
+  get npmFallbackEnabled(): boolean { return this.config.npmFallback === true }
+
   /** Public accessor for tarball storage (used by short URL handler for S3 prefix search) */
   get tarball(): TarballStorage { return this.tarballStorage }
 
