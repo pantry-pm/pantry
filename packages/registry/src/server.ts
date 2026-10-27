@@ -1,3 +1,8 @@
+import packageCatalog from '../../../catalog/packages.json'
+import packageLogos from '../../../catalog/logos.json'
+import desktopCatalog from '../../../catalog/desktop.json'
+const DESKTOP_APPS = desktopCatalog.apps
+const DESKTOP_FONTS = desktopCatalog.fonts
 import { resolve, dirname, relative } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -176,70 +181,6 @@ const SITE_LAYOUT = resolve(SITE_DIR, 'layout.stx')
 const SITE_COMPONENTS = resolve(__dirname, '../site/components')
 
 /** Desktop apps available in the registry (macOS .app bundles) */
-const DESKTOP_APPS: Array<{ domain: string, label: string, desc: string, category: string }> = [
-  // Editors & IDEs
-  { domain: 'code.visualstudio.com', label: 'Visual Studio Code', desc: 'Source code editor by Microsoft', category: 'Development' },
-  { domain: 'cursor.com', label: 'Cursor', desc: 'AI-powered code editor', category: 'Development' },
-  { domain: 'zed.dev', label: 'Zed', desc: 'High-performance code editor', category: 'Development' },
-  // Terminals
-  { domain: 'ghostty.org', label: 'Ghostty', desc: 'Fast, native terminal emulator', category: 'Development' },
-  { domain: 'warp.dev', label: 'Warp', desc: 'Modern terminal with AI', category: 'Development' },
-  { domain: 'iterm2.com', label: 'iTerm2', desc: 'Terminal emulator for macOS', category: 'Development' },
-  // Dev Tools
-  { domain: 'docker.com/desktop', label: 'Docker Desktop', desc: 'Container development platform', category: 'Development' },
-  { domain: 'orbstack.dev', label: 'OrbStack', desc: 'Fast Docker & Linux on macOS', category: 'Development' },
-  { domain: 'tableplus.com', label: 'TablePlus', desc: 'Database management GUI', category: 'Development' },
-  { domain: 'dbeaver.io', label: 'DBeaver', desc: 'Universal database tool', category: 'Development' },
-  { domain: 'postman.com', label: 'Postman', desc: 'API development platform', category: 'Development' },
-  { domain: 'bruno.app', label: 'Bruno', desc: 'Open-source API client', category: 'Development' },
-  // Browsers
-  { domain: 'firefox.org', label: 'Firefox', desc: 'Open-source web browser', category: 'Browsers' },
-  { domain: 'brave.com', label: 'Brave', desc: 'Privacy-focused browser', category: 'Browsers' },
-  { domain: 'arc.net', label: 'Arc', desc: 'Browser built for power users', category: 'Browsers' },
-  // Communication
-  { domain: 'discord.com', label: 'Discord', desc: 'Voice, video & text chat', category: 'Communication' },
-  { domain: 'slack.com', label: 'Slack', desc: 'Team messaging platform', category: 'Communication' },
-  { domain: 'signal.org', label: 'Signal', desc: 'Private messaging', category: 'Communication' },
-  { domain: 'telegram.org', label: 'Telegram', desc: 'Cloud-based messaging', category: 'Communication' },
-  { domain: 'whatsapp.com', label: 'WhatsApp', desc: 'Messaging app', category: 'Communication' },
-  { domain: 'element.io', label: 'Element', desc: 'Matrix messaging client', category: 'Communication' },
-  // AI
-  { domain: 'ollama.com', label: 'Ollama', desc: 'Run LLMs locally', category: 'AI' },
-  { domain: 'lmstudio.ai', label: 'LM Studio', desc: 'Desktop LLM app', category: 'AI' },
-  // Productivity
-  { domain: 'obsidian.md', label: 'Obsidian', desc: 'Knowledge base & notes', category: 'Productivity' },
-  { domain: 'notion.so', label: 'Notion', desc: 'All-in-one workspace', category: 'Productivity' },
-  { domain: 'linear.app', label: 'Linear', desc: 'Project management tool', category: 'Productivity' },
-  { domain: 'raycast.com', label: 'Raycast', desc: 'Productivity launcher', category: 'Productivity' },
-  { domain: '1password.com', label: '1Password', desc: 'Password manager', category: 'Security' },
-  { domain: 'bitwarden.com', label: 'Bitwarden', desc: 'Open-source password manager', category: 'Security' },
-  { domain: 'keepassxc.org', label: 'KeePassXC', desc: 'Offline password manager', category: 'Security' },
-  // Media
-  { domain: 'spotify.com', label: 'Spotify', desc: 'Music streaming', category: 'Media' },
-  { domain: 'vlc.app', label: 'VLC', desc: 'Media player', category: 'Media' },
-  { domain: 'iina.io', label: 'IINA', desc: 'Modern media player for macOS', category: 'Media' },
-  { domain: 'handbrake.fr', label: 'HandBrake', desc: 'Video transcoder', category: 'Media' },
-  // Design
-  { domain: 'figma.com', label: 'Figma', desc: 'Collaborative design tool', category: 'Design' },
-  { domain: 'inkscape.org', label: 'Inkscape', desc: 'Vector graphics editor', category: 'Design' },
-  { domain: 'gimp.org', label: 'GIMP', desc: 'Image editor', category: 'Design' },
-  { domain: 'blender.org', label: 'Blender', desc: '3D creation suite', category: 'Design' },
-  // Utilities
-  { domain: 'rectangle.app', label: 'Rectangle', desc: 'Window management', category: 'Utilities' },
-  { domain: 'karabiner-elements.pqrs.org', label: 'Karabiner-Elements', desc: 'Keyboard customizer', category: 'Utilities' },
-  { domain: 'cleanshot.com', label: 'CleanShot X', desc: 'Screenshot tool', category: 'Utilities' },
-  { domain: 'alttab.app', label: 'AltTab', desc: 'Window switcher', category: 'Utilities' },
-  { domain: 'stats.app', label: 'Stats', desc: 'System monitor in menu bar', category: 'Utilities' },
-  { domain: 'maccy.app', label: 'Maccy', desc: 'Clipboard manager', category: 'Utilities' },
-  { domain: 'monitorcontrol.app', label: 'MonitorControl', desc: 'Display brightness control', category: 'Utilities' },
-  { domain: 'hiddenbar.app', label: 'Hidden Bar', desc: 'Hide menu bar items', category: 'Utilities' },
-  { domain: 'meetingbar.app', label: 'MeetingBar', desc: 'Calendar in menu bar', category: 'Utilities' },
-  { domain: 'keka.io', label: 'Keka', desc: 'File archiver', category: 'Utilities' },
-  // Office
-  { domain: 'libreoffice.org', label: 'LibreOffice', desc: 'Office suite', category: 'Office' },
-  // VPN
-  { domain: 'tunnelblick.net', label: 'Tunnelblick', desc: 'OpenVPN client', category: 'VPN & Security' },
-]
 
 /**
  * Curated desktop fonts pantry publishes to its registry (binaries/<domain>/…),
@@ -247,25 +188,6 @@ const DESKTOP_APPS: Array<{ domain: string, label: string, desc: string, categor
  * Domains follow the `<slug>.font` convention. Keep in sync with the recipes in
  * ts-pantry/src/recipes/<domain>.ts.
  */
-const DESKTOP_FONTS: Array<{ domain: string, label: string, desc: string, category: string }> = [
-  // Monospace / coding
-  { domain: 'jetbrains-mono', label: 'JetBrains Mono', desc: 'Typeface for developers', category: 'Monospace' },
-  { domain: 'fira-code', label: 'Fira Code', desc: 'Monospaced font with programming ligatures', category: 'Monospace' },
-  { domain: 'cascadia-code', label: 'Cascadia Code', desc: "Microsoft's monospaced coding font", category: 'Monospace' },
-  { domain: 'source-code-pro', label: 'Source Code Pro', desc: "Adobe's monospaced coding font", category: 'Monospace' },
-  { domain: 'hack', label: 'Hack', desc: 'A typeface designed for source code', category: 'Monospace' },
-  { domain: 'ibm-plex-mono', label: 'IBM Plex Mono', desc: "IBM's monospaced typeface", category: 'Monospace' },
-  { domain: 'geist-mono', label: 'Geist Mono', desc: "Vercel's monospaced typeface", category: 'Monospace' },
-  { domain: 'meslo-lg-nerd-font', label: 'MesloLG Nerd Font', desc: 'Meslo patched with Nerd Font glyphs', category: 'Nerd Fonts' },
-  { domain: 'jetbrains-mono-nerd-font', label: 'JetBrainsMono Nerd Font', desc: 'JetBrains Mono patched with Nerd Font glyphs', category: 'Nerd Fonts' },
-  // Sans / UI
-  { domain: 'inter', label: 'Inter', desc: 'Typeface designed for screens', category: 'Sans Serif' },
-  { domain: 'geist', label: 'Geist', desc: "Vercel's sans-serif typeface", category: 'Sans Serif' },
-  { domain: 'roboto', label: 'Roboto', desc: "Google's signature sans-serif", category: 'Sans Serif' },
-  { domain: 'open-sans', label: 'Open Sans', desc: 'Humanist sans-serif typeface', category: 'Sans Serif' },
-  { domain: 'lato', label: 'Lato', desc: 'Sans-serif typeface family', category: 'Sans Serif' },
-  { domain: 'ibm-plex-sans', label: 'IBM Plex Sans', desc: "IBM's sans-serif typeface", category: 'Sans Serif' },
-]
 
 /** Featured packages shown on the homepage */
 const FEATURED_PACKAGES = [
@@ -1149,6 +1071,10 @@ export function createHandler(
         if (publisherSite) return publisherSite
       }
 
+      if (path === '/catalog' && req.method === 'GET') {
+        return Response.json(packageCatalog, { headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=3600' } })
+      }
+
       // Desktop apps listing — returns all desktop apps with live version info from S3
       if (path === '/desktop-apps' && req.method === 'GET') {
         const category = url.searchParams.get('category') || ''
@@ -1160,6 +1086,7 @@ export function createHandler(
                 const meta = await fetchPackageMetadata(app.domain, binaryStorage)
                 return {
                   ...app,
+                  logo: (packageLogos as Record<string, unknown>)[app.domain] ?? null,
                   version: meta?.latestVersion || null,
                   platforms: meta?.latestVersion
                     ? Object.keys(meta.versions?.[meta.latestVersion]?.platforms || {})
@@ -1194,6 +1121,7 @@ export function createHandler(
                 const meta = await fetchPackageMetadata(font.domain, binaryStorage)
                 return {
                   ...font,
+                  logo: (packageLogos as Record<string, unknown>)[font.domain] ?? null,
                   version: meta?.latestVersion || null,
                   platforms: meta?.latestVersion
                     ? Object.keys(meta.versions?.[meta.latestVersion]?.platforms || {})

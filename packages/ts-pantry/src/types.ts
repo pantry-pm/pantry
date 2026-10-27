@@ -31,6 +31,8 @@ export interface PkgxPackage {
   name: string
   domain: string
   description: string
+  /** Upstream artwork with its original source and immutable content identity. */
+  logo?: import('./catalog/types').PackageLogo
   packageYmlUrl?: string
   homepageUrl?: string
   githubUrl?: string
