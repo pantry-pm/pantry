@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "53720fd49ff66dc9dcd9c00748f0c3592b2fc00d3ae80fd9a67dc97a694f85f1",
+  "revision": "1b77c03a0ab5b3740be9beb3f9410092a1d056ead95deadd119d95a83284f21b",
   "packages": [
     {
       "domain": "1password.com",
@@ -3690,7 +3690,7 @@
       "programs": [
         "craft"
       ],
-      "latestVersion": "0.0.365",
+      "latestVersion": "0.0.366",
       "homepageUrl": "https://craft-native.org/",
       "githubUrl": "https://github.com/craft-native/craft",
       "platforms": [
@@ -17225,11 +17225,11 @@
       "description": "A native keyboard launcher built with Stacks",
       "kind": "app",
       "aliases": [
-        "launchpad"
+        "launchpad",
+        "githubcomstacksjs",
+        "Launchpad"
       ],
-      "programs": [
-        "launchpad"
-      ],
+      "programs": [],
       "latestVersion": "1.0.1",
       "homepageUrl": "https://github.com/stacksjs/launchpad",
       "githubUrl": "https://github.com/stacksjs/launchpad",

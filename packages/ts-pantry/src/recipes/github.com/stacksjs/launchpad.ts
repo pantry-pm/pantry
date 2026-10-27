@@ -6,7 +6,7 @@ export const recipe: Recipe = {
   description: 'A native keyboard launcher built with Stacks',
   homepage: 'https://github.com/stacksjs/launchpad',
   github: 'https://github.com/stacksjs/launchpad',
-  programs: ['launchpad'],
+  programs: [],
   buildDependencies: { 'jqlang.org': '*' },
   platforms: ['darwin/aarch64'],
   versionSource: { type: 'github-releases', repo: 'stacksjs/launchpad', tagPattern: /^v(.+)$/ },
@@ -19,8 +19,6 @@ export const recipe: Recipe = {
       'tar -xzf launchpad.tar.gz -C {{prefix}}',
       'codesign --verify --deep --strict {{prefix}}/Launchpad.app',
       'xcrun stapler validate {{prefix}}/Launchpad.app',
-      'mkdir -p {{prefix}}/bin',
-      'ln -sf ../Launchpad.app/Contents/MacOS/Launchpad {{prefix}}/bin/launchpad',
     ],
   },
 }

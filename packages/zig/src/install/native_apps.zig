@@ -54,6 +54,30 @@ fn endsWithIgnoreCase(s: []const u8, suffix: []const u8) bool {
     return std.ascii.eqlIgnoreCase(s[s.len - suffix.len ..], suffix);
 }
 
+/// A desktop payload needs a bundle manifest and a usable native executable,
+/// rather than an artificial bin/ directory. Signature assessment remains the
+/// platform's responsibility when the installed application is launched.
+pub fn hasUsableAppBundle(allocator: std.mem.Allocator, app: []const u8) bool {
+    if (!endsWithIgnoreCase(app, ".app")) return false;
+    const info = std.fs.path.join(allocator, &.{ app, "Contents", "Info.plist" }) catch return false;
+    defer allocator.free(info);
+    const manifest = io_helper.statFile(info) catch return false;
+    if (manifest.size == 0) return false;
+    const macos = std.fs.path.join(allocator, &.{ app, "Contents", "MacOS" }) catch return false;
+    defer allocator.free(macos);
+    var dir = io_helper.openDirAbsoluteForIteration(macos) catch return false;
+    defer dir.close();
+    var entries = dir.iterate();
+    while (entries.next() catch null) |entry| {
+        if (entry.kind != .file and entry.kind != .sym_link) continue;
+        const executable = std.fs.path.join(allocator, &.{ macos, entry.name }) catch return false;
+        defer allocator.free(executable);
+        const metadata = io_helper.statFile(executable) catch continue;
+        if (metadata.size > 0 and io_helper.isExecutable(executable)) return true;
+    }
+    return false;
+}
+
 /// Replace any existing copy of `src_app` (a `.app` bundle) in the apps dir and
 /// preserve the upstream quarantine and Gatekeeper state.
 fn placeApp(allocator: std.mem.Allocator, apps_dir: []const u8, src_app: []const u8) bool {

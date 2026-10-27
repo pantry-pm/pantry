@@ -3984,7 +3984,7 @@ pub const Installer = struct {
         return try self.allocator.dupe(u8, extract_dir);
     }
 
-    /// Check if a directory has package structure (bin, lib, include, share, etc.)
+    /// Check for native application bundles or conventional package directories.
     fn hasPackageStructure(self: *Installer, dir_path: []const u8) bool {
         // Use std.fs.Dir for iteration (Io.Dir doesn't have iterate() in Zig 0.16)
         var dir = io_helper.openDirAbsoluteForIteration(dir_path) catch return false;
@@ -4003,6 +4003,12 @@ pub const Installer = struct {
                 if (metadata.size > 0) return true;
             }
             if (entry.kind != .directory) continue;
+
+            if (std.ascii.endsWithIgnoreCase(entry.name, ".app")) {
+                const app = std.fs.path.join(self.allocator, &.{ dir_path, entry.name }) catch return false;
+                defer self.allocator.free(app);
+                if (@import("native_apps.zig").hasUsableAppBundle(self.allocator, app)) return true;
+            }
 
             // Check for common package directories
             if (std.mem.eql(u8, entry.name, "bin") or
@@ -5579,6 +5585,46 @@ fn materializationAllocationFailure(failing: std.mem.Allocator) !void {
         return err;
     };
     try fixture.expectNoTransaction();
+}
+
+test "native materialization: application archives need no invented CLI programs" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(io_helper.io, "source/Launchpad.app/Contents/MacOS");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "source/Launchpad.app/Contents/MacOS/Launchpad", .data = "#!/bin/sh\nexit 0\n" });
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root_len = try tmp.dir.realPathFile(io_helper.io, ".", &root_buf);
+    const root = root_buf[0..root_len];
+    const source = try std.fs.path.join(allocator, &.{ root, "source" });
+    defer allocator.free(source);
+    const destination = try std.fs.path.join(allocator, &.{ root, "installed" });
+    defer allocator.free(destination);
+    const executable = try std.fs.path.join(allocator, &.{ source, "Launchpad.app/Contents/MacOS/Launchpad" });
+    defer allocator.free(executable);
+    const executable_z = try allocator.dupeSentinel(u8, executable, 0);
+    defer allocator.free(executable_z);
+    _ = std.c.chmod(executable_z, 0o755);
+    try std.testing.expect(!installer.hasPackageStructure(source));
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "source/Launchpad.app/Contents/Info.plist", .data = "<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>CFBundleExecutable</key><string>Launchpad</string></dict></plist>" });
+    try std.testing.expect(installer.hasPackageStructure(source));
+    try installer.materializeVerifiedProjectPackage(source, destination, "github.com/stacksjs/launchpad");
+    const installed = try std.fs.path.join(allocator, &.{ destination, "Launchpad.app/Contents/MacOS/Launchpad" });
+    defer allocator.free(installed);
+    try std.testing.expect(io_helper.isExecutable(installed));
+    // A native bundle does not satisfy a CLI package's declared executable contract.
+    try std.testing.expectError(error.InvalidPackageSource, installer.materializeVerifiedProjectPackage(source, destination, "ziglang.org"));
+    try std.testing.expect(io_helper.isExecutable(installed));
+    _ = std.c.chmod(executable_z, 0o644);
+    try std.testing.expect(!installer.hasPackageStructure(source));
+    _ = std.c.chmod(executable_z, 0o755);
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "source/Launchpad.app/Contents/MacOS/Launchpad", .data = "" });
+    try std.testing.expect(!installer.hasPackageStructure(source));
 }
 
 test "native materialization: every transaction allocation failure removes its owned directory" {

@@ -33,6 +33,8 @@ Set `native.registry.domain` in `pantry.json`, for example `github.com/your-org/
 
 The caller of `pantry-pm/pantry/.github/workflows/native-app.yml` passes `PANTRY_TOKEN` as an optional workflow secret. Registry publication runs only for releases whose manifest enables that target. Checks and pull requests need no registry credential.
 
+Application archives carry their `.app` bundle directly. Pantry validates the bundle manifest and a non-empty executable before materialization, preserving the bundle and its notarization ticket. The catalog's `programs` field lists exported command line tools; a GUI-only application declares an empty list.
+
 Registry operators issue an application token with `pantry registry token issue releases@example.com --publish --binary-domain github.com/your-org/your-app --expires-in-days 365`. The member account must exist first. Store its returned token with `pantry token set --registry https://registry.pantry.dev` using stdin, then run `pantry token sync --registry https://registry.pantry.dev --repo your-org/your-app`. Ordinary account tokens cannot grant native package access. A native token can publish only its exact approved domains and complete only uploads initiated by its account. Retained-artifact rescans remain operator-only.
 
 `publishNativeRegistry` and `publishPreparedNativeRegistry` from `ts-pantry/native` expose the same release target to other hosts. The first qualifies the project; the second publishes the already-qualified pipeline result. Original application artwork belongs in the shared catalog logo manifest, with its upstream source and SHA-256 recorded.

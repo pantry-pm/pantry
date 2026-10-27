@@ -7,7 +7,7 @@ export const launchpadPackage = {
   homepageUrl: 'https://github.com/stacksjs/launchpad' as const,
   githubUrl: 'https://github.com/stacksjs/launchpad' as const,
   installCommand: 'pantry install --user --kind app launchpad' as const,
-  programs: ['launchpad'] as const,
+  programs: [] as const,
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: ['jqlang.org'] as const,
