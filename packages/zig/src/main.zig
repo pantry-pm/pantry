@@ -69,6 +69,16 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     // pantry data dir. Treating bare `--user pkg` as a local install was
     // surprising — and meant `pkg` never landed on PATH. The flag now flips
     // the routing the same way `--global --user` does.
+    const kind = ctx.getOption("kind") orelse "cli";
+    if (!std.mem.eql(u8, kind, "cli") and !std.mem.eql(u8, kind, "library") and !std.mem.eql(u8, kind, "app") and !std.mem.eql(u8, kind, "font")) {
+        style.printForced("--kind must be app, cli, library or font\n", .{});
+        std.process.exit(1);
+    }
+    const desktop = std.mem.eql(u8, kind, "app") or std.mem.eql(u8, kind, "font");
+    if (desktop and (!user or packages.items.len == 0)) {
+        style.printForced("Application and font installs require --user and an explicit package domain\n", .{});
+        std.process.exit(1);
+    }
     const global_install = global or user;
 
     // If a global install is requested without any packages, install everything
@@ -91,7 +101,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     // user-level (or system-wide) global dir and are linked into the bin
     // directory the shell hook puts on PATH.
     if (global_install and packages.items.len > 0) {
-        const result = try lib.commands.installPackagesGloballyCommand(allocator, packages.items);
+        const result = if (user) try lib.commands.installPackagesUserLocalCommand(allocator, packages.items, desktop) else try lib.commands.installPackagesGloballyCommand(allocator, packages.items);
         defer result.deinit(allocator);
 
         if (result.message) |msg| {
@@ -724,6 +734,24 @@ fn updateAction(ctx: *cli.BaseCommand.ParseContext) !void {
         }
     }
 
+    std.process.exit(result.exit_code);
+}
+
+/// The desktop service is an independently installed Pantry CLI capability.
+fn desktopAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const action = ctx.getArgument(0) orelse "serve";
+    if (!std.mem.eql(u8, action, "serve") and !std.mem.eql(u8, action, "pair") and !std.mem.eql(u8, action, "setup")) {
+        style.printForced("Usage: pantry desktop serve|pair|setup [--yes] [--json]\n", .{});
+        std.process.exit(1);
+    }
+    var args: std.ArrayList([]const u8) = .empty;
+    defer args.deinit(ctx.allocator);
+    try args.appendSlice(ctx.allocator, &.{ "pantry-desktop@" ++ version_options.version, action });
+    if (ctx.hasOption("yes")) try args.append(ctx.allocator, "--yes");
+    if (ctx.hasOption("json")) try args.append(ctx.allocator, "--json");
+    const result = try lib.commands.pxCommand(ctx.allocator, args.items, .{ .silent = true });
+    defer result.deinit(ctx.allocator);
+    if (result.message) |message| style.printForced("{s}\n", .{message});
     std.process.exit(result.exit_code);
 }
 
@@ -3226,6 +3254,8 @@ pub fn main() !void {
         .withShort('u');
     _ = try install_cmd.addOption(user_opt);
 
+    _ = try install_cmd.addOption(cli.Option.init("kind", "kind", "Package kind: app, cli, library or font", .string));
+
     const install_force_opt = cli.Option.init("force", "force", "Fetch latest versions and reinstall all dependencies", .bool)
         .withShort('f');
     _ = try install_cmd.addOption(install_force_opt);
@@ -3463,6 +3493,13 @@ pub fn main() !void {
 
     _ = px_cmd.setAction(pxAction);
     _ = try root.addCommand(px_cmd);
+
+    var desktop_cmd = try cli.BaseCommand.init(allocator, "desktop", "Connect desktop applications to the Pantry CLI");
+    _ = try desktop_cmd.addArgument(cli.Argument.init("action", "serve, pair or setup", .string).withRequired(false));
+    _ = try desktop_cmd.addOption(cli.Option.init("yes", "yes", "Allow the per-user service to start now and at login", .bool));
+    _ = try desktop_cmd.addOption(cli.Option.init("json", "json", "Print pairing information as JSON", .bool));
+    _ = desktop_cmd.setAction(desktopAction);
+    _ = try root.addCommand(desktop_cmd);
 
     // ========================================================================
     // Outdated Command

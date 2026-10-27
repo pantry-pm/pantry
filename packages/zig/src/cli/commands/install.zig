@@ -100,3 +100,8 @@ pub fn installPackagesGloballyCommand(allocator: std.mem.Allocator, args: []cons
         .message = result.message,
     };
 }
+
+pub fn installPackagesUserLocalCommand(allocator: std.mem.Allocator, args: []const []const u8, desktop: bool) !common.CommandResult {
+    const result = try install.installPackagesUserLocalCommand(allocator, args, desktop);
+    return .{ .exit_code = result.exit_code, .message = result.message };
+}

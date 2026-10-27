@@ -240,3 +240,9 @@ publisher to commit, tag and push normally. The tag invokes the Pantry delivery
 workflow. `ts-pantry native:release --bump patch` exposes the same operation;
 `--dry-run` previews the version change after qualification without committing,
 tagging or pushing.
+
+### Desktop catalog and connections
+
+`ts-pantry/catalog` provides the complete validated public package snapshot and local search. `ts-pantry/desktop` provides an authenticated transport client for the separately installed Pantry desktop service. They contain no installer and bundle for browsers. The external CLI owns installation, pairing, job persistence and activation of apps, CLIs, libraries and fonts. See [desktop bridge documentation](../../docs/features/desktop-bridge.md).
+
+Native Stacks projects use `buddy desktop:apple:package`, `buddy desktop:apple:publish` and `buddy desktop:apple:submit` for the shared Apple delivery pipeline. The native SDK also exports `publishNativeApple` and `submitNativeApple` for other hosts.

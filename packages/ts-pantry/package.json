@@ -43,12 +43,25 @@
     },
     "./*": {
       "import": "./dist/*"
+    },
+    "./catalog": {
+      "types": "./dist/src/catalog/client.d.ts",
+      "import": "./dist/src/catalog/client.js"
+    },
+    "./desktop": {
+      "types": "./dist/src/desktop/client.d.ts",
+      "import": "./dist/src/desktop/client.js"
+    },
+    "./desktop/service": {
+      "types": "./dist/src/desktop/service.d.ts",
+      "import": "./dist/src/desktop/service.js"
     }
   },
   "module": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
-    "ts-pantry": "./dist/bin/cli.js"
+    "ts-pantry": "./dist/bin/cli.js",
+    "pantry-desktop": "./dist/bin/desktop.js"
   },
   "files": [
     "README.md",
@@ -103,7 +116,7 @@
     "pantry:rescan-binaries": "bun scripts/backfill-malware-scans.ts"
   },
   "dependencies": {
-    "@stacksjs/bumpx": "0.2.26",
+    "@stacksjs/bumpx": "^0.2.29",
     "@stacksjs/env": "^0.75.311"
   },
   "devDependencies": {

@@ -30,6 +30,7 @@ pub const ExecutorAlias = struct {
 /// applied to the executor.
 pub const executor_aliases = [_]ExecutorAlias{
     .{ .executable = "buddy", .package = "@stacksjs/buddy" },
+    .{ .executable = "pantry-desktop", .package = "ts-pantry" },
 };
 
 /// What a panx argument names: the package to install and the binary to run.
@@ -296,4 +297,11 @@ test "an unaliased name is left alone" {
     const t = resolveTarget("bud");
     try std.testing.expectEqualStrings("bud", t.package);
     try std.testing.expectEqualStrings("bud", t.executable);
+}
+
+test "desktop bridge executable resolves to the versioned first-party SDK" {
+    const target = resolveTarget("pantry-desktop@0.11.136");
+    try std.testing.expectEqualStrings("ts-pantry", target.package);
+    try std.testing.expectEqualStrings("pantry-desktop", target.executable);
+    try std.testing.expectEqualStrings("0.11.136", target.version.?);
 }

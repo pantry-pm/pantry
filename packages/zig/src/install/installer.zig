@@ -38,6 +38,8 @@ fn canRestoreLockTarball(version: []const u8, resolved: []const u8) bool {
 
 /// Installation options
 pub const InstallOptions = struct {
+    /// Catalog installs may use bare Pantry domains, including font families.
+    pantry_registry: bool = false,
     /// Force reinstall even if cached
     force: bool = false,
     /// Verbose output
@@ -763,7 +765,7 @@ pub const Installer = struct {
         // (scoped @scope/name or non-domain names without dots). These will never be in S3.
         const is_scoped_name = spec.name.len > 0 and spec.name[0] == '@';
         const is_domain_name = std.mem.indexOfScalar(u8, spec.name, '.') != null;
-        const skip_s3_lookup = is_scoped_name or (!is_domain_name and pkg_info == null);
+        const skip_s3_lookup = !options.pantry_registry and (is_scoped_name or (!is_domain_name and pkg_info == null));
 
         if (options.verbose) std.debug.print("[verbose:installer] looking up S3 registry for domain={s}, version={s} (skip_s3={})\n", .{ domain, spec.version, skip_s3_lookup });
 

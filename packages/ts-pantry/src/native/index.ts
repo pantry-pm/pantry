@@ -12,3 +12,5 @@ export { setupAppleSigning, removeAppleSigningKeychain, parseSigningIdentities, 
 export type { AppleSigningOptions, AppleSigningResult } from './apple-signing'
 export { deliverReleaseToAppStore, parseAppStoreDeliveryId, isExistingAppStoreUpload } from './release-app-store'
 export type { AppStoreReleaseOptions, AppStoreReleaseReceipt } from './release-app-store'
+
+export * from './store-publish'

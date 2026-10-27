@@ -6,12 +6,12 @@
       "name": "pantry",
       "dependencies": {
         "@cwcss/crosswind": "^0.2.16",
+        "@stacksjs/bumpx": "^0.2.29",
         "@stacksjs/stx": "^0.2.192",
         "@stacksjs/ts-cloud": "^0.16.68"
       },
       "devDependencies": {
         "@playwright/test": "^1.64.1",
-        "@stacksjs/bumpx": "0.2.26",
         "better-dx": "^0.2.23"
       }
     },
@@ -67,7 +67,7 @@
       "name": "ts-pantry",
       "version": "0.11.135",
       "dependencies": {
-        "@stacksjs/bumpx": "0.2.26",
+        "@stacksjs/bumpx": "^0.2.29",
         "@stacksjs/env": "^0.75.311"
       },
       "devDependencies": {

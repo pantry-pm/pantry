@@ -63,6 +63,9 @@ async function verifyEntryPoints(): Promise<void> {
     path.join(process.cwd(), 'dist', 'src', 'testing', 'index.js'),
     path.join(process.cwd(), 'dist', 'src', 'native', 'index.js'),
     path.join(process.cwd(), 'dist', 'src', 'native', 'release.js'),
+    path.join(process.cwd(), 'dist', 'src', 'catalog', 'client.js'),
+    path.join(process.cwd(), 'dist', 'src', 'desktop', 'client.js'),
+    path.join(process.cwd(), 'dist', 'src', 'desktop', 'service.js'),
   ]
 
   for (const entry of entries) {
@@ -85,7 +88,7 @@ async function build() {
   // dependency of another entry point, so these multi-entry JavaScript files
   // are replaced by isolated runtime builds below.
   const declarationResult = await Bun.build({
-    entrypoints: ['src/index.ts', 'bin/cli.ts', 'src/testing/index.ts', 'src/native/index.ts', 'src/native/release.ts'],
+    entrypoints: ['src/index.ts', 'bin/cli.ts', 'bin/desktop.ts', 'src/testing/index.ts', 'src/native/index.ts', 'src/native/release.ts', 'src/catalog/client.ts', 'src/desktop/client.ts', 'src/desktop/service.ts'],
     outdir: './dist',
     target: 'node',
     splitting: false,
@@ -107,7 +110,7 @@ async function build() {
   // emitted paths exactly where the export map already points, and the shared
   // half moves into chunks both of them import.
   const runtimeResult = await Bun.build({
-    entrypoints: ['src/index.ts', 'src/testing/index.ts', 'src/native/index.ts', 'src/native/release.ts', 'bin/cli.ts'],
+    entrypoints: ['src/index.ts', 'src/testing/index.ts', 'src/native/index.ts', 'src/native/release.ts', 'src/catalog/client.ts', 'src/desktop/client.ts', 'src/desktop/service.ts', 'bin/cli.ts', 'bin/desktop.ts'],
     outdir: './dist',
     root: '.',
     target: 'node',

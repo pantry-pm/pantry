@@ -31,6 +31,7 @@ pub const installCommandWithOptions = core.installCommandWithOptions;
 pub const installGlobalDepsCommand = global.installGlobalDepsCommand;
 pub const installGlobalDepsCommandUserLocal = global.installGlobalDepsCommandUserLocal;
 pub const installPackagesGloballyCommand = global.installPackagesGloballyCommand;
+pub const installPackagesUserLocalCommand = global.installPackagesUserLocalCommand;
 
 // Re-export workspace command (now from modular workspace.zig)
 pub const installWorkspaceCommand = workspace.installWorkspaceCommand;
