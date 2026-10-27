@@ -192,21 +192,30 @@ test "endsWithIgnoreCase" {
     try std.testing.expect(!endsWithIgnoreCase("foo", ".app"));
 }
 
-test "installAppsFromTree finds and installs nested .app into a dest dir" {
-    const a = std.testing.allocator;
-    const tmp = "/tmp/pantry-native-apps-test";
-    const dest = "/tmp/pantry-native-apps-dest";
-    _ = run(a, &[_][]const u8{ RM, "-rf", tmp, dest });
-    defer _ = run(a, &[_][]const u8{ RM, "-rf", tmp, dest });
-    // Build a fake artifact tree: tmp/payload/Demo.app/Contents/MacOS/demo
-    _ = run(a, &[_][]const u8{ MKDIR, "-p", tmp ++ "/payload/Demo.app/Contents/MacOS" });
-    {
-        const f = io_helper.createFileAbsolute(tmp ++ "/payload/Demo.app/Contents/MacOS/demo", .{ .truncate = true }) catch unreachable;
-        io_helper.closeFile(f);
-    }
-    _ = run(a, &[_][]const u8{ MKDIR, "-p", dest });
+test "native app activation is unsupported off macOS" {
+    if (builtin.os.tag == .macos) return error.SkipZigTest;
+    try std.testing.expectEqual(Outcome.unsupported, install(std.testing.allocator, "fixture.invalid", true));
+    try std.testing.expect(!activateTree(std.testing.allocator, "/nonexistent", true));
+}
 
+test "installAppsFromTree finds and installs nested .app into a dest dir" {
+    if (builtin.os.tag != .macos) return error.SkipZigTest;
+    const a = std.testing.allocator;
+    const tmp = try io_helper.uniqueTempPath(a, "pantry-native-apps-test");
+    defer a.free(tmp);
+    const dest = try io_helper.uniqueTempPath(a, "pantry-native-apps-dest");
+    defer a.free(dest);
+    defer _ = run(a, &[_][]const u8{ RM, "-rf", tmp, dest });
+    const contents = try std.fmt.allocPrint(a, "{s}/payload/Demo.app/Contents/MacOS", .{tmp});
+    defer a.free(contents);
+    const executable = try std.fmt.allocPrint(a, "{s}/demo", .{contents});
+    defer a.free(executable);
+    _ = run(a, &[_][]const u8{ MKDIR, "-p", contents, dest });
+    const f = try io_helper.createFileAbsolute(executable, .{ .truncate = true });
+    io_helper.closeFile(f);
     const installed = installAppsFromTree(a, tmp, dest, 3);
     try std.testing.expectEqual(@as(usize, 1), installed);
-    try std.testing.expect(exists(dest ++ "/Demo.app"));
+    const bundle = try std.fmt.allocPrint(a, "{s}/Demo.app", .{dest});
+    defer a.free(bundle);
+    try std.testing.expect(exists(bundle));
 }

@@ -75,6 +75,10 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
         std.process.exit(1);
     }
     const desktop = std.mem.eql(u8, kind, "app") or std.mem.eql(u8, kind, "font");
+    if (desktop and builtin.os.tag != .macos) {
+        style.printForced("Application and font activation currently requires macOS\n", .{});
+        std.process.exit(1);
+    }
     if (desktop and (!user or packages.items.len == 0)) {
         style.printForced("Application and font installs require --user and an explicit package domain\n", .{});
         std.process.exit(1);
