@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.141...v0.11.142)
+
+## ✨ Features
+
+- refresh Launchpad catalog branding and install guidance ([8b65d88](https://github.com/pantry-pm/pantry/commit/8b65d88)) _(by Chris Breuer <chris@stacksjs.com>)_
+- infer desktop install scope from the package catalog ([358d410](https://github.com/pantry-pm/pantry/commit/358d410)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.142 ([85b9288](https://github.com/pantry-pm/pantry/commit/85b9288)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update ansible, claude-code, cmake, codex, flit, LLaMA.cpp, qsv ([3bb5051](https://github.com/pantry-pm/pantry/commit/3bb5051)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.140...v0.11.141)
 
 ## ✨ Features
