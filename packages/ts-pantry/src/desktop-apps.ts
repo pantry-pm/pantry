@@ -8,7 +8,7 @@
  * into /Applications → clear quarantine).
  */
 
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -127,17 +127,11 @@ export function scanInstalledApps(applicationsDir = '/Applications'): InstalledA
     try {
       const plistPath = `${appPath}/Contents/Info.plist`
       if (fs.existsSync(plistPath)) {
-        const vOut = execSync(
-          `/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "${plistPath}" 2>/dev/null`,
-          { timeout: 5000, encoding: 'utf-8' },
-        ).trim()
+        const vOut = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
         if (vOut) version = vOut
 
         try {
-          bundleId = execSync(
-            `/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${plistPath}" 2>/dev/null`,
-            { timeout: 5000, encoding: 'utf-8' },
-          ).trim() || undefined
+          bundleId = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIdentifier', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || undefined
         }
         catch {}
       }

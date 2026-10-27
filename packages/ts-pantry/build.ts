@@ -77,6 +77,15 @@ async function verifyEntryPoints(): Promise<void> {
       throw error
     }
   }
+  for (const name of ['catalog', 'desktop']) {
+    const browser = await Bun.build({ entrypoints: [path.join(process.cwd(), 'dist', 'src', name, 'client.js')], target: 'browser' })
+    if (!browser.success) throw new Error(`Published ${name} client cannot bundle for browsers: ${browser.logs.map(item => item.message).join('; ')}`)
+    for (const output of browser.outputs) {
+      const source = await output.text()
+      if (/Bun\.spawn|node:fs|startDesktopBridge/.test(source)) throw new Error(`Published ${name} client includes external installer implementation`)
+    }
+  }
+
 }
 
 async function build() {

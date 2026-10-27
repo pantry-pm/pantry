@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
+import { scanInstalledApps } from '../desktop-apps'
 import { bundledPackageCatalog } from '../catalog/client'
 import type { PackageCatalogEntry } from '../catalog/types'
 import type { DesktopInstallJob, DesktopInstalledPackage } from './client'
@@ -54,6 +55,17 @@ function publicJob(job: StoredJob): DesktopInstallJob {
   return result
 }
 
+/** Application discovery belongs to the external process, including the real user Applications directory. */
+export function installedCatalogApplications(catalog: readonly PackageCatalogEntry[]): DesktopInstalledPackage[] {
+  if (process.platform !== 'darwin') return []
+  const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const byName = new Map(catalog.filter(entry => entry.kind === 'app').map(entry => [normalize(entry.name), entry.domain]))
+  return ['/Applications', join(homedir(), 'Applications')].flatMap(root => scanInstalledApps(root)).flatMap(app => {
+    const domain = byName.get(normalize(app.name))
+    return domain ? [{ name: domain, version: app.version, applicationPath: app.path }] : []
+  })
+}
+
 /** Standalone Pantry process. The launcher never spawns or embeds an installer. */
 export interface DesktopBridge { server: Bun.Server<undefined>, close: () => Promise<void> }
 
@@ -72,7 +84,8 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
     }
   }
   persist()
-  const packages = new Map((options.catalog ?? bundledPackageCatalog()).map(entry => [entry.domain, entry]))
+  const catalog = options.catalog ?? bundledPackageCatalog()
+  const packages = new Map(catalog.map(entry => [entry.domain, entry]))
   const executable = options.pantryExecutable ?? Bun.which('pantry')
   if (!options.run && (!executable || !isAbsolute(executable))) throw new Error('Install the Pantry CLI before starting its desktop bridge')
   const now = options.now ?? Date.now
@@ -143,7 +156,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
       const url = new URL(request.url)
       // No browser origins, wildcard CORS or DNS-based hostnames are accepted.
       if (request.headers.has('origin') || request.headers.get('host') !== `127.0.0.1:${server.port}`) return respond({ error: 'Forbidden origin or host' }, 403)
-      if (url.pathname === '/health' && request.method === 'GET') return respond({ protocolVersion: 1, service: 'pantry-desktop', capabilities: ['catalog', 'install:user', 'installed'] })
+      if (url.pathname === '/health' && request.method === 'GET') return respond({ protocolVersion: 1, service: 'pantry-desktop', capabilities: ['install:user', 'installed', 'jobs'] })
       if (url.pathname === '/pair' && request.method === 'POST') {
         while (attempts.length && attempts[0]! < now() - 60000) attempts.shift()
         if (attempts.length >= 10) return respond({ error: 'Too many pairing attempts. Try again in a minute.' }, 429)
@@ -176,7 +189,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
         try {
           const installed = JSON.parse(output) as DesktopInstalledPackage[]
           if (!Array.isArray(installed) || installed.some(item => typeof item.name !== 'string' || typeof item.version !== 'string')) throw new Error('Invalid installed package list')
-          return respond({ packages: installed.map(item => ({ name: item.name, version: item.version })) })
+          return respond({ packages: [...installed.map(item => ({ name: item.name, version: item.version })), ...(options.run ? [] : installedCatalogApplications(catalog))] })
         }
         catch { return respond({ error: 'Pantry returned an invalid installed package list.' }, 502) }
       }

@@ -9,8 +9,15 @@ export interface DesktopInstallJob {
   finishedAt?: string
   error?: string
 }
-export interface DesktopInstalledPackage { name: string, version: string }
+export interface DesktopInstalledPackage { name: string, version: string, applicationPath?: string }
 export type DesktopFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+
+export class PantryDesktopError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+    this.name = 'PantryDesktopError'
+  }
+}
 
 /** A transport client only. It contains no installer, executable or shell implementation. */
 export class PantryDesktopClient {
@@ -30,7 +37,7 @@ export class PantryDesktopClient {
       },
     })
     const body = await response.json() as Record<string, unknown>
-    if (!response.ok) throw new Error(String(body.error || `Pantry Desktop request failed (${response.status})`))
+    if (!response.ok) throw new PantryDesktopError(String(body.error || `Pantry Desktop request failed (${response.status})`), response.status)
     return body
   }
 
