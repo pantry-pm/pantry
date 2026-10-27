@@ -1,3 +1,21 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.140...v0.11.141)
+
+## ✨ Features
+
+- expose typed desktop install job receipts ([1c9899c](https://github.com/pantry-pm/pantry/commit/1c9899c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.141 ([56f24c7](https://github.com/pantry-pm/pantry/commit/56f24c7)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update babashka, CLIProxyAPI, Codex, Cursor, Element, Ghostty, htslib, hugo, LLaMA.cpp, mise, mole, pnp, solr, vim, WhatsApp, zig ([2b3b2ea](https://github.com/pantry-pm/pantry/commit/2b3b2ea)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.369 ([2e57a2f](https://github.com/pantry-pm/pantry/commit/2e57a2f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update appium, buddy, cnquery, LLaMA.cpp, opencode.ai, tox, vim, virtualenv ([b6763c2](https://github.com/pantry-pm/pantry/commit/b6763c2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.368 ([df3bffe](https://github.com/pantry-pm/pantry/commit/df3bffe)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.139...v0.11.140)
 
 ## 🐛 Bug Fixes
