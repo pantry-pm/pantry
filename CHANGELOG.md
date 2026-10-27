@@ -1,3 +1,25 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.135...v0.11.136)
+
+## ✨ Features
+
+- **desktop**: add authenticated installs and native Apple publishing ([7f41345](https://github.com/pantry-pm/pantry/commit/7f41345)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **catalog**: publish complete package metadata and upstream logos ([3e6c05c](https://github.com/pantry-pm/pantry/commit/3e6c05c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **catalog**: retain original artwork bytes across checkouts ([f731517](https://github.com/pantry-pm/pantry/commit/f731517)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.136 ([589b71d](https://github.com/pantry-pm/pantry/commit/589b71d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- integrate current native package metadata ([6308e1e](https://github.com/pantry-pm/pantry/commit/6308e1e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.361 ([6baead7](https://github.com/pantry-pm/pantry/commit/6baead7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update claude-code, fly, gh, harlequin.sh, hunspell, LLaMA.cpp, micromamba, mise, openbao, pandoc, Slack, stripe, valkey ([df2de23](https://github.com/pantry-pm/pantry/commit/df2de23)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.134...v0.11.135)
 
 ## 🐛 Bug Fixes
