@@ -4,6 +4,8 @@
 
 const std = @import("std");
 
+pub const PackageKind = enum { app, cli, library, font };
+
 /// Major-release boundaries for executable interfaces.
 pub const ProgramVersion = struct {
     name: []const u8,
@@ -15,6 +17,7 @@ pub const ProgramVersion = struct {
 pub const PackageInfo = struct {
     name: []const u8,
     domain: []const u8,
+    kind: PackageKind = .cli,
     description: []const u8,
     homepage_url: ?[]const u8,
     programs: []const []const u8,
@@ -29,6 +32,7 @@ pub const PackageInfo = struct {
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
+    .kind = .app,
     .description = "A password manager and secure vault.",
     .homepage_url = "https://1password.com",
     .programs = &[_][]const u8{"1password"},
@@ -39,6 +43,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "abseil",
     .domain = "abseil.io",
+    .kind = .library,
     .description = "Abseil Common Libraries (C++)",
     .homepage_url = "https://abseil.io",
     .programs = &[_][]const u8{},
@@ -49,6 +54,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "acorn",
     .domain = "acorn.io/acorn-cli",
+    .kind = .cli,
     .description = "A simple application deployment framework built on Kubernetes",
     .homepage_url = "https://docs.acorn.io/",
     .programs = &[_][]const u8{"acorn"},
@@ -59,6 +65,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Auto-GPT",
     .domain = "agpt.co",
+    .kind = .cli,
     .description = "AutoGPT is the vision of accessible AI for everyone, to use and to build on. Our mission is to provide the tools, so that you can focus on what matters.",
     .homepage_url = "https://agpt.co",
     .programs = &[_][]const u8{"auto-gpt"},
@@ -69,6 +76,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-crypt",
     .domain = "agwa.name/git-crypt",
+    .kind = .cli,
     .description = "Enable transparent encryption/decryption of files in a git repo",
     .homepage_url = "https://www.agwa.name/projects/git-crypt/",
     .programs = &[_][]const u8{"git-crypt"},
@@ -79,6 +87,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kargo",
     .domain = "akuity.io/kargo",
+    .kind = .cli,
     .description = "Application lifecycle orchestration",
     .homepage_url = "https://kargo.akuity.io/",
     .programs = &[_][]const u8{"kargo"},
@@ -89,6 +98,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "alacritty",
     .domain = "alacritty.org",
+    .kind = .cli,
     .description = "A cross-platform, OpenGL terminal emulator.",
     .homepage_url = "https://alacritty.org",
     .programs = &[_][]const u8{"alacritty"},
@@ -99,6 +109,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "alembic",
     .domain = "alembic.sqlalchemy.org",
+    .kind = .cli,
     .description = "A database migrations tool for SQLAlchemy.",
     .homepage_url = null,
     .programs = &[_][]const u8{"alembic"},
@@ -109,6 +120,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aserver",
     .domain = "alsa-project.org/alsa-lib",
+    .kind = .cli,
     .description = "Provides audio and MIDI functionality to the Linux operating system",
     .homepage_url = "https://www.alsa-project.org/",
     .programs = &[_][]const u8{"aserver"},
@@ -119,6 +131,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "AltTab",
     .domain = "alttab.app",
+    .kind = .app,
     .description = "A window switcher for macOS that brings the power of alt-tab from Windows.",
     .homepage_url = "https://alt-tab-macos.netlify.app",
     .programs = &[_][]const u8{"alttab"},
@@ -129,6 +142,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "amber",
     .domain = "amber-lang.com",
+    .kind = .cli,
     .description = "Crystal web framework. Bare metal performance, productivity and happiness",
     .homepage_url = "https://amberframework.org/",
     .programs = &[_][]const u8{"amber"},
@@ -139,6 +153,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "amp",
     .domain = "amp.rs",
+    .kind = .cli,
     .description = "A complete text editor for your terminal.",
     .homepage_url = "https://amp.rs",
     .programs = &[_][]const u8{"amp"},
@@ -149,6 +164,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitql",
     .domain = "amrdeveloper.github.io/GQL",
+    .kind = .cli,
     .description = "GitQL is a extensible SQL-like query language and SDK to perform queries on various data sources such .git files with supports of most of SQL features such as grouping, ordering and aggregation and window functions and allow customization like user-defined types and functions",
     .homepage_url = "https://amrdeveloper.github.io/GQL/",
     .programs = &[_][]const u8{"gitql"},
@@ -159,6 +175,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "syft",
     .domain = "anchore.com/syft",
+    .kind = .cli,
     .description = "CLI tool and library for generating a Software Bill of Materials from container images and filesystems",
     .homepage_url = null,
     .programs = &[_][]const u8{"syft"},
@@ -169,6 +186,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cmdline-tools",
     .domain = "android.com/cmdline-tools",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "apkanalyzer", "avdmanager", "lint", "profgen", "resourceshrinker", "retrace", "screenshot2", "sdkmanager" },
@@ -179,6 +197,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ng",
     .domain = "angular.dev",
+    .kind = .cli,
     .description = "CLI tool for Angular",
     .homepage_url = "https://angular.dev/cli/",
     .programs = &[_][]const u8{"ng"},
@@ -189,6 +208,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ansible",
     .domain = "ansible.com",
+    .kind = .cli,
     .description = "Ansible is a radically simple IT automation platform that makes your applications and systems easier to deploy and maintain. Automate everything from code deployment to network configuration to cloud management, in a language that approaches plain English, using SSH, with no agents to install on remote systems. https://docs.ansible.com.",
     .homepage_url = "https://www.ansible.com/",
     .programs = &[_][]const u8{ "ansible", "ansible-config", "ansible-connection", "ansible-console", "ansible-doc", "ansible-galaxy", "ansible-inventory", "ansible-playbook", "ansible-pull", "ansible-test", "ansible-vault" },
@@ -199,6 +219,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ansible-lint",
     .domain = "ansible.com/ansible-lint",
+    .kind = .cli,
     .description = "ansible-lint checks playbooks for practices and behavior that could potentially be improved and can fix some of the most common ones for you",
     .homepage_url = "https://ansible-lint.readthedocs.io/",
     .programs = &[_][]const u8{"ansible-lint"},
@@ -209,6 +230,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "claude-code",
     .domain = "anthropic.com/claude-code",
+    .kind = .cli,
     .description = "Claude Code — Anthropic's agentic coding CLI that lives in your terminal.",
     .homepage_url = "https://github.com/anthropics/claude-code",
     .programs = &[_][]const u8{"claude"},
@@ -219,6 +241,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aom",
     .domain = "aomedia.googlesource.com/aom",
+    .kind = .cli,
     .description = "Codec library for encoding and decoding AV1 video streams",
     .homepage_url = "https://aomedia.googlesource.com/aom",
     .programs = &[_][]const u8{ "aomenc", "aomdec" },
@@ -229,6 +252,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "apr",
     .domain = "apache.org/apr",
+    .kind = .library,
     .description = "Mirror of Apache Portable Runtime",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -239,6 +263,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "apu-{{ version.major }}-config",
     .domain = "apache.org/apr-util",
+    .kind = .cli,
     .description = "Mirror of Apache Portable Runtime util",
     .homepage_url = null,
     .programs = &[_][]const u8{"apu-{{ version.major }}-config"},
@@ -249,6 +274,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "arrow",
     .domain = "apache.org/arrow",
+    .kind = .cli,
     .description = "Apache Arrow is the universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics",
     .homepage_url = "https://arrow.apache.org/",
     .programs = &[_][]const u8{ "parquet-dump-schema", "parquet-reader", "parquet-scan" },
@@ -259,6 +285,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "avro",
     .domain = "apache.org/avro",
+    .kind = .cli,
     .description = "Apache Avro is a data serialization system.",
     .homepage_url = "https://avro.apache.org/",
     .programs = &[_][]const u8{ "avroappend", "avrocat", "avromod", "avropipe" },
@@ -269,6 +296,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "httpd",
     .domain = "apache.org/httpd",
+    .kind = .cli,
     .description = "Apache HTTP server",
     .homepage_url = "https://httpd.apache.org/",
     .programs = &[_][]const u8{ "ab", "apachectl", "checkgid", "fcgistarter", "htcacheclean", "htdbm", "htdigest", "htpasswd", "httpd", "httxt2dbm", "logresolve", "rotatelogs", "suexec" },
@@ -279,6 +307,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jmeter",
     .domain = "apache.org/jmeter",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "jmeter", "jmeter-server", "mirror-server" },
@@ -289,6 +318,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "serf",
     .domain = "apache.org/serf",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -299,6 +329,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "svn",
     .domain = "apache.org/subversion",
+    .kind = .cli,
     .description = "Version control system designed to be a better CVS",
     .homepage_url = "https://subversion.apache.org/",
     .programs = &[_][]const u8{ "svn", "svnadmin", "svnbench", "svndumpfilter", "svnfsfs", "svnlook", "svnmucc", "svnrdump", "svnserve", "svnsync", "svnversion" },
@@ -309,6 +340,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "thrift",
     .domain = "apache.org/thrift",
+    .kind = .cli,
     .description = "Framework for scalable cross-language services development",
     .homepage_url = "https://thrift.apache.org/",
     .programs = &[_][]const u8{"thrift"},
@@ -319,6 +351,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zookeeper",
     .domain = "apache.org/zookeeper",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "zkCleanup", "zkCli", "zkEnv", "zkServer-initialize", "zkServer", "zkSnapshotComparer", "zkSnapshotRecursiveSummaryToolkit", "zkSnapShotToolkit", "zkTxnLogToolkit" },
@@ -329,6 +362,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "apktool",
     .domain = "apktool.org",
+    .kind = .cli,
     .description = "Tool for reverse engineering 3rd party, closed, binary Android apps",
     .homepage_url = "https://apktool.org/",
     .programs = &[_][]const u8{"apktool"},
@@ -339,6 +373,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rover",
     .domain = "apollographql.com/rover",
+    .kind = .cli,
     .description = "CLI for managing and maintaining data graphs with Apollo Studio",
     .homepage_url = "https://www.apollographql.com/docs/rover/",
     .programs = &[_][]const u8{"rover"},
@@ -349,6 +384,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "appium",
     .domain = "appium.io",
+    .kind = .cli,
     .description = "Cross-platform automation framework for all kinds of apps, built on top of the W3C WebDriver protocol",
     .homepage_url = "https://appium.io/",
     .programs = &[_][]const u8{"appium"},
@@ -359,6 +395,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "container",
     .domain = "apple.com/container",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "container", "container-apiserver" },
@@ -369,6 +406,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "telnet",
     .domain = "apple.com/remote_cmds",
+    .kind = .cli,
     .description = "",
     .homepage_url = "https://opensource.apple.com/releases",
     .programs = &[_][]const u8{"telnet"},
@@ -379,6 +417,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "apptainer",
     .domain = "apptainer.org",
+    .kind = .cli,
     .description = "Application container and unprivileged sandbox platform for Linux",
     .homepage_url = "https://apptainer.org/",
     .programs = &[_][]const u8{ "apptainer", "run-singularity", "singularity" },
@@ -389,6 +428,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tfsec",
     .domain = "aquasecurity.github.io/tfsec",
+    .kind = .cli,
     .description = "Static analysis security scanner for your terraform code",
     .homepage_url = "https://aquasecurity.github.io/tfsec/latest/",
     .programs = &[_][]const u8{"tfsec"},
@@ -399,6 +439,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trivy",
     .domain = "aquasecurity.github.io/trivy",
+    .kind = .cli,
     .description = "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
     .homepage_url = "https://aquasecurity.github.io/trivy/",
     .programs = &[_][]const u8{"trivy"},
@@ -409,6 +450,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Arc",
     .domain = "arc.net",
+    .kind = .app,
     .description = "A Chromium-based web browser with a focus on design and productivity.",
     .homepage_url = "https://arc.net",
     .programs = &[_][]const u8{"arc"},
@@ -419,6 +461,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "arduino-cli",
     .domain = "arduino.github.io/arduino-cli",
+    .kind = .cli,
     .description = "Arduino command-line interface",
     .homepage_url = "https://arduino.github.io/arduino-cli/latest/",
     .programs = &[_][]const u8{"arduino-cli"},
@@ -429,6 +472,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "argbash",
     .domain = "argbash.dev",
+    .kind = .cli,
     .description = "Bash argument parsing code generator",
     .homepage_url = null,
     .programs = &[_][]const u8{ "argbash", "argbash-init", "argbash-1to2" },
@@ -439,6 +483,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "argo-cd",
     .domain = "argoproj.github.io/cd",
+    .kind = .cli,
     .description = "GitOps Continuous Delivery for Kubernetes",
     .homepage_url = "https://argoproj.github.io/cd/",
     .programs = &[_][]const u8{"argocd"},
@@ -449,6 +494,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "argo-workflows",
     .domain = "argoproj.github.io/workflows",
+    .kind = .cli,
     .description = "Get stuff done with container-native workflows for Kubernetes",
     .homepage_url = "https://argoproj.io",
     .programs = &[_][]const u8{"argo"},
@@ -459,6 +505,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aria2c",
     .domain = "aria2.github.io",
+    .kind = .cli,
     .description = "aria2 is a lightweight multi-protocol & multi-source, cross platform download utility operated in command-line. It supports HTTP/HTTPS, FTP, SFTP, BitTorrent and Metalink.",
     .homepage_url = "https://aria2.github.io/",
     .programs = &[_][]const u8{"aria2c"},
@@ -469,6 +516,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Arkade",
     .domain = "arkade.dev",
+    .kind = .cli,
     .description = "Open Source Marketplace For Developer Tools",
     .homepage_url = "https://blog.alexellis.io/kubernetes-marketplace-two-year-update/",
     .programs = &[_][]const u8{"arkade"},
@@ -479,6 +527,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "asciidoctor",
     .domain = "asciidoctor.org",
+    .kind = .cli,
     .description = ":gem: A fast, open source text processor and publishing toolchain, written in Ruby, for converting AsciiDoc content to HTML 5, DocBook 5, and other formats.",
     .homepage_url = "https://asciidoctor.org/",
     .programs = &[_][]const u8{"asciidoctor"},
@@ -489,6 +538,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "asciinema",
     .domain = "asciinema.org",
+    .kind = .cli,
     .description = "Record and share terminal sessions",
     .homepage_url = "https://asciinema.org",
     .programs = &[_][]const u8{"asciinema"},
@@ -499,6 +549,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "agg",
     .domain = "asciinema.org/agg",
+    .kind = .cli,
     .description = "Asciicast to GIF converter",
     .homepage_url = "https://docs.asciinema.org/manual/agg/",
     .programs = &[_][]const u8{"agg"},
@@ -509,6 +560,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aspell",
     .domain = "aspell.net",
+    .kind = .cli,
     .description = "Spell checker with better logic than ispell",
     .homepage_url = "http://aspell.net/",
     .programs = &[_][]const u8{ "aspell", "aspell-import", "precat", "preunzip", "prezip", "prezip-bin", "pspell-config", "run-with-aspell", "word-list-compress" },
@@ -519,6 +571,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "assimp",
     .domain = "assimp.org",
+    .kind = .cli,
     .description = "The official Open-Asset-Importer-Library Repository. Loads 40+ 3D-file-formats into one unified and clean data structure. ",
     .homepage_url = "https://www.assimp.org/",
     .programs = &[_][]const u8{"assimp"},
@@ -529,6 +582,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ast-grep.github",
     .domain = "ast-grep.github.io",
+    .kind = .cli,
     .description = "⚡A CLI tool for code structural search, lint and rewriting. Written in Rust",
     .homepage_url = "https://ast-grep.github.io/",
     .programs = &[_][]const u8{ "sg", "ast-grep" },
@@ -539,6 +593,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ruff",
     .domain = "astral.sh/ruff",
+    .kind = .cli,
     .description = "An extremely fast Python linter and code formatter, written in Rust.",
     .homepage_url = "https://docs.astral.sh/ruff/",
     .programs = &[_][]const u8{"ruff"},
@@ -549,6 +604,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ty",
     .domain = "astral.sh/ty",
+    .kind = .cli,
     .description = "An extremely fast Python type checker and language server, written in Rust.",
     .homepage_url = null,
     .programs = &[_][]const u8{"ty"},
@@ -559,6 +615,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "uv",
     .domain = "astral.sh/uv",
+    .kind = .cli,
     .description = "An extremely fast Python package and project manager, written in Rust.",
     .homepage_url = "https://docs.astral.sh/uv",
     .programs = &[_][]const u8{ "uv", "uvx" },
@@ -569,6 +626,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "atlas",
     .domain = "atlasgo.io",
+    .kind = .cli,
     .description = "Manage your database schema as code",
     .homepage_url = "https://atlasgo.io",
     .programs = &[_][]const u8{"atlas"},
@@ -579,6 +637,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "attrs",
     .domain = "attrs.org",
+    .kind = .library,
     .description = "Python Classes Without Boilerplate",
     .homepage_url = "https://www.attrs.org/",
     .programs = &[_][]const u8{},
@@ -589,6 +648,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "augeas",
     .domain = "augeas.net",
+    .kind = .cli,
     .description = "A configuration editing tool and API",
     .homepage_url = "https://augeas.net/",
     .programs = &[_][]const u8{ "augmatch", "augparse", "augprint", "augtool", "fadot" },
@@ -599,6 +659,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spicedb",
     .domain = "authzed.com/spicedb",
+    .kind = .cli,
     .description = "Open Source, Google Zanzibar-inspired database for scalably storing and querying fine-grained authorization data",
     .homepage_url = "https://authzed.com/docs",
     .programs = &[_][]const u8{"spicedb"},
@@ -609,6 +670,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aux4",
     .domain = "aux4.io",
+    .kind = .cli,
     .description = "elevate your imagination",
     .homepage_url = "https://aux4.io",
     .programs = &[_][]const u8{"aux4"},
@@ -619,6 +681,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws/cdk",
     .domain = "aws.amazon.com/cdk",
+    .kind = .cli,
     .description = "The AWS Cloud Development Kit is a framework for defining cloud infrastructure in code",
     .homepage_url = "https://aws.amazon.com/cdk",
     .programs = &[_][]const u8{"cdk"},
@@ -629,6 +692,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws/cli",
     .domain = "aws.amazon.com/cli",
+    .kind = .cli,
     .description = "Universal Command Line Interface for Amazon Web Services",
     .homepage_url = "https://aws.amazon.com/cli/",
     .programs = &[_][]const u8{"aws"},
@@ -639,6 +703,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dynamodb-local",
     .domain = "aws.amazon.com/dynamodb-local",
+    .kind = .cli,
     .description = "Amazon DynamoDB Local for development and integration tests",
     .homepage_url = "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.html",
     .programs = &[_][]const u8{"dynamodb-local"},
@@ -649,6 +714,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "q",
     .domain = "aws.amazon.com/q",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"q"},
@@ -659,6 +725,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sam",
     .domain = "aws.amazon.com/sam",
+    .kind = .cli,
     .description = "CLI tool to build, test, debug, and deploy Serverless applications using AWS SAM",
     .homepage_url = "https://aws.amazon.com/serverless/sam/",
     .programs = &[_][]const u8{"sam"},
@@ -669,6 +736,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "session-manager-plugin",
     .domain = "aws.amazon.com/session-manager-plugin",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"session-manager-plugin"},
@@ -679,6 +747,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "babashka",
     .domain = "babashka.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"bb"},
@@ -689,6 +758,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bashly",
     .domain = "bashly.dannyb.co",
+    .kind = .cli,
     .description = "Bash command line framework and CLI generator",
     .homepage_url = "https://bashly.dev",
     .programs = &[_][]const u8{"bashly"},
@@ -699,6 +769,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bcrypt",
     .domain = "bcrypt.sourceforge.net",
+    .kind = .cli,
     .description = "Cross platform file encryption utility using blowfish",
     .homepage_url = "https://bcrypt.sourceforge.net/",
     .programs = &[_][]const u8{"bcrypt"},
@@ -709,6 +780,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ack",
     .domain = "beyondgrep.com",
+    .kind = .cli,
     .description = "ack is a grep-like search tool optimized for source code.",
     .homepage_url = "https://beyondgrep.com/",
     .programs = &[_][]const u8{"ack"},
@@ -719,6 +791,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "biome",
     .domain = "biomejs.dev",
+    .kind = .cli,
     .description = "A toolchain for web projects, aimed to provide functionalities to maintain them. Biome offers formatter and linter, usable via CLI and LSP.",
     .homepage_url = "https://biomejs.dev/",
     .programs = &[_][]const u8{"biome"},
@@ -729,6 +802,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bitcoin",
     .domain = "bitcoin.org",
+    .kind = .cli,
     .description = "Decentralized, peer to peer payment network",
     .homepage_url = "https://bitcoincore.org/",
     .programs = &[_][]const u8{ "bitcoin-cli", "bitcoin-tx", "bitcoin-util", "bitcoin-wallet", "bitcoind" },
@@ -739,6 +813,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Bittensor",
     .domain = "bittensor.com",
+    .kind = .library,
     .description = "Internet-scale Neural Networks",
     .homepage_url = "https://www.bittensor.com/",
     .programs = &[_][]const u8{},
@@ -749,6 +824,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bw",
     .domain = "bitwarden.com",
+    .kind = .app,
     .description = "Secure and free password manager for all of your devices",
     .homepage_url = "https://bitwarden.com/",
     .programs = &[_][]const u8{"bw"},
@@ -759,6 +835,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libb2",
     .domain = "blake2.net/libb2",
+    .kind = .library,
     .description = "C library providing BLAKE2b, BLAKE2s, BLAKE2bp, BLAKE2sp",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -769,6 +846,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Blender",
     .domain = "blender.org",
+    .kind = .app,
     .description = "A free and open-source 3D creation suite.",
     .homepage_url = "https://blender.org",
     .programs = &[_][]const u8{"blender"},
@@ -779,6 +857,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "s4cmd",
     .domain = "bloomreach.com/s4cmd",
+    .kind = .cli,
     .description = "Super S3 command line tool",
     .homepage_url = null,
     .programs = &[_][]const u8{"s4cmd"},
@@ -789,6 +868,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "boost",
     .domain = "boost.org",
+    .kind = .library,
     .description = "Super-project for modularized Boost",
     .homepage_url = "https://github.com/boostorg/wiki/wiki/Getting-Started%3A-Overview",
     .programs = &[_][]const u8{},
@@ -799,6 +879,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bore",
     .domain = "bore.pub",
+    .kind = .cli,
     .description = "Modern, simple TCP tunnel in Rust that exposes local ports to a remote server",
     .homepage_url = "http://bore.pub",
     .programs = &[_][]const u8{"bore"},
@@ -809,6 +890,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "borg",
     .domain = "borgbackup.org",
+    .kind = .cli,
     .description = "Deduplicating archiver with compression and authenticated encryption.",
     .homepage_url = "https://www.borgbackup.org/",
     .programs = &[_][]const u8{ "borg", "borgfs" },
@@ -819,6 +901,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Brave Browser",
     .domain = "brave.com",
+    .kind = .app,
     .description = "A privacy-focused web browser that blocks ads and trackers.",
     .homepage_url = "https://brave.com",
     .programs = &[_][]const u8{"brave"},
@@ -829,6 +912,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rubberband",
     .domain = "breakfastquay.com/rubberband",
+    .kind = .cli,
     .description = "Audio time stretcher tool and library",
     .homepage_url = "https://breakfastquay.com/rubberband/",
     .programs = &[_][]const u8{"rubberband"},
@@ -839,6 +923,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "browser-use",
     .domain = "browser-use.com",
+    .kind = .library,
     .description = "Make websites accessible for AI agents",
     .homepage_url = "https://browser-use.com/",
     .programs = &[_][]const u8{},
@@ -849,6 +934,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Bruno",
     .domain = "bruno.app",
+    .kind = .app,
     .description = "A fast and Git-friendly open-source API client.",
     .homepage_url = "https://usebruno.com",
     .programs = &[_][]const u8{"bruno"},
@@ -859,6 +945,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dexios",
     .domain = "brxken128.github.io/dexios",
+    .kind = .cli,
     .description = "A secure file encryption utility, written in Rust.",
     .homepage_url = "https://brxken128.github.io/dexios/",
     .programs = &[_][]const u8{"dexios"},
@@ -869,6 +956,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "buddy",
     .domain = "buddy.sh",
+    .kind = .cli,
     .description = "AI code review and dependency updates in one teammate — reviews pull requests and local changes, gates merges, repairs CI, and keeps dependencies current",
     .homepage_url = "https://buddy.sh",
     .programs = &[_][]const u8{"buddy"},
@@ -879,6 +967,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "talhelper",
     .domain = "budimanjojo.github.io/talhelper",
+    .kind = .cli,
     .description = "A tool to help creating Talos kubernetes cluster",
     .homepage_url = "https://budimanjojo.github.io/talhelper/latest/",
     .programs = &[_][]const u8{"talhelper"},
@@ -889,6 +978,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "buf",
     .domain = "buf.build",
+    .kind = .cli,
     .description = "The best way of working with Protocol Buffers.",
     .homepage_url = "https://buf.build",
     .programs = &[_][]const u8{"buf"},
@@ -899,6 +989,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pack",
     .domain = "buildpacks.io",
+    .kind = .cli,
     .description = "CLI for building apps using Cloud Native Buildpacks",
     .homepage_url = "https://buildpacks.io",
     .programs = &[_][]const u8{"pack"},
@@ -909,6 +1000,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bun",
     .domain = "bun.com",
+    .kind = .cli,
     .description = "Incredibly fast JavaScript runtime, bundler, test runner, and package manager – all in one",
     .homepage_url = "https://bun.com",
     .programs = if (@import("builtin").os.tag == .windows) &[_][]const u8{"bun.exe"} else &[_][]const u8{ "bun", "bunx" },
@@ -919,6 +1011,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bun-profile",
     .domain = "bun.com/profile",
+    .kind = .cli,
     .description = "Official Bun profiling runtime with its native ELF symbols preserved.",
     .homepage_url = "https://bun.com",
     .programs = &[_][]const u8{"bun-profile"},
@@ -929,6 +1022,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bytebase",
     .domain = "bytebase.com",
+    .kind = .cli,
     .description = "World's most advanced database DevSecOps solution for Developer, Security, DBA and Platform Engineering teams. The GitHub/GitLab for database DevSecOps.",
     .homepage_url = "https://www.bytebase.com",
     .programs = &[_][]const u8{"bytebase"},
@@ -939,6 +1033,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mpdecimal",
     .domain = "bytereef.org/mpdecimal",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -949,6 +1044,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "c-ares",
     .domain = "c-ares.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -959,6 +1055,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "caddy",
     .domain = "caddyserver.com",
+    .kind = .cli,
     .description = "Fast and extensible multi-platform HTTP/1-2-3 web server with automatic HTTPS",
     .homepage_url = "https://caddyserver.com/",
     .programs = &[_][]const u8{"caddy"},
@@ -969,6 +1066,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cairo-trace",
     .domain = "cairographics.org",
+    .kind = .cli,
     .description = "Vector graphics library with cross-device output support",
     .homepage_url = "https://cairographics.org/",
     .programs = &[_][]const u8{"cairo-trace"},
@@ -979,6 +1077,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pycairo",
     .domain = "cairographics.org/pycairo",
+    .kind = .library,
     .description = "Python bindings for cairo",
     .homepage_url = "https://pycairo.readthedocs.io",
     .programs = &[_][]const u8{},
@@ -989,6 +1088,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "capnproto",
     .domain = "capnproto.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "capnp", "capnpc", "capnpc-c++", "capnpc-capnp" },
@@ -999,6 +1099,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cstool",
     .domain = "capstone-engine.org",
+    .kind = .cli,
     .description = "Capstone disassembly/disassembler framework for ARM, ARM64 (ARMv8), Alpha, BPF, Ethereum VM, HPPA, LoongArch, M68K, M680X, Mips, MOS65XX, PPC, RISC-V(rv32G/rv64G), SH, Sparc, SystemZ, TMS320C64X, TriCore, Webassembly, XCore and X86.",
     .homepage_url = "https://www.capstone-engine.org/",
     .programs = &[_][]const u8{"cstool"},
@@ -1009,6 +1110,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "carapace",
     .domain = "carapace.sh",
+    .kind = .cli,
     .description = "Multi-shell multi-command argument completer",
     .homepage_url = "https://carapace.sh",
     .programs = &[_][]const u8{"carapace"},
@@ -1019,6 +1121,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Cascadia Code",
     .domain = "cascadia-code",
+    .kind = .font,
     .description = "Microsofts monospaced coding font.",
     .homepage_url = "https://github.com/microsoft/cascadia-code",
     .programs = &[_][]const u8{},
@@ -1029,6 +1132,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "casdoor",
     .domain = "casdoor.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"casdoor"},
@@ -1039,6 +1143,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cask",
     .domain = "cask.readthedocs.io",
+    .kind = .cli,
     .description = "Project management tool for Emacs",
     .homepage_url = "https://cask.readthedocs.io/",
     .programs = &[_][]const u8{"cask"},
@@ -1049,6 +1154,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cassandra",
     .domain = "cassandra.apache.org",
+    .kind = .cli,
     .description = "Apache Cassandra wide-column distributed database",
     .homepage_url = "https://cassandra.apache.org",
     .programs = &[_][]const u8{ "cassandra", "nodetool", "cqlsh" },
@@ -1059,6 +1165,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wumpus",
     .domain = "catb.org/wumpus",
+    .kind = .cli,
     .description = "Exact clone of the ancient BASIC Hunt the Wumpus game",
     .homepage_url = "http://www.catb.org/~esr/wumpus/",
     .programs = &[_][]const u8{ "wumpus", "superhack" },
@@ -1069,6 +1176,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ccache",
     .domain = "ccache.dev",
+    .kind = .cli,
     .description = "Object-file caching compiler wrapper",
     .homepage_url = "https://ccache.dev/",
     .programs = &[_][]const u8{"ccache"},
@@ -1079,6 +1187,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cedar",
     .domain = "cedarpolicy.com/cli",
+    .kind = .cli,
     .description = "Implementation of the Cedar Policy Language",
     .homepage_url = "https://www.cedarpolicy.com",
     .programs = &[_][]const u8{"cedar"},
@@ -1089,6 +1198,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cephadm",
     .domain = "ceph.com/cephadm",
+    .kind = .cli,
     .description = "Ceph is a distributed object, block, and file storage platform ",
     .homepage_url = "https://ceph.io",
     .programs = &[_][]const u8{"cephadm"},
@@ -1099,6 +1209,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ceres-solver",
     .domain = "ceres-solver.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -1109,6 +1220,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "certbot",
     .domain = "certbot.eff.org",
+    .kind = .cli,
     .description = "Certbot is EFF's tool to obtain certs from Let's Encrypt and (optionally) auto-enable HTTPS on your server.  It can also act as a client for any other CA that uses the ACME protocol.",
     .homepage_url = "https://certbot.eff.org/",
     .programs = &[_][]const u8{"certbot"},
@@ -1119,6 +1231,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "python-certifi",
     .domain = "certifi.io/python-certifi",
+    .kind = .library,
     .description = "(Python Distribution) A carefully curated collection of Root Certificates for validating the trustworthiness of SSL certificates while verifying the identity of TLS hosts.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -1129,6 +1242,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cfssl",
     .domain = "cfssl.org",
+    .kind = .cli,
     .description = "CFSSL: Cloudflare's PKI and TLS toolkit",
     .homepage_url = "https://cfssl.org/",
     .programs = &[_][]const u8{ "cfssl", "cfssl-bundle", "cfssl-certinfo", "cfssl-newkey", "cfssl-scan", "cfssljson", "mkbundle", "multirootca" },
@@ -1139,6 +1253,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cgal",
     .domain = "cgal.org",
+    .kind = .cli,
     .description = "The public CGAL repository, see the README below",
     .homepage_url = "https://github.com/CGAL/cgal#readme",
     .programs = &[_][]const u8{ "cgal_create_CMakeLists", "cgal_create_cmake_script", "cgal_make_macosx_app" },
@@ -1149,6 +1264,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "changie",
     .domain = "changie.dev",
+    .kind = .cli,
     .description = "Automated changelog tool for preparing releases with lots of customization options",
     .homepage_url = "https://changie.dev/",
     .programs = &[_][]const u8{"changie"},
@@ -1159,6 +1275,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "crush",
     .domain = "charm.sh/crush",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"crush"},
@@ -1169,6 +1286,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "freeze",
     .domain = "charm.sh/freeze",
+    .kind = .cli,
     .description = "Generate images of code and terminal output 📸",
     .homepage_url = null,
     .programs = &[_][]const u8{"freeze"},
@@ -1179,6 +1297,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glow",
     .domain = "charm.sh/glow",
+    .kind = .cli,
     .description = "Render markdown on the CLI, with pizzazz! 💅🏻",
     .homepage_url = null,
     .programs = &[_][]const u8{"glow"},
@@ -1189,6 +1308,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gum",
     .domain = "charm.sh/gum",
+    .kind = .cli,
     .description = "A tool for glamorous shell scripts 🎀",
     .homepage_url = null,
     .programs = &[_][]const u8{"gum"},
@@ -1199,6 +1319,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "melt",
     .domain = "charm.sh/melt",
+    .kind = .cli,
     .description = "Author, manage, and run multitrack audio/video compositions",
     .homepage_url = "https://www.mltframework.org/",
     .programs = &[_][]const u8{"melt"},
@@ -1209,6 +1330,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mods",
     .domain = "charm.sh/mods",
+    .kind = .cli,
     .description = "AI on the command line",
     .homepage_url = null,
     .programs = &[_][]const u8{"mods"},
@@ -1219,6 +1341,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pop",
     .domain = "charm.sh/pop",
+    .kind = .cli,
     .description = "Send emails from your terminal 📬",
     .homepage_url = null,
     .programs = &[_][]const u8{"pop"},
@@ -1229,6 +1352,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "skate",
     .domain = "charm.sh/skate",
+    .kind = .cli,
     .description = "A personal key value store 🛼",
     .homepage_url = null,
     .programs = &[_][]const u8{"skate"},
@@ -1239,6 +1363,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vhs",
     .domain = "charm.sh/vhs",
+    .kind = .cli,
     .description = "Your CLI home video recorder 📼",
     .homepage_url = null,
     .programs = &[_][]const u8{"vhs"},
@@ -1249,6 +1374,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "checkov",
     .domain = "checkov.io",
+    .kind = .cli,
     .description = "Prevent cloud misconfigurations and find vulnerabilities during build-time in infrastructure as code, container images and open source packages with Checkov by Bridgecrew.",
     .homepage_url = "https://www.checkov.io/",
     .programs = &[_][]const u8{"checkov"},
@@ -1259,6 +1385,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "chezmoi",
     .domain = "chezmoi.io",
+    .kind = .cli,
     .description = "Manage your dotfiles across multiple diverse machines, securely.",
     .homepage_url = "https://chezmoi.io/",
     .programs = &[_][]const u8{"chezmoi"},
@@ -1269,6 +1396,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "halibut",
     .domain = "chiark.greenend.org.uk/halibut",
+    .kind = .cli,
     .description = "Yet another free document preparation system",
     .homepage_url = "https://www.chiark.greenend.org.uk/~sgtatham/halibut/",
     .programs = &[_][]const u8{"halibut"},
@@ -1279,6 +1407,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "putty",
     .domain = "chiark.greenend.org.uk/putty",
+    .kind = .cli,
     .description = "Implementation of Telnet and SSH",
     .homepage_url = "https://www.chiark.greenend.org.uk/~sgtatham/putty/",
     .programs = &[_][]const u8{ "pageant", "plink", "pscp", "psftp", "psusan", "puttygen" },
@@ -1289,6 +1418,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "puzzles",
     .domain = "chiark.greenend.org.uk/puzzles",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "puzzles", "blackbox", "bridges", "cube", "dominosa", "fifteen", "filling", "flip", "flood", "galaxies", "guess", "inertia", "keen", "lightup", "loopy", "magnets", "map", "mines", "mosaic", "net", "netslide", "palisade", "pattern", "pearl", "pegs", "range", "rect", "samegame", "signpost", "singles", "sixteen", "slant", "solo", "tents", "towers", "tracks", "twiddle", "undead", "unequal", "unruly", "untangle" },
@@ -1299,6 +1429,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "chomp",
     .domain = "chompbuild.com",
+    .kind = .cli,
     .description = "'JS Make' - parallel task runner for the frontend ecosystem with a JS extension system.",
     .homepage_url = "https://chompbuild.com",
     .programs = &[_][]const u8{"chomp"},
@@ -1309,6 +1440,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "chromedriver",
     .domain = "chromedriver.chromium.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"chromedriver"},
@@ -1319,6 +1451,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cilium",
     .domain = "cilium.io/cilium",
+    .kind = .cli,
     .description = "CLI to install, manage & troubleshoot Kubernetes clusters running Cilium",
     .homepage_url = "https://cilium.io",
     .programs = &[_][]const u8{"cilium"},
@@ -1329,6 +1462,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hubble",
     .domain = "cilium.io/hubble",
+    .kind = .cli,
     .description = "Hubble - Network, Service & Security Observability for Kubernetes using eBPF",
     .homepage_url = null,
     .programs = &[_][]const u8{"hubble"},
@@ -1339,6 +1473,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "circleci",
     .domain = "circleci.com",
+    .kind = .cli,
     .description = "Enables you to reproduce the CircleCI environment locally",
     .homepage_url = "https://circleci.com/docs/2.0/local-cli/",
     .programs = &[_][]const u8{"circleci"},
@@ -1349,6 +1484,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsrtp",
     .domain = "cisco.com/libsrtp",
+    .kind = .library,
     .description = "Library for SRTP (Secure Realtime Transport Protocol) ",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -1359,6 +1495,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "classic.yarnpkg",
     .domain = "classic.yarnpkg.com",
+    .kind = .cli,
     .description = "The 1.x line is frozen - features and bugfixes now happen on https://github.com/yarnpkg/berry",
     .homepage_url = "https://yarnpkg.com/",
     .programs = &[_][]const u8{ "yarn", "yarnpkg" },
@@ -1369,6 +1506,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "CleanShot X",
     .domain = "cleanshot.com",
+    .kind = .app,
     .description = "A screen capture and recording tool for macOS.",
     .homepage_url = "https://cleanshot.com",
     .programs = &[_][]const u8{"cleanshot"},
@@ -1379,6 +1517,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gh",
     .domain = "cli.github.com",
+    .kind = .cli,
     .description = "GitHub’s official command line tool",
     .homepage_url = "https://cli.github.com/",
     .programs = &[_][]const u8{"gh"},
@@ -1389,6 +1528,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "clisp",
     .domain = "clisp.org",
+    .kind = .cli,
     .description = "GNU CLISP, a Common Lisp implementation",
     .homepage_url = "https://clisp.sourceforge.io/",
     .programs = &[_][]const u8{"clisp"},
@@ -1399,6 +1539,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "clog",
     .domain = "clog-tool.github.io",
+    .kind = .cli,
     .description = "Colorized pattern-matching log tail utility",
     .homepage_url = "https://gothenburgbitfactory.org/clog/docs/",
     .programs = &[_][]const u8{"clog"},
@@ -1409,6 +1550,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cloudflared",
     .domain = "cloudflare.com/cloudflared",
+    .kind = .cli,
     .description = "Cloudflare Tunnel client (formerly Argo Tunnel)",
     .homepage_url = "https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/tunnel-guide",
     .programs = &[_][]const u8{"cloudflared"},
@@ -1419,6 +1561,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cf",
     .domain = "cloudfoundry.org/cf-cli",
+    .kind = .cli,
     .description = "Filter to replace numeric timestamps with a formatted date time",
     .homepage_url = "https://ee.lbl.gov/",
     .programs = &[_][]const u8{"cf"},
@@ -1429,6 +1572,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubectl-cnpg",
     .domain = "cloudnative-pg.io",
+    .kind = .cli,
     .description = "CloudNativePG is a comprehensive platform designed to seamlessly manage PostgreSQL databases within Kubernetes environments, covering the entire operational lifecycle from initial deployment to ongoing maintenance",
     .homepage_url = "https://cloudnative-pg.io/",
     .programs = &[_][]const u8{"kubectl-cnpg"},
@@ -1439,6 +1583,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cmake",
     .domain = "cmake.org",
+    .kind = .cli,
     .description = "Mirror of CMake upstream repository",
     .homepage_url = "https://www.cmake.org/",
     .programs = &[_][]const u8{ "cmake", "ccmake", "cpack", "ctest" },
@@ -1449,6 +1594,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cmocka",
     .domain = "cmocka.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -1459,6 +1605,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cnquery",
     .domain = "cnquery.io",
+    .kind = .cli,
     .description = "open source, cloud-native, graph-based asset inventory",
     .homepage_url = "https://cnquery.io",
     .programs = &[_][]const u8{"cnquery"},
@@ -1469,6 +1616,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pod",
     .domain = "cocoapods.org",
+    .kind = .cli,
     .description = "Dependency manager for Cocoa projects",
     .homepage_url = "https://cocoapods.org/",
     .programs = &[_][]const u8{"pod"},
@@ -1479,6 +1627,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcodeproj",
     .domain = "cocoapods.org/xcodeproj",
+    .kind = .cli,
     .description = "Create and modify Xcode projects from Ruby.",
     .homepage_url = "https://cocoapods.org/",
     .programs = &[_][]const u8{"xcodeproj"},
@@ -1489,6 +1638,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cog",
     .domain = "cocogitto.io",
+    .kind = .cli,
     .description = "The Conventional Commits toolbox",
     .homepage_url = "https://docs.cocogitto.io",
     .programs = &[_][]const u8{"cog"},
@@ -1499,6 +1649,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aribb24",
     .domain = "code.videolan.org/aribb24",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -1509,6 +1660,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rist",
     .domain = "code.videolan.org/rist/librist",
+    .kind = .cli,
     .description = "Reliable Internet Stream Transport (RIST)",
     .homepage_url = "https://code.videolan.org/rist/",
     .programs = &[_][]const u8{ "rist2rist", "ristreceiver", "ristsender", "ristsrppasswd" },
@@ -1519,6 +1671,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dav1d",
     .domain = "code.videolan.org/videolan/dav1d",
+    .kind = .cli,
     .description = "AV1 decoder targeted to be small and fast",
     .homepage_url = "https://code.videolan.org/videolan/dav1d",
     .programs = &[_][]const u8{"dav1d"},
@@ -1529,6 +1682,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Visual Studio Code",
     .domain = "code.visualstudio.com",
+    .kind = .app,
     .description = "A lightweight but powerful source code editor.",
     .homepage_url = "https://code.visualstudio.com",
     .programs = &[_][]const u8{"code"},
@@ -1539,6 +1693,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "coder",
     .domain = "coder.com",
+    .kind = .cli,
     .description = "Tool for provisioning self-hosted development environments with Terraform",
     .homepage_url = "https://coder.com",
     .programs = &[_][]const u8{"coder"},
@@ -1549,6 +1704,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "code-server",
     .domain = "coder.com/code-server",
+    .kind = .cli,
     .description = "Access VS Code through the browser",
     .homepage_url = "https://coder.com",
     .programs = &[_][]const u8{"code-server"},
@@ -1559,6 +1715,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Codex",
     .domain = "codex.openai.com",
+    .kind = .library,
     .description = "OpenAI's Codex desktop app — a command center for the Codex coding agent.",
     .homepage_url = "https://developers.openai.com/codex/app",
     .programs = &[_][]const u8{},
@@ -1569,6 +1726,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cointop",
     .domain = "cointop.sh",
+    .kind = .cli,
     .description = "A fast and lightweight interactive terminal based UI application for tracking cryptocurrencies 🚀",
     .homepage_url = "https://cointop.sh",
     .programs = &[_][]const u8{"cointop"},
@@ -1579,6 +1737,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "conda",
     .domain = "conda.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"conda"},
@@ -1589,6 +1748,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "conftest",
     .domain = "conftest.dev",
+    .kind = .cli,
     .description = "Write tests against structured configuration data using the Open Policy Agent Rego query language",
     .homepage_url = "https://www.conftest.dev/",
     .programs = &[_][]const u8{"conftest"},
@@ -1599,6 +1759,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "protoc-gen-connect-go",
     .domain = "connectrpc.org/protoc-gen-connect-go",
+    .kind = .cli,
     .description = "The Go implementation of Connect: Protobuf RPC that works.",
     .homepage_url = "https://connectrpc.com",
     .programs = &[_][]const u8{"protoc-gen-connect-go"},
@@ -1609,6 +1770,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "consul",
     .domain = "consul.io",
+    .kind = .cli,
     .description = "Consul is a distributed, highly available, and data center aware solution to connect and configure applications across dynamic, distributed infrastructure.",
     .homepage_url = "https://www.consul.io",
     .programs = &[_][]const u8{"consul"},
@@ -1619,6 +1781,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "convco",
     .domain = "convco.github.io",
+    .kind = .cli,
     .description = "Conventional commits, changelog, versioning, validation",
     .homepage_url = "https://convco.github.io",
     .programs = &[_][]const u8{"convco"},
@@ -1629,6 +1792,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "coredns",
     .domain = "coredns.io",
+    .kind = .cli,
     .description = "CoreDNS is a DNS server that chains plugins",
     .homepage_url = "https://coredns.io/",
     .programs = &[_][]const u8{"coredns"},
@@ -1639,6 +1803,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cpanm",
     .domain = "cpanmin.us",
+    .kind = .cli,
     .description = "cpanminus - get, unpack, build and install modules from CPAN ",
     .homepage_url = "http://cpanmin.us",
     .programs = &[_][]const u8{"cpanm"},
@@ -1649,6 +1814,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "daemontools",
     .domain = "cr.yp.to/daemontools",
+    .kind = .cli,
     .description = "Collection of tools for managing UNIX services",
     .homepage_url = "https://cr.yp.to/daemontools.html",
     .programs = &[_][]const u8{ "envdir", "envuidgid", "fghack", "multilog", "pgrphack", "readproctitle", "setlock", "setuidgid", "softlimit", "supervise", "svc", "svok", "svscan", "svscanboot", "svstat", "tai64n", "tai64nlocal" },
@@ -1659,6 +1825,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "craft",
     .domain = "craft-native.org",
+    .kind = .cli,
     .description = "Build desktop apps with web languages, powered by Zig",
     .homepage_url = "https://craft-native.org",
     .programs = &[_][]const u8{"craft"},
@@ -1669,6 +1836,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aichat",
     .domain = "crates.io/aichat",
+    .kind = .cli,
     .description = "All-in-one LLM CLI tool featuring Shell Assistant, Chat-REPL, RAG, AI Tools & Agents, with access to OpenAI, Claude, Gemini, Ollama, Groq, and more.",
     .homepage_url = null,
     .programs = &[_][]const u8{"aichat"},
@@ -1679,6 +1847,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "albionrpg",
     .domain = "crates.io/albion_terminal_rpg",
+    .kind = .cli,
     .description = "A text-based RPG for the Terminal, written in Rust.",
     .homepage_url = null,
     .programs = &[_][]const u8{"albionrpg"},
@@ -1689,6 +1858,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "argc",
     .domain = "crates.io/argc",
+    .kind = .cli,
     .description = "A Bash CLI framework, also a Bash command runner.",
     .homepage_url = null,
     .programs = &[_][]const u8{"argc"},
@@ -1699,6 +1869,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bake",
     .domain = "crates.io/bake-rs",
+    .kind = .cli,
     .description = "Simple and easy to use \"script runner\" written in Rust.",
     .homepage_url = null,
     .programs = &[_][]const u8{"bake"},
@@ -1709,6 +1880,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bartib",
     .domain = "crates.io/bartib",
+    .kind = .cli,
     .description = "A simple timetracker for the command line. It saves a log of all tracked activities as a plaintext file and allows you to create flexible reports.",
     .homepage_url = null,
     .programs = &[_][]const u8{"bartib"},
@@ -1719,6 +1891,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bat",
     .domain = "crates.io/bat",
+    .kind = .cli,
     .description = "Clone of cat(1) with syntax highlighting and Git integration",
     .homepage_url = null,
     .programs = &[_][]const u8{"bat"},
@@ -1729,6 +1902,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "btm",
     .domain = "crates.io/bottom",
+    .kind = .cli,
     .description = "Yet another cross-platform graphical process/system monitor.",
     .homepage_url = "https://clementtsang.github.io/bottom/",
     .programs = &[_][]const u8{"btm"},
@@ -1739,6 +1913,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bpb",
     .domain = "crates.io/bpb",
+    .kind = .cli,
     .description = "boats's personal barricade",
     .homepage_url = null,
     .programs = &[_][]const u8{"bpb"},
@@ -1749,6 +1924,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "broot",
     .domain = "crates.io/broot",
+    .kind = .cli,
     .description = "A new way to see and navigate directory trees : https://dystroy.org/broot",
     .homepage_url = "https://dystroy.org/broot/",
     .programs = &[_][]const u8{"broot"},
@@ -1759,6 +1935,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cargo-binstall",
     .domain = "crates.io/cargo-binstall",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"cargo-binstall"},
@@ -1769,6 +1946,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cargo-tarpaulin",
     .domain = "crates.io/cargo-tarpaulin",
+    .kind = .cli,
     .description = "A code coverage tool for Rust projects",
     .homepage_url = "https://crates.io/crates/cargo-tarpaulin",
     .programs = &[_][]const u8{"cargo-tarpaulin"},
@@ -1779,6 +1957,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cavif",
     .domain = "crates.io/cavif",
+    .kind = .cli,
     .description = "AVIF image creator in pure Rust",
     .homepage_url = "https://lib.rs/cavif",
     .programs = &[_][]const u8{"cavif"},
@@ -1789,6 +1968,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "checkexec",
     .domain = "crates.io/checkexec",
+    .kind = .cli,
     .description = "CLI tool to conditionally execute commands only when files in a dependency list have been updated. Like `make`, but standalone.",
     .homepage_url = null,
     .programs = &[_][]const u8{"checkexec"},
@@ -1799,6 +1979,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "click",
     .domain = "crates.io/click",
+    .kind = .cli,
     .description = "The \"Command Line Interactive Controller for Kubernetes\"",
     .homepage_url = null,
     .programs = &[_][]const u8{"click"},
@@ -1809,6 +1990,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "comrak",
     .domain = "crates.io/comrak",
+    .kind = .cli,
     .description = "CommonMark + GFM compatible Markdown parser and renderer",
     .homepage_url = null,
     .programs = &[_][]const u8{"comrak"},
@@ -1819,6 +2001,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cpz",
     .domain = "crates.io/cpz",
+    .kind = .cli,
     .description = "Modern, performance focused unix commands",
     .homepage_url = null,
     .programs = &[_][]const u8{"cpz"},
@@ -1829,6 +2012,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "craftql",
     .domain = "crates.io/craftql",
+    .kind = .cli,
     .description = "A CLI tool to visualize GraphQL schemas and to output a graph data structure as a graphviz .dot format",
     .homepage_url = null,
     .programs = &[_][]const u8{"craftql"},
@@ -1839,6 +2023,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "csview",
     .domain = "crates.io/csview",
+    .kind = .cli,
     .description = "📠 Pretty and fast csv viewer for cli with cjk/emoji support.",
     .homepage_url = null,
     .programs = &[_][]const u8{"csview"},
@@ -1849,6 +2034,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ddh",
     .domain = "crates.io/ddh",
+    .kind = .cli,
     .description = "A fast duplicate file finder",
     .homepage_url = null,
     .programs = &[_][]const u8{"ddh"},
@@ -1859,6 +2045,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dym",
     .domain = "crates.io/didyoumean",
+    .kind = .cli,
     .description = "A CLI spelling corrector for when you're unsure",
     .homepage_url = null,
     .programs = &[_][]const u8{"dym"},
@@ -1869,6 +2056,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "diskonaut",
     .domain = "crates.io/diskonaut",
+    .kind = .cli,
     .description = "Terminal visual disk space navigator",
     .homepage_url = null,
     .programs = &[_][]const u8{"diskonaut"},
@@ -1879,6 +2067,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "diskus",
     .domain = "crates.io/diskus",
+    .kind = .cli,
     .description = "A minimal, fast alternative to 'du -sh'",
     .homepage_url = null,
     .programs = &[_][]const u8{"diskus"},
@@ -1889,6 +2078,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docuum",
     .domain = "crates.io/docuum",
+    .kind = .cli,
     .description = "Docuum performs least recently used (LRU) eviction of Docker images. 🗑️",
     .homepage_url = null,
     .programs = &[_][]const u8{"docuum"},
@@ -1899,6 +2089,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "drill",
     .domain = "crates.io/drill",
+    .kind = .cli,
     .description = "Drill is an HTTP load testing application written in Rust",
     .homepage_url = null,
     .programs = &[_][]const u8{"drill"},
@@ -1909,6 +2100,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dust",
     .domain = "crates.io/du-dust",
+    .kind = .cli,
     .description = "A more intuitive version of du in rust",
     .homepage_url = null,
     .programs = &[_][]const u8{"dust"},
@@ -1919,6 +2111,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dua",
     .domain = "crates.io/dua",
+    .kind = .cli,
     .description = "View disk space usage and delete unwanted data, fast.",
     .homepage_url = "https://lib.rs/crates/dua-cli",
     .programs = &[_][]const u8{"dua"},
@@ -1929,6 +2122,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ducker",
     .domain = "crates.io/ducker",
+    .kind = .cli,
     .description = "A slightly quackers Docker TUI based on k9s 🦆",
     .homepage_url = "https://crates.io/crates/ducker",
     .programs = &[_][]const u8{"ducker"},
@@ -1939,6 +2133,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eb",
     .domain = "crates.io/eb",
+    .kind = .cli,
     .description = "Client for Amazon Elastic Beanstalk web service",
     .homepage_url = "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3.html",
     .programs = &[_][]const u8{"eb"},
@@ -1949,6 +2144,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eureka",
     .domain = "crates.io/eureka",
+    .kind = .cli,
     .description = "💡 CLI tool to input and store your ideas without leaving the terminal",
     .homepage_url = null,
     .programs = &[_][]const u8{"eureka"},
@@ -1959,6 +2155,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "exa",
     .domain = "crates.io/exa",
+    .kind = .cli,
     .description = "A modern replacement for ‘ls’.",
     .homepage_url = "https://the.exa.website/",
     .programs = &[_][]const u8{"exa"},
@@ -1969,6 +2166,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eza",
     .domain = "crates.io/eza",
+    .kind = .cli,
     .description = "Modern, maintained replacement for ls",
     .homepage_url = "https://eza.rocks",
     .programs = &[_][]const u8{"eza"},
@@ -1979,6 +2177,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fblog",
     .domain = "crates.io/fblog",
+    .kind = .cli,
     .description = "Small command-line JSON Log viewer",
     .homepage_url = null,
     .programs = &[_][]const u8{"fblog"},
@@ -1989,6 +2188,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fd",
     .domain = "crates.io/fd-find",
+    .kind = .cli,
     .description = "A simple, fast and user-friendly alternative to 'find'",
     .homepage_url = null,
     .programs = &[_][]const u8{"fd"},
@@ -1999,6 +2199,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flamegraph",
     .domain = "crates.io/flamegraph",
+    .kind = .cli,
     .description = "Easy flamegraphs for Rust projects and everything else, without Perl or pipes <3",
     .homepage_url = null,
     .programs = &[_][]const u8{ "flamegraph", "cargo-flamegraph" },
@@ -2009,6 +2210,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fnm",
     .domain = "crates.io/fnm",
+    .kind = .cli,
     .description = "🚀 Fast and simple Node.js version manager, built in Rust",
     .homepage_url = "https://fnm.vercel.app",
     .programs = &[_][]const u8{"fnm"},
@@ -2019,6 +2221,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fselect",
     .domain = "crates.io/fselect",
+    .kind = .cli,
     .description = "Find files with SQL-like queries",
     .homepage_url = "https://fselect.rocks",
     .programs = &[_][]const u8{"fselect"},
@@ -2029,6 +2232,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fsrx",
     .domain = "crates.io/fsrx",
+    .kind = .cli,
     .description = "📚 flow state reading in the terminal",
     .homepage_url = null,
     .programs = &[_][]const u8{"fsrx"},
@@ -2039,6 +2243,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "get-blessed",
     .domain = "crates.io/get-blessed",
+    .kind = .cli,
     .description = "Terminal tool to get you the best crates for your rust projects, curated by blessed.rs ",
     .homepage_url = "https://crates.io/crates/get-blessed",
     .programs = &[_][]const u8{"get-blessed"},
@@ -2049,6 +2254,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-absorb",
     .domain = "crates.io/git-absorb",
+    .kind = .cli,
     .description = "git commit --fixup, but automatic",
     .homepage_url = "https://crates.io/crates/git-absorb",
     .programs = &[_][]const u8{"git-absorb"},
@@ -2059,6 +2265,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-branchless",
     .domain = "crates.io/git-branchless",
+    .kind = .cli,
     .description = "High-velocity, monorepo-scale workflow for Git",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-branchless"},
@@ -2069,6 +2276,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "delta",
     .domain = "crates.io/git-delta",
+    .kind = .cli,
     .description = "A syntax-highlighting pager for git, diff, grep, and blame output",
     .homepage_url = "https://dandavison.github.io/delta/",
     .programs = &[_][]const u8{"delta"},
@@ -2079,6 +2287,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-gone",
     .domain = "crates.io/git-gone",
+    .kind = .cli,
     .description = "Cleanup stale Git branches of pull requests",
     .homepage_url = "https://crates.io/crates/git-gone",
     .programs = &[_][]const u8{"git-gone"},
@@ -2089,6 +2298,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-grab",
     .domain = "crates.io/git-grab",
+    .kind = .cli,
     .description = "Clone a git repository into a standard location organised by domain and path.",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-grab"},
@@ -2099,6 +2309,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-tidy",
     .domain = "crates.io/git-tidy",
+    .kind = .cli,
     .description = "Tidy up stale git branches.",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-tidy"},
@@ -2109,6 +2320,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-trim",
     .domain = "crates.io/git-trim",
+    .kind = .cli,
     .description = "Automatically trims your branches whose tracking remote refs are merged or stray",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-trim"},
@@ -2119,6 +2331,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitopolis",
     .domain = "crates.io/gitopolis",
+    .kind = .cli,
     .description = "Manage multiple git repositories",
     .homepage_url = null,
     .programs = &[_][]const u8{"gitopolis"},
@@ -2129,6 +2342,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitu",
     .domain = "crates.io/gitu",
+    .kind = .cli,
     .description = "A TUI Git client inspired by Magit",
     .homepage_url = null,
     .programs = &[_][]const u8{"gitu"},
@@ -2139,6 +2353,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitui",
     .domain = "crates.io/gitui",
+    .kind = .cli,
     .description = "Blazing 💥 fast terminal-ui for git written in rust 🦀",
     .homepage_url = null,
     .programs = &[_][]const u8{"gitui"},
@@ -2149,6 +2364,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitweb",
     .domain = "crates.io/gitweb",
+    .kind = .cli,
     .description = "🌲 Open the current remote repository in your browser",
     .homepage_url = null,
     .programs = &[_][]const u8{"gitweb"},
@@ -2159,6 +2375,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hac",
     .domain = "crates.io/hac-client",
+    .kind = .cli,
     .description = "A terminal API Client that comes in handy. // Lightweight alternative to postman",
     .homepage_url = null,
     .programs = &[_][]const u8{"hac"},
@@ -2169,6 +2386,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "huniq",
     .domain = "crates.io/huniq",
+    .kind = .cli,
     .description = "Filter out duplicates on the command line. Replacement for `sort | uniq` optimized for speed (10x faster) when sorting is not needed.",
     .homepage_url = null,
     .programs = &[_][]const u8{"huniq"},
@@ -2179,6 +2397,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hyperfine",
     .domain = "crates.io/hyperfine",
+    .kind = .cli,
     .description = "A command-line benchmarking tool",
     .homepage_url = null,
     .programs = &[_][]const u8{"hyperfine"},
@@ -2189,6 +2408,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "imessage-exporter",
     .domain = "crates.io/imessage-exporter",
+    .kind = .cli,
     .description = "Command-line tool to export and inspect local iMessage database",
     .homepage_url = null,
     .programs = &[_][]const u8{"imessage-exporter"},
@@ -2199,6 +2419,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jnv",
     .domain = "crates.io/jnv",
+    .kind = .cli,
     .description = "Interactive JSON filter using jq",
     .homepage_url = null,
     .programs = &[_][]const u8{"jnv"},
@@ -2209,6 +2430,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "joshuto",
     .domain = "crates.io/joshuto",
+    .kind = .cli,
     .description = "ranger-like terminal file manager written in Rust",
     .homepage_url = "https://crates.io/crates/joshuto",
     .programs = &[_][]const u8{"joshuto"},
@@ -2219,6 +2441,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jwt",
     .domain = "crates.io/jwt-cli",
+    .kind = .cli,
     .description = "A super fast CLI tool to decode and encode JWTs built in Rust",
     .homepage_url = null,
     .programs = &[_][]const u8{"jwt"},
@@ -2229,6 +2452,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kaspa-miner",
     .domain = "crates.io/kaspa-miner",
+    .kind = .cli,
     .description = "A fast CPU miner for Kaspa",
     .homepage_url = null,
     .programs = &[_][]const u8{"kaspa-miner"},
@@ -2239,6 +2463,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "killport",
     .domain = "crates.io/killport",
+    .kind = .cli,
     .description = "A command-line tool to easily kill processes running on a specified port.",
     .homepage_url = null,
     .programs = &[_][]const u8{"killport"},
@@ -2249,6 +2474,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubie",
     .domain = "crates.io/kubie",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"kubie"},
@@ -2259,6 +2485,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "licensor",
     .domain = "crates.io/licensor",
+    .kind = .cli,
     .description = "write licenses to stdout",
     .homepage_url = null,
     .programs = &[_][]const u8{"licensor"},
@@ -2269,6 +2496,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lighthouse",
     .domain = "crates.io/lighthouse",
+    .kind = .cli,
     .description = "Ethereum consensus client in Rust",
     .homepage_url = "https://lighthouse.sigmaprime.io/",
     .programs = &[_][]const u8{"lighthouse"},
@@ -2279,6 +2507,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mask",
     .domain = "crates.io/mask",
+    .kind = .cli,
     .description = "🎭 A CLI task runner defined by a simple markdown file",
     .homepage_url = null,
     .programs = &[_][]const u8{"mask"},
@@ -2289,6 +2518,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "md-tui",
     .domain = "crates.io/md-tui",
+    .kind = .cli,
     .description = "Markdown renderer in the terminal",
     .homepage_url = null,
     .programs = &[_][]const u8{ "mdt", "md-tui" },
@@ -2299,6 +2529,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mdcat",
     .domain = "crates.io/mdcat",
+    .kind = .cli,
     .description = "Show markdown documents on text terminals",
     .homepage_url = "https://crates.io/crates/mdcat",
     .programs = &[_][]const u8{"mdcat"},
@@ -2309,6 +2540,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mprocs",
     .domain = "crates.io/mprocs",
+    .kind = .cli,
     .description = "Run multiple commands in parallel",
     .homepage_url = null,
     .programs = &[_][]const u8{"mprocs"},
@@ -2319,6 +2551,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "names",
     .domain = "crates.io/names",
+    .kind = .cli,
     .description = "Random name generator for Rust",
     .homepage_url = null,
     .programs = &[_][]const u8{"names"},
@@ -2329,6 +2562,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "omekasy",
     .domain = "crates.io/omekasy",
+    .kind = .cli,
     .description = "𝘾𝙤𝙢𝙢𝙖𝙣𝙙 𝙡𝙞𝙣𝙚 𝙖𝙥𝙥𝙡𝙞𝙘𝙖𝙩𝙞𝙤𝙣 𝕥𝕙𝕒𝕥 𝕔𝕠𝕟𝕧𝕖𝕣𝕥𝕤 𝕒𝕝𝕡𝕙𝕒𝕟𝕦𝕞𝕖𝕣𝕚𝕔 𝕔𝕙𝕒𝕣𝕒𝕔𝕥𝕖𝕣𝕤 𝒕𝒐 𝒗𝒂𝒓𝒊𝒐𝒖𝒔 𝒔𝒕𝒚𝒍𝒆𝒔 𝚍𝚎𝚏𝚒𝚗𝚎𝚍 𝚒𝚗 𝚄𝚗𝚒𝚌𝚘𝚍𝚎.",
     .homepage_url = null,
     .programs = &[_][]const u8{"omekasy"},
@@ -2339,6 +2573,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ox",
     .domain = "crates.io/ox",
+    .kind = .cli,
     .description = "Independent Rust text editor that runs in your terminal",
     .homepage_url = null,
     .programs = &[_][]const u8{"ox"},
@@ -2349,6 +2584,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pastel",
     .domain = "crates.io/pastel",
+    .kind = .cli,
     .description = "A command-line tool to generate, analyze, convert and manipulate colors",
     .homepage_url = null,
     .programs = &[_][]const u8{"pastel"},
@@ -2359,6 +2595,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pgen",
     .domain = "crates.io/pgen",
+    .kind = .cli,
     .description = "Command-line passphrase generator",
     .homepage_url = null,
     .programs = &[_][]const u8{"pgen"},
@@ -2369,6 +2606,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pier",
     .domain = "crates.io/pier",
+    .kind = .cli,
     .description = "A Linux script management CLI written in Rust",
     .homepage_url = null,
     .programs = &[_][]const u8{"pier"},
@@ -2379,6 +2617,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pik",
     .domain = "crates.io/pik",
+    .kind = .cli,
     .description = "Process Interactive Kill",
     .homepage_url = "https://crates.io/crates/pik",
     .programs = &[_][]const u8{"pik"},
@@ -2389,6 +2628,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "portfolio_rs",
     .domain = "crates.io/portfolio_rs",
+    .kind = .cli,
     .description = "A command line tool for managing financial investment portfolios.",
     .homepage_url = "https://crates.io/crates/portfolio_rs",
     .programs = &[_][]const u8{"portfolio_rs"},
@@ -2399,6 +2639,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pqrs",
     .domain = "crates.io/pqrs",
+    .kind = .cli,
     .description = "Command line tool for inspecting Parquet files",
     .homepage_url = null,
     .programs = &[_][]const u8{"pqrs"},
@@ -2409,6 +2650,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pueue",
     .domain = "crates.io/pueue",
+    .kind = .cli,
     .description = "Command-line tool for managing long-running shell commands",
     .homepage_url = null,
     .programs = &[_][]const u8{ "pueue", "pueued" },
@@ -2419,6 +2661,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pushenv",
     .domain = "crates.io/pushenv",
+    .kind = .cli,
     .description = "A CLI utility that reads a .env file before starting a process",
     .homepage_url = "https://crates.io/crates/pushenv",
     .programs = &[_][]const u8{"pushenv"},
@@ -2429,6 +2672,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "qsv",
     .domain = "crates.io/qsv",
+    .kind = .cli,
     .description = "Ultra-fast CSV data-wrangling toolkit",
     .homepage_url = "https://qsv.dathere.com",
     .programs = &[_][]const u8{"qsv"},
@@ -2439,6 +2683,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rage",
     .domain = "crates.io/rage",
+    .kind = .cli,
     .description = "A simple, secure and modern file encryption tool (and Rust library) with small explicit keys, no config options, and UNIX-style composability.",
     .homepage_url = "https://str4d.xyz/rage",
     .programs = &[_][]const u8{ "rage", "rage-keygen" },
@@ -2449,6 +2694,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rg",
     .domain = "crates.io/ripgrep",
+    .kind = .cli,
     .description = "ripgrep recursively searches directories for a regex pattern while respecting your gitignore",
     .homepage_url = null,
     .programs = &[_][]const u8{"rg"},
@@ -2459,6 +2705,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rga",
     .domain = "crates.io/ripgrep-all",
+    .kind = .cli,
     .description = "rga: ripgrep, but also search in PDFs, E-Books, Office documents, zip, tar.gz, etc.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "rga", "rga-fzf", "rga-fzf-open", "rga-preproc" },
@@ -2469,6 +2716,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rmz",
     .domain = "crates.io/rmz",
+    .kind = .cli,
     .description = "Modern, performance focused unix commands",
     .homepage_url = null,
     .programs = &[_][]const u8{"rmz"},
@@ -2479,6 +2727,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rpg-cli",
     .domain = "crates.io/rpg-cli",
+    .kind = .cli,
     .description = "Your filesystem as a dungeon!",
     .homepage_url = "https://olano.dev/blog/deconstructing-the-role-playing-videogame/",
     .programs = &[_][]const u8{"rpg-cli"},
@@ -2489,6 +2738,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rtx-cli",
     .domain = "crates.io/rtx-cli",
+    .kind = .cli,
     .description = "dev tools, env vars, task runner",
     .homepage_url = "https://mise.jdx.dev",
     .programs = &[_][]const u8{ "mise", "rtx" },
@@ -2499,6 +2749,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rucola",
     .domain = "crates.io/rucola-notes",
+    .kind = .cli,
     .description = "Terminal-based markdown note manager.",
     .homepage_url = null,
     .programs = &[_][]const u8{"rucola"},
@@ -2509,6 +2760,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rust-kanban",
     .domain = "crates.io/rust-kanban",
+    .kind = .cli,
     .description = "A kanban board for the terminal built with ❤️ in Rust",
     .homepage_url = "https://crates.io/crates/rust-kanban",
     .programs = &[_][]const u8{"rust-kanban"},
@@ -2519,6 +2771,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rustls-ffi",
     .domain = "crates.io/rustls-ffi",
+    .kind = .library,
     .description = "Use Rustls from any language",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -2529,6 +2782,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "samply",
     .domain = "crates.io/samply",
+    .kind = .cli,
     .description = "Command-line sampling profiler for macOS, Linux, and Windows",
     .homepage_url = null,
     .programs = &[_][]const u8{"samply"},
@@ -2539,6 +2793,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sanitize",
     .domain = "crates.io/sanitize",
+    .kind = .cli,
     .description = "A simple directory sanitizer, written in rust.",
     .homepage_url = null,
     .programs = &[_][]const u8{"sanitize"},
@@ -2549,6 +2804,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sccache",
     .domain = "crates.io/sccache",
+    .kind = .cli,
     .description = "Sccache is a ccache-like tool. It is used as a compiler wrapper and avoids compilation when possible. Sccache has the capability to utilize caching in remote storage environments, including various cloud storage options, or alternatively, in local storage.",
     .homepage_url = null,
     .programs = &[_][]const u8{"sccache"},
@@ -2559,6 +2815,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sd",
     .domain = "crates.io/sd",
+    .kind = .cli,
     .description = "Intuitive find & replace CLI (sed alternative)",
     .homepage_url = null,
     .programs = &[_][]const u8{"sd"},
@@ -2569,6 +2826,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "semverator",
     .domain = "crates.io/semverator",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"semverator"},
@@ -2579,6 +2837,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sig",
     .domain = "crates.io/sigrs",
+    .kind = .cli,
     .description = "Interactive grep (for streaming)",
     .homepage_url = null,
     .programs = &[_][]const u8{"sig"},
@@ -2589,6 +2848,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "silicon",
     .domain = "crates.io/silicon",
+    .kind = .cli,
     .description = "Create beautiful image of your source code.",
     .homepage_url = null,
     .programs = &[_][]const u8{"silicon"},
@@ -2599,6 +2859,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sk",
     .domain = "crates.io/skim",
+    .kind = .cli,
     .description = "Fuzzy Finder in rust!",
     .homepage_url = null,
     .programs = &[_][]const u8{"sk"},
@@ -2609,6 +2870,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sleek",
     .domain = "crates.io/sleek",
+    .kind = .cli,
     .description = "Sleek is a CLI tool for formatting SQL. It helps you maintain a consistent style across your SQL code, enhancing readability and productivity.",
     .homepage_url = null,
     .programs = &[_][]const u8{"sleek"},
@@ -2619,6 +2881,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spider",
     .domain = "crates.io/spider_cli",
+    .kind = .cli,
     .description = "A web crawler and scraper for Rust",
     .homepage_url = "https://spider.cloud",
     .programs = &[_][]const u8{"spider"},
@@ -2629,6 +2892,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spotify_player",
     .domain = "crates.io/spotify_player",
+    .kind = .cli,
     .description = "A Spotify player in the terminal with full feature parity",
     .homepage_url = null,
     .programs = &[_][]const u8{"spotify_player"},
@@ -2639,6 +2903,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sqlx-cli",
     .domain = "crates.io/sqlx-cli",
+    .kind = .cli,
     .description = "🧰 The Rust SQL Toolkit. An async, pure Rust SQL crate featuring compile-time checked queries without a DSL. Supports PostgreSQL, MySQL, and SQLite.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "cargo-sqlx", "sqlx" },
@@ -2649,6 +2914,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "srgn",
     .domain = "crates.io/srgn",
+    .kind = .cli,
     .description = "A grep-like tool which understands source code syntax and allows for manipulation in addition to search",
     .homepage_url = "https://crates.io/crates/srgn/",
     .programs = &[_][]const u8{"srgn"},
@@ -2659,6 +2925,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "stego",
     .domain = "crates.io/stego",
+    .kind = .cli,
     .description = "🦕 stego is a steganographic swiss army knife.",
     .homepage_url = null,
     .programs = &[_][]const u8{"stego"},
@@ -2669,6 +2936,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tw",
     .domain = "crates.io/tabiew",
+    .kind = .cli,
     .description = "A lightweight TUI application to view and query tabular data files, such as CSV, TSV, and parquet.",
     .homepage_url = null,
     .programs = &[_][]const u8{"tw"},
@@ -2679,6 +2947,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tea-gpg-wallet",
     .domain = "crates.io/tea-gpg-wallet",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"tea-gpg-wallet"},
@@ -2689,6 +2958,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "termusic",
     .domain = "crates.io/termusic",
+    .kind = .cli,
     .description = "Music Player TUI written in Rust",
     .homepage_url = null,
     .programs = &[_][]const u8{ "termusic", "termusic-server" },
@@ -2699,6 +2969,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tidy-viewer",
     .domain = "crates.io/tidy-viewer",
+    .kind = .cli,
     .description = "📺(tv) Tidy Viewer is a cross-platform CLI csv pretty printer that uses column styling to maximize viewer enjoyment.",
     .homepage_url = null,
     .programs = &[_][]const u8{"tidy-viewer"},
@@ -2709,6 +2980,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tiny",
     .domain = "crates.io/tiny",
+    .kind = .cli,
     .description = "A terminal IRC client ",
     .homepage_url = null,
     .programs = &[_][]const u8{"tiny"},
@@ -2719,6 +2991,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "toast",
     .domain = "crates.io/toast",
+    .kind = .cli,
     .description = "Containerize your development and continuous integration environments. 🥂",
     .homepage_url = null,
     .programs = &[_][]const u8{"toast"},
@@ -2729,6 +3002,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tokei",
     .domain = "crates.io/tokei",
+    .kind = .cli,
     .description = "Program that allows you to count code, quickly",
     .homepage_url = null,
     .programs = &[_][]const u8{"tokei"},
@@ -2739,6 +3013,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "topgrade",
     .domain = "crates.io/topgrade",
+    .kind = .cli,
     .description = "Upgrade all the things",
     .homepage_url = null,
     .programs = &[_][]const u8{"topgrade"},
@@ -2749,6 +3024,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trash",
     .domain = "crates.io/trashy",
+    .kind = .cli,
     .description = "a cli system trash manager, alternative to rm and trash-cli",
     .homepage_url = null,
     .programs = &[_][]const u8{"trash"},
@@ -2759,6 +3035,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tv",
     .domain = "crates.io/tv-cli",
+    .kind = .cli,
     .description = "Format json into table view",
     .homepage_url = null,
     .programs = &[_][]const u8{"tv"},
@@ -2769,6 +3046,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "typos",
     .domain = "crates.io/typos",
+    .kind = .cli,
     .description = "Source code spell checker",
     .homepage_url = null,
     .programs = &[_][]const u8{"typos"},
@@ -2779,6 +3057,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "versio",
     .domain = "crates.io/versio",
+    .kind = .cli,
     .description = "A version number manager",
     .homepage_url = null,
     .programs = &[_][]const u8{"versio"},
@@ -2789,6 +3068,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vivid",
     .domain = "crates.io/vivid",
+    .kind = .cli,
     .description = "Generator for LS_COLORS with support for multiple color themes",
     .homepage_url = null,
     .programs = &[_][]const u8{"vivid"},
@@ -2799,6 +3079,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wasm-pack",
     .domain = "crates.io/wasm-pack",
+    .kind = .cli,
     .description = "📦✨ your favorite rust -> wasm workflow tool!",
     .homepage_url = "https://rustwasm.github.io/wasm-pack/",
     .programs = &[_][]const u8{"wasm-pack"},
@@ -2809,6 +3090,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wordl",
     .domain = "crates.io/wordl",
+    .kind = .cli,
     .description = "Terminal wordle. Web like GUI with Keyboard hints, guess reveal animations etc.",
     .homepage_url = null,
     .programs = &[_][]const u8{"wordl"},
@@ -2819,6 +3101,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wthrr",
     .domain = "crates.io/wthrr",
+    .kind = .cli,
     .description = "🌞 🦀 🌙 Weather companion for the terminal. Rust app. ",
     .homepage_url = "https://crates.io/crates/wthrr",
     .programs = &[_][]const u8{"wthrr"},
@@ -2829,6 +3112,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xh",
     .domain = "crates.io/xh",
+    .kind = .cli,
     .description = "Friendly and fast tool for sending HTTP requests",
     .homepage_url = null,
     .programs = &[_][]const u8{"xh"},
@@ -2839,6 +3123,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zellij",
     .domain = "crates.io/zellij",
+    .kind = .cli,
     .description = "Pluggable terminal workspace, with terminal multiplexer as the base feature",
     .homepage_url = "https://zellij.dev",
     .programs = &[_][]const u8{"zellij"},
@@ -2849,6 +3134,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zoxide",
     .domain = "crates.io/zoxide",
+    .kind = .cli,
     .description = "Shell extension to navigate your filesystem faster",
     .homepage_url = "https://crates.io/crates/zoxide",
     .programs = &[_][]const u8{"zoxide"},
@@ -2859,6 +3145,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "diun",
     .domain = "crazymax.dev/diun",
+    .kind = .cli,
     .description = "Receive notifications when an image is updated on a Docker registry",
     .homepage_url = "https://crazymax.dev/diun/",
     .programs = &[_][]const u8{"diun"},
@@ -2869,6 +3156,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "resticprofile",
     .domain = "creativeprojects.github.io/resticprofile",
+    .kind = .cli,
     .description = "Configuration profiles manager and scheduler for restic backup",
     .homepage_url = "https://creativeprojects.github.io/resticprofile/",
     .programs = &[_][]const u8{"resticprofile"},
@@ -2879,6 +3167,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cruft",
     .domain = "cruft.github.io",
+    .kind = .cli,
     .description = "Allows you to maintain all the necessary cruft for packaging and building projects separate from the code you intentionally write. Built on-top of, and fully compatible with, CookieCutter.",
     .homepage_url = "https://cruft.github.io/cruft/",
     .programs = &[_][]const u8{"cruft"},
@@ -2889,6 +3178,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cryptography",
     .domain = "cryptography.io",
+    .kind = .library,
     .description = "cryptography is a package designed to expose cryptographic primitives and recipes to Python developers.",
     .homepage_url = "https://cryptography.io",
     .programs = &[_][]const u8{},
@@ -2899,6 +3189,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "crystal",
     .domain = "crystal-lang.org",
+    .kind = .cli,
     .description = "Fast and statically typed, compiled language with Ruby-like syntax",
     .homepage_url = "https://crystal-lang.org/",
     .programs = &[_][]const u8{"crystal"},
@@ -2909,6 +3200,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "shards",
     .domain = "crystal-lang.org/shards",
+    .kind = .cli,
     .description = "Fast and statically typed, compiled language with Ruby-like syntax",
     .homepage_url = "https://crystal-lang.org/",
     .programs = &[_][]const u8{"shards"},
@@ -2919,6 +3211,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cscope.sourceforge",
     .domain = "cscope.sourceforge.io",
+    .kind = .cli,
     .description = "Tool for browsing source code",
     .homepage_url = "https://cscope.sourceforge.net/",
     .programs = &[_][]const u8{ "cscope", "ocs" },
@@ -2929,6 +3222,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "liblinear",
     .domain = "csie.ntu.edu.tw/cjlin/liblinear",
+    .kind = .cli,
     .description = "LIBLINEAR -- A Library for Large Linear Classification",
     .homepage_url = "https://www.csie.ntu.edu.tw/~cjlin/liblinear/",
     .programs = &[_][]const u8{ "predict", "train" },
@@ -2939,6 +3233,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ctags",
     .domain = "ctags.io",
+    .kind = .cli,
     .description = "A maintained ctags implementation",
     .homepage_url = "https://ctags.io",
     .programs = &[_][]const u8{"ctags"},
@@ -2949,6 +3244,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ctop",
     .domain = "ctop.sh",
+    .kind = .cli,
     .description = "Top-like interface for container metrics",
     .homepage_url = "https://bcicen.github.io/ctop/",
     .programs = &[_][]const u8{"ctop"},
@@ -2959,6 +3255,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cue",
     .domain = "cuelang.org",
+    .kind = .cli,
     .description = "The home of the CUE language! Validate and define text-based and dynamic configuration",
     .homepage_url = "https://cuelang.org/",
     .programs = &[_][]const u8{"cue"},
@@ -2969,6 +3266,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cURL",
     .domain = "curl.se",
+    .kind = .cli,
     .description = "A command line tool and library for transferring data with URL syntax, supporting DICT, FILE, FTP, FTPS, GOPHER, GOPHERS, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, MQTT, POP3, POP3S, RTMP, RTMPS, RTSP, SCP, SFTP, SMB, SMBS, SMTP, SMTPS, TELNET, TFTP, WS and WSS. libcurl offers a myriad of powerful features",
     .homepage_url = "https://curl.se",
     .programs = &[_][]const u8{ "curl", "curl-config" },
@@ -2979,6 +3277,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ca-certs",
     .domain = "curl.se/ca-certs",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -2989,6 +3288,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ssl3",
     .domain = "curl.se/ssl3",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -2999,6 +3299,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trurl",
     .domain = "curl.se/trurl",
+    .kind = .cli,
     .description = "a command line tool for URL parsing and manipulation.",
     .homepage_url = "https://curl.se/trurl/",
     .programs = &[_][]const u8{"trurl"},
@@ -3009,6 +3310,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "curlie",
     .domain = "curlie.io",
+    .kind = .cli,
     .description = "The power of curl, the ease of use of httpie.",
     .homepage_url = "https://rs.github.io/curlie",
     .programs = &[_][]const u8{"curlie"},
@@ -3019,6 +3321,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Cursor",
     .domain = "cursor.com",
+    .kind = .app,
     .description = "An AI-first code editor built for pair programming.",
     .homepage_url = "https://cursor.com",
     .programs = &[_][]const u8{"cursor"},
@@ -3029,6 +3332,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cyrus-sasl",
     .domain = "cyrusimap.org/cyrus-sasl",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3039,6 +3343,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cython",
     .domain = "cython.org",
+    .kind = .cli,
     .description = "Compiler for writing C extensions for the Python language",
     .homepage_url = "https://cython.org/",
     .programs = &[_][]const u8{"cython"},
@@ -3049,6 +3354,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcython",
     .domain = "cython.org/libcython",
+    .kind = .library,
     .description = "The most widely used Python to C compiler",
     .homepage_url = "https://cython.org",
     .programs = &[_][]const u8{},
@@ -3059,6 +3365,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "d2",
     .domain = "d2lang.com",
+    .kind = .cli,
     .description = "D2 is a modern diagram scripting language that turns text to diagrams.",
     .homepage_url = "https://d2lang.com/",
     .programs = &[_][]const u8{"d2"},
@@ -3069,6 +3376,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dagger",
     .domain = "dagger.io",
+    .kind = .cli,
     .description = "An engine to run your pipelines in containers",
     .homepage_url = "https://dagger.io",
     .programs = &[_][]const u8{"dagger"},
@@ -3079,6 +3387,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dart",
     .domain = "dart.dev",
+    .kind = .cli,
     .description = "The Dart SDK, including the VM, JS and Wasm compilers, analysis, core libraries, and more.",
     .homepage_url = "https://dart.dev",
     .programs = &[_][]const u8{ "dart", "dartaotruntime" },
@@ -3089,6 +3398,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "file",
     .domain = "darwinsys.com/file",
+    .kind = .cli,
     .description = "Read-only mirror of file CVS repository, updated every half hour. NOTE: do not make pull requests here, nor comment any commits, submit them usual way to bug tracker or to the mailing list. Maintainer(s) are not tracking  this git mirror.",
     .homepage_url = "https://darwinsys.com/file/",
     .programs = &[_][]const u8{"file"},
@@ -3099,6 +3409,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "databricks",
     .domain = "databricks.com",
+    .kind = .cli,
     .description = "Databricks CLI",
     .homepage_url = null,
     .programs = &[_][]const u8{"databricks"},
@@ -3109,6 +3420,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "daytona",
     .domain = "daytona.io",
+    .kind = .cli,
     .description = "The Open Source Dev Environment Manager.",
     .homepage_url = "https://daytona.io",
     .programs = &[_][]const u8{"daytona"},
@@ -3119,6 +3431,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "DBeaver",
     .domain = "dbeaver.io",
+    .kind = .app,
     .description = "A universal database tool for developers and database administrators.",
     .homepage_url = "https://dbeaver.io",
     .programs = &[_][]const u8{"dbeaver"},
@@ -3129,6 +3442,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dblab",
     .domain = "dblab.danvergara.com",
+    .kind = .cli,
     .description = "The database client every command line junkie deserves.",
     .homepage_url = null,
     .programs = &[_][]const u8{"dblab"},
@@ -3139,6 +3453,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bash-completion",
     .domain = "debian.org/bash-completion",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3149,6 +3464,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "iso-codes",
     .domain = "debian.org/iso-codes",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3159,6 +3475,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "MetaGPT",
     .domain = "deepwisdom.ai",
+    .kind = .cli,
     .description = "🌟 The Multi-Agent Framework: First AI Software Company, Towards Natural Language Programming",
     .homepage_url = "https://deepwisdom.ai/",
     .programs = &[_][]const u8{"metagpt"},
@@ -3169,6 +3486,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "prettyping",
     .domain = "denilson.sa.nom.br/prettyping",
+    .kind = .cli,
     .description = "`prettyping` is a wrapper around the standard `ping` tool, making the output prettier, more colorful, more compact, and easier to read.",
     .homepage_url = "https://denilsonsa.github.io/prettyping/",
     .programs = &[_][]const u8{"prettyping"},
@@ -3179,6 +3497,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "deno",
     .domain = "deno.land",
+    .kind = .cli,
     .description = "A modern runtime for JavaScript and TypeScript.",
     .homepage_url = "https://deno.com/",
     .programs = &[_][]const u8{"deno"},
@@ -3189,6 +3508,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "depot",
     .domain = "depot.dev",
+    .kind = .cli,
     .description = "🖥️ Depot CLI, build your Docker images in the cloud",
     .homepage_url = "https://depot.dev",
     .programs = &[_][]const u8{"depot"},
@@ -3199,6 +3519,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "socat",
     .domain = "dest-unreach.org/socat",
+    .kind = .cli,
     .description = "SOcket CAT: netcat on steroids",
     .homepage_url = "http://www.dest-unreach.org/socat/",
     .programs = &[_][]const u8{"socat"},
@@ -3209,6 +3530,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ncdu",
     .domain = "dev.yorhel.nl/ncdu",
+    .kind = .cli,
     .description = "NCurses Disk Usage",
     .homepage_url = "https://dev.yorhel.nl/ncdu",
     .programs = &[_][]const u8{"ncdu"},
@@ -3219,6 +3541,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "1Password CLI",
     .domain = "developer.1password.com/1password-cli",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"op"},
@@ -3229,6 +3552,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fido2",
     .domain = "developers.yubico.com/libfido2",
+    .kind = .cli,
     .description = "Provides library functionality for FIDO2, including communication with a device over USB or NFC.",
     .homepage_url = "https://developers.yubico.com/libfido2/",
     .programs = &[_][]const u8{ "fido2-assert", "fido2-cred", "fido2-token" },
@@ -3239,6 +3563,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yubikey-manager",
     .domain = "developers.yubico.com/yubikey-manager",
+    .kind = .cli,
     .description = "Python library and command line tool for configuring any YubiKey over all USB interfaces.",
     .homepage_url = "https://developers.yubico.com/yubikey-manager/",
     .programs = &[_][]const u8{"ykman"},
@@ -3249,6 +3574,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "devpod",
     .domain = "devpod.sh/cli",
+    .kind = .cli,
     .description = "Codespaces but open-source, client-only and unopinionated: Works with any IDE and lets you use any cloud, kubernetes or just localhost docker.",
     .homepage_url = "https://devpod.sh",
     .programs = &[_][]const u8{"devpod"},
@@ -3259,6 +3585,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dgraph",
     .domain = "dgraph.io",
+    .kind = .cli,
     .description = "high-performance graph database for real-time use cases",
     .homepage_url = "https://dgraph.io/docs",
     .programs = &[_][]const u8{"dgraph"},
@@ -3269,6 +3596,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dhall",
     .domain = "dhall-lang.org",
+    .kind = .cli,
     .description = "Interpreter for the Dhall language",
     .homepage_url = "https://dhall-lang.org/",
     .programs = &[_][]const u8{"dhall"},
@@ -3279,6 +3607,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pls",
     .domain = "dhruvkb.dev/pls",
+    .kind = .cli,
     .description = "pls is a prettier and powerful ls(1) for the pros.",
     .homepage_url = "https://pls.cli.rs/",
     .programs = &[_][]const u8{"pls"},
@@ -3289,6 +3618,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Dia",
     .domain = "diabrowser.com",
+    .kind = .library,
     .description = "An AI-native web browser by The Browser Company.",
     .homepage_url = "https://www.diabrowser.com",
     .programs = &[_][]const u8{},
@@ -3299,6 +3629,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "digger",
     .domain = "digger.dev",
+    .kind = .cli,
     .description = "Digger is an open source IaC orchestration tool. Digger allows you to run IaC in your existing CI pipeline ⚡️  ",
     .homepage_url = "https://digger.dev",
     .programs = &[_][]const u8{"digger"},
@@ -3309,6 +3640,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jansson",
     .domain = "digip.org/jansson",
+    .kind = .library,
     .description = "C library for encoding, decoding and manipulating JSON data",
     .homepage_url = "http://www.digip.org/jansson/",
     .programs = &[_][]const u8{},
@@ -3319,6 +3651,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "doctl",
     .domain = "digitalocean.com/doctl",
+    .kind = .cli,
     .description = "The official command line interface for the DigitalOcean API.",
     .homepage_url = "https://docs.digitalocean.com/reference/doctl/",
     .programs = &[_][]const u8{"doctl"},
@@ -3329,6 +3662,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "direnv",
     .domain = "direnv.net",
+    .kind = .cli,
     .description = "Load/unload environment variables based on $PWD",
     .homepage_url = "https://direnv.net/",
     .programs = &[_][]const u8{"direnv"},
@@ -3339,6 +3673,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Discord",
     .domain = "discord.com",
+    .kind = .app,
     .description = "A voice, video, and text chat platform.",
     .homepage_url = "https://discord.com",
     .programs = &[_][]const u8{"discord"},
@@ -3349,6 +3684,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libaec",
     .domain = "dkrz.de/libaec",
+    .kind = .library,
     .description = "libaec - Adaptive Entropy Coding library",
     .homepage_url = "https://gitlab.dkrz.de/k202009/libaec",
     .programs = &[_][]const u8{},
@@ -3359,6 +3695,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dog",
     .domain = "dns.lookup.dog",
+    .kind = .cli,
     .description = "A command-line DNS client.",
     .homepage_url = "https://dns.lookup.dog/",
     .programs = &[_][]const u8{"dog"},
@@ -3369,6 +3706,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docbook",
     .domain = "docbook.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3379,6 +3717,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docbook-xsl",
     .domain = "docbook.org/xsl",
+    .kind = .cli,
     .description = "XML vocabulary to create presentation-neutral documents",
     .homepage_url = null,
     .programs = &[_][]const u8{"dbtoepub"},
@@ -3389,6 +3728,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "buildx",
     .domain = "docker.com/buildx",
+    .kind = .cli,
     .description = "Docker CLI plugin for extended build capabilities with BuildKit",
     .homepage_url = null,
     .programs = &[_][]const u8{"buildx"},
@@ -3399,6 +3739,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docker/cli",
     .domain = "docker.com/cli",
+    .kind = .cli,
     .description = "Pack, ship and run any application as a lightweight container",
     .homepage_url = "https://www.docker.com/",
     .programs = &[_][]const u8{"docker"},
@@ -3409,6 +3750,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docker-compose",
     .domain = "docker.com/compose",
+    .kind = .cli,
     .description = "Define and run multi-container applications with Docker",
     .homepage_url = "https://docs.docker.com/compose/",
     .programs = &[_][]const u8{"docker-compose"},
@@ -3419,6 +3761,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Docker Desktop",
     .domain = "docker.com/desktop",
+    .kind = .app,
     .description = "A desktop application for building and sharing containerized applications.",
     .homepage_url = "https://docker.com",
     .programs = &[_][]const u8{"docker-desktop"},
@@ -3429,6 +3772,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docker-machine",
     .domain = "docker.com/machine",
+    .kind = .cli,
     .description = "Create Docker hosts locally and on cloud providers",
     .homepage_url = "https://docs.gitlab.com/runner/executors/docker_machine.html",
     .programs = &[_][]const u8{"docker-machine"},
@@ -3439,6 +3783,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "doctave",
     .domain = "doctave.com",
+    .kind = .cli,
     .description = "A batteries-included developer documentation site generator",
     .homepage_url = "https://cli.doctave.com",
     .programs = &[_][]const u8{"doctave"},
@@ -3449,6 +3794,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docutils",
     .domain = "docutils.org",
+    .kind = .cli,
     .description = "Text processing system for reStructuredText",
     .homepage_url = "https://docutils.sourceforge.io",
     .programs = &[_][]const u8{ "docutils", "rst2html", "rst2html4", "rst2html5", "rst2latex", "rst2man", "rst2odt", "rst2pseudoxml", "rst2s5", "rst2xetex", "rst2xml" },
@@ -3459,6 +3805,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dotenv-linter",
     .domain = "dotenv-linter.github.io",
+    .kind = .cli,
     .description = "⚡️Lightning-fast linter for .env files. Written in Rust 🦀",
     .homepage_url = "https://dotenv-linter.github.io",
     .programs = &[_][]const u8{"dotenv-linter"},
@@ -3469,6 +3816,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dotenvx",
     .domain = "dotenvx.com",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"dotenvx"},
@@ -3479,6 +3827,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dotnet",
     .domain = "dotnet.microsoft.com",
+    .kind = .cli,
     .description = "Home of the .NET platform",
     .homepage_url = "https://dotnet.microsoft.com/",
     .programs = &[_][]const u8{"dotnet"},
@@ -3489,6 +3838,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "doxygen",
     .domain = "doxygen.nl",
+    .kind = .cli,
     .description = "Generate documentation for several programming languages",
     .homepage_url = "https://www.doxygen.nl/",
     .programs = &[_][]const u8{"doxygen"},
@@ -3499,6 +3849,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dozzle",
     .domain = "dozzle.dev",
+    .kind = .cli,
     .description = "Realtime log viewer for docker containers. ",
     .homepage_url = "https://dozzle.dev/",
     .programs = &[_][]const u8{"dozzle"},
@@ -3509,6 +3860,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dprint",
     .domain = "dprint.dev",
+    .kind = .cli,
     .description = "Pluggable and configurable code formatting platform written in Rust.",
     .homepage_url = "https://dprint.dev/",
     .programs = &[_][]const u8{"dprint"},
@@ -3519,6 +3871,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libdrm",
     .domain = "dri.freedesktop.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3529,6 +3882,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "duckdb",
     .domain = "duckdb.org",
+    .kind = .cli,
     .description = "DuckDB is an analytical in-process SQL database management system",
     .homepage_url = "https://www.duckdb.org",
     .programs = &[_][]const u8{"duckdb"},
@@ -3539,6 +3893,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "duk",
     .domain = "duktape.org",
+    .kind = .cli,
     .description = "Duktape - embeddable Javascript engine with a focus on portability and compact footprint",
     .homepage_url = "https://duktape.org",
     .programs = &[_][]const u8{"duk"},
@@ -3549,6 +3904,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bacon",
     .domain = "dystroy.org/bacon",
+    .kind = .cli,
     .description = "Background rust code check",
     .homepage_url = "https://dystroy.org/bacon/",
     .programs = &[_][]const u8{"bacon"},
@@ -3559,6 +3915,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "earthly",
     .domain = "earthly.dev/earthly",
+    .kind = .cli,
     .description = "Super simple build framework with fast, repeatable builds and an instantly familiar syntax – like Dockerfile and Makefile had a baby.",
     .homepage_url = "https://earthly.dev/",
     .programs = &[_][]const u8{"earthly"},
@@ -3569,6 +3926,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "graphene",
     .domain = "ebassi.github.io/graphene",
+    .kind = .library,
     .description = "A thin layer of graphic data types",
     .homepage_url = "http://ebassi.github.io/graphene",
     .programs = &[_][]const u8{},
@@ -3579,6 +3937,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "edgedb",
     .domain = "edgedb.com",
+    .kind = .cli,
     .description = "The EdgeDB CLI",
     .homepage_url = "https://www.edgedb.com/docs/cli/index",
     .programs = &[_][]const u8{"edgedb"},
@@ -3589,6 +3948,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eigen.tuxfamily",
     .domain = "eigen.tuxfamily.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3599,6 +3959,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eksctl",
     .domain = "eksctl.io",
+    .kind = .cli,
     .description = "Simple command-line tool for creating clusters on Amazon EKS",
     .homepage_url = "https://eksctl.io",
     .programs = &[_][]const u8{"eksctl"},
@@ -3609,6 +3970,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Element",
     .domain = "element.io",
+    .kind = .app,
     .description = "A decentralized, encrypted messaging and collaboration client built on Matrix.",
     .homepage_url = "https://element.io",
     .programs = &[_][]const u8{"element"},
@@ -3619,6 +3981,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "elementsproject",
     .domain = "elementsproject.org",
+    .kind = .cli,
     .description = "Open Source implementation of advanced blockchain features extending the Bitcoin protocol",
     .homepage_url = null,
     .programs = &[_][]const u8{ "bench_bitcoin", "elements-cli", "elements-tx", "elements-util", "elements-wallet", "elementsd", "test_bitcoin" },
@@ -3629,6 +3992,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "elfutils",
     .domain = "elfutils.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "eu-addr2line", "eu-ar", "eu-elfclassify", "eu-elfcmp", "eu-elfcompress", "eu-elflint", "eu-findtextrel", "eu-nm", "eu-objdump", "eu-ranlib", "eu-readelf", "eu-size", "eu-stack", "eu-strings", "eu-strip", "eu-unstrip" },
@@ -3639,6 +4003,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "elixir-lang",
     .domain = "elixir-lang.org",
+    .kind = .cli,
     .description = "Elixir is a dynamic, functional language for building scalable and maintainable applications",
     .homepage_url = "https://elixir-lang.org/",
     .programs = &[_][]const u8{ "elixir", "elixirc", "iex", "mix" },
@@ -3649,6 +4014,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "otp-27",
     .domain = "elixir-lang.org/otp-27",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3659,6 +4025,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "elizaOS",
     .domain = "elizaOS.github.io",
+    .kind = .cli,
     .description = "Autonomous agents for everyone",
     .homepage_url = "https://elizaOS.github.io/eliza/",
     .programs = &[_][]const u8{"eliza"},
@@ -3669,6 +4036,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "elvish",
     .domain = "elv.sh",
+    .kind = .cli,
     .description = "Powerful scripting language & versatile interactive shell",
     .homepage_url = "https://elv.sh/",
     .programs = &[_][]const u8{"elvish"},
@@ -3679,6 +4047,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fswatch",
     .domain = "emcrisostomo.github.io/fswatch",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"fswatch"},
@@ -3689,6 +4058,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "encore",
     .domain = "encore.dev",
+    .kind = .cli,
     .description = "Open Source Development Platform for building robust type-safe distributed systems with declarative infrastructure",
     .homepage_url = "https://encore.dev",
     .programs = &[_][]const u8{ "encore", "git-remote-encore" },
@@ -3699,6 +4069,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "encore-go",
     .domain = "encore.dev/go",
+    .kind = .cli,
     .description = "Encore's rolling fork of Go with added automatic tracing & instrumentation",
     .homepage_url = "https://encore.dev",
     .programs = &[_][]const u8{"encore-go"},
@@ -3709,6 +4080,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eol",
     .domain = "endoflife.date",
+    .kind = .cli,
     .description = "CLI to show end-of-life dates for a number of products.",
     .homepage_url = "https://endoflife.date",
     .programs = &[_][]const u8{"eol"},
@@ -3719,6 +4091,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "epsilon",
     .domain = "epsilon-project.sourceforge.io",
+    .kind = .cli,
     .description = "Powerful wavelet image compressor",
     .homepage_url = "https://sourceforge.net/projects/epsilon-project/",
     .programs = &[_][]const u8{"epsilon"},
@@ -3729,6 +4102,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "erlang",
     .domain = "erlang.org",
+    .kind = .cli,
     .description = "Programming language for highly scalable real-time systems",
     .homepage_url = "https://www.erlang.org/",
     .programs = &[_][]const u8{ "ct_run", "dialyzer", "epmd", "erl", "erlc", "escript", "run_erl", "to_erl", "typer" },
@@ -3739,6 +4113,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "etcd",
     .domain = "etcd.io",
+    .kind = .cli,
     .description = "Distributed reliable key-value store for the most critical data of a distributed system",
     .homepage_url = "https://etcd.io",
     .programs = &[_][]const u8{ "etcd", "etcdctl" },
@@ -3749,6 +4124,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "exiftool",
     .domain = "exiftool.org",
+    .kind = .cli,
     .description = "Perl lib for reading and writing EXIF metadata",
     .homepage_url = "https://exiftool.org",
     .programs = &[_][]const u8{"exiftool"},
@@ -3759,6 +4135,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eas",
     .domain = "expo.dev/eas-cli",
+    .kind = .cli,
     .description = "Fastest way to build, submit, and update iOS and Android apps",
     .homepage_url = "https://docs.expo.dev/eas/",
     .programs = &[_][]const u8{"eas"},
@@ -3769,6 +4146,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pod2man",
     .domain = "eyrie.org/eagle/podlators",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "pod2man", "pod2text" },
@@ -3779,6 +4157,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "process-compose",
     .domain = "f1bonacc1.github.io/process-compose",
+    .kind = .cli,
     .description = "Process Compose is a simple and flexible scheduler and orchestrator to manage non-containerized applications.",
     .homepage_url = "https://f1bonacc1.github.io/process-compose/",
     .programs = &[_][]const u8{"process-compose"},
@@ -3789,6 +4168,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "reshape",
     .domain = "fabianlindfors.se/reshape",
+    .kind = .cli,
     .description = "An easy-to-use, zero-downtime schema migration tool for Postgres",
     .homepage_url = null,
     .programs = &[_][]const u8{"reshape"},
@@ -3799,6 +4179,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "edencommon",
     .domain = "facebook.com/edencommon",
+    .kind = .library,
     .description = "Shared library for Watchman and Eden projects. ",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3809,6 +4190,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fb303",
     .domain = "facebook.com/fb303",
+    .kind = .library,
     .description = "fb303 is a core set of thrift functions that provide a common mechanism for querying stats and other information from a service.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3819,6 +4201,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "thrift1",
     .domain = "facebook.com/fbthrift",
+    .kind = .cli,
     .description = "Facebook's branch of Apache Thrift, including a new C++ server.",
     .homepage_url = null,
     .programs = &[_][]const u8{"thrift1"},
@@ -3829,6 +4212,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "folly",
     .domain = "facebook.com/folly",
+    .kind = .library,
     .description = "An open-source C++ library developed and used at Facebook.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3839,6 +4223,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mvfst",
     .domain = "facebook.com/mvfst",
+    .kind = .library,
     .description = "An implementation of the QUIC transport protocol.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3849,6 +4234,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wangle",
     .domain = "facebook.com/wangle",
+    .kind = .library,
     .description = "Wangle is a framework providing a set of common client/server abstractions for building services in a consistent, modular, and composable way.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3859,6 +4245,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "watchman",
     .domain = "facebook.com/watchman",
+    .kind = .cli,
     .description = "Watches files and records, or triggers actions, when they change. ",
     .homepage_url = "https://facebook.github.io/watchman/",
     .programs = &[_][]const u8{ "watchman", "watchman-diag", "watchman-make", "watchman-wait", "watchman-replicate-subscription", "watchmanctl" },
@@ -3869,6 +4256,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zstd",
     .domain = "facebook.com/zstd",
+    .kind = .cli,
     .description = "Zstandard - Fast real-time compression algorithm",
     .homepage_url = "https://facebook.github.io/zstd/",
     .programs = &[_][]const u8{ "pzstd", "unzstd", "zstd", "zstdcat", "zstdgrep", "zstdless", "zstdmt" },
@@ -3879,6 +4267,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pluto",
     .domain = "fairwinds.com/pluto",
+    .kind = .cli,
     .description = "A cli tool to help discover deprecated apiVersions in Kubernetes",
     .homepage_url = "https://fairwinds.com",
     .programs = &[_][]const u8{"pluto"},
@@ -3889,6 +4278,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fastlane",
     .domain = "fastlane.tools",
+    .kind = .cli,
     .description = "🚀 The easiest way to automate building and releasing your iOS and Android apps",
     .homepage_url = "https://fastlane.tools",
     .programs = &[_][]const u8{"fastlane"},
@@ -3899,6 +4289,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sketchybar",
     .domain = "felixkratz.github.io/SketchyBar",
+    .kind = .cli,
     .description = "A highly customizable macOS status bar replacement",
     .homepage_url = "https://felixkratz.github.io/SketchyBar/",
     .programs = &[_][]const u8{"sketchybar"},
@@ -3909,6 +4300,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spin",
     .domain = "fermyon.com/spin",
+    .kind = .cli,
     .description = "Spin is the open source developer tool for building and running serverless applications powered by WebAssembly.",
     .homepage_url = "https://www.fermyon.com/spin",
     .programs = &[_][]const u8{"spin"},
@@ -3919,6 +4311,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SDL2_gfx",
     .domain = "ferzkopp.net/SDL2_gfx",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -3929,6 +4322,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ffmpeg",
     .domain = "ffmpeg.org",
+    .kind = .cli,
     .description = "Play, record, convert, and stream audio and video",
     .homepage_url = "https://ffmpeg.org/",
     .programs = &[_][]const u8{ "ffmpeg", "ffplay", "ffprobe" },
@@ -3939,6 +4333,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fftw",
     .domain = "fftw.org",
+    .kind = .cli,
     .description = "C routines to compute the Discrete Fourier Transform",
     .homepage_url = "https://fftw.org",
     .programs = &[_][]const u8{ "fftw-wisdom", "fftw-wisdom-to-conf", "fftwf-wisdom", "fftwl-wisdom" },
@@ -3949,6 +4344,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Figma",
     .domain = "figma.com",
+    .kind = .app,
     .description = "A collaborative interface design tool.",
     .homepage_url = "https://figma.com",
     .programs = &[_][]const u8{"figma"},
@@ -3959,6 +4355,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "age",
     .domain = "filippo.io/age",
+    .kind = .cli,
     .description = "A simple, modern and secure encryption tool (and Go library) with small explicit keys, no config options, and UNIX-style composability.",
     .homepage_url = "https://age-encryption.org",
     .programs = &[_][]const u8{ "age", "age-keygen" },
@@ -3969,6 +4366,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yubikey-agent",
     .domain = "filippo.io/yubikey-agent",
+    .kind = .cli,
     .description = "Seamless ssh-agent for YubiKeys and other PIV tokens",
     .homepage_url = "https://filippo.io/yubikey-agent",
     .programs = &[_][]const u8{"yubikey-agent"},
@@ -3979,6 +4377,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Fira Code",
     .domain = "fira-code",
+    .kind = .font,
     .description = "Monospaced font with programming ligatures.",
     .homepage_url = "https://github.com/tonsky/FiraCode",
     .programs = &[_][]const u8{},
@@ -3989,6 +4388,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Firefox",
     .domain = "firefox.org",
+    .kind = .app,
     .description = "A free and open-source web browser.",
     .homepage_url = "https://www.mozilla.org/firefox",
     .programs = &[_][]const u8{"firefox"},
@@ -3999,6 +4399,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fish",
     .domain = "fishshell.com",
+    .kind = .cli,
     .description = "User-friendly command-line shell for UNIX-like operating systems",
     .homepage_url = "https://fishshell.com",
     .programs = &[_][]const u8{ "fish", "fish_indent", "fish_key_reader" },
@@ -4009,6 +4410,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flipt",
     .domain = "flipt.io",
+    .kind = .cli,
     .description = "Enterprise-ready, GitOps enabled, CloudNative feature management solution",
     .homepage_url = "https://flipt.io",
     .programs = &[_][]const u8{"flipt"},
@@ -4019,6 +4421,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flit",
     .domain = "flit.pypa.io",
+    .kind = .cli,
     .description = "Simplified packaging of Python modules",
     .homepage_url = "https://flit.pypa.io/",
     .programs = &[_][]const u8{"flit"},
@@ -4029,6 +4432,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fltk",
     .domain = "fltk.org",
+    .kind = .cli,
     .description = "FLTK - Fast Light Tool Kit - https://github.com/fltk/fltk - cross platform GUI development",
     .homepage_url = "https://www.fltk.org/",
     .programs = &[_][]const u8{ "fluid", "fltk-config" },
@@ -4039,6 +4443,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fluentci",
     .domain = "fluentci.io",
+    .kind = .cli,
     .description = "Set up and run your CI locally or in any CI Provider in a consistent way https://backdropbuild.com/builds/v4/fluentci",
     .homepage_url = "https://fluentci.io",
     .programs = &[_][]const u8{"fluentci"},
@@ -4049,6 +4454,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flutter",
     .domain = "flutter.dev",
+    .kind = .cli,
     .description = "Flutter makes it easy and fast to build beautiful apps for mobile and beyond",
     .homepage_url = "https://flutter.dev",
     .programs = &[_][]const u8{ "flutter", "dart" },
@@ -4059,6 +4465,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flux",
     .domain = "fluxcd.io/flux2",
+    .kind = .cli,
     .description = "Open and extensible continuous delivery solution for Kubernetes. Powered by GitOps Toolkit.",
     .homepage_url = "https://fluxcd.io",
     .programs = &[_][]const u8{"flux"},
@@ -4069,6 +4476,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fly",
     .domain = "fly.io",
+    .kind = .cli,
     .description = "Command line tools for fly.io services",
     .homepage_url = "https://fly.io",
     .programs = &[_][]const u8{ "fly", "flyctl" },
@@ -4079,6 +4487,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flyway",
     .domain = "flywaydb.org",
+    .kind = .cli,
     .description = "Database version control to control migrations",
     .homepage_url = "https://flywaydb.org/",
     .programs = &[_][]const u8{"flyway"},
@@ -4089,6 +4498,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fmt",
     .domain = "fmt.dev",
+    .kind = .library,
     .description = "A modern formatting library",
     .homepage_url = "https://fmt.dev",
     .programs = &[_][]const u8{},
@@ -4099,6 +4509,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fna-xna.github",
     .domain = "fna-xna.github.io",
+    .kind = .library,
     .description = "FAudio - Accuracy-focused XAudio reimplementation for open platforms",
     .homepage_url = "https://fna-xna.github.io/",
     .programs = &[_][]const u8{},
@@ -4109,6 +4520,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libelf",
     .domain = "fossies.org/libelf",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4119,6 +4531,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "appstreamcli",
     .domain = "freedesktop.org/appstream",
+    .kind = .cli,
     .description = "Tools and libraries to work with AppStream metadata",
     .homepage_url = "https://www.freedesktop.org/wiki/Distributions/AppStream/",
     .programs = &[_][]const u8{"appstreamcli"},
@@ -4129,6 +4542,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "at-spi2-atk",
     .domain = "freedesktop.org/at-spi2-atk",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4139,6 +4553,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libatspi",
     .domain = "freedesktop.org/at-spi2-core/libatspi",
+    .kind = .library,
     .description = "AT-SPI accessibility client library",
     .homepage_url = "https://gitlab.gnome.org/GNOME/at-spi2-core",
     .programs = &[_][]const u8{},
@@ -4149,6 +4564,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cppunit",
     .domain = "freedesktop.org/cppunit",
+    .kind = .cli,
     .description = "Unit testing framework for C++",
     .homepage_url = "https://wiki.freedesktop.org/www/Software/cppunit/",
     .programs = &[_][]const u8{ "cppunit-config", "DllPlugInTester" },
@@ -4159,6 +4575,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dbus",
     .domain = "freedesktop.org/dbus",
+    .kind = .cli,
     .description = "Message bus system, providing inter-application communication",
     .homepage_url = "https://wiki.freedesktop.org/www/Software/dbus",
     .programs = &[_][]const u8{ "dbus-cleanup-sockets", "dbus-daemon", "dbus-launch", "dbus-monitor", "dbus-run-session", "dbus-send", "dbus-test-tool", "dbus-update-activation-environment", "dbus-uuidgen" },
@@ -4169,6 +4586,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "desktop-file-utils",
     .domain = "freedesktop.org/desktop-file-utils",
+    .kind = .cli,
     .description = "Command-line utilities for working with desktop entries",
     .homepage_url = "https://wiki.freedesktop.org/www/Software/desktop-file-utils/",
     .programs = &[_][]const u8{ "desktop-file-edit", "desktop-file-install", "desktop-file-validate", "update-desktop-database" },
@@ -4179,6 +4597,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fontconfig",
     .domain = "freedesktop.org/fontconfig",
+    .kind = .cli,
     .description = "XML-based font configuration API for X Windows",
     .homepage_url = "https://wiki.freedesktop.org/www/Software/fontconfig/",
     .programs = &[_][]const u8{ "fc-cache", "fc-cat", "fc-conflist", "fc-list", "fc-match", "fc-pattern", "fc-query", "fc-scan", "fc-validate" },
@@ -4189,6 +4608,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "icon-theme",
     .domain = "freedesktop.org/icon-theme",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4199,6 +4619,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "intltool",
     .domain = "freedesktop.org/intltool",
+    .kind = .cli,
     .description = "String tool",
     .homepage_url = "https://wiki.freedesktop.org/www/Software/intltool",
     .programs = &[_][]const u8{ "intltool-extract", "intltool-merge", "intltool-prepare", "intltool-update", "intltoolize", "lwp-download", "lwp-dump", "lwp-mirror", "lwp-request" },
@@ -4209,6 +4630,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libbsd",
     .domain = "freedesktop.org/libbsd",
+    .kind = .library,
     .description = "BSD compatibility library (mirror)",
     .homepage_url = "https://libbsd.freedesktop.org/",
     .programs = &[_][]const u8{},
@@ -4219,6 +4641,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mesa-glu",
     .domain = "freedesktop.org/mesa-glu",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4229,6 +4652,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "p11-kit",
     .domain = "freedesktop.org/p11-kit",
+    .kind = .cli,
     .description = "Provides a way to load and enumerate PKCS#11 modules.",
     .homepage_url = "https://p11-glue.freedesktop.org",
     .programs = &[_][]const u8{ "p11-kit", "trust" },
@@ -4239,6 +4663,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pkg-config",
     .domain = "freedesktop.org/pkg-config",
+    .kind = .cli,
     .description = "package compiler and linker metadata toolkit",
     .homepage_url = null,
     .programs = &[_][]const u8{"pkg-config"},
@@ -4249,6 +4674,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "polkit",
     .domain = "freedesktop.org/polkit",
+    .kind = .cli,
     .description = "polkit (formerly PolicyKit) is a toolkit for defining and handling authorizations. It is used for allowing unprivileged processes to speak to privileged processes.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "pkaction", "pkcheck", "pkexec", "pkttyagent" },
@@ -4259,6 +4685,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "poppler-qt5",
     .domain = "freedesktop.org/poppler-qt5",
+    .kind = .cli,
     .description = "PDF rendering library (based on the xpdf-3.0 code base)",
     .homepage_url = "https://poppler.freedesktop.org/",
     .programs = &[_][]const u8{ "pdfattach", "pdfdetach", "pdffonts", "pdfimages", "pdfinfo", "pdfseparate", "pdfsig", "pdftocairo", "pdftohtml", "pdftoppm", "pdftops", "pdftotext", "pdfunite" },
@@ -4269,6 +4696,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "update-mime-database",
     .domain = "freedesktop.org/shared-mime-info",
+    .kind = .cli,
     .description = "Database of common MIME types",
     .homepage_url = "https://wiki.freedesktop.org/www/Software/shared-mime-info",
     .programs = &[_][]const u8{"update-mime-database"},
@@ -4279,6 +4707,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "slirp",
     .domain = "freedesktop.org/slirp",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4289,6 +4718,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "uchardet",
     .domain = "freedesktop.org/uchardet",
+    .kind = .cli,
     .description = "Encoding detector library",
     .homepage_url = "https://www.freedesktop.org/wiki/Software/uchardet/",
     .programs = &[_][]const u8{"uchardet"},
@@ -4299,6 +4729,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vdpau",
     .domain = "freedesktop.org/vdpau",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4309,6 +4740,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb-util",
     .domain = "freedesktop.org/xcb-util",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4319,6 +4751,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb-util-image",
     .domain = "freedesktop.org/xcb-util-image",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4329,6 +4762,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb-util-keysyms",
     .domain = "freedesktop.org/xcb-util-keysyms",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4339,6 +4773,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb-util-renderutil",
     .domain = "freedesktop.org/xcb-util-renderutil",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4349,6 +4784,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb-util-wm",
     .domain = "freedesktop.org/xcb-util-wm",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4359,6 +4795,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xdg-user-dir",
     .domain = "freedesktop.org/xdg-user-dirs",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "xdg-user-dir", "xdg-user-dirs-update" },
@@ -4369,6 +4806,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "XKeyboardConfig",
     .domain = "freedesktop.org/XKeyboardConfig",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4379,6 +4817,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "freeglut.sourceforge",
     .domain = "freeglut.sourceforge.io",
+    .kind = .library,
     .description = "Free implementation of the OpenGL Utility Toolkit (GLUT)",
     .homepage_url = "http://freeglut.sourceforge.net",
     .programs = &[_][]const u8{},
@@ -4389,6 +4828,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "freetds",
     .domain = "freetds.org",
+    .kind = .cli,
     .description = "Libraries to talk to Microsoft SQL Server and Sybase databases",
     .homepage_url = "https://www.freetds.org/",
     .programs = &[_][]const u8{ "bsqldb", "bsqlodbc", "datacopy", "defncopy", "fisql", "freebcp", "osql", "tdspool", "tsql" },
@@ -4399,6 +4839,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "freetype",
     .domain = "freetype.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4409,6 +4850,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "frei0r.dyne",
     .domain = "frei0r.dyne.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4419,6 +4861,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "forc",
     .domain = "fuellabs.github.io/sway",
+    .kind = .cli,
     .description = "🌴 Empowering everyone to build reliable and efficient smart contracts.",
     .homepage_url = "https://docs.fuel.network/docs/sway/",
     .programs = &[_][]const u8{"forc"},
@@ -4429,6 +4872,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "qrencode",
     .domain = "fukuchi.org/qrencode",
+    .kind = .cli,
     .description = "A fast and compact QR Code encoding library",
     .homepage_url = "https://fukuchi.org/works/qrencode/index.html.en",
     .programs = &[_][]const u8{"qrencode"},
@@ -4439,6 +4883,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "grpcurl",
     .domain = "fullstory.com/grpcurl",
+    .kind = .cli,
     .description = "Like cURL, but for gRPC: Command-line tool for interacting with gRPC servers",
     .homepage_url = null,
     .programs = &[_][]const u8{"grpcurl"},
@@ -4449,6 +4894,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fury",
     .domain = "fury.co",
+    .kind = .cli,
     .description = "Gemfury CLI",
     .homepage_url = "https://fury.co/guide/cli",
     .programs = &[_][]const u8{"fury"},
@@ -4459,6 +4905,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fx",
     .domain = "fx.wtf",
+    .kind = .cli,
     .description = "Terminal JSON viewer & processor",
     .homepage_url = "https://fx.wtf",
     .programs = &[_][]const u8{"fx"},
@@ -4469,6 +4916,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "freexl",
     .domain = "gaia-gis.it/fossil/freexl",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4479,6 +4927,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libspatialite",
     .domain = "gaia-gis.it/libspatialite",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4489,6 +4938,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "readosm",
     .domain = "gaia-gis.it/readosm",
+    .kind = .library,
     .description = "C library for reading OpenStreetMap input files (.osm and .osm.pbf)",
     .homepage_url = "https://www.gaia-gis.it/fossil/readosm",
     .programs = &[_][]const u8{},
@@ -4499,6 +4949,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spatialite-tools",
     .domain = "gaia-gis.it/spatialite-tools",
+    .kind = .cli,
     .description = "Command-line tools for SpatiaLite: the spatialite SQL shell, spatialite_tool, and OpenStreetMap loaders",
     .homepage_url = "https://www.gaia-gis.it/fossil/spatialite-tools",
     .programs = &[_][]const u8{ "spatialite", "spatialite_tool", "spatialite_convert", "spatialite_dxf", "spatialite_gml", "spatialite_network", "spatialite_osm_filter", "spatialite_osm_map", "spatialite_osm_net", "spatialite_osm_overpass", "spatialite_osm_raw", "spatialite_xml2utf8", "spatialite_xml_collapse", "spatialite_xml_load", "spatialite_xml_print", "spatialite_xml_validator", "shp_doctor", "shp_sanitize", "spatialite_dem", "exif_loader" },
@@ -4509,6 +4960,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gdal",
     .domain = "gdal.org",
+    .kind = .cli,
     .description = "GDAL is an open source MIT licensed translator library for raster and vector geospatial data formats.",
     .homepage_url = "https://www.gdal.org/",
     .programs = &[_][]const u8{ "gdaladdo", "gdalbuildvrt", "gdal-config", "gdal_contour", "gdal_create", "gdaldem", "gdalenhance", "gdal_grid", "gdalinfo", "gdallocationinfo", "gdalmanage", "gdalmdiminfo", "gdalmdimtranslate", "gdal_rasterize", "gdalsrsinfo", "gdaltindex", "gdaltransform", "gdal_translate", "gdal_viewshed", "gdalwarp", "gnmanalyse", "gnmmanage", "nearblack", "ogr2ogr", "ogrinfo", "ogrlineref", "ogrtindex", "sozip" },
@@ -4519,6 +4971,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "The Silver Searcher",
     .domain = "geoff.greer.fm/ag",
+    .kind = .cli,
     .description = "A code-searching tool similar to ack, but faster.",
     .homepage_url = "http://geoff.greer.fm/ag/",
     .programs = &[_][]const u8{"ag"},
@@ -4529,6 +4982,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cb",
     .domain = "getclipboard.app",
+    .kind = .cli,
     .description = "😎🏖️🐬 Your new, 𝙧𝙞𝙙𝙤𝙣𝙠𝙪𝙡𝙞𝙘𝙞𝙤𝙪𝙨𝙡𝙮 smart clipboard manager",
     .homepage_url = "https://getclipboard.app",
     .programs = &[_][]const u8{"cb"},
@@ -4539,6 +4993,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "composer",
     .domain = "getcomposer.org",
+    .kind = .cli,
     .description = "Dependency Manager for PHP",
     .homepage_url = "https://getcomposer.org/",
     .programs = &[_][]const u8{ "composer", "composer.phar" },
@@ -4549,6 +5004,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "getfoundry.sh",
     .domain = "getfoundry.sh",
+    .kind = .cli,
     .description = "Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.",
     .homepage_url = "https://getfoundry.sh",
     .programs = &[_][]const u8{ "forge", "anvil", "cast", "chisel" },
@@ -4559,6 +5015,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "getmonero",
     .domain = "getmonero.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "monero-wallet-rpc", "monero-wallet-cli", "monero-gen-trusted-multisig", "monero-gen-ssl-cert", "monerod", "monero-blockchain-import", "monero-blockchain-export", "monero-blockchain-mark-spent-outputs", "monero-blockchain-usage", "monero-blockchain-ancestry", "monero-blockchain-depth", "monero-blockchain-stats", "monero-blockchain-prune-known-spent-data", "monero-blockchain-prune" },
@@ -4569,6 +5026,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sops",
     .domain = "getsops.io",
+    .kind = .cli,
     .description = "Simple and flexible tool for managing secrets",
     .homepage_url = "https://getsops.io/",
     .programs = &[_][]const u8{"sops"},
@@ -4579,6 +5037,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "synth",
     .domain = "getsynth.com",
+    .kind = .cli,
     .description = "The Declarative Data Generator",
     .homepage_url = "https://www.getsynth.com/",
     .programs = &[_][]const u8{"synth"},
@@ -4589,6 +5048,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zola",
     .domain = "getzola.org",
+    .kind = .cli,
     .description = "A fast static site generator in a single binary with everything built-in. https://www.getzola.org",
     .homepage_url = "https://www.getzola.org/",
     .programs = &[_][]const u8{"zola"},
@@ -4599,6 +5059,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gl2ps",
     .domain = "geuz.org/gl2ps",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4609,6 +5070,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gflags.github",
     .domain = "gflags.github.io",
+    .kind = .library,
     .description = "The gflags package contains a C++ library that implements commandline flags processing. It includes built-in support for standard types such as string and the ability to define flags in the source file in which they are used. Online documentation available at:",
     .homepage_url = "https://gflags.github.io/gflags/",
     .programs = &[_][]const u8{},
@@ -4619,6 +5081,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "epstool",
     .domain = "ghostgum.com.au/epstool",
+    .kind = .cli,
     .description = "Edit preview images and fix bounding boxes in EPS files",
     .homepage_url = "http://www.ghostgum.com.au/software/epstool.htm",
     .programs = &[_][]const u8{"epstool"},
@@ -4629,6 +5092,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ghostscript",
     .domain = "ghostscript.com",
+    .kind = .cli,
     .description = "This is purely for downloads, please check the website for full information",
     .homepage_url = "https://www.ghostscript.com/",
     .programs = &[_][]const u8{ "dvipdf", "eps2eps", "gpcl6", "gpcl6c", "gpdlc", "gs", "gsbj", "gsc", "gsdj", "gsdj500", "gslj", "gslp", "gsnd", "gsx", "gxps", "gxpsc", "lprsetup.sh", "pdf2dsc", "pdf2ps", "pf2afm", "pfbtopfa", "pphs", "printafm", "ps2ascii", "ps2epsi", "ps2pdf", "ps2pdf12", "ps2pdf13", "ps2pdf14", "ps2pdfwr", "ps2ps", "ps2ps2", "unix-lpr.sh" },
@@ -4639,6 +5103,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Ghostty",
     .domain = "ghostty.org",
+    .kind = .app,
     .description = "A fast, feature-rich, and cross-platform terminal emulator.",
     .homepage_url = "https://ghostty.org",
     .programs = &[_][]const u8{"ghostty"},
@@ -4649,6 +5114,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gif",
     .domain = "giflib.sourceforge.io",
+    .kind = .cli,
     .description = "Library and utilities for processing GIFs",
     .homepage_url = "https://giflib.sourceforge.net/",
     .programs = &[_][]const u8{ "gif2rgb", "gifbuild", "gifclrmp", "giffix", "giftext", "giftool" },
@@ -4659,6 +5125,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "GIMP",
     .domain = "gimp.org",
+    .kind = .app,
     .description = "A free and open-source raster graphics editor.",
     .homepage_url = "https://gimp.org",
     .programs = &[_][]const u8{"gimp"},
@@ -4669,6 +5136,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-cliff",
     .domain = "git-cliff.org",
+    .kind = .cli,
     .description = "A highly customizable Changelog Generator that follows Conventional Commit specifications ⛰️ ",
     .homepage_url = "https://git-cliff.org",
     .programs = &[_][]const u8{"git-cliff"},
@@ -4679,6 +5147,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-lfs",
     .domain = "git-lfs.com",
+    .kind = .cli,
     .description = "Git extension for versioning large files",
     .homepage_url = "https://git-lfs.github.com/",
     .programs = &[_][]const u8{"git-lfs"},
@@ -4689,6 +5158,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-quick-stats",
     .domain = "git-quick-stats.sh",
+    .kind = .cli,
     .description = "▁▅▆▃▅ Git quick statistics is a simple and efficient way to access various statistics in git repository.",
     .homepage_url = "https://git-quick-stats.sh/",
     .programs = &[_][]const u8{"git-quick-stats"},
@@ -4699,6 +5169,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git",
     .domain = "git-scm.org",
+    .kind = .cli,
     .description = "Git Source Code Mirror - This is a publish-only repository but pull requests can be turned into patches to the mailing list via GitGitGadget (https://gitgitgadget.github.io/). Please follow Documentation/SubmittingPatches procedure for any of your improvements.",
     .homepage_url = null,
     .programs = if (@import("builtin").os.tag == .macos) &[_][]const u8{ "git", "git-cvsserver", "git-receive-pack", "git-shell", "git-upload-archive", "git-upload-pack", "scalar", "git-credential-osxkeychain" } else &[_][]const u8{ "git", "git-cvsserver", "git-receive-pack", "git-shell", "git-upload-archive", "git-upload-pack", "scalar" },
@@ -4709,6 +5180,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-town",
     .domain = "git-town.com",
+    .kind = .cli,
     .description = "High-level command-line interface for Git",
     .homepage_url = "https://www.git-town.com/",
     .programs = &[_][]const u8{"git-town"},
@@ -4719,6 +5191,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "librttopo",
     .domain = "git.osgeo.org/gitea/rttopo/librttopo",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4729,6 +5202,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rbw",
     .domain = "git.tozt.net/rbw",
+    .kind = .cli,
     .description = "Unofficial Bitwarden CLI client",
     .homepage_url = "https://git.tozt.net/rbw",
     .programs = &[_][]const u8{"rbw"},
@@ -4739,6 +5213,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "create2crunch",
     .domain = "github.com/0age/create2crunch",
+    .kind = .cli,
     .description = "A Rust program for finding salts that create gas-efficient Ethereum addresses via CREATE2.",
     .homepage_url = null,
     .programs = &[_][]const u8{"create2crunch"},
@@ -4749,6 +5224,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vanitygen-plusplus",
     .domain = "github.com/10gic/vanitygen-plusplus",
+    .kind = .cli,
     .description = "A vanity address generator for BTC, ETH, LTC, TRX and 100+ more crypto currencies.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "vanitygen++", "keyconv", "oclvanitygen++", "oclvanityminer" },
@@ -4759,6 +5235,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws-vault",
     .domain = "github.com/99designs/aws-vault",
+    .kind = .cli,
     .description = "A vault for securely storing and accessing AWS credentials in development environments",
     .homepage_url = null,
     .programs = &[_][]const u8{"aws-vault"},
@@ -4769,6 +5246,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcresultparser",
     .domain = "github.com/a7ex/xcresultparser",
+    .kind = .cli,
     .description = "Parse the binary xcresult bundle from Xcode builds and testruns",
     .homepage_url = null,
     .programs = &[_][]const u8{"xcresultparser"},
@@ -4779,6 +5257,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rawdog",
     .domain = "github.com/abanteai/rawdog",
+    .kind = .cli,
     .description = "Generate and auto-execute Python scripts in the cli",
     .homepage_url = "https://mentat.ai",
     .programs = &[_][]const u8{"rawdog"},
@@ -4789,6 +5268,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "colima",
     .domain = "github.com/abiosoft/colima",
+    .kind = .cli,
     .description = "Container runtimes on macOS (and Linux) with minimal setup",
     .homepage_url = null,
     .programs = &[_][]const u8{"colima"},
@@ -4799,6 +5279,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "confd",
     .domain = "github.com/abtreece/confd",
+    .kind = .cli,
     .description = "Manage local application configuration files using templates and data from etcd or consul",
     .homepage_url = null,
     .programs = &[_][]const u8{"confd"},
@@ -4809,6 +5290,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ticker",
     .domain = "github.com/achannarasappa/ticker",
+    .kind = .cli,
     .description = "Terminal stock ticker with live updates and position tracking",
     .homepage_url = null,
     .programs = &[_][]const u8{"ticker"},
@@ -4819,6 +5301,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libunibreak",
     .domain = "github.com/adah1972/libunibreak",
+    .kind = .library,
     .description = "The libunibreak library",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4829,6 +5312,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fastgron",
     .domain = "github.com/adamritter/fastgron",
+    .kind = .cli,
     .description = " High-performance JSON to GRON (greppable, flattened JSON) converter",
     .homepage_url = null,
     .programs = &[_][]const u8{"fastgron"},
@@ -4839,6 +5323,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gost3411-2012",
     .domain = "github.com/adegtyarev/streebog",
+    .kind = .cli,
     .description = "GOST R 34.11-2012: RFC-6986 cryptographic hash function",
     .homepage_url = "https://www.streebog.net/",
     .programs = &[_][]const u8{"gost3411-2012"},
@@ -4849,6 +5334,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "webhook",
     .domain = "github.com/adnanh/webhook",
+    .kind = .cli,
     .description = "webhook is a lightweight incoming webhook server to run shell commands",
     .homepage_url = null,
     .programs = &[_][]const u8{"webhook"},
@@ -4859,6 +5345,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yamllint",
     .domain = "github.com/adrienverge/yamllint",
+    .kind = .cli,
     .description = "A linter for YAML files.",
     .homepage_url = null,
     .programs = &[_][]const u8{"yamllint"},
@@ -4869,6 +5356,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "squashfs-tools-ng",
     .domain = "github.com/AgentD/squashfs-tools-ng",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "gensquashfs", "rdsquashfs", "sqfs2tar", "tar2sqfs", "sqfsdiff" },
@@ -4879,6 +5367,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cloc",
     .domain = "github.com/AlDanial/cloc",
+    .kind = .cli,
     .description = "cloc counts blank lines, comment lines, and physical lines of source code in many programming languages.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "cloc", "config_data" },
@@ -4889,6 +5378,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "k3sup",
     .domain = "github.com/alexellis/k3sup",
+    .kind = .cli,
     .description = "Utility to create k3s clusters on any local or remote VM",
     .homepage_url = "https://k3sup.dev",
     .programs = &[_][]const u8{"k3sup"},
@@ -4899,6 +5389,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "allure",
     .domain = "github.com/allure-framework/allure2",
+    .kind = .cli,
     .description = "Allure Report is a flexible, lightweight multi-language test reporting tool. It provides clear graphical reports and allows everyone involved in the development process to extract the maximum of information from the everyday testing process",
     .homepage_url = "https://allurereport.org/",
     .programs = &[_][]const u8{"allure"},
@@ -4909,6 +5400,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "commit",
     .domain = "github.com/alt-art/commit",
+    .kind = .cli,
     .description = "Command-line tool to guide your template commit messages anywhere, anytime",
     .homepage_url = null,
     .programs = &[_][]const u8{"commit"},
@@ -4919,6 +5411,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "grype",
     .domain = "github.com/anchore/grype",
+    .kind = .cli,
     .description = "A vulnerability scanner for container images and filesystems",
     .homepage_url = null,
     .programs = &[_][]const u8{"grype"},
@@ -4929,6 +5422,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libepoxy",
     .domain = "github.com/anholt/libepoxy",
+    .kind = .library,
     .description = "Epoxy is a library for handling OpenGL function pointer management for you",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -4939,6 +5433,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jira",
     .domain = "github.com/ankitpokhrel/jira-cli",
+    .kind = .cli,
     .description = "simple jira command line client in Go",
     .homepage_url = null,
     .programs = &[_][]const u8{"jira"},
@@ -4949,6 +5444,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ni",
     .domain = "github.com/antfu/ni",
+    .kind = .cli,
     .description = "💡 Use the right package manager",
     .homepage_url = null,
     .programs = &[_][]const u8{ "na", "nci", "ni", "nlx", "nr", "nu", "nun" },
@@ -4959,6 +5455,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "alpaca.cpp",
     .domain = "github.com/antimatter15/alpaca.cpp",
+    .kind = .cli,
     .description = "Locally run an Instruction-Tuned Chat-Style LLM ",
     .homepage_url = null,
     .programs = &[_][]const u8{"alpaca.cpp"},
@@ -4969,6 +5466,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "GPT Engineer",
     .domain = "github.com/AntonOsika/gpt-engineer",
+    .kind = .cli,
     .description = "Platform to experiment with the AI Software Engineer. Terminal based. NOTE: Very different from https://gptengineer.app",
     .homepage_url = null,
     .programs = &[_][]const u8{ "gpte", "gpt-engineer" },
@@ -4979,6 +5477,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "avif",
     .domain = "github.com/AOMediaCodec/libavif",
+    .kind = .cli,
     .description = "libavif - Library for encoding and decoding .avif files",
     .homepage_url = null,
     .programs = &[_][]const u8{ "avifenc", "avifdec" },
@@ -4989,6 +5488,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tea-package-builder",
     .domain = "github.com/ArionThinker/tea-package-builder",
+    .kind = .cli,
     .description = "Tea Package Builder is a tool that helps create packages for Tea.xyz quickly and conveniently",
     .homepage_url = null,
     .programs = &[_][]const u8{"tea-package-builder"},
@@ -4999,6 +5499,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "btop",
     .domain = "github.com/aristocratos/btop",
+    .kind = .cli,
     .description = "Resource monitor. C++ version and continuation of bashtop and bpytop",
     .homepage_url = null,
     .programs = &[_][]const u8{"btop"},
@@ -5009,6 +5510,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "asciidoc",
     .domain = "github.com/asciidoc-py/asciidoc-py",
+    .kind = .cli,
     .description = "Formatter/translator for text files to numerous formats",
     .homepage_url = "https://asciidoc-py.github.io/",
     .programs = &[_][]const u8{"asciidoc"},
@@ -5019,6 +5521,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tabulate",
     .domain = "github.com/astanin/python-tabulate",
+    .kind = .cli,
     .description = "Pretty-print tabular data in Python, a library and a command-line utility. Repository migrated from bitbucket.org/astanin/python-tabulate.",
     .homepage_url = "https://pypi.org/project/tabulate/",
     .programs = &[_][]const u8{"tabulate"},
@@ -5029,6 +5532,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "csvdiff",
     .domain = "github.com/aswinkarthik/csvdiff",
+    .kind = .cli,
     .description = "A fast diff tool for comparing csv files",
     .homepage_url = "https://aswinkarthik.github.io/csvdiff/",
     .programs = &[_][]const u8{"csvdiff"},
@@ -5039,6 +5543,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Stable Diffusion web UI",
     .domain = "github.com/AUTOMATIC1111/stable-diffusion-webui",
+    .kind = .cli,
     .description = "Stable Diffusion web UI",
     .homepage_url = null,
     .programs = &[_][]const u8{"stable-diffusion-webui"},
@@ -5049,6 +5554,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cfn-lint",
     .domain = "github.com/aws-cloudformation/cfn-lint",
+    .kind = .cli,
     .description = "Validate CloudFormation templates against the CloudFormation spec",
     .homepage_url = null,
     .programs = &[_][]const u8{"cfn-lint"},
@@ -5059,6 +5565,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws-sdk-cpp",
     .domain = "github.com/aws/aws-sdk-cpp",
+    .kind = .library,
     .description = "AWS SDK for C++",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5069,6 +5576,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docker-credential-ecr-login",
     .domain = "github.com/awslabs/amazon-ecr-credential-helper",
+    .kind = .cli,
     .description = "Automatically gets credentials for Amazon ECR on docker push/docker pull",
     .homepage_url = null,
     .programs = &[_][]const u8{"docker-credential-ecr-login"},
@@ -5079,6 +5587,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dy",
     .domain = "github.com/awslabs/dynein",
+    .kind = .cli,
     .description = "DynamoDB CLI written in Rust.",
     .homepage_url = null,
     .programs = &[_][]const u8{"dy"},
@@ -5089,6 +5598,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eks-node-viewer",
     .domain = "github.com/awslabs/eks-node-viewer",
+    .kind = .cli,
     .description = "EKS Node Viewer",
     .homepage_url = null,
     .programs = &[_][]const u8{"eks-node-viewer"},
@@ -5099,6 +5609,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "llrt",
     .domain = "github.com/awslabs/llrt",
+    .kind = .cli,
     .description = "LLRT (Low Latency Runtime) is an experimental, lightweight JavaScript runtime designed to address the growing demand for fast and efficient Serverless applications.",
     .homepage_url = null,
     .programs = &[_][]const u8{"llrt"},
@@ -5109,6 +5620,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mailpit",
     .domain = "github.com/axllent/mailpit",
+    .kind = .cli,
     .description = "An email and SMTP testing tool with API for developers",
     .homepage_url = "https://mailpit.axllent.org/",
     .programs = &[_][]const u8{"mailpit"},
@@ -5119,6 +5631,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bats",
     .domain = "github.com/bats-core/bats-core",
+    .kind = .cli,
     .description = "Bash Automated Testing System",
     .homepage_url = "https://bats-core.readthedocs.io/",
     .programs = &[_][]const u8{"bats"},
@@ -5129,6 +5642,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bazel",
     .domain = "github.com/bazelbuild/bazelisk",
+    .kind = .cli,
     .description = "A user-friendly launcher for Bazel.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "bazel", "bazelisk" },
@@ -5139,6 +5653,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "buildifier",
     .domain = "github.com/bazelbuild/buildtools",
+    .kind = .cli,
     .description = "Format bazel BUILD files with a standard convention",
     .homepage_url = null,
     .programs = &[_][]const u8{"buildifier"},
@@ -5149,6 +5664,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "six",
     .domain = "github.com/benjaminp/six",
+    .kind = .library,
     .description = "Python 2 and 3 compatibility library",
     .homepage_url = "https://six.readthedocs.io/",
     .programs = &[_][]const u8{},
@@ -5159,6 +5675,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws-whoami",
     .domain = "github.com/benkehoe/aws-whoami-golang",
+    .kind = .cli,
     .description = "A tool to show what AWS account and identity you're using.",
     .homepage_url = null,
     .programs = &[_][]const u8{"aws-whoami"},
@@ -5169,6 +5686,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libxcrypt",
     .domain = "github.com/besser82/libxcrypt",
+    .kind = .library,
     .description = "Extended crypt library for descrypt, md5crypt, bcrypt, and others",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5179,6 +5697,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lporg",
     .domain = "github.com/blacktop/lporg",
+    .kind = .cli,
     .description = "Organize Your macOS Launchpad Apps",
     .homepage_url = null,
     .programs = &[_][]const u8{"lporg"},
@@ -5189,6 +5708,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nex",
     .domain = "github.com/blynn/nex",
+    .kind = .cli,
     .description = "44BSD re-implementation of vi",
     .homepage_url = "https://repo.or.cz/nvi.git",
     .programs = &[_][]const u8{"nex"},
@@ -5199,6 +5719,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scc",
     .domain = "github.com/boyter/scc",
+    .kind = .cli,
     .description = "Sloc, Cloc and Code: scc is a very fast accurate code counter with complexity calculations and COCOMO estimates written in pure Go",
     .homepage_url = null,
     .programs = &[_][]const u8{"scc"},
@@ -5209,6 +5730,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "iproute2mac",
     .domain = "github.com/brona/iproute2mac",
+    .kind = .cli,
     .description = "CLI wrapper for basic network utilites on Mac OS X inspired with iproute2 on Linux systems - ip command.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "bridge", "ip", "iproute2mac.py" },
@@ -5219,6 +5741,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bruce",
     .domain = "github.com/brucedom/bruce",
+    .kind = .cli,
     .description = "Basic Runtime for Uniform Compute Environments",
     .homepage_url = null,
     .programs = &[_][]const u8{"bruce"},
@@ -5229,6 +5752,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xsv",
     .domain = "github.com/burntsushi/xsv",
+    .kind = .cli,
     .description = "A fast CSV command line toolkit written in Rust.",
     .homepage_url = null,
     .programs = &[_][]const u8{"xsv"},
@@ -5239,6 +5763,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "org-stats",
     .domain = "github.com/caarlos0/org-stats",
+    .kind = .cli,
     .description = "Get the contributor stats summary from all repos of any given organization",
     .homepage_url = null,
     .programs = &[_][]const u8{"org-stats"},
@@ -5249,6 +5774,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "svu",
     .domain = "github.com/caarlos0/svu",
+    .kind = .cli,
     .description = "Semantic Version Util",
     .homepage_url = null,
     .programs = &[_][]const u8{"svu"},
@@ -5259,6 +5785,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "acmedns",
     .domain = "github.com/caddy-dns/acmedns",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"caddy-acmedns"},
@@ -5269,6 +5796,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcaddy",
     .domain = "github.com/caddyserver/xcaddy",
+    .kind = .cli,
     .description = "Build Caddy with plugins",
     .homepage_url = null,
     .programs = &[_][]const u8{"xcaddy"},
@@ -5279,6 +5807,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "charmcraft",
     .domain = "github.com/canonical/charmcraft",
+    .kind = .cli,
     .description = "Collaborate, build and publish charmed operators for Kubernetes, Linux and Windows.",
     .homepage_url = "https://charmhub.io",
     .programs = &[_][]const u8{"charmcraft"},
@@ -5289,6 +5818,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "canonical/pebble",
     .domain = "github.com/canonical/pebble",
+    .kind = .cli,
     .description = "Pebble is a lightweight Linux service manager with layered configuration and an HTTP API.",
     .homepage_url = "https://canonical-pebble.readthedocs-hosted.com/",
     .programs = &[_][]const u8{"pebble"},
@@ -5299,6 +5829,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "carthage",
     .domain = "github.com/Carthage/Carthage",
+    .kind = .cli,
     .description = "A simple, decentralized dependency manager for Cocoa",
     .homepage_url = null,
     .programs = &[_][]const u8{"carthage"},
@@ -5309,6 +5840,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libyang",
     .domain = "github.com/cesnet/libyang",
+    .kind = .cli,
     .description = "YANG data modeling language library",
     .homepage_url = null,
     .programs = &[_][]const u8{ "yanglint", "yangre" },
@@ -5319,6 +5851,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "apko",
     .domain = "github.com/chainguard-dev/apko",
+    .kind = .cli,
     .description = "Build OCI images from APK packages directly without Dockerfile",
     .homepage_url = "https://apko.dev",
     .programs = &[_][]const u8{"apko"},
@@ -5329,6 +5862,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcparse",
     .domain = "github.com/ChargePoint/xcparse",
+    .kind = .cli,
     .description = "Command line tool & Swift framework for parsing Xcode 11+ xcresult",
     .homepage_url = null,
     .programs = &[_][]const u8{"xcparse"},
@@ -5339,6 +5873,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ruff",
     .domain = "github.com/charliermarsh/ruff",
+    .kind = .library,
     .description = "An extremely fast Python linter and code formatter, written in Rust.",
     .homepage_url = "https://docs.astral.sh/ruff",
     .programs = &[_][]const u8{},
@@ -5349,6 +5884,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "reattach-to-user-namespace",
     .domain = "github.com/ChrisJohnsen/tmux-MacOSX-pasteboard",
+    .kind = .cli,
     .description = "Notes and workarounds for accessing the Mac OS X pasteboard in tmux sessions. Note: The pu branch (“Proposed Updates”) may be rewound without notice.",
     .homepage_url = null,
     .programs = &[_][]const u8{"reattach-to-user-namespace"},
@@ -5359,6 +5895,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "protoc-gen-jsonschema",
     .domain = "github.com/chrusty/protoc-gen-jsonschema",
+    .kind = .cli,
     .description = "Protobuf to JSON-Schema compiler",
     .homepage_url = null,
     .programs = &[_][]const u8{"protoc-gen-jsonschema"},
@@ -5369,6 +5906,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cirrus",
     .domain = "github.com/cirruslabs/cirrus-cli",
+    .kind = .cli,
     .description = "CLI for executing Cirrus tasks locally and in any CI",
     .homepage_url = null,
     .programs = &[_][]const u8{"cirrus"},
@@ -5379,6 +5917,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mp",
     .domain = "github.com/clever/microplane",
+    .kind = .cli,
     .description = "A CLI tool to make git changes across many repos, especially useful with Microservices.",
     .homepage_url = "https://medium.com/always-a-student/mo-repos-mo-problems-how-we-make-changes-across-many-git-repositories-293ad7d418f0",
     .programs = &[_][]const u8{"mp"},
@@ -5389,6 +5928,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cloudbase/garm",
     .domain = "github.com/cloudbase/garm",
+    .kind = .cli,
     .description = "GitHub Actions Runner Manager",
     .homepage_url = null,
     .programs = &[_][]const u8{ "garm", "garm-cli" },
@@ -5399,6 +5939,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cloudbase/garm-provider-openstack",
     .domain = "github.com/cloudbase/garm-provider-openstack",
+    .kind = .cli,
     .description = "Garm external provider for OpenStack",
     .homepage_url = null,
     .programs = &[_][]const u8{"garm-provider-openstack"},
@@ -5409,6 +5950,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "stress-ng",
     .domain = "github.com/ColinIanKing/stress-ng",
+    .kind = .cli,
     .description = "This is the stress-ng upstream project git repository.  stress-ng will stress test a computer system in various selectable ways. It was designed to exercise various physical subsystems of a computer as well as the various operating system kernel interfaces. ",
     .homepage_url = "https://wiki.ubuntu.com/Kernel/Reference/stress-ng",
     .programs = &[_][]const u8{"stress-ng"},
@@ -5419,6 +5961,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "librdkafka",
     .domain = "github.com/confluentinc/librdkafka",
+    .kind = .library,
     .description = "The Apache Kafka C/C++ library",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5429,6 +5972,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libserdes",
     .domain = "github.com/confluentinc/libserdes",
+    .kind = .library,
     .description = "Avro Serialization/Deserialization C/C++ library with Confluent schema-registry support",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5439,6 +5983,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gvisor-tap-vsock",
     .domain = "github.com/containers/gvisor-tap-vsock",
+    .kind = .cli,
     .description = "A new network stack based on gVisor",
     .homepage_url = null,
     .programs = &[_][]const u8{ "gvproxy", "qemu-wrapper" },
@@ -5449,6 +5994,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "podlet",
     .domain = "github.com/containers/podlet",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"podlet"},
@@ -5459,6 +6005,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "skopeo",
     .domain = "github.com/containers/skopeo",
+    .kind = .cli,
     .description = "Work with remote images registries - retrieving information, images, signing content",
     .homepage_url = null,
     .programs = &[_][]const u8{"skopeo"},
@@ -5469,6 +6016,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mactop",
     .domain = "github.com/context-labs/mactop",
+    .kind = .cli,
     .description = "Apple Silicon Monitor Top written in Golang",
     .homepage_url = null,
     .programs = &[_][]const u8{"mactop"},
@@ -5479,6 +6027,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cookiecutter",
     .domain = "github.com/cookiecutter/cookiecutter",
+    .kind = .cli,
     .description = "A cross-platform command-line utility that creates projects from cookiecutters (project templates), e.g. Python package projects, C projects.",
     .homepage_url = "https://pypi.org/project/cookiecutter/",
     .programs = &[_][]const u8{"cookiecutter"},
@@ -5489,6 +6038,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "TTS",
     .domain = "github.com/coqui-ai/TTS",
+    .kind = .cli,
     .description = "🐸💬 - a deep learning toolkit for Text-to-Speech, battle-tested in research and production",
     .homepage_url = "http://coqui.ai",
     .programs = &[_][]const u8{ "tts", "tts-server", "ttx" },
@@ -5499,6 +6049,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "air",
     .domain = "github.com/cosmtrek/air",
+    .kind = .cli,
     .description = "☁️ Live reload for Go apps",
     .homepage_url = null,
     .programs = &[_][]const u8{"air"},
@@ -5509,6 +6060,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cowsay",
     .domain = "github.com/cowsay-org/cowsay",
+    .kind = .cli,
     .description = "apjanke's fork of the classic cowsay project",
     .homepage_url = "https://cowsay.diamonds",
     .programs = &[_][]const u8{"cowsay"},
@@ -5519,6 +6071,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "python-pathspec",
     .domain = "github.com/cpburnz/python-pathspec",
+    .kind = .library,
     .description = "Utility library for gitignore style pattern matching of file paths.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5529,6 +6082,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go-md2man",
     .domain = "github.com/cpuguy83/go-md2man",
+    .kind = .cli,
     .description = "Converts markdown into roff (man pages)",
     .homepage_url = null,
     .programs = &[_][]const u8{"go-md2man"},
@@ -5539,6 +6093,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vfkit",
     .domain = "github.com/crc-org/vfkit",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"vfkit"},
@@ -5549,6 +6104,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "create-dmg",
     .domain = "github.com/create-dmg/create-dmg",
+    .kind = .cli,
     .description = "A shell script to build fancy DMGs",
     .homepage_url = null,
     .programs = &[_][]const u8{"create-dmg"},
@@ -5559,6 +6115,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xxh",
     .domain = "github.com/Cyan4973/xxHash",
+    .kind = .cli,
     .description = "Extremely fast non-cryptographic hash algorithm",
     .homepage_url = "https://xxhash.com",
     .programs = &[_][]const u8{ "xxhsum", "xxh32sum", "xxh64sum", "xxh128sum" },
@@ -5569,6 +6126,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "safe_hashes",
     .domain = "github.com/Cyfrin/safe-tx-hashes-util",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"safe_hashes"},
@@ -5579,6 +6137,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "reproc",
     .domain = "github.com/DaanDeMeyer/reproc",
+    .kind = .library,
     .description = "A cross-platform (C99/C++11) process library",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5589,6 +6148,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gci",
     .domain = "github.com/daixiang0/gci",
+    .kind = .cli,
     .description = "GCI, a tool that control golang package import order and make it always deterministic.",
     .homepage_url = null,
     .programs = &[_][]const u8{"gci"},
@@ -5599,6 +6159,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libccd",
     .domain = "github.com/danfis/libccd",
+    .kind = .library,
     .description = "Library for collision detection between two convex shapes",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5609,6 +6170,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "overmind",
     .domain = "github.com/darthsim/overmind",
+    .kind = .cli,
     .description = "Process manager for Procfile-based applications and tmux",
     .homepage_url = null,
     .programs = &[_][]const u8{"overmind"},
@@ -5619,6 +6181,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dateutil",
     .domain = "github.com/dateutil/dateutil",
+    .kind = .library,
     .description = "Useful extensions to the standard Python datetime features",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5629,6 +6192,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cJSON",
     .domain = "github.com/DaveGamble/cJSON",
+    .kind = .library,
     .description = "Ultralightweight JSON parser in ANSI C",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5639,6 +6203,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tre",
     .domain = "github.com/dduan/tre",
+    .kind = .cli,
     .description = "Tree command, improved.",
     .homepage_url = null,
     .programs = &[_][]const u8{"tre"},
@@ -5649,6 +6214,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oapi-codegen",
     .domain = "github.com/deepmap/oapi-codegen",
+    .kind = .library,
     .description = "Generate Go client and server boilerplate from OpenAPI 3 specifications",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5659,6 +6225,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "navi",
     .domain = "github.com/denisidoro/navi",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"navi"},
@@ -5669,6 +6236,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "GitHub Desktop",
     .domain = "github.com/desktop",
+    .kind = .cli,
     .description = "A desktop application for contributing to projects on GitHub.",
     .homepage_url = "https://desktop.github.com",
     .programs = &[_][]const u8{"github-desktop"},
@@ -5679,6 +6247,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "usque",
     .domain = "github.com/Diniboy1123/usque",
+    .kind = .cli,
     .description = "Open-source reimplementation of the Cloudflare WARP client's MASQUE protocol. ",
     .homepage_url = null,
     .programs = &[_][]const u8{"usque"},
@@ -5689,6 +6258,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cgif",
     .domain = "github.com/dloebl/cgif",
+    .kind = .library,
     .description = "GIF encoder written in C",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5699,6 +6269,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "redfishtool",
     .domain = "github.com/DMTF/redfishtool",
+    .kind = .cli,
     .description = "A Python34 program that implements a command line tool for accessing the Redfish API.",
     .homepage_url = null,
     .programs = &[_][]const u8{"redfishtool"},
@@ -5709,6 +6280,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gdu",
     .domain = "github.com/dundee/gdu",
+    .kind = .cli,
     .description = "Fast disk usage analyzer with console interface written in Go",
     .homepage_url = "https://www.gnu.org/software/coreutils/",
     .programs = &[_][]const u8{"gdu"},
@@ -5719,6 +6291,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "neofetch",
     .domain = "github.com/dylanaraps/neofetch",
+    .kind = .cli,
     .description = "🖼️  A command-line system information tool written in bash 3.2+",
     .homepage_url = null,
     .programs = &[_][]const u8{"neofetch"},
@@ -5729,6 +6302,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libdeflate",
     .domain = "github.com/ebiggers/libdeflate",
+    .kind = .cli,
     .description = "Heavily optimized library for DEFLATE/zlib/gzip compression and decompression",
     .homepage_url = null,
     .programs = &[_][]const u8{ "libdeflate-gzip", "libdeflate-gunzip" },
@@ -5739,6 +6313,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kcat",
     .domain = "github.com/edenhill/kcat",
+    .kind = .cli,
     .description = "Generic command line non-JVM Apache Kafka producer and consumer",
     .homepage_url = null,
     .programs = &[_][]const u8{"kcat"},
@@ -5749,6 +6324,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pycparser",
     .domain = "github.com/eliben/pycparser",
+    .kind = .library,
     .description = ":snake: Complete C99 parser in pure Python",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5759,6 +6335,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "otel-cli",
     .domain = "github.com/equinix-labs/otel-cli",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"otel-cli"},
@@ -5769,6 +6346,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "triangle",
     .domain = "github.com/esimov/triangle",
+    .kind = .cli,
     .description = "Convert images to computer generated art using delaunay triangulation.",
     .homepage_url = null,
     .programs = &[_][]const u8{"triangle"},
@@ -5779,6 +6357,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lerc",
     .domain = "github.com/Esri/lerc",
+    .kind = .library,
     .description = "Limited Error Raster Compression",
     .homepage_url = "https://github.com/esri/lerc",
     .programs = &[_][]const u8{},
@@ -5789,6 +6368,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gnome-extensions-cli",
     .domain = "github.com/essembeh/gnome-extensions-cli",
+    .kind = .cli,
     .description = "Command line tool to manage your Gnome Shell extensions",
     .homepage_url = null,
     .programs = &[_][]const u8{ "gnome-extensions-cli", "gext" },
@@ -5799,6 +6379,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "better-commits",
     .domain = "github.com/Everduin94/better-commits",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "bcommits", "better-branch", "better-commits", "better-commits-init", "git-bc" },
@@ -5809,6 +6390,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ladder",
     .domain = "github.com/everywall/ladder",
+    .kind = .cli,
     .description = "Selfhosted alternative to 12ft.io. and 1ft.io bypass paywalls with a proxy ladder and remove CORS headers from any URL",
     .homepage_url = null,
     .programs = &[_][]const u8{"ladder"},
@@ -5819,6 +6401,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lefthook",
     .domain = "github.com/evilmartians/lefthook",
+    .kind = .cli,
     .description = "Fast and powerful Git hooks manager for any type of projects.",
     .homepage_url = "http://lefthook.dev/",
     .programs = &[_][]const u8{"lefthook"},
@@ -5829,6 +6412,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sasqwatch",
     .domain = "github.com/fabio42/sasqwatch",
+    .kind = .cli,
     .description = "A modern take on the classic watch command",
     .homepage_url = null,
     .programs = &[_][]const u8{"sasqwatch"},
@@ -5839,6 +6423,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fizz",
     .domain = "github.com/facebookincubator/fizz",
+    .kind = .cli,
     .description = "C++14 implementation of the TLS-1.3 standard",
     .homepage_url = null,
     .programs = &[_][]const u8{"fizz"},
@@ -5849,6 +6434,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fastfetch",
     .domain = "github.com/fastfetch-cli/fastfetch",
+    .kind = .cli,
     .description = "A maintained, feature-rich and performance oriented, neofetch like system information tool.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "fastfetch", "flashfetch" },
@@ -5859,6 +6445,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fast_float",
     .domain = "github.com/fastfloat/fast_float",
+    .kind = .library,
     .description = "Fast and exact implementation of the C++ from_chars functions for number types: 4x to 10x faster than strtod, part of GCC 12, Chromium, Redis and WebKit/Safari",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5869,6 +6456,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nak",
     .domain = "github.com/fiatjaf/nak",
+    .kind = .cli,
     .description = "a command line tool for doing all things nostr",
     .homepage_url = null,
     .programs = &[_][]const u8{"nak"},
@@ -5879,6 +6467,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "firecracker",
     .domain = "github.com/firecracker-microvm/firecracker",
+    .kind = .cli,
     .description = "Native KVM microVM monitor and jailer.",
     .homepage_url = "https://firecracker-microvm.github.io",
     .programs = &[_][]const u8{ "firecracker", "jailer" },
@@ -5889,6 +6478,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pstree",
     .domain = "github.com/FredHucht/pstree",
+    .kind = .cli,
     .description = "pstree shows the process listing as a tree",
     .homepage_url = null,
     .programs = &[_][]const u8{"pstree"},
@@ -5899,6 +6489,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spdlog",
     .domain = "github.com/gabime/spdlog",
+    .kind = .library,
     .description = "Fast C++ logging library.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5909,6 +6500,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scrcpy",
     .domain = "github.com/Genymobile/scrcpy",
+    .kind = .cli,
     .description = "Display and control your Android device",
     .homepage_url = null,
     .programs = &[_][]const u8{"scrcpy"},
@@ -5919,6 +6511,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "LLaMA.cpp",
     .domain = "github.com/ggerganov/llama.cpp",
+    .kind = .cli,
     .description = "LLM inference in C/C++",
     .homepage_url = null,
     .programs = &[_][]const u8{ "llama-cli", "llama.cpp" },
@@ -5929,6 +6522,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "whisper",
     .domain = "github.com/ggerganov/whisper.cpp",
+    .kind = .cli,
     .description = "Port of OpenAI's Whisper model in C/C++",
     .homepage_url = null,
     .programs = &[_][]const u8{ "whisper.cpp", "whisper-cli" },
@@ -5939,6 +6533,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "psutil",
     .domain = "github.com/giampaolo/psutil",
+    .kind = .library,
     .description = "Cross-platform lib for process and system monitoring in Python",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -5949,6 +6544,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-chglog",
     .domain = "github.com/git-chglog",
+    .kind = .cli,
     .description = "CHANGELOG generator implemented in Go (Golang).",
     .homepage_url = "https://godoc.org/github.com/git-chglog/git-chglog",
     .programs = &[_][]const u8{"git-chglog"},
@@ -5959,6 +6555,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-credential-manager",
     .domain = "github.com/git-ecosystem/git-credential-manager",
+    .kind = .cli,
     .description = "Secure, cross-platform Git credential storage with authentication to GitHub, Azure Repos, and other popular Git hosting services.",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-credential-manager"},
@@ -5969,6 +6566,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-sizer",
     .domain = "github.com/github/git-sizer",
+    .kind = .cli,
     .description = "Compute various size metrics for a Git repository, flagging those that might cause problems",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-sizer"},
@@ -5979,6 +6577,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spec-kit",
     .domain = "github.com/github/spec-kit",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"specify"},
@@ -5989,6 +6588,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glauth",
     .domain = "github.com/glauth/glauth",
+    .kind = .cli,
     .description = "A lightweight LDAP server for development, home use, or CI",
     .homepage_url = null,
     .programs = &[_][]const u8{ "glauth", "glauth-setup" },
@@ -5999,6 +6599,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lego",
     .domain = "github.com/go-acme/lego",
+    .kind = .cli,
     .description = "Let's Encrypt/ACME client and library written in Go",
     .homepage_url = "https://go-acme.github.io/lego/",
     .programs = &[_][]const u8{"lego"},
@@ -6009,6 +6610,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aiac",
     .domain = "github.com/gofireflyio/aiac",
+    .kind = .cli,
     .description = "Artificial Intelligence Infrastructure-as-Code Generator.",
     .homepage_url = null,
     .programs = &[_][]const u8{"aiac"},
@@ -6019,6 +6621,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "migrate",
     .domain = "github.com/golang-migrate/migrate",
+    .kind = .cli,
     .description = "Database migrations. CLI and Golang library.",
     .homepage_url = null,
     .programs = &[_][]const u8{"migrate"},
@@ -6029,6 +6632,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gollum",
     .domain = "github.com/gollum/gollum",
+    .kind = .cli,
     .description = "An n:m message multiplexer written in Go",
     .homepage_url = "https://gollum.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{"gollum"},
@@ -6039,6 +6643,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "brotli",
     .domain = "github.com/google/brotli",
+    .kind = .cli,
     .description = "Generic-purpose lossless compression algorithm by Google",
     .homepage_url = null,
     .programs = &[_][]const u8{"brotli"},
@@ -6049,6 +6654,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gops",
     .domain = "github.com/google/gops",
+    .kind = .cli,
     .description = "A tool to list and diagnose Go processes currently running on your system",
     .homepage_url = null,
     .programs = &[_][]const u8{"gops"},
@@ -6059,6 +6665,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "re2",
     .domain = "github.com/google/re2",
+    .kind = .library,
     .description = "RE2 is a fast, safe, thread-friendly alternative to backtracking regular expression engines like those used in PCRE, Perl, and Python. It is a C++ library.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6069,6 +6676,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glslc",
     .domain = "github.com/google/shaderc",
+    .kind = .cli,
     .description = "A collection of tools, libraries, and tests for Vulkan shader compilation.",
     .homepage_url = null,
     .programs = &[_][]const u8{"glslc"},
@@ -6079,6 +6687,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "container-structure-test",
     .domain = "github.com/GoogleContainerTools/container-structure-test",
+    .kind = .cli,
     .description = "validate the structure of your container images",
     .homepage_url = null,
     .programs = &[_][]const u8{"container-structure-test"},
@@ -6089,6 +6698,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gopass",
     .domain = "github.com/gopasspw/gopass",
+    .kind = .cli,
     .description = "The slightly more awesome standard unix password manager for teams",
     .homepage_url = "https://www.gopass.pw/",
     .programs = &[_][]const u8{"gopass"},
@@ -6099,6 +6709,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "google-maps-scraper",
     .domain = "github.com/gosom/google-maps-scraper",
+    .kind = .cli,
     .description = "scrape data  data from Google Maps. Extracts data such as the name, address, phone number, website URL, rating,  reviews number, latitude and longitude, reviews,email and more for each place",
     .homepage_url = null,
     .programs = &[_][]const u8{"google-maps-scraper"},
@@ -6109,6 +6720,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gotestsum",
     .domain = "github.com/gotestyourself/gotestsum",
+    .kind = .cli,
     .description = "'go test' runner with output optimized for humans, JUnit XML for CI integration, and a summary of the test results.",
     .homepage_url = null,
     .programs = &[_][]const u8{"gotestsum"},
@@ -6119,6 +6731,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go-redfish-api-idrac",
     .domain = "github.com/greenpau/go-redfish-api-idrac",
+    .kind = .cli,
     .description = "iDRAC Redfish API client library written in Go.",
     .homepage_url = null,
     .programs = &[_][]const u8{"go-redfish-api-idrac-client"},
@@ -6129,6 +6742,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pup",
     .domain = "github.com/gromgit/pup",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"pup"},
@@ -6139,6 +6753,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hadolint",
     .domain = "github.com/hadolint/hadolint",
+    .kind = .cli,
     .description = "Dockerfile linter, validate inline bash, written in Haskell",
     .homepage_url = null,
     .programs = &[_][]const u8{"hadolint"},
@@ -6149,6 +6764,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oha",
     .domain = "github.com/hatoo/oha",
+    .kind = .cli,
     .description = "Native HTTP load generator with paced requests and JSON reports.",
     .homepage_url = "https://github.com/hatoo/oha",
     .programs = &[_][]const u8{"oha"},
@@ -6159,6 +6775,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "helmfile",
     .domain = "github.com/helmfile/helmfile",
+    .kind = .cli,
     .description = "Declaratively deploy your Kubernetes manifests, Kustomize configs, and Charts as Helm releases. Generate all-in-one manifests for use with ArgoCD.",
     .homepage_url = "https://helmfile.readthedocs.io",
     .programs = &[_][]const u8{"helmfile"},
@@ -6169,6 +6786,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vals",
     .domain = "github.com/helmfile/vals",
+    .kind = .cli,
     .description = "Helm-like configuration values loader with support for various sources",
     .homepage_url = null,
     .programs = &[_][]const u8{"vals"},
@@ -6179,6 +6797,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xb-tool",
     .domain = "github.com/hughsie/libxmlb",
+    .kind = .cli,
     .description = "A library to help create and query binary XML blobs",
     .homepage_url = null,
     .programs = &[_][]const u8{"xb-tool"},
@@ -6189,6 +6808,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hyfetch",
     .domain = "github.com/hykilpikonna/hyfetch",
+    .kind = .cli,
     .description = "Fast, highly customisable system info script with LGBTQ+ pride flags",
     .homepage_url = null,
     .programs = &[_][]const u8{"hyfetch"},
@@ -6199,6 +6819,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "neowofetch",
     .domain = "github.com/hykilpikonna/hyfetch/neowofetch",
+    .kind = .cli,
     .description = "Fast, highly customisable system info script with LGBTQ+ pride flags",
     .homepage_url = null,
     .programs = &[_][]const u8{"neowofetch"},
@@ -6209,6 +6830,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lux",
     .domain = "github.com/iawia002/lux",
+    .kind = .cli,
     .description = "👾 Fast and simple video download library and CLI tool written in Go",
     .homepage_url = null,
     .programs = &[_][]const u8{"lux"},
@@ -6219,6 +6841,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Scriptisto",
     .domain = "github.com/igor-petruk/scriptisto",
+    .kind = .cli,
     .description = "A language-agnostic \"shebang interpreter\" that enables you to write scripts in compiled languages.",
     .homepage_url = null,
     .programs = &[_][]const u8{"scriptisto"},
@@ -6229,6 +6852,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "markdownlint",
     .domain = "github.com/igorshubovych/markdownlint-cli",
+    .kind = .cli,
     .description = "CLI for Node.js style checker and lint tool for Markdown files",
     .homepage_url = null,
     .programs = &[_][]const u8{"markdownlint"},
@@ -6239,6 +6863,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ios-deploy",
     .domain = "github.com/ios-control/ios-deploy",
+    .kind = .cli,
     .description = "Install and debug iPhone apps from the command line, without using Xcode",
     .homepage_url = null,
     .programs = &[_][]const u8{"ios-deploy"},
@@ -6249,6 +6874,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libatomic_ops",
     .domain = "github.com/ivmai/libatomic_ops",
+    .kind = .library,
     .description = "The atomic_ops project (Atomic memory update operations portable implementation)",
     .homepage_url = "https://github.com/ivmai/libatomic_ops/wiki/Download",
     .programs = &[_][]const u8{},
@@ -6259,6 +6885,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pike",
     .domain = "github.com/jameswoolfenden/pike",
+    .kind = .cli,
     .description = "Pike is a tool for determining the permissions or policy required for IAC code",
     .homepage_url = "https://pike.lysator.liu.se/",
     .programs = &[_][]const u8{"pike"},
@@ -6269,6 +6896,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "keyring",
     .domain = "github.com/jaraco/keyring",
+    .kind = .cli,
     .description = "Easy way to access the system keyring service from python",
     .homepage_url = null,
     .programs = &[_][]const u8{"keyring"},
@@ -6279,6 +6907,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "blink",
     .domain = "github.com/jart/blink",
+    .kind = .cli,
     .description = "tiniest x86-64-linux emulator",
     .homepage_url = null,
     .programs = &[_][]const u8{ "blink", "blinkenlights" },
@@ -6289,6 +6918,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nnn",
     .domain = "github.com/jarun/nnn",
+    .kind = .cli,
     .description = "Tiny, lightning fast, feature-packed file manager",
     .homepage_url = null,
     .programs = &[_][]const u8{"nnn"},
@@ -6299,6 +6929,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lolcat",
     .domain = "github.com/jaseg/lolcat",
+    .kind = .cli,
     .description = "Rainbows and unicorns in your console!",
     .homepage_url = null,
     .programs = &[_][]const u8{"lolcat"},
@@ -6309,6 +6940,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jasper",
     .domain = "github.com/jasper-software/jasper",
+    .kind = .cli,
     .description = "Official Repository for the JasPer Image Coding Toolkit",
     .homepage_url = "https://ece.engr.uvic.ca/~frodo/jasper/",
     .programs = &[_][]const u8{"jasper"},
@@ -6319,6 +6951,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yaml-cpp",
     .domain = "github.com/jbeder/yaml-cpp",
+    .kind = .library,
     .description = "A YAML parser and emitter in C++",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6329,6 +6962,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "horcrux",
     .domain = "github.com/jesseduffield/horcrux",
+    .kind = .cli,
     .description = "Split your file into encrypted fragments so that you don't need to remember a passcode",
     .homepage_url = null,
     .programs = &[_][]const u8{"horcrux"},
@@ -6339,6 +6973,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lazydocker",
     .domain = "github.com/jesseduffield/lazydocker",
+    .kind = .cli,
     .description = "The lazier way to manage everything docker",
     .homepage_url = null,
     .programs = &[_][]const u8{"lazydocker"},
@@ -6349,6 +6984,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lazygit",
     .domain = "github.com/jesseduffield/lazygit",
+    .kind = .cli,
     .description = "simple terminal UI for git commands",
     .homepage_url = null,
     .programs = &[_][]const u8{"lazygit"},
@@ -6359,6 +6995,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "screenresolution",
     .domain = "github.com/jhford/screenresolution",
+    .kind = .cli,
     .description = "Command line utility for getting, setting and listing display resolution on Mac OS X 10.6+",
     .homepage_url = null,
     .programs = &[_][]const u8{"screenresolution"},
@@ -6369,6 +7006,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jj",
     .domain = "github.com/jj-vcs/jj",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"jj"},
@@ -6379,6 +7017,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ia",
     .domain = "github.com/jjjake/internetarchive",
+    .kind = .cli,
     .description = "Python wrapper for the various Internet Archive APIs",
     .homepage_url = null,
     .programs = &[_][]const u8{"ia"},
@@ -6389,6 +7028,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "awslogs",
     .domain = "github.com/jorgebastida/awslogs",
+    .kind = .cli,
     .description = "Simple command-line tool to read AWS CloudWatch logs",
     .homepage_url = null,
     .programs = &[_][]const u8{"awslogs"},
@@ -6399,6 +7039,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sourcekitten",
     .domain = "github.com/jpsim/SourceKitten",
+    .kind = .cli,
     .description = "An adorable little framework and command line tool for interacting with SourceKit.",
     .homepage_url = null,
     .programs = &[_][]const u8{"sourcekitten"},
@@ -6409,6 +7050,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "json-c",
     .domain = "github.com/json-c/json-c",
+    .kind = .library,
     .description = "https://github.com/json-c/json-c is the official code repository for json-c.  See the wiki for release tarballs for download.  API docs at http://json-c.github.io/json-c/",
     .homepage_url = "https://github.com/json-c/json-c/wiki",
     .programs = &[_][]const u8{},
@@ -6419,6 +7061,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "utf8proc",
     .domain = "github.com/JuliaStrings/utf8proc",
+    .kind = .library,
     .description = "a clean C library for processing UTF-8 Unicode data",
     .homepage_url = "http://juliastrings.github.io/utf8proc/",
     .programs = &[_][]const u8{},
@@ -6429,6 +7072,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terminal-notifier",
     .domain = "github.com/julienXX/terminal-notifier",
+    .kind = .cli,
     .description = "Send User Notifications on macOS from the command-line.",
     .homepage_url = null,
     .programs = &[_][]const u8{"terminal-notifier"},
@@ -6439,6 +7083,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fzf",
     .domain = "github.com/junegunn/fzf",
+    .kind = .cli,
     .description = ":cherry_blossom: A command-line fuzzy finder",
     .homepage_url = "https://junegunn.github.io/fzf/",
     .programs = &[_][]const u8{"fzf"},
@@ -6449,6 +7094,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "justwatchcom/sql_exporter",
     .domain = "github.com/justwatchcom/sql_exporter",
+    .kind = .cli,
     .description = "Database agnostic SQL exporter for Prometheus",
     .homepage_url = null,
     .programs = &[_][]const u8{"sql_exporter"},
@@ -6459,6 +7105,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "k0sctl",
     .domain = "github.com/k0sproject/k0sctl",
+    .kind = .cli,
     .description = "A bootstrapping and management tool for k0s clusters.",
     .homepage_url = null,
     .programs = &[_][]const u8{"k0sctl"},
@@ -6469,6 +7116,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "GKlib",
     .domain = "github.com/KarypisLab/GKlib",
+    .kind = .cli,
     .description = "A library of various helper routines and frameworks used by many of the lab's software",
     .homepage_url = null,
     .programs = &[_][]const u8{ "cmpnbrs", "csrcnv", "fis", "gkgraph", "gkrw", "m2mnbrs" },
@@ -6479,6 +7127,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kaspad",
     .domain = "github.com/kaspanet/kaspad",
+    .kind = .cli,
     .description = "Kaspad was the reference full node Kaspa implementation written in Go (golang), now rewritten in Rust: https://github.com/kaspanet/rusty-kaspa",
     .homepage_url = null,
     .programs = &[_][]const u8{ "genkeypair", "kaspactl", "kaspad", "kaspaminer", "kaspawallet" },
@@ -6489,6 +7138,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kaspa",
     .domain = "github.com/kaspanet/rusty-kaspa",
+    .kind = .cli,
     .description = "Kaspa full-node reference implementation and related libraries in the Rust programming language",
     .homepage_url = null,
     .programs = &[_][]const u8{ "kaspad", "kaspa-cli" },
@@ -6499,6 +7149,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "btrfs-progs",
     .domain = "github.com/kdave/btrfs-progs",
+    .kind = .cli,
     .description = "Userspace utilities to manage btrfs filesystems",
     .homepage_url = "https://btrfs.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{ "btrfs", "btrfsck", "btrfs-convert", "btrfs-find-root", "btrfs-image", "btrfs-map-logical", "btrfs-select-super", "btrfstune", "fsck.btrfs", "mkfs.btrfs" },
@@ -6509,6 +7160,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zap",
     .domain = "github.com/keith/zap",
+    .kind = .cli,
     .description = "A CLI for cleaning up after .apps",
     .homepage_url = null,
     .programs = &[_][]const u8{"zap"},
@@ -6519,6 +7171,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go-bindata",
     .domain = "github.com/kevinburke/go-bindata",
+    .kind = .cli,
     .description = "A small utility which generates Go code from any file. Useful for embedding binary data in a Go program.",
     .homepage_url = null,
     .programs = &[_][]const u8{"go-bindata"},
@@ -6529,6 +7182,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "prime_server",
     .domain = "github.com/kevinkreiser/prime_server",
+    .kind = .cli,
     .description = "Non-blocking web server API for distributed service-oriented applications",
     .homepage_url = "https://github.com/kevinkreiser/prime_server",
     .programs = &[_][]const u8{ "prime_httpd", "prime_proxyd", "prime_workerd", "prime_serverd", "prime_echod", "prime_filed" },
@@ -6539,6 +7193,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tokesura",
     .domain = "github.com/kevinmichaelchen/tokesura",
+    .kind = .cli,
     .description = "CLI and Library for working with Hasura JWTs",
     .homepage_url = null,
     .programs = &[_][]const u8{"tokesura"},
@@ -6549,6 +7204,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Vulkan-Headers",
     .domain = "github.com/KhronosGroup/Vulkan-Headers",
+    .kind = .library,
     .description = "Vulkan header files and API registry",
     .homepage_url = "https://www.vulkan.org/",
     .programs = &[_][]const u8{},
@@ -6559,6 +7215,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Vulkan-Loader",
     .domain = "github.com/KhronosGroup/Vulkan-Loader",
+    .kind = .library,
     .description = "Vulkan Loader",
     .homepage_url = "https://vulkan.lunarg.com/doc/sdk/latest/linux/LoaderInterfaceArchitecture.html",
     .programs = &[_][]const u8{},
@@ -6569,6 +7226,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swift-outdated",
     .domain = "github.com/kiliankoe/swift-outdated",
+    .kind = .cli,
     .description = "A swift subcommand for displaying when your dependencies (SwiftPM or Xcode) are out of date",
     .homepage_url = null,
     .programs = &[_][]const u8{"swift-outdated"},
@@ -6579,6 +7237,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tf-import-gen",
     .domain = "github.com/kishaningithub/tf-import-gen",
+    .kind = .cli,
     .description = "Tool to generate terraform import statements to simplify state migrations from one terraform code base to another",
     .homepage_url = null,
     .programs = &[_][]const u8{"tf-import-gen"},
@@ -6589,6 +7248,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "idna",
     .domain = "github.com/kjd/idna",
+    .kind = .library,
     .description = "Internationalized Domain Names for Python (IDNA 2008 and UTS #46)",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6599,6 +7259,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "onig-config",
     .domain = "github.com/kkos/oniguruma",
+    .kind = .cli,
     .description = "Regular expressions library",
     .homepage_url = null,
     .programs = &[_][]const u8{"onig-config"},
@@ -6609,6 +7270,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "skhd",
     .domain = "github.com/koekeishiya/skhd",
+    .kind = .cli,
     .description = " Simple hotkey daemon for macOS",
     .homepage_url = null,
     .programs = &[_][]const u8{"skhd"},
@@ -6619,6 +7281,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yabai",
     .domain = "github.com/koekeishiya/yabai",
+    .kind = .cli,
     .description = "A tiling window manager for macOS based on binary space partitioning",
     .homepage_url = null,
     .programs = &[_][]const u8{"yabai"},
@@ -6629,6 +7292,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ny",
     .domain = "github.com/krzkaczor/ny",
+    .kind = .cli,
     .description = "🗽 Fast, Proxy Package Manager for JavaScript",
     .homepage_url = null,
     .programs = &[_][]const u8{"ny"},
@@ -6639,6 +7303,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Sourcery",
     .domain = "github.com/krzysztofzablocki/Sourcery",
+    .kind = .cli,
     .description = "Meta-programming for Swift, stop writing boilerplate code.",
     .homepage_url = "http://merowing.info",
     .programs = &[_][]const u8{"sourcery"},
@@ -6649,6 +7314,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubecolor",
     .domain = "github.com/kubecolor/kubecolor",
+    .kind = .cli,
     .description = "Colorize your kubectl output",
     .homepage_url = "https://kubecolor.github.io/",
     .programs = &[_][]const u8{"kubecolor"},
@@ -6659,6 +7325,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws-iam-authenticator",
     .domain = "github.com/kubernetes-sigs/aws-iam-authenticator",
+    .kind = .cli,
     .description = "A tool to use AWS IAM credentials to authenticate to a Kubernetes cluster",
     .homepage_url = null,
     .programs = &[_][]const u8{"aws-iam-authenticator"},
@@ -6669,6 +7336,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swiftenv",
     .domain = "github.com/kylef/swiftenv",
+    .kind = .cli,
     .description = "Swift Version Manager",
     .homepage_url = "https://swiftenv.fuller.li/",
     .programs = &[_][]const u8{"swiftenv"},
@@ -6679,6 +7347,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "snipkit",
     .domain = "github.com/lemoony/snipkit",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"snipkit"},
@@ -6689,6 +7358,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libass",
     .domain = "github.com/libass/libass",
+    .kind = .library,
     .description = "libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alpha/Substation Alpha) subtitle format.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6699,6 +7369,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fusermount3",
     .domain = "github.com/libfuse/libfuse",
+    .kind = .cli,
     .description = "The reference implementation of the Linux FUSE (Filesystem in Userspace) interface",
     .homepage_url = null,
     .programs = &[_][]const u8{"fusermount3"},
@@ -6709,6 +7380,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libkml",
     .domain = "github.com/libkml/libkml",
+    .kind = .library,
     .description = "Reference implementation of OGC KML 2.2",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6719,6 +7391,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsixel",
     .domain = "github.com/libsixel/libsixel",
+    .kind = .cli,
     .description = "Mirror of \"sixel\" original version (kmiya's sixel). The origin of libsixel.",
     .homepage_url = "http://nanno.dip.jp/softlib/man/rlogin/#REGWIND",
     .programs = &[_][]const u8{ "img2sixel", "sixel2png", "libsixel-config" },
@@ -6729,6 +7402,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsamplerate",
     .domain = "github.com/libsndfile/libsamplerate",
+    .kind = .library,
     .description = "An audio Sample Rate Conversion library",
     .homepage_url = "http://libsndfile.github.io/libsamplerate/",
     .programs = &[_][]const u8{},
@@ -6739,6 +7413,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sndfile",
     .domain = "github.com/libsndfile/libsndfile",
+    .kind = .cli,
     .description = "A C library for reading and writing sound files containing sampled audio data.",
     .homepage_url = "https://libsndfile.github.io/libsndfile/",
     .programs = &[_][]const u8{ "sndfile-info", "sndfile-convert", "sndfile-play" },
@@ -6749,6 +7424,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "licensed",
     .domain = "github.com/licensee/licensed",
+    .kind = .cli,
     .description = "A Ruby gem to cache and verify the licenses of dependencies",
     .homepage_url = null,
     .programs = &[_][]const u8{"licensed"},
@@ -6759,6 +7435,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "enc",
     .domain = "github.com/life4/enc",
+    .kind = .cli,
     .description = "🔑🔒 A modern and friendly CLI alternative to GnuPG: generate and download keys, encrypt, decrypt, and sign text and files, and more.",
     .homepage_url = null,
     .programs = &[_][]const u8{"enc"},
@@ -6769,6 +7446,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ethaddrgen",
     .domain = "github.com/Limeth/ethaddrgen",
+    .kind = .cli,
     .description = "Custom Ethereum vanity address generator made in Rust",
     .homepage_url = null,
     .programs = &[_][]const u8{"ethaddrgen"},
@@ -6779,6 +7457,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lcov",
     .domain = "github.com/linux-test-project/lcov",
+    .kind = .cli,
     .description = "Graphical front-end for GCC's coverage testing tool (gcov)",
     .homepage_url = null,
     .programs = &[_][]const u8{ "lcov", "geninfo", "genhtml", "gendesc", "genpng" },
@@ -6789,6 +7468,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sensors",
     .domain = "github.com/lm-sensors/lm-sensors",
+    .kind = .cli,
     .description = "Tools for monitoring the temperatures, voltages, and fans",
     .homepage_url = "https://hwmon.wiki.kernel.org/",
     .programs = &[_][]const u8{"sensors"},
@@ -6799,6 +7479,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go-sponge",
     .domain = "github.com/loq9/go-sponge",
+    .kind = .cli,
     .description = "Golang alternative of sponge tool",
     .homepage_url = null,
     .programs = &[_][]const u8{"go-sponge"},
@@ -6809,6 +7490,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mackup",
     .domain = "github.com/lra/mackup",
+    .kind = .cli,
     .description = "Keep your application settings in sync (OS X/Linux)",
     .homepage_url = null,
     .programs = &[_][]const u8{"mackup"},
@@ -6819,6 +7501,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vault-unseal",
     .domain = "github.com/lrstanley/vault-unseal",
+    .kind = .cli,
     .description = "auto-unseal utility for Hashicorp Vault",
     .homepage_url = null,
     .programs = &[_][]const u8{"vault-unseal"},
@@ -6829,6 +7512,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lsof",
     .domain = "github.com/lsof-org/lsof",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"lsof"},
@@ -6839,6 +7523,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cargo-c",
     .domain = "github.com/lu-zero/cargo-c",
+    .kind = .cli,
     .description = "Helper program to build and install c-like libraries",
     .homepage_url = null,
     .programs = &[_][]const u8{ "cargo-capi", "cargo-cbuild", "cargo-cinstall", "cargo-ctest" },
@@ -6849,6 +7534,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rye-uv",
     .domain = "github.com/lucianosrp/rye-uv",
+    .kind = .cli,
     .description = "Simple CLI tool to migrate from Rye to Uv",
     .homepage_url = null,
     .programs = &[_][]const u8{"rye-uv"},
@@ -6859,6 +7545,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "luv",
     .domain = "github.com/luvit/luv",
+    .kind = .library,
     .description = "Bare libuv bindings for lua",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6869,6 +7556,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "invoice",
     .domain = "github.com/maaslalani/invoice",
+    .kind = .cli,
     .description = "Command line invoice generator",
     .homepage_url = null,
     .programs = &[_][]const u8{"invoice"},
@@ -6879,6 +7567,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rswift",
     .domain = "github.com/mac-cain13/R.swift",
+    .kind = .cli,
     .description = "Strong typed, autocompleted resources like images, fonts and segues in Swift projects",
     .homepage_url = null,
     .programs = &[_][]const u8{"rswift"},
@@ -6889,6 +7578,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "heif-converter",
     .domain = "github.com/MaestroError/heif-converter-image",
+    .kind = .cli,
     .description = "heif-converter is a versatile command-line application, along with a Docker image, that offers an easy and efficient way to convert HEIC (and AVIF) images to other common formats like JPEG and PNG, and vice versa. It leverages the go-libheif module, a GoLang wrapper for the libheif library.",
     .homepage_url = null,
     .programs = &[_][]const u8{"heif-converter"},
@@ -6899,6 +7589,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mail",
     .domain = "github.com/mail-os/mail",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"mail"},
@@ -6909,6 +7600,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mamba",
     .domain = "github.com/mamba-org/mamba",
+    .kind = .cli,
     .description = "The Fast Cross-Platform Package Manager",
     .homepage_url = "https://mamba.readthedocs.io",
     .programs = &[_][]const u8{"mamba"},
@@ -6919,6 +7611,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "micromamba",
     .domain = "github.com/mamba-org/micro",
+    .kind = .cli,
     .description = "The Fast Cross-Platform Package Manager",
     .homepage_url = "https://mamba.readthedocs.io",
     .programs = &[_][]const u8{"micromamba"},
@@ -6929,6 +7622,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SDL2_Pango",
     .domain = "github.com/markuskimius/SDL2_Pango",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -6939,6 +7633,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mas",
     .domain = "github.com/mas-cli/mas",
+    .kind = .cli,
     .description = ":package: Mac App Store command line interface",
     .homepage_url = null,
     .programs = &[_][]const u8{"mas"},
@@ -6949,6 +7644,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "redis_tui",
     .domain = "github.com/mat2cc/redis_tui",
+    .kind = .cli,
     .description = "Redis terminal application",
     .homepage_url = null,
     .programs = &[_][]const u8{"redis_tui"},
@@ -6959,6 +7655,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "blowfish",
     .domain = "github.com/matoszz/blowfish",
+    .kind = .cli,
     .description = "blowfish is a command line interface for interacting with DMTF Redfish and SNIA Swordfish enabled devices based on gofish",
     .homepage_url = null,
     .programs = &[_][]const u8{"blowfish"},
@@ -6969,6 +7666,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jinja2",
     .domain = "github.com/mattrobenolt/jinja2-cli",
+    .kind = .cli,
     .description = "CLI for the Jinja2 templating language",
     .homepage_url = null,
     .programs = &[_][]const u8{"jinja2"},
@@ -6979,6 +7677,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "counterfeiter",
     .domain = "github.com/maxbrunsfeld/counterfeiter",
+    .kind = .cli,
     .description = "A tool for generating self-contained, type-safe test doubles in go",
     .homepage_url = null,
     .programs = &[_][]const u8{"counterfeiter"},
@@ -6989,6 +7688,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mmdblookup",
     .domain = "github.com/maxmind/libmaxminddb",
+    .kind = .cli,
     .description = "C library for the MaxMind DB file format",
     .homepage_url = "https://maxmind.github.io/libmaxminddb/",
     .programs = &[_][]const u8{"mmdblookup"},
@@ -6999,6 +7699,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "generic_sum",
     .domain = "github.com/Mbed-TLS/mbedtls",
+    .kind = .cli,
     .description = "An open source, portable, easy to use, readable and flexible TLS library, and reference implementation of the PSA Cryptography API. Releases are on a varying cadence, typically around 3 - 6 months between releases.",
     .homepage_url = "https://tls.mbed.org/",
     .programs = &[_][]const u8{"generic_sum"},
@@ -7009,6 +7710,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yq",
     .domain = "github.com/mikefarah/yq",
+    .kind = .cli,
     .description = "yq is a portable command-line YAML, JSON, XML, CSV, TOML  and properties processor",
     .homepage_url = "https://mikefarah.gitbook.io/yq/",
     .programs = &[_][]const u8{"yq"},
@@ -7019,6 +7721,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rip2",
     .domain = "github.com/MilesCranmer/rip2",
+    .kind = .cli,
     .description = " A safe and ergonomic alternative to rm",
     .homepage_url = null,
     .programs = &[_][]const u8{"rip"},
@@ -7029,6 +7732,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tfupdate",
     .domain = "github.com/minamijoyo/tfupdate",
+    .kind = .cli,
     .description = "Update version constraints in your Terraform configurations",
     .homepage_url = null,
     .programs = &[_][]const u8{"tfupdate"},
@@ -7039,6 +7743,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "toml-cli",
     .domain = "github.com/MinseokOh/toml-cli",
+    .kind = .cli,
     .description = "A simple CLI for editing and querying TOML files.",
     .homepage_url = null,
     .programs = &[_][]const u8{"toml-cli"},
@@ -7049,6 +7754,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gox",
     .domain = "github.com/mitchellh/gox",
+    .kind = .cli,
     .description = "A dead simple, no frills Go cross compile tool",
     .homepage_url = null,
     .programs = &[_][]const u8{"gox"},
@@ -7059,6 +7765,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "when",
     .domain = "github.com/mitsuhiko/when",
+    .kind = .cli,
     .description = "Timezones from the command line",
     .homepage_url = "https://www.lightandmatter.com/when/when.html",
     .programs = &[_][]const u8{"when"},
@@ -7069,6 +7776,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "md2html",
     .domain = "github.com/mity/md4c",
+    .kind = .cli,
     .description = "C Markdown parser. Fast. SAX-like interface. Compliant to CommonMark specification.",
     .homepage_url = null,
     .programs = &[_][]const u8{"md2html"},
@@ -7079,6 +7787,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "buildkit",
     .domain = "github.com/moby/buildkit",
+    .kind = .cli,
     .description = "concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit",
     .homepage_url = "https://github.com/moby/moby/issues/34227",
     .programs = &[_][]const u8{"buildctl"},
@@ -7089,6 +7798,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "license-plist",
     .domain = "github.com/mono0926/LicensePlist",
+    .kind = .cli,
     .description = "A license list generator of all your dependencies for iOS applications",
     .homepage_url = "https://www.slideshare.net/mono0926/licenseplist-a-license-list-generator-of-all-your-dependencies-for-ios-applications",
     .programs = &[_][]const u8{"license-plist"},
@@ -7099,6 +7809,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mop",
     .domain = "github.com/mop-tracker/mop",
+    .kind = .cli,
     .description = "Stock market tracker for hackers.",
     .homepage_url = null,
     .programs = &[_][]const u8{"mop"},
@@ -7109,6 +7820,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "duti",
     .domain = "github.com/moretension/duti",
+    .kind = .cli,
     .description = "A command-line tool to select default applications for document types and URL schemes on Mac OS X",
     .homepage_url = null,
     .programs = &[_][]const u8{"duti"},
@@ -7119,6 +7831,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "checkmake",
     .domain = "github.com/mrtazz/checkmake",
+    .kind = .cli,
     .description = "experimental linter/analyzer for Makefiles",
     .homepage_url = null,
     .programs = &[_][]const u8{"checkmake"},
@@ -7129,6 +7842,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sl",
     .domain = "github.com/mtoyoda/sl",
+    .kind = .cli,
     .description = "SL(1): Cure your bad habit of mistyping",
     .homepage_url = null,
     .programs = &[_][]const u8{"sl"},
@@ -7139,6 +7853,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "duf",
     .domain = "github.com/muesli/duf",
+    .kind = .cli,
     .description = "Disk Usage/Free Utility - a better 'df' alternative",
     .homepage_url = null,
     .programs = &[_][]const u8{"duf"},
@@ -7149,6 +7864,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swift-sh",
     .domain = "github.com/mxcl/swift-sh",
+    .kind = .cli,
     .description = "Easily script with third-party Swift dependencies.",
     .homepage_url = null,
     .programs = &[_][]const u8{"swift-sh"},
@@ -7159,6 +7875,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fsdiff",
     .domain = "github.com/mycreepy/fsdiff",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"fsdiff"},
@@ -7169,6 +7886,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pakku",
     .domain = "github.com/mycreepy/pakku",
+    .kind = .cli,
     .description = "pakku is a declarative approach to your system package managers.",
     .homepage_url = null,
     .programs = &[_][]const u8{"pakku"},
@@ -7179,6 +7897,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openplayground",
     .domain = "github.com/nat/openplayground",
+    .kind = .cli,
     .description = "An LLM playground you can run on your laptop",
     .homepage_url = null,
     .programs = &[_][]const u8{"openplayground"},
@@ -7189,6 +7908,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "act",
     .domain = "github.com/nektos/act",
+    .kind = .cli,
     .description = "Run your GitHub Actions locally 🚀",
     .homepage_url = "https://nektosact.com",
     .programs = &[_][]const u8{"act"},
@@ -7199,6 +7919,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "utf8cpp",
     .domain = "github.com/nemtrif/utfcpp",
+    .kind = .library,
     .description = "UTF-8 with C++ in a Portable Way",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7209,6 +7930,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unibilium",
     .domain = "github.com/neovim/unibilium",
+    .kind = .library,
     .description = "https://github.com/neovim/neovim/blob/master/MAINTAIN.md#third-party-dependencies",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7219,6 +7941,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-filter-repo",
     .domain = "github.com/newren/git-filter-repo",
+    .kind = .cli,
     .description = "Quickly rewrite git repository history (filter-branch replacement)",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-filter-repo"},
@@ -7229,6 +7952,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swiftformat",
     .domain = "github.com/nicklockwood/SwiftFormat",
+    .kind = .cli,
     .description = "A command-line tool and Xcode Extension for formatting Swift code",
     .homepage_url = null,
     .programs = &[_][]const u8{"swiftformat"},
@@ -7239,6 +7963,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "license",
     .domain = "github.com/nishanths/license",
+    .kind = .cli,
     .description = "Command line license text generator.",
     .homepage_url = null,
     .programs = &[_][]const u8{"license"},
@@ -7249,6 +7974,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jqp",
     .domain = "github.com/noahgorstein/jqp",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"jqp"},
@@ -7259,6 +7985,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "node-build",
     .domain = "github.com/nodenv/node-build",
+    .kind = .cli,
     .description = "Install NodeJS versions",
     .homepage_url = null,
     .programs = &[_][]const u8{"node-build"},
@@ -7269,6 +7996,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gpt4all",
     .domain = "github.com/nomic-ai/gpt4all",
+    .kind = .cli,
     .description = "Locally run an Assistant-Tuned Chat-Style LLM ",
     .homepage_url = null,
     .programs = &[_][]const u8{"gpt4all"},
@@ -7279,6 +8007,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "chatblade",
     .domain = "github.com/npiv/chatblade",
+    .kind = .cli,
     .description = "A CLI Swiss Army Knife for ChatGPT",
     .homepage_url = null,
     .programs = &[_][]const u8{"chatblade"},
@@ -7289,6 +8018,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "adr",
     .domain = "github.com/npryce/adr-tools",
+    .kind = .cli,
     .description = "Command-line tools for working with Architecture Decision Records",
     .homepage_url = null,
     .programs = &[_][]const u8{"adr"},
@@ -7299,6 +8029,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "needs",
     .domain = "github.com/NQMVD/needs",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"needs"},
@@ -7309,6 +8040,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nullclaw",
     .domain = "github.com/nullclaw/nullclaw",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"nullclaw"},
@@ -7319,6 +8051,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "numactl",
     .domain = "github.com/numactl/numactl",
+    .kind = .library,
     .description = "NUMA support for Linux",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7329,6 +8062,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "thefuck",
     .domain = "github.com/nvbn/thefuck",
+    .kind = .cli,
     .description = "Magnificent app which corrects your previous console command.",
     .homepage_url = null,
     .programs = &[_][]const u8{"thefuck"},
@@ -7339,6 +8073,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nvm-exec",
     .domain = "github.com/nvm-sh/nvm",
+    .kind = .cli,
     .description = "Node Version Manager - POSIX-compliant bash script to manage multiple active node.js versions",
     .homepage_url = null,
     .programs = &[_][]const u8{"nvm-exec"},
@@ -7349,6 +8084,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oapi-codegen",
     .domain = "github.com/oapi-codegen/oapi-codegen",
+    .kind = .cli,
     .description = "Generate Go client and server boilerplate from OpenAPI 3 specifications",
     .homepage_url = null,
     .programs = &[_][]const u8{"oapi-codegen"},
@@ -7359,6 +8095,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ocrmypdf",
     .domain = "github.com/ocrmypdf/OCRmyPDF",
+    .kind = .cli,
     .description = "OCRmyPDF adds an OCR text layer to scanned PDF files, allowing them to be searched",
     .homepage_url = "https://ocrmypdf.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{"ocrmypdf"},
@@ -7369,6 +8106,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go-mod-upgrade",
     .domain = "github.com/oligot/go-mod-upgrade",
+    .kind = .cli,
     .description = "Update outdated Go dependencies interactively",
     .homepage_url = null,
     .programs = &[_][]const u8{"go-mod-upgrade"},
@@ -7379,6 +8117,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tbb",
     .domain = "github.com/oneapi-src/oneTBB",
+    .kind = .library,
     .description = "oneAPI Threading Building Blocks (oneTBB)",
     .homepage_url = "https://uxlfoundation.github.io/oneTBB/",
     .programs = &[_][]const u8{},
@@ -7389,6 +8128,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "text generation web UI",
     .domain = "github.com/oobabooga/text-generation-webui",
+    .kind = .cli,
     .description = "A Gradio web UI for Large Language Models with support for multiple inference backends.",
     .homepage_url = null,
     .programs = &[_][]const u8{"text-generation-webui"},
@@ -7399,6 +8139,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jsoncpp",
     .domain = "github.com/open-source-parsers/jsoncpp",
+    .kind = .library,
     .description = "A C++ library for interacting with JSON.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7409,6 +8150,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openclaw",
     .domain = "github.com/openclaw/openclaw",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "openclaw", "openclaw-init" },
@@ -7419,6 +8161,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "arpack-ng",
     .domain = "github.com/opencollab/arpack-ng",
+    .kind = .library,
     .description = "Collection of Fortran77 subroutines designed to solve large scale eigenvalue problems.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7429,6 +8172,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pkcs11-helper",
     .domain = "github.com/OpenSC/pkcs11-helper",
+    .kind = .library,
     .description = "Library that simplifies the interaction with PKCS#11 providers for end-user applications using a simple API and optional OpenSSL engine",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7439,6 +8183,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libgeotiff",
     .domain = "github.com/OSGeo/libgeotiff",
+    .kind = .cli,
     .description = "Official repository of the libgeotiff project",
     .homepage_url = null,
     .programs = &[_][]const u8{ "applygeo", "geotifcp", "listgeo" },
@@ -7449,6 +8194,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "normalizer",
     .domain = "github.com/Ousret/charset_normalizer",
+    .kind = .cli,
     .description = "Truly universal encoding detector in pure Python",
     .homepage_url = "https://charset-normalizer.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{"normalizer"},
@@ -7459,6 +8205,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tine",
     .domain = "github.com/OutOfBedlam/tine",
+    .kind = .cli,
     .description = "TINE a data pipeline runner.",
     .homepage_url = "https://tine.thingsme.xyz",
     .programs = &[_][]const u8{"tine"},
@@ -7469,6 +8216,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "argon2",
     .domain = "github.com/P-H-C/phc-winner-argon2",
+    .kind = .cli,
     .description = "The password hash Argon2, winner of PHC ",
     .homepage_url = null,
     .programs = &[_][]const u8{"argon2"},
@@ -7479,6 +8227,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "p7zip",
     .domain = "github.com/p7zip-project/p7zip",
+    .kind = .cli,
     .description = "A new p7zip fork with additional codecs and improvements (forked from https://sourceforge.net/projects/sevenzip/ AND https://sourceforge.net/projects/p7zip/).",
     .homepage_url = null,
     .programs = &[_][]const u8{ "7z", "7za", "7zr" },
@@ -7489,6 +8238,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libfyaml",
     .domain = "github.com/pantoniou/libfyaml",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "fy-compose", "fy-dump", "fy-filter", "fy-join", "fy-testsuite", "fy-tool", "fy-ypath" },
@@ -7499,6 +8249,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "par2",
     .domain = "github.com/Parchive/par2cmdline",
+    .kind = .cli,
     .description = "Parchive: Parity Archive Volume Set for data recovery",
     .homepage_url = "http://parchive.sourceforge.net",
     .programs = &[_][]const u8{ "par2", "par2create", "par2verify", "par2repair" },
@@ -7509,6 +8260,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go-passbolt-cli",
     .domain = "github.com/passbolt/go-passbolt-cli",
+    .kind = .cli,
     .description = "A CLI tool to interact  with Passbolt, a Open source Password Manager for Teams ",
     .homepage_url = "https://passbolt.com",
     .programs = &[_][]const u8{"passbolt"},
@@ -7519,6 +8271,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "s5cmd",
     .domain = "github.com/peak/s5cmd",
+    .kind = .cli,
     .description = "Parallel S3 and local filesystem execution tool.",
     .homepage_url = null,
     .programs = &[_][]const u8{"s5cmd"},
@@ -7529,6 +8282,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lsd",
     .domain = "github.com/peltoche/lsd",
+    .kind = .cli,
     .description = "Clone of ls with colorful output, file type icons, and more",
     .homepage_url = null,
     .programs = &[_][]const u8{"lsd"},
@@ -7539,6 +8293,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "periphery",
     .domain = "github.com/peripheryapp/periphery",
+    .kind = .cli,
     .description = "A tool to identify unused code in Swift projects.",
     .homepage_url = null,
     .programs = &[_][]const u8{"periphery"},
@@ -7549,6 +8304,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ipcalc",
     .domain = "github.com/pete911/ipcalc",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"ipcalc"},
@@ -7559,6 +8315,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcbor",
     .domain = "github.com/PJK/libcbor",
+    .kind = .library,
     .description = "CBOR protocol implementation for C",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7569,6 +8326,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "platformdirs",
     .domain = "github.com/platformdirs/platformdirs",
+    .kind = .library,
     .description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\".",
     .homepage_url = "https://platformdirs.readthedocs.io",
     .programs = &[_][]const u8{},
@@ -7579,6 +8337,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SquashFS-Tools",
     .domain = "github.com/plougher/squashfs-tools",
+    .kind = .cli,
     .description = "tools to create and extract Squashfs filesystems",
     .homepage_url = null,
     .programs = &[_][]const u8{ "mksquashfs", "unsquashfs", "sqfscat", "sqfstar" },
@@ -7589,6 +8348,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "chruby-exec",
     .domain = "github.com/postmodern/chruby",
+    .kind = .cli,
     .description = "Changes the current Ruby",
     .homepage_url = null,
     .programs = &[_][]const u8{"chruby-exec"},
@@ -7599,6 +8359,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ruby-install",
     .domain = "github.com/postmodern/ruby-install",
+    .kind = .cli,
     .description = "Install Ruby, JRuby, Rubinius, TruffleRuby, or mruby",
     .homepage_url = null,
     .programs = &[_][]const u8{"ruby-install"},
@@ -7609,6 +8370,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "witr",
     .domain = "github.com/pranshuparmar/witr",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"witr"},
@@ -7619,6 +8381,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sup",
     .domain = "github.com/pressly/sup",
+    .kind = .cli,
     .description = "Super simple deployment tool - think of it like 'make' for a network of servers",
     .homepage_url = "https://pressly.github.io/sup",
     .programs = &[_][]const u8{"sup"},
@@ -7629,6 +8392,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gomarkdoc",
     .domain = "github.com/princjef/gomarkdoc",
+    .kind = .cli,
     .description = "Generate markdown documentation for Go (golang) code",
     .homepage_url = null,
     .programs = &[_][]const u8{"gomarkdoc"},
@@ -7639,6 +8403,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "just-mcp",
     .domain = "github.com/promptexecution/just-mcp",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"just-mcp"},
@@ -7649,6 +8414,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "protoc",
     .domain = "github.com/protobuf-c/protobuf-c",
+    .kind = .cli,
     .description = "Protocol Buffers implementation in C",
     .homepage_url = null,
     .programs = &[_][]const u8{ "protoc-c", "protoc-gen-c" },
@@ -7659,6 +8425,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "black",
     .domain = "github.com/psf/black",
+    .kind = .cli,
     .description = "The uncompromising Python code formatter",
     .homepage_url = "https://black.readthedocs.io/en/stable/",
     .programs = &[_][]const u8{ "black", "blackd" },
@@ -7669,6 +8436,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "requests",
     .domain = "github.com/psf/requests",
+    .kind = .library,
     .description = "A simple, yet elegant, HTTP library.",
     .homepage_url = "https://requests.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{},
@@ -7679,6 +8447,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pyproject-build",
     .domain = "github.com/pypa/build",
+    .kind = .cli,
     .description = "A simple, correct Python build frontend",
     .homepage_url = "https://build.pypa.io",
     .programs = &[_][]const u8{"pyproject-build"},
@@ -7689,6 +8458,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "twine",
     .domain = "github.com/pypa/twine",
+    .kind = .cli,
     .description = "Utilities for interacting with PyPI",
     .homepage_url = "https://twine.readthedocs.io/",
     .programs = &[_][]const u8{"twine"},
@@ -7699,6 +8469,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pyparsing",
     .domain = "github.com/pyparsing/pyparsing",
+    .kind = .library,
     .description = "Python library for creating PEG parsers",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7709,6 +8480,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cffi",
     .domain = "github.com/python-cffi/cffi",
+    .kind = .library,
     .description = "A Foreign Function Interface package for calling C libraries from Python.",
     .homepage_url = "https://cffi.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{},
@@ -7719,6 +8491,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pylsp",
     .domain = "github.com/python-lsp/python-lsp-server",
+    .kind = .cli,
     .description = "Fork of the python-language-server project, maintained by the Spyder IDE team and the community",
     .homepage_url = null,
     .programs = &[_][]const u8{"pylsp"},
@@ -7729,6 +8502,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mutagen",
     .domain = "github.com/quodlibet/mutagen",
+    .kind = .library,
     .description = "Python module for handling audio metadata",
     .homepage_url = "https://mutagen.readthedocs.io",
     .programs = &[_][]const u8{},
@@ -7739,6 +8513,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "whosthere",
     .domain = "github.com/ramonvermeulen/whosthere",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"whosthere"},
@@ -7749,6 +8524,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hx",
     .domain = "github.com/raskell-io/hx",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"hx"},
@@ -7759,6 +8535,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rbenv",
     .domain = "github.com/rbenv/rbenv",
+    .kind = .cli,
     .description = "Manage your app's Ruby environment",
     .homepage_url = "https://rbenv.org",
     .programs = &[_][]const u8{"rbenv"},
@@ -7769,6 +8546,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swiftlint",
     .domain = "github.com/realm/SwiftLint",
+    .kind = .cli,
     .description = "A tool to enforce Swift style and conventions.",
     .homepage_url = "https://realm.github.io/SwiftLint",
     .programs = &[_][]const u8{"swiftlint"},
@@ -7779,6 +8557,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hiredis",
     .domain = "github.com/redis/hiredis",
+    .kind = .library,
     .description = "Minimalistic C client for Redis >= 1.2",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7789,6 +8568,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "regbot",
     .domain = "github.com/regclient/regclient/regbot",
+    .kind = .cli,
     .description = "Docker and OCI Registry Client in Go and tooling using those libraries.",
     .homepage_url = null,
     .programs = &[_][]const u8{"regbot"},
@@ -7799,6 +8579,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "regctl",
     .domain = "github.com/regclient/regclient/regctl",
+    .kind = .cli,
     .description = "Docker and OCI Registry Client in Go and tooling using those libraries.",
     .homepage_url = null,
     .programs = &[_][]const u8{"regctl"},
@@ -7809,6 +8590,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "regsync",
     .domain = "github.com/regclient/regclient/regsync",
+    .kind = .cli,
     .description = "Docker and OCI Registry Client in Go and tooling using those libraries.",
     .homepage_url = null,
     .programs = &[_][]const u8{"regsync"},
@@ -7819,6 +8601,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "diffoci",
     .domain = "github.com/reproducible-containers/diffoci",
+    .kind = .cli,
     .description = "diff for Docker and OCI container images",
     .homepage_url = null,
     .programs = &[_][]const u8{"diffoci"},
@@ -7829,6 +8612,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kube-capacity",
     .domain = "github.com/robscott/kube-capacity",
+    .kind = .cli,
     .description = "A simple CLI that provides an overview of the resource requests, limits, and utilization in a Kubernetes cluster",
     .homepage_url = null,
     .programs = &[_][]const u8{"kube-capacity"},
@@ -7839,6 +8623,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trezor-agent",
     .domain = "github.com/romanz/trezor-agent",
+    .kind = .cli,
     .description = "Hardware-based SSH/GPG/age agent",
     .homepage_url = null,
     .programs = &[_][]const u8{ "jade-agent", "jade-gpg", "jade-gpg-agent", "keepkey-agent", "keepkeyctl", "ledger-agent", "ledger-gpg", "ledger-gpg-agent", "onlykey-agent", "onlykey-cli", "onlykey-gpg", "onlykey-gpg-agent", "trezor-agent", "trezor-gpg", "trezor-gpg-agent", "trezor-signify", "trezorctl" },
@@ -7849,6 +8634,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "CLIProxyAPI",
     .domain = "github.com/router-for-me/CLIProxyAPI",
+    .kind = .cli,
     .description = "CLI Proxy API — use your Gemini CLI, Claude Code, Codex, Kimi, Qwen, iFlow and Grok CLI subscriptions through OpenAI/Gemini/Claude/Codex-compatible API endpoints.",
     .homepage_url = "https://help.router-for.me/",
     .programs = &[_][]const u8{"cli-proxy-api"},
@@ -7859,6 +8645,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rexi",
     .domain = "github.com/royreznik/rexi",
+    .kind = .cli,
     .description = "Terminal UI for Regex Testing",
     .homepage_url = null,
     .programs = &[_][]const u8{"rexi"},
@@ -7869,6 +8656,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "paper",
     .domain = "github.com/rrthomas/libpaper",
+    .kind = .cli,
     .description = "Library and command-line tools for configuring and getting information on paper sizes",
     .homepage_url = null,
     .programs = &[_][]const u8{"paper"},
@@ -7879,6 +8667,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "psutils",
     .domain = "github.com/rrthomas/psutils",
+    .kind = .cli,
     .description = "Utilities for manipulating PostScript documents",
     .homepage_url = null,
     .programs = &[_][]const u8{ "psbook", "psjoin", "psnup", "psresize", "psselect", "pstops" },
@@ -7889,6 +8678,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "z",
     .domain = "github.com/rupa/z",
+    .kind = .library,
     .description = "z - jump around",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7899,6 +8689,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unxip",
     .domain = "github.com/saagarjha/unxip",
+    .kind = .cli,
     .description = "A fast Xcode unarchiver",
     .homepage_url = null,
     .programs = &[_][]const u8{"unxip"},
@@ -7909,6 +8700,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docker-lock",
     .domain = "github.com/safe-waters/docker-lock",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"docker-lock"},
@@ -7919,6 +8711,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spacer",
     .domain = "github.com/samwho/spacer",
+    .kind = .cli,
     .description = "Small command-line utility for adding spacers to command output",
     .homepage_url = null,
     .programs = &[_][]const u8{"spacer"},
@@ -7929,6 +8722,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yj",
     .domain = "github.com/sclevine/yj",
+    .kind = .cli,
     .description = "CLI - Convert between YAML, TOML, JSON, and HCL. Preserves map order.",
     .homepage_url = null,
     .programs = &[_][]const u8{"yj"},
@@ -7939,6 +8733,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "usrsctp",
     .domain = "github.com/sctplab/usrsctp",
+    .kind = .library,
     .description = "A portable SCTP userland stack",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7949,6 +8744,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libseccomp",
     .domain = "github.com/seccomp/libseccomp",
+    .kind = .cli,
     .description = "Interface to the Linux Kernel's syscall filtering mechanism",
     .homepage_url = null,
     .programs = &[_][]const u8{"scmp_sys_resolver"},
@@ -7959,6 +8755,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zimg",
     .domain = "github.com/sekrit-twc/zimg",
+    .kind = .library,
     .description = "Scaling, colorspace conversion, and dithering library",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -7969,6 +8766,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "shaka-packager",
     .domain = "github.com/shaka-project/shaka-packager",
+    .kind = .cli,
     .description = "A media packaging and development framework for VOD and Live DASH and HLS applications, supporting Common Encryption for Widevine and other DRM Systems.",
     .homepage_url = "https://shaka-project.github.io/shaka-packager/",
     .programs = &[_][]const u8{ "packager", "mpd_generator" },
@@ -7979,6 +8777,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "conform",
     .domain = "github.com/siderolabs/conform",
+    .kind = .cli,
     .description = "Policy enforcement for your pipelines.",
     .homepage_url = null,
     .programs = &[_][]const u8{"conform"},
@@ -7989,6 +8788,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pio",
     .domain = "github.com/siiptuo/pio",
+    .kind = .cli,
     .description = "Your Gateway to Embedded Software Development Excellence :alien:",
     .homepage_url = "https://platformio.org/",
     .programs = &[_][]const u8{"pio"},
@@ -7999,6 +8799,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "term-size",
     .domain = "github.com/sindresorhus/macos-term-size",
+    .kind = .cli,
     .description = "Get the terminal window size on macOS",
     .homepage_url = null,
     .programs = &[_][]const u8{"term-size"},
@@ -8009,6 +8810,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "speedtest",
     .domain = "github.com/sivel/speedtest-cli",
+    .kind = .cli,
     .description = "Command line interface for testing internet bandwidth using speedtest.net",
     .homepage_url = null,
     .programs = &[_][]const u8{ "speedtest-cli", "speedtest" },
@@ -8019,6 +8821,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "marionette",
     .domain = "github.com/skx/marionette",
+    .kind = .cli,
     .description = "Something like puppet, for the localhost only.",
     .homepage_url = null,
     .programs = &[_][]const u8{"marionette"},
@@ -8029,6 +8832,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jadx",
     .domain = "github.com/skylot/jadx",
+    .kind = .cli,
     .description = "Dex to Java decompiler",
     .homepage_url = null,
     .programs = &[_][]const u8{ "jadx", "jadx-gui" },
@@ -8039,6 +8843,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cpptoml",
     .domain = "github.com/skystrife/cpptoml",
+    .kind = .library,
     .description = "cpptoml is a header-only library for parsing TOML",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8049,6 +8854,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "factotum",
     .domain = "github.com/snowplow/factotum",
+    .kind = .cli,
     .description = "A system to programmatically run data pipelines",
     .homepage_url = "http://snowplowanalytics.com/blog/2016/04/09/introducing-factotum-data-pipeline-runner/",
     .programs = &[_][]const u8{"factotum"},
@@ -8059,6 +8865,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "diff-so-fancy",
     .domain = "github.com/so-fancy/diff-so-fancy",
+    .kind = .cli,
     .description = "Good-lookin' diffs. Actually… nah… The best-lookin' diffs. :tada:",
     .homepage_url = null,
     .programs = &[_][]const u8{"diff-so-fancy"},
@@ -8069,6 +8876,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "envchain",
     .domain = "github.com/sorah/envchain",
+    .kind = .cli,
     .description = "Environment variables meet macOS Keychain and gnome-keyring <3",
     .homepage_url = null,
     .programs = &[_][]const u8{"envchain"},
@@ -8079,6 +8887,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "stargazers",
     .domain = "github.com/spencerkimball/stargazers",
+    .kind = .cli,
     .description = "Analyze GitHub stars",
     .homepage_url = null,
     .programs = &[_][]const u8{"stargazers"},
@@ -8089,6 +8898,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "squidfunk/mkdocs-material",
     .domain = "github.com/squidfunk/mkdocs-material",
+    .kind = .cli,
     .description = "Documentation that simply works",
     .homepage_url = "https://squidfunk.github.io/mkdocs-material/",
     .programs = &[_][]const u8{"mkdocs"},
@@ -8099,16 +8909,18 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Launchpad",
     .domain = "github.com/stacksjs/launchpad",
+    .kind = .app,
     .description = "A native keyboard launcher built with Stacks",
-    .homepage_url = "https://github.com/stacksjs/launchpad",
+    .homepage_url = "https://launchpad.stacksjs.com",
     .programs = &[_][]const u8{},
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"jqlang.org"},
     .aliases = &[_][]const u8{"launchpad"},
-    .versions = &[_][]const u8{"1.0.1"},
+    .versions = &[_][]const u8{ "1.0.3", "1.0.2", "1.0.1" },
 }, .{
     .name = "stern",
     .domain = "github.com/stern/stern",
+    .kind = .cli,
     .description = "⎈ Multi pod and container log tailing for Kubernetes -- Friendly fork of https://github.com/wercker/stern",
     .homepage_url = null,
     .programs = &[_][]const u8{"stern"},
@@ -8119,6 +8931,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "age-plugin-yubikey",
     .domain = "github.com/str4d/age-plugin-yubikey",
+    .kind = .cli,
     .description = "Plugin for encrypting files with age and PIV tokens such as YubiKeys",
     .homepage_url = null,
     .programs = &[_][]const u8{"age-plugin-yubikey"},
@@ -8129,6 +8942,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libde265",
     .domain = "github.com/strukturag/libde265",
+    .kind = .cli,
     .description = "Open h.265 video codec implementation.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "acceleration_speed", "bjoentegaard", "block-rate-estim", "gen-enc-table", "rd-curves", "tests", "yuv-distortion" },
@@ -8139,6 +8953,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "heif",
     .domain = "github.com/strukturag/libheif",
+    .kind = .cli,
     .description = "libheif is an HEIF and AVIF file format decoder and encoder.",
     .homepage_url = "https://www.libde265.org/",
     .programs = &[_][]const u8{ "heif-enc", "heif-info", "heif-thumbnailer" },
@@ -8149,6 +8964,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pytz",
     .domain = "github.com/stub42/pytz",
+    .kind = .library,
     .description = "pytz Python historical timezone library and database",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8159,6 +8975,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sparsecat",
     .domain = "github.com/svenwiltink/sparsecat",
+    .kind = .cli,
     .description = "CLI tool that reduces bandwidth usage when transmitting sparse files.",
     .homepage_url = null,
     .programs = &[_][]const u8{"sparsecat"},
@@ -8169,6 +8986,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swag",
     .domain = "github.com/swaggo/swag",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"swag"},
@@ -8179,6 +8997,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swiftgen",
     .domain = "github.com/SwiftGen/SwiftGen",
+    .kind = .cli,
     .description = "The Swift code generator for your assets, storyboards, Localizable.strings, … — Get rid of all String-based APIs!",
     .homepage_url = null,
     .programs = &[_][]const u8{"swiftgen"},
@@ -8189,6 +9008,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yazi",
     .domain = "github.com/sxyazi/yazi",
+    .kind = .cli,
     .description = "💥 Blazing fast terminal file manager written in Rust, based on async I/O.",
     .homepage_url = "https://yazi-rs.github.io",
     .programs = &[_][]const u8{"yazi"},
@@ -8199,6 +9019,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aws-sso",
     .domain = "github.com/synfinatic/aws-sso-cli",
+    .kind = .cli,
     .description = "A powerful tool for using AWS Identity Center for the CLI and web console.",
     .homepage_url = "https://synfinatic.github.io/aws-sso-cli/",
     .programs = &[_][]const u8{"aws-sso"},
@@ -8209,6 +9030,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "expected",
     .domain = "github.com/TartanLlama/expected",
+    .kind = .library,
     .description = "C++11/14/17 std::expected with functional-style extensions ",
     .homepage_url = "https://tl.tartanllama.xyz",
     .programs = &[_][]const u8{},
@@ -8219,6 +9041,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tflint",
     .domain = "github.com/terraform-linters/tflint",
+    .kind = .cli,
     .description = "A Pluggable Terraform Linter",
     .homepage_url = null,
     .programs = &[_][]const u8{"tflint"},
@@ -8229,6 +9052,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terrarium",
     .domain = "github.com/terrarium-tf",
+    .kind = .cli,
     .description = "terraform wrapper which transparent loads env files for stacks",
     .homepage_url = null,
     .programs = &[_][]const u8{"terrarium"},
@@ -8239,6 +9063,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tfenv",
     .domain = "github.com/tfutils/tfenv",
+    .kind = .cli,
     .description = "Terraform version manager",
     .homepage_url = null,
     .programs = &[_][]const u8{"tfenv"},
@@ -8249,6 +9074,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opencanaryd",
     .domain = "github.com/thinkst/opencanary",
+    .kind = .cli,
     .description = "Modular and decentralised honeypot",
     .homepage_url = "http://opencanary.org",
     .programs = &[_][]const u8{"opencanaryd"},
@@ -8259,6 +9085,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zippy",
     .domain = "github.com/thinkst/zippy",
+    .kind = .cli,
     .description = "Detect AI-generated text [relatively] quickly via compression ratios",
     .homepage_url = null,
     .programs = &[_][]const u8{"zippy"},
@@ -8269,6 +9096,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libnsl",
     .domain = "github.com/thkukuk/libnsl",
+    .kind = .library,
     .description = "This library contains the public client interface for NIS(YP) and NIS+ in a IPv6 ready version",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8279,6 +9107,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libnl",
     .domain = "github.com/thom311/libnl",
+    .kind = .library,
     .description = "Netlink Library Suite",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8289,6 +9118,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "complexity",
     .domain = "github.com/thoughtbot/complexity",
+    .kind = .cli,
     .description = "A command line tool to identify complex code",
     .homepage_url = "https://www.gnu.org/software/complexity/",
     .programs = &[_][]const u8{"complexity"},
@@ -8299,6 +9129,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tmux",
     .domain = "github.com/tmux/tmux",
+    .kind = .cli,
     .description = "Terminal multiplexer",
     .homepage_url = "https://tmux.github.io/",
     .programs = &[_][]const u8{"tmux"},
@@ -8309,6 +9140,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cemetery-escape",
     .domain = "github.com/tom-on-the-internet/cemetery-escape",
+    .kind = .cli,
     .description = "A game in the terminal. Ghosts chase you. You find the key and escape.",
     .homepage_url = null,
     .programs = &[_][]const u8{"cemetery-escape"},
@@ -8319,6 +9151,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gron",
     .domain = "github.com/tomnomnom/gron",
+    .kind = .cli,
     .description = "Make JSON greppable!",
     .homepage_url = null,
     .programs = &[_][]const u8{"gron"},
@@ -8329,6 +9162,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dasel",
     .domain = "github.com/TomWright/dasel",
+    .kind = .cli,
     .description = "Select, put and delete data from JSON, TOML, YAML, XML and CSV files with a single tool. Supports conversion between formats and can be used as a Go package.",
     .homepage_url = "https://daseldocs.tomwright.me",
     .programs = &[_][]const u8{"dasel"},
@@ -8339,6 +9173,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "toml11",
     .domain = "github.com/ToruNiina/toml11",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8349,6 +9184,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "filelock",
     .domain = "github.com/tox-dev/filelock",
+    .kind = .library,
     .description = "A platform-independent file lock for Python.",
     .homepage_url = "https://py-filelock.readthedocs.io",
     .programs = &[_][]const u8{},
@@ -8359,6 +9195,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "blueutil",
     .domain = "github.com/toy/blueutil",
+    .kind = .cli,
     .description = "CLI for bluetooth on OSX: power, discoverable state, list, inquire devices, connect, info, …",
     .homepage_url = null,
     .programs = &[_][]const u8{"blueutil"},
@@ -8369,6 +9206,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mole",
     .domain = "github.com/tw93/mole",
+    .kind = .cli,
     .description = "Deep clean and optimize your Mac",
     .homepage_url = "https://github.com/tw93/Mole",
     .programs = &[_][]const u8{ "mole", "mo" },
@@ -8379,6 +9217,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swift-create-xcframework",
     .domain = "github.com/unsignedapps/swift-create-xcframework",
+    .kind = .cli,
     .description = "A simple Command Line Tool to create XCFrameworks by wrapping xcodebuild.",
     .homepage_url = null,
     .programs = &[_][]const u8{"swift-create-xcframework"},
@@ -8389,6 +9228,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mscp",
     .domain = "github.com/upa/mscp",
+    .kind = .cli,
     .description = "mscp: transfer files over multiple SSH (SFTP) connections",
     .homepage_url = null,
     .programs = &[_][]const u8{"mscp"},
@@ -8399,6 +9239,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "urllib3",
     .domain = "github.com/urllib3/urllib3",
+    .kind = .library,
     .description = "urllib3 is a user-friendly HTTP client library for Python",
     .homepage_url = "https://urllib3.readthedocs.io",
     .programs = &[_][]const u8{},
@@ -8409,6 +9250,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "util-linux",
     .domain = "github.com/util-linux/util-linux",
+    .kind = .cli,
     .description = "",
     .homepage_url = "http://en.wikipedia.org/wiki/Util-linux",
     .programs = &[_][]const u8{ "cal", "colcrt", "colrm", "column", "flock", "getopt", "hardlink", "hexdump", "isosize", "logger", "look", "mcookie", "mesg", "namei", "rename", "renice", "rev", "scriptreplay", "setsid", "wall", "whereis" },
@@ -8419,6 +9261,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "valhalla",
     .domain = "github.com/valhalla/valhalla",
+    .kind = .cli,
     .description = "Open source routing engine for OpenStreetMap, with tools for time-dependent routing, isochrones, map matching and elevation",
     .homepage_url = "https://valhalla.github.io/valhalla/",
     .programs = &[_][]const u8{ "valhalla_service", "valhalla_build_tiles", "valhalla_build_config", "valhalla_build_elevation", "valhalla_build_admins", "valhalla_build_timezones", "valhalla_build_extract", "valhalla_add_elevation", "valhalla_run_route" },
@@ -8429,6 +9272,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ifacemaker",
     .domain = "github.com/vburenin/ifacemaker",
+    .kind = .cli,
     .description = "Generate interfaces from structure methods.",
     .homepage_url = null,
     .programs = &[_][]const u8{"ifacemaker"},
@@ -8439,6 +9283,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "saml2aws",
     .domain = "github.com/Versent/saml2aws",
+    .kind = .cli,
     .description = "CLI tool which enables you to login and retrieve AWS temporary credentials using a SAML IDP",
     .homepage_url = null,
     .programs = &[_][]const u8{"saml2aws"},
@@ -8449,6 +9294,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Surya",
     .domain = "github.com/VikParuchuri/surya",
+    .kind = .cli,
     .description = "OCR, layout analysis, reading order, table recognition in 90+ languages",
     .homepage_url = "https://www.datalab.to",
     .programs = &[_][]const u8{"surya_detect"},
@@ -8459,6 +9305,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oci2git",
     .domain = "github.com/Virviil/oci2git",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"oci2git"},
@@ -8469,6 +9316,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "regex-tui",
     .domain = "github.com/vitor-mariano/regex-tui",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8479,6 +9327,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tdnf",
     .domain = "github.com/vmware/tdnf",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"tdnf"},
@@ -8489,6 +9338,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sqlboiler",
     .domain = "github.com/volatiletech/sqlboiler",
+    .kind = .cli,
     .description = "Generate a Go ORM tailored to your database schema.",
     .homepage_url = null,
     .programs = &[_][]const u8{"sqlboiler"},
@@ -8499,6 +9349,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dive",
     .domain = "github.com/wagoodman/dive",
+    .kind = .cli,
     .description = "A tool for exploring each layer in a docker image",
     .homepage_url = null,
     .programs = &[_][]const u8{"dive"},
@@ -8509,6 +9360,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flex",
     .domain = "github.com/westes/flex",
+    .kind = .cli,
     .description = "The Fast Lexical Analyzer - scanner generator for lexing in C and C++",
     .homepage_url = null,
     .programs = &[_][]const u8{ "flex", "flex++" },
@@ -8519,6 +9371,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "starpls",
     .domain = "github.com/withered-magic/starpls",
+    .kind = .cli,
     .description = "An LSP implementation for Starlark, the configuration language used by Bazel and Buck2.",
     .homepage_url = null,
     .programs = &[_][]const u8{"starpls"},
@@ -8529,6 +9382,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ghq",
     .domain = "github.com/x-motemen/ghq",
+    .kind = .cli,
     .description = "Remote repository management made easy",
     .homepage_url = null,
     .programs = &[_][]const u8{"ghq"},
@@ -8539,6 +9393,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcodes",
     .domain = "github.com/XcodesOrg/xcodes",
+    .kind = .cli,
     .description = "The best command-line tool to install and switch between multiple versions of Xcode.",
     .homepage_url = null,
     .programs = &[_][]const u8{"xcodes"},
@@ -8549,6 +9404,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xchtmlreport",
     .domain = "github.com/XCTestHTMLReport/XCTestHTMLReport",
+    .kind = .cli,
     .description = "Xcode-like HTML report for Unit and UI Tests",
     .homepage_url = null,
     .programs = &[_][]const u8{"xchtmlreport"},
@@ -8559,6 +9415,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xeol",
     .domain = "github.com/xeol-io/xeol",
+    .kind = .cli,
     .description = "A scanner for end-of-life (EOL) software and dependencies in container images, filesystems, and SBOMs",
     .homepage_url = "https://www.xeol.io/",
     .programs = &[_][]const u8{"xeol"},
@@ -8569,6 +9426,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rav1e",
     .domain = "github.com/xiph/rav1e",
+    .kind = .cli,
     .description = "Fastest and safest AV1 video encoder",
     .homepage_url = null,
     .programs = &[_][]const u8{"rav1e"},
@@ -8579,6 +9437,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "speexdsp",
     .domain = "github.com/xiph/speexdsp",
+    .kind = .library,
     .description = "Speex audio processing library - THIS IS A MIRROR, DEVELOPMENT HAPPENS AT https://gitlab.xiph.org/xiph/speexdsp",
     .homepage_url = "https://speex.org",
     .programs = &[_][]const u8{},
@@ -8589,6 +9448,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "usql",
     .domain = "github.com/xo/usql",
+    .kind = .cli,
     .description = "Universal command-line interface for SQL databases",
     .homepage_url = null,
     .programs = &[_][]const u8{"usql"},
@@ -8599,6 +9459,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubeconform",
     .domain = "github.com/yannh/kubeconform",
+    .kind = .cli,
     .description = "A FAST Kubernetes manifests validator, with support for Custom Resources!",
     .homepage_url = null,
     .programs = &[_][]const u8{"kubeconform"},
@@ -8609,6 +9470,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mint",
     .domain = "github.com/yonaskolb/Mint",
+    .kind = .cli,
     .description = "Dependency manager that installs and runs Swift command-line tool packages",
     .homepage_url = null,
     .programs = &[_][]const u8{"mint"},
@@ -8619,6 +9481,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcodegen",
     .domain = "github.com/yonaskolb/XcodeGen",
+    .kind = .cli,
     .description = "Generate your Xcode project from a spec file and your folder structure",
     .homepage_url = null,
     .programs = &[_][]const u8{"xcodegen"},
@@ -8629,6 +9492,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "csvlens",
     .domain = "github.com/YS-L/csvlens",
+    .kind = .cli,
     .description = "Command line csv viewer",
     .homepage_url = null,
     .programs = &[_][]const u8{"csvlens"},
@@ -8639,6 +9503,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "z3",
     .domain = "github.com/Z3Prover/z3",
+    .kind = .cli,
     .description = "High-performance theorem prover",
     .homepage_url = null,
     .programs = &[_][]const u8{"z3"},
@@ -8649,6 +9514,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jsonlint",
     .domain = "github.com/zaach/jsonlint",
+    .kind = .cli,
     .description = "A JSON parser and validator with a CLI.",
     .homepage_url = "http://zaach.github.com/jsonlint/",
     .programs = &[_][]const u8{"jsonlint"},
@@ -8659,6 +9525,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kube-score",
     .domain = "github.com/zegl/kube-score",
+    .kind = .cli,
     .description = "Kubernetes object analysis with recommendations for improved reliability and security. kube-score actively prevents downtime and bugs in your Kubernetes YAML and Charts. Static code analysis for Kubernetes.",
     .homepage_url = "https://kube-score.com",
     .programs = &[_][]const u8{"kube-score"},
@@ -8669,6 +9536,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "landrun",
     .domain = "github.com/Zouuup/landrun",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"landrun"},
@@ -8679,6 +9547,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zsh-autosuggestions",
     .domain = "github.com/zsh-users/zsh-autosuggestions",
+    .kind = .library,
     .description = "Fish-like autosuggestions for zsh",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8689,6 +9558,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zsh-completions",
     .domain = "github.com/zsh-users/zsh-completions",
+    .kind = .library,
     .description = "Additional completion definitions for Zsh.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8699,6 +9569,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zsh-syntax-highlighting",
     .domain = "github.com/zsh-users/zsh-syntax-highlighting",
+    .kind = .library,
     .description = "Fish shell like syntax highlighting for Zsh.",
     .homepage_url = "github.com/zsh-users/zsh-syntax-highlighting",
     .programs = &[_][]const u8{},
@@ -8709,6 +9580,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Eget",
     .domain = "github.com/zyedidia/eget",
+    .kind = .cli,
     .description = "Easily install prebuilt binaries from GitHub.",
     .homepage_url = null,
     .programs = &[_][]const u8{"eget"},
@@ -8719,6 +9591,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "docker-clean",
     .domain = "github.com/ZZROTDesign/docker-clean",
+    .kind = .cli,
     .description = "A script that cleans docker containers, images, volumes, and networks. ",
     .homepage_url = null,
     .programs = &[_][]const u8{"docker-clean"},
@@ -8729,6 +9602,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SvtAv1EncApp",
     .domain = "gitlab.com/AOMediaCodec/SVT-AV1",
+    .kind = .cli,
     .description = "AV1 encoder",
     .homepage_url = "https://gitlab.com/AOMediaCodec/SVT-AV1",
     .programs = &[_][]const u8{"SvtAv1EncApp"},
@@ -8739,6 +9613,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glab",
     .domain = "gitlab.com/gitlab-org/cli",
+    .kind = .cli,
     .description = "Open-source GitLab command-line tool",
     .homepage_url = "https://gitlab.com/gitlab-org/cli",
     .programs = &[_][]const u8{"glab"},
@@ -8749,6 +9624,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitlab-runner",
     .domain = "gitlab.com/gitlab-org/gitlab-runner",
+    .kind = .cli,
     .description = "Official GitLab CI runner",
     .homepage_url = "https://gitlab.com/gitlab-org/gitlab-runner",
     .programs = &[_][]const u8{"gitlab-runner"},
@@ -8759,6 +9635,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "eclint",
     .domain = "gitlab.com/greut/eclint",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"eclint"},
@@ -8769,6 +9646,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tree",
     .domain = "gitlab.com/OldManProgrammer/unix-tree",
+    .kind = .cli,
     .description = "Display directories as trees (with optional color/HTML output)",
     .homepage_url = "https://oldmanprogrammer.net/source.php?dir=projects/tree",
     .programs = &[_][]const u8{"tree"},
@@ -8779,6 +9657,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "procps",
     .domain = "gitlab.com/procps-ng/procps",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "free", "pgrep", "pidof", "pkill", "pmap", "ps", "pwdx", "slabtop", "sysctl", "tload", "top", "vmstat", "w" },
@@ -8789,6 +9668,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "watch",
     .domain = "gitlab.com/procps-ng/watch",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"watch"},
@@ -8799,6 +9679,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitleaks",
     .domain = "gitleaks.io",
+    .kind = .cli,
     .description = "Find secrets with Gitleaks 🔑",
     .homepage_url = "https://gitleaks.io",
     .programs = &[_][]const u8{"gitleaks"},
@@ -8809,6 +9690,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "metis",
     .domain = "glaros.dtc.umn.edu/metis",
+    .kind = .cli,
     .description = "Programs that partition graphs and order matrices",
     .homepage_url = "http://glaros.dtc.umn.edu/gkhome/views/metis",
     .programs = &[_][]const u8{ "cmpfillin", "gpmetis", "graphchk", "m2gmetis", "mpmetis", "ndmetis" },
@@ -8819,6 +9701,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gleam",
     .domain = "gleam.run",
+    .kind = .cli,
     .description = "⭐️ A friendly language for building type-safe, scalable systems!",
     .homepage_url = "https://gleam.run",
     .programs = &[_][]const u8{"gleam"},
@@ -8829,6 +9712,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glew.sourceforge",
     .domain = "glew.sourceforge.io",
+    .kind = .cli,
     .description = "The OpenGL Extension Wrangler Library",
     .homepage_url = "https://glew.sourceforge.net/",
     .programs = &[_][]const u8{ "glewinfo", "visualinfo" },
@@ -8839,6 +9723,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glfw",
     .domain = "glfw.org",
+    .kind = .library,
     .description = "A multi-platform library for OpenGL, OpenGL ES, Vulkan, window and input",
     .homepage_url = "https://www.glfw.org",
     .programs = &[_][]const u8{},
@@ -8849,6 +9734,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glm.g-truc",
     .domain = "glm.g-truc.net",
+    .kind = .library,
     .description = "OpenGL Mathematics (GLM)",
     .homepage_url = "https://glm.g-truc.net",
     .programs = &[_][]const u8{},
@@ -8859,6 +9745,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "adwaita-icon-theme",
     .domain = "gnome.org/adwaita-icon-theme",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8869,6 +9756,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "atk",
     .domain = "gnome.org/atk",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8879,6 +9767,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gdk-pixbuf",
     .domain = "gnome.org/gdk-pixbuf",
+    .kind = .cli,
     .description = "Toolkit for image loading and pixel buffer manipulation",
     .homepage_url = "https://gtk.org",
     .programs = &[_][]const u8{ "gdk-pixbuf-csource", "gdk-pixbuf-pixdata", "gdk-pixbuf-query-loaders", "gdk-pixbuf-thumbnailer" },
@@ -8889,6 +9778,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gi-docgen",
     .domain = "gnome.org/gi-docgen",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8899,6 +9789,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glib",
     .domain = "gnome.org/glib",
+    .kind = .cli,
     .description = "Core application library for C",
     .homepage_url = "https://docs.gtk.org/glib/",
     .programs = &[_][]const u8{ "gdbus", "gdbus-codegen", "gio", "gio-querymodules", "glib-compile-resources", "glib-compile-schemas", "glib-genmarshal", "glib-gettextize", "glib-mkenums", "gobject-query", "gresource", "gsettings", "gtester", "gtester-report" },
@@ -8909,6 +9800,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glib-networking",
     .domain = "gnome.org/glib-networking",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8919,6 +9811,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "g-ir",
     .domain = "gnome.org/gobject-introspection",
+    .kind = .cli,
     .description = "Generate introspection data for GObject libraries",
     .homepage_url = "https://gi.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{ "g-ir-annotation-tool", "g-ir-compiler", "g-ir-generate", "g-ir-inspect", "g-ir-scanner" },
@@ -8929,6 +9822,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gsettings-desktop-schemas",
     .domain = "gnome.org/gsettings-desktop-schemas",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8939,6 +9833,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gtk-mac-integration-gtk3",
     .domain = "gnome.org/gtk-mac-integration-gtk3",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8949,6 +9844,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "json-glib",
     .domain = "gnome.org/json-glib",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8959,6 +9855,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gsf",
     .domain = "gnome.org/libgsf",
+    .kind = .cli,
     .description = "I/O abstraction library for dealing with structured file formats",
     .homepage_url = "https://gitlab.gnome.org/GNOME/libgsf",
     .programs = &[_][]const u8{ "gsf", "gsf-office-thumbnailer", "gsf-vba-dump" },
@@ -8969,6 +9866,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rsvg-convert",
     .domain = "gnome.org/librsvg",
+    .kind = .cli,
     .description = "Read-only mirror of https://gitlab.gnome.org/GNOME/librsvg",
     .homepage_url = "https://wiki.gnome.org/Projects/LibRsvg",
     .programs = &[_][]const u8{"rsvg-convert"},
@@ -8979,6 +9877,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsecret",
     .domain = "gnome.org/libsecret",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -8989,6 +9888,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xml",
     .domain = "gnome.org/libxml2",
+    .kind = .cli,
     .description = "Read-only mirror of https://gitlab.gnome.org/GNOME/libxml2",
     .homepage_url = "http://xmlsoft.org/",
     .programs = &[_][]const u8{ "xml2-config", "xmlcatalog", "xmllint" },
@@ -8999,6 +9899,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xslt",
     .domain = "gnome.org/libxslt",
+    .kind = .cli,
     .description = "Read-only mirror of https://gitlab.gnome.org/GNOME/libxslt",
     .homepage_url = "http://xmlsoft.org/XSLT/",
     .programs = &[_][]const u8{ "xslt-config", "xsltproc" },
@@ -9009,6 +9910,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pango",
     .domain = "gnome.org/pango",
+    .kind = .cli,
     .description = "Framework for layout and rendering of i18n text",
     .homepage_url = "https://www.gtk.org/docs/architecture/pango",
     .programs = &[_][]const u8{ "pango-list", "pango-segmentation", "pango-view" },
@@ -9019,6 +9921,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "PyGObject",
     .domain = "gnome.org/PyGObject",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9029,6 +9932,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vala",
     .domain = "gnome.org/vala",
+    .kind = .cli,
     .description = "Compiler for the GObject type system",
     .homepage_url = "https://wiki.gnome.org/Projects/Vala",
     .programs = &[_][]const u8{ "vala", "valac", "valadoc", "vala-gen-introspect", "vapigen" },
@@ -9039,6 +9943,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "autoconf",
     .domain = "gnu.org/autoconf",
+    .kind = .cli,
     .description = "Automatic configure script builder",
     .homepage_url = "https://www.gnu.org/software/autoconf/",
     .programs = &[_][]const u8{ "autoconf", "autoheader", "autom4te", "autoreconf", "autoscan", "autoupdate", "ifnames" },
@@ -9049,6 +9954,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "autoconf-archive",
     .domain = "gnu.org/autoconf-archive",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9059,6 +9965,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "automake",
     .domain = "gnu.org/automake",
+    .kind = .cli,
     .description = "Tool for generating GNU Standards-compliant Makefiles",
     .homepage_url = "https://www.gnu.org/software/automake/",
     .programs = &[_][]const u8{ "aclocal", "automake" },
@@ -9069,6 +9976,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bash",
     .domain = "gnu.org/bash",
+    .kind = .cli,
     .description = "Bourne-Again SHell, a UNIX command interpreter",
     .homepage_url = "https://www.gnu.org/software/bash/",
     .programs = &[_][]const u8{ "bash", "bashbug" },
@@ -9079,6 +9987,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bc",
     .domain = "gnu.org/bc",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "bc", "dc" },
@@ -9089,6 +9998,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "binutils",
     .domain = "gnu.org/binutils",
+    .kind = .cli,
     .description = "GNU binary tools for native development",
     .homepage_url = "https://www.gnu.org/software/binutils/binutils.html",
     .programs = &[_][]const u8{ "addr2line", "ar", "c++filt", "elfedit", "nm", "objcopy", "objdump", "ranlib", "readelf", "size", "strings", "strip" },
@@ -9099,6 +10009,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bison",
     .domain = "gnu.org/bison",
+    .kind = .cli,
     .description = "Parser generator",
     .homepage_url = "https://www.gnu.org/software/bison/",
     .programs = &[_][]const u8{ "bison", "yacc" },
@@ -9109,6 +10020,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "coreutils",
     .domain = "gnu.org/coreutils",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "[", "b2sum", "base32", "base64", "basename", "basenc", "cat", "chcon", "chgrp", "chmod", "chown", "chroot", "cksum", "comm", "cp", "csplit", "cut", "date", "dd", "df", "dir", "dircolors", "dirname", "du", "echo", "env", "expand", "expr", "factor", "false", "fmt", "fold", "groups", "head", "hostid", "id", "install", "join", "kill", "link", "ln", "logname", "ls", "md5sum", "mkdir", "mkfifo", "mknod", "mktemp", "mv", "nice", "nl", "nohup", "nproc", "numfmt", "od", "paste", "pathchk", "pinky", "pr", "printenv", "printf", "ptx", "pwd", "readlink", "realpath", "rm", "rmdir", "runcon", "seq", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum", "shred", "shuf", "sleep", "sort", "split", "stat", "stty", "sum", "sync", "tac", "tail", "tee", "test", "timeout", "touch", "tr", "true", "truncate", "tsort", "tty", "uname", "unexpand", "uniq", "unlink", "uptime", "users", "vdir", "wc", "who", "whoami", "yes" },
@@ -9119,6 +10031,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "diffutils",
     .domain = "gnu.org/diffutils",
+    .kind = .cli,
     .description = "File comparison utilities",
     .homepage_url = "https://www.gnu.org/software/diffutils/",
     .programs = &[_][]const u8{ "cmp", "diff", "diff3", "sdiff" },
@@ -9129,6 +10042,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ed",
     .domain = "gnu.org/ed",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"ed"},
@@ -9139,6 +10053,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "emacs",
     .domain = "gnu.org/emacs",
+    .kind = .cli,
     .description = "GNU Emacs text editor",
     .homepage_url = "https://www.gnu.org/software/emacs/",
     .programs = &[_][]const u8{"emacs"},
@@ -9149,6 +10064,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "findutils",
     .domain = "gnu.org/findutils",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "find", "locate", "updatedb", "xargs" },
@@ -9159,6 +10075,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fribidi",
     .domain = "gnu.org/fribidi",
+    .kind = .cli,
     .description = "Implementation of the Unicode BiDi algorithm",
     .homepage_url = null,
     .programs = &[_][]const u8{"fribidi"},
@@ -9169,6 +10086,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gawk",
     .domain = "gnu.org/gawk",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "awk", "gawk", "gawk-{{version}}", "gawkbug" },
@@ -9179,6 +10097,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gcc",
     .domain = "gnu.org/gcc",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "ar", "cc", "c++", "gc++", "cpp", "g++", "gcc", "gcc-ar", "gcc-nm", "gcc-ranlib", "gcov", "gcov-dump", "gcov-tool", "gfortran", "lto-dump", "nm", "ranlib" },
@@ -9189,6 +10108,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libgomp",
     .domain = "gnu.org/gcc/libgomp",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9199,6 +10119,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libstdcxx",
     .domain = "gnu.org/gcc/libstdcxx",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9209,6 +10130,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gdbm",
     .domain = "gnu.org/gdbm",
+    .kind = .cli,
     .description = "GNU database manager",
     .homepage_url = "https://www.gnu.org.ua/software/gdbm/",
     .programs = &[_][]const u8{ "gdbm_dump", "gdbm_load", "gdbmtool" },
@@ -9219,6 +10141,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gettext",
     .domain = "gnu.org/gettext",
+    .kind = .cli,
     .description = "GNU internationalization (i18n) and localization (l10n) library",
     .homepage_url = "https://www.gnu.org/software/gettext/",
     .programs = &[_][]const u8{ "autopoint", "envsubst", "gettext", "gettext.sh", "gettextize", "msgattrib", "msgcat", "msgcmp", "msgcomm", "msgconv", "msgen", "msgexec", "msgfilter", "msgfmt", "msggrep", "msginit", "msgmerge", "msgunfmt", "msguniq", "ngettext", "recode-sr-latin", "xgettext" },
@@ -9229,6 +10152,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gmp",
     .domain = "gnu.org/gmp",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9239,6 +10163,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gperf",
     .domain = "gnu.org/gperf",
+    .kind = .cli,
     .description = "Perfect hash function generator",
     .homepage_url = "https://www.gnu.org/software/gperf/",
     .programs = &[_][]const u8{"gperf"},
@@ -9249,6 +10174,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "grep",
     .domain = "gnu.org/grep",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"grep"},
@@ -9259,6 +10185,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "groff",
     .domain = "gnu.org/groff",
+    .kind = .cli,
     .description = "GNU troff text-formatting system",
     .homepage_url = "https://www.gnu.org/software/groff/",
     .programs = &[_][]const u8{ "addftinfo", "afmtodit", "chem", "eqn", "eqn2graph", "gdiffmk", "glilypond", "gperl", "gpinyin", "grap2graph", "grn", "grodvi", "groff", "grog", "grolbp", "grolj4", "gropdf", "grops", "grotty", "hpftodit", "indxbib", "lkbib", "lookbib", "mmroff", "neqn", "nroff", "pdfmom", "pdfroff", "pfbtops", "pic", "pic2graph", "post-grohtml", "preconv", "pre-grohtml", "refer", "soelim", "tbl", "tfmtodit", "troff" },
@@ -9269,6 +10196,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "grub",
     .domain = "gnu.org/grub",
+    .kind = .cli,
     .description = "GNU GRand Unified Bootloader",
     .homepage_url = "https://www.gnu.org/software/grub/",
     .programs = &[_][]const u8{ "grub-bios-setup", "grub-editenv", "grub-file", "grub-fstest", "grub-install", "grub-kbdcomp", "grub-menulst2cfg", "grub-mkconfig", "grub-mkimage", "grub-mklayout", "grub-mknetdir", "grub-mkpasswd-pbkdf2", "grub-mkrelpath", "grub-mkrescue", "grub-mkstandalone", "grub-mount", "grub-probe", "grub-reboot", "grub-render-label", "grub-script-check", "grub-set-default", "grub-syslinux2cfg" },
@@ -9279,6 +10207,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "guil",
     .domain = "gnu.org/guile",
+    .kind = .cli,
     .description = "GNU Ubiquitous Intelligent Language for Extensions",
     .homepage_url = "https://www.gnu.org/software/guile/",
     .programs = &[_][]const u8{ "guild", "guile", "guile-config", "guile-snarf", "guile-tools" },
@@ -9289,6 +10218,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "help2man",
     .domain = "gnu.org/help2man",
+    .kind = .cli,
     .description = "Automatically generate simple man pages",
     .homepage_url = "https://www.gnu.org/software/help2man/",
     .programs = &[_][]const u8{"help2man"},
@@ -9299,6 +10229,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "inetutils",
     .domain = "gnu.org/inetutils",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "dnsdomainname", "ftp", "hostname", "ifconfig", "logger", "ping", "ping6", "rcp", "rexec", "rlogin", "rsh", "talk", "telnet", "tftp", "traceroute", "whois", "ftpd", "inetd", "rexecd", "rlogind", "rshd", "syslogd", "talkd", "telnetd", "tftpd", "uucpd" },
@@ -9309,6 +10240,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "iconv",
     .domain = "gnu.org/libiconv",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"iconv"},
@@ -9319,6 +10251,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "idn",
     .domain = "gnu.org/libidn",
+    .kind = .cli,
     .description = "International domain name library",
     .homepage_url = "https://www.gnu.org/software/libidn/",
     .programs = &[_][]const u8{"idn"},
@@ -9329,6 +10262,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "idn2",
     .domain = "gnu.org/libidn2",
+    .kind = .cli,
     .description = "International domain name library (IDNA2008, Punycode and TR46)",
     .homepage_url = "https://www.gnu.org/software/libidn/#libidn2",
     .programs = &[_][]const u8{"idn2"},
@@ -9339,6 +10273,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libmicrohttpd",
     .domain = "gnu.org/libmicrohttpd",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9349,6 +10284,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsigsegv",
     .domain = "gnu.org/libsigsegv",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9359,6 +10295,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "asn1",
     .domain = "gnu.org/libtasn1",
+    .kind = .cli,
     .description = "ASN.1 structure parser library",
     .homepage_url = "https://www.gnu.org/software/libtasn1/",
     .programs = &[_][]const u8{ "asn1Coding", "asn1Decoding", "asn1Parser" },
@@ -9369,6 +10306,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libtool",
     .domain = "gnu.org/libtool",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "libtool", "libtoolize" },
@@ -9379,6 +10317,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libunistring",
     .domain = "gnu.org/libunistring",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9389,6 +10328,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "m4",
     .domain = "gnu.org/m4",
+    .kind = .cli,
     .description = "GNU M4. Mirror of git://git.savannah.gnu.org/m4.git ",
     .homepage_url = "https://www.gnu.org/software/m4/",
     .programs = &[_][]const u8{"m4"},
@@ -9399,6 +10339,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "make",
     .domain = "gnu.org/make",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"make"},
@@ -9409,6 +10350,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mpc",
     .domain = "gnu.org/mpc",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9419,6 +10361,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mpfr",
     .domain = "gnu.org/mpfr",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9429,6 +10372,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nettle",
     .domain = "gnu.org/nettle",
+    .kind = .cli,
     .description = "A mirror of the nettle repository",
     .homepage_url = "https://www.lysator.liu.se/~nisse/nettle/",
     .programs = &[_][]const u8{ "nettle-hash", "nettle-lfib-stream", "nettle-pbkdf2", "pkcs1-conv", "sexp-conv" },
@@ -9439,6 +10383,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "parallel",
     .domain = "gnu.org/parallel",
+    .kind = .cli,
     .description = "Shell command parallelization utility",
     .homepage_url = "https://savannah.gnu.org/projects/parallel/",
     .programs = &[_][]const u8{ "env_parallel", "niceload", "parallel", "parcat", "parset", "parsort", "sem", "sql" },
@@ -9449,6 +10394,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "patch",
     .domain = "gnu.org/patch",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"patch"},
@@ -9459,6 +10405,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "plotutils",
     .domain = "gnu.org/plotutils",
+    .kind = .cli,
     .description = "C/C++ function library for exporting 2-D vector graphics",
     .homepage_url = "https://www.gnu.org/software/plotutils/",
     .programs = &[_][]const u8{ "double", "graph", "ode", "pic2plot", "plot", "plotfont", "spline", "tek2plot" },
@@ -9469,6 +10416,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "readline",
     .domain = "gnu.org/readline",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9479,6 +10427,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sed",
     .domain = "gnu.org/sed",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"sed"},
@@ -9489,6 +10438,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "source-highlight",
     .domain = "gnu.org/source-highlight",
+    .kind = .cli,
     .description = "Source-code syntax highlighter",
     .homepage_url = "https://www.gnu.org/software/src-highlite/",
     .programs = &[_][]const u8{ "check-regexp", "source-highlight", "source-highlight-settings" },
@@ -9499,6 +10449,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "stow",
     .domain = "gnu.org/stow",
+    .kind = .cli,
     .description = "Organize software neatly under a single directory tree (e.g. /usr/local)",
     .homepage_url = "https://www.gnu.org/software/stow/",
     .programs = &[_][]const u8{"stow"},
@@ -9509,6 +10460,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tar",
     .domain = "gnu.org/tar",
+    .kind = .cli,
     .description = "Multi-format archive and compression library",
     .homepage_url = "https://www.libarchive.org",
     .programs = &[_][]const u8{"tar"},
@@ -9519,6 +10471,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "texinfo",
     .domain = "gnu.org/texinfo",
+    .kind = .cli,
     .description = "Official documentation format of the GNU project",
     .homepage_url = "https://www.gnu.org/software/texinfo/",
     .programs = &[_][]const u8{ "info", "install-info", "makeinfo", "pdftexi2dvi", "pod2texi", "texi2any", "texi2dvi", "texi2pdf", "texindex" },
@@ -9529,6 +10482,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wget",
     .domain = "gnu.org/wget",
+    .kind = .cli,
     .description = "Internet file retriever",
     .homepage_url = "https://www.gnu.org/software/wget/",
     .programs = &[_][]const u8{"wget"},
@@ -9539,6 +10493,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "which",
     .domain = "gnu.org/which",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"which"},
@@ -9549,6 +10504,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xorriso",
     .domain = "gnu.org/xorriso",
+    .kind = .cli,
     .description = "ISO 9660 Rock Ridge filesystem manipulator",
     .homepage_url = "https://www.gnu.org/software/xorriso/",
     .programs = &[_][]const u8{ "xorriso", "xorrisofs", "xorrecord", "osirrox" },
@@ -9559,6 +10515,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gnupg",
     .domain = "gnupg.org",
+    .kind = .cli,
     .description = "GNU Pretty Good Privacy (PGP) package",
     .homepage_url = "https://gnupg.org/",
     .programs = &[_][]const u8{ "gpg", "gpg-agent", "gpg-connect-agent", "gpg-wks-server", "gpgconf", "gpgparsemail", "gpgscm", "gpgsm", "gpgsplit", "gpgtar", "gpgv", "kbxutil", "watchgnupg" },
@@ -9569,6 +10526,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gpgme",
     .domain = "gnupg.org/gpgme",
+    .kind = .cli,
     .description = "Library access to GnuPG",
     .homepage_url = "https://www.gnupg.org/related_software/gpgme/",
     .programs = &[_][]const u8{ "gpgme-config", "gpgme-json", "gpgme-tool" },
@@ -9579,6 +10537,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libassuan-config",
     .domain = "gnupg.org/libassuan",
+    .kind = .cli,
     .description = "Assuan IPC Library",
     .homepage_url = "https://www.gnupg.org/related_software/libassuan/",
     .programs = &[_][]const u8{"libassuan-config"},
@@ -9589,6 +10548,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libgcrypt",
     .domain = "gnupg.org/libgcrypt",
+    .kind = .cli,
     .description = "Cryptographic library based on the code from GnuPG",
     .homepage_url = "https://gnupg.org/related_software/libgcrypt/",
     .programs = &[_][]const u8{ "dumpsexp", "hmac256", "libgcrypt-config", "mpicalc" },
@@ -9599,6 +10559,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libgpg-error",
     .domain = "gnupg.org/libgpg-error",
+    .kind = .cli,
     .description = "Common error values for all GnuPG components",
     .homepage_url = "https://www.gnupg.org/related_software/libgpg-error/",
     .programs = &[_][]const u8{ "gpg-error", "gpg-error-config", "gpgrt-config", "yat2m" },
@@ -9609,6 +10570,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libksba",
     .domain = "gnupg.org/libksba",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9619,6 +10581,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "npth",
     .domain = "gnupg.org/npth",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9629,6 +10592,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pinentry",
     .domain = "gnupg.org/pinentry",
+    .kind = .cli,
     .description = "Passphrase entry dialog utilizing the Assuan protocol",
     .homepage_url = "https://www.gnupg.org/related_software/pinentry/",
     .programs = &[_][]const u8{ "pinentry", "pinentry-tty" },
@@ -9639,6 +10603,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "v2.5",
     .domain = "gnupg.org/v2.5",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9649,6 +10614,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gnuplot",
     .domain = "gnuplot.info",
+    .kind = .cli,
     .description = "Command-driven, interactive function plotting",
     .homepage_url = "http://www.gnuplot.info/",
     .programs = &[_][]const u8{"gnuplot"},
@@ -9659,6 +10625,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gnutls",
     .domain = "gnutls.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "certtool", "danetool", "gnutls-cli", "gnutls-cli-debug", "gnutls-serv", "ocsptool", "p11tool", "psktool" },
@@ -9669,6 +10636,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "go",
     .domain = "go.dev",
+    .kind = .cli,
     .description = "The Go programming language",
     .homepage_url = "https://go.dev",
     .programs = &[_][]const u8{ "go", "gofmt" },
@@ -9679,6 +10647,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "govulncheck",
     .domain = "go.dev/govulncheck",
+    .kind = .cli,
     .description = "[mirror] the database client and tools for the Go vulnerability database",
     .homepage_url = null,
     .programs = &[_][]const u8{"govulncheck"},
@@ -9689,6 +10658,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "testscript",
     .domain = "go.dev/testscript",
+    .kind = .cli,
     .description = "Selected Go-internal packages factored out from the standard library",
     .homepage_url = "https://github.com/rogpeppe/go-internal/tree/master/cmd/testscript",
     .programs = &[_][]const u8{"testscript"},
@@ -9699,6 +10669,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mockgen",
     .domain = "go.uber.org/mock/mockgen",
+    .kind = .cli,
     .description = "GoMock is a mocking framework for the Go programming language.",
     .homepage_url = null,
     .programs = &[_][]const u8{"mockgen"},
@@ -9709,6 +10680,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hugo",
     .domain = "gohugo.io",
+    .kind = .cli,
     .description = "The world’s fastest framework for building websites.",
     .homepage_url = "https://gohugo.io/",
     .programs = &[_][]const u8{"hugo"},
@@ -9719,6 +10691,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tools",
     .domain = "golang.org/tools",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "goimports", "callgraph", "digraph", "stringer", "toolstash" },
@@ -9729,6 +10702,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "golangci-lint",
     .domain = "golangci-lint.run",
+    .kind = .cli,
     .description = "Fast linters runner for Go",
     .homepage_url = "https://golangci-lint.run/",
     .programs = &[_][]const u8{"golangci-lint"},
@@ -9739,6 +10713,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gomplate",
     .domain = "gomplate.ca",
+    .kind = .cli,
     .description = "A flexible commandline tool for template rendering. Supports lots of local and remote datasources.",
     .homepage_url = "https://gomplate.ca/",
     .programs = &[_][]const u8{"gomplate"},
@@ -9749,6 +10724,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "chrome-for-testing",
     .domain = "google.com/chrome",
+    .kind = .cli,
     .description = "Versioned Chrome for server browser automation",
     .homepage_url = "https://developer.chrome.com/docs/chromedriver/downloads",
     .programs = &[_][]const u8{"google-chrome-stable"},
@@ -9759,6 +10735,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "double-conversion",
     .domain = "google.com/double-conversion",
+    .kind = .library,
     .description = "Efficient binary-decimal and decimal-binary conversion routines for IEEE doubles.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9769,6 +10746,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "firebase",
     .domain = "google.com/firebase-tools",
+    .kind = .cli,
     .description = "The Firebase Command Line Tools",
     .homepage_url = "https://firebase.google.com/docs/cli/",
     .programs = &[_][]const u8{"firebase"},
@@ -9779,6 +10757,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fullycapable",
     .domain = "google.com/fullycapable",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "capsh", "getcap", "getpcaps", "setcap" },
@@ -9789,6 +10768,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gcloud",
     .domain = "google.com/gcloud",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "gcloud", "gsutil", "bq" },
@@ -9799,6 +10779,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glog",
     .domain = "google.com/glog",
+    .kind = .library,
     .description = "C++ implementation of the Google logging module",
     .homepage_url = "http://google.github.io/glog/",
     .programs = &[_][]const u8{},
@@ -9809,6 +10790,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "googletest",
     .domain = "google.com/googletest",
+    .kind = .library,
     .description = "GoogleTest - Google Testing and Mocking Framework",
     .homepage_url = "https://google.github.io/googletest/",
     .programs = &[_][]const u8{},
@@ -9819,6 +10801,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "highway",
     .domain = "google.com/highway",
+    .kind = .library,
     .description = "Performance-portable, length-agnostic SIMD with runtime dispatch",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9829,6 +10812,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "protoc-gen-go",
     .domain = "google.com/protobuf-go",
+    .kind = .cli,
     .description = "Go support for Google's protocol buffers",
     .homepage_url = "https://developers.google.com/protocol-buffers",
     .programs = &[_][]const u8{"protoc-gen-go"},
@@ -9839,6 +10823,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spm",
     .domain = "google.com/sentencepiece",
+    .kind = .cli,
     .description = "Unsupervised text tokenizer for Neural Network-based text generation.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "spm_decode", "spm_encode", "spm_export_vocab", "spm_normalize", "spm_train" },
@@ -9849,6 +10834,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "webp",
     .domain = "google.com/webp",
+    .kind = .cli,
     .description = "Mirror only. Please do not send pull requests. See https://chromium.googlesource.com/webm/libwebp/+/HEAD/CONTRIBUTING.md.",
     .homepage_url = "https://developers.google.com/speed/webp/",
     .programs = &[_][]const u8{ "cwebp", "dwebp", "gif2webp", "img2webp", "vwebp", "webpinfo", "webpmux" },
@@ -9859,6 +10845,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "woff2",
     .domain = "google.com/woff2",
+    .kind = .cli,
     .description = "Utilities to create and convert Web Open Font File (WOFF) files",
     .homepage_url = null,
     .programs = &[_][]const u8{ "woff2_info", "woff2_decompress", "woff2_compress" },
@@ -9869,6 +10856,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zx",
     .domain = "google.com/zx",
+    .kind = .cli,
     .description = "A tool for writing better scripts",
     .homepage_url = "https://google.github.io/zx/",
     .programs = &[_][]const u8{"zx"},
@@ -9879,6 +10867,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "snappy",
     .domain = "google.github.io/snappy",
+    .kind = .library,
     .description = "A fast compressor/decompressor",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -9889,6 +10878,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "goreleaser",
     .domain = "goreleaser.com",
+    .kind = .cli,
     .description = "Deliver Go binaries as fast and easily as possible",
     .homepage_url = "https://goreleaser.com/",
     .programs = &[_][]const u8{"goreleaser"},
@@ -9899,6 +10889,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gource",
     .domain = "gource.io",
+    .kind = .cli,
     .description = "software version control visualization",
     .homepage_url = "https://gource.io",
     .programs = &[_][]const u8{"gource"},
@@ -9909,6 +10900,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gphoto2",
     .domain = "gphoto.org/libgphoto2",
+    .kind = .cli,
     .description = "The libgphoto2 camera access and control library.",
     .homepage_url = "http://www.gphoto.org/proj/libgphoto2/",
     .programs = &[_][]const u8{ "gphoto2-config", "gphoto2-port-config" },
@@ -9919,6 +10911,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gqlgen",
     .domain = "gqlgen.com",
+    .kind = .cli,
     .description = "go generate based graphql server library",
     .homepage_url = "https://gqlgen.com",
     .programs = &[_][]const u8{"gqlgen"},
@@ -9929,6 +10922,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gradle",
     .domain = "gradle.org",
+    .kind = .cli,
     .description = "Open-source build automation tool based on the Groovy and Kotlin DSL",
     .homepage_url = "https://www.gradle.org/",
     .programs = &[_][]const u8{"gradle"},
@@ -9939,6 +10933,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "loki",
     .domain = "grafana.com/loki",
+    .kind = .cli,
     .description = "Horizontally-scalable, highly-available log aggregation system",
     .homepage_url = "https://grafana.com/loki",
     .programs = &[_][]const u8{"loki"},
@@ -9949,6 +10944,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "granted",
     .domain = "granted.dev",
+    .kind = .cli,
     .description = "The easiest way to access your cloud.",
     .homepage_url = "https://granted.dev",
     .programs = &[_][]const u8{"granted"},
@@ -9959,6 +10955,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gm",
     .domain = "graphicsmagick.org",
+    .kind = .cli,
     .description = "Image processing tools collection",
     .homepage_url = "http://www.graphicsmagick.org/",
     .programs = &[_][]const u8{"gm"},
@@ -9969,6 +10966,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gr2fonttest",
     .domain = "graphite.sil.org",
+    .kind = .cli,
     .description = "Graphite is a \"smart font\" system developed specifically to handle the complexities of lesser-known languages of the world.",
     .homepage_url = "https://graphite.sil.org/",
     .programs = &[_][]const u8{"gr2fonttest"},
@@ -9979,6 +10977,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gql",
     .domain = "graphqleditor.com/gql",
+    .kind = .cli,
     .description = "Very simple CLI for many GraphQL schemas in the cloud. Provides autocompletion for GraphQL queries",
     .homepage_url = null,
     .programs = &[_][]const u8{"gql"},
@@ -9989,6 +10988,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "graphviz",
     .domain = "graphviz.org",
+    .kind = .cli,
     .description = "Graph visualization software from AT&T and Bell Labs",
     .homepage_url = "https://graphviz.org/",
     .programs = &[_][]const u8{ "acyclic", "bcomps", "ccomps", "circo", "cluster", "dijkstra", "dot", "dot2gxl", "dot_builtins", "edgepaint", "fdp", "gc", "gml2gv", "graphml2gv", "gv2gml", "gv2gxl", "gvcolor", "gvgen", "gvmap", "gvmap.sh", "gvpack", "gvpr", "gxl2dot", "gxl2gv", "mm2gv", "neato", "nop", "osage", "patchwork", "prune", "sccmap", "sfdp", "tred", "twopi", "unflatten" },
@@ -9999,6 +10999,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "groonga",
     .domain = "groonga.org",
+    .kind = .cli,
     .description = "An embeddable fulltext search engine. Groonga is the successor project to Senna.",
     .homepage_url = "https://groonga.org/",
     .programs = &[_][]const u8{ "groonga", "groonga-suggest-create-dataset" },
@@ -10009,6 +11010,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "groovy-lang",
     .domain = "groovy-lang.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "grape", "grape_completion", "groovy", "groovyc", "groovyc_completion", "groovy_completion", "groovyConsole", "groovyConsole_completion", "groovydoc", "groovydoc_completion", "groovysh", "groovysh_completion", "java2groovy", "startGroovy" },
@@ -10019,6 +11021,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "grpc",
     .domain = "grpc.io",
+    .kind = .cli,
     .description = "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)",
     .homepage_url = "https://grpc.io/",
     .programs = &[_][]const u8{ "grpc_csharp_plugin", "grpc_node_plugin", "grpc_cpp_plugin", "grpc_python_plugin", "grpc_objective_c_plugin", "grpc_ruby_plugin", "grpc_php_plugin", "grpc_cli" },
@@ -10029,6 +11032,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "protoc-gen-go-grpc",
     .domain = "grpc.io/grpc-go",
+    .kind = .cli,
     .description = "The Go language implementation of gRPC. HTTP/2 based RPC",
     .homepage_url = "https://grpc.io",
     .programs = &[_][]const u8{"protoc-gen-go-grpc"},
@@ -10039,6 +11043,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "orc",
     .domain = "gstreamer.freedesktop.org/orc",
+    .kind = .cli,
     .description = "Oil Runtime Compiler (ORC)",
     .homepage_url = "https://gstreamer.freedesktop.org/projects/orc.html",
     .programs = &[_][]const u8{ "orcc", "orc-bugreport" },
@@ -10049,6 +11054,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gtk3",
     .domain = "gtk.org/gtk3",
+    .kind = .cli,
     .description = "Toolkit for creating graphical user interfaces",
     .homepage_url = "https://gtk.org/",
     .programs = &[_][]const u8{ "gtk-builder-tool", "gtk-encode-symbolic-svg", "gtk-launch", "gtk-query-immodules-3.0", "gtk-query-settings", "gtk-update-icon-cache", "gtk3-demo", "gtk3-demo-application", "gtk3-icon-browser", "gtk3-widget-factory" },
@@ -10059,6 +11065,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gtk4",
     .domain = "gtk.org/gtk4",
+    .kind = .cli,
     .description = "Toolkit for creating graphical user interfaces",
     .homepage_url = "https://gtk.org/",
     .programs = &[_][]const u8{ "gtk4-builder-tool", "gtk4-demo", "gtk4-demo-application", "gtk4-encode-symbolic-svg", "gtk4-launch", "gtk4-node-editor", "gtk4-query-settings", "gtk4-print-editor", "gtk4-rendernode-tool", "gtk4-update-icon-cache", "gtk4-widget-factory" },
@@ -10069,6 +11076,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gts.sourceforge",
     .domain = "gts.sourceforge.net",
+    .kind = .cli,
     .description = "GNU triangulated surface library",
     .homepage_url = "https://gts.sourceforge.net/",
     .programs = &[_][]const u8{ "delaunay", "gts2dxf", "gts2oogl", "gts2stl", "gtscheck", "gtscompare", "gtstemplate", "stl2gts", "transform" },
@@ -10079,6 +11087,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Hack",
     .domain = "hack",
+    .kind = .font,
     .description = "A typeface designed for source code.",
     .homepage_url = "https://sourcefoundry.org/hack/",
     .programs = &[_][]const u8{},
@@ -10089,6 +11098,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libmd",
     .domain = "hadrons.org/libmd",
+    .kind = .library,
     .description = "BSD Mesage Digest library (mirror)",
     .homepage_url = "https://www.hadrons.org/software/libmd/",
     .programs = &[_][]const u8{},
@@ -10099,6 +11109,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "HandBrake",
     .domain = "handbrake.fr",
+    .kind = .app,
     .description = "An open-source video transcoder.",
     .homepage_url = "https://handbrake.fr",
     .programs = &[_][]const u8{"handbrake"},
@@ -10109,6 +11120,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "autossh",
     .domain = "harding.motd.ca/autossh",
+    .kind = .cli,
     .description = "Automatically restart SSH sessions and tunnels",
     .homepage_url = "https://www.harding.motd.ca/autossh/",
     .programs = &[_][]const u8{"autossh"},
@@ -10119,6 +11131,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "harfbuzz",
     .domain = "harfbuzz.org",
+    .kind = .cli,
     .description = "HarfBuzz text shaping engine",
     .homepage_url = "http://harfbuzz.github.io/",
     .programs = &[_][]const u8{ "hb-shape", "hb-subset", "hb-view" },
@@ -10129,6 +11142,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "harlequin.sh",
     .domain = "harlequin.sh",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"harlequin"},
@@ -10139,6 +11153,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "consul-template",
     .domain = "hashicorp.com/consul-template",
+    .kind = .cli,
     .description = "Template rendering, notifier, and supervisor for @HashiCorp Consul and Vault data.",
     .homepage_url = "https://www.hashicorp.com/",
     .programs = &[_][]const u8{"consul-template"},
@@ -10149,6 +11164,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "envconsul",
     .domain = "hashicorp.com/envconsul",
+    .kind = .cli,
     .description = "Launch a subprocess with environment variables using data from @HashiCorp Consul and Vault.",
     .homepage_url = "https://www.hashicorp.com/",
     .programs = &[_][]const u8{"envconsul"},
@@ -10159,6 +11175,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "haskell",
     .domain = "haskell.org",
+    .kind = .cli,
     .description = "Mirror of the Glasgow Haskell Compiler. Please submit issues and patches to GHC's Gitlab instance (https://gitlab.haskell.org/ghc/ghc). First time contributors are encouraged to get started with the newcomers info (https://gitlab.haskell.org/ghc/ghc/wikis/contributing).",
     .homepage_url = "http://www.haskell.org/ghc/",
     .programs = &[_][]const u8{ "ghc", "ghc-{{version.marketing}}", "ghc-{{version}}", "ghc-pkg", "ghc-pkg-{{version.marketing}}", "ghc-pkg-{{version}}", "ghci", "ghci-{{version.marketing}}", "ghci-{{version}}", "ghcup", "haddock", "haddock-{{version.marketing}}", "haddock-{{version}}", "hp2ps", "hp2ps-{{version.marketing}}", "hp2ps-{{version}}", "hpc", "hpc-{{version.marketing}}", "hpc-{{version}}", "hsc2hs", "hsc2hs-{{version.marketing}}", "hsc2hs-{{version}}", "runghc", "runghc-{{version.marketing}}", "runghc-{{version}}", "runhaskell", "runhaskell-{{version.marketing}}", "runhaskell-{{version}}" },
@@ -10169,6 +11186,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cabal",
     .domain = "haskell.org/cabal",
+    .kind = .cli,
     .description = "Official upstream development repository for Cabal and cabal-install",
     .homepage_url = "https://www.haskell.org/cabal/",
     .programs = &[_][]const u8{"cabal"},
@@ -10179,6 +11197,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hasura",
     .domain = "hasura.io",
+    .kind = .cli,
     .description = "Blazing fast, instant realtime GraphQL APIs on all your data with fine grained access control, also trigger webhooks on database events.",
     .homepage_url = "https://hasura.io",
     .programs = &[_][]const u8{"hasura"},
@@ -10189,6 +11208,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hatch",
     .domain = "hatch.pypa.io",
+    .kind = .cli,
     .description = "Modern, extensible Python project management",
     .homepage_url = "https://hatch.pypa.io/latest/",
     .programs = &[_][]const u8{"hatch"},
@@ -10199,6 +11219,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gc",
     .domain = "hboehm.info/gc",
+    .kind = .library,
     .description = "The Boehm-Demers-Weiser conservative C/C++ Garbage Collector (bdwgc, also known as bdw-gc, boehm-gc, libgc)",
     .homepage_url = "https://www.hboehm.info/gc/",
     .programs = &[_][]const u8{},
@@ -10209,6 +11230,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "HDF5",
     .domain = "hdfgroup.org/HDF5",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "h5c++", "h5cc", "h5clear", "h5copy", "h5debug", "h5delete", "h5diff", "h5dump", "h5fc", "h5format_convert", "h5import", "h5jam", "h5ls", "h5mkgrp", "h5perf_serial", "h5redeploy", "h5repack", "h5repart", "h5stat", "h5unjam", "h5watch" },
@@ -10219,6 +11241,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cfitsio",
     .domain = "heasarc.gsfc.nasa.gov/cfitsio",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -10229,6 +11252,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hx",
     .domain = "helix-editor.com",
+    .kind = .cli,
     .description = "A post-modern modal text editor.",
     .homepage_url = "https://helix-editor.com",
     .programs = &[_][]const u8{"hx"},
@@ -10239,6 +11263,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "helm",
     .domain = "helm.sh",
+    .kind = .cli,
     .description = "The Kubernetes Package Manager",
     .homepage_url = "https://helm.sh/",
     .programs = &[_][]const u8{"helm"},
@@ -10249,6 +11274,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "heroku",
     .domain = "heroku.com",
+    .kind = .cli,
     .description = "CLI for Heroku",
     .homepage_url = "https://www.npmjs.com/package/heroku/",
     .programs = &[_][]const u8{"heroku"},
@@ -10259,6 +11285,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hcloud",
     .domain = "hetzner.com/hcloud",
+    .kind = .cli,
     .description = "A command-line interface for Hetzner Cloud",
     .homepage_url = null,
     .programs = &[_][]const u8{"hcloud"},
@@ -10269,6 +11296,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Hidden Bar",
     .domain = "hiddenbar.app",
+    .kind = .app,
     .description = "A utility to hide menu bar items on macOS.",
     .homepage_url = "https://github.com/dwarvesf/hidden",
     .programs = &[_][]const u8{"hiddenbar"},
@@ -10279,6 +11307,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hjson",
     .domain = "hjson.github.io",
+    .kind = .cli,
     .description = "Hjson for Rust",
     .homepage_url = "https://hjson.github.io/",
     .programs = &[_][]const u8{"hjson"},
@@ -10289,6 +11318,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tidy",
     .domain = "html-tidy.org",
+    .kind = .cli,
     .description = "The granddaddy of HTML tools, with support for modern standards",
     .homepage_url = "https://www.html-tidy.org/",
     .programs = &[_][]const u8{"tidy"},
@@ -10299,6 +11329,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "htop",
     .domain = "htop.dev",
+    .kind = .cli,
     .description = "Improved top (interactive process viewer)",
     .homepage_url = "https://htop.dev/",
     .programs = &[_][]const u8{"htop"},
@@ -10309,6 +11340,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "htslib",
     .domain = "htslib.org",
+    .kind = .cli,
     .description = "C library for high-throughput sequencing data formats",
     .homepage_url = "https://www.htslib.org/",
     .programs = &[_][]const u8{ "bgzip", "htsfile", "tabix" },
@@ -10319,6 +11351,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "samtools",
     .domain = "htslib.org/samtools",
+    .kind = .cli,
     .description = "Tools (written in C using htslib) for manipulating next-generation sequencing data",
     .homepage_url = "https://www.htslib.org/",
     .programs = &[_][]const u8{ "ace2sam", "blast2sam.pl", "bowtie2sam.pl", "export2sam.pl", "fasta-sanitize.pl", "interpolate_sam.pl", "maq2sam-long", "maq2sam-short", "md5fa", "md5sum-lite", "novo2sam.pl", "plot-ampliconstats", "plot-bamstats", "psl2sam.pl", "sam2vcf.pl", "samtools", "samtools.pl", "seq_cache_populate.pl", "soap2sam.pl", "wgsim", "wgsim_eval.pl", "zoom2sam.pl" },
@@ -10329,6 +11362,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "httpie",
     .domain = "httpie.io",
+    .kind = .cli,
     .description = "🥧 HTTPie CLI  — modern, user-friendly command-line HTTP client for the API era. JSON support, colors, sessions, downloads, plugins & more.",
     .homepage_url = "https://httpie.io/",
     .programs = &[_][]const u8{ "http", "httpie", "https" },
@@ -10339,6 +11373,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "huggingface/cli",
     .domain = "huggingface.co",
+    .kind = .cli,
     .description = "The official Python client for the Huggingface Hub.",
     .homepage_url = "https://huggingface.co/docs/huggingface_hub/index",
     .programs = &[_][]const u8{"huggingface-cli"},
@@ -10349,6 +11384,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cicada",
     .domain = "hugo.wang/cicada",
+    .kind = .cli,
     .description = "An old-school bash-like Unix shell written in Rust",
     .homepage_url = "https://hugo.wang/cicada/",
     .programs = &[_][]const u8{"cicada"},
@@ -10359,6 +11395,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hunspell",
     .domain = "hunspell.github.io",
+    .kind = .cli,
     .description = "Spell checker and morphological analyzer",
     .homepage_url = "https://hunspell.github.io",
     .programs = &[_][]const u8{ "analyze", "chmorph", "hunspell", "hunzip", "hzip", "munch", "unmunch" },
@@ -10369,6 +11406,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hurl",
     .domain = "hurl.dev",
+    .kind = .cli,
     .description = "Run and Test HTTP Requests with plain text and curl",
     .homepage_url = "https://hurl.dev",
     .programs = &[_][]const u8{ "hurl", "hurlfmt" },
@@ -10379,6 +11417,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "smi",
     .domain = "ibr.cs.tu-bs.de/libsmi",
+    .kind = .cli,
     .description = "Library to Access SMI MIB Information",
     .homepage_url = "https://www.ibr.cs.tu-bs.de/projects/libsmi/",
     .programs = &[_][]const u8{ "smidiff", "smidump", "smilint", "smiquery", "smixlate" },
@@ -10389,6 +11428,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "krampus",
     .domain = "idleberg.github.io/krampus",
+    .kind = .cli,
     .description = "Command-line tool to kill one or more processes by port number",
     .homepage_url = "https://pkg.go.dev/github.com/idleberg/krampus",
     .programs = &[_][]const u8{"krampus"},
@@ -10399,6 +11439,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "IINA",
     .domain = "iina.io",
+    .kind = .app,
     .description = "A modern media player for macOS.",
     .homepage_url = "https://iina.io",
     .programs = &[_][]const u8{"iina"},
@@ -10409,6 +11450,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ijg",
     .domain = "ijg.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "cjpeg", "djpeg", "jpegtran", "rdjpgcom", "wrjpgcom" },
@@ -10419,6 +11461,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "imageflow_tool",
     .domain = "imageflow.io/imageflow_tool",
+    .kind = .cli,
     .description = "High-performance image manipulation for web servers. Includes imageflow_server, imageflow_tool, and libimageflow",
     .homepage_url = "https://docs.imageflow.io/",
     .programs = &[_][]const u8{"imageflow_tool"},
@@ -10429,6 +11472,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "imagemagick",
     .domain = "imagemagick.org",
+    .kind = .cli,
     .description = "ImageMagick is a powerful, open-source software suite for creating, editing, converting, and manipulating images in over 200 formats. Ideal for web developers, graphic designers, and researchers, it offers versatile tools for image processing, including batch processing, format conversion, and complex image transformations.",
     .homepage_url = "https://imagemagick.org/index.php",
     .programs = &[_][]const u8{ "animate", "compare", "composite", "conjure", "convert", "display", "identify", "import", "magick", "magick-script", "Magick++-config", "MagickCore-config", "MagickWand-config", "mogrify", "montage", "stream" },
@@ -10439,6 +11483,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ImageOptim",
     .domain = "imageoptim.com",
+    .kind = .cli,
     .description = "An image optimizer for macOS.",
     .homepage_url = "https://imageoptim.com",
     .programs = &[_][]const u8{"imageoptim"},
@@ -10449,6 +11494,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "shovel",
     .domain = "indexsupply.com/shovel",
+    .kind = .cli,
     .description = "An Ethereum to Postgres indexer",
     .homepage_url = "https://indexsupply.com/shovel",
     .programs = &[_][]const u8{"shovel"},
@@ -10459,6 +11505,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unzip",
     .domain = "info-zip.org/unzip",
+    .kind = .cli,
     .description = "Extraction utility for .zip compressed archives",
     .homepage_url = "https://infozip.sourceforge.net/UnZip.html",
     .programs = &[_][]const u8{ "funzip", "unzip", "unzipsfx", "zipgrep", "zipinfo" },
@@ -10469,6 +11516,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zip",
     .domain = "info-zip.org/zip",
+    .kind = .cli,
     .description = "Compression and file packaging/archive utility",
     .homepage_url = "https://infozip.sourceforge.net/Zip.html",
     .programs = &[_][]const u8{ "zip", "zipcloak", "zipnote", "zipsplit" },
@@ -10479,6 +11527,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "infracost",
     .domain = "infracost.io",
+    .kind = .cli,
     .description = "Cloud cost estimates for Terraform in pull requests💰📉 Shift FinOps Left!",
     .homepage_url = "https://www.infracost.io/docs/",
     .programs = &[_][]const u8{"infracost"},
@@ -10489,6 +11538,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Inkscape",
     .domain = "inkscape.org",
+    .kind = .app,
     .description = "A professional vector graphics editor.",
     .homepage_url = "https://inkscape.org",
     .programs = &[_][]const u8{"inkscape"},
@@ -10499,6 +11549,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Insomnia",
     .domain = "insomnia.rest",
+    .kind = .cli,
     .description = "A collaborative API client and design tool.",
     .homepage_url = "https://insomnia.rest",
     .programs = &[_][]const u8{"insomnia"},
@@ -10509,6 +11560,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libva",
     .domain = "intel.com/libva",
+    .kind = .library,
     .description = "Libva is an implementation for VA-API (Video Acceleration API)",
     .homepage_url = "http://intel.github.io/libva/",
     .programs = &[_][]const u8{},
@@ -10519,6 +11571,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Inter",
     .domain = "inter",
+    .kind = .font,
     .description = "Typeface designed for screens.",
     .homepage_url = "https://rsms.me/inter/",
     .programs = &[_][]const u8{},
@@ -10529,6 +11582,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dialog",
     .domain = "invisible-island.net/dialog",
+    .kind = .cli,
     .description = "Display user-friendly message boxes from shell scripts",
     .homepage_url = "https://invisible-island.net/dialog/",
     .programs = &[_][]const u8{ "dialog", "dialog-config" },
@@ -10539,6 +11593,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lynx",
     .domain = "invisible-island.net/lynx",
+    .kind = .cli,
     .description = "Text-based web browser",
     .homepage_url = "https://invisible-island.net/lynx/",
     .programs = &[_][]const u8{"lynx"},
@@ -10549,6 +11604,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ncurses",
     .domain = "invisible-island.net/ncurses",
+    .kind = .cli,
     .description = "Text-based UI library",
     .homepage_url = "https://invisible-island.net/ncurses/announce.html",
     .programs = &[_][]const u8{ "captoinfo", "clear", "infocmp", "infotocap", "ncurses6-config", "ncursesw6-config", "reset", "tabs", "tic", "toe", "tput", "tset" },
@@ -10559,6 +11615,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ipfs",
     .domain = "ipfs.tech",
+    .kind = .cli,
     .description = "Peer-to-peer hypermedia protocol",
     .homepage_url = "https://ipfs.tech/",
     .programs = &[_][]const u8{"ipfs"},
@@ -10569,6 +11626,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ipfscluster",
     .domain = "ipfscluster.io",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "ipfs-cluster-follow", "ipfs-cluster-ctl", "ipfs-cluster-service" },
@@ -10579,6 +11637,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ipython",
     .domain = "ipython.org",
+    .kind = .cli,
     .description = "Official repository for IPython itself. Other repos in the IPython organization contain things like the website, documentation builds, etc.",
     .homepage_url = "https://ipython.org/",
     .programs = &[_][]const u8{ "ipython", "ipython3" },
@@ -10589,6 +11648,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "iroh",
     .domain = "iroh.computer",
+    .kind = .cli,
     .description = "peer-2-peer that just works",
     .homepage_url = "https://iroh.computer",
     .programs = &[_][]const u8{"iroh"},
@@ -10599,6 +11659,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bind9",
     .domain = "isc.org/bind9",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "arpaname", "delv", "dig", "dnssec-cds", "dnssec-dsfromkey", "dnssec-importkey", "dnssec-keyfromlabel", "dnssec-keygen", "dnssec-ksr", "dnssec-revoke", "dnssec-settime", "dnssec-signzone", "dnssec-verify", "host", "mdig", "named-checkconf", "named-checkzone", "named-compilezone", "named-journalprint", "named-nzd2nzf", "named-rrchecker", "nsec3hash", "nslookup", "nsupdate", "ddns-confgen", "named", "rndc", "rndc-confgen", "tsig-keygen" },
@@ -10609,6 +11670,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "istioctl",
     .domain = "istio.io",
+    .kind = .cli,
     .description = "Connect, secure, control, and observe services.",
     .homepage_url = "https://istio.io/",
     .programs = &[_][]const u8{"istioctl"},
@@ -10619,6 +11681,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "iTerm2",
     .domain = "iterm2.com",
+    .kind = .app,
     .description = "A terminal emulator for macOS with advanced features.",
     .homepage_url = "https://iterm2.com",
     .programs = &[_][]const u8{"iterm2"},
@@ -10629,6 +11692,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "itstool",
     .domain = "itstool.org",
+    .kind = .cli,
     .description = "Translate XML with PO files using W3C Internationalization Tag Set rules",
     .homepage_url = "https://itstool.org/",
     .programs = &[_][]const u8{"itstool"},
@@ -10639,6 +11703,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pv",
     .domain = "ivarch.com/pv",
+    .kind = .cli,
     .description = "Monitor data's progress through a pipe",
     .homepage_url = "https://www.ivarch.com/programs/pv.shtml",
     .programs = &[_][]const u8{"pv"},
@@ -10649,6 +11714,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jbang",
     .domain = "jbang.dev",
+    .kind = .cli,
     .description = "Unleash the power of Java - JBang Lets Students, Educators and Professional Developers create, edit and run self-contained source-only Java programs with unprecedented ease.",
     .homepage_url = "https://jbang.dev/",
     .programs = &[_][]const u8{"jbang"},
@@ -10659,6 +11725,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jbig2dec",
     .domain = "jbig2dec.com",
+    .kind = .cli,
     .description = "This is a mirror: the canonical repo is: git.ghostscript.com/jbig2dec.git. This repo does not host releases, they are here: https://github.com/ArtifexSoftware/jbig2dec/tags",
     .homepage_url = "https://jbig2dec.com/",
     .programs = &[_][]const u8{"jbig2dec"},
@@ -10669,6 +11736,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "minisign",
     .domain = "jedisct1.github.io/minisign",
+    .kind = .cli,
     .description = "A dead simple tool to sign files and verify digital signatures.",
     .homepage_url = "https://jedisct1.github.io/minisign/",
     .programs = &[_][]const u8{"minisign"},
@@ -10679,6 +11747,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "s-lang",
     .domain = "jedsoft.org/slang",
+    .kind = .cli,
     .description = "Library for creating multi-platform software",
     .homepage_url = "https://www.jedsoft.org/slang/",
     .programs = &[_][]const u8{"slsh"},
@@ -10689,6 +11758,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jemalloc",
     .domain = "jemalloc.net",
+    .kind = .library,
     .description = "",
     .homepage_url = "http://jemalloc.net/",
     .programs = &[_][]const u8{},
@@ -10699,6 +11769,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Jenkins X",
     .domain = "jenkins-x.io",
+    .kind = .cli,
     .description = "Jenkins X provides automated CI+CD for Kubernetes with Preview Environments on Pull Requests using Cloud Native pipelines from Tekton",
     .homepage_url = "https://jenkins-x.io/",
     .programs = &[_][]const u8{"jx"},
@@ -10709,6 +11780,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jenkins-lts",
     .domain = "jenkins.io",
+    .kind = .cli,
     .description = "Extendable open source continuous integration server",
     .homepage_url = "https://www.jenkins.io/",
     .programs = &[_][]const u8{ "jenkins-lts", "jenkins-lts-cli" },
@@ -10719,6 +11791,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jenv",
     .domain = "jenv.be",
+    .kind = .cli,
     .description = "Manage your Java environment ",
     .homepage_url = "http://www.jenv.be",
     .programs = &[_][]const u8{"jenv"},
@@ -10729,6 +11802,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "JetBrains Mono",
     .domain = "jetbrains-mono",
+    .kind = .font,
     .description = "A typeface for developers.",
     .homepage_url = "https://www.jetbrains.com/lp/mono/",
     .programs = &[_][]const u8{},
@@ -10739,6 +11813,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "JetBrainsMono Nerd Font",
     .domain = "jetbrains-mono-nerd-font",
+    .kind = .font,
     .description = "JetBrains Mono patched with Nerd Font glyphs.",
     .homepage_url = "https://www.nerdfonts.com",
     .programs = &[_][]const u8{},
@@ -10749,6 +11824,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jetp",
     .domain = "jetporch.com",
+    .kind = .cli,
     .description = "Read-only mirror: see https://www.jetporch.com/community/sourcehut",
     .homepage_url = null,
     .programs = &[_][]const u8{"jetp"},
@@ -10759,6 +11835,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jfrog-cli",
     .domain = "jfrog.com/jfrog-cli",
+    .kind = .cli,
     .description = "JFrog CLI is a client that provides a simple interface that automates access to the JFrog products.",
     .homepage_url = "https://www.jfrog.com/confluence/display/CLI/JFrog+CLI",
     .programs = &[_][]const u8{ "jf", "jfrog" },
@@ -10769,6 +11846,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jless",
     .domain = "jless.io",
+    .kind = .cli,
     .description = "jless is a command-line JSON viewer designed for reading, exploring, and searching through JSON data.",
     .homepage_url = "https://jless.io/",
     .programs = &[_][]const u8{"jless"},
@@ -10779,6 +11857,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tig",
     .domain = "jonas.github.io/tig",
+    .kind = .cli,
     .description = "Text interface for Git repositories",
     .homepage_url = "https://jonas.github.io/tig/",
     .programs = &[_][]const u8{"tig"},
@@ -10789,6 +11868,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jpegxl",
     .domain = "jpeg.org/jpegxl",
+    .kind = .cli,
     .description = "JPEG XL image format reference implementation",
     .homepage_url = "https://jpeg.org/jpegxl/index.html",
     .programs = &[_][]const u8{ "cjxl", "djxl", "jxlinfo" },
@@ -10799,6 +11879,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "json.nlohmann.me",
     .domain = "json.nlohmann.me",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -10809,6 +11890,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jsonnet",
     .domain = "jsonnet.org",
+    .kind = .cli,
     .description = "Jsonnet - The data templating language",
     .homepage_url = "http://jsonnet.org",
     .programs = &[_][]const u8{ "jsonnet", "jsonnetfmt" },
@@ -10819,6 +11901,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcerf",
     .domain = "jugit.fz-juelich.de/mlz/libcerf",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -10829,6 +11912,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "juju",
     .domain = "juju.is",
+    .kind = .cli,
     .description = "Orchestration engine that enables the deployment, integration and lifecycle management of applications at any scale, on any infrastructure (Kubernetes or otherwise).",
     .homepage_url = "https://juju.is/",
     .programs = &[_][]const u8{"juju"},
@@ -10839,6 +11923,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "julia",
     .domain = "julialang.org",
+    .kind = .cli,
     .description = "The Julia Programming Language",
     .homepage_url = "https://julialang.org/",
     .programs = &[_][]const u8{"julia"},
@@ -10849,6 +11934,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "juliaup",
     .domain = "julialang.org/juliaup",
+    .kind = .cli,
     .description = "Julia installer and version multiplexer",
     .homepage_url = null,
     .programs = &[_][]const u8{"juliaup"},
@@ -10859,6 +11945,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jumppad",
     .domain = "jumppad.dev",
+    .kind = .cli,
     .description = "Modern cloud native development environments",
     .homepage_url = "https://jumppad.dev",
     .programs = &[_][]const u8{"jumppad"},
@@ -10869,6 +11956,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jupyter",
     .domain = "jupyter.org",
+    .kind = .cli,
     .description = "JupyterLab computational environment.",
     .homepage_url = "https://jupyterlab.readthedocs.io/",
     .programs = &[_][]const u8{ "jlpm", "jupyter", "jupyter-bundlerextension", "jupyter-dejavu", "jupyter-events", "jupyter-execute", "jupyter-fileid", "jupyter-kernel", "jupyter-kernelspec", "jupyter-lab", "jupyter-labextension", "jupyter-labhub", "jupyter-migrate", "jupyter-nbclassic", "jupyter-nbclassic-bundlerextension", "jupyter-nbclassic-extension", "jupyter-nbclassic-serverextension", "jupyter-nbconvert", "jupyter-nbextension", "jupyter-run", "jupyter-server", "jupyter-serverextension", "jupyter-troubleshoot", "jupyter-trust" },
@@ -10879,6 +11967,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "just",
     .domain = "just.systems",
+    .kind = .cli,
     .description = "Handy way to save and run project-specific commands",
     .homepage_url = "https://just.systems",
     .programs = &[_][]const u8{"just"},
@@ -10889,6 +11978,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "k3d",
     .domain = "k3d.io",
+    .kind = .cli,
     .description = "Little helper to run CNCF's k3s in Docker",
     .homepage_url = "https://k3d.io",
     .programs = &[_][]const u8{"k3d"},
@@ -10899,6 +11989,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "k6",
     .domain = "k6.io",
+    .kind = .cli,
     .description = "A modern load testing tool, using Go and JavaScript - https://k6.io",
     .homepage_url = "https://k6.io",
     .programs = &[_][]const u8{"k6"},
@@ -10909,6 +12000,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "k9s",
     .domain = "k9scli.io",
+    .kind = .cli,
     .description = "🐶 Kubernetes CLI To Manage Your Clusters In Style!",
     .homepage_url = "https://k9scli.io/",
     .programs = &[_][]const u8{"k9s"},
@@ -10919,6 +12011,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kafka.apache",
     .domain = "kafka.apache.org",
+    .kind = .cli,
     .description = "Mirror of Apache Kafka",
     .homepage_url = null,
     .programs = &[_][]const u8{ "connect-distributed.sh", "connect-mirror-maker.sh", "connect-plugin-path.sh", "connect-standalone.sh", "kafka-acls.sh", "kafka-broker-api-versions.sh", "kafka-client-metrics.sh", "kafka-cluster.sh", "kafka-configs.sh", "kafka-console-consumer.sh", "kafka-console-producer.sh", "kafka-consumer-groups.sh", "kafka-consumer-perf-test.sh", "kafka-delegation-tokens.sh", "kafka-delete-records.sh", "kafka-dump-log.sh", "kafka-e2e-latency.sh", "kafka-features.sh", "kafka-get-offsets.sh", "kafka-jmx.sh", "kafka-leader-election.sh", "kafka-log-dirs.sh", "kafka-metadata-quorum.sh", "kafka-metadata-shell.sh", "kafka-producer-perf-test.sh", "kafka-reassign-partitions.sh", "kafka-replica-verification.sh", "kafka-run-class.sh", "kafka-server-start.sh", "kafka-server-stop.sh", "kafka-storage.sh", "kafka-streams-application-reset.sh", "kafka-topics.sh", "kafka-transactions.sh", "kafka-verifiable-consumer.sh", "kafka-verifiable-producer.sh", "trogdor.sh", "zookeeper-security-migration.sh", "zookeeper-server-start.sh", "zookeeper-server-stop.sh", "zookeeper-shell.sh" },
@@ -10929,6 +12022,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kaggle",
     .domain = "kaggle.com",
+    .kind = .cli,
     .description = "Official Kaggle API",
     .homepage_url = null,
     .programs = &[_][]const u8{"kaggle"},
@@ -10939,6 +12033,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kamal-deploy",
     .domain = "kamal-deploy.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"kamal"},
@@ -10949,6 +12044,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Karabiner-Elements",
     .domain = "karabiner-elements.pqrs.org",
+    .kind = .app,
     .description = "A powerful keyboard customizer for macOS.",
     .homepage_url = "https://karabiner-elements.pqrs.org",
     .programs = &[_][]const u8{"karabiner"},
@@ -10959,6 +12055,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "KeePassXC",
     .domain = "keepassxc.org",
+    .kind = .app,
     .description = "A cross-platform community-driven password manager.",
     .homepage_url = "https://keepassxc.org",
     .programs = &[_][]const u8{"keepassxc"},
@@ -10969,6 +12066,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "keep",
     .domain = "keephq.dev",
+    .kind = .cli,
     .description = "The open-source AIOps and alert management platform",
     .homepage_url = "https://keephq.dev",
     .programs = &[_][]const u8{"keep"},
@@ -10979,6 +12077,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Keka",
     .domain = "keka.io",
+    .kind = .app,
     .description = "A file archiver for macOS.",
     .homepage_url = "https://keka.io",
     .programs = &[_][]const u8{"keka"},
@@ -10989,6 +12088,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kerberos",
     .domain = "kerberos.org",
+    .kind = .cli,
     .description = "mirror of MIT krb5 repository",
     .homepage_url = null,
     .programs = &[_][]const u8{ "compile_et", "gss-client", "k5srvutil", "kadmin", "kdestroy", "kinit", "klist", "kpasswd", "krb5-config", "kswitch", "ktutil", "kvno", "sclient", "sim_client", "uuclient", "gss-server", "kadmin.local", "kadmind", "kdb5_util", "kprop", "kpropd", "kproplog", "krb5-send-pr", "krb5kdc", "sim_server", "sserver", "uuserver" },
@@ -10999,6 +12099,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libkeyutils",
     .domain = "kernel.org/keyutils",
+    .kind = .library,
     .description = "Linux key retention client library and development interface.",
     .homepage_url = "https://kernel.googlesource.com/pub/scm/linux/kernel/git/dhowells/keyutils/",
     .programs = &[_][]const u8{},
@@ -11009,6 +12110,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcap",
     .domain = "kernel.org/libcap",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "capsh", "getcap", "getpcaps", "setcap" },
@@ -11019,6 +12121,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "linux-headers",
     .domain = "kernel.org/linux-headers",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11029,6 +12132,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "perf",
     .domain = "kernel.org/perf",
+    .kind = .cli,
     .description = "Native Linux performance counters, sampling and ELF/DWARF reports.",
     .homepage_url = "https://perf.wiki.kernel.org/",
     .programs = &[_][]const u8{"perf"},
@@ -11039,6 +12143,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "genqlient",
     .domain = "khanacademy.org/genqlient",
+    .kind = .cli,
     .description = "a truly type-safe Go GraphQL client",
     .homepage_url = null,
     .programs = &[_][]const u8{"genqlient"},
@@ -11049,6 +12154,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "glslang",
     .domain = "khronos.org/glslang",
+    .kind = .cli,
     .description = "Khronos-reference front end for GLSL/ESSL, partial front end for HLSL, and a SPIR-V generator.",
     .homepage_url = "https://www.khronos.org/opengles/sdk/tools/Reference-Compiler/",
     .programs = &[_][]const u8{ "glslang", "glslangValidator" },
@@ -11059,6 +12165,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opencl-headers",
     .domain = "khronos.org/opencl-headers",
+    .kind = .library,
     .description = "Khronos OpenCL-Headers",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11069,6 +12176,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spirv-cross",
     .domain = "khronos.org/SPIRV-Cross",
+    .kind = .cli,
     .description = "SPIRV-Cross is a practical tool and library for performing reflection on SPIR-V and disassembling SPIR-V back to high level languages.",
     .homepage_url = null,
     .programs = &[_][]const u8{"spirv-cross"},
@@ -11079,6 +12187,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spirv",
     .domain = "khronos.org/SPIRV-Tools",
+    .kind = .cli,
     .description = "API and commands for processing SPIR-V modules",
     .homepage_url = null,
     .programs = &[_][]const u8{ "spirv-as", "spirv-cfg", "spirv-dis", "spirv-lesspipe.sh", "spirv-link", "spirv-lint", "spirv-objdump", "spirv-opt", "spirv-reduce", "spirv-val" },
@@ -11089,6 +12198,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kind",
     .domain = "kind.sigs.k8s.io",
+    .kind = .cli,
     .description = "Kubernetes IN Docker - local clusters for testing Kubernetes",
     .homepage_url = "https://kind.sigs.k8s.io/",
     .programs = &[_][]const u8{"kind"},
@@ -11099,6 +12209,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cli",
     .domain = "kiro.dev/cli",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"kiro-cli"},
@@ -11109,6 +12220,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "argcomplete",
     .domain = "kislyuk.github.io/argcomplete",
+    .kind = .cli,
     .description = "Python and tab completion, better together.",
     .homepage_url = "https://kislyuk.github.io/argcomplete/",
     .programs = &[_][]const u8{ "activate-global-python-argcomplete", "register-python-argcomplete", "python-argcomplete-check-easy-install-script" },
@@ -11119,6 +12231,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kluctl",
     .domain = "kluctl.io",
+    .kind = .cli,
     .description = "The missing glue to put together large Kubernetes deployments, composed of multiple smaller parts (Helm/Kustomize/...)  in a manageable and unified way.",
     .homepage_url = "https://kluctl.io",
     .programs = &[_][]const u8{"kluctl"},
@@ -11129,6 +12242,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ko",
     .domain = "ko.build",
+    .kind = .cli,
     .description = "Build and deploy Go applications on Kubernetes",
     .homepage_url = "https://ko.build",
     .programs = &[_][]const u8{"ko"},
@@ -11139,6 +12253,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dssim",
     .domain = "kornel.ski/dssim",
+    .kind = .cli,
     .description = "Image similarity comparison simulating human perception (multiscale SSIM in Rust)",
     .homepage_url = "https://kornel.ski/dssim",
     .programs = &[_][]const u8{"dssim"},
@@ -11149,6 +12264,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kotlinlang",
     .domain = "kotlinlang.org",
+    .kind = .cli,
     .description = "Statically typed programming language for the JVM",
     .homepage_url = "https://kotlinlang.org/",
     .programs = &[_][]const u8{ "kapt", "kotlin", "kotlinc", "kotlinc-js", "kotlinc-jvm" },
@@ -11159,6 +12275,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "koyeb",
     .domain = "koyeb.com",
+    .kind = .cli,
     .description = "Koyeb cli",
     .homepage_url = null,
     .programs = &[_][]const u8{"koyeb"},
@@ -11169,6 +12286,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kpt",
     .domain = "kpt.dev",
+    .kind = .cli,
     .description = "Automate Kubernetes Configuration Editing",
     .homepage_url = "https://kpt.dev",
     .programs = &[_][]const u8{"kpt"},
@@ -11179,6 +12297,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubectl-krew",
     .domain = "krew.sigs.k8s.io",
+    .kind = .cli,
     .description = "📦 Find and install kubectl plugins",
     .homepage_url = "https://sigs.k8s.io/krew/",
     .programs = &[_][]const u8{"kubectl-krew"},
@@ -11189,6 +12308,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ktlint",
     .domain = "ktlint.github.io",
+    .kind = .cli,
     .description = "An anti-bikeshedding Kotlin linter with built-in formatter",
     .homepage_url = "https://ktlint.github.io/",
     .programs = &[_][]const u8{"ktlint"},
@@ -11199,6 +12319,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubebuilder",
     .domain = "kubebuilder.io",
+    .kind = .cli,
     .description = "Kubebuilder - SDK for building Kubernetes APIs using CRDs",
     .homepage_url = "http://book.kubebuilder.io",
     .programs = &[_][]const u8{"kubebuilder"},
@@ -11209,6 +12330,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubecm",
     .domain = "kubecm.cloud",
+    .kind = .cli,
     .description = "Manage your kubeconfig more easily.",
     .homepage_url = "https://kubecm.cloud",
     .programs = &[_][]const u8{"kubecm"},
@@ -11219,6 +12341,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kube",
     .domain = "kubectx.dev",
+    .kind = .cli,
     .description = "Tool that can switch between kubectl contexts easily and create aliases",
     .homepage_url = "https://kubectx.dev",
     .programs = &[_][]const u8{ "kubectx", "kubens" },
@@ -11229,6 +12352,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kube-linter",
     .domain = "kubelinter.io",
+    .kind = .cli,
     .description = "KubeLinter is a static analysis tool that checks Kubernetes YAML files and Helm charts to ensure the applications represented in them adhere to best practices.",
     .homepage_url = "https://docs.kubelinter.io/",
     .programs = &[_][]const u8{"kube-linter"},
@@ -11239,6 +12363,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubectl",
     .domain = "kubernetes.io/kubectl",
+    .kind = .cli,
     .description = "Production-Grade Container Scheduling and Management",
     .homepage_url = "https://kubernetes.io/docs/reference/kubectl/",
     .programs = &[_][]const u8{"kubectl"},
@@ -11249,6 +12374,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kustomize",
     .domain = "kubernetes.io/kustomize",
+    .kind = .cli,
     .description = "Template-free customization of Kubernetes YAML manifests",
     .homepage_url = null,
     .programs = &[_][]const u8{"kustomize"},
@@ -11259,6 +12385,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "minikube",
     .domain = "kubernetes.io/minikube",
+    .kind = .cli,
     .description = "Run a Kubernetes cluster locally",
     .homepage_url = "https://minikube.sigs.k8s.io/",
     .programs = &[_][]const u8{"minikube"},
@@ -11269,6 +12396,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "kubeshark",
     .domain = "kubeshark.co",
+    .kind = .cli,
     .description = "The API traffic analyzer for Kubernetes providing real-time K8s protocol-level visibility, capturing and monitoring all traffic and payloads going in, out and across containers, pods, nodes and clusters. Inspired by Wireshark, purposely built for Kubernetes",
     .homepage_url = "https://www.kubeshark.co/",
     .programs = &[_][]const u8{"kubeshark"},
@@ -11279,6 +12407,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ladspa",
     .domain = "ladspa.org",
+    .kind = .cli,
     .description = "Linux Audio Developer's Simple Plugin",
     .homepage_url = "https://www.ladspa.org",
     .programs = &[_][]const u8{ "analyseplugin", "applyplugin", "listplugins" },
@@ -11289,6 +12418,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lame",
     .domain = "lame.sourceforge.io",
+    .kind = .cli,
     .description = "High quality MPEG Audio Layer III (MP3) encoder",
     .homepage_url = "https://lame.sourceforge.io/",
     .programs = &[_][]const u8{"lame"},
@@ -11299,6 +12429,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "langchain",
     .domain = "langchain.com",
+    .kind = .cli,
     .description = "🦜🔗 Build context-aware reasoning applications",
     .homepage_url = "https://python.langchain.com",
     .programs = &[_][]const u8{ "f2py", "jsondiff", "jsonpatch", "jsonpointer", "langchain-server", "langsmith", "normalizer" },
@@ -11309,6 +12440,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "laravel",
     .domain = "laravel.com",
+    .kind = .cli,
     .description = "The Laravel application installer.",
     .homepage_url = "https://laravel.com/docs",
     .programs = &[_][]const u8{"laravel"},
@@ -11319,6 +12451,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Lato",
     .domain = "lato",
+    .kind = .font,
     .description = "A sans-serif typeface family by Łukasz Dziedzic.",
     .homepage_url = "https://www.latofonts.com/",
     .programs = &[_][]const u8{},
@@ -11329,6 +12462,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lavinmq",
     .domain = "lavinmq.com",
+    .kind = .cli,
     .description = "Lightweight and fast AMQP (0-9-1) server",
     .homepage_url = "https://lavinmq.com",
     .programs = &[_][]const u8{ "lavinmq", "lavinmqctl", "lavinmqperf" },
@@ -11339,6 +12473,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gifsicle",
     .domain = "lcdf.org/gifsicle",
+    .kind = .cli,
     .description = "Create, manipulate, and optimize GIF images and animations",
     .homepage_url = "https://www.lcdf.org/gifsicle/",
     .programs = &[_][]const u8{"gifsicle"},
@@ -11349,6 +12484,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tinyxml2",
     .domain = "leethomason.github.io/tinyxml2",
+    .kind = .library,
     .description = "TinyXML2 is a simple, small, efficient, C++ XML parser that can be easily integrated into other programs.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11359,6 +12495,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "leo",
     .domain = "leo-lang.org",
+    .kind = .cli,
     .description = "🦁 The Leo Programming Language. A Programming Language for Formally Verified, Zero-Knowledge Applications",
     .homepage_url = "https://leo-lang.org/",
     .programs = &[_][]const u8{"leo"},
@@ -11369,6 +12506,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libtermkey",
     .domain = "leonerd.org.uk/libtermkey",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11379,6 +12517,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libvterm",
     .domain = "leonerd.org.uk/libvterm",
+    .kind = .cli,
     .description = "C99 library which implements a VT220 or xterm terminal emulator",
     .homepage_url = "https://www.leonerd.org.uk/code/libvterm/",
     .programs = &[_][]const u8{ "unterm", "vterm-ctrl", "vterm-dump" },
@@ -11389,6 +12528,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "leptonica",
     .domain = "leptonica.org",
+    .kind = .cli,
     .description = "Leptonica is an open source library containing software that is broadly useful for image processing and image analysis applications. The official github repository for Leptonica is: danbloomberg/leptonica.  See leptonica.org for more documentation.",
     .homepage_url = "http://www.leptonica.org/",
     .programs = &[_][]const u8{ "convertfilestopdf", "convertfilestops", "convertformat", "convertsegfilestopdf", "convertsegfilestops", "converttopdf", "converttops", "fileinfo", "imagetops", "xtractprotos" },
@@ -11399,6 +12539,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lftp",
     .domain = "lftp.yar.ru",
+    .kind = .cli,
     .description = "sophisticated command line file transfer program (ftp, http, sftp, fish, torrent)",
     .homepage_url = "https://lftp.yar.ru/",
     .programs = &[_][]const u8{ "lftp", "lftpget" },
@@ -11409,6 +12550,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libarchive",
     .domain = "libarchive.org",
+    .kind = .cli,
     .description = "Multi-format archive and compression library",
     .homepage_url = "https://www.libarchive.org",
     .programs = &[_][]const u8{ "bsdcat", "bsdcpio", "bsdtar" },
@@ -11419,6 +12561,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcxx.llvm",
     .domain = "libcxx.llvm.org",
+    .kind = .library,
     .description = "The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.",
     .homepage_url = "http://llvm.org",
     .programs = &[_][]const u8{},
@@ -11429,6 +12572,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libevent",
     .domain = "libevent.org",
+    .kind = .library,
     .description = "Event notification library",
     .homepage_url = "https://libevent.org",
     .programs = &[_][]const u8{},
@@ -11439,6 +12583,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libexif.github",
     .domain = "libexif.github.io",
+    .kind = .library,
     .description = "A library for parsing, editing, and saving EXIF data",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11449,6 +12594,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xmlwf",
     .domain = "libexpat.github.io",
+    .kind = .cli,
     .description = ":herb: Fast streaming XML parser written in C99 with >90% test coverage; moved from SourceForge to GitHub",
     .homepage_url = "https://libexpat.github.io/",
     .programs = &[_][]const u8{"xmlwf"},
@@ -11459,6 +12605,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libgd.github",
     .domain = "libgd.github.io",
+    .kind = .cli,
     .description = "Graphics library to dynamically manipulate images",
     .homepage_url = "https://libgd.github.io/",
     .programs = &[_][]const u8{ "bdftogd", "gd2copypal", "gd2togif", "gdcmpgif", "giftogd2" },
@@ -11469,6 +12616,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "geos-config",
     .domain = "libgeos.org",
+    .kind = .cli,
     .description = "Geometry Engine, Open Source",
     .homepage_url = "https://libgeos.org/",
     .programs = &[_][]const u8{"geos-config"},
@@ -11479,6 +12627,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git2",
     .domain = "libgit2.org",
+    .kind = .cli,
     .description = "A cross-platform, linkable library implementation of Git that you can use in your application.",
     .homepage_url = "https://libgit2.github.com/",
     .programs = &[_][]const u8{"git2"},
@@ -11489,6 +12638,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "idevicedate",
     .domain = "libimobiledevice.org",
+    .kind = .cli,
     .description = "A cross-platform protocol library to communicate with iOS devices",
     .homepage_url = "https://www.libimobiledevice.org/",
     .programs = &[_][]const u8{"idevicedate"},
@@ -11499,6 +12649,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libimobiledevice-glue",
     .domain = "libimobiledevice.org/libimobiledevice-glue",
+    .kind = .library,
     .description = "A library with common code used by libraries and tools around the libimobiledevice project",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11509,6 +12660,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "plistutil",
     .domain = "libimobiledevice.org/libplist",
+    .kind = .cli,
     .description = "A library to handle Apple Property List format in binary or XML",
     .homepage_url = "https://www.libimobiledevice.org/",
     .programs = &[_][]const u8{"plistutil"},
@@ -11519,6 +12671,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libtatsu",
     .domain = "libimobiledevice.org/libtatsu",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11529,6 +12682,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libusbmuxd",
     .domain = "libimobiledevice.org/libusbmuxd",
+    .kind = .cli,
     .description = "A client library to multiplex connections from and to iOS devices",
     .homepage_url = "https://www.libimobiledevice.org/",
     .programs = &[_][]const u8{ "iproxy", "inetcat" },
@@ -11539,6 +12693,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libisl.sourceforge",
     .domain = "libisl.sourceforge.io",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11549,6 +12704,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libjpeg-turbo",
     .domain = "libjpeg-turbo.org",
+    .kind = .cli,
     .description = "Main libjpeg-turbo repository",
     .homepage_url = "https://libjpeg-turbo.org",
     .programs = &[_][]const u8{ "cjpeg", "djpeg", "jpegtran", "rdjpgcom", "tjbench", "wrjpgcom" },
@@ -11559,6 +12715,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "liblqr.wikidot",
     .domain = "liblqr.wikidot.com",
+    .kind = .library,
     .description = "Liquid Rescale library",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11569,6 +12726,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libpipeline",
     .domain = "libpipeline.gitlab.io/libpipeline",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11579,6 +12737,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libpng",
     .domain = "libpng.org",
+    .kind = .cli,
     .description = "LIBPNG: Portable Network Graphics support, official libpng repository",
     .homepage_url = "http://www.libpng.org/pub/png/libpng.html",
     .programs = &[_][]const u8{ "libpng-config", "libpng16-config", "png-fix-itxt", "pngfix" },
@@ -11589,6 +12748,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libproxy",
     .domain = "libproxy.github.io/libproxy",
+    .kind = .cli,
     .description = "Library that provides automatic proxy configuration management",
     .homepage_url = "https://libproxy.github.io/libproxy/",
     .programs = &[_][]const u8{"proxy"},
@@ -11599,6 +12759,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libraw",
     .domain = "libraw.org",
+    .kind = .cli,
     .description = "Library for reading RAW files from digital photo cameras",
     .homepage_url = "https://www.libraw.org/",
     .programs = &[_][]const u8{ "4channels", "dcraw_emu", "dcraw_half", "half_mt", "mem_image", "multirender_test", "postprocessing_benchmark", "raw-identify", "rawtextdump", "simple_dcraw", "unprocessed_raw" },
@@ -11609,6 +12770,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "LibreOffice",
     .domain = "libreoffice.org",
+    .kind = .app,
     .description = "A free and powerful office suite.",
     .homepage_url = "https://libreoffice.org",
     .programs = &[_][]const u8{"libreoffice"},
@@ -11619,6 +12781,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsdl",
     .domain = "libsdl.org",
+    .kind = .library,
     .description = "Simple Directmedia Layer",
     .homepage_url = "https://libsdl.org",
     .programs = &[_][]const u8{},
@@ -11629,6 +12792,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SDL_image",
     .domain = "libsdl.org/SDL_image",
+    .kind = .library,
     .description = "Image decoding for many popular formats for Simple Directmedia Layer.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11639,6 +12803,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SDL_mixer",
     .domain = "libsdl.org/SDL_mixer",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11649,6 +12814,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SDL_ttf",
     .domain = "libsdl.org/SDL_ttf",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11659,6 +12825,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsodium",
     .domain = "libsodium.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11669,6 +12836,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsoup",
     .domain = "libsoup.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11679,6 +12847,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libspng",
     .domain = "libspng.org",
+    .kind = .library,
     .description = "Simple, modern libpng alternative",
     .homepage_url = "https://libspng.org",
     .programs = &[_][]const u8{},
@@ -11689,6 +12858,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libssh",
     .domain = "libssh.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -11699,6 +12869,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libssh2",
     .domain = "libssh2.org",
+    .kind = .library,
     .description = "the SSH library",
     .homepage_url = "https://libssh2.org/",
     .programs = &[_][]const u8{},
@@ -11709,6 +12880,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "LibTomMath",
     .domain = "libtom.net/math",
+    .kind = .library,
     .description = "LibTomMath is a free open source portable number theoretic multiple-precision integer library written entirely in C.",
     .homepage_url = "https://www.libtom.net",
     .programs = &[_][]const u8{},
@@ -11719,6 +12891,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "liburcu",
     .domain = "liburcu.org",
+    .kind = .library,
     .description = "liburcu is a LGPLv2.1 userspace RCU (read-copy-update) library. This data synchronization library provides read-side access which scales linearly with the number of cores.",
     .homepage_url = "http://liburcu.org",
     .programs = &[_][]const u8{},
@@ -11729,6 +12902,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libusb.info",
     .domain = "libusb.info",
+    .kind = .library,
     .description = "A cross-platform library to access USB devices ",
     .homepage_url = "https://libusb.info",
     .programs = &[_][]const u8{},
@@ -11739,6 +12913,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libusb-compat",
     .domain = "libusb.info/compat",
+    .kind = .cli,
     .description = "Library for USB device access",
     .homepage_url = "https://libusb.info/",
     .programs = &[_][]const u8{"libusb-config"},
@@ -11749,6 +12924,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libuv",
     .domain = "libuv.org",
+    .kind = .library,
     .description = "Cross-platform asynchronous I/O",
     .homepage_url = "https://libuv.org/",
     .programs = &[_][]const u8{},
@@ -11759,6 +12935,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vips",
     .domain = "libvips.org",
+    .kind = .cli,
     .description = "A fast image processing library with low memory needs.",
     .homepage_url = "https://libvips.github.io/libvips/",
     .programs = &[_][]const u8{ "vips", "vipsedit", "vipsheader", "vipsprofile", "vipsthumbnail" },
@@ -11769,6 +12946,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libwebsockets",
     .domain = "libwebsockets.org",
+    .kind = .library,
     .description = "canonical libwebsockets.org networking library",
     .homepage_url = "https://libwebsockets.org",
     .programs = &[_][]const u8{},
@@ -11779,6 +12957,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zip",
     .domain = "libzip.org",
+    .kind = .cli,
     .description = "A C library for reading, creating, and modifying zip archives.",
     .homepage_url = "https://libzip.org/",
     .programs = &[_][]const u8{ "zipcmp", "zipmerge", "ziptool" },
@@ -11789,6 +12968,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lima-vm",
     .domain = "lima-vm.io",
+    .kind = .cli,
     .description = "Linux virtual machines, with a focus on running containers",
     .homepage_url = "https://lima-vm.io/",
     .programs = &[_][]const u8{ "apptainer.lima", "docker.lima", "kubectl.lima", "lima", "limactl", "nerdctl.lima", "podman.lima" },
@@ -11799,6 +12979,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Linear",
     .domain = "linear.app",
+    .kind = .app,
     .description = "A streamlined issue tracking and project management tool.",
     .homepage_url = "https://linear.app",
     .programs = &[_][]const u8{"linear"},
@@ -11809,6 +12990,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "linkerd",
     .domain = "linkerd.io/linkerd2",
+    .kind = .cli,
     .description = "Ultralight, security-first service mesh for Kubernetes. Main repo for Linkerd 2.x.",
     .homepage_url = "https://linkerd.io",
     .programs = &[_][]const u8{"linkerd"},
@@ -11819,6 +13001,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "linux-pam",
     .domain = "linux-pam.org",
+    .kind = .cli,
     .description = "Linux PAM (Pluggable Authentication Modules for Linux) project",
     .homepage_url = null,
     .programs = &[_][]const u8{ "faillock", "mkhomedir_helper", "pam_namespace_helper", "pam_timestamp_check", "unix_chkpwd" },
@@ -11829,6 +13012,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "litecli",
     .domain = "litecli.com",
+    .kind = .cli,
     .description = "CLI for SQLite Databases with auto-completion and syntax highlighting",
     .homepage_url = "https://litecli.com",
     .programs = &[_][]const u8{"litecli"},
@@ -11839,6 +13023,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "littlecms",
     .domain = "littlecms.com",
+    .kind = .cli,
     .description = "A free, open source, CMM engine. It provides fast transforms between ICC profiles.",
     .homepage_url = "https://www.littlecms.com/",
     .programs = &[_][]const u8{ "jpgicc", "linkicc", "psicc", "tificc", "transicc" },
@@ -11849,6 +13034,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "llm",
     .domain = "llm.datasette.io",
+    .kind = .cli,
     .description = "Access large language models from the command-line",
     .homepage_url = "https://llm.datasette.io/",
     .programs = &[_][]const u8{"llm"},
@@ -11859,6 +13045,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "json",
     .domain = "lloyd.github.io/yajl",
+    .kind = .cli,
     .description = "A fast streaming JSON parsing library in C.",
     .homepage_url = "https://lloyd.github.io/yajl/",
     .programs = &[_][]const u8{ "json_reformat", "json_verify" },
@@ -11869,6 +13056,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "llvm",
     .domain = "llvm.org",
+    .kind = .cli,
     .description = "The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.",
     .homepage_url = "http://llvm.org",
     .programs = &[_][]const u8{ "lld", "clang", "clang++", "cc", "c++", "cpp", "nm", "objcopy", "ranlib", "readelf", "strings", "strip", "llvm-profdata", "llvm-cov" },
@@ -11879,6 +13067,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "clang-format",
     .domain = "llvm.org/clang-format",
+    .kind = .cli,
     .description = "The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.",
     .homepage_url = "http://llvm.org",
     .programs = &[_][]const u8{ "clang-format", "git-clang-format" },
@@ -11889,6 +13078,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "LM Studio",
     .domain = "lmstudio.ai",
+    .kind = .app,
     .description = "A desktop app for discovering, downloading, and running local LLMs.",
     .homepage_url = "https://lmstudio.ai",
     .programs = &[_][]const u8{"lm-studio"},
@@ -11899,6 +13089,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "LocalAI",
     .domain = "localai.io",
+    .kind = .cli,
     .description = ":robot: The free, Open Source alternative to OpenAI, Claude and others. Self-hosted and local-first. Drop-in replacement for OpenAI,  running on consumer-grade hardware. No GPU required. Runs gguf, transformers, diffusers and many more models architectures. Features: Generate Text, Audio, Video, Images, Voice Cloning, Distributed, P2P inference",
     .homepage_url = "https://localai.io",
     .programs = &[_][]const u8{"local-ai"},
@@ -11909,6 +13100,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "awslocal",
     .domain = "localstack.cloud/awscli-local",
+    .kind = .cli,
     .description = "💲  \"awslocal\" - Thin wrapper around the \"aws\" command line interface for use with LocalStack",
     .homepage_url = "https://www.localstack.cloud/",
     .programs = &[_][]const u8{"awslocal"},
@@ -11919,6 +13111,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "localstack",
     .domain = "localstack.cloud/cli",
+    .kind = .cli,
     .description = "The LocalStack CLI packaged using pyinstaller",
     .homepage_url = "https://localstack.cloud/",
     .programs = &[_][]const u8{"localstack"},
@@ -11929,6 +13122,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "logdy",
     .domain = "logdy.dev",
+    .kind = .cli,
     .description = "Web based real-time log viewer. Stream ANY content to a web UI with autogenerated filters. Parse any format with TypeScript.",
     .homepage_url = "https://logdy.dev",
     .programs = &[_][]const u8{"logdy"},
@@ -11939,6 +13133,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Logi Options+",
     .domain = "logitech.com/options",
+    .kind = .cli,
     .description = "Logitech device customization and settings application.",
     .homepage_url = "https://www.logitech.com/software/logi-options-plus.html",
     .programs = &[_][]const u8{"logi-options"},
@@ -11949,6 +13144,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Logi Options+",
     .domain = "logitech.com/options-plus",
+    .kind = .library,
     .description = "Logitech device customization and settings application.",
     .homepage_url = "https://www.logitech.com/software/logi-options-plus.html",
     .programs = &[_][]const u8{},
@@ -11959,6 +13155,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gpp",
     .domain = "logological.org/gpp",
+    .kind = .cli,
     .description = "General-purpose preprocessor with customizable syntax",
     .homepage_url = "https://logological.org/gpp",
     .programs = &[_][]const u8{"gpp"},
@@ -11969,6 +13166,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lua",
     .domain = "lua.org",
+    .kind = .cli,
     .description = "Powerful, lightweight programming language",
     .homepage_url = "https://www.lua.org/",
     .programs = &[_][]const u8{ "lua", "luac" },
@@ -11979,6 +13177,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "luajit",
     .domain = "luajit.org",
+    .kind = .cli,
     .description = "Mirror of the LuaJIT git repository",
     .homepage_url = "http://luajit.org",
     .programs = &[_][]const u8{ "luajit", "luajit-{{version.marketing}}." },
@@ -11989,6 +13188,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "luarocks",
     .domain = "luarocks.org",
+    .kind = .cli,
     .description = "LuaRocks is the package manager for the Lua programming language.",
     .homepage_url = "https://luarocks.org/",
     .programs = &[_][]const u8{ "luarocks", "luarocks-admin" },
@@ -11999,6 +13199,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cw",
     .domain = "lucagrulla.com/cw",
+    .kind = .cli,
     .description = "The best way to tail AWS CloudWatch Logs from your terminal",
     .homepage_url = "https://www.lucagrulla.com/cw",
     .programs = &[_][]const u8{"cw"},
@@ -12009,6 +13210,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lunarvim",
     .domain = "lunarvim.org",
+    .kind = .cli,
     .description = "🌙 LunarVim is an IDE layer for Neovim. Completely free and community driven.",
     .homepage_url = "https://www.lunarvim.org",
     .programs = &[_][]const u8{ "lvim", "nvim" },
@@ -12019,6 +13221,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lxml.de",
     .domain = "lxml.de",
+    .kind = .library,
     .description = "The lxml XML toolkit for Python",
     .homepage_url = "https://lxml.de/",
     .programs = &[_][]const u8{},
@@ -12029,6 +13232,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lychee",
     .domain = "lychee.cli.rs",
+    .kind = .cli,
     .description = "⚡ Fast, async, stream-based link checker written in Rust. Finds broken URLs and mail addresses inside Markdown, HTML, reStructuredText, websites and more!",
     .homepage_url = "https://lychee.cli.rs/",
     .programs = &[_][]const u8{"lychee"},
@@ -12039,6 +13243,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lz4",
     .domain = "lz4.org",
+    .kind = .cli,
     .description = "Extremely Fast Compression algorithm",
     .homepage_url = "https://lz4.github.io/lz4/",
     .programs = &[_][]const u8{"lz4"},
@@ -12049,6 +13254,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "slides",
     .domain = "maaslalani.com/slides",
+    .kind = .cli,
     .description = "Terminal based presentation tool",
     .homepage_url = "http://maaslalani.com/slides/",
     .programs = &[_][]const u8{"slides"},
@@ -12059,6 +13265,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Maccy",
     .domain = "maccy.app",
+    .kind = .app,
     .description = "A lightweight clipboard manager for macOS.",
     .homepage_url = "https://maccy.app",
     .programs = &[_][]const u8{"maccy"},
@@ -12069,6 +13276,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "macfuse.github",
     .domain = "macfuse.github.io",
+    .kind = .library,
     .description = "macFUSE umbrella repository",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12079,6 +13287,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "v2",
     .domain = "macfuse.github.io/v2",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12089,6 +13298,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "macvim",
     .domain = "macvim.org",
+    .kind = .cli,
     .description = "Vim - the text editor - for macOS",
     .homepage_url = "https://macvim.org",
     .programs = &[_][]const u8{ "gview", "gvim", "gvimdiff", "gvimtutor", "mview", "mvim", "mvimdiff", "mvimtutor", "view", "vim", "vimdiff", "vimtutor" },
@@ -12099,6 +13309,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mailpit",
     .domain = "mailpit.axllent.org",
+    .kind = .cli,
     .description = "An email and SMTP testing tool with API for developers",
     .homepage_url = "https://mailpit.axllent.org/",
     .programs = &[_][]const u8{"mailpit"},
@@ -12109,6 +13320,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mako-render",
     .domain = "makotemplates.org",
+    .kind = .cli,
     .description = "Mako Templates for Python",
     .homepage_url = "https://www.makotemplates.org",
     .programs = &[_][]const u8{"mako-render"},
@@ -12119,6 +13331,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "man-db",
     .domain = "man-db.gitlab.io/man-db",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "apropos", "catman", "lexgrog", "man", "mandb", "manpath", "man-recode", "whatis" },
@@ -12129,6 +13342,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mandoc.bsd.lv",
     .domain = "mandoc.bsd.lv",
+    .kind = .cli,
     .description = "UNIX manpage compiler toolset",
     .homepage_url = "https://mandoc.bsd.lv/",
     .programs = &[_][]const u8{ "bsdapropos", "bsdman", "bsdsoelim", "bsdwhatis", "demandoc", "mandoc" },
@@ -12139,6 +13353,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "MariaDB",
     .domain = "mariadb.com/server",
+    .kind = .cli,
     .description = "MariaDB server is a community developed fork of MySQL server. Started by core members of the original MySQL team, MariaDB actively works with outside developers to deliver the most featureful, stable, and sanely licensed open SQL server in the industry.",
     .homepage_url = "https://mariadb.org/",
     .programs = &[_][]const u8{ "aria_chk", "aria_dump_log", "aria_ftdump", "aria_pack", "aria_read_log", "aria_s3_copy", "innochecksum", "mariabackup", "mariadb", "mariadb-access", "mariadb-admin", "mariadb-backup", "mariadb-binlog", "mariadb-check", "mariadb-client-test", "mariadb-config", "mariadb-conv", "mariadb-convert-table-format", "mariadb-dump", "mariadb-dumpslow", "mariadb-find-rows", "mariadb-fix-extensions", "mariadb-hotcopy", "mariadb-import", "mariadb-plugin", "mariadb-secure-installation", "mariadb-setpermission", "mariadb-show", "mariadb-slap", "mariadb-test", "mariadb-tzinfo-to-sql", "mariadb-upgrade", "mariadb-waitpid", "mariadb_config", "mariadbd", "mariadbd-multi", "mariadbd-safe", "mariadbd-safe-helper", "mbstream", "msql2mysql", "my_print_defaults", "myisam_ftdump", "myisamchk", "myisamlog", "myisampack", "mysql", "mysql.server", "mysql_client_test", "mysql_config", "mysql_convert_table_format", "mysql_find_rows", "mysql_fix_extensions", "mysql_install_db", "mysql_plugin", "mysql_secure_installation", "mysql_setpermission", "mysql_tzinfo_to_sql", "mysql_upgrade", "mysql_waitpid", "mysqlaccess", "mysqladmin", "mysqlbinlog", "mysqlcheck", "mysqld", "mysqld_multi", "mysqld_safe", "mysqld_safe_helper", "mysqldump", "mysqldumpslow", "mysqlhotcopy", "mysqlimport", "mysqlshow", "mysqlslap", "mysqltest", "mytop", "perror", "replace", "resolve_stack_dump", "resolveip", "wsrep_sst_backup", "wsrep_sst_mariabackup", "wsrep_sst_mysqldump", "wsrep_sst_rsync", "wsrep_sst_rsync_wan" },
@@ -12149,6 +13364,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "markupsafe.palletsprojects",
     .domain = "markupsafe.palletsprojects.com",
+    .kind = .library,
     .description = "Safely add untrusted strings to HTML/XML markup.",
     .homepage_url = "https://markupsafe.palletsprojects.com",
     .programs = &[_][]const u8{},
@@ -12159,6 +13375,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mz",
     .domain = "materialize.com",
+    .kind = .cli,
     .description = "Real-time Data Integration and Transformation: use SQL to transform, deliver, and act on fast-changing data.",
     .homepage_url = "https://materialize.com",
     .programs = &[_][]const u8{"mz"},
@@ -12169,6 +13386,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libmatio",
     .domain = "matio.sourceforge.io",
+    .kind = .cli,
     .description = "C library for reading and writing MATLAB MAT files",
     .homepage_url = "https://matio.sourceforge.net/",
     .programs = &[_][]const u8{"matdump"},
@@ -12179,6 +13397,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "maturin",
     .domain = "maturin.rs",
+    .kind = .cli,
     .description = "Build and publish crates with pyo3, cffi and uniffi bindings as well as rust binaries as python packages",
     .homepage_url = "https://maturin.rs",
     .programs = &[_][]const u8{"maturin"},
@@ -12189,6 +13408,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mvn",
     .domain = "maven.apache.org",
+    .kind = .cli,
     .description = "Java-based project management",
     .homepage_url = "https://maven.apache.org/",
     .programs = &[_][]const u8{ "mvn", "mvnDebug", "mvnyjp" },
@@ -12199,6 +13419,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jags",
     .domain = "mcmc-jags.sourceforge.io",
+    .kind = .cli,
     .description = "Just Another Gibbs Sampler for Bayesian MCMC simulation",
     .homepage_url = "https://mcmc-jags.sourceforge.io",
     .programs = &[_][]const u8{"jags"},
@@ -12209,6 +13430,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "MediaInfo",
     .domain = "mediaarea.net",
+    .kind = .library,
     .description = "Display technical and tag data for video and audio files.",
     .homepage_url = "https://mediaarea.net/en/MediaInfo",
     .programs = &[_][]const u8{},
@@ -12219,6 +13441,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "MeetingBar",
     .domain = "meetingbar.app",
+    .kind = .app,
     .description = "A menu bar app for your calendar meetings.",
     .homepage_url = "https://meetingbar.app",
     .programs = &[_][]const u8{"meetingbar"},
@@ -12229,6 +13452,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "meilisearch",
     .domain = "meilisearch.com",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"meilisearch"},
@@ -12239,6 +13463,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "memcached",
     .domain = "memcached.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"memcached"},
@@ -12249,6 +13474,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mercure",
     .domain = "mercure.rocks",
+    .kind = .cli,
     .description = "🪽 An open, easy, fast, reliable and battery-efficient solution for real-time communications",
     .homepage_url = "https://mercure.rocks",
     .programs = &[_][]const u8{"mercure"},
@@ -12259,6 +13485,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mercurial-scm",
     .domain = "mercurial-scm.org",
+    .kind = .cli,
     .description = "Scalable distributed version control system",
     .homepage_url = "https://mercurial-scm.org/",
     .programs = &[_][]const u8{ "hg", "chg" },
@@ -12269,6 +13496,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mergestat",
     .domain = "mergestat.com/mergestat-lite",
+    .kind = .cli,
     .description = "Query git repositories with SQL. Generate reports, perform status checks, analyze codebases. 🔍 📊",
     .homepage_url = "https://mergestat.com/",
     .programs = &[_][]const u8{"mergestat"},
@@ -12279,6 +13507,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mergiraf",
     .domain = "mergiraf.org",
+    .kind = .cli,
     .description = "Syntax-aware git merge driver",
     .homepage_url = "https://mergiraf.org",
     .programs = &[_][]const u8{"mergiraf"},
@@ -12289,6 +13518,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mesa3d",
     .domain = "mesa3d.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12299,6 +13529,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "MesloLG Nerd Font",
     .domain = "meslo-lg-nerd-font",
+    .kind = .font,
     .description = "Meslo patched with Nerd Font glyphs.",
     .homepage_url = "https://www.nerdfonts.com",
     .programs = &[_][]const u8{},
@@ -12309,6 +13540,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "meson",
     .domain = "mesonbuild.com",
+    .kind = .cli,
     .description = "Fast and user friendly build system",
     .homepage_url = "https://mesonbuild.com/",
     .programs = &[_][]const u8{"meson"},
@@ -12319,6 +13551,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "micro",
     .domain = "micro-editor.github.io",
+    .kind = .cli,
     .description = "A modern and intuitive terminal-based text editor",
     .homepage_url = "https://micro-editor.github.io",
     .programs = &[_][]const u8{"micro"},
@@ -12329,6 +13562,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "md5sha1sum",
     .domain = "microbrew.org/md5sha1sum",
+    .kind = .cli,
     .description = "Hash utilities",
     .homepage_url = "http://microbrew.org/tools/md5sha1sum/",
     .programs = &[_][]const u8{ "md5sum", "sha1sum", "ripemd160sum" },
@@ -12339,6 +13573,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "microcks-cli",
     .domain = "microcks.io",
+    .kind = .cli,
     .description = "Simple CLI for interacting with Microcks test APIs",
     .homepage_url = "https://microcks.io",
     .programs = &[_][]const u8{"microcks-cli"},
@@ -12349,6 +13584,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "az",
     .domain = "microsoft.com/azure-cli",
+    .kind = .cli,
     .description = "Azure Command-Line Interface",
     .homepage_url = "https://docs.microsoft.com/cli/azure/overview",
     .programs = &[_][]const u8{"az"},
@@ -12359,6 +13595,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "azcopy",
     .domain = "microsoft.com/azure-storage-azcopy",
+    .kind = .cli,
     .description = "The new Azure Storage data transfer utility - AzCopy v10",
     .homepage_url = null,
     .programs = &[_][]const u8{"azcopy"},
@@ -12369,6 +13606,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vscode cli",
     .domain = "microsoft.com/code-cli",
+    .kind = .cli,
     .description = "Command-line interface built-in Visual Studio Code",
     .homepage_url = "https://code.visualstudio.com",
     .programs = &[_][]const u8{"code"},
@@ -12379,6 +13617,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dxc",
     .domain = "microsoft.com/dxc",
+    .kind = .cli,
     .description = "This repo hosts the source for the DirectX Shader Compiler which is based on LLVM/Clang.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "dxc", "dxv", "dxa", "dxr", "dxl" },
@@ -12389,6 +13628,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "markitdown",
     .domain = "microsoft.com/markitdown",
+    .kind = .cli,
     .description = "Python tool for converting files and office documents to Markdown.",
     .homepage_url = null,
     .programs = &[_][]const u8{"markitdown"},
@@ -12399,6 +13639,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pwsh",
     .domain = "microsoft.com/PowerShell",
+    .kind = .cli,
     .description = "PowerShell for every system!",
     .homepage_url = "https://microsoft.com/PowerShell",
     .programs = &[_][]const u8{"pwsh"},
@@ -12409,6 +13650,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pyright",
     .domain = "microsoft.com/pyright",
+    .kind = .cli,
     .description = "Static Type Checker for Python",
     .homepage_url = null,
     .programs = &[_][]const u8{"pyright"},
@@ -12419,6 +13661,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Midnight Commander",
     .domain = "midnight-commander.org",
+    .kind = .cli,
     .description = "Terminal-based visual file manager",
     .homepage_url = "https://www.midnight-commander.org/",
     .programs = &[_][]const u8{ "mc", "mcdiff", "mcedit", "mcview" },
@@ -12429,6 +13672,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "minio",
     .domain = "min.io",
+    .kind = .cli,
     .description = "MinIO is a high-performance, S3 compatible object store, open sourced under GNU AGPLv3 license.",
     .homepage_url = "https://min.io",
     .programs = &[_][]const u8{"minio"},
@@ -12439,6 +13683,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mc",
     .domain = "min.io/mc",
+    .kind = .cli,
     .description = "Unix like utilities for object store",
     .homepage_url = "https://min.io/download",
     .programs = &[_][]const u8{"mc"},
@@ -12449,6 +13694,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "miniupnp.free.fr",
     .domain = "miniupnp.free.fr",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "external-ip", "upnp-listdevices", "upnpc" },
@@ -12459,6 +13705,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mise",
     .domain = "mise.jdx.dev",
+    .kind = .cli,
     .description = "dev tools, env vars, task runner",
     .homepage_url = "https://mise.jdx.dev",
     .programs = &[_][]const u8{ "rtx", "mise" },
@@ -12469,6 +13716,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mitmproxy",
     .domain = "mitmproxy.org",
+    .kind = .cli,
     .description = "An interactive TLS-capable intercepting HTTP proxy for penetration testers and software developers.",
     .homepage_url = "https://mitmproxy.org",
     .programs = &[_][]const u8{"mitmproxy"},
@@ -12479,6 +13727,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mkcert",
     .domain = "mkcert.dev",
+    .kind = .cli,
     .description = "A simple zero-config tool to make locally trusted development certificates with any names you'd like.",
     .homepage_url = "https://mkcert.dev",
     .programs = &[_][]const u8{"mkcert"},
@@ -12489,6 +13738,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mkdocs",
     .domain = "mkdocs.org",
+    .kind = .cli,
     .description = "Project documentation with Markdown.",
     .homepage_url = "https://www.mkdocs.org",
     .programs = &[_][]const u8{"mkdocs"},
@@ -12499,6 +13749,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "modal",
     .domain = "modal.com",
+    .kind = .library,
     .description = "Python client library for Modal",
     .homepage_url = "https://modal.com/docs",
     .programs = &[_][]const u8{},
@@ -12509,6 +13760,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "modernc.org/goyacc",
     .domain = "modernc.org/goyacc",
+    .kind = .cli,
     .description = "Parser Generator for Go",
     .homepage_url = "https://pkg.go.dev/modernc.org/goyacc",
     .programs = &[_][]const u8{"goyacc"},
@@ -12519,6 +13771,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mongodb",
     .domain = "mongodb.com",
+    .kind = .cli,
     .description = "The MongoDB Database",
     .homepage_url = "https://www.mongodb.com/",
     .programs = &[_][]const u8{ "install_compass", "mongod", "mongos" },
@@ -12529,6 +13782,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mongosh",
     .domain = "mongodb.com/shell",
+    .kind = .cli,
     .description = "MongoDB Shell to connect, configure, query, and work with your MongoDB database",
     .homepage_url = "https://www.mongodb.com/try/download/shell",
     .programs = &[_][]const u8{"mongosh"},
@@ -12539,6 +13793,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "MonitorControl",
     .domain = "monitorcontrol.app",
+    .kind = .app,
     .description = "A tool to control external monitor brightness and volume on macOS.",
     .homepage_url = "https://github.com/MonitorControl/MonitorControl",
     .programs = &[_][]const u8{"monitorcontrol"},
@@ -12549,6 +13804,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "moon",
     .domain = "moonrepo.dev/moon",
+    .kind = .cli,
     .description = "A build system and monorepo management tool for the web ecosystem, written in Rust.",
     .homepage_url = "https://moonrepo.dev/moon",
     .programs = &[_][]const u8{"moon"},
@@ -12559,6 +13815,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mosh",
     .domain = "mosh.org",
+    .kind = .cli,
     .description = "Remote terminal application",
     .homepage_url = "https://mosh.org",
     .programs = &[_][]const u8{ "mosh-client", "mosh-server" },
@@ -12569,6 +13826,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cbindgen",
     .domain = "mozilla.org/cbindgen",
+    .kind = .cli,
     .description = "A project for generating C bindings from Rust code",
     .homepage_url = null,
     .programs = &[_][]const u8{"cbindgen"},
@@ -12579,6 +13837,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mozjpeg",
     .domain = "mozilla.org/mozjpeg",
+    .kind = .cli,
     .description = "Improved JPEG encoder.",
     .homepage_url = null,
     .programs = &[_][]const u8{ "cjpeg", "djpeg", "jpegtran", "rdjpgcom", "tjbench", "wrjpgcom" },
@@ -12589,6 +13848,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nspr-config",
     .domain = "mozilla.org/nspr",
+    .kind = .cli,
     .description = "Platform-neutral API for system-level and libc-like functions",
     .homepage_url = "https://hg.mozilla.org/projects/nspr",
     .programs = &[_][]const u8{"nspr-config"},
@@ -12599,6 +13859,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nss",
     .domain = "mozilla.org/nss",
+    .kind = .cli,
     .description = "Libraries for security-enabled client and server applications",
     .homepage_url = "https://firefox-source-docs.mozilla.org/security/nss/index.html",
     .programs = &[_][]const u8{ "addbuiltin", "certutil", "crmftest", "ecperf", "listsuites", "multinit", "ocspresp", "p7verify", "pk12util", "remtest", "secmodtest", "ssltap", "vfychain", "atob", "chktest", "dbtest", "encodeinttest", "nonspr10", "oidcalc", "pk11ectest", "pk1sign", "rsaperf", "selfserv", "strsclnt", "vfyserv", "baddbdir", "cmsutil", "derdump", "fbectest", "makepqg", "nss-config", "p7content", "pk11gcmtest", "pkix-errcodes", "rsapoptst", "shlibsign", "symkeyutil", "bltest", "conflict", "dertimetest", "fipstest", "mangle", "nss-policy-check", "p7env", "pk11importtest", "pp", "sdbthreadtst", "signtool", "tstclnt", "btoa", "crlutil", "digest", "httpserv", "modutil", "ocspclnt", "p7sign", "pk11mode", "pwdecrypt", "sdrtest", "signver", "validation" },
@@ -12609,6 +13870,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mpg123",
     .domain = "mpg123.de",
+    .kind = .cli,
     .description = "MP3 player for Linux and UNIX",
     .homepage_url = "https://www.mpg123.de/",
     .programs = &[_][]const u8{"mpg123"},
@@ -12619,6 +13881,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mpmath",
     .domain = "mpmath.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12629,6 +13892,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mpv",
     .domain = "mpv.io",
+    .kind = .cli,
     .description = "Media player based on MPlayer and mplayer2",
     .homepage_url = "https://mpv.io",
     .programs = &[_][]const u8{"mpv"},
@@ -12639,6 +13903,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "msgpack",
     .domain = "msgpack.org",
+    .kind = .library,
     .description = "MessagePack implementation for C and C++ / msgpack.org[C/C++]",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12649,6 +13914,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mujs",
     .domain = "mujs.com",
+    .kind = .cli,
     .description = "An embeddable Javascript interpreter in C.",
     .homepage_url = "https://www.mujs.com/",
     .programs = &[_][]const u8{ "mujs", "mujs-pp" },
@@ -12659,6 +13925,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mun",
     .domain = "mun-lang.org",
+    .kind = .cli,
     .description = "Source code for the Mun language and runtime.",
     .homepage_url = "https://mun-lang.org",
     .programs = &[_][]const u8{"mun"},
@@ -12669,6 +13936,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mupdf",
     .domain = "mupdf.com",
+    .kind = .cli,
     .description = "Lightweight PDF and XPS viewer",
     .homepage_url = "https://mupdf.com/",
     .programs = &[_][]const u8{ "mupdf-gl", "muraster", "mutool" },
@@ -12679,6 +13947,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "musepack",
     .domain = "musepack.net",
+    .kind = .cli,
     .description = "Audio compression format and tools",
     .homepage_url = "https://www.musepack.net/",
     .programs = &[_][]const u8{ "mpc2sv8", "mpcchap", "mpccut", "mpcdec", "mpcenc", "mpcgain", "wavcmp" },
@@ -12689,6 +13958,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcuefile",
     .domain = "musepack.net/libcuefile",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12699,6 +13969,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libreplaygain",
     .domain = "musepack.net/libreplaygain",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12709,6 +13980,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "musl.libc",
     .domain = "musl.libc.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "ld.musl-clang", "musl-clang" },
@@ -12719,6 +13991,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Muzzle",
     .domain = "muzzleapp.com",
+    .kind = .library,
     .description = "Silences notifications automatically while screen sharing.",
     .homepage_url = "https://muzzleapp.com",
     .programs = &[_][]const u8{},
@@ -12729,6 +14002,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gofumpt",
     .domain = "mvdan.cc/gofumpt",
+    .kind = .cli,
     .description = "A stricter gofmt",
     .homepage_url = "https://pkg.go.dev/mvdan.cc/gofumpt",
     .programs = &[_][]const u8{"gofumpt"},
@@ -12739,6 +14013,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "shfmt",
     .domain = "mvdan.cc/sh",
+    .kind = .cli,
     .description = "A shell parser, formatter, and interpreter with bash support; includes shfmt",
     .homepage_url = "https://pkg.go.dev/mvdan.cc/sh/v3",
     .programs = &[_][]const u8{"shfmt"},
@@ -12749,6 +14024,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mypy-lang",
     .domain = "mypy-lang.org",
+    .kind = .cli,
     .description = "Experimental optional static type checker for Python",
     .homepage_url = "https://www.mypy-lang.org/",
     .programs = &[_][]const u8{ "mypy", "mypyc", "dmypy" },
@@ -12759,6 +14035,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mysql",
     .domain = "mysql.com",
+    .kind = .cli,
     .description = "MySQL Server, the world's most popular open source database, and MySQL Cluster, a real-time, open source transactional database.",
     .homepage_url = "http://www.mysql.com/",
     .programs = &[_][]const u8{ "my_print_defaults", "myisam_ftdump", "myisamchk", "myisamlog", "myisampack", "mysql", "mysql_config", "mysql_config_editor", "mysql_migrate_keyring", "mysql_secure_installation", "mysql_tzinfo_to_sql", "mysqladmin", "mysqlbinlog", "mysqlcheck", "mysqld", "mysqld_multi", "mysqld_safe", "mysqldump", "mysqldumpslow", "mysqlimport", "mysqlshow", "mysqlslap" },
@@ -12769,6 +14046,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nano",
     .domain = "nano-editor.org",
+    .kind = .cli,
     .description = "Free (GNU) replacement for the Pico text editor",
     .homepage_url = "https://www.nano-editor.org/",
     .programs = &[_][]const u8{"nano"},
@@ -12779,6 +14057,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nasm.us",
     .domain = "nasm.us",
+    .kind = .cli,
     .description = "A cross-platform x86 assembler with an Intel-like syntax",
     .homepage_url = "https://www.nasm.us/",
     .programs = &[_][]const u8{ "nasm", "ndisasm" },
@@ -12789,6 +14068,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "neo4j",
     .domain = "neo4j.com",
+    .kind = .cli,
     .description = "Neo4j graph database (community edition)",
     .homepage_url = "https://neo4j.com",
     .programs = &[_][]const u8{ "neo4j", "neo4j-admin", "cypher-shell" },
@@ -12799,6 +14079,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nvim",
     .domain = "neovim.io",
+    .kind = .cli,
     .description = "Ambitious Vim-fork focused on extensibility and agility",
     .homepage_url = "https://neovim.io/",
     .programs = &[_][]const u8{"nvim"},
@@ -12809,6 +14090,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libmnl",
     .domain = "netfilter.org/libmnl",
+    .kind = .library,
     .description = "Minimal userspace library for Netlink communications.",
     .homepage_url = "https://www.netfilter.org/projects/libmnl/",
     .programs = &[_][]const u8{},
@@ -12819,6 +14101,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libnftnl",
     .domain = "netfilter.org/libnftnl",
+    .kind = .library,
     .description = "Low-level userspace library for nftables Netlink messages.",
     .homepage_url = "https://www.netfilter.org/projects/libnftnl/",
     .programs = &[_][]const u8{},
@@ -12829,6 +14112,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nftables",
     .domain = "netfilter.org/nftables",
+    .kind = .cli,
     .description = "Native nftables ruleset management with JSON and an interactive CLI.",
     .homepage_url = "https://www.netfilter.org/projects/nftables/",
     .programs = &[_][]const u8{"nft"},
@@ -12839,6 +14123,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vmaf",
     .domain = "netflix.com/vmaf",
+    .kind = .cli,
     .description = "Perceptual video quality assessment based on multi-method fusion.",
     .homepage_url = null,
     .programs = &[_][]const u8{"vmaf"},
@@ -12849,6 +14134,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lapack",
     .domain = "netlib.org/lapack",
+    .kind = .library,
     .description = "LAPACK development repository",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -12859,6 +14145,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "netpbm.sourceforge",
     .domain = "netpbm.sourceforge.net",
+    .kind = .cli,
     .description = "Image manipulation",
     .homepage_url = "https://netpbm.sourceforge.net/",
     .programs = &[_][]const u8{ "411toppm", "asciitopgm", "atktopbm", "avstopam", "bioradtopgm", "bmptopnm", "brushtopbm", "cameratopam", "cistopbm", "cmuwmtopbm", "ddbugtopbm", "escp2topbm", "eyuvtoppm", "fiascotopnm", "fitstopnm", "fstopgm", "gemtopnm", "giftopnm", "gouldtoppm", "hdifftopam", "hipstopgm", "ilbmtoppm", "imgtoppm", "infotopam", "jbigtopnm", "jpeg2ktopam", "jpegtopnm", "leaftoppm", "lispmtopgm", "macptopbm", "mdatopbm", "mgrtopbm", "mrftopbm", "mtvtoppm", "neotoppm", "palmtopnm", "pamaddnoise", "pamarith", "pambackground", "pambayer", "pamchannel", "pamcomp", "pamcrater", "pamcut", "pamdeinterlace", "pamdepth", "pamdice", "pamditherbw", "pamedge", "pamendian", "pamenlarge", "pamexec", "pamfile", "pamfix", "pamflip", "pamfunc", "pamgauss", "pamgradient", "pamlookup", "pammasksharpen", "pammixinterlace", "pammosaicknit", "pamoil", "pampaintspill", "pamperspective", "pampick", "pampop9", "pamrecolor", "pamrubber", "pamscale", "pamseq", "pamshadedrelief", "pamsharpmap", "pamsharpness", "pamsistoaglyph", "pamslice", "pamsplit", "pamstack", "pamstereogram", "pamstretch", "pamsumm", "pamsummcol", "pamthreshold", "pamtilt", "pamtoavs", "pamtodjvurle", "pamtofits", "pamtogif", "pamtohdiff", "pamtohtmltbl", "pamtojpeg2k", "pamtompfont", "pamtooctaveimg", "pamtopam", "pamtopdbimg", "pamtopfm", "pamtopng", "pamtopnm", "pamtosrf", "pamtosvg", "pamtotga", "pamtotiff", "pamtouil", "pamtowinicon", "pamtoxvmini", "pamundice", "pamunlookup", "pamvalidate", "pamwipeout", "pbmclean", "pbmlife", "pbmmake", "pbmmask", "pbmminkowski", "pbmpage", "pbmpscale", "pbmreduce", "pbmtext", "pbmtextps", "pbmto10x", "pbmto4425", "pbmtoascii", "pbmtoatk", "pbmtobbnbg", "pbmtocis", "pbmtocmuwm", "pbmtodjvurle", "pbmtoepsi", "pbmtoepson", "pbmtoescp2", "pbmtog3", "pbmtogem", "pbmtogo", "pbmtoibm23xx", "pbmtolj", "pbmtoln03", "pbmtolps", "pbmtomacp", "pbmtomatrixorbital", "pbmtomda", "pbmtomgr", "pbmtomrf", "pbmtonokia", "pbmtopgm", "pbmtopi3", "pbmtopk", "pbmtoplot", "pbmtoppa", "pbmtopsg3", "pbmtoptx", "pbmtosunicon", "pbmtowbmp", "pbmtoxbm", "pbmtoybm", "pbmtozinc", "pc1toppm", "pcxtoppm", "pdbimgtopam", "pfmtopam", "pgmabel", "pgmbentley", "pgmdeshadow", "pgmenhance", "pgmhist", "pgmkernel", "pgmmake", "pgmmedian", "pgmminkowski", "pgmmorphconv", "pgmnoise", "pgmramp", "pgmtexture", "pgmtofs", "pgmtolispm", "pgmtopbm", "pgmtopgm", "pgmtoppm", "pgmtosbig", "pgmtost4", "pi1toppm", "pi3topbm", "picttoppm", "pjtoppm", "pktopbm", "pngtopam", "pnmalias", "pnmcat", "pnmcolormap", "pnmconvol", "pnmcrop", "pnmgamma", "pnmhisteq", "pnmhistmap", "pnmindex", "pnminvert", "pnmmercator", "pnmmontage", "pnmnlfilt", "pnmnorm", "pnmpad", "pnmpaste", "pnmpsnr", "pnmremap", "pnmrotate", "pnmscalefixed", "pnmshear", "pnmsmooth", "pnmstitch", "pnmtile", "pnmtoddif", "pnmtofiasco", "pnmtojbig", "pnmtojpeg", "pnmtopalm", "pnmtopclxl", "pnmtopng", "pnmtops", "pnmtorast", "pnmtorle", "pnmtosgi", "pnmtosir", "pnmtotiffcmyk", "pnmtoxwd", "ppm3d", "ppmbrighten", "ppmchange", "ppmcie", "ppmcolormask", "ppmcolors", "ppmdcfont", "ppmdim", "ppmdist", "ppmdither", "ppmdmkfont", "ppmdraw", "ppmflash", "ppmforge", "ppmglobe", "ppmhist", "ppmlabel", "ppmmake", "ppmmix", "ppmntsc", "ppmpat", "ppmrelief", "ppmrough", "ppmshift", "ppmspread", "ppmtoacad", "ppmtoapplevol", "ppmtoarbtxt", "ppmtoascii", "ppmtobmp", "ppmtoeyuv", "ppmtogif", "ppmtoicr", "ppmtoilbm", "ppmtoleaf", "ppmtolj", "ppmtomitsu", "ppmtompeg", "ppmtoneo", "ppmtopcx", "ppmtopgm", "ppmtopi1", "ppmtopict", "ppmtopj", "ppmtopjxl", "ppmtoppm", "ppmtopuzz", "ppmtorgb3", "ppmtosixel", "ppmtospu", "ppmtoterm", "ppmtowinicon", "ppmtoxpm", "ppmtoyuv", "ppmtoyuvsplit", "ppmtv", "psidtopgm", "pstopnm", "qrttoppm", "rasttopnm", "rawtopgm", "rawtoppm", "rgb3toppm", "rlatopam", "rletopnm", "sbigtopgm", "sgitopnm", "sirtopnm", "sldtoppm", "spctoppm", "spottopgm", "sputoppm", "srftopam", "st4topgm", "sunicontopnm", "svgtopam", "tgatoppm", "thinkjettopbm", "tifftopnm", "wbmptopbm", "winicontopam", "winicontoppm", "xbmtopbm", "ximtoppm", "xpmtoppm", "xvminitoppm", "xwdtopnm", "ybmtopbm", "yuvsplittoppm", "yuvtoppm", "yuy2topam", "zeisstopnm" },
@@ -12869,6 +14156,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "networkx",
     .domain = "networkx.org",
+    .kind = .library,
     .description = "Network Analysis in Python",
     .homepage_url = "https://networkx.org",
     .programs = &[_][]const u8{},
@@ -12879,6 +14167,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nghttp2",
     .domain = "nghttp2.org",
+    .kind = .library,
     .description = "nghttp2 - HTTP/2 C Library and tools",
     .homepage_url = "https://nghttp2.org",
     .programs = &[_][]const u8{},
@@ -12889,6 +14178,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nginx",
     .domain = "nginx.org",
+    .kind = .cli,
     .description = "HTTP(S) server and reverse proxy, and IMAP/POP3 proxy server",
     .homepage_url = "https://nginx.org/",
     .programs = &[_][]const u8{"nginx"},
@@ -12899,6 +14189,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gimme-aws-creds",
     .domain = "nike.com/gimme-aws-creds",
+    .kind = .cli,
     .description = "A CLI that utilizes Okta IdP via SAML to acquire temporary AWS credentials",
     .homepage_url = null,
     .programs = &[_][]const u8{"gimme-aws-creds"},
@@ -12909,6 +14200,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nim-lang",
     .domain = "nim-lang.org",
+    .kind = .cli,
     .description = "Nim is a statically typed compiled systems programming language. It combines successful concepts from mature languages like Python, Ada and Modula. Its design focuses on efficiency, expressiveness, and elegance (in that order of priority).",
     .homepage_url = "https://nim-lang.org",
     .programs = &[_][]const u8{ "nim", "nim_dbg", "testament", "nimsuggest", "nimgrep", "nim-gdb", "atlas", "nimpretty", "nimble" },
@@ -12919,6 +14211,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ninja",
     .domain = "ninja-build.org",
+    .kind = .cli,
     .description = "Small build system for use with gyp or CMake",
     .homepage_url = "https://ninja-build.org/",
     .programs = &[_][]const u8{"ninja"},
@@ -12929,6 +14222,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "patchelf",
     .domain = "nixos.org/patchelf",
+    .kind = .cli,
     .description = "A small utility to modify the dynamic linker and RPATH of ELF executables",
     .homepage_url = null,
     .programs = &[_][]const u8{"patchelf"},
@@ -12939,6 +14233,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nixpacks",
     .domain = "nixpacks.com",
+    .kind = .cli,
     .description = "App source + Nix packages + Docker = Image",
     .homepage_url = "https://nixpacks.com/",
     .programs = &[_][]const u8{"nixpacks"},
@@ -12949,6 +14244,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ldns",
     .domain = "nlnetlabs.nl/ldns",
+    .kind = .cli,
     .description = "LDNS is a DNS library that facilitates DNS tool programming",
     .homepage_url = "https://nlnetlabs.nl/projects/ldns/",
     .programs = &[_][]const u8{ "drill", "ldns-config" },
@@ -12959,6 +14255,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nmap",
     .domain = "nmap.org",
+    .kind = .cli,
     .description = "Port scanning utility for large networks",
     .homepage_url = "https://nmap.org/",
     .programs = &[_][]const u8{ "nmap", "ncat", "nping" },
@@ -12969,6 +14266,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "node",
     .domain = "nodejs.org",
+    .kind = .cli,
     .description = "Platform built on V8 to build network applications",
     .homepage_url = "https://nodejs.org/",
     .programs = &[_][]const u8{"node"},
@@ -12979,6 +14277,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "corepack",
     .domain = "nodejs.org/corepack",
+    .kind = .cli,
     .description = "Platform built on V8 to build network applications",
     .homepage_url = "https://nodejs.org/",
     .programs = &[_][]const u8{"corepack"},
@@ -12989,6 +14288,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nomad",
     .domain = "nomadproject.io",
+    .kind = .cli,
     .description = "Nomad is an easy-to-use, flexible, and performant workload orchestrator that can deploy a mix of microservice, batch, containerized, and non-containerized applications. Nomad is easy to operate and scale and has native Consul and Vault integrations.",
     .homepage_url = "https://www.nomadproject.io",
     .programs = &[_][]const u8{"nomad"},
@@ -12999,6 +14299,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lzip",
     .domain = "nongnu.org/lzip",
+    .kind = .cli,
     .description = "LZMA-based compression program similar to gzip or bzip2",
     .homepage_url = "https://www.nongnu.org/lzip/",
     .programs = &[_][]const u8{"lzip"},
@@ -13009,6 +14310,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Notion",
     .domain = "notion.so",
+    .kind = .app,
     .description = "An all-in-one workspace for notes, tasks, wikis, and databases.",
     .homepage_url = "https://notion.so",
     .programs = &[_][]const u8{"notion"},
@@ -13019,6 +14321,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "neon-config",
     .domain = "notroj.github.io/neon",
+    .kind = .cli,
     .description = "neon - an HTTP/1.1 and WebDAV client library with a C API",
     .homepage_url = "https://notroj.github.io/neon/",
     .programs = &[_][]const u8{"neon-config"},
@@ -13029,6 +14332,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "npmjs",
     .domain = "npmjs.com",
+    .kind = .cli,
     .description = "the package manager for JavaScript",
     .homepage_url = "https://docs.npmjs.com/cli/",
     .programs = &[_][]const u8{ "npm", "npx" },
@@ -13039,6 +14343,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pake",
     .domain = "npmjs.com/pake-cli",
+    .kind = .cli,
     .description = "🤱🏻 Turn any webpage into a desktop app with Rust.  🤱🏻 利用 Rust 轻松构建轻量级多端桌面应用",
     .homepage_url = null,
     .programs = &[_][]const u8{"pake"},
@@ -13049,6 +14354,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ntp",
     .domain = "ntp.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "ntpq", "sntp", "ntp-keygen", "ntp-wait", "ntpd", "ntpdate", "ntpdc", "ntptime", "ntptrace", "update-leap" },
@@ -13059,6 +14365,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "numbat",
     .domain = "numbat.dev",
+    .kind = .cli,
     .description = "A statically typed programming language for scientific computations with first class support for physical dimensions and units",
     .homepage_url = "https://numbat.dev",
     .programs = &[_][]const u8{"numbat"},
@@ -13069,6 +14376,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "f2py",
     .domain = "numpy.org",
+    .kind = .cli,
     .description = "The fundamental package for scientific computing with Python.",
     .homepage_url = "https://www.numpy.org/",
     .programs = &[_][]const u8{"f2py"},
@@ -13079,6 +14387,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nu",
     .domain = "nushell.sh",
+    .kind = .cli,
     .description = "Modern shell for the GitHub era",
     .homepage_url = "https://www.nushell.sh",
     .programs = &[_][]const u8{"nu"},
@@ -13089,6 +14398,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nx.dev",
     .domain = "nx.dev",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"nx"},
@@ -13099,6 +14409,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oauth2-proxy",
     .domain = "oauth2-proxy.github.io",
+    .kind = .cli,
     .description = "A reverse proxy that provides authentication with Google, Azure, OpenID Connect and many more identity providers.",
     .homepage_url = "https://oauth2-proxy.github.io/oauth2-proxy/",
     .programs = &[_][]const u8{"oauth2-proxy"},
@@ -13109,6 +14420,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "lzo",
     .domain = "oberhumer.com/lzo",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13119,6 +14431,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ucl",
     .domain = "oberhumer.com/ucl",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13129,6 +14442,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Obsidian",
     .domain = "obsidian.md",
+    .kind = .app,
     .description = "A powerful knowledge base that works on local Markdown files.",
     .homepage_url = "https://obsidian.md",
     .programs = &[_][]const u8{"obsidian"},
@@ -13139,6 +14453,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "odigos",
     .domain = "odigos.io",
+    .kind = .cli,
     .description = "Distributed tracing without code changes. 🚀 Instantly monitor any application using OpenTelemetry and eBPF",
     .homepage_url = "https://odigos.io",
     .programs = &[_][]const u8{"odigos"},
@@ -13149,6 +14464,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oh-my-posh",
     .domain = "ohmyposh.dev",
+    .kind = .cli,
     .description = "The most customisable and low-latency cross platform/shell prompt renderer",
     .homepage_url = "https://ohmyposh.dev",
     .programs = &[_][]const u8{"oh-my-posh"},
@@ -13159,6 +14475,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ollama",
     .domain = "ollama.ai",
+    .kind = .cli,
     .description = "Get up and running with Llama 3.3, DeepSeek-R1, Phi-4, Gemma 2, and other large language models.",
     .homepage_url = "https://ollama.com/",
     .programs = &[_][]const u8{"ollama"},
@@ -13169,6 +14486,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Ollama",
     .domain = "ollama.com",
+    .kind = .app,
     .description = "A local LLM runner for running large language models.",
     .homepage_url = "https://ollama.com",
     .programs = &[_][]const u8{"ollama"},
@@ -13179,6 +14497,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "onefetch",
     .domain = "onefetch.dev",
+    .kind = .cli,
     .description = "Command-line Git information tool",
     .homepage_url = "https://onefetch.dev/",
     .programs = &[_][]const u8{"onefetch"},
@@ -13189,6 +14508,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ginkgo",
     .domain = "onsi.github.io/ginkgo",
+    .kind = .cli,
     .description = "A Modern Testing Framework for Go",
     .homepage_url = "http://onsi.github.io/ginkgo/",
     .programs = &[_][]const u8{"ginkgo"},
@@ -13199,6 +14519,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "open-mpi",
     .domain = "open-mpi.org",
+    .kind = .cli,
     .description = "Open MPI main development repository",
     .homepage_url = "https://www.open-mpi.org",
     .programs = &[_][]const u8{ "mpic++", "mpiCC", "mpicc", "mpicxx", "mpiexec", "mpif77", "mpif90", "mpifort", "mpirun", "ompi_info", "opal_wrapper" },
@@ -13209,6 +14530,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hwloc",
     .domain = "open-mpi.org/hwloc",
+    .kind = .cli,
     .description = "Portable abstraction of the hierarchical topology of modern architectures",
     .homepage_url = "https://www.open-mpi.org/projects/hwloc/",
     .programs = &[_][]const u8{ "hwloc-annotate", "hwloc-bind", "hwloc-calc", "hwloc-compress-dir", "hwloc-diff", "hwloc-distrib", "hwloc-info", "hwloc-patch", "hwloc-ps", "lstopo-no-graphics" },
@@ -13219,6 +14541,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Open Sans",
     .domain = "open-sans",
+    .kind = .font,
     .description = "A humanist sans-serif typeface designed by Steve Matteson.",
     .homepage_url = "https://fonts.google.com/specimen/Open+Sans",
     .programs = &[_][]const u8{},
@@ -13229,6 +14552,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "codex",
     .domain = "openai.com/codex",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "codex", "codex-exec", "codex-tui", "md-events" },
@@ -13239,6 +14563,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openai",
     .domain = "openai.com/openai-python",
+    .kind = .cli,
     .description = "The official Python library for the OpenAI API",
     .homepage_url = "https://pypi.org/project/openai/",
     .programs = &[_][]const u8{"openai"},
@@ -13249,6 +14574,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "whisper",
     .domain = "openai.com/whisper",
+    .kind = .cli,
     .description = "Robust Speech Recognition via Large-Scale Weak Supervision",
     .homepage_url = null,
     .programs = &[_][]const u8{"whisper"},
@@ -13259,6 +14585,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openapi-generator",
     .domain = "openapi-generator.tech",
+    .kind = .cli,
     .description = "OpenAPI Generator allows generation of API client libraries (SDK generation), server stubs, documentation and configuration automatically given an OpenAPI Spec (v2, v3)",
     .homepage_url = "https://openapi-generator.tech/",
     .programs = &[_][]const u8{"openapi-generator"},
@@ -13269,6 +14596,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openbao",
     .domain = "openbao.org/openbao",
+    .kind = .cli,
     .description = "OpenBao exists to provide a software solution to manage, store, and distribute sensitive data including secrets, certificates, and keys.",
     .homepage_url = "https://openbao.org/",
     .programs = &[_][]const u8{ "bao", "bao-setup" },
@@ -13279,6 +14607,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openblas",
     .domain = "openblas.net",
+    .kind = .library,
     .description = "OpenBLAS is an optimized BLAS library based on GotoBLAS2 1.13 BSD version. ",
     .homepage_url = "http://www.openblas.net",
     .programs = &[_][]const u8{},
@@ -13289,6 +14618,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opencode.ai",
     .domain = "opencode.ai",
+    .kind = .cli,
     .description = "The open source coding agent.",
     .homepage_url = "https://opencode.ai",
     .programs = &[_][]const u8{"opencode"},
@@ -13299,6 +14629,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opencore-amr.sourceforge",
     .domain = "opencore-amr.sourceforge.io",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13309,6 +14640,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opendap",
     .domain = "opendap.org",
+    .kind = .cli,
     .description = "A new version of libdap that contains both DAP2 and DAP4 support",
     .homepage_url = "https://www.opendap.org/",
     .programs = &[_][]const u8{ "dap-config", "dap-config-pkgconfig", "getdap", "getdap4" },
@@ -13319,6 +14651,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "git-review",
     .domain = "opendev.org/git-review",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"git-review"},
@@ -13329,6 +14662,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openstack",
     .domain = "opendev.org/openstack/python-openstackclient",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "openstack", "openstack-inventory" },
@@ -13339,6 +14673,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "exr",
     .domain = "openexr.com",
+    .kind = .cli,
     .description = "The OpenEXR project provides the specification and reference implementation of the EXR file format, the professional-grade image storage format of the motion picture industry.",
     .homepage_url = "https://www.openexr.com/",
     .programs = &[_][]const u8{ "exr2aces", "exrenvmap", "exrheader", "exrmakepreview", "exrmaketiled", "exrmultipart", "exrmultiview", "exrstdattr" },
@@ -13349,6 +14684,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "imath",
     .domain = "openexr.com/imath",
+    .kind = .library,
     .description = "Imath is a C++ and python library of 2D and 3D vector, matrix, and math operations for computer graphics",
     .homepage_url = "https://imath.readthedocs.io",
     .programs = &[_][]const u8{},
@@ -13359,6 +14695,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "open-interpreter",
     .domain = "openinterpreter.com",
+    .kind = .cli,
     .description = "A natural language interface for computers",
     .homepage_url = "http://openinterpreter.com/",
     .programs = &[_][]const u8{"interpreter"},
@@ -13369,6 +14706,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openjdk",
     .domain = "openjdk.org",
+    .kind = .cli,
     .description = "Development kit for the Java programming language",
     .homepage_url = "https://openjdk.java.net/",
     .programs = &[_][]const u8{ "jar", "jarsigner", "java", "javac", "javadoc", "javap", "jcmd", "jconsole", "jdb", "jdeprscan", "jdeps", "jfr", "jhsdb", "jimage", "jinfo", "jlink", "jmap", "jmod", "jps", "jrunscript", "jshell", "jstack", "jstat", "jstatd", "keytool", "rmiregistry", "serialver" },
@@ -13380,6 +14718,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opj",
     .domain = "openjpeg.org",
+    .kind = .cli,
     .description = "Official repository of the OpenJPEG project",
     .homepage_url = "https://www.openjpeg.org/",
     .programs = &[_][]const u8{ "opj_compress", "opj_decompress", "opj_dump" },
@@ -13390,6 +14729,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ldap",
     .domain = "openldap.org",
+    .kind = .cli,
     .description = "Open source suite of directory software",
     .homepage_url = "https://www.openldap.org/software/",
     .programs = &[_][]const u8{ "ldapcompare", "ldapdelete", "ldapexop", "ldapmodify", "ldapmodrdn", "ldappasswd", "ldapsearch", "ldapurl", "ldapvc", "ldapwhoami" },
@@ -13400,6 +14740,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "liblmdb",
     .domain = "openldap.org/liblmdb",
+    .kind = .cli,
     .description = "Lightning memory-mapped database: key-value data store",
     .homepage_url = "https://www.symas.com/symas-embedded-database-lmdb",
     .programs = &[_][]const u8{ "mdb_copy", "mdb_dump", "mdb_load", "mdb_stat" },
@@ -13410,6 +14751,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libomp",
     .domain = "openmp.llvm.org",
+    .kind = .library,
     .description = "The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.",
     .homepage_url = "http://llvm.org",
     .programs = &[_][]const u8{},
@@ -13420,6 +14762,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openpmix.github",
     .domain = "openpmix.github.io",
+    .kind = .cli,
     .description = "Process Management Interface for HPC environments",
     .homepage_url = "https://openpmix.github.io/",
     .programs = &[_][]const u8{ "palloc", "pattrs", "pctrl", "pevent", "plookup", "pmix_info", "pmixcc", "pps", "pquery" },
@@ -13430,6 +14773,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opa",
     .domain = "openpolicyagent.org",
+    .kind = .cli,
     .description = "Open Policy Agent (OPA) is an open source, general-purpose policy engine.",
     .homepage_url = "https://www.openpolicyagent.org",
     .programs = &[_][]const u8{"opa"},
@@ -13440,6 +14784,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cups",
     .domain = "openprinting.github.io/cups",
+    .kind = .cli,
     .description = "Common UNIX Printing System",
     .homepage_url = "https://openprinting.github.io/cups",
     .programs = &[_][]const u8{ "cups-config", "ippeveprinter", "ipptool" },
@@ -13450,6 +14795,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openresty",
     .domain = "openresty.org",
+    .kind = .cli,
     .description = "High Performance Web Platform Based on Nginx and LuaJIT",
     .homepage_url = "https://openresty.org",
     .programs = &[_][]const u8{ "nginx-xml2pod", "opm", "resty", "restydoc", "restydoc-index" },
@@ -13460,6 +14806,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opensearch",
     .domain = "opensearch.org",
+    .kind = .cli,
     .description = "🔎 Open source distributed and RESTful search engine.",
     .homepage_url = "https://opensearch.org/docs/latest/opensearch/index/",
     .programs = &[_][]const u8{ "opensearch", "opensearch-keystore", "opensearch-plugin", "opensearch-shard" },
@@ -13470,6 +14817,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oc",
     .domain = "openshift.com",
+    .kind = .cli,
     .description = "The OpenShift Command Line, part of OKD",
     .homepage_url = "https://www.openshift.com/",
     .programs = &[_][]const u8{"oc"},
@@ -13480,6 +14828,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openslide",
     .domain = "openslide.org",
+    .kind = .cli,
     .description = "C library to read whole-slide images (a.k.a. virtual slides)",
     .homepage_url = "https://openslide.org/",
     .programs = &[_][]const u8{ "openslide-quickhash1sum", "openslide-show-properties", "openslide-write-png" },
@@ -13490,6 +14839,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openssh",
     .domain = "openssh.com",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "scp", "sftp", "slogin", "ssh", "ssh-add", "ssh-agent", "ssh-keygen", "ssh-keyscan", "sshd" },
@@ -13500,6 +14850,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "OpenSSL",
     .domain = "openssl.org",
+    .kind = .cli,
     .description = "TLS/SSL and crypto library with QUIC APIs",
     .homepage_url = "https://quictls.github.io/openssl",
     .programs = &[_][]const u8{ "openssl", "c_rehash" },
@@ -13510,6 +14861,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsolv",
     .domain = "opensuse.org/libsolv",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13520,6 +14872,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tofu",
     .domain = "opentofu.org",
+    .kind = .cli,
     .description = "OpenTofu lets you declaratively manage your cloud infrastructure.",
     .homepage_url = "https://opentofu.org",
     .programs = &[_][]const u8{"tofu"},
@@ -13530,6 +14883,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "openvpn",
     .domain = "openvpn.net",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"openvpn"},
@@ -13540,6 +14894,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "operator-sdk",
     .domain = "operatorframework.io/operator-sdk",
+    .kind = .cli,
     .description = "SDK for building Kubernetes applications. Provides high level APIs, useful abstractions, and project scaffolding.",
     .homepage_url = "https://sdk.operatorframework.io/",
     .programs = &[_][]const u8{"operator-sdk"},
@@ -13550,6 +14905,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "opus-codec",
     .domain = "opus-codec.org",
+    .kind = .library,
     .description = "Modern audio compression for the internet.",
     .homepage_url = "https://opus-codec.org/",
     .programs = &[_][]const u8{},
@@ -13560,6 +14916,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "berkeley-db",
     .domain = "oracle.com/berkeley-db",
+    .kind = .cli,
     .description = "High performance key/value database",
     .homepage_url = "https://www.oracle.com/database/technologies/related/berkeleydb.html",
     .programs = &[_][]const u8{ "db_verify", "db_upgrade", "db_tuner", "db_replicate", "db_stat", "db_recover", "db_load", "db_log_verify", "db_printlog", "db_dump", "db_hotbackup", "db_deadlock", "db_checkpoint", "db_convert", "db_archive" },
@@ -13570,6 +14927,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oci",
     .domain = "oracle.com/oci-cli",
+    .kind = .cli,
     .description = "Command Line Interface for Oracle Cloud Infrastructure",
     .homepage_url = "https://docs.cloud.oracle.com/iaas/Content/API/Concepts/cliconcepts.htm",
     .programs = &[_][]const u8{"oci"},
@@ -13580,6 +14938,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "oras",
     .domain = "oras.land",
+    .kind = .cli,
     .description = "OCI registry client - managing content like artifacts, images, packages",
     .homepage_url = "https://oras.land",
     .programs = &[_][]const u8{"oras"},
@@ -13590,6 +14949,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "OrbStack",
     .domain = "orbstack.dev",
+    .kind = .app,
     .description = "A fast, lightweight Docker and Linux on macOS.",
     .homepage_url = "https://orbstack.dev",
     .programs = &[_][]const u8{"orbstack"},
@@ -13600,6 +14960,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ord",
     .domain = "ordinals.com",
+    .kind = .cli,
     .description = "Index, block explorer, and command-line wallet",
     .homepage_url = "https://ordinals.com/",
     .programs = &[_][]const u8{"ord"},
@@ -13610,6 +14971,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gpg-tui",
     .domain = "orhun.dev/gpg-tui",
+    .kind = .cli,
     .description = "Manage your GnuPG keys with ease! 🔐",
     .homepage_url = "https://blog.orhun.dev/introducing-gpg-tui/",
     .programs = &[_][]const u8{"gpg-tui"},
@@ -13620,6 +14982,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ots",
     .domain = "ots.sniptt.com",
+    .kind = .cli,
     .description = "🔐 Share end-to-end encrypted secrets with others via a one-time URL",
     .homepage_url = "https://ots.sniptt.com",
     .programs = &[_][]const u8{"ots"},
@@ -13630,6 +14993,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "packer",
     .domain = "packer.io",
+    .kind = .cli,
     .description = "Packer is a tool for creating identical machine images for multiple platforms from a single source configuration.",
     .homepage_url = "https://packer.io",
     .programs = &[_][]const u8{"packer"},
@@ -13640,6 +15004,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libaio",
     .domain = "pagure.io/libaio",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13650,6 +15015,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xml",
     .domain = "pagure.io/xmlto",
+    .kind = .cli,
     .description = "Convert XML to another format (based on XSL or other tools)",
     .homepage_url = "https://pagure.io/xmlto/",
     .programs = &[_][]const u8{ "xmlif", "xmlto" },
@@ -13660,6 +15026,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "python-click",
     .domain = "palletsprojects.com/click",
+    .kind = .library,
     .description = "Python composable command line interface toolkit",
     .homepage_url = "https://click.palletsprojects.com",
     .programs = &[_][]const u8{},
@@ -13670,6 +15037,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "python-jinja",
     .domain = "palletsprojects.com/jinja",
+    .kind = .library,
     .description = "A very fast and expressive template engine.",
     .homepage_url = "https://jinja.palletsprojects.com",
     .programs = &[_][]const u8{},
@@ -13680,6 +15048,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pandoc",
     .domain = "pandoc.org",
+    .kind = .cli,
     .description = "Swiss-army knife of markup format conversion",
     .homepage_url = "https://pandoc.org/",
     .programs = &[_][]const u8{"pandoc"},
@@ -13690,6 +15059,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pandoc-crossref",
     .domain = "pandoc.org/crossref",
+    .kind = .cli,
     .description = "Pandoc filter for numbering and cross-referencing",
     .homepage_url = "https://lierdakil.github.io/pandoc-crossref/",
     .programs = &[_][]const u8{"pandoc-crossref"},
@@ -13700,6 +15070,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scie-pants",
     .domain = "pantsbuild.org/scie-pants",
+    .kind = .cli,
     .description = "Protects your Pants from the elements.",
     .homepage_url = "https://www.pantsbuild.org/docs/installation",
     .programs = &[_][]const u8{"pants"},
@@ -13710,6 +15081,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "daff",
     .domain = "paulfitz.github.io/daff",
+    .kind = .cli,
     .description = "align and compare tables",
     .homepage_url = "https://paulfitz.github.io/daff",
     .programs = &[_][]const u8{"daff"},
@@ -13720,6 +15092,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pcre",
     .domain = "pcre.org",
+    .kind = .cli,
     .description = "Perl compatible regular expressions library",
     .homepage_url = "https://www.pcre.org/",
     .programs = &[_][]const u8{ "pcre-config", "pcregrep", "pcretest" },
@@ -13730,6 +15103,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pcre2",
     .domain = "pcre.org/v2",
+    .kind = .cli,
     .description = "Perl compatible regular expressions library with a new API",
     .homepage_url = "https://www.pcre.org/",
     .programs = &[_][]const u8{ "pcre2-config", "pcre2grep", "pcre2test" },
@@ -13740,6 +15114,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pcsc-lite",
     .domain = "pcsclite.apdu.fr",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"pcscd"},
@@ -13750,6 +15125,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pdm",
     .domain = "pdm.fming.dev",
+    .kind = .cli,
     .description = "A modern Python package and dependency manager supporting the latest PEP standards",
     .homepage_url = "https://pdm.fming.dev",
     .programs = &[_][]const u8{"pdm"},
@@ -13760,6 +15136,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Pearcleaner",
     .domain = "pearcleaner.app",
+    .kind = .library,
     .description = "Open-source application uninstaller for macOS.",
     .homepage_url = "https://github.com/alienator88/Pearcleaner",
     .programs = &[_][]const u8{},
@@ -13770,6 +15147,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "suite-sparse",
     .domain = "people.engr.tamu.edu/davis/suitesparse",
+    .kind = .cli,
     .description = "The official SuiteSparse library: a suite of sparse matrix algorithms authored or co-authored by Tim Davis, Texas A&M University.",
     .homepage_url = "https://people.engr.tamu.edu/davis/suitesparse.html",
     .programs = &[_][]const u8{ "mongoose", "suitesparse_mongoose" },
@@ -13780,6 +15158,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libcap-ng",
     .domain = "people.redhat.com/sgrubb/libcap-ng",
+    .kind = .cli,
     .description = "Libcap-ng is a library for Linux that makes using posix capabilities easy.",
     .homepage_url = "https://people.redhat.com/sgrubb/libcap-ng/",
     .programs = &[_][]const u8{ "captest", "filecap", "netcap", "pscap" },
@@ -13790,6 +15169,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "perl",
     .domain = "perl.org",
+    .kind = .cli,
     .description = "Highly capable, feature-rich programming language",
     .homepage_url = "https://www.perl.org/",
     .programs = &[_][]const u8{ "corelist", "cpan", "enc2xs", "encguess", "h2ph", "h2xs", "instmodsh", "json_pp", "libnetcfg", "perl", "perlbug", "perldoc", "perlivp", "perlthanks", "piconv", "pl2pm", "pod2html", "pod2man", "pod2text", "pod2usage", "podchecker", "prove", "ptar", "ptardiff", "ptargrep", "shasum", "splain", "streamzip", "xsubpp", "zipdetails" },
@@ -13800,6 +15180,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cedar-agent",
     .domain = "permit.io/cedar-agent",
+    .kind = .cli,
     .description = "Cedar-agent is the easiest way to deploy and run Cedar",
     .homepage_url = null,
     .programs = &[_][]const u8{"cedar-agent"},
@@ -13810,6 +15191,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "php",
     .domain = "php.net",
+    .kind = .cli,
     .description = "General-purpose scripting language",
     .homepage_url = "https://www.php.net/",
     .programs = &[_][]const u8{ "phar", "php", "php-cgi", "php-config", "phpdbg", "phpize", "php-fpm" },
@@ -13820,6 +15202,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "phpMyAdmin",
     .domain = "phpmyadmin.net",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13830,6 +15213,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pi",
     .domain = "pi.dev",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "pi", "pi-init" },
@@ -13840,6 +15224,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "himalaya",
     .domain = "pimalaya.org/himalaya",
+    .kind = .cli,
     .description = "CLI email client written in Rust",
     .homepage_url = "https://pimalaya.org",
     .programs = &[_][]const u8{"himalaya"},
@@ -13850,6 +15235,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pinniped",
     .domain = "pinniped.dev",
+    .kind = .cli,
     .description = "Pinniped is the easy, secure way to log in to your Kubernetes clusters.",
     .homepage_url = "https://pinniped.dev",
     .programs = &[_][]const u8{"pinniped"},
@@ -13860,6 +15246,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pip",
     .domain = "pip.pypa.io",
+    .kind = .cli,
     .description = "The Python package installer",
     .homepage_url = "https://pip.pypa.io/",
     .programs = &[_][]const u8{ "pip", "pip3.8", "pip3.9", "pip3.10", "pip3.11" },
@@ -13870,6 +15257,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pipenv",
     .domain = "pipenv.pypa.io",
+    .kind = .cli,
     .description = " Python Development Workflow for Humans.",
     .homepage_url = "https://pipenv.pypa.io",
     .programs = &[_][]const u8{"pipenv"},
@@ -13880,6 +15268,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pixman",
     .domain = "pixman.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -13890,6 +15279,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pkgx",
     .domain = "pkgx.sh",
+    .kind = .cli,
     .description = "Standalone binary that can run anything",
     .homepage_url = "https://pkgx.sh",
     .programs = &[_][]const u8{"pkgx"},
@@ -13900,6 +15290,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "brewkit",
     .domain = "pkgx.sh/brewkit",
+    .kind = .cli,
     .description = "build infra & `$ bk build`",
     .homepage_url = null,
     .programs = &[_][]const u8{"bk"},
@@ -13910,6 +15301,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cargox",
     .domain = "pkgx.sh/cargox",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"cargox"},
@@ -13920,6 +15312,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dev",
     .domain = "pkgx.sh/dev",
+    .kind = .cli,
     .description = "isolated `dev` environments",
     .homepage_url = null,
     .programs = &[_][]const u8{"dev"},
@@ -13930,6 +15323,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mash",
     .domain = "pkgx.sh/mash",
+    .kind = .cli,
     .description = "mash up millions of open source packages into monstrously powerful scripts",
     .homepage_url = "https://mash.pkgx.sh",
     .programs = &[_][]const u8{"mash"},
@@ -13940,6 +15334,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pkgm",
     .domain = "pkgx.sh/pkgm",
+    .kind = .cli,
     .description = "Install `pkgx` packages to `/usr/local`",
     .homepage_url = null,
     .programs = &[_][]const u8{"pkgm"},
@@ -13950,6 +15345,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pkl-lang",
     .domain = "pkl-lang.org",
+    .kind = .cli,
     .description = "A configuration as code language with rich validation and tooling.",
     .homepage_url = "https://pkl-lang.org",
     .programs = &[_][]const u8{ "jpkl", "pkl" },
@@ -13960,6 +15356,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "plakar",
     .domain = "plakar.io",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"plakar"},
@@ -13970,6 +15367,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pscale",
     .domain = "planetscale.com",
+    .kind = .cli,
     .description = "The CLI for PlanetScale Database",
     .homepage_url = "https://www.planetscale.com/",
     .programs = &[_][]const u8{"pscale"},
@@ -13980,6 +15378,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "plantuml",
     .domain = "plantuml.com",
+    .kind = .cli,
     .description = "Generate diagrams from textual description",
     .homepage_url = "https://plantuml.com/",
     .programs = &[_][]const u8{"plantuml"},
@@ -13990,6 +15389,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rename",
     .domain = "plasmasturm.org/rename",
+    .kind = .cli,
     .description = "Rename multiple files",
     .homepage_url = "http://plasmasturm.org/code/rename/",
     .programs = &[_][]const u8{"rename"},
@@ -14000,6 +15400,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "plocate.sesse",
     .domain = "plocate.sesse.net",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "plocate", "plocate-build", "updatedb" },
@@ -14010,6 +15411,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pluralith",
     .domain = "pluralith.com",
+    .kind = .cli,
     .description = "A tool for Terraform state visualisation and automated generation of infrastructure documentation",
     .homepage_url = "https://www.pluralith.com",
     .programs = &[_][]const u8{"pluralith"},
@@ -14020,6 +15422,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libimagequant",
     .domain = "pngquant.org/lib",
+    .kind = .library,
     .description = "Palette quantization library that powers pngquant and other PNG optimizers",
     .homepage_url = "https://pngquant.org/lib",
     .programs = &[_][]const u8{},
@@ -14030,6 +15433,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pnp",
     .domain = "pnpm.io",
+    .kind = .cli,
     .description = "Fast, disk space efficient package manager",
     .homepage_url = "https://pnpm.io/",
     .programs = &[_][]const u8{ "pnpm", "pnpx" },
@@ -14040,6 +15444,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "po4a",
     .domain = "po4a.org",
+    .kind = .cli,
     .description = "Maintain the translations of your documentation with ease  (PO for anything)",
     .homepage_url = "http://po4a.org/",
     .programs = &[_][]const u8{ "msguntypot", "po4a", "po4a-display-man", "po4a-display-pod", "po4a-gettextize", "po4a-normalize", "po4a-updatepo", "podselect" },
@@ -14050,6 +15455,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pocketbase",
     .domain = "pocketbase.io",
+    .kind = .cli,
     .description = "Open source backend for your next project in 1 file",
     .homepage_url = "https://pocketbase.io/",
     .programs = &[_][]const u8{"pocketbase"},
@@ -14060,6 +15466,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "podman",
     .domain = "podman.io",
+    .kind = .cli,
     .description = "Podman: A tool for managing OCI containers and pods.",
     .homepage_url = "https://podman.io/",
     .programs = &[_][]const u8{ "podman", "podman-remote", "podman-mac-helper" },
@@ -14070,6 +15477,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pocket",
     .domain = "pokt.network",
+    .kind = .cli,
     .description = "Official implementation of the Pocket Network Protocol",
     .homepage_url = "http://www.pokt.network",
     .programs = &[_][]const u8{"pocket"},
@@ -14080,6 +15488,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "poppler.freedesktop",
     .domain = "poppler.freedesktop.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "pdfattach", "pdfdetach", "pdffonts", "pdfimages", "pdfinfo", "pdfseparate", "pdftocairo", "pdftohtml", "pdftoppm", "pdftops", "pdftotext", "pdfunite" },
@@ -14090,6 +15499,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "poppler-data",
     .domain = "poppler.freedesktop.org/poppler-data",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14100,6 +15510,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "PortAudio",
     .domain = "portaudio.com",
+    .kind = .library,
     .description = "PortAudio is a cross-platform, open-source C language library for real-time audio input and output.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14110,6 +15521,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "postgresql",
     .domain = "postgresql.org",
+    .kind = .cli,
     .description = "Mirror of the official PostgreSQL GIT repository. Note that this is just a *mirror* - we don't work with pull requests on github. To contribute, please see https://wiki.postgresql.org/wiki/Submitting_a_Patch",
     .homepage_url = "https://www.postgresql.org/",
     .programs = &[_][]const u8{ "clusterdb", "createdb", "dropdb", "dropuser", "ecpg", "initdb", "pg_archivecleanup", "pg_basebackup", "pg_config", "pg_controldata", "pg_ctl", "pg_dump", "pg_dumpall", "pg_isready", "pg_receivewal", "pg_recvlogical", "pg_resetwal", "pg_restore", "pg_rewind", "pg_test_fsync", "pg_test_timing", "pg_upgrade", "pg_waldump", "pgbench", "postgres", "psql", "reindexdb", "vacuumdb" },
@@ -14120,6 +15532,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libpq",
     .domain = "postgresql.org/libpq",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14130,6 +15543,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "postgrest",
     .domain = "postgrest.org",
+    .kind = .cli,
     .description = "Serves a fully RESTful API from any existing PostgreSQL database",
     .homepage_url = "https://postgrest.org",
     .programs = &[_][]const u8{"postgrest"},
@@ -14140,6 +15554,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Postman",
     .domain = "postman.com",
+    .kind = .app,
     .description = "An API platform for building and testing APIs.",
     .homepage_url = "https://postman.com",
     .programs = &[_][]const u8{"postman"},
@@ -14150,6 +15565,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gauche",
     .domain = "practical-scheme.net/gauche",
+    .kind = .cli,
     .description = "R7RS Scheme implementation, developed to be a handy script interpreter",
     .homepage_url = "https://practical-scheme.net/gauche/",
     .programs = &[_][]const u8{ "gauche-cesconv", "gauche-config", "gauche-install", "gauche-package", "gosh" },
@@ -14160,6 +15576,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pre-commit",
     .domain = "pre-commit.com",
+    .kind = .cli,
     .description = "A framework for managing and maintaining multi-language pre-commit hooks.",
     .homepage_url = "https://pre-commit.com/",
     .programs = &[_][]const u8{"pre-commit"},
@@ -14170,6 +15587,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pixi",
     .domain = "prefix.dev",
+    .kind = .cli,
     .description = "Package management made easy",
     .homepage_url = "https://pixi.sh",
     .programs = &[_][]const u8{"pixi"},
@@ -14180,6 +15598,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "goose",
     .domain = "pressly.github.io/goose",
+    .kind = .cli,
     .description = "A database migration tool. Supports SQL migrations and Go functions. ",
     .homepage_url = "https://pressly.github.io/goose/",
     .programs = &[_][]const u8{"goose"},
@@ -14190,6 +15609,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "prettier",
     .domain = "prettier.io",
+    .kind = .cli,
     .description = "Code formatter for JavaScript, CSS, JSON, GraphQL, Markdown, YAML",
     .homepage_url = "https://prettier.io/",
     .programs = &[_][]const u8{"prettier"},
@@ -14200,6 +15620,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "fend",
     .domain = "printfn.github.io/fend",
+    .kind = .cli,
     .description = "Arbitrary-precision unit-aware calculator",
     .homepage_url = "https://printfn.github.io/fend",
     .programs = &[_][]const u8{"fend"},
@@ -14210,6 +15631,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "geni",
     .domain = "priver.dev/geni",
+    .kind = .cli,
     .description = "Standalone database migration tool which works for Postgres, MariaDB, MySQL, Sqlite and LibSQL(Turso).",
     .homepage_url = null,
     .programs = &[_][]const u8{"geni"},
@@ -14220,6 +15642,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "proj",
     .domain = "proj.org",
+    .kind = .cli,
     .description = "PROJ - Cartographic Projections and Coordinate Transformations Library",
     .homepage_url = "https://proj.org/",
     .programs = &[_][]const u8{"proj"},
@@ -14230,6 +15653,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "copa",
     .domain = "project-copacetic.github.io",
+    .kind = .cli,
     .description = "Tool to directly patch container images given the vulnerability scanning results",
     .homepage_url = "https://project-copacetic.github.io/copacetic/",
     .programs = &[_][]const u8{"copa"},
@@ -14240,6 +15664,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "nuclei",
     .domain = "projectdiscovery.io/nuclei",
+    .kind = .cli,
     .description = "Nuclei is a fast, customizable vulnerability scanner powered by the global security community and built on a simple YAML-based DSL, enabling collaboration to tackle trending vulnerabilities on the internet. It helps you find vulnerabilities in your applications, APIs, networks, DNS, and cloud configurations.",
     .homepage_url = "https://nuclei.projectdiscovery.io/",
     .programs = &[_][]const u8{"nuclei"},
@@ -14250,6 +15675,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "projen",
     .domain = "projen.io",
+    .kind = .cli,
     .description = "Rapidly build modern applications with advanced configuration management",
     .homepage_url = "https://projen.io",
     .programs = &[_][]const u8{"projen"},
@@ -14260,6 +15686,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Protocol Buffers",
     .domain = "protobuf.dev",
+    .kind = .cli,
     .description = "Protocol Buffers - Google's data interchange format",
     .homepage_url = "https://protobuf.dev/",
     .programs = &[_][]const u8{"protoc"},
@@ -14270,6 +15697,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "prql",
     .domain = "prql-lang.org",
+    .kind = .cli,
     .description = "PRQL is a modern language for transforming data — a simple, powerful, pipelined SQL replacement",
     .homepage_url = "https://prql-lang.org",
     .programs = &[_][]const u8{ "prql-compiler", "prqlc" },
@@ -14280,6 +15708,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "psycopg2",
     .domain = "psycopg.org/psycopg2",
+    .kind = .library,
     .description = "PostgreSQL database adapter for the Python programming language",
     .homepage_url = "https://www.psycopg.org/",
     .programs = &[_][]const u8{},
@@ -14290,6 +15719,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "psycopg3",
     .domain = "psycopg.org/psycopg3",
+    .kind = .library,
     .description = "New generation PostgreSQL database adapter for the Python programming language ",
     .homepage_url = "https://www.psycopg.org/psycopg3/",
     .programs = &[_][]const u8{},
@@ -14300,6 +15730,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vid.stab",
     .domain = "public.hronopik.de/vid.stab",
+    .kind = .library,
     .description = "Video stabilization library",
     .homepage_url = "http://public.hronopik.de/vid.stab/",
     .programs = &[_][]const u8{},
@@ -14310,6 +15741,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pugixml",
     .domain = "pugixml.org",
+    .kind = .library,
     .description = "Light-weight, simple and fast XML parser for C++ with XPath support",
     .homepage_url = "http://pugixml.org/",
     .programs = &[_][]const u8{},
@@ -14320,6 +15752,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pulumi",
     .domain = "pulumi.io",
+    .kind = .cli,
     .description = "Pulumi - Infrastructure as Code in any programming language 🚀",
     .homepage_url = "https://pulumi.io/",
     .programs = &[_][]const u8{ "pulumi", "pulumi-analyzer-policy", "pulumi-analyzer-policy-python", "pulumi-language-dotnet", "pulumi-language-go", "pulumi-language-java", "pulumi-language-nodejs", "pulumi-language-python", "pulumi-language-python-exec", "pulumi-language-yaml", "pulumi-resource-pulumi-nodejs", "pulumi-resource-pulumi-python", "pulumi-watch" },
@@ -14330,6 +15763,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pwgen",
     .domain = "pwgen.sourceforge.io",
+    .kind = .cli,
     .description = "Password generator",
     .homepage_url = "https://pwgen.sourceforge.net/",
     .programs = &[_][]const u8{"pwgen"},
@@ -14340,6 +15774,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "girara",
     .domain = "pwmt.org/girara",
+    .kind = .library,
     .description = "User interface library",
     .homepage_url = "https://pwmt.org/projects/girara",
     .programs = &[_][]const u8{},
@@ -14350,6 +15785,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zathura",
     .domain = "pwmt.org/zathura",
+    .kind = .cli,
     .description = "Document viewer",
     .homepage_url = "https://pwmt.org/projects/zathura",
     .programs = &[_][]const u8{"zathura"},
@@ -14360,6 +15796,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pygmentize",
     .domain = "pygments.org",
+    .kind = .cli,
     .description = "Pygments is a generic syntax highlighter written in Python",
     .homepage_url = "https://pygments.org/",
     .programs = &[_][]const u8{"pygmentize"},
@@ -14370,6 +15807,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "invoke",
     .domain = "pyinvoke.org",
+    .kind = .cli,
     .description = "Pythonic task management & command execution.",
     .homepage_url = "https://www.pyinvoke.org/",
     .programs = &[_][]const u8{"invoke"},
@@ -14380,6 +15818,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pipx",
     .domain = "pypa.github.io/pipx",
+    .kind = .cli,
     .description = "Execute binaries from Python packages in isolated environments",
     .homepage_url = "https://pipx.pypa.io",
     .programs = &[_][]const u8{"pipx"},
@@ -14390,6 +15829,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "distlib",
     .domain = "pypa.io/distlib",
+    .kind = .library,
     .description = "A low-level library which implements some Python packaging  standards (PEPs) and which could be used by third-party packaging tools to achieve interoperability.",
     .homepage_url = "http://distlib.readthedocs.io/",
     .programs = &[_][]const u8{},
@@ -14400,6 +15840,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hatch",
     .domain = "pypa.io/hatch",
+    .kind = .cli,
     .description = "Modern, extensible Python project management",
     .homepage_url = "https://hatch.pypa.io/latest/",
     .programs = &[_][]const u8{ "hatch", "hatchling" },
@@ -14410,6 +15851,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "packaging",
     .domain = "pypa.io/packaging",
+    .kind = .library,
     .description = "Core utilities for Python packages",
     .homepage_url = "https://packaging.pypa.io/",
     .programs = &[_][]const u8{},
@@ -14420,6 +15862,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "setuptools",
     .domain = "pypa.io/setuptools",
+    .kind = .library,
     .description = "Official project repository for the Setuptools build system",
     .homepage_url = "https://pypi.org/project/setuptools/",
     .programs = &[_][]const u8{},
@@ -14430,6 +15873,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trove-classifiers",
     .domain = "pypa.io/trove-classifiers",
+    .kind = .library,
     .description = "Canonical source for classifiers on PyPI.",
     .homepage_url = "https://pypi.org/p/trove-classifiers/",
     .programs = &[_][]const u8{},
@@ -14440,6 +15884,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pytest",
     .domain = "pytest.org",
+    .kind = .cli,
     .description = "The pytest framework makes it easy to write small tests, yet scales to support complex functional testing",
     .homepage_url = "https://docs.pytest.org/en/latest/",
     .programs = &[_][]const u8{"pytest"},
@@ -14450,6 +15895,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pluggy",
     .domain = "pytest.org/pluggy",
+    .kind = .library,
     .description = "A minimalist production ready plugin system",
     .homepage_url = "https://pluggy.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{},
@@ -14460,6 +15906,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "python-pillow",
     .domain = "python-pillow.org",
+    .kind = .library,
     .description = "Python Imaging Library (Fork)",
     .homepage_url = "https://python-pillow.github.io",
     .programs = &[_][]const u8{},
@@ -14470,6 +15917,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "poetry",
     .domain = "python-poetry.org",
+    .kind = .cli,
     .description = "Python packaging and dependency management made easy",
     .homepage_url = "https://python-poetry.org/",
     .programs = &[_][]const u8{"poetry"},
@@ -14480,6 +15928,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "python",
     .domain = "python.org",
+    .kind = .cli,
     .description = "The Python programming language",
     .homepage_url = "https://www.python.org",
     .programs = &[_][]const u8{ "python", "python{{ version.major }}", "python{{ version.marketing }}" },
@@ -14490,6 +15939,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "typing_extensions",
     .domain = "python.org/typing_extensions",
+    .kind = .library,
     .description = "Backported and experimental type hints for Python",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14500,6 +15950,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pyyaml",
     .domain = "pyyaml.org",
+    .kind = .library,
     .description = "Canonical source repository for LibYAML",
     .homepage_url = "http://pyyaml.org/wiki/LibYAML",
     .programs = &[_][]const u8{},
@@ -14510,6 +15961,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libyaml",
     .domain = "pyyaml.org/libyaml",
+    .kind = .library,
     .description = "Canonical source repository for LibYAML",
     .homepage_url = "http://pyyaml.org/wiki/LibYAML",
     .programs = &[_][]const u8{},
@@ -14520,6 +15972,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "qemu",
     .domain = "qemu.org",
+    .kind = .cli,
     .description = "Generic machine emulator and virtualizer",
     .homepage_url = "https://www.qemu.org/",
     .programs = &[_][]const u8{ "qemu-img", "qemu-edid", "qemu-io", "qemu-nbd", "qemu-storage-daemon", "qemu-system-aarch64", "qemu-system-alpha", "qemu-system-arm", "qemu-system-avr", "qemu-system-hppa", "qemu-system-i386", "qemu-system-loongarch64", "qemu-system-m68k", "qemu-system-microblaze", "qemu-system-microblazeel", "qemu-system-mips", "qemu-system-mips64", "qemu-system-mips64el", "qemu-system-mipsel", "qemu-system-or1k", "qemu-system-ppc", "qemu-system-ppc64", "qemu-system-riscv32", "qemu-system-riscv64", "qemu-system-rx", "qemu-system-s390x", "qemu-system-sh4", "qemu-system-sh4eb", "qemu-system-sparc", "qemu-system-sparc64", "qemu-system-tricore", "qemu-system-x86_64", "qemu-system-xtensa", "qemu-system-xtensaeb" },
@@ -14530,6 +15983,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "qhull",
     .domain = "qhull.org",
+    .kind = .cli,
     .description = "Qhull development for www.qhull.org -- Qhull 2020.2 (8.1-alpha1) at https://github.com/qhull/qhull/wiki",
     .homepage_url = "http://www.qhull.org/",
     .programs = &[_][]const u8{ "qconvex", "qdelaunay", "qhalf", "qhull", "qvoronoi", "rbox" },
@@ -14540,6 +15994,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "qpdf",
     .domain = "qpdf.sourceforge.io",
+    .kind = .cli,
     .description = "qpdf: A content-preserving PDF document transformer",
     .homepage_url = "https://qpdf.sourceforge.io/",
     .programs = &[_][]const u8{"qpdf"},
@@ -14550,6 +16005,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "qt",
     .domain = "qt.io",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "balsam", "canbusutil", "lconvert", "lprodump", "lrelease", "lrelease-pro", "lupdate", "lupdate-pro", "meshdebug", "moc", "qcollectiongenerator", "qdbus", "qdbuscpp2xml", "qdbusxml2cpp", "qdistancefieldgenerator", "qhelpgenerator", "qlalr", "qmake", "qmlcachegen", "qmleasing", "qmlformat", "qmlimportscanner", "qmllint", "qmlmin", "qmlplugindump", "qmlpreview", "qmlprofiler", "qmlscene", "qmltestrunner", "qmltime", "qmltyperegistrar", "qscxmlc", "qtattributionsscanner", "qtdiag", "qtpaths", "qtplugininfo", "qvkgen", "rcc", "repc", "tracegen", "uic", "xmlpatterns", "xmlpatternsvalidator" },
@@ -14560,6 +16016,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sqruff",
     .domain = "quary.dev/sqruff",
+    .kind = .cli,
     .description = "Fast SQL formatter/linter",
     .homepage_url = "https://playground.quary.dev/?secondary=Format",
     .programs = &[_][]const u8{ "bench", "sqruff" },
@@ -14570,6 +16027,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "quickwit",
     .domain = "quickwit.io",
+    .kind = .cli,
     .description = "Cloud-native search engine for observability. An open-source alternative to Datadog, Elasticsearch, Loki, and Tempo.",
     .homepage_url = "https://quickwit.io",
     .programs = &[_][]const u8{"quickwit"},
@@ -14580,6 +16038,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gti",
     .domain = "r-wos.org/gti",
+    .kind = .cli,
     .description = "ASCII-art displaying typo-corrector for commands",
     .homepage_url = "https://r-wos.org/hacks/gti",
     .programs = &[_][]const u8{"gti"},
@@ -14590,6 +16049,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rabbitmq",
     .domain = "rabbitmq.com",
+    .kind = .cli,
     .description = "Open source RabbitMQ: core server and tier 1 (built-in) plugins",
     .homepage_url = "https://www.rabbitmq.com/",
     .programs = &[_][]const u8{ "rabbitmqctl", "rabbitmq-defaults", "rabbitmq-diagnostics", "rabbitmq-env", "rabbitmq-plugins", "rabbitmq-queues", "rabbitmq-server", "rabbitmq-streams", "rabbitmq-upgrade", "vmware-rabbitmq" },
@@ -14600,6 +16060,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "raccoin",
     .domain = "raccoin.org",
+    .kind = .cli,
     .description = "Crypto Portfolio and Tax Reporting Tool",
     .homepage_url = "https://raccoin.org/",
     .programs = &[_][]const u8{"raccoin"},
@@ -14610,6 +16071,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "radicle",
     .domain = "radicle.org",
+    .kind = .cli,
     .description = "Radicle CLI",
     .homepage_url = "https://app.radicle.network/alt-clients.radicle.eth/radicle-cli",
     .programs = &[_][]const u8{ "rad", "git-remote-rad", "rad-account", "rad-auth", "rad-checkout", "rad-clone", "rad-edit", "rad-ens", "rad-gov", "rad-help", "rad-init", "rad-inspect", "rad-issue", "rad-ls", "rad-merge", "rad-patch", "rad-path", "rad-pull", "rad-push", "rad-remote", "rad-reward", "rad-rm", "rad-self", "rad-sync", "rad-track", "rad-untrack" },
@@ -14620,6 +16082,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "railway",
     .domain = "railway.app",
+    .kind = .cli,
     .description = "Develop and deploy code with zero configuration",
     .homepage_url = "https://railway.app/",
     .programs = &[_][]const u8{"railway"},
@@ -14630,6 +16093,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rapidjson",
     .domain = "rapidjson.org",
+    .kind = .library,
     .description = "A fast JSON parser/generator for C++ with both SAX/DOM style API",
     .homepage_url = "http://rapidjson.org/",
     .programs = &[_][]const u8{},
@@ -14640,6 +16104,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unrar",
     .domain = "rarlab.com",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"unrar"},
@@ -14650,6 +16115,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Raycast",
     .domain = "raycast.com",
+    .kind = .app,
     .description = "A blazingly fast launcher and productivity tool for macOS.",
     .homepage_url = "https://raycast.com",
     .programs = &[_][]const u8{"raycast"},
@@ -14660,6 +16126,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ruby-build",
     .domain = "rbenv.org/ruby-build",
+    .kind = .cli,
     .description = "A tool to download, compile, and install Ruby on Unix-like systems.",
     .homepage_url = "https://rbenv.org/man/ruby-build.1",
     .programs = &[_][]const u8{"ruby-build"},
@@ -14670,6 +16137,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rclone",
     .domain = "rclone.org",
+    .kind = .cli,
     .description = "\"rsync for cloud storage\" - Google Drive, S3, Dropbox, Backblaze B2, One Drive, Swift, Hubic, Wasabi, Google Cloud Storage, Azure Blob, Azure Files, Yandex Files",
     .homepage_url = "https://rclone.org/",
     .programs = &[_][]const u8{"rclone"},
@@ -14680,6 +16148,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "re2c",
     .domain = "re2c.org",
+    .kind = .cli,
     .description = "Lexer generator for C, C++, D, Go, Haskell, Java, JS, OCaml, Python, Rust, V and Zig.",
     .homepage_url = "https://re2c.org",
     .programs = &[_][]const u8{"re2c"},
@@ -14690,6 +16159,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "check_if_email_exists",
     .domain = "reacher.email/check-if-email-exists-cli",
+    .kind = .cli,
     .description = "Check if an email address exists without sending any email, written in Rust. Comes with a ⚙️ HTTP backend.",
     .homepage_url = "https://reacher.email",
     .programs = &[_][]const u8{"check_if_email_exists"},
@@ -14700,6 +16170,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rebar3",
     .domain = "rebar3.org",
+    .kind = .cli,
     .description = "Erlang build tool that makes it easy to compile and test Erlang applications and releases.",
     .homepage_url = "https://rebar3.org",
     .programs = &[_][]const u8{"rebar3"},
@@ -14710,6 +16181,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Rectangle",
     .domain = "rectangle.app",
+    .kind = .app,
     .description = "A window management app for macOS based on Spectacle.",
     .homepage_url = "https://rectangleapp.com",
     .programs = &[_][]const u8{"rectangle"},
@@ -14720,6 +16192,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "redis",
     .domain = "redis.io",
+    .kind = .cli,
     .description = "Redis is an in-memory database that persists on disk. The data model is key-value, but many different kind of values are supported: Strings, Lists, Sets, Sorted Sets, Hashes, Streams, HyperLogLogs, Bitmaps.",
     .homepage_url = "http://redis.io",
     .programs = &[_][]const u8{ "redis-server", "redis-cli", "redis-benchmark" },
@@ -14730,6 +16203,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "render",
     .domain = "render.com",
+    .kind = .cli,
     .description = "Command-line interface for Render",
     .homepage_url = "https://render.com/docs/cli",
     .programs = &[_][]const u8{"render"},
@@ -14740,6 +16214,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "replibyte",
     .domain = "replibyte.com",
+    .kind = .cli,
     .description = "Seed your development database with real data ⚡️",
     .homepage_url = "https://www.replibyte.com",
     .programs = &[_][]const u8{"replibyte"},
@@ -14750,6 +16225,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "restic",
     .domain = "restic.net/restic",
+    .kind = .cli,
     .description = "Fast, efficient and secure backup program",
     .homepage_url = "https://restic.net/",
     .programs = &[_][]const u8{"restic"},
@@ -14760,6 +16236,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rhash.sourceforge",
     .domain = "rhash.sourceforge.net",
+    .kind = .cli,
     .description = "Utility for computing and verifying hash sums of files",
     .homepage_url = "https://sourceforge.net/projects/rhash/",
     .programs = &[_][]const u8{ "whirlpool-hash", "tiger-hash", "tth-hash", "rhash", "sfv-hash", "magnet-link", "has160-hash", "gost12-256-hash", "gost12-512-hash", "edonr512-hash", "edonr256-hash", "ed2k-link" },
@@ -14770,6 +16247,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "hexedit",
     .domain = "rigaux.org/hexedit",
+    .kind = .cli,
     .description = "View and edit files in hexadecimal or in ASCII",
     .homepage_url = "https://rigaux.org/hexedit.html",
     .programs = &[_][]const u8{"hexedit"},
@@ -14780,6 +16258,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rio",
     .domain = "rioterm.com",
+    .kind = .cli,
     .description = "A hardware-accelerated GPU terminal emulator focusing to run in desktops and browsers.",
     .homepage_url = "https://rioterm.com",
     .programs = &[_][]const u8{"rio"},
@@ -14790,6 +16269,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pyqt-bundle",
     .domain = "riverbankcomputing.com/pyqt-builder",
+    .kind = .cli,
     .description = "The PyQt build system",
     .homepage_url = "https://pyqt-builder.readthedocs.io/",
     .programs = &[_][]const u8{"pyqt-bundle"},
@@ -14800,6 +16280,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sip",
     .domain = "riverbankcomputing.com/sip",
+    .kind = .cli,
     .description = "Tool to create Python bindings for C and C++ libraries",
     .homepage_url = "https://python-sip.readthedocs.io/en/latest/",
     .programs = &[_][]const u8{ "sip-install", "sip-build", "sip-distinfo", "sip-module", "sip-sdist", "sip-wheel" },
@@ -14810,6 +16291,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "robot",
     .domain = "robotframework.org",
+    .kind = .cli,
     .description = "Generic automation framework for acceptance testing and RPA",
     .homepage_url = "https://robotframework.org/",
     .programs = &[_][]const u8{"robot"},
@@ -14820,6 +16302,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Roboto",
     .domain = "roboto",
+    .kind = .font,
     .description = "Google's signature family of fonts.",
     .homepage_url = "https://fonts.google.com/specimen/Roboto",
     .programs = &[_][]const u8{},
@@ -14830,6 +16313,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libpsl",
     .domain = "rockdaboot.github.io/libpsl",
+    .kind = .library,
     .description = "C library for the Public Suffix List",
     .homepage_url = "https://rockdaboot.github.io/libpsl",
     .programs = &[_][]const u8{},
@@ -14840,6 +16324,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rome",
     .domain = "rome.tools",
+    .kind = .cli,
     .description = "Unified developer tools for JavaScript, TypeScript, and the web",
     .homepage_url = "https://docs.rome.tools/",
     .programs = &[_][]const u8{"rome"},
@@ -14850,6 +16335,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dnf5",
     .domain = "rpm.org/dnf5",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"dnf5"},
@@ -14860,6 +16346,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libdnf5",
     .domain = "rpm.org/libdnf5",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14870,6 +16357,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "librepo",
     .domain = "rpm.org/librepo",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14880,6 +16368,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "popt",
     .domain = "rpm.org/popt",
+    .kind = .library,
     .description = "C library for parsing command line parameters",
     .homepage_url = "http://ftp.rpm.org/popt/",
     .programs = &[_][]const u8{},
@@ -14890,6 +16379,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rpm",
     .domain = "rpm.org/rpm",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"rpm"},
@@ -14900,6 +16390,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rpm-sequoia",
     .domain = "rpm.org/rpm-sequoia",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -14910,6 +16401,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rsync",
     .domain = "rsync.samba.org",
+    .kind = .cli,
     .description = "An open source utility that provides fast incremental file transfer. It also has useful features for backup and restore operations among many other use cases.",
     .homepage_url = "https://rsync.samba.org/",
     .programs = &[_][]const u8{ "rsync", "rsync-ssl" },
@@ -14920,6 +16412,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rtmpdump",
     .domain = "rtmpdump.mplayerhq.hu",
+    .kind = .cli,
     .description = "Tool for downloading RTMP streaming media",
     .homepage_url = "https://rtmpdump.mplayerhq.hu/",
     .programs = &[_][]const u8{ "rtmpdump", "rtmpgw", "rtmpsrv", "rtmpsuck" },
@@ -14930,6 +16423,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ronn",
     .domain = "rtomayko.github.io/ronn",
+    .kind = .cli,
     .description = "the opposite of roff",
     .homepage_url = "http://rtomayko.github.com/ronn/",
     .programs = &[_][]const u8{"ronn"},
@@ -14940,6 +16434,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rubocop",
     .domain = "rubocop.org",
+    .kind = .cli,
     .description = "A Ruby static code analyzer and formatter, based on the community Ruby style guide.",
     .homepage_url = "https://docs.rubocop.org",
     .programs = &[_][]const u8{"rubocop"},
@@ -14950,6 +16445,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ruby-lang",
     .domain = "ruby-lang.org",
+    .kind = .cli,
     .description = "Powerful, clean, object-oriented scripting language",
     .homepage_url = "https://www.ruby-lang.org/",
     .programs = &[_][]const u8{ "erb", "irb", "rake", "rdoc", "ri", "ruby" },
@@ -14960,6 +16456,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rubygems",
     .domain = "rubygems.org",
+    .kind = .cli,
     .description = "Powerful, clean, object-oriented scripting language",
     .homepage_url = "https://www.ruby-lang.org/",
     .programs = &[_][]const u8{ "bundle", "bundler", "gem" },
@@ -14970,6 +16467,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gist",
     .domain = "rubygems.org/gist",
+    .kind = .cli,
     .description = "Potentially the best command line gister.",
     .homepage_url = "http://defunkt.io/gist/",
     .programs = &[_][]const u8{"gist"},
@@ -14980,6 +16478,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rucio-client",
     .domain = "rucio.cern.ch/rucio-client",
+    .kind = .cli,
     .description = "Rucio - Scientific Data Management",
     .homepage_url = "http://rucio.cern.ch",
     .programs = &[_][]const u8{ "rucio", "rucio-admin" },
@@ -14990,6 +16489,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "atlantis",
     .domain = "runatlantis.io",
+    .kind = .cli,
     .description = "Terraform Pull Request Automation tool",
     .homepage_url = "https://www.runatlantis.io/",
     .programs = &[_][]const u8{"atlantis"},
@@ -15000,6 +16500,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mdbook",
     .domain = "rust-lang.github.io/mdBook",
+    .kind = .cli,
     .description = "Create book from markdown files. Like Gitbook but implemented in Rust",
     .homepage_url = "https://rust-lang.github.io/mdBook/",
     .programs = &[_][]const u8{"mdbook"},
@@ -15010,6 +16511,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rust",
     .domain = "rust-lang.org",
+    .kind = .cli,
     .description = "Empowering everyone to build reliable and efficient software.",
     .homepage_url = "https://www.rust-lang.org/",
     .programs = &[_][]const u8{ "cargo-clippy", "cargo-fmt", "clippy-driver", "rust-analyzer", "rust-gdb", "rust-gdbgui", "rust-lldb", "rustc", "rustdoc", "rustfmt" },
@@ -15020,6 +16522,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cargo",
     .domain = "rust-lang.org/cargo",
+    .kind = .cli,
     .description = "The Rust package manager",
     .homepage_url = "https://doc.rust-lang.org/cargo",
     .programs = &[_][]const u8{"cargo"},
@@ -15030,6 +16533,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bindgen",
     .domain = "rust-lang.org/rust-bindgen",
+    .kind = .cli,
     .description = "Automatically generates Rust FFI bindings to C (and some C++) libraries.",
     .homepage_url = "https://rust-lang.github.io/rust-bindgen/",
     .programs = &[_][]const u8{"bindgen"},
@@ -15040,6 +16544,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rustup",
     .domain = "rust-lang.org/rustup",
+    .kind = .cli,
     .description = "The Rust toolchain installer",
     .homepage_url = "https://rust-lang.github.io/rustup/",
     .programs = &[_][]const u8{ "rustup", "rustup-init" },
@@ -15050,6 +16555,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rust-script",
     .domain = "rust-script.org",
+    .kind = .cli,
     .description = "Run Rust files and expressions as scripts without any setup or compilation step.",
     .homepage_url = "https://rust-script.org",
     .programs = &[_][]const u8{"rust-script"},
@@ -15060,6 +16566,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "rye",
     .domain = "rye.astral.sh",
+    .kind = .cli,
     .description = "Experimental Package Management Solution for Python",
     .homepage_url = "https://rye-up.com/",
     .programs = &[_][]const u8{"rye"},
@@ -15070,6 +16577,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "s3cmd",
     .domain = "s3tools.org",
+    .kind = .cli,
     .description = "Official s3cmd repo -- Command line tool for managing S3 compatible storage services (including Amazon S3 and CloudFront).",
     .homepage_url = "https://s3tools.org/s3cmd",
     .programs = &[_][]const u8{"s3cmd"},
@@ -15080,6 +16588,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "s3cmd",
     .domain = "s3tools.org/s3cmd",
+    .kind = .cli,
     .description = "Official s3cmd repo -- Command line tool for managing S3 compatible storage services (including Amazon S3 and CloudFront).",
     .homepage_url = "https://s3tools.org/s3cmd",
     .programs = &[_][]const u8{"s3cmd"},
@@ -15090,6 +16599,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "caesiumclt",
     .domain = "saerasoft.com/caesium",
+    .kind = .cli,
     .description = "Caesium Command Line Tools - Lossy/lossless image compression tool ",
     .homepage_url = "http://saerasoft.com/caesium",
     .programs = &[_][]const u8{"caesiumclt"},
@@ -15100,6 +16610,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "duckscript",
     .domain = "sagiegurari.github.io/duckscript",
+    .kind = .cli,
     .description = "Simple, extendable and embeddable scripting language.",
     .homepage_url = "https://sagiegurari.github.io/duckscript",
     .programs = &[_][]const u8{"duck"},
@@ -15110,6 +16621,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsass",
     .domain = "sass-lang.com/libsass",
+    .kind = .library,
     .description = "A C/C++ implementation of a Sass compiler",
     .homepage_url = "https://sass-lang.com/libsass",
     .programs = &[_][]const u8{},
@@ -15120,6 +16632,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sassc",
     .domain = "sass-lang.com/sassc",
+    .kind = .cli,
     .description = "Wrapper around libsass that helps to create command-line apps",
     .homepage_url = null,
     .programs = &[_][]const u8{"sassc"},
@@ -15130,6 +16643,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "acl",
     .domain = "savannah.nongnu.org/acl",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "chacl", "getfacl", "setfacl" },
@@ -15140,6 +16654,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "attr",
     .domain = "savannah.nongnu.org/attr",
+    .kind = .cli,
     .description = "Manipulate filesystem extended attributes",
     .homepage_url = "https://savannah.nongnu.org/projects/attr",
     .programs = &[_][]const u8{ "attr", "getfattr", "setfattr" },
@@ -15150,6 +16665,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scala-lang",
     .domain = "scala-lang.org",
+    .kind = .cli,
     .description = "The Scala 3 compiler, also known as Dotty.",
     .homepage_url = "https://dotty.epfl.ch",
     .programs = &[_][]const u8{ "scalac", "scala", "scala-cli", "sbtn", "amm" },
@@ -15160,6 +16676,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sbt",
     .domain = "scala-sbt.org",
+    .kind = .cli,
     .description = "sbt, the interactive build tool",
     .homepage_url = "https://www.scala-sbt.org/",
     .programs = &[_][]const u8{"sbt"},
@@ -15170,6 +16687,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scw",
     .domain = "scaleway.com",
+    .kind = .cli,
     .description = "Command Line Interface for Scaleway",
     .homepage_url = "https://www.scaleway.com/en/cli/",
     .programs = &[_][]const u8{"scw"},
@@ -15180,6 +16698,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "croc",
     .domain = "schollz.com/croc",
+    .kind = .cli,
     .description = "Easily and securely send things from one computer to another :crocodile: :package:",
     .homepage_url = "https://schollz.com/software/croc6",
     .programs = &[_][]const u8{"croc"},
@@ -15190,6 +16709,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scons",
     .domain = "scons.org",
+    .kind = .cli,
     .description = "Substitute for classic 'make' tool with autoconf/automake functionality",
     .homepage_url = "https://www.scons.org/",
     .programs = &[_][]const u8{"scons"},
@@ -15200,6 +16720,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Scryer Prolog",
     .domain = "scryer.pl",
+    .kind = .cli,
     .description = "Modern ISO Prolog implementation written mostly in Rust",
     .homepage_url = "https://www.scryer.pl",
     .programs = &[_][]const u8{"scryer-prolog"},
@@ -15210,6 +16731,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sdkman-init.sh",
     .domain = "sdkman.io",
+    .kind = .cli,
     .description = "The SDKMAN! Command Line Interface",
     .homepage_url = "https://sdkman.io",
     .programs = &[_][]const u8{"sdkman-init.sh"},
@@ -15220,6 +16742,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "SeaweedFS",
     .domain = "seaweedfs.com",
+    .kind = .cli,
     .description = "SeaweedFS is a fast distributed storage system for blobs, objects, files, and data lake, for billions of files! Blob store has O(1) disk seek, cloud tiering. Filer supports Cloud Drive, cross-DC active-active replication, Kubernetes, POSIX FUSE mount, S3 API, S3 Gateway, Hadoop, WebDAV, encryption, Erasure Coding.",
     .homepage_url = "https://seaweedfs.com",
     .programs = &[_][]const u8{"weed"},
@@ -15230,6 +16753,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sentry-cli",
     .domain = "sentry.io",
+    .kind = .cli,
     .description = "Command-line utility to interact with Sentry",
     .homepage_url = "https://docs.sentry.io/cli/",
     .programs = &[_][]const u8{"sentry-cli"},
@@ -15240,6 +16764,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "optipng",
     .domain = "sf.net/optipng",
+    .kind = .cli,
     .description = "PNG file optimizer",
     .homepage_url = "https://optipng.sourceforge.net/",
     .programs = &[_][]const u8{"optipng"},
@@ -15250,6 +16775,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sfcgal-config",
     .domain = "sfcgal.org",
+    .kind = .cli,
     .description = "C++ wrapper library around CGAL",
     .homepage_url = "https://sfcgal.gitlab.io/SFCGAL/",
     .programs = &[_][]const u8{"sfcgal-config"},
@@ -15260,6 +16786,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sftpgo",
     .domain = "sftpgo.com",
+    .kind = .cli,
     .description = "Full-featured and highly configurable SFTP, HTTP/S, FTP/S and WebDAV server - S3, Google Cloud Storage, Azure Blob",
     .homepage_url = "https://sftpgo.com",
     .programs = &[_][]const u8{"sftpgo"},
@@ -15270,6 +16797,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "shellcheck",
     .domain = "shellcheck.net",
+    .kind = .cli,
     .description = "ShellCheck, a static analysis tool for shell scripts",
     .homepage_url = "https://www.shellcheck.net/",
     .programs = &[_][]const u8{"shellcheck"},
@@ -15280,6 +16808,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Signal",
     .domain = "signal.org",
+    .kind = .app,
     .description = "A private messenger for encrypted communications.",
     .homepage_url = "https://signal.org",
     .programs = &[_][]const u8{"signal"},
@@ -15290,6 +16819,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cosign",
     .domain = "sigstore.dev/cosign",
+    .kind = .cli,
     .description = "Code signing and transparency for containers and binaries",
     .homepage_url = null,
     .programs = &[_][]const u8{"cosign"},
@@ -15300,6 +16830,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gitsign",
     .domain = "sigstore.dev/gitsign",
+    .kind = .cli,
     .description = "Keyless Git signing using Sigstore",
     .homepage_url = null,
     .programs = &[_][]const u8{ "gitsign", "gitsign-credential-cache" },
@@ -15310,6 +16841,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tiff",
     .domain = "simplesystems.org/libtiff",
+    .kind = .cli,
     .description = "TIFF library and utilities",
     .homepage_url = "https://libtiff.gitlab.io/libtiff/",
     .programs = &[_][]const u8{ "tiffcp", "tiffdump", "tiffinfo", "tiffset", "tiffsplit" },
@@ -15320,6 +16852,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sing-box",
     .domain = "sing-box.app",
+    .kind = .cli,
     .description = "The universal proxy platform",
     .homepage_url = "https://sing-box.sagernet.org",
     .programs = &[_][]const u8{"sing-box"},
@@ -15330,6 +16863,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "skaffold",
     .domain = "skaffold.dev",
+    .kind = .cli,
     .description = "Easy and Repeatable Kubernetes Development",
     .homepage_url = "https://skaffold.dev/",
     .programs = &[_][]const u8{"skaffold"},
@@ -15340,6 +16874,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Slack",
     .domain = "slack.com",
+    .kind = .app,
     .description = "A messaging and collaboration platform for teams.",
     .homepage_url = "https://slack.com",
     .programs = &[_][]const u8{"slack"},
@@ -15350,6 +16885,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "smartmontools",
     .domain = "smartmontools.org",
+    .kind = .cli,
     .description = "SMART hard drive monitoring",
     .homepage_url = "https://www.smartmontools.org/",
     .programs = &[_][]const u8{ "smartctl", "smartd" },
@@ -15360,6 +16896,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "snaplet",
     .domain = "snaplet.dev/cli",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"snaplet"},
@@ -15370,6 +16907,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sniffnet",
     .domain = "sniffnet.net",
+    .kind = .cli,
     .description = "Cross-platform application to monitor your network traffic",
     .homepage_url = "https://sniffnet.net",
     .programs = &[_][]const u8{"sniffnet"},
@@ -15380,6 +16918,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "snyk",
     .domain = "snyk.io",
+    .kind = .cli,
     .description = "Scans and monitors projects for security vulnerabilities",
     .homepage_url = "https://snyk.io",
     .programs = &[_][]const u8{"snyk"},
@@ -15390,6 +16929,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "driftctl",
     .domain = "snyk.io/driftctl",
+    .kind = .cli,
     .description = "Detect, track and alert on infrastructure drift",
     .homepage_url = null,
     .programs = &[_][]const u8{"driftctl"},
@@ -15400,6 +16940,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "solana",
     .domain = "solana.com",
+    .kind = .cli,
     .description = "Web-Scale Blockchain for fast, secure, scalable, decentralized apps and marketplaces.",
     .homepage_url = "https://solana.com",
     .programs = &[_][]const u8{ "solana", "solana-keygen", "solana-bench-streamer", "solana-faucet", "solana-log-analyzer", "solana-net-shaper", "solana-stake-accounts", "solana-tokens", "solana-watchtower" },
@@ -15410,6 +16951,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "soldeer",
     .domain = "soldeer.xyz",
+    .kind = .cli,
     .description = "Solidity Package Manager written in rust and integrated into Foundry (forge soldeer ...)",
     .homepage_url = "https://soldeer.xyz",
     .programs = &[_][]const u8{"soldeer"},
@@ -15420,6 +16962,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "soliditylang",
     .domain = "soliditylang.org",
+    .kind = .cli,
     .description = "Solidity, the Smart Contract Programming Language",
     .homepage_url = "https://soliditylang.org",
     .programs = &[_][]const u8{ "solc", "yul-phaser" },
@@ -15430,6 +16973,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "solr",
     .domain = "solr.apache.org",
+    .kind = .cli,
     .description = "Apache Solr enterprise search platform",
     .homepage_url = "https://solr.apache.org",
     .programs = &[_][]const u8{"solr"},
@@ -15440,6 +16984,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sonar-scanner",
     .domain = "sonarqube.org/sonarscanner",
+    .kind = .cli,
     .description = "Scanner CLI for SonarQube (Server, Cloud)",
     .homepage_url = "http://redirect.sonarsource.com/doc/install-configure-scanner.html",
     .programs = &[_][]const u8{ "sonar-scanner", "sonar-scanner-debug" },
@@ -15450,6 +16995,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Source Code Pro",
     .domain = "source-code-pro",
+    .kind = .font,
     .description = "Monospaced font family for user interface and coding environments.",
     .homepage_url = "https://github.com/adobe-fonts/source-code-pro",
     .programs = &[_][]const u8{},
@@ -15460,6 +17006,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "e2fsprogs",
     .domain = "sourceforge.net/e2fsprogs",
+    .kind = .cli,
     .description = "Utilities for the ext2, ext3, and ext4 file systems",
     .homepage_url = "https://e2fsprogs.sourceforge.net/",
     .programs = &[_][]const u8{ "chattr", "compile_et", "lsattr", "mk_cmds", "mke2fs", "debugfs", "dumpe2fs" },
@@ -15470,6 +17017,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "faac",
     .domain = "sourceforge.net/faac",
+    .kind = .cli,
     .description = "Freeware Advanced Audio Coder faac mirror",
     .homepage_url = "https://sourceforge.net/projects/faac/",
     .programs = &[_][]const u8{"faac"},
@@ -15480,6 +17028,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "faad",
     .domain = "sourceforge.net/faad2",
+    .kind = .cli,
     .description = "Freeware Advanced Audio (AAC) Decoder faad2 mirror",
     .homepage_url = "https://sourceforge.net/projects/faac/",
     .programs = &[_][]const u8{"faad"},
@@ -15490,6 +17039,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libmng",
     .domain = "sourceforge.net/libmng",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -15500,6 +17050,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libtirpc",
     .domain = "sourceforge.net/libtirpc",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -15510,6 +17061,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "net-tools",
     .domain = "sourceforge.net/net-tools",
+    .kind = .cli,
     .description = "Linux networking base tools",
     .homepage_url = "https://sourceforge.net/projects/net-tools/",
     .programs = &[_][]const u8{ "hostname", "ifconfig", "netstat", "route" },
@@ -15520,6 +17072,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "aac-enc",
     .domain = "sourceforge.net/opencore-amr",
+    .kind = .cli,
     .description = "Standalone library of the Fraunhofer FDK AAC code from Android",
     .homepage_url = "https://sourceforge.net/projects/opencore-amr/",
     .programs = &[_][]const u8{"aac-enc"},
@@ -15530,6 +17083,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "potrace",
     .domain = "sourceforge.net/potrace",
+    .kind = .cli,
     .description = "Convert bitmaps to vector graphics",
     .homepage_url = "https://potrace.sourceforge.net/",
     .programs = &[_][]const u8{ "potrace", "mkbitmap" },
@@ -15540,6 +17094,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "XMLStarlet",
     .domain = "sourceforge.net/xmlstar",
+    .kind = .cli,
     .description = "XML command-line utilities",
     .homepage_url = "https://xmlstar.sourceforge.net/",
     .programs = &[_][]const u8{ "xml", "xmlstarlet" },
@@ -15550,6 +17105,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bzip2",
     .domain = "sourceware.org/bzip2",
+    .kind = .cli,
     .description = "Clone of https://gitlab.com/federicomenaquintero/bzip2",
     .homepage_url = "https://sourceware.org/bzip2/",
     .programs = &[_][]const u8{ "bunzip2", "bzcat", "bzcmp", "bzdiff", "bzgrep", "bzegrep", "bzfgrep", "bzip2", "bzip2recover", "bzmore", "bzless" },
@@ -15560,6 +17116,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "device-mapper",
     .domain = "sourceware.org/dm",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -15570,6 +17127,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libffi",
     .domain = "sourceware.org/libffi",
+    .kind = .library,
     .description = "A portable foreign-function interface library.",
     .homepage_url = "http://sourceware.org/libffi",
     .programs = &[_][]const u8{},
@@ -15580,6 +17138,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "soxr.sourceforge",
     .domain = "soxr.sourceforge.net",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -15590,6 +17149,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spacetime",
     .domain = "spacetimedb.com",
+    .kind = .cli,
     .description = "Multiplayer at the speed of light",
     .homepage_url = "https://spacetimedb.com",
     .programs = &[_][]const u8{"spacetime"},
@@ -15600,6 +17160,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "spawn.link",
     .domain = "spawn.link",
+    .kind = .cli,
     .description = "a featureful union filesystem",
     .homepage_url = "https://trapexit.github.io/mergerfs/",
     .programs = &[_][]const u8{ "mergerfs", "mergerfs-fusermount", "mount.mergerfs" },
@@ -15610,6 +17171,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "speexdec",
     .domain = "speex.org",
+    .kind = .cli,
     .description = "Audio codec designed for speech",
     .homepage_url = "https://speex.org/",
     .programs = &[_][]const u8{"speexdec"},
@@ -15620,6 +17182,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sphinx",
     .domain = "sphinx-doc.org",
+    .kind = .cli,
     .description = "Tool to create intelligent and beautiful documentation",
     .homepage_url = "https://www.sphinx-doc.org/",
     .programs = &[_][]const u8{ "sphinx-apidoc", "sphinx-autogen", "sphinx-build", "sphinx-quickstart" },
@@ -15630,6 +17193,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Spotify",
     .domain = "spotify.com",
+    .kind = .app,
     .description = "A digital music streaming service.",
     .homepage_url = "https://spotify.com",
     .programs = &[_][]const u8{"spotify"},
@@ -15640,6 +17204,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sqlc",
     .domain = "sqlc.dev",
+    .kind = .cli,
     .description = "Generate type-safe code from SQL",
     .homepage_url = "https://sqlc.dev/",
     .programs = &[_][]const u8{"sqlc"},
@@ -15650,6 +17215,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sqlfluff",
     .domain = "sqlfluff.com",
+    .kind = .cli,
     .description = "A modular SQL linter and auto-formatter with support for multiple dialects and templated code.",
     .homepage_url = "https://docs.sqlfluff.com/",
     .programs = &[_][]const u8{"sqlfluff"},
@@ -15660,6 +17226,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sqlite3",
     .domain = "sqlite.org",
+    .kind = .cli,
     .description = "Official Git mirror of the SQLite source tree",
     .homepage_url = "https://sqlite.org/index.html",
     .programs = &[_][]const u8{"sqlite3"},
@@ -15670,6 +17237,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "squawk",
     .domain = "squawkhq.com",
+    .kind = .cli,
     .description = "🐘 linter for PostgreSQL, focused on migrations",
     .homepage_url = "https://squawkhq.com",
     .programs = &[_][]const u8{"squawk"},
@@ -15680,6 +17248,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "scdoc",
     .domain = "sr.ht/scdoc",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"scdoc"},
@@ -15690,6 +17259,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "srt",
     .domain = "srtalliance.org",
+    .kind = .cli,
     .description = "Secure, Reliable, Transport",
     .homepage_url = "https://www.srtalliance.org/",
     .programs = &[_][]const u8{ "srt-ffplay", "srt-file-transmit", "srt-live-transmit", "srt-tunnel" },
@@ -15700,6 +17270,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sshx",
     .domain = "sshx.io",
+    .kind = .cli,
     .description = "Fast, collaborative live terminal sharing over the web",
     .homepage_url = "https://sshx.io",
     .programs = &[_][]const u8{"sshx"},
@@ -15710,6 +17281,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "starship",
     .domain = "starship.rs",
+    .kind = .cli,
     .description = "☄🌌️  The minimal, blazing-fast, and infinitely customizable prompt for any shell!",
     .homepage_url = "https://starship.rs",
     .programs = &[_][]const u8{"starship"},
@@ -15720,6 +17292,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Stats",
     .domain = "stats.app",
+    .kind = .app,
     .description = "A macOS system monitor in your menu bar.",
     .homepage_url = "https://github.com/exelban/stats",
     .programs = &[_][]const u8{"stats"},
@@ -15730,6 +17303,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "steampipe",
     .domain = "steampipe.io",
+    .kind = .cli,
     .description = "Zero-ETL, infinite possibilities. Live query APIs, code & more with SQL. No DB required.",
     .homepage_url = "https://steampipe.io/",
     .programs = &[_][]const u8{"steampipe"},
@@ -15740,6 +17314,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "jq",
     .domain = "stedolan.github.io/jq",
+    .kind = .cli,
     .description = "Lightweight and flexible command-line JSON processor",
     .homepage_url = "https://jqlang.github.io/jq/",
     .programs = &[_][]const u8{"jq"},
@@ -15750,6 +17325,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "strace",
     .domain = "strace.io",
+    .kind = .cli,
     .description = "strace is a diagnostic, debugging and instructional userspace utility for Linux",
     .homepage_url = "https://strace.io/",
     .programs = &[_][]const u8{"strace"},
@@ -15760,6 +17336,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "streamlink",
     .domain = "streamlink.github.io",
+    .kind = .cli,
     .description = "Streamlink is a CLI utility which pipes video streams from various services into a video player",
     .homepage_url = "https://streamlink.github.io/",
     .programs = &[_][]const u8{"streamlink"},
@@ -15770,6 +17347,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "stripe",
     .domain = "stripe.com",
+    .kind = .cli,
     .description = "A command-line tool for Stripe",
     .homepage_url = "https://stripe.com/docs/stripe-cli",
     .programs = &[_][]const u8{"stripe"},
@@ -15780,6 +17358,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "supabase",
     .domain = "supabase.com/cli",
+    .kind = .cli,
     .description = "Supabase CLI. Manage postgres migrations, run Supabase locally, deploy edge functions. Postgres backups. Generating types from your database schema.",
     .homepage_url = "https://supabase.com/docs/reference/cli/about",
     .programs = &[_][]const u8{"supabase"},
@@ -15790,6 +17369,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "surreal",
     .domain = "surrealdb.com",
+    .kind = .cli,
     .description = "A scalable, distributed, collaborative, document-graph database, for the realtime web",
     .homepage_url = "https://surrealdb.com",
     .programs = &[_][]const u8{"surreal"},
@@ -15800,6 +17380,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "genact",
     .domain = "svenstaro.github.io/genact",
+    .kind = .cli,
     .description = "🌀 A nonsense activity generator",
     .homepage_url = "https://svenstaro.github.io/genact/",
     .programs = &[_][]const u8{"genact"},
@@ -15810,6 +17391,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swagger-codegen",
     .domain = "swagger.io/swagger-codegen",
+    .kind = .cli,
     .description = "swagger-codegen contains a template-driven engine to generate documentation, API clients and server stubs in different languages by parsing your OpenAPI / Swagger definition.",
     .homepage_url = "https://swagger.io/tools/swagger-codegen/",
     .programs = &[_][]const u8{"swagger-codegen"},
@@ -15820,6 +17402,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swift",
     .domain = "swift.org",
+    .kind = .cli,
     .description = "The Swift Programming Language",
     .homepage_url = "https://swift.org",
     .programs = &[_][]const u8{ "docc", "dsymutil", "sourcekit-lsp", "swift-api-checker.py", "swift-build-sdk-interfaces", "swift-build-tool", "swift-demangle", "swift-driver", "swift-format", "swift-frontend", "swift-help", "swift-package", "swift-plugin-server", "swift-stdlib-tool", "swift", "swift-api-digester", "swift-api-extract", "swift-autolink-extract", "swift-build", "swift-experimental-sdk", "swift-package-collection", "swift-package-registry", "swift-run", "swift-symbolgraph-extract", "swift-test", "swiftc" },
@@ -15830,6 +17413,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "swig",
     .domain = "swig.org",
+    .kind = .cli,
     .description = "SWIG is a software development tool that connects programs written in C and C++ with a variety of high-level programming languages.",
     .homepage_url = "https://www.swig.org/",
     .programs = &[_][]const u8{ "swig", "ccache-swig" },
@@ -15840,6 +17424,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "symfony",
     .domain = "symfony.com",
+    .kind = .cli,
     .description = "The Symfony CLI tool",
     .homepage_url = "https://symfony.com/download",
     .programs = &[_][]const u8{"symfony"},
@@ -15850,6 +17435,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "php-cs-fixer",
     .domain = "symfony.com/cs",
+    .kind = .cli,
     .description = "A tool to automatically fix PHP Coding Standards issues",
     .homepage_url = "https://cs.symfony.com/",
     .programs = &[_][]const u8{"php-cs-fixer"},
@@ -15860,6 +17446,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sympy",
     .domain = "sympy.org",
+    .kind = .library,
     .description = "A computer algebra system written in pure Python",
     .homepage_url = "https://sympy.org/",
     .programs = &[_][]const u8{},
@@ -15870,6 +17457,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "syncthing",
     .domain = "syncthing.net",
+    .kind = .cli,
     .description = "Open source continuous file synchronization application",
     .homepage_url = "https://syncthing.net/",
     .programs = &[_][]const u8{"syncthing"},
@@ -15880,6 +17468,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "systemd",
     .domain = "systemd.io",
+    .kind = .cli,
     .description = "The systemd System and Service Manager ",
     .homepage_url = "https://systemd.io",
     .programs = &[_][]const u8{ "busctl", "coredumpctl", "hostnamectl", "journalctl", "kernel-install", "localectl", "loginctl", "machinectl", "networkctl", "oomctl", "portablectl", "resolvectl", "systemctl", "systemd-ac-power", "systemd-analyze", "systemd-ask-password", "systemd-cat", "systemd-cgls", "systemd-cgtop", "systemd-confext", "systemd-creds", "systemd-delta", "systemd-detect-virt", "systemd-dissect", "systemd-escape", "systemd-firstboot", "systemd-id128", "systemd-inhibit", "systemd-machine-id-setup", "systemd-mount", "systemd-notify", "systemd-nspawn", "systemd-path", "systemd-repart", "systemd-resolve", "systemd-run", "systemd-socket-activate", "systemd-stdio-bridge", "systemd-sysext", "systemd-sysusers", "systemd-tmpfiles", "systemd-tty-ask-password-agent", "systemd-umount", "timedatectl", "udevadm", "userdbctl", "halt", "init", "mount.ddi", "poweroff", "reboot", "resolvconf", "runlevel", "shutdown", "telinit" },
@@ -15890,6 +17479,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libudev",
     .domain = "systemd.io/libudev",
+    .kind = .library,
     .description = "Native libudev shared library and development interface.",
     .homepage_url = "https://systemd.io/",
     .programs = &[_][]const u8{},
@@ -15900,6 +17490,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "TablePlus",
     .domain = "tableplus.com",
+    .kind = .app,
     .description = "A modern, native database management tool.",
     .homepage_url = "https://tableplus.com",
     .programs = &[_][]const u8{"tableplus"},
@@ -15910,6 +17501,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "taglib-config",
     .domain = "taglib.org",
+    .kind = .cli,
     .description = "TagLib Audio Meta-Data Library",
     .homepage_url = "https://taglib.org/",
     .programs = &[_][]const u8{"taglib-config"},
@@ -15920,6 +17512,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tailcall",
     .domain = "tailcall.run",
+    .kind = .cli,
     .description = "High Performance GraphQL Runtime",
     .homepage_url = "https://tailcall.run",
     .programs = &[_][]const u8{"tailcall"},
@@ -15930,6 +17523,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tailscale",
     .domain = "tailscale.com",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "tailscale", "tailscaled" },
@@ -15940,6 +17534,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tailwindcss",
     .domain = "tailwindcss.com",
+    .kind = .cli,
     .description = "A utility-first CSS framework for rapid UI development.",
     .homepage_url = "https://tailwindcss.com",
     .programs = &[_][]const u8{"tailwindcss"},
@@ -15950,6 +17545,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mecab",
     .domain = "taku910.github.io/mecab",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "mecab", "mecab-config" },
@@ -15960,6 +17556,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mecab-ipadic",
     .domain = "taku910.github.io/mecab-ipadic",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -15970,6 +17567,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "talosctl",
     .domain = "talos.dev",
+    .kind = .cli,
     .description = "CLI for out-of-band management of Kubernetes nodes created by Talos",
     .homepage_url = "https://www.talos.dev/",
     .programs = &[_][]const u8{"talosctl"},
@@ -15980,6 +17578,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "taplo",
     .domain = "taplo.tamasfe.dev",
+    .kind = .cli,
     .description = "A TOML toolkit written in Rust",
     .homepage_url = "https://taplo.tamasfe.dev",
     .programs = &[_][]const u8{"taplo"},
@@ -15990,6 +17589,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tart",
     .domain = "tart.run",
+    .kind = .cli,
     .description = "macOS and Linux VMs on Apple Silicon to use in CI and other automations",
     .homepage_url = "https://tart.run",
     .programs = &[_][]const u8{"tart"},
@@ -16000,6 +17600,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "task",
     .domain = "taskfile.dev",
+    .kind = .cli,
     .description = "A task runner / simpler Make alternative written in Go",
     .homepage_url = "https://taskfile.dev",
     .programs = &[_][]const u8{"task"},
@@ -16010,6 +17611,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tcl-lang",
     .domain = "tcl-lang.org",
+    .kind = .cli,
     .description = "Tool Command Language",
     .homepage_url = "https://www.tcl-lang.org",
     .programs = &[_][]const u8{ "tclsh", "wish" },
@@ -16020,6 +17622,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "expect",
     .domain = "tcl-lang.org/expect",
+    .kind = .cli,
     .description = "Program that can automate interactive applications",
     .homepage_url = "https://core.tcl-lang.org/expect/index",
     .programs = &[_][]const u8{ "autoexpect", "autopasswd", "cryptdir", "decryptdir", "dislocate", "expect", "ftp-rfc", "kibitz", "lpunlock", "mkpasswd", "multixterm", "passmass", "rftp", "rlogin-cwd", "timed-read", "timed-run", "tknewsbiff", "tkpasswd", "unbuffer", "weather", "xkibitz", "xpstat" },
@@ -16030,6 +17633,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tcl",
     .domain = "tcl.tk/tcl",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "sqlite3_analyzer", "tclsh{{version.major}}.{{version.minor}}", "tclsh" },
@@ -16040,6 +17644,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pcap-config",
     .domain = "tcpdump.org",
+    .kind = .cli,
     .description = "the LIBpcap interface to various kernel packet capture mechanism",
     .homepage_url = "https://www.tcpdump.org/",
     .programs = &[_][]const u8{"pcap-config"},
@@ -16050,6 +17655,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tcsh",
     .domain = "tcsh.org",
+    .kind = .cli,
     .description = "Enhanced, fully compatible version of the Berkeley C shell",
     .homepage_url = "https://www.tcsh.org/",
     .programs = &[_][]const u8{ "csh", "tcsh" },
@@ -16060,6 +17666,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tea/cli",
     .domain = "tea.xyz",
+    .kind = .library,
     .description = "Run Anything",
     .homepage_url = "https://pkgx.sh",
     .programs = &[_][]const u8{},
@@ -16070,6 +17677,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tectonic",
     .domain = "tectonic-typesetting.github.io",
+    .kind = .cli,
     .description = "A modernized, complete, self-contained TeX/LaTeX engine, powered by XeTeX and TeXLive.",
     .homepage_url = "https://tectonic-typesetting.github.io/",
     .programs = &[_][]const u8{"tectonic"},
@@ -16080,6 +17688,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Telegram",
     .domain = "telegram.org",
+    .kind = .app,
     .description = "A cloud-based messaging app with a focus on speed and security.",
     .homepage_url = "https://telegram.org",
     .programs = &[_][]const u8{"telegram"},
@@ -16090,6 +17699,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "templ",
     .domain = "templ.guide",
+    .kind = .cli,
     .description = "A language for writing HTML user interfaces in Go.",
     .homepage_url = "https://templ.guide",
     .programs = &[_][]const u8{"templ"},
@@ -16100,6 +17710,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "temporal",
     .domain = "temporal.io",
+    .kind = .cli,
     .description = "Command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal",
     .homepage_url = "https://temporal.io/",
     .programs = &[_][]const u8{"temporal"},
@@ -16110,6 +17721,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "termshark",
     .domain = "termshark.io",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"termshark"},
@@ -16120,6 +17732,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terraform-docs",
     .domain = "terraform-docs.io",
+    .kind = .cli,
     .description = "Generate documentation from Terraform modules in various output formats",
     .homepage_url = "https://terraform-docs.io",
     .programs = &[_][]const u8{"terraform-docs"},
@@ -16130,6 +17743,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terraform",
     .domain = "terraform.io",
+    .kind = .cli,
     .description = "Terraform enables you to safely and predictably create, change, and improve infrastructure. It is a source-available tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.",
     .homepage_url = "https://www.terraform.io",
     .programs = &[_][]const u8{"terraform"},
@@ -16140,6 +17754,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terraform-cdk",
     .domain = "terraform.io/cdk",
+    .kind = .cli,
     .description = "Define infrastructure resources using programming constructs and provision them using HashiCorp Terraform",
     .homepage_url = "https://www.terraform.io/cdktf",
     .programs = &[_][]const u8{"cdktf"},
@@ -16150,6 +17765,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terragrunt",
     .domain = "terragrunt.gruntwork.io",
+    .kind = .cli,
     .description = "Terragrunt is a flexible orchestration tool that allows Infrastructure as Code written in OpenTofu/Terraform to scale.",
     .homepage_url = "https://terragrunt.gruntwork.io/",
     .programs = &[_][]const u8{"terragrunt"},
@@ -16160,6 +17776,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "terratag",
     .domain = "terratag.io",
+    .kind = .cli,
     .description = "Terratag is a CLI tool that enables users of Terraform to automatically create and maintain tags across their entire set of AWS, Azure, and GCP resources",
     .homepage_url = "https://terratag.io",
     .programs = &[_][]const u8{"terratag"},
@@ -16170,6 +17787,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tesseract",
     .domain = "tesseract-ocr.github.io",
+    .kind = .cli,
     .description = "Tesseract Open Source OCR Engine (main repository)",
     .homepage_url = "https://github.com/tesseract-ocr/",
     .programs = &[_][]const u8{"tesseract"},
@@ -16180,6 +17798,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "The Unarchiver",
     .domain = "the-unarchiver.com",
+    .kind = .cli,
     .description = "A multi-format archive decompressor for macOS.",
     .homepage_url = "https://theunarchiver.com",
     .programs = &[_][]const u8{ "unar", "lsar" },
@@ -16190,6 +17809,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dnsmasq",
     .domain = "thekelleys.org.uk/dnsmasq",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"dnsmasq"},
@@ -16200,6 +17820,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "theora",
     .domain = "theora.org",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16210,6 +17831,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "talisman",
     .domain = "thoughtworks.github.io/talisman",
+    .kind = .cli,
     .description = "Using a pre-commit hook, Talisman validates the outgoing changeset for things that look suspicious — such as tokens, passwords, and private keys.",
     .homepage_url = "https://thoughtworks.github.io/talisman/",
     .programs = &[_][]const u8{"talisman"},
@@ -16220,6 +17842,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "editline",
     .domain = "thrysoee.dk/editline",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16230,6 +17853,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pixlet",
     .domain = "tidbyt.com",
+    .kind = .cli,
     .description = "Build apps for pixel-based displays ✨",
     .homepage_url = "https://tidbyt.com",
     .programs = &[_][]const u8{"pixlet"},
@@ -16240,6 +17864,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tilt",
     .domain = "tilt.dev",
+    .kind = .cli,
     .description = "Define your dev environment as code. For microservice apps on Kubernetes.",
     .homepage_url = "https://tilt.dev/",
     .programs = &[_][]const u8{"tilt"},
@@ -16250,6 +17875,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tb",
     .domain = "tinybird.co",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"tb"},
@@ -16260,6 +17886,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tinygo",
     .domain = "tinygo.org",
+    .kind = .cli,
     .description = "Go compiler for small places. Microcontrollers, WebAssembly (WASM/WASI), and command-line tools. Based on LLVM.",
     .homepage_url = "https://tinygo.org",
     .programs = &[_][]const u8{"tinygo"},
@@ -16270,6 +17897,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tldr",
     .domain = "tldr.sh",
+    .kind = .cli,
     .description = "C command-line client for tldr pages 📚",
     .homepage_url = null,
     .programs = &[_][]const u8{"tldr"},
@@ -16280,6 +17908,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "teller",
     .domain = "tlr.dev",
+    .kind = .cli,
     .description = "Cloud native secrets management for developers - never leave your command line for secrets.",
     .homepage_url = null,
     .programs = &[_][]const u8{"teller"},
@@ -16290,6 +17919,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tmate",
     .domain = "tmate.io",
+    .kind = .cli,
     .description = "Instant Terminal Sharing",
     .homepage_url = "https://tmate.io/",
     .programs = &[_][]const u8{"tmate"},
@@ -16300,6 +17930,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tox",
     .domain = "tox.wiki",
+    .kind = .cli,
     .description = "Command line driven CI frontend and development task automation tool.",
     .homepage_url = "https://tox.wiki/en/latest/",
     .programs = &[_][]const u8{"tox"},
@@ -16310,6 +17941,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "traefik",
     .domain = "traefik.io",
+    .kind = .cli,
     .description = "The Cloud Native Application Proxy",
     .homepage_url = "https://traefik.io/",
     .programs = &[_][]const u8{"traefik"},
@@ -16320,6 +17952,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Transmit",
     .domain = "transmit.panic.com",
+    .kind = .cli,
     .description = "A file transfer client for macOS.",
     .homepage_url = "https://panic.com/transmit",
     .programs = &[_][]const u8{"transmit"},
@@ -16330,6 +17963,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tree-sitter",
     .domain = "tree-sitter.github.io",
+    .kind = .cli,
     .description = "Parser generator tool and incremental parsing library",
     .homepage_url = "https://tree-sitter.github.io/",
     .programs = &[_][]const u8{"tree-sitter"},
@@ -16340,6 +17974,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trip",
     .domain = "trippy.cli.rs",
+    .kind = .cli,
     .description = "Network diagnostic tool, inspired by mtr",
     .homepage_url = "https://trippy.cli.rs/",
     .programs = &[_][]const u8{"trip"},
@@ -16350,6 +17985,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "trufflehog",
     .domain = "trufflesecurity.com/trufflehog",
+    .kind = .cli,
     .description = "Find, verify, and analyze leaked credentials",
     .homepage_url = "https://trufflesecurity.com/",
     .programs = &[_][]const u8{"trufflehog"},
@@ -16360,6 +17996,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ttyd",
     .domain = "tsl0922.github.io/ttyd",
+    .kind = .cli,
     .description = "Command-line tool for sharing terminal over the web",
     .homepage_url = "https://tsl0922.github.io/ttyd/",
     .programs = &[_][]const u8{"ttyd"},
@@ -16370,6 +18007,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcbeautify",
     .domain = "tuist.io/xcbeautify",
+    .kind = .cli,
     .description = "A little beautifier tool for xcodebuild",
     .homepage_url = null,
     .programs = &[_][]const u8{"xcbeautify"},
@@ -16380,6 +18018,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xz",
     .domain = "tukaani.org/xz",
+    .kind = .cli,
     .description = "General-purpose data compression with high compression ratio",
     .homepage_url = "https://tukaani.org/xz/",
     .programs = &[_][]const u8{ "lzcat", "lzcmp", "lzdiff", "lzegrep", "lzfgrep", "lzgrep", "lzless", "lzma", "lzmadec", "lzmainfo", "lzmore", "unlzma", "unxz", "xz", "xzcat", "xzcmp", "xzdec", "xzdiff", "xzegrep", "xzfgrep", "xzgrep", "xzless", "xzmore" },
@@ -16390,6 +18029,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Tunnelblick",
     .domain = "tunnelblick.net",
+    .kind = .app,
     .description = "A free, open-source graphic user interface for OpenVPN on macOS.",
     .homepage_url = "https://tunnelblick.net",
     .programs = &[_][]const u8{"tunnelblick"},
@@ -16400,6 +18040,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "turso",
     .domain = "turso.tech",
+    .kind = .cli,
     .description = "Command line interface to Turso.",
     .homepage_url = "https://turso.tech",
     .programs = &[_][]const u8{"turso"},
@@ -16410,6 +18051,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libsql-server",
     .domain = "turso.tech/sqld",
+    .kind = .cli,
     .description = "libSQL server: the database server behind Turso and `turso dev`.",
     .homepage_url = "https://github.com/tursodatabase/libsql/tree/main/libsql-server",
     .programs = &[_][]const u8{"sqld"},
@@ -16420,6 +18062,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tuxpaint",
     .domain = "tuxpaint.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "tp-magic-config", "tuxpaint", "tuxpaint-import" },
@@ -16430,6 +18073,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "tsc",
     .domain = "typescriptlang.org",
+    .kind = .cli,
     .description = "TypeScript is a superset of JavaScript that compiles to clean JavaScript output.",
     .homepage_url = "https://www.typescriptlang.org/",
     .programs = &[_][]const u8{"tsc"},
@@ -16440,6 +18084,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "typesense",
     .domain = "typesense.org",
+    .kind = .cli,
     .description = "Fast, typo-tolerant search engine for building delightful search experiences",
     .homepage_url = "https://typesense.org",
     .programs = &[_][]const u8{"typesense-server"},
@@ -16450,6 +18095,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "typst",
     .domain = "typst.app",
+    .kind = .cli,
     .description = "A new markup-based typesetting system that is powerful and easy to learn.",
     .homepage_url = "https://typst.app/",
     .programs = &[_][]const u8{"typst"},
@@ -16460,6 +18106,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unbound",
     .domain = "unbound.net",
+    .kind = .cli,
     .description = "Unbound is a validating, recursive, and caching DNS resolver.",
     .homepage_url = "https://nlnetlabs.nl/unbound",
     .programs = &[_][]const u8{ "unbound", "unbound-anchor", "unbound-checkconf", "unbound-control", "unbound-control-setup", "unbound-host" },
@@ -16470,6 +18117,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unicode",
     .domain = "unicode.org",
+    .kind = .cli,
     .description = "The home of the ICU project source code.",
     .homepage_url = "https://icu.unicode.org/",
     .programs = &[_][]const u8{ "derb", "genbrk", "gencfu", "gencnval", "gendict", "genrb", "icu-config", "icuexportdata", "icuinfo", "makeconv", "pkgdata", "uconv" },
@@ -16480,6 +18128,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "netcdf",
     .domain = "unidata.ucar.edu/netcdf",
+    .kind = .cli,
     .description = "Official GitHub repository for netCDF-C libraries and utilities.",
     .homepage_url = "https://www.unidata.ucar.edu/software/netcdf/",
     .programs = &[_][]const u8{ "nc-config", "nccopy", "ncdump", "ncgen", "ncgen3" },
@@ -16490,6 +18139,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "unixodbc",
     .domain = "unixodbc.org",
+    .kind = .cli,
     .description = "The unixODBC Project goals are to develop and promote unixODBC to be the definitive standard for ODBC on non MS Windows platforms.",
     .homepage_url = "https://www.unixodbc.org/",
     .programs = &[_][]const u8{ "dltest", "isql", "iusql", "odbc_config", "odbcinst", "slencheck" },
@@ -16500,6 +18150,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "uplift",
     .domain = "upliftci.dev",
+    .kind = .cli,
     .description = "Semantic versioning the easy way. Powered by Conventional Commits. Built for use with CI.",
     .homepage_url = "https://upliftci.dev",
     .programs = &[_][]const u8{"uplift"},
@@ -16510,6 +18161,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "upx",
     .domain = "upx.github.io",
+    .kind = .cli,
     .description = "UPX - the Ultimate Packer for eXecutables",
     .homepage_url = "https://upx.github.io/",
     .programs = &[_][]const u8{"upx"},
@@ -16520,6 +18172,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "uriparse",
     .domain = "uriparser.github.io",
+    .kind = .cli,
     .description = " :hocho: Strictly RFC 3986 compliant URI parsing and handling library written in C89; moved from SourceForge to GitHub",
     .homepage_url = "https://uriparser.github.io/",
     .programs = &[_][]const u8{"uriparse"},
@@ -16530,6 +18183,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vale",
     .domain = "vale.sh",
+    .kind = .cli,
     .description = ":pencil: A markup-aware linter for prose built with speed and extensibility in mind.",
     .homepage_url = "https://vale.sh/",
     .programs = &[_][]const u8{"vale"},
@@ -16540,6 +18194,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "valkey",
     .domain = "valkey.io",
+    .kind = .cli,
     .description = "A flexible distributed key-value datastore that is optimized for caching and other realtime workloads.",
     .homepage_url = "https://valkey.io",
     .programs = &[_][]const u8{ "valkey-server", "valkey-cli", "valkey-benchmark" },
@@ -16550,6 +18205,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vamp",
     .domain = "vamp-plugins.org",
+    .kind = .cli,
     .description = "Audio processing plugin system sdk",
     .homepage_url = "https://www.vamp-plugins.org/",
     .programs = &[_][]const u8{ "vamp-simple-host", "vamp-rdf-template-generator" },
@@ -16560,6 +18216,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Vanna",
     .domain = "vanna.ai",
+    .kind = .library,
     .description = "🤖 Chat with your SQL database 📊. Accurate Text-to-SQL Generation via LLMs using RAG 🔄.",
     .homepage_url = "https://vanna.ai/docs/",
     .programs = &[_][]const u8{},
@@ -16570,6 +18227,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vspipe",
     .domain = "vapoursynth.com",
+    .kind = .cli,
     .description = "A video processing framework with simplicity in mind",
     .homepage_url = "https://www.vapoursynth.com",
     .programs = &[_][]const u8{"vspipe"},
@@ -16580,6 +18238,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vault",
     .domain = "vaultproject.io",
+    .kind = .cli,
     .description = "A tool for secrets management, encryption as a service, and privileged access management",
     .homepage_url = "https://www.vaultproject.io/",
     .programs = &[_][]const u8{"vault"},
@@ -16590,6 +18249,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vcluster",
     .domain = "vcluster.com",
+    .kind = .cli,
     .description = "vCluster - Create fully functional virtual Kubernetes clusters - Each vcluster runs inside a namespace of the underlying k8s cluster. It's cheaper than creating separate full-blown clusters and it offers better multi-tenancy and isolation than regular namespaces.",
     .homepage_url = "https://www.vcluster.com",
     .programs = &[_][]const u8{"vcluster"},
@@ -16600,6 +18260,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "mockery",
     .domain = "vektra.github.io/mockery",
+    .kind = .cli,
     .description = "Mock code autogenerator for Golang",
     .homepage_url = "https://vektra.github.io/mockery/",
     .programs = &[_][]const u8{"mockery"},
@@ -16610,6 +18271,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "velero",
     .domain = "velero.io",
+    .kind = .cli,
     .description = "Backup and migrate Kubernetes applications and their persistent volumes",
     .homepage_url = "https://velero.io/",
     .programs = &[_][]const u8{"velero"},
@@ -16620,6 +18282,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gen-ir",
     .domain = "veracode.com/gen-ir",
+    .kind = .cli,
     .description = "Generates LLVM IR for Xcode Projects",
     .homepage_url = null,
     .programs = &[_][]const u8{"gen-ir"},
@@ -16630,6 +18293,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "next",
     .domain = "vercel.com/next",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"next"},
@@ -16640,6 +18304,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pkg",
     .domain = "vercel.com/pkg",
+    .kind = .cli,
     .description = "Package your Node.js project into an executable",
     .homepage_url = "https://npmjs.com/pkg",
     .programs = &[_][]const u8{"pkg"},
@@ -16650,6 +18315,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "versitygw",
     .domain = "versity.com/versitygw",
+    .kind = .cli,
     .description = "versity s3 gateway",
     .homepage_url = "https://www.versity.com/products/versitygw/",
     .programs = &[_][]const u8{"versitygw"},
@@ -16660,6 +18326,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ksops",
     .domain = "viaduct.ai/ksops",
+    .kind = .cli,
     .description = "KSOPS - A Flexible Kustomize Plugin for SOPS Encrypted Resources",
     .homepage_url = null,
     .programs = &[_][]const u8{"ksops"},
@@ -16670,6 +18337,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libbluray",
     .domain = "videolan.org/libbluray",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16680,6 +18348,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libplacebo",
     .domain = "videolan.org/libplacebo",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16690,6 +18359,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "x264",
     .domain = "videolan.org/x264",
+    .kind = .cli,
     .description = "H.264/AVC encoder",
     .homepage_url = "https://www.videolan.org/developers/x264.html",
     .programs = &[_][]const u8{"x264"},
@@ -16700,6 +18370,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "x265",
     .domain = "videolan.org/x265",
+    .kind = .cli,
     .description = "H.265/HEVC encoder",
     .homepage_url = "https://bitbucket.org/multicoreware/x265_git",
     .programs = &[_][]const u8{"x265"},
@@ -16710,6 +18381,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vim",
     .domain = "vim.org",
+    .kind = .cli,
     .description = "The official Vim repository",
     .homepage_url = "https://www.vim.org",
     .programs = &[_][]const u8{ "vim", "vi" },
@@ -16720,6 +18392,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "virtualenv",
     .domain = "virtualenv.pypa.io",
+    .kind = .cli,
     .description = "Tool for creating isolated virtual python environments",
     .homepage_url = "https://virtualenv.pypa.io/",
     .programs = &[_][]const u8{"virtualenv"},
@@ -16730,6 +18403,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vde",
     .domain = "virtualsquare.org/vde",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16740,6 +18414,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vite",
     .domain = "vitejs.dev",
+    .kind = .cli,
     .description = "Next generation frontend tooling. It's fast!",
     .homepage_url = "https://vitejs.dev/",
     .programs = &[_][]const u8{"vite"},
@@ -16750,6 +18425,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vitess",
     .domain = "vitess.io",
+    .kind = .cli,
     .description = "Horizontally scalable MySQL: a database clustering system that shards MySQL behind a query router",
     .homepage_url = "https://vitess.io",
     .programs = &[_][]const u8{ "mysqlctl", "mysqlctld", "vtorc", "vtctld", "vtctldclient", "vtgate", "vttablet", "vtbackup", "vtcombo" },
@@ -16760,6 +18436,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "v",
     .domain = "vlang.io",
+    .kind = .cli,
     .description = "Simple, fast, safe, compiled language for developing maintainable software. Compiles itself in <1s with zero library dependencies. Supports automatic C => V translation. https://vlang.io",
     .homepage_url = null,
     .programs = &[_][]const u8{"v"},
@@ -16770,6 +18447,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "VLC",
     .domain = "vlc.app",
+    .kind = .app,
     .description = "A free and open-source cross-platform multimedia player.",
     .homepage_url = "https://videolan.org",
     .programs = &[_][]const u8{"vlc"},
@@ -16780,6 +18458,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "volta",
     .domain = "volta.sh",
+    .kind = .cli,
     .description = "JavaScript toolchain manager for reproducible environments",
     .homepage_url = "https://volta.sh",
     .programs = &[_][]const u8{"volta"},
@@ -16790,6 +18469,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wails",
     .domain = "wails.io",
+    .kind = .cli,
     .description = "Create beautiful applications using Go",
     .homepage_url = "https://wails.io",
     .programs = &[_][]const u8{"wails"},
@@ -16800,6 +18480,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wait4x",
     .domain = "wait4x.dev",
+    .kind = .cli,
     .description = "Wait4X allows you to wait for a port or a service to enter the requested state.",
     .homepage_url = "https://wait4x.dev",
     .programs = &[_][]const u8{"wait4x"},
@@ -16810,6 +18491,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Warp",
     .domain = "warp.dev",
+    .kind = .app,
     .description = "A modern, Rust-based terminal with AI built in.",
     .homepage_url = "https://warp.dev",
     .programs = &[_][]const u8{"warp"},
@@ -16820,6 +18502,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wasmer",
     .domain = "wasmer.io",
+    .kind = .cli,
     .description = "🚀 Fast, secure, lightweight containers based on WebAssembly",
     .homepage_url = "https://wasmer.io",
     .programs = &[_][]const u8{"wasmer"},
@@ -16830,6 +18513,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "watchexec",
     .domain = "watchexec.github.io",
+    .kind = .cli,
     .description = "Executes commands in response to file modifications",
     .homepage_url = "https://watchexec.github.io/",
     .programs = &[_][]const u8{"watchexec"},
@@ -16840,6 +18524,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "dos2unix",
     .domain = "waterlan.home.xs4all.nl/dos2unix",
+    .kind = .cli,
     .description = "Convert text between DOS, UNIX, and Mac formats",
     .homepage_url = "https://waterlan.home.xs4all.nl/dos2unix.html",
     .programs = &[_][]const u8{ "dos2unix", "mac2unix", "unix2dos", "unix2mac" },
@@ -16850,6 +18535,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wavpack",
     .domain = "wavpack.com",
+    .kind = .cli,
     .description = "WavPack encode/decode library, command-line programs, and several plugins",
     .homepage_url = "https://www.wavpack.com/",
     .programs = &[_][]const u8{ "wavpack", "wvunpack", "wvtag", "wvgain" },
@@ -16860,6 +18546,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wayland",
     .domain = "wayland.freedesktop.org",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"wayland-scanner"},
@@ -16870,6 +18557,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wayland-protocols",
     .domain = "wayland.freedesktop.org/protocols",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16880,6 +18568,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libvpx",
     .domain = "webmproject.org/libvpx",
+    .kind = .library,
     .description = "Mirror only. Please do not send pull requests.",
     .homepage_url = "http://www.webmproject.org/code/",
     .programs = &[_][]const u8{},
@@ -16890,6 +18579,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "werf",
     .domain = "werf.io",
+    .kind = .cli,
     .description = "A solution for implementing efficient and consistent software delivery to Kubernetes facilitating best practices.",
     .homepage_url = "https://werf.io/",
     .programs = &[_][]const u8{"werf"},
@@ -16900,6 +18590,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wezterm",
     .domain = "wezfurlong.org/wezterm",
+    .kind = .cli,
     .description = "A GPU-accelerated cross-platform terminal emulator and multiplexer written by @wez and implemented in Rust",
     .homepage_url = "https://wezfurlong.org/wezterm/",
     .programs = &[_][]const u8{"wezterm"},
@@ -16910,6 +18601,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "WhatsApp",
     .domain = "whatsapp.com",
+    .kind = .app,
     .description = "A messaging app for simple, reliable, and private communication.",
     .homepage_url = "https://whatsapp.com",
     .programs = &[_][]const u8{"whatsapp"},
@@ -16920,6 +18612,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "difft",
     .domain = "wilfred.me.uk/difftastic",
+    .kind = .cli,
     .description = "a structural diff that understands syntax 🟥🟩",
     .homepage_url = "https://difftastic.wilfred.me.uk/",
     .programs = &[_][]const u8{"difft"},
@@ -16930,6 +18623,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wimlib",
     .domain = "wimlib.net",
+    .kind = .cli,
     .description = "Library to create, extract, and modify Windows Imaging files",
     .homepage_url = "https://wimlib.net/",
     .programs = &[_][]const u8{ "mkwinpeimg", "wimappend", "wimapply", "wimdelete", "wimdir", "wimexport", "wimextract", "wiminfo", "wimjoin", "wimlib-imagex", "wimmount", "wimmountrw", "wimoptimize", "wimsplit", "wimunmount", "wimupdate", "wimverify" },
@@ -16940,6 +18634,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wireshark",
     .domain = "wireshark.org",
+    .kind = .cli,
     .description = "Network analyzer and capture tool - without graphical user interface",
     .homepage_url = "https://www.wireshark.org",
     .programs = &[_][]const u8{ "capinfos", "captype", "dumpcap", "editcap", "idl2wrs", "mergecap", "mmdbresolve", "randpkt", "rawshark", "reordercap", "sharkd", "text2pcap", "tshark" },
@@ -16950,6 +18645,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "applesimutils",
     .domain = "wix.com/applesimutils",
+    .kind = .cli,
     .description = "A collection of command-line utils for Apple simulators.",
     .homepage_url = null,
     .programs = &[_][]const u8{"applesimutils"},
@@ -16960,6 +18656,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "gdown",
     .domain = "wkentaro.github.io/gdown",
+    .kind = .cli,
     .description = "Google Drive Public File Downloader when Curl/Wget Fails",
     .homepage_url = null,
     .programs = &[_][]const u8{"gdown"},
@@ -16970,6 +18667,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libwpe",
     .domain = "wpewebkit.org/libwpe",
+    .kind = .library,
     .description = "General-purpose library specifically developed for the WPE-flavored port of WebKit.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16980,6 +18678,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wpebackend-fdo",
     .domain = "wpewebkit.org/wpebackend-fdo",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -16990,6 +18689,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wunderctl",
     .domain = "wundergraph.com",
+    .kind = .cli,
     .description = "WunderGraph is a Backend for Frontend Framework to optimize frontend, fullstack and backend developer workflows through API Composition.",
     .homepage_url = "https://wundergraph.com",
     .programs = &[_][]const u8{"wunderctl"},
@@ -17000,6 +18700,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "wxwidgets",
     .domain = "wxwidgets.org",
+    .kind = .cli,
     .description = "Cross-Platform C++ GUI Library",
     .homepage_url = "https://www.wxwidgets.org",
     .programs = &[_][]const u8{ "wx-config", "wxrc" },
@@ -17010,6 +18711,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "applewm",
     .domain = "x.org/applewm",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17020,6 +18722,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "exts",
     .domain = "x.org/exts",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17030,6 +18733,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ice",
     .domain = "x.org/ice",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17040,6 +18744,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "cvt",
     .domain = "x.org/libcvt",
+    .kind = .cli,
     .description = "VESA CVT standard timing modelines generator",
     .homepage_url = "https://www.x.org",
     .programs = &[_][]const u8{"cvt"},
@@ -17050,6 +18755,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libfontenc",
     .domain = "x.org/libfontenc",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17060,6 +18766,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libpthread-stubs",
     .domain = "x.org/libpthread-stubs",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17070,6 +18777,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libSM",
     .domain = "x.org/libSM",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17080,6 +18788,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libxfont2",
     .domain = "x.org/libxfont2",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17090,6 +18799,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "libxres",
     .domain = "x.org/libxres",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17100,6 +18810,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "pciaccess",
     .domain = "x.org/pciaccess",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17110,6 +18821,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "protocol",
     .domain = "x.org/protocol",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17120,6 +18832,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb",
     .domain = "x.org/protocol/xcb",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17130,6 +18843,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "sm",
     .domain = "x.org/sm",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17140,6 +18854,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "util-macros",
     .domain = "x.org/util-macros",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17150,6 +18865,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "x11",
     .domain = "x.org/x11",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17160,6 +18876,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xau",
     .domain = "x.org/xau",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17170,6 +18887,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xauth",
     .domain = "x.org/xauth",
+    .kind = .cli,
     .description = "X.Org Applications: xauth",
     .homepage_url = "https://www.x.org/",
     .programs = &[_][]const u8{"xauth"},
@@ -17180,6 +18898,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xaw",
     .domain = "x.org/xaw",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17190,6 +18909,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb",
     .domain = "x.org/xcb",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17200,6 +18920,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcb-util",
     .domain = "x.org/xcb-util",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17210,6 +18931,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcomposite",
     .domain = "x.org/xcomposite",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17220,6 +18942,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xcursor",
     .domain = "x.org/xcursor",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17230,6 +18953,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xdamage",
     .domain = "x.org/xdamage",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17240,6 +18964,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xdmcp",
     .domain = "x.org/xdmcp",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17250,6 +18975,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xfixes",
     .domain = "x.org/xfixes",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17260,6 +18986,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xft",
     .domain = "x.org/xft",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17270,6 +18997,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xi",
     .domain = "x.org/xi",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17280,6 +19008,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xinerama",
     .domain = "x.org/xinerama",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17290,6 +19019,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xinput",
     .domain = "x.org/xinput",
+    .kind = .cli,
     .description = "Utility to configure and test X input devices",
     .homepage_url = "https://gitlab.freedesktop.org/xorg/app/xinput",
     .programs = &[_][]const u8{"xinput"},
@@ -17300,6 +19030,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xkbfile",
     .domain = "x.org/xkbfile",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17310,6 +19041,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xmu",
     .domain = "x.org/xmu",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17320,6 +19052,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xpm",
     .domain = "x.org/xpm",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17330,6 +19063,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xrandr",
     .domain = "x.org/xrandr",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17340,6 +19074,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xrender",
     .domain = "x.org/xrender",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17350,6 +19085,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xscrnsaver",
     .domain = "x.org/xscrnsaver",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17360,6 +19096,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xshmfence",
     .domain = "x.org/xshmfence",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17370,6 +19107,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xt",
     .domain = "x.org/xt",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17380,6 +19118,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xtrans",
     .domain = "x.org/xtrans",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17390,6 +19129,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xtst",
     .domain = "x.org/xtst",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17400,6 +19140,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xv",
     .domain = "x.org/xv",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17410,6 +19151,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xxf86vm",
     .domain = "x.org/xxf86vm",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17420,6 +19162,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xc",
     .domain = "xcfile.dev",
+    .kind = .cli,
     .description = "Markdown defined task runner.",
     .homepage_url = "https://xcfile.dev/",
     .programs = &[_][]const u8{"xc"},
@@ -17430,6 +19173,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xerces-c",
     .domain = "xerces.apache.org/xerces-c",
+    .kind = .cli,
     .description = "Validating XML parser",
     .homepage_url = "https://xerces.apache.org/xerces-c/",
     .programs = &[_][]const u8{ "CreateDOMDocument", "DOMCount", "DOMPrint", "EnumVal", "PParse", "PSVIWriter", "Redirect", "SAX2Count", "SAX2Print", "SAXCount", "SAXPrint", "SCMPrint", "SEnumVal", "StdInParse", "XInclude" },
@@ -17440,6 +19184,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "flac",
     .domain = "xiph.org/flac",
+    .kind = .cli,
     .description = "Free Lossless Audio Codec",
     .homepage_url = "https://xiph.org/flac/",
     .programs = &[_][]const u8{"flac"},
@@ -17450,6 +19195,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "shout",
     .domain = "xiph.org/libshout",
+    .kind = .cli,
     .description = "Data and connectivity library for the icecast server",
     .homepage_url = "https://icecast.org/",
     .programs = &[_][]const u8{"shout"},
@@ -17460,6 +19206,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "ogg",
     .domain = "xiph.org/ogg",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17470,6 +19217,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "vorbis",
     .domain = "xiph.org/vorbis",
+    .kind = .library,
     .description = "Reference implementation of the Ogg Vorbis audio format.",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17480,6 +19228,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xkbcli",
     .domain = "xkbcommon.org",
+    .kind = .cli,
     .description = "keymap handling library for toolkits and window systems",
     .homepage_url = "https://xkbcommon.org/",
     .programs = &[_][]const u8{"xkbcli"},
@@ -17490,6 +19239,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xplr",
     .domain = "xplr.dev",
+    .kind = .cli,
     .description = "A hackable, minimal, fast TUI file explorer",
     .homepage_url = "https://xplr.dev",
     .programs = &[_][]const u8{"xplr"},
@@ -17500,6 +19250,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xpra",
     .domain = "xpra.org",
+    .kind = .cli,
     .description = "Persistent remote applications for X11; screen sharing for X11, MacOS and MSWindows.",
     .homepage_url = "https://xpra.org/",
     .programs = &[_][]const u8{"xpra"},
@@ -17510,6 +19261,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xray-core",
     .domain = "xtls.github.io",
+    .kind = .cli,
     .description = "Xray, Penetrates Everything. Also the best v2ray-core, with XTLS support. Fully compatible configuration.",
     .homepage_url = "https://xtls.github.io/",
     .programs = &[_][]const u8{"xray"},
@@ -17520,6 +19272,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "xvid",
     .domain = "xvid.com",
+    .kind = .library,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
@@ -17530,6 +19283,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yadm",
     .domain = "yadm.io",
+    .kind = .cli,
     .description = "Yet Another Dotfiles Manager",
     .homepage_url = "https://yadm.io/",
     .programs = &[_][]const u8{"yadm"},
@@ -17540,6 +19294,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yarn",
     .domain = "yarnpkg.com",
+    .kind = .cli,
     .description = "📦🐈 Active development trunk for Yarn ⚒",
     .homepage_url = "https://yarnpkg.com/",
     .programs = &[_][]const u8{ "yarn", "yarnpkg" },
@@ -17550,6 +19305,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yasm",
     .domain = "yasm.tortall.net",
+    .kind = .cli,
     .description = "Yasm Assembler mainline development tree",
     .homepage_url = "https://yasm.tortall.net/",
     .programs = &[_][]const u8{"yasm"},
@@ -17560,6 +19316,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "youtube-dl",
     .domain = "youtube-dl.org",
+    .kind = .cli,
     .description = "Command-line program to download videos from YouTube.com and other video sites",
     .homepage_url = "https://ytdl-org.github.io/youtube-dl/",
     .programs = &[_][]const u8{"youtube-dl"},
@@ -17570,6 +19327,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yt-dlp",
     .domain = "yt-dlp.org",
+    .kind = .cli,
     .description = "A feature-rich command-line audio/video downloader",
     .homepage_url = "https://discord.gg/H5MNcFW63r",
     .programs = &[_][]const u8{"yt-dlp"},
@@ -17580,6 +19338,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "yuicompressor",
     .domain = "yui.github.io/yuicompressor",
+    .kind = .cli,
     .description = "Yahoo! JavaScript and CSS compressor",
     .homepage_url = "https://yui.github.io/yuicompressor/",
     .programs = &[_][]const u8{"yuicompressor"},
@@ -17590,6 +19349,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zarf",
     .domain = "zarf.dev",
+    .kind = .cli,
     .description = "DevSecOps for Air Gap & Limited-Connection Systems. https://zarf.dev/",
     .homepage_url = null,
     .programs = &[_][]const u8{"zarf"},
@@ -17600,6 +19360,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "Zed",
     .domain = "zed.dev",
+    .kind = .app,
     .description = "A high-performance, multiplayer code editor.",
     .homepage_url = "https://zed.dev",
     .programs = &[_][]const u8{"zed"},
@@ -17610,6 +19371,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zeromq",
     .domain = "zeromq.org",
+    .kind = .library,
     .description = "ZeroMQ core engine in C++, implements ZMTP/3.1",
     .homepage_url = "https://www.zeromq.org",
     .programs = &[_][]const u8{},
@@ -17620,6 +19382,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "czmq",
     .domain = "zeromq.org/czmq",
+    .kind = .library,
     .description = "High-level C binding for ZeroMQ",
     .homepage_url = "https://zeromq.org",
     .programs = &[_][]const u8{},
@@ -17630,6 +19393,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zig",
     .domain = "ziglang.org",
+    .kind = .cli,
     .description = "General-purpose programming language and toolchain for maintaining robust, optimal, and reusable software.",
     .homepage_url = "https://ziglang.org/",
     .programs = &[_][]const u8{"zig"},
@@ -17640,6 +19404,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zlib",
     .domain = "zlib.net",
+    .kind = .library,
     .description = "A massively spiffy yet delicately unobtrusive compression library.",
     .homepage_url = "http://zlib.net/",
     .programs = &[_][]const u8{},
@@ -17650,6 +19415,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "minizip",
     .domain = "zlib.net/minizip",
+    .kind = .library,
     .description = "A massively spiffy yet delicately unobtrusive compression library.",
     .homepage_url = "http://zlib.net/",
     .programs = &[_][]const u8{},
@@ -17660,6 +19426,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zookeeper",
     .domain = "zookeeper.apache.org",
+    .kind = .cli,
     .description = "Apache ZooKeeper distributed coordination service",
     .homepage_url = "https://zookeeper.apache.org",
     .programs = &[_][]const u8{ "zkServer.sh", "zkCli.sh" },
@@ -17670,6 +19437,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zotregistry",
     .domain = "zotregistry.dev",
+    .kind = .cli,
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{ "zb", "zli", "zot", "zxp" },
@@ -17680,6 +19448,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zrok",
     .domain = "zrok.io",
+    .kind = .cli,
     .description = "Geo-scale, next-generation peer-to-peer sharing platform built on top of OpenZiti.",
     .homepage_url = "https://zrok.io",
     .programs = &[_][]const u8{ "zrok", "copyto", "pastefrom" },
@@ -17690,6 +19459,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "zsh",
     .domain = "zsh.sourceforge.io",
+    .kind = .cli,
     .description = "UNIX shell (command interpreter)",
     .homepage_url = "https://www.zsh.org/",
     .programs = &[_][]const u8{"zsh"},

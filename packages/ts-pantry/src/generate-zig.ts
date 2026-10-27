@@ -4,6 +4,12 @@ import { recipeDepsToSpecs } from './dependency-spec'
 import { getAliasOverrides, shouldReplaceAliases } from './alias-overrides'
 import { programsForPlatform } from './programs'
 import type { PlatformPrograms, ProgramVersions } from './programs'
+import { desktopApps, desktopFonts } from './catalog/desktop'
+
+const desktopKinds = new Map<string, 'app' | 'font'>([
+  ...desktopApps.map(pkg => [pkg.domain, 'app'] as const),
+  ...desktopFonts.map(pkg => [pkg.domain, 'font'] as const),
+])
 
 /**
  * Generate Zig package definitions from TypeScript package data
@@ -177,6 +183,7 @@ function packageToZigStruct(pkg: ZigPackageDefinition): string {
   return `    .{
         .name = "${escapeZigString(pkg.name)}",
         .domain = "${escapeZigString(pkg.domain)}",
+        .kind = .${desktopKinds.get(pkg.domain) ?? (pkg.programs.length ? 'cli' : 'library')},
         .description = "${escapeZigString(pkg.description)}",
         .homepage_url = ${pkg.homepageUrl ? `"${escapeZigString(pkg.homepageUrl)}"` : 'null'},
         .programs = ${programs},${programVersions ? `\n        .program_versions = &[_]ProgramVersion{ ${programVersions} },` : ''}
@@ -388,6 +395,8 @@ function generateZigFile(packages: ZigPackageDefinition[]): string {
 
 const std = @import("std");
 
+pub const PackageKind = enum { app, cli, library, font };
+
 /// Major-release boundaries for executable interfaces.
 pub const ProgramVersion = struct {
     name: []const u8,
@@ -399,6 +408,7 @@ pub const ProgramVersion = struct {
 pub const PackageInfo = struct {
     name: []const u8,
     domain: []const u8,
+    kind: PackageKind = .cli,
     description: []const u8,
     homepage_url: ?[]const u8,
     programs: []const []const u8,

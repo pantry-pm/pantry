@@ -69,26 +69,47 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     // pantry data dir. Treating bare `--user pkg` as a local install was
     // surprising — and meant `pkg` never landed on PATH. The flag now flips
     // the routing the same way `--global --user` does.
-    const kind = ctx.getOption("kind") orelse "cli";
+    const kind_override = ctx.getOption("kind");
+    const kind = kind_override orelse "cli";
     if (!std.mem.eql(u8, kind, "cli") and !std.mem.eql(u8, kind, "library") and !std.mem.eql(u8, kind, "app") and !std.mem.eql(u8, kind, "font")) {
         style.printForced("--kind must be app, cli, library or font\n", .{});
         std.process.exit(1);
     }
-    const desktop = std.mem.eql(u8, kind, "app") or std.mem.eql(u8, kind, "font");
-    if (desktop and builtin.os.tag != .macos) {
-        style.printForced("Application and font activation currently requires macOS\n", .{});
+    if ((std.mem.eql(u8, kind, "app") or std.mem.eql(u8, kind, "font")) and packages.items.len == 0) {
+        style.printForced("Application and font installs require an explicit package name\n", .{});
         std.process.exit(1);
     }
-    if (desktop and (!user or packages.items.len == 0)) {
-        style.printForced("Application and font installs require --user and an explicit package domain\n", .{});
-        std.process.exit(1);
+    const routing = lib.commands.install_routing;
+    var desktop_packages = std.ArrayList([]const u8).empty;
+    defer desktop_packages.deinit(allocator);
+    var ordinary_packages = std.ArrayList([]const u8).empty;
+    defer ordinary_packages.deinit(allocator);
+    for (packages.items) |package| {
+        if (routing.isDesktop(package, kind_override)) try desktop_packages.append(allocator, package) else try ordinary_packages.append(allocator, package);
+    }
+    if (desktop_packages.items.len > 0) {
+        if (builtin.os.tag != .macos) {
+            style.printForced("Application and font activation currently requires macOS\n", .{});
+            std.process.exit(1);
+        }
+        if (dry_run) {
+            for (desktop_packages.items) |package| style.printForced("Would install {s} from the Pantry registry and activate it for this user\n", .{package});
+            for (ordinary_packages.items) |package| style.printForced("Would install {s} in the {s} scope\n", .{ package, if (user) "user" else if (global) "system" else "project" });
+            std.process.exit(0);
+        }
+        var result = try lib.commands.installPackagesUserLocalCommand(allocator, desktop_packages.items, true);
+        defer result.deinit(allocator);
+        if (result.message) |message| style.printForced("{s}\n", .{message});
+        if (result.exit_code != 0 or ordinary_packages.items.len == 0) std.process.exit(result.exit_code);
+        packages.clearRetainingCapacity();
+        try packages.appendSlice(allocator, ordinary_packages.items);
     }
     const global_install = global or user;
 
     // If a global install is requested without any packages, install everything
     // marked `global: true` in deps.yaml (or system-wide when `--user` is absent).
     if (global_install and packages.items.len == 0) {
-        const result = if (user)
+        var result = if (user)
             try lib.commands.installGlobalDepsCommandUserLocal(allocator)
         else
             try lib.commands.installGlobalDepsCommand(allocator);
@@ -105,7 +126,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     // user-level (or system-wide) global dir and are linked into the bin
     // directory the shell hook puts on PATH.
     if (global_install and packages.items.len > 0) {
-        const result = if (user) try lib.commands.installPackagesUserLocalCommand(allocator, packages.items, desktop) else try lib.commands.installPackagesGloballyCommand(allocator, packages.items);
+        var result = if (user) try lib.commands.installPackagesUserLocalCommand(allocator, packages.items, false) else try lib.commands.installPackagesGloballyCommand(allocator, packages.items);
         defer result.deinit(allocator);
 
         if (result.message) |msg| {

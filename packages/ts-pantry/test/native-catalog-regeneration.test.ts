@@ -26,3 +26,20 @@ test('native catalog reads regenerated module content and preserves the last com
   }
   finally { rmSync(root, { recursive: true, force: true }) }
 })
+
+test('native catalog retains desktop kinds for routing without CLI-only flags', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-native-kind-'))
+  const packages = join(root, 'packages')
+  const output = join(root, 'generated.zig')
+  mkdirSync(packages)
+  try {
+    writeFileSync(join(packages, 'app.ts'), "export const fixturePackage = { name: 'Launchpad', domain: 'github.com/stacksjs/launchpad', programs: [], versions: ['1.0.3'] }")
+    writeFileSync(join(packages, 'cli.ts'), "export const fixturePackage = { name: 'Tool', domain: 'tool.example', programs: ['tool'], versions: ['1.0.0'] }")
+    await generateZigDefinitions(packages, output)
+    const source = readFileSync(output, 'utf8')
+    expect(source).toContain('.kind = .app,')
+    expect(source).toContain('.kind = .cli,')
+    expect(source).toContain('pub const PackageKind = enum { app, cli, library, font };')
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
