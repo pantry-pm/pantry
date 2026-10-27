@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.138...v0.11.139)
+
+## ✨ Features
+
+- publish notarized native apps through scoped registry grants ([cfca798](https://github.com/pantry-pm/pantry/commit/cfca798)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.139 ([6fd45bf](https://github.com/pantry-pm/pantry/commit/6fd45bf)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.365 ([08a63f7](https://github.com/pantry-pm/pantry/commit/08a63f7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder, hasura, LLaMA.cpp, pdm, pnp, zig ([9a225b2](https://github.com/pantry-pm/pantry/commit/9a225b2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.137...v0.11.138)
 
 ## 🐛 Bug Fixes
