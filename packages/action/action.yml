@@ -8,7 +8,7 @@ branding:
 
 inputs:
   native-app:
-    description: 'Run the complete native app pipeline declared in pantry.json: check or release'
+    description: 'Run native app checks or release: signing, enabled stores, Pantry registry publication and GitHub artifacts from pantry.json'
     required: false
   cache-build-dependencies:
     description: Enable shared archive caching for repository build scripts in subsequent steps (also enabled by PANTRY_CACHE_BUILD_DEPENDENCIES=true)

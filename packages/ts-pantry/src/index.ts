@@ -74,3 +74,5 @@ export * from './app-store-connect'
 export * from './app-store-submission'
 export * from './apple-certificates'
 export * from './installer'
+
+export * from './binary-publish'

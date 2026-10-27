@@ -2155,7 +2155,7 @@ function extractBearerToken(authHeader: string | null): string | null {
  * Validate authorization token.
  * Supports both legacy REGISTRY_TOKEN and user API tokens (ptry_ prefix).
  */
-async function validateToken(authHeader: string | null): Promise<{ valid: boolean, error?: string, userId?: string }> {
+async function validateToken(authHeader: string | null): Promise<{ valid: boolean, error?: string, userId?: string, binaryPublishDomains?: string[] }> {
   if (!authHeader) {
     return { valid: false, error: 'Authorization required' }
   }
@@ -2919,6 +2919,7 @@ async function handleAdminRoutes(
       const result = await auth.createApiToken(user.email, typeof body.name === 'string' ? body.name : 'admin-issued', {
         permissions: permissions.length > 0 ? permissions : ['read'],
         expiresInDays: typeof body.expiresInDays === 'number' ? body.expiresInDays : undefined,
+        binaryPublishDomains: body.binaryPublishDomains,
       })
       return Response.json({ success: true, ...result }, { status: 201, headers: corsHeaders })
     }
@@ -2953,19 +2954,39 @@ async function authorizeBinaryPublisher(
   return null
 }
 
+interface NativeUploadIdentity {
+  userId: string
+  binaryPublishDomains?: string[]
+}
+
+async function authenticateNativeUploader(req: Request, corsHeaders: Record<string, string>): Promise<NativeUploadIdentity | Response> {
+  const identity = await validateToken(req.headers.get('authorization'))
+  if (!identity.valid || !identity.userId)
+    return Response.json({ error: identity.error || 'Authorization required' }, { status: 401, headers: corsHeaders })
+  if (identity.userId !== '_admin' && !identity.binaryPublishDomains?.length)
+    return Response.json({ error: 'Native publication requires an operator-issued package grant', code: 'BINARY_PACKAGE_GRANT_REQUIRED' }, { status: 403, headers: corsHeaders })
+  return { userId: identity.userId, binaryPublishDomains: identity.binaryPublishDomains }
+}
+
+function deniedNativeDomain(corsHeaders: Record<string, string>): Response {
+  return Response.json({ error: 'Token cannot publish this native package or complete another publisher upload', code: 'BINARY_PACKAGE_SCOPE_DENIED' }, { status: 403, headers: corsHeaders })
+}
+
 async function handleBinaryUploadInitiate(
   req: Request,
   getPublisher: () => BinaryArtifactPublisher,
   corsHeaders: Record<string, string>,
 ): Promise<Response> {
-  const denied = await authorizeBinaryPublisher(req, corsHeaders)
-  if (denied) return denied
-  const body = await req.json().catch(() => null)
+  const identity = await authenticateNativeUploader(req, corsHeaders)
+  if (identity instanceof Response) return identity
+  const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body)
     return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
 
   try {
-    const initiated = getPublisher().initiate(body)
+    if (identity.userId !== '_admin' && !identity.binaryPublishDomains?.includes(typeof body.domain === 'string' ? body.domain.trim() : ''))
+      return deniedNativeDomain(corsHeaders)
+    const initiated = getPublisher().initiate(body, identity.userId)
     return Response.json(initiated, { status: 201, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
   }
   catch (error) {
@@ -2985,8 +3006,8 @@ async function handleBinaryUploadComplete(
   getPublisher: () => BinaryArtifactPublisher,
   corsHeaders: Record<string, string>,
 ): Promise<Response> {
-  const denied = await authorizeBinaryPublisher(req, corsHeaders)
-  if (denied) return denied
+  const identity = await authenticateNativeUploader(req, corsHeaders)
+  if (identity instanceof Response) return identity
   const body = await req.json().catch(() => null) as { uploadId?: unknown } | null
   if (!body || typeof body.uploadId !== 'string') {
     return Response.json({
@@ -2996,7 +3017,11 @@ async function handleBinaryUploadComplete(
   }
 
   try {
-    const completed = await getPublisher().complete(body.uploadId, '_admin')
+    const publisher = getPublisher()
+    const grant = publisher.uploadAuthorization(body.uploadId)
+    if (identity.userId !== '_admin' && (!identity.binaryPublishDomains?.includes(grant.domain) || grant.publisher !== identity.userId))
+      return deniedNativeDomain(corsHeaders)
+    const completed = await publisher.complete(body.uploadId, identity.userId)
     return Response.json({ success: true, ...completed }, {
       status: 201,
       headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
@@ -3809,6 +3834,8 @@ async function handleAuthRoutes(
 
     try {
       const body = await req.json() as { name?: string, permissions?: ('publish' | 'read')[], expiresInDays?: number }
+      if ('binaryPublishDomains' in body)
+        return Response.json({ error: 'Native package grants can only be issued by a registry operator' }, { status: 403, headers: corsHeaders })
       const validPermissions = ['publish', 'read'] as const
       const permissions = Array.isArray(body.permissions)
         ? body.permissions.filter((p): p is 'publish' | 'read' => validPermissions.includes(p as any))

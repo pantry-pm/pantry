@@ -72,6 +72,7 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
   if (mode === 'release' && env.CRAFT_BIN) throw new Error('Release builds must use the configured immutable runtime; CRAFT_BIN is a development override')
   // Check every configured provider before building or touching any remote store.
   const notary = mode === 'release' && config.macos?.notarize ? resolveNotaryCredentials(env) : undefined
+  if (mode === 'release' && config.registry && !(env.PANTRY_REGISTRY_TOKEN || env.PANTRY_TOKEN)) throw new Error('Native registry publishing requires a Pantry publishing token')
   if (mode === 'release' && config.android && !env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON) throw new Error('Google Play publishing requires GOOGLE_PLAY_SERVICE_ACCOUNT_JSON')
   if (mode === 'release' && config.macos?.appStore && (!env.APPLE_APP_STORE_APPLICATION_CERTIFICATE || !env.APPLE_APP_STORE_INSTALLER_CERTIFICATE || !env.APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64 || !env.APP_STORE_CONNECT_API_KEY_ID || !env.APP_STORE_CONNECT_ISSUER_ID || !env.APP_STORE_CONNECT_PRIVATE_KEY))
     throw new Error('App Store publishing requires distribution certificates, provisioning profile and App Store Connect credentials')

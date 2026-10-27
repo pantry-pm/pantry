@@ -61,6 +61,7 @@ import { iterm2comPackage } from './apps/iterm2com'
 import { karabinerelementspqrsorgPackage } from './apps/karabinerelementspqrsorg'
 import { keepassxcorgPackage } from './apps/keepassxcorg'
 import { kekaioPackage } from './apps/kekaio'
+import { launchpadPackage } from './apps/launchpad'
 import { libreofficeorgPackage } from './apps/libreofficeorg'
 import { linearappPackage } from './apps/linearapp'
 import { lmstudioaiPackage } from './apps/lmstudioai'
@@ -1853,6 +1854,7 @@ export interface Pantry {
   karabinerelementspqrsorg: typeof karabinerelementspqrsorgPackage
   keepassxcorg: typeof keepassxcorgPackage
   kekaio: typeof kekaioPackage
+  launchpad: typeof launchpadPackage
   libreofficeorg: typeof libreofficeorgPackage
   linearapp: typeof linearappPackage
   lmstudioai: typeof lmstudioaiPackage
@@ -6557,6 +6559,7 @@ export const pantry: Pantry = {
   karabinerelementspqrsorg: karabinerelementspqrsorgPackage,
   keepassxcorg: keepassxcorgPackage,
   kekaio: kekaioPackage,
+  launchpad: launchpadPackage,
   libreofficeorg: libreofficeorgPackage,
   linearapp: linearappPackage,
   lmstudioai: lmstudioaiPackage,

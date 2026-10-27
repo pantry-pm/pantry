@@ -124,7 +124,7 @@ SHA-256 over the uploaded archive.
 | `GET` | `/npm/resolve/{specs}` | GET compatibility form for bounded spec lists. |
 | `POST` | `/registry/download` | Stream or bundle resolved tarballs for efficient installs. |
 | `POST` | `/npm/download` | Compatibility alias for registry download. |
-| `POST` | `/api/v1/binaries/uploads` | Authenticate an operator and create a short-lived upload scoped to an untrusted staging key. |
+| `POST` | `/api/v1/binaries/uploads` | Authenticate an operator or an operator-issued exact-domain publishing token; create a short-lived upload scoped to an untrusted staging key. |
 | `POST` | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, digest-verify, and promote a staged native artifact. |
 | `POST` | `/api/v1/binaries/rescan` | Authenticate an operator, stream-scan a retained artifact in place, and either attest it clean or quarantine it. |
 | `POST` | `/api/v1/binaries/quarantine/rescan/prepare` | Prepare a digest- and object-identity-bound private quarantine review. |

@@ -5,8 +5,8 @@ export type Entitlements = Record<string, boolean | string | string[]>
 
 /** The supported source runtime used by newly scaffolded native apps. */
 export const defaultCraftRuntime: { revision: string, version: string } = {
-  revision: 'd675077c317c486d8b5743f3432c40ddf1cd693a',
-  version: '0.0.295',
+  revision: 'e1d6e40100ae2c35c96f9d96ed826f08ddf1f48b',
+  version: '0.0.367',
 }
 
 export function isAndroidPackageName(value: string): boolean {
@@ -25,6 +25,7 @@ export interface NativeAppConfig {
     appStore?: boolean
   }
   android?: { bundle: string, packageName: string, track: string, status: 'draft' | 'completed' | 'inProgress', userFraction?: number }
+  registry?: { domain: string, url?: string }
   release?: { draft?: boolean }
 }
 
@@ -55,6 +56,16 @@ export function readNativeAppConfig(root: string, required = false): NativeAppCo
   }
   if (config.macos?.maxBundleSize !== undefined && (!Number.isSafeInteger(config.macos.maxBundleSize) || config.macos.maxBundleSize <= 0))
     throw new Error('maxBundleSize must be a positive byte count')
+  if (config.registry) {
+    if (typeof config.registry.domain !== 'string' || !/^[a-z0-9](?:[a-z0-9._-]|\/(?=[a-z0-9])){0,213}$/i.test(config.registry.domain) || config.registry.domain.includes('..') || config.registry.domain.endsWith('/'))
+      throw new Error('Native registry publishing requires an exact package domain')
+    if (config.registry.url) {
+      const url = new URL(config.registry.url)
+      if (url.username || url.password || url.search || url.hash || (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname))))
+        throw new Error('Native registry URL must use HTTPS, or HTTP on loopback for testing')
+    }
+    if (!config.macos?.notarize) throw new Error('Native registry apps require notarized macOS distribution')
+  }
   if (config.android) {
     insideProject(root, config.android.bundle)
     if (!isAndroidPackageName(config.android.packageName) || !config.android.track || !['draft', 'completed', 'inProgress'].includes(config.android.status))

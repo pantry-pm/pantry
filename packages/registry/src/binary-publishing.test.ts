@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { InMemoryAnalytics } from './analytics'
-import { InMemoryAuthStorage } from './auth'
+import { AuthService, InMemoryAuthStorage } from './auth'
 import {
   BinaryArtifactPublisher,
   BinaryPublishError,
@@ -1256,6 +1256,7 @@ describe('binary scan-before-promote publisher', () => {
 })
 
 describe('binary publication API', () => {
+  let authStorage: InMemoryAuthStorage
   let server: ReturnType<typeof createServer>
   let baseUrl: string
   let token: string
@@ -1272,6 +1273,7 @@ describe('binary publication API', () => {
       tokenSecret: 'test-secret-that-is-long-enough',
       legacyScanAttestationCutoff: Date.parse('2026-01-02T00:00:00.000Z'),
     })
+    authStorage = new InMemoryAuthStorage()
     server = createServer(
       createLocalRegistry(baseUrl),
       port,
@@ -1279,7 +1281,7 @@ describe('binary publication API', () => {
       new InMemoryZigStorage(),
       undefined,
       undefined,
-      new InMemoryAuthStorage(),
+      authStorage,
       scanner,
       publisher,
     )
@@ -1289,6 +1291,43 @@ describe('binary publication API', () => {
   afterEach(() => {
     server.stop()
     delete process.env.PANTRY_REGISTRY_TOKEN
+  })
+
+  it('grants only an operator-selected domain and binds completion to the initiating account', async () => {
+    const auth = new AuthService(authStorage)
+    await auth.signup('launchpad-ci@example.com', 'Launchpad CI', 'test-password-123')
+    await auth.signup('other-ci@example.com', 'Other CI', 'test-password-123')
+    const session = await auth.login('launchpad-ci@example.com', 'test-password-123')
+    const escalation = await fetch(`${baseUrl}/auth/tokens`, { method: 'POST', headers: { Cookie: `pantry_session=${session.sessionToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'self-granted', permissions: ['publish'], binaryPublishDomains: ['victim.com/app'] }) })
+    expect(escalation.status).toBe(403)
+    const issue = async (email: string) => {
+      const response = await fetch(`${baseUrl}/admin/tokens`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: 'native-release', permissions: ['publish'], binaryPublishDomains: ['example.com/tool'], expiresInDays: 90 }),
+      })
+      expect(response.status).toBe(201)
+      return (await response.json() as any).token as string
+    }
+    const scoped = await issue('launchpad-ci@example.com')
+    const other = await issue('other-ci@example.com')
+    const bytes = Buffer.from('scoped native artifact')
+    const headers = { Authorization: `Bearer ${scoped}`, 'Content-Type': 'application/json' }
+    const outside = await fetch(`${baseUrl}/api/v1/binaries/uploads`, { method: 'POST', headers, body: JSON.stringify({ ...request(bytes), domain: 'victim.com/app' }) })
+    expect(outside.status).toBe(403)
+    const ordinary = await auth.createApiToken('launchpad-ci@example.com', 'ordinary', { permissions: ['publish'] })
+    expect((await fetch(`${baseUrl}/api/v1/binaries/uploads`, { method: 'POST', headers: { ...headers, Authorization: `Bearer ${ordinary.token}` }, body: JSON.stringify(request(bytes)) })).status).toBe(403)
+    const started = await fetch(`${baseUrl}/api/v1/binaries/uploads`, { method: 'POST', headers, body: JSON.stringify(request(bytes)) })
+    expect(started.status).toBe(201)
+    const upload = await started.json() as any
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+    const completion = JSON.stringify({ uploadId: upload.uploadId })
+    expect((await fetch(`${baseUrl}/api/v1/binaries/uploads/complete`, { method: 'POST', headers: { ...headers, Authorization: `Bearer ${other}` }, body: completion })).status).toBe(403)
+    const finished = await fetch(`${baseUrl}/api/v1/binaries/uploads/complete`, { method: 'POST', headers, body: completion })
+    expect(finished.status).toBe(201)
+    expect((await finished.json() as any).scan.verdict).toBe('clean')
+    expect((await fetch(`${baseUrl}/api/v1/binaries/rescan`, { method: 'POST', headers, body: JSON.stringify({ domain: 'example.com/tool', version: '1.2.3', platforms: ['darwin-arm64'] }) })).status).toBe(403)
+    await auth.deleteApiToken('launchpad-ci@example.com', (await auth.listApiTokens('launchpad-ci@example.com')).find(item => item.name === 'native-release')!.id)
+    expect((await fetch(`${baseUrl}/api/v1/binaries/uploads`, { method: 'POST', headers, body: JSON.stringify(request(bytes)) })).status).toBe(401)
   })
 
   it('requires operator auth and completes a staged publication', async () => {

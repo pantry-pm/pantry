@@ -15,7 +15,7 @@
  * import { pantry } from 'ts-pantry'
  *
  * // Access the package
- * const pkg = pantry.gitcrypt
+ * const pkg = pantry["git-crypt"]
  * // Or access via domain
  * const samePkg = pantry.agwanamegitcrypt
  * console.log(pkg === samePkg) // true

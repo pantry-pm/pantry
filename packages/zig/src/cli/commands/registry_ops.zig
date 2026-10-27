@@ -1055,6 +1055,7 @@ pub const IssueOptions = struct {
     /// needs, and nothing more.
     publish: bool = false,
     expires_in_days: ?[]const u8 = null,
+    binary_domain: ?[]const u8 = null,
 };
 
 pub fn tokenIssueCommand(allocator: std.mem.Allocator, opts: IssueOptions) !CommandResult {
@@ -1074,6 +1075,12 @@ pub fn tokenIssueCommand(allocator: std.mem.Allocator, opts: IssueOptions) !Comm
     try appendJsonString(&body, arena, opts.name orelse "issued by pantry");
     try body.appendSlice(arena, ",\"permissions\":");
     try body.appendSlice(arena, if (opts.publish) "[\"publish\",\"read\"]" else "[\"read\"]");
+    if (opts.binary_domain) |domain| {
+        if (!opts.publish) return CommandResult.err(allocator, "Error: --binary-domain requires --publish.");
+        try body.appendSlice(arena, ",\"binaryPublishDomains\":[");
+        try appendJsonString(&body, arena, domain);
+        try body.append(arena, ']');
+    }
     if (opts.expires_in_days) |days| {
         const parsed = std.fmt.parseInt(u32, days, 10) catch
             return CommandResult.err(allocator, "Error: --expires-in-days must be a number.");

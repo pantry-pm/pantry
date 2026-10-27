@@ -307,6 +307,8 @@ export interface UserSubscription {
  * API token for programmatic access (e.g., publishing)
  */
 export interface ApiToken {
+  /** Operator-issued exact native package domains. Ordinary account tokens cannot grant these. */
+  binaryPublishDomains?: string[]
   /** Token ID (e.g., "ptry_abc123...") — only returned at creation time */
   id: string
   /** User-provided label (e.g., "CI deploy token") */
@@ -329,6 +331,7 @@ export interface ApiToken {
  * Subset of ApiToken returned in listings (never includes raw token or hash)
  */
 export interface ApiTokenInfo {
+  binaryPublishDomains?: string[]
   id: string
   name: string
   permissions: ('publish' | 'read')[]
@@ -355,6 +358,7 @@ export interface Session {
  * Result of validating a Bearer token during publish
  */
 export interface TokenValidationResult {
+  binaryPublishDomains?: string[]
   valid: boolean
   userId?: string
   tokenId?: string

@@ -12,6 +12,8 @@ on:
     secrets:
       DOTENV_PRIVATE_KEY_PRODUCTION:
         required: false
+      PANTRY_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -32,6 +34,7 @@ jobs:
         with:
           native-app: ${{ inputs.release && 'release' || 'check' }}
           release-token: ${{ github.token }}
+          token: ${{ inputs.release && secrets.PANTRY_TOKEN || '' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DOTENV_PRIVATE_KEY_PRODUCTION: ${{ inputs.release && secrets.DOTENV_PRIVATE_KEY_PRODUCTION || '' }}

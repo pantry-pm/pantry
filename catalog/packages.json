@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "40fed5b78dd885e8e49180d6d9f7cb38cb05b5b2ed205693e2ef1467579e1184",
+  "revision": "53720fd49ff66dc9dcd9c00748f0c3592b2fc00d3ae80fd9a67dc97a694f85f1",
   "packages": [
     {
       "domain": "1password.com",
@@ -3420,7 +3420,7 @@
       "programs": [
         "coder"
       ],
-      "latestVersion": "2.38.2",
+      "latestVersion": "2.38.3",
       "homepageUrl": "https://coder.com/",
       "githubUrl": "https://github.com/coder/coder",
       "platforms": null,
@@ -3690,7 +3690,7 @@
       "programs": [
         "craft"
       ],
-      "latestVersion": "0.0.360",
+      "latestVersion": "0.0.365",
       "homepageUrl": "https://craft-native.org/",
       "githubUrl": "https://github.com/craft-native/craft",
       "platforms": [
@@ -12928,7 +12928,7 @@
         "llama-cli",
         "llama.cpp"
       ],
-      "latestVersion": "11912",
+      "latestVersion": "11913",
       "homepageUrl": null,
       "githubUrl": "https://github.com/ggerganov/llama.cpp",
       "platforms": [
@@ -17218,6 +17218,29 @@
       "githubUrl": "https://github.com/squidfunk/mkdocs-material",
       "platforms": null,
       "logo": null
+    },
+    {
+      "domain": "github.com/stacksjs/launchpad",
+      "name": "Launchpad",
+      "description": "A native keyboard launcher built with Stacks",
+      "kind": "app",
+      "aliases": [
+        "launchpad"
+      ],
+      "programs": [
+        "launchpad"
+      ],
+      "latestVersion": "1.0.1",
+      "homepageUrl": "https://github.com/stacksjs/launchpad",
+      "githubUrl": "https://github.com/stacksjs/launchpad",
+      "platforms": [
+        "darwin/aarch64"
+      ],
+      "logo": {
+        "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/7871dc0622c7b7043581472664c113e0253d4aaa46c9ee9243f589c94367f3d9.png",
+        "sourceUrl": "https://raw.githubusercontent.com/stacksjs/launchpad/main/assets/app-icon.png",
+        "sha256": "7871dc0622c7b7043581472664c113e0253d4aaa46c9ee9243f589c94367f3d9"
+      }
     },
     {
       "domain": "github.com/stern/stern",
@@ -22054,7 +22077,7 @@
       "programs": [
         "hasura"
       ],
-      "latestVersion": "2.51.2",
+      "latestVersion": "2.51.3",
       "homepageUrl": "https://hasura.io/",
       "githubUrl": "https://github.com/hasura/graphql-engine",
       "platforms": null,
@@ -30646,7 +30669,7 @@
       "programs": [
         "pdm"
       ],
-      "latestVersion": "2.29.3",
+      "latestVersion": "2.29.4",
       "homepageUrl": "https://pdm.fming.dev/",
       "githubUrl": "https://github.com/pdm-project/pdm",
       "platforms": null,
@@ -31291,7 +31314,7 @@
         "pnpm",
         "pnpx"
       ],
-      "latestVersion": "12.15.0",
+      "latestVersion": "12.16.0",
       "homepageUrl": "https://pnpm.io/",
       "githubUrl": "https://github.com/pnpm/pnpm",
       "platforms": null,
@@ -39454,7 +39477,7 @@
       "programs": [
         "zig"
       ],
-      "latestVersion": "0.18.0-dev.610+720939f8c",
+      "latestVersion": "0.18.0-dev.624+b7f2c6d8f",
       "homepageUrl": "https://ziglang.org/",
       "githubUrl": "https://github.com/ziglang/zig",
       "platforms": null,

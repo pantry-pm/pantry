@@ -47,7 +47,7 @@ export async function assessNativeMacArtifact(file: string, command: NativeComma
   if (!`${result.stdout}\n${result.stderr}`.includes('source=Notarized Developer ID')) throw new Error('Gatekeeper did not recognize the notarized Developer ID distribution')
 }
 
-async function runStapler(action: 'staple' | 'validate', file: string, command: NativeCommand): Promise<void> {
+export async function runStapler(action: 'staple' | 'validate', file: string, command: NativeCommand): Promise<void> {
   const label = action === 'staple' ? 'Staple notarization' : 'Validate notarization'
   for (let attempt = 0; ; attempt++) {
     const result = await command('xcrun', ['stapler', action, file])

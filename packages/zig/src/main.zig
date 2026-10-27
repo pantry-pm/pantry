@@ -1200,6 +1200,7 @@ fn registryTokenIssueAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .name = ctx.getOption("name"),
         .publish = ctx.hasOption("publish"),
         .expires_in_days = ctx.getOption("expires-in-days"),
+        .binary_domain = ctx.getOption("binary-domain"),
     });
     finishTokenResult(allocator, result);
 }
@@ -4404,6 +4405,7 @@ pub fn main() !void {
     _ = try registry_token_issue_cmd.addOption(cli.Option.init("name", "name", "Label for the token (e.g. ci, laptop)", .string));
     _ = try registry_token_issue_cmd.addOption(cli.Option.init("publish", "publish", "Allow publishing as well as downloading", .bool));
     _ = try registry_token_issue_cmd.addOption(cli.Option.init("expires-in-days", "expires-in-days", "Expire the token after N days", .string));
+    _ = try registry_token_issue_cmd.addOption(cli.Option.init("binary-domain", "binary-domain", "Grant native publication to this exact package domain (requires --publish)", .string));
     _ = registry_token_issue_cmd.setAction(registryTokenIssueAction);
     _ = try registry_token_cmd.addCommand(registry_token_issue_cmd);
 

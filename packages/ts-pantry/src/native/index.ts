@@ -14,3 +14,5 @@ export { deliverReleaseToAppStore, parseAppStoreDeliveryId, isExistingAppStoreUp
 export type { AppStoreReleaseOptions, AppStoreReleaseReceipt } from './release-app-store'
 
 export * from './store-publish'
+
+export * from './registry'

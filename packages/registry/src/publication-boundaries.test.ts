@@ -11,7 +11,8 @@ function source(path: string): string {
 describe('first-party publication boundaries', () => {
   it('keeps native publishers behind the scan-before-promote API', () => {
     const centralUploader = source('packages/ts-pantry/scripts/upload-to-s3.ts')
-    const client = source('packages/ts-pantry/scripts/binary-publish-client.ts')
+    const client = source('packages/ts-pantry/src/binary-publish.ts')
+    expect(source('packages/ts-pantry/scripts/binary-publish-client.ts')).toContain("export * from '../src/binary-publish'")
     const zigPublisher = source('packages/zig/src/cli/commands/publish_binary.zig')
     const phpBundler = source('packages/ts-pantry/scripts/bundle-php.sh')
     const pkgxFallback = source('packages/registry/src/pkgx-fallback.ts')

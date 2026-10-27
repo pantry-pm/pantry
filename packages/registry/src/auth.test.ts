@@ -780,3 +780,18 @@ describe('e2e: auth routes', () => {
     })
   })
 })
+
+
+describe('operator-issued native package grants', () => {
+  it('roundtrips bounded exact domains and rejects wildcard, traversal and read-only grants', async () => {
+    const storage = new InMemoryAuthStorage()
+    const auth = new AuthService(storage)
+    const issued = await auth.createApiToken('ci@example.com', 'native CI', { permissions: ['publish'], binaryPublishDomains: ['github.com/stacksjs/launchpad'] })
+    expect(issued.info.binaryPublishDomains).toEqual(['github.com/stacksjs/launchpad'])
+    expect((await new AuthService(storage).validatePublishToken(issued.token, '')).binaryPublishDomains).toEqual(['github.com/stacksjs/launchpad'])
+    expect((await auth.listApiTokens('ci@example.com'))[0].binaryPublishDomains).toEqual(['github.com/stacksjs/launchpad'])
+    for (const domains of [[], ['*'], ['example.com/../app'], ['example.com/app/'], Array(21).fill('example.com/app')])
+      await expect(auth.createApiToken('ci@example.com', 'invalid', { permissions: ['publish'], binaryPublishDomains: domains })).rejects.toThrow('exact binary package domains')
+    await expect(auth.createApiToken('ci@example.com', 'read only', { permissions: ['read'], binaryPublishDomains: ['example.com/app'] })).rejects.toThrow('publish permission')
+  })
+})

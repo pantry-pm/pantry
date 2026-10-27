@@ -299,6 +299,12 @@
       "label": "Tunnelblick",
       "desc": "OpenVPN client",
       "category": "VPN & Security"
+    },
+    {
+      "domain": "github.com/stacksjs/launchpad",
+      "label": "Launchpad",
+      "desc": "A native keyboard launcher built with Stacks",
+      "category": "Productivity"
     }
   ],
   "fonts": [

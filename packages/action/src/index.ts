@@ -5,7 +5,7 @@ import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release
 import { installBootstrap } from './bootstrap'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { deliverReleaseToAppStore } from './release-app-store'
-import { deliverReleaseToGooglePlay, prepareNativeRelease, readNativeAppConfig } from '../../ts-pantry/src/native'
+import { deliverReleaseToGooglePlay, prepareNativeRelease, publishPreparedNativeRegistry, readNativeAppConfig } from '../../ts-pantry/src/native'
 import { setupAppleSigning } from './apple-signing'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import type { ReleaseClient } from './release-draft'
@@ -1524,6 +1524,13 @@ async function configureNativeRelease(inputs: ActionInputs): Promise<void> {
   core.setOutput('native-artifacts', result.files.join('\n'))
   core.setOutput('native-version', result.version)
   if (inputs.nativeApp === 'check') return
+  if (result.config.registry) {
+    core.startGroup('Publish native application to Pantry registry')
+    const published = await publishPreparedNativeRegistry(root, result)
+    result.files.push(published.archive, published.receipt)
+    core.info(`Published ${published.publication.domain}@${published.publication.version} to Pantry`)
+    core.endGroup()
+  }
   inputs.release = true
   inputs.releaseFiles = result.files.join('\n')
   inputs.releaseTag = inputs.releaseTag || `v${result.version}`
