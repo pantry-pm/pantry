@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.137...v0.11.138)
+
+## 🐛 Bug Fixes
+
+- **catalog**: allow browsing the complete package library ([496c926](https://github.com/pantry-pm/pantry/commit/496c926)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **desktop**: verify service restart readiness and platform activation coverage ([25a623e](https://github.com/pantry-pm/pantry/commit/25a623e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.138 ([7967f40](https://github.com/pantry-pm/pantry/commit/7967f40)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.136...v0.11.137)
 
 ## 🐛 Bug Fixes
