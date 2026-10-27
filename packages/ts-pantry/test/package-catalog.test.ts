@@ -5,6 +5,7 @@ import { fetchPackageCatalog, parsePackageCatalog, searchPackageCatalog } from '
 test('the complete catalog is valid and includes desktop apps, CLIs, libraries and fonts', () => {
   const entries = parsePackageCatalog(snapshot)
   expect(entries.length).toBeGreaterThan(1700)
+  expect(searchPackageCatalog(entries, '', { limit: 50000 })).toHaveLength(entries.length)
   for (const kind of ['app', 'cli', 'library', 'font']) expect(entries.some(entry => entry.kind === kind)).toBe(true)
   expect(searchPackageCatalog(entries, 'git')[0]?.domain).toBe('git-scm.org')
   expect(searchPackageCatalog(entries, 'Figma')[0]?.kind).toBe('app')

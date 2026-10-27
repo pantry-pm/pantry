@@ -49,7 +49,8 @@ export async function fetchPackageCatalog(options: { signal?: AbortSignal, fetch
 
 export function searchPackageCatalog(entries: readonly PackageCatalogEntry[], query: string, options: { kind?: PackageKind, limit?: number } = {}): PackageCatalogEntry[] {
   const words = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
-  const limit = Math.min(1000, Math.max(1, options.limit ?? 100))
+  const requested = Number.isFinite(options.limit ?? 100) ? Math.floor(options.limit ?? 100) : 100
+  const limit = Math.min(50000, Math.max(1, requested))
   return entries.filter(entry => (!options.kind || entry.kind === options.kind) && words.every(word => [entry.name, entry.domain, ...entry.aliases, ...entry.programs, entry.description].some(value => value.toLocaleLowerCase().includes(word))))
     .sort((a, b) => {
       const exactA = [a.name, a.domain, ...a.aliases, ...a.programs].some(value => value.toLocaleLowerCase() === query.toLocaleLowerCase().trim())
