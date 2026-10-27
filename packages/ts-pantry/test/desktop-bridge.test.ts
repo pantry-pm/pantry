@@ -91,3 +91,25 @@ test('app and font installations use the native CLI activation path', async () =
   }
   finally { await bridge.close(); rmSync(directory, { recursive: true, force: true }) }
 })
+
+test('install receipts expose the authoritative package kind and execution timestamps', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pantry-desktop-receipts-'))
+  const catalog = ['app', 'cli', 'library', 'font'].map(kind => bundledPackageCatalog().find(entry => entry.kind === kind)!)
+  let now = Date.parse('2026-10-27T12:00:00Z')
+  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, catalog, now: () => now, run: async () => { now += 2000; return 0 } })
+  try {
+    const baseUrl = `http://127.0.0.1:${bridge.server.port}`
+    const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(directory, now), 'Launchpad')
+    const client = new PantryDesktopClient({ baseUrl, token })
+    for (const entry of catalog) {
+      const job = await client.install(entry.domain)
+      for (let index = 0; index < 50 && (await client.job(job.id)).status !== 'succeeded'; index++) await Bun.sleep(5)
+      const receipt = await client.job(job.id)
+      expect(receipt.kind).toBe(entry.kind)
+      expect(Date.parse(receipt.finishedAt!) - Date.parse(receipt.startedAt!)).toBe(2000)
+      expect(receipt.timezoneOffset).toBe(new Date(now).getTimezoneOffset())
+      expect((await client.jobs()).find(item => item.id === job.id)).toEqual(receipt)
+    }
+  }
+  finally { await bridge.close(); rmSync(directory, { recursive: true, force: true }) }
+})

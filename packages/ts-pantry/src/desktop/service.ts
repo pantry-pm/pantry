@@ -70,6 +70,7 @@ export function installedCatalogApplications(catalog: readonly PackageCatalogEnt
 export interface DesktopBridge { server: Bun.Server<undefined>, close: () => Promise<void> }
 
 export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopBridge {
+  const now = options.now ?? Date.now
   const directory = options.stateDirectory ?? desktopStateDirectory()
   secureDesktopDirectory(directory)
   const stateFile = join(directory, 'state.json')
@@ -80,7 +81,8 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
     if (job.status === 'queued' || job.status === 'running') {
       job.status = 'failed'
       job.error = 'Pantry restarted before this installation completed. Check installed packages before retrying.'
-      job.finishedAt = new Date().toISOString()
+      job.finishedAt = new Date(now()).toISOString()
+      job.timezoneOffset = new Date(now()).getTimezoneOffset()
     }
   }
   persist()
@@ -88,7 +90,6 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
   const packages = new Map(catalog.map(entry => [entry.domain, entry]))
   const executable = options.pantryExecutable ?? Bun.which('pantry')
   if (!options.run && (!executable || !isAbsolute(executable))) throw new Error('Install the Pantry CLI before starting its desktop bridge')
-  const now = options.now ?? Date.now
   let activeChild: ReturnType<typeof Bun.spawn> | undefined
   const execute = options.run ?? (async (args: string[], output: (text: string) => void) => {
     const child = Bun.spawn([executable!, ...args], { cwd: directory, stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', env: { ...process.env, NO_COLOR: '1', CI: '1' } })
@@ -131,6 +132,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
         const job = state.jobs.find(item => item.status === 'queued')
         if (!job) break
         job.status = 'running'
+        job.startedAt = new Date(now()).toISOString()
         persist()
         try {
           const kind = packages.get(job.domain)!.kind
@@ -142,7 +144,9 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
           job.status = 'failed'
           job.error = error instanceof Error ? error.message : 'Pantry installation failed'
         }
-        job.finishedAt = new Date(now()).toISOString()
+        const finished = new Date(now())
+        job.finishedAt = finished.toISOString()
+        job.timezoneOffset = finished.getTimezoneOffset()
         persist()
       }
     }
@@ -199,7 +203,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
         const previous = state.jobs.find(job => job.clientId === client.id && job.requestId === body.requestId)
         if (previous) return previous.domain === body.domain ? respond({ job: publicJob(previous) }, 202) : respond({ error: 'This request ID already belongs to another package.' }, 409)
         if (state.jobs.filter(job => job.status === 'queued' || job.status === 'running').length >= 3) return respond({ error: 'Wait for current Pantry installations to finish.' }, 429)
-        const job: StoredJob = { id: crypto.randomUUID(), requestId: body.requestId, clientId: client.id, domain: body.domain, status: 'queued', output: '', createdAt: new Date(now()).toISOString() }
+        const job: StoredJob = { id: crypto.randomUUID(), requestId: body.requestId, clientId: client.id, domain: body.domain, kind: packages.get(body.domain)!.kind, status: 'queued', output: '', createdAt: new Date(now()).toISOString() }
         state.jobs.push(job)
         if (state.jobs.length > 1000) state.jobs.splice(0, state.jobs.length - 1000)
         persist()

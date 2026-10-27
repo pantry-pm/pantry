@@ -3,6 +3,10 @@ export interface DesktopInstallJob {
   id: string
   requestId: string
   domain: string
+  /** Added in 0.11.141; absent on jobs created by older desktop services. */
+  kind?: 'app' | 'cli' | 'library' | 'font'
+  startedAt?: string
+  timezoneOffset?: number
   status: 'queued' | 'running' | 'succeeded' | 'failed'
   output: string
   createdAt: string
