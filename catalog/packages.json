@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "1b77c03a0ab5b3740be9beb3f9410092a1d056ead95deadd119d95a83284f21b",
+  "revision": "bed0533062f1e792e12436960e5aeda98f5540cd707ccd832ccae595bf8b2e8c",
   "packages": [
     {
       "domain": "1password.com",
@@ -392,7 +392,7 @@
         "ansible-test",
         "ansible-vault"
       ],
-      "latestVersion": "2.22.0rc1",
+      "latestVersion": "2.22.0rc2",
       "homepageUrl": "https://www.ansible.com/",
       "githubUrl": "https://github.com/ansible/ansible",
       "platforms": null,
@@ -438,7 +438,7 @@
       "programs": [
         "claude"
       ],
-      "latestVersion": "2.1.311",
+      "latestVersion": "2.1.312",
       "homepageUrl": "https://github.com/anthropics/claude-code",
       "githubUrl": "https://github.com/anthropics/claude-code",
       "platforms": null,
@@ -769,7 +769,7 @@
       "programs": [
         "appium"
       ],
-      "latestVersion": "3.8.0",
+      "latestVersion": "3.9.0",
       "homepageUrl": "https://appium.io/",
       "githubUrl": "https://github.com/appium/appium",
       "platforms": null,
@@ -1515,7 +1515,7 @@
       "programs": [
         "bb"
       ],
-      "latestVersion": "1.13.228",
+      "latestVersion": "1.13.229",
       "homepageUrl": null,
       "githubUrl": null,
       "platforms": null,
@@ -1931,7 +1931,7 @@
       "programs": [
         "buddy"
       ],
-      "latestVersion": "0.11.13",
+      "latestVersion": "0.11.15",
       "homepageUrl": "https://buddy.sh/",
       "githubUrl": "https://github.com/stacksjs/buddy",
       "platforms": [
@@ -3194,7 +3194,7 @@
         "cpack",
         "ctest"
       ],
-      "latestVersion": "4.4.4",
+      "latestVersion": "4.4.5",
       "homepageUrl": "https://www.cmake.org/",
       "githubUrl": "https://github.com/Kitware/CMake",
       "platforms": null,
@@ -3236,7 +3236,7 @@
       "programs": [
         "cnquery"
       ],
-      "latestVersion": "14.8.0",
+      "latestVersion": "14.9.0",
       "homepageUrl": "https://cnquery.io/",
       "githubUrl": "https://github.com/mondoohq/cnquery",
       "platforms": null,
@@ -3463,7 +3463,7 @@
         "Codex"
       ],
       "programs": [],
-      "latestVersion": "26.1021.31345",
+      "latestVersion": "26.1023.50603",
       "homepageUrl": "https://developers.openai.com/codex/app",
       "githubUrl": null,
       "platforms": [
@@ -3690,7 +3690,7 @@
       "programs": [
         "craft"
       ],
-      "latestVersion": "0.0.366",
+      "latestVersion": "0.0.369",
       "homepageUrl": "https://craft-native.org/",
       "githubUrl": "https://github.com/craft-native/craft",
       "platforms": [
@@ -5401,7 +5401,7 @@
       "programs": [
         "qsv"
       ],
-      "latestVersion": "26.0.0",
+      "latestVersion": "27.0.1",
       "homepageUrl": "https://qsv.dathere.com/",
       "githubUrl": "https://github.com/dathere/qsv",
       "platforms": null,
@@ -6688,7 +6688,7 @@
       "programs": [
         "cursor"
       ],
-      "latestVersion": "3.27.14",
+      "latestVersion": "3.27.22",
       "homepageUrl": "https://cursor.com/",
       "githubUrl": null,
       "platforms": [
@@ -7954,7 +7954,7 @@
       "programs": [
         "element"
       ],
-      "latestVersion": "1.12.32",
+      "latestVersion": "1.12.33",
       "homepageUrl": "https://element.io/",
       "githubUrl": null,
       "platforms": [
@@ -8902,7 +8902,7 @@
       "programs": [
         "flit"
       ],
-      "latestVersion": "4.1.0",
+      "latestVersion": "4.2.0",
       "homepageUrl": "https://flit.pypa.io/",
       "githubUrl": "https://github.com/pypa/flit",
       "platforms": null,
@@ -10370,7 +10370,7 @@
       "programs": [
         "ghostty"
       ],
-      "latestVersion": "1.3.1",
+      "latestVersion": "1.4.0",
       "homepageUrl": "https://ghostty.org/",
       "githubUrl": "https://github.com/ghostty-org/ghostty",
       "platforms": [
@@ -12928,7 +12928,7 @@
         "llama-cli",
         "llama.cpp"
       ],
-      "latestVersion": "11913",
+      "latestVersion": "11936",
       "homepageUrl": null,
       "githubUrl": "https://github.com/ggerganov/llama.cpp",
       "platforms": [
@@ -16742,7 +16742,7 @@
       "programs": [
         "cli-proxy-api"
       ],
-      "latestVersion": "8.0.44",
+      "latestVersion": "8.0.45",
       "homepageUrl": "https://help.router-for.me/",
       "githubUrl": "https://github.com/router-for-me/CLIProxyAPI",
       "platforms": null,
@@ -17230,16 +17230,16 @@
         "Launchpad"
       ],
       "programs": [],
-      "latestVersion": "1.0.1",
-      "homepageUrl": "https://github.com/stacksjs/launchpad",
+      "latestVersion": "1.0.3",
+      "homepageUrl": "https://launchpad.stacksjs.com/",
       "githubUrl": "https://github.com/stacksjs/launchpad",
       "platforms": [
         "darwin/aarch64"
       ],
       "logo": {
-        "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/7871dc0622c7b7043581472664c113e0253d4aaa46c9ee9243f589c94367f3d9.png",
+        "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/732814037efb630f03e0cd513438bbbbce21fc527abba63de3455df236673458.png",
         "sourceUrl": "https://raw.githubusercontent.com/stacksjs/launchpad/main/assets/app-icon.png",
-        "sha256": "7871dc0622c7b7043581472664c113e0253d4aaa46c9ee9243f589c94367f3d9"
+        "sha256": "732814037efb630f03e0cd513438bbbbce21fc527abba63de3455df236673458"
       }
     },
     {
@@ -17764,7 +17764,7 @@
         "mole",
         "mo"
       ],
-      "latestVersion": "1.64.0",
+      "latestVersion": "1.65.0",
       "homepageUrl": "https://github.com/tw93/Mole",
       "githubUrl": "https://github.com/tw93/mole",
       "platforms": [
@@ -20962,7 +20962,7 @@
       "programs": [
         "hugo"
       ],
-      "latestVersion": "0.168.0",
+      "latestVersion": "0.169.0",
       "homepageUrl": "https://gohugo.io/",
       "githubUrl": "https://github.com/gohugoio/hugo",
       "platforms": null,
@@ -22367,7 +22367,7 @@
         "htsfile",
         "tabix"
       ],
-      "latestVersion": "1.24",
+      "latestVersion": "1.25",
       "homepageUrl": "https://www.htslib.org/",
       "githubUrl": "https://github.com/samtools/htslib",
       "platforms": null,
@@ -27329,7 +27329,7 @@
         "rtx",
         "mise"
       ],
-      "latestVersion": "2026.10.20",
+      "latestVersion": "2026.10.21",
       "homepageUrl": "https://mise.jdx.dev/",
       "githubUrl": "https://github.com/jdx/mise",
       "platforms": null,
@@ -29449,7 +29449,7 @@
         "codex-tui",
         "md-events"
       ],
-      "latestVersion": "0.164.0",
+      "latestVersion": "0.165.0",
       "homepageUrl": null,
       "githubUrl": null,
       "platforms": null,
@@ -29572,7 +29572,7 @@
       "programs": [
         "opencode"
       ],
-      "latestVersion": "1.19.4",
+      "latestVersion": "2.2.0",
       "homepageUrl": "https://opencode.ai/",
       "githubUrl": "https://github.com/anomalyco/opencode",
       "platforms": [
@@ -31314,7 +31314,7 @@
         "pnpm",
         "pnpx"
       ],
-      "latestVersion": "12.16.0",
+      "latestVersion": "12.16.1",
       "homepageUrl": "https://pnpm.io/",
       "githubUrl": "https://github.com/pnpm/pnpm",
       "platforms": null,
@@ -34478,7 +34478,7 @@
       "programs": [
         "solr"
       ],
-      "latestVersion": "10.0.0",
+      "latestVersion": "10.1.0",
       "homepageUrl": "https://solr.apache.org/",
       "githubUrl": "https://github.com/apache/solr",
       "platforms": [
@@ -36494,7 +36494,7 @@
       "programs": [
         "tox"
       ],
-      "latestVersion": "4.67.1",
+      "latestVersion": "4.67.2",
       "homepageUrl": "https://tox.wiki/en/latest/",
       "githubUrl": "https://github.com/tox-dev/tox",
       "platforms": null,
@@ -37433,7 +37433,7 @@
         "vim",
         "vi"
       ],
-      "latestVersion": "9.2.1245",
+      "latestVersion": "9.2.1252",
       "homepageUrl": "https://www.vim.org/",
       "githubUrl": "https://github.com/vim/vim",
       "platforms": null,
@@ -37455,7 +37455,7 @@
       "programs": [
         "virtualenv"
       ],
-      "latestVersion": "21.14.13",
+      "latestVersion": "21.15.0",
       "homepageUrl": "https://virtualenv.pypa.io/",
       "githubUrl": "https://github.com/pypa/virtualenv",
       "platforms": null,
@@ -37885,7 +37885,7 @@
       "programs": [
         "whatsapp"
       ],
-      "latestVersion": "2.26.42.19",
+      "latestVersion": "2.26.43.20",
       "homepageUrl": "https://whatsapp.com/",
       "githubUrl": null,
       "platforms": [
@@ -39477,7 +39477,7 @@
       "programs": [
         "zig"
       ],
-      "latestVersion": "0.18.0-dev.624+b7f2c6d8f",
+      "latestVersion": "0.18.0-dev.738+ae9a8acc7",
       "homepageUrl": "https://ziglang.org/",
       "githubUrl": "https://github.com/ziglang/zig",
       "platforms": null,
