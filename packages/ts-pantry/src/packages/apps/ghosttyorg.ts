@@ -3,7 +3,7 @@
  *
  * @domain `ghostty.org`
  * @programs `ghostty`
- * @version `1.1.0` (3 versions available)
+ * @version `1.4.0` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ghostty.org`
@@ -22,6 +22,7 @@ export const ghosttyorgPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.4.0',
     '1.3.1',
     '1.1.0',
     '1.0.1',

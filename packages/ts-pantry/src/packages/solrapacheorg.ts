@@ -26,6 +26,7 @@ export const solrapacheorgPackage = {
   ] as const,
   buildDependencies: [] as const,
   versions: [
+    '10.1.0',
     '10.0.0',
     '9.11.0',
     '9.10.1',
