@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.136...v0.11.137)
+
+## 🐛 Bug Fixes
+
+- **desktop**: discover installed user applications through the external service ([6808d4d](https://github.com/pantry-pm/pantry/commit/6808d4d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.137 ([c541664](https://github.com/pantry-pm/pantry/commit/c541664)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.135...v0.11.136)
 
 ## ✨ Features
