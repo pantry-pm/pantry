@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.139...v0.11.140)
+
+## 🐛 Bug Fixes
+
+- validate native application package layouts ([d665e8e](https://github.com/pantry-pm/pantry/commit/d665e8e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.140 ([76016dd](https://github.com/pantry-pm/pantry/commit/76016dd)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.366 ([17478ac](https://github.com/pantry-pm/pantry/commit/17478ac)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.138...v0.11.139)
 
 ## ✨ Features
