@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.142...v0.11.143)
+
+## 🐛 Bug Fixes
+
+- create a new Apple review after a completed submission ([801baed](https://github.com/pantry-pm/pantry/commit/801baed)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ⚡ Performance Improvements
+
+- prepare catalog metadata once for interactive search ([f23624e](https://github.com/pantry-pm/pantry/commit/f23624e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.143 ([a003a82](https://github.com/pantry-pm/pantry/commit/a003a82)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.375 ([1d4eed6](https://github.com/pantry-pm/pantry/commit/1d4eed6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update chrome-for-testing, Codex, craft, depot, LLaMA.cpp, ollama, stripe, tailscale ([f073fe9](https://github.com/pantry-pm/pantry/commit/f073fe9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.141...v0.11.142)
 
 ## ✨ Features
