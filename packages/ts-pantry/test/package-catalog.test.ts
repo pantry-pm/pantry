@@ -1,6 +1,27 @@
 import { expect, test } from 'bun:test'
 import snapshot from '../../../catalog/packages.json'
-import { fetchPackageCatalog, parsePackageCatalog, searchPackageCatalog } from '../src/catalog/client'
+import { createPackageCatalogSearch, fetchPackageCatalog, parsePackageCatalog, searchPackageCatalog } from '../src/catalog/client'
+
+test('a prepared catalog searches a stable snapshot without rebuilding metadata per keystroke', () => {
+  const entries = parsePackageCatalog(snapshot)
+  const original = entries.map(entry => entry.domain)
+  const search = createPackageCatalogSearch(entries)
+  for (const query of ['', 'git', ' GIT ', 'source code', 'figma', 'libsodium', 'no-such-package-xyz']) {
+    for (const kind of [undefined, 'app', 'cli', 'library', 'font'] as const) {
+      expect(search(query, { kind, limit: 7 })).toEqual(searchPackageCatalog(entries, query, { kind, limit: 7 }))
+    }
+  }
+  expect(entries.map(entry => entry.domain)).toEqual(original)
+  const entry = { ...entries[0]! }
+  let reads = 0
+  Object.defineProperty(entry, 'description', { get: () => { reads++; return 'Snapshot metadata' } })
+  const prepared = createPackageCatalogSearch([entry])
+  const initialReads = reads
+  prepared('snapshot')
+  prepared('metadata')
+  expect(reads).toBe(initialReads)
+  expect(createPackageCatalogSearch([])('git')).toEqual([])
+})
 
 test('the complete catalog is valid and includes desktop apps, CLIs, libraries and fonts', () => {
   const entries = parsePackageCatalog(snapshot)

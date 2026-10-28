@@ -59,6 +59,30 @@ export function searchPackageCatalog(entries: readonly PackageCatalogEntry[], qu
     }).slice(0, limit)
 }
 
+/** Prepare an immutable catalog snapshot once for interactive search. Recreate after a refresh. */
+export function createPackageCatalogSearch(entries: readonly PackageCatalogEntry[]) {
+  const index = entries.map(entry => ({
+    entry,
+    names: [entry.name, entry.domain, ...entry.aliases, ...entry.programs].map(value => value.toLocaleLowerCase()),
+    description: entry.description.toLocaleLowerCase(),
+  })).sort((a, b) => a.entry.name.localeCompare(b.entry.name))
+  return (query: string, options: { kind?: PackageKind, limit?: number } = {}): PackageCatalogEntry[] => {
+    const term = query.toLocaleLowerCase().trim()
+    const words = term.split(/\s+/).filter(Boolean)
+    const requested = Number.isFinite(options.limit ?? 100) ? Math.floor(options.limit ?? 100) : 100
+    const limit = Math.min(50000, Math.max(1, requested))
+    const exact: PackageCatalogEntry[] = []
+    const matches: PackageCatalogEntry[] = []
+    for (const item of index) {
+      if (options.kind && item.entry.kind !== options.kind) continue
+      if (!words.every(word => item.description.includes(word) || item.names.some(name => name.includes(word)))) continue
+      if (item.names.includes(term)) exact.push(item.entry)
+      else if (matches.length < limit) matches.push(item.entry)
+    }
+    return exact.concat(matches).slice(0, limit)
+  }
+}
+
 /** Complete offline metadata snapshot. No installer implementation is imported. */
 export function bundledPackageCatalog(): PackageCatalogEntry[] {
   return parsePackageCatalog(snapshot)
