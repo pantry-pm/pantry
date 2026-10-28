@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.143...v0.11.144)
+
+## 🐛 Bug Fixes
+
+- qualify published catalog search declarations ([a346d90](https://github.com/pantry-pm/pantry/commit/a346d90)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.144 ([430e428](https://github.com/pantry-pm/pantry/commit/430e428)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.142...v0.11.143)
 
 ## 🐛 Bug Fixes
