@@ -3,7 +3,7 @@
  *
  * @domain `hurl.dev`
  * @programs `hurl`, `hurlfmt`
- * @version `8.0.1` (31 versions available)
+ * @version `8.1.0` (32 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install hurl.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "hurl"
  * console.log(pkg.description) // "Run and Test HTTP Requests with plain text and ..."
  * console.log(pkg.programs)    // ["hurl", "hurlfmt"]
- * console.log(pkg.versions[0]) // "8.0.1" (latest)
+ * console.log(pkg.versions[0]) // "8.1.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/hurl-dev.md
@@ -69,6 +69,7 @@ export const hurldevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.1.0',
     '8.0.1',
     '8.0.0',
     '7.1.0',
