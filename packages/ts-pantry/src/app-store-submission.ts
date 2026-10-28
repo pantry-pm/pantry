@@ -614,7 +614,9 @@ async function submitVersions(client: AppStoreConnectClient, appId: string, vers
   const ids: string[] = []
   for (const version of versions) {
     const platform = applePlatform(version.platform)
-    const platformSubmissions = existing.data.filter(item => item.attributes.platform === platform)
+    // Completed reviews retain their items after cancellation or a decision.
+    // A version can be edited and resubmitted using that same version ID.
+    const platformSubmissions = existing.data.filter(item => item.attributes.platform === platform && item.attributes.state !== 'COMPLETE')
     let submission: Resource<ReviewSubmissionAttributes> | undefined
     for (const candidate of platformSubmissions) {
       const items = await client.request<ListResponse<Record<string, unknown>>>(`/reviewSubmissions/${candidate.id}/items?include=appStoreVersion&limit=200`)

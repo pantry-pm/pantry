@@ -21,7 +21,7 @@ describe('App Store Connect submission', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  it.each([false, true])('synchronizes metadata, uploads screenshots, and submits an existing version (legacy input: %s)', async (legacy) => {
+  it.each([{ legacy: false, completed: false }, { legacy: true, completed: false }, { legacy: false, completed: true }])('synchronizes metadata and submits a version even after a completed review: %j', async ({ legacy, completed }) => {
     const screenshotPath = join(dir, 'mac.png')
     writeFileSync(screenshotPath, Buffer.from('test screenshot'))
     const writes: Array<{ path: string, method: string, body?: any }> = []
@@ -80,7 +80,9 @@ describe('App Store Connect submission', () => {
       if (url.pathname.endsWith('/appAssetLibraryPlacements') && method === 'POST')
         return Response.json({ data: { ...body.data, id: 'placement-123' } }, { status: 201 })
       if (url.pathname.endsWith('/apps/app-123/reviewSubmissions'))
-        return Response.json({ data: [] })
+        return Response.json({ data: completed ? [{ type: 'reviewSubmissions', id: 'old-review', attributes: { platform: 'MAC_OS', state: 'COMPLETE' } }] : [] })
+      if (url.pathname.endsWith('/reviewSubmissions/old-review/items'))
+        return Response.json({ data: [], included: [{ type: 'appStoreVersions', id: 'mac-version', attributes: {} }] })
       if (url.pathname.endsWith('/reviewSubmissions') && method === 'POST')
         return Response.json({ data: { type: 'reviewSubmissions', id: 'review-123', attributes: { platform: 'MAC_OS', state: 'READY_FOR_REVIEW' } } }, { status: 201 })
       if (url.pathname.endsWith('/reviewSubmissions/review-123/items'))
