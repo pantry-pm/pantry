@@ -60,7 +60,7 @@ export function searchPackageCatalog(entries: readonly PackageCatalogEntry[], qu
 }
 
 /** Prepare an immutable catalog snapshot once for interactive search. Recreate after a refresh. */
-export function createPackageCatalogSearch(entries: readonly PackageCatalogEntry[]) {
+export function createPackageCatalogSearch(entries: readonly PackageCatalogEntry[]): (query: string, options?: { kind?: PackageKind, limit?: number }) => PackageCatalogEntry[] {
   const index = entries.map(entry => ({
     entry,
     names: [entry.name, entry.domain, ...entry.aliases, ...entry.programs].map(value => value.toLocaleLowerCase()),

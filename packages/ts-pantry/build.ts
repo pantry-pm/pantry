@@ -85,7 +85,19 @@ async function verifyEntryPoints(): Promise<void> {
       if (/Bun\.spawn|node:fs|startDesktopBridge/.test(source)) throw new Error(`Published ${name} client includes external installer implementation`)
     }
   }
-
+  // Consumers load declarations, not the source graph checked by the SDK's tsconfig.
+  const contract = path.join(process.cwd(), 'dist', '.catalog-contract.ts')
+  fs.writeFileSync(contract, `import { createPackageCatalogSearch } from './src/catalog/client'
+import type { PackageCatalogEntry } from './src/catalog/client'
+const search = createPackageCatalogSearch([])
+const entries: PackageCatalogEntry[] = search('git', { kind: 'cli', limit: 5 })
+entries.map(entry => entry.domain)
+`)
+  try {
+    const check = Bun.spawn([process.execPath, 'x', '--bun', 'tsc', '--ignoreConfig', '--noEmit', '--skipLibCheck', '--moduleResolution', 'bundler', '--module', 'esnext', '--target', 'esnext', contract], { stdout: 'inherit', stderr: 'inherit' })
+    if (await check.exited !== 0) throw new Error('Published catalog declarations failed their consumer contract')
+  }
+  finally { fs.rmSync(contract, { force: true }) }
 }
 
 async function build() {
