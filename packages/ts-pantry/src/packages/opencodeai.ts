@@ -3,7 +3,7 @@
  *
  * @domain `opencode.ai`
  * @programs `opencode`
- * @version `2.2.0` (191 versions available)
+ * @version `2.2.0` (192 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install opencode.ai`
@@ -65,6 +65,7 @@ export const opencodeaiPackage = {
   */
   versions: [
     '2.2.0',
+    '1.19.5',
     '1.19.4',
     '1.19.3',
     '1.19.2',
