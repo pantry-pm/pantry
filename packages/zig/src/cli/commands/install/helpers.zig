@@ -652,7 +652,19 @@ pub fn canSkipFromLockfile(
         if (!found) return false;
     }
 
-    // Check if destination directory actually exists (use stack buffer + access instead of openDir)
+    return isPackageInstalled(proj_dir, modules_dir, clean_name);
+}
+
+/// Is this package present and usable under `proj_dir/modules_dir`?
+///
+/// The half of `canSkipFromLockfile` that does not consult the lock, for the
+/// packages that are deliberately not in it: a service inferred from `.env`
+/// is installed but never locked (#253), so the lock cannot answer whether
+/// this install still has work to do.
+pub fn isPackageInstalled(proj_dir: []const u8, modules_dir: []const u8, dep_name: []const u8) bool {
+    const clean_name = resolvePackageAlias(normalizePackageName(dep_name));
+    // Stack buffer + access instead of openDir: this runs per dependency on
+    // the fast path.
     var dest_buf: [std.fs.max_path_bytes]u8 = undefined;
     const dest_dir = std.fmt.bufPrint(&dest_buf, "{s}/{s}/{s}", .{ proj_dir, modules_dir, clean_name }) catch return false;
     io_helper.accessAbsolute(dest_dir, .{}) catch return false;

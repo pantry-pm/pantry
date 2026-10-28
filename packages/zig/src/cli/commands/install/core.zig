@@ -167,11 +167,16 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
 
     // 4a. Services the project's .env names (DB_CONNECTION=pgsql, ...) count
     // as dependencies too, or a changed driver would never be installed.
+    //
+    // Asked of the disk rather than of the lockfile, because an inference is
+    // deliberately absent from the lock (#253). Against the lock this read
+    // "not locked, so not up to date" for every inferred service, sending a
+    // project with a `.env` down the slow path on every install.
     {
         const inferred = env_deps.infer(allocator, cwd, deps, .{ .report = false }) catch &.{};
         defer env_deps.freeDeps(allocator, inferred);
         for (inferred) |dep| {
-            if (!helpers.canSkipFromLockfile(&lockfile.packages, dep.name, dep.version, cwd, allocator, modules_dir)) return null;
+            if (!helpers.isPackageInstalled(cwd, modules_dir, dep.name)) return null;
         }
     }
 
@@ -563,7 +568,6 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                             ws_file.root_dir,
                             companion_options,
                             staged_lockfile_path,
-                            options.frozen_lockfile,
                         ), df.path);
                     }
                 }
@@ -701,10 +705,19 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             allocator,
             if (deps_file_path) |path| std.fs.path.dirname(path) orelse cwd else cwd,
             deps,
-            .{ .frozen_lockfile = options.frozen_lockfile },
+            .{},
         ) catch &.{};
         defer env_deps.freeDeps(allocator, env_inferred);
         try filtered_deps.appendSlice(allocator, env_inferred);
+
+        // They are installed, and that is all they are. `pantry.lock` records
+        // what the workspace declares, so neither these nor what they pull in
+        // may reach it — a lock refreshed on a machine whose `.env` says
+        // postgres otherwise carries three entries a checkout without that
+        // `.env` removes again (#253).
+        var env_only_domains = env_deps.inferredOnlyDomains(allocator, env_inferred, deps) catch
+            env_deps.DomainSet{ .allocator = allocator, .map = std.StringHashMap(void).init(allocator) };
+        defer env_only_domains.deinit();
 
         // Load overrides/resolutions from package.json if it exists
         var override_map = lib.deps.overrides.OverrideMap.init(allocator);
@@ -1219,15 +1232,21 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 const resolved_url = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version });
                 defer allocator.free(resolved_url);
 
-                if (options.frozen_lockfile) {
-                    if (!resolutionLockMatches(&lock_file, clean_name, result.version, resolved_url))
-                        frozen_lockfile_changed = true;
-                } else if (!options.no_save) {
-                    if (lockfile_hooks.getLockedVersionForPackage(&lock_file, clean_name)) |previous| {
-                        if (!std.mem.eql(u8, previous.version, result.version))
-                            style.printLockPinMoved(clean_name, previous.version, result.version, false);
+                // An inferred service is outside the lock's contract, so it
+                // is neither written to the lock nor able to report the lock
+                // as out of date. It is still installed, and the checkpoint
+                // below still records it.
+                if (!env_only_domains.contains(helpers.resolvePackageAlias(clean_name))) {
+                    if (options.frozen_lockfile) {
+                        if (!resolutionLockMatches(&lock_file, clean_name, result.version, resolved_url))
+                            frozen_lockfile_changed = true;
+                    } else if (!options.no_save) {
+                        if (lockfile_hooks.getLockedVersionForPackage(&lock_file, clean_name)) |previous| {
+                            if (!std.mem.eql(u8, previous.version, result.version))
+                                style.printLockPinMoved(clean_name, previous.version, result.version, false);
+                        }
+                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
                     }
-                    try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
                 }
                 // Nothing of it is on disk to record below.
                 if (result.lock_only) continue;
@@ -1975,7 +1994,6 @@ fn installCompanionDepsFile(
     project_root: []const u8,
     options: types.InstallOptions,
     lockfile_path: ?[]const u8,
-    frozen_environment: bool,
 ) !types.CommandResult {
     const parser = @import("../../../deps/parser.zig");
     const pipeline = @import("../../../install/pipeline.zig");
@@ -1989,13 +2007,10 @@ fn installCompanionDepsFile(
         allocator.free(declared_deps);
     }
 
-    // Services the project's .env names, unless declared (#36). A non-null
-    // Frozen installs infer only what the committed lock already records.
-    // A staged path is also used by ordinary installs; it does not make their
-    // environment inference frozen.
-    const env_inferred = env_deps.infer(allocator, project_root, declared_deps, .{
-        .frozen_lockfile = frozen_environment,
-    }) catch &.{};
+    // Services the project's .env names, unless declared (#36). What they
+    // resolve to is installed but never locked (#253), so a frozen run infers
+    // exactly what any other run does.
+    const env_inferred = env_deps.infer(allocator, project_root, declared_deps, .{}) catch &.{};
     defer env_deps.freeDeps(allocator, env_inferred);
     const deps = if (env_inferred.len == 0) declared_deps else try std.mem.concat(allocator, parser.PackageDependency, &.{ declared_deps, env_inferred });
     defer if (env_inferred.len > 0) allocator.free(deps);
@@ -2092,11 +2107,19 @@ fn installCompanionDepsFile(
     // lockfile so `pantry install` actually refreshes stale runtime pins while
     // preserving every workspace and npm entry.
     if (!options.no_save) {
+        // `declared_deps`, not `deps`: the constraints recorded on the root
+        // workspace are the ones the workspace declares. `env_only_domains`
+        // keeps the same inference out of the resolved package entries, where
+        // it arrives with everything it pulled in.
+        var env_only_domains = try env_deps.inferredOnlyDomains(allocator, env_inferred, declared_deps);
+        defer env_only_domains.deinit();
+
         const lockfile_changed = try syncCompanionLockfile(
             allocator,
             project_root,
-            deps,
+            declared_deps,
             pipeline_result.results,
+            &env_only_domains,
             options.frozen_lockfile,
             lockfile_path,
         );
@@ -2118,6 +2141,7 @@ fn syncCompanionLockfile(
     project_root: []const u8,
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
+    env_only_domains: *const env_deps.DomainSet,
     frozen: bool,
     lockfile_path_override: ?[]const u8,
 ) !bool {
@@ -2138,7 +2162,7 @@ fn syncCompanionLockfile(
         try lib.packages.Lockfile.init(allocator, "1.0.0");
     defer lockfile.deinit(allocator);
 
-    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results);
+    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results, env_only_domains);
 
     const changed = if (original) |*existing|
         !lockfile_writer.lockfilesEqual(existing, &lockfile)
@@ -2161,6 +2185,7 @@ fn mergeCompanionLockfileEntries(
     lockfile: *lib.packages.Lockfile,
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
+    env_only_domains: *const env_deps.DomainSet,
 ) !void {
     // Packages whose resolved version depends on which platform installs them,
     // so the sweep below can tell a stale pin from another platform's.
@@ -2218,6 +2243,7 @@ fn mergeCompanionLockfileEntries(
     for (results) |result| {
         if (!result.success or result.name.len == 0) continue;
         const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(result.name));
+        if (env_only_domains.contains(clean_name)) continue;
 
         // Replace every older pin for this package, regardless of its key's
         // version spelling (constraint or resolved version).
@@ -2366,13 +2392,56 @@ test "companion deps replace stale system pins without dropping workspace packag
         .success = true,
     }};
 
-    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results);
+    var env_only = env_deps.DomainSet{ .allocator = allocator, .map = std.StringHashMap(void).init(allocator) };
+    defer env_only.deinit();
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results, &env_only);
 
     try t.expectEqualStrings("^1.3.14", lockfile.workspaces.get("").?.system.?.get("bun.sh").?);
     try t.expect(lockfile.packages.get("bun.sh@^1.3.4") == null);
     try t.expectEqualStrings("1.3.14", lockfile.packages.get("bun.sh@1.3.14").?.version);
     try t.expect(lockfile.packages.get("lit@3.3.1") != null);
     try t.expect(lockfile.workspaces.get("packages/ui") != null);
+}
+
+test "a service inferred from .env stays out of the lock, with what it pulled in" {
+    const t = std.testing;
+    const allocator = t.allocator;
+    const parser = @import("../../../deps/parser.zig");
+    const pipeline = @import("../../../install/pipeline.zig");
+
+    var lockfile = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+    try lockfile.addWorkspace(allocator, "", .{ .name = try allocator.dupe(u8, "fixture") });
+
+    // What the workspace declares. postgresql.org is not in it: `.env` said
+    // DB_CONNECTION=postgres on the machine that ran this install.
+    const declared = [_]parser.PackageDependency{.{ .name = "sqlite.org", .version = "^3" }};
+    const inferred = [_]parser.PackageDependency{.{ .name = "postgresql.org", .version = "latest" }};
+
+    // The pipeline installed all of it, postgres's own dependencies included.
+    const results = [_]pipeline.PackageResult{
+        .{ .name = "sqlite.org", .version = "3.51.0", .success = true },
+        .{ .name = "postgresql.org", .version = "18.4.0", .success = true },
+        .{ .name = "gnome.org/libxslt", .version = "1.1.45", .success = true },
+        .{ .name = "unicode.org", .version = "73.2.0", .success = true },
+    };
+
+    var env_only = try env_deps.inferredOnlyDomains(allocator, &inferred, &declared);
+    defer env_only.deinit();
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &declared, &results, &env_only);
+
+    // The declared package is locked, as always.
+    try t.expectEqualStrings("3.51.0", lockfile.packages.get("sqlite.org@3.51.0").?.version);
+    try t.expectEqualStrings("^3", lockfile.workspaces.get("").?.system.?.get("sqlite.org").?);
+
+    // The three entries the reported lock gained are absent, as is the
+    // constraint that put "postgresql.org": "latest" on the root workspace —
+    // so this lock is byte-identical to one cut on a machine whose .env says
+    // sqlite (#253).
+    try t.expect(lockfile.packages.get("postgresql.org@18.4.0") == null);
+    try t.expect(lockfile.packages.get("gnome.org/libxslt@1.1.45") == null);
+    try t.expect(lockfile.packages.get("unicode.org@73.2.0") == null);
+    try t.expect(lockfile.workspaces.get("").?.system.?.get("postgresql.org") == null);
 }
 
 test "a manifest install fails when a package it asked for did not arrive" {
