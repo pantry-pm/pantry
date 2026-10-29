@@ -332,6 +332,10 @@ async function installSystemPackages(
   const installed = await installResolvedSystemPackages(requests, {
     installDir: pantryDir,
     onRetry: message => core.warning(message),
+    // `quiet` silences progress, not this: a pin that resolved off a stale
+    // bundled catalog because a version source was unreachable installs an
+    // older version than upstream has, and CI is where that happens.
+    onWarn: message => core.warning(message),
     nativeInstall: packageSpecs => exec.exec(pantryExecutable, ['install', ...packageSpecs, '--no-save'], {
       cwd: path.dirname(pantryDir),
       env: { ...process.env, CI: 'true', NO_COLOR: '1' } as { [key: string]: string },
@@ -662,6 +666,18 @@ export async function run(): Promise<void> {
       }
       else core.warning('GitHub build dependency archive cache unavailable; local caching remains enabled')
     }
+
+    // Authenticate the SDK's upstream version lookups before anything resolves
+    // a version. Unauthenticated api.github.com is 60 req/hr per IP and runner
+    // pools share egress addresses, so a 403 here is routine — and a failed
+    // lookup is what made a published `bun.sh: ^1.4.1` report as having no
+    // satisfying version. `github.token` is the input's default, so this is on
+    // by default; passing `github-token: ''` opts out. Kept in-process rather
+    // than exported, so it reaches the lookups without widening the job env.
+    const githubToken = core.getInput('github-token')
+    if (githubToken && !process.env.PANTRY_GITHUB_TOKEN)
+      process.env.PANTRY_GITHUB_TOKEN = githubToken
+
     const inputs: ActionInputs = {
       nativeApp: (core.getInput('native-app') || undefined) as ActionInputs['nativeApp'],
       version: core.getInput('version') || 'latest',
