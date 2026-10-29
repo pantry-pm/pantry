@@ -3,7 +3,7 @@
  *
  * @domain `nomadproject.io`
  * @programs `nomad`
- * @version `2.1.0` (58 versions available)
+ * @version `2.1.1` (59 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install nomadproject.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "nomad"
  * console.log(pkg.description) // "Nomad is an easy-to-use, flexible, and performa..."
  * console.log(pkg.programs)    // ["nomad"]
- * console.log(pkg.versions[0]) // "2.1.0" (latest)
+ * console.log(pkg.versions[0]) // "2.1.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/nomadproject-io.md
@@ -67,6 +67,7 @@ export const nomadprojectioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.1',
     '2.1.0',
     '2.0.7',
     '2.0.6',
