@@ -208,8 +208,7 @@ fn ensureDir(path: []const u8) void {
 /// install root (`/opt/pantry/pantry`) — the path up to and including the LAST
 /// `/pantry/` segment. Used to glob sibling packages' lib dirs. Returns null if
 /// the binary isn't under a pantry tree (slice into `bin`, no allocation).
-fn pantryRootOf(bin: []const u8) ?[]const u8 {
-    const marker = "/pantry/";
+fn lastSegmentRoot(bin: []const u8, marker: []const u8) ?[]const u8 {
     var last: ?usize = null;
     var from: usize = 0;
     while (std.mem.indexOfPos(u8, bin, from, marker)) |i| {
@@ -217,7 +216,33 @@ fn pantryRootOf(bin: []const u8) ?[]const u8 {
         from = i + marker.len;
     }
     const idx = last orelse return null;
-    return bin[0 .. idx + marker.len - 1]; // include "/pantry"
+    return bin[0 .. idx + marker.len - 1]; // include the marker, without its trailing slash
+}
+
+fn pantryRootOf(bin: []const u8) ?[]const u8 {
+    return lastSegmentRoot(bin, "/pantry/");
+}
+
+/// The directory to glob for installed packages' `lib/` dirs, derived from a
+/// resolved service binary.
+///
+/// A global install lays packages out under `<prefix>/packages/<domain>/v<ver>`
+/// and symlinks binaries into `<prefix>/bin`, so a resolved `/usr/local/bin/
+/// initdb` contains no `/pantry/` segment at all. That used to fall back to a
+/// hardcoded `/opt/pantry/pantry`, which does not exist on such a host: the
+/// `find` matched nothing, the library path came out empty, and postgres then
+/// failed to start for want of libpq (#243).
+///
+/// Order matters. `/packages/` is checked first because the user-local global
+/// root (`~/.local/share/pantry/global/packages`) contains BOTH markers, and
+/// the deeper one is the tighter search. Neither present means a binary that
+/// is not inside a pantry layout — its own `<bin>/..` is then the only root we
+/// can name that is certain to exist.
+fn libraryGlobRootOf(bin: []const u8) []const u8 {
+    if (lastSegmentRoot(bin, "/packages/")) |root| return root;
+    if (pantryRootOf(bin)) |root| return root;
+    const bin_dir = std.fs.path.dirname(bin) orelse return "/usr/local";
+    return std.fs.path.dirname(bin_dir) orelse "/usr/local";
 }
 
 fn serviceDataDir(allocator: std.mem.Allocator, home: ?[]const u8, name: []const u8) ![]const u8 {
@@ -497,7 +522,7 @@ pub const Services = struct {
         // so the command can compute the platform library path itself by globbing every
         // installed package's lib dir — self-contained, independent of the unit
         // Environment. postgres links libpq/readline/icu/... from sibling deps.
-        const pantry_root = pantryRootOf(postgres_bin) orelse "/opt/pantry/pantry";
+        const pantry_root = libraryGlobRootOf(postgres_bin);
 
         // Self-initializing launch command: on first start (no PG_VERSION yet)
         // run initdb, then exec postgres. postgres/initdb refuse to run as root,
@@ -515,24 +540,58 @@ pub const Services = struct {
         // backup) so the `test -f PG_VERSION || initdb` below re-initializes a
         // fresh, compatible cluster instead of the service silently failing.
         const library_var = Paths.libraryPathVar();
-        const start_cmd = try std.fmt.allocPrint(
-            allocator,
-            "/bin/sh -c 'D=\"{s}\"; " ++
-                "L=\"$(find {s} -maxdepth 6 -type d -path \"*/v*/lib\" 2>/dev/null | tr \"\\n\" \":\")\"; " ++
-                "if [ -f \"$D/PG_VERSION\" ]; then " ++
-                "DV=$(cat \"$D/PG_VERSION\" 2>/dev/null); " ++
-                "SV=$(env {s}=$L {s} -V 2>/dev/null | sed -E \"s/[^0-9]*([0-9]+).*/\\1/\"); " ++
-                "if [ -n \"$DV\" ] && [ -n \"$SV\" ] && [ \"$DV\" != \"$SV\" ]; then " ++
-                "echo \"pantry: PostgreSQL data dir $D is v$DV but the server is v$SV; backing it up and re-initializing.\" >&2; " ++
-                "mv \"$D\" \"$D.bak.v$DV.$(date +%s)\"; fi; fi; " ++
-                "if [ \"$(id -u)\" = 0 ]; then " ++
-                "id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry; " ++
-                "mkdir -p \"$D\"; chown -R pantry \"$D\"; R=\"runuser -u pantry -- env {s}=$L\"; " ++
-                "else R=\"env {s}=$L\"; fi; " ++
-                "test -f \"$D/PG_VERSION\" || $R {s} -D \"$D\" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust; " ++
-                "exec $R {s} -D \"$D\" -p {d}'",
-            .{ pgdata, pantry_root, library_var, postgres_bin, library_var, library_var, initdb_bin, postgres_bin, port },
-        );
+
+        // Written to a file rather than inlined into `ExecStart=`. systemd
+        // parses that line itself: it applies its own quote removal and warns
+        // "Ignoring unknown escape sequences" on the `\n` this command needs
+        // for `tr`, so what the shell received was not what was written and
+        // the unit died with status=127 (#243). A script file is read by
+        // /bin/sh alone, and it is the same shape mysql and mariadb already
+        // use here.
+        const script = try std.fmt.allocPrint(allocator,
+            \\#!/bin/sh
+            \\D="{s}"
+            \\L="$(find {s} -maxdepth 6 -type d -path "*/v*/lib" 2>/dev/null | tr "\n" ":")"
+            \\# An existing cluster whose PG_VERSION major differs from the
+            \\# server's is incompatible — postgres fails instantly with
+            \\# "database files are incompatible with server" (common after a
+            \\# major upgrade, v17 -> v18). Move it aside so the initdb below
+            \\# makes a fresh, compatible one instead of the service flapping.
+            \\if [ -f "$D/PG_VERSION" ]; then
+            \\  DV=$(cat "$D/PG_VERSION" 2>/dev/null)
+            \\  SV=$(env {s}="$L" {s} -V 2>/dev/null | sed -E "s/[^0-9]*([0-9]+).*/\1/")
+            \\  if [ -n "$DV" ] && [ -n "$SV" ] && [ "$DV" != "$SV" ]; then
+            \\    echo "pantry: PostgreSQL data dir $D is v$DV but the server is v$SV; backing it up and re-initializing." >&2
+            \\    mv "$D" "$D.bak.v$DV.$(date +%s)"
+            \\  fi
+            \\fi
+            \\# postgres and initdb both refuse to run as root, so in system
+            \\# scope provision an unprivileged user and run through runuser,
+            \\# which drops LD_LIBRARY_PATH on the uid change — hence `env`.
+            \\# The run prefix lives in the positional parameters, not a
+            \\# string: unquoted, it would re-split on every space.
+            \\if [ "$(id -u)" = 0 ]; then
+            \\  id -u pantry >/dev/null 2>&1 || useradd --system --home-dir /var/lib/pantry --shell /usr/sbin/nologin pantry
+            \\  mkdir -p "$D"; chown -R pantry "$D"
+            \\  set -- runuser -u pantry -- env "{s}=$L"
+            \\else set -- env "{s}=$L"; fi
+            \\test -f "$D/PG_VERSION" || "$@" {s} -D "$D" --no-locale --encoding=UTF8 --username=postgres --auth-local=trust --auth-host=trust
+            \\# exec keeps the server as the unit's tracked PID for Restart=.
+            \\exec "$@" {s} -D "$D" -p {d}
+            \\
+        , .{ pgdata, pantry_root, library_var, postgres_bin, library_var, library_var, initdb_bin, postgres_bin, port });
+        defer allocator.free(script);
+
+        // Scoped per project, like mysql's: a shared script would let merely
+        // inspecting another project rewrite a running unit's next startup
+        // port and data directory.
+        const script_scope = if (project_root) |root| try projectScopeId(allocator, root) else null;
+        defer if (script_scope) |id| allocator.free(id);
+        const script_dir = try serviceDataDirScoped(allocator, home, "postgres-run", script_scope);
+        defer allocator.free(script_dir);
+        const script_path = try writeServiceFile(allocator, script_dir, "start.sh", script);
+        defer allocator.free(script_path);
+        const start_cmd = try std.fmt.allocPrint(allocator, "/bin/sh {s}", .{script_path});
 
         return ServiceConfig{
             .name = try allocator.dupe(u8, "postgres"),
@@ -630,7 +689,7 @@ pub const Services = struct {
 
         // pantry root for self-contained LD_LIBRARY_PATH; mysqld refuses root, so
         // run as the unprivileged `pantry` user via runuser in system scope.
-        const pantry_root = pantryRootOf(mysqld) orelse "/opt/pantry/pantry";
+        const pantry_root = libraryGlobRootOf(mysqld);
         // Locate the REAL mysqld robustly: resolveServiceBinary can fall back to
         // bare "mysqld" (not symlinked into .bin), and `env mysqld` then fails
         // with 127. Glob the installed mysql.com package for bin/mysqld (only
@@ -1613,7 +1672,7 @@ pub const Services = struct {
         // from sibling deps). mariadbd refuses to run as root, so in system scope
         // (root) provision an unprivileged `pantry` user, chown the datadir, and
         // run via runuser (which drops LD_LIBRARY_PATH, so pass it via `env`).
-        const pantry_root = pantryRootOf(mariadbd) orelse "/opt/pantry/pantry";
+        const pantry_root = libraryGlobRootOf(mariadbd);
         const script = try std.fmt.allocPrint(allocator,
             \\#!/bin/sh
             \\DATADIR="{s}"
@@ -2943,4 +3002,60 @@ test "project service scopes are stable and isolated" {
     try std.testing.expectEqual(@as(usize, 8), first.len);
     try std.testing.expectEqualStrings(first, repeated);
     try std.testing.expect(!std.mem.eql(u8, first, second));
+}
+
+test "the library glob root is derived from the binary, never a fixed path" {
+    // Global install: binaries symlinked into <prefix>/bin, packages beside
+    // them under <prefix>/packages. No "/pantry/" segment anywhere, which is
+    // what used to fall back to a nonexistent /opt/pantry/pantry (#243).
+    try std.testing.expectEqualStrings(
+        "/usr/local/packages",
+        libraryGlobRootOf("/usr/local/packages/postgresql.org/v17.10/bin/initdb"),
+    );
+    // The same install reached through its bin symlink: no marker at all, so
+    // the root is the binary's own parent — a directory that exists by
+    // construction, and whose packages/ subtree the find still reaches.
+    try std.testing.expectEqualStrings("/usr/local", libraryGlobRootOf("/usr/local/bin/initdb"));
+
+    // Project-local layout keeps its "/pantry" root.
+    try std.testing.expectEqualStrings(
+        "/srv/app/pantry",
+        libraryGlobRootOf("/srv/app/pantry/postgresql.org/v17.10/bin/postgres"),
+    );
+
+    // User-local global root carries BOTH markers; the deeper one wins
+    // because it is the tighter search.
+    try std.testing.expectEqualStrings(
+        "/home/dev/.local/share/pantry/global/packages",
+        libraryGlobRootOf("/home/dev/.local/share/pantry/global/packages/postgresql.org/v17.10/bin/postgres"),
+    );
+}
+
+test "postgres launches through a script file, not an inline shell command" {
+    const allocator = std.testing.allocator;
+    var pg = try Services.postgresql(allocator, 5432);
+    defer pg.deinit(allocator);
+
+    // systemd parses ExecStart= itself — it strips quotes and warns on the
+    // `\n` that `tr` needs, which is what made the unit exit 127 (#243). The
+    // command must therefore be a plain `/bin/sh <path>` with no quoting,
+    // escapes or shell metacharacters left for systemd to misread.
+    try std.testing.expect(std.mem.startsWith(u8, pg.start_command, "/bin/sh /"));
+    try std.testing.expect(std.mem.endsWith(u8, pg.start_command, "/start.sh"));
+    try std.testing.expect(std.mem.indexOfAny(u8, pg.start_command, "\"'$\\\n;") == null);
+    try std.testing.expect(std.mem.indexOf(u8, pg.start_command, "-c ") == null);
+
+    // ...and the script it points at is the thing that actually carries the
+    // launch, so the port, the data dir and the exec are pinned here rather
+    // than only in the unit's health check.
+    const io_helper = @import("../io_helper.zig");
+    const script_path = pg.start_command["/bin/sh ".len..];
+    const written = try io_helper.readFileAlloc(std.testing.allocator, script_path, 64 * 1024);
+    defer std.testing.allocator.free(written);
+    try std.testing.expect(std.mem.startsWith(u8, written, "#!/bin/sh\n"));
+    try std.testing.expect(std.mem.indexOf(u8, written, "-p 5432") != null);
+    try std.testing.expect(std.mem.indexOf(u8, written, "PG_VERSION") != null);
+    try std.testing.expect(std.mem.indexOf(u8, written, "\nexec ") != null);
+    const pgdata = pg.env_vars.get("PGDATA").?;
+    try std.testing.expect(std.mem.indexOf(u8, written, pgdata) != null);
 }
