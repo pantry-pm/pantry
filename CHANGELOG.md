@@ -1,3 +1,24 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.144...v0.11.145)
+
+## 🐛 Bug Fixes
+
+- **action**: handle process exit during Linux identity reads ([5ab2072](https://github.com/pantry-pm/pantry/commit/5ab2072)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.145 ([4780152](https://github.com/pantry-pm/pantry/commit/4780152)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.384 ([5b47b07](https://github.com/pantry-pm/pantry/commit/5b47b07)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update biome, CLIProxyAPI, coder, LLaMA.cpp, mise ([f358c5a](https://github.com/pantry-pm/pantry/commit/f358c5a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.382 ([b394238](https://github.com/pantry-pm/pantry/commit/b394238)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.380 ([cd707ca](https://github.com/pantry-pm/pantry/commit/cd707ca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci, fly, LLaMA.cpp, node, nomad, pulumi, terraform ([9bb3489](https://github.com/pantry-pm/pantry/commit/9bb3489)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bitcoin, CLIProxyAPI, cnquery, hurl, LLaMA.cpp, projen, Sourcery, upx, Zed ([fafe35b](https://github.com/pantry-pm/pantry/commit/fafe35b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft, doctl, hatch, LLaMA.cpp, odigos, tinygo, tox, virtualenv ([9176adb](https://github.com/pantry-pm/pantry/commit/9176adb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.143...v0.11.144)
 
 ## 🐛 Bug Fixes
