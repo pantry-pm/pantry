@@ -87,9 +87,13 @@ test "ServiceConfig creation - PostgreSQL" {
     try std.testing.expect(pg.keep_alive == true);
     try std.testing.expect(pg.auto_start == false);
 
-    // Start command must contain the port and PGDATA path
-    try std.testing.expect(std.mem.indexOf(u8, pg.start_command, "5432") != null);
+    // Postgres self-initializes, so it launches via a generated start script
+    // (systemd mangles an inline shell command in ExecStart — #243). The port
+    // therefore lives in that script and in health_check, as it does for
+    // mysql and mariadb; the script's own contents are pinned in
+    // definitions.zig.
     try std.testing.expect(std.mem.indexOf(u8, pg.start_command, "postgres") != null);
+    try std.testing.expect(std.mem.indexOf(u8, pg.health_check.?, "5432") != null);
 
     // Env vars: PGPORT and PGDATA must be set
     try std.testing.expect(pg.env_vars.get("PGPORT") != null);
@@ -107,7 +111,8 @@ test "ServiceConfig creation - PostgreSQL with custom port" {
     defer pg.deinit(allocator);
 
     try std.testing.expect(pg.port.? == 9999);
-    try std.testing.expect(std.mem.indexOf(u8, pg.start_command, "9999") != null);
+    // In the generated start script and the health check, not in ExecStart.
+    try std.testing.expect(std.mem.indexOf(u8, pg.health_check.?, "9999") != null);
 
     const pgport = pg.env_vars.get("PGPORT").?;
     try std.testing.expectEqualStrings("9999", pgport);
@@ -1641,7 +1646,8 @@ test "PostgreSQL WithContext - null project_root falls back gracefully" {
     try std.testing.expect(pg.port.? == 5432);
     try std.testing.expect(pg.start_command.len > 0);
     const expected_library_var = if (builtin.os.tag == .macos) "DYLD_LIBRARY_PATH" else "LD_LIBRARY_PATH";
-    try std.testing.expect(std.mem.indexOf(u8, pg.start_command, expected_library_var) != null);
+    // The library path is set inside the generated start script now, so this
+    // asserts it where it is still observable from the config.
     try std.testing.expect(std.mem.indexOf(u8, pg.health_check.?, expected_library_var) != null);
     try std.testing.expect(std.mem.indexOf(u8, pg.health_check.?, "pg_isready") != null);
 }
@@ -2208,7 +2214,8 @@ test "getServiceConfigWithPort - PostgreSQL with custom port" {
 
     try std.testing.expectEqualStrings("postgres", config.name);
     try std.testing.expect(config.port.? == 5433);
-    try std.testing.expect(std.mem.indexOf(u8, config.start_command, "5433") != null);
+    // Generated start script, so the port is in the health check (#243).
+    try std.testing.expect(std.mem.indexOf(u8, config.health_check.?, "5433") != null);
 }
 
 test "getServiceConfigWithPort - MySQL with custom port" {

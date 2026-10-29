@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const definitions = @import("definitions.zig");
 const lib = @import("../lib.zig");
 const io_helper = lib.io_helper;
+const style = @import("../cli/style.zig");
 
 /// Whether services are managed in the per-user systemd instance (`systemctl
 /// --user`, units under `~/.config/systemd/user`, `WantedBy=default.target`) or
@@ -375,9 +376,46 @@ pub const ServiceController = struct {
         } catch return;
     }
 
+    /// Is there a systemd user manager for this user to talk to?
+    ///
+    /// `systemctl --user` needs a per-user bus, which exists only while the
+    /// user has a login session or lingering is enabled. Without it every
+    /// call fails with "Failed to connect to bus: No medium found", which
+    /// names neither the cause nor the fix (#243). Checked by looking for the
+    /// runtime dir the bus socket lives in, so no process is spawned.
+    fn userBusAvailable() bool {
+        if (io_helper.getenv("XDG_RUNTIME_DIR")) |dir| {
+            var buf: [std.fs.max_path_bytes]u8 = undefined;
+            const socket = std.fmt.bufPrint(&buf, "{s}/systemd/private", .{dir}) catch return true;
+            io_helper.accessAbsolute(socket, .{}) catch return false;
+            return true;
+        }
+        return false;
+    }
+
+    /// What to do about a missing user bus, in the operator's own terms.
+    pub fn userBusHint(allocator: std.mem.Allocator) ![]const u8 {
+        const user = io_helper.getenv("USER") orelse io_helper.getenv("LOGNAME") orelse "$USER";
+        return std.fmt.allocPrint(
+            allocator,
+            "No systemd user manager is running for this session, so `systemctl --user` cannot be reached.\n" ++
+                "  Enable it for this user:  loginctl enable-linger {s}\n" ++
+                "  Or run the service in system scope instead (as root).",
+            .{user},
+        );
+    }
+
     fn systemdStart(self: *ServiceController, service_name: []const u8, project_id: ?[]const u8) !void {
         const service_unit = try self.getSystemdUnit(service_name, project_id);
         defer self.allocator.free(service_unit);
+        // Reported before the attempt: the raw failure is a bus error that
+        // says nothing about lingering, and it is the same for every verb.
+        if (self.scope == .user and !userBusAvailable()) {
+            const hint = userBusHint(self.allocator) catch return error.ServiceStartFailed;
+            defer self.allocator.free(hint);
+            style.printWarn("{s}\n", .{hint});
+            return error.ServiceStartFailed;
+        }
         if (!try self.runSystemctl("start", service_unit)) return error.ServiceStartFailed;
     }
 
