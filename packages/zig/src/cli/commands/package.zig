@@ -778,6 +778,10 @@ pub const PublishOptions = struct {
     /// stx release spent 100 to 120 seconds on each of its packages in turn,
     /// three stages of ten minutes - and queued, those delays overlap.
     deferred_readbacks: ?*ReadbackQueue = null,
+    /// How long to wait for an accepted upload to become public before
+    /// reporting it pending, in milliseconds (`--confirm-timeout`, seconds).
+    /// Null uses `npm_readback_timeout_ms`.
+    confirm_timeout_ms: ?u64 = null,
 };
 
 pub const DeferredReadback = publish_plan.DeferredReadback;
@@ -1118,6 +1122,34 @@ test "a bounded timeout before sending an upload is retryable" {
     try std.testing.expect(isTransientNetworkError(error.Timeout));
 }
 
+test "the public readback has its own window, not the upload socket's" {
+    // The regression this pins: both were `npm_publish_timeout_ms`, so a
+    // readback gave up after the time allotted to a stalled PUT and reported
+    // a version that did go live as a failure (#245).
+    try std.testing.expect(npm_readback_timeout_ms != npm_publish_timeout_ms);
+    try std.testing.expect(npm_readback_timeout_ms > npm_publish_timeout_ms);
+
+    // Default, and --confirm-timeout overriding it.
+    try std.testing.expectEqual(npm_readback_timeout_ms, readbackTimeoutMs(.{}));
+    try std.testing.expectEqual(@as(u64, 1_800_000), readbackTimeoutMs(.{ .confirm_timeout_ms = 1_800_000 }));
+}
+
+test "an accepted upload completes even when npm has not shown it yet" {
+    const allocator = std.testing.allocator;
+
+    // npm accepted the bytes and the readback timed out. That used to be
+    // exit 1, which skipped the release binaries and the GitHub release for a
+    // version that went live a minute later — and the message forbids
+    // re-uploading, so there was no safe way to re-run (#245).
+    var pending = completeNpmPublication(allocator, "demo", "1.0.0", null, ".", .{}, false);
+    defer pending.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 0), pending.exit_code);
+
+    var confirmed = completeNpmPublication(allocator, "demo", "1.0.0", null, ".", .{}, true);
+    defer confirmed.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 0), confirmed.exit_code);
+}
+
 /// Reason a package should be skipped when publishing to npm, or null to publish.
 ///
 /// Native (Zig) packages live on the Pantry registry, not npm: their source is
@@ -1159,8 +1191,44 @@ fn completeVerifiedNpmPublication(
     package_dir: []const u8,
     options: PublishOptions,
 ) CommandResult {
+    return completeNpmPublication(allocator, name, version, scripts, package_dir, options, true);
+}
+
+/// Finish an upload npm accepted, whether or not it is public yet.
+///
+/// A readback that times out used to return exit 1. But npm had accepted the
+/// bytes: the version lands, and the message says not to upload it again — so
+/// the only effect was to skip every release step after the publish (binaries,
+/// GitHub release) for a version that went live a minute later, with no safe
+/// way to re-run (#245). An accepted upload therefore completes, and the
+/// pending line says what is still outstanding.
+///
+/// This applies ONLY where npm accepted this run's upload. An upload whose
+/// outcome is unknown — a socket that died after the bytes, a 5xx or a
+/// redirect over a committed write — still fails, because there the version
+/// may never appear and a release built on it would reference nothing.
+///
+/// A mismatch is not pending either: `confirmPublication` returns
+/// `error.PublicationIntegrityMismatch` rather than false when the public
+/// tarball is not the one we sent, and that error propagates to a failure.
+/// What reaches `confirmed = false` is only "npm has not shown it yet".
+fn completeNpmPublication(
+    allocator: std.mem.Allocator,
+    name: []const u8,
+    version: []const u8,
+    scripts: ?std.json.ObjectMap,
+    package_dir: []const u8,
+    options: PublishOptions,
+    confirmed: bool,
+) CommandResult {
     const queued = if (options.deferred_readbacks) |queue| queue.items.len > 0 and std.mem.eql(u8, queue.items[queue.items.len - 1].name, name) and std.mem.eql(u8, queue.items[queue.items.len - 1].version, version) else false;
-    style.print("\n✓ {s} {s}@{s}\n", .{ if (queued) "Uploaded" else "Published", name, version });
+    if (!confirmed) {
+        // The same text release tooling already recognises, kept verbatim and
+        // still printed under this package's receipt — as a warning now, not
+        // an error, because the publish itself succeeded.
+        style.print("  {s}⚠{s} {s}\n", .{ style.yellow, style.reset, publish_plan.pending_publication });
+    }
+    style.print("\n✓ {s} {s}@{s}\n", .{ if (queued or !confirmed) "Uploaded" else "Published", name, version });
     if (!options.ignore_scripts) {
         if (scripts) |configured| {
             _ = lib.lifecycle.runPostPublishScripts(allocator, configured, package_dir);
@@ -1247,7 +1315,7 @@ fn publishSingleToNpm(
             .message = try std.fmt.allocPrint(allocator, "Public version availability could not be verified: {s}. Upload was not started.", .{@errorName(err)}),
         };
         if (exists) {
-            if (!try precheck_client.confirmPublication(metadata.name, metadata.version, null, npm_publish_timeout_ms)) {
+            if (!try precheck_client.confirmPublication(metadata.name, metadata.version, null, readbackTimeoutMs(options))) {
                 return CommandResult.err(allocator, "Existing version is pending public tarball availability. Do not upload this version again.");
             }
             style.print("\n{s}↷{s} {s}@{s} already published — skipping\n", .{ style.dim, style.reset, metadata.name, metadata.version });
@@ -1376,7 +1444,7 @@ fn publishSingleToNpm(
             const deferred = options.readback and options.deferred_readbacks != null;
             if (deferred) try deferReadback(allocator, options.deferred_readbacks.?, metadata.name, metadata.version, tarball_info.shasum, tarball_info.integrity, registry_url);
             const confirm_started = io_helper.getMilliTimestamp();
-            const confirmed = !options.readback or deferred or try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, npm_publish_timeout_ms);
+            const confirmed = !options.readback or deferred or try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, readbackTimeoutMs(options));
             const confirm_ms = io_helper.getMilliTimestamp() - confirm_started;
             if (deferred)
                 style.print("  {s}accepted by npm; read back once a package needs it or the batch is uploaded{s}\n", .{ style.dim, style.reset })
@@ -1385,7 +1453,7 @@ fn publishSingleToNpm(
             else
                 style.print("  {s}accepted by npm; public readback left to the caller (--no-readback){s}\n", .{ style.dim, style.reset });
             if (!confirmed) {
-                return CommandResult.err(allocator, publish_plan.pending_publication);
+                return completeNpmPublication(allocator, metadata.name, metadata.version, scripts_obj, package_dir, options, false);
             }
             // A queued readback reports "Published" when it confirms.
             const done = if (deferred) "Uploaded" else "Published";
@@ -1420,7 +1488,7 @@ fn publishSingleToNpm(
                 // for it contradicts the pre-check and, mid-release, strands
                 // the packages that already went out.
                 if (options.skip_existing) {
-                    if (!try registry_client.confirmPublication(metadata.name, metadata.version, null, npm_publish_timeout_ms)) {
+                    if (!try registry_client.confirmPublication(metadata.name, metadata.version, null, readbackTimeoutMs(options))) {
                         return CommandResult.err(allocator, "Claimed version is pending public metadata and tarball availability. Do not upload this version again.");
                     }
                     style.print("\n{s}↷{s} {s}@{s} already claimed on npm — skipping\n", .{ style.dim, style.reset, metadata.name, metadata.version });
@@ -1461,7 +1529,7 @@ fn publishSingleToNpm(
             // before the upload — no CI provider, a token npm would not
             // exchange for a package with no trusted publisher — which used to
             // wait two minutes per package for a version that was never sent.
-            if (result.sent and try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, npm_publish_timeout_ms)) {
+            if (result.sent and try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, readbackTimeoutMs(options))) {
                 style.print(
                     "\n{s}✓{s} {s}@{s} is on the registry — the publish landed, the response did not\n",
                     .{ style.green, style.reset, metadata.name, metadata.version },
@@ -1557,7 +1625,7 @@ fn publishSingleToNpm(
             // A request can commit before its response fails. Never send a
             // second PUT after bytes may have reached the registry.
             if (registry_client.token_upload_started) {
-                if (try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, npm_publish_timeout_ms)) {
+                if (try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, readbackTimeoutMs(options))) {
                     return completeVerifiedNpmPublication(allocator, metadata.name, metadata.version, scripts_obj, package_dir, options);
                 }
                 return CommandResult.err(allocator, "Upload outcome is pending public verification. Do not send another upload while this version may be staged.");
@@ -1596,7 +1664,7 @@ fn publishSingleToNpm(
         if (r.status_code == 408 or (r.status_code >= 500 and r.status_code < 600) or (r.status_code >= 300 and r.status_code < 400)) {
             var owned_response = r;
             defer owned_response.deinit(allocator);
-            if (try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, npm_publish_timeout_ms)) {
+            if (try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, readbackTimeoutMs(options))) {
                 return completeVerifiedNpmPublication(allocator, metadata.name, metadata.version, scripts_obj, package_dir, options);
             }
             return CommandResult.err(allocator, "Upload outcome is pending public verification. Do not send another upload while this version may be staged.");
@@ -1636,8 +1704,8 @@ fn publishSingleToNpm(
         if (options.readback and options.deferred_readbacks != null) {
             try deferReadback(allocator, options.deferred_readbacks.?, metadata.name, metadata.version, tarball_info.shasum, tarball_info.integrity, registry_url);
             style.print("  {s}accepted by npm; read back once a package needs it or the batch is uploaded{s}\n", .{ style.dim, style.reset });
-        } else if (options.readback and !try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, npm_publish_timeout_ms)) {
-            return CommandResult.err(allocator, publish_plan.pending_publication);
+        } else if (options.readback and !try registry_client.confirmPublication(metadata.name, metadata.version, &tarball_info.integrity, readbackTimeoutMs(options))) {
+            return completeNpmPublication(allocator, metadata.name, metadata.version, scripts_obj, package_dir, options, false);
         }
         return completeVerifiedNpmPublication(allocator, metadata.name, metadata.version, scripts_obj, package_dir, options);
     } else {
@@ -1662,7 +1730,7 @@ fn publishSingleToNpm(
             // See the OIDC path above: under `skip_existing` a conflict is the
             // pre-check losing a race, not a mistake worth failing over.
             if (options.skip_existing) {
-                if (!try registry_client.confirmPublication(metadata.name, metadata.version, null, npm_publish_timeout_ms)) {
+                if (!try registry_client.confirmPublication(metadata.name, metadata.version, null, readbackTimeoutMs(options))) {
                     return CommandResult.err(allocator, "Claimed version is pending public metadata and tarball availability. Do not upload this version again.");
                 }
                 const why: []const u8 = if (conflict_kind == .staged)
@@ -1900,6 +1968,23 @@ const npm_publish_timeout_ms: u64 = 120_000;
 /// loop to wait for the same thing. Timing out still means pending, never
 /// that the upload should be sent again.
 const deferred_readback_timeout_ms: u64 = 600_000;
+
+/// How long an immediate readback waits for npm to make an accepted upload
+/// public. Separate from `npm_publish_timeout_ms`, which bounds the upload
+/// socket: the two were the same value, so a readback gave up after the time
+/// allotted to a stalled PUT. npm's propagation regularly passes two minutes
+/// and has been observed around 25 minutes on a Craft release, which is what
+/// made `publish --npm` exit 1 on a version that did go live and skip every
+/// release step after it (#245). The batch path had already been raised to
+/// ten minutes for the same reason; this matches it. `--confirm-timeout`
+/// overrides it where a publisher knows its registry is slower still.
+const npm_readback_timeout_ms: u64 = 600_000;
+
+/// The readback window for this publish: `--confirm-timeout`, else the
+/// default above.
+fn readbackTimeoutMs(options: PublishOptions) u64 {
+    return options.confirm_timeout_ms orelse npm_readback_timeout_ms;
+}
 
 const OIDCPublishTaskResult = anyerror!OIDCPublishResult;
 
