@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { InMemoryAnalytics } from './analytics'
 import { createLocalRegistry } from './registry'
 import { createServer } from './server'
 import { getAvailablePort } from './test-utils'
 import { InMemoryZigStorage } from './zig'
+import { managedRegistryZig } from './zig-native-hash'
 import { zigPackageFixture } from './zig-package-fixture'
 
 // These routes execute the declared native compiler with a 120-second budget.
@@ -74,6 +78,75 @@ describe('Zig registry routes', () => {
     expect(body.fetchCommand).toContain('zig fetch --save')
     expect(body.artifactSha256).toBe(createHash('sha256').update(await zigPackageFixture()).digest('hex'))
     expect(body.dependency).toContain('.@"graphics-package-consumer"')
+  }, 130_000)
+
+  it('publishes a dependency entry a clean native Zig consumer resolves', async () => {
+    // The qualification #248 asked for. The registry used to advertise the
+    // tarball's SHA-256 under a `1220` prefix, which is a different identity
+    // from a Zig package hash: the archive downloaded and matched that digest,
+    // and a consumer still refused the dependency with "invalid hash:
+    // incomplete". Nothing in this suite noticed, because every assertion
+    // compared the registry against itself. This one hands the advertised
+    // entry to the compiler and lets it judge.
+    const zig = process.env.PANTRY_ZIG_BIN || managedRegistryZig() || Bun.which('zig')
+    expect(zig).toBeTruthy()
+
+    const body = await (await publish()).json() as any
+    expect(body.hash).not.toMatch(/^1220/)
+
+    // A cache of its own, so a hit from another test cannot stand in for a
+    // fetch that would otherwise fail.
+    const workspace = await mkdtemp(join(tmpdir(), 'pantry-zig-consumer-'))
+    const cache = join(workspace, 'cache')
+    try {
+      // Spawned asynchronously, never with spawnSync: the registry under test
+      // serves the tarball from THIS process, so blocking the loop while the
+      // compiler fetches deadlocks the pair until the test times out.
+      async function zigRun(...args: string[]): Promise<{ code: number, out: string, err: string }> {
+        const child = Bun.spawn([zig!, ...args], {
+          cwd: workspace,
+          env: { ...process.env, ZIG_GLOBAL_CACHE_DIR: cache },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        })
+        const [out, err, code] = await Promise.all([
+          new Response(child.stdout).text(),
+          new Response(child.stderr).text(),
+          child.exited,
+        ])
+        return { code, out, err }
+      }
+
+      // What the compiler computes for the served archive has to be exactly
+      // what the registry told consumers to write down.
+      const fetched = await zigRun('fetch', body.tarballUrl)
+      // Not an empty stderr: the compiler writes housekeeping warnings there
+      // (a temp dir it could not remove, for one), and failing on those tests
+      // the host rather than the hash. The exit status and the hash are the
+      // contract.
+      expect(fetched.err).not.toContain('error:')
+      expect(fetched.code).toBe(0)
+      expect(fetched.out.trim()).toBe(body.hash)
+
+      // And the identity a consumer actually records has to be that same
+      // hash: `zig fetch --save` writes the dependency into build.zig.zon
+      // exactly as a person adding this package would.
+      // `zig fetch --save` edits a real project, so it needs both files.
+      await writeFile(join(workspace, 'build.zig'), 'pub fn build(_: *@import("std").Build) void {}\n')
+      await writeFile(
+        join(workspace, 'build.zig.zon'),
+        // The fingerprint is derived from the package name, so it is fixed for
+        // `.consumer` rather than arbitrary — the compiler rejects a wrong one
+        // and prints the value it wants, which is where this came from.
+        `.{\n    .name = .consumer,\n    .version = "0.0.0",\n    .fingerprint = 0x705b372777268903,\n    .paths = .{""},\n}\n`,
+      )
+      const saved = await zigRun('fetch', '--save=dep', body.tarballUrl)
+      expect(`${saved.code} ${saved.err}`.replace(/warning\(fetch\):[^\n]*\n?/g, '').trim()).toBe('0')
+      const manifest = await readFile(join(workspace, 'build.zig.zon'), 'utf8')
+      expect(manifest).toContain(body.hash)
+      expect(manifest).toContain(body.tarballUrl)
+    }
+    finally { await rm(workspace, { recursive: true, force: true }) }
   }, 130_000)
 
   it('retrieves latest and exact version metadata and lists versions', async () => {
