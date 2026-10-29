@@ -113,7 +113,9 @@ export async function serviceProcessIdentity(pid: number): Promise<ServiceProces
         await new Promise(resolve => setTimeout(resolve, 5))
       }
       catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+        // Linux may return ESRCH while a process exits between procfs reads,
+        // before its directory disappears and starts returning ENOENT.
+        if (['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code || '')) return undefined
         throw error
       }
     }
