@@ -3,7 +3,7 @@
  *
  * @domain `getcomposer.org`
  * @programs `composer`, `composer.phar`
- * @version `2.10.3` (62 versions available)
+ * @version `2.11.0` (63 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install getcomposer.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "composer"
  * console.log(pkg.description) // "Dependency Manager for PHP"
  * console.log(pkg.programs)    // ["composer", "composer.phar"]
- * console.log(pkg.versions[0]) // "2.10.3" (latest)
+ * console.log(pkg.versions[0]) // "2.11.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/getcomposer-org.md
@@ -77,6 +77,7 @@ export const getcomposerorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.0',
     '2.10.3',
     '2.10.2',
     '2.10.1',

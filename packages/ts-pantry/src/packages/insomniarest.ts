@@ -3,7 +3,7 @@
  *
  * @domain `insomnia.rest`
  * @programs `insomnia`
- * @version `13.3.1` (26 versions available)
+ * @version `13.4.0` (27 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install insomnia.rest`
@@ -22,6 +22,7 @@ export const insomniarestPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '13.4.0',
     '13.3.1',
     '13.3.0',
     '13.2.0',
