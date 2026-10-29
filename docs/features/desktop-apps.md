@@ -2,15 +2,17 @@
 
 Pantry can install and manage macOS desktop applications (.app bundles) through the same registry and pipeline used for system packages.
 
+Desktop applications need native activation after the artifact is downloaded. Use `--user --kind app` to place them in `~/Applications`; fonts use `--user --kind font` and `~/Library/Fonts`. Package discovery, original logos, and desktop application connections are documented in [Desktop catalog and installation bridge](./desktop-bridge.md).
+
 ## Quick Start
 
 ```bash
 # Install a desktop app
-pantry install obsidian.md
+pantry install --user --kind app obsidian.md
 
 # Install by alias
-pantry install vscode
-pantry install discord
+pantry install --user --kind app vscode
+pantry install --user --kind app discord
 
 # View available desktop apps
 curl https://registry.pantry.dev/desktop-apps | jq
@@ -25,106 +27,106 @@ curl https://registry.pantry.dev/desktop-apps?category=Development | jq
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Visual Studio Code | `code.visualstudio.com` | `pantry install code.visualstudio.com` |
-| Cursor | `cursor.com` | `pantry install cursor.com` |
-| Zed | `zed.dev` | `pantry install zed.dev` |
-| Ghostty | `ghostty.org` | `pantry install ghostty.org` |
-| Warp | `warp.dev` | `pantry install warp.dev` |
-| iTerm2 | `iterm2.com` | `pantry install iterm2.com` |
-| Docker Desktop | `docker.com/desktop` | `pantry install docker.com/desktop` |
-| OrbStack | `orbstack.dev` | `pantry install orbstack.dev` |
-| TablePlus | `tableplus.com` | `pantry install tableplus.com` |
-| DBeaver | `dbeaver.io` | `pantry install dbeaver.io` |
-| Postman | `postman.com` | `pantry install postman.com` |
-| Bruno | `bruno.app` | `pantry install bruno.app` |
+| Visual Studio Code | `code.visualstudio.com` | `pantry install --user --kind app code.visualstudio.com` |
+| Cursor | `cursor.com` | `pantry install --user --kind app cursor.com` |
+| Zed | `zed.dev` | `pantry install --user --kind app zed.dev` |
+| Ghostty | `ghostty.org` | `pantry install --user --kind app ghostty.org` |
+| Warp | `warp.dev` | `pantry install --user --kind app warp.dev` |
+| iTerm2 | `iterm2.com` | `pantry install --user --kind app iterm2.com` |
+| Docker Desktop | `docker.com/desktop` | `pantry install --user --kind app docker.com/desktop` |
+| OrbStack | `orbstack.dev` | `pantry install --user --kind app orbstack.dev` |
+| TablePlus | `tableplus.com` | `pantry install --user --kind app tableplus.com` |
+| DBeaver | `dbeaver.io` | `pantry install --user --kind app dbeaver.io` |
+| Postman | `postman.com` | `pantry install --user --kind app postman.com` |
+| Bruno | `bruno.app` | `pantry install --user --kind app bruno.app` |
 
 ### Browsers
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Firefox | `firefox.org` | `pantry install firefox.org` |
-| Brave | `brave.com` | `pantry install brave.com` |
-| Arc | `arc.net` | `pantry install arc.net` |
+| Firefox | `firefox.org` | `pantry install --user --kind app firefox.org` |
+| Brave | `brave.com` | `pantry install --user --kind app brave.com` |
+| Arc | `arc.net` | `pantry install --user --kind app arc.net` |
 
 ### Communication
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Discord | `discord.com` | `pantry install discord.com` |
-| Slack | `slack.com` | `pantry install slack.com` |
-| Signal | `signal.org` | `pantry install signal.org` |
-| Telegram | `telegram.org` | `pantry install telegram.org` |
-| WhatsApp | `whatsapp.com` | `pantry install whatsapp.com` |
-| Element | `element.io` | `pantry install element.io` |
+| Discord | `discord.com` | `pantry install --user --kind app discord.com` |
+| Slack | `slack.com` | `pantry install --user --kind app slack.com` |
+| Signal | `signal.org` | `pantry install --user --kind app signal.org` |
+| Telegram | `telegram.org` | `pantry install --user --kind app telegram.org` |
+| WhatsApp | `whatsapp.com` | `pantry install --user --kind app whatsapp.com` |
+| Element | `element.io` | `pantry install --user --kind app element.io` |
 
 ### AI
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Ollama | `ollama.com` | `pantry install ollama.com` |
-| LM Studio | `lmstudio.ai` | `pantry install lmstudio.ai` |
+| Ollama | `ollama.com` | `pantry install --user --kind app ollama.com` |
+| LM Studio | `lmstudio.ai` | `pantry install --user --kind app lmstudio.ai` |
 
 ### Productivity
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Obsidian | `obsidian.md` | `pantry install obsidian.md` |
-| Notion | `notion.so` | `pantry install notion.so` |
-| Linear | `linear.app` | `pantry install linear.app` |
-| Raycast | `raycast.com` | `pantry install raycast.com` |
+| Obsidian | `obsidian.md` | `pantry install --user --kind app obsidian.md` |
+| Notion | `notion.so` | `pantry install --user --kind app notion.so` |
+| Linear | `linear.app` | `pantry install --user --kind app linear.app` |
+| Raycast | `raycast.com` | `pantry install --user --kind app raycast.com` |
 
 ### Security
 
 | App | Domain | Install |
 |-----|--------|---------|
-| 1Password | `1password.com` | `pantry install 1password.com` |
-| Bitwarden | `bitwarden.com` | `pantry install bitwarden.com` |
-| KeePassXC | `keepassxc.org` | `pantry install keepassxc.org` |
+| 1Password | `1password.com` | `pantry install --user --kind app 1password.com` |
+| Bitwarden | `bitwarden.com` | `pantry install --user --kind app bitwarden.com` |
+| KeePassXC | `keepassxc.org` | `pantry install --user --kind app keepassxc.org` |
 
 ### Media
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Spotify | `spotify.com` | `pantry install spotify.com` |
-| VLC | `vlc.app` | `pantry install vlc.app` |
-| IINA | `iina.io` | `pantry install iina.io` |
-| HandBrake | `handbrake.fr` | `pantry install handbrake.fr` |
+| Spotify | `spotify.com` | `pantry install --user --kind app spotify.com` |
+| VLC | `vlc.app` | `pantry install --user --kind app vlc.app` |
+| IINA | `iina.io` | `pantry install --user --kind app iina.io` |
+| HandBrake | `handbrake.fr` | `pantry install --user --kind app handbrake.fr` |
 
 ### Design
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Figma | `figma.com` | `pantry install figma.com` |
-| Inkscape | `inkscape.org` | `pantry install inkscape.org` |
-| GIMP | `gimp.org` | `pantry install gimp.org` |
-| Blender | `blender.org` | `pantry install blender.org` |
+| Figma | `figma.com` | `pantry install --user --kind app figma.com` |
+| Inkscape | `inkscape.org` | `pantry install --user --kind app inkscape.org` |
+| GIMP | `gimp.org` | `pantry install --user --kind app gimp.org` |
+| Blender | `blender.org` | `pantry install --user --kind app blender.org` |
 
 ### Utilities
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Rectangle | `rectangle.app` | `pantry install rectangle.app` |
-| Karabiner-Elements | `karabiner-elements.pqrs.org` | `pantry install karabiner-elements.pqrs.org` |
-| CleanShot X | `cleanshot.com` | `pantry install cleanshot.com` |
-| AltTab | `alttab.app` | `pantry install alttab.app` |
-| Stats | `stats.app` | `pantry install stats.app` |
-| Maccy | `maccy.app` | `pantry install maccy.app` |
-| MonitorControl | `monitorcontrol.app` | `pantry install monitorcontrol.app` |
-| Hidden Bar | `hiddenbar.app` | `pantry install hiddenbar.app` |
-| MeetingBar | `meetingbar.app` | `pantry install meetingbar.app` |
-| Keka | `keka.io` | `pantry install keka.io` |
+| Rectangle | `rectangle.app` | `pantry install --user --kind app rectangle.app` |
+| Karabiner-Elements | `karabiner-elements.pqrs.org` | `pantry install --user --kind app karabiner-elements.pqrs.org` |
+| CleanShot X | `cleanshot.com` | `pantry install --user --kind app cleanshot.com` |
+| AltTab | `alttab.app` | `pantry install --user --kind app alttab.app` |
+| Stats | `stats.app` | `pantry install --user --kind app stats.app` |
+| Maccy | `maccy.app` | `pantry install --user --kind app maccy.app` |
+| MonitorControl | `monitorcontrol.app` | `pantry install --user --kind app monitorcontrol.app` |
+| Hidden Bar | `hiddenbar.app` | `pantry install --user --kind app hiddenbar.app` |
+| MeetingBar | `meetingbar.app` | `pantry install --user --kind app meetingbar.app` |
+| Keka | `keka.io` | `pantry install --user --kind app keka.io` |
 
 ### Office
 
 | App | Domain | Install |
 |-----|--------|---------|
-| LibreOffice | `libreoffice.org` | `pantry install libreoffice.org` |
+| LibreOffice | `libreoffice.org` | `pantry install --user --kind app libreoffice.org` |
 
 ### VPN
 
 | App | Domain | Install |
 |-----|--------|---------|
-| Tunnelblick | `tunnelblick.net` | `pantry install tunnelblick.net` |
+| Tunnelblick | `tunnelblick.net` | `pantry install --user --kind app tunnelblick.net` |
 
 ## Registry API
 

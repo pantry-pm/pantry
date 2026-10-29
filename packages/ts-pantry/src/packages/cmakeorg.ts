@@ -3,7 +3,7 @@
  *
  * @domain `cmake.org`
  * @programs `cmake`, `ccmake`, `cpack`, `ctest`
- * @version `4.4.4` (97 versions available)
+ * @version `4.4.5` (99 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cmake.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "cmake"
  * console.log(pkg.description) // "Mirror of CMake upstream repository"
  * console.log(pkg.programs)    // ["cmake", "ccmake", ...]
- * console.log(pkg.versions[0]) // "4.4.4" (latest)
+ * console.log(pkg.versions[0]) // "4.4.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cmake-org.md
@@ -83,11 +83,13 @@ export const cmakePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.4.5',
     '4.4.4',
     '4.4.3',
     '4.4.2',
     '4.4.1',
     '4.4.0',
+    '4.3.6',
     '4.3.5',
     '4.3.4',
     '4.3.3',

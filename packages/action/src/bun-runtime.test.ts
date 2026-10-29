@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { setupBunRuntime } from './bun-runtime'
+import { requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
 
 const dirs: string[] = []
 function tempBinDir(): string {
@@ -16,6 +16,49 @@ afterEach(() => {
 })
 
 describe('setup-only (install: false) Bun runtime', () => {
+  test('bootstrap selects only the declared Bun root', () => {
+    expect(requiredBunPackageSpec(['craft-native.org@0.0.346', 'bun.sh@1.4.3'])).toBe('bun.sh@1.4.3')
+    expect(requiredBunPackageSpec(['bun.com@~1.4.3'])).toBe('bun.com@~1.4.3')
+    expect(requiredBunPackageSpec(['bun@1.4.3'])).toBe('bun@1.4.3')
+    expect(requiredBunPackageSpec(['bunpress.org@1'])).toBe('bun.sh')
+  })
+
+  test.skipIf(process.platform === 'win32')('a later signing-only call preserves the compiler and executor selected by project setup', async () => {
+    const binDir = tempBinDir()
+    const runtime = '#!/bin/sh\nprintf "1.4.3\\n"\n'
+    const executor = '#!/bin/sh\nexec "$(dirname "$0")/bun" x "$@"\n'
+    fs.writeFileSync(path.join(binDir, 'bun'), runtime, { mode: 0o755 })
+    fs.writeFileSync(path.join(binDir, 'bunx'), executor, { mode: 0o755 })
+    let installs = 0
+    let linked = false
+    await setupBunRuntime({ binDir, preserveExisting: true, install: async () => {
+      installs++
+      fs.writeFileSync(path.join(binDir, 'bun'), '#!/bin/sh\nprintf "1.4.4\\n"\n')
+    }, onLinked: () => { linked = true } })
+    expect(installs).toBe(0)
+    expect(linked).toBe(true)
+    expect(fs.readFileSync(path.join(binDir, 'bun'), 'utf8')).toBe(runtime)
+    expect(fs.readFileSync(path.join(binDir, 'bunx'), 'utf8')).toBe(executor)
+  })
+
+  test('a broken activation is reinstalled instead of counted as a compiler', async () => {
+    const binDir = tempBinDir()
+    fs.writeFileSync(path.join(binDir, 'bun'), 'not executable')
+    let installs = 0
+    await setupBunRuntime({ binDir, preserveExisting: true, install: async () => { installs++ } })
+    expect(installs).toBe(1)
+  })
+
+  test.skipIf(process.platform === 'win32')('an activation export failure does not reinstall or hide the error', async () => {
+    const binDir = tempBinDir()
+    fs.writeFileSync(path.join(binDir, 'bun'), '#!/bin/sh\nprintf "1.4.3\\n"\n', { mode: 0o755 })
+    let installs = 0
+    await expect(setupBunRuntime({ binDir, preserveExisting: true,
+      install: async () => { installs++ },
+      onLinked: () => { throw new Error('GITHUB_ENV is not writable') },
+    })).rejects.toThrow('GITHUB_ENV is not writable')
+    expect(installs).toBe(0)
+  })
   test('a rejected Bun install fails the setup and keeps the download error', async () => {
     const binDir = tempBinDir()
     let linked = false
@@ -30,29 +73,35 @@ describe('setup-only (install: false) Bun runtime', () => {
     expect(fs.existsSync(path.join(binDir, 'bunx'))).toBe(false)
   })
 
-  test('a successful install links bunx and exports the runtime', async () => {
+  test('a successful install preserves the provider bunx activation and exports the runtime', async () => {
     const binDir = tempBinDir()
     let linked = false
     await setupBunRuntime({
       binDir,
       install: async () => {
         fs.writeFileSync(path.join(binDir, 'bun'), '#!/bin/sh\n', { mode: 0o755 })
+        fs.writeFileSync(path.join(binDir, 'bunx'), '#!/bin/sh\nexec "$(dirname "$0")/bun" x "$@"\n', { mode: 0o755 })
       },
       onLinked: () => { linked = true },
     })
     expect(linked).toBe(true)
-    expect(fs.readlinkSync(path.join(binDir, 'bunx'))).toBe(path.join(binDir, 'bun'))
+    expect(fs.lstatSync(path.join(binDir, 'bunx')).isSymbolicLink()).toBe(false)
+    expect(fs.readFileSync(path.join(binDir, 'bunx'), 'utf8')).toContain('/bun" x "$@"')
   })
 
-  test('a stale bunx link is replaced rather than failing setup', async () => {
+  test.skipIf(process.platform === 'win32')('executor arguments survive a primary runtime launcher', async () => {
     const binDir = tempBinDir()
-    fs.symlinkSync('/nonexistent/bun', path.join(binDir, 'bunx'))
+    const activation = '#!/bin/sh\nexec "$(dirname "$0")/bun" x "$@"\n'
     await setupBunRuntime({
       binDir,
       install: async () => {
-        fs.writeFileSync(path.join(binDir, 'bun'), '#!/bin/sh\n', { mode: 0o755 })
+        fs.writeFileSync(path.join(binDir, 'bun'), '#!/bin/sh\nprintf "%s\\n" "$@"\n', { mode: 0o755 })
+        fs.writeFileSync(path.join(binDir, 'bunx'), activation, { mode: 0o755 })
       },
     })
-    expect(fs.readlinkSync(path.join(binDir, 'bunx'))).toBe(path.join(binDir, 'bun'))
+    const result = Bun.spawnSync([path.join(binDir, 'bunx'), '--bun', '@stacksjs/buddy@0.75.283', '--version'])
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout.toString().trim().split('\n')).toEqual(['x', '--bun', '@stacksjs/buddy@0.75.283', '--version'])
+    expect(fs.readFileSync(path.join(binDir, 'bunx'), 'utf8')).toBe(activation)
   })
 })

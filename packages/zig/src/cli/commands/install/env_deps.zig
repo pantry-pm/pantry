@@ -19,9 +19,15 @@
 //!     is added and its pin is untouched.
 //!   - Only those keys are read, and only a recognised driver name is ever
 //!     printed; no other `.env` value leaves this file.
-//!   - Under `--frozen-lockfile` the lockfile is the contract: a package is
-//!     inferred only if `pantry.lock` already records it, so CI never drifts
-//!     from the committed lock.
+//!   - An inference never reaches `pantry.lock`, neither as a constraint nor
+//!     as a package entry, and neither does anything it drags in. The lock
+//!     records what the workspace declares, so it has to read the same on
+//!     every machine; a service read out of someone's local `.env` does not.
+//!     Writing them in made a lock cut on a Postgres machine carry
+//!     postgresql.org, gnome.org/libxslt and unicode.org, which a checkout
+//!     without that `.env` then removed again (#253).
+//!   - Because of that rule, `--frozen-lockfile` needs no special case here:
+//!     an inference cannot move the lock, so it cannot drift from it either.
 //!   - `PANTRY_ENV_DEPS=0` (or `false`/`off`) turns the whole thing off.
 
 const std = @import("std");
@@ -119,15 +125,21 @@ pub fn inferFromEnv(content: []const u8, out: *[max_inferences]Inference) []Infe
     return out[0..n];
 }
 
+/// The registry domain a dependency name refers to, in any spelling
+/// (`postgres`, `auto:redis`, `postgresql.org@17`).
+pub fn canonicalDomain(dep_name: []const u8) []const u8 {
+    var name = helpers.normalizePackageName(dep_name);
+    // `postgresql.org@17` written as a single key.
+    if (std.mem.lastIndexOfScalar(u8, name, '@')) |at| {
+        if (at > 0) name = name[0..at];
+    }
+    return helpers.resolvePackageAlias(name);
+}
+
 /// Does the dependency list already name `domain`, in any spelling?
 pub fn isDeclared(declared: []const parser.PackageDependency, domain: []const u8) bool {
     for (declared) |dep| {
-        var name = helpers.normalizePackageName(dep.name);
-        // `postgresql.org@17` written as a single key.
-        if (std.mem.lastIndexOfScalar(u8, name, '@')) |at| {
-            if (at > 0) name = name[0..at];
-        }
-        if (std.mem.eql(u8, helpers.resolvePackageAlias(name), domain)) return true;
+        if (std.mem.eql(u8, canonicalDomain(dep.name), domain)) return true;
     }
     return false;
 }
@@ -137,22 +149,7 @@ pub fn isEnabled() bool {
     return !(std.mem.eql(u8, val, "0") or std.ascii.eqlIgnoreCase(val, "false") or std.ascii.eqlIgnoreCase(val, "off") or std.ascii.eqlIgnoreCase(val, "no"));
 }
 
-fn lockfileHas(allocator: std.mem.Allocator, project_dir: []const u8, domain: []const u8) bool {
-    const lockfile_reader = @import("../../../packages/lockfile.zig");
-    const path = std.fs.path.join(allocator, &.{ project_dir, "pantry.lock" }) catch return false;
-    defer allocator.free(path);
-    var lock = lockfile_reader.readLockfile(allocator, path) catch return false;
-    defer lock.deinit(allocator);
-    if (lock.packages.get(domain) != null) return true;
-    var it = lock.packages.iterator();
-    while (it.next()) |entry| {
-        if (std.mem.eql(u8, entry.value_ptr.name, domain)) return true;
-    }
-    return false;
-}
-
 pub const Options = struct {
-    frozen_lockfile: bool = false,
     /// Print what was added and why.
     report: bool = true,
 };
@@ -184,7 +181,6 @@ pub fn infer(
     for (found) |inf| {
         if (isDeclared(declared, inf.domain)) continue;
         if (isDeclared(added.items, inf.domain)) continue;
-        if (options.frozen_lockfile and !lockfileHas(allocator, project_dir, inf.domain)) continue;
 
         const name = try allocator.dupe(u8, inf.domain);
         errdefer allocator.free(name);
@@ -197,6 +193,106 @@ pub fn infer(
         }
     }
     return added.toOwnedSlice(allocator);
+}
+
+/// A set of registry domains, owning its keys.
+pub const DomainSet = struct {
+    allocator: std.mem.Allocator,
+    map: std.StringHashMap(void),
+
+    pub fn contains(self: DomainSet, domain: []const u8) bool {
+        return self.map.contains(domain);
+    }
+
+    pub fn deinit(self: *DomainSet) void {
+        var it = self.map.keyIterator();
+        while (it.next()) |key| self.allocator.free(key.*);
+        self.map.deinit();
+    }
+};
+
+/// Walk `seeds` and everything the catalog says they need. `visit` is called
+/// with each domain reached, seeds included, once each.
+fn walkCatalog(
+    allocator: std.mem.Allocator,
+    seeds: []const []const u8,
+    context: anytype,
+    comptime visit: fn (@TypeOf(context), []const u8) anyerror!void,
+) !void {
+    const generated = @import("../../../packages/generated.zig");
+    const pipeline = @import("../../../install/pipeline.zig");
+
+    var seen = std.StringHashMap(void).init(allocator);
+    defer seen.deinit();
+
+    var frontier: std.ArrayList([]const u8) = .empty;
+    defer frontier.deinit(allocator);
+    for (seeds) |seed| try frontier.append(allocator, seed);
+
+    while (frontier.pop()) |domain| {
+        if ((try seen.getOrPut(domain)).found_existing) continue;
+        try visit(context, domain);
+        const info = generated.getPackageByDomain(domain) orelse continue;
+        for (info.dependencies) |spec| {
+            // Any OS's guard: a lock is written on one platform and read on
+            // another, so what the other one would pull in counts too.
+            const parsed = pipeline.parseAnyOsDepSpec(spec) orelse continue;
+            try frontier.append(allocator, parsed.domain);
+        }
+    }
+}
+
+/// Domains that are in this install ONLY because `.env` named a service.
+///
+/// The inferred roots, plus everything the package catalog says they pull in,
+/// minus everything a declared dependency pulls in. The subtraction is the
+/// point: `unicode.org` arrives with postgresql.org here, but a workspace that
+/// declares something else needing it has it on its own merits, and leaving
+/// that out of the lock would make the lock depend on the local `.env` in the
+/// opposite direction.
+///
+/// The transitive half is what made this a set rather than a name check: the
+/// lock cut on a Postgres machine gained gnome.org/libxslt and unicode.org as
+/// well as postgresql.org itself (#253).
+///
+/// The caller owns the result.
+pub fn inferredOnlyDomains(
+    allocator: std.mem.Allocator,
+    inferred: []const parser.PackageDependency,
+    declared: []const parser.PackageDependency,
+) !DomainSet {
+    var set = DomainSet{ .allocator = allocator, .map = std.StringHashMap(void).init(allocator) };
+    errdefer set.deinit();
+    if (inferred.len == 0) return set;
+
+    var inferred_roots: std.ArrayList([]const u8) = .empty;
+    defer inferred_roots.deinit(allocator);
+    for (inferred) |dep| try inferred_roots.append(allocator, canonicalDomain(dep.name));
+
+    const Add = struct {
+        fn visit(target: *DomainSet, domain: []const u8) anyerror!void {
+            const gop = try target.map.getOrPut(domain);
+            if (gop.found_existing) return;
+            gop.key_ptr.* = target.allocator.dupe(u8, domain) catch |err| {
+                _ = target.map.remove(domain);
+                return err;
+            };
+        }
+    };
+    try walkCatalog(allocator, inferred_roots.items, &set, Add.visit);
+
+    var declared_roots: std.ArrayList([]const u8) = .empty;
+    defer declared_roots.deinit(allocator);
+    for (declared) |dep| try declared_roots.append(allocator, canonicalDomain(dep.name));
+
+    const Remove = struct {
+        fn visit(target: *DomainSet, domain: []const u8) anyerror!void {
+            if (target.map.fetchRemove(domain)) |removed| target.allocator.free(removed.key);
+        }
+    };
+    try walkCatalog(allocator, declared_roots.items, &set, Remove.visit);
+
+    return set;
 }
 
 pub fn freeDeps(allocator: std.mem.Allocator, deps: []const parser.PackageDependency) void {
@@ -317,7 +413,7 @@ test "infer reads the project's .env and never overrides an explicit pin" {
     try testing.expectEqualStrings("redis.io", with_pin[0].name);
 }
 
-test "under --frozen-lockfile only packages the lockfile records are inferred" {
+test "inference is independent of the lockfile, in frozen runs too" {
     const allocator = testing.allocator;
     var tmp = testing.tmpDir(.{});
     defer tmp.cleanup();
@@ -326,23 +422,59 @@ test "under --frozen-lockfile only packages the lockfile records are inferred" {
 
     try writeFixture(tmp, ".env", "DB_CONNECTION=pgsql\nQUEUE_CONNECTION=redis\n");
 
-    // No lockfile at all: frozen infers nothing.
-    const without_lock = try infer(allocator, dir, &.{}, .{ .frozen_lockfile = true, .report = false });
-    defer freeDeps(allocator, without_lock);
-    try testing.expectEqual(@as(usize, 0), without_lock.len);
+    // No lockfile at all. Inference used to be gated on the lock recording the
+    // package, which only held because inference itself had put it there; now
+    // nothing it produces reaches the lock, so there is nothing to gate on and
+    // a --frozen-lockfile run infers exactly what any other run does (#253).
+    const inferred = try infer(allocator, dir, &.{}, .{ .report = false });
+    defer freeDeps(allocator, inferred);
+    try testing.expectEqual(@as(usize, 2), inferred.len);
+    try testing.expectEqualStrings("postgresql.org", inferred[0].name);
+    try testing.expectEqualStrings("redis.io", inferred[1].name);
+}
 
-    try writeFixture(tmp, "pantry.lock",
-        \\{
-        \\  "version": "1",
-        \\  "lockfileVersion": 1,
-        \\  "generatedAt": "2026-10-03T00:00:00Z",
-        \\  "packages": {
-        \\    "postgresql.org@17.6.0": { "name": "postgresql.org", "version": "17.6.0", "source": "pantry" }
-        \\  }
-        \\}
-    );
-    const with_lock = try infer(allocator, dir, &.{}, .{ .frozen_lockfile = true, .report = false });
-    defer freeDeps(allocator, with_lock);
-    try testing.expectEqual(@as(usize, 1), with_lock.len);
-    try testing.expectEqualStrings("postgresql.org", with_lock[0].name);
+test "inferred-only domains cover what an inference drags in" {
+    const allocator = testing.allocator;
+    const mk = struct {
+        fn dep(name: []const u8) parser.PackageDependency {
+            return .{ .name = name, .version = "latest" };
+        }
+    }.dep;
+
+    var set = try inferredOnlyDomains(allocator, &.{mk("postgresql.org")}, &.{mk("bun.sh")});
+    defer set.deinit();
+
+    // The root itself, and the transitive entries that appeared in the lock
+    // alongside it in the reported failure.
+    try testing.expect(set.contains("postgresql.org"));
+    try testing.expect(set.contains("gnome.org/libxslt"));
+    try testing.expect(set.contains("unicode.org"));
+    try testing.expect(!set.contains("bun.sh"));
+}
+
+test "a domain a declared package also needs is not inferred-only" {
+    const allocator = testing.allocator;
+    const mk = struct {
+        fn dep(name: []const u8) parser.PackageDependency {
+            return .{ .name = name, .version = "latest" };
+        }
+    }.dep;
+
+    // Declaring postgres outright leaves nothing attributable to the .env...
+    var declared = try inferredOnlyDomains(allocator, &.{mk("postgresql.org")}, &.{mk("postgres")});
+    defer declared.deinit();
+    try testing.expect(!declared.contains("postgresql.org"));
+    try testing.expect(!declared.contains("unicode.org"));
+
+    // ...and so does declaring something that needs the same library: the lock
+    // must not lose an entry that package needs on its own merits.
+    var shared = try inferredOnlyDomains(allocator, &.{mk("postgresql.org")}, &.{mk("gnome.org/libxslt")});
+    defer shared.deinit();
+    try testing.expect(shared.contains("postgresql.org"));
+    try testing.expect(!shared.contains("gnome.org/libxslt"));
+
+    // Nothing inferred, nothing to exclude.
+    var empty = try inferredOnlyDomains(allocator, &.{}, &.{mk("postgresql.org")});
+    defer empty.deinit();
+    try testing.expectEqual(@as(u32, 0), empty.map.count());
 }

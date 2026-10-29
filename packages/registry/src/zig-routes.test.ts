@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { createHash } from 'node:crypto'
 import { InMemoryAnalytics } from './analytics'
 import { createLocalRegistry } from './registry'
 import { createServer } from './server'
 import { getAvailablePort } from './test-utils'
 import { InMemoryZigStorage } from './zig'
+import { zigPackageFixture } from './zig-package-fixture'
 
+// These routes execute the declared native compiler with a 120-second budget.
+// Leave time for request cleanup instead of the default five-second unit limit.
 describe('Zig registry routes', () => {
   let port: number
   let baseUrl: string
@@ -30,10 +34,10 @@ describe('Zig registry routes', () => {
     delete process.env.PANTRY_REGISTRY_TOKEN
   })
 
-  function publish(version = '1.0.0', authorization = token): Promise<Response> {
+  async function publish(version = '1.0.0', authorization = token): Promise<Response> {
     const form = new FormData()
-    form.append('tarball', new File([Buffer.from(`zig package ${version}`)], `example-${version}.tar.gz`))
-    form.append('manifest', `.name = .example_package,\n.version = "${version}",`)
+    form.append('tarball', new File([new Uint8Array(await zigPackageFixture(version))], `graphics_package_consumer-${version}.tar.gz`))
+    form.append('manifest', `.name = .graphics_package_consumer,\n.version = "${version}",`)
     form.append('description', 'Example Zig package')
     return fetch(`${baseUrl}/zig/publish`, {
       method: 'POST',
@@ -57,53 +61,78 @@ describe('Zig registry routes', () => {
 
     expect((await publish('1.0.0', token)).status).toBe(401)
     expect((await publish('1.0.0', rotatedToken)).status).toBe(201)
-  })
+  }, 130_000)
 
   it('publishes canonical metadata and content-addressed evidence', async () => {
     const response = await publish()
     const body = await response.json() as any
 
     expect(response.status).toBe(201)
-    expect(body.message).toBe('Published example-package@1.0.0')
-    expect(body.hash).toMatch(/^1220[a-f0-9]{64}$/)
-    expect(body.tarballUrl).toBe(`${baseUrl}/zig/packages/example-package/1.0.0/tarball`)
+    expect(body.message).toBe('Published graphics-package-consumer@1.0.0')
+    expect(body.hash).toBe('graphics_package_consumer-1.0.0-eF_X1KAAAAB7sPq4wQFLI6Urz5wPpAnB_liZ_wFl9Csi')
+    expect(body.tarballUrl).toBe(`${baseUrl}/zig/packages/graphics-package-consumer/1.0.0/tarball`)
     expect(body.fetchCommand).toContain('zig fetch --save')
-    expect(body.dependency).toContain('.example-package')
-  })
+    expect(body.artifactSha256).toBe(createHash('sha256').update(await zigPackageFixture()).digest('hex'))
+    expect(body.dependency).toContain('.@"graphics-package-consumer"')
+  }, 130_000)
 
   it('retrieves latest and exact version metadata and lists versions', async () => {
     expect((await publish('1.0.0')).status).toBe(201)
     expect((await publish('2.0.0')).status).toBe(201)
 
-    const latest = await (await fetch(`${baseUrl}/zig/packages/example-package`)).json() as any
-    const exact = await (await fetch(`${baseUrl}/zig/packages/example-package/1.0.0`)).json() as any
-    const versions = await (await fetch(`${baseUrl}/zig/packages/example-package/versions`)).json() as any
+    const latest = await (await fetch(`${baseUrl}/zig/packages/graphics-package-consumer`)).json() as any
+    const exact = await (await fetch(`${baseUrl}/zig/packages/graphics-package-consumer/1.0.0`)).json() as any
+    const versions = await (await fetch(`${baseUrl}/zig/packages/graphics-package-consumer/versions`)).json() as any
 
     expect(latest.version).toBe('2.0.0')
     expect(exact.version).toBe('1.0.0')
     expect(versions.versions).toEqual(['2.0.0', '1.0.0'])
-  })
+  }, 130_000)
 
   it('downloads the exact published tarball and resolves its hash', async () => {
     const published = await (await publish()).json() as any
-    const tarball = await fetch(`${baseUrl}/zig/packages/example-package/1.0.0/tarball`)
+    const tarball = await fetch(`${baseUrl}/zig/packages/graphics-package-consumer/1.0.0/tarball`)
     const hashLookup = await fetch(`${baseUrl}/zig/hash/${published.hash}`)
 
     expect(tarball.status).toBe(200)
     expect(tarball.headers.get('content-type')).toBe('application/gzip')
-    expect(await tarball.text()).toBe('zig package 1.0.0')
-    expect((await hashLookup.json() as any).name).toBe('example-package')
-  })
+    expect(Buffer.from(await tarball.arrayBuffer()).toString('base64')).toBe((await zigPackageFixture()).toString('base64'))
+    expect((await hashLookup.json() as any).name).toBe('graphics-package-consumer')
+  }, 130_000)
 
   it('searches published packages with a bounded JSON response', async () => {
     expect((await publish()).status).toBe(201)
-    const response = await fetch(`${baseUrl}/zig/search?q=example&limit=1`)
+    const response = await fetch(`${baseUrl}/zig/search?q=graphics&limit=1`)
     const body = await response.json() as any
 
     expect(response.status).toBe(200)
     expect(body.results).toHaveLength(1)
-    expect(body.results[0].name).toBe('example-package')
-  })
+    expect(body.results[0].name).toBe('graphics-package-consumer')
+  }, 130_000)
+
+  it('rejects a malformed clean archive without publishing metadata', async () => {
+    const form = new FormData()
+    form.append('tarball', new File([Buffer.from('not an archive')], 'invalid-1.0.0.tar.gz'))
+    form.append('manifest', '.{ .name = .invalid, .version = "1.0.0" }')
+    const response = await fetch(`${baseUrl}/zig/publish`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form,
+    })
+    expect(response.status).toBe(422)
+    expect((await fetch(`${baseUrl}/zig/packages/invalid/1.0.0`)).status).toBe(404)
+  }, 130_000)
+
+  it('fails closed when the declared native compiler is unavailable', async () => {
+    const previous = process.env.PANTRY_ZIG_BIN
+    process.env.PANTRY_ZIG_BIN = '/missing-registry-zig-executable'
+    try {
+      expect((await publish()).status).toBe(503)
+      expect((await fetch(`${baseUrl}/zig/packages/graphics-package-consumer/1.0.0`)).status).toBe(404)
+    }
+    finally {
+      if (previous === undefined) delete process.env.PANTRY_ZIG_BIN
+      else process.env.PANTRY_ZIG_BIN = previous
+    }
+  }, 130_000)
 
   it('rejects duplicate immutable versions', async () => {
     expect((await publish()).status).toBe(201)
@@ -111,17 +140,17 @@ describe('Zig registry routes', () => {
 
     expect(duplicate.status).toBe(409)
     expect(await duplicate.json()).toEqual({ error: 'Version already exists' })
-  })
+  }, 130_000)
 
   it('requires the current token to delete a package', async () => {
     expect((await publish()).status).toBe(201)
-    expect((await fetch(`${baseUrl}/zig/packages/example-package`, { method: 'DELETE' })).status).toBe(401)
+    expect((await fetch(`${baseUrl}/zig/packages/graphics-package-consumer`, { method: 'DELETE' })).status).toBe(401)
 
-    const deleted = await fetch(`${baseUrl}/zig/packages/example-package`, {
+    const deleted = await fetch(`${baseUrl}/zig/packages/graphics-package-consumer`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     })
     expect(deleted.status).toBe(200)
-    expect((await fetch(`${baseUrl}/zig/packages/example-package`)).status).toBe(404)
-  })
+    expect((await fetch(`${baseUrl}/zig/packages/graphics-package-consumer`)).status).toBe(404)
+  }, 130_000)
 })

@@ -2,6 +2,7 @@ const std = @import("std");
 const io_helper = @import("../../io_helper.zig");
 const style = @import("../style.zig");
 const common = @import("common.zig");
+const token_commands = @import("token.zig");
 const CommandResult = common.CommandResult;
 
 pub const PublishBinaryOptions = struct {
@@ -87,7 +88,9 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
     const domain_slug = domain_slug_buf[0..slug_len];
 
     const registry = io_helper.getenv("PANTRY_REGISTRY_URL") orelse "https://registry.pantry.dev";
-    const token = io_helper.getenv("PANTRY_REGISTRY_TOKEN") orelse io_helper.getenv("PANTRY_TOKEN") orelse "";
+    const credential = try token_commands.resolve(allocator, null, registry, token_commands.default_key);
+    defer if (credential) |value| value.deinit(allocator);
+    const token = if (credential) |value| value.value else "";
 
     style.print("Publishing native binary through Pantry registry\n", .{});
     style.print("  Domain:   {s}\n", .{options.domain});

@@ -3,7 +3,7 @@
  *
  * @domain `bitcoin.org`
  * @programs `bitcoin-cli`, `bitcoin-tx`, `bitcoin-util`, `bitcoin-wallet`, `bitcoind`
- * @version `31.1` (73 versions available)
+ * @version `32.1` (77 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install bitcoin.org`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "bitcoin"
  * console.log(pkg.description) // "Decentralized, peer to peer payment network"
  * console.log(pkg.programs)    // ["bitcoin-cli", "bitcoin-tx", ...]
- * console.log(pkg.versions[0]) // "31.1" (latest)
+ * console.log(pkg.versions[0]) // "32.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/bitcoin-org.md
@@ -74,8 +74,11 @@ export const bitcoinorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '32.1',
+    '31.2',
     '31.1',
     '31.0',
+    '30.4',
     '30.3',
     '30.2',
     '30.2.0',
@@ -83,6 +86,7 @@ export const bitcoinorgPackage = {
     '30.1.0',
     '30.0',
     '30.0.0',
+    '29.5',
     '29.4',
     '29.3',
     '29.3.0',

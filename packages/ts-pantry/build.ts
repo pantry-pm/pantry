@@ -61,6 +61,11 @@ async function verifyEntryPoints(): Promise<void> {
   const entries = [
     path.join(process.cwd(), 'dist', 'src', 'index.js'),
     path.join(process.cwd(), 'dist', 'src', 'testing', 'index.js'),
+    path.join(process.cwd(), 'dist', 'src', 'native', 'index.js'),
+    path.join(process.cwd(), 'dist', 'src', 'native', 'release.js'),
+    path.join(process.cwd(), 'dist', 'src', 'catalog', 'client.js'),
+    path.join(process.cwd(), 'dist', 'src', 'desktop', 'client.js'),
+    path.join(process.cwd(), 'dist', 'src', 'desktop', 'service.js'),
   ]
 
   for (const entry of entries) {
@@ -72,6 +77,27 @@ async function verifyEntryPoints(): Promise<void> {
       throw error
     }
   }
+  for (const name of ['catalog', 'desktop']) {
+    const browser = await Bun.build({ entrypoints: [path.join(process.cwd(), 'dist', 'src', name, 'client.js')], target: 'browser' })
+    if (!browser.success) throw new Error(`Published ${name} client cannot bundle for browsers: ${browser.logs.map(item => item.message).join('; ')}`)
+    for (const output of browser.outputs) {
+      const source = await output.text()
+      if (/Bun\.spawn|node:fs|startDesktopBridge/.test(source)) throw new Error(`Published ${name} client includes external installer implementation`)
+    }
+  }
+  // Consumers load declarations, not the source graph checked by the SDK's tsconfig.
+  const contract = path.join(process.cwd(), 'dist', '.catalog-contract.ts')
+  fs.writeFileSync(contract, `import { createPackageCatalogSearch } from './src/catalog/client'
+import type { PackageCatalogEntry } from './src/catalog/client'
+const search = createPackageCatalogSearch([])
+const entries: PackageCatalogEntry[] = search('git', { kind: 'cli', limit: 5 })
+entries.map(entry => entry.domain)
+`)
+  try {
+    const check = Bun.spawn([process.execPath, 'x', '--bun', 'tsc', '--ignoreConfig', '--noEmit', '--skipLibCheck', '--moduleResolution', 'bundler', '--module', 'esnext', '--target', 'esnext', contract], { stdout: 'inherit', stderr: 'inherit' })
+    if (await check.exited !== 0) throw new Error('Published catalog declarations failed their consumer contract')
+  }
+  finally { fs.rmSync(contract, { force: true }) }
 }
 
 async function build() {
@@ -83,7 +109,7 @@ async function build() {
   // dependency of another entry point, so these multi-entry JavaScript files
   // are replaced by isolated runtime builds below.
   const declarationResult = await Bun.build({
-    entrypoints: ['src/index.ts', 'bin/cli.ts', 'src/testing/index.ts'],
+    entrypoints: ['src/index.ts', 'bin/cli.ts', 'bin/desktop.ts', 'src/testing/index.ts', 'src/native/index.ts', 'src/native/release.ts', 'src/catalog/client.ts', 'src/desktop/client.ts', 'src/desktop/service.ts'],
     outdir: './dist',
     target: 'node',
     splitting: false,
@@ -105,7 +131,7 @@ async function build() {
   // emitted paths exactly where the export map already points, and the shared
   // half moves into chunks both of them import.
   const runtimeResult = await Bun.build({
-    entrypoints: ['src/index.ts', 'src/testing/index.ts', 'bin/cli.ts'],
+    entrypoints: ['src/index.ts', 'src/testing/index.ts', 'src/native/index.ts', 'src/native/release.ts', 'src/catalog/client.ts', 'src/desktop/client.ts', 'src/desktop/service.ts', 'bin/cli.ts', 'bin/desktop.ts'],
     outdir: './dist',
     root: '.',
     target: 'node',

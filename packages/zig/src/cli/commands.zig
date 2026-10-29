@@ -222,6 +222,8 @@ pub const installWorkspaceCommand = install_commands.installWorkspaceCommand;
 pub const installGlobalDepsCommand = install_commands.installGlobalDepsCommand;
 pub const installGlobalDepsCommandUserLocal = install_commands.installGlobalDepsCommandUserLocal;
 pub const installPackagesGloballyCommand = install_commands.installPackagesGloballyCommand;
+pub const installPackagesUserLocalCommand = install_commands.installPackagesUserLocalCommand;
+pub const install_routing = @import("commands/install/routing.zig");
 
 // ============================================================================
 // Re-export Dev Commands

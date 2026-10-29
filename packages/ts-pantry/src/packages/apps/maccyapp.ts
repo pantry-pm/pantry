@@ -3,7 +3,7 @@
  *
  * @domain `maccy.app`
  * @programs `maccy`
- * @version `2.7.1` (35 versions available)
+ * @version `2.8.0` (36 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install maccy.app`
@@ -22,6 +22,7 @@ export const maccyappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '2.8.0',
     '2.7.1',
     '2.7.0',
     '2.6.1',

@@ -583,9 +583,10 @@ export function commitSubject(published: Array<Entry & { previousPublished: stri
   // Single update: name it exactly.
   if (published.length === 1) {
     const e = published[0]
+    const name = e.name.trim() || e.domain
     return e.previousPublished
-      ? `chore(desktop): publish ${e.kind} ${e.domain} ${e.previousPublished} → ${e.published}`
-      : `chore(desktop): publish ${e.kind} ${e.domain} ${e.published}`
+      ? `chore(desktop): publish ${e.kind} ${name} ${e.previousPublished} → ${e.published}`
+      : `chore(desktop): publish ${e.kind} ${name} ${e.published}`
   }
 
   // Several: count per kind ("2 apps & 1 font"), append names if they fit.
@@ -595,7 +596,7 @@ export function commitSubject(published: Array<Entry & { previousPublished: stri
   const what = [apps && n(apps, 'app'), fonts && n(fonts, 'font')].filter(Boolean).join(' & ')
 
   let subject = `chore(desktop): publish ${what}`
-  const names = published.map(e => e.domain).join(', ')
+  const names = published.map(e => e.name.trim() || e.domain).join(', ')
   if (`${subject} (${names})`.length <= 72)
     subject += ` (${names})`
   return subject

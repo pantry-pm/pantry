@@ -123,7 +123,7 @@ export interface RegistryConfig {
    * Object storage provider. AWS S3, Backblaze B2 and Hetzner Object Storage are
    * all S3-compatible. Defaults to `STORAGE_PROVIDER` env, then `'aws'`.
    */
-  storageProvider?: 'aws' | 'backblaze' | 'hetzner'
+  storageProvider?: 'aws' | 'backblaze' | 'hetzner' | 'r2'
   /** Endpoint host override (no scheme), e.g. `s3.us-west-004.backblazeb2.com`. */
   s3Endpoint?: string
   /** Force path-style addressing instead of virtual-hosted. */
@@ -307,6 +307,8 @@ export interface UserSubscription {
  * API token for programmatic access (e.g., publishing)
  */
 export interface ApiToken {
+  /** Operator-issued exact native package domains. Ordinary account tokens cannot grant these. */
+  binaryPublishDomains?: string[]
   /** Token ID (e.g., "ptry_abc123...") — only returned at creation time */
   id: string
   /** User-provided label (e.g., "CI deploy token") */
@@ -329,6 +331,7 @@ export interface ApiToken {
  * Subset of ApiToken returned in listings (never includes raw token or hash)
  */
 export interface ApiTokenInfo {
+  binaryPublishDomains?: string[]
   id: string
   name: string
   permissions: ('publish' | 'read')[]
@@ -355,6 +358,7 @@ export interface Session {
  * Result of validating a Bearer token during publish
  */
 export interface TokenValidationResult {
+  binaryPublishDomains?: string[]
   valid: boolean
   userId?: string
   tokenId?: string
@@ -411,7 +415,7 @@ export interface MetadataStorage {
   getPackage(name: string): Promise<PackageRecord | null>
   getPackageVersion(name: string, version: string): Promise<PackageMetadata | null>
   putPackage(record: PackageRecord): Promise<void>
-  putVersion(name: string, version: string, metadata: PackageMetadata): Promise<void>
+  putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void>
   search(query: string, limit?: number): Promise<SearchResult[]>
   listVersions(name: string): Promise<string[]>
   incrementDownloads(name: string, version: string): Promise<void>

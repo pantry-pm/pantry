@@ -14,6 +14,7 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync, r
 import { join } from 'node:path'
 import type { VersionSource, Recipe } from './recipe-types'
 import { revisedPackageVersions } from './package-revisions'
+import { findRecipeFile } from './recipe-loader'
 
 const recipesDir = join(import.meta.dir, '..', 'src', 'recipes')
 const packagesDir = join(import.meta.dir, '..', 'src', 'packages')
@@ -435,7 +436,12 @@ async function main() {
       else if (entry.name.endsWith('.ts')) recipeFiles.push(join(dir, entry.name))
     }
   }
-  scan(recipesDir)
+  if (targetDomain) {
+    const file = findRecipeFile(targetDomain)
+    if (!file) throw new Error(`No native recipe found for ${targetDomain}`)
+    recipeFiles.push(file)
+  }
+  else scan(recipesDir)
 
   /** Set once any upstream answers "rate limit exhausted": the sweep is void. */
   let rateLimitHit = false
@@ -575,4 +581,7 @@ async function main() {
 // `UpstreamUnavailable`, say — used to kick off a full sweep of every recipe as
 // a side effect of the import.
 if (import.meta.main)
-  main().catch(console.error)
+  main().catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })

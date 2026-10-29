@@ -1,8 +1,15 @@
+import packageCatalog from '../../../catalog/packages.json'
+import packageLogos from '../../../catalog/logos.json'
+import desktopCatalog from '../../../catalog/desktop.json'
+const DESKTOP_APPS = desktopCatalog.apps
+const DESKTOP_FONTS = desktopCatalog.fonts
 import { resolve, dirname, relative } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
+import { PackageVersionExistsError } from './publication'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
 import { handleZigRoutes, createZigStorage } from './zig-routes'
 import type { ZigPackageStorage } from './zig'
@@ -158,23 +165,6 @@ process.on('SIGUSR2', () => {
     .catch(err => console.error('Reload failed:', err))
 })
 
-// systemd sends SIGTERM on every restart, so this runs on each deploy. Handling
-// the signal suppresses the default exit, hence the explicit one — and the
-// bounded wait, so a slow bucket turns into a normal shutdown rather than
-// systemd's kill timeout.
-let _shuttingDown = false
-for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-  process.on(signal, () => {
-    if (_shuttingDown)
-      return
-    _shuttingDown = true
-    Promise.race([
-      flushEgressLedger().catch(err => console.warn('Egress flush failed:', (err as Error).message)),
-      new Promise(resolve => setTimeout(resolve, 5000)),
-    ]).finally(() => process.exit(0))
-  })
-}
-
 function isKnownVersion(domain: string, version: string): boolean {
   const versions = _knownVersions.get(domain)
   if (!versions) return false // Unknown package — don't track
@@ -191,70 +181,6 @@ const SITE_LAYOUT = resolve(SITE_DIR, 'layout.stx')
 const SITE_COMPONENTS = resolve(__dirname, '../site/components')
 
 /** Desktop apps available in the registry (macOS .app bundles) */
-const DESKTOP_APPS: Array<{ domain: string, label: string, desc: string, category: string }> = [
-  // Editors & IDEs
-  { domain: 'code.visualstudio.com', label: 'Visual Studio Code', desc: 'Source code editor by Microsoft', category: 'Development' },
-  { domain: 'cursor.com', label: 'Cursor', desc: 'AI-powered code editor', category: 'Development' },
-  { domain: 'zed.dev', label: 'Zed', desc: 'High-performance code editor', category: 'Development' },
-  // Terminals
-  { domain: 'ghostty.org', label: 'Ghostty', desc: 'Fast, native terminal emulator', category: 'Development' },
-  { domain: 'warp.dev', label: 'Warp', desc: 'Modern terminal with AI', category: 'Development' },
-  { domain: 'iterm2.com', label: 'iTerm2', desc: 'Terminal emulator for macOS', category: 'Development' },
-  // Dev Tools
-  { domain: 'docker.com/desktop', label: 'Docker Desktop', desc: 'Container development platform', category: 'Development' },
-  { domain: 'orbstack.dev', label: 'OrbStack', desc: 'Fast Docker & Linux on macOS', category: 'Development' },
-  { domain: 'tableplus.com', label: 'TablePlus', desc: 'Database management GUI', category: 'Development' },
-  { domain: 'dbeaver.io', label: 'DBeaver', desc: 'Universal database tool', category: 'Development' },
-  { domain: 'postman.com', label: 'Postman', desc: 'API development platform', category: 'Development' },
-  { domain: 'bruno.app', label: 'Bruno', desc: 'Open-source API client', category: 'Development' },
-  // Browsers
-  { domain: 'firefox.org', label: 'Firefox', desc: 'Open-source web browser', category: 'Browsers' },
-  { domain: 'brave.com', label: 'Brave', desc: 'Privacy-focused browser', category: 'Browsers' },
-  { domain: 'arc.net', label: 'Arc', desc: 'Browser built for power users', category: 'Browsers' },
-  // Communication
-  { domain: 'discord.com', label: 'Discord', desc: 'Voice, video & text chat', category: 'Communication' },
-  { domain: 'slack.com', label: 'Slack', desc: 'Team messaging platform', category: 'Communication' },
-  { domain: 'signal.org', label: 'Signal', desc: 'Private messaging', category: 'Communication' },
-  { domain: 'telegram.org', label: 'Telegram', desc: 'Cloud-based messaging', category: 'Communication' },
-  { domain: 'whatsapp.com', label: 'WhatsApp', desc: 'Messaging app', category: 'Communication' },
-  { domain: 'element.io', label: 'Element', desc: 'Matrix messaging client', category: 'Communication' },
-  // AI
-  { domain: 'ollama.com', label: 'Ollama', desc: 'Run LLMs locally', category: 'AI' },
-  { domain: 'lmstudio.ai', label: 'LM Studio', desc: 'Desktop LLM app', category: 'AI' },
-  // Productivity
-  { domain: 'obsidian.md', label: 'Obsidian', desc: 'Knowledge base & notes', category: 'Productivity' },
-  { domain: 'notion.so', label: 'Notion', desc: 'All-in-one workspace', category: 'Productivity' },
-  { domain: 'linear.app', label: 'Linear', desc: 'Project management tool', category: 'Productivity' },
-  { domain: 'raycast.com', label: 'Raycast', desc: 'Productivity launcher', category: 'Productivity' },
-  { domain: '1password.com', label: '1Password', desc: 'Password manager', category: 'Security' },
-  { domain: 'bitwarden.com', label: 'Bitwarden', desc: 'Open-source password manager', category: 'Security' },
-  { domain: 'keepassxc.org', label: 'KeePassXC', desc: 'Offline password manager', category: 'Security' },
-  // Media
-  { domain: 'spotify.com', label: 'Spotify', desc: 'Music streaming', category: 'Media' },
-  { domain: 'vlc.app', label: 'VLC', desc: 'Media player', category: 'Media' },
-  { domain: 'iina.io', label: 'IINA', desc: 'Modern media player for macOS', category: 'Media' },
-  { domain: 'handbrake.fr', label: 'HandBrake', desc: 'Video transcoder', category: 'Media' },
-  // Design
-  { domain: 'figma.com', label: 'Figma', desc: 'Collaborative design tool', category: 'Design' },
-  { domain: 'inkscape.org', label: 'Inkscape', desc: 'Vector graphics editor', category: 'Design' },
-  { domain: 'gimp.org', label: 'GIMP', desc: 'Image editor', category: 'Design' },
-  { domain: 'blender.org', label: 'Blender', desc: '3D creation suite', category: 'Design' },
-  // Utilities
-  { domain: 'rectangle.app', label: 'Rectangle', desc: 'Window management', category: 'Utilities' },
-  { domain: 'karabiner-elements.pqrs.org', label: 'Karabiner-Elements', desc: 'Keyboard customizer', category: 'Utilities' },
-  { domain: 'cleanshot.com', label: 'CleanShot X', desc: 'Screenshot tool', category: 'Utilities' },
-  { domain: 'alttab.app', label: 'AltTab', desc: 'Window switcher', category: 'Utilities' },
-  { domain: 'stats.app', label: 'Stats', desc: 'System monitor in menu bar', category: 'Utilities' },
-  { domain: 'maccy.app', label: 'Maccy', desc: 'Clipboard manager', category: 'Utilities' },
-  { domain: 'monitorcontrol.app', label: 'MonitorControl', desc: 'Display brightness control', category: 'Utilities' },
-  { domain: 'hiddenbar.app', label: 'Hidden Bar', desc: 'Hide menu bar items', category: 'Utilities' },
-  { domain: 'meetingbar.app', label: 'MeetingBar', desc: 'Calendar in menu bar', category: 'Utilities' },
-  { domain: 'keka.io', label: 'Keka', desc: 'File archiver', category: 'Utilities' },
-  // Office
-  { domain: 'libreoffice.org', label: 'LibreOffice', desc: 'Office suite', category: 'Office' },
-  // VPN
-  { domain: 'tunnelblick.net', label: 'Tunnelblick', desc: 'OpenVPN client', category: 'VPN & Security' },
-]
 
 /**
  * Curated desktop fonts pantry publishes to its registry (binaries/<domain>/…),
@@ -262,25 +188,6 @@ const DESKTOP_APPS: Array<{ domain: string, label: string, desc: string, categor
  * Domains follow the `<slug>.font` convention. Keep in sync with the recipes in
  * ts-pantry/src/recipes/<domain>.ts.
  */
-const DESKTOP_FONTS: Array<{ domain: string, label: string, desc: string, category: string }> = [
-  // Monospace / coding
-  { domain: 'jetbrains-mono', label: 'JetBrains Mono', desc: 'Typeface for developers', category: 'Monospace' },
-  { domain: 'fira-code', label: 'Fira Code', desc: 'Monospaced font with programming ligatures', category: 'Monospace' },
-  { domain: 'cascadia-code', label: 'Cascadia Code', desc: "Microsoft's monospaced coding font", category: 'Monospace' },
-  { domain: 'source-code-pro', label: 'Source Code Pro', desc: "Adobe's monospaced coding font", category: 'Monospace' },
-  { domain: 'hack', label: 'Hack', desc: 'A typeface designed for source code', category: 'Monospace' },
-  { domain: 'ibm-plex-mono', label: 'IBM Plex Mono', desc: "IBM's monospaced typeface", category: 'Monospace' },
-  { domain: 'geist-mono', label: 'Geist Mono', desc: "Vercel's monospaced typeface", category: 'Monospace' },
-  { domain: 'meslo-lg-nerd-font', label: 'MesloLG Nerd Font', desc: 'Meslo patched with Nerd Font glyphs', category: 'Nerd Fonts' },
-  { domain: 'jetbrains-mono-nerd-font', label: 'JetBrainsMono Nerd Font', desc: 'JetBrains Mono patched with Nerd Font glyphs', category: 'Nerd Fonts' },
-  // Sans / UI
-  { domain: 'inter', label: 'Inter', desc: 'Typeface designed for screens', category: 'Sans Serif' },
-  { domain: 'geist', label: 'Geist', desc: "Vercel's sans-serif typeface", category: 'Sans Serif' },
-  { domain: 'roboto', label: 'Roboto', desc: "Google's signature sans-serif", category: 'Sans Serif' },
-  { domain: 'open-sans', label: 'Open Sans', desc: 'Humanist sans-serif typeface', category: 'Sans Serif' },
-  { domain: 'lato', label: 'Lato', desc: 'Sans-serif typeface family', category: 'Sans Serif' },
-  { domain: 'ibm-plex-sans', label: 'IBM Plex Sans', desc: "IBM's sans-serif typeface", category: 'Sans Serif' },
-]
 
 /** Featured packages shown on the homepage */
 const FEATURED_PACKAGES = [
@@ -725,14 +632,15 @@ export function createHandler(
   malwareScanner: MalwareScanner = createMalwareScannerFromEnv(),
   injectedBinaryPublisher?: BinaryArtifactPublisher,
   injectedBuildStatus?: BuildStatusStore,
-): (req: Request) => Promise<Response> {
+): ((req: Request) => Promise<Response>) & { drain: () => Promise<void> } {
   const getReadyBuildStatus = async (): Promise<BuildStatusStore> => {
     const store = injectedBuildStatus || getBuildStatus()
     await store.ready()
     return store
   }
   let binaryPublisher = injectedBinaryPublisher
-  const getBinaryPublisher = (): BinaryArtifactPublisher => {
+  let drainingAdmission = false
+  const resolveBinaryPublisher = (): BinaryArtifactPublisher => {
     if (binaryPublisher) return binaryPublisher
     const secret = process.env.PANTRY_BINARY_STAGING_SECRET || getRegistryToken() || ''
     const storage = resolveStorageProvider()
@@ -771,7 +679,11 @@ export function createHandler(
     return binaryPublisher
   }
 
-  return async (req: Request): Promise<Response> => {
+  const dispatch = async (req: Request, admitted: boolean): Promise<Response> => {
+    const getBinaryPublisher = () => {
+      if (!admitted) throw new BinaryPublishError('Registry is draining publication work', 503, 'REGISTRY_DRAINING')
+      return resolveBinaryPublisher()
+    }
     const url = new URL(req.url)
     const path = url.pathname
 
@@ -792,7 +704,7 @@ export function createHandler(
       // even on a private registry: a client that gets a 401 needs somewhere to
       // find out why, and `curl <registry>/api/registry-info` is that place.
       if (path === '/api/registry-info' && req.method === 'GET') {
-        return Response.json(registryInfo(process.env, baseUrl), {
+        return Response.json({ ...registryInfo(process.env, baseUrl), npmFallback: registry.npmFallbackEnabled }, {
           headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
         })
       }
@@ -892,7 +804,7 @@ export function createHandler(
         return Response.json(data, { headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=15' } })
       }
       // Live build status: what's building now, recent outcomes, rebuild queue.
-      // Aggregate only — no per-client or per-package breakdown — so this is
+      // Aggregate only — no per-client breakdown — so this is
       // the same class of information as the download counts already on /stats.
       if (path === '/api/egress' && req.method === 'GET') {
         return Response.json(getEgressLedger().snapshot(), {
@@ -1159,6 +1071,10 @@ export function createHandler(
         if (publisherSite) return publisherSite
       }
 
+      if (path === '/catalog' && req.method === 'GET') {
+        return Response.json(packageCatalog, { headers: { ...corsHeaders, 'Cache-Control': 'public, max-age=3600' } })
+      }
+
       // Desktop apps listing — returns all desktop apps with live version info from S3
       if (path === '/desktop-apps' && req.method === 'GET') {
         const category = url.searchParams.get('category') || ''
@@ -1170,6 +1086,7 @@ export function createHandler(
                 const meta = await fetchPackageMetadata(app.domain, binaryStorage)
                 return {
                   ...app,
+                  logo: (packageLogos as Record<string, unknown>)[app.domain] ?? null,
                   version: meta?.latestVersion || null,
                   platforms: meta?.latestVersion
                     ? Object.keys(meta.versions?.[meta.latestVersion]?.platforms || {})
@@ -1204,6 +1121,7 @@ export function createHandler(
                 const meta = await fetchPackageMetadata(font.domain, binaryStorage)
                 return {
                   ...font,
+                  logo: (packageLogos as Record<string, unknown>)[font.domain] ?? null,
                   version: meta?.latestVersion || null,
                   platforms: meta?.latestVersion
                     ? Object.keys(meta.versions?.[meta.latestVersion]?.platforms || {})
@@ -1245,7 +1163,7 @@ export function createHandler(
         const rawSort = url.searchParams.get('sort') || 'relevance'
         const sort = ['relevance', 'downloads', 'name', 'newest'].includes(rawSort) ? rawSort : 'relevance'
         const rawView = url.searchParams.get('view') || 'list'
-        const view = ['list', 'grid'].includes(rawView) ? rawView : 'list'
+        const view = ['list', 'grid', 'table'].includes(rawView) ? rawView : 'list'
         const rawType = url.searchParams.get('type') || 'all'
         const type = ['all', 'system', 'zig', 'php', 'npm'].includes(rawType) ? rawType : 'all'
         const page = Math.min(Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1), 10000)
@@ -1256,7 +1174,7 @@ export function createHandler(
 
       // Publish
       if (path === '/publish' && req.method === 'POST') {
-        return handlePublish(req, registry, corsHeaders, malwareScanner)
+        return await handlePublish(req, registry, corsHeaders, malwareScanner)
       }
 
       // Stripe webhook
@@ -1915,6 +1833,8 @@ export function createHandler(
       return htmlResponse(await renderSitePage('404.stx', { title: 'Not Found' }), 404)
     }
     catch (error) {
+      if (error instanceof PackageVersionExistsError)
+        return Response.json({ error: 'Version already exists' }, { status: 409, headers: corsHeaders })
       console.error('Server error:', error)
       return Response.json(
         { error: 'Internal server error' },
@@ -1922,6 +1842,25 @@ export function createHandler(
       )
     }
   }
+  const active = new Set<Promise<Response>>()
+  const handler = (req: Request): Promise<Response> => {
+    if (drainingAdmission && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      return Promise.resolve(Response.json({ error: 'Registry is draining active publication work', code: 'REGISTRY_DRAINING' }, { status: 503, headers: { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } }))
+    }
+    const result = dispatch(req, !drainingAdmission)
+    active.add(result)
+    void result.finally(() => active.delete(result)).catch(() => {})
+    return result
+  }
+  return Object.assign(handler, {
+    drain: async () => {
+      drainingAdmission = true
+      // Keep metadata reads serving while the already admitted work settles.
+      await Promise.allSettled([...active])
+      await binaryPublisher?.drain()
+    },
+  })
+
 }
 
 export function createServer(
@@ -1937,6 +1876,7 @@ export function createServer(
   buildStatus?: BuildStatusStore,
 ): { start: () => void, stop: (closeActiveConnections?: boolean) => Promise<void> } {
   let server: ReturnType<typeof Bun.serve> | null = null
+  let draining: Promise<void> | null = null
   const analyticsStorage = analytics || createAnalytics()
   const zigPackageStorage = zigStorage || createZigStorage()
   const phpPackageStorage = phpStorage || createPhpStorage()
@@ -1945,21 +1885,23 @@ export function createServer(
   _authService = authSvc
   const baseUrl = process.env.BASE_URL || `http://localhost:${port}`
   const internalBaseUrl = process.env.REGISTRY_INTERNAL_URL || `http://127.0.0.1:${port}`
-  const handler = createHandler(
-    registry,
-    analyticsStorage,
-    zigPackageStorage,
-    baseUrl,
-    binaryStorage,
-    phpPackageStorage,
-    authSvc,
-    internalBaseUrl,
-    malwareScanner,
-    binaryPublisher,
-    buildStatus,
-  )
+  let activeHandler: ReturnType<typeof createHandler> | undefined
 
   const start = () => {
+    if (server || draining) throw new Error('Registry server is already running or draining')
+    activeHandler = createHandler(
+      registry,
+      analyticsStorage,
+      zigPackageStorage,
+      baseUrl,
+      binaryStorage,
+      phpPackageStorage,
+      authSvc,
+      internalBaseUrl,
+      malwareScanner,
+      binaryPublisher,
+      buildStatus,
+    )
     const configuredIdleTimeout = Number.parseInt(process.env.PANTRY_HTTP_IDLE_TIMEOUT_SECONDS || '', 10)
     const idleTimeout = Number.isSafeInteger(configuredIdleTimeout)
       && configuredIdleTimeout >= 10
@@ -1968,7 +1910,7 @@ export function createServer(
       : 255
     server = Bun.serve({
       port,
-      fetch: handler,
+      fetch: activeHandler,
       // ClamAV streams can legitimately take longer than Bun's 10-second
       // default. Keep the client connection open through the scanner's bounded
       // timeout so retries cannot duplicate an in-flight scan.
@@ -2041,12 +1983,26 @@ export function createServer(
     console.log('  GET  /dashboard/login            - Login')
   }
 
-  const stop = async (closeActiveConnections = false) => {
-    if (server) {
-      const stopping = server
-      server = null
-      await stopping.stop(closeActiveConnections)
+  const stop = (closeActiveConnections = false): Promise<void> => {
+    if (!server) return Promise.resolve()
+    const current = server
+    const currentHandler = activeHandler
+    if (!currentHandler) return Promise.reject(new Error('Registry server has no active request handler'))
+    if (closeActiveConnections) {
+      // Retain the handle while graceful drain is pending so a deadline can
+      // still force its active connections closed.
+      return Promise.resolve(current.stop(true)).then(() => {
+        if (server === current) server = null
+      })
     }
+    draining ??= (async () => {
+      await currentHandler.drain()
+      await current.stop(false)
+    })().finally(() => {
+      if (server === current) server = null
+      draining = null
+    })
+    return draining
   }
 
   return { start, stop }
@@ -2199,7 +2155,7 @@ function extractBearerToken(authHeader: string | null): string | null {
  * Validate authorization token.
  * Supports both legacy REGISTRY_TOKEN and user API tokens (ptry_ prefix).
  */
-async function validateToken(authHeader: string | null): Promise<{ valid: boolean, error?: string, userId?: string }> {
+async function validateToken(authHeader: string | null): Promise<{ valid: boolean, error?: string, userId?: string, binaryPublishDomains?: string[] }> {
   if (!authHeader) {
     return { valid: false, error: 'Authorization required' }
   }
@@ -2963,6 +2919,7 @@ async function handleAdminRoutes(
       const result = await auth.createApiToken(user.email, typeof body.name === 'string' ? body.name : 'admin-issued', {
         permissions: permissions.length > 0 ? permissions : ['read'],
         expiresInDays: typeof body.expiresInDays === 'number' ? body.expiresInDays : undefined,
+        binaryPublishDomains: body.binaryPublishDomains,
       })
       return Response.json({ success: true, ...result }, { status: 201, headers: corsHeaders })
     }
@@ -2997,19 +2954,39 @@ async function authorizeBinaryPublisher(
   return null
 }
 
+interface NativeUploadIdentity {
+  userId: string
+  binaryPublishDomains?: string[]
+}
+
+async function authenticateNativeUploader(req: Request, corsHeaders: Record<string, string>): Promise<NativeUploadIdentity | Response> {
+  const identity = await validateToken(req.headers.get('authorization'))
+  if (!identity.valid || !identity.userId)
+    return Response.json({ error: identity.error || 'Authorization required' }, { status: 401, headers: corsHeaders })
+  if (identity.userId !== '_admin' && !identity.binaryPublishDomains?.length)
+    return Response.json({ error: 'Native publication requires an operator-issued package grant', code: 'BINARY_PACKAGE_GRANT_REQUIRED' }, { status: 403, headers: corsHeaders })
+  return { userId: identity.userId, binaryPublishDomains: identity.binaryPublishDomains }
+}
+
+function deniedNativeDomain(corsHeaders: Record<string, string>): Response {
+  return Response.json({ error: 'Token cannot publish this native package or complete another publisher upload', code: 'BINARY_PACKAGE_SCOPE_DENIED' }, { status: 403, headers: corsHeaders })
+}
+
 async function handleBinaryUploadInitiate(
   req: Request,
   getPublisher: () => BinaryArtifactPublisher,
   corsHeaders: Record<string, string>,
 ): Promise<Response> {
-  const denied = await authorizeBinaryPublisher(req, corsHeaders)
-  if (denied) return denied
-  const body = await req.json().catch(() => null)
+  const identity = await authenticateNativeUploader(req, corsHeaders)
+  if (identity instanceof Response) return identity
+  const body = await req.json().catch(() => null) as Record<string, unknown> | null
   if (!body)
     return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
 
   try {
-    const initiated = getPublisher().initiate(body)
+    if (identity.userId !== '_admin' && !identity.binaryPublishDomains?.includes(typeof body.domain === 'string' ? body.domain.trim() : ''))
+      return deniedNativeDomain(corsHeaders)
+    const initiated = getPublisher().initiate(body, identity.userId)
     return Response.json(initiated, { status: 201, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
   }
   catch (error) {
@@ -3029,8 +3006,8 @@ async function handleBinaryUploadComplete(
   getPublisher: () => BinaryArtifactPublisher,
   corsHeaders: Record<string, string>,
 ): Promise<Response> {
-  const denied = await authorizeBinaryPublisher(req, corsHeaders)
-  if (denied) return denied
+  const identity = await authenticateNativeUploader(req, corsHeaders)
+  if (identity instanceof Response) return identity
   const body = await req.json().catch(() => null) as { uploadId?: unknown } | null
   if (!body || typeof body.uploadId !== 'string') {
     return Response.json({
@@ -3040,7 +3017,11 @@ async function handleBinaryUploadComplete(
   }
 
   try {
-    const completed = await getPublisher().complete(body.uploadId, '_admin')
+    const publisher = getPublisher()
+    const grant = publisher.uploadAuthorization(body.uploadId)
+    if (identity.userId !== '_admin' && (!identity.binaryPublishDomains?.includes(grant.domain) || grant.publisher !== identity.userId))
+      return deniedNativeDomain(corsHeaders)
+    const completed = await publisher.complete(body.uploadId, identity.userId)
     return Response.json({ success: true, ...completed }, {
       status: 201,
       headers: { ...corsHeaders, 'Cache-Control': 'no-store' },
@@ -3726,7 +3707,7 @@ function extractSessionToken(req: Request): string | null {
  * would happily follow off-site, so they're rejected.
  */
 function safeRedirectTarget(value: string | null | undefined): string | null {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return null
+  if (!value || !value.startsWith('/') || value.startsWith('//') || /[\\\u0000-\u001f\u007f]/.test(value)) return null
   return value
 }
 
@@ -3853,6 +3834,8 @@ async function handleAuthRoutes(
 
     try {
       const body = await req.json() as { name?: string, permissions?: ('publish' | 'read')[], expiresInDays?: number }
+      if ('binaryPublishDomains' in body)
+        return Response.json({ error: 'Native package grants can only be issued by a registry operator' }, { status: 403, headers: corsHeaders })
       const validPermissions = ['publish', 'read'] as const
       const permissions = Array.isArray(body.permissions)
         ? body.permissions.filter((p): p is 'publish' | 'read' => validPermissions.includes(p as any))
@@ -3907,29 +3890,35 @@ async function handleSiteAuth(
     'X-Content-Type-Options': 'nosniff',
   }
 
+  const next = safeRedirectTarget(new URL(req.url).searchParams.get('next')) || '/account'
+  const pageContext = { next, encodedNext: encodeURIComponent(next) }
+
   // Login page
   if (path === '/login') {
     if (req.method === 'POST') {
+      let formData: Awaited<ReturnType<typeof req.formData>> | undefined
       try {
-        const formData = await req.formData()
+        formData = await req.formData()
+        pageContext.next = safeRedirectTarget(formData.get('next') as string) || next
+        pageContext.encodedNext = encodeURIComponent(pageContext.next)
         const email = formData.get('email') as string || ''
         const password = formData.get('password') as string || ''
         const { sessionToken } = await auth.login(email, password)
         // The private-registry gate bounces browsers here with ?next=… — send
         // them back where they were headed instead of dumping them on /account.
-        const next = safeRedirectTarget(formData.get('next') as string || new URL(req.url).searchParams.get('next'))
+        const destination = safeRedirectTarget(formData.get('next') as string || new URL(req.url).searchParams.get('next'))
         return new Response(null, {
           status: 302,
           headers: {
             ...htmlHeaders,
-            'Location': next || '/account',
+            'Location': destination || '/account',
             'Set-Cookie': `pantry_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
           },
         })
       }
       catch {
         // Generic error message to prevent user enumeration via timing/messaging differences
-        const html = await renderSitePage('login.stx', { error: 'Invalid email or password', title: 'Log In' })
+        const html = await renderSitePage('login.stx', { ...pageContext, error: 'Invalid email or password', title: 'Log In', email: formData?.get('email') || '' })
         return new Response(html, { status: 401, headers: htmlHeaders })
       }
     }
@@ -3938,10 +3927,10 @@ async function handleSiteAuth(
     if (sessionToken) {
       const user = await auth.validateSession(sessionToken)
       if (user) {
-        return new Response(null, { status: 302, headers: { ...htmlHeaders, Location: '/account' } })
+        return new Response(null, { status: 302, headers: { ...htmlHeaders, Location: next } })
       }
     }
-    const html = await renderSitePage('login.stx', { title: 'Log In' })
+    const html = await renderSitePage('login.stx', { ...pageContext, title: 'Log In' })
     return new Response(html, { headers: htmlHeaders })
   }
 
@@ -3953,14 +3942,17 @@ async function handleSiteAuth(
       return new Response(null, { status: 302, headers: { ...htmlHeaders, Location: '/login' } })
     }
     if (req.method === 'POST') {
+      let formData: Awaited<ReturnType<typeof req.formData>> | undefined
       try {
-        const formData = await req.formData()
+        formData = await req.formData()
+        pageContext.next = safeRedirectTarget(formData.get('next') as string) || next
+        pageContext.encodedNext = encodeURIComponent(pageContext.next)
         const email = formData.get('email') as string || ''
         const name = formData.get('name') as string || ''
         const password = formData.get('password') as string || ''
         const rejection = signupRejection(email)
         if (rejection) {
-          const html = await renderSitePage('signup.stx', { error: escapeHtml(rejection), title: 'Sign Up' })
+          const html = await renderSitePage('signup.stx', { ...pageContext, error: rejection, title: 'Sign Up', email, name })
           return new Response(html, { status: 403, headers: htmlHeaders })
         }
         await auth.signup(email, name, password)
@@ -3969,13 +3961,13 @@ async function handleSiteAuth(
           status: 302,
           headers: {
             ...htmlHeaders,
-            'Location': '/account',
+            'Location': safeRedirectTarget(formData.get('next') as string) || next,
             'Set-Cookie': `pantry_session=${sessionToken}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
           },
         })
       }
       catch (err: any) {
-        const html = await renderSitePage('signup.stx', { error: escapeHtml(err.message || 'Signup failed'), title: 'Sign Up' })
+        const html = await renderSitePage('signup.stx', { ...pageContext, error: err.message || 'Signup failed', title: 'Sign Up', email: formData?.get('email') || '', name: formData?.get('name') || '' })
         return new Response(html, { status: err instanceof AuthError ? err.status : 400, headers: htmlHeaders })
       }
     }
@@ -3984,10 +3976,10 @@ async function handleSiteAuth(
     if (sessionToken) {
       const user = await auth.validateSession(sessionToken)
       if (user) {
-        return new Response(null, { status: 302, headers: { ...htmlHeaders, Location: '/account' } })
+        return new Response(null, { status: 302, headers: { ...htmlHeaders, Location: next } })
       }
     }
-    const html = await renderSitePage('signup.stx', { title: 'Sign Up' })
+    const html = await renderSitePage('signup.stx', { ...pageContext, title: 'Sign Up' })
     return new Response(html, { headers: htmlHeaders })
   }
 
@@ -5380,7 +5372,7 @@ async function handleBinaryProxy(
       const kind = isTarball ? 'tarball' : 'checksum'
       activeRecord = await findActiveBinaryRecord(binaryStore, s3Key, kind, !storage)
       const parsed = parseBinaryKey(s3Key)
-      if (!activeRecord && parsed && isPendingMaterialize(parsed.domain, parsed.version, parsed.platform)) {
+      if (!bodyless && !activeRecord && parsed && isPendingMaterialize(parsed.domain, parsed.version, parsed.platform)) {
         const tarballKey = isTarball ? s3Key : s3Key.slice(0, -'.sha256'.length)
         _presignClient ??= createS3Client(resolveStorageProvider())
         if (getPublisher && await ensureBinaryAvailable(tarballKey, _presignClient, getPublisher())) {
@@ -5404,6 +5396,32 @@ async function handleBinaryProxy(
           code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
         }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
       }
+    }
+
+    // Both HEAD and GET require the same independent production attestation.
+    // Reject before spending a client's budget or counting authorized bytes.
+    if (isTarball && activeRecord && !storage && binaryAttestationRequired()) {
+      _presignClient ??= createS3Client(resolveStorageProvider())
+      if (!await hasCleanBinaryAttestation(_presignClient, process.env.S3_BUCKET || 'pantry-registry', s3Key, activeRecord.sha256)) {
+        return Response.json({
+          error: 'Binary artifact has no clean malware-scan attestation',
+          code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
+        }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+      }
+    }
+
+    // A probe must never fetch an archive or redirect HEAD to a URL signed for
+    // GET (SigV4 binds the HTTP method). Use the validated manifest for headers.
+    if (bodyless && isTarball && activeRecord) {
+      const size = Number(activeRecord.size)
+      return new Response(null, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': contentType,
+          'Cache-Control': cacheControl,
+          ...(Number.isFinite(size) && size >= 0 ? { 'Content-Length': String(size) } : {}),
+        },
+      })
     }
 
     // Charge the download against the caller's budget before handing over a
@@ -5433,14 +5451,15 @@ async function handleBinaryProxy(
     // network counters cannot see this: the client is redirected to object
     // storage, so the transfer never touches this process.
     if (isTarball && activeRecord)
-      getEgressLedger().record(Number(activeRecord.size) || 0)
+      getEgressLedger().record(Number(activeRecord.size) || 0, parseBinaryKey(s3Key)?.domain)
 
     // Track only authorized tarball downloads fire-and-forget.
     if (isTarball) {
       const parts = s3Key.split('/')
       if (parts.length >= 4) {
-        const domain = parts[1]
-        const version = parts[2]
+        const parsed = parseBinaryKey(s3Key)
+        const domain = parsed?.domain || parts[1]
+        const version = parsed?.version || parts[2]
         analytics.trackDownload({
           packageName: domain,
           version,
@@ -5488,15 +5507,6 @@ async function handleBinaryProxy(
       // (Hetzner/B2) use private buckets, so presign a time-limited GET URL.
       const s3Bucket = process.env.S3_BUCKET || 'pantry-registry'
       const resolved = resolveStorageProvider()
-      if (binaryAttestationRequired()) {
-        _presignClient ??= createS3Client(resolved)
-        if (!await hasCleanBinaryAttestation(_presignClient, s3Bucket, s3Key, activeRecord!.sha256)) {
-          return Response.json({
-            error: 'Binary artifact has no clean malware-scan attestation',
-            code: 'BINARY_SCAN_ATTESTATION_REQUIRED',
-          }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
-        }
-      }
       let location: string
       let redirectCacheControl = cacheControl
       if (resolved.cdnBaseUrl) {
@@ -6124,7 +6134,7 @@ async function handleSiteSearch(
 
   const suggestions = ['python.org', 'nodejs.org', 'curl.se', 'go.dev', 'redis.io', 'postgresql.org', 'bun.sh', 'rust-lang.org']
   const html = await renderSitePage('search.stx', {
-    query: escapeHtml(query),
+    query,
     encodedQuery: encodeURIComponent(query),
     results: pagedResults,
     sort,
@@ -6139,8 +6149,8 @@ async function handleSiteSearch(
     pageStart,
     pageEnd,
     pageNumbers,
-    title: type === 'zig' ? 'zig packages' : type === 'php' ? 'php packages' : query ? `search: ${escapeHtml(query)}` : 'search',
-    metaDescription: type === 'zig' ? 'Browse Zig packages on pantry.dev' : type === 'php' ? 'Browse PHP/Composer packages on pantry.dev' : query ? `Search results for "${escapeHtml(query)}" on pantry.dev` : 'Search packages on pantry.dev',
+    title: type === 'zig' ? 'zig packages' : type === 'php' ? 'php packages' : query ? `search: ${query}` : 'search',
+    metaDescription: type === 'zig' ? 'Browse Zig packages on pantry.dev' : type === 'php' ? 'Browse PHP/Composer packages on pantry.dev' : query ? `Search results for "${query}" on pantry.dev` : 'Search packages on pantry.dev',
     canonicalUrl: 'https://pantry.dev/search',
   })
   return htmlResponse(html)
@@ -6474,7 +6484,8 @@ async function handleSiteCompare(
     const html = await renderSitePage('compare.stx', {
       comparePackages: [],
       hasPackages: false,
-      packagesQuery: encodeURIComponent(packagesParam),
+      packagesQuery: packagesParam,
+      encodedPackagesQuery: encodeURIComponent(packagesParam),
       title: 'Compare',
       metaDescription: 'Compare packages side by side on pantry.dev — downloads, versions, and platform support.',
       canonicalUrl: 'https://pantry.dev/compare',
@@ -6570,7 +6581,8 @@ async function handleSiteCompare(
   const html = await renderSitePage('compare.stx', {
     comparePackages,
     hasPackages: comparePackages.length > 0,
-    packagesQuery: encodeURIComponent(packagesParam),
+    packagesQuery: packagesParam,
+      encodedPackagesQuery: encodeURIComponent(packagesParam),
     multiLineChart,
     downloadsBarChart,
     title: `Compare: ${packageNames.map(escapeHtml).join(' vs ')}`,
@@ -6865,8 +6877,9 @@ if (import.meta.main) {
       await store.ready()
   }))
 
-  const { start } = createServer(registry, port, analytics, zigStorage, undefined, phpStorage, authStorage)
-  start()
+  const server = createServer(registry, port, analytics, zigStorage, undefined, phpStorage, authStorage)
+  server.start()
+  installRegistryShutdown(server, [registry.metadata, analytics, authStorage, zigStorage, phpStorage, { flush: async () => { await _buildStatus?.flush() } }, { flush: flushEgressLedger }])
 
   console.log('\nEnvironment:')
   console.log(`  S3_BUCKET: ${process.env.S3_BUCKET || 'local'}`)

@@ -757,6 +757,8 @@ export const aliases: Record<string, string> = {
   'lapack': 'netlib.org/lapack',
   'laravel': 'laravel.com',
   'Lato': 'lato',
+  'launchpad': 'github.com/stacksjs/launchpad',
+  'Launchpad': 'github.com/stacksjs/launchpad',
   'lavinmq': 'lavinmq.com',
   'lazydocker': 'github.com/jesseduffield/lazydocker',
   'lazygit': 'github.com/jesseduffield/lazygit',

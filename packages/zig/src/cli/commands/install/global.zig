@@ -33,13 +33,14 @@ const GlobalThreadContext = struct {
     next: *std.atomic.Value(usize),
     alloc: std.mem.Allocator,
     shared_installer: *install.Installer,
+    desktop: bool = false,
 
     fn worker(ctx: *GlobalThreadContext) void {
         while (true) {
             const i = ctx.next.fetchAdd(1, .monotonic);
             if (i >= ctx.specs.len) break;
 
-            var result = ctx.shared_installer.install(ctx.specs[i], .{}) catch |err| {
+            var result = ctx.shared_installer.install(ctx.specs[i], .{ .pantry_registry = ctx.desktop }) catch |err| {
                 ctx.results[i] = .{
                     .name = ctx.specs[i].name,
                     .version = ctx.specs[i].version,
@@ -51,6 +52,11 @@ const GlobalThreadContext = struct {
                 continue;
             };
 
+            if (ctx.desktop and !@import("../../../install/native_apps.zig").activateTree(ctx.alloc, result.install_path, true)) {
+                ctx.results[i] = .{ .name = ctx.specs[i].name, .version = ctx.specs[i].version, .from_cache = result.from_cache, .success = false, .install_time_ms = result.install_time_ms, .error_msg = ctx.alloc.dupe(u8, "Package downloaded, but no application or font could be activated for this user") catch null };
+                result.deinit(ctx.alloc);
+                continue;
+            }
             ctx.results[i] = .{
                 .name = ctx.specs[i].name,
                 .version = ctx.alloc.dupe(u8, result.version) catch ctx.specs[i].version,
@@ -216,11 +222,25 @@ fn installGlobalDepsCommandWithOptions(allocator: std.mem.Allocator, user_local:
 
 /// Install specific packages globally
 pub fn installPackagesGloballyCommand(allocator: std.mem.Allocator, packages: []const []const u8) !types.CommandResult {
+    return installPackagesWithScope(allocator, packages, false, false);
+}
+
+pub fn installPackagesUserLocalCommand(allocator: std.mem.Allocator, packages: []const []const u8, desktop: bool) !types.CommandResult {
+    return installPackagesWithScope(allocator, packages, true, desktop);
+}
+
+fn installPackagesWithScope(allocator: std.mem.Allocator, packages: []const []const u8, user_local: bool, desktop: bool) !types.CommandResult {
     // Try system-wide first, fallback to user-local if no permissions.
     // The user-local fallback path is the same dir the shell hook puts on
     // PATH (`Paths.globalDir`), so packages are immediately discoverable.
     var global_dir_owned: ?[]const u8 = null;
     const global_dir = blk: {
+        if (user_local) {
+            const user_dir = try lib.Paths.globalDir(allocator);
+            global_dir_owned = user_dir;
+            try io_helper.makePath(user_dir);
+            break :blk user_dir;
+        }
         io_helper.makePath("/usr/local/packages") catch |err| {
             if (err == error.AccessDenied or err == error.PermissionDenied or err == error.MakePathFailed) {
                 const user_dir = try lib.Paths.globalDir(allocator);
@@ -284,6 +304,7 @@ pub fn installPackagesGloballyCommand(allocator: std.mem.Allocator, packages: []
         .next = &next_idx,
         .alloc = allocator,
         .shared_installer = &shared_installer,
+        .desktop = desktop,
     };
 
     for (0..thread_count) |t| {

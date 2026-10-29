@@ -3,7 +3,7 @@
  *
  * @domain `github.com/mamba-org/micro`
  * @programs `micromamba`
- * @version `2.8.0` (35 versions available)
+ * @version `2.10.0` (38 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/mamba-org/micro`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "micromamba"
  * console.log(pkg.description) // "The Fast Cross-Platform Package Manager"
  * console.log(pkg.programs)    // ["micromamba"]
- * console.log(pkg.versions[0]) // "2.8.0" (latest)
+ * console.log(pkg.versions[0]) // "2.10.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/mamba-org/micro.md
@@ -71,6 +71,7 @@ export const microPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.10.0',
     '2.9.0',
     '2.8.1',
     '2.8.0',

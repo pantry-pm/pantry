@@ -437,6 +437,7 @@ const provision_script =
     \\
     \\echo "    Installing dependencies..."
     \\(cd "$repo_path" && "$bun_bin" install --frozen-lockfile >/dev/null 2>&1 || "$bun_bin" install >/dev/null)
+    \\(cd "$repo_path" && "$bun_bin" packages/registry/scripts/provision-zig.ts)
     \\echo "    Building production server..."
     \\(cd "$repo_path/packages/registry" && NODE_ENV=production "$bun_bin" run build:server)
     \\
@@ -454,6 +455,7 @@ const provision_script =
     \\  fi
     \\}
     \\
+    \\set_env PANTRY_ZIG_BIN "$(cat "$repo_path/packages/registry/pantry/registry-zig-path")"
     \\set_env PORT "$port"
     \\set_env BASE_URL "$base_url"
     \\set_env REGISTRY_VISIBILITY "$visibility"
@@ -480,6 +482,9 @@ const provision_script =
     \\fi
     \\chmod 600 "$env_file"
     \\
+    \\shutdown_seconds=$(cd "$repo_path" && env -u CLAMD_MAX_ADMISSION_WAIT_MS "$bun_bin" --env-file="$env_file" -e 'import { registrySystemdStopTimeoutSeconds } from "./packages/registry/src/shutdown.ts"; console.log(registrySystemdStopTimeoutSeconds())')
+    \\case "$shutdown_seconds" in ''|*[!0-9]*) echo "Invalid registry shutdown policy" >&2; exit 1;; esac
+    \\
     \\cat > "/etc/systemd/system/${service}.service" <<UNIT
     \\[Unit]
     \\Description=Pantry Registry
@@ -495,6 +500,8 @@ const provision_script =
     \\ExecStart=${bun_bin} run dist/server.js
     \\Restart=always
     \\RestartSec=5
+    \\# Drain the bounded scanner/request work and persist registry snapshots.
+    \\TimeoutStopSec=${shutdown_seconds}
     \\MemoryAccounting=yes
     \\# Sized above the service's observed working set (~400 MB serving the
     \\# registry and coordinating scans), not below it. A MemoryHigh under the
@@ -1048,6 +1055,7 @@ pub const IssueOptions = struct {
     /// needs, and nothing more.
     publish: bool = false,
     expires_in_days: ?[]const u8 = null,
+    binary_domain: ?[]const u8 = null,
 };
 
 pub fn tokenIssueCommand(allocator: std.mem.Allocator, opts: IssueOptions) !CommandResult {
@@ -1067,6 +1075,12 @@ pub fn tokenIssueCommand(allocator: std.mem.Allocator, opts: IssueOptions) !Comm
     try appendJsonString(&body, arena, opts.name orelse "issued by pantry");
     try body.appendSlice(arena, ",\"permissions\":");
     try body.appendSlice(arena, if (opts.publish) "[\"publish\",\"read\"]" else "[\"read\"]");
+    if (opts.binary_domain) |domain| {
+        if (!opts.publish) return CommandResult.err(allocator, "Error: --binary-domain requires --publish.");
+        try body.appendSlice(arena, ",\"binaryPublishDomains\":[");
+        try appendJsonString(&body, arena, domain);
+        try body.append(arena, ']');
+    }
     if (opts.expires_in_days) |days| {
         const parsed = std.fmt.parseInt(u32, days, 10) catch
             return CommandResult.err(allocator, "Error: --expires-in-days must be a number.");

@@ -61,6 +61,7 @@ import { iterm2comPackage } from './apps/iterm2com'
 import { karabinerelementspqrsorgPackage } from './apps/karabinerelementspqrsorg'
 import { keepassxcorgPackage } from './apps/keepassxcorg'
 import { kekaioPackage } from './apps/kekaio'
+import { launchpadPackage } from './apps/launchpad'
 import { libreofficeorgPackage } from './apps/libreofficeorg'
 import { linearappPackage } from './apps/linearapp'
 import { lmstudioaiPackage } from './apps/lmstudioai'
@@ -1853,6 +1854,8 @@ export interface Pantry {
   karabinerelementspqrsorg: typeof karabinerelementspqrsorgPackage
   keepassxcorg: typeof keepassxcorgPackage
   kekaio: typeof kekaioPackage
+
+  githubcomstacksjs: typeof launchpadPackage
   libreofficeorg: typeof libreofficeorgPackage
   linearapp: typeof linearappPackage
   lmstudioai: typeof lmstudioaiPackage
@@ -5453,6 +5456,8 @@ export interface Pantry {
   lapack: typeof netliborglapackPackage
   laravel: typeof laravelcomPackage
   Lato: typeof latoPackage
+  launchpad: typeof launchpadPackage
+  Launchpad: typeof launchpadPackage
   lavinmq: typeof lavinmqcomPackage
   lazydocker: typeof lazydockerPackage
   lazygit: typeof lazygitPackage
@@ -6557,6 +6562,8 @@ export const pantry: Pantry = {
   karabinerelementspqrsorg: karabinerelementspqrsorgPackage,
   keepassxcorg: keepassxcorgPackage,
   kekaio: kekaioPackage,
+
+  githubcomstacksjs: launchpadPackage,
   libreofficeorg: libreofficeorgPackage,
   linearapp: linearappPackage,
   lmstudioai: lmstudioaiPackage,
@@ -10157,6 +10164,8 @@ export const pantry: Pantry = {
   lapack: netliborglapackPackage,
   laravel: laravelcomPackage,
   Lato: latoPackage,
+  launchpad: launchpadPackage,
+  Launchpad: launchpadPackage,
   lavinmq: lavinmqcomPackage,
   lazydocker: lazydockerPackage,
   lazygit: lazygitPackage,

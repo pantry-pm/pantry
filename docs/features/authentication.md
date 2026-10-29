@@ -138,6 +138,11 @@ Tokens can have the following permissions:
 
 By default, new tokens receive both `publish` and `read` permissions.
 
+## Native publishing grants
+
+Native app publication additionally requires an operator-issued `binaryPublishDomains` grant. An operator can include exact domains in `POST /admin/tokens`, together with `publish` permission. The signed staging upload binds the domain and publisher account; a different account cannot complete it. User-facing `POST /auth/tokens` cannot issue these grants. Native rescans still require the operator credential. See [desktop publishing](./desktop-bridge.md#publishing-native-apps-to-pantry).
+
+
 ## Token Expiration
 
 Tokens can optionally have an expiration date. Available options when creating a token:

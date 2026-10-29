@@ -73,7 +73,7 @@ source repository, checksum, and test evidence.
 | `GET` | `/zig/packages/{name}/{version}` | Public | Exact Zig metadata. |
 | `GET` | `/zig/packages/{name}/versions` | Public | Version list sorted by registry storage. |
 | `GET` | `/zig/packages/{name}/{version}/tarball` | Public | Download exact bytes and record analytics. |
-| `GET` | `/zig/hash/{hash}` | Public | Resolve a Zig SHA-256 multihash to metadata. |
+| `GET` | `/zig/hash/{hash}` | Public | Resolve an opaque native Zig package hash to metadata. |
 | `POST` | `/zig/publish` | Current `PANTRY_REGISTRY_TOKEN` or `PANTRY_TOKEN` | Publish multipart tarball plus optional `build.zig.zon`; reject duplicate version. |
 | `DELETE` | `/zig/packages/{name}` | Current registry token | Delete all versions of the named Zig package. |
 
@@ -82,6 +82,23 @@ Zig publication scans the received bytes before storage, then computes the
 Manifest names using underscores are canonicalized to hyphens. The auth token is
 read per request so a rotated token takes effect without re-importing the route
 module; comparison is timing-safe and missing server configuration fails closed.
+
+Zig publication computes the package hash with the managed original Zig 0.17.0
+compiler, after a clean malware scan. `zig fetch` reads the archive and its
+manifest without executing `build.zig`. Its native content hash is distinct
+from `artifactSha256`, which identifies every byte of the compressed archive.
+Native name/version hashes and historical compiler hashes are supported lookup
+keys. An invalid archive returns 422; a missing or incompatible native compiler
+returns 503. Existing published archives and historical metadata are unchanged.
+
+The maintained deploy workflow, `pantry registry setup`, and the container
+provision this compiler through Pantry's normal package installation and
+activation. For local provisioning, run
+`bun packages/registry/scripts/provision-zig.ts` from the repository root.
+`PANTRY_ZIG_BIN` may explicitly select the executable; its version is checked
+before hashing. The request owns a temporary archive, bounds compiler output
+and execution, and disposes its direct native process before removing the
+request directory. Compiler caches use Zig's normal cache contract.
 
 ## PHP/Composer API
 
@@ -107,7 +124,7 @@ SHA-256 over the uploaded archive.
 | `GET` | `/npm/resolve/{specs}` | GET compatibility form for bounded spec lists. |
 | `POST` | `/registry/download` | Stream or bundle resolved tarballs for efficient installs. |
 | `POST` | `/npm/download` | Compatibility alias for registry download. |
-| `POST` | `/api/v1/binaries/uploads` | Authenticate an operator and create a short-lived upload scoped to an untrusted staging key. |
+| `POST` | `/api/v1/binaries/uploads` | Authenticate an operator or an operator-issued exact-domain publishing token; create a short-lived upload scoped to an untrusted staging key. |
 | `POST` | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, digest-verify, and promote a staged native artifact. |
 | `POST` | `/api/v1/binaries/rescan` | Authenticate an operator, stream-scan a retained artifact in place, and either attest it clean or quarantine it. |
 | `POST` | `/api/v1/binaries/quarantine/rescan/prepare` | Prepare a digest- and object-identity-bound private quarantine review. |

@@ -15,6 +15,7 @@
  */
 
 import * as crypto from 'node:crypto'
+import { isBinaryDomain } from './binary-domain'
 import type {
   ApiToken,
   ApiTokenInfo,
@@ -233,7 +234,7 @@ export class AuthService {
   async createApiToken(
     userId: string,
     name: string,
-    options?: { permissions?: ('publish' | 'read')[], expiresInDays?: number },
+    options?: { permissions?: ('publish' | 'read')[], expiresInDays?: number, binaryPublishDomains?: string[] },
   ): Promise<{ token: string, info: ApiTokenInfo }> {
     if (!name || name.trim().length === 0) {
       throw new AuthError('Token name is required', 400)
@@ -242,6 +243,11 @@ export class AuthService {
       throw new AuthError('Token name must be 255 characters or fewer', 400)
     }
 
+    const domains = options?.binaryPublishDomains
+    if (domains !== undefined && (!Array.isArray(domains) || !domains.length || domains.length > 20 || domains.some(domain => !isBinaryDomain(domain))))
+      throw new AuthError('Native publication requires 1 to 20 exact binary package domains', 400)
+    if (domains && !options?.permissions?.includes('publish'))
+      throw new AuthError('Native publication grants require publish permission', 400)
     const rawToken = generateApiToken()
     const now = new Date().toISOString()
     const expiresAt = options?.expiresInDays
@@ -254,6 +260,7 @@ export class AuthService {
       userId,
       tokenHash: hashToken(rawToken),
       permissions: options?.permissions || ['publish', 'read'],
+      ...(domains ? { binaryPublishDomains: [...new Set(domains)] } : {}),
       createdAt: now,
       expiresAt,
     }
@@ -266,6 +273,7 @@ export class AuthService {
         id: apiToken.id,
         name: apiToken.name,
         permissions: apiToken.permissions,
+        ...(apiToken.binaryPublishDomains ? { binaryPublishDomains: [...apiToken.binaryPublishDomains] } : {}),
         createdAt: apiToken.createdAt,
         expiresAt: apiToken.expiresAt,
       },
@@ -279,6 +287,7 @@ export class AuthService {
       id: t.id,
       name: t.name,
       permissions: t.permissions,
+      ...(t.binaryPublishDomains ? { binaryPublishDomains: [...t.binaryPublishDomains] } : {}),
       createdAt: t.createdAt,
       lastUsedAt: t.lastUsedAt,
       expiresAt: t.expiresAt,
@@ -347,7 +356,7 @@ export class AuthService {
       // Update last-used timestamp (fire-and-forget)
       this.storage.updateTokenLastUsed(tokenRecord.tokenHash).catch(err => console.warn('Failed to update token last-used:', err))
 
-      return { valid: true, userId: tokenRecord.userId, tokenId: tokenRecord.id }
+      return { valid: true, userId: tokenRecord.userId, tokenId: tokenRecord.id, binaryPublishDomains: tokenRecord.binaryPublishDomains }
     }
 
     // Not a recognized token format
@@ -769,6 +778,7 @@ export class DynamoDBAuthStorage implements AuthStorage {
         userId: token.userId,
         tokenHash: token.tokenHash,
         permissions: token.permissions,
+        ...(token.binaryPublishDomains ? { binaryPublishDomains: token.binaryPublishDomains } : {}),
         createdAt: token.createdAt,
         ...(token.lastUsedAt ? { lastUsedAt: token.lastUsedAt } : {}),
         ...(token.expiresAt ? { expiresAt: token.expiresAt } : {}),
@@ -786,6 +796,7 @@ export class DynamoDBAuthStorage implements AuthStorage {
         userId: token.userId,
         tokenHash: token.tokenHash,
         permissions: token.permissions,
+        ...(token.binaryPublishDomains ? { binaryPublishDomains: token.binaryPublishDomains } : {}),
         createdAt: token.createdAt,
         ...(token.lastUsedAt ? { lastUsedAt: token.lastUsedAt } : {}),
         ...(token.expiresAt ? { expiresAt: token.expiresAt } : {}),
@@ -810,6 +821,7 @@ export class DynamoDBAuthStorage implements AuthStorage {
       userId: data.userId,
       tokenHash: data.tokenHash,
       permissions: data.permissions || ['publish', 'read'],
+      ...(data.binaryPublishDomains ? { binaryPublishDomains: data.binaryPublishDomains } : {}),
       createdAt: data.createdAt,
       lastUsedAt: data.lastUsedAt || undefined,
       expiresAt: data.expiresAt || undefined,
@@ -834,6 +846,7 @@ export class DynamoDBAuthStorage implements AuthStorage {
         userId: data.userId,
         tokenHash: data.tokenHash,
         permissions: data.permissions || ['publish', 'read'],
+      ...(data.binaryPublishDomains ? { binaryPublishDomains: data.binaryPublishDomains } : {}),
         createdAt: data.createdAt,
         lastUsedAt: data.lastUsedAt || undefined,
         expiresAt: data.expiresAt || undefined,

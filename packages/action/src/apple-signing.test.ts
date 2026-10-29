@@ -77,7 +77,9 @@ describe('keychain setup', () => {
     })
 
     expect(result.applicationIdentity).toBe('3rd Party Mac Developer Application: Acme Inc (TEAM123)')
+    expect(result.applicationFingerprint).toBe('2A9B1C4D6E8F0A2B4C6D8E0F1A3B5C7D9E1F3A5B')
     expect(result.installerIdentity).toBe('3rd Party Mac Developer Installer: Acme Inc (TEAM123)')
+    expect(result.installerFingerprint).toBe('7F5E3D1C9B7A5F3E1D9C7B5A3F1E9D7C5B3A1F9E')
     expect(fs.readFileSync(result.provisioningProfilePath!, 'utf8')).toBe('profile')
 
     const imports = calls.filter(call => call.args[0] === 'import')
@@ -97,6 +99,18 @@ describe('keychain setup', () => {
     expect(search?.args).toContain(result.keychainPath)
   })
 
+  test('rejects imported same-name certificates instead of choosing an ambiguous identity', async () => {
+    const output = tempDirectory()
+    const calls: Array<{ command: string, args: string[] }> = []
+    const runner = recordingRunner(calls)
+    await expect(setupAppleSigning({ applicationCertificate: Buffer.from('app-cert').toString('base64'), certificatePassword: 'password' }, {
+      platform: 'darwin', tempDirectory: output,
+      runCommand: async (name, args) => args[0] === 'find-identity'
+        ? { exitCode: 0, stdout: `${FIND_IDENTITY_OUTPUT}\n  3) ${'A'.repeat(40)} "3rd Party Mac Developer Application: Acme Inc (TEAM123)"`, stderr: '' }
+        : runner(name, args),
+    })).rejects.toThrow('unique certificate fingerprint')
+    expect(calls.some(call => call.args[0] === 'delete-keychain')).toBe(true)
+  })
   test('deletes the decoded .p12 files once they are imported', async () => {
     const outputDirectory = tempDirectory()
     const result = await setupAppleSigning({

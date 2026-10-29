@@ -1,0 +1,48 @@
+name: Native app
+
+on:
+  workflow_call:
+    inputs:
+      release:
+        type: boolean
+        default: false
+      runner:
+        type: string
+        default: macos-15
+    secrets:
+      DOTENV_PRIVATE_KEY_PRODUCTION:
+        required: false
+      PANTRY_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Build, verify and deliver with Pantry
+        uses: pantry-pm/pantry/packages/action@v0.11.145
+        with:
+          native-app: ${{ inputs.release && 'release' || 'check' }}
+          release-token: ${{ github.token }}
+          token: ${{ inputs.release && secrets.PANTRY_TOKEN || '' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DOTENV_PRIVATE_KEY_PRODUCTION: ${{ inputs.release && secrets.DOTENV_PRIVATE_KEY_PRODUCTION || '' }}
+      - name: Preserve built artifacts and test evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-${{ runner.os }}-${{ runner.arch }}
+          path: dist/
+          if-no-files-found: ignore
+          retention-days: 7

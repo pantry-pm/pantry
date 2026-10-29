@@ -1,3 +1,514 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.144...v0.11.145)
+
+## 🐛 Bug Fixes
+
+- **action**: handle process exit during Linux identity reads ([5ab2072](https://github.com/pantry-pm/pantry/commit/5ab2072)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.145 ([4780152](https://github.com/pantry-pm/pantry/commit/4780152)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.384 ([5b47b07](https://github.com/pantry-pm/pantry/commit/5b47b07)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update biome, CLIProxyAPI, coder, LLaMA.cpp, mise ([f358c5a](https://github.com/pantry-pm/pantry/commit/f358c5a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.382 ([b394238](https://github.com/pantry-pm/pantry/commit/b394238)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.380 ([cd707ca](https://github.com/pantry-pm/pantry/commit/cd707ca)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update circleci, fly, LLaMA.cpp, node, nomad, pulumi, terraform ([9bb3489](https://github.com/pantry-pm/pantry/commit/9bb3489)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bitcoin, CLIProxyAPI, cnquery, hurl, LLaMA.cpp, projen, Sourcery, upx, Zed ([fafe35b](https://github.com/pantry-pm/pantry/commit/fafe35b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft, doctl, hatch, LLaMA.cpp, odigos, tinygo, tox, virtualenv ([9176adb](https://github.com/pantry-pm/pantry/commit/9176adb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.143...v0.11.144)
+
+## 🐛 Bug Fixes
+
+- qualify published catalog search declarations ([a346d90](https://github.com/pantry-pm/pantry/commit/a346d90)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.144 ([430e428](https://github.com/pantry-pm/pantry/commit/430e428)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.142...v0.11.143)
+
+## 🐛 Bug Fixes
+
+- create a new Apple review after a completed submission ([801baed](https://github.com/pantry-pm/pantry/commit/801baed)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ⚡ Performance Improvements
+
+- prepare catalog metadata once for interactive search ([f23624e](https://github.com/pantry-pm/pantry/commit/f23624e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.143 ([a003a82](https://github.com/pantry-pm/pantry/commit/a003a82)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.375 ([1d4eed6](https://github.com/pantry-pm/pantry/commit/1d4eed6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update chrome-for-testing, Codex, craft, depot, LLaMA.cpp, ollama, stripe, tailscale ([f073fe9](https://github.com/pantry-pm/pantry/commit/f073fe9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.141...v0.11.142)
+
+## ✨ Features
+
+- refresh Launchpad catalog branding and install guidance ([8b65d88](https://github.com/pantry-pm/pantry/commit/8b65d88)) _(by Chris Breuer <chris@stacksjs.com>)_
+- infer desktop install scope from the package catalog ([358d410](https://github.com/pantry-pm/pantry/commit/358d410)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.142 ([85b9288](https://github.com/pantry-pm/pantry/commit/85b9288)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update ansible, claude-code, cmake, codex, flit, LLaMA.cpp, qsv ([3bb5051](https://github.com/pantry-pm/pantry/commit/3bb5051)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.140...v0.11.141)
+
+## ✨ Features
+
+- expose typed desktop install job receipts ([1c9899c](https://github.com/pantry-pm/pantry/commit/1c9899c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.141 ([56f24c7](https://github.com/pantry-pm/pantry/commit/56f24c7)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update babashka, CLIProxyAPI, Codex, Cursor, Element, Ghostty, htslib, hugo, LLaMA.cpp, mise, mole, pnp, solr, vim, WhatsApp, zig ([2b3b2ea](https://github.com/pantry-pm/pantry/commit/2b3b2ea)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.369 ([2e57a2f](https://github.com/pantry-pm/pantry/commit/2e57a2f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update appium, buddy, cnquery, LLaMA.cpp, opencode.ai, tox, vim, virtualenv ([b6763c2](https://github.com/pantry-pm/pantry/commit/b6763c2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.368 ([df3bffe](https://github.com/pantry-pm/pantry/commit/df3bffe)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.139...v0.11.140)
+
+## 🐛 Bug Fixes
+
+- validate native application package layouts ([d665e8e](https://github.com/pantry-pm/pantry/commit/d665e8e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.140 ([76016dd](https://github.com/pantry-pm/pantry/commit/76016dd)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.366 ([17478ac](https://github.com/pantry-pm/pantry/commit/17478ac)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.138...v0.11.139)
+
+## ✨ Features
+
+- publish notarized native apps through scoped registry grants ([cfca798](https://github.com/pantry-pm/pantry/commit/cfca798)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.139 ([6fd45bf](https://github.com/pantry-pm/pantry/commit/6fd45bf)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.365 ([08a63f7](https://github.com/pantry-pm/pantry/commit/08a63f7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update coder, hasura, LLaMA.cpp, pdm, pnp, zig ([9a225b2](https://github.com/pantry-pm/pantry/commit/9a225b2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.137...v0.11.138)
+
+## 🐛 Bug Fixes
+
+- **catalog**: allow browsing the complete package library ([496c926](https://github.com/pantry-pm/pantry/commit/496c926)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **desktop**: verify service restart readiness and platform activation coverage ([25a623e](https://github.com/pantry-pm/pantry/commit/25a623e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.138 ([7967f40](https://github.com/pantry-pm/pantry/commit/7967f40)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.136...v0.11.137)
+
+## 🐛 Bug Fixes
+
+- **desktop**: discover installed user applications through the external service ([6808d4d](https://github.com/pantry-pm/pantry/commit/6808d4d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.137 ([c541664](https://github.com/pantry-pm/pantry/commit/c541664)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.135...v0.11.136)
+
+## ✨ Features
+
+- **desktop**: add authenticated installs and native Apple publishing ([7f41345](https://github.com/pantry-pm/pantry/commit/7f41345)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **catalog**: publish complete package metadata and upstream logos ([3e6c05c](https://github.com/pantry-pm/pantry/commit/3e6c05c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **catalog**: retain original artwork bytes across checkouts ([f731517](https://github.com/pantry-pm/pantry/commit/f731517)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.136 ([589b71d](https://github.com/pantry-pm/pantry/commit/589b71d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- integrate current native package metadata ([6308e1e](https://github.com/pantry-pm/pantry/commit/6308e1e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.361 ([6baead7](https://github.com/pantry-pm/pantry/commit/6baead7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update claude-code, fly, gh, harlequin.sh, hunspell, LLaMA.cpp, micromamba, mise, openbao, pandoc, Slack, stripe, valkey ([df2de23](https://github.com/pantry-pm/pantry/commit/df2de23)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.134...v0.11.135)
+
+## 🐛 Bug Fixes
+
+- **registry**: type the registry policy response in publication tests ([4e5741c](https://github.com/pantry-pm/pantry/commit/4e5741c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.135 ([3460281](https://github.com/pantry-pm/pantry/commit/3460281)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.133...v0.11.134)
+
+## ✨ Features
+
+- **registry**: report the engine fallback policy to forge integrations ([3f1635c](https://github.com/pantry-pm/pantry/commit/3f1635c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **native**: validate Store bundles without local execution ([13d61ae](https://github.com/pantry-pm/pantry/commit/13d61ae)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: preserve immutable package versions under concurrent uploads ([15fa230](https://github.com/pantry-pm/pantry/commit/15fa230)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.134 ([f0387a5](https://github.com/pantry-pm/pantry/commit/f0387a5)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.360 ([d31d452](https://github.com/pantry-pm/pantry/commit/d31d452)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update CLIProxyAPI, Cursor, depot, Discord, doctl, fastlane, flux, git-credential-manager, LLaMA.cpp, Maccy, perf, talosctl, Tunnelblick, vim ([3d45d2c](https://github.com/pantry-pm/pantry/commit/3d45d2c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.359 ([0baccdd](https://github.com/pantry-pm/pantry/commit/0baccdd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update julia, LLaMA.cpp, meilisearch, odigos, projen, redis, Sourcery, templ, vim, wails, zig ([e77cd25](https://github.com/pantry-pm/pantry/commit/e77cd25)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.358 ([b641259](https://github.com/pantry-pm/pantry/commit/b641259)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update grpc, oc, python ([2ad7b88](https://github.com/pantry-pm/pantry/commit/2ad7b88)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.355 ([a4649f5](https://github.com/pantry-pm/pantry/commit/a4649f5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.354 ([3664012](https://github.com/pantry-pm/pantry/commit/3664012)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.352 ([b71011b](https://github.com/pantry-pm/pantry/commit/b71011b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.132...v0.11.133)
+
+## 🐛 Bug Fixes
+
+- resolve current Craft runtime dependencies through Zig ([76f2595](https://github.com/pantry-pm/pantry/commit/76f2595)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.133 ([fa5afba](https://github.com/pantry-pm/pantry/commit/fa5afba)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.351 ([10b0076](https://github.com/pantry-pm/pantry/commit/10b0076)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.131...v0.11.132)
+
+## 🐛 Bug Fixes
+
+- sign native disk images and require Gatekeeper acceptance ([9eee01f](https://github.com/pantry-pm/pantry/commit/9eee01f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.132 ([3117ed3](https://github.com/pantry-pm/pantry/commit/3117ed3)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft, LLaMA.cpp, mitmproxy ([ecb9bef](https://github.com/pantry-pm/pantry/commit/ecb9bef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.130...v0.11.131)
+
+## 🐛 Bug Fixes
+
+- retry interrupted Apple notarization ticket requests ([274256e](https://github.com/pantry-pm/pantry/commit/274256e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- limit targeted version checks to their recipe ([bcac3f6](https://github.com/pantry-pm/pantry/commit/bcac3f6)) _(by Chris Breuer <chris@stacksjs.com>)_
+- preserve Craft webview runtimes in Pantry packages ([370f618](https://github.com/pantry-pm/pantry/commit/370f618)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.131 ([66af52d](https://github.com/pantry-pm/pantry/commit/66af52d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.350 ([466d976](https://github.com/pantry-pm/pantry/commit/466d976)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update LLaMA.cpp, SeaweedFS, xplr ([ec6fa1d](https://github.com/pantry-pm/pantry/commit/ec6fa1d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.348 ([f3c651a](https://github.com/pantry-pm/pantry/commit/f3c651a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.129...v0.11.130)
+
+## 🐛 Bug Fixes
+
+- keep native release checks portable and workspace locks canonical ([80bb35d](https://github.com/pantry-pm/pantry/commit/80bb35d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **action**: preserve Bun across signing-only steps ([165819b](https://github.com/pantry-pm/pantry/commit/165819b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.130 ([873c837](https://github.com/pantry-pm/pantry/commit/873c837)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/native-app-publishing ([19093c4](https://github.com/pantry-pm/pantry/commit/19093c4)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.128...v0.11.129)
+
+## ✨ Features
+
+- qualify native app versions through Pantry releases ([1de5660](https://github.com/pantry-pm/pantry/commit/1de5660)) _(by Chris Breuer <chris@stacksjs.com>)_
+- decrypt native release credentials through Buddy environments ([5e104ae](https://github.com/pantry-pm/pantry/commit/5e104ae)) _(by Chris Breuer <chris@stacksjs.com>)_
+- own native app builds and publishing in Pantry ([5e31816](https://github.com/pantry-pm/pantry/commit/5e31816)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.129 ([6c1a544](https://github.com/pantry-pm/pantry/commit/6c1a544)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/native-app-publishing ([070c9ff](https://github.com/pantry-pm/pantry/commit/070c9ff)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.127...HEAD)
+
+## ✨ Features
+
+- **app-store**: reuse approved encryption declarations for builds ([756043c](https://github.com/pantry-pm/pantry/commit/756043c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **test**: give publication responses owned byte buffers ([4ab4560](https://github.com/pantry-pm/pantry/commit/4ab4560)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use product names in automated update commits ([a5ba034](https://github.com/pantry-pm/pantry/commit/a5ba034)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **benchmark**: require patched Zod in the install fixture ([e3dc1ea](https://github.com/pantry-pm/pantry/commit/e3dc1ea)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- update dblab.danvergara.com, dotnet.microsoft.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, vim.org ([003aa1d](https://github.com/pantry-pm/pantry/commit/003aa1d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.346 ([1226790](https://github.com/pantry-pm/pantry/commit/1226790)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update babashka.org, github.com/ggerganov/llama.cpp, github.com/tw93/mole, mercure.rocks, stats.app, vim.org ([81b4a90](https://github.com/pantry-pm/pantry/commit/81b4a90)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.345 ([bccf087](https://github.com/pantry-pm/pantry/commit/bccf087)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor.org, craft-native.org, github.com/ggerganov/llama.cpp, vim.org ([11a7943](https://github.com/pantry-pm/pantry/commit/11a7943)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.126...v0.11.127)
+
+## 🐛 Bug Fixes
+
+- **download**: recover DNS server failures within the GET budget ([6688186](https://github.com/pantry-pm/pantry/commit/6688186)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#251](https://github.com/pantry-pm/pantry/issues/251))
+- **craft**: preserve the public macOS runtime during installation ([9ed678e](https://github.com/pantry-pm/pantry/commit/9ed678e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- isolate mysql data and startup scripts per project ([171f3ab](https://github.com/pantry-pm/pantry/commit/171f3ab)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **action**: preserve managed Bun executor activation ([f2e40c9](https://github.com/pantry-pm/pantry/commit/f2e40c9)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ci**: preserve empty mirror arguments on system Bash ([80c2719](https://github.com/pantry-pm/pantry/commit/80c2719)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.127 ([fd0f652](https://github.com/pantry-pm/pantry/commit/fd0f652)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft-native.org to 0.0.341 ([e23de64](https://github.com/pantry-pm/pantry/commit/e23de64)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, runatlantis.io, seaweedfs.com, ziglang.org ([5e9c1e9](https://github.com/pantry-pm/pantry/commit/5e9c1e9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.340 ([9d127f5](https://github.com/pantry-pm/pantry/commit/9d127f5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.338 ([96ac1ee](https://github.com/pantry-pm/pantry/commit/96ac1ee)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 11869 ([aed2177](https://github.com/pantry-pm/pantry/commit/aed2177)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp, mise.jdx.dev, ollama.ai, oras.land ([e69bc13](https://github.com/pantry-pm/pantry/commit/e69bc13)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org, dozzle.dev, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, vim.org ([fd1b257](https://github.com/pantry-pm/pantry/commit/fd1b257)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update biomejs.dev, github.com/ggerganov/llama.cpp, github.com/tw93/mole, sdkman.io, ziglang.org ([4d5d430](https://github.com/pantry-pm/pantry/commit/4d5d430)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.329 ([a8f38fc](https://github.com/pantry-pm/pantry/commit/a8f38fc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.328 ([c7f8892](https://github.com/pantry-pm/pantry/commit/c7f8892)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update github.com/ggerganov/llama.cpp to 11852 ([ccf43d4](https://github.com/pantry-pm/pantry/commit/ccf43d4)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update anthropic.com/claude-code, coder.com/code-server, codex.openai.com, github.com/ggerganov/llama.cpp ([a93c4c1](https://github.com/pantry-pm/pantry/commit/a93c4c1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.125...v0.11.126)
+
+## 🐛 Bug Fixes
+
+- **deploy**: check out the exact approved registry commit ([e8926bb](https://github.com/pantry-pm/pantry/commit/e8926bb)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.126 ([f4f8be7](https://github.com/pantry-pm/pantry/commit/f4f8be7)) _(by Chris <chris@stacksjs.com>)_
+- update craft-native.org to 0.0.319 ([24f6499](https://github.com/pantry-pm/pantry/commit/24f6499)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.124...v0.11.125)
+
+## 🐛 Bug Fixes
+
+- **registry**: own native Zig compiler and upload caches ([d97b356](https://github.com/pantry-pm/pantry/commit/d97b356)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.125 ([4cda4ab](https://github.com/pantry-pm/pantry/commit/4cda4ab)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.123...v0.11.124)
+
+## 🐛 Bug Fixes
+
+- **config**: own TypeScript values outside the parser arena ([bff2ee6](https://github.com/pantry-pm/pantry/commit/bff2ee6)) _(by Chris <chris@stacksjs.com>)_
+- **install**: propagate required project setup failures ([4ef4b99](https://github.com/pantry-pm/pantry/commit/4ef4b99)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.124 ([8d9fecf](https://github.com/pantry-pm/pantry/commit/8d9fecf)) _(by Chris <chris@stacksjs.com>)_
+- update alttab.app, cli.github.com, coder.com, coder.com/code-server, codex.openai.com, flutter.dev, fly.io, github.com/chainguard-dev/apko, mongodb.com/shell, wait4x.dev ([b583035](https://github.com/pantry-pm/pantry/commit/b583035)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.122...v0.11.123)
+
+## 🐛 Bug Fixes
+
+- **action**: inspect Linux service groups through native kernel state ([8f6e6c2](https://github.com/pantry-pm/pantry/commit/8f6e6c2)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: renew request admission on restart and flush lazy build state ([b56f3c9](https://github.com/pantry-pm/pantry/commit/b56f3c9)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: evaluate service stop policy from the registry environment ([282cd8f](https://github.com/pantry-pm/pantry/commit/282cd8f)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: drain detached publication work while serving metadata reads ([8352eb4](https://github.com/pantry-pm/pantry/commit/8352eb4)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: derive shutdown bounds from current scan admission limits ([ccc04c1](https://github.com/pantry-pm/pantry/commit/ccc04c1)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: align service stop policy with publication shutdown ([1a207ad](https://github.com/pantry-pm/pantry/commit/1a207ad)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: drain requests and persist snapshots on shutdown ([05c08b6](https://github.com/pantry-pm/pantry/commit/05c08b6)) _(by Chris <chris@stacksjs.com>)_
+- **test**: construct Zig uploads from owned byte buffers ([76cdb23](https://github.com/pantry-pm/pantry/commit/76cdb23)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.123 ([463361b](https://github.com/pantry-pm/pantry/commit/463361b)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.121...v0.11.122)
+
+## 🐛 Bug Fixes
+
+- **ci**: require complete source acceptance before deploy and publish ([15c99fa](https://github.com/pantry-pm/pantry/commit/15c99fa)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.122 ([0559dc1](https://github.com/pantry-pm/pantry/commit/0559dc1)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.120...v0.11.121)
+
+## 🐛 Bug Fixes
+
+- **registry**: retain Zig archive identity in DynamoDB ([e3d0635](https://github.com/pantry-pm/pantry/commit/e3d0635)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.121 ([e46efb0](https://github.com/pantry-pm/pantry/commit/e46efb0)) _(by Chris <chris@stacksjs.com>)_
+- update babashka.org, cli.github.com, cursor.com, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, materialize.com, moonrepo.dev/moon, ollama.ai, terragrunt.gruntwork.io ([bf11f68](https://github.com/pantry-pm/pantry/commit/bf11f68)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.119...v0.11.120)
+
+## 🐛 Bug Fixes
+
+- **ci**: avoid stalled Ubuntu mirrors in deployment checks ([9cdb6aa](https://github.com/pantry-pm/pantry/commit/9cdb6aa)) _(by Chris Breuer <chris@stacksjs.com>)_
+- use native R2 support from the released ts-cloud SDK ([b8671b5](https://github.com/pantry-pm/pantry/commit/b8671b5)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: apply changed search defaults before submission ([6540401](https://github.com/pantry-pm/pantry/commit/6540401)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: handle existing browser appearance state safely ([c984afe](https://github.com/pantry-pm/pantry/commit/c984afe)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: complete token revocation feedback and empty states ([811a008](https://github.com/pantry-pm/pantry/commit/811a008)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: show supported package installation commands ([a3cfe52](https://github.com/pantry-pm/pantry/commit/a3cfe52)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: keep navigation and page lifecycles consistent ([12f2599](https://github.com/pantry-pm/pantry/commit/12f2599)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: recover publisher workflows and render metadata safely ([4f0f141](https://github.com/pantry-pm/pantry/commit/4f0f141)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: preserve search state and enable table results ([d5fe60b](https://github.com/pantry-pm/pantry/commit/d5fe60b)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: provide reliable feedback and keyboard access for actions ([1155c11](https://github.com/pantry-pm/pantry/commit/1155c11)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: make appearance settings and saved defaults consistent ([d488967](https://github.com/pantry-pm/pantry/commit/d488967)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: use native cookie-backed sign-in flows ([c56ac05](https://github.com/pantry-pm/pantry/commit/c56ac05)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: make account token management reliable and accessible ([10e5413](https://github.com/pantry-pm/pantry/commit/10e5413)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **publish**: recover idempotent availability reads within their deadline ([2aa6659](https://github.com/pantry-pm/pantry/commit/2aa6659)) _(by Chris <chris@stacksjs.com>)_
+- **action**: distinguish build inputs from application namespaces ([3fa7910](https://github.com/pantry-pm/pantry/commit/3fa7910)) _(by Chris <chris@stacksjs.com>)_
+- share verified build dependency archives across CI runs ([a6529d0](https://github.com/pantry-pm/pantry/commit/a6529d0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: verify the production workspace container ([64903ab](https://github.com/pantry-pm/pantry/commit/64903ab)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: provision the declared native hash compiler ([efd4a1a](https://github.com/pantry-pm/pantry/commit/efd4a1a)) _(by Chris <chris@stacksjs.com>)_
+- **registry**: advertise native Zig package content hashes ([dd38b89](https://github.com/pantry-pm/pantry/commit/dd38b89)) _(by Chris <chris@stacksjs.com>)_
+- use R2-compatible storage configuration in CI tooling ([ee02578](https://github.com/pantry-pm/pantry/commit/ee02578)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ui**: harden responsive layouts and browser interactions ([e7cc74e](https://github.com/pantry-pm/pantry/commit/e7cc74e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- reduce registry traffic and prepare R2 storage cutover ([b9598fd](https://github.com/pantry-pm/pantry/commit/b9598fd)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ⚡ Performance Improvements
+
+- **ui**: bound build table rendering and clean up live resources ([6a148b3](https://github.com/pantry-pm/pantry/commit/6a148b3)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- **registry**: distinguish native package and archive hashes ([da649eb](https://github.com/pantry-pm/pantry/commit/da649eb)) _(by Chris <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- qualify native hashing within its declared execution budget ([e2b42a1](https://github.com/pantry-pm/pantry/commit/e2b42a1)) _(by Chris <chris@stacksjs.com>)_
+- **ui**: document and polish workflow regression coverage ([2af1f2e](https://github.com/pantry-pm/pantry/commit/2af1f2e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **publish**: require confirmed absence before hooks after read recovery ([0bfbb57](https://github.com/pantry-pm/pantry/commit/0bfbb57)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.120 ([bb20aad](https://github.com/pantry-pm/pantry/commit/bb20aad)) _(by Chris <chris@stacksjs.com>)_
+- synchronize the native workspace lock for browser tooling ([4246478](https://github.com/pantry-pm/pantry/commit/4246478)) _(by Chris <chris@stacksjs.com>)_
+- update arkade.dev, github.com/ggerganov/llama.cpp, kafka.apache.org, localai.io, mise.jdx.dev, openpolicyagent.org, openssl.org, pocketbase.io, projen.io, xplr.dev, zed.dev, ziglang.org ([0111588](https://github.com/pantry-pm/pantry/commit/0111588)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org, github.com/ggerganov/llama.cpp, huggingface.co, neo4j.com, openai.com/codex, orbstack.dev, projen.io, xplr.dev ([41e2ff7](https://github.com/pantry-pm/pantry/commit/41e2ff7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org to 0.0.301 ([277ae23](https://github.com/pantry-pm/pantry/commit/277ae23)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft-native.org, dart.dev, dprint.dev, flipt.io, github.com/ggerganov/llama.cpp, github.com/router-for-me/CLIProxyAPI, hasura.io, ollama.ai, projen.io, seaweedfs.com ([53f79cf](https://github.com/pantry-pm/pantry/commit/53f79cf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/settlers-native-zig-hash ([e465b71](https://github.com/pantry-pm/pantry/commit/e465b71)) _(by Chris <chris@stacksjs.com>)_
+- Merge remote-tracking branch 'origin/main' into codex/settlers-native-zig-hash ([974f2e4](https://github.com/pantry-pm/pantry/commit/974f2e4)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.118...v0.11.119)
 
 ## 🐛 Bug Fixes

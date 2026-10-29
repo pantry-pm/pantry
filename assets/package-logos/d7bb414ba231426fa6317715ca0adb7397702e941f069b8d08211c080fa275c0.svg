@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 64" role="img" aria-labelledby="amber-crystal-title amber-crystal-desc">
+  <title id="amber-crystal-title">Amber Framework crystal</title>
+  <desc id="amber-crystal-desc">A tall, symmetrical faceted amber crystal</desc>
+  <defs>
+    <linearGradient id="amber-crystal-core" x1="12" y1="8" x2="36" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd584"/>
+      <stop offset="0.48" stop-color="#ff8a1f"/>
+      <stop offset="1" stop-color="#d84c08"/>
+    </linearGradient>
+    <linearGradient id="amber-crystal-light" x1="11" y1="16" x2="28" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff1c9"/>
+      <stop offset="1" stop-color="#ffa13c"/>
+    </linearGradient>
+  </defs>
+  <path d="M24 2 40 18l-6 30-10 14-10-14-6-30L24 2Z" fill="url(#amber-crystal-core)" stroke="#a93806" stroke-width="1.25" stroke-linejoin="round"/>
+  <path d="m24 2-7 19 7 11 7-11L24 2Z" fill="#ffb343"/>
+  <path d="M8 18h9l7 14-16-14Z" fill="url(#amber-crystal-light)"/>
+  <path d="m40 18-9 3-7 11 16-14Z" fill="#ef650e"/>
+  <path d="m8 18 16 14-10 16-6-30Z" fill="#f47a16"/>
+  <path d="m40 18-16 14 10 16 6-30Z" fill="#c94108"/>
+  <path d="m24 32 10 16-10 14V32Z" fill="#e65b0b"/>
+  <path d="m24 32-10 16 10 14V32Z" fill="#ff9f32"/>
+  <path d="M24 2v60M8 18h32M17 21l14 .02M14 48l20 .01" fill="none" stroke="#fff3cf" stroke-width="0.8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M24 2 40 18l-6 30-10 14-10-14-6-30L24 2Zm0 0-7 19 7 11 7-11L24 2ZM8 18l16 14-10 16m26-30L24 32l10 16" fill="none" stroke="#9f3106" stroke-width="0.85" stroke-linejoin="round" opacity="0.74"/>
+</svg>

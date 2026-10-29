@@ -15,6 +15,9 @@ test('two normal releases commit their versioned Action outputs and rebuild clea
     const cwd = join(root, 'project')
     const remote = join(root, 'origin.git')
     mkdirSync(join(cwd, 'packages/action/dist'), { recursive: true })
+    mkdirSync(join(cwd, '.github/workflows'), { recursive: true })
+    writeFileSync(join(cwd, '.github/workflows/native-app.yml'), 'uses: pantry-pm/pantry/packages/action@v1.0.0\n')
+    writeFileSync(join(cwd, '.github/workflows/native-check.yml'), 'uses: pantry-pm/pantry/packages/action@v1.0.0\n')
     const git = (...args: string[]) => {
       const result = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
       assert.equal(result.exitCode, 0, Buffer.from(result.stderr).toString())
@@ -42,9 +45,11 @@ test('two normal releases commit their versioned Action outputs and rebuild clea
       const head = git('rev-parse', 'HEAD')
       assert.ok(remoteTags.split('\n').some(line => line === `${head}\trefs/tags/v${version}` || line === `${head}\trefs/tags/v${version}^{}`))
       for (const name of ['index.js', 'post.js']) assert.equal(readFileSync(join(cwd, 'packages/action/dist', name), 'utf8'), version)
+      assert.equal(readFileSync(join(cwd, '.github/workflows/native-app.yml'), 'utf8'), `uses: pantry-pm/pantry/packages/action@v${version}\n`)
+      assert.equal(readFileSync(join(cwd, '.github/workflows/native-check.yml'), 'utf8'), `uses: pantry-pm/pantry/packages/action@v${version}\n`)
       buildReleaseAction(cwd)
       assert.equal(git('status', '--porcelain'), '', 'the next normal install/build must not dirty the versioned bundle')
-      assert.deepEqual(git('show', '--format=', '--name-only', 'HEAD').split('\n').sort(), ['package.json', 'packages/action/dist/index.js', 'packages/action/dist/post.js', 'packages/action/package.json'].sort())
+      assert.deepEqual(git('show', '--format=', '--name-only', 'HEAD').split('\n').sort(), ['package.json', 'packages/action/dist/index.js', 'packages/action/dist/post.js', 'packages/action/package.json', '.github/workflows/native-app.yml', '.github/workflows/native-check.yml'].sort())
       assert.doesNotMatch(git('log', '-1', '--format=%B'), /^Co-authored-by:/im)
     }
     const before = git('rev-parse', 'HEAD')

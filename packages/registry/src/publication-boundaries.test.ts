@@ -11,7 +11,8 @@ function source(path: string): string {
 describe('first-party publication boundaries', () => {
   it('keeps native publishers behind the scan-before-promote API', () => {
     const centralUploader = source('packages/ts-pantry/scripts/upload-to-s3.ts')
-    const client = source('packages/ts-pantry/scripts/binary-publish-client.ts')
+    const client = source('packages/ts-pantry/src/binary-publish.ts')
+    expect(source('packages/ts-pantry/scripts/binary-publish-client.ts')).toContain("export * from '../src/binary-publish'")
     const zigPublisher = source('packages/zig/src/cli/commands/publish_binary.zig')
     const phpBundler = source('packages/ts-pantry/scripts/bundle-php.sh')
     const pkgxFallback = source('packages/registry/src/pkgx-fallback.ts')
@@ -54,6 +55,9 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain("EXPECTED_SHA=\"$5\"")
     expect(workflow).toContain('NODE_ENV=production "$BUN" run build:server')
     expect(packageJson).toContain('./src/scanner-worker.ts --outfile ./dist/scanner-worker.js')
+    expect(workflow).toContain('CacheDirectory=pantry-registry-zig')
+    expect(workflow).toContain('CacheDirectoryMode=0700')
+    expect(workflow).toContain('set_env PANTRY_ZIG_CACHE_DIR /var/cache/pantry-registry-zig')
     expect(workflow).toContain('set_env PANTRY_MALWARE_SCANNING required')
     expect(workflow).toContain('set_env CLAMD_SOCKET /run/clamav/clamd.ctl')
     expect(workflow).toContain('set_env CLAMD_TIMEOUT_MS 240000')

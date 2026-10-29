@@ -1,0 +1,20 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Buddy">
+  <!-- Tile lockup for the browser tab: the mark is inset to 70% so it keeps
+       its optical margin once the rounded square is cropped to a 16px favicon. -->
+  <rect width="64" height="64" rx="15" fill="#F5A524"/>
+  <mask id="buddy-favicon" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="black"/>
+    <g fill="white" transform="translate(9.6 9.6) scale(0.7)">
+      <rect x="4" y="14" width="18" height="32" rx="9" transform="rotate(-8 13 30)"/>
+      <rect x="42" y="14" width="18" height="32" rx="9" transform="rotate(8 51 30)"/>
+      <rect x="15" y="7" width="34" height="31" rx="13"/>
+      <rect x="23" y="29" width="18" height="21" rx="9"/>
+    </g>
+    <g fill="black" transform="translate(9.6 9.6) scale(0.7)">
+      <circle cx="25.5" cy="25" r="2.9"/>
+      <circle cx="38.5" cy="25" r="2.9"/>
+      <rect x="28.5" y="35.5" width="7" height="5" rx="2.5"/>
+    </g>
+  </mask>
+  <rect width="64" height="64" fill="#17130E" mask="url(#buddy-favicon)"/>
+</svg>

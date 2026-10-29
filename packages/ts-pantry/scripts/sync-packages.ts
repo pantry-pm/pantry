@@ -16,6 +16,7 @@
  * - php: built by its own recipe (src/recipes/php.net.ts)
  */
 
+import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
 import { existsSync, mkdirSync, rmSync, writeFileSync, chmodSync, readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -52,7 +53,7 @@ async function checkExistsInS3(domain: string, version: string, platform: string
     // Honor STORAGE_PROVIDER so the existence check hits the configured backend
     // (Hetzner/B2) instead of s3.<region>.amazonaws.com, which fails for non-AWS
     // regions and would force a redundant re-sync of every package each run.
-    const provider = (process.env.STORAGE_PROVIDER || 'aws') as 'aws' | 'backblaze' | 'hetzner'
+    const provider = (process.env.STORAGE_PROVIDER || 'aws') as ObjectStorageProvider
     const s3 = createObjectStorageClient({ provider, region: provider === 'aws' ? region : undefined })
     const metadataKey = `binaries/${domain}/metadata.json`
 

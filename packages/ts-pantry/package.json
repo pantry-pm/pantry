@@ -2,7 +2,7 @@
   "name": "ts-pantry",
   "type": "module",
   "sideEffects": false,
-  "version": "0.11.119",
+  "version": "0.11.145",
   "description": "A library & CLI for managing packages",
   "author": "Chris Breuer <chris@stacksjs.com>",
   "license": "MIT",
@@ -33,14 +33,35 @@
       "types": "./dist/src/testing/index.d.ts",
       "import": "./dist/src/testing/index.js"
     },
+    "./native": {
+      "types": "./dist/src/native/index.d.ts",
+      "import": "./dist/src/native/index.js"
+    },
+    "./native/release": {
+      "types": "./dist/src/native/release.d.ts",
+      "import": "./dist/src/native/release.js"
+    },
     "./*": {
       "import": "./dist/*"
+    },
+    "./catalog": {
+      "types": "./dist/src/catalog/client.d.ts",
+      "import": "./dist/src/catalog/client.js"
+    },
+    "./desktop": {
+      "types": "./dist/src/desktop/client.d.ts",
+      "import": "./dist/src/desktop/client.js"
+    },
+    "./desktop/service": {
+      "types": "./dist/src/desktop/service.d.ts",
+      "import": "./dist/src/desktop/service.js"
     }
   },
   "module": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
-    "ts-pantry": "./dist/bin/cli.js"
+    "ts-pantry": "./dist/bin/cli.js",
+    "pantry-desktop": "./dist/bin/desktop.js"
   },
   "files": [
     "README.md",
@@ -94,10 +115,14 @@
     "pantry:upload": "bun scripts/upload-to-s3.ts",
     "pantry:rescan-binaries": "bun scripts/backfill-malware-scans.ts"
   },
+  "dependencies": {
+    "@stacksjs/bumpx": "^0.2.29",
+    "@stacksjs/env": "^0.75.311"
+  },
   "devDependencies": {
     "@stacksjs/bunpress": "^0.2.8",
     "@stacksjs/clapp": "^0.2.10",
-    "@stacksjs/ts-cloud": "^0.9.2",
+    "@stacksjs/ts-cloud": "^0.16.68",
     "@types/tar-stream": "^3.1.4",
     "better-dx": "^0.2.6",
     "tar-stream": "^3.2.0"

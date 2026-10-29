@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-test('mirror and download publishers retain workspace setup and provision Linux ELF tools', () => {
+test('mirror and download publishers install only their runtime and provision Linux ELF tools', () => {
   const workflow = Bun.YAML.parse(readFileSync(new URL('../../../.github/workflows/mirror.yml', import.meta.url), 'utf8')) as {
     jobs: Record<string, { steps: Array<{ uses?: string, if?: string, with?: { packages?: string, install?: string } }> }>
   }
@@ -13,7 +13,7 @@ test('mirror and download publishers retain workspace setup and provision Linux 
     const setup = steps.findIndex(step => step.uses === './packages/action')
     const normalizer = steps.findIndex(step => step.with?.packages === 'nixos.org/patchelf@0.18.0')
     expect(setup).toBeGreaterThan(-1)
-    expect(steps[setup].with?.packages).toBeUndefined()
+    expect(steps[setup].with?.packages).toBe('bun.sh')
     expect(normalizer).toBeGreaterThan(setup)
     expect(steps[normalizer].uses).toBe('./packages/action')
     expect(steps[normalizer].if).toBe("startsWith(matrix.name, 'linux-')")
@@ -35,19 +35,23 @@ test('targeted mirror dispatch preserves exact selectors and keeps scheduled run
     for (const job of ['mirror', 'download']) {
       const source = workflow.jobs[job].steps.find(step => step.run?.includes('bun scripts/build-all-packages.ts'))!.run!
       const script = source.replace(/\$\{\{.*?\}\}/g, expression => expression.includes('stripe') ? '0/1' : expression.includes('matrix.name') ? 'linux-x86-64' : '1')
-      for (const repair of [false, true]) {
-        const selector = 'openssl.org@1.1.1w,openssl.org@3.6.5;$(touch should-not-execute)'
-        const result = spawnSync('bash', ['-c', script], {
-          cwd: root,
-          env: { ...process.env, PATH: `${root}:${process.env.PATH}`, ARGUMENTS: output, S3_BUCKET: 'test-bucket', AWS_REGION: 'test-region', RUNNER_TEMP: root, TARGET_PACKAGES: repair ? selector : '', REBUILD_EXISTING: String(repair) },
-          encoding: 'utf8',
-        })
-        expect(result.status).toBe(0)
-        const args = readFileSync(output, 'utf8').trim().split('\n')
-        expect(args.includes('--force')).toBe(repair)
-        expect(args.includes('--package')).toBe(repair)
-        if (repair) expect(args[args.indexOf('--package') + 1]).toBe(selector)
-        expect(args).toContain(job === 'mirror' ? '--mirror-only' : '--download-only')
+      for (const targeted of [false, true]) {
+        for (const repair of [false, true]) {
+          const selector = 'openssl.org@1.1.1w,openssl.org@3.6.5;$(touch should-not-execute)'
+          // macOS Actions runs the system Bash 3.2, which treats an empty array
+          // as unbound under nounset. Do not silently test a Homebrew Bash here.
+          const result = spawnSync(process.platform === 'darwin' ? '/bin/bash' : 'bash', ['-c', script], {
+            cwd: root,
+            env: { ...process.env, PATH: `${root}:${process.env.PATH}`, ARGUMENTS: output, S3_BUCKET: 'test-bucket', AWS_REGION: 'test-region', RUNNER_TEMP: root, TARGET_PACKAGES: targeted ? selector : '', REBUILD_EXISTING: String(repair) },
+            encoding: 'utf8',
+          })
+          expect(result.status, result.stderr).toBe(0)
+          const args = readFileSync(output, 'utf8').trim().split('\n')
+          expect(args.includes('--force')).toBe(repair)
+          expect(args.includes('--package')).toBe(targeted)
+          if (targeted) expect(args[args.indexOf('--package') + 1]).toBe(selector)
+          expect(args).toContain(job === 'mirror' ? '--mirror-only' : '--download-only')
+        }
       }
     }
   }

@@ -427,6 +427,12 @@ npm install https://registry.pantry.dev/commits/abc1234/@scope/my-package/tarbal
 pantry install discord
 pantry install obsidian
 pantry install code.visualstudio.com
+pantry install launchpad
+
+# Catalog apps and fonts are inferred and activated for your user account.
+# Explicit --kind remains available when a name is ambiguous.
+pantry install fira-code
+pantry install --dry-run launchpad
 
 # Browse available apps
 curl https://registry.pantry.dev/desktop-apps | jq

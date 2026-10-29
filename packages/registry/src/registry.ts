@@ -21,6 +21,11 @@ import { createS3Client, resolveStorageProvider } from './storage/provider'
 import { LocalStorage, S3Storage, sanitizePackageName } from './storage/s3'
 import { assertCleanMalwareScan } from './malware-scanning'
 import { isPrereleaseVersion, pickLatestVersion } from './version-precedence'
+import { PackageVersionExistsError } from './publication'
+
+function checksumOf(bytes: ArrayBuffer): string {
+  return `sha256:${new Bun.CryptoHasher('sha256').update(bytes).digest('hex')}`
+}
 
 /** Reject version strings containing shell-unsafe or path-unsafe characters. */
 function isSafeVersion(v: string): boolean {
@@ -49,6 +54,9 @@ export class Registry {
   private config: RegistryConfig
   private tarballStorage: TarballStorage
   private metadataStorage: MetadataStorage
+
+  /** Embedders can verify that a dedicated registry never resolves foreign packages. */
+  get npmFallbackEnabled(): boolean { return this.config.npmFallback === true }
 
   /** Public accessor for tarball storage (used by short URL handler for S3 prefix search) */
   get tarball(): TarballStorage { return this.tarballStorage }
@@ -207,7 +215,26 @@ export class Registry {
         if (metadata.tarballUrl.startsWith(this.config.baseUrl)) {
           const safeName = sanitizePackageName(name)
           const key = `packages/pantry/${safeName}/${version}/${safeName}-${version}.tgz`
-          return this.tarballStorage.download(key)
+          // Content-addressed keys keep concurrent uploads and flattened scope
+          // names from replacing each other's bytes. Legacy reads are checked
+          // against their recorded digest before anything can be served.
+          const digest = metadata.checksum?.match(/^sha256:([a-f0-9]{64})$/)?.[1]
+          if (!digest)
+            throw new Error('Package artifact has no SHA-256 checksum')
+          let bytes: ArrayBuffer
+          try {
+            bytes = await this.tarballStorage.download(`packages/pantry/${safeName}/${version}/${digest}.tgz`)
+          }
+          catch (error) {
+            const code = (error as { code?: string }).code
+            const status = (error as { statusCode?: number }).statusCode
+            if (code !== 'ENOENT' && !(status === 404 && (code === 'NoSuchKey' || code === 'NotFound')))
+              throw error
+            bytes = await this.tarballStorage.download(key)
+          }
+          if (checksumOf(bytes) !== metadata.checksum)
+            throw new Error('Package artifact checksum does not match its version')
+          return bytes
         }
 
         // Otherwise, fetch from the URL (validate HTTPS to prevent SSRF)
@@ -242,7 +269,10 @@ export class Registry {
     if (!isSafeVersion(metadata.version)) {
       throw new Error(`Invalid package version: ${metadata.version}`)
     }
-    const key = `packages/pantry/${safeName}/${metadata.version}/${safeName}-${metadata.version}.tgz`
+    if (await this.metadataStorage.getPackageVersion(metadata.name, metadata.version))
+      throw new PackageVersionExistsError(metadata.name, metadata.version)
+    const checksum = checksumOf(tarball)
+    const key = `packages/pantry/${safeName}/${metadata.version}/${checksum.slice(7)}.tgz`
 
     // Upload tarball. The storage-returned URL points at the raw key
     // path, which is NOT a public route — only the
@@ -254,11 +284,6 @@ export class Registry {
     await this.tarballStorage.upload(key, tarball)
     const tarballUrl = `${this.config.baseUrl}/packages/${encodeURIComponent(metadata.name)}/${metadata.version}/tarball`
 
-    // Calculate checksum
-    const hashBuffer = await crypto.subtle.digest('SHA-256', tarball)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const checksum = `sha256:${hashArray.map(b => b.toString(16).padStart(2, '0')).join('')}`
-
     // Store metadata
     await this.metadataStorage.putVersion(metadata.name, metadata.version, {
       ...metadata,
@@ -266,7 +291,7 @@ export class Registry {
       checksum,
       publishedAt: new Date().toISOString(),
       size: tarball.byteLength,
-    })
+    }, { ifAbsent: true })
 
     if (publishedBy && publishedBy !== '_admin') {
       await this.metadataStorage.setPackagePublisher(metadata.name, publishedBy)
@@ -495,7 +520,7 @@ export function createProductionRegistry(config: {
   baseUrl: string
   region?: string
   npmFallback?: boolean
-  storageProvider?: 'aws' | 'backblaze' | 'hetzner'
+  storageProvider?: RegistryConfig['storageProvider']
   s3Endpoint?: string
   forcePathStyle?: boolean
   metadataBackend?: 'dynamodb' | 'object' | 'file'
@@ -516,7 +541,7 @@ export function createProductionRegistry(config: {
 /**
  * Create a registry from environment variables.
  *
- * Storage provider is selected via STORAGE_PROVIDER (aws | backblaze | hetzner);
+ * Storage provider is selected via STORAGE_PROVIDER (aws | backblaze | hetzner | r2);
  * endpoint/region/credentials are resolved by the storage provider helper from
  * the matching env vars (S3_ENDPOINT, S3_REGION or B2_REGION, and the
  * provider credential vars B2_... / HETZNER_S3_...).
@@ -531,9 +556,10 @@ export function createRegistryFromEnv(): Registry {
     s3Bucket,
     // Leave region undefined unless explicitly set so the provider default applies.
     s3Region: process.env.S3_REGION || process.env.AWS_REGION,
-    storageProvider: process.env.STORAGE_PROVIDER as 'aws' | 'backblaze' | 'hetzner' | undefined,
+    storageProvider: process.env.STORAGE_PROVIDER as RegistryConfig['storageProvider'],
     s3Endpoint: process.env.S3_ENDPOINT,
-    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+    // Let provider defaults apply when this optional setting is absent.
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE === undefined ? undefined : process.env.S3_FORCE_PATH_STYLE === 'true',
     dynamoTable,
     metadataBackend: process.env.METADATA_BACKEND as 'dynamodb' | 'object' | 'file' | undefined,
     metadataKey: process.env.METADATA_KEY,

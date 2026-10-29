@@ -1749,6 +1749,29 @@ cli
 // app-store:* — provider-neutral Apple provisioning and certificate automation
 // ─────────────────────────────────────────────────────────────────────────────
 cli
+  .command('native:release', 'Qualify, version, commit and push a native app release through Pantry')
+  .option('--bump <bump>', 'patch, minor or major (default: patch)')
+  .option('--dry-run', 'Validate and preview without changing the version or publishing')
+  .action(async (options: { bump?: string, dryRun?: boolean }) => {
+    const { releaseNativeApp } = await import('../src/native/release')
+    await releaseNativeApp(process.cwd(), { bump: (options.bump || 'patch') as 'patch' | 'minor' | 'major', dryRun: options.dryRun })
+  })
+
+cli
+  .command('native:check', 'Build and verify the native app declared in pantry.json')
+  .action(async () => {
+    const { prepareNativeRelease } = await import('../src/native')
+    console.log(JSON.stringify(await prepareNativeRelease(process.cwd(), 'check'), null, 2))
+  })
+
+cli
+  .command('native:prepare-release', 'Sign, verify, notarize and package configured native release targets')
+  .action(async () => {
+    const { prepareNativeRelease } = await import('../src/native')
+    console.log(JSON.stringify(await prepareNativeRelease(process.cwd(), 'release'), null, 2))
+  })
+
+cli
   .command('app-store:csr', 'Generate private keys and CSRs for Mac App Store certificates')
   .option('--name <name>', 'App name used in certificate request common names')
   .option('--output <dir>', 'Output directory (default: .pantry/apple)')

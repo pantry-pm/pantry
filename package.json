@@ -1,7 +1,7 @@
 {
   "name": "pantry",
   "type": "module",
-  "version": "0.11.119",
+  "version": "0.11.145",
   "private": true,
   "description": "A performant, universal package manager. Like Homebrew, but faster.",
   "author": "Chris Breuer <chris@stacksjs.com>",
@@ -24,6 +24,8 @@
     "build": "for dir in packages/*; do if [ -f \"$dir/package.json\" ]; then echo \"Building $dir\" && bun run --cwd $dir build; fi; done",
     "fresh": "bunx rimraf node_modules/ bun.lock && bun i",
     "test": "bun test",
+    "test:ui": "playwright test",
+    "test:ui:types": "bun --bun tsc --noEmit -p packages/registry/tests/ui/tsconfig.json",
     "lint": "bunx --bun pickier .",
     "lint:fix": "bunx --bun pickier . --fix",
     "format": "bunx --bun pickier . --format",
@@ -46,7 +48,7 @@
     "bun"
   ],
   "devDependencies": {
-    "@stacksjs/bumpx": "0.2.26",
+    "@playwright/test": "^1.64.1",
     "better-dx": "^0.2.23"
   },
   "git-hooks": {
@@ -64,6 +66,7 @@
   "dependencies": {
     "@cwcss/crosswind": "^0.2.16",
     "@stacksjs/stx": "^0.2.192",
-    "@stacksjs/ts-cloud": "^0.9.2"
+    "@stacksjs/ts-cloud": "^0.16.68",
+    "@stacksjs/bumpx": "^0.2.29"
   }
 }

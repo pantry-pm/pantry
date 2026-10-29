@@ -1,1 +1,4 @@
 * text=auto
+
+# Retain upstream artwork bytes exactly as their catalog SHA-256 records.
+assets/package-logos/** -text

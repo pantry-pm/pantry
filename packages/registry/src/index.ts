@@ -8,6 +8,7 @@
 
 // Main registry class
 export { Registry, createLocalRegistry, createProductionRegistry, createRegistryFromEnv } from './registry'
+export { PackageVersionExistsError } from './publication'
 
 // Server
 export { createServer, createHandler } from './server'

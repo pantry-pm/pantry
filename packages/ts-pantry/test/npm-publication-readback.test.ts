@@ -34,7 +34,7 @@ test('an accepted asynchronous publication must expose both metadata and verifie
     fetcher: (async (url) => {
       requests++
       if (requests === 1 || requests === 3) return new Response(null, { status: 404 })
-      if (String(url).endsWith('.tgz')) return new Response(archive.bytes)
+      if (String(url).endsWith('.tgz')) return new Response(new Uint8Array(archive.bytes))
       return Response.json({ name: 'ts-pantry', version: '1.2.3', dist: { tarball: 'https://registry.npmjs.org/ts-pantry/-/ts-pantry-1.2.3.tgz', integrity: archive.integrity } })
     }),
   })
@@ -58,7 +58,7 @@ test('self-consistent public bytes for the same version cannot replace the origi
   await expect(waitForNpmPublication('ts-pantry', '1.2.3', {
     expectedOriginal: { name: 'ts-pantry', version: '1.2.3', integrity: original.integrity, shasum: createHash('sha1').update(original.bytes).digest('hex') },
     fetcher: async url => String(url).endsWith('.tgz')
-      ? new Response(other.bytes)
+      ? new Response(new Uint8Array(other.bytes))
       : Response.json({ name: 'ts-pantry', version: '1.2.3', dist: { tarball: 'https://registry.npmjs.org/ts-pantry/-/ts-pantry-1.2.3.tgz', integrity: other.integrity, shasum: createHash('sha1').update(other.bytes).digest('hex') } }),
   })).rejects.toThrow('original accepted archive')
 })
@@ -95,7 +95,7 @@ test('an unresolved upload proceeds only to bounded original-byte readback, neve
       reads++
       if (reads === 1 || reads === 3) return new Response(null, { status: 404 })
       return String(url).endsWith('.tgz')
-        ? new Response(archive.bytes)
+        ? new Response(new Uint8Array(archive.bytes))
         : Response.json({ ...original, dist: { tarball: 'https://registry.npmjs.org/ts-pantry/-/ts-pantry-1.2.3.tgz', integrity: original.integrity, shasum: original.shasum } })
     },
   })
@@ -123,7 +123,7 @@ test('accepted receipt readback waits for public metadata and matches the origin
       reads++
       if (reads === 1) return new Response(null, { status: 404 })
       return String(url).endsWith('.tgz')
-        ? new Response(archive.bytes)
+        ? new Response(new Uint8Array(archive.bytes))
         : Response.json({ ...original, dist: { tarball: 'https://registry.npmjs.org/ts-pantry/-/ts-pantry-1.2.3.tgz', integrity: original.integrity, shasum: original.shasum } })
     },
   })

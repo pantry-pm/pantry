@@ -44,17 +44,24 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   verify:
     uses: ./.github/workflows/registry-checks.yml
 
+  source-ci:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/source-ci-gate.yml
+
   deploy:
     name: hetzner
-    needs: verify
+    needs: [verify, source-ci]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Admitted scans retain their existing size-derived deadline. The service
+    # owns a finite drain budget; a deployment must wait for its actual result.
+    timeout-minutes: 360
     permissions:
       contents: read
 
@@ -80,9 +87,10 @@ jobs:
           # variable to true and dispatch one final deployment.
           BINARY_SCAN_ATTESTATION: ${{ vars.PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION || 'false' }}
           # Monthly object-storage allowance in decimal TB, matching how the
-          # provider quotes and bills it. Feeds /api/egress so month-to-date
-          # usage reads as a share of the allowance instead of a bare number.
-          EGRESS_BUDGET_TB: ${{ vars.PANTRY_EGRESS_BUDGET_TB || '5' }}
+          # provider quotes it. Hetzner Object Storage includes about 1 TB,
+          # separate from the host allowance; override for your actual plan.
+          # /api/egress estimates authorized GETs, not provider-billed traffic.
+          EGRESS_BUDGET_TB: ${{ vars.PANTRY_EGRESS_BUDGET_TB || '1' }}
           REHEARSE_SCANNER_OUTAGE: ${{ inputs.rehearse_scanner_outage || false }}
         run: |
           # Create the key file with a 0600 umask before writing so it is
@@ -136,14 +144,16 @@ jobs:
 
             git config --global --add safe.directory "$REPO_PATH"
             git checkout -- bun.lock 2>/dev/null || true
-            git fetch origin main
-            git reset --hard origin/main
+            # CI approved this commit; main may move while its checks run.
+            git fetch --no-tags origin "$EXPECTED_SHA"
+            git reset --hard "$EXPECTED_SHA"
             DEPLOYED_SHA=$(git rev-parse HEAD)
             if [ "$DEPLOYED_SHA" != "$EXPECTED_SHA" ]; then
               echo "Expected commit $EXPECTED_SHA but checkout is $DEPLOYED_SHA" >&2
               exit 1
             fi
             "$BUN" install
+            "$BUN" packages/registry/scripts/provision-zig.ts
             (cd packages/registry && NODE_ENV=production "$BUN" run build:server)
 
             # Publish-time scanning is part of Registry readiness. Provision
@@ -283,6 +293,10 @@ jobs:
             # CPUWeight sits above clamd's 25 and below rpx's 500: the registry
             # answers requests, so it must outrank the scanning it dispatches,
             # and still yield to the gateway that fronts every tenant.
+            install -d -m 0755 "$(dirname "$ENV_FILE")"
+            [ -f "$ENV_FILE" ] || install -m 0600 /dev/null "$ENV_FILE"
+            SHUTDOWN_SECONDS=$(env -u CLAMD_MAX_ADMISSION_WAIT_MS "$BUN" --env-file="$ENV_FILE" -e 'import { registrySystemdStopTimeoutSeconds } from "./packages/registry/src/shutdown.ts"; console.log(registrySystemdStopTimeoutSeconds())')
+            case "$SHUTDOWN_SECONDS" in ''|*[!0-9]*) echo "Invalid registry shutdown policy" >&2; exit 1;; esac
             REGISTRY_CAPACITY_DIR="/etc/systemd/system/${SERVICE}.service.d"
             install -d -m 0755 "$REGISTRY_CAPACITY_DIR"
             REGISTRY_CAPACITY_TMP=$(mktemp "$REGISTRY_CAPACITY_DIR/pantry-registry-capacity.conf.XXXXXX")
@@ -294,6 +308,7 @@ jobs:
               'CPUWeight=80' \
               'IOWeight=80' \
               'TasksMax=256' \
+              "TimeoutStopSec=$SHUTDOWN_SECONDS" \
               > "$REGISTRY_CAPACITY_TMP"
             mv -f "$REGISTRY_CAPACITY_TMP" "$REGISTRY_CAPACITY_DIR/pantry-registry-capacity.conf"
 
@@ -311,6 +326,8 @@ jobs:
                 printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
               fi
             }
+            set_env PANTRY_ZIG_BIN "$(cat packages/registry/pantry/registry-zig-path)"
+            set_env PANTRY_ZIG_CACHE_DIR /var/cache/pantry-registry-zig
             set_env PANTRY_MALWARE_SCANNING required
             set_env PANTRY_REQUIRE_MALWARE_SCAN_ATTESTATION true
             set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION "$BINARY_SCAN_ATTESTATION"
@@ -349,6 +366,15 @@ jobs:
               set_env PANTRY_BINARY_STAGING_SECRET "$(openssl rand -hex 32)"
             fi
             chmod 600 "$ENV_FILE"
+
+            # systemd creates and owns the compiler cache for the configured
+            # service user, including legacy units without a user home.
+            install -d -m 0755 "/etc/systemd/system/${SERVICE}.service.d"
+            printf '%s\n' \
+              '[Service]' \
+              'CacheDirectory=pantry-registry-zig' \
+              'CacheDirectoryMode=0700' \
+              > "/etc/systemd/system/${SERVICE}.service.d/zig-cache.conf"
 
             # Ensure legacy units also consume the managed environment file.
             install -d -m 0755 "/etc/systemd/system/${SERVICE}.service.d"

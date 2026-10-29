@@ -5,18 +5,21 @@ import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release
 import { installBootstrap } from './bootstrap'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { deliverReleaseToAppStore } from './release-app-store'
+import { deliverReleaseToGooglePlay, prepareNativeRelease, publishPreparedNativeRegistry, readNativeAppConfig } from '../../ts-pantry/src/native'
 import { setupAppleSigning } from './apple-signing'
 import { createReleaseManifest, writeReleaseManifest } from './release-manifest'
 import type { ReleaseClient } from './release-draft'
 import { findReleaseForTag, settleCreatedDraft } from './release-draft'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
-import { setupBunRuntime } from './bun-runtime'
+import { requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantryConfigMaySetLinker, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import { installResolvedSystemPackages } from './system-packages'
 import { nativeArtifactCacheIdentity } from './native-cache'
 import { dependencyCache } from './cache-service'
+import { exportBuildCacheEnvironment } from './build-archive-cache-env'
+import { buildArchiveCacheDir } from './build-archive-cache'
 import type { ServiceSpec } from './services'
 import { mergeServicePackages, nativeServiceEnvironment, parseServiceSpecs } from './services'
 import type { NativeServiceState } from './native-services'
@@ -27,6 +30,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import * as crypto from 'node:crypto'
 import * as cache from '@actions/cache'
+import { dependencyCacheKeys } from './dependency-cache-key'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as github from '@actions/github'
@@ -367,6 +371,7 @@ function extractSystemDeps(): string[] {
     try {
       const content = stripJsoncComments(fs.readFileSync(f, 'utf-8'))
       const parsed = JSON.parse(content)
+      if (!parsed.dependencies) continue
       const deps = parsed.dependencies || {}
       return Object.entries(deps)
         .filter(([n]) => n.includes('.') || isKnownAlias(n))
@@ -652,6 +657,16 @@ async function sendSlackNotification(webhookUrl: string, ctx: NotificationContex
 
 export async function run(): Promise<void> {
   try {
+    if (boolInput('cache-build-dependencies', process.env.PANTRY_CACHE_BUILD_DEPENDENCIES === 'true') && process.env.PANTRY_BUILD_CACHE_READY !== 'true') {
+      if (exportBuildCacheEnvironment(process.env, core)) {
+        fs.mkdirSync(buildArchiveCacheDir(), { recursive: true })
+        fs.rmSync(path.join(buildArchiveCacheDir(), 'events.jsonl'), { force: true })
+        core.saveState('build-archive-cache-summary', 'true')
+        core.info('Enabled shared, checksum-verified build dependency archive caching')
+      }
+      else core.warning('GitHub build dependency archive cache unavailable; local caching remains enabled')
+    }
+
     // Authenticate the SDK's upstream version lookups before anything resolves
     // a version. Unauthenticated api.github.com is 60 req/hr per IP and runner
     // pools share egress addresses, so a 403 here is routine — and a failed
@@ -664,6 +679,7 @@ export async function run(): Promise<void> {
       process.env.PANTRY_GITHUB_TOKEN = githubToken
 
     const inputs: ActionInputs = {
+      nativeApp: (core.getInput('native-app') || undefined) as ActionInputs['nativeApp'],
       version: core.getInput('version') || 'latest',
       packages: core.getInput('packages') || '',
       services: core.getInput('services') || '',
@@ -783,15 +799,17 @@ export async function run(): Promise<void> {
     // If setup-only with no packages, skip to publish/release (if any)
     if (inputs.setupOnly && !inputs.packages && !inputs.services) {
       // `install: false` skips `pantry install` of *project* deps, but the
-      // action's core contract is to provide the bun runtime — always install
-      // it so downstream steps can run `bun …` without a separate setup-bun.
+      // action's core contract is to provide Bun. Retain an activated project
+      // compiler on follow-up signing/release calls instead of replacing it
+      // with latest, and bootstrap from its declared spec when none is active.
       // (Without this, setup-only returned before any bun install, so a
       // workflow that only wanted the CLI got `bun: command not found`.)
       // A failed install fails the setup here, with the download error,
       // instead of a warning and a downstream `bun: command not found`.
       await setupBunRuntime({
-        install: () => installSystemPackages(['bun.sh'], pantryDir, readLockedVersions(), path.join(installDir, platform.binaryName)),
+        install: () => installSystemPackages([requiredBunPackageSpec(extractSystemDeps())], pantryDir, readLockedVersions(), path.join(installDir, platform.binaryName)),
         binDir: pantryBinDir,
+        preserveExisting: process.env.BUN_INSTALL === pantryDir,
         onLinked: () => core.exportVariable('BUN_INSTALL', pantryDir),
       })
 
@@ -804,6 +822,7 @@ export async function run(): Promise<void> {
         await publishPackage(inputs.publish, inputs.registryUrl, resolvePackageCwd(cwd, inputs.packageDir))
         await sendNotifications(inputs)
       }
+      await configureNativeRelease(inputs)
       if (inputs.release)
         await createGitHubRelease(inputs)
       core.info('Setup complete')
@@ -835,12 +854,9 @@ export async function run(): Promise<void> {
         core.warning(`Native artifact identity unavailable; installing without a dependency cache: ${error}`)
       }
     }
-    const cachePrefix = `pantry-v4-${resolvedVer}-${platform.os}-${platform.arch}-${artifactIdentity}-`
-    const cacheKey = `${cachePrefix}${lockHash}-${depsHash}-${cachePackages || 'all'}`
-    // Restore keys: try same OS/arch with any lock hash
-    const restoreKeys = [
-      cachePrefix,
-    ]
+    const { key: cacheKey, restoreKeys } = dependencyCacheKeys(
+      platform, artifactIdentity || 'unavailable', resolvedVer, lockHash, depsHash, cachePackages,
+    )
     let cacheHit = false
     // Whether `pantry install` ran in this step, and so may have re-pointed
     // system-package links that need re-asserting afterwards
@@ -1028,22 +1044,16 @@ export async function run(): Promise<void> {
       catch { /* zig not installed */ }
     }
 
-    // ── Ensure bun symlinks ──
+    // Pantry activates bun and bunx separately; retain their executor arguments.
     const bunPath = path.join(pantryBinDir, 'bun')
-    const bunxPath = path.join(pantryBinDir, 'bunx')
-    try {
-      if (fs.existsSync(bunPath)) {
-        // Remove stale symlink before creating to avoid EEXIST race
-        try { fs.unlinkSync(bunxPath) } catch { /* doesn't exist */ }
-        fs.symlinkSync(bunPath, bunxPath)
-        core.exportVariable('BUN_INSTALL', pantryDir)
-      }
-    }
-    catch { /* bun not in deps */ }
+    if (fs.existsSync(bunPath))
+      core.exportVariable('BUN_INSTALL', pantryDir)
 
     // Launch only after Pantry has installed the complete service dependency
     // graph and all executable-link reconciliation has finished.
     await startRequestedServices(requestedServices, pantryBinDir, platform)
+
+    await configureNativeRelease(inputs)
 
     // ── Publish ──
     if (inputs.publish) {
@@ -1452,13 +1462,13 @@ async function configureAppleSigning(inputs: ActionInputs): Promise<void> {
     // The post step deletes the keychain even if the job fails.
     core.saveState('apple-signing-keychain', result.keychainPath)
 
-    core.setOutput('apple-signing-identity', result.applicationIdentity)
-    core.exportVariable('APPLE_SIGNING_IDENTITY', result.applicationIdentity)
+    core.setOutput('apple-signing-identity', result.applicationFingerprint)
+    core.exportVariable('APPLE_SIGNING_IDENTITY', result.applicationFingerprint)
     core.info(`Application identity: ${result.applicationIdentity}`)
 
     if (result.installerIdentity) {
-      core.setOutput('apple-signing-installer-identity', result.installerIdentity)
-      core.exportVariable('APPLE_INSTALLER_SIGNING_IDENTITY', result.installerIdentity)
+      core.setOutput('apple-signing-installer-identity', result.installerFingerprint)
+      core.exportVariable('APPLE_INSTALLER_SIGNING_IDENTITY', result.installerFingerprint!)
       core.info(`Installer identity: ${result.installerIdentity}`)
     }
 
@@ -1470,6 +1480,89 @@ async function configureAppleSigning(inputs: ActionInputs): Promise<void> {
   finally {
     core.endGroup()
   }
+}
+
+function nativeReleaseClient(token: string, owner: string, repo: string): ReleaseClient {
+  const octokit = github.getOctokit(token)
+  return {
+    getPublishedByTag: async (releaseTag) => {
+      try {
+        const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag: releaseTag })
+        return response.data
+      }
+      catch (err) {
+        if ((err as { status?: number }).status === 404)
+          return undefined
+        throw err
+      }
+    },
+    listRecent: async () => (await octokit.rest.repos.listReleases({ owner, repo, per_page: 100 })).data,
+    deleteRelease: async (id) => {
+      await octokit.rest.repos.deleteRelease({ owner, repo, release_id: id })
+    },
+  }
+}
+
+/** App repositories declare policy; Pantry owns the complete build/release flow. */
+async function configureNativeRelease(inputs: ActionInputs): Promise<void> {
+  if (!inputs.nativeApp) return
+  if (!['check', 'release'].includes(inputs.nativeApp)) throw new Error('native-app must be check or release')
+  if (inputs.releaseDryRun) throw new Error('Native releases require real build and provider checks; use native-app: check for validation')
+  const root = process.cwd()
+  if (inputs.nativeApp === 'release') {
+    const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version
+    const explicitTag = core.getInput('release-tag')
+    inputs.releaseTag = explicitTag || `v${version}`
+    if (inputs.releaseTag !== `v${version}`) throw new Error('Native release tag must match package.json version')
+    inputs.releaseChangelog = core.getInput('release-changelog') || 'auto'
+    inputs.releaseChecksums = core.getInput('release-checksums') || 'sha256'
+    const { owner, repo } = github.context.repo
+    const existing = await findReleaseForTag(nativeReleaseClient(inputs.releaseToken, owner, repo), inputs.releaseTag)
+    if (existing && !existing.draft) throw new Error(`Published native release ${inputs.releaseTag} is immutable; bump the app version`)
+  }
+  readNativeAppConfig(root, true)
+  const source = fs.readFileSync(path.join(root, 'pantry.json'))
+  const craftConfig = path.join(root, 'craft.config.ts')
+  const identity = crypto.createHash('sha256').update(source).update(fs.existsSync(craftConfig) ? fs.readFileSync(craftConfig) : '').digest('hex')
+  const key = `pantry-native-v1-${process.platform}-${process.arch}-${identity}`
+  const directories = [path.join(root, '.pantry/native/runtimes')]
+  let restored: string | undefined
+  try { restored = await cache.restoreCache(directories, key) }
+  catch (error) { core.info(`Native cache unavailable: ${String(error)}`) }
+  const result = await prepareNativeRelease(root, inputs.nativeApp, {
+    onSecret: value => core.setSecret(value),
+    onEnvironment: values => { Object.assign(process.env, values) },
+  })
+  if (!restored && fs.existsSync(directories[0]!)) {
+    try { await cache.saveCache(directories, key) }
+    catch (error) { core.info(`Native cache save unavailable: ${String(error)}`) }
+  }
+  core.setOutput('native-artifacts', result.files.join('\n'))
+  core.setOutput('native-version', result.version)
+  if (inputs.nativeApp === 'check') return
+  if (result.config.registry) {
+    core.startGroup('Publish native application to Pantry registry')
+    const published = await publishPreparedNativeRegistry(root, result)
+    result.files.push(published.archive, published.receipt)
+    core.info(`Published ${published.publication.domain}@${published.publication.version} to Pantry`)
+    core.endGroup()
+  }
+  inputs.release = true
+  inputs.releaseFiles = result.files.join('\n')
+  inputs.releaseTag = inputs.releaseTag || `v${result.version}`
+  inputs.releaseDraft = result.config.release?.draft ?? false
+  if (result.appStorePackage) {
+    inputs.releaseAppStore = true
+    inputs.releaseAppStorePackage = result.appStorePackage
+    inputs.releaseAppStoreBundleId = result.artifact!.bundleId
+    inputs.releaseAppStoreVersion = result.version
+    inputs.releaseAppStoreBuildNumber = result.artifact!.buildNumber
+    inputs.releaseAppStoreRetryExisting = false
+    inputs.releaseAppStoreApiKeyId = process.env.APP_STORE_CONNECT_API_KEY_ID || inputs.releaseAppStoreApiKeyId
+    inputs.releaseAppStoreIssuerId = process.env.APP_STORE_CONNECT_ISSUER_ID || inputs.releaseAppStoreIssuerId
+    inputs.releaseAppStorePrivateKey = process.env.APP_STORE_CONNECT_PRIVATE_KEY || inputs.releaseAppStorePrivateKey
+  }
+  if (result.config.android) inputs.nativeGooglePlay = { ...result.config.android, bundle: path.resolve(root, result.config.android.bundle) }
 }
 
 async function runReleaseTargets(options: {
@@ -1484,6 +1577,14 @@ async function runReleaseTargets(options: {
 }): Promise<string[]> {
   const { inputs, releaseFiles, releaseDirectory, manifest, manifestPath, releaseNotes, owner, repo } = options
   const receiptFiles: string[] = []
+
+  if (inputs.nativeGooglePlay) {
+    const receipt = await deliverReleaseToGooglePlay({ ...inputs.nativeGooglePlay, serviceAccount: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || '' })
+    const receiptPath = path.join(releaseDirectory, 'google-play-receipt.json')
+    fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 })
+    receiptFiles.push(receiptPath)
+    core.setOutput('release-google-play-receipt', receiptPath)
+  }
 
   if (inputs.releaseAppStore) {
     core.startGroup(inputs.releaseDryRun ? 'Plan Mac App Store delivery' : 'Mac App Store delivery')
@@ -1662,23 +1763,7 @@ async function createGitHubRelease(inputs: ActionInputs): Promise<void> {
   const octokit = github.getOctokit(token)
   // Draft-aware: the tag lookup never returns drafts, so legs of one release
   // matrix each created their own (see release-draft.ts).
-  const releaseClient: ReleaseClient = {
-    getPublishedByTag: async (releaseTag) => {
-      try {
-        const response = await octokit.rest.repos.getReleaseByTag({ owner, repo, tag: releaseTag })
-        return response.data
-      }
-      catch (err) {
-        if ((err as { status?: number }).status === 404)
-          return undefined
-        throw err
-      }
-    },
-    listRecent: async () => (await octokit.rest.repos.listReleases({ owner, repo, per_page: 100 })).data,
-    deleteRelease: async (id) => {
-      await octokit.rest.repos.deleteRelease({ owner, repo, release_id: id })
-    },
-  }
+  const releaseClient = nativeReleaseClient(token, owner, repo)
   const existingRelease = await retryGitHubReleaseOperation(
     `Lookup of release ${tag}`,
     () => findReleaseForTag(releaseClient, tag),

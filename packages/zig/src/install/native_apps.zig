@@ -22,7 +22,6 @@ const style = @import("../cli/style.zig");
 pub const Outcome = enum { installed, failed, unsupported };
 
 const DITTO = "/usr/bin/ditto";
-const XATTR = "/usr/bin/xattr";
 const RM = "/bin/rm";
 const MKDIR = "/bin/mkdir";
 
@@ -55,8 +54,32 @@ fn endsWithIgnoreCase(s: []const u8, suffix: []const u8) bool {
     return std.ascii.eqlIgnoreCase(s[s.len - suffix.len ..], suffix);
 }
 
+/// A desktop payload needs a bundle manifest and a usable native executable,
+/// rather than an artificial bin/ directory. Signature assessment remains the
+/// platform's responsibility when the installed application is launched.
+pub fn hasUsableAppBundle(allocator: std.mem.Allocator, app: []const u8) bool {
+    if (!endsWithIgnoreCase(app, ".app")) return false;
+    const info = std.fs.path.join(allocator, &.{ app, "Contents", "Info.plist" }) catch return false;
+    defer allocator.free(info);
+    const manifest = io_helper.statFile(info) catch return false;
+    if (manifest.size == 0) return false;
+    const macos = std.fs.path.join(allocator, &.{ app, "Contents", "MacOS" }) catch return false;
+    defer allocator.free(macos);
+    var dir = io_helper.openDirAbsoluteForIteration(macos) catch return false;
+    defer dir.close();
+    var entries = dir.iterate();
+    while (entries.next() catch null) |entry| {
+        if (entry.kind != .file and entry.kind != .sym_link) continue;
+        const executable = std.fs.path.join(allocator, &.{ macos, entry.name }) catch return false;
+        defer allocator.free(executable);
+        const metadata = io_helper.statFile(executable) catch continue;
+        if (metadata.size > 0 and io_helper.isExecutable(executable)) return true;
+    }
+    return false;
+}
+
 /// Replace any existing copy of `src_app` (a `.app` bundle) in the apps dir and
-/// clear quarantine so it launches without a Gatekeeper prompt.
+/// preserve the upstream quarantine and Gatekeeper state.
 fn placeApp(allocator: std.mem.Allocator, apps_dir: []const u8, src_app: []const u8) bool {
     const name = std.fs.path.basename(src_app);
     const dst = std.fmt.allocPrint(allocator, "{s}/{s}", .{ apps_dir, name }) catch return false;
@@ -65,7 +88,6 @@ fn placeApp(allocator: std.mem.Allocator, apps_dir: []const u8, src_app: []const
     _ = run(allocator, &[_][]const u8{ MKDIR, "-p", apps_dir });
     _ = run(allocator, &[_][]const u8{ RM, "-rf", dst });
     if (!run(allocator, &[_][]const u8{ DITTO, src_app, dst })) return false;
-    _ = run(allocator, &[_][]const u8{ XATTR, "-dr", "com.apple.quarantine", dst });
     return exists(dst);
 }
 
@@ -165,15 +187,25 @@ pub fn install(allocator: std.mem.Allocator, domain: []const u8, quiet: bool) Ou
     defer allocator.free(extract);
     extractor.extractArchiveQuiet(allocator, archive, extract, "tar.gz", quiet) catch return .failed;
 
-    const apps_dir = applicationsDir(allocator);
-    defer allocator.free(apps_dir);
-
-    if (installAppsFromTree(allocator, extract, apps_dir, 3) > 0) return .installed;
-    if (installFontsFromTree(allocator, extract) > 0) return .installed;
+    if (activateTree(allocator, extract, false)) return .installed;
 
     if (!quiet)
         style.printForced("    (no .app or fonts found in {s} artifact)\n", .{domain});
     return .failed;
+}
+
+/// Activate a registry package already materialized by the native installer.
+/// User-scoped apps go to ~/Applications; fonts retain their normal per-user location.
+pub fn activateTree(allocator: std.mem.Allocator, tree: []const u8, user_local: bool) bool {
+    if (builtin.os.tag != .macos) return false;
+    const apps_dir = if (user_local) blk: {
+        const home = io_helper.getEnvVarOwned(allocator, "HOME") catch return false;
+        defer allocator.free(home);
+        break :blk std.fmt.allocPrint(allocator, "{s}/Applications", .{home}) catch return false;
+    } else applicationsDir(allocator);
+    defer allocator.free(apps_dir);
+    if (installAppsFromTree(allocator, tree, apps_dir, 3) > 0) return true;
+    return installFontsFromTree(allocator, tree) > 0;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -184,21 +216,30 @@ test "endsWithIgnoreCase" {
     try std.testing.expect(!endsWithIgnoreCase("foo", ".app"));
 }
 
-test "installAppsFromTree finds and installs nested .app into a dest dir" {
-    const a = std.testing.allocator;
-    const tmp = "/tmp/pantry-native-apps-test";
-    const dest = "/tmp/pantry-native-apps-dest";
-    _ = run(a, &[_][]const u8{ RM, "-rf", tmp, dest });
-    defer _ = run(a, &[_][]const u8{ RM, "-rf", tmp, dest });
-    // Build a fake artifact tree: tmp/payload/Demo.app/Contents/MacOS/demo
-    _ = run(a, &[_][]const u8{ MKDIR, "-p", tmp ++ "/payload/Demo.app/Contents/MacOS" });
-    {
-        const f = io_helper.createFileAbsolute(tmp ++ "/payload/Demo.app/Contents/MacOS/demo", .{ .truncate = true }) catch unreachable;
-        io_helper.closeFile(f);
-    }
-    _ = run(a, &[_][]const u8{ MKDIR, "-p", dest });
+test "native app activation is unsupported off macOS" {
+    if (builtin.os.tag == .macos) return error.SkipZigTest;
+    try std.testing.expectEqual(Outcome.unsupported, install(std.testing.allocator, "fixture.invalid", true));
+    try std.testing.expect(!activateTree(std.testing.allocator, "/nonexistent", true));
+}
 
+test "installAppsFromTree finds and installs nested .app into a dest dir" {
+    if (builtin.os.tag != .macos) return error.SkipZigTest;
+    const a = std.testing.allocator;
+    const tmp = try io_helper.uniqueTempPath(a, "pantry-native-apps-test");
+    defer a.free(tmp);
+    const dest = try io_helper.uniqueTempPath(a, "pantry-native-apps-dest");
+    defer a.free(dest);
+    defer _ = run(a, &[_][]const u8{ RM, "-rf", tmp, dest });
+    const contents = try std.fmt.allocPrint(a, "{s}/payload/Demo.app/Contents/MacOS", .{tmp});
+    defer a.free(contents);
+    const executable = try std.fmt.allocPrint(a, "{s}/demo", .{contents});
+    defer a.free(executable);
+    _ = run(a, &[_][]const u8{ MKDIR, "-p", contents, dest });
+    const f = try io_helper.createFileAbsolute(executable, .{ .truncate = true });
+    io_helper.closeFile(f);
     const installed = installAppsFromTree(a, tmp, dest, 3);
     try std.testing.expectEqual(@as(usize, 1), installed);
-    try std.testing.expect(exists(dest ++ "/Demo.app"));
+    const bundle = try std.fmt.allocPrint(a, "{s}/Demo.app", .{dest});
+    defer a.free(bundle);
+    try std.testing.expect(exists(bundle));
 }

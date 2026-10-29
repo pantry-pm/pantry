@@ -2628,6 +2628,7 @@ fn transientGetTransport(err: anyerror) bool {
         error.EndOfStream,
         error.UnexpectedEndOfStream,
         error.TemporaryNameServerFailure,
+        error.NameServerFailure,
         error.TlsInitializationFailed,
         => true,
         else => false,
@@ -2645,7 +2646,7 @@ fn waitGetRetrySeconds(seconds: u64) !void {
     try getIo().sleep(.{ .nanoseconds = ns }, .awake);
 }
 
-fn retryGetTransport(err: anyerror, retries: *u8) !bool {
+pub fn retrySafeGetTransport(err: anyerror, retries: *u8) !bool {
     if (!transientGetTransport(err) or retries.* >= 2) return false;
     retries.* += 1;
     @import("cli/style.zig").print("  Registry GET transport {s}; retry {d}/2\n", .{ @errorName(err), retries.* });
@@ -2733,7 +2734,7 @@ fn httpGetResponseWithClient(client: *std.http.Client, allocator: std.mem.Alloca
     var retries: u8 = 0;
     while (true) {
         const result = httpGetAttemptWithClient(client, allocator, current_url, initial_uri, extra_headers, status_only_errors, retries) catch |err| {
-            if (try retryGetTransport(err, &retries)) continue;
+            if (try retrySafeGetTransport(err, &retries)) continue;
             return err;
         };
         switch (result) {
@@ -2756,7 +2757,21 @@ fn httpGetResponseWithClient(client: *std.http.Client, allocator: std.mem.Alloca
     }
 }
 
+test "safe GET DNS server recovery shares the existing attempt budget" {
+    var budget: HttpGetRetryBudget = .{ .initial_delay_ms = 0 };
+    try std.testing.expect(!try budget.transport(error.UnknownHostName));
+    try std.testing.expect(!try budget.transport(error.Canceled));
+    try std.testing.expectEqual(@as(u32, 0), budget.used);
+    try std.testing.expect(try budget.transport(error.NameServerFailure));
+    try std.testing.expectEqual(@as(u32, 1), budget.used);
+    try std.testing.expect(try budget.transport(error.TemporaryNameServerFailure));
+    try std.testing.expectEqual(@as(u32, 2), budget.used);
+    try std.testing.expect(!try budget.transport(error.NameServerFailure));
+    try std.testing.expectEqual(@as(u32, 2), budget.used);
+}
+
 test "safe GET transport recovery leaves cancellation and permanent failures terminal" {
+    try std.testing.expect(transientGetTransport(error.TlsInitializationFailed));
     try std.testing.expect(transientGetTransport(error.NetworkUnreachable));
     try std.testing.expect(transientGetTransport(error.ConnectionRefused));
     try std.testing.expect(transientGetTransport(error.ConnectionResetByPeer));

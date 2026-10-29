@@ -6,17 +6,18 @@
       "name": "pantry",
       "dependencies": {
         "@cwcss/crosswind": "^0.2.16",
+        "@stacksjs/bumpx": "^0.2.29",
         "@stacksjs/stx": "^0.2.192",
-        "@stacksjs/ts-cloud": "^0.9.2"
+        "@stacksjs/ts-cloud": "^0.16.68"
       },
       "devDependencies": {
-        "@stacksjs/bumpx": "0.2.26",
+        "@playwright/test": "^1.64.1",
         "better-dx": "^0.2.23"
       }
     },
     "packages/action": {
       "name": "pantry-setup",
-      "version": "0.11.119",
+      "version": "0.11.145",
       "dependencies": {
         "@actions/cache": "^6.0.0",
         "@actions/core": "^1.11.1",
@@ -31,14 +32,14 @@
     },
     "packages/benchmark": {
       "name": "@pantry/benchmark",
-      "version": "0.11.119",
+      "version": "0.11.145",
       "devDependencies": {
         "mitata": "^1.0.34"
       }
     },
     "packages/inspector": {
       "name": "@stacksjs/pantry-inspector",
-      "version": "0.11.119",
+      "version": "0.11.145",
       "devDependencies": {
         "bun-types": "latest",
         "typescript": "^7.0.2"
@@ -46,7 +47,7 @@
     },
     "packages/registry": {
       "name": "@stacksjs/registry",
-      "version": "0.11.119",
+      "version": "0.11.145",
       "dependencies": {
         "@stacksjs/stx": "^0.2.82",
         "@ts-charts/array": "^0.2.0",
@@ -64,11 +65,15 @@
     },
     "packages/ts-pantry": {
       "name": "ts-pantry",
-      "version": "0.11.119",
+      "version": "0.11.145",
+      "dependencies": {
+        "@stacksjs/bumpx": "^0.2.29",
+        "@stacksjs/env": "^0.75.311"
+      },
       "devDependencies": {
         "@stacksjs/bunpress": "^0.2.8",
         "@stacksjs/clapp": "^0.2.10",
-        "@stacksjs/ts-cloud": "^0.9.2",
+        "@stacksjs/ts-cloud": "^0.16.68",
         "@types/tar-stream": "^3.1.4",
         "better-dx": "^0.2.6",
         "tar-stream": "^3.2.0"

@@ -1,0 +1,434 @@
+import { afterEach, describe, expect, test } from 'bun:test'
+import { createHash, generateKeyPairSync } from 'node:crypto'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { encryptValue, generateKeypair } from '@stacksjs/env/crypto'
+import type { NativeCommand } from '../src/native'
+import { assessNativeMacArtifact, auditNativeEnvironment, craftDependencyPlan, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, provisionNativeRuntime, readNativeAppConfig, recordNativeArtifact, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle, signNativeDiskImage } from '../src/native'
+import { releaseNativeApp } from '../src/native/release'
+
+const directories: string[] = []
+function temporary(): string {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-native-'))
+  directories.push(root)
+  return root
+}
+afterEach(() => { for (const root of directories.splice(0)) rmSync(root, { recursive: true, force: true }) })
+const ok = { exitCode: 0, stdout: '', stderr: '' }
+
+describe('Buddy encrypted release environments', () => {
+  test('reads the production file with Buddy keys, masks values and preserves multiline keys', () => {
+    const root = temporary()
+    const keys = generateKeypair()
+    const value = '-----BEGIN PRIVATE KEY-----\nprivate material\n-----END PRIVATE KEY-----\n'
+    writeFileSync(join(root, '.env.production'), `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nAPP_STORE_CONNECT_PRIVATE_KEY="${encryptValue(value, keys.publicKey)}"\n`)
+    writeFileSync(join(root, '.env.keys'), `DOTENV_PRIVATE_KEY_PRODUCTION="${keys.privateKey}"\n`, { mode: 0o600 })
+    const masked: string[] = []
+    expect(loadNativeEnvironment(root, 'production', secret => masked.push(secret))).toEqual({ APP_STORE_CONNECT_PRIVATE_KEY: value })
+    expect(masked).toEqual([value])
+    rmSync(join(root, '.env.keys'))
+    // Fork CI can validate ciphertext without receiving a production key.
+    expect(() => auditNativeEnvironment(root, 'production')).not.toThrow()
+    expect(() => loadNativeEnvironment(root, 'production')).toThrow('Cannot read')
+    const previous = process.env.DOTENV_PRIVATE_KEY_PRODUCTION
+    try {
+      process.env.DOTENV_PRIVATE_KEY_PRODUCTION = keys.privateKey
+      expect(loadNativeEnvironment(root, 'production')).toEqual({ APP_STORE_CONNECT_PRIVATE_KEY: value })
+    }
+    finally {
+      if (previous === undefined) delete process.env.DOTENV_PRIVATE_KEY_PRODUCTION
+      else process.env.DOTENV_PRIVATE_KEY_PRODUCTION = previous
+    }
+  })
+  test('rejects plaintext, private-key assignments and wrong keys without printing values', () => {
+    const root = temporary()
+    const keys = generateKeypair()
+    const file = join(root, '.env.production')
+    writeFileSync(file, `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nTOKEN="secret-must-not-be-logged"\n`)
+    expect(() => auditNativeEnvironment(root, 'production')).toThrow('Buddy-encrypted: TOKEN')
+    writeFileSync(file, `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nDOTENV_PRIVATE_KEY_PRODUCTION="${encryptValue('private', keys.publicKey)}"\n`)
+    expect(() => auditNativeEnvironment(root, 'production')).toThrow('must never be committed')
+    writeFileSync(file, `DOTENV_PUBLIC_KEY_PRODUCTION="${keys.publicKey}"\nTOKEN="${encryptValue('secret-must-not-be-logged', keys.publicKey)}"\n`)
+    writeFileSync(join(root, '.env.keys'), `DOTENV_PRIVATE_KEY_PRODUCTION="${generateKeypair().privateKey}"\n`)
+    expect(() => loadNativeEnvironment(root, 'production')).toThrow('Cannot read')
+  })
+})
+
+describe('native configuration and builds', () => {
+  test('a failed qualification cannot create a release commit, tag or push', async () => {
+    const root = temporary()
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.0.0' }))
+    writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { checks: { before: [['bun', 'run', 'lint']] } } }))
+    const calls: string[][] = []
+    await expect(releaseNativeApp(root, { bump: 'patch' }, { command: async (name, args) => {
+      calls.push([name, ...args])
+      if (name === 'git') return { ...ok, stdout: args[0] === 'rev-parse' ? 'a'.repeat(40) : args[0] === 'branch' ? 'main' : '' }
+      return args.includes('lint') ? { ...ok, exitCode: 1, stderr: 'qualification failed' } : ok
+    } })).rejects.toThrow('qualification failed')
+    expect(calls.filter(args => args[0] === 'git').map(args => args[1])).toEqual(['rev-parse', 'branch', 'status'])
+    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version).toBe('1.0.0')
+  })
+  test('rejects mutable runtime pins, invalid commands and rollout configuration', () => {
+    const root = temporary()
+    const write = (native: unknown) => writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native }))
+    write({ runtime: { revision: 'main', version: '0.0.295' } })
+    expect(() => readNativeAppConfig(root)).toThrow('immutable')
+    write({ checks: { after: ['bun run test'] } })
+    expect(() => readNativeAppConfig(root)).toThrow('argument arrays')
+    write({ android: { bundle: '../app.aab', packageName: 'com.example.app', track: 'internal', status: 'completed' } })
+    expect(() => readNativeAppConfig(root)).toThrow('inside the project')
+    write({ android: { bundle: 'dist/app.aab', packageName: 'com.example.app', track: 'production', status: 'inProgress' } })
+    expect(() => readNativeAppConfig(root)).toThrow('userFraction')
+  })
+  test('cache identity includes architecture and deployment target', () => {
+    const config = { runtime: { revision: 'd'.repeat(40), version: '0.0.295' } }
+    expect(nativeRuntimeCacheKey(config, '13.0', 'arm64')).not.toBe(nativeRuntimeCacheKey(config, '14.0', 'arm64'))
+    expect(nativeRuntimeCacheKey(config, '13.0', 'arm64')).not.toBe(nativeRuntimeCacheKey(config, '13.0', 'x64'))
+    expect(lockedCraftCompilerVersion({ workspaces: { '': { system: { 'ziglang.org': '0.18.0-dev.146+35accc06e' } } } })).toBe('0.18.0-dev.146+35accc06e')
+    expect(() => lockedCraftCompilerVersion({ workspaces: { '': { system: { 'ziglang.org': '^0.18' } } } })).toThrow('exact Zig')
+  })
+  test('supports Craft manifests without requiring the retired dependency pins file', () => {
+    const root = temporary()
+    mkdirSync(join(root, 'packages/zig'), { recursive: true })
+    writeFileSync(join(root, 'packages/zig/build.zig.zon'), '.{ .dependencies = .{} }')
+    expect(craftDependencyPlan(root)).toEqual({ kind: 'manifest' })
+    mkdirSync(join(root, '.github/actions/first-party-zig-deps'), { recursive: true })
+    const pins = join(root, '.github/actions/first-party-zig-deps/pins.env')
+    writeFileSync(pins, `zig_js=${'a'.repeat(40)}\nzig_regex=${'b'.repeat(40)}\nzig_gc=${'c'.repeat(40)}\n`)
+    const plan = craftDependencyPlan(root)
+    expect(plan.kind).toBe('legacy-pins')
+    if (plan.kind === 'legacy-pins') expect(plan.sources.map(source => source.revision)).toEqual(['a'.repeat(40), 'b'.repeat(40), 'c'.repeat(40)])
+    writeFileSync(pins, 'zig_js=main\n')
+    expect(() => craftDependencyPlan(root)).toThrow('Missing upstream dependency pin')
+    rmSync(join(root, 'packages/zig/build.zig.zon'))
+    expect(() => craftDependencyPlan(root)).toThrow('dependency manifest is missing')
+  })
+  test.skipIf(process.platform !== 'darwin')('resolves current Craft packages with its locked compiler before compiling and verifies cache provenance', async () => {
+    const root = temporary()
+    const config = { runtime: { revision: 'd'.repeat(40), version: '0.0.355' } }
+    const checkout = join(root, '.pantry/native/runtimes', nativeRuntimeCacheKey(config, '13.0'), 'Tools/craft')
+    const compilerVersion = '0.18.0-dev.146+35accc06e'
+    const calls: { name: string, args: string[], env?: NodeJS.ProcessEnv }[] = []
+    const command: NativeCommand = async (name, args, options) => {
+      calls.push({ name, args, env: options?.env })
+      if (name === 'git') {
+        if (args[0] === 'init') mkdirSync(join(checkout, '.git'), { recursive: true })
+        if (args[0] === 'checkout') {
+          mkdirSync(join(checkout, 'packages/zig'), { recursive: true })
+          writeFileSync(join(checkout, 'packages/zig/build.zig.zon'), '.{ .dependencies = .{} }')
+          writeFileSync(join(checkout, 'pantry.lock'), JSON.stringify({ workspaces: { '': { system: { 'ziglang.org': compilerVersion } } } }))
+        }
+        return { ...ok, stdout: args[0] === 'rev-parse' ? config.runtime.revision : '' }
+      }
+      if (name === 'pantry') {
+        const compiler = join(checkout, 'pantry/ziglang.org', `v${compilerVersion}`, 'bin/zig')
+        mkdirSync(join(compiler, '..'), { recursive: true })
+        writeFileSync(compiler, 'fixture compiler')
+      }
+      if (name === 'xcrun') return { ...ok, stdout: '/Developer/SDKs/MacOSX.sdk' }
+      if (name === 'bun' && args.includes('-Doptimize=ReleaseSmall')) {
+        mkdirSync(join(checkout, 'packages/zig/zig-out/bin'), { recursive: true })
+        writeFileSync(join(checkout, 'packages/zig/zig-out/bin/craft'), 'fixture artifact')
+      }
+      return { ...ok, stdout: name.endsWith('/craft') ? 'craft version 0.0.355' : '' }
+    }
+    const binary = await provisionNativeRuntime(root, config, '13.0', { command, env: {} })
+    expect(binary).toBe(join(checkout, 'packages/zig/zig-out/bin/craft'))
+    const fetch = calls.find(call => call.name === 'bun' && call.args.includes('--fetch'))!
+    const build = calls.find(call => call.name === 'bun' && call.args.includes('-Doptimize=ReleaseSmall'))!
+    expect(fetch.args).toEqual(['scripts/zig.ts', '--core', 'build', '--fetch'])
+    expect(fetch.env?.CRAFT_ZIG).toBe(join(checkout, 'pantry/ziglang.org', `v${compilerVersion}`, 'bin/zig'))
+    expect(build.env?.CRAFT_ZIG).toBe(fetch.env?.CRAFT_ZIG)
+    expect(calls.indexOf(fetch)).toBeLessThan(calls.indexOf(build))
+    expect(calls.filter(call => call.name === 'git' && call.args[0] === 'remote')).toHaveLength(1)
+    calls.length = 0
+    await provisionNativeRuntime(root, config, '13.0', { command, env: {} })
+    expect(calls.map(call => [call.name, call.args[0]])).toEqual([['git', 'rev-parse'], ['git', 'status'], [binary!, '--version']])
+    await expect(provisionNativeRuntime(root, config, '13.0', { env: {}, command: async (name, args, options) => args[0] === 'status' ? { ...ok, stdout: ' M packages/zig/build.zig.zon' } : command(name, args, options) })).rejects.toThrow('Modified runtime source')
+    rmSync(binary!)
+    calls.length = 0
+    await expect(provisionNativeRuntime(root, config, '13.0', { env: {}, command: async (name, args, options) => name === 'bun' && args.includes('--fetch') ? { ...ok, exitCode: 1, stderr: 'dependency fetch failed' } : command(name, args, options) })).rejects.toThrow('dependency fetch failed')
+    expect(existsSync(join(checkout, '.pantry-runtime-profile'))).toBe(false)
+    expect(calls.some(call => call.args.includes('-Doptimize=ReleaseSmall'))).toBe(false)
+  })
+  test('build inputs stay temporary and preserve the native runtime override', async () => {
+    const root = temporary()
+    const binary = join(root, 'craft')
+    const profile = join(root, 'profile')
+    writeFileSync(binary, 'development runtime')
+    writeFileSync(profile, 'profile')
+    writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { macos: { entitlements: { direct: { 'com.apple.developer.usernotifications.communication': true } } } } }))
+    const result = await prepareNativeAppBuild(root, { env: { CRAFT_BIN: binary, APPLE_SIGNING_IDENTITY: 'Developer ID Application: Example', APPLE_PROVISIONING_PROFILE: profile } })
+    const entitlements = result.overrides.macosSigning!.entitlements!
+    expect(readFileSync(entitlements, 'utf8')).toContain('<true/>')
+    expect(result.overrides.craftPath).toBe(binary)
+    result.cleanup()
+    expect(existsSync(entitlements)).toBe(false)
+    expect(nativeEntitlementsPlist({ 'a&b': ['<value>'], enabled: false })).toContain('<key>a&amp;b</key><array><string>&lt;value&gt;</string></array>')
+  })
+  test('missing release credentials and failed checks stop before artifact creation', async () => {
+    const root = temporary()
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.0.0' }))
+    writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { macos: { notarize: true }, checks: { before: [['bun', 'run', 'lint']] } } }))
+    const calls: string[][] = []
+    const command: NativeCommand = async (name, args) => {
+      calls.push([name, ...args])
+      return args.includes('lint') ? { exitCode: 1, stdout: '', stderr: 'lint failed' } : ok
+    }
+    await expect(prepareNativeRelease(root, 'release', { env: {}, command })).rejects.toThrow('Notarization requires')
+    expect(calls).toHaveLength(0)
+    await expect(prepareNativeRelease(root, 'check', { env: {}, command })).rejects.toThrow('lint failed')
+    expect(calls).toEqual([['bun', 'install', '--frozen-lockfile'], ['bun', 'run', 'lint']])
+  })
+})
+
+describe('Apple native publishing', () => {
+  test('requires the outer DMG to have a timestamped Developer ID Application signature', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'image')
+    const calls: string[][] = []
+    await signNativeDiskImage(dmg, 'Developer ID Application: Example', async (name, args) => {
+      calls.push([name, ...args])
+      return { ...ok, stderr: args.includes('-dv') ? 'Authority=Developer ID Application: Example\nTimestamp=Oct 25, 2026\n' : '' }
+    })
+    expect(calls[0]).toEqual(['codesign', '--force', '--sign', 'Developer ID Application: Example', '--timestamp', dmg])
+    expect(calls[1]).toEqual(['codesign', '--verify', '--strict', dmg])
+    for (const signature of ['Authority=Developer ID Application: Example', 'Authority=Apple Development: Example\nTimestamp=Oct 25, 2026']) {
+      await expect(signNativeDiskImage(dmg, 'identity', async () => ({ ...ok, stderr: signature }))).rejects.toThrow('timestamped Developer ID Application')
+    }
+  })
+  test('uses Gatekeeper’s correct artifact policy and rejects unnotarized success output', async () => {
+    const root = temporary()
+    for (const [extension, policy] of [['app', ['--type', 'exec']], ['dmg', ['--type', 'open', '--context', 'context:primary-signature']], ['pkg', ['--type', 'install']]] as const) {
+      const file = join(root, `Example.${extension}`)
+      writeFileSync(file, 'distribution')
+      await assessNativeMacArtifact(file, async (name, args) => {
+        expect(name).toBe('spctl')
+        expect(args).toEqual(['--assess', ...policy, '--verbose=2', file])
+        return { ...ok, stderr: 'accepted\nsource=Notarized Developer ID\n' }
+      })
+      await expect(assessNativeMacArtifact(file, async () => ({ ...ok, stderr: 'source=Developer ID' }))).rejects.toThrow('did not recognize')
+    }
+  })
+  for (const rejectContainer of [false, true]) {
+    test(`the release pipeline ${rejectContainer ? 'stops on a rejected DMG' : 'signs and assesses the app and DMG before returning a release'}`, async () => {
+      const root = temporary()
+      const app = join(root, 'dist/Example.app')
+      const dmg = join(root, 'dist/Example.dmg')
+      const executable = join(app, 'Contents/MacOS/Example')
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.0.0' }))
+      writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { build: ['fixture-build'], macos: { notarize: true } } }))
+      const calls: string[][] = []
+      const command: NativeCommand = async (name, args) => {
+        calls.push([name, ...args])
+        if (name === 'fixture-build') {
+          mkdirSync(join(app, 'Contents/MacOS'), { recursive: true })
+          mkdirSync(join(app, 'Contents/Resources'), { recursive: true })
+          for (const file of ['Contents/Info.plist', 'Contents/Resources/index.html', 'Contents/Resources/craft.json']) writeFileSync(join(app, file), 'fixture')
+          writeFileSync(executable, Buffer.from('cffaedfe', 'hex'))
+          writeFileSync(dmg, 'unsigned image')
+          recordNativeArtifact(root, { path: dmg, appPath: app, name: 'Example', bundleId: 'com.example.app', version: '1.0.0', buildNumber: '1.0.0', target: 'macos' })
+        }
+        if (name === 'plutil') return { ...ok, stdout: JSON.stringify({ CFBundleIdentifier: 'com.example.app', CFBundleShortVersionString: '1.0.0', CFBundleVersion: '1.0.0' }) }
+        if (name === executable) return { ...ok, stdout: 'ready' }
+        if (name === 'codesign' && args.includes('-dv')) return { ...ok, stderr: 'Authority=Developer ID Application: Example\nTimestamp=Oct 25, 2026\n' }
+        if (name === 'xcrun' && args[0] === 'notarytool') return { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) }
+        if (name === 'spctl') return rejectContainer && args.at(-1) === dmg ? { ...ok, exitCode: 3, stderr: 'rejected\nsource=no usable signature' } : { ...ok, stderr: 'accepted\nsource=Notarized Developer ID' }
+        return ok
+      }
+      const result = prepareNativeRelease(root, 'release', { env: { APPLE_SIGNING_IDENTITY: 'Developer ID Application: Example', APPLE_NOTARY_KEYCHAIN_PROFILE: 'fixture' }, command })
+      if (rejectContainer) {
+        await expect(result).rejects.toThrow('Gatekeeper assessment failed (3)')
+        expect(existsSync(join(root, 'dist/notarization-receipt.json'))).toBe(false)
+      }
+      else {
+        expect((await result).files).toEqual([dmg, join(root, 'dist/notarization-receipt.json')])
+      }
+      const sign = calls.findIndex(call => call[0] === 'codesign' && call.includes('--sign') && call.at(-1) === dmg)
+      const notary = calls.findIndex(call => call[0] === 'xcrun' && call[1] === 'notarytool')
+      expect(sign).toBeGreaterThan(-1)
+      expect(sign).toBeLessThan(notary)
+      expect(calls.filter(call => call[0] === 'spctl').map(call => call.at(-1))).toEqual([app, dmg])
+      expect(calls.findIndex(call => call[0] === 'spctl')).toBeGreaterThan(notary)
+    })
+  }
+  test('exports only an exact identity through Security.framework with no password on argv', async () => {
+    const root = temporary()
+    const output = join(root, 'identity.p12')
+    await exportAppleKeychainIdentity({ fingerprint: 'AB'.repeat(20), password: 'generated archive password', output }, {
+      platform: 'darwin',
+      command: async (name, args, options) => {
+        expect(name).toBe('xcrun')
+        expect(args).toEqual(['swift', '-'])
+        expect(options!.env!.PANTRY_IDENTITY_FINGERPRINT).toBe('AB'.repeat(20))
+        expect(options!.input).toContain('SecItemExport(matches[0]')
+        writeFileSync(output, 'encrypted identity')
+        return ok
+      },
+    })
+    await expect(exportAppleKeychainIdentity({ fingerprint: 'AB'.repeat(20), password: 'generated archive password', output }, { platform: 'darwin' })).rejects.toThrow('overwrite')
+  })
+  test('requires Accepted, staples before hashing, and removes API key files', async () => {
+    const root = temporary()
+    const dmg = join(root, 'Example.dmg')
+    writeFileSync(dmg, 'unstapled')
+    let key = ''
+    const calls: string[][] = []
+    const command: NativeCommand = async (_name, args) => {
+      calls.push(args)
+      if (args[0] === 'notarytool') {
+        key = args[args.indexOf('--key') + 1]!
+        expect(readFileSync(key, 'utf8')).toBe('private key')
+        expect(args).not.toContain('private key')
+        return { ...ok, stdout: JSON.stringify({ id: 'submission-id', status: 'Accepted' }) }
+      }
+      if (args[1] === 'staple') writeFileSync(dmg, 'stapled')
+      return ok
+    }
+    const receipt = await notarizeNativeArtifact(dmg, { apiKeyId: 'ABC123', issuerId: 'issuer', privateKey: 'private key' }, command)
+    expect(calls.map(args => args.slice(0, 2))).toEqual([['notarytool', 'submit'], ['stapler', 'staple'], ['stapler', 'validate']])
+    expect(receipt.sha256).toBe(createHash('sha256').update('stapled').digest('hex'))
+    expect(existsSync(key)).toBe(false)
+    await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async () => ({ ...ok, stdout: JSON.stringify({ id: 'rejected-id', status: 'Invalid' }) }))).rejects.toThrow('did not accept')
+    expect(() => resolveNotaryCredentials({ APP_STORE_CONNECT_API_KEY_ID: 'partial' })).toThrow('complete')
+  })
+  test('retries interrupted ticket transport without resubmitting notarization', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'signed')
+    const calls: string[] = []
+    const attempts = new Map<string, number>()
+    const receipt = await notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async (_name, args) => {
+      const operation = args.slice(0, 2).join(' ')
+      calls.push(operation)
+      const attempt = (attempts.get(operation) ?? 0) + 1
+      attempts.set(operation, attempt)
+      if (args[0] === 'notarytool') return { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) }
+      if (attempt === 1) return { ...ok, exitCode: 68, stderr: 'Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."' }
+      return ok
+    })
+    expect(receipt.status).toBe('Accepted')
+    expect(calls).toEqual(['notarytool submit', 'stapler staple', 'stapler staple', 'stapler validate', 'stapler validate'])
+  })
+  test('never retries invalid tickets or treats a bare stapler failure as transport', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'signed')
+    for (const failure of [{ exitCode: 77, stderr: 'The ticket has been revoked' }, { exitCode: 68, stderr: 'The validate action failed! Error 68.' }]) {
+      const calls: string[] = []
+      await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async (_name, args) => {
+        calls.push(args.slice(0, 2).join(' '))
+        return args[0] === 'notarytool' ? { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) } : { ...ok, ...failure }
+      })).rejects.toThrow('Staple notarization failed')
+      expect(calls).toEqual(['notarytool submit', 'stapler staple'])
+    }
+  })
+  test('fails closed after exhausting ticket-service transport retries', async () => {
+    const dmg = join(temporary(), 'Example.dmg')
+    writeFileSync(dmg, 'signed')
+    let validationAttempts = 0
+    await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async (_name, args) => {
+      if (args[0] === 'notarytool') return { ...ok, stdout: JSON.stringify({ id: 'accepted-id', status: 'Accepted' }) }
+      if (args[1] === 'validate') {
+        validationAttempts++
+        return { ...ok, exitCode: 68, stderr: 'Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost."' }
+      }
+      return ok
+    })).rejects.toThrow('Validate notarization failed (68)')
+    expect(validationAttempts).toBe(5)
+  }, 25_000)
+  test('a false sandbox entitlement cannot produce an App Store package', async () => {
+    const root = temporary()
+    const app = join(root, 'Example.app')
+    mkdirSync(join(app, 'Contents'), { recursive: true })
+    writeFileSync(join(app, 'Contents/embedded.provisionprofile'), 'profile')
+    const calls: string[] = []
+    await expect(packageNativeAppStore(app, join(root, 'Example.pkg'), 'Installer', async (name) => {
+      calls.push(name)
+      return { ...ok, stdout: name === 'plutil' ? JSON.stringify({ 'com.apple.security.app-sandbox': false }) : '<plist/>' }
+    })).rejects.toThrow('sandbox must be enabled')
+    expect(calls).not.toContain('productbuild')
+  })
+  test('failed certificate import deletes its keychain and credential files', async () => {
+    const root = temporary()
+    let keychain = ''
+    let removed = false
+    await expect(setupAppleSigning({ applicationCertificate: Buffer.from('p12').toString('base64'), certificatePassword: 'password' }, {
+      platform: 'darwin', tempDirectory: root,
+      runCommand: async (_name, args) => {
+        if (args[0] === 'create-keychain') keychain = args.at(-1)!
+        if (args[0] === 'delete-keychain') removed = true
+        return args[0] === 'import' ? { exitCode: 1, stdout: '', stderr: 'import rejected' } : ok
+      },
+    })).rejects.toThrow('import rejected')
+    expect(removed).toBe(true)
+    expect(existsSync(keychain)).toBe(false)
+  })
+})
+
+describe('Google Play delivery', () => {
+  test('Android passwords stay in the child environment and the temporary key is removed', async () => {
+    const root = temporary()
+    const bundle = join(root, 'app.aab')
+    writeFileSync(bundle, 'unsigned')
+    let key = ''
+    const env = { ANDROID_KEYSTORE_BASE64: Buffer.from('keystore').toString('base64'), ANDROID_KEYSTORE_PASSWORD: 'store secret', ANDROID_KEY_PASSWORD: 'key secret', ANDROID_KEY_ALIAS: 'release' }
+    await signNativeAndroidBundle(bundle, env, async (_name, args, options) => {
+      expect(args).not.toContain('store secret')
+      expect(args).not.toContain('key secret')
+      if (args.includes('-signedjar')) {
+        key = args[args.indexOf('-keystore') + 1]!
+        expect(readFileSync(key, 'utf8')).toBe('keystore')
+        expect(options!.env!.PANTRY_ANDROID_STORE_PASSWORD).toBe('store secret')
+        writeFileSync(args[args.indexOf('-signedjar') + 1]!, 'signed')
+      }
+      return { ...ok, stdout: 'jar verified.' }
+    })
+    expect(readFileSync(bundle, 'utf8')).toBe('signed')
+    expect(existsSync(key)).toBe(false)
+    await expect(signNativeAndroidBundle(bundle, {}, async () => ({ ...ok, stdout: 'jar is unsigned.' }))).rejects.toThrow('not signed')
+  })
+  const keys = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const serviceAccount = JSON.stringify({ type: 'service_account', client_email: 'release@example.iam.gserviceaccount.com', private_key: keys.privateKey.export({ format: 'pem', type: 'pkcs8' }).toString() })
+  function fixture() {
+    const root = temporary()
+    const bundle = join(root, 'app.aab')
+    writeFileSync(bundle, 'signed Android app bundle')
+    return { bundle, packageName: 'com.example.app', track: 'internal', status: 'completed' as const, serviceAccount }
+  }
+  test('authenticates with the publisher scope, verifies bytes, validates and commits', async () => {
+    const options = fixture()
+    const requests: { url: string, method?: string, body?: unknown }[] = []
+    const request = (async (url: string | URL | Request, init?: RequestInit) => {
+      const address = String(url)
+      requests.push({ url: address, method: init?.method, body: init?.body })
+      if (address.includes('oauth2')) {
+        const assertion = new URLSearchParams(init?.body as URLSearchParams).get('assertion')!
+        const claims = JSON.parse(Buffer.from(assertion.split('.')[1]!, 'base64url').toString())
+        expect(claims.scope).toBe('https://www.googleapis.com/auth/androidpublisher')
+        return Response.json({ access_token: 'scoped-token' })
+      }
+      if (address.includes('/upload/')) return Response.json({ versionCode: 42, sha256: createHash('sha256').update(readFileSync(options.bundle)).digest('hex') })
+      if (address.includes(':commit')) return Response.json({ id: 'edit-1' })
+      return Response.json({ id: 'edit-1' })
+    }) as typeof fetch
+    const receipt = await deliverReleaseToGooglePlay(options, { fetch: request })
+    expect(receipt.committed).toBe(true)
+    expect(receipt.versionCode).toBe(42)
+    expect(requests.map(item => item.method)).toEqual(['POST', 'POST', 'POST', 'PUT', 'POST', 'POST'])
+    expect(requests.at(-1)!.url).toContain('changesInReviewBehavior=ERROR_IF_IN_REVIEW')
+    expect(JSON.parse(requests[3]!.body as string).releases[0]).toEqual({ status: 'completed', versionCodes: ['42'] })
+  })
+  test('a byte mismatch never updates the track or commits, and deletes the edit', async () => {
+    const options = fixture()
+    const methods: string[] = []
+    const request = (async (url: string | URL | Request, init?: RequestInit) => {
+      methods.push(init!.method!)
+      if (String(url).includes('oauth2')) return Response.json({ access_token: 'token' })
+      if (String(url).includes('/upload/')) return Response.json({ versionCode: 42, sha256: 'wrong' })
+      if (init?.method === 'DELETE') return new Response(null, { status: 204 })
+      return Response.json({ id: 'edit-2' })
+    }) as typeof fetch
+    await expect(deliverReleaseToGooglePlay(options, { fetch: request })).rejects.toThrow('does not match')
+    expect(methods).toEqual(['POST', 'POST', 'POST', 'DELETE'])
+  })
+})

@@ -7,6 +7,7 @@ export const recipe: Recipe = {
   homepage: 'https://craft-native.org',
   github: 'https://github.com/craft-native/craft',
   programs: ['craft'],
+  revisions: { '0.0.350': 1 },
   // Many craft GitHub releases (v0.0.16 and everything older) ship NO binary
   // assets at all — they predate upstream's binary publishing. The scheduled
   // version-fetcher merges discovered versions into the package catalog
@@ -85,7 +86,15 @@ export const recipe: Recipe = {
       'curl -Lfo craft.zip "$URL"',
       'unzip -o craft.zip',
       '',
-      'install -Dm755 craft {{prefix}}/bin/craft',
+      'mkdir -p {{prefix}}/bin',
+      'install -m755 craft {{prefix}}/bin/craft',
+      // Preserve every official macOS runtime profile and distribution.
+      // Linux and older releases legitimately provide only a subset.
+      'for runtime in craft-app-store craft-webview craft-webview-app-store; do',
+      '  if [ -f "$runtime" ]; then',
+      '    install -m755 "$runtime" "{{prefix}}/bin/$runtime"',
+      '  fi',
+      'done',
     ],
   },
 }

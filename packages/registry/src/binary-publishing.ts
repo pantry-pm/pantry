@@ -1,3 +1,4 @@
+import { isBinaryDomain } from './binary-domain'
 /**
  * Scan-before-promote publication for installable native artifacts.
  *
@@ -247,6 +248,7 @@ const EXTERNAL_SCAN_SUBMISSION_GRACE_MS = 15 * 60_000
 const EXTERNAL_SCAN_CLOCK_SKEW_MS = 5 * 60_000
 
 interface StagingClaim extends BinaryPublishRequest {
+  publisher?: string
   stagingKey: string
   expiresAt: number
 }
@@ -360,7 +362,6 @@ export interface BinaryArtifactPublisherOptions {
   legacyScanAttestationCutoff?: number
 }
 
-const domainPattern = /^[a-z0-9](?:[a-z0-9._-]|\/(?=[a-z0-9])){0,213}$/i
 const versionPattern = /^[a-z0-9._+-]{1,64}$/i
 const platformPattern = /^(?:darwin|linux|windows|freebsd)-(?:arm64|x86-64|x86|riscv64)$/
 const filenamePattern = /^[a-z0-9][a-z0-9._+-]{0,239}\.tar\.gz$/i
@@ -380,7 +381,7 @@ export function validateBinaryPublishRequest(input: unknown, maxBytes: number = 
     ? [...new Set(value.platforms.filter((item): item is string => typeof item === 'string').map(item => item.trim()))]
     : []
 
-  if (!domainPattern.test(domain) || domain.includes('..') || domain.endsWith('/'))
+  if (!isBinaryDomain(domain))
     throw new BinaryPublishError('Invalid binary package domain', 422, 'INVALID_BINARY_DOMAIN')
   if (!versionPattern.test(version))
     throw new BinaryPublishError('Invalid binary package version', 422, 'INVALID_BINARY_VERSION')
@@ -407,7 +408,7 @@ export function validateBinaryRescanRequest(input: unknown): BinaryRescanRequest
     ? [...new Set(value.platforms.filter((item): item is string => typeof item === 'string').map(item => item.trim()))]
     : []
 
-  if (!domainPattern.test(domain) || domain.includes('..') || domain.endsWith('/'))
+  if (!isBinaryDomain(domain))
     throw new BinaryPublishError('Invalid binary package domain', 422, 'INVALID_BINARY_DOMAIN')
   if (!versionPattern.test(version))
     throw new BinaryPublishError('Invalid binary package version', 422, 'INVALID_BINARY_VERSION')
@@ -426,7 +427,7 @@ export function validateBinaryQuarantineReviewRequest(input: unknown): BinaryQua
   const artifactSha256 = typeof value.artifactSha256 === 'string' ? value.artifactSha256.toLowerCase() : ''
   const filename = typeof value.filename === 'string' ? value.filename.trim() : undefined
 
-  if (!domainPattern.test(domain) || domain.includes('..') || domain.endsWith('/'))
+  if (!isBinaryDomain(domain))
     throw new BinaryPublishError('Invalid binary package domain', 422, 'INVALID_BINARY_DOMAIN')
   if (!versionPattern.test(version))
     throw new BinaryPublishError('Invalid binary package version', 422, 'INVALID_BINARY_VERSION')
@@ -662,10 +663,11 @@ export class BinaryArtifactPublisher {
     this.now = options.now || Date.now
   }
 
-  initiate(input: unknown): BinaryPublishInitiated {
+  initiate(input: unknown, publisher?: string): BinaryPublishInitiated {
     const request = validateBinaryPublishRequest(input, this.maxBytes)
     const claim: StagingClaim = {
       ...request,
+      ...(publisher ? { publisher } : {}),
       stagingKey: `${STAGING_PREFIX}/${randomUUID()}/${request.filename}`,
       expiresAt: this.now() + this.stagingTtlSeconds * 1000,
     }
@@ -710,6 +712,12 @@ export class BinaryArtifactPublisher {
     return this.completeWithin(undefined, uploadId, publisher, surface)
   }
 
+  /** Read only a signature-verified grant; expiry is enforced by completion admission. */
+  uploadAuthorization(uploadId: string): { domain: string, publisher: string } {
+    const claim = this.verifyClaim(uploadId, { allowExpired: true })
+    return { domain: claim.domain, publisher: claim.publisher ?? '_admin' }
+  }
+
   /** @param responseBudgetMs undefined waits for the scan however long it takes. */
   private async completeWithin(
     responseBudgetMs: number | undefined,
@@ -718,6 +726,8 @@ export class BinaryArtifactPublisher {
     surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
   ): Promise<BinaryPublishCompleted> {
     const claim = this.verifyClaim(uploadId, { allowExpired: true })
+    if (claim.publisher && publisher !== '_admin' && claim.publisher !== publisher)
+      throw new BinaryPublishError('Upload belongs to another publisher', 403, 'BINARY_UPLOAD_OWNER_MISMATCH')
 
     // Consulted BEFORE any object lookup. A completion that already ran
     // deleted both the staging and sealed objects on its way out, so an
@@ -829,6 +839,17 @@ export class BinaryArtifactPublisher {
     state.promise.catch(() => {})
     this.completing.set(uploadId, state)
     return state
+  }
+
+  /** Caller must fence new publication admission before awaiting detached work. */
+  async drain(): Promise<void> {
+    while (true) {
+      const pending = [...this.completing.values()].filter(state => state.settledAt === undefined)
+      if (!pending.length) return
+      // A blocked or failed publication is a settled fail-closed result. Its
+      // failure must not prevent other accepted completions from draining.
+      await Promise.allSettled(pending.map(state => state.promise))
+    }
   }
 
   /**
@@ -1071,7 +1092,7 @@ export class BinaryArtifactPublisher {
     const request = validateBinaryPublishRequest(input, this.maxBytes)
     if (bytes.byteLength !== request.size)
       throw new BinaryPublishError('Artifact buffer size does not match the publish request', 422, 'BINARY_SIZE_MISMATCH')
-    const initiated = this.initiate(request)
+    const initiated = this.initiate(request, publisher)
     const claim = this.verifyClaim(initiated.uploadId)
     await this.store.putObject(claim.stagingKey, bytes, 'application/gzip')
     // In-process: nothing here can poll a 425, so wait for the verdict.
@@ -2051,7 +2072,9 @@ export class BinaryArtifactPublisher {
       throw new BinaryPublishError('Invalid binary staging upload ID', 401, 'INVALID_BINARY_UPLOAD_ID')
     if (!options.allowExpired && value.expiresAt < this.now())
       throw new BinaryPublishError('Binary staging upload has expired', 410, 'BINARY_UPLOAD_EXPIRED')
-    return { ...request, stagingKey: value.stagingKey, expiresAt: value.expiresAt }
+    if (value.publisher !== undefined && (typeof value.publisher !== 'string' || !value.publisher || value.publisher.length > 320))
+      throw new BinaryPublishError('Invalid staging publisher', 401, 'INVALID_BINARY_UPLOAD_ID')
+    return { ...request, stagingKey: value.stagingKey, expiresAt: value.expiresAt, ...(value.publisher ? { publisher: value.publisher } : {}) }
   }
 
   private async promote(

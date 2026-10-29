@@ -3,6 +3,7 @@
 // Bootstrap Package and Dependencies
 // Resolves dependency tree, builds in correct order, uploads to S3
 
+import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -198,7 +199,7 @@ function resolveVersion(pkg: PackageInfo, constraint?: string): string {
 async function existsInS3(domain: string, version: string, platform: string, bucket: string, region: string): Promise<boolean> {
   try {
     const { createObjectStorageClient } = await import('@stacksjs/ts-cloud')
-    const provider = (process.env.STORAGE_PROVIDER || 'aws') as 'aws' | 'backblaze' | 'hetzner'
+    const provider = (process.env.STORAGE_PROVIDER || 'aws') as ObjectStorageProvider
     const s3 = createObjectStorageClient({ provider, region: provider === 'aws' ? region : undefined })
     const metadataKey = `binaries/${domain}/metadata.json`
 

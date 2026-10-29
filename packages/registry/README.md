@@ -150,7 +150,15 @@ curl -X POST http://localhost:3000/publish \
 
 ## Publishing Zig Packages
 
-Zig packages are content-addressed - they're identified by their hash, not URL.
+Zig package hashes come from the managed native compiler. They describe the
+manifest-selected package contents; `artifactSha256` separately identifies the
+complete compressed archive. The maintained deployment and
+`bun scripts/provision-zig.ts` install the required Zig 0.17.0 through Pantry.
+Both the object-storage snapshot and DynamoDB metadata backends retain the
+archive digest across writes and fresh reads. Historical records that lack
+`artifactSha256` remain readable; their native hash is never substituted for it.
+
+The compiler cache defaults to `pantry/zig-cache` under the registry package. Set `PANTRY_ZIG_CACHE_DIR` to an absolute service-owned path to place it elsewhere. The maintained Linux service uses systemd to own `/var/cache/pantry-registry-zig` for its configured service user. Hashing does not require a user home. Each upload uses a separate temporary package directory that is removed after success or failure; reusable compiler tooling remains in the managed cache.
 
 **Publish a Zig package:**
 
@@ -167,10 +175,10 @@ curl -X POST http://localhost:3000/zig/publish \
 ```json
 {
   "success": true,
-  "hash": "12209f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "hash": "<native compiler package hash>",
   "tarballUrl": "http://localhost:3000/zig/packages/my-zig-lib/1.0.0/tarball",
   "fetchCommand": "zig fetch --save http://localhost:3000/zig/packages/my-zig-lib/1.0.0/tarball",
-  "dependency": ".my_zig_lib = .{\n    .url = \"http://...\",\n    .hash = \"1220...\",\n},"
+  "dependency": ".my_zig_lib = .{\n    .url = \"http://...\",\n    .hash = \"<native compiler hash>\",\n},"
 }
 ```
 
@@ -180,7 +188,7 @@ curl -X POST http://localhost:3000/zig/publish \
 .dependencies = .{
     .my_zig_lib = .{
         .url = "https://registry.example.com/zig/packages/my-zig-lib/1.0.0/tarball",
-        .hash = "12209f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        .hash = "<native compiler package hash>",
     },
 },
 ```
@@ -309,7 +317,7 @@ This creates:
 
 ```bash
 # Build
-docker build -t pantry-registry .
+docker build -f packages/registry/Dockerfile -t pantry-registry .
 
 # Run with environment variables
 docker run -d \
@@ -349,3 +357,23 @@ S3_BUCKET=local DYNAMODB_TABLE=local bun run start
 ## License
 
 MIT
+
+### Shutdown and deployment
+
+The server entrypoint owns SIGTERM and SIGINT. Shutdown fences new write
+admission, keeps metadata reads serving while admitted requests and detached
+binary completions settle, then closes the listener and flushes package, Zig,
+PHP, auth, analytics, build-status and egress snapshots. Repeated shutdown
+requests share the same drain. A persistence failure is reported with a nonzero
+exit after every owned store has had a flush attempt.
+
+The finite shutdown backstop derives from the maintained maximum scan and
+configured scan-queue limits, with worker disposal and persistence allowances.
+Both systemd setup and the deployment drop-in evaluate that same policy using
+the service environment file, adding 15 seconds for termination reporting.
+Active request, scan, proxy and client deadlines retain their existing values.
+
+This protects accepted state during a normal service stop. Deployment still
+restarts the live service and scanner. Continuous read availability, an immutable
+ready candidate and safe traffic handover remain tracked in
+[issue 249](https://github.com/pantry-pm/pantry/issues/249).
