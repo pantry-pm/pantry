@@ -136,8 +136,11 @@ package, so a fresh checkout does not install cleanly and then fail to start:
 - pantry prints each package it adds and the key that caused it, e.g.
   `+ postgresql.org (from DB_CONNECTION=pgsql in .env; PANTRY_ENV_DEPS=0 to skip)`.
   Only those keys are read, and no other `.env` value is printed.
-- Under `--frozen-lockfile` a package is inferred only if `pantry.lock`
-  already records it, so CI never drifts from the committed lock.
+- **An inference never reaches `pantry.lock`** — not the service, not what it
+  pulls in, and not as a constraint on the workspace either. The lock records
+  what the workspace declares, so it reads the same on every machine, whatever
+  each developer's `.env` says. `--frozen-lockfile` therefore needs no special
+  case: an inference cannot move the lock, so it cannot drift from it.
 - Set `PANTRY_ENV_DEPS=0` to turn inference off.
 
 ### Service Groups
