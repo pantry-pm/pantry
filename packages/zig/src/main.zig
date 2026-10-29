@@ -899,6 +899,17 @@ fn whoamiAction(ctx: *cli.BaseCommand.ParseContext) !void {
     std.process.exit(result.exit_code);
 }
 
+/// `--confirm-timeout <seconds>` as milliseconds, or null for the default.
+///
+/// Seconds at the command line because the thing being waited on is npm's
+/// propagation delay, which publishers talk about in minutes.
+fn confirmTimeoutMs(ctx: *cli.BaseCommand.ParseContext) ?u64 {
+    const raw = ctx.getOption("confirm-timeout") orelse return null;
+    const seconds = std.fmt.parseInt(u64, std.mem.trim(u8, raw, " \t"), 10) catch return null;
+    if (seconds == 0) return null;
+    return seconds * 1000;
+}
+
 fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -929,6 +940,7 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .skip_existing = !force_republish,
         .ignore_scripts = ignore_scripts,
         .readback = !ctx.hasOption("no-readback"),
+        .confirm_timeout_ms = confirmTimeoutMs(ctx),
     };
 
     const result = try lib.commands.publishCommand(allocator, &[_][]const u8{}, options);
@@ -1428,6 +1440,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
             .skip_existing = !force_republish,
             .ignore_scripts = ignore_scripts,
             .readback = !ctx.hasOption("no-readback"),
+            .confirm_timeout_ms = confirmTimeoutMs(ctx),
         };
 
         const result = try lib.commands.publishCommand(allocator, paths.items, npm_options);
@@ -3624,6 +3637,7 @@ pub fn main() !void {
     _ = try npm_publish_cmd.addOption(npm_force_republish_opt);
     const npm_no_readback_opt = cli.Option.init("no-readback", "no-readback", "Report an accepted upload without reading it back from the public registry (for a caller that verifies every package itself)", .bool);
     _ = try npm_publish_cmd.addOption(npm_no_readback_opt);
+    _ = try npm_publish_cmd.addOption(cli.Option.init("confirm-timeout", "confirm-timeout", "Seconds to wait for an accepted upload to become public before reporting it pending (default 600)", .string));
 
     const npm_ignore_scripts_opt = cli.Option.init("ignore-scripts", "ignore-scripts", "Don't run package lifecycle scripts (prepublishOnly/prepack/etc.); use with a separate build step", .bool);
     _ = try npm_publish_cmd.addOption(npm_ignore_scripts_opt);
@@ -4711,6 +4725,7 @@ pub fn main() !void {
     _ = try publish_cmd.addOption(pub_ignore_scripts_opt);
     const pub_no_readback_opt = cli.Option.init("no-readback", "no-readback", "Report an accepted npm upload without reading it back from the public registry (for a caller that verifies every package itself)", .bool);
     _ = try publish_cmd.addOption(pub_no_readback_opt);
+    _ = try publish_cmd.addOption(cli.Option.init("confirm-timeout", "confirm-timeout", "Seconds to wait for an accepted npm upload to become public before reporting it pending (default 600)", .string));
 
     const pub_paths_arg = cli.Argument.init("paths", "Package directories or globs to publish (e.g., './packages/*'); defaults to auto-detecting packages/", .string)
         .withRequired(false)

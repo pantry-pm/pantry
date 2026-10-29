@@ -70,6 +70,12 @@ test {
     _ = @import("install/verified_staging.zig");
     _ = @import("install/tree_repair.zig");
     _ = @import("cli/commands/px.zig");
+    // package.zig's own tests were never reached: refAllDecls does not pull
+    // them in and nothing imported it for its own sake, so its five existing
+    // tests had been dead since they were written. This is why publish_plan.zig
+    // and publish_conflict.zig exist as separate files — testable logic was
+    // moved out of package.zig rather than making its tests run.
+    _ = @import("cli/commands/package.zig");
     _ = @import("http_retry.zig");
     _ = @import("deps/js_workspace.zig");
     _ = @import("cli/diagnostics.zig");
