@@ -3,7 +3,7 @@
  *
  * @domain `libreoffice.org`
  * @programs `libreoffice`
- * @version `26.8.1` (6 versions available)
+ * @version `26.8.2` (7 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install libreoffice.org`
@@ -22,6 +22,7 @@ export const libreofficeorgPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '26.8.2',
     '26.8.1',
     '26.8.0',
     '26.2.5',
