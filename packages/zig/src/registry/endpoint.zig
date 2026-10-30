@@ -53,6 +53,11 @@ const Resolved = struct {
     /// and any private package on the public registry are served against an
     /// account, so the token has to travel — to its own issuer and nowhere else.
     default_token: ?[]const u8 = null,
+    /// `default_token` came from PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN. Set
+    /// for a run, it outranks a credential stored in the file, as it does for
+    /// `pantry publish`: a CI job's package token must not lose to a personal
+    /// token left in ~/.pantry/credentials.
+    default_from_env: bool = false,
     /// Registries a project pinned a scope to (`"scopes"` in pantry.json),
     /// with the credential each one gets. See `trustPinnedRegistry`.
     pinned: []const Scoped = &.{},
@@ -89,7 +94,10 @@ fn config() Resolved {
     out.scoped = loadScoped(allocator) catch &.{};
 
     if (token_commands.resolve(allocator, null, default_base, token_commands.default_key)) |maybe| {
-        if (maybe) |token| out.default_token = token.value;
+        if (maybe) |token| {
+            out.default_token = token.value;
+            out.default_from_env = token.source == .env;
+        }
     } else |_| {}
 
     resolved = out;
@@ -272,6 +280,19 @@ fn decorateWith(allocator: std.mem.Allocator, url: []const u8, cfg: Resolved) De
         }
     }
 
+    // The public registry with a token set for this run: the environment wins
+    // over the file, as it does everywhere else a token is resolved.
+    if (cfg.default_from_env) {
+        if (cfg.default_token) |token| {
+            if (originOf(default_base)) |default_origin| {
+                if (sameOrigin(origin, default_origin)) {
+                    out.authorization = std.fmt.allocPrint(allocator, "Bearer {s}", .{token}) catch null;
+                    return out;
+                }
+            }
+        }
+    }
+
     // Any origin the user has stored a scoped credential for.
     for (cfg.scoped) |entry| {
         if (sameOrigin(origin, entry.origin)) {
@@ -353,6 +374,26 @@ test "a configured registry receives rewritten, authenticated requests" {
     defer dec.deinit(alloc);
     try std.testing.expectEqualStrings("https://registry.example.com/binaries/curl.se/metadata.json", dec.url.?);
     try std.testing.expectEqualStrings("Bearer ptry_secret", dec.authorization.?);
+}
+
+test "a token set for the run outranks one stored for the public registry" {
+    const alloc = std.testing.allocator;
+    const stored = [_]Scoped{.{ .origin = "https://registry.pantry.dev", .token = "ptry_personal" }};
+    const from_env = Resolved{ .scoped = &stored, .default_token = "ptry_client_ci", .default_from_env = true };
+    const env = decorateWith(alloc, default_base ++ "/packages/@hq%2Fplatform/versions", from_env);
+    defer env.deinit(alloc);
+    try std.testing.expectEqualStrings("Bearer ptry_client_ci", env.authorization.?);
+
+    // Without one, the stored credential for that registry is used.
+    const from_file = Resolved{ .scoped = &stored, .default_token = "ptry_personal" };
+    const file = decorateWith(alloc, default_base ++ "/packages/@hq%2Fplatform/versions", from_file);
+    defer file.deinit(alloc);
+    try std.testing.expectEqualStrings("Bearer ptry_personal", file.authorization.?);
+
+    // ...and the run's token still never leaves its registry.
+    const npm = decorateWith(alloc, "https://registry.npmjs.org/left-pad", from_env);
+    defer npm.deinit(alloc);
+    try std.testing.expect(npm.authorization == null);
 }
 
 test "the public registry gets the credential it issued" {
