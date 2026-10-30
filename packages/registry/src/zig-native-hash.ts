@@ -17,7 +17,7 @@ export class ZigPackageHashError extends Error {
   constructor(message: string, readonly status: 422 | 503) { super(message) }
 }
 
-async function execute(zig: string, args: string[], cwd: string, cache: string): Promise<string> {
+async function execute(zig: string, args: string[], cwd: string, cache: string, timeoutMs = 120_000): Promise<string> {
   let child: Bun.Subprocess<'ignore', 'pipe', 'pipe'>
   try { child = Bun.spawn([zig, ...args], { cwd, env: { ...process.env, ZIG_GLOBAL_CACHE_DIR: cache }, stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' }) }
   catch { throw new ZigPackageHashError('The declared native Zig executable is unavailable', 503) }
@@ -26,7 +26,7 @@ async function execute(zig: string, args: string[], cwd: string, cache: string):
     timedOut = true
     try { child.kill('SIGKILL') }
     catch { /* The process may have already exited. */ }
-  }, 120_000)
+  }, timeoutMs)
   async function read(stream: ReadableStream<Uint8Array>): Promise<string> {
     const reader = stream.getReader()
     const chunks: Uint8Array[] = []
@@ -58,14 +58,42 @@ async function execute(zig: string, args: string[], cwd: string, cache: string):
   finally { clearTimeout(timer) }
 }
 
+export function registryZigCache(): string {
+  const cache = process.env.PANTRY_ZIG_CACHE_DIR || resolve(import.meta.dir, '..', 'pantry', 'zig-cache')
+  if (!isAbsolute(cache)) throw new ZigPackageHashError('PANTRY_ZIG_CACHE_DIR must be an absolute path', 503)
+  return cache
+}
+
+/** Compile and qualify Zig's lazy package tooling before accepting uploads. */
+export async function prepareRegistryZig(zig: string, cache: string = registryZigCache()): Promise<void> {
+  await mkdir(cache, { recursive: true, mode: 0o700 })
+  const directory = await mkdtemp(join(tmpdir(), 'pantry-zig-prepare-'))
+  try {
+    if (await execute(zig, ['version'], directory, cache) !== registryZigVersion)
+      throw new ZigPackageHashError(`The registry requires managed Zig ${registryZigVersion} for package hashing`, 503)
+    await mkdir(join(directory, 'package/src'), { recursive: true })
+    await writeFile(join(directory, 'package/build.zig.zon'), '.{ .name = .graphics_package_consumer, .version = "1.0.0", .fingerprint = 0xab1f9a8fd4d75f78, .paths = .{ "build.zig.zon", "src" } }\n')
+    await writeFile(join(directory, 'package/src/main.zig'), 'pub const value: u32 = 42;\n')
+    const archive = join(directory, 'package.tar.gz')
+    const tar = Bun.spawnSync(['tar', '--format=ustar', '-czf', archive, '-C', directory, 'package/build.zig.zon', 'package/src/main.zig'], { stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', timeout: 10_000 })
+    if (tar.exitCode !== 0) throw new ZigPackageHashError('Could not prepare the native Zig hashing fixture', 503)
+    // `zig version` does not compile the Maker used by `zig fetch`. On a cold
+    // Linux host that compilation can exceed an upload's entire 120s budget.
+    // Do it outside the serving cgroup, using the exact cache the service reads.
+    const hash = await execute(zig, ['fetch', '--pkg-dir', join(directory, 'packages'), archive], directory, cache, 600_000)
+    if (hash !== 'graphics_package_consumer-1.0.0-eF_X1KAAAAB7sPq4wQFLI6Urz5wPpAnB_liZ_wFl9Csi')
+      throw new ZigPackageHashError(`The prepared native Zig package hash did not match its qualified identity: ${hash}`, 503)
+  }
+  finally { await rm(directory, { recursive: true, force: true }) }
+}
+
 /** Use the compiler's archive and manifest hashing contract without running build.zig. */
 export async function computeZigHash(data: ArrayBuffer | Buffer): Promise<string> {
   const zig = process.env.PANTRY_ZIG_BIN || managedRegistryZig() || Bun.which('zig')
   if (!zig) throw new ZigPackageHashError(`The registry requires managed Zig ${registryZigVersion} for package hashing`, 503)
   // Keep the compiler's reusable manifest tooling in a managed service cache.
   // A service need not have a user home, and cold compiler work is expensive.
-  const cache = process.env.PANTRY_ZIG_CACHE_DIR || resolve(import.meta.dir, '..', 'pantry', 'zig-cache')
-  if (!isAbsolute(cache)) throw new ZigPackageHashError('PANTRY_ZIG_CACHE_DIR must be an absolute path', 503)
+  const cache = registryZigCache()
   await mkdir(cache, { recursive: true, mode: 0o700 })
   const directory = await mkdtemp(join(tmpdir(), 'pantry-zig-hash-'))
   try {

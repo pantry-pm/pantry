@@ -153,7 +153,8 @@ jobs:
               exit 1
             fi
             "$BUN" install
-            "$BUN" packages/registry/scripts/provision-zig.ts
+            PANTRY_ZIG_CACHE_DIR=/var/cache/pantry-registry-zig \
+              "$BUN" packages/registry/scripts/provision-zig.ts
             (cd packages/registry && NODE_ENV=production "$BUN" run build:server)
 
             # Publish-time scanning is part of Registry readiness. Provision

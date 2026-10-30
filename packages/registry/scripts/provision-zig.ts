@@ -1,7 +1,7 @@
 import { existsSync, realpathSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { registryZigVersion } from '../src/zig-native-hash'
+import { prepareRegistryZig, registryZigCache, registryZigVersion } from '../src/zig-native-hash'
 
 const root = resolve(import.meta.dir, '..')
 const bootstrap = join(root, 'pantry/.bootstrap')
@@ -42,5 +42,6 @@ const zig = realpathSync(environment.stdout.toString().trim())
 const probe = Bun.spawnSync([zig, 'version'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 10_000 })
 if (probe.exitCode !== 0 || probe.stdout.toString().trim() !== registryZigVersion)
   throw new Error('The installed registry compiler identity did not match')
+await prepareRegistryZig(zig)
 await writeFile(join(root, 'pantry/registry-zig-path'), `${zig}\n`)
-console.log(`Registry package hashing: Zig ${registryZigVersion} at ${zig}`)
+console.log(`Registry package hashing: qualified Zig ${registryZigVersion} at ${zig}, cache ${registryZigCache()}`)

@@ -1194,7 +1194,7 @@ async function publishZigPackage(registryUrl: string, token: string, cwd: string
   let output = ''
   let stderr = ''
   const exitCode = await exec.exec('curl', [
-    '-s', '-w', '\\n%{http_code}',
+    '-sS', '-w', '\\n%{http_code}',
     '-X', 'POST', url,
     '-H', `@${headerFile}`,
     '-F', `tarball=@${tarballPath};filename=${tarballName}`,

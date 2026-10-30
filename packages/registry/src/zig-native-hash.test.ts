@@ -29,12 +29,13 @@ test('hash lookup accepts native and historical opaque keys with bounded syntax'
     expect(validateZigHash(value)).toBe(false)
 })
 
-test('native hashing separates its managed compiler cache from disposable uploads without a user home', async () => {
+test('deployment prepares the service cache before isolated uploads without a user home', async () => {
   const zig = process.env.PANTRY_ZIG_BIN || managedRegistryZig() || Bun.which('zig')
   expect(zig).toBeTruthy()
   const directory = await mkdtemp(join(tmpdir(), 'pantry-zig-service-'))
-  const source = `import { computeZigHash } from ${JSON.stringify(fileURLToPath(new URL('./zig-native-hash.ts', import.meta.url)))};
+  const source = `import { computeZigHash, prepareRegistryZig } from ${JSON.stringify(fileURLToPath(new URL('./zig-native-hash.ts', import.meta.url)))};
 import { zigPackageFixture } from ${JSON.stringify(fileURLToPath(new URL('./zig-package-fixture.ts', import.meta.url)))};
+await prepareRegistryZig(process.env.PANTRY_ZIG_BIN);
 console.log(JSON.stringify(await Promise.all([computeZigHash(await zigPackageFixture()), computeZigHash(await zigPackageFixture('1.0.0', '', 43))])));`
   const child = Bun.spawn([process.execPath, '--no-env-file', '--eval', source], {
     // A service need not have HOME, XDG_CACHE_HOME or a user profile. Keep
@@ -56,4 +57,4 @@ console.log(JSON.stringify(await Promise.all([computeZigHash(await zigPackageFix
     await child.exited
     await rm(directory, { recursive: true, force: true })
   }
-}, 130_000)
+}, 630_000)
