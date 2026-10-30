@@ -84,6 +84,11 @@ A [package token](private-packages.md#package-tokens-for-ci) counts too, but
 only for reads of its own package (metadata, versions, tarballs). Anywhere else
 on a private registry it gets `401`.
 
+Private mode closes the registry to outsiders, not to its members: any valid
+token reads every package. To keep one package from the other members too,
+make it a [private package](private-packages.md); only its owner and the
+accounts or tokens granted it can see it.
+
 Anything else gets `401` with a `WWW-Authenticate` header and a hint naming the
 command that fixes it. A browser navigating to a gated page is sent to `/login`
 instead — a JSON error is not a useful thing to show a person.

@@ -286,9 +286,12 @@ currencies (JPY) take whole units.
   package; recurring billing is for plans, not packages.
 - **An API token can't move an account onto a paid plan.** Subscribing is
   something a person does about their own billing, so it needs a session.
-- **Private registries** and paid packages compose: on a
-  [private registry](self-hosting.md) everything already requires a credential,
-  and a price adds "…and has paid" on top for that one package.
-- **Private packages** reuse these entitlements. Granting someone a
-  [private package](private-packages.md) writes the same `user:<email>` record a
-  purchase does, so a grant also lets its holder past a price.
+- **Private registries** close the whole server: on a
+  [private registry](self-hosting.md) every request needs a credential, and any
+  member can read every package. A price on a package adds "…and has paid" on
+  top, for that one package.
+- **Private packages** hide one package on an otherwise open registry from
+  everyone except its owner and the accounts or tokens granted it. Granting
+  someone a [private package](private-packages.md) writes the same
+  `user:<email>` record a purchase does, so a grant also lets its holder past a
+  price.

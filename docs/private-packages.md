@@ -6,8 +6,11 @@ customers without giving them your source repository and without standing up a
 registry of your own.
 
 Private is per package. The registry around it stays public, and your other
-packages stay public. To close a whole registry instead, see
-[Run your own registry](self-hosting.md).
+packages stay public. That is the difference from a
+[private registry](self-hosting.md), which closes the whole server: there every
+request needs a credential, but any member can read every package. A private
+package keeps even members out unless they were granted it, so the two stack: on
+a private registry, a private package is still visible only to its grants.
 
 ## Who can see a private package
 
