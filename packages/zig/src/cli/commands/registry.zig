@@ -1243,14 +1243,7 @@ pub fn createTarball(
     }
 
     // Create tarball with "package" directory at root
-    const tar_result = try io_helper.childRun(allocator, &[_][]const u8{
-        "tar",
-        "-czf",
-        tarball_path,
-        "-C",
-        staging_base,
-        "package",
-    });
+    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base);
     defer allocator.free(tar_result.stdout);
     defer allocator.free(tar_result.stderr);
 
@@ -1263,6 +1256,26 @@ pub fn createTarball(
     }
 
     return tarball_path;
+}
+
+/// Pack `staging_base/package` without the platform's file metadata. macOS
+/// tar writes an AppleDouble `._name` beside every file that carries extended
+/// attributes (quarantine, provenance), so a package published from a Mac
+/// unpacked on Linux with thousands of `._*` files, which a migration runner
+/// then tried to execute as SQL. `pantry pack` already packs this way.
+fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8) !io_helper.ChildRunResult {
+    const metadata_free = io_helper.childRun(allocator, &[_][]const u8{
+        "/usr/bin/env", "COPYFILE_DISABLE=1",  "tar",
+        "--no-xattrs",  "--exclude=._*",        "--exclude=.DS_Store",
+        "-czf",         tarball_path,           "-C",
+        staging_base,   "package",
+    }) catch null;
+    if (metadata_free) |result| {
+        if (result.term == .exited and result.term.exited == 0) return result;
+        allocator.free(result.stdout);
+        allocator.free(result.stderr);
+    }
+    return io_helper.childRun(allocator, &[_][]const u8{ "tar", "--exclude=._*", "--exclude=.DS_Store", "-czf", tarball_path, "-C", staging_base, "package" });
 }
 
 /// Default tarball creation - use .pantryignore or .gitignore for exclusions
@@ -1410,14 +1423,7 @@ fn createTarballDefault(
     }
 
     // Create tarball with "package" directory at root
-    const tar_result = try io_helper.childRun(allocator, &[_][]const u8{
-        "tar",
-        "-czf",
-        tarball_path,
-        "-C",
-        staging_base,
-        "package",
-    });
+    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base);
     defer allocator.free(tar_result.stdout);
     defer allocator.free(tar_result.stderr);
 
