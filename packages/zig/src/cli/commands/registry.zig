@@ -1265,9 +1265,9 @@ pub fn createTarball(
 /// then tried to execute as SQL. `pantry pack` already packs this way.
 fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8) !io_helper.ChildRunResult {
     const metadata_free = io_helper.childRun(allocator, &[_][]const u8{
-        "/usr/bin/env", "COPYFILE_DISABLE=1",  "tar",
-        "--no-xattrs",  "--exclude=._*",        "--exclude=.DS_Store",
-        "-czf",         tarball_path,           "-C",
+        "/usr/bin/env", "COPYFILE_DISABLE=1", "tar",
+        "--no-xattrs",  "--exclude=._*",      "--exclude=.DS_Store",
+        "-czf",         tarball_path,         "-C",
         staging_base,   "package",
     }) catch null;
     if (metadata_free) |result| {
