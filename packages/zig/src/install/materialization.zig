@@ -62,6 +62,21 @@ pub fn publish(allocator: std.mem.Allocator, source: Source, destination: []cons
     }
     if (!validation.check(candidate)) return error.InvalidPackageMaterialization;
 
+    // Candidates are private, but checking and replacing the destination must
+    // be one transaction across threads and processes. Keep the lock inode:
+    // unlinking it after use would let a new writer bypass an existing waiter.
+    const lock_path = try std.fmt.allocPrint(allocator, "{s}/.{s}.pantry-lock", .{
+        std.fs.path.dirname(destination) orelse ".", std.fs.path.basename(destination),
+    });
+    defer allocator.free(lock_path);
+    const publication_lock = try io_helper.createFileAbsolute(lock_path, .{
+        .read = true,
+        .truncate = false,
+        .lock = .exclusive,
+        .permissions = if (builtin.os.tag == .windows) .default_file else io_helper.File.Permissions.fromMode(0o600),
+    });
+    defer publication_lock.close(io_helper.io);
+
     const had_previous = if (io_helper.cwd().statFile(io_helper.io, destination, .{ .follow_symlinks = false })) |_|
         true
     else |err| switch (err) {

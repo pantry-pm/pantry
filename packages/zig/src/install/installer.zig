@@ -5225,8 +5225,13 @@ const MaterializationFixture = struct {
         var directory = try io_helper.openDirAbsoluteForIteration(std.fs.path.dirname(self.destination).?);
         defer directory.close();
         var entries = directory.iterate();
-        while (try entries.next()) |entry|
+        while (try entries.next()) |entry| {
+            if (std.mem.eql(u8, entry.name, ".v1.pantry-lock")) {
+                try std.testing.expect(entry.kind == .file);
+                continue;
+            }
             try std.testing.expectEqualStrings("v1", entry.name);
+        }
     }
 };
 
@@ -5550,8 +5555,17 @@ test "native materialization: a failed rollback retains the old package for reco
     var parent = try io_helper.openDirAbsoluteForIteration(std.fs.path.dirname(fixture.destination).?);
     defer parent.close();
     var iterator = parent.iterate();
-    const entry = (try iterator.next()) orelse return error.PreviousPackageLost;
-    const retained = try std.fs.path.join(allocator, &.{ std.fs.path.dirname(fixture.destination).?, entry.name });
+    var retained_path: ?[]u8 = null;
+    while (try iterator.next()) |entry| {
+        if (std.mem.eql(u8, entry.name, ".v1.pantry-lock")) {
+            try std.testing.expect(entry.kind == .file);
+            continue;
+        }
+        try std.testing.expect(entry.kind == .directory);
+        try std.testing.expect(retained_path == null);
+        retained_path = try std.fs.path.join(allocator, &.{ std.fs.path.dirname(fixture.destination).?, entry.name });
+    }
+    const retained = retained_path orelse return error.PreviousPackageLost;
     defer allocator.free(retained);
     const previous = try std.fs.path.join(allocator, &.{ retained, "previous" });
     defer allocator.free(previous);
@@ -5630,4 +5644,74 @@ test "native materialization: application archives need no invented CLI programs
 test "native materialization: every transaction allocation failure removes its owned directory" {
     if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
     try std.testing.checkAllAllocationFailures(std.testing.allocator, materializationAllocationFailure, .{});
+}
+
+const ConcurrentMaterializationOperations = struct {
+    inner: MaterializationTestOperations,
+    commits: *std.atomic.Value(usize),
+
+    pub fn copy(self: *@This(), source: []const u8, destination: []const u8) !void {
+        try self.inner.copy(source, destination);
+    }
+
+    pub fn rename(self: *@This(), source: []const u8, destination: []const u8) !void {
+        if (std.mem.eql(u8, destination, self.inner.fixture.destination)) {
+            // Keep the first real commit open for a competing publisher.
+            // A serialized writer proceeds after this bounded wait without
+            // requiring a second writer to enter its critical section.
+            if (self.commits.fetchAdd(1, .seq_cst) == 0) {
+                var waited: usize = 0;
+                while (self.commits.load(.seq_cst) < 2 and waited < 1000) : (waited += 1)
+                    io_helper.nanosleep(0, std.time.ns_per_ms);
+            }
+        }
+        try self.inner.rename(source, destination);
+    }
+};
+
+const ConcurrentMaterializationWorker = struct {
+    fixture: *const MaterializationFixture,
+    installer: *Installer,
+    commits: *std.atomic.Value(usize),
+    failure: ?anyerror = null,
+
+    fn run(self: *@This()) void {
+        const validation = Installer.MaterializationValidation{ .installer = self.installer, .domain = "google.com/chrome", .version = null };
+        var operations = ConcurrentMaterializationOperations{ .inner = .{ .fixture = self.fixture, .installer = self.installer }, .commits = self.commits };
+        _ = materialization.publish(std.testing.allocator, .{ .shared = self.fixture.extraction.payload }, self.fixture.destination, &validation, &operations) catch |err| {
+            self.failure = err;
+            return;
+        };
+    }
+};
+
+test "native materialization: concurrent cached publications both succeed without consuming their shared source" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+    var fixture = try MaterializationFixture.init(allocator);
+    defer fixture.deinit();
+    var commits = std.atomic.Value(usize).init(0);
+    var workers = [_]ConcurrentMaterializationWorker{
+        .{ .fixture = &fixture, .installer = &installer, .commits = &commits },
+        .{ .fixture = &fixture, .installer = &installer, .commits = &commits },
+    };
+    const first = try std.Thread.spawn(.{}, ConcurrentMaterializationWorker.run, .{&workers[0]});
+    const second = std.Thread.spawn(.{}, ConcurrentMaterializationWorker.run, .{&workers[1]}) catch |err| {
+        first.join();
+        return err;
+    };
+    first.join();
+    second.join();
+    for (workers) |worker| if (worker.failure) |failure| {
+        std.debug.print("Concurrent native publication failed: {s}\n", .{@errorName(failure)});
+        return failure;
+    };
+    try std.testing.expectEqual(@as(usize, 2), commits.load(.seq_cst));
+    try std.testing.expectEqual(fixture.payload_bytes, try materializationRegularBytes(allocator, fixture.destination));
+    try std.testing.expectEqual(fixture.payload_bytes, try materializationRegularBytes(allocator, fixture.extraction.payload));
+    try fixture.expectNoTransaction();
 }

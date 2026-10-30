@@ -758,23 +758,28 @@ pub fn openDirAbsolute(path: []const u8, options: Dir.OpenOptions) !Dir {
 /// directly works on every POSIX target.
 pub fn createFileAbsolute(path: []const u8, flags: CreateFileFlags) !File {
     if (comptime is_windows) {
-        return cwd().createFile(io, path, flags) catch return error.FileNotFound;
+        return cwd().createFile(io, path, flags);
     }
     var posix_flags: std.posix.O = .{
         .ACCMODE = if (flags.read) .RDWR else .WRONLY,
         .CREAT = true,
         .TRUNC = flags.truncate,
+        .CLOEXEC = true,
     };
     if (flags.exclusive) posix_flags.EXCL = true;
-    // 0o666 matches std.fs's default; the umask further restricts at runtime.
-    const fd = try std.posix.openat(std.posix.AT.FDCWD, path, posix_flags, 0o666);
-    if (comptime hasField(File, "flags")) {
-        var result: File = std.mem.zeroes(File);
-        result.handle = fd;
-        return result;
-    } else {
-        return .{ .handle = fd };
+    const fd = try std.posix.openat(std.posix.AT.FDCWD, path, posix_flags, flags.permissions.toMode());
+    const result: File = if (comptime hasField(File, "flags")) blk: {
+        var file: File = std.mem.zeroes(File);
+        file.handle = fd;
+        break :blk file;
+    } else .{ .handle = fd };
+    errdefer result.close(io);
+    if (flags.lock != .none) {
+        if (flags.lock_nonblocking) {
+            if (!try result.tryLock(io, flags.lock)) return error.WouldBlock;
+        } else try result.lock(io, flags.lock);
     }
+    return result;
 }
 
 /// Search PATH for `name`. Returns an allocator-owned absolute path, or
@@ -3009,4 +3014,33 @@ test "buffered copies preserve executable and private data permissions" {
         try std.testing.expectEqual(entry.mode, (try copied.stat(io)).permissions.toMode() & 0o777);
         try std.testing.expectEqual(entry.mode & 0o111 != 0, isExecutable(dest));
     }
+}
+
+test "native materialization: private coordination files honor requested permissions" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try temporary.dir.realPathFile(io, ".", &buffer);
+    const path = try std.fs.path.join(std.testing.allocator, &.{ buffer[0..length], "private" });
+    defer std.testing.allocator.free(path);
+    const file = try createFileAbsolute(path, .{ .permissions = File.Permissions.fromMode(0o600) });
+    defer file.close(io);
+    const metadata = try temporary.dir.statFile(io, "private", .{});
+    try std.testing.expectEqual(@as(u32, 0o600), metadata.permissions.toMode() & 0o777);
+}
+
+test "native materialization: file creation honors a nonblocking exclusive lock" {
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try temporary.dir.realPathFile(io, ".", &buffer);
+    const path = try std.fs.path.join(std.testing.allocator, &.{ buffer[0..length], "lock" });
+    defer std.testing.allocator.free(path);
+    const first = try createFileAbsolute(path, .{ .read = true, .truncate = false, .lock = .exclusive });
+    defer first.close(io);
+    if (createFileAbsolute(path, .{ .read = true, .truncate = false, .lock = .exclusive, .lock_nonblocking = true })) |second| {
+        second.close(io);
+        return error.ExpectedExclusiveLock;
+    } else |err| try std.testing.expectEqual(error.WouldBlock, err);
 }
