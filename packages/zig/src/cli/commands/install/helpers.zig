@@ -2490,3 +2490,93 @@ test "addDependencyToDepsYaml repairs a file the append bug already duplicated" 
         \\
     , repaired);
 }
+
+/// The version an install should use for `dep_name`: `pantry.lock`'s pin when
+/// it still satisfies `declared`, else null to resolve `declared` afresh.
+///
+/// `pantry install` resolved every declared range against the registry and
+/// took the newest match, so a committed lock never fixed what got installed —
+/// a plain install rewrote the pin, and `--frozen-lockfile` installed the newer
+/// release and only then failed. Any upstream release inside a declared range
+/// turned a frozen CI run red with no change in the project (#260,
+/// stacksjs/stacks#2905, where curl.se moved 8.22.0 -> 8.23.0 between pushes).
+///
+/// This is `bun install` / `npm ci` semantics: the lock decides while it
+/// remains valid, and `pantry update` is what moves a pin. A spec the pin no
+/// longer satisfies — the range was narrowed or bumped — resolves again, which
+/// is what lets a dependency edit take effect.
+///
+/// An unparseable spec reads as "not satisfied", so resolution falls back to
+/// the declared spec rather than installing a pin nothing has vouched for.
+pub fn lockedVersionSatisfying(
+    lock_file: *lib.deps.resolution.LockFile,
+    dep_name: []const u8,
+    declared: []const u8,
+) ?[]const u8 {
+    const registry = @import("../../../packages/registry.zig");
+    const clean_name = resolvePackageAlias(normalizePackageName(dep_name));
+    const locked = lib.deps.resolution.lockfile.getLockedVersion(lock_file, clean_name) orelse return null;
+    if (locked.version.len == 0) return null;
+
+    // `latest`, `*` and an empty spec are satisfied by anything, and a lock
+    // pin on one is the whole point of committing a lock: npm installs the
+    // locked version for `*` too.
+    if (declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*"))
+        return locked.version;
+
+    // An exact spec needs no lock to be deterministic; let it resolve itself
+    // so a mismatch between pin and spec stays visible.
+    if (!isVersionSpecRange(declared)) return null;
+
+    const satisfies = registry.satisfiesConstraint(locked.version, declared) catch return null;
+    return if (satisfies) locked.version else null;
+}
+
+/// Does this spec admit more than one version?
+pub fn isVersionSpecRange(spec: []const u8) bool {
+    if (spec.len == 0) return true;
+    return switch (spec[0]) {
+        '^', '~', '>', '<', '=' => true,
+        else => std.mem.indexOfScalar(u8, spec, '*') != null or std.mem.indexOfScalar(u8, spec, 'x') != null,
+    };
+}
+
+test "which specs admit more than one version" {
+    try std.testing.expect(isVersionSpecRange("^3.53.4"));
+    try std.testing.expect(isVersionSpecRange("~1.2"));
+    try std.testing.expect(isVersionSpecRange(">=2"));
+    try std.testing.expect(isVersionSpecRange(""));
+    try std.testing.expect(!isVersionSpecRange("3.53.4"));
+    // A rolling Zig dev spec is not a range: `ziglang.org: "0.17.0-dev"`
+    // resolves through its own path, and a lock pin on it is reused only
+    // while the registry still publishes that exact build.
+    try std.testing.expect(!isVersionSpecRange("0.17.0-dev"));
+}
+
+test "a lock pin decides while it satisfies the declared spec" {
+    const allocator = std.testing.allocator;
+    var lock = lib.deps.resolution.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("sqlite.org", "3.53.4", "registry:sqlite.org@3.53.4", null);
+    try lock.addPackage("curl.se", "8.22.0", "registry:curl.se@8.22.0", null);
+
+    // The reported case: 3.54.1 exists upstream and `^3.53.4` admits it, but
+    // the lock says 3.53.4, so that is what installs (#260).
+    try std.testing.expectEqualStrings("3.53.4", lockedVersionSatisfying(&lock, "sqlite.org", "^3.53.4").?);
+    // Any pin covers a rolling spec, which is what committing a lock is for.
+    try std.testing.expectEqualStrings("3.53.4", lockedVersionSatisfying(&lock, "sqlite.org", "latest").?);
+    try std.testing.expectEqualStrings("3.53.4", lockedVersionSatisfying(&lock, "sqlite.org", "*").?);
+    // curl.se 8.22.0 -> 8.23.0 upstream is exactly what reddened a frozen CI
+    // run with no change in the project (stacksjs/stacks#2905); the pin holds.
+    try std.testing.expectEqualStrings("8.22.0", lockedVersionSatisfying(&lock, "curl.se", "^8").?);
+
+    // A spec the pin no longer satisfies resolves again, or editing a
+    // dependency could never take effect.
+    try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "^3.54.0") == null);
+    try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "~3.52.0") == null);
+    // An exact spec needs no lock to be deterministic, and letting it resolve
+    // keeps a pin/spec disagreement visible rather than silently pinned.
+    try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "3.54.1") == null);
+    // Nothing locked, nothing to honor.
+    try std.testing.expect(lockedVersionSatisfying(&lock, "zlib.net", "^1") == null);
+}
