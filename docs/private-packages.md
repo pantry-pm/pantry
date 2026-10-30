@@ -30,6 +30,10 @@ same `404` and the same body. Search, the top-packages lists and the stats
 pages leave the package out. Nothing in a response tells a stranger the package
 exists.
 
+The one exception is a private package you put up **for sale**. It shows
+strangers a storefront so they can find it and buy it, and nothing more. See
+[Selling a private package](#selling-a-private-package).
+
 ## Making a package private
 
 ### When you publish
@@ -141,6 +145,88 @@ Grants share storage with purchases. A buyer of a paid package and a client
 granted a private one hold the same kind of entitlement, so a grant also lets
 its holder past a price. The access list shows purchases too, and revoking one
 removes that buyer's access.
+
+## Selling a private package
+
+Set a price on a private package and it's **for sale**. Someone who hasn't
+bought it can find it and buy it, but still can't see what's inside it:
+
+```bash
+curl -X POST https://registry.pantry.dev/packages/%40acme%2Fplatform/paywall \
+  -H "Authorization: Bearer $PANTRY_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"price":4900}'
+```
+
+Pricing works as it does for any [paid package](paid-packages.md). Remove the
+price and the package is fully hidden again. Make it public and it becomes an
+ordinary public paid package.
+
+### What a non-buyer sees
+
+| Surface | Shows |
+|---------|-------|
+| Package page (`/package/{name}`) | A storefront: name, description, the publisher's display name, the price and a Buy button |
+| Search (JSON and the web page) | A row marked for sale: name, description and price. No version, no download count |
+| `GET /packages/{name}/paywall` | The price, `owned: false`, `forSale: true`, and no free-version names |
+| `POST /packages/{name}/checkout`, `GET /packages/{name}/buy` | Checkout, as for any paid package |
+| `GET /packages/{name}`, `/versions`, `/{version}`, `/{version}/tarball` | `402 Payment Required` with the storefront (below) |
+| Commit snapshots, analytics, badges | Exactly what a never-published name gets |
+| Top packages, stats, compare | Left out |
+
+Every contents route returns the same `402` body, whatever version you name.
+`/packages/@acme/platform/9.9.9/tarball` answers exactly like
+`/packages/@acme/platform/1.0.0/tarball`, so the storefront never reveals which
+versions exist. It is the body a public paid package already returns for an
+unpaid download, plus `forSale`, `description` and `publisher`:
+
+```json
+{
+  "error": "Payment required",
+  "package": "@acme/platform",
+  "price": 4900,
+  "currency": "usd",
+  "formattedPrice": "$49.00",
+  "buyUrl": "https://registry.pantry.dev/packages/%40acme%2Fplatform/buy",
+  "checkoutUrl": "https://registry.pantry.dev/packages/%40acme%2Fplatform/buy",
+  "message": "@acme/platform costs $49.00. Sign in and buy it with: pantry buy @acme/platform",
+  "forSale": true,
+  "description": "The Acme platform kit",
+  "publisher": "Acme"
+}
+```
+
+`description` and `publisher` appear only when they're set. `message` reads
+"Buy it with: … (or open <buyUrl>)" when the caller is signed in. The response
+never includes `version`, `versions`, `tarballUrl`, `dist` or a checksum, so
+nothing in it can be installed. It carries `error`, and clients that already
+treat an `error` body as "not installable" keep doing so. The publisher appears
+by display name only, never by email.
+
+`freeVersions` don't apply to a private package. On a public package a version
+marked free downloads for anyone. On a private one it doesn't open the package
+to people who haven't bought it.
+
+### After the purchase
+
+A purchase records the same `user:<email>` entitlement as a
+[grant](#granting-access). From then on the buyer, and the buyer's team if they
+bought it as a seat holder, see the whole package on every surface: metadata,
+versions, tarballs, the full package page, analytics and commit snapshots.
+
+### Plans and fees
+
+Selling a private package needs both features, and each one keeps its own
+rule:
+
+- **Private** needs Pro or Team. The plan is checked when the package becomes
+  private.
+- **Selling** has no plan requirement, but the plan sets the fee. Since the
+  package is private, the seller is on Pro or Team, so the fee is the plan rate
+  of 5% per sale. A sale that started on pantry.dev, such as the storefront's
+  Buy button, adds the 3% discovery fee. `pantry buy` from a terminal doesn't.
+
+Checkout needs payments configured on the registry, as for any paid package.
 
 ## Package tokens for CI
 
@@ -326,7 +412,10 @@ admin session). A read-only token can install but can't hand out access.
 Responses for a private package carry `Cache-Control: private, no-store`, so a
 CDN never stores one and serves it to someone else. The shared, cached pages
 (search, home, stats, compare) never include private packages, for anyone,
-because they're cached for everyone.
+because they're cached for everyone. The one thing they may show is the
+storefront row of a package that is for sale. The web search page is cached for
+up to a minute, so a storefront row can linger that long after its price comes
+off.
 
 ## Limits
 

@@ -8,6 +8,26 @@ The package's metadata stays public. That's deliberate: the page is where
 someone reads what a package does and decides to buy it. What's gated is the
 tarball.
 
+A [private package](private-packages.md#selling-a-private-package) can be sold
+too. It shows a non-buyer much less.
+
+## Public paid vs. private for sale
+
+| What a non-buyer sees | Public paid package | Private package for sale |
+|---|---|---|
+| Package page | The full page: versions, install command, dependencies, stats, plus a Buy button | A storefront: name, description, publisher, price, Buy button |
+| `GET /packages/{name}` and `/versions` | The metadata and version list | `402` with the storefront |
+| `GET /packages/{name}/{version}` | The version's metadata | `402` with the storefront |
+| Tarball | `402` (free versions download) | `402` with the storefront (free versions don't apply) |
+| Search | A normal row | A row marked for sale, with no version or download count |
+| Download stats, badges, top lists | Shown | Not shown |
+| Commit snapshots | Shown | Not shown |
+
+Both `402`s have the same shape, so a client handles them the same way. A
+private package's `402` adds `forSale: true`, `description` and `publisher`,
+and is the same whichever version was asked for. A buyer of either kind gets
+everything.
+
 ## What selling costs
 
 Publishing is free and installing is free. **Selling** a package costs a fee per
