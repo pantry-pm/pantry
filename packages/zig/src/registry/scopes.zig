@@ -466,6 +466,21 @@ pub fn describeFailure(
     has_token: bool,
     pinned_scope: ?[]const u8,
 ) ![]const u8 {
+    return describeFailureWithNote(allocator, failure, name, constraint, base, has_token, pinned_scope, null);
+}
+
+/// `describeFailure`, with what the registry itself said about a 402 (see
+/// `paymentNote`) replacing the generic purchase hint.
+pub fn describeFailureWithNote(
+    allocator: std.mem.Allocator,
+    failure: Failure,
+    name: []const u8,
+    constraint: []const u8,
+    base: []const u8,
+    has_token: bool,
+    pinned_scope: ?[]const u8,
+    payment_note: ?[]const u8,
+) ![]const u8 {
     const host = hostOf(base);
     const spec = if (isAnyVersion(constraint))
         try allocator.dupe(u8, name)
@@ -478,7 +493,10 @@ pub fn describeFailure(
             try std.fmt.allocPrint(allocator, "{s} is private on {s} and the token sent was rejected (401). It may be expired or revoked: set PANTRY_REGISTRY_TOKEN to a current token with access.", .{ spec, host })
         else
             try std.fmt.allocPrint(allocator, "{s} is private on {s} (401). Set PANTRY_REGISTRY_TOKEN to a token with access.", .{ spec, host }),
-        .payment_required => try std.fmt.allocPrint(allocator, "{s} is a paid package on {s} (402). Buy access with: pantry buy {s}", .{ spec, host, name }),
+        .payment_required => if (payment_note) |note|
+            try allocator.dupe(u8, note)
+        else
+            try std.fmt.allocPrint(allocator, "{s} is a paid package on {s} (402). Buy access with: pantry buy {s}", .{ spec, host, name }),
         .forbidden => try std.fmt.allocPrint(allocator, "{s} is private on {s} and this token has no access to it (403). Ask its publisher for access (pantry access grant {s} <email>) or for a package token.", .{ spec, host, name }),
         .not_found => if (has_token)
             try std.fmt.allocPrint(allocator, "{s} is not available from {s} (404). Check the name, and that your token has access to it.", .{ spec, host })
@@ -495,6 +513,54 @@ pub fn describeFailure(
         return std.fmt.allocPrint(allocator, "{s} {s} is pinned to {s} in \"scopes\"; no other registry was tried.", .{ body, scope, host });
     }
     return body;
+}
+
+/// What a registry's 402 body says to do, for printing instead of a generic
+/// credential hint.
+///
+/// A package for sale (private or public paid) answers an unentitled caller
+/// with `{ error, package, price, currency, formattedPrice, buyUrl, message,
+/// forSale?, … }`. The registry's own `message` wins; failing that, a line
+/// built from the price and buy URL. Null when the body is not one of these,
+/// so the caller falls back to its generic 402 text. Caller owns the result.
+pub fn paymentNote(allocator: std.mem.Allocator, body: []const u8, name: []const u8) !?[]const u8 {
+    if (body.len == 0) return null;
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch return null;
+    defer parsed.deinit();
+    if (parsed.value != .object) return null;
+    const obj = parsed.value.object;
+
+    if (obj.get("message")) |m| {
+        if (m == .string) {
+            const text = std.mem.trim(u8, m.string, &std.ascii.whitespace);
+            if (text.len > 0) return try allocator.dupe(u8, text);
+        }
+    }
+
+    const package = blk: {
+        if (obj.get("package")) |p| {
+            if (p == .string and p.string.len > 0) break :blk p.string;
+        }
+        break :blk name;
+    };
+    const price = if (obj.get("formattedPrice")) |p| (if (p == .string and p.string.len > 0) p.string else null) else null;
+    const buy_url = blk: {
+        for ([_][]const u8{ "buyUrl", "checkoutUrl" }) |key| {
+            if (obj.get(key)) |u| {
+                if (u == .string and u.string.len > 0) break :blk u.string;
+            }
+        }
+        break :blk null;
+    };
+    if (price == null and buy_url == null) return null;
+
+    var out: std.ArrayList(u8) = .empty;
+    errdefer out.deinit(allocator);
+    try out.print(allocator, "{s} is for sale", .{package});
+    if (price) |p| try out.print(allocator, " ({s})", .{p});
+    try out.print(allocator, ": pantry buy {s}", .{package});
+    if (buy_url) |u| try out.print(allocator, ", or open {s}", .{u});
+    return try out.toOwnedSlice(allocator);
 }
 
 // ---------------------------------------------------------------------------
@@ -533,7 +599,23 @@ pub const ResolveOptions = struct {
     /// pantry.lock's integrity for `locked_version`.
     locked_integrity: ?[]const u8 = null,
     timeout_ms: u64 = 30_000,
+    /// Filled (owned by the allocator passed to `resolve`) with the
+    /// registry's own words when it answers 402 - see `paymentNote`.
+    payment_note: ?*?[]const u8 = null,
 };
+
+/// GET with the body kept for a 402, whose JSON says what the package costs
+/// and where to buy it; every other failure only needs its status.
+fn registryGet(allocator: std.mem.Allocator, url: []const u8, timeout_ms: u64) !io_helper.HttpResponse {
+    return io_helper.httpGetResponseTimeout(allocator, url, &.{}, timeout_ms);
+}
+
+fn notePayment(allocator: std.mem.Allocator, res: io_helper.HttpResponse, name: []const u8, opts: ResolveOptions) void {
+    if (res.status != 402) return;
+    const slot = opts.payment_note orelse return;
+    if (slot.* != null) return;
+    slot.* = paymentNote(allocator, res.body, name) catch null;
+}
 
 /// `@hq/platform` → `@hq%2Fplatform`, the spelling the CLI's other
 /// `/packages/{name}` calls use.
@@ -685,9 +767,12 @@ pub fn resolve(
     const versions_url = try packageUrl(allocator, base, name, "/versions");
     defer allocator.free(versions_url);
 
-    const listing = io_helper.httpGetStatusTimeout(allocator, versions_url, opts.timeout_ms) catch return error.PinnedUnavailable;
+    const listing = registryGet(allocator, versions_url, opts.timeout_ms) catch return error.PinnedUnavailable;
     defer listing.deinit(allocator);
-    if (classifyStatus(listing.status)) |f| return failureError(f);
+    if (classifyStatus(listing.status)) |f| {
+        notePayment(allocator, listing, name, opts);
+        return failureError(f);
+    }
 
     const versions = parseVersionsBody(allocator, listing.body) catch |err| switch (err) {
         error.OutOfMemory => return error.OutOfMemory,
@@ -704,9 +789,12 @@ pub fn resolve(
     const meta_url = try packageUrl(allocator, base, name, meta_suffix);
     defer allocator.free(meta_url);
 
-    const meta = io_helper.httpGetStatusTimeout(allocator, meta_url, opts.timeout_ms) catch return error.PinnedUnavailable;
+    const meta = registryGet(allocator, meta_url, opts.timeout_ms) catch return error.PinnedUnavailable;
     defer meta.deinit(allocator);
-    if (classifyStatus(meta.status)) |f| return failureError(f);
+    if (classifyStatus(meta.status)) |f| {
+        notePayment(allocator, meta, name, opts);
+        return failureError(f);
+    }
 
     var resolution = parseVersionMetadata(allocator, meta.body, base, name, chosen) catch |err| switch (err) {
         error.OutOfMemory => return error.OutOfMemory,
@@ -1010,4 +1098,49 @@ test "pinned resolution: failure messages say what to do" {
     const rejected = try describeFailure(allocator, .unauthorized, "@hq/platform", "^1", "https://registry.pantry.dev", true, null);
     defer allocator.free(rejected);
     try testing.expect(std.mem.indexOf(u8, rejected, "rejected (401)") != null);
+}
+
+test "payment note: a for-sale 402 prints the registry's own message" {
+    const allocator = testing.allocator;
+    const note = (try paymentNote(allocator,
+        \\{"error":"Payment required","package":"@hq/platform","price":900,"currency":"usd","formattedPrice":"$9.00",
+        \\ "buyUrl":"https://registry.pantry.dev/packages/%40hq%2Fplatform/buy","forSale":true,
+        \\ "message":"@hq/platform costs $9.00. Sign in and buy it with: pantry buy @hq/platform"}
+    , "@hq/platform")).?;
+    defer allocator.free(note);
+    try testing.expectEqualStrings("@hq/platform costs $9.00. Sign in and buy it with: pantry buy @hq/platform", note);
+}
+
+test "payment note: without a message, built from price and buy URL" {
+    const allocator = testing.allocator;
+    const note = (try paymentNote(allocator,
+        \\{"error":"Payment required","package":"@hq/platform","formattedPrice":"$9.00","checkoutUrl":"https://r.test/packages/%40hq%2Fplatform/buy"}
+    , "@hq/platform")).?;
+    defer allocator.free(note);
+    try testing.expectEqualStrings("@hq/platform is for sale ($9.00): pantry buy @hq/platform, or open https://r.test/packages/%40hq%2Fplatform/buy", note);
+
+    const no_url = (try paymentNote(allocator,
+        \\{"formattedPrice":"$9.00"}
+    , "@hq/platform")).?;
+    defer allocator.free(no_url);
+    try testing.expectEqualStrings("@hq/platform is for sale ($9.00): pantry buy @hq/platform", no_url);
+}
+
+test "payment note: anything else falls back to the generic 402 text" {
+    const allocator = testing.allocator;
+    try testing.expect((try paymentNote(allocator, "", "x")) == null);
+    try testing.expect((try paymentNote(allocator, "<html>402</html>", "x")) == null);
+    try testing.expect((try paymentNote(allocator, "{\"error\":\"Payment required\"}", "x")) == null);
+    try testing.expect((try paymentNote(allocator, "{\"message\":\"  \"}", "x")) == null);
+
+    const generic = try describeFailureWithNote(allocator, .payment_required, "x", "1.0.0", "https://r.test", false, "@s", null);
+    defer allocator.free(generic);
+    try testing.expect(std.mem.indexOf(u8, generic, "pantry buy x") != null);
+
+    const noted = try describeFailureWithNote(allocator, .payment_required, "@s/x", "1.0.0", "https://r.test", false, "@s", "@s/x costs $9.00. Buy it with: pantry buy @s/x");
+    defer allocator.free(noted);
+    try testing.expect(std.mem.startsWith(u8, noted, "@s/x costs $9.00. Buy it with: pantry buy @s/x"));
+    try testing.expect(std.mem.indexOf(u8, noted, "no other registry was tried") != null);
+    // Never the credential hint: the caller is signed in or not, it still has to buy.
+    try testing.expect(std.mem.indexOf(u8, noted, "PANTRY_REGISTRY_TOKEN") == null);
 }

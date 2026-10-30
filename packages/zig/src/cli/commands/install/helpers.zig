@@ -285,9 +285,38 @@ pub fn gatedStatusError(status: u16) ?anyerror {
     };
 }
 
+/// What the registry said in its last 402 on this thread (price, where to
+/// buy), kept for `gatedLookupMessage`. The lookups that see the 402 return
+/// only an error, and the named install that prints it runs on one thread.
+/// Owned by `std.heap.page_allocator`.
+threadlocal var gated_payment_note: ?[]u8 = null;
+
+fn rememberGatedPayment(note: []const u8) void {
+    if (gated_payment_note) |old| std.heap.page_allocator.free(old);
+    gated_payment_note = std.heap.page_allocator.dupe(u8, note) catch null;
+}
+
+/// Tests only: stand in for a lookup that saw a 402 body.
+pub fn rememberGatedPaymentForTest(note: []const u8) void {
+    rememberGatedPayment(note);
+}
+
+/// Record a 402 response's message, if its body carries one.
+fn noteGatedResponse(allocator: std.mem.Allocator, res: io_helper.HttpResponse, name: []const u8) void {
+    if (res.status != 402) return;
+    const note = (scopes.paymentNote(allocator, res.body, name) catch null) orelse return;
+    defer allocator.free(note);
+    rememberGatedPayment(note);
+}
+
 /// What to tell the user when a lookup stopped on a gated name. Null for
-/// errors that are not about access.
+/// errors that are not about access. A 402 repeats the registry's own words
+/// when it sent any.
 pub fn gatedLookupMessage(allocator: std.mem.Allocator, err: anyerror, name: []const u8, version: []const u8) ?[]const u8 {
+    const note = gated_payment_note;
+    gated_payment_note = null;
+    defer if (note) |n| std.heap.page_allocator.free(n);
+
     const failure: scopes.Failure = switch (err) {
         error.RegistryAuthenticationRequired => .unauthorized,
         error.PaymentRequired => .payment_required,
@@ -295,7 +324,7 @@ pub fn gatedLookupMessage(allocator: std.mem.Allocator, err: anyerror, name: []c
         else => return null,
     };
     const base = endpoint.baseUrl();
-    return scopes.describeFailure(allocator, failure, name, version, base, endpoint.hasCredentialFor(base), null) catch null;
+    return scopes.describeFailureWithNote(allocator, failure, name, version, base, endpoint.hasCredentialFor(base), null, if (failure == .payment_required) note else null) catch null;
 }
 
 /// Ask the Pantry registry for `name` the way the caller asked for it.
@@ -315,9 +344,12 @@ pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, ve
         defer allocator.free(suffix);
         const url = try scopes.packageUrl(allocator, base, name, suffix);
         defer allocator.free(url);
-        const response = io_helper.httpGetStatusTimeout(allocator, url, 15_000) catch return null;
+        const response = io_helper.httpGetResponseTimeout(allocator, url, &.{}, 15_000) catch return null;
         defer response.deinit(allocator);
-        if (gatedStatusError(response.status)) |err| return err;
+        if (gatedStatusError(response.status)) |err| {
+            noteGatedResponse(allocator, response, name);
+            return err;
+        }
         if (!response.ok()) return null;
         var resolution = scopes.parseVersionMetadata(allocator, response.body, base, name, version) catch |err| switch (err) {
             error.OutOfMemory => return error.OutOfMemory,
@@ -333,7 +365,10 @@ pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, ve
         stale.deinit(allocator);
 
         // The newest does not satisfy the range; an older version might.
-        var resolution = scopes.resolve(allocator, base, name, version, .{ .timeout_ms = 15_000 }) catch |err| {
+        var note: ?[]const u8 = null;
+        defer if (note) |n| allocator.free(n);
+        var resolution = scopes.resolve(allocator, base, name, version, .{ .timeout_ms = 15_000, .payment_note = &note }) catch |err| {
+            if (note) |n| rememberGatedPayment(n);
             const failure = scopes.errorFailure(err) orelse return null;
             if (!scopes.allowsNpmFallback(false, failure)) return gatedStatusError(switch (failure) {
                 .unauthorized => 401,
@@ -366,9 +401,12 @@ fn lookupViaRegistryApi(allocator: std.mem.Allocator, name: []const u8, platform
 
     // The status matters: a 401/402/403 here is the registry saying the name
     // is its own, which the byte-only helpers would have reported as a miss.
-    const status_response = io_helper.httpGetStatusTimeout(allocator, api_url, 15_000) catch return null;
+    const status_response = io_helper.httpGetResponseTimeout(allocator, api_url, &.{}, 15_000) catch return null;
     defer status_response.deinit(allocator);
-    if (gatedStatusError(status_response.status)) |err| return err;
+    if (gatedStatusError(status_response.status)) |err| {
+        noteGatedResponse(allocator, status_response, name);
+        return err;
+    }
     if (!status_response.ok()) return null;
     const response = status_response.body;
 

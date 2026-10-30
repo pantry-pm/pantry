@@ -317,6 +317,11 @@ pub const Installer = struct {
     /// its Pantry registry only: `resolveNpmPackage*` never reach npm for it
     /// (see registry/scopes.zig).
     scope_pins: ?*const scopes.Config = null,
+    /// What a pinned registry said when it answered 402 (price, where to buy),
+    /// by package name, so the install error can repeat it. Owned; written by
+    /// resolver threads under `payment_notes_mutex`.
+    payment_notes: std.StringHashMapUnmanaged([]const u8) = .empty,
+    payment_notes_mutex: io_helper.Mutex = .{},
 
     /// The pin covering `name`, when the project pinned its scope.
     pub fn pinFor(self: *const Installer, name: []const u8) ?scopes.Pin {
@@ -336,16 +341,42 @@ pub const Installer = struct {
             }
         }
         if (self.verbose) std.debug.print("[verbose:resolve] {s} is pinned to {s}: resolving {s} there only\n", .{ pin.scope, pin.baseUrl(), version_constraint });
-        return scopes.resolve(self.allocator, pin.baseUrl(), name, version_constraint, opts);
+        var note: ?[]const u8 = null;
+        opts.payment_note = &note;
+        return scopes.resolve(self.allocator, pin.baseUrl(), name, version_constraint, opts) catch |err| {
+            if (note) |text| self.rememberPaymentNote(name, text);
+            return err;
+        };
     }
 
-    /// The message for a failed pinned resolution.
-    /// The message for a failed pinned resolution, owned by `allocator`.
-    pub fn describePinnedFailure(self: *const Installer, allocator: std.mem.Allocator, err: anyerror, name: []const u8, version_constraint: []const u8) ?[]const u8 {
+    /// Keep a 402's message for `describePinnedFailure`; takes ownership.
+    fn rememberPaymentNote(self: *Installer, name: []const u8, note: []const u8) void {
+        self.payment_notes_mutex.lock();
+        defer self.payment_notes_mutex.unlock();
+        if (self.payment_notes.contains(name)) {
+            self.allocator.free(note);
+            return;
+        }
+        const key = self.allocator.dupe(u8, name) catch {
+            self.allocator.free(note);
+            return;
+        };
+        self.payment_notes.put(self.allocator, key, note) catch {
+            self.allocator.free(key);
+            self.allocator.free(note);
+        };
+    }
+
+    /// The message for a failed pinned resolution, owned by `allocator`. A
+    /// 402 repeats what the registry said (price, `pantry buy`, buy URL).
+    pub fn describePinnedFailure(self: *Installer, allocator: std.mem.Allocator, err: anyerror, name: []const u8, version_constraint: []const u8) ?[]const u8 {
         const pin = self.pinFor(name) orelse return null;
         const failure = scopes.errorFailure(err) orelse return null;
         const base = pin.baseUrl();
-        return scopes.describeFailure(allocator, failure, name, version_constraint, base, @import("../registry/endpoint.zig").hasCredentialFor(base), pin.scope) catch null;
+        self.payment_notes_mutex.lock();
+        defer self.payment_notes_mutex.unlock();
+        const note = if (failure == .payment_required) self.payment_notes.get(name) else null;
+        return scopes.describeFailureWithNote(allocator, failure, name, version_constraint, base, @import("../registry/endpoint.zig").hasCredentialFor(base), pin.scope, note) catch null;
     }
 
     /// Thread-safe cache tracking which packages are installed at the hoisted level.
@@ -717,6 +748,12 @@ pub const Installer = struct {
         self.allocator.destroy(self.hoisted_versions);
         self.http_client.deinit();
         self.allocator.destroy(self.http_client);
+        var notes = self.payment_notes.iterator();
+        while (notes.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+            self.allocator.free(entry.value_ptr.*);
+        }
+        self.payment_notes.deinit(self.allocator);
     }
 
     /// Install a package

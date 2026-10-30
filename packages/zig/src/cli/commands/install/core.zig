@@ -2581,3 +2581,18 @@ test "a frozen install refuses a changed integrity and accepts a first one" {
     // An entry from before integrity was recorded takes the first one.
     try t.expect(lockIntegrityMatches(&lock, "legacy", recorded));
 }
+
+test "an unpinned 402 repeats what the registry said instead of a credential hint" {
+    const t = std.testing;
+    // The lookup records the 402 body; the message the install prints uses it.
+    helpers.rememberGatedPaymentForTest("@hq/platform costs $9.00. Buy it with: pantry buy @hq/platform (or open https://registry.pantry.dev/packages/%40hq%2Fplatform/buy)");
+    const message = helpers.gatedLookupMessage(t.allocator, error.PaymentRequired, "@hq/platform", "1.4.0").?;
+    defer t.allocator.free(message);
+    try t.expect(std.mem.startsWith(u8, message, "@hq/platform costs $9.00. Buy it with: pantry buy @hq/platform"));
+    try t.expect(std.mem.indexOf(u8, message, "PANTRY_REGISTRY_TOKEN") == null);
+
+    // Taken once: the next gated message without a 402 body is the generic one.
+    const generic = helpers.gatedLookupMessage(t.allocator, error.PaymentRequired, "@hq/platform", "1.4.0").?;
+    defer t.allocator.free(generic);
+    try t.expect(std.mem.indexOf(u8, generic, "is a paid package") != null);
+}

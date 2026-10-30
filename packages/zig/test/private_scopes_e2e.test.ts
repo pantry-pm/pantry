@@ -35,7 +35,7 @@ let pantryAvailable = false
 let server: ReturnType<typeof Bun.serve> | undefined
 let tarballs: Record<string, Uint8Array> = {}
 let requests: Array<{ path: string, auth: string | null }> = []
-let mode: 'ok' | 'unauthorized' | 'hidden' | 'bad-checksum' = 'ok'
+let mode: 'ok' | 'unauthorized' | 'hidden' | 'bad-checksum' | 'for-sale' = 'ok'
 let work: string
 
 function canExecute(command: string): boolean {
@@ -93,6 +93,23 @@ beforeAll(() => {
         return Response.json({ error: 'Package not found' }, { status: 404 })
 
       const authorized = auth === `Bearer ${TOKEN}`
+      // A private package for sale answers an unentitled caller with 402 on
+      // metadata, versions and tarball alike.
+      if (mode === 'for-sale') {
+        const buyUrl = `${url.origin}/packages/%40hq%2Fplatform/buy`
+        return Response.json({
+          error: 'Payment required',
+          package: PACKAGE,
+          price: 900,
+          currency: 'usd',
+          formattedPrice: '$9.00',
+          buyUrl,
+          checkoutUrl: buyUrl,
+          message: `${PACKAGE} costs $9.00. Buy it with: pantry buy ${PACKAGE} (or open ${buyUrl})`,
+          forSale: true,
+          publisher: 'HQ',
+        }, { status: 402, headers: { 'cache-control': 'no-store' } })
+      }
       if (mode === 'unauthorized' && !authorized)
         return Response.json({ error: 'Authentication required' }, { status: 401 })
       // The registry shows a stranger an empty version list for a private package.
@@ -233,6 +250,22 @@ describe('pinned scopes', () => {
     expect(output).toContain('is not available from')
     expect(output).toContain('PANTRY_REGISTRY_TOKEN')
     expect(installedVersion(project)).toBeNull()
+  })
+
+  it('repeats what the registry says when a private package is for sale (402)', async () => {
+    if (!pantryAvailable)
+      return
+    mode = 'for-sale'
+    const project = writeProject('^1.2.0')
+    const { code, output } = await install(project, TOKEN)
+    expect(code).not.toBe(0)
+    expect(output).toContain(`${PACKAGE} costs $9.00. Buy it with: pantry buy ${PACKAGE}`)
+    expect(output).toContain('/packages/%40hq%2Fplatform/buy')
+    expect(output).toContain('no other registry was tried')
+    expect(output).not.toContain('PANTRY_REGISTRY_TOKEN')
+    expect(installedVersion(project)).toBeNull()
+    // Only the pinned registry was asked.
+    expect(requests.length).toBeGreaterThan(0)
   })
 
   it('refuses a tarball that does not match the registry checksum', async () => {
