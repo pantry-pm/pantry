@@ -8,4 +8,6 @@ test {
     _ = @import("registry/scopes.zig");
     // `pantry access`: private package grants and package tokens.
     _ = @import("cli/commands/access.zig");
+    // `pantry publish` to a Pantry registry: rejection hints, visibility.
+    _ = @import("cli/commands/registry.zig");
 }

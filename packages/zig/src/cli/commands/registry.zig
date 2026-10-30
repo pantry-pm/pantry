@@ -1050,7 +1050,14 @@ fn publishSingleToRegistry(
     defer allocator.free(result);
 
     style.print("\n{s}\n", .{result});
-    style.print("Published {s}@{s} to Pantry registry\n", .{ name, version });
+    if (publishedVisibility(allocator, result)) |visibility| {
+        defer allocator.free(visibility);
+        style.print("Published {s}@{s} to Pantry registry ({s})\n", .{ name, version, visibility });
+        if (std.mem.eql(u8, visibility, "restricted"))
+            style.print("Only accounts and tokens you grant can install it: pantry access grant {s} <email>\n", .{name});
+    } else {
+        style.print("Published {s}@{s} to Pantry registry\n", .{ name, version });
+    }
 
     return .{ .exit_code = 0 };
 }
@@ -1530,10 +1537,14 @@ fn uploadViaHttp(
 
     if (result.status != .ok and result.status != .created) {
         const err_data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
-        style.print("Upload rejected: HTTP {d}\n", .{@backingInt(result.status)});
+        const status = @backingInt(result.status);
+        style.print("Upload rejected: HTTP {d}\n", .{status});
         if (err_data.len > 0) {
-            style.print("{s}\n", .{err_data});
+            const message = publishRejectionMessage(allocator, err_data);
+            defer if (message) |m| allocator.free(m);
+            style.print("{s}\n", .{message orelse err_data});
         }
+        if (publishRejectionHint(status)) |hint| style.print("{s}\n", .{hint});
         alloc_writer.deinit();
         return error.UploadFailed;
     }
@@ -1543,6 +1554,65 @@ fn uploadViaHttp(
     const owned = try allocator.dupe(u8, data);
     alloc_writer.deinit();
     return owned;
+}
+
+/// The registry's own `message` (else `error`) from a rejected publish, rather
+/// than the raw JSON. Caller owns the result; null when there is none.
+fn publishRejectionMessage(allocator: std.mem.Allocator, body: []const u8) ?[]const u8 {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch return null;
+    if (parsed.value != .object) {
+        parsed.deinit();
+        return null;
+    }
+    for ([_][]const u8{ "message", "error" }) |key| {
+        if (parsed.value.object.get(key)) |v| {
+            if (v == .string and v.string.len > 0) {
+                const owned = allocator.dupe(u8, v.string) catch null;
+                parsed.deinit();
+                return owned;
+            }
+        }
+    }
+    parsed.deinit();
+    return null;
+}
+
+/// What to do about a rejected publish, by status.
+pub fn publishRejectionHint(status: u16) ?[]const u8 {
+    return switch (status) {
+        // A restricted (private) package needs a paid plan on the registry.
+        402 => "Publishing with \"publishConfig\": { \"access\": \"restricted\" } needs a Pro or Team plan: pantry subscribe pro",
+        401 => "The registry did not accept the token. Check it with `pantry token list`.",
+        403 => "This token cannot publish this package (it may belong to another account, or be read-only).",
+        else => null,
+    };
+}
+
+/// The visibility the registry recorded for a publish (`"restricted"`,
+/// `"public"`), from its 201 response.
+pub fn publishedVisibility(allocator: std.mem.Allocator, body: []const u8) ?[]const u8 {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch return null;
+    defer parsed.deinit();
+    if (parsed.value != .object) return null;
+    const v = parsed.value.object.get("visibility") orelse return null;
+    if (v != .string or v.string.len == 0) return null;
+    return allocator.dupe(u8, v.string) catch null;
+}
+
+test "publish: rejection hints and recorded visibility" {
+    const allocator = std.testing.allocator;
+    try std.testing.expect(std.mem.indexOf(u8, publishRejectionHint(402).?, "Pro or Team") != null);
+    try std.testing.expect(publishRejectionHint(500) == null);
+
+    const message = publishRejectionMessage(allocator, "{\"error\":\"Payment required\",\"message\":\"Private packages need Pro\"}").?;
+    defer allocator.free(message);
+    try std.testing.expectEqualStrings("Private packages need Pro", message);
+    try std.testing.expect(publishRejectionMessage(allocator, "not json") == null);
+
+    const visibility = publishedVisibility(allocator, "{\"ok\":true,\"visibility\":\"restricted\"}").?;
+    defer allocator.free(visibility);
+    try std.testing.expectEqualStrings("restricted", visibility);
+    try std.testing.expect(publishedVisibility(allocator, "{}") == null);
 }
 
 /// Result of version check
@@ -1618,4 +1688,16 @@ fn isLowerVersion(v1: []const u8, v2: []const u8) bool {
     }
 
     return false; // Equal versions
+}
+
+test "publish: the manifest uploaded as metadata keeps publishConfig.access" {
+    // The registry decides visibility from the manifest that travels as the
+    // upload's `metadata` part (`publish_content` -> uploadViaHttp), so the
+    // rewrite step in front of it must leave publishConfig untouched.
+    const manifest =
+        \\{"name":"@hq/platform","version":"1.4.0","publishConfig":{"access":"restricted"}}
+    ;
+    const out = try workspace_publish.rewriteManifestContent(std.testing.allocator, manifest, "/nonexistent");
+    defer if (out.ptr != manifest.ptr) std.testing.allocator.free(out);
+    try std.testing.expect(std.mem.indexOf(u8, out, "\"publishConfig\":{\"access\":\"restricted\"}") != null);
 }
