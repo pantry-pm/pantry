@@ -1,3 +1,39 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.147...v0.11.148)
+
+## ✨ Features
+
+- **install**: print the registry's purchase message on a 402 ([2d7ae00](https://github.com/pantry-pm/pantry/commit/2d7ae00)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: sell private packages through a storefront ([58acbff](https://github.com/pantry-pm/pantry/commit/58acbff)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **publish**: explain restricted publish rejections and show visibility ([b59b67b](https://github.com/pantry-pm/pantry/commit/b59b67b)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **cli**: add pantry access for private package grants and tokens ([62be50c](https://github.com/pantry-pm/pantry/commit/62be50c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **install**: pin package scopes to a Pantry registry ([ff85ca7](https://github.com/pantry-pm/pantry/commit/ff85ca7)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: private packages with access grants and package-scoped tokens ([e626d44](https://github.com/pantry-pm/pantry/commit/e626d44)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- **registry**: selling private packages, and how they differ from public paid ones ([de607c9](https://github.com/pantry-pm/pantry/commit/de607c9)) _(by Chris Breuer <chris@stacksjs.com>)_
+- document private scopes and pantry access ([7d738a0](https://github.com/pantry-pm/pantry/commit/7d738a0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- tell a private registry from a private package ([27a0712](https://github.com/pantry-pm/pantry/commit/27a0712)) _(by Chris Breuer <chris@stacksjs.com>)_
+- list private packages in the sidebar ([3ee7c55](https://github.com/pantry-pm/pantry/commit/3ee7c55)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: document private packages, grants and package tokens ([8f32bab](https://github.com/pantry-pm/pantry/commit/8f32bab)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **registry**: qualify Zig packages against a real native consumer (#261) ([7c50055](https://github.com/pantry-pm/pantry/commit/7c50055)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#261](https://github.com/pantry-pm/pantry/issues/261), [#248](https://github.com/pantry-pm/pantry/issues/248))
+
+## 🔧 Chores
+
+- release v0.11.148 ([4bfe4cf](https://github.com/pantry-pm/pantry/commit/4bfe4cf)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.396 ([0178564](https://github.com/pantry-pm/pantry/commit/0178564)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update apko, circleci, LLaMA.cpp, mise, opencode.ai, perf, traefik, zig ([10f2c59](https://github.com/pantry-pm/pantry/commit/10f2c59)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.395 ([d081be8](https://github.com/pantry-pm/pantry/commit/d081be8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor, claude-code, craft, dozzle, LLaMA.cpp, oc, pdm, swift ([6309a6b](https://github.com/pantry-pm/pantry/commit/6309a6b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.146...v0.11.147)
 
 ## 🐛 Bug Fixes
