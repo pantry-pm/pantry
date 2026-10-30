@@ -33,8 +33,9 @@ This guide explains all the ways you can define dependencies in pantry, from sim
 3. [Source Auto-Detection](#source-auto-detection)
 4. [Version Specifications](#version-specifications)
 5. [Source Resolution Order](#source-resolution-order)
-6. [Mixing Syntaxes](#mixing-syntaxes)
-7. [Best Practices](#best-practices)
+6. [Private Scopes](#private-scopes)
+7. [Mixing Syntaxes](#mixing-syntaxes)
+8. [Best Practices](#best-practices)
 
 ---
 
@@ -425,6 +426,48 @@ Change the default order to prefer npm first:
 ```
 
 Now `"typescript": "^5.0.0"` will check npm first, then pkgx, then GitHub.
+
+---
+
+## Private Scopes
+
+`scopes` pins a package scope to a Pantry registry. The scope's packages then
+resolve from that registry only, whatever the resolution order says:
+
+```json
+{
+  "scopes": {
+    "@acme": "pantry",
+    "@partner": "https://registry.partner.example"
+  },
+  "dependencies": {
+    "@acme/platform": "^1.4.0",
+    "@partner/sdk": "2.1.0"
+  }
+}
+```
+
+- `"pantry"` means the Pantry registry this machine uses (`PANTRY_REGISTRY_URL`,
+  else registry.pantry.dev). A URL means another registry that speaks the
+  Pantry protocol.
+- In `package.json`, put the object under the pantry namespace instead:
+  `"pantry": { "scopes": { "@acme": "pantry" } }`.
+- Exact versions, ranges and `latest` all resolve from the registry's version
+  list. Pantry never asks npm, pkgx or GitHub about a pinned name, even when the
+  name appears deep in the dependency tree.
+- Authentication comes from `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN` or the
+  credential stored for the registry (`pantry token set --registry <url>`).
+- Any failure (no token, no access, not found, unreachable) stops the install
+  with a message that says what to fix. Nothing else is tried.
+- `pantry.lock` records `integrity: "sha256:<hex>"` for these packages and
+  checks it on later installs.
+
+Unpinned names keep the normal order, with one rule: when the Pantry registry
+answers `401`, `402` or `403` for a name, the install stops there instead of
+trying npm under the same name.
+
+See [Private packages](./private-packages.md) for publishing restricted
+packages and issuing access with `pantry access`.
 
 ---
 

@@ -92,9 +92,18 @@ access can always be revoked.
 
 ## Granting access
 
+```bash
+pantry access list   @acme/platform
+pantry access grant  @acme/platform it@client.example --expires-in-days 90
+pantry access revoke @acme/platform it@client.example
+```
+
 Grant an account by email. The grant works whether or not that person has an
 account yet: when they sign up with that address and create a token, they can
-install.
+install. Leave out `--expires-in-days` for a grant that never expires;
+otherwise it takes 1 to 3650 days.
+
+Over HTTP:
 
 ```bash
 # Grant
@@ -139,6 +148,16 @@ A client's CI usually shouldn't hold a person's credentials. Mint a token that
 can read this one package and nothing else:
 
 ```bash
+pantry access token @acme/platform --name client-ci --expires-in-days 365
+# Issued package token "client-ci" for @acme/platform (id ptry_1a2…9f0e, expires …).
+# It is shown once:
+#
+#   ptry_…
+```
+
+Over HTTP:
+
+```bash
 curl -X POST https://registry.pantry.dev/packages/%40acme%2Fplatform/tokens \
   -H "Authorization: Bearer $PANTRY_TOKEN" \
   -H 'Content-Type: application/json' \
@@ -146,8 +165,13 @@ curl -X POST https://registry.pantry.dev/packages/%40acme%2Fplatform/tokens \
 # {"token":"ptry_…","id":"ptry_1a2…9f0e","name":"client-ci","expiresAt":"2027-10-30T…"}
 ```
 
-The token is shown once. Hand it to the client, who stores it like any other
-registry token (`pantry token set`, or `PANTRY_TOKEN` in CI).
+The token is shown once, and the registry keeps only a hash. Hand it to the
+client, who stores it like any other registry token: `pantry token set`, or
+`PANTRY_REGISTRY_TOKEN` in CI secrets:
+
+```bash
+echo 'ptry_…' | gh secret set PANTRY_REGISTRY_TOKEN --repo client/app
+```
 
 A package token:
 
@@ -163,7 +187,10 @@ A package token:
 - stops working when it expires or is revoked.
 
 ```bash
-# List (no secrets)
+pantry access tokens       @acme/platform                # id, name, expiry, last used
+pantry access token-revoke @acme/platform ptry_1a2…9f0e  # the next install with it is refused
+
+# Or over HTTP. List (no secrets)
 curl https://registry.pantry.dev/packages/%40acme%2Fplatform/tokens \
   -H "Authorization: Bearer $PANTRY_TOKEN"
 
@@ -174,6 +201,98 @@ curl -X DELETE "https://registry.pantry.dev/packages/%40acme%2Fplatform/tokens/p
 
 `expiresInDays` is optional, from 1 to 3650. Without it the token doesn't
 expire, so prefer setting one.
+
+### Who can manage access
+
+Every `pantry access` command authenticates the way `pantry publish` does:
+`--token`, then `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN`, then the credential
+`pantry token set` stored for the registry. The registry is `--registry`, else
+`PANTRY_REGISTRY_URL`, else registry.pantry.dev.
+
+| Response | Meaning |
+|---|---|
+| `401` | The token isn't accepted for management. A read-only or package token can install, but it can't change access. |
+| `403` | You can install the package, but only its publisher (or their team) can change who has access. |
+| `404` | No such package, or it's private and this account can't see it. Revoking a grant or token that doesn't exist also returns `404`. |
+
+## Installing: pin the scope
+
+In the consuming project:
+
+```json
+{
+  "scopes": { "@acme": "pantry" },
+  "dependencies": { "@acme/platform": "^1.4.0" }
+}
+```
+
+```bash
+PANTRY_REGISTRY_TOKEN=ptry_… pantry install
+```
+
+The scope's value is `"pantry"`, meaning the Pantry registry this machine uses
+(`PANTRY_REGISTRY_URL`, else registry.pantry.dev). It can also be the URL of
+another Pantry-protocol registry, such as `"https://registry.acme.example"`. In a
+`package.json`, put the same object under `"pantry": { "scopes": { … } }`.
+
+For every package in a pinned scope:
+
+- **The Pantry registry is the only source.** Pantry never asks npm, pkgx or any
+  other registry about the name, at the top level or deep in the tree. This is
+  what stops dependency confusion: if someone publishes `@acme/platform` on npm,
+  your install doesn't pick it up when the private lookup fails.
+- **Versions resolve by semver from the registry's version list**
+  (`GET /packages/{name}/versions`). Exact pins (`1.4.0`), ranges (`^1.4.0`,
+  `~1.4`, `>=1.2 <2`, `1.x`, `||`) and `latest` all work. A version
+  `pantry.lock` already records wins while it still satisfies the range.
+- **Metadata, the version list and the tarball all carry the token.**
+- **`pantry.lock` records `integrity: "sha256:<hex>"`**, from the registry's
+  checksum (or from the downloaded bytes if the registry sent none). Later
+  installs check the tarball against it. If the registry's checksum for a
+  locked version changes, the install stops.
+- **Every failure stops the install** and says what to do:
+
+  ```
+  - @acme/platform@1.4.0 (@acme/platform@1.4.0 is not available from
+    registry.pantry.dev (404). It is private: set PANTRY_REGISTRY_TOKEN to a
+    token with access. @acme is pinned to registry.pantry.dev in "scopes";
+    no other registry was tried.)
+  ```
+
+  The registry shows someone without access an empty version list for a private
+  package, the same as a name that was never published. Pantry reports both the
+  same way.
+
+A malformed `scopes` entry (a key that isn't `@scope`, or a value that isn't
+`"pantry"` or an http(s) URL) also stops the install. Skipping it would turn the
+scope back into one that resolves from npm.
+
+### Tokens for a custom scope registry
+
+When `scopes` names a URL, requests to that registry carry, in this order:
+
+1. a credential stored for exactly that registry:
+   `pantry token set --registry https://registry.acme.example`
+2. `PANTRY_REGISTRY_TOKEN`, then `PANTRY_TOKEN`, from the environment
+
+The global (unscoped) entry in `~/.pantry/credentials` is never sent to a URL
+that came from a project's manifest. Over plain `http://`, a token is only sent
+to `localhost` / `127.0.0.1`. Keep in mind that the environment token is sent to
+whatever URL a repository's `scopes` names. On CI that builds untrusted pull
+requests, use a package token (read-only, one package) rather than a broad
+account token.
+
+## Without scopes
+
+If a name isn't pinned, Pantry keeps its usual order: the Pantry registry, then
+npm. There's one exception. When the Pantry registry answers `401`, `402` or
+`403` for a name, the name is Pantry's and needs a credential or a purchase, so
+the install stops there and doesn't try npm. A `404` or an unreachable registry
+still falls back to npm, so public installs don't depend on Pantry being up.
+
+An exact version (`pantry install left-pad@1.2.0`) is looked up on the Pantry
+registry as that exact version. A range only accepts a Pantry answer that
+satisfies it.
 
 ## API
 
