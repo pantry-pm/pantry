@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Build and verify with Pantry
-        uses: pantry-pm/pantry/packages/action@v0.11.146
+        uses: pantry-pm/pantry/packages/action@v0.11.147
         with:
           native-app: check
       - name: Preserve built artifacts and test evidence

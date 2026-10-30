@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.146...v0.11.147)
+
+## 🐛 Bug Fixes
+
+- **registry**: prepare native Zig hashing before accepting uploads ([9c199b5](https://github.com/pantry-pm/pantry/commit/9c199b5)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.147 ([4c3530c](https://github.com/pantry-pm/pantry/commit/4c3530c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.393 ([bc23583](https://github.com/pantry-pm/pantry/commit/bc23583)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.145...v0.11.146)
 
 ## 🐛 Bug Fixes
