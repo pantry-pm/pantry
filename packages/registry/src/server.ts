@@ -1476,8 +1476,11 @@ export function createHandler(
         return handleDashboard(path, req, url, analyticsStorage, corsHeaders)
       }
 
-      // Package routes
-      const packageMatch = path.match(/^\/packages\/(@[^/]+\/[^/]+|[^/]+)(?:\/(.+))?$/)
+      // Package routes. A scoped name arrives as `@scope/name`, `%40scope%2Fname`
+      // or `@scope%2Fname` (the spelling the CLI sends); the encoded slash is
+      // part of the name, so it is matched first, before `@scope/name/...`
+      // could take a route's next segment for the name's second half.
+      const packageMatch = path.match(/^\/packages\/((?:@|%40)[^/]*%2[fF][^/]+|@[^/]+\/[^/]+|[^/]+)(?:\/(.+))?$/)
       if (packageMatch) {
         const packageName = decodeURIComponent(packageMatch[1])
         // Reject package names with path traversal or control characters

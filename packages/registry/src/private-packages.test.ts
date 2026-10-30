@@ -467,6 +467,16 @@ describe('private packages', () => {
       expect((await validate(token, 'read')).valid).toBe(false)
     })
 
+    it('reads every route under each spelling of a scoped name', async () => {
+      const token = await mintPackageToken()
+      for (const name of [ENCODED, PRIVATE, '@hq%2Fplatform', '%40hq/platform'.replace('/', '%2F')]) {
+        expect((await get(`/packages/${name}`, token)).status).toBe(200)
+        expect(await (await get(`/packages/${name}/versions`, token)).json()).toEqual({ versions: ['1.0.0'] })
+        expect((await get(`/packages/${name}/1.0.0`, token)).status).toBe(200)
+        expect((await get(`/packages/${name}/1.0.0/tarball`, token)).status).toBe(200)
+      }
+    })
+
     it('cannot be minted with wider rights through the auth service', async () => {
       await expect(auth.createApiToken('owner@hq.training', 'x', { permissions: ['publish', 'read'], packageScope: [PRIVATE] })).rejects.toThrow('read-only')
     })
