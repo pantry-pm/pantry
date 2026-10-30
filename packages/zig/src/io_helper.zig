@@ -2513,6 +2513,7 @@ pub fn httpRequest(
     extra_headers: []const std.http.Header,
 ) !HttpResponse {
     if (method == .GET and body == null) return httpGetResponseTimeout(allocator, url, extra_headers, 30_000);
+    if (body != null and !method.requestHasBody()) return httpRequestBodyOnBodilessMethod(allocator, method, url, body.?, extra_headers);
 
     var client: std.http.Client = .{ .allocator = allocator, .io = io };
     defer client.deinit();
@@ -2545,6 +2546,56 @@ pub fn httpRequest(
     const owned = try allocator.dupe(u8, data);
     alloc_writer.deinit();
     return .{ .status = @backingInt(result.status), .body = owned };
+}
+
+/// A JSON body on a method `std.http` treats as bodiless - `DELETE` with
+/// `{ "email": … }`, as the registry's access API takes it. HTTP allows it; the
+/// std client asserts against it. So the head goes out as bodiless with our
+/// own `content-length`, and the body is written after it.
+fn httpRequestBodyOnBodilessMethod(
+    allocator: std.mem.Allocator,
+    method: std.http.Method,
+    url: []const u8,
+    body: []const u8,
+    extra_headers: []const std.http.Header,
+) !HttpResponse {
+    var client: std.http.Client = .{ .allocator = allocator, .io = io };
+    defer client.deinit();
+
+    const decoration = decorateRequest(allocator, url);
+    defer decoration.deinit(allocator);
+    var merged_buf: [8]std.http.Header = undefined;
+    const merged = mergedHeaders(&merged_buf, extra_headers, decoration);
+
+    var length_buf: [24]u8 = undefined;
+    const length = std.fmt.bufPrint(&length_buf, "{d}", .{body.len}) catch unreachable;
+    var headers: std.ArrayList(std.http.Header) = .empty;
+    defer headers.deinit(allocator);
+    try headers.appendSlice(allocator, merged);
+    try headers.append(allocator, .{ .name = "content-length", .value = length });
+    try headers.append(allocator, .{ .name = "content-type", .value = "application/json" });
+
+    const uri = try std.Uri.parse(decoration.effectiveUrl(url));
+    var req = client.request(method, uri, .{
+        .extra_headers = headers.items,
+        .keep_alive = false,
+        .redirect_behavior = .unhandled,
+        .headers = .{ .accept_encoding = .{ .override = "identity" } },
+    }) catch return error.HttpRequestFailed;
+    defer req.deinit();
+
+    req.sendBodilessUnflushed() catch |err| return requestTransportError(&req, err);
+    const writer = req.connection.?.writer();
+    writer.writeAll(body) catch |err| return requestTransportError(&req, err);
+    req.connection.?.flush() catch |err| return requestTransportError(&req, err);
+
+    var redirect_buffer: [8192]u8 = undefined;
+    var response = req.receiveHead(&redirect_buffer) catch |err| return requestTransportError(&req, err);
+    const status = @backingInt(response.head.status);
+    var transfer_buffer: [64]u8 = undefined;
+    const reader = response.reader(&transfer_buffer);
+    const response_body = reader.allocRemaining(allocator, std.Io.Limit.limited(4 * 1024 * 1024)) catch |err| return requestTransportError(&req, err);
+    return .{ .status = status, .body = response_body };
 }
 
 // Preserve cancellation before Io.Reader erases it as ReadFailed. Threaded

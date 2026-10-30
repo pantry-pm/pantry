@@ -6,4 +6,6 @@ test {
     // Rooted here rather than in test_registry_root.zig because reading a
     // manifest reaches the dependency parser, which needs zig_config.
     _ = @import("registry/scopes.zig");
+    // `pantry access`: private package grants and package tokens.
+    _ = @import("cli/commands/access.zig");
 }

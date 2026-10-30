@@ -1395,6 +1395,58 @@ fn buyAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+// ============================================================================
+// Private packages (`pantry access …`)
+// ============================================================================
+
+fn accessOptions(ctx: *cli.BaseCommand.ParseContext, usage: []const u8) lib.commands.access_commands.Options {
+    return .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .package = requirePackageArg(ctx, usage),
+        .email = ctx.getArgument(1),
+        .id = ctx.getArgument(1),
+        .name = ctx.getOption("name"),
+        .expires_in_days = ctx.getOption("expires-in-days"),
+    };
+}
+
+fn accessListAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.access_commands.listCommand(allocator, accessOptions(ctx, "pantry access list @scope/package"));
+    finishTokenResult(allocator, result);
+}
+
+fn accessGrantAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.access_commands.grantCommand(allocator, accessOptions(ctx, "pantry access grant @scope/package dev@client.com"));
+    finishTokenResult(allocator, result);
+}
+
+fn accessRevokeAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.access_commands.revokeCommand(allocator, accessOptions(ctx, "pantry access revoke @scope/package dev@client.com"));
+    finishTokenResult(allocator, result);
+}
+
+fn accessTokenAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.access_commands.tokenCreateCommand(allocator, accessOptions(ctx, "pantry access token @scope/package --name acme-ci"));
+    finishTokenResult(allocator, result);
+}
+
+fn accessTokensAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.access_commands.tokensCommand(allocator, accessOptions(ctx, "pantry access tokens @scope/package"));
+    finishTokenResult(allocator, result);
+}
+
+fn accessTokenRevokeAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.access_commands.tokenRevokeCommand(allocator, accessOptions(ctx, "pantry access token-revoke @scope/package <id>"));
+    finishTokenResult(allocator, result);
+}
+
 fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -4506,6 +4558,61 @@ pub fn main() !void {
     _ = try subscribe_cmd.addOption(cli.Option.init("print", "print", "Print the URL instead of opening a browser", .bool));
     _ = subscribe_cmd.setAction(subscribeAction);
     _ = try root.addCommand(subscribe_cmd);
+
+    // Private packages: who may install a restricted package.
+    const access_days_opt = cli.Option.init("expires-in-days", "expires-in-days", "Expire after this many days (default: never for grants, the registry's default for tokens)", .string);
+
+    var access_cmd = try cli.BaseCommand.init(allocator, "access", "Control who can install a private package");
+
+    var access_list_cmd = try cli.BaseCommand.init(allocator, "list", "Show who has access to a package");
+    _ = try access_list_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try access_list_cmd.addOption(paid_registry_opt);
+    _ = try access_list_cmd.addOption(paid_token_opt);
+    _ = access_list_cmd.setAction(accessListAction);
+    _ = try access_cmd.addCommand(access_list_cmd);
+
+    var access_grant_cmd = try cli.BaseCommand.init(allocator, "grant", "Let an account install a package");
+    _ = try access_grant_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try access_grant_cmd.addArgument(cli.Argument.init("email", "Their account email", .string).withRequired(true));
+    _ = try access_grant_cmd.addOption(access_days_opt);
+    _ = try access_grant_cmd.addOption(paid_registry_opt);
+    _ = try access_grant_cmd.addOption(paid_token_opt);
+    _ = access_grant_cmd.setAction(accessGrantAction);
+    _ = try access_cmd.addCommand(access_grant_cmd);
+
+    var access_revoke_cmd = try cli.BaseCommand.init(allocator, "revoke", "Take an account's access away");
+    _ = try access_revoke_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try access_revoke_cmd.addArgument(cli.Argument.init("email", "Their account email", .string).withRequired(true));
+    _ = try access_revoke_cmd.addOption(paid_registry_opt);
+    _ = try access_revoke_cmd.addOption(paid_token_opt);
+    _ = access_revoke_cmd.setAction(accessRevokeAction);
+    _ = try access_cmd.addCommand(access_revoke_cmd);
+
+    var access_token_cmd = try cli.BaseCommand.init(allocator, "token", "Issue a read-only token for this package only (for a client's CI)");
+    _ = try access_token_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try access_token_cmd.addOption(cli.Option.init("name", "name", "Label for the token, e.g. acme-ci", .string));
+    _ = try access_token_cmd.addOption(access_days_opt);
+    _ = try access_token_cmd.addOption(paid_registry_opt);
+    _ = try access_token_cmd.addOption(paid_token_opt);
+    _ = access_token_cmd.setAction(accessTokenAction);
+    _ = try access_cmd.addCommand(access_token_cmd);
+
+    var access_tokens_cmd = try cli.BaseCommand.init(allocator, "tokens", "List a package's tokens");
+    _ = try access_tokens_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try access_tokens_cmd.addOption(paid_registry_opt);
+    _ = try access_tokens_cmd.addOption(paid_token_opt);
+    _ = access_tokens_cmd.setAction(accessTokensAction);
+    _ = try access_cmd.addCommand(access_tokens_cmd);
+
+    var access_token_revoke_cmd = try cli.BaseCommand.init(allocator, "token-revoke", "Revoke a package token");
+    _ = try access_token_revoke_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try access_token_revoke_cmd.addArgument(cli.Argument.init("id", "Token id (from `pantry access tokens`)", .string).withRequired(true));
+    _ = try access_token_revoke_cmd.addOption(paid_registry_opt);
+    _ = try access_token_revoke_cmd.addOption(paid_token_opt);
+    _ = access_token_revoke_cmd.setAction(accessTokenRevokeAction);
+    _ = try access_cmd.addCommand(access_token_revoke_cmd);
+
+    _ = try root.addCommand(access_cmd);
 
     const team_session_opt = cli.Option.init("session", "session", "Session token from the website (team changes need a signed-in person)", .string);
 
