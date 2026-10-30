@@ -972,6 +972,30 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // ── Parallel pipeline: resolve tree → download → extract ──
         const pipeline = @import("../../../install/pipeline.zig");
 
+        // A committed lock decides what gets installed. Every declared range
+        // used to be resolved against the registry, so the newest match won
+        // and the pin was rewritten; `--frozen-lockfile` installed that newer
+        // release and only then failed (#260). A spec the pin no longer
+        // satisfies still resolves afresh, so editing a dependency works.
+        //
+        // Checked before anything is installed, which is the other half of
+        // the report: a frozen run must fail without having written to
+        // `pantry/` first.
+        if (options.frozen_lockfile) {
+            for (deps_to_install) |dep| {
+                if (env_only_domains.contains(helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name)))) continue;
+                if (helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) != null) continue;
+                // `latest`-style specs are covered by any pin, so reaching
+                // here means the lock does not cover this dependency at all,
+                // or its pin falls outside the declared spec.
+                style.printWarn("Lockfile does not satisfy {s}@{s} but --frozen-lockfile is set\n", .{ dep.name, dep.version });
+                return .{
+                    .exit_code = 1,
+                    .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),
+                };
+            }
+        }
+
         // Build pipeline dep list
         var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, deps_to_install.len);
         defer allocator.free(pipeline_deps);
@@ -981,7 +1005,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
             pipeline_deps[di] = .{
                 .name = clean_name,
-                .version = dep.version,
+                .version = helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) orelse dep.version,
                 .source = if (is_domain) .pantry else switch (dep.source) {
                     .registry => .npm,
                     .pantry => .pantry,
