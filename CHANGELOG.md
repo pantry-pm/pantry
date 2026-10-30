@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.150...v0.11.151)
+
+## 💄 Styles
+
+- zig fmt registry.zig ([dd42430](https://github.com/pantry-pm/pantry/commit/dd42430)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.151 ([cc483f9](https://github.com/pantry-pm/pantry/commit/cc483f9)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update aux4, CLIProxyAPI, composer, digger, grpc, LLaMA.cpp, mz, opencode.ai, pnp, vim, virtualenv, WhatsApp, zookeeper ([32e6be5](https://github.com/pantry-pm/pantry/commit/32e6be5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.149...v0.11.150)
 
 ## 🐛 Bug Fixes
