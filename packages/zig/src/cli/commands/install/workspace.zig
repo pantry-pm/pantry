@@ -89,6 +89,7 @@ fn workspaceCommandResult(allocator: std.mem.Allocator, failed_count: usize) !ty
 const helpers = @import("helpers.zig");
 const style = @import("../../style.zig");
 const generated_packages = @import("../../../packages/generated.zig");
+const scopes = @import("../../../registry/scopes.zig");
 const install_pipeline = @import("../../../install/pipeline.zig");
 
 /// Result of a single workspace remote package install
@@ -924,6 +925,17 @@ pub fn installWorkspaceCommandWithOptions(
     shared_installer.data_dir = try allocator.dupe(u8, env_dir);
     shared_installer.modules_dir = options.modules_dir;
     shared_installer.verbose = options.verbose;
+
+    // Scopes pinned to a Pantry registry (workspace root's pantry.json /
+    // package.json "pantry.scopes") resolve there only, for every member.
+    var scope_diag: scopes.Diagnostic = .{};
+    var scope_pins = scopes.loadForProject(allocator, workspace_root, &scope_diag) catch |err| {
+        shared_installer.deinit();
+        const detail = if (scope_diag.len > 0) scope_diag.message() else @errorName(err);
+        return .{ .exit_code = 1, .message = try std.fmt.allocPrint(allocator, "Error: invalid \"scopes\" - {s}", .{detail}) };
+    };
+    defer scope_pins.deinit();
+    shared_installer.scope_pins = &scope_pins;
 
     // Configure installer with .npmrc settings (custom registry URL)
     if (npmrc_config.registry) |custom_registry| {

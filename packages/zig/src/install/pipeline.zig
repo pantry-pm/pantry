@@ -18,6 +18,7 @@ const style = @import("../cli/style.zig");
 const offline = @import("offline.zig");
 const patches_mod = @import("patches.zig");
 const downloader = @import("downloader.zig");
+const scopes = @import("../registry/scopes.zig");
 
 const Installer = installer_mod.Installer;
 const PackageCache = cache_mod.PackageCache;
@@ -31,7 +32,14 @@ const PackageSpec = packages.PackageSpec;
 /// Unknown, malformed, or unsupported formats fail closed. Callers only invoke
 /// this function when the registry supplied an integrity value, so treating an
 /// uncheckable claim as valid would silently bypass the package contract.
-pub fn verifyIntegrity(allocator: std.mem.Allocator, bytes: []const u8, integrity: []const u8) bool {
+pub fn verifyIntegrity(allocator: std.mem.Allocator, bytes: []const u8, integrity_in: []const u8) bool {
+    // `sha256:<hex>` - how the Pantry registry states a checksum, and what
+    // pantry.lock records for a Pantry package - is the raw hex form below.
+    const integrity = if (std.mem.startsWith(u8, integrity_in, "sha256:") and integrity_in.len == 7 + 64)
+        integrity_in[7..]
+    else
+        integrity_in;
+
     // Raw hex SHA256
     if (integrity.len == 64) {
         var is_hex = true;
@@ -232,6 +240,13 @@ test "verifyIntegrity sha256 hex happy path" {
     try std.testing.expect(!verifyIntegrity(allocator, body, bad));
 }
 
+test "verifyIntegrity sha256:<hex> as the Pantry registry states it" {
+    const allocator = std.testing.allocator;
+    try std.testing.expect(verifyIntegrity(allocator, "hello world", "sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"));
+    try std.testing.expect(!verifyIntegrity(allocator, "hello World", "sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"));
+    try std.testing.expect(!verifyIntegrity(allocator, "hello world", "sha256:b94d27"));
+}
+
 test "verifyIntegrity rejects unknown and malformed claims" {
     const allocator = std.testing.allocator;
     try std.testing.expect(!verifyIntegrity(allocator, "x", "frobnitz-abc"));
@@ -284,7 +299,23 @@ pub const ResolvedPackage = struct {
     /// Mac). Recorded in the lock, as bun.lock records every platform's, but
     /// not downloaded.
     lock_only: bool = false,
+    /// In a scope the project pinned to a Pantry registry (see
+    /// registry/scopes.zig). Its integrity is recorded in the lock even when
+    /// the registry sent none.
+    pinned: bool = false,
+    /// Resolution failed and nothing else may be tried: reported as this
+    /// package's install error instead of downloading anything. Owned.
+    resolve_error: ?[]const u8 = null,
 };
+
+/// Free everything a `ResolvedPackage` owns.
+pub fn freeResolved(allocator: std.mem.Allocator, pkg: ResolvedPackage) void {
+    allocator.free(pkg.name);
+    allocator.free(pkg.version);
+    allocator.free(pkg.tarball_url);
+    if (pkg.integrity) |i| allocator.free(i);
+    if (pkg.resolve_error) |e| allocator.free(e);
+}
 
 pub const PackageResult = struct {
     name: []const u8,
@@ -295,6 +326,10 @@ pub const PackageResult = struct {
     /// See `ResolvedPackage.lock_only`: belongs in the lock, not on disk, and
     /// is not reported as installed.
     lock_only: bool = false,
+    /// The tarball's integrity, for the lockfile. Set for packages from a
+    /// pinned Pantry scope (registry checksum, else sha256 of the bytes).
+    /// Owned.
+    integrity: ?[]const u8 = null,
 };
 
 pub const PipelineResult = struct {
@@ -306,6 +341,7 @@ pub const PipelineResult = struct {
     pub fn deinit(self: *PipelineResult, allocator: std.mem.Allocator) void {
         for (self.results) |*r| {
             if (r.error_msg) |msg| allocator.free(msg);
+            if (r.integrity) |i| allocator.free(i);
             if (r.name.len > 0) allocator.free(r.name);
             if (r.version.len > 0) allocator.free(r.version);
         }
@@ -343,6 +379,8 @@ const ResolveThreadCtx = struct {
     installer: *Installer,
     deps: []const PipelineDep,
     results: []?Installer.NpmResolutionWithDeps,
+    /// Why a dependency in a pinned scope did not resolve (null otherwise).
+    errors: []?anyerror,
     next: *std.atomic.Value(usize),
     verbose: bool,
 
@@ -358,7 +396,12 @@ const ResolveThreadCtx = struct {
             // pantry S3 registry inside the download phase. Routing them
             // through resolveNpmPackageWithDeps would hit npmjs.org and find
             // squatter packages (e.g. `bun.sh@0.0.0`).
-            if (dep.source != .npm) {
+            //
+            // A name in a pinned scope resolves through the installer whatever
+            // source it was declared with: `resolveNpmPackageWithDeps` sends
+            // it to its Pantry registry and nowhere else.
+            const pinned = ctx.installer.pinFor(dep.name) != null;
+            if (dep.source != .npm and !pinned) {
                 ctx.results[i] = null;
                 continue;
             }
@@ -371,6 +414,7 @@ const ResolveThreadCtx = struct {
                 if (ctx.verbose) {
                     std.debug.print("[verbose:pipeline:resolve] FAILED: {s} @ {s}: {}\n", .{ dep.name, dep.version, err });
                 }
+                if (pinned) ctx.errors[i] = err;
                 break :blk null;
             };
         }
@@ -662,10 +706,7 @@ fn resolveFullTree(
     var resolved = std.ArrayList(ResolvedPackage).empty;
     errdefer {
         for (resolved.items) |pkg| {
-            allocator.free(pkg.name);
-            allocator.free(pkg.version);
-            allocator.free(pkg.tarball_url);
-            if (pkg.integrity) |i| allocator.free(i);
+            freeResolved(allocator, pkg);
         }
         resolved.deinit(allocator);
     }
@@ -697,12 +738,16 @@ fn resolveFullTree(
         const results = try allocator.alloc(?Installer.NpmResolutionWithDeps, wave_size);
         defer allocator.free(results);
         for (results) |*r| r.* = null;
+        const resolve_errors = try allocator.alloc(?anyerror, wave_size);
+        defer allocator.free(resolve_errors);
+        for (resolve_errors) |*e| e.* = null;
 
         var next_idx = std.atomic.Value(usize).init(0);
         var ctx = ResolveThreadCtx{
             .installer = inst,
             .deps = current_wave.items,
             .results = results,
+            .errors = resolve_errors,
             .next = &next_idx,
             .verbose = verbose,
         };
@@ -754,6 +799,7 @@ fn resolveFullTree(
                             .source = .npm,
                             .optional = current_wave.items[ri].optional,
                             .lock_only = !result.platform_ok,
+                            .pinned = inst.pinFor(current_wave.items[ri].name) != null,
                         });
                         // Fix: name should be the dep name, not the version
                         resolved.items[resolved.items.len - 1].name = try allocator.dupe(u8, name_key);
@@ -807,7 +853,31 @@ fn resolveFullTree(
                 // .github, .git, .http, .ziglang, .local all install via
                 // their own paths in the download phase (or out-of-band).
                 const dep = current_wave.items[ri];
-                if (dep.source == .npm) {
+                if (inst.pinFor(dep.name) != null) {
+                    // A pinned scope that did not resolve is an install error.
+                    // No Pantry binary lookup, no npm: nothing else is tried.
+                    if (!seen.contains(dep.name)) {
+                        try seen.put(try allocator.dupe(u8, dep.name), {});
+                        const err = resolve_errors[ri] orelse error.PinnedUnavailable;
+                        const message = inst.describePinnedFailure(allocator, err, dep.name, dep.version) orelse
+                            try std.fmt.allocPrint(allocator, "{s}", .{@errorName(err)});
+                        errdefer allocator.free(message);
+                        const name = try allocator.dupe(u8, dep.name);
+                        errdefer allocator.free(name);
+                        const version = try allocator.dupe(u8, dep.version);
+                        errdefer allocator.free(version);
+                        try resolved.append(allocator, .{
+                            .name = name,
+                            .version = version,
+                            .tarball_url = try allocator.dupe(u8, ""),
+                            .integrity = null,
+                            .source = .npm,
+                            .optional = dep.optional,
+                            .pinned = true,
+                            .resolve_error = message,
+                        });
+                    }
+                } else if (dep.source == .npm) {
                     if (try resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
                         if (!seen.contains(dep.name)) {
                             try seen.put(try allocator.dupe(u8, dep.name), {});
@@ -943,6 +1013,11 @@ const DownloadThreadCtx = struct {
                 continue;
             }
 
+            if (pkg.resolve_error) |message| {
+                ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, message) catch null };
+                continue;
+            }
+
             // .pantry source: system binaries from registry.pantry.dev.
             // Delegate to installer.install() which handles S3 lookup,
             // version resolution, download, and extraction for system deps.
@@ -1060,6 +1135,7 @@ const DownloadThreadCtx = struct {
                     .version = owned_version,
                     .success = true,
                     .from_cache = true,
+                    .integrity = if (pkg.pinned and pkg.integrity != null) (alloc.dupe(u8, pkg.integrity.?) catch null) else null,
                 };
                 continue;
             }
@@ -1119,7 +1195,11 @@ const DownloadThreadCtx = struct {
                     }
                 }
                 const dl = downloaded orelse {
-                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = null };
+                    const em: ?[]const u8 = if (pkg.pinned)
+                        std.fmt.allocPrint(alloc, "could not download {s}@{s} from its pinned registry", .{ pkg.name, pkg.version }) catch null
+                    else
+                        null;
+                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = em };
                     continue;
                 };
 
@@ -1223,11 +1303,21 @@ const DownloadThreadCtx = struct {
             // Record in hoisted cache
             ctx.installer.hoisted_versions.put(pkg.name, pkg.version);
 
+            // A pinned package's lock entry always carries an integrity: the
+            // registry's checksum (verified above), else that of these bytes.
+            const recorded_integrity: ?[]const u8 = if (!pkg.pinned)
+                null
+            else if (pkg.integrity) |integrity|
+                (alloc.dupe(u8, integrity) catch null)
+            else
+                (scopes.sha256Integrity(alloc, tarball_bytes.?) catch null);
+
             ctx.results[i] = .{
                 .name = owned_name,
                 .version = owned_version,
                 .success = true,
                 .from_cache = false,
+                .integrity = recorded_integrity,
             };
 
             if (ctx.verbose) {
@@ -1313,10 +1403,7 @@ fn resolveViaRegistry(
     var resolved = std.ArrayList(ResolvedPackage).empty;
     errdefer {
         for (resolved.items) |pkg| {
-            allocator.free(pkg.name);
-            allocator.free(pkg.version);
-            allocator.free(pkg.tarball_url);
-            if (pkg.integrity) |i| allocator.free(i);
+            freeResolved(allocator, pkg);
         }
         resolved.deinit(allocator);
     }
@@ -1846,7 +1933,11 @@ pub fn run(
     // ── Phase 1: Resolve full dependency tree ──
     // Resolve from npm by default. The Pantry server-side bulk resolver and
     // tarball stream remain an explicit acceleration mode, never a dependency.
-    const use_registry_acceleration = registryAccelerationEnabled(allocator);
+    // The bulk resolver answers from npm, so it is never used while scopes
+    // are pinned: a pinned name - top-level or transitive - must not get an
+    // npm answer from anywhere.
+    const has_scope_pins = if (inst.scope_pins) |pins| !pins.isEmpty() else false;
+    const use_registry_acceleration = !has_scope_pins and registryAccelerationEnabled(allocator);
     if (verbose) {
         const source = if (use_registry_acceleration) "Pantry registry accelerator" else "npm registry";
         std.debug.print("[verbose:pipeline] Phase 1: resolving dependency tree via {s}...\n", .{source});
@@ -1857,10 +1948,7 @@ pub fn run(
         try resolveFullTree(allocator, inst, top_level_deps, verbose);
     defer {
         for (resolved.items) |pkg| {
-            allocator.free(pkg.name);
-            allocator.free(pkg.version);
-            allocator.free(pkg.tarball_url);
-            if (pkg.integrity) |i| allocator.free(i);
+            freeResolved(allocator, pkg);
         }
         resolved.deinit(allocator);
     }

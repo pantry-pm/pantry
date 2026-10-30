@@ -53,6 +53,9 @@ const Resolved = struct {
     /// and any private package on the public registry are served against an
     /// account, so the token has to travel — to its own issuer and nowhere else.
     default_token: ?[]const u8 = null,
+    /// Registries a project pinned a scope to (`"scopes"` in pantry.json),
+    /// with the credential each one gets. See `trustPinnedRegistry`.
+    pinned: []const Scoped = &.{},
 };
 
 var resolve_mutex: io_helper.Mutex = .{};
@@ -150,7 +153,96 @@ pub const Decoration = io_helper.RequestDecoration;
 ///
 /// This is the function installed as `io_helper.decorate_request`.
 pub fn decorate(allocator: std.mem.Allocator, url: []const u8) Decoration {
-    return decorateWith(allocator, url, config());
+    var cfg = config();
+    pinned_mutex.lock();
+    defer pinned_mutex.unlock();
+    cfg.pinned = pinned_list.items;
+    return decorateWith(allocator, url, cfg);
+}
+
+/// Whether a request to `url` would carry a credential. Lets an error say
+/// "your token was rejected" rather than "set a token" when one was sent.
+pub fn hasCredentialFor(url: []const u8) bool {
+    const allocator = std.heap.page_allocator;
+    const dec = decorate(allocator, url);
+    defer dec.deinit(allocator);
+    return dec.authorization != null;
+}
+
+// ---------------------------------------------------------------------------
+// Registries pinned by a project's `"scopes"`
+// ---------------------------------------------------------------------------
+
+var pinned_mutex: io_helper.Mutex = .{};
+var pinned_list: std.ArrayList(Scoped) = .empty;
+
+/// Let requests to a registry a project pinned a scope to carry a credential.
+///
+/// `"scopes": { "@acme": "https://registry.acme.example" }` names a registry
+/// this machine may never have been configured for, and a private scope there
+/// is unusable without a token. Which token goes, in order:
+///
+///   1. a `[https://registry.acme.example]` section in ~/.pantry/credentials —
+///      a credential stored for exactly that registry;
+///   2. `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN` from the environment — how CI
+///      hands a client its read-only package token.
+///
+/// The global (unscoped) credentials entry is deliberately not sent: it is the
+/// account token for the public registry, and a URL read from a repository's
+/// manifest is not a reason to hand it to another host. Plain http is only
+/// trusted for loopback hosts, so a token never crosses a network in clear.
+pub fn trustPinnedRegistry(url: []const u8) void {
+    const trimmed = std.mem.trimEnd(u8, std.mem.trim(u8, url, &std.ascii.whitespace), "/");
+    const origin = originOf(trimmed) orelse return;
+    if (!secureEnoughForToken(origin)) return;
+
+    const allocator = std.heap.page_allocator;
+    const token = pinnedCredential(allocator, trimmed) orelse return;
+
+    pinned_mutex.lock();
+    defer pinned_mutex.unlock();
+    for (pinned_list.items) |entry| {
+        if (sameOrigin(entry.origin, origin)) {
+            allocator.free(token);
+            return;
+        }
+    }
+    const owned_origin = allocator.dupe(u8, origin) catch {
+        allocator.free(token);
+        return;
+    };
+    pinned_list.append(allocator, .{ .origin = owned_origin, .token = token }) catch {
+        allocator.free(owned_origin);
+        allocator.free(token);
+    };
+}
+
+fn pinnedCredential(allocator: std.mem.Allocator, registry: []const u8) ?[]const u8 {
+    if (token_commands.Store.load(allocator)) |loaded| {
+        var store = loaded;
+        defer store.deinit();
+        if (store.get(token_commands.default_key, registry)) |entry| {
+            if (entry.registry != null and entry.value.len > 0)
+                return allocator.dupe(u8, entry.value) catch null;
+        }
+    } else |_| {}
+
+    for (token_commands.env_names) |name| {
+        if (io_helper.getEnvVarOwned(allocator, name)) |value| {
+            if (value.len > 0) return value;
+            allocator.free(value);
+        } else |_| {}
+    }
+    return null;
+}
+
+/// https anywhere; http only to this machine.
+pub fn secureEnoughForToken(origin: []const u8) bool {
+    if (std.ascii.startsWithIgnoreCase(origin, "https://")) return true;
+    if (!std.ascii.startsWithIgnoreCase(origin, "http://")) return false;
+    const host_port = origin["http://".len..];
+    const host = if (std.mem.lastIndexOfScalar(u8, host_port, ':')) |colon| host_port[0..colon] else host_port;
+    return std.ascii.eqlIgnoreCase(host, "localhost") or std.mem.eql(u8, host, "127.0.0.1") or std.mem.eql(u8, host, "[::1]");
 }
 
 /// The decision itself, against an explicit configuration. Separated from the
@@ -182,6 +274,14 @@ fn decorateWith(allocator: std.mem.Allocator, url: []const u8, cfg: Resolved) De
 
     // Any origin the user has stored a scoped credential for.
     for (cfg.scoped) |entry| {
+        if (sameOrigin(origin, entry.origin)) {
+            out.authorization = std.fmt.allocPrint(allocator, "Bearer {s}", .{entry.token}) catch null;
+            return out;
+        }
+    }
+
+    // A registry the project pinned a scope to.
+    for (cfg.pinned) |entry| {
         if (sameOrigin(origin, entry.origin)) {
             out.authorization = std.fmt.allocPrint(allocator, "Bearer {s}", .{entry.token}) catch null;
             return out;
@@ -328,4 +428,41 @@ test "port and case differences are part of the origin, not ignored" {
     const other_port = decorateWith(alloc, "http://localhost:3001/health", cfg);
     defer other_port.deinit(alloc);
     try std.testing.expect(other_port.authorization == null);
+}
+
+test "a registry pinned by scopes receives its credential, and nobody else does" {
+    const alloc = std.testing.allocator;
+    const pinned = [_]Scoped{.{ .origin = "https://registry.acme.test", .token = "ptry_client_ci" }};
+    const cfg = Resolved{ .pinned = &pinned, .default_token = "ptry_account" };
+
+    const versions = decorateWith(alloc, "https://registry.acme.test/packages/@acme%2Fsdk/versions", cfg);
+    defer versions.deinit(alloc);
+    try std.testing.expectEqualStrings("Bearer ptry_client_ci", versions.authorization.?);
+
+    const tarball = decorateWith(alloc, "https://registry.acme.test/packages/@acme%2Fsdk/1.0.0/tarball", cfg);
+    defer tarball.deinit(alloc);
+    try std.testing.expectEqualStrings("Bearer ptry_client_ci", tarball.authorization.?);
+
+    // The public registry keeps its own token; third parties get none.
+    const public = decorateWith(alloc, default_base ++ "/packages/x", cfg);
+    defer public.deinit(alloc);
+    try std.testing.expectEqualStrings("Bearer ptry_account", public.authorization.?);
+    for ([_][]const u8{
+        "https://registry.npmjs.org/@acme/sdk",
+        "https://registry.acme.test.attacker.test/packages/x",
+        "http://registry.acme.test/packages/x",
+    }) |url| {
+        const dec = decorateWith(alloc, url, cfg);
+        defer dec.deinit(alloc);
+        try std.testing.expect(dec.authorization == null);
+    }
+}
+
+test "tokens only travel over https, or plain http to this machine" {
+    try std.testing.expect(secureEnoughForToken("https://registry.example.com"));
+    try std.testing.expect(secureEnoughForToken("http://localhost:3000"));
+    try std.testing.expect(secureEnoughForToken("http://127.0.0.1:3000"));
+    try std.testing.expect(!secureEnoughForToken("http://registry.example.com"));
+    try std.testing.expect(!secureEnoughForToken("http://localhost.attacker.test"));
+    try std.testing.expect(!secureEnoughForToken("ftp://registry.example.com"));
 }

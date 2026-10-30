@@ -1279,7 +1279,7 @@ pub fn parseWorkspaceIsolation(allocator: std.mem.Allocator, file_path: []const 
 }
 
 /// Strip JSON comments (// and /* */) and trailing commas for JSONC support
-fn stripJsonComments(allocator: std.mem.Allocator, content: []const u8) ![]const u8 {
+pub fn stripJsonComments(allocator: std.mem.Allocator, content: []const u8) ![]const u8 {
     // Single-pass: strip comments AND trailing commas in one allocation
     var result = try std.ArrayList(u8).initCapacity(allocator, content.len);
     errdefer result.deinit(allocator);

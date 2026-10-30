@@ -17,6 +17,7 @@ const semver = @import("../packages/semver.zig");
 const registry_versions_mod = @import("registry_versions.zig");
 const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
+const scopes = @import("../registry/scopes.zig");
 
 const pantryError = errors.pantryError;
 const Paths = core.Paths;
@@ -54,6 +55,13 @@ pub const InstallOptions = struct {
     inline_progress: ?downloader.InlineProgressOptions = null,
     /// Skip transitive dependency resolution (caller handles it)
     skip_transitive_resolution: bool = false,
+    /// npm-style installs: the tarball must hash to this (`sha256:<hex>`,
+    /// raw hex, or SRI) or the install fails before anything is extracted.
+    expected_integrity: ?[]const u8 = null,
+    /// npm-style installs: report the tarball's integrity in the result -
+    /// `expected_integrity` when given, else `sha256:<hex>` of the bytes - so
+    /// the lockfile can pin a package whose registry sent no checksum.
+    record_integrity: bool = false,
 };
 
 /// Installation result
@@ -305,6 +313,40 @@ pub const Installer = struct {
     /// across threads. A package whose dependency tree gained nothing new
     /// keeps the library paths it was fixed with (see `libraryPathsCurrent`).
     fresh_installs: std.atomic.Value(usize) = .init(0),
+    /// The project's `"scopes"` pins. A name in a pinned scope resolves from
+    /// its Pantry registry only: `resolveNpmPackage*` never reach npm for it
+    /// (see registry/scopes.zig).
+    scope_pins: ?*const scopes.Config = null,
+
+    /// The pin covering `name`, when the project pinned its scope.
+    pub fn pinFor(self: *const Installer, name: []const u8) ?scopes.Pin {
+        const cfg = self.scope_pins orelse return null;
+        return cfg.pinFor(name);
+    }
+
+    /// Resolve a pinned name from its registry, preferring pantry.lock's
+    /// version and checking its recorded integrity. Never consults npm.
+    pub fn resolvePinned(self: *Installer, pin: scopes.Pin, name: []const u8, version_constraint: []const u8) scopes.ResolveError!scopes.Resolution {
+        var opts = scopes.ResolveOptions{};
+        if (self.lockfile) |lf| {
+            const lockfile_zig = @import("../deps/resolution/lockfile.zig");
+            if (lockfile_zig.getLockedVersion(lf, name)) |locked| {
+                opts.locked_version = locked.version;
+                opts.locked_integrity = locked.integrity;
+            }
+        }
+        if (self.verbose) std.debug.print("[verbose:resolve] {s} is pinned to {s}: resolving {s} there only\n", .{ pin.scope, pin.baseUrl(), version_constraint });
+        return scopes.resolve(self.allocator, pin.baseUrl(), name, version_constraint, opts);
+    }
+
+    /// The message for a failed pinned resolution.
+    /// The message for a failed pinned resolution, owned by `allocator`.
+    pub fn describePinnedFailure(self: *const Installer, allocator: std.mem.Allocator, err: anyerror, name: []const u8, version_constraint: []const u8) ?[]const u8 {
+        const pin = self.pinFor(name) orelse return null;
+        const failure = scopes.errorFailure(err) orelse return null;
+        const base = pin.baseUrl();
+        return scopes.describeFailure(allocator, failure, name, version_constraint, base, @import("../registry/endpoint.zig").hasCredentialFor(base), pin.scope) catch null;
+    }
 
     /// Thread-safe cache tracking which packages are installed at the hoisted level.
     /// Eliminates redundant filesystem checks when the same transitive dep is encountered
@@ -547,6 +589,9 @@ pub const Installer = struct {
             name: []const u8,
             version: []const u8,
             tarball_url: []const u8,
+            /// Verified on restore for pinned Pantry scopes, whose lock
+            /// entries always record one.
+            integrity: ?[]const u8 = null,
         };
 
         var to_install: std.ArrayList(PkgEntry) = .empty;
@@ -569,6 +614,7 @@ pub const Installer = struct {
                     .name = pkg.name,
                     .version = pkg.version,
                     .tarball_url = pkg.resolved,
+                    .integrity = if (self.pinFor(pkg.name) != null) pkg.integrity else null,
                 }) catch continue;
                 continue;
             };
@@ -607,6 +653,7 @@ pub const Installer = struct {
                         .project_root = ctx.project_root,
                         .quiet = true,
                         .skip_transitive_resolution = true, // We install everything flat
+                        .expected_integrity = entry.integrity,
                     }) catch {
                         continue;
                     };
@@ -1480,6 +1527,10 @@ pub const Installer = struct {
                 .install_path = install_dir,
                 .from_cache = true,
                 .install_time_ms = @intCast(end_time - start_time),
+                .integrity = if (options.record_integrity and options.expected_integrity != null)
+                    try self.allocator.dupe(u8, options.expected_integrity.?)
+                else
+                    null,
             };
         }
 
@@ -1533,6 +1584,22 @@ pub const Installer = struct {
             break :blk dl;
         };
         defer self.allocator.free(tarball_bytes);
+
+        // The bytes must be the ones the registry (or pantry.lock) vouched for
+        // before anything reaches disk.
+        if (options.expected_integrity) |expected| {
+            if (expected.len > 0 and !@import("pipeline.zig").verifyIntegrity(self.allocator, tarball_bytes, expected)) {
+                if (!options.quiet) style.print("  ✗ Integrity mismatch for {s}@{s} (expected {s})\n", .{ spec.name, spec.version, expected[0..@min(expected.len, 80)] });
+                return error.IntegrityMismatch;
+            }
+        }
+        const recorded_integrity: ?[]const u8 = if (!options.record_integrity)
+            null
+        else if (options.expected_integrity) |expected|
+            try self.allocator.dupe(u8, expected)
+        else
+            try scopes.sha256Integrity(self.allocator, tarball_bytes);
+        errdefer if (recorded_integrity) |i| self.allocator.free(i);
 
         // Create install directory
         try io_helper.makePath(install_dir);
@@ -1592,6 +1659,7 @@ pub const Installer = struct {
             .install_path = install_dir,
             .from_cache = false,
             .install_time_ms = @intCast(end_time - start_time),
+            .integrity = recorded_integrity,
         };
     }
 
@@ -2203,6 +2271,17 @@ pub const Installer = struct {
         result.deinit(self.allocator);
     }
 
+    /// Record a pinned resolution where lockfile writers look for the exact
+    /// version, tarball and integrity (`getCachedNpmResolution`), so no writer
+    /// re-resolves a pinned name - and none can ask npm about it.
+    fn cachePinnedResolution(self: *Installer, name: []const u8, version_constraint: []const u8, pinned: *const scopes.Resolution) void {
+        var key_buf: [512]u8 = undefined;
+        const key = std.fmt.bufPrint(&key_buf, "{s}@{s}", .{ name, version_constraint }) catch return;
+        self.npm_cache.putResolution(key, pinned.version, pinned.tarball_url, pinned.integrity);
+        const exact_key = std.fmt.bufPrint(&key_buf, "{s}@{s}", .{ name, pinned.version }) catch return;
+        self.npm_cache.putResolution(exact_key, pinned.version, pinned.tarball_url, pinned.integrity);
+    }
+
     /// Query npm registry to resolve a version constraint to a concrete version + tarball URL.
     /// Uses a two-level cache: L1 caches raw registry JSON by package name (avoids duplicate
     /// HTTP fetches for the same package with different constraints), L2 caches resolved
@@ -2226,6 +2305,23 @@ pub const Installer = struct {
         if (self.npm_cache.getResolution(cache_key, self.allocator)) |cached| {
             if (self.verbose) std.debug.print("[verbose:resolve] L2 cache hit: {s} -> {s}\n", .{ cache_key, cached.version });
             return cached;
+        }
+
+        // A pinned scope is never looked up on npm, whatever the caller meant.
+        // (Its L2 entries above only ever come from `cachePinnedResolution`.)
+        if (self.pinFor(name)) |pin| {
+            var pinned = try self.resolvePinned(pin, name, version_constraint);
+            defer pinned.deinit(self.allocator);
+            self.cachePinnedResolution(name, version_constraint, &pinned);
+            const version = try self.allocator.dupe(u8, pinned.version);
+            errdefer self.allocator.free(version);
+            const tarball_url = try self.allocator.dupe(u8, pinned.tarball_url);
+            errdefer self.allocator.free(tarball_url);
+            return NpmResolution{
+                .version = version,
+                .tarball_url = tarball_url,
+                .integrity = if (pinned.integrity) |i| try self.allocator.dupe(u8, i) else null,
+            };
         }
 
         // --- Lockfile-first resolution: skip npm registry entirely if locked ---
@@ -2361,6 +2457,40 @@ pub const Installer = struct {
         name: []const u8,
         version_constraint: []const u8,
     ) !NpmResolutionWithDeps {
+        // A pinned scope is never looked up on npm (see resolveNpmPackage).
+        if (self.pinFor(name)) |pin| {
+            var pinned = try self.resolvePinned(pin, name, version_constraint);
+            defer pinned.deinit(self.allocator);
+            self.cachePinnedResolution(name, version_constraint, &pinned);
+
+            var deps_list = std.ArrayList(NpmResolutionWithDeps.DepEntry).empty;
+            errdefer {
+                for (deps_list.items) |d| {
+                    self.allocator.free(d.name);
+                    self.allocator.free(d.version_constraint);
+                }
+                deps_list.deinit(self.allocator);
+            }
+            for (pinned.dependencies) |d| {
+                const dep_name = try self.allocator.dupe(u8, d.name);
+                errdefer self.allocator.free(dep_name);
+                const dep_constraint = try self.allocator.dupe(u8, d.constraint);
+                errdefer self.allocator.free(dep_constraint);
+                try deps_list.append(self.allocator, .{ .name = dep_name, .version_constraint = dep_constraint, .is_optional = d.optional });
+            }
+            const version = try self.allocator.dupe(u8, pinned.version);
+            errdefer self.allocator.free(version);
+            const tarball_url = try self.allocator.dupe(u8, pinned.tarball_url);
+            errdefer self.allocator.free(tarball_url);
+            const integrity = if (pinned.integrity) |i| try self.allocator.dupe(u8, i) else null;
+            return NpmResolutionWithDeps{
+                .version = version,
+                .tarball_url = tarball_url,
+                .integrity = integrity,
+                .dependencies = try deps_list.toOwnedSlice(self.allocator),
+            };
+        }
+
         // --- L2 cache check (same as resolveNpmPackage) ---
         var cache_key_stack: [512]u8 = undefined;
         const cache_key = std.fmt.bufPrint(&cache_key_stack, "{s}@{s}", .{ name, version_constraint }) catch

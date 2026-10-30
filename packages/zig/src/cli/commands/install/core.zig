@@ -16,6 +16,7 @@ const offline = @import("../../../install/offline.zig");
 const recovery = @import("../../../install/recovery.zig");
 const style = @import("../../style.zig");
 const dependency_parser = @import("../../../deps/parser.zig");
+const scopes = @import("../../../registry/scopes.zig");
 
 const cache = lib.cache;
 const string = lib.string;
@@ -34,6 +35,29 @@ fn resolutionLockMatches(
     const locked = lockfile_hooks.getLockedVersionForPackage(lock_file, name) orelse return false;
     return std.mem.eql(u8, locked.version, version) and
         std.mem.eql(u8, locked.resolved, resolved);
+}
+
+/// A frozen install may not change a recorded integrity. A lock entry without
+/// one (written before integrity was recorded) accepts the first.
+fn lockIntegrityMatches(
+    lock_file: *lib.deps.resolution.LockFile,
+    name: []const u8,
+    integrity: ?[]const u8,
+) bool {
+    const current = integrity orelse return true;
+    const locked = lockfile_hooks.getLockedVersionForPackage(lock_file, name) orelse return false;
+    const recorded = locked.integrity orelse return true;
+    return scopes.integrityEqual(recorded, current);
+}
+
+/// `"scopes"` that cannot be honoured stop the install: skipping a malformed
+/// pin would let a private scope resolve from npm.
+fn scopePinsError(allocator: std.mem.Allocator, err: anyerror, diag: *const scopes.Diagnostic) !types.CommandResult {
+    const detail = if (diag.len > 0) diag.message() else @errorName(err);
+    return .{
+        .exit_code = 1,
+        .message = try std.fmt.allocPrint(allocator, "Error: invalid \"scopes\" - {s}", .{detail}),
+    };
 }
 
 /// Fast path: check if all packages are already installed without doing expensive
@@ -272,12 +296,6 @@ fn depDomainFromSpec(spec_in: []const u8) ?DepSpec {
     return .{ .domain = domain, .constraint = constraint };
 }
 
-/// Whether a version string names one version and no other.
-///
-/// `1.2.0` is exact; `^1.2.0`, `~1.2`, `>=1.2.0`, `1.x`, `*`, `latest` and the
-/// empty string are not. The distinction decides whether a request may be
-/// answered from the Pantry registry - which resolves ranges but ignores the
-/// version asked for - or has to go to npm, which honours an exact version.
 /// The exit code a manifest install ends on.
 ///
 /// Named rather than inline so the rule has a test, the way
@@ -288,6 +306,12 @@ fn manifestExitCode(failed_count: usize) u8 {
     return if (failed_count > 0) 1 else 0;
 }
 
+/// Whether a version string names one version and no other.
+///
+/// `1.2.0` is exact; `^1.2.0`, `~1.2`, `>=1.2.0`, `1.x`, `*`, `latest` and the
+/// empty string are not. The distinction decides how the Pantry registry is
+/// asked: an exact version is looked up as that version, a range against the
+/// registry's newest (and its version list when that does not satisfy).
 fn isExactVersion(version: []const u8) bool {
     if (version.len == 0) return false;
     if (std.mem.eql(u8, version, "latest")) return false;
@@ -943,6 +967,15 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         shared_installer.modules_dir = options.modules_dir;
         shared_installer.verbose = options.verbose;
 
+        // Scopes the project pinned to a Pantry registry resolve there only.
+        var scope_diag: scopes.Diagnostic = .{};
+        var scope_pins = scopes.loadForProject(allocator, proj_dir, &scope_diag) catch |err| {
+            shared_installer.deinit();
+            return scopePinsError(allocator, err, &scope_diag);
+        };
+        defer scope_pins.deinit();
+        shared_installer.scope_pins = &scope_pins;
+
         // Configure installer with .npmrc settings
         if (npmrc_config.registry) |custom_registry| {
             shared_installer.setRegistryUrl(custom_registry);
@@ -1238,14 +1271,15 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 // below still records it.
                 if (!env_only_domains.contains(helpers.resolvePackageAlias(clean_name))) {
                     if (options.frozen_lockfile) {
-                        if (!resolutionLockMatches(&lock_file, clean_name, result.version, resolved_url))
+                        if (!resolutionLockMatches(&lock_file, clean_name, result.version, resolved_url) or
+                            !lockIntegrityMatches(&lock_file, clean_name, result.integrity))
                             frozen_lockfile_changed = true;
                     } else if (!options.no_save) {
                         if (lockfile_hooks.getLockedVersionForPackage(&lock_file, clean_name)) |previous| {
                             if (!std.mem.eql(u8, previous.version, result.version))
                                 style.printLockPinMoved(clean_name, previous.version, result.version, false);
                         }
-                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, null);
+                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, result.integrity);
                     }
                 }
                 // Nothing of it is on disk to record below.
@@ -1465,6 +1499,13 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     installer.verbose = options.verbose;
     defer installer.deinit();
 
+    // `pantry install @hq/platform` honours the project's scope pins too.
+    var scope_diag: scopes.Diagnostic = .{};
+    var scope_pins = scopes.loadForProject(allocator, project_root, &scope_diag) catch |err|
+        return scopePinsError(allocator, err, &scope_diag);
+    defer scope_pins.deinit();
+    installer.scope_pins = &scope_pins;
+
     // Start timing (millisecond precision)
     const start_ts2 = io_helper.clockGettime();
     const start_time = @as(i64, @intCast(start_ts2.sec)) * 1000 + @as(i64, @intCast(@divFloor(start_ts2.nsec, 1_000_000)));
@@ -1527,8 +1568,31 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             std.mem.eql(u8, name, "ziglang") or
             std.mem.eql(u8, name, "ziglang.org");
 
+        // A name in a pinned scope resolves from its Pantry registry and
+        // nowhere else; any failure is this package's install error.
+        var pinned_resolution: ?install.Installer.NpmResolution = null;
+        defer if (pinned_resolution) |r| {
+            allocator.free(r.version);
+            allocator.free(r.tarball_url);
+            if (r.integrity) |i| allocator.free(i);
+        };
+        if (installer.pinFor(name) != null) {
+            pinned_resolution = installer.resolveNpmPackage(name, version) catch |err| {
+                const message = installer.describePinnedFailure(allocator, err, name, version);
+                defer if (message) |m| allocator.free(m);
+                style.printFailed(name, version, message orelse @errorName(err));
+                failed_count += 1;
+                continue;
+            };
+        }
+
         // Determine the package spec - use npm fallback if not in pantry registry
-        const spec = if (is_zig_pkg) lib.packages.PackageSpec{
+        const spec = if (pinned_resolution) |pinned| lib.packages.PackageSpec{
+            .name = name,
+            .version = pinned.version,
+            .source = .npm,
+            .url = pinned.tarball_url,
+        } else if (is_zig_pkg) lib.packages.PackageSpec{
             .name = "ziglang.org",
             .version = version,
             .source = .pantry,
@@ -1536,27 +1600,21 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .name = name,
             .version = version,
         } else npm_fallback: {
-            // An exact version the caller named, as opposed to a range or the
-            // default.
+            // The Pantry registry first, asked the question the caller asked:
+            // an exact version is looked up as that version (the old lookup
+            // took no version and installed whatever was newest, so exact pins
+            // skipped Pantry entirely), and a range only accepts an answer
+            // that satisfies it.
             //
-            // The Pantry registry lookup below answers with whatever version it
-            // currently holds and takes no version argument, so consulting it
-            // for an exact request silently installed something else:
-            // `pantry install left-pad@1.2.0` reported success and put 1.3.0 on
-            // disk. An exact version is the one thing a caller cannot be talked
-            // out of, so it skips the registry and goes to npm, which resolves
-            // the version it was asked for.
-            //
-            // A *range* is not a pin and must not take this path: the npm
-            // branch below looks the version string up as a key in `versions`,
-            // which `^1.2.0` is not, so routing a range there fails the install
-            // outright. Ranges keep the registry path, which resolves them.
-            const pinned = isExactVersion(version);
-
-            // Try Pantry S3/DynamoDB registry first
-            if (if (pinned) null else helpers.lookupPantryRegistry(allocator, name) catch |err| lkup: {
-                style.print("{s}  ? {s}: pantry registry lookup failed: {}{s}\n", .{ style.dim, name, err, style.reset });
-                break :lkup null;
+            // A registry that says the name is its own and gated (401/402/403)
+            // ends the search here. Falling back to npm under the same name is
+            // how a private package gets swapped for a stranger's.
+            if (helpers.lookupPantryForRequest(allocator, name, version, isExactVersion(version)) catch |err| {
+                const message = helpers.gatedLookupMessage(allocator, err, name, version);
+                defer if (message) |m| allocator.free(m);
+                style.printFailed(name, version, message orelse @errorName(err));
+                failed_count += 1;
+                continue;
             }) |info| {
                 var pantry_info = info;
                 defer pantry_info.deinit(allocator);
@@ -1662,6 +1720,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .project_root = project_root,
             .quiet = false, // Show download progress
             .verbose = options.verbose,
+            .expected_integrity = if (pinned_resolution) |r| r.integrity else null,
+            .record_integrity = pinned_resolution != null,
         }) catch |err| {
             style.clearLine();
             // Provide friendly error messages
@@ -2060,6 +2120,12 @@ fn installCompanionDepsFile(
     shared_installer.verbose = options.verbose;
     defer shared_installer.deinit();
 
+    var scope_diag: scopes.Diagnostic = .{};
+    var scope_pins = scopes.loadForProject(allocator, project_root, &scope_diag) catch |err|
+        return scopePinsError(allocator, err, &scope_diag);
+    defer scope_pins.deinit();
+    shared_installer.scope_pins = &scope_pins;
+
     var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, deps.len);
     defer allocator.free(pipeline_deps);
     for (deps, 0..) |dep, di| {
@@ -2286,6 +2352,8 @@ fn mergeCompanionLockfileEntries(
             .version = try allocator.dupe(u8, result.version),
             .source = if (std.mem.indexOfScalar(u8, clean_name, '.') != null) .pantry else .npm,
             .resolved = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version }),
+            // Set for pinned Pantry scopes (see pipeline.PackageResult).
+            .integrity = if (result.integrity) |i| try allocator.dupe(u8, i) else null,
         };
         const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, result.version });
         defer allocator.free(key);
@@ -2479,4 +2547,37 @@ test "isExactVersion separates a pin from a range" {
     try t.expect(!isExactVersion("*"));
     try t.expect(!isExactVersion("latest"));
     try t.expect(!isExactVersion(""));
+}
+
+test "a Pantry registry that gates a name ends the lookup instead of falling back to npm" {
+    const t = std.testing;
+    // 401/402/403: the name is the registry's own. Each is an error, so the
+    // named install stops rather than asking npm about the same name.
+    try t.expectEqual(@as(?anyerror, error.RegistryAuthenticationRequired), helpers.gatedStatusError(401));
+    try t.expectEqual(@as(?anyerror, error.PaymentRequired), helpers.gatedStatusError(402));
+    try t.expectEqual(@as(?anyerror, error.RegistryAccessDenied), helpers.gatedStatusError(403));
+    // A miss, an outage or a success is not a gate.
+    try t.expect(helpers.gatedStatusError(200) == null);
+    try t.expect(helpers.gatedStatusError(404) == null);
+    try t.expect(helpers.gatedStatusError(503) == null);
+
+    const message = helpers.gatedLookupMessage(t.allocator, error.RegistryAccessDenied, "@acme/sdk", "1.0.0").?;
+    defer t.allocator.free(message);
+    try t.expect(std.mem.indexOf(u8, message, "(403)") != null);
+    try t.expect(helpers.gatedLookupMessage(t.allocator, error.FileNotFound, "x", "1") == null);
+}
+
+test "a frozen install refuses a changed integrity and accepts a first one" {
+    const t = std.testing;
+    var lock = lib.deps.resolution.LockFile.init(t.allocator);
+    defer lock.deinit();
+    const recorded = "sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
+    try lock.addPackage("@hq/platform", "1.4.0", "registry:@hq/platform@1.4.0", recorded);
+    try lock.addPackage("legacy", "1.0.0", "registry:legacy@1.0.0", null);
+
+    try t.expect(lockIntegrityMatches(&lock, "@hq/platform", recorded));
+    try t.expect(lockIntegrityMatches(&lock, "@hq/platform", null));
+    try t.expect(!lockIntegrityMatches(&lock, "@hq/platform", "sha256:0000000000000000000000000000000000000000000000000000000000000000"));
+    // An entry from before integrity was recorded takes the first one.
+    try t.expect(lockIntegrityMatches(&lock, "legacy", recorded));
 }

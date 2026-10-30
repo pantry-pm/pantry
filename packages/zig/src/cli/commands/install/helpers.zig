@@ -9,6 +9,8 @@ const types = @import("types.zig");
 const cache = lib.cache;
 const install = lib.install;
 const style = @import("../../style.zig");
+const scopes = @import("../../../registry/scopes.zig");
+const endpoint = @import("../../../registry/endpoint.zig");
 
 // ============================================================================
 // Package Spec Parsing
@@ -236,9 +238,9 @@ pub fn lookupPantryRegistryWithClient(allocator: std.mem.Allocator, name: []cons
     return lookupPantryRegistryImpl(allocator, name, client);
 }
 
-fn lookupPantryRegistryImpl(allocator: std.mem.Allocator, name: []const u8, client: ?*std.http.Client) ?PantryPackageInfo {
+fn lookupPantryRegistryImpl(allocator: std.mem.Allocator, name: []const u8, client: ?*std.http.Client) !?PantryPackageInfo {
     // Try registry REST API first (native HTTP, no subprocess)
-    var api_result = lookupViaRegistryApi(allocator, name, current_platform, client);
+    var api_result = try lookupViaRegistryApi(allocator, name, current_platform, client);
     if (api_result) |info| {
         // The API answers with the registry's single latestVersion, which has
         // pointed at a prerelease (libgeos.org answered 3.15.0beta2 with 3.15.0
@@ -268,18 +270,107 @@ pub fn lookupPantryS3OnlyWithClient(allocator: std.mem.Allocator, name: []const 
     return lookupViaS3Metadata(allocator, name, current_platform, client);
 }
 
+/// The error a Pantry lookup ends on when the registry gates the name.
+///
+/// 401/402/403 mean the name is the registry's and needs a credential or a
+/// purchase. That is an answer, not a miss: the caller must not go on to ask
+/// npm about the same name (`scopes.allowsNpmFallback`).
+pub fn gatedStatusError(status: u16) ?anyerror {
+    const failure = scopes.classifyStatus(status) orelse return null;
+    if (scopes.allowsNpmFallback(false, failure)) return null;
+    return switch (failure) {
+        .unauthorized => error.RegistryAuthenticationRequired,
+        .payment_required => error.PaymentRequired,
+        else => error.RegistryAccessDenied,
+    };
+}
+
+/// What to tell the user when a lookup stopped on a gated name. Null for
+/// errors that are not about access.
+pub fn gatedLookupMessage(allocator: std.mem.Allocator, err: anyerror, name: []const u8, version: []const u8) ?[]const u8 {
+    const failure: scopes.Failure = switch (err) {
+        error.RegistryAuthenticationRequired => .unauthorized,
+        error.PaymentRequired => .payment_required,
+        error.RegistryAccessDenied => .forbidden,
+        else => return null,
+    };
+    const base = endpoint.baseUrl();
+    return scopes.describeFailure(allocator, failure, name, version, base, endpoint.hasCredentialFor(base), null) catch null;
+}
+
+/// Ask the Pantry registry for `name` the way the caller asked for it.
+///
+/// An exact version is looked up as that version (`GET /packages/{name}/{v}`):
+/// the plain lookup takes no version and answers with the newest, which is
+/// why exact pins used to skip Pantry altogether. A range takes the newest
+/// only if it satisfies the range, and otherwise picks from the version list.
+///
+/// Null means "not a Pantry package, try elsewhere". A gated name (401/402/
+/// 403) is an error, so the caller stops instead of falling back to npm.
+pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, version: []const u8, exact: bool) !?PantryPackageInfo {
+    const base = endpoint.default_base;
+    if (exact) {
+        if (!scopes.isSafeVersion(version)) return null;
+        const suffix = try std.fmt.allocPrint(allocator, "/{s}", .{version});
+        defer allocator.free(suffix);
+        const url = try scopes.packageUrl(allocator, base, name, suffix);
+        defer allocator.free(url);
+        const response = io_helper.httpGetStatusTimeout(allocator, url, 15_000) catch return null;
+        defer response.deinit(allocator);
+        if (gatedStatusError(response.status)) |err| return err;
+        if (!response.ok()) return null;
+        var resolution = scopes.parseVersionMetadata(allocator, response.body, base, name, version) catch |err| switch (err) {
+            error.OutOfMemory => return error.OutOfMemory,
+            else => return null,
+        };
+        defer resolution.deinit(allocator);
+        return try infoFromResolution(allocator, name, &resolution);
+    }
+
+    if (try lookupPantryRegistry(allocator, name)) |info| {
+        if (scopes.satisfies(info.version, version) catch false) return info;
+        var stale = info;
+        stale.deinit(allocator);
+
+        // The newest does not satisfy the range; an older version might.
+        var resolution = scopes.resolve(allocator, base, name, version, .{ .timeout_ms = 15_000 }) catch |err| {
+            const failure = scopes.errorFailure(err) orelse return null;
+            if (!scopes.allowsNpmFallback(false, failure)) return gatedStatusError(switch (failure) {
+                .unauthorized => 401,
+                .payment_required => 402,
+                else => 403,
+            }).?;
+            return null;
+        };
+        defer resolution.deinit(allocator);
+        return try infoFromResolution(allocator, name, &resolution);
+    }
+    return null;
+}
+
+fn infoFromResolution(allocator: std.mem.Allocator, name: []const u8, resolution: *const scopes.Resolution) !PantryPackageInfo {
+    const s3_path = try allocator.dupe(u8, name);
+    errdefer allocator.free(s3_path);
+    const version = try allocator.dupe(u8, resolution.version);
+    errdefer allocator.free(version);
+    return .{ .s3_path = s3_path, .version = version, .tarball_url = try allocator.dupe(u8, resolution.tarball_url) };
+}
+
 /// Try looking up package via the pantry registry REST API (native HTTP, no subprocess).
-/// Returns package info if found, null on any error.
-fn lookupViaRegistryApi(allocator: std.mem.Allocator, name: []const u8, platform: []const u8, client: ?*std.http.Client) ?PantryPackageInfo {
+/// Returns package info if found, null on a miss or an unreachable registry,
+/// and an error when the registry gates the name (see `gatedStatusError`).
+fn lookupViaRegistryApi(allocator: std.mem.Allocator, name: []const u8, platform: []const u8, client: ?*std.http.Client) !?PantryPackageInfo {
     // Perf: Stack buffer for URL (avoids heap alloc)
     var url_buf: [512]u8 = undefined;
     const api_url = std.fmt.bufPrint(&url_buf, "https://registry.pantry.dev/packages/{s}", .{name}) catch return null;
 
-    const response = if (client) |c|
-        io_helper.httpGetWithClient(c, allocator, api_url) catch return null
-    else
-        io_helper.httpGet(allocator, api_url) catch return null;
-    defer allocator.free(response);
+    // The status matters: a 401/402/403 here is the registry saying the name
+    // is its own, which the byte-only helpers would have reported as a miss.
+    const status_response = io_helper.httpGetStatusTimeout(allocator, api_url, 15_000) catch return null;
+    defer status_response.deinit(allocator);
+    if (gatedStatusError(status_response.status)) |err| return err;
+    if (!status_response.ok()) return null;
+    const response = status_response.body;
 
     if (response.len == 0) return null;
 
