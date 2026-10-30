@@ -4041,7 +4041,27 @@ pub const Installer = struct {
             } else if (entry.kind == .sym_link) {
                 const target = try io_helper.readLinkAlloc(self.allocator, src_path);
                 defer self.allocator.free(target);
-                try io_helper.symLink(target, dst_path);
+                // Materialization has to be repeatable. Directories here go
+                // through makePath and regular files through createFile, which
+                // truncates — both fine over an existing tree. A bare
+                // symlink(2) is not: it returns EEXIST, and that escaped as
+                // PathAlreadyExists from an install over a restored cache or a
+                // retried materialization (#250).
+                io_helper.symLink(target, dst_path) catch |err| switch (err) {
+                    error.PathAlreadyExists => {
+                        const existing = io_helper.readLinkAlloc(self.allocator, dst_path) catch null;
+                        defer if (existing) |value| self.allocator.free(value);
+                        // Already pointing where the source says: nothing to
+                        // do. Pointing elsewhere, or not a link at all:
+                        // replace it, because the source is authoritative and
+                        // a stale link is how a tree half-materializes.
+                        if (existing == null or !std.mem.eql(u8, existing.?, target)) {
+                            io_helper.deleteFile(dst_path) catch {};
+                            try io_helper.symLink(target, dst_path);
+                        }
+                    },
+                    else => return err,
+                };
             } else {
                 try io_helper.copyFile(src_path, dst_path);
             }
@@ -5714,4 +5734,67 @@ test "native materialization: concurrent cached publications both succeed withou
     try std.testing.expectEqual(fixture.payload_bytes, try materializationRegularBytes(allocator, fixture.destination));
     try std.testing.expectEqual(fixture.payload_bytes, try materializationRegularBytes(allocator, fixture.extraction.payload));
     try fixture.expectNoTransaction();
+}
+
+test "native materialization: re-copying a tree over its own symlinks is repeatable" {
+    // #250: a macOS job that restored an exact dependency cache failed with
+    // PathAlreadyExists for git-scm.org@2.53.0 while fourteen of fifteen
+    // packages installed. `copyDirectoryStructure` recreates directories with
+    // makePath and overwrites regular files through createFile, both
+    // repeatable — but it created symlinks with a bare `symlink(2)`, which
+    // returns EEXIST over a destination that already holds the link. git is
+    // the most symlink-dense package in that cohort (its libexec is a wall of
+    // them), which is consistent with git alone failing.
+    //
+    // This does not claim to be the reported tree; it identifies a colliding
+    // operation on the implicated path and holds it shut.
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+
+    const source = try std.fmt.allocPrint(allocator, "{s}/source/libexec", .{root});
+    defer allocator.free(source);
+    const dest = try std.fmt.allocPrint(allocator, "{s}/prefix/libexec", .{root});
+    defer allocator.free(dest);
+    try io_helper.makePath(source);
+
+    const real = try std.fmt.allocPrint(allocator, "{s}/git", .{source});
+    defer allocator.free(real);
+    const file = try io_helper.createFile(real, .{});
+    try io_helper.writeAllToFile(file, "#!/bin/sh\nexit 0\n");
+    io_helper.closeFile(file);
+    const link = try std.fmt.allocPrint(allocator, "{s}/git-receive-pack", .{source});
+    defer allocator.free(link);
+    try io_helper.symLink("git", link);
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    try installer.copyDirectoryStructure(source, dest);
+    // The second pass is the restored-cache case: every entry is already
+    // there. Before the fix this returned error.PathAlreadyExists — asserted
+    // with expectError while diagnosing, which is how the operation was
+    // identified rather than inferred.
+    try installer.copyDirectoryStructure(source, dest);
+
+    const copied_link = try std.fmt.allocPrint(allocator, "{s}/git-receive-pack", .{dest});
+    defer allocator.free(copied_link);
+    const target = try io_helper.readLinkAlloc(allocator, copied_link);
+    defer allocator.free(target);
+    try std.testing.expectEqualStrings("git", target);
+
+    // A link left pointing somewhere else — a half-written or older tree —
+    // must end up at the source's target, since the source is authoritative.
+    io_helper.deleteFile(copied_link) catch {};
+    try io_helper.symLink("git-upload-pack", copied_link);
+    try installer.copyDirectoryStructure(source, dest);
+    const repaired = try io_helper.readLinkAlloc(allocator, copied_link);
+    defer allocator.free(repaired);
+    try std.testing.expectEqualStrings("git", repaired);
 }
