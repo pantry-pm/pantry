@@ -64,7 +64,7 @@ export class InMemoryMetadataStorage implements MetadataStorage {
     this.onMutate()
   }
 
-  async putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void> {
+  async putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean, settingsIfNew?: PackagePublisherSettings }): Promise<void> {
     let pkg = this.packages.get(name)
     // No await between this check and insertion. File and object snapshot
     // backends deliberately have one serving process.
@@ -85,6 +85,7 @@ export class InMemoryMetadataStorage implements MetadataStorage {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         totalDownloads: 0,
+        ...(options?.settingsIfNew ? { settings: { ...options.settingsIfNew } } : {}),
       }
     }
 
@@ -132,6 +133,7 @@ export class InMemoryMetadataStorage implements MetadataStorage {
           keywords: pkg.keywords,
           author: pkg.author,
           downloads: pkg.totalDownloads,
+          ...(pkg.settings?.visibility === 'private' ? { private: true } : {}),
         })
 
         if (results.length >= limit)
@@ -340,6 +342,15 @@ export class InMemoryMetadataStorage implements MetadataStorage {
     const key = `${grant.packageName}:${grant.token}`
     this.accessGrants.set(key, grant)
     this.onMutate()
+  }
+
+  async listAccessGrants(packageName: string): Promise<PackageAccessGrant[]> {
+    return [...this.accessGrants.values()].filter(grant => grant.packageName === packageName)
+  }
+
+  async deleteAccessGrant(packageName: string, token: string): Promise<void> {
+    if (this.accessGrants.delete(`${packageName}:${token}`))
+      this.onMutate()
   }
 
   /** Newest first. */

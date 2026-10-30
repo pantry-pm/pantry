@@ -45,6 +45,8 @@ export interface PackageVersion {
 /**
  * Full package record with all versions
  */
+export type PackageVisibility = 'public' | 'unlisted' | 'private'
+
 /** Per-package settings editable by the publisher on pantry.dev */
 export interface PackagePublisherSettings {
   description?: string
@@ -57,7 +59,12 @@ export interface PackagePublisherSettings {
   /** npm package name if different from registry name */
   npmPackageName?: string
   npmAccess?: 'public' | 'restricted'
-  visibility?: 'public' | 'unlisted'
+  /**
+   * Who can see the package. `unlisted` keeps it out of search and listings;
+   * `private` hides it from everyone but its owner, admins and the accounts
+   * and package tokens the owner grants (see `private-packages.ts`).
+   */
+  visibility?: PackageVisibility
   deprecated?: boolean
   deprecationMessage?: string
 }
@@ -101,6 +108,11 @@ export interface SearchResult {
   keywords?: string[]
   author?: string
   downloads: number
+  /**
+   * Set by storage when the package is private, so the registry can drop it
+   * for callers who may not see it. Stripped before results leave the server.
+   */
+  private?: boolean
 }
 
 /**
@@ -226,12 +238,14 @@ export interface PackagePaywall {
 }
 
 /**
- * Access grant — records that a token has paid for access to a package
+ * Access grant — records that an account (or, for grants written before
+ * accounts, a token) may install a package. Written by a purchase, or by the
+ * owner of a private package granting access.
  */
 export interface PackageAccessGrant {
   /** Package name */
   packageName: string
-  /** Access token that was granted access */
+  /** Grant subject: `user:<email>` for accounts, a raw token for legacy grants */
   token: string
   /** Stripe payment intent or subscription ID */
   stripePaymentId?: string
@@ -239,6 +253,8 @@ export interface PackageAccessGrant {
   grantedAt: string
   /** When access expires (undefined = lifetime) */
   expiresAt?: string
+  /** Account that granted access by hand (absent for purchases) */
+  grantedBy?: string
 }
 
 // ===========================================================================
@@ -325,6 +341,13 @@ export interface ApiToken {
   lastUsedAt?: string
   /** ISO 8601 expiry (undefined = never expires) */
   expiresAt?: string
+  /**
+   * Package names this token is confined to. A scoped token may read exactly
+   * these packages and nothing else — no account, publish or admin rights.
+   */
+  packageScope?: string[]
+  /** Account that minted a package-scoped token */
+  createdBy?: string
 }
 
 /**
@@ -332,6 +355,7 @@ export interface ApiToken {
  */
 export interface ApiTokenInfo {
   binaryPublishDomains?: string[]
+  packageScope?: string[]
   id: string
   name: string
   permissions: ('publish' | 'read')[]
@@ -359,6 +383,8 @@ export interface Session {
  */
 export interface TokenValidationResult {
   binaryPublishDomains?: string[]
+  /** Present when the token is confined to specific packages */
+  packageScope?: string[]
   valid: boolean
   userId?: string
   tokenId?: string
@@ -415,7 +441,11 @@ export interface MetadataStorage {
   getPackage(name: string): Promise<PackageRecord | null>
   getPackageVersion(name: string, version: string): Promise<PackageMetadata | null>
   putPackage(record: PackageRecord): Promise<void>
-  putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void>
+  /**
+   * `settingsIfNew` is applied only when this call creates the package, in the
+   * same write, so a package published private is never briefly public.
+   */
+  putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean, settingsIfNew?: PackagePublisherSettings }): Promise<void>
   search(query: string, limit?: number): Promise<SearchResult[]>
   listVersions(name: string): Promise<string[]>
   incrementDownloads(name: string, version: string): Promise<void>
@@ -443,4 +473,7 @@ export interface MetadataStorage {
   deletePaywall(name: string): Promise<void>
   getAccessGrant(packageName: string, token: string): Promise<PackageAccessGrant | null>
   putAccessGrant(grant: PackageAccessGrant): Promise<void>
+  /** Every grant on a package, expired ones included (the owner should see those). */
+  listAccessGrants(packageName: string): Promise<PackageAccessGrant[]>
+  deleteAccessGrant(packageName: string, token: string): Promise<void>
 }

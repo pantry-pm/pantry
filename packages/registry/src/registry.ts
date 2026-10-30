@@ -169,12 +169,20 @@ export class Registry {
   }
 
   /**
-   * Search for packages
+   * Search for packages.
+   *
+   * Private packages are left out unless `canRead` says this caller may see
+   * them; with no `canRead`, they are always left out.
    */
-  async search(query: string, limit = 20): Promise<SearchResult[]> {
+  async search(query: string, limit = 20, canRead?: (name: string) => Promise<boolean>): Promise<SearchResult[]> {
     const safeQuery = query.slice(0, 256)
     const safeLimit = Math.min(Math.max(limit, 1), 100)
-    const results = await this.metadataStorage.search(safeQuery, safeLimit)
+    const results: SearchResult[] = []
+    for (const result of await this.metadataStorage.search(safeQuery, safeLimit)) {
+      const { private: isPrivate, ...visible } = result
+      if (isPrivate && !(canRead && await canRead(result.name))) continue
+      results.push(visible)
+    }
 
     // If we have enough results or npm fallback is disabled, return
     if (results.length >= limit || !this.config.npmFallback) {
@@ -263,7 +271,12 @@ export class Registry {
   /**
    * Publish a package
    */
-  async publish(metadata: PackageMetadata, tarball: ArrayBuffer, publishedBy?: string): Promise<void> {
+  async publish(
+    metadata: PackageMetadata,
+    tarball: ArrayBuffer,
+    publishedBy?: string,
+    options?: { settingsIfNew?: PackagePublisherSettings },
+  ): Promise<void> {
     assertCleanMalwareScan(metadata.malwareScan, tarball)
     const safeName = sanitizePackageName(metadata.name)
     if (!isSafeVersion(metadata.version)) {
@@ -291,7 +304,7 @@ export class Registry {
       checksum,
       publishedAt: new Date().toISOString(),
       size: tarball.byteLength,
-    }, { ifAbsent: true })
+    }, { ifAbsent: true, settingsIfNew: options?.settingsIfNew })
 
     if (publishedBy && publishedBy !== '_admin') {
       await this.metadataStorage.setPackagePublisher(metadata.name, publishedBy)

@@ -99,7 +99,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
       updatedAt: data.updatedAt,
       totalDownloads: data.totalDownloads || 0,
       publishedBy: data.publishedBy,
-      settings: data.settings,
+      settings: parseSettings(data.settings),
     }
   }
 
@@ -195,7 +195,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
     }
   }
 
-  async putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean }): Promise<void> {
+  async putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean, settingsIfNew?: PackagePublisherSettings }): Promise<void> {
     const now = new Date().toISOString()
 
     // Check if package exists
@@ -229,6 +229,8 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
             updatedAt: now,
             totalDownloads: 0,
             searchText: buildSearchText(name, metadata.description, metadata.keywords),
+            // Same encoding as updatePublisherPackage, so getPackage reads one shape.
+            ...(options?.settingsIfNew ? { settings: JSON.stringify(options.settingsIfNew) } : {}),
           }),
           ConditionExpression: 'attribute_not_exists(PK)',
         } as any)
@@ -352,6 +354,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
           keywords: data.keywords,
           author: data.author,
           downloads: data.totalDownloads || 0,
+          ...(parseSettings(data.settings)?.visibility === 'private' ? { private: true } : {}),
         })
       }
       if (!result.LastEvaluatedKey) break
@@ -770,6 +773,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
       stripePaymentId: data.stripePaymentId || undefined,
       grantedAt: data.grantedAt,
       expiresAt: data.expiresAt || undefined,
+      grantedBy: data.grantedBy || undefined,
     }
   }
 
@@ -784,13 +788,64 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         stripePaymentId: grant.stripePaymentId || '',
         grantedAt: grant.grantedAt,
         expiresAt: grant.expiresAt || '',
+        grantedBy: grant.grantedBy || '',
       }),
+    })
+  }
+
+  async listAccessGrants(packageName: string): Promise<PackageAccessGrant[]> {
+    const result = await this.db.query({
+      TableName: this.tableName,
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :prefix)',
+      ExpressionAttributeValues: {
+        ':pk': { S: `ACCESS#${packageName}` },
+        ':prefix': { S: 'TOKEN#' },
+      },
+    })
+    return result.Items.map((item) => {
+      const data = DynamoDBClient.unmarshal(item)
+      return {
+        packageName: data.packageName,
+        token: data.token,
+        stripePaymentId: data.stripePaymentId || undefined,
+        grantedAt: data.grantedAt,
+        expiresAt: data.expiresAt || undefined,
+        grantedBy: data.grantedBy || undefined,
+      }
+    })
+  }
+
+  async deleteAccessGrant(packageName: string, token: string): Promise<void> {
+    await this.db.deleteItem({
+      TableName: this.tableName,
+      Key: {
+        PK: { S: `ACCESS#${packageName}` },
+        SK: { S: `TOKEN#${token}` },
+      },
     })
   }
 
   /** Newest first. */
   private compareSemver(a: string, b: string): number {
     return compareVersions(b, a)
+  }
+}
+
+/**
+ * Package settings as stored. `updatePublisherPackage` writes them as a JSON
+ * string; reading them back raw meant every `settings.visibility` check on this
+ * backend saw `undefined`.
+ */
+function parseSettings(raw: unknown): PackagePublisherSettings | undefined {
+  if (!raw) return undefined
+  if (typeof raw === 'object') return raw as PackagePublisherSettings
+  if (typeof raw !== 'string') return undefined
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed as PackagePublisherSettings : undefined
+  }
+  catch {
+    return undefined
   }
 }
 

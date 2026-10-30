@@ -7,7 +7,7 @@ import { resolve, dirname, relative } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { installRegistryShutdown } from './shutdown'
-import type { RegistryConfig, AuthStorage } from './types'
+import type { RegistryConfig, AuthStorage, PackageRecord } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
 import { PackageVersionExistsError } from './publication'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -17,6 +17,7 @@ import { handlePhpRoutes, createPhpStorage } from './php-routes'
 import type { PhpPackageStorage } from './php'
 import { getPackagistCount, searchPackagist, fetchFromPackagist } from './packagist-fallback'
 import { createS3Client, resolveStorageProvider } from './storage/provider'
+import { sanitizePackageName } from './storage/s3'
 import { isS3ObjectNotFound } from './storage/aws-client'
 import { augmentMetadataWithPkgx, isPendingMaterialize, materializeFromPkgx } from './pkgx-fallback'
 import { ObjectAnalytics } from './storage/object-analytics'
@@ -54,6 +55,18 @@ import {
   formatCount as chartFormatCount,
 } from './charts'
 import { AuthService, AuthError, createAuthStorage, isUserApiToken } from './auth'
+import {
+  canReadPackage,
+  grantPackageAccess,
+  isPrivatePackage,
+  listAccountGrants,
+  normalizeGrantEmail,
+  parseGrantExpiry,
+  restrictedAccessRequested,
+  revokePackageAccess,
+  viewGrant,
+  type PackageReader,
+} from './private-packages'
 import {
   enforceReadAccess,
   isSignupEmailAllowed,
@@ -690,7 +703,7 @@ export function createHandler(
     // CORS headers for browser access
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, HEAD, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     }
 
@@ -714,7 +727,9 @@ export function createHandler(
       // the web UI alike. On a public one this only runs plugin access policies.
       // It is deliberately the first thing after CORS: a route added below is
       // covered by default rather than by remembering to gate it.
-      const denied = await enforceReadAccess(req, url, { identify: identifyReader, corsHeaders })
+      // A package-scoped token is let through for reads of its own package only.
+      const readTarget = packageReadTarget(path, req.method)
+      const denied = await enforceReadAccess(req, url, { identify: r => identifyReader(r, readTarget), corsHeaders })
       if (denied) return denied
 
       // Plugins get first refusal on every request, so a fork can add or
@@ -1155,8 +1170,16 @@ export function createHandler(
         if (wantsJson) {
           const query = (url.searchParams.get('q') || '').slice(0, 256)
           const limit = Number.parseInt(url.searchParams.get('limit') || '20', 10)
-          const results = await registry.search(query, Math.min(limit, 50))
-          return Response.json({ results }, { headers: corsHeaders })
+          // Private packages appear only for callers who may read them, and a
+          // response that includes one is never shared through a cache.
+          const canSee = packageFilterFor(req, registry)
+          let includesPrivate = false
+          const results = await registry.search(query, Math.min(limit, 50), async (name) => {
+            const visible = await canSee(name)
+            if (visible) includesPrivate = true
+            return visible
+          })
+          return Response.json({ results }, { headers: includesPrivate ? { ...corsHeaders, ...PRIVATE_CACHE_HEADERS } : corsHeaders })
         }
         // Default to HTML for browsers
         const q = (url.searchParams.get('q') || '').slice(0, 256)
@@ -1233,7 +1256,7 @@ export function createHandler(
       // Analytics routes
       const analyticsMatch = path.match(/^\/analytics(?:\/(.+))?$/)
       if (analyticsMatch && req.method === 'GET') {
-        return handleAnalytics(analyticsMatch[1], url, analyticsStorage, corsHeaders)
+        return handleAnalytics(analyticsMatch[1], url, analyticsStorage, corsHeaders, req, registry)
       }
 
       // Short URL for commit packages (pkg-pr-new style)
@@ -1248,6 +1271,9 @@ export function createHandler(
         }
         const sha = shortCommitMatch[2]
         const safeName = pkgName.replaceAll('@', '').replaceAll('/', '-').replaceAll('..', '')
+        // Commit snapshots of a private package are as private as its releases.
+        if ((await packageExposure(req, registry, pkgName)) === 'hidden')
+          return Response.json({ error: 'Commit package not found' }, { status: 404, headers: corsHeaders })
 
         // Strategy: list S3 objects under commits/{sha} prefix and find a matching package.
         // This handles full SHA, short SHA, exact names, and aliases (e.g., "craft" -> "craft-native-craft").
@@ -1274,7 +1300,20 @@ export function createHandler(
               })
 
             if (matchKey) {
-              tarball = await registry.tarball.download(matchKey)
+              // An alias can resolve to a package other than the one named, so
+              // check the package the key actually belongs to as well.
+              const [, fullSha = '', dir = ''] = matchKey.split('/')
+              const owner = (await registry.metadata.getCommitPackages(fullSha).catch(() => []))
+                .find((p) => {
+                  try {
+                    return sanitizePackageName(p.name) === dir
+                  }
+                  catch {
+                    return false
+                  }
+                })
+              if (!owner || (await packageExposure(req, registry, owner.name)) !== 'hidden')
+                tarball = await registry.tarball.download(matchKey)
             }
           }
         }
@@ -1312,6 +1351,10 @@ export function createHandler(
         const sha = commitMatch[1]
         const packageName = commitMatch[2] ? decodeURIComponent(commitMatch[2]) : undefined
         const action = commitMatch[3]
+
+        // Commit snapshots of a private package are as private as its releases.
+        if (packageName && (await packageExposure(req, registry, packageName)) === 'hidden')
+          return Response.json({ error: 'Commit package not found' }, { status: 404, headers: corsHeaders })
 
         // GET /commits/{sha}/{name}/tarball
         if (packageName && action === 'tarball') {
@@ -1355,7 +1398,12 @@ export function createHandler(
         // GET /commits/{sha}
         if (!packageName) {
           const summary = await registry.getCommitPackages(sha)
-          if (!summary) {
+          if (summary) {
+            const canSee = packageFilterFor(req, registry)
+            const flags = await Promise.all(summary.packages.map(p => canSee(p.name)))
+            summary.packages = summary.packages.filter((_, i) => flags[i])
+          }
+          if (!summary || summary.packages.length === 0) {
             return Response.json(
               { error: 'No packages found for this commit' },
               { status: 404, headers: corsHeaders },
@@ -1433,10 +1481,24 @@ export function createHandler(
         }
         const rest = packageMatch[2]
 
+        // Private packages: grants and package tokens (owner or admin).
+        if (rest === 'access' || rest === 'tokens' || rest?.startsWith('tokens/')) {
+          const managed = await handlePackageAccessRoutes(req, registry, packageName, rest, corsHeaders)
+          if (managed) return managed
+        }
+
+        // Every read below answers a caller who may not see a private package
+        // exactly as it would for a package that doesn't exist — and never
+        // falls back to npm for it, which would hand them someone else's code.
+        const exposure = await packageExposure(req, registry, packageName)
+        const hidden = exposure === 'hidden'
+        const cacheHeaders = (shared: Record<string, string>): Record<string, string> =>
+          exposure === 'private' ? { ...corsHeaders, ...PRIVATE_CACHE_HEADERS } : { ...corsHeaders, ...shared }
+
         // GET /packages/{name}/versions
         if (rest === 'versions' && req.method === 'GET') {
-          let versions = await registry.listVersions(packageName)
-          if (versions.length === 0) {
+          let versions = hidden ? [] : await registry.listVersions(packageName)
+          if (versions.length === 0 && !hidden) {
             versions = await listBinaryPackageVersions(packageName, binaryStorage)
           }
           // Weak ETag over the version list: a publish changes the list and
@@ -1445,23 +1507,22 @@ export function createHandler(
           const etagBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(bodyJson))
           const etag = `W/"${Array.from(new Uint8Array(etagBuf)).slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('')}"`
           if (req.headers.get('if-none-match') === etag) {
-            return new Response(null, { status: 304, headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'public, max-age=60, must-revalidate' } })
+            return new Response(null, { status: 304, headers: { ...cacheHeaders({ 'Cache-Control': 'public, max-age=60, must-revalidate' }), ETag: etag } })
           }
           return new Response(bodyJson, {
             headers: {
-              ...corsHeaders,
-              'Content-Type': 'application/json; charset=utf-8',
-              'ETag': etag,
               // Short TTL + revalidate so a publish is visible within the minute
               // rather than blocked for the previous 5-minute cache window.
-              'Cache-Control': 'public, max-age=60, must-revalidate',
+              ...cacheHeaders({ 'Cache-Control': 'public, max-age=60, must-revalidate' }),
+              'Content-Type': 'application/json; charset=utf-8',
+              'ETag': etag,
             },
           })
         }
 
         // GET /packages/{name}/paywall — price, and whether the caller owns it
         if (rest === 'paywall' && req.method === 'GET') {
-          const paywall = await registry.metadata.getPaywall(packageName)
+          const paywall = hidden ? null : await registry.metadata.getPaywall(packageName)
           if (!paywall || !paywall.enabled) {
             return Response.json({ enabled: false }, { headers: corsHeaders })
           }
@@ -1541,6 +1602,8 @@ export function createHandler(
               { status: 401, headers: corsHeaders },
             )
           }
+          if (hidden)
+            return Response.json({ error: 'This package is not for sale' }, { status: 400, headers: corsHeaders })
           if (await isEntitled(registry.metadata, packageName, identity.userId)) {
             return Response.json({ owned: true, message: 'You already own this package' }, { headers: corsHeaders })
           }
@@ -1574,6 +1637,8 @@ export function createHandler(
               headers: { ...corsHeaders, Location: `/login?next=${encodeURIComponent(next)}` },
             })
           }
+          if (hidden)
+            return Response.json({ error: 'This package is not for sale' }, { status: 400, headers: corsHeaders })
           if (await isEntitled(registry.metadata, packageName, user.email)) {
             return new Response(null, {
               status: 302,
@@ -1620,6 +1685,8 @@ export function createHandler(
           if (!version || !/^[a-zA-Z0-9._+-]+$/.test(version) || version.length > 64) {
             return Response.json({ error: 'Invalid version' }, { status: 400, headers: corsHeaders })
           }
+          if (hidden)
+            return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
 
           // Paid packages: the publisher and the operator always get through,
           // buyers get through once their account is entitled, everyone else
@@ -1669,51 +1736,58 @@ export function createHandler(
           const etagHash = await crypto.subtle.digest('SHA-256', tarball)
           const etag = `"${Array.from(new Uint8Array(etagHash)).slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('')}"`
           const ifNoneMatch = req.headers.get('if-none-match')
+          // Immutable because (name, version) tarballs never change — but a
+          // private one must never land in a shared cache.
+          const tarballCache = cacheHeaders({ 'Cache-Control': 'public, max-age=31536000, immutable' })
           if (ifNoneMatch === etag) {
-            return new Response(null, { status: 304, headers: { ...corsHeaders, ETag: etag, 'Cache-Control': 'public, max-age=31536000, immutable' } })
+            return new Response(null, { status: 304, headers: { ...tarballCache, ETag: etag } })
           }
           return new Response(tarball, {
             headers: {
-              ...corsHeaders,
+              ...tarballCache,
               'Content-Type': 'application/gzip',
               'Content-Length': String(tarball.byteLength),
               'Content-Disposition': `attachment; filename="${packageName}-${version}.tgz"`,
               'ETag': etag,
-              // Immutable because (name, version) tarballs never change.
-              'Cache-Control': 'public, max-age=31536000, immutable',
             },
           })
         }
 
         // GET /packages/{name}/{version}
         if (rest && !rest.includes('/') && req.method === 'GET') {
-          const metadata = await registry.getPackage(packageName, rest)
-          if (!metadata) {
-            // Track all missing version requests, tagging whether the version is known
+          const metadata = hidden ? null : await registry.getPackage(packageName, rest)
+          // Track all missing version requests, tagging whether the version is
+          // known — including a hidden caller's, exactly as for a name nobody
+          // published (the public requested-versions list would otherwise tell
+          // the two apart), but never a permitted reader's: their misses would
+          // publish which versions of a private package people are asking for.
+          if (!metadata && exposure !== 'private') {
             analyticsStorage.trackMissingVersion(
               packageName,
               rest,
               req.headers.get('user-agent') || undefined,
               isKnownVersion(packageName, rest),
             ).catch(err => console.warn('Analytics tracking failed:', err))
+          }
+          if (!metadata) {
             return Response.json(
               { error: 'Package version not found' },
               { status: 404, headers: corsHeaders },
             )
           }
-          return Response.json(metadata, { headers: corsHeaders })
+          return Response.json(metadata, { headers: cacheHeaders({}) })
         }
 
         // GET /packages/{name}
         if (!rest && req.method === 'GET') {
-          const metadata = await registry.getPackage(packageName)
+          const metadata = hidden ? null : await registry.getPackage(packageName)
           if (!metadata) {
             return Response.json(
               { error: 'Package not found' },
               { status: 404, headers: corsHeaders },
             )
           }
-          return Response.json(metadata, { headers: corsHeaders })
+          return Response.json(metadata, { headers: cacheHeaders({}) })
         }
       }
 
@@ -1723,13 +1797,25 @@ export function createHandler(
 
       // Homepage
       if (path === '/' || path === '') {
-        return cachedPublicResponse('home', () => handleSiteHome(binaryStorage, analyticsStorage, zigPackageStorage))
+        return cachedPublicResponse('home', () => handleSiteHome(binaryStorage, analyticsStorage, zigPackageStorage, registry))
       }
 
       // Package detail page
       const sitePkgMatch = path.match(/^\/package\/(.+)$/)
       if (sitePkgMatch) {
         const name = decodeURIComponent(sitePkgMatch[1])
+        // Checked before the shared page cache: a private package's page is
+        // rendered per request for those who may see it and never cached, and
+        // everyone else gets the not-found page.
+        const exposure = await packageExposure(req, registry, _aliases.get(name) || name)
+        if (exposure === 'hidden')
+          return renderPackageNotFound(name)
+        if (exposure === 'private') {
+          const page = await handleSitePackage(name, analyticsStorage, binaryStorage, registry, zigPackageStorage, phpPackageStorage)
+          const headers = new Headers(page.headers)
+          for (const [key, value] of Object.entries(PRIVATE_CACHE_HEADERS)) headers.set(key, value)
+          return new Response(page.body, { status: page.status, headers })
+        }
         return cachedPublicResponse(`package:${name}`, () =>
           handleSitePackage(name, analyticsStorage, binaryStorage, registry, zigPackageStorage, phpPackageStorage))
       }
@@ -1739,12 +1825,12 @@ export function createHandler(
         const packagesParam = url.searchParams.get('packages') || ''
         const cacheKey = packagesParam.split(',').map(name => name.trim()).filter(Boolean).slice(0, 4).join(',')
         return cachedPublicResponse(`compare:${cacheKey}`, () =>
-          handleSiteCompare(packagesParam, analyticsStorage, binaryStorage))
+          handleSiteCompare(packagesParam, analyticsStorage, binaryStorage, registry))
       }
 
       // Stats page
       if (path === '/stats') {
-        return cachedPublicResponse('stats', () => handleSiteStats(analyticsStorage))
+        return cachedPublicResponse('stats', () => handleSiteStats(analyticsStorage, registry))
       }
 
       // Fonts — serve self-hosted font files
@@ -1803,7 +1889,10 @@ export function createHandler(
         const badgeType = badgeParts[0]
         const badgePkg = decodeURIComponent(badgeParts.slice(1).join('/'))
         if (!badgePkg) return Response.json({ error: 'Missing package name' }, { status: 400 })
-        return await handleBadge(badgeType, badgePkg, binaryStorage, analyticsStorage)
+        // A badge for a private package reads exactly like one for a package
+        // that doesn't exist — the README it would sit in may be public.
+        const badgeHidden = (await packageExposure(req, registry, badgePkg)) !== 'public'
+        return await handleBadge(badgeType, badgePkg, binaryStorage, badgeHidden ? undefined : analyticsStorage)
       }
 
       // Static pages
@@ -2009,6 +2098,18 @@ export function createServer(
 }
 
 /**
+ * A download timeline with nothing in it, shaped exactly like the one analytics
+ * returns for a package it has never seen.
+ */
+function emptyTimeline(days: number): Array<{ date: string, count: number }> {
+  const timeline: Array<{ date: string, count: number }> = []
+  const now = new Date()
+  for (let i = days - 1; i >= 0; i--)
+    timeline.push({ date: new Date(now.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0], count: 0 })
+  return timeline
+}
+
+/**
  * Handle analytics requests
  */
 async function handleAnalytics(
@@ -2016,7 +2117,16 @@ async function handleAnalytics(
   url: URL,
   analytics: AnalyticsStorage,
   corsHeaders: Record<string, string>,
+  req?: Request,
+  registry?: Registry,
 ): Promise<Response> {
+  // Per-package numbers for a private package read like a package with none to
+  // those who can't see it, and are never shared through a cache with anyone.
+  const exposureOf = async (name: string): Promise<PackageExposure> =>
+    req && registry ? packageExposure(req, registry, name) : 'public'
+  const headersFor = (exposure: PackageExposure): Record<string, string> =>
+    exposure === 'private' ? { ...corsHeaders, ...PRIVATE_CACHE_HEADERS } : corsHeaders
+
   // GET /analytics/{category}/{30d,90d,365d}
   const categoryMatch = path?.match(/^(install|install-on-request|build-error)\/(30|90|365)d$/)
   if (categoryMatch) {
@@ -2034,7 +2144,9 @@ async function handleAnalytics(
   // GET /analytics/top
   if (path === 'top' || !path) {
     const limit = Math.min(Number.parseInt(url.searchParams.get('limit') || '10', 10), 100)
-    const packages = await analytics.getTopPackages(limit)
+    // A public ranking: private packages never appear in it.
+    const ranked = await analytics.getTopPackages(Math.min(limit + 20, 120))
+    const packages = (await withoutPrivatePackages(registry, ranked)).slice(0, Math.max(limit, 0))
     return Response.json({ packages }, { headers: corsHeaders })
   }
 
@@ -2042,6 +2154,8 @@ async function handleAnalytics(
   if (path.endsWith('/requested-versions')) {
     const packageName = decodeURIComponent(path.replace('/requested-versions', ''))
     const limit = Math.min(Number.parseInt(url.searchParams.get('limit') || '20', 10), 100)
+    // Not hidden: a private package only ever records the misses of callers who
+    // couldn't see it — the same requests a never-published name would show.
     const requests = await analytics.getMissingVersionRequests(packageName, limit)
     return Response.json({ packageName, requests }, { headers: corsHeaders })
   }
@@ -2050,13 +2164,15 @@ async function handleAnalytics(
   if (path.endsWith('/timeline')) {
     const packageName = decodeURIComponent(path.replace('/timeline', ''))
     const days = Number.parseInt(url.searchParams.get('days') || '30', 10)
-    const timeline = await analytics.getDownloadTimeline(packageName, days)
-    return Response.json({ packageName, timeline }, { headers: corsHeaders })
+    const exposure = await exposureOf(packageName)
+    const timeline = exposure === 'hidden' ? emptyTimeline(days) : await analytics.getDownloadTimeline(packageName, days)
+    return Response.json({ packageName, timeline }, { headers: headersFor(exposure) })
   }
 
   // GET /analytics/{name}
   const packageName = decodeURIComponent(path)
-  const stats = await analytics.getPackageStats(packageName)
+  const exposure = await exposureOf(packageName)
+  const stats = exposure === 'hidden' ? null : await analytics.getPackageStats(packageName)
 
   if (!stats) {
     return Response.json(
@@ -2065,7 +2181,7 @@ async function handleAnalytics(
     )
   }
 
-  return Response.json(stats, { headers: corsHeaders })
+  return Response.json(stats, { headers: headersFor(exposure) })
 }
 
 /**
@@ -2232,12 +2348,16 @@ async function isAuthorizedRequest(req: Request): Promise<boolean> {
  * accepts read-only tokens, which are the ones you hand to consumers of a
  * private registry. Never throws: an unidentifiable caller is simply anonymous.
  */
-async function identifyReader(req: Request): Promise<ReaderIdentity> {
+async function identifyReader(req: Request, packageName?: string): Promise<ReaderIdentity> {
   try {
     const authHeader = req.headers.get('authorization')
     const token = extractBearerToken(authHeader)
     if (token && _authService) {
-      const result = await _authService.validateAccessToken(token, getRegistryToken() ?? '', 'read')
+      // Without `packageName` a package-scoped token is refused here, so it can
+      // never stand in for an account on the routes that call this bare.
+      const result = await _authService.validateAccessToken(token, getRegistryToken() ?? '', 'read', { packageName })
+      if (result.valid && result.packageScope)
+        return { authenticated: true, userId: null, packageScope: result.packageScope }
       if (result.valid)
         return { authenticated: true, userId: result.userId ?? null }
     }
@@ -2302,6 +2422,161 @@ async function isAdminRequest(req: Request): Promise<boolean> {
 }
 
 /**
+ * The package a read request is for, when it is one a package-scoped token may
+ * make: metadata, the version list, one version, or its tarball. Used to let
+ * such a token through the private-registry gate for its own package only.
+ */
+function packageReadTarget(path: string, method: string): string | undefined {
+  if (method !== 'GET' && method !== 'HEAD') return undefined
+  const match = path.match(/^\/packages\/(@[^/]+\/[^/]+|[^/]+)(?:\/(.+))?$/)
+  if (!match) return undefined
+  const rest = match[2]
+  if (rest && rest !== 'versions' && !/^[a-zA-Z0-9._+-]+(?:\/tarball)?$/.test(rest)) return undefined
+  try {
+    return decodeURIComponent(match[1])
+  }
+  catch {
+    return undefined
+  }
+}
+
+/**
+ * Who is reading, for private-package checks. Resolved once per request and
+ * reused across every package a listing has to filter.
+ */
+async function packageReaderFor(req: Request): Promise<PackageReader> {
+  const identity = await identifyReader(req)
+  const admin = identity.userId === '_admin' || await isAdminRequest(req)
+  const email = identity.userId && identity.userId !== '_admin' ? identity.userId : null
+  const token = extractBearerToken(req.headers.get('authorization'))
+  return {
+    admin,
+    email,
+    org: email ? await orgFor(email) : null,
+    canActFor: async (actor, owner) => _authService ? _authService.canActFor(actor, owner) : false,
+    scopedTo: async (packageName) => {
+      if (!token || !_authService || !isUserApiToken(token)) return false
+      const result = await _authService.validateAccessToken(token, '', 'read', { packageName })
+      return result.valid && !!result.packageScope?.includes(packageName)
+    },
+  }
+}
+
+/**
+ * How a package should be served to this caller:
+ *
+ *   'public'  — not private; serve as always.
+ *   'private' — private, and this caller may read it; serve without shared caching.
+ *   'hidden'  — private, and this caller may not; answer as if it didn't exist.
+ */
+type PackageExposure = 'public' | 'private' | 'hidden'
+
+async function packageExposure(
+  req: Request,
+  registry: Registry,
+  packageName: string,
+  reader?: PackageReader,
+): Promise<PackageExposure> {
+  // No catch: if the record can't be read, neither can its visibility, and the
+  // request fails rather than serving a private package as if it were public.
+  const record = await registry.getPublisherPackageRecord(packageName)
+  if (!isPrivatePackage(record)) return 'public'
+  return await canReadPackage(registry.metadata, record, reader ?? await packageReaderFor(req)) ? 'private' : 'hidden'
+}
+
+/** A filter for listings: may this caller see `name`? Public packages always pass. */
+function packageFilterFor(req: Request, registry: Registry): (name: string) => Promise<boolean> {
+  let reader: Promise<PackageReader> | null = null
+  return async (name) => {
+    const record = await registry.getPublisherPackageRecord(name).catch(() => undefined)
+    if (record === undefined) return false // unreadable: leave it out
+    if (!isPrivatePackage(record)) return true
+    if (!reader) reader = packageReaderFor(req)
+    return canReadPackage(registry.metadata, record, await reader)
+  }
+}
+
+/**
+ * Drop private packages from a public, shared listing (top packages, stats,
+ * cached pages). These are cached for everyone, so they can't be tailored to
+ * whoever happened to load them first: private packages are simply never in
+ * them.
+ */
+async function withoutPrivatePackages<T extends { name: string }>(registry: Registry | undefined, items: T[]): Promise<T[]> {
+  if (!registry) return items
+  // A record that can't be read is left out too: a listing can lose a row, but
+  // it must not gain a private one.
+  const flags = await Promise.all(items.map(item => registry.getPublisherPackageRecord(item.name)
+    .then(record => isPrivatePackage(record), () => true)))
+  return items.filter((_, i) => !flags[i])
+}
+
+/** Headers for a response that only some callers may see. */
+const PRIVATE_CACHE_HEADERS = { 'Cache-Control': 'private, no-store', 'Vary': 'Authorization, Cookie' }
+
+/**
+ * Authorize managing a package's access (grants and package tokens): the
+ * registry token, an admin session, or the owner — by session or by a token
+ * with publish permission — including members of the owner's team.
+ *
+ * A caller who can't see a private package gets the same 404 as a package that
+ * doesn't exist; one who can see it (say, through a grant) but doesn't own it
+ * gets a 403. A package nobody owns is managed by admins only.
+ */
+async function requirePackageManager(
+  req: Request,
+  registry: Registry,
+  packageName: string,
+  corsHeaders: Record<string, string>,
+): Promise<{ actor: string, record: PackageRecord } | Response> {
+  const notFound = () => Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
+  const admin = await isAdminRequest(req)
+
+  let actor: string | null = null
+  if (admin) {
+    const sessionToken = extractSessionToken(req)
+    const sessionUser = sessionToken && _authService ? await _authService.validateSession(sessionToken) : null
+    actor = sessionUser?.email ?? '_admin'
+  }
+  else {
+    const authHeader = req.headers.get('authorization')
+    const token = extractBearerToken(authHeader)
+    if (token && isUserApiToken(token)) {
+      const result = await validateToken(authHeader)
+      if (result.valid) actor = result.userId ?? null
+    }
+    if (!actor && _authService) {
+      const sessionToken = extractSessionToken(req)
+      const user = sessionToken ? await _authService.validateSession(sessionToken) : null
+      if (user) actor = user.email
+    }
+  }
+
+  if (!actor) {
+    return Response.json(
+      { error: 'Authentication required', hint: 'pantry token set --registry <registry-url>' },
+      { status: 401, headers: corsHeaders },
+    )
+  }
+
+  const record = await registry.getPublisherPackageRecord(packageName).catch(() => null)
+  if (!record) return notFound()
+  if (admin) return { actor, record }
+
+  const owns = !!record.publishedBy && (record.publishedBy === actor
+    || (!!_authService && await _authService.canActFor(actor, record.publishedBy)))
+  if (owns) return { actor, record }
+
+  if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req))))
+    return notFound()
+
+  return Response.json(
+    { error: 'Only the owner of this package can manage who has access to it' },
+    { status: 403, headers: corsHeaders },
+  )
+}
+
+/**
  * Refuse anyone but the package's publisher (or the operator).
  *
  * Pricing is not a publish operation: holding a valid publish token says you
@@ -2331,10 +2606,17 @@ async function requirePackageOwner(
   if (!record) {
     return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
   }
+  // An unowned private package (published with the registry token) is the
+  // operator's; "first to price it claims it" would hand it to a stranger.
+  if (!record.publishedBy && isPrivatePackage(record))
+    return await isAdminRequest(req) ? null : Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
   if (record.publishedBy && record.publishedBy !== identity.userId) {
     // A team member acts for the seat holder who owns the package.
     if (_authService && await _authService.canActFor(identity.userId, record.publishedBy))
       return null
+    // Someone who can't see a private package doesn't learn that it exists.
+    if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req))))
+      return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
     return Response.json(
       { error: 'Only the publisher of this package can change its price' },
       { status: 403, headers: corsHeaders },
@@ -2828,6 +3110,142 @@ async function handleEnterpriseRoutes(
   return null
 }
 
+/** The longest a package token may live, in days. */
+const MAX_PACKAGE_TOKEN_DAYS = 3650
+
+/**
+ * Grants and package tokens for one package (see `private-packages.ts`):
+ *
+ *   GET    /packages/{name}/access         — grants, and package tokens as `token:<id>`
+ *   PUT    /packages/{name}/access         {email, expiresAt?} — grant or re-date
+ *   DELETE /packages/{name}/access         {email}             — revoke
+ *   POST   /packages/{name}/tokens         {name, expiresInDays?} — mint (shown once)
+ *   GET    /packages/{name}/tokens         — list, without secrets
+ *   DELETE /packages/{name}/tokens/{id}    — revoke
+ *
+ * Owner or admin only (`requirePackageManager`). Returns null for a method or
+ * path that isn't one of these, so the caller's 404 applies.
+ */
+async function handlePackageAccessRoutes(
+  req: Request,
+  registry: Registry,
+  packageName: string,
+  rest: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response | null> {
+  const isAccess = rest === 'access' && ['GET', 'PUT', 'DELETE'].includes(req.method)
+  const isTokens = rest === 'tokens' && ['GET', 'POST'].includes(req.method)
+  const tokenId = rest.startsWith('tokens/') && req.method === 'DELETE' ? rest.slice('tokens/'.length) : null
+  if (!isAccess && !isTokens && !tokenId) return null
+
+  const headers = { ...corsHeaders, 'Cache-Control': 'no-store' }
+  if (!_authService)
+    return Response.json({ error: 'Accounts are not enabled on this registry' }, { status: 501, headers })
+  const auth = _authService
+
+  const managed = await requirePackageManager(req, registry, packageName, headers)
+  if (managed instanceof Response) return managed
+
+  const readBody = async (): Promise<Record<string, unknown> | Response> => {
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body))
+      return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers })
+    return body as Record<string, unknown>
+  }
+
+  if (isAccess && req.method === 'GET') {
+    const grants = await listAccountGrants(registry.metadata, packageName)
+    const views = await Promise.all(grants.map(async (grant) => {
+      const account = await auth.findUser(grant.token.slice('user:'.length)).catch(() => null)
+      return viewGrant(grant, account?.name)
+    }))
+    const tokens = await auth.listPackageTokens(packageName)
+    return Response.json({
+      grants: [
+        ...views.filter(view => view !== null),
+        ...tokens.map(token => ({
+          subject: `token:${token.id}`,
+          name: token.name,
+          expiresAt: token.expiresAt || null,
+          createdAt: token.createdAt,
+        })),
+      ],
+    }, { headers })
+  }
+
+  if (isAccess && req.method === 'PUT') {
+    const body = await readBody()
+    if (body instanceof Response) return body
+    const email = normalizeGrantEmail(body.email)
+    if (!email)
+      return Response.json({ error: 'A valid email is required' }, { status: 400, headers })
+    const expiry = parseGrantExpiry(body.expiresAt)
+    if ('error' in expiry)
+      return Response.json({ error: expiry.error }, { status: 400, headers })
+    const grant = await grantPackageAccess(registry.metadata, packageName, email, {
+      expiresAt: expiry.expiresAt,
+      grantedBy: managed.actor,
+    })
+    const account = await auth.findUser(email).catch(() => null)
+    return Response.json({ grant: viewGrant(grant, account?.name) }, { headers })
+  }
+
+  if (isAccess && req.method === 'DELETE') {
+    const body = await readBody()
+    if (body instanceof Response) return body
+    const email = normalizeGrantEmail(body.email)
+    if (!email)
+      return Response.json({ error: 'A valid email is required' }, { status: 400, headers })
+    if (!(await revokePackageAccess(registry.metadata, packageName, email)))
+      return Response.json({ error: `${email} has no access grant on ${packageName}` }, { status: 404, headers })
+    return Response.json({ revoked: true }, { headers })
+  }
+
+  if (isTokens && req.method === 'GET') {
+    const tokens = await auth.listPackageTokens(packageName)
+    return Response.json({
+      tokens: tokens.map(token => ({
+        id: token.id,
+        name: token.name,
+        expiresAt: token.expiresAt || null,
+        createdAt: token.createdAt,
+        ...(token.lastUsedAt ? { lastUsedAt: token.lastUsedAt } : {}),
+      })),
+    }, { headers })
+  }
+
+  if (isTokens && req.method === 'POST') {
+    const body = await readBody()
+    if (body instanceof Response) return body
+    const name = typeof body.name === 'string' ? body.name : ''
+    const days = body.expiresInDays
+    if (days !== undefined && days !== null
+      && (typeof days !== 'number' || !Number.isFinite(days) || days <= 0 || days > MAX_PACKAGE_TOKEN_DAYS)) {
+      return Response.json({ error: `expiresInDays must be a number from 1 to ${MAX_PACKAGE_TOKEN_DAYS}` }, { status: 400, headers })
+    }
+    try {
+      const { token, info } = await auth.createPackageToken(packageName, name, {
+        createdBy: managed.actor,
+        expiresInDays: typeof days === 'number' ? days : undefined,
+      })
+      return Response.json({ token, id: info.id, name: info.name, expiresAt: info.expiresAt || null }, { status: 201, headers })
+    }
+    catch (err: any) {
+      return Response.json({ error: err.message }, { status: err instanceof AuthError ? err.status : 400, headers })
+    }
+  }
+
+  // DELETE /packages/{name}/tokens/{id}
+  let id = tokenId!
+  try {
+    id = decodeURIComponent(id)
+  }
+  catch { /* use it as sent */ }
+  if (!(await auth.deletePackageToken(packageName, id)))
+    return Response.json({ error: 'No such token on this package' }, { status: 404, headers })
+  return Response.json({ revoked: true }, { headers })
+}
+
 /** Resolve paid-package access for a request, including who published it. */
 async function resolvePackageAccess(
   req: Request,
@@ -2843,6 +3261,17 @@ async function resolvePackageAccess(
 
   const identity = await identifyReader(req)
   const record = await registry.getPublisherPackageRecord(packageName)
+
+  // A package token is the owner's own credential, handed to a client: it
+  // installs what the owner could, price or no price.
+  if (!identity.authenticated && _authService) {
+    const token = extractBearerToken(req.headers.get('authorization'))
+    if (token && isUserApiToken(token)) {
+      const scoped = await _authService.validateAccessToken(token, '', 'read', { packageName })
+      if (scoped.valid && scoped.packageScope?.includes(packageName))
+        return { allowed: true, paywall, reason: 'entitled' }
+    }
+  }
 
   return resolveAccess(
     registry.metadata,
@@ -3305,12 +3734,15 @@ async function handlePublish(
     )
     if (security instanceof Response) return security
     metadata.malwareScan = security
-    await registry.publish(metadata, tarball, publisherId)
+    const visibility = await publishVisibility(registry, metadata, tarball, authResult.userId, corsHeaders)
+    if (visibility instanceof Response) return visibility
+    await registry.publish(metadata, tarball, publisherId, visibility.settingsIfNew ? { settingsIfNew: visibility.settingsIfNew } : undefined)
 
     return Response.json(
       {
         success: true,
         message: `Published ${metadata.name}@${metadata.version}`,
+        visibility: visibility.visibility,
         scan: publicScanResult(security),
       },
       { status: 201, headers: corsHeaders },
@@ -3379,12 +3811,15 @@ async function handlePublish(
     )
     if (security instanceof Response) return security
     metadata.malwareScan = security
-    await registry.publish(metadata, tarball, publisherIdJson)
+    const visibility = await publishVisibility(registry, metadata, tarball, authResult.userId, corsHeaders)
+    if (visibility instanceof Response) return visibility
+    await registry.publish(metadata, tarball, publisherIdJson, visibility.settingsIfNew ? { settingsIfNew: visibility.settingsIfNew } : undefined)
 
     return Response.json(
       {
         success: true,
         message: `Published ${metadata.name}@${metadata.version}`,
+        visibility: visibility.visibility,
         scan: publicScanResult(security),
       },
       { status: 201, headers: corsHeaders },
@@ -3395,6 +3830,45 @@ async function handlePublish(
     { error: 'Unsupported content type' },
     { status: 415, headers: corsHeaders },
   )
+}
+
+/**
+ * The visibility a publish lands with.
+ *
+ * `publishConfig.access: "restricted"` makes a package private, but only on its
+ * first publish: after that the package keeps whatever it has, and only the
+ * settings endpoint changes it. In particular a later `"access": "public"` —
+ * say, a manifest copied from an open-source sibling — never quietly publishes
+ * a private package to the world.
+ *
+ * Private packages are a paid-plan feature, like unlisted ones; the operator is
+ * exempt. Refusing is the only safe answer to an unentitled restricted publish:
+ * falling back to public would publish what the author said not to.
+ */
+async function publishVisibility(
+  registry: Registry,
+  metadata: any,
+  tarball: ArrayBuffer,
+  userId: string | undefined,
+  corsHeaders: Record<string, string>,
+): Promise<{ visibility: 'public' | 'unlisted' | 'private', settingsIfNew?: { visibility: 'private' } } | Response> {
+  const existing = await registry.getPublisherPackageRecord(metadata.name).catch(() => null)
+  if (existing) return { visibility: existing.settings?.visibility || 'public' }
+  if (!restrictedAccessRequested(metadata, tarball)) return { visibility: 'public' }
+
+  if (userId && userId !== '_admin') {
+    // The seat holder's plan covers their team, as it does for artifact size.
+    const tier = await tierForUser(await orgFor(userId))
+    if (!tierDefinition(tier).privatePackages) {
+      return Response.json({
+        error: 'Private packages are a Pro feature',
+        hint: 'Subscribe at /pricing, or with: pantry subscribe pro. Or remove "publishConfig.access": "restricted" to publish publicly.',
+        tier,
+      }, { status: 402, headers: corsHeaders })
+    }
+  }
+
+  return { visibility: 'private', settingsIfNew: { visibility: 'private' } }
 }
 
 async function validateAndScanCorePackage(
@@ -4037,10 +4511,12 @@ function isSiteAdmin(user: SessionUser): boolean {
   return user.role === 'admin'
 }
 
-async function canManagePackage(pkg: { publishedBy?: string } | null, user: SessionUser): Promise<boolean> {
+async function canManagePackage(pkg: Pick<PackageRecord, 'publishedBy' | 'settings'> | null, user: SessionUser): Promise<boolean> {
   if (!pkg) return false
   if (isSiteAdmin(user)) return true
-  if (!pkg.publishedBy) return true
+  // An unclaimed package is anyone's to claim — except a private one, which
+  // only the operator could have published and only the operator manages.
+  if (!pkg.publishedBy) return !isPrivatePackage(pkg)
   if (pkg.publishedBy === user.email) return true
   // Team members manage the seat holder's packages as if they were their own.
   return _authService ? _authService.canActFor(user.email, pkg.publishedBy) : false
@@ -4193,14 +4669,20 @@ async function handlePublisherApi(
         await registry.claimPublisherPackage(name, user.email)
       }
 
-      // Hiding a package from search is a paid feature. Refuse the change
+      // Hiding a package — from search (unlisted) or from everyone but the
+      // people you choose (private) — is a paid feature. Refuse the change
       // rather than silently saving a setting that wouldn't be honoured.
       const settings = body.settings as Record<string, unknown> | undefined
-      if (settings?.visibility === 'unlisted' && !admin) {
-        const tier = await auth.getTier(user.email)
+      if (settings && 'visibility' in settings && !['public', 'unlisted', 'private'].includes(settings.visibility as string)) {
+        return Response.json({ error: 'visibility must be public, unlisted or private' }, { status: 400, headers: corsHeaders })
+      }
+      const hiding = settings?.visibility === 'unlisted' || settings?.visibility === 'private'
+      if (hiding && settings?.visibility !== record.settings?.visibility && !admin) {
+        // The owner's plan, so a team member gets what the seat holder pays for.
+        const tier = await auth.getTier(record.publishedBy || user.email)
         if (!tierDefinition(tier).privatePackages) {
           return Response.json({
-            error: 'Unlisted packages are a Pro feature',
+            error: `${settings?.visibility === 'private' ? 'Private' : 'Unlisted'} packages are a Pro feature`,
             hint: 'Subscribe at /pricing, or with: pantry subscribe pro',
             tier,
           }, { status: 402, headers: corsHeaders })
@@ -5886,7 +6368,7 @@ async function listBinaryPackageVersions(domain: string, storage?: BinaryStorage
   })
 }
 
-async function handleSiteHome(binaryStorage?: BinaryStorage, analyticsStorage?: AnalyticsStorage, zigStorage?: ZigPackageStorage): Promise<Response> {
+async function handleSiteHome(binaryStorage?: BinaryStorage, analyticsStorage?: AnalyticsStorage, zigStorage?: ZigPackageStorage, registry?: Registry): Promise<Response> {
   // Fetch featured package metadata + sparkline data in parallel
   const metaResults = await Promise.allSettled(
     FEATURED_PACKAGES.map(async (pkg) => {
@@ -5915,10 +6397,11 @@ async function handleSiteHome(binaryStorage?: BinaryStorage, analyticsStorage?: 
   let stats: Record<string, any> = {}
   if (analyticsStorage) {
     try {
-      const [top, installAnalytics] = await Promise.all([
-        analyticsStorage.getTopPackages(10),
+      const [ranked, installAnalytics] = await Promise.all([
+        analyticsStorage.getTopPackages(30),
         analyticsStorage.getInstallAnalytics(30).catch(() => null),
       ])
+      const top = (await withoutPrivatePackages(registry, ranked)).slice(0, 10)
 
       const totalDownloads = top.reduce((sum, p) => sum + p.downloads, 0)
 
@@ -6156,6 +6639,35 @@ async function handleSiteSearch(
   return htmlResponse(html)
 }
 
+/**
+ * The package page for a name with nothing behind it. Also what a caller who
+ * may not see a private package gets, so the two are indistinguishable.
+ */
+async function renderPackageNotFound(name: string): Promise<Response> {
+  const html = await renderSitePage('package.stx', {
+    isPaid: false,
+    priceLabel: '',
+    buyUrl: '',
+    freeVersionList: '',
+    hasFreeVersions: false,
+    name,
+    safeName: escapeHtml(name),
+    encodedName: encodeURIComponent(name),
+    notFound: true,
+    isZigPackage: false,
+    isPhpPackage: false,
+    zigFetchUrl: '',
+    meta: null,
+    latestVersion: '',
+    versions: [],
+    platforms: [],
+    stats: null,
+    timeline: [],
+    title: `${name} - not found`,
+  })
+  return htmlResponse(html, 404)
+}
+
 async function handleSitePackage(
   name: string,
   analytics: AnalyticsStorage,
@@ -6214,23 +6726,8 @@ async function handleSitePackage(
     packagistPkg = await fetchFromPackagist(name).catch(() => null)
   }
 
-  if (!meta && !pkgInfo && !zigPkg && !phpPkg && !packagistPkg) {
-    const html = await renderPackagePage({
-      name, safeName, encodedName,
-      notFound: true,
-      isZigPackage: false,
-      isPhpPackage: false,
-      zigFetchUrl: '',
-      meta: null,
-      latestVersion: '',
-      versions: [],
-      platforms: [],
-      stats: null,
-      timeline: [],
-      title: `${name} - not found`,
-    })
-    return htmlResponse(html, 404)
-  }
+  if (!meta && !pkgInfo && !zigPkg && !phpPkg && !packagistPkg)
+    return renderPackageNotFound(name)
 
   // Zig-only package (no S3 binary metadata or npm entry)
   if (!meta && !pkgInfo && zigPkg) {
@@ -6473,6 +6970,7 @@ async function handleSiteCompare(
   packagesParam: string,
   analyticsStorage: AnalyticsStorage,
   binaryStorage?: BinaryStorage,
+  registry?: Registry,
 ): Promise<Response> {
   const packageNames = packagesParam
     .split(',')
@@ -6494,12 +6992,17 @@ async function handleSiteCompare(
   }
 
   // Fetch data for all packages in parallel
+  // The page is cached for everyone, so a private package compares exactly
+  // like a name nobody has published: no stats, an empty timeline.
+  const publicNames = new Set((await withoutPrivatePackages(registry, packageNames.map(name => ({ name }))))
+    .map(p => p.name))
   const pkgDataResults = await Promise.allSettled(
     packageNames.map(async (name) => {
+      const hidden = !publicNames.has(name)
       const [meta, pkgStats, timeline] = await Promise.all([
         fetchPackageMetadata(name, binaryStorage),
-        analyticsStorage.getPackageStats(name),
-        analyticsStorage.getDownloadTimeline(name, 30).catch(() => []),
+        hidden ? null : analyticsStorage.getPackageStats(name),
+        hidden ? emptyTimeline(30) : analyticsStorage.getDownloadTimeline(name, 30).catch(() => []),
       ])
 
       const versions = meta?.versions ? Object.keys(meta.versions) : []
@@ -6598,12 +7101,15 @@ async function handleSiteCompare(
 // eslint-disable-next-line no-unused-vars
 async function handleSiteStats(
   analyticsStorage: AnalyticsStorage,
+  registry?: Registry,
 ): Promise<Response> {
-  const [topPkgs, installAnalytics30, installAnalytics90] = await Promise.all([
-    analyticsStorage.getTopPackages(25),
+  const [rankedPkgs, installAnalytics30, installAnalytics90] = await Promise.all([
+    // Over-fetch so the list stays full after private packages are dropped.
+    analyticsStorage.getTopPackages(45),
     analyticsStorage.getInstallAnalytics(30).catch(() => null),
     analyticsStorage.getInstallAnalytics(90).catch(() => null),
   ])
+  const topPkgs = (await withoutPrivatePackages(registry, rankedPkgs)).slice(0, 25)
 
   const totalDownloads30 = topPkgs.reduce((sum, p) => sum + p.downloads, 0)
   const totalDownloads90 = (installAnalytics90 as any)?.total_count || totalDownloads30

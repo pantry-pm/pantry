@@ -67,6 +67,7 @@
             <select id="visibility" class="bg-[var(--bg)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" style="color: var(--fg);">
               <option value="public">Public — listed in search</option>
               <option value="unlisted">Unlisted — direct link only</option>
+              <option value="private">Private — only you and people you grant</option>
             </select>
           </div>
           <label class="flex items-center gap-2 text-sm mt-4 cursor-pointer" style="color: var(--fg-muted);">

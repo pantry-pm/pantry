@@ -131,6 +131,11 @@ export function isPublicPath(path: string, env: Env = process.env): boolean {
 export interface ReaderIdentity {
   authenticated: boolean
   userId: string | null
+  /**
+   * Set when the credential is a package-scoped read token. It authenticates
+   * only requests for those packages, and carries no account (`userId` null).
+   */
+  packageScope?: string[]
 }
 
 export interface ReadAccessOptions {

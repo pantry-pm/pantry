@@ -58,6 +58,19 @@ export function isUserApiToken(token: string): boolean {
   return token.startsWith(TOKEN_PREFIX)
 }
 
+/**
+ * The owner recorded on a package-scoped token.
+ *
+ * Package tokens belong to the package rather than to whoever minted them, so
+ * they survive that person leaving the team, and listing a package's tokens is
+ * the same single lookup as listing an account's. The leading `@` and the
+ * second `@` make it impossible to sign up as this "account": the email check
+ * allows exactly one `@`, with something before it.
+ */
+export function packageTokenOwner(packageName: string): string {
+  return `@package:${packageName}`
+}
+
 // ===========================================================================
 // Password Helpers (Bun.password — Argon2id)
 // ===========================================================================
@@ -234,7 +247,14 @@ export class AuthService {
   async createApiToken(
     userId: string,
     name: string,
-    options?: { permissions?: ('publish' | 'read')[], expiresInDays?: number, binaryPublishDomains?: string[] },
+    options?: {
+      permissions?: ('publish' | 'read')[]
+      expiresInDays?: number
+      binaryPublishDomains?: string[]
+      /** Confine the token to reading these packages (see `createPackageToken`). */
+      packageScope?: string[]
+      createdBy?: string
+    },
   ): Promise<{ token: string, info: ApiTokenInfo }> {
     if (!name || name.trim().length === 0) {
       throw new AuthError('Token name is required', 400)
@@ -248,6 +268,15 @@ export class AuthService {
       throw new AuthError('Native publication requires 1 to 20 exact binary package domains', 400)
     if (domains && !options?.permissions?.includes('publish'))
       throw new AuthError('Native publication grants require publish permission', 400)
+    const scope = options?.packageScope
+    if (scope !== undefined) {
+      if (!Array.isArray(scope) || !scope.length || scope.some(name => typeof name !== 'string' || !name))
+        throw new AuthError('A package token needs at least one package', 400)
+      // A scoped token reads its packages and does nothing else. Refuse rather
+      // than quietly drop a wider permission someone asked for.
+      if (options?.permissions?.some(p => p !== 'read') || domains)
+        throw new AuthError('Package tokens are read-only', 400)
+    }
     const rawToken = generateApiToken()
     const now = new Date().toISOString()
     const expiresAt = options?.expiresInDays
@@ -259,8 +288,10 @@ export class AuthService {
       name: name.trim(),
       userId,
       tokenHash: hashToken(rawToken),
-      permissions: options?.permissions || ['publish', 'read'],
+      permissions: scope ? ['read'] : options?.permissions || ['publish', 'read'],
       ...(domains ? { binaryPublishDomains: [...new Set(domains)] } : {}),
+      ...(scope ? { packageScope: [...new Set(scope)] } : {}),
+      ...(options?.createdBy ? { createdBy: options.createdBy } : {}),
       createdAt: now,
       expiresAt,
     }
@@ -274,10 +305,42 @@ export class AuthService {
         name: apiToken.name,
         permissions: apiToken.permissions,
         ...(apiToken.binaryPublishDomains ? { binaryPublishDomains: [...apiToken.binaryPublishDomains] } : {}),
+        ...(apiToken.packageScope ? { packageScope: [...apiToken.packageScope] } : {}),
         createdAt: apiToken.createdAt,
         expiresAt: apiToken.expiresAt,
       },
     }
+  }
+
+  /**
+   * Mint a read-only token confined to one package — what a client's CI holds
+   * to install a private package. Stored under the package, not the minter.
+   */
+  async createPackageToken(
+    packageName: string,
+    name: string,
+    options: { createdBy: string, expiresInDays?: number },
+  ): Promise<{ token: string, info: ApiTokenInfo }> {
+    return this.createApiToken(packageTokenOwner(packageName), name, {
+      permissions: ['read'],
+      packageScope: [packageName],
+      createdBy: options.createdBy,
+      expiresInDays: options.expiresInDays,
+    })
+  }
+
+  /** A package's tokens, without hashes. */
+  async listPackageTokens(packageName: string): Promise<ApiTokenInfo[]> {
+    return this.listApiTokens(packageTokenOwner(packageName))
+  }
+
+  /** Revoke a package token. False when the package has no token with that id. */
+  async deletePackageToken(packageName: string, tokenId: string): Promise<boolean> {
+    const owner = packageTokenOwner(packageName)
+    const tokens = await this.storage.listApiTokens(owner)
+    if (!tokens.some(t => t.id === tokenId)) return false
+    await this.storage.deleteApiToken(owner, tokenId)
+    return true
   }
 
   /** List all API tokens for a user (without hashes). */
@@ -288,6 +351,7 @@ export class AuthService {
       name: t.name,
       permissions: t.permissions,
       ...(t.binaryPublishDomains ? { binaryPublishDomains: [...t.binaryPublishDomains] } : {}),
+      ...(t.packageScope ? { packageScope: [...t.packageScope] } : {}),
       createdAt: t.createdAt,
       lastUsedAt: t.lastUsedAt,
       expiresAt: t.expiresAt,
@@ -315,11 +379,17 @@ export class AuthService {
    * one pipeline is friction with no security benefit. A `read` token, on the
    * other hand, can only download — which is exactly what you hand to a
    * consumer of a private registry.
+   *
+   * A package-scoped token is valid only for `read` and only when the caller
+   * names a package in its scope. Every path that doesn't pass `packageName` —
+   * publishing, account routes, the registry-wide gate — therefore refuses it
+   * by default, which is the direction that fails safe.
    */
   async validateAccessToken(
     token: string,
     legacyToken: string,
     permission: 'publish' | 'read',
+    options?: { packageName?: string },
   ): Promise<TokenValidationResult> {
     // Legacy admin token check (constant-time comparison to prevent timing attacks)
     if (legacyToken) {
@@ -353,10 +423,24 @@ export class AuthService {
         return { valid: false, error: `Token does not have ${permission} permission` }
       }
 
+      if (tokenRecord.packageScope) {
+        const inScope = permission === 'read'
+          && !!options?.packageName
+          && tokenRecord.packageScope.includes(options.packageName)
+        if (!inScope)
+          return { valid: false, error: 'Token is limited to reading specific packages' }
+      }
+
       // Update last-used timestamp (fire-and-forget)
       this.storage.updateTokenLastUsed(tokenRecord.tokenHash).catch(err => console.warn('Failed to update token last-used:', err))
 
-      return { valid: true, userId: tokenRecord.userId, tokenId: tokenRecord.id, binaryPublishDomains: tokenRecord.binaryPublishDomains }
+      return {
+        valid: true,
+        userId: tokenRecord.userId,
+        tokenId: tokenRecord.id,
+        binaryPublishDomains: tokenRecord.binaryPublishDomains,
+        ...(tokenRecord.packageScope ? { packageScope: [...tokenRecord.packageScope] } : {}),
+      }
     }
 
     // Not a recognized token format
@@ -779,6 +863,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
         tokenHash: token.tokenHash,
         permissions: token.permissions,
         ...(token.binaryPublishDomains ? { binaryPublishDomains: token.binaryPublishDomains } : {}),
+        ...(token.packageScope ? { packageScope: token.packageScope } : {}),
+        ...(token.createdBy ? { createdBy: token.createdBy } : {}),
         createdAt: token.createdAt,
         ...(token.lastUsedAt ? { lastUsedAt: token.lastUsedAt } : {}),
         ...(token.expiresAt ? { expiresAt: token.expiresAt } : {}),
@@ -797,6 +883,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
         tokenHash: token.tokenHash,
         permissions: token.permissions,
         ...(token.binaryPublishDomains ? { binaryPublishDomains: token.binaryPublishDomains } : {}),
+        ...(token.packageScope ? { packageScope: token.packageScope } : {}),
+        ...(token.createdBy ? { createdBy: token.createdBy } : {}),
         createdAt: token.createdAt,
         ...(token.lastUsedAt ? { lastUsedAt: token.lastUsedAt } : {}),
         ...(token.expiresAt ? { expiresAt: token.expiresAt } : {}),
@@ -822,6 +910,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
       tokenHash: data.tokenHash,
       permissions: data.permissions || ['publish', 'read'],
       ...(data.binaryPublishDomains ? { binaryPublishDomains: data.binaryPublishDomains } : {}),
+      ...(data.packageScope ? { packageScope: data.packageScope } : {}),
+      ...(data.createdBy ? { createdBy: data.createdBy } : {}),
       createdAt: data.createdAt,
       lastUsedAt: data.lastUsedAt || undefined,
       expiresAt: data.expiresAt || undefined,
@@ -847,6 +937,8 @@ export class DynamoDBAuthStorage implements AuthStorage {
         tokenHash: data.tokenHash,
         permissions: data.permissions || ['publish', 'read'],
       ...(data.binaryPublishDomains ? { binaryPublishDomains: data.binaryPublishDomains } : {}),
+      ...(data.packageScope ? { packageScope: data.packageScope } : {}),
+      ...(data.createdBy ? { createdBy: data.createdBy } : {}),
         createdAt: data.createdAt,
         lastUsedAt: data.lastUsedAt || undefined,
         expiresAt: data.expiresAt || undefined,
