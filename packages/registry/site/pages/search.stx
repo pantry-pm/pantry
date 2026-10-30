@@ -142,6 +142,9 @@
           @if (result.version)
           <span class="font-mono" style="font-size: 0.6875rem; color: var(--fg-subtle);">{{ result.version }}</span>
           @endif
+          @if (result.forSale)
+          <span class="rounded px-1.5 py-0.5" style="font-size: 0.625rem; color: var(--accent); border: 1px solid var(--accent);">for sale · {{ result.formattedPrice }}</span>
+          @endif
         </div>
         @if (result.description)
         <p style="font-size: 0.8125rem; color: var(--fg-muted);">{{ result.description }}</p>
@@ -192,7 +195,12 @@
             </td>
             <td style="color: var(--fg-muted); max-width: 20rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ result.description }}</td>
             <td class="col-downloads">{{ result.downloads }}</td>
-            <td class="col-version" style="text-align: right;">{{ result.version }}</td>
+            <td class="col-version" style="text-align: right;">
+              @if (result.forSale)
+              <span style="color: var(--accent);">for sale · {{ result.formattedPrice }}</span>
+              @endif
+              {{ result.version }}
+            </td>
             <td class="col-platform hidden sm:table-cell">
               @if (result.platforms)
               <div class="flex flex-wrap gap-1 justify-end">
@@ -236,6 +244,9 @@
             @endif
             @if (result.version)
             <span class="font-mono" style="font-size: 0.6875rem; color: var(--fg-subtle);">{{ result.version }}</span>
+            @endif
+            @if (result.forSale)
+            <span class="rounded px-1.5 py-0.5" style="font-size: 0.625rem; color: var(--accent); border: 1px solid var(--accent);">for sale · {{ result.formattedPrice }}</span>
             @endif
           </div>
         </div>

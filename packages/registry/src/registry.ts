@@ -171,17 +171,27 @@ export class Registry {
   /**
    * Search for packages.
    *
-   * Private packages are left out unless `canRead` says this caller may see
-   * them; with no `canRead`, they are always left out.
+   * A private package is left out unless `presentPrivate` returns what this
+   * caller may see of it: the full row, a reduced one (a storefront for a
+   * package that is for sale), or null. With no `presentPrivate`, private
+   * packages are always left out.
    */
-  async search(query: string, limit = 20, canRead?: (name: string) => Promise<boolean>): Promise<SearchResult[]> {
+  async search(
+    query: string,
+    limit = 20,
+    presentPrivate?: (result: SearchResult) => Promise<SearchResult | null>,
+  ): Promise<SearchResult[]> {
     const safeQuery = query.slice(0, 256)
     const safeLimit = Math.min(Math.max(limit, 1), 100)
     const results: SearchResult[] = []
     for (const result of await this.metadataStorage.search(safeQuery, safeLimit)) {
-      const { private: isPrivate, ...visible } = result
-      if (isPrivate && !(canRead && await canRead(result.name))) continue
-      results.push(visible)
+      const { private: isPrivate, ...row } = result
+      if (!isPrivate) {
+        results.push(row)
+        continue
+      }
+      const shown = presentPrivate ? await presentPrivate(row) : null
+      if (shown) results.push(shown)
     }
 
     // If we have enough results or npm fallback is disabled, return

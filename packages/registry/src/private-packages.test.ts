@@ -21,6 +21,15 @@ import { DynamoDBMetadataStorage } from './storage/dynamodb-metadata'
 import { getAvailablePort } from './test-utils'
 
 const ADMIN_TOKEN = 'ptry_admin_token_for_private_package_tests'
+const WEBHOOK_SECRET = 'whsec_private_package_tests'
+
+/** Sign a webhook body the way Stripe does, so the real verifier runs. */
+async function stripeSignature(body: string): Promise<string> {
+  const timestamp = Math.floor(Date.now() / 1000)
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${body}`))
+  return `t=${timestamp},v1=${Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')}`
+}
 const PRIVATE = '@hq/platform'
 const ENCODED = encodeURIComponent(PRIVATE)
 const MISSING = '@hq/never-published'
@@ -58,7 +67,7 @@ describe('private packages', () => {
   let authStorage: InMemoryAuthStorage
   let analytics: InMemoryAnalytics
   const savedEnv: Record<string, string | undefined> = {}
-  const ENV_KEYS = ['PANTRY_REGISTRY_TOKEN', 'PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'REGISTRY_VISIBILITY', 'BASE_URL']
+  const ENV_KEYS = ['PANTRY_REGISTRY_TOKEN', 'PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'REGISTRY_VISIBILITY', 'BASE_URL']
 
   let ownerToken: string
   let ownerReadToken: string
@@ -195,6 +204,7 @@ describe('private packages', () => {
     process.env.PANTRY_REGISTRY_TOKEN = ADMIN_TOKEN
     delete process.env.PANTRY_TOKEN
     delete process.env.STRIPE_SECRET_KEY
+    process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET
     delete process.env.REGISTRY_VISIBILITY
     delete process.env.BASE_URL
 
@@ -406,9 +416,8 @@ describe('private packages', () => {
       expect((await api('POST', `/packages/${ENCODED}/paywall`, ownerToken, { price: 900 })).status).toBe(200)
       const token = await mintPackageToken()
       expect((await get(`/packages/${ENCODED}/1.0.0/tarball`, token)).status).toBe(200)
-      // A stranger still sees nothing at all — not a 402 naming the price.
-      expect((await get(`/packages/${ENCODED}/1.0.0/tarball`, strangerToken)).status).toBe(404)
-      expect(await (await get(`/packages/${ENCODED}/paywall`, strangerToken)).json()).toEqual({ enabled: false })
+      // A price puts it up for sale: a stranger is asked to pay (see below).
+      expect((await get(`/packages/${ENCODED}/1.0.0/tarball`, strangerToken)).status).toBe(402)
     })
 
     it('honours an unexpired grant with an expiry', async () => {
@@ -555,6 +564,202 @@ describe('private packages', () => {
       expect(second.grant.expiresAt).toBe(later)
       const cleared = await (await api('PUT', `/packages/${ENCODED}/access`, ownerToken, { email: 'it@client.example', expiresAt: null })).json() as any
       expect(cleared.grant.expiresAt).toBeNull()
+    })
+  })
+
+
+  // -------------------------------------------------------------------------
+
+  describe('private and for sale', () => {
+    const STOREFRONT_KEYS = ['buyUrl', 'checkoutUrl', 'currency', 'description', 'error', 'forSale', 'formattedPrice', 'message', 'package', 'price', 'publisher']
+
+    async function putUpForSale(): Promise<void> {
+      const res = await api('POST', `/packages/${ENCODED}/paywall`, ownerToken, { price: 900, freeVersions: ['1.0.0'] })
+      expect(res.status).toBe(200)
+    }
+
+    async function deliverPurchase(email: string): Promise<void> {
+      const body = JSON.stringify({
+        id: `evt_${Math.random().toString(36).slice(2)}`,
+        type: 'checkout.session.completed',
+        data: { object: { payment_status: 'paid', payment_intent: 'pi_test', metadata: { package_name: PRIVATE, buyer_email: email } } },
+      })
+      const res = await fetch(`${baseUrl}/webhooks/stripe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'stripe-signature': await stripeSignature(body) },
+        body,
+      })
+      expect(res.status).toBe(200)
+    }
+
+    /** The 402 every contents route answers a non-buyer with. */
+    async function expectStorefront402(res: Response): Promise<Record<string, unknown>> {
+      expect(res.status).toBe(402)
+      expect(res.headers.get('cache-control')).toBe('no-store')
+      const text = await res.text()
+      const body = JSON.parse(text)
+      expect(Object.keys(body).sort()).toEqual(STOREFRONT_KEYS)
+      expect(body).toMatchObject({
+        error: 'Payment required',
+        forSale: true,
+        package: PRIVATE,
+        description: 'the platform kit',
+        publisher: 'owner',
+        price: 900,
+        currency: 'usd',
+        formattedPrice: '$9.00',
+        buyUrl: `${baseUrl}/packages/${ENCODED}/buy`,
+      })
+      // Nothing an installer could act on, and no version names.
+      expect(text).not.toContain('1.0.0')
+      expect(text).not.toContain('tarball')
+      expect(text).not.toContain('sha256')
+      expect(text).not.toContain('owner@hq.training')
+      return body
+    }
+
+    it('answers every contents route with the same storefront 402, whatever the version', async () => {
+      await putUpForSale()
+      for (const token of [undefined, strangerToken]) {
+        const bodies = []
+        for (const path of [
+          `/packages/${ENCODED}`,
+          `/packages/${PRIVATE}`,
+          `/packages/${ENCODED}/versions`,
+          `/packages/${ENCODED}/1.0.0`,
+          `/packages/${ENCODED}/9.9.9`,
+          `/packages/${ENCODED}/1.0.0/tarball`,
+          `/packages/${ENCODED}/9.9.9/tarball`,
+        ]) {
+          bodies.push(await expectStorefront402(await get(path, token)))
+        }
+        // An existing and a made-up version are indistinguishable, and the
+        // free version stays shut: free versions don't open a private package.
+        expect(new Set(bodies.map(b => JSON.stringify(b))).size).toBe(1)
+      }
+    })
+
+    it('serves the paywall, minus the free version names', async () => {
+      await putUpForSale()
+      const paywall = await (await get(`/packages/${ENCODED}/paywall`)).json() as any
+      expect(paywall).toMatchObject({ enabled: true, price: 900, currency: 'usd', formattedPrice: '$9.00', forSale: true, owned: false, freeVersions: [] })
+      // The owner still sees their own configuration.
+      const own = await (await get(`/packages/${ENCODED}/paywall`, ownerToken)).json() as any
+      expect(own.freeVersions).toEqual(['1.0.0'])
+      expect(own.forSale).toBeUndefined()
+    })
+
+    it('lets a non-buyer reach checkout', async () => {
+      await putUpForSale()
+      expect((await api('POST', `/packages/${ENCODED}/checkout`, undefined)).status).toBe(401)
+      // No Stripe in tests: getting as far as "payments are not configured"
+      // means the request reached checkout rather than being turned away.
+      const res = await api('POST', `/packages/${ENCODED}/checkout`, strangerToken)
+      expect(res.status).toBe(400)
+      expect(((await res.json()) as any).error).toBe('Payments are not configured on this registry')
+
+      const cookie = { Cookie: `pantry_session=${await session('stranger@elsewhere.example')}` }
+      const buy = await get(`/packages/${ENCODED}/buy`, undefined, { headers: cookie, redirect: 'manual' })
+      expect(((await buy.json()) as any).error).toBe('Payments are not configured on this registry')
+      const anonymous = await get(`/packages/${ENCODED}/buy`, undefined, { redirect: 'manual' })
+      expect(anonymous.status).toBe(302)
+      expect(anonymous.headers.get('location')).toStartWith('/login?next=')
+    })
+
+    it('renders a storefront page with nothing but the listing and the buy flow', async () => {
+      await putUpForSale()
+      const res = await get(`/package/${ENCODED}`)
+      expect(res.status).toBe(200)
+      expect(res.headers.get('cache-control')).toBe('private, no-store')
+      const html = await res.text()
+      for (const shown of ['the platform kit', 'by owner', '$9.00', `/packages/${ENCODED}/buy`, `pantry buy ${PRIVATE}`])
+        expect(html).toContain(shown)
+      for (const withheld of ['1.0.0', 'pantry install', 'tarball', 'owner@hq.training', 'Dependencies', 'Versions'])
+        expect(html).not.toContain(withheld)
+    })
+
+    it('lists the package in search, marked for sale and without numbers', async () => {
+      await putUpForSale()
+      for (const token of [undefined, strangerToken]) {
+        const res = await get('/search?q=platform&format=json', token)
+        const row = ((await res.json()) as any).results.find((r: any) => r.name === PRIVATE)
+        expect(row).toEqual({
+          name: PRIVATE,
+          version: '',
+          description: 'the platform kit',
+          downloads: 0,
+          forSale: true,
+          price: 900,
+          currency: 'usd',
+          formattedPrice: '$9.00',
+          buyUrl: `${baseUrl}/packages/${ENCODED}/buy`,
+        })
+      }
+      // A query no other test renders: the HTML page sits in a shared cache.
+      const html = await (await get('/search?q=kit', undefined, { headers: { Accept: 'text/html' } })).text()
+      expect(html).toContain('for sale · $9.00')
+      expect(html).not.toContain('1.0.0')
+      // Readers still get the full row.
+      const own = await get('/search?q=platform&format=json', ownerToken)
+      expect(((await own.json()) as any).results.find((r: any) => r.name === PRIVATE).version).toBe('1.0.0')
+    })
+
+    it('keeps snapshots, numbers and rankings hidden', async () => {
+      await putUpForSale()
+      const hidden = readSurfaces(PRIVATE)
+      const missing = readSurfaces(MISSING)
+      for (const label of ['downloads badge', 'version badge', 'analytics', 'analytics timeline', 'commit snapshot', 'commit tarball']) {
+        const i = hidden.findIndex(([l]) => l === label)
+        const a = await shape(await get(hidden[i][1], strangerToken), PRIVATE)
+        const b = await shape(await get(missing[i][1], strangerToken), MISSING)
+        expect({ label, ...a }).toEqual({ label, ...b })
+      }
+      const top = await (await get('/analytics/top?limit=50')).json() as any
+      expect(top.packages.map((p: any) => p.name)).not.toContain(PRIVATE)
+      expect(await (await get('/stats')).text()).not.toContain(PRIVATE)
+      expect((await get(`/commits/abc1234abc1234abc1234abc1234abc1234abc12`)).status).toBe(404)
+    })
+
+    it('opens everything to the buyer once the purchase lands', async () => {
+      await putUpForSale()
+      await deliverPurchase('stranger@elsewhere.example')
+      await expectReadable(strangerToken)
+      const page = await get(`/package/${ENCODED}`, undefined, { headers: { Cookie: `pantry_session=${await session('stranger@elsewhere.example')}` } })
+      expect(await page.text()).toContain('1.0.0')
+      expect((await get(`/commits/abc1234abc1234abc1234abc1234abc1234abc12/${ENCODED}`, strangerToken)).status).toBe(200)
+      // Someone else still only sees the storefront.
+      await expectStorefront402(await get(`/packages/${ENCODED}`, clientToken))
+    })
+
+    it('goes back to fully hidden when the price comes off', async () => {
+      await putUpForSale()
+      expect((await api('DELETE', `/packages/${ENCODED}/paywall`, ownerToken)).status).toBe(200)
+      await expectInvisible()
+      await expectInvisible(strangerToken)
+    })
+
+    it('becomes an ordinary paid package when made public', async () => {
+      await putUpForSale()
+      const res = await fetch(`${baseUrl}/publisher/api/packages/${ENCODED}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Cookie': `pantry_session=${await session('owner@hq.training')}` },
+        body: JSON.stringify({ settings: { visibility: 'public' } }),
+      })
+      expect(res.status).toBe(200)
+      const meta = await get(`/packages/${ENCODED}`)
+      expect(meta.status).toBe(200)
+      expect(((await meta.json()) as any).version).toBe('1.0.0')
+      const tarball = await get(`/packages/${ENCODED}/1.1.0/tarball`)
+      expect(tarball.status).toBe(402)
+      expect(((await tarball.json()) as any).forSale).toBeUndefined()
+      // Public paid packages keep their free versions.
+      expect((await get(`/packages/${ENCODED}/1.0.0/tarball`)).status).toBe(200)
+    })
+
+    it('tells a non-owner they may not manage access, rather than pretending it is missing', async () => {
+      await putUpForSale()
+      expect((await api('GET', `/packages/${ENCODED}/access`, strangerToken)).status).toBe(403)
+      expect((await api('POST', `/packages/${ENCODED}/paywall`, strangerToken, { price: 100 })).status).toBe(403)
     })
   })
 

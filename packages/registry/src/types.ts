@@ -113,6 +113,15 @@ export interface SearchResult {
    * for callers who may not see it. Stripped before results leave the server.
    */
   private?: boolean
+  /**
+   * A private package for sale, listed as a storefront for a caller who hasn't
+   * bought it: `version` is empty and `downloads` zero, and the price is here.
+   */
+  forSale?: boolean
+  price?: number
+  currency?: string
+  formattedPrice?: string
+  buyUrl?: string
 }
 
 /**

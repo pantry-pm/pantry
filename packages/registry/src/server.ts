@@ -7,7 +7,7 @@ import { resolve, dirname, relative } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { installRegistryShutdown } from './shutdown'
-import type { RegistryConfig, AuthStorage, PackageRecord } from './types'
+import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
 import { PackageVersionExistsError } from './publication'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -1174,10 +1174,14 @@ export function createHandler(
           // response that includes one is never shared through a cache.
           const canSee = packageFilterFor(req, registry)
           let includesPrivate = false
-          const results = await registry.search(query, Math.min(limit, 50), async (name) => {
-            const visible = await canSee(name)
-            if (visible) includesPrivate = true
-            return visible
+          const results = await registry.search(query, Math.min(limit, 50), async (result) => {
+            if (await canSee(result.name)) {
+              includesPrivate = true
+              return result
+            }
+            // Not theirs to read, but for sale: list it so a buyer can find it.
+            const listing = await storefrontListing(registry, result.name).catch(() => null)
+            return listing ? storefrontSearchResult(listing, baseUrl) : null
           })
           return Response.json({ results }, { headers: includesPrivate ? { ...corsHeaders, ...PRIVATE_CACHE_HEADERS } : corsHeaders })
         }
@@ -1192,7 +1196,7 @@ export function createHandler(
         const page = Math.min(Math.max(1, Number.parseInt(url.searchParams.get('page') || '1', 10) || 1), 10000)
         const cacheKey = `search:${JSON.stringify([q, sort, view, type, page])}`
         return cachedPublicResponse(cacheKey, () =>
-          handleSiteSearch(q, registry, binaryStorage, analyticsStorage, sort, view, type, zigPackageStorage, page, phpPackageStorage))
+          handleSiteSearch(q, registry, binaryStorage, analyticsStorage, sort, view, type, zigPackageStorage, page, phpPackageStorage, baseUrl))
       }
 
       // Publish
@@ -1272,7 +1276,7 @@ export function createHandler(
         const sha = shortCommitMatch[2]
         const safeName = pkgName.replaceAll('@', '').replaceAll('/', '-').replaceAll('..', '')
         // Commit snapshots of a private package are as private as its releases.
-        if ((await packageExposure(req, registry, pkgName)) === 'hidden')
+        if (deniesContents(await packageExposure(req, registry, pkgName)))
           return Response.json({ error: 'Commit package not found' }, { status: 404, headers: corsHeaders })
 
         // Strategy: list S3 objects under commits/{sha} prefix and find a matching package.
@@ -1312,7 +1316,7 @@ export function createHandler(
                     return false
                   }
                 })
-              if (!owner || (await packageExposure(req, registry, owner.name)) !== 'hidden')
+              if (!owner || !deniesContents(await packageExposure(req, registry, owner.name)))
                 tarball = await registry.tarball.download(matchKey)
             }
           }
@@ -1353,7 +1357,7 @@ export function createHandler(
         const action = commitMatch[3]
 
         // Commit snapshots of a private package are as private as its releases.
-        if (packageName && (await packageExposure(req, registry, packageName)) === 'hidden')
+        if (packageName && deniesContents(await packageExposure(req, registry, packageName)))
           return Response.json({ error: 'Commit package not found' }, { status: 404, headers: corsHeaders })
 
         // GET /commits/{sha}/{name}/tarball
@@ -1492,11 +1496,23 @@ export function createHandler(
         // falls back to npm for it, which would hand them someone else's code.
         const exposure = await packageExposure(req, registry, packageName)
         const hidden = exposure === 'hidden'
+        // A private package for sale: its contents answer 402 with the
+        // storefront, exactly as a public paid package answers a download.
+        const forSale = exposure === 'storefront'
+        const storefrontDenial = async (): Promise<Response | null> => {
+          if (!forSale) return null
+          const listing = await storefrontListing(registry, packageName)
+          if (!listing) return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
+          const identity = await identifyReader(req)
+          return paymentRequiredResponse(packageName, listing.paywall, baseUrl, { authenticated: identity.authenticated, storefront: listing }, corsHeaders)
+        }
         const cacheHeaders = (shared: Record<string, string>): Record<string, string> =>
           exposure === 'private' ? { ...corsHeaders, ...PRIVATE_CACHE_HEADERS } : { ...corsHeaders, ...shared }
 
         // GET /packages/{name}/versions
         if (rest === 'versions' && req.method === 'GET') {
+          const denied = await storefrontDenial()
+          if (denied) return denied
           let versions = hidden ? [] : await registry.listVersions(packageName)
           if (versions.length === 0 && !hidden) {
             versions = await listBinaryPackageVersions(packageName, binaryStorage)
@@ -1535,10 +1551,13 @@ export function createHandler(
             price: paywall.price,
             currency: paywall.currency,
             formattedPrice: formatPrice(paywall.price, paywall.currency),
-            freeVersions: paywall.freeVersions || [],
+            // Version names are contents: a storefront caller doesn't get them,
+            // and free versions don't open a private package to non-buyers.
+            freeVersions: forSale ? [] : paywall.freeVersions || [],
             owned,
             paymentsEnabled: paymentsEnabled(),
             buyUrl: `${baseUrl}/packages/${encodeURIComponent(packageName)}/buy`,
+            ...(forSale ? { forSale: true } : {}),
           }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
         }
 
@@ -1687,30 +1706,19 @@ export function createHandler(
           }
           if (hidden)
             return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
+          // Answered before anything looks at the version, so a non-buyer can't
+          // tell which versions exist; free versions don't apply here either.
+          const deniedTarball = await storefrontDenial()
+          if (deniedTarball) return deniedTarball
 
           // Paid packages: the publisher and the operator always get through,
           // buyers get through once their account is entitled, everyone else
           // gets a 402 that says what it costs and where to buy it.
           const access = await resolvePackageAccess(req, registry, packageName, version)
           if (!access.allowed && access.paywall) {
-            const buyUrl = `${baseUrl}/packages/${encodeURIComponent(packageName)}/buy`
-            const priceText = formatPrice(access.paywall.price, access.paywall.currency)
-            return Response.json(
-              {
-                error: 'Payment required',
-                package: packageName,
-                price: access.paywall.price,
-                currency: access.paywall.currency,
-                formattedPrice: priceText,
-                buyUrl,
-                // Kept for older clients that read `checkoutUrl`.
-                checkoutUrl: buyUrl,
-                message: access.reason === 'unauthenticated'
-                  ? `${packageName} costs ${priceText}. Sign in and buy it with: pantry buy ${packageName}`
-                  : `${packageName} costs ${priceText}. Buy it with: pantry buy ${packageName} (or open ${buyUrl})`,
-              },
-              { status: 402, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } },
-            )
+            return paymentRequiredResponse(packageName, access.paywall, baseUrl, {
+              authenticated: access.reason !== 'unauthenticated',
+            }, corsHeaders)
           }
 
           const tarball = await registry.downloadTarball(packageName, version)
@@ -1755,6 +1763,8 @@ export function createHandler(
 
         // GET /packages/{name}/{version}
         if (rest && !rest.includes('/') && req.method === 'GET') {
+          const deniedVersion = await storefrontDenial()
+          if (deniedVersion) return deniedVersion
           const metadata = hidden ? null : await registry.getPackage(packageName, rest)
           // Track all missing version requests, tagging whether the version is
           // known — including a hidden caller's, exactly as for a name nobody
@@ -1780,6 +1790,8 @@ export function createHandler(
 
         // GET /packages/{name}
         if (!rest && req.method === 'GET') {
+          const deniedMetadata = await storefrontDenial()
+          if (deniedMetadata) return deniedMetadata
           const metadata = hidden ? null : await registry.getPackage(packageName)
           if (!metadata) {
             return Response.json(
@@ -1810,6 +1822,16 @@ export function createHandler(
         const exposure = await packageExposure(req, registry, _aliases.get(name) || name)
         if (exposure === 'hidden')
           return renderPackageNotFound(name)
+        if (exposure === 'storefront') {
+          const listing = await storefrontListing(registry, _aliases.get(name) || name)
+          if (!listing) return renderPackageNotFound(name)
+          // Not through the shared cache: the same URL shows its owner the
+          // whole package.
+          const page = await renderStorefront(listing)
+          const headers = new Headers(page.headers)
+          for (const [key, value] of Object.entries(PRIVATE_CACHE_HEADERS)) headers.set(key, value)
+          return new Response(page.body, { status: page.status, headers })
+        }
         if (exposure === 'private') {
           const page = await handleSitePackage(name, analyticsStorage, binaryStorage, registry, zigPackageStorage, phpPackageStorage)
           const headers = new Headers(page.headers)
@@ -2165,14 +2187,14 @@ async function handleAnalytics(
     const packageName = decodeURIComponent(path.replace('/timeline', ''))
     const days = Number.parseInt(url.searchParams.get('days') || '30', 10)
     const exposure = await exposureOf(packageName)
-    const timeline = exposure === 'hidden' ? emptyTimeline(days) : await analytics.getDownloadTimeline(packageName, days)
+    const timeline = deniesContents(exposure) ? emptyTimeline(days) : await analytics.getDownloadTimeline(packageName, days)
     return Response.json({ packageName, timeline }, { headers: headersFor(exposure) })
   }
 
   // GET /analytics/{name}
   const packageName = decodeURIComponent(path)
   const exposure = await exposureOf(packageName)
-  const stats = exposure === 'hidden' ? null : await analytics.getPackageStats(packageName)
+  const stats = deniesContents(exposure) ? null : await analytics.getPackageStats(packageName)
 
   if (!stats) {
     return Response.json(
@@ -2465,11 +2487,105 @@ async function packageReaderFor(req: Request): Promise<PackageReader> {
 /**
  * How a package should be served to this caller:
  *
- *   'public'  — not private; serve as always.
- *   'private' — private, and this caller may read it; serve without shared caching.
- *   'hidden'  — private, and this caller may not; answer as if it didn't exist.
+ *   'public'     — not private; serve as always.
+ *   'private'    — private, and this caller may read it; serve without shared caching.
+ *   'storefront' — private and for sale (its paywall is on), and this caller
+ *                  may not read it: they get what a buyer needs and nothing
+ *                  else — name, description, publisher, price, the buy flow.
+ *   'hidden'     — private and not for sale, and this caller may not read it;
+ *                  answer as if it didn't exist.
  */
-type PackageExposure = 'public' | 'private' | 'hidden'
+type PackageExposure = 'public' | 'private' | 'storefront' | 'hidden'
+
+/** Whether this caller is kept out of the package's contents. */
+function deniesContents(exposure: PackageExposure): boolean {
+  return exposure === 'hidden' || exposure === 'storefront'
+}
+
+/** What a private package for sale shows to someone who hasn't bought it. */
+interface StorefrontListing {
+  name: string
+  description?: string
+  publisher?: string
+  paywall: PackagePaywall
+}
+
+/**
+ * The storefront for a private package, or null when it isn't for sale. The
+ * publisher is shown by display name only — never the account's email.
+ */
+async function storefrontListing(registry: Registry, packageName: string): Promise<StorefrontListing | null> {
+  const record = await registry.getPublisherPackageRecord(packageName)
+  if (!isPrivatePackage(record)) return null
+  const paywall = await registry.metadata.getPaywall(packageName)
+  if (!paywall?.enabled) return null
+  const owner = record?.publishedBy && _authService ? await _authService.findUser(record.publishedBy).catch(() => null) : null
+  return {
+    name: packageName,
+    ...(record?.description ? { description: record.description } : {}),
+    ...(owner?.name ? { publisher: owner.name } : {}),
+    paywall,
+  }
+}
+
+/**
+ * The 402 an unentitled caller gets for a package's contents — the same body a
+ * public paid package answers a tarball download with, so a client handles both
+ * the same way. A private package for sale adds what its storefront shows and
+ * `forSale: true`; it never carries a version, a dist, or a tarball URL.
+ */
+function paymentRequiredResponse(
+  packageName: string,
+  paywall: PackagePaywall,
+  baseUrl: string,
+  options: { authenticated: boolean, storefront?: StorefrontListing },
+  corsHeaders: Record<string, string>,
+): Response {
+  const buyUrl = `${baseUrl}/packages/${encodeURIComponent(packageName)}/buy`
+  const priceText = formatPrice(paywall.price, paywall.currency)
+  const storefront = options.storefront
+  return Response.json(
+    {
+      error: 'Payment required',
+      package: packageName,
+      price: paywall.price,
+      currency: paywall.currency,
+      formattedPrice: priceText,
+      buyUrl,
+      // Kept for older clients that read `checkoutUrl`.
+      checkoutUrl: buyUrl,
+      message: options.authenticated
+        ? `${packageName} costs ${priceText}. Buy it with: pantry buy ${packageName} (or open ${buyUrl})`
+        : `${packageName} costs ${priceText}. Sign in and buy it with: pantry buy ${packageName}`,
+      ...(storefront
+        ? {
+            forSale: true,
+            ...(storefront.description ? { description: storefront.description } : {}),
+            ...(storefront.publisher ? { publisher: storefront.publisher } : {}),
+          }
+        : {}),
+    },
+    { status: 402, headers: { ...corsHeaders, 'Cache-Control': 'no-store' } },
+  )
+}
+
+/**
+ * A storefront row for search: enough to find and buy the package. No version,
+ * no download count, no keywords or author.
+ */
+function storefrontSearchResult(listing: StorefrontListing, baseUrl: string): SearchResult {
+  return {
+    name: listing.name,
+    version: '',
+    ...(listing.description ? { description: listing.description } : {}),
+    downloads: 0,
+    forSale: true,
+    price: listing.paywall.price,
+    currency: listing.paywall.currency,
+    formattedPrice: formatPrice(listing.paywall.price, listing.paywall.currency),
+    buyUrl: `${baseUrl}/packages/${encodeURIComponent(listing.name)}/buy`,
+  }
+}
 
 async function packageExposure(
   req: Request,
@@ -2481,7 +2597,9 @@ async function packageExposure(
   // request fails rather than serving a private package as if it were public.
   const record = await registry.getPublisherPackageRecord(packageName)
   if (!isPrivatePackage(record)) return 'public'
-  return await canReadPackage(registry.metadata, record, reader ?? await packageReaderFor(req)) ? 'private' : 'hidden'
+  if (await canReadPackage(registry.metadata, record, reader ?? await packageReaderFor(req))) return 'private'
+  const paywall = await registry.metadata.getPaywall(packageName)
+  return paywall?.enabled ? 'storefront' : 'hidden'
 }
 
 /** A filter for listings: may this caller see `name`? Public packages always pass. */
@@ -2567,7 +2685,10 @@ async function requirePackageManager(
     || (!!_authService && await _authService.canActFor(actor, record.publishedBy)))
   if (owns) return { actor, record }
 
-  if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req))))
+  // A private package that isn't for sale doesn't admit to existing. One that
+  // is for sale has a public storefront, so it gets the honest 403 below.
+  if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req)))
+    && !(await registry.metadata.getPaywall(packageName))?.enabled)
     return notFound()
 
   return Response.json(
@@ -2614,8 +2735,10 @@ async function requirePackageOwner(
     // A team member acts for the seat holder who owns the package.
     if (_authService && await _authService.canActFor(identity.userId, record.publishedBy))
       return null
-    // Someone who can't see a private package doesn't learn that it exists.
-    if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req))))
+    // Someone who can't see a private package doesn't learn that it exists —
+    // unless it is for sale, in which case its storefront already says so.
+    if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req)))
+      && !(await registry.metadata.getPaywall(packageName))?.enabled)
       return Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
     return Response.json(
       { error: 'Only the publisher of this package can change its price' },
@@ -6468,6 +6591,7 @@ async function handleSiteSearch(
   zigStorage?: ZigPackageStorage,
   page = 1,
   phpStorage?: PhpPackageStorage,
+  baseUrl = '',
 ): Promise<Response> {
   let results: any[] = []
 
@@ -6509,7 +6633,12 @@ async function handleSiteSearch(
     }))
   }
   else if (query) {
-    const searchResults = await registry.search(query, 50)
+    // This page is cached for everyone, so it can't show anyone a private
+    // package — only the storefront row of one that is for sale.
+    const searchResults = await registry.search(query, 50, async (result) => {
+      const listing = await storefrontListing(registry, result.name).catch(() => null)
+      return listing ? storefrontSearchResult(listing, baseUrl) : null
+    })
     results = searchResults || []
 
     // Also search Zig packages and merge if type is 'all'
@@ -6576,6 +6705,8 @@ async function handleSiteSearch(
       const enrichLimit = Math.min(results.length, 20)
       const statsResults = await Promise.allSettled(
         results.slice(0, enrichLimit).map(async (r: any) => {
+          // A storefront row shows no numbers.
+          if (r.forSale) return { ...r, downloads: '', downloadCount: 0 }
           const pkgStats = await analyticsStorage.getPackageStats(r.name)
           return { ...r, downloads: pkgStats ? chartFormatCount(pkgStats.totalDownloads) : '', downloadCount: pkgStats?.totalDownloads || 0 }
         }),
@@ -6635,6 +6766,26 @@ async function handleSiteSearch(
     title: type === 'zig' ? 'zig packages' : type === 'php' ? 'php packages' : query ? `search: ${query}` : 'search',
     metaDescription: type === 'zig' ? 'Browse Zig packages on pantry.dev' : type === 'php' ? 'Browse PHP/Composer packages on pantry.dev' : query ? `Search results for "${query}" on pantry.dev` : 'Search packages on pantry.dev',
     canonicalUrl: 'https://pantry.dev/search',
+  })
+  return htmlResponse(html)
+}
+
+/**
+ * The page a private package for sale shows someone who hasn't bought it: the
+ * name, description, publisher, price and the buy flow. Rendered from the
+ * listing alone, so there is nothing else on hand to leak — no versions, files,
+ * install commands, dependencies or download numbers.
+ */
+async function renderStorefront(listing: StorefrontListing): Promise<Response> {
+  const html = await renderSitePage('storefront.stx', {
+    name: listing.name,
+    description: listing.description || '',
+    publisher: listing.publisher || '',
+    priceLabel: formatPrice(listing.paywall.price, listing.paywall.currency),
+    buyUrl: `/packages/${encodeURIComponent(listing.name)}/buy`,
+    title: escapeHtml(listing.name),
+    metaDescription: escapeHtml(listing.description || `${listing.name} — available to buy on pantry.`),
+    canonicalUrl: `https://pantry.dev/package/${listing.name}`,
   })
   return htmlResponse(html)
 }
