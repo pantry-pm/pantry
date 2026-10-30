@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.145...v0.11.146)
+
+## 🐛 Bug Fixes
+
+- **install**: honor file locks and serialize native publication ([f98fa9a](https://github.com/pantry-pm/pantry/commit/f98fa9a)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **publish**: an accepted npm upload no longer fails on a slow readback (#259) ([9235e9d](https://github.com/pantry-pm/pantry/commit/9235e9d)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#245](https://github.com/pantry-pm/pantry/issues/245), [#259](https://github.com/pantry-pm/pantry/issues/259))
+- **services**: launch postgres from a script, and find libs where they are (#258) ([5374300](https://github.com/pantry-pm/pantry/commit/5374300)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#258](https://github.com/pantry-pm/pantry/issues/258), [#243](https://github.com/pantry-pm/pantry/issues/243))
+- **installer**: resolve versions against live sources when one is unreachable (#255) ([d55859b](https://github.com/pantry-pm/pantry/commit/d55859b)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#242](https://github.com/pantry-pm/pantry/issues/242), [#255](https://github.com/pantry-pm/pantry/issues/255))
+- **install**: keep .env-inferred services out of pantry.lock (#254) ([f036cca](https://github.com/pantry-pm/pantry/commit/f036cca)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#253](https://github.com/pantry-pm/pantry/issues/253), [#254](https://github.com/pantry-pm/pantry/issues/254))
+
+## 🔧 Chores
+
+- release v0.11.146 ([4b9f9f8](https://github.com/pantry-pm/pantry/commit/4b9f9f8)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.390 ([c0252de](https://github.com/pantry-pm/pantry/commit/c0252de)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update chrome-for-testing, exr, LLaMA.cpp, LM Studio, macfuse.github, mole, Slack, vcluster, zarf ([19d3dec](https://github.com/pantry-pm/pantry/commit/19d3dec)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update codex, Codex, depot, Dia, flutter, fly, huggingface/cli, jupyter, lavinmq, LLaMA.cpp, mongosh, moon, nomad, oc, opa, opencode.ai, streamlink, terratag ([ab5a11b](https://github.com/pantry-pm/pantry/commit/ab5a11b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update bw, code-server, composer, Insomnia, LibreOffice, LLaMA.cpp, LM Studio, maturin, mise, projen, rubocop, squawk, terratag, xray-core ([ec00d70](https://github.com/pantry-pm/pantry/commit/ec00d70)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.387 ([5188f8a](https://github.com/pantry-pm/pantry/commit/5188f8a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.385 ([e5ab9be](https://github.com/pantry-pm/pantry/commit/e5ab9be)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update certbot, groonga, LLaMA.cpp, mupdf, mz, ollama, opencode.ai ([1f65ed9](https://github.com/pantry-pm/pantry/commit/1f65ed9)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.144...v0.11.145)
 
 ## 🐛 Bug Fixes

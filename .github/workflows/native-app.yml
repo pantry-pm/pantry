@@ -30,7 +30,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Build, verify and deliver with Pantry
-        uses: pantry-pm/pantry/packages/action@v0.11.145
+        uses: pantry-pm/pantry/packages/action@v0.11.146
         with:
           native-app: ${{ inputs.release && 'release' || 'check' }}
           release-token: ${{ github.token }}
