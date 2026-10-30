@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.148...v0.11.149)
+
+## ✨ Features
+
+- **registry**: let an operator give an account a plan without billing ([cd9cdd2](https://github.com/pantry-pm/pantry/commit/cd9cdd2)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **registry**: let a token set for the run outrank one stored for the public registry ([2d3a92b](https://github.com/pantry-pm/pantry/commit/2d3a92b)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: read a scoped name the way the CLI spells it on every route ([9365243](https://github.com/pantry-pm/pantry/commit/9365243)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.149 ([a660465](https://github.com/pantry-pm/pantry/commit/a660465)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.147...v0.11.148)
 
 ## ✨ Features
