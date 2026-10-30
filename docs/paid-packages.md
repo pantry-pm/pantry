@@ -289,3 +289,6 @@ currencies (JPY) take whole units.
 - **Private registries** and paid packages compose: on a
   [private registry](self-hosting.md) everything already requires a credential,
   and a price adds "…and has paid" on top for that one package.
+- **Private packages** reuse these entitlements. Granting someone a
+  [private package](private-packages.md) writes the same `user:<email>` record a
+  purchase does, so a grant also lets its holder past a price.

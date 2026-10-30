@@ -33,6 +33,16 @@ integrity semantics; clients must use the contract for the selected surface.
 | `GET` | `/packages/{name}/versions` | Public | List stored versions, falling back to npm only when configured. |
 | `GET` | `/packages/{name}/{version}/tarball` | Public | Proxy exact bytes, update download analytics, and return 404 when unavailable. |
 | `POST` | `/publish` | Legacy admin token or `ptry_` API token with publish permission | Accept multipart metadata/tarball or JSON/base64, validate limits, reject duplicates, persist bytes then metadata. |
+| `GET`/`PUT`/`DELETE` | `/packages/{name}/access` | Owner, owner's team, or admin | List, grant or revoke account access to a private package. |
+| `GET`/`POST` | `/packages/{name}/tokens` | Owner, owner's team, or admin | List or mint package-scoped read tokens. |
+| `DELETE` | `/packages/{name}/tokens/{id}` | Owner, owner's team, or admin | Revoke a package token. |
+
+A package published with `"publishConfig": { "access": "restricted" }`, or set
+to `private` in its settings, is a **private package**. Every read surface,
+including the routes above, search, listings, badges, analytics, commit
+snapshots and web pages, answers callers outside its owner, team, admins, grants
+and package tokens exactly as it answers for a package that does not exist.
+See [Private packages](./private-packages.md).
 
 Publishing validates package name, version, metadata size, content type, and the
 plan's artifact limit. A duplicate `{name, version}` returns `409` before the
@@ -149,6 +159,9 @@ The registry supports:
 - a legacy operator token from `PANTRY_REGISTRY_TOKEN` or `PANTRY_TOKEN`;
 - account API tokens prefixed `ptry_`, stored only as hashes and scoped with
   `publish` and/or `read` permissions;
+- package tokens: `ptry_` tokens with `read` only and a package scope, minted
+  by a package's owner for CI. They read that package and are refused
+  everywhere else, publishing and account routes included;
 - HTTP-only web sessions for publisher/dashboard operations;
 - npm trusted-publisher/OIDC flows in the Pantry CLI for compatible targets.
 

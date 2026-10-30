@@ -80,6 +80,10 @@ A credential is any of:
   admin credential;
 - a **logged-in browser session**, so the web UI works for signed-in humans.
 
+A [package token](private-packages.md#package-tokens-for-ci) counts too, but
+only for reads of its own package (metadata, versions, tarballs). Anywhere else
+on a private registry it gets `401`.
+
 Anything else gets `401` with a `WWW-Authenticate` header and a hint naming the
 command that fixes it. A browser navigating to a gated page is sent to `/login`
 instead — a JSON error is not a useful thing to show a person.
