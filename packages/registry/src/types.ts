@@ -325,6 +325,8 @@ export interface UserSubscription {
   stripeSubscriptionId?: string
   /** End of the paid period — a cancelled plan keeps its benefits until then. */
   currentPeriodEnd?: string
+  /** Given by the registry operator rather than bought; ends at currentPeriodEnd when set. */
+  comped?: boolean
   updatedAt?: string
 }
 

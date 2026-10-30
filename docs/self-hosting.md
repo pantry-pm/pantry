@@ -387,6 +387,7 @@ On the client side: `PANTRY_REGISTRY_URL` names the registry to talk to, and
 | `pantry registry member add` | Create an account |
 | `pantry registry token issue` | Mint a read-only (or `--publish`) token for a member |
 | `pantry registry token revoke` | Revoke one |
+| `pantry registry plan set` | Give an account `pro` or `team` without billing it (or `free` to take it back) |
 | `pantry registry info` | What a registry says about itself |
 
 `setup`, `storage` and `rotate-token` drive the box over SSH; the rest are

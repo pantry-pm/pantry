@@ -1220,6 +1220,26 @@ fn registryMemberAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+fn registryPlanSetAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const email = ctx.getArgument(0) orelse {
+        style.print("Error: an email address is required (pantry registry plan set releases@yourco.com team)\n", .{});
+        std.process.exit(1);
+    };
+    const tier = ctx.getArgument(1) orelse {
+        style.print("Error: a plan is required: free, pro or team\n", .{});
+        std.process.exit(1);
+    };
+    const result = try lib.commands.registry_ops.planSetCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .email = email,
+        .tier = tier,
+        .until = ctx.getOption("until"),
+    });
+    finishTokenResult(allocator, result);
+}
+
 fn registryTokenIssueAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const email = ctx.getArgument(0) orelse {
@@ -4483,6 +4503,17 @@ pub fn main() !void {
     _ = registry_member_add_cmd.setAction(registryMemberAddAction);
     _ = try registry_member_cmd.addCommand(registry_member_add_cmd);
     _ = try registry_cmd.addCommand(registry_member_cmd);
+
+    var registry_plan_cmd = try cli.BaseCommand.init(allocator, "plan", "Give accounts a plan without billing them");
+    var registry_plan_set_cmd = try cli.BaseCommand.init(allocator, "set", "Put an account on free, pro or team (refuses to replace a paid plan)");
+    _ = try registry_plan_set_cmd.addArgument(cli.Argument.init("email", "Account's email address", .string).withRequired(true));
+    _ = try registry_plan_set_cmd.addArgument(cli.Argument.init("plan", "free, pro or team", .string).withRequired(true));
+    _ = try registry_plan_set_cmd.addOption(reg_registry_opt);
+    _ = try registry_plan_set_cmd.addOption(reg_admin_token_opt);
+    _ = try registry_plan_set_cmd.addOption(cli.Option.init("until", "until", "End the plan on this date (ISO 8601)", .string));
+    _ = registry_plan_set_cmd.setAction(registryPlanSetAction);
+    _ = try registry_plan_cmd.addCommand(registry_plan_set_cmd);
+    _ = try registry_cmd.addCommand(registry_plan_cmd);
 
     var registry_token_cmd = try cli.BaseCommand.init(allocator, "token", "Issue and revoke access tokens for a registry you operate");
     var registry_token_issue_cmd = try cli.BaseCommand.init(allocator, "issue", "Mint a token for a member (read-only unless --publish)");

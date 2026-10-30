@@ -141,6 +141,12 @@ export interface AccountSubscription {
   stripeSubscriptionId?: string
   /** When the paid period ends — a cancelled subscription keeps its tier until then. */
   currentPeriodEnd?: string
+  /**
+   * Given by the registry's operator (`pantry registry plan set`) rather than
+   * bought. Stripe never sees it; when `currentPeriodEnd` is set, the plan
+   * ends then.
+   */
+  comped?: boolean
   updatedAt?: string
 }
 
@@ -153,6 +159,7 @@ export interface AccountSubscription {
  */
 export function effectiveTier(sub: AccountSubscription | null | undefined, now: Date = new Date()): Tier {
   if (!sub || sub.tier === 'free') return 'free'
+  if (sub.comped && sub.currentPeriodEnd && new Date(sub.currentPeriodEnd) <= now) return 'free'
 
   switch (sub.status) {
     case 'active':

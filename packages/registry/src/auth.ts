@@ -471,6 +471,7 @@ export class AuthService {
       stripeCustomerId: user.subscription.stripeCustomerId,
       stripeSubscriptionId: user.subscription.stripeSubscriptionId,
       currentPeriodEnd: user.subscription.currentPeriodEnd,
+      ...(user.subscription.comped ? { comped: true } : {}),
       updatedAt: user.subscription.updatedAt,
     }
   }
@@ -514,6 +515,7 @@ export class AuthService {
         stripeCustomerId: sub.stripeCustomerId,
         stripeSubscriptionId: sub.stripeSubscriptionId,
         currentPeriodEnd: sub.currentPeriodEnd,
+        ...(sub.comped ? { comped: true } : {}),
         updatedAt: new Date().toISOString(),
       }
     }

@@ -6,6 +6,7 @@ import { isPublicPath, registryInfo, resolveVisibility, signupsEnabled } from '.
 import { resetPlugins, setPlugins, type RegistryPlugin } from './plugins'
 import { getAvailablePort } from './test-utils'
 import { S3RequestError } from './storage/aws-client'
+import { effectiveTier } from './subscriptions'
 
 const ADMIN_TOKEN = 'ptry_test_admin_token_for_access_tests'
 
@@ -354,6 +355,36 @@ describe('registry visibility', () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       expect(afterRevoke.status).toBe(401)
+    })
+
+    it('comp a plan, end it on its date, and never replace one someone pays for', async () => {
+      await auth.signup('releases@acme.com', 'Releases', 'password123')
+      const plan = (body: Record<string, unknown>, headers: Record<string, string> = adminHeaders) =>
+        fetch(`${baseUrl}/admin/plans`, { method: 'POST', headers, body: JSON.stringify(body) })
+
+      expect((await plan({ email: 'releases@acme.com', tier: 'team' }, { 'Content-Type': 'application/json' })).status).toBe(401)
+      expect((await plan({ email: 'releases@acme.com', tier: 'gold' })).status).toBe(400)
+      expect((await plan({ email: 'releases@acme.com', tier: 'pro', until: '2001-01-01' })).status).toBe(400)
+      expect((await plan({ email: 'ghost@acme.com', tier: 'pro' })).status).toBe(404)
+
+      const granted = await plan({ email: 'releases@acme.com', tier: 'team' })
+      expect(granted.status).toBe(200)
+      expect(await granted.json()).toMatchObject({ tier: 'team', until: null, comped: true })
+      expect(await auth.getSubscription('releases@acme.com')).toMatchObject({ tier: 'team', status: 'active', comped: true })
+      expect(effectiveTier(await auth.getSubscription('releases@acme.com'))).toBe('team')
+
+      const until = new Date(Date.now() + 86_400_000).toISOString()
+      await plan({ email: 'releases@acme.com', tier: 'pro', until })
+      const limited = await auth.getSubscription('releases@acme.com')
+      expect(effectiveTier(limited)).toBe('pro')
+      expect(effectiveTier(limited, new Date(Date.now() + 2 * 86_400_000))).toBe('free')
+
+      expect((await plan({ email: 'releases@acme.com', tier: 'free' })).status).toBe(200)
+      expect(await auth.getSubscription('releases@acme.com')).toBeNull()
+
+      await auth.setSubscription('releases@acme.com', { tier: 'pro', status: 'active', stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' })
+      expect((await plan({ email: 'releases@acme.com', tier: 'team' })).status).toBe(409)
+      expect(await auth.getSubscription('releases@acme.com')).toMatchObject({ tier: 'pro', stripeSubscriptionId: 'sub_1' })
     })
 
     it('will not mint a token for an unknown user', async () => {

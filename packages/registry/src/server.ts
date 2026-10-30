@@ -39,6 +39,7 @@ import {
 import {
   calculateFee,
   DISCOVERY_FEE_BPS,
+  effectiveTier,
   formatBps,
   TIERS,
   tierDefinition,
@@ -3431,7 +3432,7 @@ async function handleAdminRoutes(
 ): Promise<Response | null> {
   if (!path.startsWith('/admin/')) return null
 
-  const known = path === '/admin/users' || path === '/admin/tokens' || path === '/admin/tokens/revoke'
+  const known = path === '/admin/users' || path === '/admin/tokens' || path === '/admin/tokens/revoke' || path === '/admin/plans'
   if (!known || req.method !== 'POST') return null
 
   if (!(await isAdminRequest(req))) {
@@ -3474,6 +3475,25 @@ async function handleAdminRoutes(
         binaryPublishDomains: body.binaryPublishDomains,
       })
       return Response.json({ success: true, ...result }, { status: 201, headers: corsHeaders })
+    }
+
+    if (path === '/admin/plans') {
+      // An operator's grant of a plan: a partner, a sponsor, the registry's own
+      // product. Stripe never sees it, so it must not overwrite a plan someone
+      // is paying for; cancel that in Stripe first.
+      const tier = typeof body.tier === 'string' ? body.tier : ''
+      if (!['free', 'pro', 'team'].includes(tier))
+        return Response.json({ error: 'tier must be free, pro or team' }, { status: 400, headers: corsHeaders })
+      const until = body.until === undefined || body.until === null ? null : String(body.until)
+      if (until !== null && (Number.isNaN(Date.parse(until)) || Date.parse(until) <= Date.now()))
+        return Response.json({ error: 'until must be a date in the future' }, { status: 400, headers: corsHeaders })
+      const current = await auth.getSubscription(email)
+      if (current?.stripeSubscriptionId && !current.comped && effectiveTier(current) !== 'free')
+        return Response.json({ error: `${email} has a paid ${current.tier} plan; cancel it in Stripe before replacing it` }, { status: 409, headers: corsHeaders })
+      await auth.setSubscription(email, tier === 'free'
+        ? null
+        : { tier: tier as Tier, status: 'active', comped: true, ...(until ? { currentPeriodEnd: new Date(until).toISOString() } : {}) })
+      return Response.json({ success: true, email: email.toLowerCase().trim(), tier, until: until ? new Date(until).toISOString() : null, comped: tier !== 'free' }, { headers: corsHeaders })
     }
 
     // /admin/tokens/revoke

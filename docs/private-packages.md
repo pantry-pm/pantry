@@ -90,6 +90,16 @@ do exactly what the author said not to. The plan that counts is the seat
 holder's, so a Team member publishes private packages on the team's plan. The
 registry operator (registry token or admin session) is exempt.
 
+An operator can give an account a plan without billing it, for a partner, a
+sponsor or the operator's own product. It never replaces a plan someone pays
+for:
+
+```bash
+pantry registry plan set releases@yourco.com team                     # until changed
+pantry registry plan set partner@example.com pro --until 2027-12-31   # ends on that date
+pantry registry plan set partner@example.com free                     # take it back
+```
+
 A package stays private if its owner's plan lapses. The registry never makes a
 package public on its own. Grants and package tokens can still be managed, so
 access can always be revoked.

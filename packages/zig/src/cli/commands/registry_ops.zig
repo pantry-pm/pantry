@@ -1043,6 +1043,78 @@ pub fn memberAddCommand(allocator: std.mem.Allocator, opts: MemberOptions) !Comm
 }
 
 // ---------------------------------------------------------------------------
+// pantry registry plan set
+// ---------------------------------------------------------------------------
+
+pub const PlanOptions = struct {
+    registry: ?[]const u8 = null,
+    token: ?[]const u8 = null,
+    email: []const u8,
+    /// free, pro or team.
+    tier: []const u8,
+    /// An ISO date the comped plan ends on; null keeps it until changed.
+    until: ?[]const u8 = null,
+};
+
+pub fn isPlanTier(tier: []const u8) bool {
+    return std.mem.eql(u8, tier, "free") or std.mem.eql(u8, tier, "pro") or std.mem.eql(u8, tier, "team");
+}
+
+/// The body of POST /admin/plans.
+pub fn planBody(arena: std.mem.Allocator, opts: PlanOptions) ![]const u8 {
+    var body: std.ArrayList(u8) = .empty;
+    try body.appendSlice(arena, "{\"email\":");
+    try appendJsonString(&body, arena, opts.email);
+    try body.appendSlice(arena, ",\"tier\":");
+    try appendJsonString(&body, arena, opts.tier);
+    if (opts.until) |until| {
+        try body.appendSlice(arena, ",\"until\":");
+        try appendJsonString(&body, arena, until);
+    }
+    try body.append(arena, '}');
+    return body.items;
+}
+
+/// Give an account a plan without billing it: a partner, a sponsor, or the
+/// operator's own product. The registry refuses to replace a plan someone pays for.
+pub fn planSetCommand(allocator: std.mem.Allocator, opts: PlanOptions) !CommandResult {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    if (!isPlanTier(opts.tier))
+        return CommandResult.err(allocator, "Error: the plan must be free, pro or team.");
+    const url = resolveRegistryUrl(arena, opts.registry) orelse
+        return CommandResult.err(allocator, missing_registry_message);
+    const token = credentialFor(arena, opts.token, url) orelse
+        return CommandResult.err(allocator, missingTokenMessage(arena, url));
+
+    const res = adminPost(arena, url, "/admin/plans", token, try planBody(arena, opts)) catch
+        return CommandResult.err(allocator, "Could not reach the registry.");
+    if (!res.ok())
+        return CommandResult.err(allocator, try std.fmt.allocPrint(arena, "Could not set the plan: {s}", .{apiError(arena, res)}));
+
+    const message = if (std.mem.eql(u8, opts.tier, "free"))
+        try std.fmt.allocPrint(arena, "{s} is back on the free plan on {s}.", .{ opts.email, url })
+    else if (opts.until) |until|
+        try std.fmt.allocPrint(arena, "{s} is on the {s} plan on {s} until {s}, without billing.", .{ opts.email, opts.tier, url, until })
+    else
+        try std.fmt.allocPrint(arena, "{s} is on the {s} plan on {s}, without billing, until you change it.", .{ opts.email, opts.tier, url });
+    return CommandResult.success(allocator, message);
+}
+
+test "plan set accepts the three plans and writes the admin body" {
+    var arena_state = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    try std.testing.expect(isPlanTier("team"));
+    try std.testing.expect(isPlanTier("free"));
+    try std.testing.expect(!isPlanTier("gold"));
+    try std.testing.expectEqualStrings("{\"email\":\"releases@hq.training\",\"tier\":\"team\"}", try planBody(arena, .{ .email = "releases@hq.training", .tier = "team" }));
+    try std.testing.expectEqualStrings("{\"email\":\"a@b.co\",\"tier\":\"pro\",\"until\":\"2027-12-31\"}", try planBody(arena, .{ .email = "a@b.co", .tier = "pro", .until = "2027-12-31" }));
+}
+
+// ---------------------------------------------------------------------------
 // pantry registry token issue / revoke
 // ---------------------------------------------------------------------------
 
