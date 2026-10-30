@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.149...v0.11.150)
+
+## 🐛 Bug Fixes
+
+- **publish**: pack a package without macOS file metadata ([2ebd57a](https://github.com/pantry-pm/pantry/commit/2ebd57a)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.150 ([09dee16](https://github.com/pantry-pm/pantry/commit/09dee16)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.148...v0.11.149)
 
 ## ✨ Features
