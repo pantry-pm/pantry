@@ -22,6 +22,7 @@ import { LocalStorage, S3Storage, sanitizePackageName } from './storage/s3'
 import { assertCleanMalwareScan } from './malware-scanning'
 import { isPrereleaseVersion, pickLatestVersion } from './version-precedence'
 import { PackageVersionExistsError } from './publication'
+import { withDeprecation } from './deprecation'
 
 function checksumOf(bytes: ArrayBuffer): string {
   return `sha256:${new Bun.CryptoHasher('sha256').update(bytes).digest('hex')}`
@@ -116,12 +117,15 @@ export class Registry {
    */
   async getPackage(name: string, version?: string): Promise<PackageMetadata | null> {
     // First check our registry
+    const pkg = await this.metadataStorage.getPackage(name)
     const metadata = version
       ? await this.metadataStorage.getPackageVersion(name, version)
-      : await this.getLatestVersion(name)
+      : pkg && await this.getLatestVersion(name, pkg)
 
     if (metadata) {
-      return metadata
+      // A deprecated package says so on every version it serves, the way npm
+      // marks `versions[v].deprecated`.
+      return withDeprecation(metadata, pkg?.settings)
     }
 
     // Fallback to npm if enabled
@@ -135,11 +139,7 @@ export class Registry {
   /**
    * Get the latest version of a package
    */
-  private async getLatestVersion(name: string): Promise<PackageMetadata | null> {
-    const pkg = await this.metadataStorage.getPackage(name)
-    if (!pkg)
-      return null
-
+  private async getLatestVersion(name: string, pkg: PackageRecord): Promise<PackageMetadata | null> {
     // A pointer stored before prerelease tags without a dash were recognized
     // can sit on one with the release published beside it (libgeos.org on
     // 3.15.0beta2 next to 3.15.0). Only then is the version list worth reading.

@@ -14,6 +14,14 @@
       @endif
     </div>
 
+    @if (isDeprecated)
+    <div class="border rounded-lg p-4 mb-6 animate-fade-in-delay" role="note" aria-label="Deprecated package" data-deprecated style="background: var(--bg-subtle); border-color: var(--yellow);">
+      <p class="uppercase tracking-widest mb-1 font-semibold" style="font-size: 0.6875rem; color: var(--yellow);">Deprecated</p>
+      <p style="font-size: 0.9375rem; color: var(--fg); overflow-wrap: anywhere;">{{ deprecationNotice }}</p>
+      <p class="mt-1" style="font-size: 0.8125rem; color: var(--fg-subtle);">Its owner has retired this package. Existing versions still install, with a warning.</p>
+    </div>
+    @endif
+
     <div class="border rounded-lg p-5 animate-fade-in-delay" style="background: var(--bg-subtle); border-color: var(--accent);">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div>

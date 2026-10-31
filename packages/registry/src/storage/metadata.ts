@@ -255,7 +255,9 @@ export class InMemoryMetadataStorage implements MetadataStorage {
   ): Promise<PackageRecord> {
     const pkg = this.packages.get(name)
     if (!pkg) throw new Error('Package not found')
-    if (pkg.publishedBy && pkg.publishedBy !== userId) {
+    // `_admin` is a site admin (see Registry.updatePublisherPackage), as in
+    // the DynamoDB store.
+    if (pkg.publishedBy && pkg.publishedBy !== userId && userId !== '_admin') {
       throw new Error('Not authorized to update this package')
     }
 

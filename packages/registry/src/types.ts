@@ -26,6 +26,12 @@ export interface PackageMetadata {
   disclosure?: DisclosureMetadata
   /** Clean publish-time verdict for the exact uploaded bytes. */
   malwareScan?: MalwareScanResult
+  /**
+   * Set when the package is deprecated: the owner's message (npm's
+   * `versions[v].deprecated`). Derived from the package's settings when the
+   * document is served, never stored with the version.
+   */
+  deprecated?: string
 }
 
 /**
@@ -65,6 +71,11 @@ export interface PackagePublisherSettings {
    * and package tokens the owner grants (see `private-packages.ts`).
    */
   visibility?: PackageVisibility
+  /**
+   * Retired by its owner (`pantry deprecate`, or the dashboard). Every version
+   * stays installable; metadata carries `deprecated: "<message>"` and clients
+   * warn. See `deprecation.ts`.
+   */
   deprecated?: boolean
   deprecationMessage?: string
 }

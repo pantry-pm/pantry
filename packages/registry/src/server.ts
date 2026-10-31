@@ -77,6 +77,7 @@ import {
   type ReaderIdentity,
 } from './access'
 import { pluginResponse } from './plugins'
+import { deprecationMessage, parseDeprecationMessage } from './deprecation'
 import { MirrorStore, normalizeEntries } from './mirror'
 import { normalizePolicy, SecurityStore } from './security'
 import { buildSbom, parseFormat } from './sbom'
@@ -348,6 +349,14 @@ const publicPageCache = new BoundedAsyncCache<string, CachedResponse>(
   PUBLIC_PAGE_CACHE_BYTES,
   snapshot => (snapshot.body.length + snapshot.headers.reduce((sum, [key, value]) => sum + key.length + value.length, 0)) * 2,
 )
+
+/**
+ * Drop a package's cached public page, so a change its owner just made (a
+ * deprecation, say) shows on the next view rather than within the minute.
+ */
+function forgetPublicPackagePage(name: string): void {
+  publicPageCache.delete(`package:${name}`)
+}
 
 async function cachedPublicResponse(key: string, load: () => Promise<Response>): Promise<Response> {
   const snapshot = await publicPageCache.getOrCreate(key, async () => {
@@ -1495,6 +1504,11 @@ export function createHandler(
           if (managed) return managed
         }
 
+        // Deprecation (`pantry deprecate`): owner, their team or admin.
+        if (rest === 'deprecation' && ['PUT', 'POST', 'DELETE'].includes(req.method)) {
+          return handlePackageDeprecation(req, registry, packageName, corsHeaders)
+        }
+
         // Every read below answers a caller who may not see a private package
         // exactly as it would for a package that doesn't exist — and never
         // falls back to npm for it, which would hand them someone else's code.
@@ -2511,6 +2525,8 @@ interface StorefrontListing {
   name: string
   description?: string
   publisher?: string
+  /** The owner's deprecation message, when the package is deprecated. */
+  deprecated?: string
   paywall: PackagePaywall
 }
 
@@ -2524,10 +2540,12 @@ async function storefrontListing(registry: Registry, packageName: string): Promi
   const paywall = await registry.metadata.getPaywall(packageName)
   if (!paywall?.enabled) return null
   const owner = record?.publishedBy && _authService ? await _authService.findUser(record.publishedBy).catch(() => null) : null
+  const deprecated = deprecationMessage(record?.settings)
   return {
     name: packageName,
     ...(record?.description ? { description: record.description } : {}),
     ...(owner?.name ? { publisher: owner.name } : {}),
+    ...(deprecated ? { deprecated } : {}),
     paywall,
   }
 }
@@ -2566,6 +2584,7 @@ function paymentRequiredResponse(
             forSale: true,
             ...(storefront.description ? { description: storefront.description } : {}),
             ...(storefront.publisher ? { publisher: storefront.publisher } : {}),
+            ...(storefront.deprecated ? { deprecated: storefront.deprecated } : {}),
           }
         : {}),
     },
@@ -2645,6 +2664,32 @@ const PRIVATE_CACHE_HEADERS = { 'Cache-Control': 'private, no-store', 'Vary': 'A
  * doesn't exist; one who can see it (say, through a grant) but doesn't own it
  * gets a 403. A package nobody owns is managed by admins only.
  */
+/**
+ * Who is asking to manage a package: the registry token or an admin session
+ * (`admin`), else an account by a token with publish permission or by session.
+ * Null when the request carries none of these - a read-only or package token
+ * is not authority over a package.
+ */
+async function packageManagerIdentity(req: Request): Promise<{ actor: string, admin: boolean } | null> {
+  if (await isAdminRequest(req)) {
+    const sessionToken = extractSessionToken(req)
+    const sessionUser = sessionToken && _authService ? await _authService.validateSession(sessionToken) : null
+    return { actor: sessionUser?.email ?? '_admin', admin: true }
+  }
+  const authHeader = req.headers.get('authorization')
+  const token = extractBearerToken(authHeader)
+  if (token && isUserApiToken(token)) {
+    const result = await validateToken(authHeader)
+    if (result.valid && result.userId) return { actor: result.userId, admin: false }
+  }
+  if (_authService) {
+    const sessionToken = extractSessionToken(req)
+    const user = sessionToken ? await _authService.validateSession(sessionToken) : null
+    if (user) return { actor: user.email, admin: false }
+  }
+  return null
+}
+
 async function requirePackageManager(
   req: Request,
   registry: Registry,
@@ -2652,27 +2697,9 @@ async function requirePackageManager(
   corsHeaders: Record<string, string>,
 ): Promise<{ actor: string, record: PackageRecord } | Response> {
   const notFound = () => Response.json({ error: 'Package not found' }, { status: 404, headers: corsHeaders })
-  const admin = await isAdminRequest(req)
-
-  let actor: string | null = null
-  if (admin) {
-    const sessionToken = extractSessionToken(req)
-    const sessionUser = sessionToken && _authService ? await _authService.validateSession(sessionToken) : null
-    actor = sessionUser?.email ?? '_admin'
-  }
-  else {
-    const authHeader = req.headers.get('authorization')
-    const token = extractBearerToken(authHeader)
-    if (token && isUserApiToken(token)) {
-      const result = await validateToken(authHeader)
-      if (result.valid) actor = result.userId ?? null
-    }
-    if (!actor && _authService) {
-      const sessionToken = extractSessionToken(req)
-      const user = sessionToken ? await _authService.validateSession(sessionToken) : null
-      if (user) actor = user.email
-    }
-  }
+  const identity = await packageManagerIdentity(req)
+  const admin = identity?.admin ?? false
+  const actor = identity?.actor ?? null
 
   if (!actor) {
     return Response.json(
@@ -3371,6 +3398,91 @@ async function handlePackageAccessRoutes(
   if (!(await auth.deletePackageToken(packageName, id)))
     return Response.json({ error: 'No such token on this package' }, { status: 404, headers })
   return Response.json({ revoked: true }, { headers })
+}
+
+/**
+ * Deprecate a package, or take the deprecation back:
+ *
+ *   PUT    /packages/{name}/deprecation   {message?}  - deprecate (POST too)
+ *   DELETE /packages/{name}/deprecation               - undeprecate
+ *
+ * The same rule as the publisher dashboard (`canManagePackage`): the owner,
+ * a member of the owner's team, or an admin - by a token with publish
+ * permission or by session. Like editing a package there, deprecating one
+ * nobody owns yet claims it. Only the deprecation settings change; everything
+ * else in the package's settings (visibility included) is kept.
+ */
+async function handlePackageDeprecation(
+  req: Request,
+  registry: Registry,
+  packageName: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const headers = { ...corsHeaders, 'Cache-Control': 'no-store' }
+  const identity = await packageManagerIdentity(req)
+  if (!identity) {
+    return Response.json(
+      { error: 'Authentication required', hint: 'pantry token set --registry <registry-url>' },
+      { status: 401, headers },
+    )
+  }
+
+  const notFound = () => Response.json({ error: 'Package not found' }, { status: 404, headers })
+  const record = await registry.getPublisherPackageRecord(packageName).catch(() => null)
+  if (!record) return notFound()
+
+  const user: SessionUser = { email: identity.actor, name: '', role: identity.admin ? 'admin' : 'user' }
+  if (!(await canManagePackage(record, user))) {
+    // A private package this caller can't see doesn't admit to existing,
+    // unless it is for sale and its storefront already says so.
+    if (isPrivatePackage(record) && !(await canReadPackage(registry.metadata, record, await packageReaderFor(req)))
+      && !(await registry.metadata.getPaywall(packageName))?.enabled)
+      return notFound()
+    return Response.json(
+      { error: 'Only the publisher of this package (or their team) can deprecate it' },
+      { status: 403, headers },
+    )
+  }
+
+  let settings: { deprecated: boolean, deprecationMessage: string | undefined }
+  if (req.method === 'DELETE') {
+    settings = { deprecated: false, deprecationMessage: undefined }
+  }
+  else {
+    const text = await req.text()
+    let body: Record<string, unknown> = {}
+    if (text.trim()) {
+      try {
+        const parsed = JSON.parse(text)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('not an object')
+        body = parsed
+      }
+      catch {
+        return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers })
+      }
+    }
+    const parsed = parseDeprecationMessage(body.message)
+    if ('error' in parsed) return Response.json({ error: parsed.error }, { status: 400, headers })
+    settings = { deprecated: true, deprecationMessage: parsed.message }
+  }
+
+  if (!record.publishedBy && !identity.admin) {
+    await registry.claimPublisherPackage(packageName, identity.actor)
+  }
+  // Written as the seat holder when a team member acts, as the dashboard does.
+  const actingAs = record.publishedBy && record.publishedBy !== identity.actor
+    && _authService && await _authService.canActFor(identity.actor, record.publishedBy)
+    ? record.publishedBy
+    : identity.actor
+  const updated = await registry.updatePublisherPackage(packageName, actingAs, { settings }, identity.admin)
+  forgetPublicPackagePage(packageName)
+
+  const message = deprecationMessage(updated.settings)
+  return Response.json({
+    name: packageName,
+    deprecated: message !== null,
+    ...(message ? { message } : {}),
+  }, { headers })
 }
 
 /** Resolve paid-package access for a request, including who published it. */
@@ -4822,6 +4934,14 @@ async function handlePublisherApi(
       if (settings && 'visibility' in settings && !['public', 'unlisted', 'private'].includes(settings.visibility as string)) {
         return Response.json({ error: 'visibility must be public, unlisted or private' }, { status: 400, headers: corsHeaders })
       }
+      if (settings && 'deprecationMessage' in settings) {
+        const parsed = parseDeprecationMessage(settings.deprecationMessage)
+        if ('error' in parsed) return Response.json({ error: `deprecationMessage: ${parsed.error}` }, { status: 400, headers: corsHeaders })
+        settings.deprecationMessage = parsed.message
+      }
+      if (settings && 'deprecated' in settings && typeof settings.deprecated !== 'boolean') {
+        return Response.json({ error: 'deprecated must be true or false' }, { status: 400, headers: corsHeaders })
+      }
       const hiding = settings?.visibility === 'unlisted' || settings?.visibility === 'private'
       if (hiding && settings?.visibility !== record.settings?.visibility && !admin) {
         // The owner's plan, so a team member gets what the seat holder pays for.
@@ -4850,6 +4970,7 @@ async function handlePublisherApi(
         license: body.license,
         settings: body.settings as any,
       }, admin)
+      forgetPublicPackagePage(name)
       return Response.json({ package: updated }, { headers: corsHeaders })
     }
   }
@@ -6804,6 +6925,8 @@ async function renderStorefront(listing: StorefrontListing): Promise<Response> {
     name: listing.name,
     description: listing.description || '',
     publisher: listing.publisher || '',
+    isDeprecated: !!listing.deprecated,
+    deprecationNotice: listing.deprecated || '',
     priceLabel: formatPrice(listing.paywall.price, listing.paywall.currency),
     buyUrl: `/packages/${encodeURIComponent(listing.name)}/buy`,
     title: escapeHtml(listing.name),
@@ -6827,6 +6950,8 @@ async function renderPackageNotFound(name: string): Promise<Response> {
     name,
     safeName: escapeHtml(name),
     encodedName: encodeURIComponent(name),
+    isDeprecated: false,
+    deprecationNotice: '',
     notFound: true,
     isZigPackage: false,
     isPhpPackage: false,
@@ -6870,8 +6995,13 @@ async function handleSitePackage(
       }
     : { isPaid: false, priceLabel: '', buyUrl: '', freeVersionList: '', hasFreeVersions: false }
 
+  // A deprecated package says so on every branch below, like the price.
+  const record = registry ? await registry.getPublisherPackageRecord(name).catch(() => null) : null
+  const deprecated = deprecationMessage(record?.settings)
+  const deprecationProps = { isDeprecated: deprecated !== null, deprecationNotice: deprecated || '' }
+
   const renderPackagePage = (props: Record<string, unknown>): Promise<string> =>
-    renderSitePage('package.stx', { ...paidProps, ...props })
+    renderSitePage('package.stx', { ...paidProps, ...deprecationProps, ...props })
   const safeName = escapeHtml(name)
   const encodedName = encodeURIComponent(name)
   const [rawMeta, stats, timeline, pkgInfo, zigPkg, phpPkg] = await Promise.all([

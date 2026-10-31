@@ -108,6 +108,15 @@ export class BoundedAsyncCache<K, V> {
     return created
   }
 
+  /**
+   * Forget one key. A load already in flight still answers its own callers,
+   * but is no longer shared with the next one.
+   */
+  delete(key: K): boolean {
+    const inFlight = this.inFlight.delete(key)
+    return this.cache.delete(key) || inFlight
+  }
+
   clear(): void {
     this.cache.clear()
     this.inFlight.clear()
