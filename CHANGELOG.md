@@ -1,3 +1,25 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.152...v0.11.153)
+
+## ✨ Features
+
+- **cli**: add pantry deprecate and warn on deprecated installs ([eb38b5a](https://github.com/pantry-pm/pantry/commit/eb38b5a)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: let owners deprecate packages ([379344b](https://github.com/pantry-pm/pantry/commit/379344b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 📝 Documentation
+
+- document package deprecation ([fd02709](https://github.com/pantry-pm/pantry/commit/fd02709)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.153 ([3c22611](https://github.com/pantry-pm/pantry/commit/3c22611)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.409 ([4883480](https://github.com/pantry-pm/pantry/commit/4883480)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.408 ([d605a9f](https://github.com/pantry-pm/pantry/commit/d605a9f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update claude-code, LLaMA.cpp, LM Studio, mailpit, mole, tox, uriparse, zrok ([d903d2f](https://github.com/pantry-pm/pantry/commit/d903d2f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.151...v0.11.152)
 
 ## ✨ Features
