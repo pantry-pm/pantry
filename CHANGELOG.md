@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.151...v0.11.152)
+
+## ✨ Features
+
+- **native**: accept a Craft AppKit bundle as a native macOS app ([18cd098](https://github.com/pantry-pm/pantry/commit/18cd098)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.152 ([1f351e9](https://github.com/pantry-pm/pantry/commit/1f351e9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update aux4, coder, exr, jbang, libarchive, LLaMA.cpp, opencode.ai, projen, sqlfluff, stripe, vcluster ([f2d193a](https://github.com/pantry-pm/pantry/commit/f2d193a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.150...v0.11.151)
 
 ## 💄 Styles
