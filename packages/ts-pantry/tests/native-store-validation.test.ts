@@ -47,3 +47,19 @@ test('locally runnable builds still require a successful readiness check', async
   ready = true
   await validateNativeMacApp(artifact, undefined, command)
 })
+
+test('a Craft AppKit bundle (compiled screens, no web content) is a valid native app', async () => {
+  const { artifact, app } = fixture()
+  rmSync(join(app, 'Contents/Resources/index.html')); rmSync(join(app, 'Contents/Resources/craft.json'))
+  const plist = async (name: string) => name === 'plutil' ? { exitCode: 0, stderr: '', stdout: JSON.stringify({ CFBundleIdentifier: artifact.bundleId, CFBundleShortVersionString: artifact.version, CFBundleVersion: artifact.buildNumber }) } : undefined
+  const command: NativeCommand = async (name, args) => (await plist(name)) ?? { exitCode: 0, stderr: '', stdout: args[0] === '--version' ? 'craft native macOS renderer 0.0.172 (zig-js)' : 'ready' }
+  // Without its screens it is incomplete, as a web bundle without its page is.
+  await expect(validateNativeMacBundle(artifact, undefined, command)).rejects.toThrow('incomplete')
+  writeFileSync(join(app, 'Contents/Resources/native-screen.js'), 'screens')
+  writeFileSync(join(app, 'Contents/Resources/craft-app.json'), '{}')
+  await validateNativeMacBundle(artifact, undefined, command)
+  // Local execution proves the host loads; it is not asked for the web build's benchmark.
+  await validateNativeMacApp(artifact, undefined, command)
+  const wrong: NativeCommand = async (name) => (await plist(name)) ?? { exitCode: 0, stderr: '', stdout: 'something else' }
+  await expect(validateNativeMacApp(artifact, undefined, wrong)).rejects.toThrow('AppKit renderer')
+})

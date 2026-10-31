@@ -26,13 +26,22 @@ export function nativeBundleSize(directory: string): number {
   return stat.isDirectory() ? readdirSync(directory).reduce((size, name) => size + nativeBundleSize(join(directory, name)), 0) : stat.size
 }
 
+/** Whether the bundle is a Craft AppKit app: compiled stx screens and host settings, no web content. */
+export function isNativeAppKitBundle(app: string): boolean {
+  return existsSync(join(app, 'Contents/Resources/native-screen.js')) && existsSync(join(app, 'Contents/Resources/craft-app.json'))
+}
+
 /** Structural validation is shared by locally runnable and Store distribution bundles. */
 export async function validateNativeMacBundle(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand): Promise<void> {
   const app = artifact.appPath ?? artifact.path
   if (!app.endsWith('.app') || !existsSync(app)) throw new Error('Native build must produce a macOS application bundle')
   const plist = join(app, 'Contents/Info.plist')
   const executable = join(app, 'Contents/MacOS', artifact.name)
-  for (const file of [plist, executable, join(app, 'Contents/Resources/index.html'), join(app, 'Contents/Resources/craft.json')]) {
+  // A Craft AppKit app (stx screens drawn natively, no web view) carries its
+  // compiled screens and the host's settings instead of a page and a manifest.
+  const appKit = isNativeAppKitBundle(app)
+  const content = appKit ? ['native-screen.js', 'craft-app.json'] : ['index.html', 'craft.json']
+  for (const file of [plist, executable, ...content.map(name => join(app, 'Contents/Resources', name))]) {
     if (!existsSync(file)) throw new Error(`Native app is incomplete: ${file}`)
   }
   const magic = readFileSync(executable).subarray(0, 4).toString('hex')
@@ -48,6 +57,13 @@ export async function validateNativeMacBundle(artifact: NativeArtifact, maxBytes
 export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand): Promise<void> {
   await validateNativeMacBundle(artifact, maxBytes, command)
   const executable = join(artifact.appPath ?? artifact.path, 'Contents/MacOS', artifact.name)
+  // The AppKit host has no readiness benchmark: it opens a window. Running it
+  // proves it loads and links, and its version names the renderer.
+  if (isNativeAppKitBundle(artifact.appPath ?? artifact.path)) {
+    const version = succeeded('Native launch check', await command(executable, ['--version']))
+    if (!`${version.stdout}${version.stderr}`.includes('craft native macOS renderer')) throw new Error('Native app did not report the AppKit renderer')
+    return
+  }
   const benchmark = succeeded('Native launch check', await command(executable, ['--benchmark']))
   if (!`${benchmark.stdout}${benchmark.stderr}`.includes('ready')) throw new Error('Native app did not report ready')
 }
