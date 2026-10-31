@@ -3,7 +3,7 @@
  *
  * @domain `uriparser.github.io`
  * @programs `uriparse`
- * @version `1.0.0` (4 versions available)
+ * @version `1.0.3` (16 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install uriparser.github.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "uriparse"
  * console.log(pkg.description) // " :hocho: Strictly RFC 3986 compliant URI parsin..."
  * console.log(pkg.programs)    // ["uriparse"]
- * console.log(pkg.versions[0]) // "1.0.0" (latest)
+ * console.log(pkg.versions[0]) // "1.0.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/uriparser-github-io.md
@@ -67,6 +67,7 @@ export const uriparsergithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.3',
     '1.0.2',
     '1.0.1',
     '1.0.0',
