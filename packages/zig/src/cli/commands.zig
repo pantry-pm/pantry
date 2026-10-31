@@ -35,6 +35,7 @@ pub const registry_commands = @import("commands/registry.zig");
 pub const registry_ops = @import("commands/registry_ops.zig");
 pub const paid_commands = @import("commands/paid.zig");
 pub const access_commands = @import("commands/access.zig");
+pub const deprecate_commands = @import("commands/deprecate.zig");
 pub const insure_commands = @import("commands/insure.zig");
 pub const token_commands = @import("commands/token.zig");
 pub const px_commands = @import("commands/px.zig");

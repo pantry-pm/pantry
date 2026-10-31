@@ -343,10 +343,13 @@ pub const Installer = struct {
         if (self.verbose) std.debug.print("[verbose:resolve] {s} is pinned to {s}: resolving {s} there only\n", .{ pin.scope, pin.baseUrl(), version_constraint });
         var note: ?[]const u8 = null;
         opts.payment_note = &note;
-        return scopes.resolve(self.allocator, pin.baseUrl(), name, version_constraint, opts) catch |err| {
+        const resolution = scopes.resolve(self.allocator, pin.baseUrl(), name, version_constraint, opts) catch |err| {
             if (note) |text| self.rememberPaymentNote(name, text);
             return err;
         };
+        // A deprecated package installs all the same, with a warning.
+        scopes.warnIfDeprecated(name, &resolution);
+        return resolution;
     }
 
     /// Keep a 402's message for `describePinnedFailure`; takes ownership.

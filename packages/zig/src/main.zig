@@ -1467,6 +1467,22 @@ fn accessTokenRevokeAction(ctx: *cli.BaseCommand.ParseContext) !void {
     finishTokenResult(allocator, result);
 }
 
+// ============================================================================
+// Deprecation (`pantry deprecate …`)
+// ============================================================================
+
+fn deprecateAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    const allocator = ctx.allocator;
+    const result = try lib.commands.deprecate_commands.deprecateCommand(allocator, .{
+        .registry = ctx.getOption("registry"),
+        .token = ctx.getOption("token"),
+        .package = requirePackageArg(ctx, "pantry deprecate @scope/package \"Use @scope/other instead\""),
+        .message = ctx.getArgument(1),
+        .undo = ctx.hasOption("undo"),
+    });
+    finishTokenResult(allocator, result);
+}
+
 fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -4644,6 +4660,16 @@ pub fn main() !void {
     _ = try access_cmd.addCommand(access_token_revoke_cmd);
 
     _ = try root.addCommand(access_cmd);
+
+    // Retire a package: every version stays installable, installs warn.
+    var deprecate_cmd = try cli.BaseCommand.init(allocator, "deprecate", "Mark a package you publish as deprecated (installs warn; nothing is removed)");
+    _ = try deprecate_cmd.addArgument(cli.Argument.init("package", "Package name", .string).withRequired(true));
+    _ = try deprecate_cmd.addArgument(cli.Argument.init("message", "Why, and what to use instead (quote it)", .string).withRequired(false));
+    _ = try deprecate_cmd.addOption(cli.Option.init("undo", "undo", "Undeprecate the package", .bool));
+    _ = try deprecate_cmd.addOption(paid_registry_opt);
+    _ = try deprecate_cmd.addOption(paid_token_opt);
+    _ = deprecate_cmd.setAction(deprecateAction);
+    _ = try root.addCommand(deprecate_cmd);
 
     const team_session_opt = cli.Option.init("session", "session", "Session token from the website (team changes need a signed-in person)", .string);
 

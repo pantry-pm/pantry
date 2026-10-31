@@ -11,6 +11,7 @@ const install = lib.install;
 const style = @import("../../style.zig");
 const scopes = @import("../../../registry/scopes.zig");
 const endpoint = @import("../../../registry/endpoint.zig");
+const deprecation = @import("../../../registry/deprecation.zig");
 
 // ============================================================================
 // Package Spec Parsing
@@ -384,6 +385,8 @@ pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, ve
 }
 
 fn infoFromResolution(allocator: std.mem.Allocator, name: []const u8, resolution: *const scopes.Resolution) !PantryPackageInfo {
+    // A deprecated package installs all the same, with a warning.
+    scopes.warnIfDeprecated(name, resolution);
     const s3_path = try allocator.dupe(u8, name);
     errdefer allocator.free(s3_path);
     const version = try allocator.dupe(u8, resolution.version);
@@ -420,6 +423,9 @@ fn lookupViaRegistryApi(allocator: std.mem.Allocator, name: []const u8, platform
     if (parsed.value.object.get("error") != null) return null;
 
     const version = if (parsed.value.object.get("version")) |v| (if (v == .string) v.string else return null) else return null;
+
+    // A deprecated package installs all the same, with a warning.
+    if (deprecation.fromMetadata(parsed.value.object)) |message| deprecation.warn(name, version, message);
 
     // If the response has a direct tarball URL, use it
     if (parsed.value.object.get("tarballUrl")) |t| {

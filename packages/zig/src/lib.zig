@@ -79,4 +79,7 @@ test {
     _ = @import("http_retry.zig");
     _ = @import("deps/js_workspace.zig");
     _ = @import("cli/diagnostics.zig");
+    _ = @import("cli/commands/deprecate.zig");
+    _ = @import("registry/deprecation.zig");
+    _ = @import("registry/scopes.zig");
 }

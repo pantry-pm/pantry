@@ -35,6 +35,7 @@ const endpoint = @import("endpoint.zig");
 const semver = @import("../packages/semver.zig");
 const parser = @import("../deps/parser.zig");
 const auth_registry = @import("../auth/registry.zig");
+const deprecation = @import("deprecation.zig");
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -580,11 +581,15 @@ pub const Resolution = struct {
     integrity: ?[]const u8 = null,
     /// Read from the published manifest the registry stores with the version.
     dependencies: []Dependency = &.{},
+    /// The owner's deprecation message (npm's `deprecated`), when the package
+    /// is deprecated. Installs warn with it (see `warnIfDeprecated`) and go on.
+    deprecated: ?[]const u8 = null,
 
     pub fn deinit(self: *Resolution, allocator: std.mem.Allocator) void {
         allocator.free(self.version);
         allocator.free(self.tarball_url);
         if (self.integrity) |i| allocator.free(i);
+        if (self.deprecated) |d| allocator.free(d);
         for (self.dependencies) |d| {
             allocator.free(d.name);
             allocator.free(d.constraint);
@@ -745,13 +750,23 @@ pub fn parseVersionMetadata(
     errdefer allocator.free(canonical);
     const owned_version = try allocator.dupe(u8, version);
     errdefer allocator.free(owned_version);
+    const deprecated: ?[]const u8 = if (deprecation.fromMetadata(obj)) |message| try allocator.dupe(u8, message) else null;
+    errdefer if (deprecated) |d| allocator.free(d);
 
     return .{
         .version = owned_version,
         .tarball_url = canonical,
         .integrity = integrity,
         .dependencies = try deps.toOwnedSlice(allocator),
+        .deprecated = deprecated,
     };
+}
+
+/// Print `warn: <name>@<version> is deprecated: <message>` for a deprecated
+/// resolution, once per package and version. Never fails.
+pub fn warnIfDeprecated(name: []const u8, resolution: *const Resolution) void {
+    const message = resolution.deprecated orelse return;
+    deprecation.warn(name, resolution.version, message);
 }
 
 /// Resolve `name@constraint` against the Pantry registry at `base`, and only
@@ -1032,6 +1047,22 @@ test "pinned resolution: metadata yields the canonical tarball, integrity and de
     try testing.expectEqualStrings("sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9", res.integrity.?);
     try testing.expectEqual(@as(usize, 3), res.dependencies.len);
     try testing.expect(res.dependencies[2].optional);
+}
+
+test "pinned resolution: a deprecated version carries its message" {
+    var deprecated = try parseVersionMetadata(testing.allocator,
+        \\{"name":"@hq/kit-probe","version":"1.0.0","checksum":"sha256:b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+        \\ "deprecated":"Use @hq/kit instead"}
+    , "https://registry.pantry.dev", "@hq/kit-probe", "1.0.0");
+    defer deprecated.deinit(testing.allocator);
+    try testing.expectEqualStrings("Use @hq/kit instead", deprecated.deprecated.?);
+
+    // npm's empty string means "not deprecated".
+    var current = try parseVersionMetadata(testing.allocator,
+        \\{"name":"@hq/kit-probe","version":"1.0.0","deprecated":""}
+    , "https://registry.pantry.dev", "@hq/kit-probe", "1.0.0");
+    defer current.deinit(testing.allocator);
+    try testing.expect(current.deprecated == null);
 }
 
 test "pinned resolution: an npm answer relayed by the registry is a miss" {
