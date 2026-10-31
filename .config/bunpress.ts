@@ -69,6 +69,7 @@ const config = {
           items: [
             { text: 'Paid Packages', link: '/paid-packages' },
             { text: 'Private Packages', link: '/private-packages' },
+            { text: 'Deprecating Packages', link: '/deprecating-packages' },
             { text: 'Plans & Fees', link: '/pricing' },
             { text: 'Build Insurance & SBOMs', link: '/build-insurance' },
             { text: 'Publishing to npm', link: '/NPM_OIDC_PUBLISHING' },

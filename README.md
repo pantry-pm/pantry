@@ -546,6 +546,7 @@ See [GitHub Action Documentation](https://github.com/pantry-pm/pantry/tree/main/
 Explore advanced dependency management topics:
 
 - [Paid Packages](https://pantry.dev/paid-packages) _(price a package, get paid, buyers install with their account)_
+- [Deprecating Packages](https://pantry.dev/deprecating-packages) _(retire a package without unpublishing it; installs warn)_
 - [Build Insurance, Alerts & SBOMs](https://pantry.dev/build-insurance) _(never lose a build to an unpublished dependency)_
 - [Plans & Fees](https://pantry.dev/pricing) _(Free / Pro $9 / Team $29 — private packages, build insurance, priority builds)_
 - [Run Your Own Registry](https://pantry.dev/self-hosting) _(one command, and it's private by default — only authenticated members can download)_

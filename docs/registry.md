@@ -36,6 +36,7 @@ integrity semantics; clients must use the contract for the selected surface.
 | `GET`/`PUT`/`DELETE` | `/packages/{name}/access` | Owner, owner's team, or admin | List, grant or revoke account access to a private package. |
 | `GET`/`POST` | `/packages/{name}/tokens` | Owner, owner's team, or admin | List or mint package-scoped read tokens. |
 | `DELETE` | `/packages/{name}/tokens/{id}` | Owner, owner's team, or admin | Revoke a package token. |
+| `PUT`/`DELETE` | `/packages/{name}/deprecation` | Owner, owner's team, or admin (publish token or session) | Deprecate with `{message?}`, or undeprecate. Merges into the package settings. |
 
 A package published with `"publishConfig": { "access": "restricted" }`, or set
 to `private` in its settings, is a **private package**. Every read surface,
@@ -43,6 +44,12 @@ including the routes above, search, listings, badges, analytics, commit
 snapshots and web pages, answers callers outside its owner, team, admins, grants
 and package tokens exactly as it answers for a package that does not exist.
 See [Private packages](./private-packages.md).
+
+A **deprecated** package (`pantry deprecate`, or its dashboard settings) keeps
+serving every version. Each metadata document for it carries npm's
+`deprecated: "<message>"`, derived from the package settings at read time and
+never stored with a version, and its web page shows the notice. See
+[Deprecating packages](./deprecating-packages.md).
 
 Publishing validates package name, version, metadata size, content type, and the
 plan's artifact limit. A duplicate `{name, version}` returns `409` before the

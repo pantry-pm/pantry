@@ -263,6 +263,7 @@ migrating it; run an ordinary install and commit the resulting lock first.
 | `pantry publish:check` | Validate names and registry collisions without publishing; offline mode performs syntactic checks only. |
 | `pantry publish:commit` | Publish temporary, commit-addressed monorepo packages and return installable URLs. Existing names can be skipped unless forced. |
 | `pantry publish:binary` | Publish a platform-specific native binary and metadata to Pantry object storage. |
+| `pantry deprecate <package> [message]` | Mark a Pantry-registry package deprecated (owner, team, or admin; enforced by the registry); `--undo` reverses it. Versions stay installable. See [Deprecating packages](./deprecating-packages.md). |
 | `pantry login` | Log in to npm in the browser and save the session token to the user npmrc. |
 | `pantry publisher:add`, `publisher:list`, `publisher:remove` | Manage npm trusted publishers through npm's trust API (`/-/package/<name>/trust`), the one `npm trust` uses. |
 | `pantry sign` / `pantry verify` | Create or verify package signatures with configured Ed25519 key material. |
@@ -399,6 +400,8 @@ environment instead of copying packages into the global shell.
 - Untrusted lifecycle script: require trust or an explicit script policy.
 - Registry authentication failure: fail without uploading.
 - Duplicate immutable version: registry returns conflict; do not overwrite it.
+- Deprecated package (`deprecated` in its metadata): print one
+  `warn: <name>@<version> is deprecated: <message>` line and install it anyway.
 - Partial workspace failure: return non-zero and do not claim complete success.
 
 ## Test and evidence map

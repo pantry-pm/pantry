@@ -417,6 +417,9 @@ admin session). A read-only token can install but can't hand out access.
 - A private package published with the registry token has no owner, so only
   admins manage it.
 
+To retire a private package without unpublishing it, see
+[Deprecating packages](deprecating-packages.md). It stays private.
+
 ## Caching
 
 Responses for a private package carry `Cache-Control: private, no-store`, so a

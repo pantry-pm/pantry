@@ -24,7 +24,7 @@ interface ContractMarker {
 }
 
 const markers: ContractMarker[] = [
-  ...['install', 'ci', 'add', 'remove', 'uninstall', 'update', 'outdated', 'list', 'why', 'tree', 'dedupe', 'link', 'unlink', 'audit', 'search', 'info', 'publish', 'npm:publish', 'publish:check', 'publish:commit', 'publish:binary', 'sign', 'verify'].map(command => ({
+  ...['install', 'ci', 'add', 'remove', 'uninstall', 'update', 'outdated', 'list', 'why', 'tree', 'dedupe', 'link', 'unlink', 'audit', 'search', 'info', 'publish', 'npm:publish', 'publish:check', 'publish:commit', 'publish:binary', 'deprecate', 'sign', 'verify'].map(command => ({
     label: `package command ${command}`,
     source: 'mainSource' as const,
     sourceMarker: `BaseCommand.init(allocator, "${command}"`,
@@ -66,6 +66,7 @@ const markers: ContractMarker[] = [
     ['commit publish', `path === '/publish/commit'`, '/publish/commit'],
     ['npm resolve', `path === '/npm/resolve'`, '/npm/resolve'],
     ['registry download', `path === '/registry/download'`, '/registry/download'],
+    ['package deprecation', `rest === 'deprecation'`, '/packages/{name}/deprecation'],
   ].map(([label, sourceMarker, documentMarker]) => ({
     label: `registry route ${label}`,
     source: 'registryServerSource' as const,
