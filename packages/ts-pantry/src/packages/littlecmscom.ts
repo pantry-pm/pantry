@@ -3,7 +3,7 @@
  *
  * @domain `littlecms.com`
  * @programs `jpgicc`, `linkicc`, `psicc`, `tificc`, `transicc`
- * @version `2.18.0` (5 versions available)
+ * @version `2.20` (17 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install littlecms.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "littlecms"
  * console.log(pkg.description) // "A free, open source, CMM engine. It provides fa..."
  * console.log(pkg.programs)    // ["jpgicc", "linkicc", ...]
- * console.log(pkg.versions[0]) // "2.18.0" (latest)
+ * console.log(pkg.versions[0]) // "2.20" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/littlecms-com.md
@@ -79,6 +79,7 @@ export const littlecmscomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.20',
     '2.19.1',
     '2.19',
     '2.18',
