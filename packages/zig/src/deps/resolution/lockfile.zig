@@ -51,6 +51,38 @@ pub const LockedPackage = struct {
 };
 
 /// Lock file structure
+/// The keys of a string-keyed map in byte order (borrowed from the map).
+fn sortedMapKeys(allocator: std.mem.Allocator, map: anytype) ![][]const u8 {
+    const keys = try allocator.alloc([]const u8, map.count());
+    var it = map.iterator();
+    var i: usize = 0;
+    while (it.next()) |entry| : (i += 1) keys[i] = entry.key_ptr.*;
+    std.mem.sort([]const u8, keys, {}, struct {
+        fn lessThan(_: void, a: []const u8, b: []const u8) bool {
+            return std.mem.order(u8, a, b) == .lt;
+        }
+    }.lessThan);
+    return keys;
+}
+
+/// A JSON string literal, escaped.
+fn appendJsonString(output: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []const u8) !void {
+    try output.append(allocator, '"');
+    for (text) |c| switch (c) {
+        '"' => try output.appendSlice(allocator, "\\\""),
+        '\\' => try output.appendSlice(allocator, "\\\\"),
+        '\n' => try output.appendSlice(allocator, "\\n"),
+        '\r' => try output.appendSlice(allocator, "\\r"),
+        '\t' => try output.appendSlice(allocator, "\\t"),
+        0...8, 11, 12, 14...31 => {
+            var buf: [6]u8 = undefined;
+            try output.appendSlice(allocator, try std.fmt.bufPrint(&buf, "\\u{x:0>4}", .{c}));
+        },
+        else => try output.append(allocator, c),
+    };
+    try output.append(allocator, '"');
+}
+
 pub const LockFile = struct {
     version: []const u8,
     packages: std.StringHashMap(LockedPackage),
@@ -162,66 +194,56 @@ pub const LockFile = struct {
         return try std.fmt.allocPrint(self.allocator, "{s}@{s}", .{ name, version });
     }
 
-    /// Write lock file to disk
+    /// Write lock file to disk.
+    ///
+    /// Packages and their dependencies are written in sorted order, so the same
+    /// resolution always produces the same bytes: a hash map iterates in an
+    /// order that changes with insertion order, and a committed lockfile used to
+    /// be reshuffled by an install that changed nothing. The file is only
+    /// rewritten when its content differs.
     pub fn write(self: *LockFile, path: []const u8) !void {
         var output: std.ArrayList(u8) = .empty;
         defer output.deinit(self.allocator);
 
-        try output.appendSlice(self.allocator, "{\n");
-        var buf: [1024]u8 = undefined;
-        const version_line = try std.fmt.bufPrint(&buf, "  \"version\": \"{s}\",\n", .{self.version});
-        try output.appendSlice(self.allocator, version_line);
-        try output.appendSlice(self.allocator, "  \"packages\": {\n");
+        try output.appendSlice(self.allocator, "{\n  \"version\": ");
+        try appendJsonString(&output, self.allocator, self.version);
+        try output.appendSlice(self.allocator, ",\n  \"packages\": {\n");
 
-        var it = self.packages.iterator();
-        var first = true;
-        while (it.next()) |entry| {
-            if (!first) {
-                try output.appendSlice(self.allocator, ",\n");
-            }
-            first = false;
+        const keys = try sortedMapKeys(self.allocator, &self.packages);
+        defer self.allocator.free(keys);
 
-            const key = entry.key_ptr.*;
-            const pkg = entry.value_ptr.*;
+        for (keys, 0..) |key, index| {
+            const pkg = self.packages.get(key).?;
+            if (index > 0) try output.appendSlice(self.allocator, ",\n");
 
-            const key_line = try std.fmt.bufPrint(&buf, "    \"{s}\": {{\n", .{key});
-            try output.appendSlice(self.allocator, key_line);
-            const name_line = try std.fmt.bufPrint(&buf, "      \"name\": \"{s}\",\n", .{pkg.name});
-            try output.appendSlice(self.allocator, name_line);
-            const version_line2 = try std.fmt.bufPrint(&buf, "      \"version\": \"{s}\",\n", .{pkg.version});
-            try output.appendSlice(self.allocator, version_line2);
-            const resolved_line = try std.fmt.bufPrint(&buf, "      \"resolved\": \"{s}\"", .{pkg.resolved});
-            try output.appendSlice(self.allocator, resolved_line);
+            try output.appendSlice(self.allocator, "    ");
+            try appendJsonString(&output, self.allocator, key);
+            try output.appendSlice(self.allocator, ": {\n      \"name\": ");
+            try appendJsonString(&output, self.allocator, pkg.name);
+            try output.appendSlice(self.allocator, ",\n      \"version\": ");
+            try appendJsonString(&output, self.allocator, pkg.version);
+            try output.appendSlice(self.allocator, ",\n      \"resolved\": ");
+            try appendJsonString(&output, self.allocator, pkg.resolved);
 
             if (pkg.integrity) |integrity| {
-                const integrity_line = try std.fmt.bufPrint(&buf, ",\n      \"integrity\": \"{s}\"", .{integrity});
-                try output.appendSlice(self.allocator, integrity_line);
+                try output.appendSlice(self.allocator, ",\n      \"integrity\": ");
+                try appendJsonString(&output, self.allocator, integrity);
             }
 
-            if (pkg.dev) {
-                try output.appendSlice(self.allocator, ",\n      \"dev\": true");
-            }
-
-            if (pkg.optional) {
-                try output.appendSlice(self.allocator, ",\n      \"optional\": true");
-            }
+            if (pkg.dev) try output.appendSlice(self.allocator, ",\n      \"dev\": true");
+            if (pkg.optional) try output.appendSlice(self.allocator, ",\n      \"optional\": true");
 
             if (pkg.dependencies.count() > 0) {
                 try output.appendSlice(self.allocator, ",\n      \"dependencies\": {\n");
 
-                var dep_it = pkg.dependencies.iterator();
-                var dep_first = true;
-                while (dep_it.next()) |dep_entry| {
-                    if (!dep_first) {
-                        try output.appendSlice(self.allocator, ",\n");
-                    }
-                    dep_first = false;
-
-                    const dep_line = try std.fmt.bufPrint(&buf, "        \"{s}\": \"{s}\"", .{
-                        dep_entry.key_ptr.*,
-                        dep_entry.value_ptr.*,
-                    });
-                    try output.appendSlice(self.allocator, dep_line);
+                const dep_keys = try sortedMapKeys(self.allocator, &pkg.dependencies);
+                defer self.allocator.free(dep_keys);
+                for (dep_keys, 0..) |dep_key, dep_index| {
+                    if (dep_index > 0) try output.appendSlice(self.allocator, ",\n");
+                    try output.appendSlice(self.allocator, "        ");
+                    try appendJsonString(&output, self.allocator, dep_key);
+                    try output.appendSlice(self.allocator, ": ");
+                    try appendJsonString(&output, self.allocator, pkg.dependencies.get(dep_key).?);
                 }
 
                 try output.appendSlice(self.allocator, "\n      }");
@@ -232,13 +254,16 @@ pub const LockFile = struct {
 
         try output.appendSlice(self.allocator, "\n  }\n}\n");
 
+        // Unchanged content keeps the file (and its mtime) as it was.
+        if (io_helper.readFileAlloc(self.allocator, path, 64 * 1024 * 1024)) |existing| {
+            defer self.allocator.free(existing);
+            if (std.mem.eql(u8, existing, output.items)) return;
+        } else |_| {}
+
         const file = try io_helper.cwd().createFile(io_helper.io, path, .{});
         defer file.close(io_helper.io);
 
-        const content = try output.toOwnedSlice(self.allocator);
-        defer self.allocator.free(content);
-
-        try io_helper.writeAllToFile(file, content);
+        try io_helper.writeAllToFile(file, output.items);
     }
 
     /// Read lock file from disk
@@ -598,4 +623,45 @@ pub fn loadLockfileIfExists(allocator: std.mem.Allocator, cwd: []const u8) !?Loc
         }
         return err;
     };
+}
+
+test "LockFile.write is the same bytes whatever order packages were added in" {
+    const allocator = std.testing.allocator;
+    const dir = "/tmp/pantry_test_lockfile_order_zigtest";
+    io_helper.makePath(dir) catch {};
+    defer io_helper.deleteTree(dir) catch {};
+    const first_path = dir ++ "/a.lock";
+    const second_path = dir ++ "/b.lock";
+
+    const names = [_][]const u8{ "oberhumer.com/lzo", "nghttp2.org", "x.org/xcb", "sqlite.org", "git-scm.org" };
+
+    var forward = LockFile.init(allocator);
+    defer forward.deinit();
+    for (names) |name| try forward.addPackage(name, "1.0.0", "registry:pkg@1.0.0", null);
+    try forward.write(first_path);
+
+    var backward = LockFile.init(allocator);
+    defer backward.deinit();
+    var i: usize = names.len;
+    while (i > 0) : (i -= 1) try backward.addPackage(names[i - 1], "1.0.0", "registry:pkg@1.0.0", null);
+    try backward.write(second_path);
+
+    const a = try io_helper.readFileAlloc(allocator, first_path, 1024 * 1024);
+    defer allocator.free(a);
+    const b = try io_helper.readFileAlloc(allocator, second_path, 1024 * 1024);
+    defer allocator.free(b);
+    try std.testing.expectEqualStrings(a, b);
+
+    // Byte order: git-scm.org < nghttp2.org < oberhumer.com/lzo < sqlite.org < x.org/xcb
+    const git = std.mem.indexOf(u8, a, "\"git-scm.org@").?;
+    const nghttp = std.mem.indexOf(u8, a, "\"nghttp2.org@").?;
+    const oberhumer = std.mem.indexOf(u8, a, "\"oberhumer.com/lzo@").?;
+    const sqlite = std.mem.indexOf(u8, a, "\"sqlite.org@").?;
+    const xcb = std.mem.indexOf(u8, a, "\"x.org/xcb@").?;
+    try std.testing.expect(git < nghttp and nghttp < oberhumer and oberhumer < sqlite and sqlite < xcb);
+
+    // And it reads back.
+    var read_back = try LockFile.read(allocator, first_path);
+    defer read_back.deinit();
+    try std.testing.expectEqual(@as(usize, names.len), read_back.packages.count());
 }
