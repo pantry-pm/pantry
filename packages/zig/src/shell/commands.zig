@@ -204,9 +204,7 @@ pub const ShellCommands = struct {
             // removed when an install fails, and a hit on a missing one would
             // hand out a PATH with nothing behind it.
             const env_present = blk: {
-                const bin = std.fs.path.join(self.allocator, &[_][]const u8{ cached_entry.path, "bin" }) catch break :blk false;
-                defer self.allocator.free(bin);
-                io_helper.cwd().access(io_helper.io, bin, .{}) catch break :blk false;
+                io_helper.cwd().access(io_helper.io, cached_entry.path, .{}) catch break :blk false;
                 break :blk true;
             };
             if (mtime_ok and size_ok and install_present and env_present) {
