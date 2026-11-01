@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.155...v0.11.156)
+
+## 🐛 Bug Fixes
+
+- **lockfile**: write pantry.lock in sorted order, escaped, and only when it changed ([db633c1](https://github.com/pantry-pm/pantry/commit/db633c1)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.156 ([25ce55f](https://github.com/pantry-pm/pantry/commit/25ce55f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.154...v0.11.155)
 
 ## 🐛 Bug Fixes
