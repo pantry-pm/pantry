@@ -159,6 +159,21 @@ pub fn shellUnknownSubcommand(allocator: std.mem.Allocator, subcommand: []const 
 }
 
 pub fn shellActivateCommand(allocator: std.mem.Allocator, dir: []const u8) !CommandResult {
+    return shellActivateCommandWithOptions(allocator, dir, .{});
+}
+
+pub const ActivateOptions = struct {
+    /// Print a JSON report instead of shell code.
+    json: bool = false,
+    /// Install what the project declares when it is missing (the default).
+    install: bool = true,
+};
+
+/// `pantry env`: the shell code to `eval`, or with `json` the environment as
+/// data. A JSON report whose install did not finish exits 1 with the report
+/// (and its `error`) on stdout, so a caller can tell that from a project that
+/// declares nothing.
+pub fn shellActivateCommandWithOptions(allocator: std.mem.Allocator, dir: []const u8, options: ActivateOptions) !CommandResult {
     // stdout of this command is eval'd shell code — every diagnostic
     // (including spawned package-manager children, see js_delegate) must go
     // to stderr or it corrupts the activation.
@@ -170,13 +185,21 @@ pub fn shellActivateCommand(allocator: std.mem.Allocator, dir: []const u8) !Comm
 
     var commands = try shell_cmds.ShellCommands.init(allocator);
     defer commands.deinit();
+    commands.skip_install = !options.install;
+    commands.format = if (options.json) .json else .shell;
 
     const shell_code = commands.activate(dir) catch |err| {
-        const msg = try std.fmt.allocPrint(
-            allocator,
-            "Error: Failed to activate environment: {s}",
-            .{@errorName(err)},
-        );
+        const msg = if (options.json)
+            try std.json.Stringify.valueAlloc(allocator, shell_cmds.ShellCommands.Report{
+                .ok = false,
+                .@"error" = try std.fmt.allocPrint(allocator, "failed to activate the environment: {s}", .{@errorName(err)}),
+            }, .{})
+        else
+            try std.fmt.allocPrint(
+                allocator,
+                "Error: Failed to activate environment: {s}",
+                .{@errorName(err)},
+            );
         return .{
             .exit_code = 1,
             .message = msg,
@@ -184,7 +207,7 @@ pub fn shellActivateCommand(allocator: std.mem.Allocator, dir: []const u8) !Comm
     };
 
     return .{
-        .exit_code = 0,
+        .exit_code = if (options.json and commands.failure != null) 1 else 0,
         .message = shell_code,
     };
 }

@@ -211,6 +211,39 @@ export pantry_SHELL_DEACTIVATION_MESSAGE="🏠 Back to global environment"
 
 ## Environment Management Commands
 
+### Reading an Environment as Data
+
+`pantry env` prints shell code for `eval`. Tools that read the environment
+instead of sourcing it (a CI runner prepending a PATH, an editor) ask for JSON:
+
+```bash
+pantry env --json --dir ./my-project
+```
+
+```json
+{
+  "ok": true,
+  "root": "/work/my-project",
+  "env": "/Users/me/.local/share/pantry/envs/my-project_ab12cd34-d1234abcd",
+  "path": ["/Users/me/.local/share/pantry/envs/.../bin", "/work/my-project/pantry/git-scm.org/v2.53.0/bin"],
+  "library_path_variable": "DYLD_LIBRARY_PATH",
+  "library_path": ["/work/my-project/pantry/curl.se/v8.21.0/lib"],
+  "dependencies": ["git-scm.org 2.53.0", "curl.se 8"],
+  "error": null
+}
+```
+
+- `--dir <path>` activates another project than the current directory.
+- Activation installs what the project declares when it is missing. `--install`
+  says so explicitly; `--no-install` reports the environment without installing.
+- `path` is exactly what the shell code puts on `PATH`, highest precedence
+  first; `library_path` is what it adds to the dynamic-linker variable.
+- Install progress goes to stderr, so stdout is always one JSON document.
+- A project that declares nothing prints an empty report and exits 0. An install
+  that did not finish, or a declared registry package that is not on disk,
+  prints `"ok": false` with `error` and exits 1, so a caller can tell a broken
+  environment from an empty one.
+
 ### Listing Environments
 
 The `env:list` command shows all your development environments:

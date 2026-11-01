@@ -18,6 +18,32 @@ pub const ShellCommands = struct {
     /// shell code set this and skip the side effect.
     skip_install: bool = false,
 
+    /// What `activate()` returns: shell code to `eval`, or a JSON report for
+    /// tools that read the environment instead of sourcing it (a CI runner
+    /// prepending the PATH, an editor). The JSON never carries the banner.
+    format: Format = .shell,
+
+    /// Why the last `activate()` returned nothing usable (an install that did
+    /// not finish). Shell activation stays best-effort and silent; the JSON
+    /// format reports it, and the CLI exits non-zero, so a caller can tell an
+    /// environment that failed to install from a project with no tools.
+    failure: ?[]const u8 = null,
+    failure_owned: ?[]u8 = null,
+
+    pub const Format = enum { shell, json };
+
+    /// The environment a project activates, as `pantry env --json` prints it.
+    pub const Report = struct {
+        ok: bool = true,
+        root: []const u8 = "",
+        env: []const u8 = "",
+        path: []const []const u8 = &.{},
+        library_path_variable: []const u8 = "",
+        library_path: []const []const u8 = &.{},
+        dependencies: []const []const u8 = &.{},
+        @"error": ?[]const u8 = null,
+    };
+
     pub fn init(allocator: std.mem.Allocator) !ShellCommands {
         // Use persistent cache to avoid re-installing on every cd
         const env_cache = try allocator.create(lib.cache.EnvCache);
@@ -30,6 +56,7 @@ pub const ShellCommands = struct {
     }
 
     pub fn deinit(self: *ShellCommands) void {
+        if (self.failure_owned) |owned| self.allocator.free(owned);
         self.env_cache.deinit();
         self.allocator.destroy(self.env_cache);
     }
@@ -127,8 +154,11 @@ pub const ShellCommands = struct {
     /// Performance target: < 50ms (cache hit), < 300ms (cache miss with install)
     pub fn activate(self: *ShellCommands, pwd: []const u8) ![]const u8 {
         // 1. Detect project root
+        self.failure = null;
+        if (self.failure_owned) |owned| self.allocator.free(owned);
+        self.failure_owned = null;
         const project_root = try self.detectProjectRoot(pwd) orelse {
-            return try self.allocator.dupe(u8, ""); // No project found
+            return try self.nothing(null); // No project found
         };
         defer self.allocator.free(project_root);
 
@@ -170,7 +200,16 @@ pub const ShellCommands = struct {
                 io_helper.cwd().access(io_helper.io, proj_pantry, .{}) catch break :blk false;
                 break :blk true;
             };
-            if (mtime_ok and size_ok and install_present) {
+            // And the environment directory the entry points at: it is
+            // removed when an install fails, and a hit on a missing one would
+            // hand out a PATH with nothing behind it.
+            const env_present = blk: {
+                const bin = std.fs.path.join(self.allocator, &[_][]const u8{ cached_entry.path, "bin" }) catch break :blk false;
+                defer self.allocator.free(bin);
+                io_helper.cwd().access(io_helper.io, bin, .{}) catch break :blk false;
+                break :blk true;
+            };
+            if (mtime_ok and size_ok and install_present and env_present) {
                 cached_entry.last_validated = now;
                 return try self.generateShellCode(project_root, cached_entry.path);
             }
@@ -241,13 +280,13 @@ pub const ShellCommands = struct {
         if (!env_exists and dep_file != null and !self.skip_install) {
             // Parse dependency file to detect version changes
             const dep_file_content = io_helper.readFileAlloc(self.allocator, dep_file.?, 10 * 1024 * 1024) catch { // 10MB max
-                return try self.allocator.dupe(u8, "");
+                return try self.nothing("the dependency file could not be read");
             };
             defer self.allocator.free(dep_file_content);
 
             // Create env directory
             io_helper.makePath(env_dir) catch {
-                return try self.allocator.dupe(u8, "");
+                return try self.nothing("the environment directory could not be created");
             };
 
             // Actually install dependencies
@@ -263,7 +302,7 @@ pub const ShellCommands = struct {
                 @memcpy(project_root_z[0..project_root.len], project_root);
                 project_root_z[project_root.len] = 0;
                 if (std.c.chdir(&project_root_z) != 0) {
-                    return try self.allocator.dupe(u8, "");
+                    return try self.nothing("the project directory could not be entered");
                 }
             }
             defer {
@@ -279,12 +318,16 @@ pub const ShellCommands = struct {
                 &[_][]const u8{},
                 install_types.InstallOptions{ .quiet = false },
             ) catch {
-                return try self.allocator.dupe(u8, "");
+                // A half-made environment must not pass for an installed one
+                // on the next activation.
+                io_helper.deleteTree(env_dir) catch {};
+                return try self.nothing("pantry install could not run");
             };
             defer install_result.deinit(self.allocator);
 
             if (install_result.exit_code != 0) {
-                return try self.allocator.dupe(u8, "");
+                io_helper.deleteTree(env_dir) catch {};
+                return try self.nothing("pantry install failed");
             }
 
             // Install global dependencies (global: true in deps.yaml)
@@ -321,7 +364,7 @@ pub const ShellCommands = struct {
                         @memcpy(pr_buf[0..project_root.len], project_root);
                         pr_buf[project_root.len] = 0;
                         if (std.c.chdir(&pr_buf) != 0) {
-                            return try self.allocator.dupe(u8, "");
+                            return try self.nothing("the project directory could not be entered");
                         }
                     }
                     defer {
@@ -337,12 +380,12 @@ pub const ShellCommands = struct {
                         &[_][]const u8{},
                         install_types.InstallOptions{ .quiet = false },
                     ) catch {
-                        return try self.allocator.dupe(u8, "");
+                        return try self.nothing("pantry install could not run");
                     };
                     defer install_result.deinit(self.allocator);
 
                     if (install_result.exit_code != 0) {
-                        return try self.allocator.dupe(u8, "");
+                        return try self.nothing("pantry install failed");
                     }
 
                     // Re-check global dependencies after update
@@ -384,6 +427,115 @@ pub const ShellCommands = struct {
 
         // 8. Generate shell code for activation
         return try self.generateShellCode(project_root, env_dir);
+    }
+
+    /// The result when there is no environment to activate. Shell activation
+    /// stays empty and silent; the JSON format says whether that is a project
+    /// with no tools (`reason == null`) or an install that did not finish.
+    fn nothing(self: *ShellCommands, reason: ?[]const u8) ![]const u8 {
+        self.failure = reason;
+        if (self.format == .shell) return try self.allocator.dupe(u8, "");
+        return try std.json.Stringify.valueAlloc(self.allocator, Report{ .ok = reason == null, .@"error" = reason }, .{});
+    }
+
+    /// The declared dependencies as "name version", once each, in file order.
+    fn declaredDependencies(self: *ShellCommands, arena: std.mem.Allocator, project_root: []const u8) ![]const []const u8 {
+        const detector = @import("../deps/detector.zig");
+        const parser = @import("../deps/parser.zig");
+        const deps_file = (try detector.findDepsFile(self.allocator, project_root)) orelse return &.{};
+        defer self.allocator.free(deps_file.path);
+        const deps = try parser.inferDependencies(self.allocator, deps_file);
+        defer {
+            for (deps) |*d| {
+                var dd = d.*;
+                dd.deinit(self.allocator);
+            }
+            self.allocator.free(deps);
+        }
+        var seen = std.StringHashMap(void).init(arena);
+        var names: std.ArrayList([]const u8) = .empty;
+        for (deps) |dep| {
+            if (seen.contains(dep.name)) continue;
+            try seen.put(try arena.dupe(u8, dep.name), {});
+            try names.append(arena, if (dep.version.len > 0)
+                try std.fmt.allocPrint(arena, "{s} {s}", .{ dep.name, dep.version })
+            else
+                try arena.dupe(u8, dep.name));
+        }
+        return names.items;
+    }
+
+    /// Declared dependencies with no installed package under `pantry/`.
+    fn missingDependencies(self: *ShellCommands, arena: std.mem.Allocator, project_root: []const u8) ![]const []const u8 {
+        const detector = @import("../deps/detector.zig");
+        const parser = @import("../deps/parser.zig");
+        const deps_file = (try detector.findDepsFile(self.allocator, project_root)) orelse return &.{};
+        defer self.allocator.free(deps_file.path);
+        const deps = try parser.inferDependencies(self.allocator, deps_file);
+        defer {
+            for (deps) |*d| {
+                var dd = d.*;
+                dd.deinit(self.allocator);
+            }
+            self.allocator.free(deps);
+        }
+        var names: std.ArrayList([]const u8) = .empty;
+        for (deps) |dep| {
+            // Runtimes live under ~/.pantry/runtimes and npm packages in
+            // node_modules; only registry packages are installed under pantry/.
+            if (dep.isRuntime() or !dep.isSystemDep()) continue;
+            if (try self.resolveProjectPackageDir(project_root, dep.name, dep.version)) |found| {
+                self.allocator.free(found);
+                continue;
+            }
+            try names.append(arena, try arena.dupe(u8, dep.name));
+        }
+        return names.items;
+    }
+
+    /// The JSON form of an activated environment: the same PATH and library
+    /// path the shell code exports, as arrays, plus what the project declares.
+    fn environmentReport(
+        self: *ShellCommands,
+        project_root: []const u8,
+        env_dir: []const u8,
+        path_components: []const []const u8,
+        lib_join: []const u8,
+        lib_var: []const u8,
+    ) ![]const u8 {
+        var arena_state = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena_state.deinit();
+        const arena = arena_state.allocator();
+
+        var libs: std.ArrayList([]const u8) = .empty;
+        var parts = std.mem.splitScalar(u8, lib_join, ':');
+        while (parts.next()) |part| {
+            if (part.len > 0) try libs.append(arena, part);
+        }
+
+        // An install can report success and leave a declared package
+        // unresolved (a half-made environment from an earlier failed run), so
+        // the report states what is actually on disk.
+        const missing = self.missingDependencies(arena, project_root) catch &.{};
+        var problem: ?[]const u8 = null;
+        if (missing.len > 0) {
+            const joined = try std.mem.join(arena, ", ", missing);
+            const message = try std.fmt.allocPrint(self.allocator, "not installed: {s}", .{joined});
+            self.failure_owned = message;
+            self.failure = message;
+            problem = message;
+        }
+
+        return try std.json.Stringify.valueAlloc(self.allocator, Report{
+            .ok = problem == null,
+            .@"error" = problem,
+            .root = project_root,
+            .env = env_dir,
+            .path = path_components,
+            .library_path_variable = lib_var,
+            .library_path = libs.items,
+            .dependencies = self.declaredDependencies(arena, project_root) catch &.{},
+        }, .{});
     }
 
     /// Generate shell code for environment activation
@@ -483,6 +635,9 @@ pub const ShellCommands = struct {
         else
             try self.allocator.dupe(u8, "");
         defer self.allocator.free(lib_export);
+
+        if (self.format == .json)
+            return try self.environmentReport(project_root, env_dir, path_components.items, lib_join, lib_var);
 
         // QoL: activation banner + the project's deps so `dev` visibly "locks
         // in". stdout carries the eval'd shell code, so this goes to stderr.
@@ -3127,4 +3282,62 @@ test "ShellCommands executePostSetupCommands aborts on required failures" {
     const after_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "after-required.txt" });
     defer allocator.free(after_path);
     try std.testing.expectError(error.FileNotFound, io_helper.readFileAlloc(allocator, after_path, 1024));
+}
+
+test "ShellCommands activate prints the environment as JSON" {
+    const allocator = std.testing.allocator;
+    style.setDiagnosticsToStderr(true);
+    defer style.setDiagnosticsToStderr(false);
+
+    var commands = try ShellCommands.init(allocator);
+    defer commands.deinit();
+    commands.skip_install = true;
+    commands.format = .json;
+
+    // A project that declares a registry package which is not installed: the
+    // report still lists the PATH, and says what is missing.
+    const test_dir = "/tmp/pantry_test_activate_json_zigtest";
+    io_helper.makePath(test_dir) catch {};
+    defer io_helper.deleteTree(test_dir) catch {};
+    const deps_path = try std.fs.path.join(allocator, &[_][]const u8{ test_dir, "deps.yaml" });
+    defer allocator.free(deps_path);
+    {
+        const file = try io_helper.cwd().createFile(io_helper.io, deps_path, .{});
+        defer file.close(io_helper.io);
+        try io_helper.writeAllToFile(file, "dependencies:\n  nonexistent.example.invalid: 1.0.0\n");
+    }
+
+    const report = try commands.activate(test_dir);
+    defer allocator.free(report);
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, report, .{});
+    defer parsed.deinit();
+    const root = parsed.value.object;
+    try std.testing.expect(root.get("ok").?.bool == false);
+    try std.testing.expect(std.mem.indexOf(u8, root.get("error").?.string, "nonexistent.example.invalid") != null);
+    try std.testing.expect(root.get("path").?.array.items.len >= 1);
+    try std.testing.expectEqualStrings("nonexistent.example.invalid 1.0.0", root.get("dependencies").?.array.items[0].string);
+    try std.testing.expect(commands.failure != null);
+}
+
+test "ShellCommands activate prints an empty JSON report outside a project" {
+    const allocator = std.testing.allocator;
+    style.setDiagnosticsToStderr(true);
+    defer style.setDiagnosticsToStderr(false);
+
+    var commands = try ShellCommands.init(allocator);
+    defer commands.deinit();
+    commands.skip_install = true;
+    commands.format = .json;
+
+    const test_dir = "/tmp/pantry_test_activate_json_empty_zigtest";
+    io_helper.makePath(test_dir) catch {};
+    defer io_helper.deleteTree(test_dir) catch {};
+
+    const report = try commands.activate(test_dir);
+    defer allocator.free(report);
+    var parsed = try std.json.parseFromSlice(std.json.Value, allocator, report, .{});
+    defer parsed.deinit();
+    try std.testing.expect(parsed.value.object.get("ok").?.bool);
+    try std.testing.expectEqual(@as(usize, 0), parsed.value.object.get("path").?.array.items.len);
+    try std.testing.expect(commands.failure == null);
 }

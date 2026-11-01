@@ -187,6 +187,7 @@ pub const shellCodeCommand = shell_commands.shellCodeCommand;
 pub const shellLookupCommand = shell_commands.shellLookupCommand;
 pub const shellRouteCommand = shell_commands.shellRouteCommand;
 pub const shellActivateCommand = shell_commands.shellActivateCommand;
+pub const shellActivateCommandWithOptions = shell_commands.shellActivateCommandWithOptions;
 
 // ============================================================================
 // Re-export System Utility Commands

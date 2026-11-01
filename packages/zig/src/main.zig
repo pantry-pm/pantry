@@ -2015,8 +2015,30 @@ fn envAction(ctx: *cli.BaseCommand.ParseContext) !void {
     };
     defer allocator.free(cwd);
 
-    const result = try lib.commands.shellActivateCommand(allocator, cwd);
+    const json = ctx.hasOption("json");
+    // `--dir` activates another project than the one the shell is in; a
+    // relative one is read against it.
+    const dir = if (ctx.getOption("dir")) |given|
+        try std.fs.path.resolve(allocator, &.{ cwd, given })
+    else
+        try allocator.dupe(u8, cwd);
+    defer allocator.free(dir);
+
+    const result = try lib.commands.shellActivateCommandWithOptions(allocator, dir, .{
+        .json = json,
+        // Installing is what activation does; `--install` says so out loud.
+        .install = !ctx.hasOption("no-install"),
+    });
     defer result.deinit(allocator);
+
+    if (json) {
+        // A report always prints, including the one that says why nothing
+        // was installed; the exit code carries the verdict.
+        const stdout_file = std.Io.File.stdout();
+        if (result.message) |msg| io_helper.writeAllToFile(stdout_file, msg) catch {};
+        io_helper.writeAllToFile(stdout_file, "\n") catch {};
+        std.process.exit(result.exit_code);
+    }
 
     if (result.message) |msg| {
         if (msg.len > 0) {
@@ -3982,6 +4004,10 @@ pub fn main() !void {
 
     // Main user-facing command: `eval "$(pantry env)"` to activate environment
     var env_cmd = try cli.BaseCommand.init(allocator, "env", "Activate project environment (use: eval \"$(pantry env)\")");
+    _ = try env_cmd.addOption(cli.Option.init("json", "json", "Print the environment as JSON (path, library path, dependencies) instead of shell code", .bool));
+    _ = try env_cmd.addOption(cli.Option.init("dir", "dir", "Activate the project in this directory instead of the current one", .string));
+    _ = try env_cmd.addOption(cli.Option.init("install", "install", "Install what the project declares when it is missing (the default)", .bool));
+    _ = try env_cmd.addOption(cli.Option.init("no-install", "no-install", "Print the environment without installing anything", .bool));
     _ = env_cmd.setAction(envAction);
     _ = try root.addCommand(env_cmd);
 
