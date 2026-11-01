@@ -3,7 +3,7 @@
  *
  * @domain `macvim.org`
  * @programs `gview`, `gvim`, `gvimdiff`, `gvimtutor`, `mview`, ... (+7 more)
- * @version `182.0.0` (6 versions available)
+ * @version `184` (16 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install macvim.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "macvim"
  * console.log(pkg.description) // "Vim - the text editor - for macOS"
  * console.log(pkg.programs)    // ["gview", "gvim", ...]
- * console.log(pkg.versions[0]) // "182.0.0" (latest)
+ * console.log(pkg.versions[0]) // "184" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/macvim-org.md
@@ -91,6 +91,7 @@ export const macvimorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '184',
     '183',
     '182',
     '182.0.0',
