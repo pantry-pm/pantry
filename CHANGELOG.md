@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.154...v0.11.155)
+
+## 🐛 Bug Fixes
+
+- **env**: a cached environment is valid while its directory exists ([a3d4d81](https://github.com/pantry-pm/pantry/commit/a3d4d81)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.155 ([8ae25e2](https://github.com/pantry-pm/pantry/commit/8ae25e2)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.418 ([e18179e](https://github.com/pantry-pm/pantry/commit/e18179e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update CLIProxyAPI, vim ([8bdb048](https://github.com/pantry-pm/pantry/commit/8bdb048)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.153...v0.11.154)
 
 ## ✨ Features
