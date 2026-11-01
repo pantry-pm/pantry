@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.153...v0.11.154)
+
+## ✨ Features
+
+- **env**: print the environment as JSON, for another directory ([807242f](https://github.com/pantry-pm/pantry/commit/807242f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.154 ([be33334](https://github.com/pantry-pm/pantry/commit/be33334)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update carapace, chezmoi, CLIProxyAPI, LLaMA.cpp, macvim, Stats, steampipe, vim, wails, zig ([6249a38](https://github.com/pantry-pm/pantry/commit/6249a38)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update CLIProxyAPI, LLaMA.cpp ([496192a](https://github.com/pantry-pm/pantry/commit/496192a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.417 ([fcc3a74](https://github.com/pantry-pm/pantry/commit/fcc3a74)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update Codex, LLaMA.cpp, rio ([dd1eece](https://github.com/pantry-pm/pantry/commit/dd1eece)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.416 ([e570ce1](https://github.com/pantry-pm/pantry/commit/e570ce1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.415 ([b40f7c8](https://github.com/pantry-pm/pantry/commit/b40f7c8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.414 ([7570989](https://github.com/pantry-pm/pantry/commit/7570989)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update LLaMA.cpp, vim ([ba3c0f8](https://github.com/pantry-pm/pantry/commit/ba3c0f8)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.413 ([0ad4e7d](https://github.com/pantry-pm/pantry/commit/0ad4e7d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update littlecms, vale, xray-core ([422c621](https://github.com/pantry-pm/pantry/commit/422c621)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.411 ([a970b2b](https://github.com/pantry-pm/pantry/commit/a970b2b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update libwebsockets, LLaMA.cpp, mise ([33fa622](https://github.com/pantry-pm/pantry/commit/33fa622)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.152...v0.11.153)
 
 ## ✨ Features
