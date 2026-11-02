@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.159...v0.11.160)
+
+## ✨ Features
+
+- **webkitgtk**: add the GTK3 WebKit provider craft's Linux binary needs (#272) ([4bc3581](https://github.com/pantry-pm/pantry/commit/4bc3581)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#266](https://github.com/pantry-pm/pantry/issues/266), [#272](https://github.com/pantry-pm/pantry/issues/272))
+
+## 🐛 Bug Fixes
+
+- **ci**: bot commits land through a checked pull request, not a bypass (#274) ([f750d63](https://github.com/pantry-pm/pantry/commit/f750d63)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#266](https://github.com/pantry-pm/pantry/issues/266), [#274](https://github.com/pantry-pm/pantry/issues/274))
+- **runtime**: normalize copied native helper dependencies ([b50b1ea](https://github.com/pantry-pm/pantry/commit/b50b1ea)) _(by Chris <chris@stacksjs.com>)_ ([#273](https://github.com/pantry-pm/pantry/issues/273))
+- **discovery**: a package's own bin programs outrank its nested npm copies (#271) ([454f826](https://github.com/pantry-pm/pantry/commit/454f826)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#269](https://github.com/pantry-pm/pantry/issues/269), [#271](https://github.com/pantry-pm/pantry/issues/271))
+- **install**: materializing a tree over its own symlinks is repeatable (#264) ([39fe503](https://github.com/pantry-pm/pantry/commit/39fe503)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#250](https://github.com/pantry-pm/pantry/issues/250), [#264](https://github.com/pantry-pm/pantry/issues/264))
+
+## ✅ Tests
+
+- **runtime**: record native helper execution identities ([ecf736a](https://github.com/pantry-pm/pantry/commit/ecf736a)) _(by Chris <chris@stacksjs.com>)_ ([#273](https://github.com/pantry-pm/pantry/issues/273))
+
+## 🔧 Chores
+
+- release v0.11.160 ([a88748f](https://github.com/pantry-pm/pantry/commit/a88748f)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.158...v0.11.159)
 
 ## 🐛 Bug Fixes
