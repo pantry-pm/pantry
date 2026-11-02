@@ -7,6 +7,20 @@ export const recipe: Recipe = {
   homepage: 'https://craft-native.org',
   github: 'https://github.com/craft-native/craft',
   programs: ['craft'],
+
+  // Craft's Linux binary links GTK3 (libgtk-3, libgdk-3), GLib (libglib-2.0,
+  // libgobject-2.0, libgio-2.0) and the GTK3 WebKit API (libwebkit2gtk-4.1,
+  // libjavascriptcoregtk-4.1). It downloaded none of them, so ELF
+  // normalization correctly refused to publish the Linux artifact with seven
+  // unresolved libraries. Keyed under `linux` because the Darwin binaries use
+  // the system WebKit framework and must not acquire these.
+  dependencies: {
+    linux: {
+      'gtk.org/gtk3': '^3.24',
+      'gnome.org/glib': '^2',
+      'webkitgtk.org': '^2.54',
+    },
+  },
   revisions: { '0.0.350': 1, '0.0.423': 1 },
   // Many craft GitHub releases (v0.0.16 and everything older) ship NO binary
   // assets at all — they predate upstream's binary publishing. The scheduled

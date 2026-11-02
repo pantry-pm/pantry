@@ -54,7 +54,11 @@ export const craftPackage = {
     'craft',
   ] as const,
   companions: [] as const,
-  dependencies: [] as const,
+  dependencies: [
+    'linux:gtk.org/gtk3^3.24',
+    'linux:gnome.org/glib^2',
+    'linux:webkitgtk.org^2.54',
+  ] as const,
   /**
   * Build dependencies for this package.
   * These are only required when building the package from source.
