@@ -737,21 +737,14 @@ fn discoverNpmBinaries(
 }
 
 /// Discover binaries in a package directory
-/// 1. Checks for npm package structure (lib/node_modules/*/bin/*)
-/// 2. Scans standard bin/ and sbin/ directories
+/// 1. Scans standard bin/ and sbin/ directories
+/// 2. Falls back to npm package structure (lib/node_modules/*/bin/*)
 /// 3. Falls back to scanning the package root for native executables
 ///    (handles packages like zig that ship the binary at root level)
 pub fn discoverBinaries(
     allocator: std.mem.Allocator,
     package_dir: []const u8,
 ) ![]BinaryInfo {
-    // First, try to find npm binaries (these take precedence)
-    const npm_bins = try discoverNpmBinaries(allocator, package_dir);
-    if (npm_bins.len > 0) {
-        return npm_bins;
-    }
-    defer allocator.free(npm_bins);
-
     var binaries = try std.ArrayList(BinaryInfo).initCapacity(allocator, 8);
     errdefer {
         for (binaries.items) |*bin| {
@@ -795,6 +788,20 @@ pub fn discoverBinaries(
                 }
             }
         }
+    }
+
+    // Fallback: a package that ships no bin/ or sbin/ programs of its own may still
+    // carry programs in an npm layout. This is consulted second, not first: a recipe's
+    // own wrappers in bin/ (npmjs.com replaces bin/npx with a shim) must keep owning
+    // their names, and the nested directory also holds files that are executable
+    // without being commands, such as npm-cli.js.
+    if (binaries.items.len == 0) {
+        const npm_bins = try discoverNpmBinaries(allocator, package_dir);
+        if (npm_bins.len > 0) {
+            binaries.deinit(allocator);
+            return npm_bins;
+        }
+        allocator.free(npm_bins);
     }
 
     // Fallback: if no binaries found in bin/sbin, scan the package root for native executables.
@@ -1198,6 +1205,55 @@ test "discoverBinaries" {
 
     try std.testing.expect(binaries.len == 1);
     try std.testing.expectEqualStrings("testbin", binaries[0].name);
+}
+
+test "discoverBinaries keeps a package's own bin programs over its nested npm copies" {
+    const allocator = std.testing.allocator;
+
+    // Mirrors the npmjs.com layout: the recipe's own bin/ wrappers (one of which is a
+    // deliberate shim) alongside the upstream package's nested bin directory, which
+    // also carries non-command files such as npm-cli.js.
+    const test_dir = "test_pkg_npm_shadow";
+    io_helper.makePath(test_dir) catch {};
+    defer io_helper.deleteTree(test_dir) catch {};
+
+    const own_bin = try std.fmt.allocPrint(allocator, "{s}/bin", .{test_dir});
+    defer allocator.free(own_bin);
+    try io_helper.makePath(own_bin);
+
+    const nested_bin = try std.fmt.allocPrint(allocator, "{s}/lib/node_modules/npm/bin", .{test_dir});
+    defer allocator.free(nested_bin);
+    try io_helper.makePath(nested_bin);
+
+    const own_programs = [_][]const u8{ "npm", "npx" };
+    for (own_programs) |name| {
+        const path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ own_bin, name });
+        defer allocator.free(path);
+        const file = try io_helper.cwd().createFile(io_helper.io, path, .{ .permissions = .executable_file });
+        file.close(io_helper.io);
+    }
+
+    const nested_programs = [_][]const u8{ "npm", "npx", "npm-cli.js" };
+    for (nested_programs) |name| {
+        const path = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ nested_bin, name });
+        defer allocator.free(path);
+        const file = try io_helper.cwd().createFile(io_helper.io, path, .{ .permissions = .executable_file });
+        file.close(io_helper.io);
+    }
+
+    const binaries = try discoverBinaries(allocator, test_dir);
+    defer {
+        for (binaries) |*bin| {
+            var b = bin.*;
+            b.deinit(allocator);
+        }
+        allocator.free(binaries);
+    }
+
+    try std.testing.expectEqual(@as(usize, own_programs.len), binaries.len);
+    for (binaries) |bin| {
+        try std.testing.expect(std.mem.indexOf(u8, bin.path, "node_modules") == null);
+    }
 }
 
 test "createShimsFromBinConfig normalizes scoped bin object keys" {
