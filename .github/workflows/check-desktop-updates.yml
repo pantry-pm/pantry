@@ -142,6 +142,10 @@ jobs:
   # the commit — the gate cannot let a stale manifest through.
   record:
     needs: [publish-ubuntu, publish-macos]
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
     if: >-
       always() &&
       needs.publish-ubuntu.result == 'success' &&
@@ -160,17 +164,14 @@ jobs:
       - name: Record verified registry state
         working-directory: packages/ts-pantry
         run: bun scripts/check-desktop-updates.ts --require-current --commit
-      - name: Push verified manifest commit
-        working-directory: packages/ts-pantry
-        run: |
-          for attempt in 1 2 3 4 5; do
-            if git push; then
-              echo "push ok (attempt $attempt)"
-              exit 0
-            fi
-            echo "push rejected (attempt $attempt); rebasing onto latest main"
-            git fetch origin main
-            git rebase origin/main
-          done
-          echo "ERROR: could not push manifest after 5 attempts" >&2
-          exit 1
+      # The rebase-and-retry loop this replaces answered a race with another
+      # push. It cannot answer the ruleset: main requires the CI contexts, a
+      # bot push holds no repository role to be excused by, and retrying a
+      # GH013 five times only rebases five times before failing anyway.
+      - name: Land the verified manifest through a pull request
+        uses: ./.github/actions/merge-via-pr
+        with:
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          branch-prefix: chore/desktop-manifest
+          body: |
+            Verified desktop manifest state from `check-desktop-updates.yml`.
