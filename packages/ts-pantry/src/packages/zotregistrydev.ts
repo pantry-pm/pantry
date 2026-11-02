@@ -3,7 +3,7 @@
  *
  * @domain `zotregistry.dev`
  * @programs `zb`, `zli`, `zot`, `zxp`
- * @version `2.1.22` (29 versions available)
+ * @version `2.1.23` (30 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zotregistry.dev`
@@ -16,7 +16,7 @@
  * const pkg = pantry.zotregistrydev
  * console.log(pkg.name)        // "zotregistry"
  * console.log(pkg.programs)    // ["zb", "zli", ...]
- * console.log(pkg.versions[0]) // "2.1.22" (latest)
+ * console.log(pkg.versions[0]) // "2.1.23" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/zotregistry-dev.md
@@ -69,6 +69,7 @@ export const zotregistrydevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.23',
     '2.1.22',
     '2.1.21',
     '2.1.20',
