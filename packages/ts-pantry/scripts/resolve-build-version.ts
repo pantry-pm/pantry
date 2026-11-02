@@ -1,6 +1,4 @@
 import { appendFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 /** Resolve generated metadata by its canonical domain, including nested providers. */
 export async function resolveBuildVersion(domain: string, requested = ''): Promise<string> {
@@ -12,11 +10,11 @@ export async function resolveBuildVersion(domain: string, requested = ''): Promi
   }
   if (requested) return exactVersion(requested)
 
-  const filename = domain.includes('/') ? domain : domain.replaceAll('.', '')
-  const metadata = await import(pathToFileURL(resolve(import.meta.dir, '../src/packages', `${filename}.ts`)).href)
-  for (const value of Object.values(metadata)) {
-    if (!value || typeof value !== 'object' || !('domain' in value) || value.domain !== domain
-      || !('versions' in value) || !Array.isArray(value.versions) || typeof value.versions[0] !== 'string') continue
+  // The generated catalog owns actual filenames and collision-resolved keys.
+  // Compare declared domains rather than guessing either identity from a name.
+  const { pantry } = await import('../src/packages')
+  for (const value of Object.values(pantry)) {
+    if (value.domain !== domain || typeof value.versions[0] !== 'string') continue
     return exactVersion(value.versions[0])
   }
   throw new Error(`No generated version for ${domain}; specify an exact version`)
