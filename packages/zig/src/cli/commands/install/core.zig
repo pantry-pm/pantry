@@ -1373,6 +1373,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         const end_ts = io_helper.clockGettime();
         const end_time = @as(i64, @intCast(end_ts.sec)) * 1000 + @as(i64, @intCast(@divFloor(end_ts.nsec, 1_000_000)));
         const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time));
+        // Name every failed package on stderr before the counts.
+        if (failed_count > 0) style.printFailureReport();
         if (success_count > 0) {
             style.printSummary(success_count, total_deps, elapsed_ms);
         } else if (failed_count == 0) {
@@ -1547,7 +1549,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         installed_packages.deinit(allocator);
     }
 
-    for (package_args.items, 0..) |pkg_spec_str, arg_idx| {
+    packages: for (package_args.items, 0..) |pkg_spec_str, arg_idx| {
         const is_transitive_dep = arg_idx >= user_requested_count;
         // Parse package spec (name@version). Scope-aware: a scoped name begins
         // with '@', so splitting on the FIRST '@' emptied the name and turned
@@ -1716,30 +1718,49 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // Show what we're installing
         style.print("  {s}>{s} {s}@{s}...", .{ style.dim, style.reset, name, spec.version });
 
-        var result = installer.install(spec, .{
-            .project_root = project_root,
-            .quiet = false, // Show download progress
-            .verbose = options.verbose,
-            .expected_integrity = if (pinned_resolution) |r| r.integrity else null,
-            .record_integrity = pinned_resolution != null,
-        }) catch |err| {
-            style.clearLine();
-            // Provide friendly error messages
-            const error_msg = switch (err) {
-                error.PackageNotFound => "not found in pantry or npm registry",
-                error.NoTarballUrl => "npm package found but no tarball URL available",
-                else => style.friendlyErrorName(err),
+        // A requested package whose install fails for a transient reason (the
+        // network, a deadline, a registry gateway answer) gets one more try.
+        // The HTTP layer already retries within its own deadline; this covers
+        // the case it cannot, a Retry-After longer than that deadline.
+        io_helper.resetTransientGetRecord();
+        var retried = false;
+        var result = attempt: while (true) {
+            break :attempt installer.install(spec, .{
+                .project_root = project_root,
+                .quiet = false, // Show download progress
+                .verbose = options.verbose,
+                .expected_integrity = if (pinned_resolution) |r| r.integrity else null,
+                .record_integrity = pinned_resolution != null,
+            }) catch |err| {
+                style.clearLine();
+                // Provide friendly error messages
+                const base_msg = switch (err) {
+                    error.PackageNotFound => "not found in pantry or npm registry",
+                    error.NoTarballUrl => "npm package found but no tarball URL available",
+                    else => style.friendlyErrorName(err),
+                };
+                var reason_buffer: [512]u8 = undefined;
+                const error_msg = describeInstallFailure(&reason_buffer, base_msg, io_helper.lastTransientGetRecord(), retried);
+                if (!is_transitive_dep and !retried and style.isTransientInstallError(err)) {
+                    retried = true;
+                    const delay = transientRetryDelaySeconds(io_helper.lastTransientGetRecord());
+                    style.printForced("\n  ! {s}@{s}: {s} (transient); retrying once in {d}s\n", .{ name, spec.version, error_msg, delay });
+                    io_helper.sleepMs(delay * 1000);
+                    io_helper.resetTransientGetRecord();
+                    style.print("  {s}>{s} {s}@{s}...", .{ style.dim, style.reset, name, spec.version });
+                    continue :attempt;
+                }
+                // A pulled-in transitive dep failing is non-fatal (it may lack a
+                // build for this platform); only requested packages count as failures.
+                if (is_transitive_dep) {
+                    if (options.verbose)
+                        style.print("{s}  ? optional dep {s}: {s}{s}\n", .{ style.dim, name, error_msg, style.reset });
+                } else {
+                    style.printFailed(name, spec.version, error_msg);
+                    failed_count += 1;
+                }
+                continue :packages;
             };
-            // A pulled-in transitive dep failing is non-fatal (it may lack a
-            // build for this platform); only requested packages count as failures.
-            if (is_transitive_dep) {
-                if (options.verbose)
-                    style.print("{s}  ? optional dep {s}: {s}{s}\n", .{ style.dim, name, error_msg, style.reset });
-            } else {
-                style.printFailed(name, spec.version, error_msg);
-                failed_count += 1;
-            }
-            continue;
         };
 
         defer result.deinit(allocator);
@@ -1872,6 +1893,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     const end_time = @as(i64, @intCast(end_ts2.sec)) * 1000 + @as(i64, @intCast(@divFloor(end_ts2.nsec, 1_000_000)));
     const elapsed_ms = @as(f64, @floatFromInt(end_time - start_time));
 
+    // Name every failed package on stderr before the counts.
+    if (failed_count > 0) style.printFailureReport();
     style.printSummary(success_count, package_args.items.len, elapsed_ms);
 
     if (failed_count > 0) {
@@ -1880,6 +1903,50 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     }
 
     return .{ .exit_code = 0 };
+}
+
+/// A failed install's reason, with the registry's last gateway answer when one
+/// came before it: a bare `timed out` says nothing about the HTTP 503 that
+/// spent the deadline (CI job 7047).
+fn describeInstallFailure(
+    buffer: []u8,
+    base: []const u8,
+    transient: ?io_helper.TransientGetRecord,
+    retried: bool,
+) []const u8 {
+    var writer: std.Io.Writer = .fixed(buffer);
+    writer.writeAll(base) catch return base;
+    if (transient) |record| {
+        writer.print("; registry answered HTTP {d}", .{record.status}) catch return base;
+        if (record.retry_after_seconds > 0) writer.print(" (Retry-After {d}s)", .{record.retry_after_seconds}) catch return base;
+    }
+    if (retried) writer.writeAll("; failed again after one retry") catch return base;
+    return writer.buffered();
+}
+
+/// How long to wait before the one package-level retry: what the registry
+/// asked for, bounded to 5-60 s, or 10 s when it asked for nothing.
+fn transientRetryDelaySeconds(transient: ?io_helper.TransientGetRecord) u64 {
+    const record = transient orelse return 10;
+    if (record.retry_after_seconds == 0) return 10;
+    return std.math.clamp(@as(u64, record.retry_after_seconds), 5, 60);
+}
+
+test "install failure reasons keep the registry answer and the retry" {
+    var buffer: [512]u8 = undefined;
+    try std.testing.expectEqualStrings(
+        "timed out; registry answered HTTP 503 (Retry-After 60s); failed again after one retry",
+        describeInstallFailure(&buffer, "timed out", .{ .status = 503, .retry_after_seconds = 60 }, true),
+    );
+    try std.testing.expectEqualStrings("checksum mismatch", describeInstallFailure(&buffer, "checksum mismatch", null, false));
+    try std.testing.expect(style.isTransientReason(describeInstallFailure(&buffer, "registry unavailable", .{ .status = 503, .retry_after_seconds = 0 }, false)));
+}
+
+test "the package-level retry waits a bounded time" {
+    try std.testing.expectEqual(@as(u64, 10), transientRetryDelaySeconds(null));
+    try std.testing.expectEqual(@as(u64, 60), transientRetryDelaySeconds(.{ .status = 503, .retry_after_seconds = 600 }));
+    try std.testing.expectEqual(@as(u64, 5), transientRetryDelaySeconds(.{ .status = 429, .retry_after_seconds = 1 }));
+    try std.testing.expectEqual(@as(u64, 10), transientRetryDelaySeconds(.{ .status = 502, .retry_after_seconds = 0 }));
 }
 
 /// Named installs write a caret constraint for the resolved version to deps.yaml.

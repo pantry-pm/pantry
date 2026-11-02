@@ -225,6 +225,7 @@ pub fn printAutoLinked(name: []const u8, path: []const u8) void {
 /// Print a failed package: - bold(name)@dim(version) dim((reason))
 /// Forced: failures must surface even under quiet mode.
 pub fn printFailed(name: []const u8, version: []const u8, reason: ?[]const u8) void {
+    recordFailure(name, version, reason);
     printForced("{s}{s}{s} {s}{s}{s}{s}@{s}", .{
         red,  minus,   reset,
         bold, name,    reset,
@@ -314,9 +315,232 @@ pub fn printCheckedSummary(success_count: usize, total_count: usize, elapsed_ms:
     });
 }
 
-/// Print failure count. Forced: must surface even under quiet mode.
+/// Print failure count. Forced: must surface even under quiet mode. A caller
+/// that did not print the failure report before its summary gets it here, so
+/// the count never appears without the packages it counts.
 pub fn printFailureCount(count: usize) void {
+    printFailureReport();
     printForced("\n{s}{d} package(s) failed to install{s}\n", .{ red, count, reset });
+}
+
+// ── Failure report ──────────────────────────────────────────────────────────
+//
+// Every `printFailed` line is also recorded here, and the install summary
+// repeats them as one block on stderr: name, version, reason, and whether the
+// failure is transient. Inline failure lines scroll away among a long install
+// (CI job 7047 printed `87/88 packages installed` and `1 package(s) failed to
+// install` with the one failed package buried 90 lines up, glued to the end of
+// its progress line), so the summary has to name them itself.
+
+const max_failure_records = 64;
+
+const FailureRecord = struct {
+    name: []const u8,
+    version: []const u8,
+    reason: []const u8,
+    transient: bool,
+};
+
+var failure_lock: io_helper.Mutex = .{};
+var failure_bytes: [16 * 1024]u8 = undefined;
+var failure_bytes_used: usize = 0;
+var failure_records: [max_failure_records]FailureRecord = undefined;
+var failure_records_len: usize = 0;
+var failure_records_dropped: usize = 0;
+var failure_report_printed: bool = false;
+
+fn keepFailureText(text: []const u8) []const u8 {
+    const room = failure_bytes.len - failure_bytes_used;
+    const kept = text[0..@min(text.len, room)];
+    @memcpy(failure_bytes[failure_bytes_used..][0..kept.len], kept);
+    defer failure_bytes_used += kept.len;
+    return failure_bytes[failure_bytes_used..][0..kept.len];
+}
+
+/// Record one failed package for the summary report. Copies its arguments.
+pub fn recordFailure(name: []const u8, version: []const u8, reason: ?[]const u8) void {
+    failure_lock.lock();
+    defer failure_lock.unlock();
+    if (failure_records_len == max_failure_records) {
+        failure_records_dropped += 1;
+        return;
+    }
+    const why = reason orelse "no error detail was reported";
+    failure_records[failure_records_len] = .{
+        .name = keepFailureText(name),
+        .version = keepFailureText(version),
+        .reason = keepFailureText(why),
+        .transient = isTransientReason(why),
+    };
+    failure_records_len += 1;
+    failure_report_printed = false;
+}
+
+/// Forget recorded failures (tests, and commands that report per phase).
+pub fn resetFailures() void {
+    failure_lock.lock();
+    defer failure_lock.unlock();
+    failure_bytes_used = 0;
+    failure_records_len = 0;
+    failure_records_dropped = 0;
+    failure_report_printed = false;
+}
+
+/// The failure report as plain text: no colour and no carriage returns, one
+/// package per line, so it survives a CI log intact. `annotate` adds a
+/// workflow-command `::error` line per package, which GitHub Actions and
+/// ReviewOS lift into the run summary.
+pub fn formatFailureReport(buffer: []u8, annotate: bool) []const u8 {
+    failure_lock.lock();
+    defer failure_lock.unlock();
+    var writer: std.Io.Writer = .fixed(buffer);
+    writeFailureReport(&writer, annotate) catch {};
+    return writer.buffered();
+}
+
+fn writeFailureReport(writer: *std.Io.Writer, annotate: bool) std.Io.Writer.Error!void {
+    const total = failure_records_len + failure_records_dropped;
+    if (total == 0) return;
+    try writer.print("\nerror: {d} {s} failed to install:\n", .{ total, if (total == 1) "package" else "packages" });
+    for (failure_records[0..failure_records_len]) |record| {
+        try writer.print("  {s}", .{record.name});
+        if (record.version.len > 0) try writer.print("@{s}", .{record.version});
+        try writer.print(": {s}", .{record.reason});
+        if (record.transient) try writer.writeAll(" [transient: network, timeout or registry outage; a rerun may pass]");
+        try writer.writeAll("\n");
+    }
+    if (failure_records_dropped > 0) try writer.print("  ...and {d} more\n", .{failure_records_dropped});
+    if (!annotate) return;
+    for (failure_records[0..failure_records_len]) |record| {
+        try writer.writeAll("::error title=pantry install failed::");
+        try writeWorkflowData(writer, record.name);
+        if (record.version.len > 0) {
+            try writer.writeAll("@");
+            try writeWorkflowData(writer, record.version);
+        }
+        try writer.writeAll(": ");
+        try writeWorkflowData(writer, record.reason);
+        if (record.transient) try writer.writeAll(" (transient)");
+        try writer.writeAll("\n");
+    }
+}
+
+/// Workflow-command message data escapes `%`, CR and LF.
+fn writeWorkflowData(writer: *std.Io.Writer, text: []const u8) std.Io.Writer.Error!void {
+    for (text) |c| switch (c) {
+        '%' => try writer.writeAll("%25"),
+        '\r' => try writer.writeAll("%0D"),
+        '\n' => try writer.writeAll("%0A"),
+        else => try writer.writeByte(c),
+    };
+}
+
+/// Print the recorded failures to stderr, once, ahead of the summary. Forced:
+/// it surfaces under `--quiet` too.
+pub fn printFailureReport() void {
+    if (builtin.is_test) return;
+    if (failure_report_printed) return;
+    var buffer: [24 * 1024]u8 = undefined;
+    const annotate = if (io_helper.getEnvVarOwned(std.heap.page_allocator, "GITHUB_ACTIONS") catch null) |value| blk: {
+        defer std.heap.page_allocator.free(value);
+        break :blk std.mem.eql(u8, value, "true");
+    } else false;
+    const report = formatFailureReport(&buffer, annotate);
+    failure_report_printed = true;
+    if (report.len == 0) return;
+    // The report opens with a newline, which also ends a progress line
+    // (`  > name@1.0...`) still open on a terminal shared with stdout.
+    io_helper.writeAllToFile(io_helper.File.stderr(), report) catch {};
+}
+
+/// Whether a failure reason names a cause a rerun can clear: the network, a
+/// deadline, or a registry gateway answer. Absence, authentication, checksum
+/// and extraction failures are not transient.
+pub fn isTransientReason(reason: []const u8) bool {
+    const markers = [_][]const u8{
+        "timed out",          "timeout",           "network",     "connection reset",
+        "connection refused", "connection closed", "dns failure", "registry unavailable",
+        "rate limited",       "http 429",          "http 502",    "http 503",
+        "http 504",           "temporarily",
+    };
+    var lower_buffer: [512]u8 = undefined;
+    const lower = std.ascii.lowerString(&lower_buffer, reason[0..@min(reason.len, lower_buffer.len)]);
+    for (markers) |marker| {
+        if (std.mem.indexOf(u8, lower, marker) != null) return true;
+    }
+    return false;
+}
+
+/// Whether an install error is worth one more attempt (see `isTransientReason`).
+pub fn isTransientInstallError(err: anyerror) bool {
+    return switch (err) {
+        error.Timeout,
+        error.ConnectionTimedOut,
+        error.ConnectionResetByPeer,
+        error.ConnectionRefused,
+        error.NetworkUnreachable,
+        error.HostUnreachable,
+        error.NetworkError,
+        error.HttpRequestFailed,
+        error.HttpConnectionClosing,
+        error.TemporaryNameServerFailure,
+        error.NameServerFailure,
+        error.RegistryUnavailable,
+        error.RegistryRateLimited,
+        error.UnexpectedEndOfStream,
+        error.EndOfStream,
+        => true,
+        else => false,
+    };
+}
+
+test "failure report names every failed package, its version and reason" {
+    resetFailures();
+    defer resetFailures();
+    recordFailure("ffmpeg.org", "9.0.2", "timed out after registry HTTP 503 (Retry-After 60s)");
+    recordFailure("example.com/tool", "1.0.0", "checksum mismatch");
+    var buffer: [4096]u8 = undefined;
+    const report = formatFailureReport(&buffer, false);
+    try std.testing.expectEqualStrings(
+        "\nerror: 2 packages failed to install:\n" ++
+            "  ffmpeg.org@9.0.2: timed out after registry HTTP 503 (Retry-After 60s) [transient: network, timeout or registry outage; a rerun may pass]\n" ++
+            "  example.com/tool@1.0.0: checksum mismatch\n",
+        report,
+    );
+    try std.testing.expect(std.mem.indexOfScalar(u8, report, 0x1b) == null);
+    try std.testing.expect(std.mem.indexOfScalar(u8, report, '\r') == null);
+}
+
+test "failure report annotations escape workflow-command data" {
+    resetFailures();
+    defer resetFailures();
+    recordFailure("ffmpeg.org", "9.0.2", "100% stalled\nthen timed out");
+    var buffer: [4096]u8 = undefined;
+    const report = formatFailureReport(&buffer, true);
+    try std.testing.expect(std.mem.indexOf(u8, report, "::error title=pantry install failed::ffmpeg.org@9.0.2: 100%25 stalled%0Athen timed out (transient)\n") != null);
+}
+
+test "failure report keeps a count past its record limit and nothing when clean" {
+    resetFailures();
+    defer resetFailures();
+    var buffer: [16 * 1024]u8 = undefined;
+    try std.testing.expectEqualStrings("", formatFailureReport(&buffer, false));
+    for (0..max_failure_records + 3) |_| recordFailure("a.org", "1.0.0", null);
+    const report = formatFailureReport(&buffer, false);
+    try std.testing.expect(std.mem.startsWith(u8, report, "\nerror: 67 packages failed to install:\n"));
+    try std.testing.expect(std.mem.endsWith(u8, report, "  ...and 3 more\n"));
+    try std.testing.expect(std.mem.indexOf(u8, report, "a.org@1.0.0: no error detail was reported\n") != null);
+}
+
+test "transient failures are told apart from permanent ones" {
+    try std.testing.expect(isTransientInstallError(error.Timeout));
+    try std.testing.expect(isTransientInstallError(error.RegistryUnavailable));
+    try std.testing.expect(!isTransientInstallError(error.PackageNotFound));
+    try std.testing.expect(!isTransientInstallError(error.ChecksumMismatch));
+    try std.testing.expect(isTransientReason("Registry GET HTTP 503"));
+    try std.testing.expect(isTransientReason(friendlyErrorName(error.Timeout)));
+    try std.testing.expect(!isTransientReason(friendlyErrorName(error.ChecksumMismatch)));
+    try std.testing.expect(!isTransientReason("not found in pantry or npm registry"));
 }
 
 // ── Progress ────────────────────────────────────────────────────────────────
@@ -401,6 +625,19 @@ pub fn friendlyErrorName(err: anyerror) []const u8 {
         error.ConnectionRefused => "connection refused",
         error.ConnectionTimedOut => "connection timed out",
         error.TlsInitializationFailed => "TLS error",
+        error.Timeout => "timed out",
+        error.ConnectionResetByPeer => "connection reset",
+        error.NetworkUnreachable, error.HostUnreachable => "network unreachable",
+        error.TemporaryNameServerFailure, error.NameServerFailure => "DNS failure",
+        error.UnknownHostName => "unknown host",
+        error.RegistryUnavailable => "registry unavailable",
+        error.RegistryRateLimited => "registry rate limited (HTTP 429)",
+        error.RegistryAuthenticationRequired => "registry authentication required (HTTP 401/403)",
+        error.RegistryArtifactNotFound => "artifact missing from registry (HTTP 404)",
+        error.InvalidRegistryMetadata => "invalid registry metadata",
+        error.ChecksumMismatch => "checksum mismatch",
+        error.IntegrityMismatch => "integrity mismatch",
+        error.ExtractionFailed => "extract failed",
         else => @errorName(err),
     };
 }

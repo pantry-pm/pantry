@@ -1,6 +1,8 @@
 // Import these files explicitly so their launch and install invariants run in CI.
 test {
     _ = @import("io_helper.zig");
+    // The install failure report and transient-failure classification.
+    _ = @import("cli/style.zig");
     _ = @import("cli/commands/install/core.zig");
     // Scope pinning: private scopes resolve from their Pantry registry only.
     // Rooted here rather than in test_registry_root.zig because reading a

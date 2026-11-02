@@ -2623,10 +2623,11 @@ fn sameHttpOrigin(a: std.Uri, b: std.Uri) bool {
     return std.ascii.eqlIgnoreCase(a_host, b_host) and (a.port orelse default_port) == (b.port orelse default_port);
 }
 
-fn httpGetResponseTask(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool) anyerror!HttpResponse {
+fn httpGetResponseTask(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool, timeout_ms: u64) anyerror!HttpResponse {
     var client: std.http.Client = .{ .allocator = allocator, .io = io };
     defer client.deinit();
-    return httpGetResponseWithClient(&client, allocator, url, extra_headers, status_only_errors);
+    const deadline_ms = getMilliTimestamp() +| @as(i64, @intCast(@min(timeout_ms, std.math.maxInt(i64))));
+    return httpGetResponseWithClientDeadline(&client, allocator, url, extra_headers, status_only_errors, deadline_ms);
 }
 
 /// Safe GETs share a fixed retry budget across gateway and connection failures.
@@ -2636,7 +2637,9 @@ fn transientGetStatus(status: u16) bool {
 }
 
 // A valid server delay is a lower bound, never clamped into an early retry.
-// The existing caller-owned deadline cancels this sleep and the whole request.
+// A delay that cannot finish inside the caller's deadline is not waited out:
+// the status is returned instead (see `retryFitsDeadline`), so the caller
+// reports the registry's answer rather than a bare `Timeout`.
 fn responseRetryDelay(response: *std.http.Client.Response, retries: u32) ?u64 {
     var headers = response.head.iterateHeaders();
     while (headers.next()) |header| {
@@ -2648,16 +2651,81 @@ fn responseRetryDelay(response: *std.http.Client.Response, retries: u32) ?u64 {
     return retries;
 }
 
+/// Whether waiting `delay_seconds` before another attempt still ends before
+/// `deadline_ms` (a `getMilliTimestamp` value). No deadline always fits.
+fn retryFitsDeadline(delay_seconds: u64, deadline_ms: ?i64, now_ms: i64) bool {
+    const deadline = deadline_ms orelse return true;
+    const delay_ms: i64 = @as(i64, @intCast(@min(delay_seconds, http_retry.max_delay_seconds))) * 1000;
+    return now_ms + delay_ms < deadline;
+}
+
+test "a Retry-After longer than the request deadline is not waited out" {
+    // job 7047: HTTP 503 with Retry-After: 60 inside a 30 s metadata deadline
+    // slept until the deadline and surfaced as a bare `Timeout`.
+    try std.testing.expect(!retryFitsDeadline(60, 30_000, 0));
+    try std.testing.expect(retryFitsDeadline(1, 30_000, 0));
+    try std.testing.expect(!retryFitsDeadline(1, 30_000, 29_500));
+    try std.testing.expect(retryFitsDeadline(60, null, 0));
+}
+
+/// The last gateway answer (429/502/503/504) a registry GET received, kept so
+/// an install that fails afterwards - often as a deadline `Timeout` - can say
+/// what the registry answered. Callers reset it before one package's install
+/// and read it after that install fails.
+var last_transient_get_status = std.atomic.Value(u16).init(0);
+var last_transient_get_retry_after = std.atomic.Value(u32).init(0);
+
+pub const TransientGetRecord = struct { status: u16, retry_after_seconds: u32 };
+
+pub fn resetTransientGetRecord() void {
+    last_transient_get_status.store(0, .monotonic);
+    last_transient_get_retry_after.store(0, .monotonic);
+}
+
+pub fn lastTransientGetRecord() ?TransientGetRecord {
+    const status = last_transient_get_status.load(.monotonic);
+    if (status == 0) return null;
+    return .{ .status = status, .retry_after_seconds = last_transient_get_retry_after.load(.monotonic) };
+}
+
+fn recordTransientGet(status: u16, delay: ?u64) void {
+    if (!transientGetStatus(status)) return;
+    last_transient_get_status.store(status, .monotonic);
+    last_transient_get_retry_after.store(@intCast(@min(delay orelse 0, std.math.maxInt(u32))), .monotonic);
+}
+
+test "transient registry answers are kept for the failure report" {
+    resetTransientGetRecord();
+    defer resetTransientGetRecord();
+    recordTransientGet(404, null);
+    try std.testing.expectEqual(@as(?TransientGetRecord, null), lastTransientGetRecord());
+    recordTransientGet(503, 60);
+    const record = lastTransientGetRecord().?;
+    try std.testing.expectEqual(@as(u16, 503), record.status);
+    try std.testing.expectEqual(@as(u32, 60), record.retry_after_seconds);
+}
+
+const GetStatusNote = enum { none, retry_after_exceeds_budget, retry_after_exceeds_deadline };
+
 // Log the responding origin, including after redirects, without exposing a
 // signed path, query, user information, or authorization header.
 fn printGetStatus(uri: std.Uri, status: u16, retry: ?u32, delay: ?u64, max_retries: u32) void {
+    printGetStatusNote(uri, status, retry, delay, max_retries, if (delay == null) .retry_after_exceeds_budget else .none);
+}
+
+fn printGetStatusNote(uri: std.Uri, status: u16, retry: ?u32, delay: ?u64, max_retries: u32, note: GetStatusNote) void {
+    recordTransientGet(status, delay);
     var buffer: [512]u8 = undefined;
     const host = if (uri.host) |value| value.toRaw(&buffer) catch "<invalid host>" else "<missing host>";
     const style = @import("cli/style.zig");
     style.print("  Registry GET HTTP {d} from {s}://{s}", .{ status, uri.scheme, host });
     if (uri.port) |port| style.print(":{d}", .{port});
     if (retry) |attempt| style.print("; retry {d}/{d} after {d}s", .{ attempt, max_retries, delay.? });
-    if (delay == null) style.print("; Retry-After exceeds request budget", .{});
+    switch (note) {
+        .none => {},
+        .retry_after_exceeds_budget => style.print("; Retry-After exceeds request budget", .{}),
+        .retry_after_exceeds_deadline => style.print("; Retry-After {d}s outlasts the request deadline, not retrying", .{delay.?}),
+    }
     style.print("\n", .{});
 }
 
@@ -2718,7 +2786,7 @@ const HttpGetAttempt = union(enum) {
 
 /// Own all buffers and the request within one attempt, closing the connection
 /// before returning an error or a retryable status to the bounded outer loop.
-fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocator, current_url: []const u8, initial_uri: std.Uri, extra_headers: []const std.http.Header, status_only_errors: bool, retries: u8) !HttpGetAttempt {
+fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocator, current_url: []const u8, initial_uri: std.Uri, extra_headers: []const std.http.Header, status_only_errors: bool, retries: u8, deadline_ms: ?i64) !HttpGetAttempt {
     const decoration = decorateRequest(allocator, current_url);
     defer decoration.deinit(allocator);
     const uri = try std.Uri.parse(decoration.effectiveUrl(current_url));
@@ -2760,10 +2828,12 @@ fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocat
     if (transientGetStatus(status)) {
         const delay = responseRetryDelay(&response, retries + 1);
         if (retries < 2 and delay != null) {
-            printGetStatus(uri, status, retries + 1, delay, 2);
-            return .{ .retry_status = .{ .status = status, .delay = delay.? } };
-        }
-        printGetStatus(uri, status, null, delay, 2);
+            if (retryFitsDeadline(delay.?, deadline_ms, getMilliTimestamp())) {
+                printGetStatus(uri, status, retries + 1, delay, 2);
+                return .{ .retry_status = .{ .status = status, .delay = delay.? } };
+            }
+            printGetStatusNote(uri, status, null, delay, 2, .retry_after_exceeds_deadline);
+        } else printGetStatus(uri, status, null, delay, 2);
     }
     if (status_only_errors and (status < 200 or status >= 300)) return .{ .response = .{ .status = status, .body = try allocator.alloc(u8, 0) } };
     const decompress_buffer: []u8 = switch (response.head.content_encoding) {
@@ -2781,6 +2851,10 @@ fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocat
 }
 
 fn httpGetResponseWithClient(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool) anyerror!HttpResponse {
+    return httpGetResponseWithClientDeadline(client, allocator, url, extra_headers, status_only_errors, null);
+}
+
+fn httpGetResponseWithClientDeadline(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool, deadline_ms: ?i64) anyerror!HttpResponse {
     var current_url = try allocator.dupe(u8, url);
     defer allocator.free(current_url);
     const initial_decoration = decorateRequest(allocator, url);
@@ -2789,7 +2863,7 @@ fn httpGetResponseWithClient(client: *std.http.Client, allocator: std.mem.Alloca
     var redirects: u8 = 0;
     var retries: u8 = 0;
     while (true) {
-        const result = httpGetAttemptWithClient(client, allocator, current_url, initial_uri, extra_headers, status_only_errors, retries) catch |err| {
+        const result = httpGetAttemptWithClient(client, allocator, current_url, initial_uri, extra_headers, status_only_errors, retries, deadline_ms) catch |err| {
             if (try retrySafeGetTransport(err, &retries)) continue;
             return err;
         };
@@ -2852,7 +2926,7 @@ fn httpGetResponseWithPolicy(allocator: std.mem.Allocator, url: []const u8, extr
     const Selection = union(enum) { response: anyerror!HttpResponse, timeout: void };
     var buffer: [2]Selection = undefined;
     var select = std.Io.Select(Selection).init(getIo(), &buffer);
-    try select.concurrent(.response, httpGetResponseTask, .{ allocator, url, extra_headers, status_only_errors });
+    try select.concurrent(.response, httpGetResponseTask, .{ allocator, url, extra_headers, status_only_errors, timeout_ms });
     select.concurrent(.timeout, httpTimeoutTask, .{timeout_ms}) catch |err| {
         while (select.cancel()) |result| {
             if (result == .response) {
