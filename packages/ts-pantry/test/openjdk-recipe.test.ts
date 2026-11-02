@@ -115,14 +115,14 @@ test('exact security-update pins and Java 8 keep the vendor release spelling', (
 })
 
 
-test('exact vendor runtimes run on the native publisher instead of foreign download fanout', () => {
-  const root = resolve(import.meta.dir, '..')
-  for (const platform of ['darwin-arm64', 'linux-arm64', 'linux-x86-64']) {
+for (const platform of ['darwin-arm64', 'linux-arm64', 'linux-x86-64']) {
+  test(`exact ${platform} vendor runtimes run on the native publisher instead of foreign download fanout`, () => {
+    const root = resolve(import.meta.dir, '..')
     const native = spawnSync(process.execPath, ['scripts/build-all-packages.ts', '--platform', platform, '-p', 'openjdk.org@17.0.20.8', '--source-only', '--print-selected'], { cwd: root, encoding: 'utf8' })
     expect(native.status, native.stderr).toBe(0)
     expect(native.stdout.trim()).toBe('openjdk.org@17.0.20.8')
     const foreign = spawnSync(process.execPath, ['scripts/build-all-packages.ts', '--platform', platform, '-p', 'openjdk.org@17.0.20.8', '--download-only', '--print-selected'], { cwd: root, encoding: 'utf8' })
     expect(foreign.status, foreign.stderr).toBe(0)
     expect(foreign.stdout.trim()).toBe('')
-  }
-})
+  })
+}
