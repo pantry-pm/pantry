@@ -1,3 +1,24 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.158...v0.11.159)
+
+## 🐛 Bug Fixes
+
+- **install**: refresh owned commands across package revisions ([37de5c9](https://github.com/pantry-pm/pantry/commit/37de5c9)) _(by Chris <chris@stacksjs.com>)_ ([#268](https://github.com/pantry-pm/pantry/issues/268))
+- **discovery**: find executable nested package commands ([31f8448](https://github.com/pantry-pm/pantry/commit/31f8448)) _(by Chris <chris@stacksjs.com>)_ ([#269](https://github.com/pantry-pm/pantry/issues/269))
+- **install**: a lock pin decides what installs while it satisfies its spec (#263) ([5621d07](https://github.com/pantry-pm/pantry/commit/5621d07)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#260](https://github.com/pantry-pm/pantry/issues/260), [#263](https://github.com/pantry-pm/pantry/issues/263), [stacksjs/stacks#2905](https://github.com/stacksjs/stacks/issues/2905), [#253](https://github.com/pantry-pm/pantry/issues/253))
+- **registry**: resolve build versions from the package catalog ([54c533c](https://github.com/pantry-pm/pantry/commit/54c533c)) _(by Chris <chris@stacksjs.com>)_ ([#267](https://github.com/pantry-pm/pantry/issues/267))
+
+## 🔧 Chores
+
+- release v0.11.159 ([31320d0](https://github.com/pantry-pm/pantry/commit/31320d0)) _(by Chris <chris@stacksjs.com>)_
+- preserve upstream package catalog updates ([e70b49d](https://github.com/pantry-pm/pantry/commit/e70b49d)) _(by Chris <chris@stacksjs.com>)_
+- update craft to 0.0.424 ([4a12ac1](https://github.com/pantry-pm/pantry/commit/4a12ac1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- integrate reviewed registry and activation fixes ([0668d17](https://github.com/pantry-pm/pantry/commit/0668d17)) _(by Chris <chris@stacksjs.com>)_ ([#267](https://github.com/pantry-pm/pantry/issues/267), [#268](https://github.com/pantry-pm/pantry/issues/268), [#269](https://github.com/pantry-pm/pantry/issues/269))
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.157...v0.11.158)
 
 ## 🐛 Bug Fixes
