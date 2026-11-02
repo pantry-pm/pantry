@@ -219,16 +219,40 @@ export function bundleRuntimeLibraries(
 export function normalizeMachoRuntime(prefix: string, isBinary: (file: string) => boolean): void {
   for (const part of ['bin', 'sbin', 'lib', 'lib64', 'libexec']) walk(join(prefix, part), (file) => {
     if (lstatSync(file).isSymbolicLink() || !isBinary(file)) return
+    let changed = false
     const commands = execFileSync('otool', ['-l', file], { encoding: 'utf8' })
     const existing = [...commands.matchAll(/cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset/g)].map(match => match[1])
     const wanted = ['lib', 'lib64'].filter(lib => existsSync(join(prefix, lib))).map((lib) => {
       const path = relative(dirname(file), join(prefix, lib)).split(sep).join('/')
       return path ? `@loader_path/${path}` : '@loader_path'
     })
-    for (const path of new Set(existing)) if (!wanted.includes(path)) execFileSync('install_name_tool', ['-delete_rpath', path, file], { stdio: 'pipe' })
-    for (const path of wanted) if (!existing.includes(path)) execFileSync('install_name_tool', ['-add_rpath', path, file], { stdio: 'pipe' })
-    const id = execFileSync('otool', ['-D', file], { encoding: 'utf8' }).trim().split('\n')[1]
-    if (id) execFileSync('install_name_tool', ['-id', `@rpath/${basename(file)}`, file], { stdio: 'pipe' })
+    for (const path of new Set(existing)) if (!wanted.includes(path)) {
+      execFileSync('install_name_tool', ['-delete_rpath', path, file], { stdio: 'pipe' })
+      changed = true
+    }
+    for (const path of wanted) if (!existing.includes(path)) {
+      execFileSync('install_name_tool', ['-add_rpath', path, file], { stdio: 'pipe' })
+      changed = true
+    }
+    const id = execFileSync('otool', ['-D', file], { encoding: 'utf8' }).trim().split('\n')[1]?.trim()
+    const wantedId = `@rpath/${basename(file)}`
+    if (id && id !== wantedId) {
+      execFileSync('install_name_tool', ['-id', wantedId, file], { stdio: 'pipe' })
+      changed = true
+    }
+    if (!changed) {
+      // Dependency bundling can already have invalidated this signature before
+      // normalization. Preserve valid images, while still signing those edits
+      // and unsigned compiler output. Tool failures must not look like unsigned.
+      try {
+        execFileSync('codesign', ['--verify', '--strict', file], { stdio: 'pipe' })
+        return
+      }
+      catch (error) {
+        const status = (error as { status?: number | null }).status
+        if (typeof status !== 'number' || !Number.isInteger(status) || status <= 0) throw error
+      }
+    }
     execFileSync('codesign', ['--force', '--sign', '-', file], { stdio: 'pipe' })
   })
 }

@@ -32,7 +32,9 @@ test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declare
     const firstLib = join(first, 'lib/libfixture-first.1.dylib')
     run(['xcrun', 'clang', '-dynamiclib', join(root, 'second.c'), '-Wl,-headerpad_max_install_names', '-install_name', '@rpath/libfixture-second.1.dylib', '-o', secondLib])
     run(['xcrun', 'clang', '-dynamiclib', join(root, 'first.c'), secondLib, `-Wl,-rpath,${second}/lib64`, '-Wl,-headerpad_max_install_names', '-install_name', '@rpath/first.example/v1.0/lib/libfixture-first.1.dylib', '-o', firstLib])
-    run(['xcrun', 'clang', join(root, 'main.c'), firstLib, `-Wl,-rpath,${first}/lib`, '-Wl,-headerpad_max_install_names', '-o', join(stage, 'bin/fixture')])
+    // Only the dependency's install name needs rewriting in this executable.
+    // Its RPATH is already canonical, so signing cannot rely on RPATH edits.
+    run(['xcrun', 'clang', join(root, 'main.c'), firstLib, '-Wl,-rpath,@loader_path/../lib', '-Wl,-headerpad_max_install_names', '-o', join(stage, 'bin/fixture')])
     const before = Bun.spawnSync([join(stage, 'bin/fixture')], { env: environment, stdout: 'pipe', stderr: 'pipe' })
     expect(before.exitCode).not.toBe(0)
     expect(before.stderr.toString()).toContain('@rpath/first.example/v1.0/lib/libfixture-first.1.dylib')
@@ -51,6 +53,7 @@ test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declare
     run(['xcrun', 'clang', '-dynamiclib', join(root, 'second.c'), '-Wl,-headerpad_max_install_names', '-install_name', '@rpath/libfixture-second.1.dylib', '-o', secondLib])
     const currentSecondSha256 = new Bun.CryptoHasher('sha256').update(readFileSync(secondLib)).digest('hex')
     await fixUp(stage, 'darwin-arm64', [], [{ domain: 'first.example', version: '1.0', prefix: first, resources: ['lib/runtime-data'] }, { domain: 'second.example', version: '1.0', prefix: second }])
+    run(['codesign', '--verify', '--strict', join(stage, 'bin/fixture')])
     const fresh = join(root, 'fresh consumer/pantry/example.org/v1.0')
     mkdirSync(dirname(fresh), { recursive: true })
     renameSync(stage, fresh)
