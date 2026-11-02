@@ -2659,8 +2659,10 @@ pub fn lockedVersionSatisfying(
     if (declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*"))
         return locked.version;
 
-    // An exact spec needs no lock to be deterministic; let it resolve itself
-    // so a mismatch between pin and spec stays visible.
+    // Frozen validation also asks about exact pins. An identical literal
+    // version is covered; a different pin still resolves from its declaration.
+    // Rolling development selectors remain distinct from their resolved build.
+    if (std.mem.eql(u8, locked.version, declared)) return locked.version;
     if (!isVersionSpecRange(declared)) return null;
 
     const satisfies = registry.satisfiesConstraint(locked.version, declared) catch return null;
@@ -2714,4 +2716,19 @@ test "a lock pin decides while it satisfies the declared spec" {
     try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "3.54.1") == null);
     // Nothing locked, nothing to honor.
     try std.testing.expect(lockedVersionSatisfying(&lock, "zlib.net", "^1") == null);
+}
+
+test "a frozen lock accepts an identical exact system pin" {
+    const allocator = std.testing.allocator;
+    var lock = lib.deps.resolution.LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("bun.sh", "1.4.4", "registry:bun.sh@1.4.4", null);
+    try lock.addPackage("ziglang.org", "0.17.0-dev.123+abcdef", "registry:ziglang.org@0.17.0-dev.123+abcdef", null);
+    const exact = lockedVersionSatisfying(&lock, "bun.sh", "1.4.4");
+    try std.testing.expect(exact != null);
+    try std.testing.expectEqualStrings("1.4.4", exact.?);
+    try std.testing.expectEqualStrings("1.4.4", lockedVersionSatisfying(&lock, "bun", "1.4.4").?);
+    try std.testing.expect(lockedVersionSatisfying(&lock, "bun.sh", "1.4.5") == null);
+    try std.testing.expect(lockedVersionSatisfying(&lock, "bun.sh", "1.4.3") == null);
+    try std.testing.expect(lockedVersionSatisfying(&lock, "ziglang.org", "0.17.0-dev") == null);
 }
