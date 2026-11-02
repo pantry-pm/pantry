@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.161...v0.11.162)
+
+## 🐛 Bug Fixes
+
+- **native**: validate the paired Pantry CLI before provisioning ([98fd967](https://github.com/pantry-pm/pantry/commit/98fd967)) _(by Chris <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **openjdk**: separate native platform selection cases ([6a9ecd6](https://github.com/pantry-pm/pantry/commit/6a9ecd6)) _(by Chris <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.162 ([c7a598d](https://github.com/pantry-pm/pantry/commit/c7a598d)) _(by Chris <chris@stacksjs.com>)_
+- integrate current Pantry release and TestFlight support ([a01c8bf](https://github.com/pantry-pm/pantry/commit/a01c8bf)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.160...v0.11.161)
 
 ## ✨ Features
