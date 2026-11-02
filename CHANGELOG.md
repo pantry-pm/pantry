@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.160...v0.11.161)
+
+## ✨ Features
+
+- **ts-pantry**: TestFlight distribution and the next build number ([6072e7a](https://github.com/pantry-pm/pantry/commit/6072e7a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.161 ([e34cdb0](https://github.com/pantry-pm/pantry/commit/e34cdb0)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.159...v0.11.160)
 
 ## ✨ Features
