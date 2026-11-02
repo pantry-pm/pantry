@@ -114,7 +114,7 @@ export function bundleRuntimeLibraries(
   dependencies: RuntimePackage[],
   isBinary: (file: string) => boolean,
   patchelf = 'patchelf',
-  options: { preserveInternalLayout?: boolean } = {},
+  options: { preserveInternalLayout?: boolean, prepareBinary?: (file: string) => void } = {},
 ): RuntimeLibraryReceipt[] {
   const linux = platform.startsWith('linux-')
   const root = realpathSync(prefix)
@@ -166,6 +166,7 @@ export function bundleRuntimeLibraries(
     const file = queue[position]
     if (visited.has(file)) continue
     visited.add(file)
+    options.prepareBinary?.(file)
     const needed = linux
       ? execFileSync(patchelf, ['--print-needed', file], { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
       : execFileSync('otool', ['-L', file], { encoding: 'utf8' }).trim().split('\n').slice(1).map(line => line.trim().replace(/\s+\(.*$/, '')).filter(Boolean)
@@ -199,7 +200,16 @@ export function bundleRuntimeLibraries(
         if (selected.dependency) {
           const identity = `${selected.dependency.domain}@${selected.dependency.version}`
           if (!licenses.has(identity)) licenses.set(identity, preserveLicenses(root, selected.dependency))
-          if (!resources.has(identity)) resources.set(identity, copyRuntimeResources(root, selected.dependency))
+          if (!resources.has(identity)) {
+            const copied = copyRuntimeResources(root, selected.dependency)
+            resources.set(identity, copied)
+            // Resources can be native helpers or loadable modules with their
+            // own library edges, rather than only passive data files.
+            for (const resource of copied) {
+              const file = join(root, resource.path)
+              if (isBinary(file)) queue.push(file)
+            }
+          }
           receipts.push({ name, domain: selected.dependency.domain, version: selected.dependency.version, source: relative(realpathSync(selected.dependency.prefix), selected.file).split(sep).join('/'), sourceSha256: hash(selected.file), licenseFiles: licenses.get(identity)!, resources: resources.get(identity)! })
         }
       }
@@ -216,14 +226,19 @@ export function bundleRuntimeLibraries(
 }
 
 /** Normalize loader paths without searching or copying any host libraries. */
-export function normalizeMachoRuntime(prefix: string, isBinary: (file: string) => boolean): void {
-  for (const part of ['bin', 'sbin', 'lib', 'lib64', 'libexec']) walk(join(prefix, part), (file) => {
+export function normalizeMachoRuntime(prefix: string, isBinary: (file: string) => boolean, additionalFiles: readonly string[] = []): void {
+  const root = realpathSync(prefix)
+  const visited = new Set<string>()
+  const normalize = (file: string): void => {
     if (lstatSync(file).isSymbolicLink() || !isBinary(file)) return
+    const actual = realpathSync(file)
+    if (visited.has(actual)) return
+    visited.add(actual)
     let changed = false
     const commands = execFileSync('otool', ['-l', file], { encoding: 'utf8' })
     const existing = [...commands.matchAll(/cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset/g)].map(match => match[1])
-    const wanted = ['lib', 'lib64'].filter(lib => existsSync(join(prefix, lib))).map((lib) => {
-      const path = relative(dirname(file), join(prefix, lib)).split(sep).join('/')
+    const wanted = ['lib', 'lib64'].filter(lib => existsSync(join(root, lib))).map((lib) => {
+      const path = relative(dirname(actual), join(root, lib)).split(sep).join('/')
       return path ? `@loader_path/${path}` : '@loader_path'
     })
     for (const path of new Set(existing)) if (!wanted.includes(path)) {
@@ -254,12 +269,21 @@ export function normalizeMachoRuntime(prefix: string, isBinary: (file: string) =
       }
     }
     execFileSync('codesign', ['--force', '--sign', '-', file], { stdio: 'pipe' })
-  })
+  }
+  for (const part of ['bin', 'sbin', 'lib', 'lib64', 'libexec']) walk(join(prefix, part), normalize)
+  for (const file of additionalFiles) {
+    if (!inside(root, realpathSync(file))) throw new Error('Native runtime resource escapes artifact')
+    normalize(file)
+  }
 }
 
 export function writeRuntimeProvenance(prefix: string, libraries: RuntimeLibraryReceipt[]): void {
   if (!libraries.length) return
   const destination = join(prefix, 'share/pantry/runtime-libraries.json')
   mkdirSync(dirname(destination), { recursive: true })
-  writeFileSync(destination, JSON.stringify({ version: 1, libraries: libraries.map(library => ({ ...library, bundledSha256: hash(join(prefix, 'lib', library.name)) })) }, null, 2) + '\n')
+  writeFileSync(destination, JSON.stringify({ version: 1, libraries: libraries.map(library => ({
+    ...library,
+    bundledSha256: hash(join(prefix, 'lib', library.name)),
+    resources: library.resources?.map(resource => ({ ...resource, sha256: hash(join(prefix, resource.path)) })),
+  })) }, null, 2) + '\n')
 }

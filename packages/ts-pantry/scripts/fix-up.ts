@@ -20,28 +20,34 @@ export async function fixUp(prefix: string, platform: string, skips: string[] = 
   const [os] = platform.split('-')
   const osName = os === 'darwin' ? 'darwin' : 'linux'
   const originalModes = new Map<string, number>()
+  const nativeFiles = new Set<string>()
   const isBinary = osName === 'linux' ? isDynamicElf : isDynamicMachO
+  const prepareBinary = (file: string): void => {
+    const actual = realpathSync(file)
+    nativeFiles.add(actual)
+    const mode = statSync(actual).mode & 0o7777
+    if (!(mode & 0o200)) {
+      originalModes.set(actual, mode)
+      chmodSync(actual, mode | 0o200)
+    }
+  }
   try {
     for (const part of ['bin', 'sbin', 'lib', 'lib64', 'libexec']) {
       const directory = join(prefix, part)
       if (!existsSync(directory) || !lstatSync(directory).isDirectory()) continue
       walkFiles(directory, (file) => {
         if (!isBinary(file)) return
-        const mode = statSync(file).mode & 0o7777
-        if (!(mode & 0o200)) {
-          originalModes.set(file, mode)
-          chmodSync(file, mode | 0o200)
-        }
+        prepareBinary(file)
       })
     }
     console.log(`\nRunning post-build fix-ups on ${prefix}...`)
 
     const bundled = (() => {
-      try { return bundleRuntimeLibraries(prefix, platform, runtimeDependencies, osName === 'linux' ? isDynamicElf : isDynamicMachO, 'patchelf', { preserveInternalLayout: skips.includes(osName === 'linux' ? 'fix-patchelf' : 'fix-machos') }) }
+      try { return bundleRuntimeLibraries(prefix, platform, runtimeDependencies, isBinary, 'patchelf', { preserveInternalLayout: skips.includes(osName === 'linux' ? 'fix-patchelf' : 'fix-machos'), prepareBinary }) }
       catch (cause) { throw new Error(`Cannot normalize ${osName === 'linux' ? 'ELF loader paths' : 'Mach-O runtime libraries'}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause }) }
     })()
-    if (osName === 'darwin' && !skips.includes('fix-machos')) normalizeMachoRuntime(prefix, isDynamicMachO)
-    else if (osName === 'linux' && !skips.includes('fix-patchelf')) fixElfRpaths(prefix)
+    if (osName === 'darwin' && !skips.includes('fix-machos')) normalizeMachoRuntime(prefix, isDynamicMachO, [...nativeFiles])
+    else if (osName === 'linux' && !skips.includes('fix-patchelf')) fixElfRpaths(prefix, 'patchelf', [...nativeFiles])
     writeRuntimeProvenance(prefix, bundled)
 
     // Fix pkg-config files
@@ -61,40 +67,49 @@ export async function fixUp(prefix: string, platform: string, skips: string[] = 
     for (const [file, mode] of originalModes) if (existsSync(file)) chmodSync(file, mode)
   }
 }
-export function fixElfRpaths(prefix: string, patchelf = 'patchelf'): void {
+export function fixElfRpaths(prefix: string, patchelf = 'patchelf', additionalFiles: readonly string[] = []): void {
   const dirs = ['bin', 'sbin', 'lib', 'lib64', 'libexec'].filter(dir => existsSync(join(prefix, dir)) && lstatSync(join(prefix, dir)).isDirectory())
-  for (const dir of dirs) {
-    walkFiles(join(prefix, dir), (filePath) => {
-      if (!isDynamicElf(filePath)) return
-      try {
-        const existing = execFileSync(patchelf, ['--print-rpath', filePath], { encoding: 'utf8' }).trim().split(':')
-        const libraries = dir === 'lib64' ? ['lib64', 'lib'] : ['lib', 'lib64']
-        const paths = new Set(libraries.filter(lib => existsSync(join(prefix, lib))).map((lib) => {
-          const up = relative(dirname(filePath), join(prefix, lib)).split(sep).join('/')
-          return up ? `$ORIGIN/${up}` : '$ORIGIN'
-        }))
-        // The package's own libraries must precede dependency and host paths.
-        for (const path of existing) {
-          if (!/^\$(?:ORIGIN|\{ORIGIN\})(?:\/|$)/.test(path)) continue
-          // Mirrored artifacts can name a managed dependency's versioned
-          // prefix rather than its library directory. ELF loaders do not
-          // descend into lib automatically; preserve the dependency and make
-          // its canonical library locations explicit before publication.
-          if (/\/v\d[\w.+-]*$/.test(path)) {
-            paths.add(`${path}/lib`)
-            paths.add(`${path}/lib64`)
-          }
-          paths.add(path)
+  const root = realpathSync(prefix)
+  const visited = new Set<string>()
+  const normalize = (filePath: string): void => {
+    if (!isDynamicElf(filePath)) return
+    const actual = realpathSync(filePath)
+    if (visited.has(actual)) return
+    visited.add(actual)
+    try {
+      const existing = execFileSync(patchelf, ['--print-rpath', filePath], { encoding: 'utf8' }).trim().split(':')
+      const libraries = relative(root, actual).split(sep)[0] === 'lib64' ? ['lib64', 'lib'] : ['lib', 'lib64']
+      const paths = new Set(libraries.filter(lib => existsSync(join(root, lib))).map((lib) => {
+        const up = relative(dirname(actual), join(root, lib)).split(sep).join('/')
+        return up ? `$ORIGIN/${up}` : '$ORIGIN'
+      }))
+      // The package's own libraries must precede dependency and host paths.
+      for (const path of existing) {
+        if (!/^\$(?:ORIGIN|\{ORIGIN\})(?:\/|$)/.test(path)) continue
+        // Mirrored artifacts can name a managed dependency's versioned
+        // prefix rather than its library directory. ELF loaders do not
+        // descend into lib automatically; preserve the dependency and make
+        // its canonical library locations explicit before publication.
+        if (/\/v\d[\w.+-]*$/.test(path)) {
+          paths.add(`${path}/lib`)
+          paths.add(`${path}/lib64`)
         }
-        const expected = [...paths].join(':')
-        applyElfRpath(filePath, expected, patchelf)
-        if (execFileSync(patchelf, ['--print-rpath', filePath], { encoding: 'utf8' }).trim() !== expected)
-          throw new Error('rewritten loader path did not match')
+        paths.add(path)
       }
-      catch (cause) {
-        throw new Error(`Cannot normalize ELF loader paths for ${filePath}: ${cause instanceof Error ? cause.message : String(cause)}; a working patchelf is required before publication`, { cause })
-      }
-    })
+      const expected = [...paths].join(':')
+      applyElfRpath(filePath, expected, patchelf)
+      if (execFileSync(patchelf, ['--print-rpath', filePath], { encoding: 'utf8' }).trim() !== expected)
+        throw new Error('rewritten loader path did not match')
+    }
+    catch (cause) {
+      throw new Error(`Cannot normalize ELF loader paths for ${filePath}: ${cause instanceof Error ? cause.message : String(cause)}; a working patchelf is required before publication`, { cause })
+    }
+  }
+  for (const dir of dirs) walkFiles(join(prefix, dir), normalize)
+  for (const file of additionalFiles) {
+    const actual = realpathSync(file)
+    if (actual !== root && !actual.startsWith(root + sep)) throw new Error('Native runtime resource escapes artifact')
+    normalize(file)
   }
 }
 
