@@ -380,3 +380,139 @@ test "invalid source interface metadata preserves the previous binary link" {
     try testing.expectEqualStrings(before, try io_helper.readFileAlloc(f.arena(), f.abs("base/bin/library.sh"), 4096));
     try f.expectRuns("base/bin/library.sh retained", "retained\n");
 }
+
+test "package activation selects every owned command from a new managed revision" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    const provider = "example.invalid/tool";
+    for ([_][]const u8{ "1.0.0", "1.0.0.1" }) |version| {
+        const package = try std.fmt.allocPrint(f.arena(), "base/packages/{s}/v{s}", .{ provider, version });
+        for ([_][]const u8{ "primary", "companion" }) |command| {
+            try f.wrapperScript(package, command, version);
+        }
+    }
+    try symlink.createPackageSymlinks(testing.allocator, provider, "1.0.0", f.abs("base"));
+    try symlink.createPackageSymlinks(testing.allocator, provider, "1.0.0.1", f.abs("base"));
+    try f.expectLauncher("base/bin/primary", "../packages/example.invalid/tool/v1.0.0.1/bin/primary");
+    try f.expectLauncher("base/bin/companion", "../packages/example.invalid/tool/v1.0.0.1/bin/companion");
+    try f.expectRuns("base/bin/primary", "1.0.0.1");
+    try f.expectRuns("base/bin/companion", "1.0.0.1");
+}
+
+test "removing an old package revision retains selected commands and version aliases" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    const provider = "example.invalid/tool";
+    for ([_][]const u8{ "1.0.0", "1.0.0.1" }) |version| {
+        const package = try std.fmt.allocPrint(f.arena(), "base/packages/{s}/v{s}", .{ provider, version });
+        try f.wrapperScript(package, "companion", version);
+    }
+    try symlink.createPackageSymlinks(testing.allocator, provider, "1.0.0", f.abs("base"));
+    try symlink.createPackageSymlinks(testing.allocator, provider, "1.0.0.1", f.abs("base"));
+    try symlink.removePackageSymlinks(testing.allocator, provider, "1.0.0", f.abs("base"));
+    try f.expectLauncher("base/bin/companion", "../packages/example.invalid/tool/v1.0.0.1/bin/companion");
+    try f.expectRuns("base/bin/companion", "1.0.0.1");
+    try f.expectResolves("base/packages/example.invalid/tool/v1", "base/packages/example.invalid/tool/v1.0.0.1");
+}
+
+test "package activation preserves different nested providers and install roots" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    try f.wrapperScript("base/packages/one.invalid/tool/v1.0.0", "companion", "first provider");
+    try f.wrapperScript("base/packages/two.invalid/tool/v2.0.0", "companion", "second provider");
+    try symlink.createPackageSymlinks(testing.allocator, "one.invalid/tool", "1.0.0", f.abs("base"));
+    try symlink.createPackageSymlinks(testing.allocator, "two.invalid/tool", "2.0.0", f.abs("base"));
+    try f.expectLauncher("base/bin/companion", "../packages/one.invalid/tool/v1.0.0/bin/companion");
+    try f.expectRuns("base/bin/companion", "first provider");
+
+    try f.wrapperScript("foreign/packages/one.invalid/tool/v1.0.0", "foreign-command", "foreign root");
+    try f.wrapperScript("base/packages/one.invalid/tool/v2.0.0", "foreign-command", "local root");
+    const foreign = f.abs("foreign/packages/one.invalid/tool/v1.0.0/bin/foreign-command");
+    try symlink.createProgramActivation(testing.allocator, f.abs("base/bin/foreign-command"), foreign, f.abs("base"));
+    try symlink.createPackageSymlinks(testing.allocator, "one.invalid/tool", "2.0.0", f.abs("base"));
+    const target = symlink.resolvedActivationTarget(f.arena(), f.abs("base/bin/foreign-command")) orelse return error.MissingActivation;
+    try testing.expectEqualStrings(foreign, target);
+    try f.expectRuns("base/bin/foreign-command", "foreign root");
+}
+
+test "nested package programs upgrade through a symlinked route and survive relocation" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    const provider = "example.invalid/tool";
+    for ([_][]const u8{ "1.0.0", "1.0.0.1" }) |version| {
+        const package = try std.fmt.allocPrint(f.arena(), "base/packages/{s}/v{s}/lib/node_modules/tool", .{ provider, version });
+        try f.wrapperScript(package, "companion", version);
+    }
+    try f.symlinkAt(f.abs("base"), "route");
+    try symlink.createPackageSymlinks(testing.allocator, provider, "1.0.0", f.abs("route"));
+    try symlink.createPackageSymlinks(testing.allocator, provider, "1.0.0.1", f.abs("base"));
+    try f.expectLauncher("base/bin/companion", "../packages/example.invalid/tool/v1.0.0.1/lib/node_modules/tool/bin/companion");
+    try f.rename("base", "relocated");
+    try f.remove("route");
+    try f.expectRuns("relocated/bin/companion", "1.0.0.1");
+}
+
+test "managed revision activation retains sourceable program interfaces" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    for ([_][]const u8{ "1.0.0", "1.0.0.1" }) |version| {
+        const package = try std.fmt.allocPrint(f.arena(), "base/packages/example.invalid/tool/v{s}", .{version});
+        try f.write(try std.fmt.allocPrint(f.arena(), "{s}/bin/library.sh", .{package}), "export LIBRARY_REVISION=selected\n", true);
+        try f.write(try std.fmt.allocPrint(f.arena(), "{s}/share/pantry/interfaces.json", .{package}), "{\"version\":1,\"sourceablePrograms\":[\"library.sh\"]}", false);
+    }
+    try symlink.createPackageSymlinks(testing.allocator, "example.invalid/tool", "1.0.0", f.abs("base"));
+    try symlink.createPackageSymlinks(testing.allocator, "example.invalid/tool", "1.0.0.1", f.abs("base"));
+    try f.expectResolves("base/bin/library.sh", "base/packages/example.invalid/tool/v1.0.0.1/bin/library.sh");
+}
+
+test "shared executable leaves cannot transfer activation between package providers" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    try f.wrapperScript("shared", "companion", "shared resource must not be selected");
+    const shared = f.abs("shared/bin/companion");
+    for ([_][]const u8{ "one.invalid/tool", "two.invalid/tool" }) |provider| {
+        const package = try std.fmt.allocPrint(f.arena(), "base/packages/{s}/v1.0.0", .{provider});
+        try f.mkdir(try std.fmt.allocPrint(f.arena(), "{s}/bin", .{package}));
+        try f.symlinkAt(shared, try std.fmt.allocPrint(f.arena(), "{s}/bin/companion", .{package}));
+        try f.write(try std.fmt.allocPrint(f.arena(), "{s}/share/companion.msg", .{package}), provider, false);
+    }
+    try symlink.createPackageSymlinks(testing.allocator, "one.invalid/tool", "1.0.0", f.abs("base"));
+    try f.expectRuns("base/bin/companion", "one.invalid/tool");
+    try symlink.createPackageSymlinks(testing.allocator, "two.invalid/tool", "1.0.0", f.abs("base"));
+    try f.expectRuns("base/bin/companion", "one.invalid/tool");
+    try f.expectLauncher("base/bin/companion", "../packages/one.invalid/tool/v1.0.0/bin/companion");
+
+    try f.mkdir("base/packages/one.invalid/tool/v1.0.0.1/bin");
+    try f.symlinkAt(shared, "base/packages/one.invalid/tool/v1.0.0.1/bin/companion");
+    try f.write("base/packages/one.invalid/tool/v1.0.0.1/share/companion.msg", "selected revision", false);
+    try symlink.createPackageSymlinks(testing.allocator, "one.invalid/tool", "1.0.0.1", f.abs("base"));
+    try f.expectRuns("base/bin/companion", "selected revision");
+    try f.expectLauncher("base/bin/companion", "../packages/one.invalid/tool/v1.0.0.1/bin/companion");
+}
+
+test "shared executable leaves cannot transfer activation from another install root" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    try f.wrapperScript("shared", "companion", "shared resource must not be selected");
+    const shared = f.abs("shared/bin/companion");
+    for ([_][]const u8{ "base", "foreign" }) |base| {
+        const package = try std.fmt.allocPrint(f.arena(), "{s}/packages/example.invalid/tool/v1.0.0", .{base});
+        try f.mkdir(try std.fmt.allocPrint(f.arena(), "{s}/bin", .{package}));
+        try f.symlinkAt(shared, try std.fmt.allocPrint(f.arena(), "{s}/bin/companion", .{package}));
+        try f.write(try std.fmt.allocPrint(f.arena(), "{s}/share/companion.msg", .{package}), base, false);
+    }
+    try f.mkdir("base/bin");
+    const foreign = f.abs("foreign/packages/example.invalid/tool/v1.0.0/bin/companion");
+    try symlink.createProgramActivation(testing.allocator, f.abs("base/bin/companion"), foreign, f.abs("base"));
+    try symlink.createPackageSymlinks(testing.allocator, "example.invalid/tool", "1.0.0", f.abs("base"));
+    try f.expectRuns("base/bin/companion", "foreign");
+    const target = symlink.resolvedActivationTarget(f.arena(), f.abs("base/bin/companion")) orelse return error.MissingActivation;
+    try testing.expectEqualStrings(foreign, target);
+}

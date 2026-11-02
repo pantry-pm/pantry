@@ -211,6 +211,58 @@ pub fn samePath(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, real_a, real_b);
 }
 
+/// Keep the command's leaf entry intact while resolving relocated/symlinked
+/// parent directories. A package may itself provide a symlink as its command.
+fn activationLocation(arena: std.mem.Allocator, target: []const u8) !?[]const u8 {
+    const absolute = if (std.fs.path.isAbsolute(target))
+        try std.fs.path.resolvePosix(arena, &.{target})
+    else
+        try std.fs.path.resolvePosix(arena, &.{ try io_helper.getCwdAlloc(arena), target });
+    const parent = std.fs.path.dirname(absolute) orelse return null;
+    var physical: [std.fs.max_path_bytes]u8 = undefined;
+    const directory = physicalPath(parent, &physical) orelse return null;
+    return try std.fs.path.join(arena, &.{ directory, std.fs.path.basename(absolute) });
+}
+
+/// Package-aware activation may replace another version of the same program,
+/// never another provider or another program within that provider. The caller
+/// supplies the selected managed package directory, not a guessed owner name.
+fn sameProviderProgram(
+    allocator: std.mem.Allocator,
+    existing_target: []const u8,
+    new_target: []const u8,
+    package_dir: []const u8,
+    install_base: []const u8,
+) !bool {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const provider_dir = std.fs.path.dirname(package_dir) orelse return false;
+    const packages_dir = try std.fs.path.join(arena, &.{ install_base, "packages" });
+    var provider_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var packages_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var selected_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const provider = physicalPath(provider_dir, &provider_buf) orelse return false;
+    const packages_root = physicalPath(packages_dir, &packages_buf) orelse return false;
+    const selected = physicalPath(package_dir, &selected_buf) orelse return false;
+    if (!pathWithin(provider, packages_root) or std.mem.eql(u8, provider, packages_root)) return false;
+    if (!samePath(std.fs.path.dirname(selected) orelse return false, provider)) return false;
+    const next = (try activationLocation(arena, new_target)) orelse return false;
+    if (!pathWithin(next, selected)) return false;
+    const program = try std.fs.path.relativePosix(arena, "/", selected, next);
+    const current = (try activationLocation(arena, existing_target)) orelse return false;
+    if (!pathWithin(current, provider)) return false;
+    const relative = try std.fs.path.relativePosix(arena, "/", provider, current);
+    const separator = std.mem.indexOfScalar(u8, relative, '/') orelse return false;
+    const version = relative[0..separator];
+    if (version.len < 2 or version[0] != 'v') return false;
+    if (!std.mem.eql(u8, relative[separator + 1 ..], program)) return false;
+    const previous = try std.fs.path.join(arena, &.{ provider, version });
+    var previous_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const previous_package = physicalPath(previous, &previous_buf) orelse return false;
+    return samePath(std.fs.path.dirname(previous_package) orelse return false, provider);
+}
+
 /// Create symlink for a package binary (with explicit binary path)
 /// If a symlink already exists from a different package, it is preserved (first-installed wins).
 pub fn createBinarySymlinkFromPath(
@@ -218,6 +270,16 @@ pub fn createBinarySymlinkFromPath(
     bin_name: []const u8,
     bin_path: []const u8,
     install_base: []const u8,
+) !void {
+    return createBinaryActivation(allocator, bin_name, bin_path, install_base, null);
+}
+
+fn createBinaryActivation(
+    allocator: std.mem.Allocator,
+    bin_name: []const u8,
+    bin_path: []const u8,
+    install_base: []const u8,
+    package_dir: ?[]const u8,
 ) !void {
     const symlink_dir = try std.fmt.allocPrint(
         allocator,
@@ -255,9 +317,17 @@ pub fn createBinarySymlinkFromPath(
         defer allocator.free(existing_owner);
         const existing_target = resolvedActivationTarget(allocator, symlink_path);
         defer if (existing_target) |target| allocator.free(target);
-        // Re-activating this exact program must upgrade a legacy link to its
-        // current invocation contract. Preserve another installed provider.
-        if (existing_target == null or !samePath(existing_target.?, bin_path)) {
+        // Exact reactivation also upgrades legacy links. A selected managed
+        // package may move its own commands between versions; other providers
+        // retain ownership, even when their displayed owner basename matches.
+        const owned_program = if (existing_target) |target|
+            if (package_dir) |selected|
+                try sameProviderProgram(allocator, target, bin_path, selected, install_base)
+            else
+                samePath(target, bin_path)
+        else
+            false;
+        if (!owned_program) {
             if (style.isCI()) {
                 // Machine-parseable line for CI log scraping
                 style.print(
@@ -542,7 +612,8 @@ pub fn createBinarySymlink(
     );
     defer allocator.free(package_bin_path);
 
-    return createBinarySymlinkFromPath(allocator, bin_name, package_bin_path, install_base);
+    const package_dir = std.fs.path.dirname(std.fs.path.dirname(package_bin_path) orelse return error.InvalidPath) orelse return error.InvalidPath;
+    return createBinaryActivation(allocator, bin_name, package_bin_path, install_base, package_dir);
 }
 
 /// Create version symlink (e.g., nodejs.org/v22 -> nodejs.org/v22.0.0)
@@ -811,7 +882,7 @@ pub fn createPackageSymlinks(
     } else {
         // Create symlinks for each binary using the discovered paths
         for (binaries) |bin_info| {
-            try createBinarySymlinkFromPath(allocator, bin_info.name, bin_info.path, install_base);
+            try createBinaryActivation(allocator, bin_info.name, bin_info.path, install_base, package_dir);
         }
     }
 
@@ -879,7 +950,12 @@ pub fn removePackageSymlinks(
         );
         defer allocator.free(version_symlink);
 
-        io_helper.deleteFile(version_symlink) catch {};
+        // A newer selected version may now own this shared major alias.
+        // Removing an older package must not unlink the newer selection.
+        if (resolvedLinkTarget(allocator, version_symlink)) |target| {
+            defer allocator.free(target);
+            if (samePath(target, package_dir)) io_helper.deleteFile(version_symlink) catch {};
+        }
     }
 }
 

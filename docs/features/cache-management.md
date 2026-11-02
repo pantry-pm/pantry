@@ -316,6 +316,11 @@ therefore resolve resources beside their own executable rather than beside the
 shared `bin` directory. Launchers within a Pantry tree use relative targets, so
 moving that tree preserves activation. A normal reinstall upgrades an existing
 link to the same program without changing the cached executable's bytes.
+Selecting another managed version or build revision updates the provider's
+owned commands together. Ownership uses the full provider root and program path,
+so nested package names and separate install trees cannot claim each other's
+commands. Removing an older version retains commands and major-version aliases
+that now point to the selected newer version.
 
 Packages can declare shell libraries in `share/pantry/interfaces.json` using
 `{"version":1,"sourceablePrograms":["library.sh"]}`. These remain links so a shell
