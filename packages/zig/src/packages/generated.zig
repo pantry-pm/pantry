@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1767
+//! Total packages: 1768
 
 const std = @import("std");
 
@@ -28,7 +28,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1767 total)
+/// All known packages (1768 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -1829,7 +1829,7 @@ pub const packages = [_]PackageInfo{ .{
     .description = "Build desktop apps with web languages, powered by Zig",
     .homepage_url = "https://craft-native.org",
     .programs = &[_][]const u8{"craft"},
-    .dependencies = &[_][]const u8{},
+    .dependencies = &[_][]const u8{ "linux:gtk.org/gtk3^3.24", "linux:gnome.org/glib^2", "linux:webkitgtk.org^2.54" },
     .build_dependencies = &[_][]const u8{"ziglang.org"},
     .aliases = &[_][]const u8{"craft"},
     .versions = &[_][]const u8{ "0.0.424", "0.0.423.1", "0.0.423", "0.0.420", "0.0.418", "0.0.417", "0.0.416", "0.0.415", "0.0.414", "0.0.413", "0.0.411", "0.0.410", "0.0.409", "0.0.408", "0.0.396", "0.0.395", "0.0.394", "0.0.393", "0.0.392", "0.0.390", "0.0.387", "0.0.385", "0.0.384", "0.0.382", "0.0.380", "0.0.377", "0.0.375", "0.0.374", "0.0.369", "0.0.368", "0.0.366", "0.0.365", "0.0.361", "0.0.360", "0.0.359", "0.0.358", "0.0.355", "0.0.354", "0.0.353", "0.0.352", "0.0.351", "0.0.350.1", "0.0.350", "0.0.348", "0.0.346", "0.0.345", "0.0.344", "0.0.341", "0.0.340", "0.0.338", "0.0.330", "0.0.329", "0.0.328", "0.0.319", "0.0.304", "0.0.301", "0.0.299", "0.0.296", "0.0.293", "0.0.290", "0.0.278", "0.0.276", "0.0.272", "0.0.262", "0.0.254", "0.0.251", "0.0.250", "0.0.249", "0.0.248", "0.0.247", "0.0.246", "0.0.245", "0.0.244", "0.0.243", "0.0.242", "0.0.241", "0.0.238", "0.0.237", "0.0.236", "0.0.235", "0.0.234", "0.0.233", "0.0.232", "0.0.231", "0.0.228", "0.0.227", "0.0.226", "0.0.225", "0.0.224", "0.0.223", "0.0.222", "0.0.221", "0.0.220", "0.0.219", "0.0.218", "0.0.217", "0.0.216", "0.0.215", "0.0.214", "0.0.213", "0.0.212", "0.0.211", "0.0.210", "0.0.209", "0.0.207", "0.0.206", "0.0.205", "0.0.204", "0.0.203", "0.0.202", "0.0.201", "0.0.200", "0.0.199", "0.0.198", "0.0.197", "0.0.196", "0.0.195", "0.0.194", "0.0.193", "0.0.192", "0.0.191", "0.0.189", "0.0.187", "0.0.186", "0.0.185", "0.0.184", "0.0.183", "0.0.182", "0.0.181", "0.0.180", "0.0.179", "0.0.178", "0.0.177", "0.0.176", "0.0.175", "0.0.174", "0.0.173", "0.0.172", "0.0.171", "0.0.170", "0.0.169", "0.0.168", "0.0.167", "0.0.166", "0.0.164", "0.0.163", "0.0.162", "0.0.161", "0.0.160", "0.0.158", "0.0.157", "0.0.156", "0.0.155", "0.0.154", "0.0.153", "0.0.152", "0.0.151", "0.0.150", "0.0.149", "0.0.148", "0.0.147", "0.0.146", "0.0.145", "0.0.144", "0.0.143", "0.0.142", "0.0.141", "0.0.140", "0.0.139", "0.0.138", "0.0.136", "0.0.135", "0.0.134", "0.0.133", "0.0.132", "0.0.128", "0.0.127", "0.0.126", "0.0.125", "0.0.124", "0.0.123", "0.0.122", "0.0.121", "0.0.120", "0.0.119", "0.0.118", "0.0.115", "0.0.113", "0.0.112", "0.0.111", "0.0.110", "0.0.109", "0.0.107", "0.0.105", "0.0.104", "0.0.103", "0.0.101", "0.0.100", "0.0.99", "0.0.98", "0.0.97", "0.0.96", "0.0.92", "0.0.91", "0.0.90", "0.0.88", "0.0.87", "0.0.86", "0.0.85", "0.0.84", "0.0.83", "0.0.81", "0.0.80", "0.0.79", "0.0.37", "0.0.23", "0.0.20", "0.0.19" },
@@ -18565,6 +18565,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "mesonbuild.com", "python.org@~3.11", "wayland.freedesktop.org", "curl.se" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "1.47.0", "1.46.0", "1.45.0", "1.44.0", "1.43.0", "1.42.0", "1.41.0", "1.40.0", "1.39.0", "1.38.0", "1.37.0", "1.36.0", "1.35.0", "1.34.0", "1.33.0", "1.32.0" },
+}, .{
+    .name = "webkitgtk",
+    .domain = "webkitgtk.org",
+    .kind = .library,
+    .description = "WebKit rendering engine for GTK, providing the webkit2gtk-4.1 API",
+    .homepage_url = "https://webkitgtk.org",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{ "gtk.org/gtk3^3.24", "gnome.org/glib^2", "libsoup.org^3", "unicode.org", "cairographics.org", "gnome.org/pango", "harfbuzz.org", "freetype.org", "freedesktop.org/fontconfig", "gnome.org/libxml2", "gnome.org/libxslt", "sqlite.org", "libjpeg-turbo.org", "libpng.org", "google.com/webp", "google.com/woff2", "gnu.org/libtasn1", "gnupg.org/libgcrypt", "littlecms.com", "gnome.org/atk", "gnome.org/gdk-pixbuf", "github.com/anholt/libepoxy", "gnome.org/libsecret", "openjpeg.org", "zlib.net", "x.org/x11", "x.org/exts", "wayland.freedesktop.org", "mesa3d.org" },
+    .build_dependencies = &[_][]const u8{ "cmake.org^3", "ninja-build.org", "freedesktop.org/pkg-config", "gnu.org/gettext", "gnu.org/gperf", "ruby-lang.org", "python.org^3" },
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{ "2.54.2", "2.54.1", "2.54.0" },
 }, .{
     .name = "libvpx",
     .domain = "webmproject.org/libvpx",

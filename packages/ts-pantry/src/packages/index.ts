@@ -1688,6 +1688,7 @@ import { waterlanhomexs4allnldos2unixPackage } from './waterlan.home.xs4all.nl/d
 import { wavpackcomPackage } from './wavpackcom'
 import { waylandfreedesktoporgprotocolsPackage } from './wayland.freedesktop.org/protocols'
 import { waylandfreedesktoporgPackage } from './waylandfreedesktoporg'
+import { webkitgtkorgPackage } from './webkitgtkorg'
 import { webmprojectorglibvpxPackage } from './webmproject.org/libvpx'
 import { werfioPackage } from './werfio'
 import { wezfurlongorgweztermPackage } from './wezfurlong.org/wezterm'
@@ -4564,6 +4565,7 @@ export interface Pantry {
   protocols: typeof waylandfreedesktoporgprotocolsPackage
   waylandfreedesktoporgprotocols: typeof waylandfreedesktoporgprotocolsPackage
   waylandfreedesktoporg: typeof waylandfreedesktoporgPackage
+  webkitgtkorg: typeof webkitgtkorgPackage
 
   webmprojectorglibvpx: typeof webmprojectorglibvpxPackage
   werfio: typeof werfioPackage
@@ -9272,6 +9274,7 @@ export const pantry: Pantry = {
   protocols: waylandfreedesktoporgprotocolsPackage,
   waylandfreedesktoporgprotocols: waylandfreedesktoporgprotocolsPackage,
   waylandfreedesktoporg: waylandfreedesktoporgPackage,
+  webkitgtkorg: webkitgtkorgPackage,
 
   webmprojectorglibvpx: webmprojectorglibvpxPackage,
   werfio: werfioPackage,
