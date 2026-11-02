@@ -53,10 +53,12 @@ jobs:
   update-packages:
     name: Update packages and index
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Covers the sweep plus the wait for CI to report on the pull request.
+    timeout-minutes: 80
     permissions:
       contents: write
       actions: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -221,7 +223,7 @@ jobs:
           fi
           echo "safe_to_commit=true" >> $GITHUB_OUTPUT
 
-      - name: Commit and push changes
+      - name: Commit changes
         id: commit
         if: steps.git-check.outputs.changes == 'true' && steps.deletion-check.outputs.safe_to_commit == 'true'
         run: |
@@ -234,12 +236,32 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
           git add packages/ts-pantry/src/packages/ packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js
           git commit -F /tmp/pantry-update-commit-message.txt
-          git push origin HEAD:refs/heads/main
 
-          echo "committed=true" >> $GITHUB_OUTPUT
+      # This commit used to go straight to main. It cannot any more: main
+      # requires the CI contexts, and a bot push carries no repository role to
+      # be excused by, so the push comes back GH013. The alternative to a pull
+      # request was excusing the Actions app from the checks, which would have
+      # exempted every workflow that ever pushes rather than this one, and
+      # would have kept the generated catalog the only thing on main nobody
+      # checks. So it is checked now, like everything else.
+      - name: Land the update through a pull request
+        id: land
+        if: steps.commit.conclusion == 'success'
+        uses: ./.github/actions/merge-via-pr
+        with:
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          branch-prefix: chore/package-updates
+          body: |
+            Automated catalog refresh from `update-packages.yml`.
+
+            Opened rather than pushed because `main` requires the CI contexts
+            and a bot push holds no role to be excused by. CI is dispatched at
+            this branch explicitly: a pull request opened with `GITHUB_TOKEN`
+            does not fire `pull_request`, so without the dispatch nothing would
+            ever report here.
 
       - name: Publish updated packages to the registry
-        if: steps.commit.outputs.committed == 'true'
+        if: steps.land.outputs.merged == 'true'
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
