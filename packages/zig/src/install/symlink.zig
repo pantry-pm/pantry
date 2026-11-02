@@ -648,19 +648,16 @@ fn discoverNpmBinaries(
                 );
                 errdefer allocator.free(full_path);
 
-                // Check if executable using io_helper
-                const stat = io_helper.statFile(full_path) catch {
+                // Stat mode is optional on supported Zig versions. Use the
+                // owning executable predicate instead of treating missing mode
+                // metadata as a non-executable file.
+                if (!io_helper.isExecutable(full_path)) {
                     allocator.free(full_path);
                     continue;
-                };
-                const is_executable = (stat.mode & 0o111) != 0;
-
-                if (is_executable) {
-                    try binaries.append(allocator, .{
-                        .name = try allocator.dupe(u8, bin_entry.name),
-                        .path = full_path,
-                    });
                 }
+                const name = try allocator.dupe(u8, bin_entry.name);
+                errdefer allocator.free(name);
+                try binaries.append(allocator, .{ .name = name, .path = full_path });
             }
         }
     }

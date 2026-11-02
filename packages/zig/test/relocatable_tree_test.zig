@@ -133,6 +133,34 @@ fn realpath(path: []const u8, out: *[std.fs.max_path_bytes]u8) ?[]const u8 {
 // Global layout: {base}/packages/<domain>/v<version>, {base}/bin
 // ---------------------------------------------------------------------------
 
+test "nested package discovery returns executables and releases rejected file paths" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var f = try Fixture.init();
+    defer f.deinit();
+    const package = "base/packages/example.invalid/tool/v1.0.0";
+    try f.write(package ++ "/lib/node_modules/tool/bin/executable", "#!/bin/sh\nexit 0\n", true);
+    try f.write(package ++ "/lib/node_modules/tool/bin/README", "not an executable", false);
+    const binaries = try symlink.discoverBinaries(testing.allocator, f.abs(package));
+    defer {
+        for (binaries) |*binary| binary.deinit(testing.allocator);
+        testing.allocator.free(binaries);
+    }
+    try testing.expectEqual(@as(usize, 1), binaries.len);
+    try testing.expectEqualStrings("executable", binaries[0].name);
+    try testing.expectEqualStrings(f.abs(package ++ "/lib/node_modules/tool/bin/executable"), binaries[0].path);
+    const AllocationCheck = struct {
+        fn discover(allocator: std.mem.Allocator, directory: []const u8) !void {
+            const found = try symlink.discoverBinaries(allocator, directory);
+            defer {
+                for (found) |*binary| binary.deinit(allocator);
+                allocator.free(found);
+            }
+            try testing.expectEqual(@as(usize, 1), found.len);
+        }
+    };
+    try testing.checkAllAllocationFailures(testing.allocator, AllocationCheck.discover, .{f.abs(package)});
+}
+
 test "global tree: version alias, bin symlink and shim survive the tree moving" {
     if (builtin.os.tag == .windows) return error.SkipZigTest;
     var f = try Fixture.init();
