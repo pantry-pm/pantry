@@ -1,3 +1,20 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.157...v0.11.158)
+
+## 🐛 Bug Fixes
+
+- **craft**: publish signing repair as immutable 0.0.423.1 ([9028f58](https://github.com/pantry-pm/pantry/commit/9028f58)) _(by Chris <chris@stacksjs.com>)_ ([#265](https://github.com/pantry-pm/pantry/issues/265))
+- **runtime**: preserve valid Mach-O signatures ([241fd7b](https://github.com/pantry-pm/pantry/commit/241fd7b)) _(by Chris <chris@stacksjs.com>)_ ([#265](https://github.com/pantry-pm/pantry/issues/265))
+
+## 🔧 Chores
+
+- release v0.11.158 ([5204a33](https://github.com/pantry-pm/pantry/commit/5204a33)) _(by Chris <chris@stacksjs.com>)_
+- update craft to 0.0.423 ([71a3389](https://github.com/pantry-pm/pantry/commit/71a3389)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update apko, Codex, zotregistry ([e1829ab](https://github.com/pantry-pm/pantry/commit/e1829ab)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.156...v0.11.157)
 
 ## 🐛 Bug Fixes
