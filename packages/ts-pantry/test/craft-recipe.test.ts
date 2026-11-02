@@ -138,4 +138,9 @@ describe('Craft runtime profiles', () => {
     expect(revisedPackageVersions(['0.0.350', '0.0.348'], recipe.revisions)).toEqual(['0.0.350.1', '0.0.348'])
     expect(recipeBuildVersion('0.0.350.1', recipe.revisions)).toEqual({ upstream: '0.0.350', current: '0.0.350.1' })
   })
+
+  it('publishes the signature repair without replacing the accepted upstream identity', () => {
+    expect(revisedPackageVersions(['0.0.423', '0.0.420'], recipe.revisions)).toEqual(['0.0.423.1', '0.0.420'])
+    expect(recipeBuildVersion('0.0.423.1', recipe.revisions)).toEqual({ upstream: '0.0.423', current: '0.0.423.1' })
+  })
 })
