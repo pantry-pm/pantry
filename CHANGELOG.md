@@ -1,3 +1,21 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.163...v0.11.164)
+
+## 🐛 Bug Fixes
+
+- accept identical exact system pins in frozen installs ([6bbbe9f](https://github.com/pantry-pm/pantry/commit/6bbbe9f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## ✅ Tests
+
+- isolate shell routing from the parent project environment ([2f13d34](https://github.com/pantry-pm/pantry/commit/2f13d34)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.164 ([4675128](https://github.com/pantry-pm/pantry/commit/4675128)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.162...v0.11.163)
 
 ## ✅ Tests
