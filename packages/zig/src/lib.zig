@@ -76,6 +76,9 @@ test {
     // and publish_conflict.zig exist as separate files — testable logic was
     // moved out of package.zig rather than making its tests run.
     _ = @import("cli/commands/package.zig");
+    // Same story as package.zig above: 21 tests nothing imported for their own
+    // sake, so none of them had ever run.
+    _ = @import("cli/commands/install/helpers.zig");
     _ = @import("http_retry.zig");
     _ = @import("deps/js_workspace.zig");
     _ = @import("cli/diagnostics.zig");
