@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.162...v0.11.163)
+
+## ✅ Tests
+
+- **git**: confine shim fixtures to their managed registry ([70de4cc](https://github.com/pantry-pm/pantry/commit/70de4cc)) _(by Chris <chris@stacksjs.com>)_ ([#276](https://github.com/pantry-pm/pantry/issues/276))
+
+## 🔧 Chores
+
+- release v0.11.163 ([89f87a7](https://github.com/pantry-pm/pantry/commit/89f87a7)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.161...v0.11.162)
 
 ## 🐛 Bug Fixes
