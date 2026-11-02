@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { runNativeCommand, succeeded } from './command'
+import { requireNativePantryCli } from './toolchain'
 
 export function nativeRuntimeProfile(revision: string, minimumMacos: string, arch: string = process.arch): string {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('Craft revision must be immutable')
@@ -58,6 +59,10 @@ export async function provisionNativeRuntime(root: string, config: NativeAppConf
   const checkout = join(workspace, 'Tools/craft')
   const binary = join(checkout, 'packages/zig/zig-out/bin/craft')
   const stamp = join(checkout, '.pantry-runtime-profile')
+  const needsBuild = () => !existsSync(binary) || !existsSync(stamp) || readFileSync(stamp, 'utf8') !== profile
+  // A cache hit does not use Pantry. On a cold checkout the existing project
+  // root is only an entry pre-screen; actual install-cwd validation follows.
+  if (needsBuild()) await requireNativePantryCli(command, existsSync(checkout) ? checkout : root, env)
   const run = async (args: string[], cwd: string, runEnv = env, inherit = false) => succeeded(args[0]!, await command(args[0]!, args.slice(1), { cwd, env: runEnv, inherit }))
   const clone = async (repository: string, pin: string, destination: string) => {
     if (!/^[a-f0-9]{40}$/.test(pin)) throw new Error(`Missing immutable dependency pin: ${repository}`)
@@ -80,7 +85,10 @@ export async function provisionNativeRuntime(root: string, config: NativeAppConf
     for (const source of dependencies.sources)
       await clone(source.repository, source.revision, join(workspace, 'Libraries', source.directory))
   }
-  if (!existsSync(binary) || !existsSync(stamp) || readFileSync(stamp, 'utf8') !== profile) {
+  if (needsBuild()) {
+    // Preserve an existing profile on refusal. Newly acquired immutable cold
+    // source may remain, but it is not a qualified native runtime cache.
+    await requireNativePantryCli(command, checkout, env)
     // A failed rebuild must never leave a previous success stamp usable.
     rmSync(stamp, { force: true })
     const lock = JSON.parse(readFileSync(join(checkout, 'pantry.lock'), 'utf8'))

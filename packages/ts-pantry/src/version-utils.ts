@@ -530,7 +530,8 @@ export function resolveVersionFromMetadata(constraint: string, availableVersions
   // An explicit patch is required for `~1.2` to mean "any 1.2.x" rather than
   // "1.2.0 only", and for `^0.16` to pin the minor the same way `^0.16.0` does.
   const constraintCore = cleanConstraint.replace(/^v/, '').split('+')[0].split('-')[0]
-  const hasPatch = constraintCore.split('.').length >= 3
+  const hasMinor = /^\d+$/.test(constraintCore.split('.')[1] ?? '')
+  const hasPatch = /^\d+$/.test(constraintCore.split('.')[2] ?? '')
   const constraintIsPrerelease = wanted.prerelease.length > 0
 
   /**
@@ -545,8 +546,8 @@ export function resolveVersionFromMetadata(constraint: string, availableVersions
       && candidate.patch === wanted.patch
   }
 
-  const atLeastConstraint = (candidate: ParsedVersion, version: string): boolean =>
-    compareVersionsDesc(version, cleanConstraint) <= 0 || candidate.prerelease.length > 0
+  const atLeastConstraint = (version: string): boolean =>
+    compareVersionsDesc(version, cleanConstraint) <= 0
 
   const pick = (predicate: (candidate: ParsedVersion, version: string) => boolean): string | null => {
     for (const version of sortedVersions) {
@@ -557,12 +558,13 @@ export function resolveVersionFromMetadata(constraint: string, availableVersions
     return null
   }
 
-  // Caret: same major, or - for a 0.x constraint - the same minor too.
+  // A caret keeps the leftmost explicitly supplied non-zero component stable.
   if (constraint.startsWith('^')) {
     return pick((candidate, version) => {
       if (candidate.major !== wanted.major) return false
-      if (wanted.major === 0 && candidate.minor !== wanted.minor) return false
-      return atLeastConstraint(candidate, version)
+      if (wanted.major === 0 && hasMinor && candidate.minor !== wanted.minor) return false
+      if (wanted.major === 0 && wanted.minor === 0 && hasPatch && candidate.patch !== wanted.patch) return false
+      return atLeastConstraint(version)
     })
   }
 
@@ -571,7 +573,7 @@ export function resolveVersionFromMetadata(constraint: string, availableVersions
   if (constraint.startsWith('~')) {
     return pick((candidate, version) => {
       if (candidate.major !== wanted.major || candidate.minor !== wanted.minor) return false
-      return !hasPatch || atLeastConstraint(candidate, version)
+      return !hasPatch || atLeastConstraint(version)
     })
   }
 

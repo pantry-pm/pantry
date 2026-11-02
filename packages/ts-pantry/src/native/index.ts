@@ -1,6 +1,7 @@
 export * from './config'
 export * from './command'
 export * from './runtime'
+export { nativePantryCliRange } from './toolchain'
 export * from './build'
 export * from './apple'
 export * from './google-play'

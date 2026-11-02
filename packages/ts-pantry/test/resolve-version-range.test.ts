@@ -39,6 +39,19 @@ describe('resolveVersionFromMetadata: caret', () => {
     // Silently installing 1.0.0 for `^3.0.0` is worse than reporting no match.
     expect(resolveVersionFromMetadata('^3.0.0', ['1.0.0', '2.0.0'])).toBeNull()
   })
+
+  test('a complete zero-major zero-minor caret pins the patch', () => {
+    expect(resolveVersionFromMetadata('^0.0.5', ['0.0.5', '0.0.6'])).toBe('0.0.5')
+    expect(resolveVersionFromMetadata('^0.0.5', ['0.0.6'])).toBeNull()
+    expect(resolveVersionFromMetadata('^0', ['0.0.5', '0.1.0', '1.0.0'])).toBe('0.1.0')
+    expect(resolveVersionFromMetadata('^0.0', ['0.0.5', '0.1.0'])).toBe('0.0.5')
+  })
+
+  test('wildcard caret components remain unspecified rather than becoming explicit zeroes', () => {
+    expect(resolveVersionFromMetadata('^0.0.x', ['0.0.5', '0.1.0'])).toBe('0.0.5')
+    expect(resolveVersionFromMetadata('^0.x', ['0.0.5', '0.1.0', '1.0.0'])).toBe('0.1.0')
+    expect(resolveVersionFromMetadata('^0.0.*', ['0.0.5', '0.1.0'])).toBe('0.0.5')
+  })
 })
 
 describe('resolveVersionFromMetadata: tilde', () => {
@@ -72,6 +85,11 @@ describe('resolveVersionFromMetadata: prereleases', () => {
 
   test('a prerelease constraint does not unlock unrelated prereleases', () => {
     expect(resolveVersionFromMetadata('^0.16.0-dev', ['0.16.1-dev.9'])).toBeNull()
+  })
+
+  test('a prerelease caret never admits an earlier prerelease at the same base', () => {
+    expect(resolveVersionFromMetadata('^0.11.160-beta.2', ['0.11.160-alpha.9', '0.11.160-beta.1'])).toBeNull()
+    expect(resolveVersionFromMetadata('^0.11.160-beta.2', ['0.11.160-beta.3', '0.11.160'])).toBe('0.11.160')
   })
 
   test('an exact prerelease still resolves', () => {

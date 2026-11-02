@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { encryptValue, generateKeypair } from '@stacksjs/env/crypto'
+import { version as sdkVersion } from '../package.json'
 import type { NativeCommand } from '../src/native'
 import { assessNativeMacArtifact, auditNativeEnvironment, craftDependencyPlan, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, provisionNativeRuntime, readNativeAppConfig, recordNativeArtifact, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle, signNativeDiskImage } from '../src/native'
 import { releaseNativeApp } from '../src/native/release'
@@ -122,6 +123,7 @@ describe('native configuration and builds', () => {
         return { ...ok, stdout: args[0] === 'rev-parse' ? config.runtime.revision : '' }
       }
       if (name === 'pantry') {
+        if (args[0] === '--version') return { ...ok, stdout: `pantry ${sdkVersion} (fixture)` }
         const compiler = join(checkout, 'pantry/ziglang.org', `v${compilerVersion}`, 'bin/zig')
         mkdirSync(join(compiler, '..'), { recursive: true })
         writeFileSync(compiler, 'fixture compiler')

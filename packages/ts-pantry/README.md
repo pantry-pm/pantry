@@ -185,6 +185,31 @@ older Craft revisions keep their declared sibling-source pins; malformed pins
 fail rather than switching dependency contracts. Native checks remain app-owned and run against the real artifact. Release tags must
 match `package.json`. Releases reject the local `CRAFT_BIN` development override.
 
+`ts-pantry/native` exports `nativePantryCliRange`, the compatible caret range
+derived from this SDK's own version. SDK and native CLI releases share a version
+and source cohort. Provisioning accepts the paired version and compatible later
+versions, using Pantry's Node-compatible version utility. This contract works
+on Node and Bun; it does not require a Bun global.
+
+`provisionNativeRuntime` uses the bare `pantry` on PATH, not `PANTRY_BIN`.
+An explicitly supplied `options.env` is the complete child environment. When a
+build is needed, an existing checkout checks that exact cwd and environment
+before source or profile writes. A cold checkout first pre-screens the command
+from the existing project root, then checks it again from the actual checkout
+before invalidating a profile or installing the locked compiler. Relative PATH
+entries can select different commands in those directories; both checks must
+pass. After a successful cold pre-screen, newly acquired immutable source can
+remain if the later check refuses. That source is not a qualified native cache.
+Toolchain refusal preserves existing runtime profiles and native binaries.
+Each version probe has a ten-second deadline and awaits its owned child before
+settling; this is not ownership of arbitrary descendant process groups.
+
+A qualified cached runtime keeps its source, profile and binary version checks
+without requiring unused Pantry. An absent runtime and a valid local
+`CRAFT_BIN` override likewise need no Pantry. Missing, broken or incompatible
+commands fail with the required range and cwd; the SDK never upgrades the
+global CLI automatically.
+
 Direct macOS releases require `APPLE_APPLICATION_CERTIFICATE` (base64 P12),
 `APPLE_CERTIFICATE_PASSWORD`, and, for restricted capabilities,
 `APPLE_PROVISIONING_PROFILE_BASE64` in the encrypted environment. Notarization accepts App Store Connect
