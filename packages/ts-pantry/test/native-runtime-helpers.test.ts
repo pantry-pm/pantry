@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fixUp } from '../scripts/fix-up'
@@ -95,7 +95,10 @@ for (const resourceDirectory of ['libexec/provider', 'share/provider']) {
       expect(resources.map((entry: { path: string }) => entry.path)).toEqual([`${resourceDirectory}/helper`, `${resourceDirectory}/message.txt`])
       for (const resource of resources) expect(resource.sha256).toBe(hash(join(fresh, resource.path)))
       if (darwin) run(['codesign', '--verify', '--strict', join(fresh, `${resourceDirectory}/helper`)])
-      console.info(JSON.stringify({ nativeHelperRelocation: { platform, resourceDirectory, sourceRootsRemoved: true, application: '7', helper: relocated, resourceHashes: resources } }))
+      const executionIdentity = { uid: process.getuid?.(), platform: process.platform, arch: process.arch, helperPath: realpathSync(join(fresh, resourceDirectory, 'helper')) }
+      expect(Number.isSafeInteger(executionIdentity.uid)).toBe(true)
+      expect(executionIdentity.uid).toBeGreaterThanOrEqual(0)
+      console.info(JSON.stringify({ nativeHelperRelocation: { platform, resourceDirectory, sourceRootsRemoved: true, application: '7', helper: relocated, resourceHashes: resources, executionIdentity } }))
     }
     finally { rmSync(root, { recursive: true, force: true }) }
   }, 60_000)
