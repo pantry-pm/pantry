@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.156...v0.11.157)
+
+## 🐛 Bug Fixes
+
+- **install**: name each failed package and why, and retry transient failures once ([12873b2](https://github.com/pantry-pm/pantry/commit/12873b2)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.157 ([1cf4f08](https://github.com/pantry-pm/pantry/commit/1cf4f08)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.420 ([7bb5183](https://github.com/pantry-pm/pantry/commit/7bb5183)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update cython, depot, vspipe ([2af4f61](https://github.com/pantry-pm/pantry/commit/2af4f61)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.155...v0.11.156)
 
 ## 🐛 Bug Fixes
