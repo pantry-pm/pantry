@@ -289,6 +289,9 @@ fn runTemplate(allocator: std.mem.Allocator, f: *Fixture, shell: []const u8) ![]
     const script =
         \\export HOME="$ROOT/home" PATH="$ROOT/bin:$PATH" PANTRY_STUB_LOG="$ROOT/log" PANTRY_QUIET=1
         \\mkdir -p "$HOME"; : > "$PANTRY_STUB_LOG"
+        \\unset PANTRY_CURRENT_PROJECT PANTRY_ENV_DIR PANTRY_ENV_BIN_PATH PANTRY_BIN_PATH PANTRY_DEP_FILE PANTRY_DEP_MTIME
+        \\unset PANTRY_NO_AUTO_INSTALL PANTRY_AUTOCD
+        \\cd "$ROOT"
         \\. "$ROOT/pantry.sh"
         \\for p in js-only pantry-proj yaml-proj js-only; do cd "$ROOT/$p" && __pantry_switch_environment; cd "$ROOT"; __pantry_switch_environment; done
         \\cat "$PANTRY_STUB_LOG"
