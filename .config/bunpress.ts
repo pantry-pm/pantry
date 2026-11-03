@@ -67,6 +67,7 @@ const config = {
         {
           text: 'Publishing',
           items: [
+            { text: 'Registry Tokens', link: '/tokens' },
             { text: 'Paid Packages', link: '/paid-packages' },
             { text: 'Private Packages', link: '/private-packages' },
             { text: 'Deprecating Packages', link: '/deprecating-packages' },
