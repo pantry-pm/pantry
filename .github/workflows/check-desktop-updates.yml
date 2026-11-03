@@ -145,7 +145,6 @@ jobs:
     permissions:
       contents: write
       actions: write
-      pull-requests: write
     if: >-
       always() &&
       needs.publish-ubuntu.result == 'success' &&
@@ -167,11 +166,10 @@ jobs:
       # The rebase-and-retry loop this replaces answered a race with another
       # push. It cannot answer the ruleset: main requires the CI contexts, a
       # bot push holds no repository role to be excused by, and retrying a
-      # GH013 five times only rebases five times before failing anyway.
-      - name: Land the verified manifest through a pull request
-        uses: ./.github/actions/merge-via-pr
+      # GH013 five times only rebases five times before failing anyway. The
+      # race it did answer is handled by the rebase pass inside the action.
+      - name: Land the verified manifest once CI passes
+        uses: ./.github/actions/checked-push
         with:
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           branch-prefix: chore/desktop-manifest
-          body: |
-            Verified desktop manifest state from `check-desktop-updates.yml`.
