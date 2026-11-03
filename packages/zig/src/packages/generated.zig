@@ -261,7 +261,7 @@ pub const packages = [_]PackageInfo{ .{
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "1.7.6", "1.7.5", "1.7.4", "1.7.3", "1.7.2", "1.7.1", "1.7.0", "1.6.5", "1.6.4", "1.6.3", "1.6.2", "1.6.1", "1.6.0", "1.5.2", "1.5.1", "1.5.0" },
 }, .{
-    .name = "apu-{{ version.major }}-config",
+    .name = "apr-util",
     .domain = "apache.org/apr-util",
     .kind = .cli,
     .description = "Mirror of Apache Portable Runtime util",
@@ -270,7 +270,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"apache.org/apr"},
     .build_dependencies = &[_][]const u8{ "apache.org/apr", "openssl.org", "libexpat.github.io", "sqlite.org" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.6.5", "1.6.4", "1.6.3", "1.6.2", "1.6.1", "1.6.0", "1.5.4", "1.5.3", "1.5.2", "1.5.1", "1.5.0", "1.4.2", "1.4.1", "1.4.0" },
+    .versions = &[_][]const u8{ "1.6.6", "1.6.5", "1.6.4", "1.6.3", "1.6.2", "1.6.1", "1.6.0", "1.5.4", "1.5.3", "1.5.2", "1.5.1", "1.5.0", "1.4.2", "1.4.1", "1.4.0" },
 }, .{
     .name = "arrow",
     .domain = "apache.org/arrow",

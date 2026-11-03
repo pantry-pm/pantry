@@ -2,7 +2,10 @@ import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
   domain: 'apache.org/apr-util',
-  name: 'apu-{{ version.major }}-config',
+  // The program this ships is version-stamped (apu-1-config), but the package
+  // is not: a template here is rendered nowhere, so it reached the catalog, the
+  // Zig bundle and every generated commit message as that literal text.
+  name: 'apr-util',
   description: 'Mirror of Apache Portable Runtime util',
   github: 'https://github.com/apache/apr-util',
   programs: ['apu-{{ version.major }}-config'],
