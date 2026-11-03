@@ -1,0 +1,149 @@
+name: Checked push
+description: >-
+  Push an already-committed change to the default branch, but only after the
+  required checks have actually passed on that exact commit.
+
+inputs:
+  token:
+    description: "GitHub token with contents and actions write."
+    required: true
+  branch-prefix:
+    description: "Branch namespace used to stage the commit for checking."
+    required: false
+    default: 'chore/automated'
+  checks:
+    description: "Comma-separated required check names to wait for."
+    required: false
+    default: 'lint,typecheck,test,zig-tests'
+  workflow:
+    description: "Workflow dispatched to produce those checks."
+    required: false
+    default: 'ci.yml'
+  timeout-minutes:
+    description: "How long to wait for the checks before giving up."
+    required: false
+    default: '40'
+
+outputs:
+  landed:
+    description: "true when the commit reached the default branch."
+    value: ${{ steps.land.outputs.landed }}
+
+runs:
+  using: composite
+  steps:
+    # A bot cannot push straight to the default branch: the ruleset requires
+    # the CI contexts there, and `github-actions[bot]` holds no repository role
+    # to be excused by, so the push comes back GH013 saying the checks are
+    # "expected" — meaning it looked on the commit and found none reported.
+    #
+    # So report them. The commit is staged on a branch, CI is dispatched at it,
+    # and the default branch is pushed only once the required contexts are
+    # green on that exact SHA. Nothing is excused from anything: the generated
+    # catalog now passes the same checks as everything else, and the repository
+    # needs no new permission for it — notably not "Actions may create and
+    # approve pull requests", which going through a pull request would have
+    # required and which also grants approval.
+    - name: Push once the checks pass
+      id: land
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        BASE: ${{ github.event.repository.default_branch || 'main' }}
+        PREFIX: ${{ inputs.branch-prefix }}
+        CHECKS: ${{ inputs.checks }}
+        WORKFLOW: ${{ inputs.workflow }}
+        TIMEOUT_MIN: ${{ inputs.timeout-minutes }}
+        RUN_ID: ${{ github.run_id }}
+        RUN_ATTEMPT: ${{ github.run_attempt }}
+      run: |
+        set -uo pipefail
+        # Composite steps run as `bash -e`, which aborts on the first failing
+        # command — including a `VAR="$(cmd)"` assignment, which is how the
+        # first version of this skipped its own cleanup and leaked branches.
+        # Errors are handled explicitly below instead.
+        set +e
+
+        BRANCH="${PREFIX}/${RUN_ID}-${RUN_ATTEMPT}"
+        echo "landed=false" >> "$GITHUB_OUTPUT"
+
+        # A failed attempt leaves its branch behind on purpose, so the red CI
+        # run and the commit that produced it stay inspectable. Each run's
+        # commit regenerates what the last one wrote, so clearing the older
+        # ones here is what keeps that from accumulating.
+        for ref in $(git ls-remote --heads origin "refs/heads/${PREFIX}/*" 2>/dev/null | awk '{print $2}'); do
+          [ "$ref" = "refs/heads/${BRANCH}" ] && continue
+          echo "Clearing superseded ${ref}"
+          git push origin --delete "$ref" >/dev/null 2>&1
+        done
+
+        await_checks() {
+          local sha="$1" deadline passed failed line status want runs
+          IFS=',' read -ra WANTED <<< "$CHECKS"
+          deadline=$(( $(date +%s) + TIMEOUT_MIN * 60 ))
+          while :; do
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::${CHECKS} did not all report on ${sha} within ${TIMEOUT_MIN}m"
+              return 1
+            fi
+            runs="$(gh api "repos/${REPO}/commits/${sha}/check-runs?per_page=100" \
+              --jq '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "")"' 2>/dev/null)"
+            passed=0
+            failed=''
+            for want in "${WANTED[@]}"; do
+              line="$(printf '%s\n' "$runs" | awk -F'\t' -v n="$want" '$1 == n { print; exit }')"
+              [ -n "$line" ] || continue
+              status="$(printf '%s' "$line" | cut -f2)"
+              [ "$status" = "completed" ] || continue
+              case "$(printf '%s' "$line" | cut -f3)" in
+                success|skipped|neutral) passed=$((passed + 1)) ;;
+                *) failed="${failed:+$failed, }${want}" ;;
+              esac
+            done
+            if [ -n "$failed" ]; then
+              echo "::error::required checks failed on generated output: ${failed} (branch ${BRANCH} kept for inspection)"
+              return 1
+            fi
+            [ "$passed" -eq "${#WANTED[@]}" ] && return 0
+            sleep 20
+          done
+        }
+
+        # Two passes, because the default branch can move while CI runs. A
+        # rebase produces a new commit, and a new commit has no checks on it,
+        # so the rebased commit has to be checked over again rather than
+        # pushed on the strength of the old one's result.
+        for attempt in 1 2; do
+          SHA="$(git rev-parse HEAD)"
+          echo "Attempt ${attempt}: staging ${SHA} at ${BRANCH}"
+
+          if ! git push --force origin "HEAD:refs/heads/${BRANCH}"; then
+            echo "::error::could not stage ${BRANCH}"
+            exit 1
+          fi
+
+          if ! gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"; then
+            echo "::error::could not dispatch ${WORKFLOW} at ${BRANCH}; nothing would report on ${SHA}"
+            exit 1
+          fi
+
+          await_checks "$SHA" || exit 1
+
+          if git push origin "HEAD:refs/heads/${BASE}"; then
+            echo "landed=true" >> "$GITHUB_OUTPUT"
+            git push origin --delete "$BRANCH" >/dev/null 2>&1
+            echo "Landed ${SHA} on ${BASE}"
+            exit 0
+          fi
+
+          echo "${BASE} moved while the checks ran; rebasing and checking again"
+          if ! git fetch origin "$BASE" || ! git rebase "origin/${BASE}"; then
+            git rebase --abort >/dev/null 2>&1
+            echo "::error::could not rebase onto ${BASE}"
+            exit 1
+          fi
+        done
+
+        echo "::error::${BASE} kept moving ahead of the checks; giving up this run"
+        exit 1

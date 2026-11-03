@@ -58,7 +58,6 @@ jobs:
     permissions:
       contents: write
       actions: write
-      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -239,29 +238,21 @@ jobs:
 
       # This commit used to go straight to main. It cannot any more: main
       # requires the CI contexts, and a bot push carries no repository role to
-      # be excused by, so the push comes back GH013. The alternative to a pull
-      # request was excusing the Actions app from the checks, which would have
-      # exempted every workflow that ever pushes rather than this one, and
-      # would have kept the generated catalog the only thing on main nobody
-      # checks. So it is checked now, like everything else.
-      - name: Land the update through a pull request
+      # be excused by, so the push comes back GH013 — the checks are "expected"
+      # because none were ever reported on the commit. The catalog is checked
+      # first now and pushed on the strength of that, rather than the Actions
+      # app being excused from checking, which would have exempted every
+      # workflow that ever pushes rather than this one.
+      - name: Land the update on main once CI passes
         id: land
         if: steps.commit.conclusion == 'success'
-        uses: ./.github/actions/merge-via-pr
+        uses: ./.github/actions/checked-push
         with:
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           branch-prefix: chore/package-updates
-          body: |
-            Automated catalog refresh from `update-packages.yml`.
-
-            Opened rather than pushed because `main` requires the CI contexts
-            and a bot push holds no role to be excused by. CI is dispatched at
-            this branch explicitly: a pull request opened with `GITHUB_TOKEN`
-            does not fire `pull_request`, so without the dispatch nothing would
-            ever report here.
 
       - name: Publish updated packages to the registry
-        if: steps.land.outputs.merged == 'true'
+        if: steps.land.outputs.landed == 'true'
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
