@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.164...v0.11.165)
+
+## 🐛 Bug Fixes
+
+- **native**: publish notarized disk images as zip archives ([ecf7d07](https://github.com/pantry-pm/pantry/commit/ecf7d07)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.165 ([efe42bd](https://github.com/pantry-pm/pantry/commit/efe42bd)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.163...v0.11.164)
 
 ## 🐛 Bug Fixes
