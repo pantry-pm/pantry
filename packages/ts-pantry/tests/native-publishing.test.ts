@@ -232,6 +232,7 @@ describe('Apple native publishing', () => {
           writeFileSync(dmg, 'unsigned image')
           recordNativeArtifact(root, { path: dmg, appPath: app, name: 'Example', bundleId: 'com.example.app', version: '1.0.0', buildNumber: '1.0.0', target: 'macos' })
         }
+        if (name === 'ditto' && args.includes('-k')) writeFileSync(args.at(-1)!, 'zipped image')
         if (name === 'plutil') return { ...ok, stdout: JSON.stringify({ CFBundleIdentifier: 'com.example.app', CFBundleShortVersionString: '1.0.0', CFBundleVersion: '1.0.0' }) }
         if (name === executable) return { ...ok, stdout: 'ready' }
         if (name === 'codesign' && args.includes('-dv')) return { ...ok, stderr: 'Authority=Developer ID Application: Example\nTimestamp=Oct 25, 2026\n' }
@@ -245,7 +246,9 @@ describe('Apple native publishing', () => {
         expect(existsSync(join(root, 'dist/notarization-receipt.json'))).toBe(false)
       }
       else {
-        expect((await result).files).toEqual([dmg, join(root, 'dist/notarization-receipt.json')])
+        expect((await result).files).toEqual([`${dmg}.zip`, join(root, 'dist/notarization-receipt.json')])
+        const archive = calls.findIndex(call => call[0] === 'ditto' && call.includes('-k'))
+        expect(archive).toBeGreaterThan(calls.findLastIndex(call => call[0] === 'spctl'))
       }
       const sign = calls.findIndex(call => call[0] === 'codesign' && call.includes('--sign') && call.at(-1) === dmg)
       const notary = calls.findIndex(call => call[0] === 'xcrun' && call[1] === 'notarytool')

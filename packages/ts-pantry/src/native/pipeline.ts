@@ -130,6 +130,14 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
       writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`)
       files.push(receiptPath)
     }
+    if (artifact?.path.toLowerCase().endsWith('.dmg')) {
+      // Archive only after signing, notarization, stapling and Gatekeeper assessment.
+      const archive = `${artifact.path}.zip`
+      rmSync(archive, { force: true })
+      succeeded('Archive disk image', await command('ditto', ['-c', '-k', artifact.path, archive], { cwd: root, env }))
+      if (!existsSync(archive)) throw new Error('Disk image archive was not created')
+      files[0] = archive
+    }
     let appStorePackage: string | undefined
     if (mode === 'release' && config.macos?.appStore) {
       const result = await setupAppleSigning({ applicationCertificate: env.APPLE_APP_STORE_APPLICATION_CERTIFICATE!, installerCertificate: env.APPLE_APP_STORE_INSTALLER_CERTIFICATE, certificatePassword: env.APPLE_CERTIFICATE_PASSWORD || '', provisioningProfile: env.APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64 })
