@@ -12,4 +12,11 @@ test {
     _ = @import("cli/commands/access.zig");
     // `pantry publish` to a Pantry registry: rejection hints, visibility.
     _ = @import("cli/commands/registry.zig");
+    // `pantry release`'s preflight: which repository it would ask GitHub
+    // about, and which secret names its workflows read. It belongs with the
+    // publish commands above rather than with the credential store, and it
+    // has to be here: importing it into test_token_root.zig instead drags
+    // shell/commands.zig's own tests into that binary, where two of them fail
+    // although the same tests pass in this one.
+    _ = @import("cli/commands/release.zig");
 }

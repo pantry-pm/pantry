@@ -147,16 +147,10 @@ pub fn publishCommitCommand(allocator: std.mem.Allocator, args: []const []const 
     defer if (resolved_token) |t| t.deinit(allocator);
 
     if (resolved_token == null) {
-        return CommandResult.err(
-            allocator,
-            \\Error: No authentication found.
-            \\
-            \\Store a token once:
-            \\  pantry token set
-            \\
-            \\Or set PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN, or pass --token.
-            ,
-        );
+        return token_commands.missingCredentialError(allocator, .{
+            .registry = options.registry,
+            .subject = if (package_dirs.items.len == 1) package_dirs.items[0].name else null,
+        });
     }
     const token: ?[]const u8 = resolved_token.?.value;
 

@@ -357,6 +357,120 @@ pub fn resolve(
     return null;
 }
 
+/// What a caller was about to do when nothing turned up. Both fields exist
+/// because the generic "no authentication found" that every publish path used
+/// to print was unactionable in the one place it is almost always read — a CI
+/// log — where the reader cannot see which registry was addressed and has no
+/// way to know what a replacement token must be allowed to publish.
+pub const MissingCredential = struct {
+    /// Registry the command was about to authenticate against. The token
+    /// dashboard is served by the registry itself, so a self-hosted one is
+    /// pointed at its own page rather than at ours.
+    registry: ?[]const u8 = null,
+    /// What a token would have to be scoped to publish — a package name,
+    /// domain or glob. Scope is the one thing minting a token asks for, so
+    /// "mint a token" is not an instruction anybody can follow without it.
+    subject: ?[]const u8 = null,
+};
+
+/// The human-readable form of "there is no credential here". Caller owns it.
+///
+/// It distinguishes absent from rejected in the first sentence: the two have
+/// different fixes, the old wording covered both, and an unset secret in CI
+/// therefore read as a broken one for as long as it took somebody to check.
+pub fn missingCredentialMessage(allocator: std.mem.Allocator, ctx: MissingCredential) ![]const u8 {
+    const registry = ctx.registry orelse "https://registry.pantry.dev";
+    const base = std.mem.trimEnd(u8, std.mem.trim(u8, registry, &std.ascii.whitespace), "/");
+
+    const credentials_path = Store.defaultPath(allocator) catch
+        try allocator.dupe(u8, "~/.pantry/credentials");
+    defer allocator.free(credentials_path);
+
+    // Actions sets GITHUB_REPOSITORY, and a CI log is both where this is most
+    // often read and where the reader is least able to experiment — so name
+    // the real repository instead of asking them to substitute into it.
+    const repo_owned: ?[]u8 = io_helper.getEnvVarOwned(allocator, "GITHUB_REPOSITORY") catch null;
+    defer if (repo_owned) |r| allocator.free(r);
+    const repo = if (repo_owned) |r| (if (r.len > 0) r else "owner/name") else "owner/name";
+
+    const headline = if (ctx.subject) |s|
+        try std.fmt.allocPrint(allocator, "Error: no registry credential found, so {s} cannot be published.", .{s})
+    else
+        try allocator.dupe(u8, "Error: no registry credential found.");
+    defer allocator.free(headline);
+
+    const mint = if (ctx.subject) |s|
+        try std.fmt.allocPrint(allocator, "Mint one with publish access to {s}:", .{s})
+    else
+        try allocator.dupe(u8, "Mint one:");
+    defer allocator.free(mint);
+
+    return std.fmt.allocPrint(allocator,
+        \\{s}
+        \\
+        \\Nothing was set, so this is an absent token rather than a rejected one.
+        \\Searched, in order: --token, ${s}, ${s}, then {s}.
+        \\
+        \\{s}
+        \\  {s}/account
+        \\
+        \\Store it on this machine:
+        \\  pantry token set
+        \\
+        \\Or hand it to CI as a repository secret:
+        \\  pantry token sync --repo {s} --secret {s}
+    , .{
+        headline,
+        env_names[0],
+        env_names[1],
+        credentials_path,
+        mint,
+        base,
+        repo,
+        env_names[0],
+    });
+}
+
+/// Escape a string for a GitHub Actions workflow command. Newlines and
+/// carriage returns terminate the command, so an unescaped multi-line message
+/// annotates its first line and prints the rest as plain log text.
+fn escapeAnnotation(allocator: std.mem.Allocator, text: []const u8) ![]const u8 {
+    var out = std.ArrayList(u8).empty;
+    errdefer out.deinit(allocator);
+    for (text) |c| {
+        switch (c) {
+            // '%' is escaped as well, because it introduces the other two:
+            // a literal one in the message would otherwise be read as the
+            // start of an escape that was never written.
+            '%' => try out.appendSlice(allocator, "%25"),
+            '\r' => try out.appendSlice(allocator, "%0D"),
+            '\n' => try out.appendSlice(allocator, "%0A"),
+            else => try out.append(allocator, c),
+        }
+    }
+    return out.toOwnedSlice(allocator);
+}
+
+/// Fail a command for want of a credential.
+///
+/// On GitHub Actions the message is also emitted as an error annotation, so it
+/// reaches the job summary and the pull request rather than being folded into
+/// a step's log — which is the whole reason callers were hand-rolling `[ -z
+/// "$PANTRY_REGISTRY_TOKEN" ] && echo "::error::..."` preflights in YAML.
+pub fn missingCredentialError(allocator: std.mem.Allocator, ctx: MissingCredential) !CommandResult {
+    const message = try missingCredentialMessage(allocator, ctx);
+    defer allocator.free(message);
+
+    if (style.isGitHubActions()) {
+        if (escapeAnnotation(allocator, message) catch null) |escaped| {
+            defer allocator.free(escaped);
+            style.printForced("::error title=No pantry registry credential::{s}\n", .{escaped});
+        }
+    }
+
+    return CommandResult.err(allocator, message);
+}
+
 /// Show enough of a secret to recognise it, never enough to use it.
 pub fn mask(allocator: std.mem.Allocator, value: []const u8) ![]const u8 {
     if (value.len <= 8) return try allocator.dupe(u8, "********");
@@ -630,6 +744,48 @@ fn tempStore(allocator: std.mem.Allocator, name: []const u8) !Store {
     const path = try std.fmt.allocPrint(allocator, "/tmp/pantry-token-test-{s}", .{name});
     io_helper.deleteFile(path) catch {};
     return Store.loadFrom(allocator, path);
+}
+
+test "a missing credential names the subject, the registry and what was searched" {
+    const allocator = testing.allocator;
+    const message = try missingCredentialMessage(allocator, .{
+        .registry = "https://registry.example.com/",
+        .subject = "@hq/platform",
+    });
+    defer allocator.free(message);
+
+    // Scope is the one thing minting a token asks for, so a message that
+    // omits it is not an instruction anybody can act on.
+    try testing.expect(std.mem.indexOf(u8, message, "@hq/platform") != null);
+    // The dashboard belongs to whichever registry was addressed, and the
+    // trailing slash is dropped rather than doubled into a dead link.
+    try testing.expect(std.mem.indexOf(u8, message, "https://registry.example.com/account") != null);
+    try testing.expect(std.mem.indexOf(u8, message, ".com//account") == null);
+    // Absent and rejected have different fixes; the old wording covered both.
+    try testing.expect(std.mem.indexOf(u8, message, "absent token rather than a rejected one") != null);
+    try testing.expect(std.mem.indexOf(u8, message, "PANTRY_REGISTRY_TOKEN") != null);
+}
+
+test "a missing credential still reads sensibly with no subject to name" {
+    const allocator = testing.allocator;
+    const message = try missingCredentialMessage(allocator, .{});
+    defer allocator.free(message);
+
+    try testing.expect(std.mem.indexOf(u8, message, "Error: no registry credential found.") != null);
+    try testing.expect(std.mem.indexOf(u8, message, "Mint one:") != null);
+    try testing.expect(std.mem.indexOf(u8, message, "https://registry.pantry.dev/account") != null);
+}
+
+test "an annotation survives the newlines in the message it carries" {
+    const allocator = testing.allocator;
+    const escaped = try escapeAnnotation(allocator, "one\ntwo\rthree 100% done");
+    defer allocator.free(escaped);
+
+    try testing.expectEqualStrings("one%0Atwo%0Dthree 100%25 done", escaped);
+    // A workflow command ends at the first newline. One that survived would
+    // annotate the opening line and spill the rest into the log as plain
+    // text — which is the failure this escaping exists to prevent.
+    try testing.expect(std.mem.indexOfScalar(u8, escaped, '\n') == null);
 }
 
 test "store round-trips global and scoped credentials" {

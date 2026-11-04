@@ -1575,6 +1575,7 @@ fn releaseAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const dry_run = ctx.hasOption("dry-run");
     const no_changelog = ctx.hasOption("no-changelog");
     const no_push = ctx.hasOption("no-push");
+    const skip_token_check = ctx.hasOption("skip-token-check");
 
     const options = lib.commands.ReleaseOptions{
         .release_type = release_type,
@@ -1584,6 +1585,7 @@ fn releaseAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .dry_run = dry_run,
         .no_changelog = no_changelog,
         .no_push = no_push,
+        .skip_token_check = skip_token_check,
     };
 
     const result = try lib.commands.releaseCommand(allocator, options);
@@ -5015,6 +5017,9 @@ pub fn main() !void {
 
     const rel_no_push_opt = cli.Option.init("no-push", "no-push", "Skip git push", .bool);
     _ = try release_cmd.addOption(rel_no_push_opt);
+
+    const rel_skip_token_opt = cli.Option.init("skip-token-check", "skip-token-check", "Release even if CI looks unable to publish the result", .bool);
+    _ = try release_cmd.addOption(rel_skip_token_opt);
 
     _ = release_cmd.setAction(releaseAction);
     _ = try root.addCommand(release_cmd);

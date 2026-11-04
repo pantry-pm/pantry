@@ -54,6 +54,22 @@ pub fn isCI() bool {
     return false;
 }
 
+/// GitHub Actions specifically. `isCI` cannot answer this — it also fires on
+/// NO_COLOR and on every other CI vendor — and workflow commands like
+/// `::error::` are understood by Actions alone, so printing one anywhere else
+/// adds a line of noise to the log and annotates nothing.
+var gha_detected: enum { unknown, yes, no } = .unknown;
+pub fn isGitHubActions() bool {
+    if (gha_detected != .unknown) return gha_detected == .yes;
+    if (io_helper.getEnvVarOwned(std.heap.page_allocator, "GITHUB_ACTIONS") catch null) |value| {
+        std.heap.page_allocator.free(value);
+        gha_detected = .yes;
+        return true;
+    }
+    gha_detected = .no;
+    return false;
+}
+
 // ── Quiet Mode ────────────────────────────────────────────────────────────
 
 /// Global quiet flag. When set, `print()` — and every helper built on it
