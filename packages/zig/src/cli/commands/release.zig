@@ -27,6 +27,10 @@ pub const ReleaseOptions = struct {
     no_changelog: bool = false,
     /// Skip git push
     no_push: bool = false,
+    /// Release even when CI looks unable to publish the result. The preflight
+    /// cannot see environment secrets, and a release does not have to publish
+    /// at all, so its verdict has to be overridable.
+    skip_token_check: bool = false,
     /// Custom tag name pattern (default: v{version})
     tag_name: ?[]const u8 = null,
 };
@@ -360,6 +364,192 @@ fn generateChangelog(allocator: std.mem.Allocator, new_version: []const u8) void
     style.print("  {s}CHANGELOG.md updated{s}\n", .{ style.green, style.reset });
 }
 
+// ============================================================================
+// CI publish-credential preflight
+// ============================================================================
+
+/// `owner/name` from a GitHub remote URL, or null when it isn't one.
+///
+/// Every form `git remote` hands back names the host the same way, so this
+/// finds the host and takes what follows: https://github.com/owner/name(.git),
+/// ssh://git@github.com/owner/name(.git), git@github.com:owner/name(.git).
+fn parseRepoSlug(url: []const u8) ?[]const u8 {
+    const host = "github.com";
+    const at = std.mem.indexOf(u8, url, host) orelse return null;
+    var rest = url[at + host.len ..];
+    if (rest.len < 2 or (rest[0] != '/' and rest[0] != ':')) return null;
+    rest = std.mem.trimEnd(u8, rest[1..], "/");
+    if (std.mem.endsWith(u8, rest, ".git")) rest = rest[0 .. rest.len - ".git".len];
+
+    // Exactly one slash separates owner from name; anything else is a URL this
+    // has misread, and guessing at it would address the wrong repository.
+    const slash = std.mem.indexOfScalar(u8, rest, '/') orelse return null;
+    if (slash == 0 or slash + 1 >= rest.len) return null;
+    if (std.mem.indexOfScalarPos(u8, rest, slash + 1, '/') != null) return null;
+    return rest;
+}
+
+/// `owner/name` for the `origin` remote. Caller owns the result.
+fn originRepoSlug(allocator: std.mem.Allocator) ?[]const u8 {
+    const url = gitCapture(allocator, &.{ "git", "remote", "get-url", "origin" }) orelse return null;
+    defer allocator.free(url);
+    const slug = parseRepoSlug(url) orelse return null;
+    return allocator.dupe(u8, slug) catch null;
+}
+
+fn containsName(list: []const []const u8, name: []const u8) bool {
+    for (list) |item| {
+        if (std.mem.eql(u8, item, name)) return true;
+    }
+    return false;
+}
+
+/// Collect `secrets.NAME` references from `content` that look like a pantry
+/// credential, appending the new ones to `names`.
+///
+/// Matching on PANTRY rather than on one fixed name is deliberate: a
+/// repository calls the secret whatever it likes — PANTRY_TOKEN,
+/// PANTRY_REGISTRY_TOKEN, HQ_PANTRY_TOKEN — and the workflow reading it is the
+/// only authority on which name this repository chose.
+fn collectPantrySecretRefs(
+    arena: std.mem.Allocator,
+    content: []const u8,
+    names: *std.ArrayList([]const u8),
+) !void {
+    const marker = "secrets.";
+    var pos: usize = 0;
+    while (std.mem.indexOfPos(u8, content, pos, marker)) |at| {
+        var end = at + marker.len;
+        while (end < content.len and (std.ascii.isAlphanumeric(content[end]) or content[end] == '_')) end += 1;
+        const name = content[at + marker.len .. end];
+        pos = if (end > pos) end else pos + 1;
+        if (name.len == 0) continue;
+        if (std.mem.indexOf(u8, name, "PANTRY") == null) continue;
+        if (containsName(names.items, name)) continue;
+        try names.append(arena, try arena.dupe(u8, name));
+    }
+}
+
+/// Pantry secrets every workflow in this repository reads.
+fn workflowPantrySecrets(arena: std.mem.Allocator) std.ArrayList([]const u8) {
+    var names = std.ArrayList([]const u8).empty;
+
+    const workflows_dir = ".github/workflows";
+    var dir = io_helper.openDirForIteration(workflows_dir) catch return names;
+    defer dir.close();
+
+    var iter = dir.iterate();
+    while (iter.next() catch null) |entry| {
+        if (entry.kind != .file and entry.kind != .sym_link) continue;
+        if (!std.mem.endsWith(u8, entry.name, ".yml") and !std.mem.endsWith(u8, entry.name, ".yaml")) continue;
+
+        const path = std.fs.path.join(arena, &.{ workflows_dir, entry.name }) catch continue;
+        const content = io_helper.readFileAlloc(arena, path, 4 << 20) catch continue;
+        collectPantrySecretRefs(arena, content, &names) catch continue;
+    }
+    return names;
+}
+
+/// Secret names GitHub would expose to a workflow run in `slug`: the
+/// repository's own, plus the organization secrets shared with it.
+///
+/// Null means the question could not be asked — no `gh`, not signed in, no
+/// network — which is emphatically not the same answer as "none", and must
+/// never be reported as one.
+fn configuredSecretNames(arena: std.mem.Allocator, slug: []const u8) ?std.ArrayList([]const u8) {
+    const gh = (io_helper.findExecutable(arena, "gh") catch null) orelse return null;
+
+    var names = std.ArrayList([]const u8).empty;
+    var answered = false;
+
+    // Repository secrets first. Organization secrets are a separate endpoint
+    // that 404s on a repository outside an org, so its failure is ordinary and
+    // only the repository endpoint decides whether we got an answer at all.
+    const endpoints = [_][]const u8{ "actions/secrets", "actions/organization-secrets" };
+    for (endpoints, 0..) |endpoint, index| {
+        const path = std.fmt.allocPrint(arena, "repos/{s}/{s}", .{ slug, endpoint }) catch return null;
+        const out = gitCapture(arena, &.{ gh, "api", "--paginate", path, "--jq", ".secrets[].name" });
+        if (out) |text| {
+            if (index == 0) answered = true;
+            var lines = std.mem.splitScalar(u8, text, '\n');
+            while (lines.next()) |line| {
+                const name = std.mem.trim(u8, line, " \t\r");
+                if (name.len == 0) continue;
+                if (containsName(names.items, name)) continue;
+                names.append(arena, arena.dupe(u8, name) catch continue) catch continue;
+            }
+        }
+    }
+
+    if (!answered) return null;
+    return names;
+}
+
+const CredentialPreflight = enum {
+    /// Either the workflows need no pantry credential, or every name they read
+    /// is configured.
+    ok,
+    /// The question could not be answered, which is not a reason to refuse.
+    undetermined,
+    /// A workflow reads a secret this repository demonstrably does not have.
+    missing,
+};
+
+/// Check, before anything is written, that CI will be able to publish what
+/// this release produces.
+///
+/// `pantry release` finishes by pushing a tag and announcing that the GitHub
+/// Action will publish to the registry — without ever checking that the Action
+/// can authenticate. When it cannot, the failure surfaces minutes later inside
+/// a workflow log, as the registry's own "no credential" error, by which point
+/// the tag is pushed and the version spent. Repositories had started working
+/// around that by hand-writing `[ -z "$PANTRY_REGISTRY_TOKEN" ]` guards into
+/// their YAML; this is the same guard, run early enough to be worth something.
+///
+/// Everything here is read-only and costs nothing when a repository does not
+/// publish to pantry: no workflow referencing a pantry secret means no `gh`
+/// call at all.
+fn checkPublishCredential(allocator: std.mem.Allocator) CredentialPreflight {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const wanted = workflowPantrySecrets(arena);
+    if (wanted.items.len == 0) return .ok;
+
+    const slug = originRepoSlug(arena) orelse return .undetermined;
+    const configured = configuredSecretNames(arena, slug) orelse {
+        style.print(
+            "  {s}(could not read {s}'s secrets — releasing without checking that CI can publish){s}\n",
+            .{ style.dim, slug, style.reset },
+        );
+        return .undetermined;
+    };
+
+    var missing = std.ArrayList([]const u8).empty;
+    for (wanted.items) |name| {
+        if (!containsName(configured.items, name)) {
+            missing.append(arena, name) catch return .undetermined;
+        }
+    }
+    if (missing.items.len == 0) return .ok;
+
+    style.print("{s}error:{s} {s} has no secret named ", .{ style.red, style.reset, slug });
+    for (missing.items, 0..) |name, i| {
+        if (i > 0) style.print(" or ", .{});
+        style.print("{s}{s}{s}", .{ style.yellow, name, style.reset });
+    }
+    style.print(", but its workflows read it.\n", .{});
+    style.print("  The tag would be pushed and the publish would then fail in CI for want of a credential.\n\n", .{});
+    style.print("  Store one, then put it where CI can read it:\n", .{});
+    style.print("    pantry token set\n", .{});
+    style.print("    pantry token sync --repo {s} --secret {s}\n\n", .{ slug, missing.items[0] });
+    style.print("  Or release anyway — an environment secret is scoped to a deployment\n", .{});
+    style.print("  environment and is not visible here, and a release need not publish:\n", .{});
+    style.print("    pantry release ... --skip-token-check\n", .{});
+    return .missing;
+}
+
 pub fn releaseCommand(allocator: std.mem.Allocator, options: ReleaseOptions) !CommandResult {
     // Guard: refuse to release from a dirty tree (would sweep unrelated changes
     // into the `chore: release` commit). Skipped for dry-run.
@@ -367,6 +557,15 @@ pub fn releaseCommand(allocator: std.mem.Allocator, options: ReleaseOptions) !Co
         style.print("{s}error:{s} working tree is not clean.\n", .{ style.red, style.reset });
         style.print("  Commit or stash your changes before releasing.\n", .{});
         return .{ .exit_code = 1, .message = null };
+    }
+
+    // Before anything is written: can CI publish what this release produces?
+    // A dry run gets the same report without the refusal — it writes nothing,
+    // so there is nothing to protect, and "would this release work" is a fair
+    // question to ask without credentials to hand.
+    if (!options.skip_token_check) {
+        const verdict = checkPublishCredential(allocator);
+        if (verdict == .missing and !options.dry_run) return .{ .exit_code = 1, .message = null };
     }
 
     // Reconcile version drift (zon behind latest git tag) so the bump is always
@@ -441,4 +640,60 @@ fn getPackageVersion(allocator: std.mem.Allocator) ?[]const u8 {
     while (i < content.len and content[i] != '"') : (i += 1) {}
     if (i >= content.len) return null;
     return allocator.dupe(u8, content[start..i]) catch null;
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+const testing = std.testing;
+
+test "a repo slug is read from every remote form git hands back" {
+    try testing.expectEqualStrings("pantry-pm/pantry", parseRepoSlug("https://github.com/pantry-pm/pantry.git").?);
+    try testing.expectEqualStrings("pantry-pm/pantry", parseRepoSlug("git@github.com:pantry-pm/pantry.git").?);
+    try testing.expectEqualStrings("pantry-pm/pantry", parseRepoSlug("ssh://git@github.com/pantry-pm/pantry").?);
+    try testing.expectEqualStrings("pantry-pm/pantry", parseRepoSlug("https://github.com/pantry-pm/pantry/").?);
+}
+
+test "a remote that is not one owner and one name is refused rather than guessed" {
+    // Guessing would report a missing secret against a repository nobody
+    // asked about, and the release would be refused over it. No answer is the
+    // only safe reading of a URL this does not understand.
+    try testing.expect(parseRepoSlug("https://gitlab.com/owner/name.git") == null);
+    try testing.expect(parseRepoSlug("https://github.com/owner") == null);
+    try testing.expect(parseRepoSlug("https://github.com/owner/name/extra") == null);
+    try testing.expect(parseRepoSlug("https://github.com/") == null);
+    try testing.expect(parseRepoSlug("github.com") == null);
+}
+
+test "the workflow scan finds whichever pantry secret names a repo chose" {
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    var names = std.ArrayList([]const u8).empty;
+    try collectPantrySecretRefs(arena,
+        \\      env:
+        \\        PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_REGISTRY_TOKEN }}
+        \\        UNRELATED: ${{ secrets.NPM_TOKEN }}
+        \\        OURS: ${{ secrets.HQ_PANTRY_TOKEN }}
+        \\        AGAIN: ${{ secrets.PANTRY_REGISTRY_TOKEN }}
+    , &names);
+
+    // Two distinct names, and the repeat is not a third.
+    try testing.expectEqual(@as(usize, 2), names.items.len);
+    try testing.expectEqualStrings("PANTRY_REGISTRY_TOKEN", names.items[0]);
+    try testing.expectEqualStrings("HQ_PANTRY_TOKEN", names.items[1]);
+}
+
+test "a workflow needing no pantry credential leaves nothing to ask GitHub about" {
+    var arena_state = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    var names = std.ArrayList([]const u8).empty;
+    try collectPantrySecretRefs(arena, "run: gh release create ${{ secrets.GITHUB_TOKEN }}", &names);
+    // An empty set is what keeps the preflight free for repositories that do
+    // not publish to pantry: no names, no `gh` call, no network.
+    try testing.expectEqual(@as(usize, 0), names.items.len);
 }

@@ -106,7 +106,10 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
         return .{ .exit_code = 0 };
     }
     if (token.len == 0)
-        return CommandResult.err(allocator, "PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN is required");
+        return token_commands.missingCredentialError(allocator, .{
+            .registry = registry,
+            .subject = options.domain,
+        });
 
     io_helper.accessAbsolute(options.binary_path, .{}) catch {
         const msg = try std.fmt.allocPrint(allocator, "Error: Binary not found: {s}", .{options.binary_path});

@@ -900,16 +900,10 @@ fn publishSingleToRegistry(
     // hold publish credentials, and all of them were told to run
     // `pantry token set` to be shown a report that never leaves the machine.
     if (resolved_token == null and !options.dry_run) {
-        return CommandResult.err(
-            allocator,
-            \\Error: No authentication found.
-            \\
-            \\Store a token once:
-            \\  pantry token set
-            \\
-            \\Or set PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN, or pass --token.
-            ,
-        );
+        return token_commands.missingCredentialError(allocator, .{
+            .registry = options.registry,
+            .subject = name,
+        });
     }
 
     // Optional rather than unwrapped: the dry-run path above reaches here

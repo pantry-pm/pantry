@@ -476,6 +476,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .link_libc = true,
+        // The credentials path comes from lib.Paths, and naming it in the
+        // "no credential" message put lib on this module's compile graph —
+        // along with the decls its own refAllDecls test reaches. Without
+        // these two the module cannot build at all.
+        .imports = &.{
+            .{ .name = "zig_config", .module = zig_config_mod },
+            .{ .name = "version", .module = version_mod },
+        },
     });
     const token_tests = b.addTest(.{
         .root_module = token_test_mod,
