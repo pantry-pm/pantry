@@ -1,3 +1,20 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.165...v0.11.166)
+
+## 🐛 Bug Fixes
+
+- preserve package links and reject incomplete archives ([9800934](https://github.com/pantry-pm/pantry/commit/9800934)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **catalog**: apr-util is named apr-util, not a template that never renders (#281) ([cae1fee](https://github.com/pantry-pm/pantry/commit/cae1fee)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#281](https://github.com/pantry-pm/pantry/issues/281))
+- **ci**: check the bot's commit, then push it — no pull request needed (#280) ([a8ad834](https://github.com/pantry-pm/pantry/commit/a8ad834)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#280](https://github.com/pantry-pm/pantry/issues/280))
+
+## 🔧 Chores
+
+- release v0.11.166 ([34c15b8](https://github.com/pantry-pm/pantry/commit/34c15b8)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.164...v0.11.165)
 
 ## 🐛 Bug Fixes
