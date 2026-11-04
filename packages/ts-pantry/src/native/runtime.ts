@@ -7,6 +7,17 @@ import { join, resolve } from 'node:path'
 import { runNativeCommand, succeeded } from './command'
 import { requireNativePantryCli } from './toolchain'
 
+/**
+ * Where the locked Zig compiler ended up inside its installed package. Zig's own archive carries the binary at the
+ * root, while packages that ship a `bin` directory put it under one, and which of the two a release unpacks to is not
+ * something the native build should depend on. Returns null when neither exists, so the caller can name the directory
+ * it looked in rather than a single guessed path.
+ */
+export function resolveLockedZig(packageRoot: string, exists: (path: string) => boolean = existsSync): string | null {
+  for (const candidate of [join(packageRoot, 'bin', 'zig'), join(packageRoot, 'zig')]) if (exists(candidate)) return candidate
+  return null
+}
+
 export function nativeRuntimeProfile(revision: string, minimumMacos: string, arch: string = process.arch): string {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('Craft revision must be immutable')
   if (!/^\d+\.\d+(?:\.\d+)?$/.test(minimumMacos)) throw new Error('A valid minimum macOS version is required')
@@ -94,8 +105,9 @@ export async function provisionNativeRuntime(root: string, config: NativeAppConf
     const lock = JSON.parse(readFileSync(join(checkout, 'pantry.lock'), 'utf8'))
     const zigVersion = lockedCraftCompilerVersion(lock)
     await run(['pantry', 'install', `ziglang.org@${zigVersion}`, '--no-save', '--ignore-scripts'], checkout, env, true)
-    const zig = join(checkout, 'pantry/ziglang.org', `v${zigVersion}`, 'bin/zig')
-    if (!existsSync(zig)) throw new Error(`Locked Zig compiler is missing: ${zig}`)
+    const zigRoot = join(checkout, 'pantry/ziglang.org', `v${zigVersion}`)
+    const zig = resolveLockedZig(zigRoot)
+    if (!zig) throw new Error(`Locked Zig compiler is missing under ${zigRoot}`)
     const buildEnv = { ...env, CRAFT_ZIG: zig }
     // Current Craft declares immutable URLs and native hashes in its package
     // manifest. Use the locked compiler's normal resolver, as upstream CI does.

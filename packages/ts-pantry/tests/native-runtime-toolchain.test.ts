@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { version as sdkVersion } from '../package.json'
-import { nativePantryCliRange, nativeRuntimeCacheKey, nativeRuntimeProfile, type NativeAppConfig } from '../src/native'
+import { nativePantryCliRange, nativeRuntimeCacheKey, nativeRuntimeProfile, resolveLockedZig, type NativeAppConfig } from '../src/native'
 
 // Real Git/OS commands exercise the public SDK, with no injected NativeCommand.
 // The authored local source is only an acquisition fixture. Every attempted
@@ -253,4 +253,17 @@ test('explicit CRAFT_BIN and an absent runtime do not probe or require Pantry', 
     expect(f.recorded()).toBe('')
     expect(cacheTree(join(f.root, '.pantry'))).toEqual(before)
   })
+})
+
+test('the locked Zig compiler is found whichever layout the installer unpacked', () => {
+  const root = join('/pkg', 'ziglang.org', 'v0.18.0-dev.146+35accc06e')
+  const underBin = join(root, 'bin', 'zig')
+  const atRoot = join(root, 'zig')
+  // A package that ships a bin directory, which is what earlier releases unpacked to.
+  expect(resolveLockedZig(root, path => path === underBin)).toBe(underBin)
+  // Zig's own archive, which carries the compiler at the root beside lib, doc and the licence.
+  expect(resolveLockedZig(root, path => path === atRoot)).toBe(atRoot)
+  // bin wins when both are present, so a package that gained one does not change which binary is used.
+  expect(resolveLockedZig(root, () => true)).toBe(underBin)
+  expect(resolveLockedZig(root, () => false)).toBeNull()
 })
