@@ -1097,6 +1097,7 @@ pub fn createTarball(
     // Create tarball in temp directory
     const tmp_dir = io_helper.getTempDir();
     const tarball_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir, tarball_name });
+    errdefer allocator.free(tarball_path);
 
     // One staging directory per publish. A fixed /tmp/pantry-staging was
     // shared by every publish on the machine: a monorepo publishing a
@@ -1177,10 +1178,22 @@ pub fn createTarball(
                     io_helper.makePath(parent) catch {};
                 }
 
-                // Use cp -r to handle both files and directories
-                const cp_result = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-r", src, dst }) catch continue;
-                allocator.free(cp_result.stdout);
-                allocator.free(cp_result.stderr);
+                // BSD's legacy -r follows links; -RPp preserves source node
+                // types and modes with both BSD and GNU copy tools.
+                const cp_result = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-RPp", src, dst }) catch |err| {
+                    style.print("Error: cannot stage '{s}': {}\n", .{ file_entry, err });
+                    return error.TarballCreationFailed;
+                };
+                defer allocator.free(cp_result.stdout);
+                defer allocator.free(cp_result.stderr);
+                const copied = switch (cp_result.term) {
+                    .exited => |code| code == 0,
+                    else => false,
+                };
+                if (!copied) {
+                    style.print("Error: cannot stage '{s}': {s}\n", .{ file_entry, cp_result.stderr });
+                    return error.TarballCreationFailed;
+                }
             }
         }
 
@@ -1196,9 +1209,20 @@ pub fn createTarball(
             if (std.fs.path.dirname(bin_dst)) |parent| {
                 io_helper.makePath(parent) catch {};
             }
-            const cp_result = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-r", bin_src, bin_dst }) catch continue;
-            allocator.free(cp_result.stdout);
-            allocator.free(cp_result.stderr);
+            const cp_result = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-RPp", bin_src, bin_dst }) catch |err| {
+                style.print("Error: cannot stage bin '{s}': {}\n", .{ bin_file, err });
+                return error.TarballCreationFailed;
+            };
+            defer allocator.free(cp_result.stdout);
+            defer allocator.free(cp_result.stderr);
+            const copied = switch (cp_result.term) {
+                .exited => |code| code == 0,
+                else => false,
+            };
+            if (!copied) {
+                style.print("Error: cannot stage bin '{s}': {s}\n", .{ bin_file, cp_result.stderr });
+                return error.TarballCreationFailed;
+            }
         }
 
         // Always include README*, LICENSE*, CHANGELOG* if they exist

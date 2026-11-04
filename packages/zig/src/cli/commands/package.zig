@@ -2579,7 +2579,8 @@ fn createTarball(
                 };
             }
 
-            // Use cp -rp which works correctly for both files and directories.
+            // -RPp copies files/directories without dereferencing links on
+            // either BSD or GNU systems, and preserves their source modes.
             // Previously we checked statFile().kind to decide cp -p vs cp -rp,
             // but on Linux openFile() can succeed on directories, causing
             // statFile to return kind=.file for dirs. cp -p then silently
@@ -2587,7 +2588,7 @@ fn createTarball(
             // ended up in the tarball.
             // A `files` entry that exists and cannot be copied fails the
             // publish: skipping it uploads a package without that entry.
-            const cp = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-rp", src, dst }) catch |err| {
+            const cp = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-RPp", src, dst }) catch |err| {
                 style.print("  Error: failed to copy '{s}': {}\n", .{ file_entry, err });
                 return error.TarballCreationFailed;
             };
@@ -3139,7 +3140,7 @@ fn autoIncludeEntry(allocator: std.mem.Allocator, package_dir: []const u8, stagi
             io_helper.makePath(parent) catch return;
         }
 
-        const cp = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-rp", src, dst }) catch return;
+        const cp = io_helper.childRun(allocator, &[_][]const u8{ "cp", "-RPp", src, dst }) catch return;
         defer allocator.free(cp.stdout);
         defer allocator.free(cp.stderr);
 

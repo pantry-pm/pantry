@@ -519,6 +519,28 @@ pub fn build(b: *std.Build) void {
     });
     const run_registry_tests = b.addRunArtifact(registry_tests);
 
+    const publish_archive_mod = b.createModule(.{
+        .root_source_file = b.path("src/test_publish_archive_root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const publish_archive_tests = b.addTest(.{
+        .root_module = publish_archive_mod,
+        .filters = &.{"publish archive:"},
+    });
+    const run_publish_archive_tests = b.addRunArtifact(publish_archive_tests);
+    // Exercise macOS's BSD copy tool even when Pantry's GNU coreutils are first
+    // on PATH. Both implementations must preserve the same source layout.
+    if (target.result.os.tag == .macos)
+        run_publish_archive_tests.setEnvironmentVariable("PATH", "/usr/bin:/bin:/usr/sbin:/sbin");
+    const publish_archive_step = b.step("test:publish-archive", "Preserve explicit package entries in the published archive");
+    publish_archive_step.dependOn(&run_publish_archive_tests.step);
+    if (target.result.os.tag == .macos) {
+        const ambient_publish_archive_tests = b.addRunArtifact(publish_archive_tests);
+        publish_archive_step.dependOn(&ambient_publish_archive_tests.step);
+    }
+
     // Registry version selection tests (placeholders, prereleases, ordering).
     // Rooted inside src/ for the same reason.
     const version_test_mod = b.createModule(.{
@@ -615,6 +637,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_token_tests.step);
     test_step.dependOn(&run_install_tests.step);
     test_step.dependOn(&run_registry_tests.step);
+    test_step.dependOn(publish_archive_step);
     test_step.dependOn(&run_version_tests.step);
     test_step.dependOn(&run_workspace_tests.step);
     test_step.dependOn(&run_auto_link_tests.step);
@@ -663,6 +686,7 @@ pub fn build(b: *std.Build) void {
     test_all_step.dependOn(&run_config_comprehensive_tests.step);
     test_all_step.dependOn(&run_resolution_tests.step);
     test_all_step.dependOn(&run_publish_commit_tests.step);
+    test_all_step.dependOn(publish_archive_step);
     test_all_step.dependOn(&run_pm_commands_tests.step);
     test_all_step.dependOn(&run_token_tests.step);
     test_all_step.dependOn(&run_install_tests.step);
