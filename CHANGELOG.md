@@ -1,3 +1,26 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.166...v0.11.167)
+
+## ✨ Features
+
+- **release**: check CI can publish before the tag is pushed (#284) ([8306987](https://github.com/pantry-pm/pantry/commit/8306987)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#284](https://github.com/pantry-pm/pantry/issues/284))
+
+## 🐛 Bug Fixes
+
+- **native**: accept either layout the locked Zig compiler unpacks to ([e7e50ad](https://github.com/pantry-pm/pantry/commit/e7e50ad)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## 📝 Documentation
+
+- how to mint, store and scope a registry token (#282) ([4aa7bea](https://github.com/pantry-pm/pantry/commit/4aa7bea)) _(by Glenn Michael Torregosa <gtorregosa@gmail.com>)_ ([#282](https://github.com/pantry-pm/pantry/issues/282))
+
+## 🔧 Chores
+
+- release v0.11.167 ([83f2ccc](https://github.com/pantry-pm/pantry/commit/83f2ccc)) _(by glennmichael123 <gtorregosa@gmail.com>)_
+
+## Contributors
+
+- _Glenn Michael Torregosa <gtorregosa@gmail.com>_
+- _glennmichael123 <gtorregosa@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.165...v0.11.166)
 
 ## 🐛 Bug Fixes
