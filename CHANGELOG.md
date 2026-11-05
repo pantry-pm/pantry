@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.169...v0.11.170)
+
+## 🐛 Bug Fixes
+
+- **desktop**: validate the declared application executable ([0a1e65c](https://github.com/pantry-pm/pantry/commit/0a1e65c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **desktop**: verify app activation before reporting installed ([eab6500](https://github.com/pantry-pm/pantry/commit/eab6500)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.170 ([012d116](https://github.com/pantry-pm/pantry/commit/012d116)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.168...v0.11.169)
 
 ## 🐛 Bug Fixes
