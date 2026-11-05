@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.168...v0.11.169)
+
+## 🐛 Bug Fixes
+
+- preserve recipe shell interfaces during native activation ([c281ec1](https://github.com/pantry-pm/pantry/commit/c281ec1)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.169 ([61de0d7](https://github.com/pantry-pm/pantry/commit/61de0d7)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.167...v0.11.168)
 
 ## 🐛 Bug Fixes
