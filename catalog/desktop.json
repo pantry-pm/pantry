@@ -305,6 +305,12 @@
       "label": "Launchpad",
       "desc": "A native keyboard launcher built with Stacks",
       "category": "Productivity"
+    },
+    {
+      "domain": "github.com/desktop",
+      "label": "GitHub Desktop",
+      "desc": "A desktop application for contributing to projects on GitHub.",
+      "category": "Development"
     }
   ],
   "fonts": [

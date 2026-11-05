@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "bed0533062f1e792e12436960e5aeda98f5540cd707ccd832ccae595bf8b2e8c",
+  "revision": "2bd5e1683f5ef851506e5d65a47fd8f6f8e8a2d2f96c783bad74663ece4e167e",
   "packages": [
     {
       "domain": "1password.com",
@@ -438,7 +438,7 @@
       "programs": [
         "claude"
       ],
-      "latestVersion": "2.1.312",
+      "latestVersion": "2.1.316",
       "homepageUrl": "https://github.com/anthropics/claude-code",
       "githubUrl": "https://github.com/anthropics/claude-code",
       "platforms": null,
@@ -489,7 +489,7 @@
     },
     {
       "domain": "apache.org/apr-util",
-      "name": "apu-{{ version.major }}-config",
+      "name": "apr-util",
       "description": "Mirror of Apache Portable Runtime util",
       "kind": "cli",
       "aliases": [
@@ -499,7 +499,7 @@
       "programs": [
         "apu-{{ version.major }}-config"
       ],
-      "latestVersion": "1.6.5",
+      "latestVersion": "1.6.6",
       "homepageUrl": null,
       "githubUrl": "https://github.com/apache/apr-util",
       "platforms": null,
@@ -1353,7 +1353,7 @@
       "programs": [
         "aux4"
       ],
-      "latestVersion": "5.2.13",
+      "latestVersion": "5.2.15",
       "homepageUrl": "https://aux4.io/",
       "githubUrl": "https://github.com/aux4/aux4",
       "platforms": null,
@@ -1595,7 +1595,7 @@
       "programs": [
         "biome"
       ],
-      "latestVersion": "2.6.3",
+      "latestVersion": "2.6.4",
       "homepageUrl": "https://biomejs.dev/",
       "githubUrl": "https://github.com/biomejs/biome",
       "platforms": null,
@@ -1621,7 +1621,7 @@
         "bitcoin-wallet",
         "bitcoind"
       ],
-      "latestVersion": "31.1",
+      "latestVersion": "32.1",
       "homepageUrl": "https://bitcoincore.org/",
       "githubUrl": "https://github.com/bitcoin/bitcoin",
       "platforms": null,
@@ -1662,7 +1662,7 @@
       "programs": [
         "bw"
       ],
-      "latestVersion": "2026.10.0",
+      "latestVersion": "2026.10.1",
       "homepageUrl": "https://bitwarden.com/",
       "githubUrl": null,
       "platforms": [
@@ -2245,7 +2245,7 @@
       "programs": [
         "carapace"
       ],
-      "latestVersion": "1.8.1",
+      "latestVersion": "1.8.2",
       "homepageUrl": "https://carapace.sh/",
       "githubUrl": "https://github.com/carapace-sh/carapace-bin",
       "platforms": null,
@@ -2288,7 +2288,7 @@
       "programs": [
         "casdoor"
       ],
-      "latestVersion": "4.24.0",
+      "latestVersion": "4.25.0",
       "homepageUrl": null,
       "githubUrl": null,
       "platforms": null,
@@ -2455,7 +2455,7 @@
       "programs": [
         "certbot"
       ],
-      "latestVersion": "5.8.0",
+      "latestVersion": "5.9.0",
       "homepageUrl": "https://certbot.eff.org/",
       "githubUrl": "https://github.com/certbot/certbot",
       "platforms": null,
@@ -2757,7 +2757,7 @@
       "programs": [
         "chezmoi"
       ],
-      "latestVersion": "2.73.3",
+      "latestVersion": "2.74.0",
       "homepageUrl": "https://chezmoi.io/",
       "githubUrl": "https://github.com/twpayne/chezmoi",
       "platforms": null,
@@ -2969,7 +2969,7 @@
       "programs": [
         "circleci"
       ],
-      "latestVersion": "1.11.0",
+      "latestVersion": "1.13.0",
       "homepageUrl": "https://circleci.com/docs/2.0/local-cli/",
       "githubUrl": "https://github.com/CircleCI-Public/circleci-cli",
       "platforms": null,
@@ -3236,7 +3236,7 @@
       "programs": [
         "cnquery"
       ],
-      "latestVersion": "14.9.0",
+      "latestVersion": "14.9.1",
       "homepageUrl": "https://cnquery.io/",
       "githubUrl": "https://github.com/mondoohq/cnquery",
       "platforms": null,
@@ -3420,7 +3420,7 @@
       "programs": [
         "coder"
       ],
-      "latestVersion": "2.38.3",
+      "latestVersion": "2.38.5",
       "homepageUrl": "https://coder.com/",
       "githubUrl": "https://github.com/coder/coder",
       "platforms": null,
@@ -3443,7 +3443,7 @@
       "programs": [
         "code-server"
       ],
-      "latestVersion": "4.143.1",
+      "latestVersion": "4.144.0",
       "homepageUrl": "https://coder.com/",
       "githubUrl": "https://github.com/coder/code-server",
       "platforms": null,
@@ -3463,7 +3463,7 @@
         "Codex"
       ],
       "programs": [],
-      "latestVersion": "26.1023.50603",
+      "latestVersion": "26.1027.61615",
       "homepageUrl": "https://developers.openai.com/codex/app",
       "githubUrl": null,
       "platforms": [
@@ -3690,7 +3690,7 @@
       "programs": [
         "craft"
       ],
-      "latestVersion": "0.0.369",
+      "latestVersion": "0.0.424",
       "homepageUrl": "https://craft-native.org/",
       "githubUrl": "https://github.com/craft-native/craft",
       "platforms": [
@@ -6731,7 +6731,7 @@
       "programs": [
         "cython"
       ],
-      "latestVersion": "3.3.0",
+      "latestVersion": "3.3.1",
       "homepageUrl": "https://cython.org/",
       "githubUrl": "https://github.com/cython/cython",
       "platforms": null,
@@ -7050,7 +7050,7 @@
       "programs": [
         "depot"
       ],
-      "latestVersion": "2.103.3",
+      "latestVersion": "2.103.6",
       "homepageUrl": "https://depot.dev/",
       "githubUrl": "https://github.com/depot/cli",
       "platforms": null,
@@ -7263,7 +7263,7 @@
         "Dia"
       ],
       "programs": [],
-      "latestVersion": "1.54.2",
+      "latestVersion": "1.55.1",
       "homepageUrl": "https://www.diabrowser.com/",
       "githubUrl": null,
       "platforms": [
@@ -7287,7 +7287,7 @@
       "programs": [
         "digger"
       ],
-      "latestVersion": "0.6.154",
+      "latestVersion": "0.6.155",
       "homepageUrl": "https://digger.dev/",
       "githubUrl": "https://github.com/diggerhq/digger",
       "platforms": null,
@@ -7325,7 +7325,7 @@
       "programs": [
         "doctl"
       ],
-      "latestVersion": "2.0.1",
+      "latestVersion": "2.1.0",
       "homepageUrl": "https://docs.digitalocean.com/reference/doctl/",
       "githubUrl": "https://github.com/digitalocean/doctl",
       "platforms": null,
@@ -7727,7 +7727,7 @@
       "programs": [
         "dozzle"
       ],
-      "latestVersion": "11.3.5",
+      "latestVersion": "11.4.0",
       "homepageUrl": "https://dozzle.dev/",
       "githubUrl": "https://github.com/amir20/dozzle",
       "platforms": null,
@@ -8970,7 +8970,7 @@
         "flutter",
         "dart"
       ],
-      "latestVersion": "3.47.8",
+      "latestVersion": "3.47.9",
       "homepageUrl": "https://flutter.dev/",
       "githubUrl": "https://github.com/flutter/flutter",
       "platforms": [
@@ -9015,7 +9015,7 @@
         "fly",
         "flyctl"
       ],
-      "latestVersion": "0.4.123",
+      "latestVersion": "0.5.1",
       "homepageUrl": "https://fly.io/",
       "githubUrl": "https://github.com/superfly/flyctl",
       "platforms": null,
@@ -10119,7 +10119,7 @@
         "composer",
         "composer.phar"
       ],
-      "latestVersion": "2.10.3",
+      "latestVersion": "2.11.1",
       "homepageUrl": "https://getcomposer.org/",
       "githubUrl": "https://github.com/composer/composer",
       "platforms": null,
@@ -11771,7 +11771,7 @@
       "programs": [
         "apko"
       ],
-      "latestVersion": "1.4.13",
+      "latestVersion": "1.4.15",
       "homepageUrl": "https://apko.dev/",
       "githubUrl": "https://github.com/chainguard-dev/apko",
       "platforms": null,
@@ -12436,7 +12436,7 @@
       "domain": "github.com/desktop",
       "name": "GitHub Desktop",
       "description": "A desktop application for contributing to projects on GitHub.",
-      "kind": "cli",
+      "kind": "app",
       "aliases": [
         "github-desktop",
         "gh-desktop",
@@ -12928,7 +12928,7 @@
         "llama-cli",
         "llama.cpp"
       ],
-      "latestVersion": "11936",
+      "latestVersion": "12032",
       "homepageUrl": null,
       "githubUrl": "https://github.com/ggerganov/llama.cpp",
       "platforms": [
@@ -14349,7 +14349,7 @@
       "programs": [
         "sourcery"
       ],
-      "latestVersion": "2.4.0",
+      "latestVersion": "2.4.1",
       "homepageUrl": "http://merowing.info/",
       "githubUrl": "https://github.com/krzysztofzablocki/Sourcery",
       "platforms": [
@@ -16742,7 +16742,7 @@
       "programs": [
         "cli-proxy-api"
       ],
-      "latestVersion": "8.0.45",
+      "latestVersion": "8.0.51",
       "homepageUrl": "https://help.router-for.me/",
       "githubUrl": "https://github.com/router-for-me/CLIProxyAPI",
       "platforms": null,
@@ -17764,7 +17764,7 @@
         "mole",
         "mo"
       ],
-      "latestVersion": "1.65.0",
+      "latestVersion": "1.67.0",
       "homepageUrl": "https://github.com/tw93/Mole",
       "githubUrl": "https://github.com/tw93/mole",
       "platforms": [
@@ -21056,7 +21056,7 @@
       "programs": [
         "google-chrome-stable"
       ],
-      "latestVersion": "156.0.8078.47",
+      "latestVersion": "156.0.8078.80",
       "homepageUrl": "https://developer.chrome.com/docs/chromedriver/downloads",
       "githubUrl": null,
       "platforms": [
@@ -21626,7 +21626,7 @@
         "groonga",
         "groonga-suggest-create-dataset"
       ],
-      "latestVersion": "16.1.4",
+      "latestVersion": "16.1.5",
       "homepageUrl": "https://groonga.org/",
       "githubUrl": "https://github.com/groonga/groonga",
       "platforms": null,
@@ -21691,7 +21691,7 @@
         "grpc_php_plugin",
         "grpc_cli"
       ],
-      "latestVersion": "1.85.0",
+      "latestVersion": "1.85.1",
       "homepageUrl": "https://grpc.io/",
       "githubUrl": "https://github.com/grpc/grpc",
       "platforms": null,
@@ -22099,7 +22099,7 @@
       "programs": [
         "hatch"
       ],
-      "latestVersion": "1.18.1",
+      "latestVersion": "1.18.2",
       "homepageUrl": "https://hatch.pypa.io/latest/",
       "githubUrl": "https://github.com/pypa/hatch",
       "platforms": null,
@@ -22448,7 +22448,7 @@
       "programs": [
         "huggingface-cli"
       ],
-      "latestVersion": "2.3.0",
+      "latestVersion": "2.4.0",
       "homepageUrl": "https://huggingface.co/docs/huggingface_hub/index",
       "githubUrl": "https://github.com/huggingface/huggingface_hub",
       "platforms": null,
@@ -22513,7 +22513,7 @@
         "hurl",
         "hurlfmt"
       ],
-      "latestVersion": "8.0.1",
+      "latestVersion": "8.1.0",
       "homepageUrl": "https://hurl.dev/",
       "githubUrl": "https://github.com/Orange-OpenSource/hurl",
       "platforms": null,
@@ -22857,7 +22857,7 @@
       "programs": [
         "insomnia"
       ],
-      "latestVersion": "13.3.1",
+      "latestVersion": "13.4.0",
       "homepageUrl": "https://insomnia.rest/",
       "githubUrl": "https://github.com/Kong/insomnia",
       "platforms": [
@@ -23231,7 +23231,7 @@
       "programs": [
         "jbang"
       ],
-      "latestVersion": "0.142.0",
+      "latestVersion": "0.143.0",
       "homepageUrl": "https://jbang.dev/",
       "githubUrl": "https://github.com/jbangdev/jbang",
       "platforms": null,
@@ -23717,7 +23717,7 @@
         "jupyter-troubleshoot",
         "jupyter-trust"
       ],
-      "latestVersion": "4.6.4",
+      "latestVersion": "4.6.5",
       "homepageUrl": "https://jupyterlab.readthedocs.io/",
       "githubUrl": "https://github.com/jupyterlab/jupyterlab",
       "platforms": null,
@@ -24142,7 +24142,7 @@
       "programs": [
         "perf"
       ],
-      "latestVersion": "7.2.13",
+      "latestVersion": "7.3.1",
       "homepageUrl": "https://perf.wiki.kernel.org/",
       "githubUrl": null,
       "platforms": [
@@ -24800,7 +24800,7 @@
         "lavinmqctl",
         "lavinmqperf"
       ],
-      "latestVersion": "2.10.3",
+      "latestVersion": "2.10.4",
       "homepageUrl": "https://lavinmq.com/",
       "githubUrl": "https://github.com/cloudamqp/lavinmq",
       "platforms": null,
@@ -24971,7 +24971,7 @@
         "bsdcpio",
         "bsdtar"
       ],
-      "latestVersion": "3.8.10",
+      "latestVersion": "3.8.11",
       "homepageUrl": "https://www.libarchive.org/",
       "githubUrl": "https://github.com/libarchive/libarchive",
       "platforms": null,
@@ -25387,7 +25387,7 @@
       "programs": [
         "libreoffice"
       ],
-      "latestVersion": "26.8.1",
+      "latestVersion": "26.8.2",
       "homepageUrl": "https://libreoffice.org/",
       "githubUrl": null,
       "platforms": [
@@ -25702,7 +25702,7 @@
         "libwebsockets"
       ],
       "programs": [],
-      "latestVersion": "5.0.0",
+      "latestVersion": "5.1.0",
       "homepageUrl": "https://libwebsockets.org/",
       "githubUrl": "https://github.com/warmcat/libwebsockets",
       "platforms": null,
@@ -25866,7 +25866,7 @@
         "tificc",
         "transicc"
       ],
-      "latestVersion": "2.19.1",
+      "latestVersion": "2.20",
       "homepageUrl": "https://www.littlecms.com/",
       "githubUrl": "https://github.com/mm2/Little-CMS",
       "platforms": null,
@@ -25983,7 +25983,7 @@
       "programs": [
         "lm-studio"
       ],
-      "latestVersion": "0.4.26-4",
+      "latestVersion": "0.4.28-2",
       "homepageUrl": "https://lmstudio.ai/",
       "githubUrl": null,
       "platforms": [
@@ -26370,7 +26370,7 @@
         "macfuse.github"
       ],
       "programs": [],
-      "latestVersion": "5.4.0",
+      "latestVersion": "5.5.0",
       "homepageUrl": null,
       "githubUrl": "https://github.com/macfuse/macfuse",
       "platforms": [
@@ -26419,7 +26419,7 @@
         "vimdiff",
         "vimtutor"
       ],
-      "latestVersion": "183",
+      "latestVersion": "184",
       "homepageUrl": "https://macvim.org/",
       "githubUrl": "https://github.com/macvim-dev/macvim",
       "platforms": [
@@ -26442,7 +26442,7 @@
       "programs": [
         "mailpit"
       ],
-      "latestVersion": "1.32.0",
+      "latestVersion": "1.33.0",
       "homepageUrl": "https://mailpit.axllent.org/",
       "githubUrl": "https://github.com/axllent/mailpit",
       "platforms": null,
@@ -26662,7 +26662,7 @@
       "programs": [
         "mz"
       ],
-      "latestVersion": "26.47.1",
+      "latestVersion": "26.48.2",
       "homepageUrl": "https://materialize.com/",
       "githubUrl": "https://github.com/MaterializeInc/materialize",
       "platforms": null,
@@ -26706,7 +26706,7 @@
       "programs": [
         "maturin"
       ],
-      "latestVersion": "1.15.0",
+      "latestVersion": "1.16.0",
       "homepageUrl": "https://maturin.rs/",
       "githubUrl": "https://github.com/PyO3/maturin",
       "platforms": null,
@@ -27329,7 +27329,7 @@
         "rtx",
         "mise"
       ],
-      "latestVersion": "2026.10.21",
+      "latestVersion": "2026.10.25",
       "homepageUrl": "https://mise.jdx.dev/",
       "githubUrl": "https://github.com/jdx/mise",
       "platforms": null,
@@ -27484,7 +27484,7 @@
       "programs": [
         "mongosh"
       ],
-      "latestVersion": "2.14.0",
+      "latestVersion": "2.14.1",
       "homepageUrl": "https://www.mongodb.com/try/download/shell",
       "githubUrl": "https://github.com/mongodb-js/mongosh",
       "platforms": null,
@@ -27529,7 +27529,7 @@
       "programs": [
         "moon"
       ],
-      "latestVersion": "2.6.4",
+      "latestVersion": "2.6.5",
       "homepageUrl": "https://moonrepo.dev/moon",
       "githubUrl": "https://github.com/moonrepo/moon",
       "platforms": null,
@@ -27855,7 +27855,7 @@
         "muraster",
         "mutool"
       ],
-      "latestVersion": "1.28.5",
+      "latestVersion": "1.28.6",
       "homepageUrl": "https://mupdf.com/",
       "githubUrl": "https://github.com/ArtifexSoftware/mupdf",
       "platforms": null,
@@ -28849,7 +28849,7 @@
       "programs": [
         "node"
       ],
-      "latestVersion": "26.12.1",
+      "latestVersion": "26.13.0",
       "homepageUrl": "https://nodejs.org/",
       "githubUrl": "https://github.com/nodejs/node",
       "platforms": null,
@@ -28893,7 +28893,7 @@
       "programs": [
         "nomad"
       ],
-      "latestVersion": "2.0.7",
+      "latestVersion": "2.1.1",
       "homepageUrl": "https://www.nomadproject.io/",
       "githubUrl": "https://github.com/hashicorp/nomad",
       "platforms": null,
@@ -29221,7 +29221,7 @@
       "programs": [
         "odigos"
       ],
-      "latestVersion": "1.38.4",
+      "latestVersion": "1.39.0",
       "homepageUrl": "https://odigos.io/",
       "githubUrl": "https://github.com/keyval-dev/odigos",
       "platforms": null,
@@ -29264,7 +29264,7 @@
       "programs": [
         "ollama"
       ],
-      "latestVersion": "0.40.11",
+      "latestVersion": "0.40.13",
       "homepageUrl": "https://ollama.com/",
       "githubUrl": "https://github.com/ollama/ollama",
       "platforms": null,
@@ -29449,7 +29449,7 @@
         "codex-tui",
         "md-events"
       ],
-      "latestVersion": "0.165.0",
+      "latestVersion": "0.166.0",
       "homepageUrl": null,
       "githubUrl": null,
       "platforms": null,
@@ -29572,7 +29572,7 @@
       "programs": [
         "opencode"
       ],
-      "latestVersion": "2.2.0",
+      "latestVersion": "2.2.5",
       "homepageUrl": "https://opencode.ai/",
       "githubUrl": "https://github.com/anomalyco/opencode",
       "platforms": [
@@ -29699,7 +29699,7 @@
         "exrmultiview",
         "exrstdattr"
       ],
-      "latestVersion": "3.5.2",
+      "latestVersion": "3.5.3",
       "homepageUrl": "https://www.openexr.com/",
       "githubUrl": "https://github.com/AcademySoftwareFoundation/openexr",
       "platforms": null,
@@ -29934,7 +29934,7 @@
       "programs": [
         "opa"
       ],
-      "latestVersion": "1.21.4",
+      "latestVersion": "1.22.0",
       "homepageUrl": "https://www.openpolicyagent.org/",
       "githubUrl": "https://github.com/open-policy-agent/opa",
       "platforms": null,
@@ -30030,7 +30030,7 @@
       "programs": [
         "oc"
       ],
-      "latestVersion": "4.22.20",
+      "latestVersion": "5.0.0",
       "homepageUrl": "https://www.openshift.com/",
       "githubUrl": "https://github.com/openshift/oc",
       "platforms": null,
@@ -30669,7 +30669,7 @@
       "programs": [
         "pdm"
       ],
-      "latestVersion": "2.29.4",
+      "latestVersion": "2.29.5",
       "homepageUrl": "https://pdm.fming.dev/",
       "githubUrl": "https://github.com/pdm-project/pdm",
       "platforms": null,
@@ -31314,7 +31314,7 @@
         "pnpm",
         "pnpx"
       ],
-      "latestVersion": "12.16.1",
+      "latestVersion": "12.17.0",
       "homepageUrl": "https://pnpm.io/",
       "githubUrl": "https://github.com/pnpm/pnpm",
       "platforms": null,
@@ -31814,7 +31814,7 @@
       "programs": [
         "projen"
       ],
-      "latestVersion": "0.104.17",
+      "latestVersion": "0.104.21",
       "homepageUrl": "https://projen.io/",
       "githubUrl": "https://github.com/projen/projen",
       "platforms": null,
@@ -31959,7 +31959,7 @@
         "pulumi-resource-pulumi-python",
         "pulumi-watch"
       ],
-      "latestVersion": "3.272.0",
+      "latestVersion": "3.273.0",
       "homepageUrl": "https://pulumi.io/",
       "githubUrl": "https://github.com/pulumi/pulumi",
       "platforms": null,
@@ -33045,7 +33045,7 @@
       "programs": [
         "rio"
       ],
-      "latestVersion": "0.5.28",
+      "latestVersion": "0.5.29",
       "homepageUrl": "https://rioterm.com/",
       "githubUrl": "https://github.com/raphamorim/rio",
       "platforms": null,
@@ -33386,7 +33386,7 @@
       "programs": [
         "rubocop"
       ],
-      "latestVersion": "1.92.1",
+      "latestVersion": "1.92.2",
       "homepageUrl": "https://docs.rubocop.org/",
       "githubUrl": "https://github.com/rubocop/rubocop",
       "platforms": null,
@@ -34269,7 +34269,7 @@
       "programs": [
         "slack"
       ],
-      "latestVersion": "4.53.269",
+      "latestVersion": "4.53.276",
       "homepageUrl": "https://slack.com/",
       "githubUrl": null,
       "platforms": [
@@ -34971,7 +34971,7 @@
       "programs": [
         "sqlfluff"
       ],
-      "latestVersion": "4.4.0",
+      "latestVersion": "4.5.0",
       "homepageUrl": "https://docs.sqlfluff.com/",
       "githubUrl": "https://github.com/sqlfluff/sqlfluff",
       "platforms": null,
@@ -35016,7 +35016,7 @@
       "programs": [
         "squawk"
       ],
-      "latestVersion": "2.70.0",
+      "latestVersion": "2.71.0",
       "homepageUrl": "https://squawkhq.com/",
       "githubUrl": "https://github.com/sbdchd/squawk",
       "platforms": null,
@@ -35130,7 +35130,7 @@
       "programs": [
         "stats"
       ],
-      "latestVersion": "3.0.23",
+      "latestVersion": "3.0.24",
       "homepageUrl": "https://github.com/exelban/stats",
       "githubUrl": "https://github.com/exelban/stats",
       "platforms": [
@@ -35155,7 +35155,7 @@
       "programs": [
         "steampipe"
       ],
-      "latestVersion": "2.4.8",
+      "latestVersion": "2.4.9",
       "homepageUrl": "https://steampipe.io/",
       "githubUrl": "https://github.com/turbot/steampipe",
       "platforms": null,
@@ -35223,7 +35223,7 @@
       "programs": [
         "streamlink"
       ],
-      "latestVersion": "8.6.2",
+      "latestVersion": "8.6.3",
       "homepageUrl": "https://streamlink.github.io/",
       "githubUrl": "https://github.com/streamlink/streamlink",
       "platforms": null,
@@ -35245,7 +35245,7 @@
       "programs": [
         "stripe"
       ],
-      "latestVersion": "1.55.2",
+      "latestVersion": "1.55.6",
       "homepageUrl": "https://stripe.com/docs/stripe-cli",
       "githubUrl": "https://github.com/stripe/stripe-cli",
       "platforms": null,
@@ -35382,7 +35382,7 @@
         "swift-test",
         "swiftc"
       ],
-      "latestVersion": "6.4.1",
+      "latestVersion": "6.4.2",
       "homepageUrl": "https://swift.org/",
       "githubUrl": "https://github.com/apple/swift",
       "platforms": [
@@ -35675,7 +35675,7 @@
         "tailscale",
         "tailscaled"
       ],
-      "latestVersion": "1.104.2",
+      "latestVersion": "1.104.4",
       "homepageUrl": null,
       "githubUrl": null,
       "platforms": null,
@@ -36130,7 +36130,7 @@
       "programs": [
         "terraform"
       ],
-      "latestVersion": "1.17.0",
+      "latestVersion": "1.17.1",
       "homepageUrl": "https://www.terraform.io/",
       "githubUrl": "https://github.com/hashicorp/terraform",
       "platforms": null,
@@ -36197,7 +36197,7 @@
       "programs": [
         "terratag"
       ],
-      "latestVersion": "0.8.1",
+      "latestVersion": "0.8.3",
       "homepageUrl": "https://terratag.io/",
       "githubUrl": "https://github.com/env0/terratag",
       "platforms": null,
@@ -36407,7 +36407,7 @@
       "programs": [
         "tinygo"
       ],
-      "latestVersion": "0.43.0",
+      "latestVersion": "0.44.0",
       "homepageUrl": "https://tinygo.org/",
       "githubUrl": "https://github.com/tinygo-org/tinygo",
       "platforms": [
@@ -36494,7 +36494,7 @@
       "programs": [
         "tox"
       ],
-      "latestVersion": "4.67.2",
+      "latestVersion": "4.67.5",
       "homepageUrl": "https://tox.wiki/en/latest/",
       "githubUrl": "https://github.com/tox-dev/tox",
       "platforms": null,
@@ -36516,7 +36516,7 @@
       "programs": [
         "traefik"
       ],
-      "latestVersion": "3.7.16",
+      "latestVersion": "3.7.17",
       "homepageUrl": "https://traefik.io/",
       "githubUrl": "https://github.com/traefik/traefik",
       "platforms": null,
@@ -37008,7 +37008,7 @@
       "programs": [
         "upx"
       ],
-      "latestVersion": "5.2.1",
+      "latestVersion": "5.3.0",
       "homepageUrl": "https://upx.github.io/",
       "githubUrl": "https://github.com/upx/upx",
       "platforms": null,
@@ -37026,7 +37026,7 @@
       "programs": [
         "uriparse"
       ],
-      "latestVersion": "1.0.2",
+      "latestVersion": "1.0.3",
       "homepageUrl": "https://uriparser.github.io/",
       "githubUrl": "https://github.com/uriparser/uriparser",
       "platforms": null,
@@ -37044,7 +37044,7 @@
       "programs": [
         "vale"
       ],
-      "latestVersion": "3.25.1",
+      "latestVersion": "3.26.0",
       "homepageUrl": "https://vale.sh/",
       "githubUrl": "https://github.com/errata-ai/vale",
       "platforms": null,
@@ -37134,7 +37134,7 @@
       "programs": [
         "vspipe"
       ],
-      "latestVersion": "81",
+      "latestVersion": "82",
       "homepageUrl": "https://www.vapoursynth.com/",
       "githubUrl": "https://github.com/vapoursynth/vapoursynth",
       "platforms": null,
@@ -37176,7 +37176,7 @@
       "programs": [
         "vcluster"
       ],
-      "latestVersion": "0.37.4",
+      "latestVersion": "0.37.6",
       "homepageUrl": "https://www.vcluster.com/",
       "githubUrl": "https://github.com/loft-sh/vcluster",
       "platforms": null,
@@ -37433,7 +37433,7 @@
         "vim",
         "vi"
       ],
-      "latestVersion": "9.2.1252",
+      "latestVersion": "9.2.1276",
       "homepageUrl": "https://www.vim.org/",
       "githubUrl": "https://github.com/vim/vim",
       "platforms": null,
@@ -37455,7 +37455,7 @@
       "programs": [
         "virtualenv"
       ],
-      "latestVersion": "21.15.0",
+      "latestVersion": "21.15.2",
       "homepageUrl": "https://virtualenv.pypa.io/",
       "githubUrl": "https://github.com/pypa/virtualenv",
       "platforms": null,
@@ -37611,7 +37611,7 @@
       "programs": [
         "wails"
       ],
-      "latestVersion": "3.0.0",
+      "latestVersion": "3.1.0",
       "homepageUrl": "https://wails.io/",
       "githubUrl": "https://github.com/wailsapp/wails",
       "platforms": [
@@ -37813,6 +37813,23 @@
       }
     },
     {
+      "domain": "webkitgtk.org",
+      "name": "webkitgtk",
+      "description": "WebKit rendering engine for GTK, providing the webkit2gtk-4.1 API",
+      "kind": "library",
+      "aliases": [
+        "webkitgtkorg"
+      ],
+      "programs": [],
+      "latestVersion": "2.54.2",
+      "homepageUrl": "https://webkitgtk.org/",
+      "githubUrl": "https://github.com/WebKit/WebKit",
+      "platforms": [
+        "linux/x86-64"
+      ],
+      "logo": null
+    },
+    {
       "domain": "webmproject.org/libvpx",
       "name": "libvpx",
       "description": "Mirror only. Please do not send pull requests.",
@@ -37885,7 +37902,7 @@
       "programs": [
         "whatsapp"
       ],
-      "latestVersion": "2.26.43.20",
+      "latestVersion": "2.26.43.27",
       "homepageUrl": "https://whatsapp.com/",
       "githubUrl": null,
       "platforms": [
@@ -39204,7 +39221,7 @@
       "programs": [
         "xray"
       ],
-      "latestVersion": "26.10.21",
+      "latestVersion": "26.10.31",
       "homepageUrl": "https://xtls.github.io/",
       "githubUrl": "https://github.com/XTLS/Xray-core",
       "platforms": null,
@@ -39364,7 +39381,7 @@
       "programs": [
         "zarf"
       ],
-      "latestVersion": "0.88.0",
+      "latestVersion": "0.89.0",
       "homepageUrl": null,
       "githubUrl": "https://github.com/defenseunicorns/zarf",
       "platforms": null,
@@ -39387,7 +39404,7 @@
       "programs": [
         "zed"
       ],
-      "latestVersion": "1.25.3",
+      "latestVersion": "1.26.2",
       "homepageUrl": "https://zed.dev/",
       "githubUrl": "https://github.com/zed-industries/zed",
       "platforms": [
@@ -39477,7 +39494,7 @@
       "programs": [
         "zig"
       ],
-      "latestVersion": "0.18.0-dev.738+ae9a8acc7",
+      "latestVersion": "0.18.0-dev.828+9da287565",
       "homepageUrl": "https://ziglang.org/",
       "githubUrl": "https://github.com/ziglang/zig",
       "platforms": null,
@@ -39531,7 +39548,7 @@
         "zkServer.sh",
         "zkCli.sh"
       ],
-      "latestVersion": "3.9.6",
+      "latestVersion": "3.9.7",
       "homepageUrl": "https://zookeeper.apache.org/",
       "githubUrl": "https://github.com/apache/zookeeper",
       "platforms": [
@@ -39561,7 +39578,7 @@
         "zot",
         "zxp"
       ],
-      "latestVersion": "2.1.22",
+      "latestVersion": "2.1.23",
       "homepageUrl": null,
       "githubUrl": "https://github.com/project-zot/zot",
       "platforms": null,
@@ -39581,7 +39598,7 @@
         "copyto",
         "pastefrom"
       ],
-      "latestVersion": "2.0.8",
+      "latestVersion": "2.0.9",
       "homepageUrl": "https://zrok.io/",
       "githubUrl": "https://github.com/openziti/zrok",
       "platforms": null,

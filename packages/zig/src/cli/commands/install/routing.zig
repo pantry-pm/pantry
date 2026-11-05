@@ -17,6 +17,8 @@ test "desktop routing infers catalog aliases, names and pinned versions" {
     try testing.expect(isDesktop("Launchpad", null));
     try testing.expect(isDesktop("github.com/stacksjs/launchpad@1.0.3", null));
     try testing.expect(isDesktop("raycast", null));
+    try testing.expect(isDesktop("gh-desktop", null));
+    try testing.expect(isDesktop("github.com/desktop@3.5.12", null));
     try testing.expect(isDesktop("fira-code", null));
     try testing.expect(!isDesktop("gh", null));
     try testing.expect(!isDesktop("abseil.io", null));

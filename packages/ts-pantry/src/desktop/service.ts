@@ -14,6 +14,7 @@ export interface DesktopBridgeOptions {
   /** Injectable catalog and runner allow real HTTP tests without installing user software. */
   catalog?: readonly PackageCatalogEntry[]
   run?: (args: string[], output: (text: string) => void) => Promise<number>
+  applications?: () => DesktopInstalledPackage[]
   now?: () => number
 }
 interface Client { id: string, name: string, tokenHash: string }
@@ -66,6 +67,14 @@ export function installedCatalogApplications(catalog: readonly PackageCatalogEnt
   })
 }
 
+/** Package storage alone does not establish that a desktop app is installed. */
+export function mergeInstalledPackages(catalog: readonly PackageCatalogEntry[], installed: DesktopInstalledPackage[], applications: DesktopInstalledPackage[]): DesktopInstalledPackage[] {
+  const apps = new Set(catalog.filter(entry => entry.kind === 'app').map(entry => entry.domain))
+  const merged = new Map(installed.filter(item => !apps.has(item.name)).map(item => [item.name, { name: item.name, version: item.version }]))
+  for (const app of applications) if (app.applicationPath) merged.set(app.name, app)
+  return [...merged.values()]
+}
+
 /** Standalone Pantry process. The launcher never spawns or embeds an installer. */
 export interface DesktopBridge { server: Bun.Server<undefined>, close: () => Promise<void> }
 
@@ -87,6 +96,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
   }
   persist()
   const catalog = options.catalog ?? bundledPackageCatalog()
+  const applications = options.applications ?? (() => installedCatalogApplications(catalog))
   const packages = new Map(catalog.map(entry => [entry.domain, entry]))
   const executable = options.pantryExecutable ?? Bun.which('pantry')
   if (!options.run && (!executable || !isAbsolute(executable))) throw new Error('Install the Pantry CLI before starting its desktop bridge')
@@ -138,7 +148,11 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
           const kind = packages.get(job.domain)!.kind
           const exitCode = await run(['install', '--user', ...(['app', 'font'].includes(kind) ? ['--kind', kind] : []), job.domain], (text) => { job.output = (job.output + text).slice(-32000) })
           job.status = exitCode === 0 ? 'succeeded' : 'failed'
-          if (exitCode) job.error = `Pantry installation exited with code ${exitCode}`
+          if (exitCode) job.error = `Pantry installation exited with code ${exitCode}. Expand installation details for the error, then retry.`
+          if (exitCode === 0 && kind === 'app' && !applications().some(app => app.name === job.domain && app.applicationPath)) {
+            job.status = 'failed'
+            job.error = 'The download completed, but no usable application was found in Applications. Retry installation to install the app bundle.'
+          }
         }
         catch (error) {
           job.status = 'failed'
@@ -193,7 +207,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
         try {
           const installed = JSON.parse(output) as DesktopInstalledPackage[]
           if (!Array.isArray(installed) || installed.some(item => typeof item.name !== 'string' || typeof item.version !== 'string')) throw new Error('Invalid installed package list')
-          return respond({ packages: [...installed.map(item => ({ name: item.name, version: item.version })), ...(options.run ? [] : installedCatalogApplications(catalog))] })
+          return respond({ packages: mergeInstalledPackages(catalog, installed, applications()) })
         }
         catch { return respond({ error: 'Pantry returned an invalid installed package list.' }, 502) }
       }

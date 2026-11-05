@@ -30,6 +30,7 @@ test('the complete catalog is valid and includes desktop apps, CLIs, libraries a
   for (const kind of ['app', 'cli', 'library', 'font']) expect(entries.some(entry => entry.kind === kind)).toBe(true)
   expect(searchPackageCatalog(entries, 'git')[0]?.domain).toBe('git-scm.org')
   expect(searchPackageCatalog(entries, 'Figma')[0]?.kind).toBe('app')
+  expect(searchPackageCatalog(entries, 'gh-desktop')[0]?.kind).toBe('app')
   expect(searchPackageCatalog(entries, 'libsodium')[0]?.kind).toBe('library')
 })
 

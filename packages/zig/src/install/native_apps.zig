@@ -85,10 +85,31 @@ fn placeApp(allocator: std.mem.Allocator, apps_dir: []const u8, src_app: []const
     const dst = std.fmt.allocPrint(allocator, "{s}/{s}", .{ apps_dir, name }) catch return false;
     defer allocator.free(dst);
 
-    _ = run(allocator, &[_][]const u8{ MKDIR, "-p", apps_dir });
-    _ = run(allocator, &[_][]const u8{ RM, "-rf", dst });
-    if (!run(allocator, &[_][]const u8{ DITTO, src_app, dst })) return false;
-    return exists(dst);
+    if (!hasUsableAppBundle(allocator, src_app)) return false;
+    if (!run(allocator, &.{ MKDIR, "-p", apps_dir })) return false;
+    // Copy and validate before replacing an installed app. A failed download or
+    // copy must leave the user's working installation available.
+    const unique = io_helper.uniqueTempPath(allocator, "pantry-app") catch return false;
+    defer allocator.free(unique);
+    const staging = std.fs.path.join(allocator, &.{ apps_dir, std.fs.path.basename(unique) }) catch return false;
+    defer allocator.free(staging);
+    const staged_app = std.fs.path.join(allocator, &.{ staging, name }) catch return false;
+    defer allocator.free(staged_app);
+    defer _ = run(allocator, &.{ RM, "-rf", staging });
+    if (!run(allocator, &.{ DITTO, src_app, staged_app }) or !hasUsableAppBundle(allocator, staged_app)) return false;
+    const backup = std.fmt.allocPrint(allocator, "{s}/.pantry-backup-{s}", .{ apps_dir, std.fs.path.basename(staging) }) catch return false;
+    defer allocator.free(backup);
+    const replacing = exists(dst);
+    if (replacing) io_helper.rename(dst, backup) catch return false;
+    // Stage on the destination volume so activation is a rename, with rollback.
+    io_helper.rename(staged_app, dst) catch {
+        if (replacing) io_helper.rename(backup, dst) catch {};
+        return false;
+    };
+    if (replacing) _ = run(allocator, &.{ RM, "-rf", backup });
+    _ = run(allocator, &.{ "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", "-f", dst });
+    style.print("    Application ready: {s}\n", .{dst});
+    return true;
 }
 
 /// Find `.app` bundles under `dir` (without descending into a bundle) up to a
@@ -222,7 +243,7 @@ test "native app activation is unsupported off macOS" {
     try std.testing.expect(!activateTree(std.testing.allocator, "/nonexistent", true));
 }
 
-test "installAppsFromTree finds and installs nested .app into a dest dir" {
+test "native activation: installAppsFromTree finds and installs nested .app into a dest dir" {
     if (builtin.os.tag != .macos) return error.SkipZigTest;
     const a = std.testing.allocator;
     const tmp = try io_helper.uniqueTempPath(a, "pantry-native-apps-test");
@@ -236,10 +257,24 @@ test "installAppsFromTree finds and installs nested .app into a dest dir" {
     defer a.free(executable);
     _ = run(a, &[_][]const u8{ MKDIR, "-p", contents, dest });
     const f = try io_helper.createFileAbsolute(executable, .{ .truncate = true });
+    try io_helper.writeAllToFile(f, "#!/bin/sh\nexit 0\n");
     io_helper.closeFile(f);
+    try std.testing.expect(run(a, &.{ "/bin/chmod", "755", executable }));
+    const info = try std.fmt.allocPrint(a, "{s}/payload/Demo.app/Contents/Info.plist", .{tmp});
+    defer a.free(info);
+    const manifest = try io_helper.createFileAbsolute(info, .{ .truncate = true });
+    try io_helper.writeAllToFile(manifest, "<?xml version=\"1.0\"?><plist version=\"1.0\"><dict><key>CFBundleExecutable</key><string>demo</string></dict></plist>");
+    io_helper.closeFile(manifest);
     const installed = installAppsFromTree(a, tmp, dest, 3);
     try std.testing.expectEqual(@as(usize, 1), installed);
     const bundle = try std.fmt.allocPrint(a, "{s}/Demo.app", .{dest});
     defer a.free(bundle);
     try std.testing.expect(exists(bundle));
+    // A repeat installation replaces successfully, while a broken new payload
+    // cannot remove a working installed bundle.
+    try std.testing.expectEqual(@as(usize, 1), installAppsFromTree(a, tmp, dest, 3));
+    const broken = try io_helper.createFileAbsolute(executable, .{ .truncate = true });
+    io_helper.closeFile(broken);
+    try std.testing.expectEqual(@as(usize, 0), installAppsFromTree(a, tmp, dest, 3));
+    try std.testing.expect(hasUsableAppBundle(a, bundle));
 }

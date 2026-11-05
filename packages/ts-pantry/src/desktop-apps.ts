@@ -5,7 +5,7 @@
  * pantry's OWN registry (the same desktop-app catalogue we publish) — NO
  * Homebrew. Updating an app re-installs its bundle straight from the registry
  * tarball, mirroring the Zig native-app installer (download → extract → ditto
- * into /Applications → clear quarantine).
+ * into /Applications).
  */
 
 import { execFileSync, execSync } from 'node:child_process'
@@ -126,6 +126,12 @@ export function scanInstalledApps(applicationsDir = '/Applications'): InstalledA
 
     try {
       const plistPath = `${appPath}/Contents/Info.plist`
+      if (!fs.existsSync(plistPath)) continue
+      const executable = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleExecutable', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+      if (!executable || executable !== path.basename(executable)) continue
+      const binary = path.join(appPath, 'Contents/MacOS', executable)
+      fs.accessSync(binary, fs.constants.X_OK)
+      if (!fs.statSync(binary).isFile() || fs.statSync(binary).size === 0) continue
       if (fs.existsSync(plistPath)) {
         const vOut = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
         if (vOut) version = vOut
@@ -136,7 +142,7 @@ export function scanInstalledApps(applicationsDir = '/Applications'): InstalledA
         catch {}
       }
     }
-    catch {}
+    catch { continue }
 
     apps.push({ name, version, path: appPath, bundleId })
   }

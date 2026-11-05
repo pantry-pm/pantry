@@ -1,6 +1,7 @@
 // Explicitly import activation fixtures so their public-interface tests run in CI.
 test {
     _ = @import("install/symlink.zig");
+    _ = @import("install/native_apps.zig");
 }
 
 test "native activation: final project repair retains canonical package interfaces" {

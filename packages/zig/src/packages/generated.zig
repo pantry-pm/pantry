@@ -6237,7 +6237,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "GitHub Desktop",
     .domain = "github.com/desktop",
-    .kind = .cli,
+    .kind = .app,
     .description = "A desktop application for contributing to projects on GitHub.",
     .homepage_url = "https://desktop.github.com",
     .programs = &[_][]const u8{"github-desktop"},

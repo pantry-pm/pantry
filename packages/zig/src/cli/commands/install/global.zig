@@ -333,7 +333,7 @@ fn installPackagesWithScope(allocator: std.mem.Allocator, packages: []const []co
     registerSharedLibraries(allocator, global_dir);
 
     if (!failed) style.printGlobalComplete(global_dir);
-    warnIfBinNotOnPath(allocator, global_dir);
+    if (!desktop) warnIfBinNotOnPath(allocator, global_dir);
 
     return .{ .exit_code = if (failed) 1 else 0 };
 }

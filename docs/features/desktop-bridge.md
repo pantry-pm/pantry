@@ -12,6 +12,8 @@ The desktop service listens only on `127.0.0.1:46473`. Pairing codes expire and 
 
 Installations run the native CLI with fixed argument arrays, without a shell or administrator elevation. Targets must be exact catalog identifiers. Command line tools and libraries use `pantry install --user <domain>`. Applications and fonts add `--kind app` or `--kind font`, activating downloaded artifacts in `~/Applications` or `~/Library/Fonts`. Artwork and metadata do not prove a compatible artifact exists; an unavailable artifact fails visibly.
 
+The installed-app list is discovered from usable bundles in `/Applications` and `~/Applications`; a downloaded package in Pantry storage alone is not an installed app. App jobs succeed only after the bundle is discovered. Native activation validates a staged copy before replacing an existing app, preserves its signature and quarantine state, and registers it with Launch Services. Failed activation leaves the previous app available.
+
 Install jobs have client-owned IDs, bounded output, persistent status, a serial queue, and UUID retry keys. Reusing a retry key returns the existing job. Pantry does not silently restart interrupted installations after a service restart.
 
 An App Store application may use the catalog and transport client, with the installer in the independently installed Pantry process. This architecture does not establish compliance with Apple's rules about installation or executable code. Describe the actual behavior in review notes and obtain Apple's approval before claiming Store availability.
@@ -38,3 +40,14 @@ Application archives carry their `.app` bundle directly. Pantry validates the bu
 Registry operators issue an application token with `pantry registry token issue releases@example.com --publish --binary-domain github.com/your-org/your-app --expires-in-days 365`. The member account must exist first. Store its returned token with `pantry token set --registry https://registry.pantry.dev` using stdin, then run `pantry token sync --registry https://registry.pantry.dev --repo your-org/your-app`. Ordinary account tokens cannot grant native package access. A native token can publish only its exact approved domains and complete only uploads initiated by its account. Retained-artifact rescans remain operator-only.
 
 `publishNativeRegistry` and `publishPreparedNativeRegistry` from `ts-pantry/native` expose the same release target to other hosts. The first qualifies the project; the second publishes the already-qualified pipeline result. Original application artwork belongs in the shared catalog logo manifest, with its upstream source and SHA-256 recorded.
+
+
+## Verify desktop installation on a Mac
+
+After building the native CLI, run this opt-in acceptance check. It installs the named application for your current user through the real HTTP bridge, verifies discovery and the code signature, and removes only its temporary connection state:
+
+```sh
+bun packages/ts-pantry/scripts/verify-desktop-install.ts github.com/desktop "$PWD/packages/zig/zig-out/bin/pantry"
+```
+
+Open the reported application path to verify macOS launch acceptance. Regression tests cover a zero-exit installer that fails to activate an app, retry after activation, duplicate inventory, and invalid bundles.

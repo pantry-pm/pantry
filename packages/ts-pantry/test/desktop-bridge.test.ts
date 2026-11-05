@@ -4,13 +4,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { bundledPackageCatalog } from '../src/catalog/client'
 import { PantryDesktopClient } from '../src/desktop/client'
-import { createDesktopPairingCode, startDesktopBridge } from '../src/desktop/service'
+import { createDesktopPairingCode, mergeInstalledPackages, startDesktopBridge } from '../src/desktop/service'
 
 test('desktop bridge pairs once, authenticates, constrains install arguments and deduplicates retries', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'pantry-desktop-'))
   const calls: string[][] = []
   let release: (() => void) | undefined
-  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, run: async (args, output) => {
+  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, applications: () => [], run: async (args, output) => {
     calls.push(args)
     if (args[0] === 'list') { output(JSON.stringify([{ name: 'bun.com', version: '1.4.4' }])); return 0 }
     output('Installing from the Pantry registry\n')
@@ -77,7 +77,7 @@ test('desktop clients reject non-loopback brokers', () => {
 test('app and font installations use the native CLI activation path', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'pantry-desktop-kinds-'))
   const calls: string[][] = []
-  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, run: async args => { calls.push(args); return 0 } })
+  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, applications: () => [{ name: 'figma.com', version: '1', applicationPath: '/Applications/Figma.app' }], run: async args => { calls.push(args); return 0 } })
   try {
     const baseUrl = `http://127.0.0.1:${bridge.server.port}`
     const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(directory), 'Launchpad')
@@ -96,7 +96,7 @@ test('install receipts expose the authoritative package kind and execution times
   const directory = mkdtempSync(join(tmpdir(), 'pantry-desktop-receipts-'))
   const catalog = ['app', 'cli', 'library', 'font'].map(kind => bundledPackageCatalog().find(entry => entry.kind === kind)!)
   let now = Date.parse('2026-10-27T12:00:00Z')
-  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, catalog, now: () => now, run: async () => { now += 2000; return 0 } })
+  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, catalog, applications: () => catalog.filter(entry => entry.kind === 'app').map(entry => ({ name: entry.domain, version: '1', applicationPath: '/Applications/Fixture.app' })), now: () => now, run: async () => { now += 2000; return 0 } })
   try {
     const baseUrl = `http://127.0.0.1:${bridge.server.port}`
     const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(directory, now), 'Launchpad')
@@ -110,6 +110,37 @@ test('install receipts expose the authoritative package kind and execution times
       expect(receipt.timezoneOffset).toBe(new Date(now).getTimezoneOffset())
       expect((await client.jobs()).find(item => item.id === job.id)).toEqual(receipt)
     }
+  }
+  finally { await bridge.close(); rmSync(directory, { recursive: true, force: true }) }
+})
+
+
+test('desktop installs reject false success and recover with a new request after app activation', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pantry-desktop-verify-'))
+  let available = false
+  const app = { name: 'github.com/desktop', version: '3.5.12', applicationPath: '/Users/test/Applications/GitHub Desktop.app' }
+  const calls: string[][] = []
+  const bridge = startDesktopBridge({ stateDirectory: directory, port: 0, applications: () => available ? [app] : [], run: async (args, output) => {
+    calls.push(args)
+    if (args[0] === 'list') output(JSON.stringify([{ name: app.name, version: app.version }, { name: 'bun.com', version: '1' }]))
+    return 0
+  } })
+  try {
+    const baseUrl = `http://127.0.0.1:${bridge.server.port}`
+    const token = await new PantryDesktopClient({ baseUrl }).pair(createDesktopPairingCode(directory), 'Launchpad')
+    const client = new PantryDesktopClient({ baseUrl, token })
+    expect(await client.installed()).toEqual([{ name: 'bun.com', version: '1' }])
+    const failed = await client.install(app.name)
+    for (let i = 0; i < 50 && ['queued', 'running'].includes((await client.job(failed.id)).status); i++) await Bun.sleep(5)
+    expect((await client.job(failed.id)).status).toBe('failed')
+    expect((await client.job(failed.id)).error).toContain('no usable application')
+    available = true
+    const retry = await client.install(app.name)
+    for (let i = 0; i < 50 && ['queued', 'running'].includes((await client.job(retry.id)).status); i++) await Bun.sleep(5)
+    expect((await client.job(retry.id)).status).toBe('succeeded')
+    expect((await client.installed()).filter(item => item.name === app.name)).toEqual([app])
+    expect(calls.filter(args => args[0] === 'install')).toEqual(Array(2).fill(['install', '--user', '--kind', 'app', app.name]))
+    expect(mergeInstalledPackages(bundledPackageCatalog(), [app, app], [app])).toEqual([app])
   }
   finally { await bridge.close(); rmSync(directory, { recursive: true, force: true }) }
 })
