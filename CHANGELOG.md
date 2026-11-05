@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.170...v0.11.171)
+
+## 🐛 Bug Fixes
+
+- **desktop**: discover apps with optional version metadata ([4e01ef4](https://github.com/pantry-pm/pantry/commit/4e01ef4)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.171 ([54b2c73](https://github.com/pantry-pm/pantry/commit/54b2c73)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.169...v0.11.170)
 
 ## 🐛 Bug Fixes
