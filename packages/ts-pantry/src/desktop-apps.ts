@@ -132,15 +132,22 @@ export function scanInstalledApps(applicationsDir = '/Applications'): InstalledA
       const binary = path.join(appPath, 'Contents/MacOS', executable)
       fs.accessSync(binary, fs.constants.X_OK)
       if (!fs.statSync(binary).isFile() || fs.statSync(binary).size === 0) continue
-      if (fs.existsSync(plistPath)) {
-        const vOut = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
-        if (vOut) version = vOut
-
+      // Version metadata is optional. It must not hide an otherwise usable
+      // app, and older bundles can publish only CFBundleVersion.
+      for (const key of ['CFBundleShortVersionString', 'CFBundleVersion']) {
         try {
-          bundleId = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIdentifier', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || undefined
+          const value = execFileSync('/usr/libexec/PlistBuddy', ['-c', `Print :${key}`, plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+          if (value) {
+            version = value
+            break
+          }
         }
         catch {}
       }
+      try {
+        bundleId = execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIdentifier', plistPath], { timeout: 5000, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || undefined
+      }
+      catch {}
     }
     catch { continue }
 

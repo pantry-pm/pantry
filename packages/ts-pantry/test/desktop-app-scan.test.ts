@@ -30,3 +30,18 @@ test.skipIf(process.platform !== 'darwin')('application discovery excludes empty
   }
   finally { rmSync(directory, { recursive: true, force: true }) }
 })
+
+
+test.skipIf(process.platform !== 'darwin')('usable apps remain discoverable with build-only or missing version metadata', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pantry-app-version-'))
+  try {
+    for (const name of ['BuildOnly', 'Unversioned']) {
+      const contents = join(directory, name + '.app/Contents')
+      mkdirSync(join(contents, 'MacOS'), { recursive: true })
+      writeFileSync(join(contents, 'MacOS/demo'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+      writeFileSync(join(contents, 'Info.plist'), '<plist version="1.0"><dict><key>CFBundleExecutable</key><string>demo</string>' + (name === 'BuildOnly' ? '<key>CFBundleVersion</key><string>42</string>' : '') + '</dict></plist>')
+    }
+    expect(scanInstalledApps(directory).sort((a, b) => a.name.localeCompare(b.name)).map(app => [app.name, app.version])).toEqual([['BuildOnly', '42'], ['Unversioned', '?']])
+  }
+  finally { rmSync(directory, { recursive: true, force: true }) }
+})
