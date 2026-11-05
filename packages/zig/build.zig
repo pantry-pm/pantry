@@ -510,6 +510,20 @@ pub fn build(b: *std.Build) void {
     const binary_platform_step = b.step("test:binary-platform", "Keep native registry URLs on the requested operating system");
     const binary_platform_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"binary registry platform:"} });
     binary_platform_step.dependOn(&b.addRunArtifact(binary_platform_tests).step);
+    const activation_test_step = b.step("test:native-activation", "Keep native command activation complete during concurrent installs");
+    const activation_test_mod = b.createModule(.{
+        .root_source_file = b.path("src/test_native_activation_root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .imports = &.{
+            .{ .name = "zig_config", .module = zig_config_mod },
+            .{ .name = "version", .module = version_mod },
+        },
+    });
+    const activation_tests = b.addTest(.{ .root_module = activation_test_mod, .filters = &.{"native activation"} });
+    const run_activation_tests = b.addRunArtifact(activation_tests);
+    activation_test_step.dependOn(&run_activation_tests.step);
     const executable_test_step = b.step("test:executables", "Resolve native provider files through activation launchers");
     const executable_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"executable resolution:"} });
     executable_test_step.dependOn(&b.addRunArtifact(executable_tests).step);
@@ -644,6 +658,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_pm_commands_tests.step);
     test_step.dependOn(&run_token_tests.step);
     test_step.dependOn(&run_install_tests.step);
+    test_step.dependOn(&run_activation_tests.step);
     test_step.dependOn(&run_registry_tests.step);
     test_step.dependOn(publish_archive_step);
     test_step.dependOn(&run_version_tests.step);
@@ -655,6 +670,7 @@ pub fn build(b: *std.Build) void {
 
     const install_step = b.step("test:install", "Run process launch and combined workspace install tests");
     install_step.dependOn(&run_install_tests.step);
+    install_step.dependOn(&run_activation_tests.step);
     auto_link_step.dependOn(&run_auto_link_tests.step);
 
     const relocatable_tree_step = b.step("test:relocatable", "Run relocatable pantry tree tests");
@@ -698,6 +714,7 @@ pub fn build(b: *std.Build) void {
     test_all_step.dependOn(&run_pm_commands_tests.step);
     test_all_step.dependOn(&run_token_tests.step);
     test_all_step.dependOn(&run_install_tests.step);
+    test_all_step.dependOn(&run_activation_tests.step);
     test_all_step.dependOn(&run_auto_link_tests.step);
     test_all_step.dependOn(&run_relocatable_tree_tests.step);
 

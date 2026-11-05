@@ -414,9 +414,26 @@ pub fn createProgramActivation(allocator: std.mem.Allocator, link: []const u8, s
     const use_shim = try requiresForwardingShim(allocator, source);
     if (use_shim) {
         if (!writeForwardingShim(allocator, link, source, tree_root)) return error.ProgramActivationFailed;
-    } else {
+    } else if (builtin.os.tag == .windows) {
         io_helper.deleteFile(link) catch {};
         try symLinkInTree(allocator, tree_root, source, link);
+    } else {
+        // A sourceable command must stay a link. Publish a complete sibling
+        // link atomically, just as forwarding launchers are published: a
+        // delete/create pair races with another dependency's reactivation.
+        const target = try treeLinkTarget(allocator, tree_root, source, link);
+        defer allocator.free(target);
+        var random: [16]u8 = undefined;
+        io_helper.randomBytes(&random);
+        const temporary = try std.fmt.allocPrint(allocator, "{s}.pantry-{x}-{x}.tmp", .{
+            link,
+            std.mem.readInt(u64, random[0..8], .little),
+            std.mem.readInt(u64, random[8..16], .little),
+        });
+        defer allocator.free(temporary);
+        try io_helper.symLink(target, temporary);
+        defer io_helper.deleteFile(temporary) catch {};
+        try io_helper.renameClassified(temporary, link);
     }
 }
 
@@ -1520,4 +1537,89 @@ test "createBinarySymlink" {
 
     const stat = try io_helper.statFile(symlink_path);
     _ = stat;
+}
+
+const ConcurrentActivationWorker = struct {
+    source: []const u8,
+    link: []const u8,
+    tree: []const u8,
+    ready: *std.atomic.Value(bool),
+    failure: ?anyerror = null,
+
+    fn run(self: *@This()) void {
+        while (!self.ready.load(.acquire)) std.atomic.spinLoopHint();
+        for (0..80) |_| {
+            createProgramActivation(std.heap.page_allocator, self.link, self.source, self.tree) catch |err| {
+                self.failure = err;
+                return;
+            };
+        }
+    }
+};
+
+fn expectConcurrentActivation(sourceable: bool) !void {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root_length = try tmp.dir.realPathFile(io_helper.io, ".", &root_buffer);
+    const root = root_buffer[0..root_length];
+    try tmp.dir.createDirPath(io_helper.io, "packages/provider.invalid/v1.0.0/bin");
+    try tmp.dir.createDirPath(io_helper.io, "bin");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "probe.c", .data = "int main(void) { return 0; }\n" });
+    const source_code = try std.fs.path.join(allocator, &.{ root, "probe.c" });
+    defer allocator.free(source_code);
+    const binary = try std.fs.path.join(allocator, &.{ root, "packages/provider.invalid/v1.0.0/bin/probe" });
+    defer allocator.free(binary);
+    if (sourceable) {
+        try tmp.dir.createDirPath(io_helper.io, "packages/provider.invalid/v1.0.0/share/pantry");
+        try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "packages/provider.invalid/v1.0.0/share/pantry/interfaces.json", .data = "{\"version\":1,\"sourceablePrograms\":[\"probe\"]}" });
+        try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "packages/provider.invalid/v1.0.0/bin/probe", .data = "PANTRY_ACTIVATION_FIXTURE=complete\n" });
+    } else {
+        const compile = try io_helper.childRun(allocator, &.{ "clang", source_code, "-o", binary });
+        defer allocator.free(compile.stdout);
+        defer allocator.free(compile.stderr);
+        try std.testing.expect(compile.term == .exited and compile.term.exited == 0);
+    }
+    const activation = try std.fs.path.join(allocator, &.{ root, "bin/probe" });
+    defer allocator.free(activation);
+    try createProgramActivation(allocator, activation, binary, root);
+
+    var ready = std.atomic.Value(bool).init(false);
+    var workers: [8]ConcurrentActivationWorker = undefined;
+    var threads: [8]?std.Thread = @splat(null);
+    defer {
+        ready.store(true, .release);
+        for (&threads) |*thread| if (thread.*) |running| {
+            running.join();
+            thread.* = null;
+        };
+    }
+    for (&workers, 0..) |*worker, index| {
+        worker.* = .{ .source = binary, .link = activation, .tree = root, .ready = &ready };
+        threads[index] = try std.Thread.spawn(.{}, ConcurrentActivationWorker.run, .{worker});
+    }
+    ready.store(true, .release);
+    for (&threads) |*thread| if (thread.*) |running| {
+        running.join();
+        thread.* = null;
+    };
+    for (workers) |worker| {
+        if (worker.failure) |failure| std.debug.print("Concurrent native activation failed: {s}\n", .{@errorName(failure)});
+        try std.testing.expect(worker.failure == null);
+    }
+    const command: []const []const u8 = if (sourceable) &.{ "/bin/sh", "-c", ". \"$1\"; test \"$PANTRY_ACTIVATION_FIXTURE\" = complete", "sh", activation } else &.{activation};
+    const run = try io_helper.childRun(allocator, command);
+    defer allocator.free(run.stdout);
+    defer allocator.free(run.stderr);
+    try std.testing.expect(run.term == .exited and run.term.exited == 0);
+}
+
+test "native activation: concurrent native commands remain complete" {
+    try expectConcurrentActivation(false);
+}
+
+test "native activation: concurrent sourceable commands remain complete" {
+    try expectConcurrentActivation(true);
 }
