@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.167...v0.11.168)
+
+## 🐛 Bug Fixes
+
+- **install**: publish sourceable command links atomically ([e677185](https://github.com/pantry-pm/pantry/commit/e677185)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.168 ([5365db0](https://github.com/pantry-pm/pantry/commit/5365db0)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.166...v0.11.167)
 
 ## ✨ Features
