@@ -63,6 +63,21 @@ pub fn hasUsableAppBundle(allocator: std.mem.Allocator, app: []const u8) bool {
     defer allocator.free(info);
     const manifest = io_helper.statFile(info) catch return false;
     if (manifest.size == 0) return false;
+    if (builtin.os.tag == .macos) {
+        const parsed = io_helper.childRun(allocator, &.{ "/usr/libexec/PlistBuddy", "-c", "Print :CFBundleExecutable", info }) catch return false;
+        defer allocator.free(parsed.stdout);
+        defer allocator.free(parsed.stderr);
+        switch (parsed.term) {
+            .exited => |code| if (code != 0) return false,
+            else => return false,
+        }
+        const name = std.mem.trim(u8, parsed.stdout, &std.ascii.whitespace);
+        if (name.len == 0 or !std.mem.eql(u8, name, std.fs.path.basename(name))) return false;
+        const binary = std.fs.path.join(allocator, &.{ app, "Contents", "MacOS", name }) catch return false;
+        defer allocator.free(binary);
+        const metadata = io_helper.statFile(binary) catch return false;
+        return metadata.size > 0 and io_helper.isExecutable(binary);
+    }
     const macos = std.fs.path.join(allocator, &.{ app, "Contents", "MacOS" }) catch return false;
     defer allocator.free(macos);
     var dir = io_helper.openDirAbsoluteForIteration(macos) catch return false;
