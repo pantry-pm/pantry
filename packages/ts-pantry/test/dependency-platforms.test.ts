@@ -7,6 +7,9 @@ import { resolveTransitiveDependencies } from '../src/dependency-resolver'
 import { generateZigDefinitions } from '../src/generate-zig'
 
 test('recipe serialization preserves architecture groups and exact constraints', () => {
+  expect(recipeDepsToSpecs({ 'x86-64': { 'nasm.us': '2' } })).toEqual([
+    'linux/x86-64:nasm.us@2', 'darwin/x86-64:nasm.us@2', 'windows/x86-64:nasm.us@2',
+  ])
   expect(recipeDepsToSpecs({ 'zlib.net': 1, 'darwin/x86-64': { 'libisl.sourceforge.io': '^0' }, linux: { 'openssl.org': '3.2' } })).toEqual([
     'zlib.net@1', 'darwin/x86-64:libisl.sourceforge.io^0', 'linux:openssl.org@3.2',
   ])

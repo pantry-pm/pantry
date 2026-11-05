@@ -16,10 +16,11 @@ import * as os from 'node:os'
 import * as https from 'node:https'
 import * as http from 'node:http'
 import { execFileSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { compareVersions } from './generate-zig'
+import programInterfaces from './catalog/program-interfaces.json'
 import { windowsGitArchiveDigest, windowsGitRelease, windowsGitVersionFromRelease, windowsGitVersions, windowsGitPinnedDigest } from './git-for-windows'
 
 /**
@@ -339,7 +340,7 @@ function installedBinary(pkgDir: string, binary: string, binaryDirectory?: strin
  * placeholder stub for a platform it lacks) could leave `.bin/<name>` pointing at
  * a broken stub even though the genuine binary is present on disk.
  */
-function linkBinary(source: string, destination: string, platform: Platform): void {
+function linkBinary(source: string, destination: string, platform: Platform, domain: string): void {
   const target = path.relative(fs.realpathSync(path.dirname(destination)), path.join(fs.realpathSync(path.dirname(source)), path.basename(source)))
   if (platform.os === 'windows') {
     try { fs.unlinkSync(destination) } catch { /* Entry does not exist yet. */ }
@@ -355,14 +356,29 @@ function linkBinary(source: string, destination: string, platform: Platform): vo
   const magic = Buffer.alloc(2)
   try { fs.readSync(descriptor, magic, 0, 2, 0) }
   finally { fs.closeSync(descriptor) }
-  let sourceable = false
+  // Old immutable archives predate packaged interface manifests. Their
+  // canonical recipe contract is generated alongside the native catalog.
+  const contracts = programInterfaces as Readonly<Record<string, readonly string[]>>
+  let sourceable = Object.hasOwn(contracts, domain) && contracts[domain]!.includes(path.basename(source))
   const manifest = path.join(path.dirname(path.dirname(source)), 'share/pantry/interfaces.json')
-  if (magic.toString() === '#!' && fs.existsSync(manifest)) {
+  if (fs.existsSync(manifest)) {
     if (fs.statSync(manifest).size > 64 * 1024) throw new Error('Invalid package program interface')
     const interfaces = JSON.parse(fs.readFileSync(manifest, 'utf8'))
     if (interfaces?.version !== 1 || !Array.isArray(interfaces.sourceablePrograms) || interfaces.sourceablePrograms.some((name: unknown) => typeof name !== 'string' || !/^[a-zA-Z0-9_.+-]+$/.test(name)))
       throw new Error('Invalid package program interface')
     sourceable = interfaces.sourceablePrograms.includes(path.basename(source))
+  }
+  if (sourceable) {
+    const temporary = `${destination}.pantry-${randomUUID()}.tmp`
+    try {
+      fs.symlinkSync(target, temporary)
+      fs.renameSync(temporary, destination)
+    }
+    finally {
+      try { fs.unlinkSync(temporary) }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+    }
+    return
   }
   try { fs.unlinkSync(destination) } catch { /* Entry does not exist yet. */ }
   if (magic.toString() === '#!' && !sourceable) {
@@ -375,7 +391,7 @@ function linkBinary(source: string, destination: string, platform: Platform): vo
   else fs.symlinkSync(target, destination)
 }
 
-function linkBinaries(pkgDir: string, binaries: string[], binDir: string, platform: Platform, binaryDirectory?: string): void {
+function linkBinaries(pkgDir: string, binaries: string[], binDir: string, platform: Platform, domain: string, binaryDirectory?: string): void {
   fs.mkdirSync(binDir, { recursive: true })
   let primaryBin: string | null = null
 
@@ -387,7 +403,7 @@ function linkBinaries(pkgDir: string, binaries: string[], binDir: string, platfo
       // (e.g. bunx -> bun, npx -> node)
       if (primaryBin) {
         const dstBin = path.join(binDir, bin)
-        linkBinary(primaryBin, dstBin, platform)
+        linkBinary(primaryBin, dstBin, platform, domain)
       }
       continue
     }
@@ -395,7 +411,7 @@ function linkBinaries(pkgDir: string, binaries: string[], binDir: string, platfo
     if (!primaryBin) primaryBin = srcBin
 
     const dstBin = path.join(binDir, bin)
-    linkBinary(srcBin, dstBin, platform)
+    linkBinary(srcBin, dstBin, platform, domain)
   }
 }
 
@@ -486,9 +502,9 @@ export async function installPackage(
     // Re-assert the .bin links even when already installed, so the genuine
     // binary keeps ownership of `.bin/<name>` if another installer clobbered it.
     if (options.createBinLinks !== false) {
-      linkBinaries(pkgDir, binaries, binDir, platform, resolver?.binaryDirectory)
+      linkBinaries(pkgDir, binaries, binDir, platform, domain, resolver?.binaryDirectory)
     }
-    const globalLinks = maybeLinkToGlobalBin(pkgDir, binaries, platform, options, resolver?.binaryDirectory)
+    const globalLinks = maybeLinkToGlobalBin(pkgDir, binaries, platform, options, domain, resolver?.binaryDirectory)
     return { name: domain, version, installPath: pkgDir, binaries, globalLinks }
   }
 
@@ -627,11 +643,11 @@ export async function installPackage(
 
       // Create .bin/ links
       if (options.createBinLinks !== false) {
-        linkBinaries(pkgDir, binaries, binDir, platform, resolver?.binaryDirectory)
+        linkBinaries(pkgDir, binaries, binDir, platform, domain, resolver?.binaryDirectory)
       }
 
       if (!options.quiet) console.log(`  ✓ ${domain}@${version}`)
-      const globalLinks = maybeLinkToGlobalBin(pkgDir, binaries, platform, options, resolver?.binaryDirectory)
+      const globalLinks = maybeLinkToGlobalBin(pkgDir, binaries, platform, options, domain, resolver?.binaryDirectory)
       return { name: domain, version, installPath: pkgDir, binaries, globalLinks }
     }
     finally { fs.rmSync(candidate, { recursive: true, force: true }) }
@@ -653,6 +669,7 @@ function maybeLinkToGlobalBin(
   binaries: string[],
   platform: Platform,
   options: InstallOptions,
+  domain: string,
   binaryDirectory?: string,
 ): string[] {
   if (!options.globalBin) return []
@@ -666,7 +683,7 @@ function maybeLinkToGlobalBin(
     if (!srcBin) continue
 
     const dstBin = path.join(targetDir, bin)
-    linkBinary(srcBin, dstBin, platform)
+    linkBinary(srcBin, dstBin, platform, domain)
     created.push(dstBin)
   }
 

@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { recipeDepsToSpecs } from './dependency-spec'
 import { getAliasOverrides, shouldReplaceAliases } from './alias-overrides'
 import { programsForPlatform } from './programs'
@@ -25,6 +26,7 @@ interface ZigPackageDefinition {
   platformPrograms?: PlatformPrograms
   platformProgramOverrides?: PlatformPrograms
   programVersions?: ProgramVersions
+  sourceablePrograms: string[]
   dependencies: string[]
   buildDependencies: string[]
   aliases: string[]
@@ -187,7 +189,7 @@ function packageToZigStruct(pkg: ZigPackageDefinition): string {
         .description = "${escapeZigString(pkg.description)}",
         .homepage_url = ${pkg.homepageUrl ? `"${escapeZigString(pkg.homepageUrl)}"` : 'null'},
         .programs = ${programs},${programVersions ? `\n        .program_versions = &[_]ProgramVersion{ ${programVersions} },` : ''}
-        .dependencies = &[_][]const u8{ ${deps} },
+${pkg.sourceablePrograms.length ? `        .sourceable_programs = &[_][]const u8{ ${pkg.sourceablePrograms.map(name => `"${escapeZigString(name)}"`).join(', ')} },\n` : ''}        .dependencies = &[_][]const u8{ ${deps} },
         .build_dependencies = &[_][]const u8{ ${buildDeps} },
         .aliases = &[_][]const u8{ ${aliases} },
         .versions = &[_][]const u8{ ${versions} },
@@ -219,17 +221,18 @@ function depKey(spec: string): string {
 /** Load a package's build-recipe runtime dependencies (src/recipes/<domain>.ts),
  * if any, as metadata-style specs. The recipe is authoritative for what we
  * actually compiled against, so its deps must flow into the catalog. */
-async function loadRecipeDeps(recipesDir: string, domain: string): Promise<string[]> {
+async function loadRecipeMetadata(recipesDir: string, domain: string, programs: string[]): Promise<{ dependencies: string[], sourceablePrograms: string[] }> {
   const file = path.join(recipesDir, `${domain}.ts`)
   if (!fs.existsSync(file))
-    return []
-  try {
-    const mod = await import(`file://${path.resolve(file)}`)
-    return recipeDepsToSpecs(mod.recipe?.dependencies)
-  }
-  catch {
-    return []
-  }
+    return { dependencies: [], sourceablePrograms: [] }
+  // Recipe modules retain their normal relative imports. Only the generated
+  // data catalogs are re-evaluated when their bytes change within one run.
+  const url = pathToFileURL(path.resolve(file))
+  const mod = await import(url.href)
+  const sourceable = mod.recipe?.sourceablePrograms ?? []
+  if (!Array.isArray(sourceable) || sourceable.some(name => typeof name !== 'string' || !/^[a-zA-Z0-9_.+-]+$/.test(name) || !programs.includes(name)) || new Set(sourceable).size !== sourceable.length)
+    throw new Error(`Invalid recipe program interfaces for ${domain}`)
+  return { dependencies: recipeDepsToSpecs(mod.recipe?.dependencies), sourceablePrograms: sourceable }
 }
 
 /** A dependency spec without a trailing note: `git-scm.org^2 # v0.7.0 requires it`
@@ -307,6 +310,12 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
       const sortedVersions = Array.isArray(pkgData.versions)
         ? [...pkgData.versions].sort(compareVersions)
         : []
+      const programNames = [...new Set<string>([
+        ...(Array.isArray(pkgData.programs) ? pkgData.programs : []),
+        ...Object.values(pkgData.platformPrograms ?? {}).flat() as string[],
+        ...Object.values(pkgData.platformProgramOverrides ?? {}).flat() as string[],
+      ])]
+      const recipe = await loadRecipeMetadata(recipesDir, pkgData.domain, programNames)
 
       packages.push({
         name: pkgData.name || pkgData.domain,
@@ -317,13 +326,14 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
         platformPrograms: pkgData.platformPrograms,
         platformProgramOverrides: pkgData.platformProgramOverrides,
         programVersions: pkgData.programVersions,
+        sourceablePrograms: recipe.sourceablePrograms,
         // Merge the build recipe's runtime deps into the metadata deps so the
         // catalog reflects what we actually compiled against (e.g. php links
         // libpq, so php.net must depend on postgresql.org even though pkgx's
         // upstream metadata omits it).
         dependencies: mergeDeps(
           Array.isArray(pkgData.dependencies) ? pkgData.dependencies.map(stripSpecComment) : [],
-          await loadRecipeDeps(recipesDir, pkgData.domain),
+          recipe.dependencies,
         ),
         buildDependencies: Array.isArray(pkgData.buildDependencies) ? pkgData.buildDependencies.map(stripSpecComment) : [],
         aliases: mergeAliases(pkgData.domain, Array.isArray(pkgData.aliases) ? pkgData.aliases : []),
@@ -352,6 +362,11 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
 
   // Write to output file
   fs.writeFileSync(outputFile, zigCode, 'utf-8')
+  const interfacesFile = path.resolve(packagesDir, '../catalog/program-interfaces.json')
+  const interfaces = Object.fromEntries(packages.filter(pkg => pkg.sourceablePrograms.length)
+    .map(pkg => [pkg.domain, pkg.sourceablePrograms]))
+  fs.mkdirSync(path.dirname(interfacesFile), { recursive: true })
+  fs.writeFileSync(interfacesFile, `${JSON.stringify(interfaces, null, 2)}\n`)
   console.log(`✅ Generated Zig definitions: ${outputFile}`)
   console.log(`📊 Total packages: ${packages.length}`)
 
@@ -413,6 +428,7 @@ pub const PackageInfo = struct {
     homepage_url: ?[]const u8,
     programs: []const []const u8,
     program_versions: []const ProgramVersion = &.{},
+    sourceable_programs: []const []const u8 = &.{},
     dependencies: []const []const u8,
     build_dependencies: []const []const u8,
     aliases: []const []const u8,

@@ -189,7 +189,7 @@ jobs:
       - name: Check for changes
         id: git-check
         run: |
-          CHANGES=$(git status --porcelain packages/ts-pantry/src/packages/ packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js 2>/dev/null || echo "")
+          CHANGES=$(git status --porcelain packages/ts-pantry/src/packages/ packages/ts-pantry/src/catalog/program-interfaces.json packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js 2>/dev/null || echo "")
           if [[ -z "$CHANGES" ]]; then
             echo "changes=false" >> $GITHUB_OUTPUT
             echo "No version changes detected"
@@ -233,7 +233,7 @@ jobs:
           # refreshed. A changed Main requires fresh generation and checking.
           git fetch origin main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          git add packages/ts-pantry/src/packages/ packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js
+          git add packages/ts-pantry/src/packages/ packages/ts-pantry/src/catalog/program-interfaces.json packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js
           git commit -F /tmp/pantry-update-commit-message.txt
 
       # This commit used to go straight to main. It cannot any more: main

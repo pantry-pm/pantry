@@ -3470,7 +3470,7 @@ pub const Installer = struct {
                 return err;
             };
 
-            try @import("symlink.zig").createProgramActivation(self.allocator, link, source, null);
+            try @import("symlink.zig").createPackageProgramActivation(self.allocator, pkg_info.domain, link, source, null);
         }
 
         _ = version; // not used in current implementation
@@ -3599,7 +3599,7 @@ pub const Installer = struct {
                             return err;
                         };
 
-                        try @import("symlink.zig").createProgramActivation(self.allocator, link, source, tree_root);
+                        try @import("symlink.zig").createPackageProgramActivation(self.allocator, domain, link, source, tree_root);
 
                         custom_bins_created = true;
                     }
@@ -3635,10 +3635,8 @@ pub const Installer = struct {
             );
             defer self.allocator.free(link);
 
-            try symlink.createProgramActivation(self.allocator, link, bin_info.path, tree_root);
+            try symlink.createPackageProgramActivation(self.allocator, domain, link, bin_info.path, tree_root);
         }
-
-        _ = domain; // not used with new discovery method
     }
 
     /// Create shims for npm package binaries

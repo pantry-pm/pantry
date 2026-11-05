@@ -28,6 +28,18 @@ export function recipeDepsToSpecs(deps: unknown): string[] {
   }
   const out: string[] = []
   for (const [name, value] of Object.entries(deps)) {
+    // An architecture-only recipe group applies on every supported OS. Emit
+    // the same explicit guards the native and SDK dependency readers share.
+    const architecture = normalizeDependencyArch(name)
+    if (architecture === 'x64' || architecture === 'arm64') {
+      if (value === null) continue
+      if (typeof value !== 'object' || Array.isArray(value))
+        throw new TypeError(`Dependency architecture ${name} must contain a dependency map`)
+      for (const os of ['linux', 'darwin', 'windows']) {
+        for (const [dependency, constraint] of Object.entries(value)) out.push(`${os}/${name}:${spec(dependency, constraint)}`)
+      }
+      continue
+    }
     if (dependencyPlatform(name)) {
       if (value === null) continue
       if (typeof value !== 'object' || Array.isArray(value))

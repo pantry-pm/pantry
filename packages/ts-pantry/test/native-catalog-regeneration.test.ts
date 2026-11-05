@@ -4,6 +4,29 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { generateZigDefinitions } from '../src/generate-zig'
 
+test('recipe program interfaces reach both generated installer catalogs', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-interface-catalog-'))
+  const packages = join(root, 'packages')
+  const recipes = join(root, 'recipes')
+  const output = join(root, 'generated.zig')
+  mkdirSync(packages)
+  mkdirSync(recipes)
+  try {
+    writeFileSync(join(packages, 'fixture.ts'), "export const fixturePackage = { name: 'fixture', domain: 'fixture.example', programs: ['library.sh'], versions: ['1.0.0'] }")
+    writeFileSync(join(recipes, 'fixture.example.ts'), "export const recipe = { sourceablePrograms: ['library.sh'] }")
+    await generateZigDefinitions(packages, output)
+    expect(readFileSync(output, 'utf8').replace(/\s+/g, '')).toContain('.sourceable_programs=&[_][]constu8{"library.sh"},')
+    const contracts = join(root, 'catalog/program-interfaces.json')
+    const complete = readFileSync(contracts, 'utf8')
+    expect(JSON.parse(complete)).toEqual({ 'fixture.example': ['library.sh'] })
+    writeFileSync(join(packages, 'invalid.ts'), "export const invalidPackage = { name: 'invalid', domain: 'invalid.example', programs: ['library.sh'], versions: ['1.0.0'] }")
+    writeFileSync(join(recipes, 'invalid.example.ts'), "export const recipe = { sourceablePrograms: ['../escape.sh'] }")
+    await expect(generateZigDefinitions(packages, output)).rejects.toThrow('incomplete native catalog')
+    expect(readFileSync(contracts, 'utf8')).toBe(complete)
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 test('native catalog reads regenerated module content and preserves the last complete output on errors', async () => {
   const root = mkdtempSync(join(tmpdir(), 'pantry-native-catalog-'))
   const packages = join(root, 'packages')
