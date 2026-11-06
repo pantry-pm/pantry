@@ -1491,6 +1491,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const registry = ctx.getOption("registry") orelse "https://registry.pantry.dev";
     const token = ctx.getOption("token");
     const dry_run = ctx.hasOption("dry-run");
+    const verify_existing = ctx.hasOption("verify-existing");
     const otp = ctx.getOption("otp");
     const use_oidc = !ctx.hasOption("no-oidc");
     const provenance = !ctx.hasOption("no-provenance");
@@ -1514,6 +1515,10 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     // Route --npm or --registry npm to the npm publish flow
     if (use_npm or std.mem.eql(u8, registry, "npm")) {
+        if (verify_existing) {
+            style.print("--verify-existing is supported by the Pantry registry, not npm.\n", .{});
+            std.process.exit(1);
+        }
         const npm_options = lib.commands.PublishOptions{
             .access = access,
             .tag = tag,
@@ -1550,6 +1555,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .access = access orelse "public",
         .tag = tag orelse "latest",
         .dry_run = dry_run,
+        .verify_existing = verify_existing,
     };
 
     const result = try lib.commands.registryPublishCommand(allocator, &[_][]const u8{}, options);
@@ -4888,6 +4894,9 @@ pub fn main() !void {
 
     const pub_dry_run_opt = cli.Option.init("dry-run", "dry-run", "Show what would be published without uploading", .bool);
     _ = try publish_cmd.addOption(pub_dry_run_opt);
+
+    const pub_verify_existing_opt = cli.Option.init("verify-existing", "verify-existing", "Verify the complete payload before accepting an existing Pantry version", .bool);
+    _ = try publish_cmd.addOption(pub_verify_existing_opt);
 
     const pub_npm_opt = cli.Option.init("npm", "npm", "Publish to npm registry instead of Pantry registry", .bool);
     _ = try publish_cmd.addOption(pub_npm_opt);

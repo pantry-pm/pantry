@@ -213,16 +213,18 @@ export class Registry {
   }
 
   /**
-   * Download package tarball
+   * Download a package tarball. Internal integrity checks can avoid recording a
+   * user download and refuse foreign fallback when the stored object is absent.
    */
-  async downloadTarball(name: string, version: string): Promise<ArrayBuffer | null> {
+  async downloadTarball(name: string, version: string, options: { recordDownload?: boolean, allowFallback?: boolean } = {}): Promise<ArrayBuffer | null> {
     // Check if we have it in our storage
     const metadata = await this.metadataStorage.getPackageVersion(name, version)
 
     if (metadata?.tarballUrl) {
       try {
         // Increment download count
-        await this.metadataStorage.incrementDownloads(name, version)
+        if (options.recordDownload !== false)
+          await this.metadataStorage.incrementDownloads(name, version)
 
         // If it's a local URL, download from our storage. Derive the
         // canonical storage key from name+version rather than parsing it
@@ -271,7 +273,7 @@ export class Registry {
     }
 
     // Fallback to npm if enabled
-    if (this.config.npmFallback) {
+    if (this.config.npmFallback && options.allowFallback !== false) {
       return downloadNpmTarball(name, version)
     }
 

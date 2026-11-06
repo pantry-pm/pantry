@@ -145,7 +145,7 @@ fn registryGet(allocator: std.mem.Allocator, url: []const u8) ![]const u8 {
     defer client.deinit();
 
     var alloc_writer = std.Io.Writer.Allocating.init(allocator);
-    errdefer alloc_writer.deinit();
+    defer alloc_writer.deinit();
 
     var redirect_buf: [4096]u8 = undefined;
     const result = try client.fetch(.{
@@ -161,13 +161,11 @@ fn registryGet(allocator: std.mem.Allocator, url: []const u8) ![]const u8 {
 
     const status_int: u16 = @backingInt(result.status);
     if (status_int < 200 or status_int >= 300) {
-        alloc_writer.deinit();
         return error.NotFound;
     }
 
     const data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
     const owned = try allocator.dupe(u8, data);
-    alloc_writer.deinit();
     return owned;
 }
 
@@ -699,6 +697,8 @@ pub const RegistryPublishOptions = struct {
     access: []const u8 = "public",
     tag: []const u8 = "latest",
     dry_run: bool = false,
+    /// Verify an immutable existing version against the complete packed payload.
+    verify_existing: bool = false,
 };
 
 /// Publish a package to the Pantry registry
@@ -931,7 +931,7 @@ fn publishSingleToRegistry(
 
     if (version_check) |check| {
         defer allocator.free(check.latest_version);
-        if (check.version_exists) {
+        if (check.version_exists and !options.verify_existing) {
             const err_msg = try std.fmt.allocPrint(
                 allocator,
                 "Error: Version {s} already exists in registry.\nBump the version in package.json before publishing.",
@@ -939,7 +939,7 @@ fn publishSingleToRegistry(
             );
             return CommandResult.err(allocator, err_msg);
         }
-        if (check.is_lower_version) {
+        if (check.is_lower_version and !(check.version_exists and options.verify_existing)) {
             const err_msg = try std.fmt.allocPrint(
                 allocator,
                 "Error: Version {s} is lower than the latest published version ({s}).\nVersion must be greater than the latest published version.",
@@ -951,7 +951,7 @@ fn publishSingleToRegistry(
     }
 
     if (options.dry_run) {
-        style.print("\n[DRY RUN] Would publish {s}@{s} to {s}\n", .{ name, version, options.registry });
+        style.print("\n[DRY RUN] Would {s} {s}@{s} to {s}\n", .{ if (options.verify_existing) "publish or verify" else "publish", name, version, options.registry });
         return .{ .exit_code = 0 };
     }
 
@@ -1037,7 +1037,7 @@ fn publishSingleToRegistry(
     // Upload to registry
     style.print("Uploading to registry...\n", .{});
 
-    const result = uploadToRegistry(allocator, options.registry, name, version, tarball_data, token orelse "", publish_content) catch |err| {
+    const result = uploadToRegistry(allocator, options.registry, name, version, tarball_data, token orelse "", publish_content, options.verify_existing) catch |err| {
         const err_msg = try std.fmt.allocPrint(allocator, "Error: Failed to upload to registry: {any}", .{err});
         return CommandResult.err(allocator, err_msg);
     };
@@ -1465,13 +1465,14 @@ fn uploadToRegistry(
     tarball_data: []const u8,
     token: []const u8,
     metadata_json: []const u8,
+    verify_existing: bool,
 ) ![]const u8 {
     // Publish through the registry server, which persists to the configured
     // object store (Hetzner). The package name/version travel inside
     // metadata_json, so they are not needed here.
     _ = name;
     _ = version;
-    return uploadViaHttp(allocator, registry_url, tarball_data, token, metadata_json);
+    return uploadViaHttp(allocator, registry_url, tarball_data, token, metadata_json, verify_existing);
 }
 
 /// Upload via HTTP to registry server (native — no curl subprocess)
@@ -1481,6 +1482,7 @@ fn uploadViaHttp(
     tarball_data: []const u8,
     token: []const u8,
     metadata_json: []const u8,
+    verify_existing: bool,
 ) ![]const u8 {
     const boundary = "----PantryUploadBoundary7MA4YWxkTrZu0gW";
 
@@ -1536,7 +1538,7 @@ fn uploadViaHttp(
     defer client.deinit();
 
     var alloc_writer = std.Io.Writer.Allocating.init(allocator);
-    errdefer alloc_writer.deinit();
+    defer alloc_writer.deinit();
 
     var redirect_buf: [8192]u8 = undefined;
 
@@ -1551,8 +1553,10 @@ fn uploadViaHttp(
             .content_type = .{ .override = "multipart/form-data; boundary=" ++ boundary },
             .authorization = .{ .override = auth_value },
         },
+        .extra_headers = if (verify_existing) &[_]http.Header{
+            .{ .name = "X-Pantry-Verify-Existing", .value = "true" },
+        } else &[_]http.Header{},
     }) catch |err| {
-        alloc_writer.deinit();
         // Same silence as `publish_commit.zig` had: `error.UploadFailed` alone
         // cannot tell an unreachable registry from a rejected upload.
         style.print("Upload failed before the server replied: {any}\n", .{err});
@@ -1569,14 +1573,12 @@ fn uploadViaHttp(
             style.print("{s}\n", .{message orelse err_data});
         }
         if (publishRejectionHint(status)) |hint| style.print("{s}\n", .{hint});
-        alloc_writer.deinit();
         return error.UploadFailed;
     }
 
     // Return response body (caller owns)
     const data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
     const owned = try allocator.dupe(u8, data);
-    alloc_writer.deinit();
     return owned;
 }
 

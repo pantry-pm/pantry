@@ -203,6 +203,15 @@ pantry sign package.tar.gz <private-key-hex>
 pantry verify package.tar.gz --keyring ~/.pantry/keyring.json
 ```
 
+### Immutable Pantry publication retries
+
+`pantry publish --verify-existing` publishes a missing version or verifies the
+complete payload of an existing one. A matching immutable artifact succeeds;
+changed contents, paths, modes or symlinks fail. Packaging timestamps, ownership,
+compression and entry order may vary. Private reads stay private, and a
+publish-only credential needs no broader permission. Ordinary duplicates still
+fail without the flag. This option is not supported with `--npm`.
+
 ### Commit Publishing (pkg-pr-new Alternative)
 
 ```bash

@@ -10,6 +10,7 @@ import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
 import { PackageVersionExistsError } from './publication'
+import { verifyExistingPublication } from './publication-verification'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
 import { handleZigRoutes, createZigStorage } from './zig-routes'
 import type { ZigPackageStorage } from './zig'
@@ -714,7 +715,7 @@ export function createHandler(
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Pantry-Verify-Existing',
     }
 
     // Handle preflight
@@ -3898,6 +3899,7 @@ async function handlePublish(
   malwareScanner: MalwareScanner,
 ): Promise<Response> {
   const contentType = req.headers.get('content-type') || ''
+  const verifyExisting = req.headers.get('x-pantry-verify-existing') === 'true'
 
   // Validate token (supports both legacy admin token and user API tokens)
   const authHeader = req.headers.get('authorization')
@@ -3972,7 +3974,7 @@ async function handlePublish(
     // Fail fast on duplicate publishes *before* buffering the tarball — saves
     // 50 MB of wasted memory/IO when a CI job retries a published version.
     const exists = await registry.exists(metadata.name, metadata.version)
-    if (exists) {
+    if (exists && !verifyExisting) {
       return Response.json(
         { error: 'Version already exists' },
         { status: 409, headers: corsHeaders },
@@ -3980,6 +3982,7 @@ async function handlePublish(
     }
 
     const tarball = await tarballFile.arrayBuffer()
+    if (exists) return verifyExistingPublication(registry, metadata, tarball, corsHeaders, req.signal)
 
     const publisherId = authResult.userId && authResult.userId !== '_admin' ? authResult.userId : undefined
     const security = await validateAndScanCorePackage(
@@ -3994,7 +3997,14 @@ async function handlePublish(
     metadata.malwareScan = security
     const visibility = await publishVisibility(registry, metadata, tarball, authResult.userId, corsHeaders)
     if (visibility instanceof Response) return visibility
-    await registry.publish(metadata, tarball, publisherId, visibility.settingsIfNew ? { settingsIfNew: visibility.settingsIfNew } : undefined)
+    try {
+      await registry.publish(metadata, tarball, publisherId, visibility.settingsIfNew ? { settingsIfNew: visibility.settingsIfNew } : undefined)
+    }
+    catch (error) {
+      if (verifyExisting && error instanceof PackageVersionExistsError)
+        return verifyExistingPublication(registry, metadata, tarball, corsHeaders, req.signal)
+      throw error
+    }
 
     return Response.json(
       {
@@ -4040,16 +4050,23 @@ async function handlePublish(
 
     // Fail fast before decoding potentially large base64 payload.
     const exists = await registry.exists(metadata.name, metadata.version)
-    if (exists) {
+    if (exists && !verifyExisting) {
       return Response.json(
         { error: 'Version already exists' },
         { status: 409, headers: corsHeaders },
       )
     }
 
+    if (typeof tarballBase64 !== 'string') return Response.json({ error: 'Invalid base64 tarball data' }, { status: 400, headers: corsHeaders })
+    const encoded = tarballBase64.replace(/[\t\n\r ]/g, '')
+    const decodedSize = Math.floor(encoded.length * 3 / 4) - (encoded.endsWith('==') ? 2 : encoded.endsWith('=') ? 1 : 0)
+    const publisherTierJson = await tierForPackage(registry, metadata.name, authResult.userId)
+    const maxBytesJson = tierDefinition(publisherTierJson).maxArtifactBytes
+    if (decodedSize > maxBytesJson) return Response.json({ error: 'Tarball exceeds the publisher plan artifact limit' }, { status: 413, headers: corsHeaders })
+
     let tarball: ArrayBuffer
     try {
-      tarball = Uint8Array.from(atob(tarballBase64), c => c.charCodeAt(0)).buffer
+      tarball = Uint8Array.from(atob(encoded), c => c.charCodeAt(0)).buffer
     }
     catch {
       return Response.json(
@@ -4057,6 +4074,8 @@ async function handlePublish(
         { status: 400, headers: corsHeaders },
       )
     }
+
+    if (exists) return verifyExistingPublication(registry, metadata, tarball, corsHeaders, req.signal)
 
     const publisherIdJson = authResult.userId && authResult.userId !== '_admin' ? authResult.userId : undefined
     const security = await validateAndScanCorePackage(
@@ -4071,7 +4090,14 @@ async function handlePublish(
     metadata.malwareScan = security
     const visibility = await publishVisibility(registry, metadata, tarball, authResult.userId, corsHeaders)
     if (visibility instanceof Response) return visibility
-    await registry.publish(metadata, tarball, publisherIdJson, visibility.settingsIfNew ? { settingsIfNew: visibility.settingsIfNew } : undefined)
+    try {
+      await registry.publish(metadata, tarball, publisherIdJson, visibility.settingsIfNew ? { settingsIfNew: visibility.settingsIfNew } : undefined)
+    }
+    catch (error) {
+      if (verifyExisting && error instanceof PackageVersionExistsError)
+        return verifyExistingPublication(registry, metadata, tarball, corsHeaders, req.signal)
+      throw error
+    }
 
     return Response.json(
       {

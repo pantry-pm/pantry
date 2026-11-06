@@ -148,6 +148,26 @@ curl -X POST http://localhost:3000/publish \
   -d '{"metadata":{"name":"my-package","version":"1.0.0"},"tarball":"<base64-encoded-tarball>"}'
 ```
 
+### Verified publication retries
+
+Use `pantry publish --verify-existing` when retrying an immutable Pantry
+publication. A missing version publishes normally. An existing version succeeds
+only when its stored checksum and clean scan are valid and its complete payload
+matches the candidate. The CLI retains publish-only credentials; private package
+read access does not expand.
+
+HTTP clients opt in with `X-Pantry-Verify-Existing: true` on either upload format.
+Success returns HTTP200 with `action: "verified-existing"` and an archive or
+payload SHA256 verification method. File contents, names, permissions, symlink
+targets and non-portable extended attributes remain part of identity. Packaging
+timestamps, ownership, entry order and compression may differ. Verification is
+bounded by the package archive limits and rejects ambiguous archives. Different
+or unverifiable payloads return409; unavailable stored bytes return503. No
+artifact, metadata, visibility, scan or download counter is changed.
+
+Without the opt-in, existing versions retain their409 conflict behavior. The flag
+is specific to the Pantry registry and is rejected with `--npm`.
+
 ## Publishing Zig Packages
 
 Zig package hashes come from the managed native compiler. They describe the

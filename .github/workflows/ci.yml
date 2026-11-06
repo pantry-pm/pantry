@@ -389,6 +389,10 @@ jobs:
           packages/zig/zig-out/bin/pantry install
           packages/zig/zig-out/bin/pantry install --frozen-lockfile
           git diff --exit-code -- pantry.lock bun.lock
+      - name: Verify immutable publication retries through the native transport
+        env:
+          PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
+        run: bun .github/scripts/verify-publication-retry.ts
       - name: Verify gateway recovery and terminal authentication through the native transport
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
