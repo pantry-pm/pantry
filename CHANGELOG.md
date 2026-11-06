@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.173...v0.11.174)
+
+## 🐛 Bug Fixes
+
+- cancel blocked scanner writes on terminal replies ([5023be1](https://github.com/pantry-pm/pantry/commit/5023be1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.174 ([f20815f](https://github.com/pantry-pm/pantry/commit/f20815f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.172...v0.11.173)
 
 ## 🐛 Bug Fixes
