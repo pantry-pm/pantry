@@ -121,7 +121,16 @@ export async function recoverPublication(publication: Publication & { sha: strin
   if (matches.some(run => run.status !== 'completed')) return 'running'
   const successful = matches.find(run => run.conclusion === 'success')
   if (successful) {
-    const { jobs } = await api(`repos/${repository}/actions/runs/${successful.id}/jobs?per_page=100`)
+    // A partial rerun keeps earlier successful jobs in earlier attempts. Read
+    // all attempts and verify the newest execution of each required job.
+    const jobs: any[] = []
+    for (let page = 1; page <= 10; page++) {
+      const result = await api(`repos/${repository}/actions/runs/${successful.id}/jobs?filter=all&per_page=100&page=${page}`)
+      jobs.push(...result.jobs)
+      if (jobs.length >= (result.total_count ?? result.jobs.length)) break
+      if (!result.jobs.length || page === 10) throw new Error('Incomplete publication job read-back')
+    }
+    jobs.sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
     for (const platform of ['linux-x86-64', 'linux-arm64']) {
       const job = jobs.find((job: any) => job.name === `Publish (${platform})`)
       if (job?.conclusion !== 'success' || !job.steps.some((step: any) => step.name === 'Publish changed packages (download-first)' && step.conclusion === 'success'))

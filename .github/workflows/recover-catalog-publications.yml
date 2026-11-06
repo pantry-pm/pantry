@@ -6,7 +6,8 @@ on:
   schedule:
     - cron: '23 * * * *'
   workflow_run:
-    workflows: [Update Packages, Publish Changed Packages]
+    # Per-request publisher run-name values are also completion event names.
+    workflows: [Update Packages, Publish Changed Packages, 'catalog:*']
     types: [completed]
   workflow_dispatch:
     inputs:

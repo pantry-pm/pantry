@@ -147,6 +147,8 @@ test('publication workflow pins every checkout and recovery trusts only main', a
   expect(publisher.jobs.detect.steps.find((step: any) => step.id === 'detect').run).toContain('--diff-filter=A')
   const recovery = Bun.YAML.parse(await readFile(new URL('recover-catalog-publications.yml', base), 'utf8')) as any
   expect(recovery.jobs.recover.steps[0].with.ref).toBe('main')
+  expect(recovery.on.workflow_run.workflows.some((pattern: string) => new Bun.Glob(pattern).match(title))).toBe(true)
+  expect(recovery.on.workflow_run.workflows.some((pattern: string) => new Bun.Glob(pattern).match(recovery.name))).toBe(false)
   expect(recovery.concurrency['cancel-in-progress']).toBe(false)
   const updater = Bun.YAML.parse(await readFile(new URL('update-packages.yml', base), 'utf8')) as any
   expect(updater.jobs['update-packages'].steps.find((step: any) => step.name === 'Prepare durable publication requests')).toBeDefined()
@@ -167,4 +169,18 @@ test('a busy repository cannot exhaust recovery by returning unrelated historica
   }
   expect(await recoverPublication(publication, { ...f.options, api })).toBe('dispatched')
   expect(requests).toBe(2)
+})
+
+
+test('partial publisher reruns retain prior successful platforms and use the latest job execution', async () => {
+  const f = fixture([run])
+  const api = async (path: string) => {
+    if (!path.includes('/jobs?')) return { workflow_runs: [run] }
+    expect(path).toContain('filter=all')
+    return { total_count: 3, jobs: [
+      { ...jobs[0], id: 3 }, { ...jobs[0], id: 1, conclusion: 'failure' }, { ...jobs[1], id: 2 },
+    ] }
+  }
+  expect(await recoverPublication(publication, { ...f.options, api })).toBe('confirmed')
+  expect(f.receipts).toEqual([[publication.id, publication.sha]])
 })
