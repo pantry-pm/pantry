@@ -474,6 +474,12 @@ const provision_script =
     \\# tmpfs /tmp would charge that file to the worker's own MemoryMax.
     \\install -d -m 700 /opt/pantry-registry/scan-scratch
     \\set_env PANTRY_SCANNER_SCRATCH_DIR /opt/pantry-registry/scan-scratch
+    \\# Reclaim staging abandoned by killed workers through normal host cleanup.
+    \\# Two days exceeds the bounded 45-minute scanner worker lifetime.
+    \\install -d -m 755 /etc/tmpfiles.d
+    \\printf '%s\n' 'e /opt/pantry-registry/scan-scratch - - - 2d' > /etc/tmpfiles.d/pantry-registry-scans.conf
+    \\systemd-tmpfiles --create /etc/tmpfiles.d/pantry-registry-scans.conf
+    \\systemctl enable --now systemd-tmpfiles-clean.timer
     \\set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
     \\set_env PANTRY_REQUIRE_BINARY_SCAN_ATTESTATION true
     \\if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$env_file"; then

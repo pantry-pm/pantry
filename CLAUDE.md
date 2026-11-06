@@ -298,6 +298,10 @@ configuration produce them every time — so:
   llvm.org 23.1.0 darwin-arm64 artifact (1576 MB compressed, 5.68 GB unpacked,
   11,116 members, largest 192 MB): 15 s to walk, peak RSS 94 MB. It is the
   staged FILE that needs room, not the process.
+  Both production setup paths register `pantry-registry-scans.conf` with the
+  host's normal tmpfiles timer. Staging older than two days is reclaimed even
+  after SIGKILL, which cannot run the worker's `finally`; the age bound exceeds
+  the maximum 45-minute scan lifetime and does not touch active staging.
 
 Three more rules hold the *other* stall shapes shut:
 
