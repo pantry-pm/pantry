@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.175...v0.11.176)
+
+## 🐛 Bug Fixes
+
+- **registry**: reclaim staging abandoned by killed scanners ([765506c](https://github.com/pantry-pm/pantry/commit/765506c)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.176 ([7492b03](https://github.com/pantry-pm/pantry/commit/7492b03)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.174...v0.11.175)
 
 ## 🐛 Bug Fixes
