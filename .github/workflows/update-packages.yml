@@ -79,34 +79,14 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Take what publishers reported since the last run. This is the only
-      # thing that consumes those notifications, so a release sits in the queue
-      # for at most one sweep. Claim empties the queue in the same request, so
-      # two runs cannot both take the same domains and the queue cannot grow
-      # without bound.
-      #
-      # Best-effort by construction: if the registry is unreachable, the sweep
-      # below still refreshes every recipe, this one included.
-      - name: Claim released packages from the registry
+      # A failed claim is fatal for claimed-only runs. Sweeps can still cover
+      # every recipe when the registry is unreachable or not yet upgraded.
+      - name: Lease released packages from the registry
         id: claimed
         env:
           PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
-        run: |
-          domains=""
-          if [ -n "${PANTRY_TOKEN:-}" ]; then
-            body="$(curl -sS --max-time 20 -X POST https://registry.pantry.dev/api/rebuild-queue/claim \
-              -H "Authorization: Bearer $PANTRY_TOKEN" || echo '')"
-            domains="$(printf '%s' "$body" | jq -r '(.claimed // []) | join(" ")' 2>/dev/null || echo '')"
-          else
-            echo "::warning::No PANTRY_TOKEN — release notifications will not be claimed this run."
-          fi
-
-          if [ -n "$domains" ]; then
-            echo "Claimed from the registry: $domains"
-          else
-            echo "Nothing claimed."
-          fi
-          echo "domains=$domains" >> "$GITHUB_OUTPUT"
+          CLAIMED_ONLY: ${{ inputs.claimed-only }}
+        run: bun .github/scripts/release-claim.ts claim
 
       - name: Fetch versions from recipes (GitHub API)
         env:
@@ -188,10 +168,13 @@ jobs:
       - name: Build the Action from the updated package catalog
         run: bun run --cwd packages/action build
 
+      - name: Prepare durable publication requests
+        run: bun .github/scripts/catalog-publications.ts prepare
+
       - name: Check for changes
         id: git-check
         run: |
-          CHANGES=$(git status --porcelain packages/ts-pantry/src/packages/ packages/ts-pantry/src/catalog/program-interfaces.json packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js 2>/dev/null || echo "")
+          CHANGES=$(git status --porcelain .github/catalog-publications/ packages/ts-pantry/src/packages/ packages/ts-pantry/src/catalog/program-interfaces.json packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js 2>/dev/null || echo "")
           if [[ -z "$CHANGES" ]]; then
             echo "changes=false" >> $GITHUB_OUTPUT
             echo "No version changes detected"
@@ -235,7 +218,7 @@ jobs:
           # refreshed. A changed Main requires fresh generation and checking.
           git fetch origin main
           test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-          git add packages/ts-pantry/src/packages/ packages/ts-pantry/src/catalog/program-interfaces.json packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js
+          git add .github/catalog-publications/ packages/ts-pantry/src/packages/ packages/ts-pantry/src/catalog/program-interfaces.json packages/ts-pantry/src/generated-package-names.ts packages/zig/src/packages/generated.zig packages/action/dist/index.js packages/action/dist/post.js
           git commit -F /tmp/pantry-update-commit-message.txt
 
       # This commit used to go straight to main. It cannot any more: main
@@ -253,50 +236,17 @@ jobs:
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           branch-prefix: chore/package-updates
 
-      - name: Publish updated packages to the registry
-        if: steps.land.outputs.landed == 'true'
+      # No direct publication dispatch: the request landed in the same commit.
+      # Recovery runs after completion (including a failure after the push), and
+      # hourly if GitHub drops that event. It also confirms actual build success.
+      - name: Acknowledge processed releases
+        if: >-
+          steps.claimed.outputs.claim_id != '' &&
+          (steps.git-check.outputs.changes == 'false' || steps.land.outputs.landed == 'true')
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          # Publish version bumps to the registry AS THEY LAND — on the cheap
-          # ubuntu runners ONLY. publish-changed-packages builds linux-x86-64 +
-          # linux-arm64 from source and produces darwin-arm64 via the download
-          # fanout; it never spins up a macOS runner (which bill 10x). This
-          # replaces the old dispatch to `build.yml -f platform=unix`, which
-          # source-compiled every bump on a macOS-15 runner unsupervised.
-          #
-          # We dispatch explicitly rather than rely on publish-changed's `push`
-          # trigger: this bot commit is pushed with GITHUB_TOKEN (no PAT_TOKEN
-          # secret is set), and GITHUB_TOKEN pushes do NOT fire other workflows'
-          # push triggers — which is exactly why updates never published before.
-          CHANGED=$(git diff --name-only HEAD~1 -- packages/ts-pantry/src/packages/ 2>/dev/null)
-          [ -z "$CHANGED" ] && exit 0
-
-          DOMAINS=""
-          while IFS= read -r filepath; do
-            [ -z "$filepath" ] && continue
-            [ -f "$filepath" ] || continue
-            # Skip index/alias artifacts, and — crucially — desktop apps + fonts:
-            # those include macOS/DMG packages that publish-changed cannot build on
-            # its ubuntu legs. check-desktop-updates.yml routes them to the correct
-            # native host instead; routing them here would fail the run.
-            case "$filepath" in
-              */aliases.ts|*/generated-*|*/index.ts|*/packages/apps/*|*/packages/fonts/*) continue ;;
-            esac
-            DOMAIN=$(grep -m 1 "domain:" "$filepath" 2>/dev/null | sed "s/.*domain: '//" | sed "s/' as const.*//" | tr -d ' \n\r')
-            [ -z "$DOMAIN" ] && continue
-            DOMAINS="${DOMAINS:+$DOMAINS,}$DOMAIN"
-          done <<< "$CHANGED"
-
-          [ -z "$DOMAINS" ] && exit 0
-          # rebuild-existing=false: this workflow commits src/packages/ and
-          # nothing else, so every domain here is a pure version bump. The new
-          # version is missing from S3 and gets built regardless; --force would
-          # only re-upload the entire back catalogue alongside it (one cmake.org
-          # bump had each leg re-upload 20 versions to publish 3).
-          echo "Dispatching publish-changed-packages (ubuntu-only) for: $DOMAINS"
-          gh workflow run publish-changed-packages.yml -f packages="$DOMAINS" -f rebuild-existing=false
-        timeout-minutes: 2
+          PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+          CLAIM_ID: ${{ steps.claimed.outputs.claim_id }}
+        run: bun .github/scripts/release-claim.ts ack
 
       - name: discord-failure-alert
         if: failure()

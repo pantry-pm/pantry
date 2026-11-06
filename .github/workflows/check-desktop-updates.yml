@@ -154,6 +154,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -162,14 +165,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: Record verified registry state
-        working-directory: packages/ts-pantry
-        run: bun scripts/check-desktop-updates.ts --require-current --commit
+        id: manifest
+        run: |
+          before=$(git rev-parse HEAD)
+          (cd packages/ts-pantry && bun scripts/check-desktop-updates.ts --require-current --commit)
+          if [ "$(git rev-parse HEAD)" != "$before" ]; then
+            echo "committed=true" >> "$GITHUB_OUTPUT"
+          fi
       # The rebase-and-retry loop this replaces answered a race with another
       # push. It cannot answer the ruleset: main requires the CI contexts, a
       # bot push holds no repository role to be excused by, and retrying a
       # GH013 five times only rebases five times before failing anyway. The
       # race it did answer is handled by the rebase pass inside the action.
       - name: Land the verified manifest once CI passes
+        if: steps.manifest.outputs.committed == 'true'
         uses: ./.github/actions/checked-push
         with:
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}

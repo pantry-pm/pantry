@@ -952,34 +952,40 @@ export function createHandler(
         // mean holding a credential that can write to the pantry repository,
         // and a standing write credential on an internet-facing service is a
         // poor trade for turning "within the hour" into "within a minute".
-        const queued = (await getReadyBuildStatus()).requestRebuild(domain, priority)
+        const store = await getReadyBuildStatus()
+        const queued = store.requestRebuild(domain, priority)
+        await store.flush()
         return Response.json({ queued, domain, priority }, { headers: corsHeaders })
       }
       // The build-driver reads (and optionally clears) the rebuild queue.
       if (path === '/api/rebuild-queue' && req.method === 'GET') {
         return Response.json({ queue: (await getReadyBuildStatus()).getQueue() }, { headers: corsHeaders })
       }
-      // Claim the queue: return it and empty it in one step, so the run that
-      // takes the work is the only one that acts on it.
-      //
-      // `requestRebuild` and `clearQueue` have both existed since the queue
-      // did, and nothing ever called the second one — there was no way to,
-      // over HTTP. So every request accumulated and none was ever acted on:
-      // the production queue had been holding `curl.se` indefinitely, and a
-      // release that asked to be indexed was simply added to that pile. A
-      // queue nobody drains is a queue nobody should be told to write to.
-      //
-      // Reading and clearing are one request rather than a GET then a DELETE
-      // because two sweeps overlapping would otherwise both act on the same
-      // domains, and the second would find them already gone.
-      if (path === '/api/rebuild-queue/claim' && req.method === 'POST') {
+      // Leases are persisted before returning. Retrying with the same owner
+      // returns the same claim; failed runs become claimable after expiry.
+      if ((path === '/api/rebuild-queue/claim' || path === '/api/rebuild-queue/lease') && req.method === 'POST') {
         if (!(await isAuthorizedRequest(req)))
           return Response.json({ error: 'Authentication required' }, { status: 401, headers: corsHeaders })
-        const status = await getReadyBuildStatus()
-        const claimed = status.getQueue()
-        if (claimed.length > 0)
-          status.clearQueue(claimed)
-        return Response.json({ claimed, count: claimed.length }, { headers: corsHeaders })
+        const body = await req.json().catch(() => ({})) as { owner?: unknown }
+        const owner = body?.owner ?? crypto.randomUUID()
+        if (typeof owner !== 'string' || !/^[a-zA-Z0-9._/-]{1,128}$/.test(owner))
+          return Response.json({ error: 'valid owner required' }, { status: 400, headers: corsHeaders })
+        const store = await getReadyBuildStatus()
+        const claim = store.claimQueue(owner)
+        await store.flush()
+        return Response.json({ claimId: claim?.id ?? null, expiresAt: claim?.expiresAt ?? null,
+          claimed: claim?.domains ?? [], count: claim?.domains.length ?? 0 }, { headers: corsHeaders })
+      }
+      if (path === '/api/rebuild-queue/ack' && req.method === 'POST') {
+        if (!(await isAuthorizedRequest(req)))
+          return Response.json({ error: 'Authentication required' }, { status: 401, headers: corsHeaders })
+        const body = await req.json().catch(() => null) as { claimId?: unknown } | null
+        if (typeof body?.claimId !== 'string' || !/^[a-f0-9-]{36}$/.test(body.claimId))
+          return Response.json({ error: 'valid claimId required' }, { status: 400, headers: corsHeaders })
+        const store = await getReadyBuildStatus()
+        const acknowledged = store.acknowledgeClaim(body.claimId)
+        await store.flush()
+        return Response.json({ acknowledged }, { headers: corsHeaders })
       }
       // Requested-but-unavailable versions: versions a build attempted but that
       // don't exist upstream (no source tarball AND no prebuilt binary — every

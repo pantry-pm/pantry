@@ -31,7 +31,7 @@ function fixture(overrides: {
         ? { total_count: overrides.total ?? (overrides.jobs ?? jobs).length, jobs: overrides.jobs ?? jobs }
         : { workflow_runs: overrides.runs ?? [run] }
     }),
-    report: overrides.report ?? (async (...args: string[]) => { reports.push(args) }),
+    report: overrides.report ?? (async (sha: string, check: string, url: string) => { reports.push([sha, check, url]) }),
   }
   return { options, reports, paths }
 }

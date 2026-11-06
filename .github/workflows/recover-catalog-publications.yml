@@ -1,0 +1,53 @@
+name: Recover Catalog Publications
+
+# The request is committed atomically with the catalog. This workflow can fail
+# or be skipped without losing it; the next tick checks for a confirmed build.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_run:
+    workflows: [Update Packages, Publish Changed Packages]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      retry-failed:
+        description: Retry requests that exhausted their three automatic attempts after inspecting build diagnostics
+        type: boolean
+        default: false
+
+concurrency:
+  group: recover-catalog-publications
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # workflow_run may describe untrusted input. Only run code from main.
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+      - uses: ./packages/action
+        with:
+          install: 'false'
+          packages: bun.com@1.4.3
+      - name: Recover pending publications and record verified receipts
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          RETRY_FAILED: ${{ inputs.retry-failed }}
+        run: bun .github/scripts/catalog-publications.ts recover
+      - name: discord-failure-alert
+        if: failure()
+        uses: ./.github/actions/discord-notify
+        with:
+          title: Catalog publication recovery — Failed
+          description: Pending publications remain recorded; inspect recovery and build diagnostics
+          status: failure
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}

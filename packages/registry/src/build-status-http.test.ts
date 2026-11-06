@@ -47,6 +47,7 @@ async function start(store: BuildStatusStore) {
   resources.push({ server, registry, directory, store })
   server.start()
   return {
+    baseUrl,
     async report() {
       return fetch(`${baseUrl}/api/build-events`, {
         method: 'POST',
@@ -148,4 +149,54 @@ it('keeps two live servers\' hydrated rebuild queues in their own injected store
   await response.json()
   expect((await first.readQueue()).queue).toContain('curl.se')
   expect((await second.readQueue()).queue).toEqual([])
+})
+
+
+it('leases and acknowledges through real HTTP, persists before ACK, and preserves new notifications', async () => {
+  const fixture = createBuildStatusFixture()
+  await fixture.store.ready()
+  const http = await start(fixture.store)
+  const post = (path: string, body: unknown, authorized = true) => fetch(`${http.baseUrl}/api/rebuild-queue/${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...(authorized ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body),
+  })
+  expect((await post('lease', { owner: '123-1' }, false)).status).toBe(401)
+  expect((await post('ack', { claimId: crypto.randomUUID() }, false)).status).toBe(401)
+  expect((await post('lease', { owner: 'bad owner' })).status).toBe(400)
+  expect((await post('ack', { claimId: 'bad' })).status).toBe(400)
+  expect((await http.queue('curl.se')).status).toBe(200)
+  const lease = await (await post('lease', { owner: '123-1' })).json() as any
+  expect(lease.claimed).toEqual(['curl.se'])
+  expect(JSON.parse(fixture.storage.objects.get('build-status/status.json')!.toString()).claims[0].id).toBe(lease.claimId)
+  expect(await (await post('lease', { owner: '123-1' })).json()).toEqual(lease)
+  expect(await http.readQueue()).toEqual({ queue: [] })
+  await http.queue('curl.se')
+  const ack = await post('ack', { claimId: lease.claimId })
+  expect(await ack.json()).toEqual({ acknowledged: true })
+  expect(await http.readQueue()).toEqual({ queue: ['curl.se'] })
+  const persisted = JSON.parse(fixture.storage.objects.get('build-status/status.json')!.toString())
+  expect(persisted.claims).toEqual([])
+  expect(persisted.queue).toEqual(['curl.se'])
+  expect(await (await post('ack', { claimId: lease.claimId })).json()).toEqual({ acknowledged: false })
+})
+
+it('never acknowledges an unpersisted lease and safely retries the same owner after storage recovers', async () => {
+  const fixture = createBuildStatusFixture()
+  await fixture.store.ready()
+  const http = await start(fixture.store)
+  await http.queue('curl.se')
+  const originalPut = fixture.storage.putObject.bind(fixture.storage)
+  fixture.storage.putObject = async () => { throw new Error('fixture storage unavailable') }
+  const claim = () => fetch(`${http.baseUrl}/api/rebuild-queue/lease`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ owner: '123-1' }),
+  })
+  try {
+    expect((await claim()).status).toBe(500)
+    expect(JSON.parse(fixture.storage.objects.get('build-status/status.json')!.toString()).queue).toEqual(['curl.se'])
+  }
+  finally { fixture.storage.putObject = originalPut }
+  const response = await claim()
+  expect(response.status).toBe(200)
+  const body = await response.json() as any
+  expect(body.claimed).toEqual(['curl.se'])
+  expect(JSON.parse(fixture.storage.objects.get('build-status/status.json')!.toString()).claims[0].id).toBe(body.claimId)
 })

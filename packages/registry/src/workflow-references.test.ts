@@ -69,6 +69,6 @@ describe('workflow_run references', () => {
     // pass by finding nothing to check.
     const referencing = workflows().filter(w => w.triggersOn.length > 0).map(w => w.file).sort()
 
-    expect(referencing).toEqual(['ci-failure-issue.yml', 'drain-release-queue.yml'])
+    expect(referencing).toEqual(['ci-failure-issue.yml', 'drain-release-queue.yml', 'recover-catalog-publications.yml'])
   })
 })

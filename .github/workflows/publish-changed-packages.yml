@@ -1,8 +1,9 @@
 name: Publish Changed Packages
+run-name: ${{ inputs.request-id && format('catalog:{0}:{1}:{2}:{3}', inputs.request-id, inputs.source-sha, inputs.platform, inputs.verify-tools-only) || 'Publish Changed Packages' }}
 
 # Auto-publish to the pantry registry whenever a commit changes a package's
 # recipe or metadata — including the automated version bumps pushed by
-# `update-packages.yml` (which dispatches this workflow explicitly). Runs
+# `update-packages.yml` (via its durable publication recovery workflow).
 # Download recipes run on Linux; customized source recipes run on native Linux
 # and, when selected, native macOS. Pantry supplies the build tools and each
 # recipe's declared dependency graph. macOS supplies its licensed Apple SDK.
@@ -14,6 +15,14 @@ on:
       - 'packages/ts-pantry/src/packages/**'
   workflow_dispatch:
     inputs:
+      request-id:
+        description: Durable catalog publication request ID (set by recovery)
+        required: false
+        type: string
+      source-sha:
+        description: Exact landed catalog commit to publish (set by recovery)
+        required: false
+        type: string
       platform:
         description: 'Native platforms to publish. Select Linux to repair Linux-only dependencies without starting a macOS source build.'
         required: false
@@ -46,14 +55,10 @@ on:
         type: boolean
 
 concurrency:
-  # Per-RUN group (not per-ref): update-packages.yml dispatches this once per
-  # version-bump commit — often several times an hour. A shared `github.ref`
-  # group collapses them all into ONE queue slot, and each new dispatch cancels
-  # the previously-pending one, so intermediate updates get silently dropped and
-  # never publish. Giving every run its own group lets each version bump publish
-  # independently (each targets a specific, small package set). Accepted versions
-  # are skipped by default; recipe repairs publish distinct package revisions.
-  group: publish-changed-${{ github.run_id }}
+  # Different catalog requests publish independently. Duplicate dispatches of
+  # one request serialize, and accepted artifact identities are skipped. Manual
+  # publications without a request ID keep their own independent run group.
+  group: publish-changed-${{ inputs.request-id || github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -88,6 +93,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.source-sha || github.sha }}
           fetch-depth: 0
 
       - name: Setup Pantry
@@ -105,18 +111,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # PAT-backed updater pushes can fire this trigger. Their durable
+          # requests belong to recovery; avoid a second untracked publication.
+          if [ "${{ github.event_name }}" = "push" ] && \
+            git diff --name-only --diff-filter=A "${{ github.event.before }}" HEAD -- .github/catalog-publications/ | grep -q '\.json$'; then
+            echo "domains=" >> "$GITHUB_OUTPUT"
+            echo "rebuild_existing=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           MANUAL="${{ github.event.inputs.packages }}"
           if [ -n "$MANUAL" ]; then
             DOMAINS=$(echo "$MANUAL" | tr ', ' '\n' | sed '/^$/d')
           else
+            SOURCE="$(git rev-parse HEAD)"
             BEFORE="${{ github.event.before }}"
             # New branch / unknown base ⇒ fall back to the last commit.
-            case "$BEFORE" in ''|0000000000000000000000000000000000000000) BEFORE="${{ github.sha }}~1" ;; esac
+            case "$BEFORE" in ''|0000000000000000000000000000000000000000) BEFORE="${SOURCE}~1" ;; esac
             # Compare parsed version arrays rather than the declaration line.
             # Version lists are multiline, so line-based detection misses the
             # normal case where the updater inserts a new array item.
             DOMAINS=$(bun packages/ts-pantry/scripts/changed-package-domains.ts \
-              "$BEFORE" "${{ github.sha }}")
+              "$BEFORE" "$SOURCE")
           fi
           DOMAINS=$(echo "$DOMAINS" | sed '/^$/d' | sort -u | paste -sd' ' -)
           echo "Detected changed packages: ${DOMAINS:-<none>}"
@@ -169,6 +184,8 @@ jobs:
           - { name: linux-arm64, os: ubuntu-24.04-arm, needs_toolchain: true }
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source-sha || github.sha }}
 
       - name: Setup Pantry
         uses: ./packages/action
@@ -242,6 +259,8 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source-sha || github.sha }}
 
       - name: Setup Pantry
         uses: ./packages/action

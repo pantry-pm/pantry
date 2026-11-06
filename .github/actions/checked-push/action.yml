@@ -85,7 +85,7 @@ runs:
 
           # Record the latest run before dispatch so an older green run on the
           # same SHA cannot satisfy this attempt.
-          if ! CI_AFTER_ID="$(gh api "repos/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=1" --jq '.workflow_runs[0].id // 0')"; then
+          if ! CI_AFTER_ID="$(bun "$CHECKED_PUSH_ACTION_PATH/../../scripts/checked-push-ci.ts" baseline)"; then
             echo "::error::could not read the CI run baseline"
             exit 1
           fi

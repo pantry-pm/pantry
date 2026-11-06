@@ -1,3 +1,5 @@
+import { createGitHubApi } from './github-api'
+
 interface CiRun {
   id: number
   head_sha: string
@@ -19,8 +21,8 @@ interface CheckedCiOptions {
   workflow: string
   afterRunId: number
   checks: string[]
-  read: (path: string) => Promise<unknown>
-  report: (sha: string, check: string, url: string) => Promise<void>
+  read: (path: string, budgetMs: number) => Promise<unknown>
+  report: (sha: string, check: string, url: string, budgetMs: number) => Promise<void>
   now?: () => number
   sleep?: (ms: number) => Promise<void>
   budgetMs?: number
@@ -42,8 +44,9 @@ export async function verifyCheckedPushCi(options: CheckedCiOptions): Promise<nu
   const withinBudget = (): void => {
     if (now() >= deadline) throw new Error(`CI verification timed out for ${sha}`)
   }
+  const remaining = (): number => Math.min(30_000, Math.max(1, deadline - now()))
   while (now() < deadline) {
-    const response = await read(`repos/${repository}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&head_sha=${sha}&per_page=100`) as { workflow_runs: CiRun[] }
+    const response = await read(`repos/${repository}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&head_sha=${sha}&per_page=100`, remaining()) as { workflow_runs: CiRun[] }
     const run = response.workflow_runs.filter(run => run.id > afterRunId
       && run.head_sha === sha && run.head_branch === branch && run.event === 'workflow_dispatch'
       && run.path === `.github/workflows/${workflow}` && run.head_repository.full_name === repository)
@@ -53,7 +56,7 @@ export async function verifyCheckedPushCi(options: CheckedCiOptions): Promise<nu
       const jobs: CiJob[] = []
       for (let page = 1; page <= 10; page++) {
         withinBudget()
-        const result = await read(`repos/${repository}/actions/runs/${run.id}/jobs?per_page=100&page=${page}`) as { total_count: number, jobs: CiJob[] }
+        const result = await read(`repos/${repository}/actions/runs/${run.id}/jobs?per_page=100&page=${page}`, remaining()) as { total_count: number, jobs: CiJob[] }
         jobs.push(...result.jobs)
         if (jobs.length >= result.total_count) break
         if (!result.jobs.length || page === 10) throw new Error('Incomplete staged CI job read-back')
@@ -68,7 +71,8 @@ export async function verifyCheckedPushCi(options: CheckedCiOptions): Promise<nu
       })
       for (const job of verified) {
         withinBudget()
-        await report(sha, job.name, job.html_url)
+        await report(sha, job.name, job.html_url, remaining())
+        withinBudget()
       }
       return run.id
     }
@@ -80,22 +84,22 @@ export async function verifyCheckedPushCi(options: CheckedCiOptions): Promise<nu
 
 if (import.meta.main) {
   const repository = process.env.REPO ?? ''
-  const gh = async (...args: string[]): Promise<string> => {
-    const child = Bun.spawn(['gh', ...args], { stdout: 'pipe', stderr: 'pipe', timeout: 30_000 })
-    const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
-    if (code !== 0) throw new Error(`GitHub API request failed: ${stderr}`)
-    return stdout
+  const api = createGitHubApi({ token: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? '' })
+  if (process.argv[2] === 'baseline') {
+    const response = await api(`repos/${repository}/actions/workflows/${process.env.WORKFLOW ?? 'ci.yml'}/runs?per_page=1`)
+    console.log(response.workflow_runs[0]?.id ?? 0)
+    process.exit(0)
   }
   const runId = await verifyCheckedPushCi({
     repository, sha: process.env.CHECKED_SHA ?? '', branch: process.env.CHECKED_BRANCH ?? '',
     workflow: process.env.WORKFLOW ?? 'ci.yml', afterRunId: Number(process.env.CI_AFTER_ID),
     checks: (process.env.CHECKS ?? '').split(',').map(check => check.trim()),
     budgetMs: Number(process.env.TIMEOUT_MIN) * 60_000,
-    read: async path => JSON.parse(await gh('api', path)),
-    report: async (sha, check, url) => {
-      await gh('api', '--method', 'POST', `repos/${repository}/statuses/${sha}`,
-        '-f', 'state=success', '-f', `context=${check}`, '-f', `target_url=${url}`,
-        '-f', 'description=Passed in verified staged CI')
+    read: (path, budgetMs) => api(path, {}, budgetMs),
+    report: async (sha, check, url, budgetMs) => {
+      await api(`repos/${repository}/statuses/${sha}`, { method: 'POST', body: JSON.stringify({
+        state: 'success', context: check, target_url: url, description: 'Passed in verified staged CI',
+      }) }, budgetMs)
       console.log(`Verified and reported ${check} on ${sha}: ${url}`)
     },
   })

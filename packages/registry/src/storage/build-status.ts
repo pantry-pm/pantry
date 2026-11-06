@@ -154,11 +154,21 @@ const COVERAGE_TTL_MS = 6 * 60 * 60 * 1000
 const UNAVAILABLE_PER_DOMAIN = 50
 const UNAVAILABLE_TOTAL_CAP = 5000
 
+export interface ReleaseClaim {
+  id: string
+  owner: string
+  domains: string[]
+  expiresAt: number
+}
+
+export const RELEASE_CLAIM_TTL_MS: number = 2 * 60 * 60 * 1000
+
 interface PersistedState {
   version: 1
   building: BuildEvent[]
   recent: BuildEvent[]
   queue: string[]
+  claims?: ReleaseClaim[]
   /** Requested-but-missing versions (no source/binary upstream). Persisted. */
   unavailable?: UnavailableVersion[]
 }
@@ -172,6 +182,7 @@ interface PersistedCoverage {
 export class BuildStatusStore {
   private building = new Map<string, BuildEvent>() // key: domain|version|platform
   private recent: BuildEvent[] = [] // newest first
+  private claims = new Map<string, ReleaseClaim>()
   private queue: string[] = [] // domains requested for rebuild (FIFO, deduped)
   // Requested-but-missing versions, de-duplicated by domain|version|platform.
   // Persisted; capped per-domain + overall. Reconciled (entry removed) when the
@@ -347,6 +358,9 @@ export class BuildStatusStore {
       this.building = new Map((state.building || []).filter(e => isValidPackageDomain(e?.domain)).map(e => [this.key(e), e]))
       this.recent = (state.recent || []).filter(e => isValidPackageDomain(e?.domain)).slice(0, RECENT_LIMIT)
       this.queue = (state.queue || []).filter(d => isValidPackageDomain(d))
+      this.claims = new Map((state.claims || []).filter(c => c && typeof c.id === 'string'
+        && typeof c.owner === 'string' && Number.isFinite(c.expiresAt) && Array.isArray(c.domains))
+        .map(c => [c.id, { ...c, domains: c.domains.filter(isValidPackageDomain) }]))
       this.unavailable = new Map(
         (state.unavailable || [])
           .filter(u => u && isValidPackageDomain(u.domain) && u.version && u.platform)
@@ -382,6 +396,7 @@ export class BuildStatusStore {
       building: [...this.building.values()],
       recent: this.recent.slice(0, RECENT_LIMIT),
       queue: this.queue,
+      claims: [...this.claims.values()],
       unavailable: [...this.unavailable.values()],
     }
   }
@@ -611,8 +626,45 @@ export class BuildStatusStore {
     return true
   }
 
-  getQueue(): string[] {
+  private expireClaims(now: number): void {
+    for (const [id, claim] of this.claims) {
+      if (claim.expiresAt > now) continue
+      this.queue = [...new Set([...claim.domains, ...this.queue])]
+      this.claims.delete(id)
+      this.snapshot.scheduleSave()
+    }
+  }
+
+  getQueue(now: number = Date.now()): string[] {
+    this.expireClaims(now)
     return [...this.queue]
+  }
+
+  /** Lease notifications; a crash or failed run returns them to the queue. */
+  claimQueue(owner: string, now: number = Date.now()): ReleaseClaim | null {
+    this.assertHydrated()
+    this.expireClaims(now)
+    const existing = [...this.claims.values()].find(c => c.owner === owner)
+    if (existing) return structuredClone(existing)
+    if (!this.queue.length) return null
+    const claim = { id: crypto.randomUUID(), owner, domains: [...this.queue], expiresAt: now + RELEASE_CLAIM_TTL_MS }
+    this.claims.set(claim.id, claim)
+    this.queue = []
+    this.snapshot.scheduleSave()
+    this.emit()
+    return structuredClone(claim)
+  }
+
+  /** ACK only this lease; notifications received while it ran remain queued. */
+  acknowledgeClaim(id: string, now: number = Date.now()): boolean {
+    this.assertHydrated()
+    this.expireClaims(now)
+    const acknowledged = this.claims.delete(id)
+    if (acknowledged) {
+      this.snapshot.scheduleSave()
+      this.emit()
+    }
+    return acknowledged
   }
 
   /** Remove domains from the queue (called once a build run has claimed them). */
@@ -634,7 +686,7 @@ export class BuildStatusStore {
     return {
       building: [...this.building.values()].sort((a, b) => b.ts - a.ts),
       recent: this.recent.slice(0, 100),
-      queue: [...this.queue],
+      queue: this.getQueue(),
     }
   }
 

@@ -22,8 +22,8 @@ name: Drain Release Queue
 #
 # So this runs often and does almost nothing: one unauthenticated GET, and on
 # the rare tick where the queue is non-empty, one dispatch. It does NOT claim.
-# Claiming empties the queue, and the run that empties it should be the run that
-# acts on it — otherwise a dispatch that fails to start loses the domains.
+# The consuming run leases notifications and acknowledges them only after its
+# work is safely recorded. A failed dispatch leaves every notification queued.
 #
 # This is still a scheduled workflow and still subject to the same throttling.
 # The denser cron is deliberate: `build-orchestrator.yml` declares `*/30` and is
@@ -70,10 +70,10 @@ on:
   # which is rare and only fires when something is already broken, and this
   # workflow itself.
   #
-  # `Update Packages` is in the list and cannot loop. The run this dispatches
-  # claims the queue, so the tick that its completion causes finds the queue
-  # empty and dispatches nothing. The chain is at most two deep, and the second
-  # link is the one that catches a release queued while the first was running.
+  # The consumer's successful completion catches releases queued while it ran.
+  # Its failed completion is excluded below: a failure before leasing (such as
+  # a registry outage) must not immediately dispatch another identical failure.
+  # The schedule and other workflow completions remain the retry backstop.
   workflow_run:
     types: [completed]
     workflows:
@@ -101,6 +101,10 @@ permissions:
 
 jobs:
   drain:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.name != 'Update Packages' ||
+      github.event.workflow_run.conclusion == 'success'
     name: Dispatch a refresh if anything is queued
     runs-on: ubuntu-latest
     timeout-minutes: 5
