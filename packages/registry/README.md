@@ -158,9 +158,12 @@ read access does not expand.
 
 HTTP clients opt in with `X-Pantry-Verify-Existing: true` on either upload format.
 Success returns HTTP200 with `action: "verified-existing"` and an archive or
-payload SHA256 verification method. File contents, names, permissions, symlink
-targets and non-portable extended attributes remain part of identity. Packaging
-timestamps, ownership, entry order and compression may differ. Verification is
+payload SHA256 verification method. File contents, names, installed permissions,
+symlink targets and non-portable extended attributes remain part of identity.
+`payload-sha256-v2` excludes the synthetic `package/` wrapper directory that the
+native installer strips; its caller-umask-dependent metadata is not installed.
+Nested directory permissions remain part of identity. Packaging timestamps,
+ownership, entry order and compression may differ. Verification is
 bounded by the package archive limits and rejects ambiguous archives. Different
 or unverifiable payloads return409; unavailable stored bytes return503. No
 artifact, metadata, visibility, scan or download counter is changed.

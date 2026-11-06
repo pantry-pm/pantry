@@ -92,10 +92,13 @@ export async function publicationPayloadDigest(bytes: ArrayBuffer, options: Publ
   const paths = new Set<string>()
   // Store fixed-size hashes rather than attacker-controlled names or contents.
   const entries: string[] = []
+  let packageWrapper = true
+  let wrapperEntry: string | undefined
   let files = 0
   unpack.on('entry', (header, stream, next) => {
     void (async () => {
       const name = packagePath(header.name, header.type === 'directory')
+      if (name !== 'package' && !name.startsWith('package/')) packageWrapper = false
       const pathHash = createHash('sha256').update(name).digest('hex')
       if (paths.has(pathHash)) throw new Error('Publication archive contains a duplicate path')
       paths.add(pathHash)
@@ -126,13 +129,20 @@ export async function publicationPayloadDigest(bytes: ArrayBuffer, options: Publ
       }
       if (actualSize !== size) throw new Error('Publication archive entry is truncated')
       if (type === 'file') files++
-      entries.push(digest.digest('hex'))
+      const entry = digest.digest('hex')
+      if (name === 'package' && type === 'directory') wrapperEntry = entry
+      else entries.push(entry)
       next()
     })().catch(error => unpack.destroy(error instanceof Error ? error : new Error(String(error))))
   })
   await pipeline(Readable.from(Buffer.from(bytes)), createGunzip(), framing(maxBytes), unpack, { signal: options.signal })
   if (!files) throw new Error('Publication archive contains no regular files')
-  return createHash('sha256').update('pantry-payload-v1\0').update(entries.sort().join('\n')).digest('hex')
+  // Native installation strips one leading component. The packer's synthetic
+  // package/ directory is never installed, and its mode depends on the caller's
+  // umask. Keep every installed directory's metadata, including package/ when
+  // it is an actual directory beside other top-level content.
+  if (!packageWrapper && wrapperEntry) entries.push(wrapperEntry)
+  return createHash('sha256').update('pantry-payload-v2\0').update(entries.sort().join('\n')).digest('hex')
 }
 
 /** Called only after publish authentication, ownership and artifact-size checks. */
@@ -162,7 +172,7 @@ export async function verifyExistingPublication(
       const expected = await publicationPayloadDigest(existing, { signal })
       payloadSha256 = await publicationPayloadDigest(candidate, { signal })
       if (payloadSha256 !== expected) return conflict()
-      verification = 'payload-sha256-v1'
+      verification = 'payload-sha256-v2'
     }
     catch { return conflict() }
   }

@@ -26,6 +26,22 @@ test('ignores portable ownership and time metadata while retaining root director
   expect(await publicationPayloadDigest(await archive([root, file]))).toBe(await publicationPayloadDigest(await archive([{ ...file, uid: 1001, gid: 1001, mtime: new Date(1_000_000) }, root])))
 })
 
+test('ignores the synthetic package wrapper stripped by the native installer', async () => {
+  const wrapped = { ...file, name: `package/${file.name}` }
+  const root: Entry = { name: 'package/', type: 'directory', mode: 0o700 }
+  const expected = await publicationPayloadDigest(await archive([root, wrapped]))
+  expect(await publicationPayloadDigest(await archive([{ ...root, mode: 0o755 }, wrapped]))).toBe(expected)
+  expect(await publicationPayloadDigest(await archive([wrapped]))).toBe(expected)
+})
+
+test('retains nested directories and package directories beside other top-level content', async () => {
+  const root: Entry = { name: 'package/', type: 'directory', mode: 0o700 }
+  expect(await publicationPayloadDigest(await archive([root, file]))).not.toBe(await publicationPayloadDigest(await archive([{ ...root, mode: 0o755 }, file])))
+  const wrapped = { ...file, name: `package/${file.name}` }
+  const directory: Entry = { name: 'package/source/', type: 'directory', mode: 0o700 }
+  expect(await publicationPayloadDigest(await archive([root, directory, wrapped]))).not.toBe(await publicationPayloadDigest(await archive([root, { ...directory, mode: 0o755 }, wrapped])))
+})
+
 test('retains non-portable PAX attributes and ignores only declared portable metadata', async () => {
   const plain = await publicationPayloadDigest(await archive([file]))
   expect(await publicationPayloadDigest(await archive([{ ...file, pax: { mtime: '1000', uid: '1001' } }]))).toBe(plain)

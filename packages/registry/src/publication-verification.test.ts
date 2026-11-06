@@ -25,8 +25,9 @@ async function responseBody(response: Response): Promise<Record<string, unknown>
   return value
 }
 
-async function archive(options: { revision?: string, mode?: number, link?: string, repack?: boolean, public?: boolean } = {}): Promise<Uint8Array<ArrayBuffer>> {
+async function archive(options: { revision?: string, mode?: number, link?: string, repack?: boolean, public?: boolean, wrapperMode?: number } = {}): Promise<Uint8Array<ArrayBuffer>> {
   const output = pack()
+  if (options.wrapperMode !== undefined) output.entry({ name: 'package/', type: 'directory', mode: options.wrapperMode, mtime: new Date(0) })
   const entries = [
     { name: 'package/pantry.json', body: JSON.stringify({ name: NAME, version: VERSION, publishConfig: options.public ? { access: 'public' } : PRIVATE }) },
     { name: 'package/platform.json', body: JSON.stringify({ revision: options.revision || 'source-alpha' }) },
@@ -128,8 +129,17 @@ describe('immutable publication verification over HTTP', () => {
     expect(response.status).toBe(200)
     const body = await responseBody(response)
     expect(body.action).toBe('verified-existing')
-    expect(body.verification).toBe('payload-sha256-v1')
+    expect(body.verification).toBe('payload-sha256-v2')
     expect(body.visibility).toBe('private')
+    expect(await registry.getPublisherPackageRecord(NAME)).toEqual(before)
+  })
+
+  test('verifies repacking across caller umasks without changing installed permissions', async () => {
+    expect((await publish(await archive({ wrapperMode: 0o700 }))).status).toBe(201)
+    const before = structuredClone(await registry.getPublisherPackageRecord(NAME))
+    const response = await publish(await archive({ wrapperMode: 0o755 }))
+    expect(response.status).toBe(200)
+    expect((await responseBody(response)).verification).toBe('payload-sha256-v2')
     expect(await registry.getPublisherPackageRecord(NAME)).toEqual(before)
   })
 
