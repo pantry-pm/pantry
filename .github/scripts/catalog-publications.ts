@@ -55,7 +55,7 @@ export async function pendingPublications(cwd: string): Promise<Array<Publicatio
 }
 
 /** Commit the handoff with the metadata, closing the crash-after-push gap. */
-export async function preparePublications(cwd: string, id: string): Promise<void> {
+export async function preparePublications(cwd: string, id: string, claimedDomains: string[] = []): Promise<void> {
   if (!/^[0-9]+-[0-9]+$/.test(id)) throw new Error('Expected workflow run ID and attempt')
   const directory = join(cwd, publicationDirectory)
   await mkdir(directory, { recursive: true })
@@ -79,6 +79,18 @@ export async function preparePublications(cwd: string, id: string): Promise<void
     const before = exists ? git(cwd, 'show', `HEAD:${path}`) : null
     if (versionsChanged(before, after)) domains.add(domain)
   }
+  // A rebuild notification is work even if a previous run already recorded
+  // the version. Hand it off durably before acknowledging the release lease.
+  const requested = new Set(claimedDomains)
+  if ([...requested].some(domain => !/^[a-zA-Z0-9._/-]{1,128}$/.test(domain)))
+    throw new Error('Invalid claimed publication domain')
+  for (const file of new Bun.Glob('**/*.ts').scanSync({ cwd: join(cwd, root), onlyFiles: true })) {
+    if (!requested.size) break
+    if (file.startsWith('apps/') || file.startsWith('fonts/')) continue
+    const domain = packageDomain(await readFile(join(cwd, root, file), 'utf8'))
+    if (domain && requested.delete(domain)) domains.add(domain)
+  }
+  if (requested.size) throw new Error(`No portable package metadata for claimed releases: ${[...requested].join(', ')}`)
   if (domains.size) {
     const publication = { id, domains: [...domains].sort() }
     await writeFile(join(directory, `${id}.json`), `${JSON.stringify(publication, null, 2)}\n`, { flag: 'wx' })
@@ -124,7 +136,7 @@ export async function recoverPublication(publication: Publication & { sha: strin
 
 if (import.meta.main) {
   const cwd = process.cwd()
-  if (process.argv[2] === 'prepare') await preparePublications(cwd, `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`)
+  if (process.argv[2] === 'prepare') await preparePublications(cwd, `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`, (process.env.CLAIMED_DOMAINS ?? '').split(/\s+/).filter(Boolean))
   else {
     const repository = process.env.GITHUB_REPOSITORY ?? ''
     if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error('Expected repository')

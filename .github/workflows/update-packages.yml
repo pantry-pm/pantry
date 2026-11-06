@@ -169,6 +169,8 @@ jobs:
         run: bun run --cwd packages/action build
 
       - name: Prepare durable publication requests
+        env:
+          CLAIMED_DOMAINS: ${{ steps.claimed.outputs.domains }}
         run: bun .github/scripts/catalog-publications.ts prepare
 
       - name: Check for changes
