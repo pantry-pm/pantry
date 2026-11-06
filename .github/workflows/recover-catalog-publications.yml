@@ -11,6 +11,10 @@ on:
     types: [completed]
   workflow_dispatch:
     inputs:
+      publisher-run:
+        description: Publisher run to await before confirming its durable request
+        required: false
+        type: string
       retry-failed:
         description: Retry requests that exhausted their three automatic attempts after inspecting build diagnostics
         type: boolean
@@ -43,6 +47,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           RETRY_FAILED: ${{ inputs.retry-failed }}
+          PUBLISHER_RUN: ${{ inputs.publisher-run }}
         run: bun .github/scripts/catalog-publications.ts recover
       - name: discord-failure-alert
         if: failure()
