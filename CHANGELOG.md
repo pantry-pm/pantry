@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.171...v0.11.172)
+
+## ✨ Features
+
+- verify immutable publication retries through the native CLI ([9e1d8d3](https://github.com/pantry-pm/pantry/commit/9e1d8d3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.172 ([842976e](https://github.com/pantry-pm/pantry/commit/842976e)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.170...v0.11.171)
 
 ## 🐛 Bug Fixes
