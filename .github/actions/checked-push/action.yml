@@ -5,7 +5,7 @@ description: >-
 
 inputs:
   token:
-    description: "GitHub token with contents and actions write."
+    description: "GitHub token with contents, actions and statuses write."
     required: true
   branch-prefix:
     description: "Branch namespace used to stage the commit for checking."
@@ -32,22 +32,14 @@ outputs:
 runs:
   using: composite
   steps:
-    # A bot cannot push straight to the default branch: the ruleset requires
-    # the CI contexts there, and `github-actions[bot]` holds no repository role
-    # to be excused by, so the push comes back GH013 saying the checks are
-    # "expected" — meaning it looked on the commit and found none reported.
-    #
-    # So report them. The commit is staged on a branch, CI is dispatched at it,
-    # and the default branch is pushed only once the required contexts are
-    # green on that exact SHA. Nothing is excused from anything: the generated
-    # catalog now passes the same checks as everything else, and the repository
-    # needs no new permission for it — notably not "Actions may create and
-    # approve pull requests", which going through a pull request would have
-    # required and which also grants approval.
+    # workflow_dispatch jobs do not satisfy branch rules, even when green.
+    # Verify the dispatched CI run, then publish its verdict as commit statuses.
+    # https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks
     - name: Push once the checks pass
       id: land
       shell: bash
       env:
+        CHECKED_PUSH_ACTION_PATH: ${{ github.action_path }}
         GH_TOKEN: ${{ inputs.token }}
         REPO: ${{ github.repository }}
         BASE: ${{ github.event.repository.default_branch || 'main' }}
@@ -78,38 +70,6 @@ runs:
           git push origin --delete "$ref" >/dev/null 2>&1
         done
 
-        await_checks() {
-          local sha="$1" deadline passed failed line status want runs
-          IFS=',' read -ra WANTED <<< "$CHECKS"
-          deadline=$(( $(date +%s) + TIMEOUT_MIN * 60 ))
-          while :; do
-            if [ "$(date +%s)" -ge "$deadline" ]; then
-              echo "::error::${CHECKS} did not all report on ${sha} within ${TIMEOUT_MIN}m"
-              return 1
-            fi
-            runs="$(gh api "repos/${REPO}/commits/${sha}/check-runs?per_page=100" \
-              --jq '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion // "")"' 2>/dev/null)"
-            passed=0
-            failed=''
-            for want in "${WANTED[@]}"; do
-              line="$(printf '%s\n' "$runs" | awk -F'\t' -v n="$want" '$1 == n { print; exit }')"
-              [ -n "$line" ] || continue
-              status="$(printf '%s' "$line" | cut -f2)"
-              [ "$status" = "completed" ] || continue
-              case "$(printf '%s' "$line" | cut -f3)" in
-                success|skipped|neutral) passed=$((passed + 1)) ;;
-                *) failed="${failed:+$failed, }${want}" ;;
-              esac
-            done
-            if [ -n "$failed" ]; then
-              echo "::error::required checks failed on generated output: ${failed} (branch ${BRANCH} kept for inspection)"
-              return 1
-            fi
-            [ "$passed" -eq "${#WANTED[@]}" ] && return 0
-            sleep 20
-          done
-        }
-
         # Two passes, because the default branch can move while CI runs. A
         # rebase produces a new commit, and a new commit has no checks on it,
         # so the rebased commit has to be checked over again rather than
@@ -123,12 +83,21 @@ runs:
             exit 1
           fi
 
+          # Record the latest run before dispatch so an older green run on the
+          # same SHA cannot satisfy this attempt.
+          if ! CI_AFTER_ID="$(gh api "repos/${REPO}/actions/workflows/${WORKFLOW}/runs?per_page=1" --jq '.workflow_runs[0].id // 0')"; then
+            echo "::error::could not read the CI run baseline"
+            exit 1
+          fi
+
           if ! gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$BRANCH"; then
             echo "::error::could not dispatch ${WORKFLOW} at ${BRANCH}; nothing would report on ${SHA}"
             exit 1
           fi
 
-          await_checks "$SHA" || exit 1
+          export CI_AFTER_ID
+          CHECKED_SHA="$SHA" CHECKED_BRANCH="$BRANCH" \
+            bun "$CHECKED_PUSH_ACTION_PATH/../../scripts/checked-push-ci.ts" || exit 1
 
           if git push origin "HEAD:refs/heads/${BASE}"; then
             echo "landed=true" >> "$GITHUB_OUTPUT"
@@ -137,8 +106,16 @@ runs:
             exit 0
           fi
 
+          if ! git fetch origin "$BASE"; then
+            echo "::error::could not read ${BASE} after the rejected push"
+            exit 1
+          fi
+          if git merge-base --is-ancestor "origin/${BASE}" HEAD; then
+            echo "::error::push rejected although ${BASE} has not moved; inspect the repository rule evaluation"
+            exit 1
+          fi
           echo "${BASE} moved while the checks ran; rebasing and checking again"
-          if ! git fetch origin "$BASE" || ! git rebase "origin/${BASE}"; then
+          if ! git rebase "origin/${BASE}"; then
             git rebase --abort >/dev/null 2>&1
             echo "::error::could not rebase onto ${BASE}"
             exit 1

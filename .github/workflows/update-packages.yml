@@ -44,7 +44,8 @@ on:
 
 concurrency:
   group: update-packages
-  cancel-in-progress: true
+  # A queue-drain dispatch must not cancel a sweep or discard claimed releases.
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -53,11 +54,12 @@ jobs:
   update-packages:
     name: Update packages and index
     runs-on: ubuntu-latest
-    # Covers the sweep plus the wait for CI to report on the pull request.
-    timeout-minutes: 80
+    # Covers generation and two CI passes if main moves during checking.
+    timeout-minutes: 100
     permissions:
       contents: write
       actions: write
+      statuses: write
 
     steps:
       - name: Checkout repository

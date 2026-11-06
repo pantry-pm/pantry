@@ -145,6 +145,7 @@ jobs:
     permissions:
       contents: write
       actions: write
+      statuses: write
     if: >-
       always() &&
       needs.publish-ubuntu.result == 'success' &&
