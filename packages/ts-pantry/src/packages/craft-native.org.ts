@@ -3,7 +3,7 @@
  *
  * @domain `craft-native.org`
  * @programs `craft`
- * @version `0.0.424` (218 versions available)
+ * @version `0.0.481` (231 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install craft-native.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "craft"
  * console.log(pkg.description) // "Build desktop apps with web languages, powered by Zig"
  * console.log(pkg.programs)    // ["craft"]
- * console.log(pkg.versions[0]) // "0.0.424" (latest)
+ * console.log(pkg.versions[0]) // "0.0.481" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/craft-native-org.md
@@ -71,6 +71,19 @@ export const craftPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.0.481',
+    '0.0.476',
+    '0.0.475',
+    '0.0.471',
+    '0.0.467',
+    '0.0.464',
+    '0.0.451',
+    '0.0.449',
+    '0.0.446',
+    '0.0.443',
+    '0.0.442',
+    '0.0.436',
+    '0.0.435',
     '0.0.424',
     '0.0.423.1',
     '0.0.423',

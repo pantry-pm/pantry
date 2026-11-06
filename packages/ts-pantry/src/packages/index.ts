@@ -4743,6 +4743,7 @@ export interface Pantry {
   appstreamcli: typeof freedesktoporgappstreamPackage
   apptainer: typeof apptainerorgPackage
   apr: typeof apacheorgaprPackage
+  'apr-util': typeof apacheorgaprutilPackage
   arc: typeof arcnetPackage
   Arc: typeof arcnetPackage
   'arduino-cli': typeof arduinogithubioarduinocliPackage
@@ -6364,6 +6365,7 @@ export interface Pantry {
   wayland: typeof waylandfreedesktoporgPackage
   'wayland-protocols': typeof waylandfreedesktoporgprotocolsPackage
   webhook: typeof webhookPackage
+  webkitgtk: typeof webkitgtkorgPackage
   webp: typeof googlecomwebpPackage
   werf: typeof werfioPackage
   wezterm: typeof wezfurlongorgweztermPackage
@@ -9452,6 +9454,7 @@ export const pantry: Pantry = {
   appstreamcli: freedesktoporgappstreamPackage,
   apptainer: apptainerorgPackage,
   apr: apacheorgaprPackage,
+  'apr-util': apacheorgaprutilPackage,
   arc: arcnetPackage,
   Arc: arcnetPackage,
   'arduino-cli': arduinogithubioarduinocliPackage,
@@ -11073,6 +11076,7 @@ export const pantry: Pantry = {
   wayland: waylandfreedesktoporgPackage,
   'wayland-protocols': waylandfreedesktoporgprotocolsPackage,
   webhook: webhookPackage,
+  webkitgtk: webkitgtkorgPackage,
   webp: googlecomwebpPackage,
   werf: werfioPackage,
   wezterm: wezfurlongorgweztermPackage,

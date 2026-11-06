@@ -3,7 +3,7 @@
  *
  * @domain `google.com/chrome`
  * @programs `google-chrome-stable`
- * @version `156.0.8078.80` (5 versions available)
+ * @version `157.0.8103.38` (6 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install google.com/chrome`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "chrome-for-testing"
  * console.log(pkg.description) // "Versioned Chrome for server browser automation"
  * console.log(pkg.programs)    // ["google-chrome-stable"]
- * console.log(pkg.versions[0]) // "156.0.8078.80" (latest)
+ * console.log(pkg.versions[0]) // "157.0.8103.38" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/google-com/chrome.md
@@ -95,6 +95,7 @@ export const googlecomchromePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '157.0.8103.38',
     '156.0.8078.80',
     '156.0.8078.73',
     '156.0.8078.47',

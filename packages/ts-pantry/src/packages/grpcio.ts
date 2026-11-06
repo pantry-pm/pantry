@@ -3,7 +3,7 @@
  *
  * @domain `grpc.io`
  * @programs `grpc_csharp_plugin`, `grpc_node_plugin`, `grpc_cpp_plugin`, `grpc_python_plugin`, `grpc_objective_c_plugin`, ... (+3 more)
- * @version `1.85.1` (43 versions available)
+ * @version `1.85.1` (47 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install grpc.io`
@@ -98,14 +98,18 @@ export const grpcioPackage = {
     '1.84.2',
     '1.84.1',
     '1.84.0',
+    '1.83.2',
     '1.83.1',
     '1.83.0',
+    '1.82.3',
     '1.82.2',
     '1.82.1',
     '1.82.0',
     '1.81.1',
     '1.81.0',
+    '1.80.1',
     '1.80.0',
+    '1.78.2',
     '1.78.1',
     '1.78.0',
     '1.76.0',

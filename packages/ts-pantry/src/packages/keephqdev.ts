@@ -3,7 +3,7 @@
  *
  * @domain `keephq.dev`
  * @programs `keep`
- * @version `0.54.3` (57 versions available)
+ * @version `0.55.0` (58 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install keephq.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "keep"
  * console.log(pkg.description) // "The open-source AIOps and alert management plat..."
  * console.log(pkg.programs)    // ["keep"]
- * console.log(pkg.versions[0]) // "0.54.3" (latest)
+ * console.log(pkg.versions[0]) // "0.55.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/keephq-dev.md
@@ -67,6 +67,7 @@ export const keephqdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.55.0',
     '0.54.3',
     '0.54.2',
     '0.54.1',

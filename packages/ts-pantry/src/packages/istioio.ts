@@ -3,7 +3,7 @@
  *
  * @domain `istio.io`
  * @programs `istioctl`
- * @version `1.31.3` (61 versions available)
+ * @version `1.31.4` (63 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install istio.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "istioctl"
  * console.log(pkg.description) // "Connect, secure, control, and observe services."
  * console.log(pkg.programs)    // ["istioctl"]
- * console.log(pkg.versions[0]) // "1.31.3" (latest)
+ * console.log(pkg.versions[0]) // "1.31.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/istio-io.md
@@ -67,10 +67,12 @@ export const istioioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.31.4',
     '1.31.3',
     '1.31.2',
     '1.31.1',
     '1.31.0',
+    '1.30.8',
     '1.30.7',
     '1.30.6',
     '1.30.5',

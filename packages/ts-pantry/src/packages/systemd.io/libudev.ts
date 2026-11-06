@@ -2,7 +2,7 @@
  * **libudev** - Native libudev shared library and development interface.
  *
  * @domain `systemd.io/libudev`
- * @version `262.1` (20 versions available)
+ * @version `262.2` (22 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install systemd.io/libudev`
@@ -16,7 +16,7 @@
  * const pkg = pantry.systemdiolibudev
  * console.log(pkg.name)        // "libudev"
  * console.log(pkg.description) // "Native libudev shared library and development i..."
- * console.log(pkg.versions[0]) // "262.1" (latest)
+ * console.log(pkg.versions[0]) // "262.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/systemd-io/libudev.md
@@ -67,8 +67,10 @@ export const libudevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '262.2',
     '262.1',
     '262',
+    '261.5',
     '261.4',
     '261.3',
     '261.2',

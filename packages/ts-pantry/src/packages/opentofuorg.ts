@@ -3,7 +3,7 @@
  *
  * @domain `opentofu.org`
  * @programs `tofu`
- * @version `1.13.2` (58 versions available)
+ * @version `1.13.9` (61 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install opentofu.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "tofu"
  * console.log(pkg.description) // "OpenTofu lets you declaratively manage your clo..."
  * console.log(pkg.programs)    // ["tofu"]
- * console.log(pkg.versions[0]) // "1.13.2" (latest)
+ * console.log(pkg.versions[0]) // "1.13.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/opentofu-org.md
@@ -75,9 +75,12 @@ export const opentofuorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.13.9',
+    '1.13.8',
     '1.13.2',
     '1.13.1',
     '1.13.0',
+    '1.12.12',
     '1.12.11',
     '1.12.9',
     '1.12.8',

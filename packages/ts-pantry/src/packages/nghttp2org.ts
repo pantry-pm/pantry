@@ -2,7 +2,7 @@
  * **nghttp2** - nghttp2 - HTTP/2 C Library and tools
  *
  * @domain `nghttp2.org`
- * @version `1.70.0` (50 versions available)
+ * @version `1.71.0` (51 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install nghttp2.org`
@@ -15,7 +15,7 @@
  * const pkg = pantry.nghttp2org
  * console.log(pkg.name)        // "nghttp2"
  * console.log(pkg.description) // "nghttp2 - HTTP/2 C Library and tools"
- * console.log(pkg.versions[0]) // "1.70.0" (latest)
+ * console.log(pkg.versions[0]) // "1.71.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/nghttp2-org.md
@@ -52,6 +52,7 @@ export const nghttp2orgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.71.0',
     '1.70.0',
     '1.69.0',
     '1.68.1',

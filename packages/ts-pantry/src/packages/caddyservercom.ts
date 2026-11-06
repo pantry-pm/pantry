@@ -3,7 +3,7 @@
  *
  * @domain `caddyserver.com`
  * @programs `caddy`
- * @version `2.11.7` (37 versions available)
+ * @version `2.11.9` (39 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install caddyserver.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "caddy"
  * console.log(pkg.description) // "Fast and extensible multi-platform HTTP/1-2-3 w..."
  * console.log(pkg.programs)    // ["caddy"]
- * console.log(pkg.versions[0]) // "2.11.7" (latest)
+ * console.log(pkg.versions[0]) // "2.11.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/caddyserver-com.md
@@ -68,6 +68,8 @@ export const caddyservercomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.9',
+    '2.11.8',
     '2.11.7',
     '2.11.6',
     '2.11.4',

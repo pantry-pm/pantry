@@ -2,7 +2,7 @@
  * **zlib** - A massively spiffy yet delicately unobtrusive compression library.
  *
  * @domain `zlib.net`
- * @version `1.3.2` (5 versions available)
+ * @version `1.4` (7 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zlib.net`
@@ -15,7 +15,7 @@
  * const pkg = pantry.zlibnet
  * console.log(pkg.name)        // "zlib"
  * console.log(pkg.description) // "A massively spiffy yet delicately unobtrusive c..."
- * console.log(pkg.versions[0]) // "1.3.2" (latest)
+ * console.log(pkg.versions[0]) // "1.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/zlib-net.md
@@ -52,6 +52,7 @@ export const zlibnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4',
     '1.3.2',
     '1.3.1',
     '1.3',
