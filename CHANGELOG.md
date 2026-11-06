@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.172...v0.11.173)
+
+## 🐛 Bug Fixes
+
+- compare installed payloads independently of archive wrapper modes ([73d6b28](https://github.com/pantry-pm/pantry/commit/73d6b28)) _(by Chris <chrisbreuer93@gmail.com>)_
+- observe clamd responses throughout artifact uploads ([2e670bc](https://github.com/pantry-pm/pantry/commit/2e670bc)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.173 ([ae42dd2](https://github.com/pantry-pm/pantry/commit/ae42dd2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.171...v0.11.172)
 
 ## ✨ Features
