@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.174...v0.11.175)
+
+## 🐛 Bug Fixes
+
+- retain project Typesense credentials across service restarts ([4a26423](https://github.com/pantry-pm/pantry/commit/4a26423)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.175 ([037ef75](https://github.com/pantry-pm/pantry/commit/037ef75)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.173...v0.11.174)
 
 ## 🐛 Bug Fixes
