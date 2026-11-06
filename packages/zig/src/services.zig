@@ -5,6 +5,7 @@ pub const platform = @import("services/platform.zig");
 pub const manager = @import("services/manager.zig");
 pub const logs = @import("services/logs.zig");
 pub const ports = @import("services/ports.zig");
+pub const environment = @import("services/environment.zig");
 
 // Re-export main types
 pub const ServiceConfig = definitions.ServiceConfig;

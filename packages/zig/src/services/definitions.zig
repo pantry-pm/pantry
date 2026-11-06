@@ -1995,11 +1995,12 @@ pub const Services = struct {
         io_helper.makePath(data_dir) catch {};
 
         // typesense-server refuses to start without an api key. Honor
-        // TYPESENSE_API_KEY from the environment (carried into the generated
+        // TYPESENSE_API_KEY from the environment or the scoped project's .env
+        // (carried into the generated
         // unit as an Environment= line, which typesense-server reads
         // natively — keeps the key off the command line) and fall back to a
         // local dev default so config-driven setups work out of the box.
-        const api_key = io_helper.getEnvVarOwned(allocator, "TYPESENSE_API_KEY") catch null;
+        const api_key = try @import("environment.zig").get(allocator, "TYPESENSE_API_KEY", project_root);
         const have_real_key = api_key != null and api_key.?.len > 0;
         if (have_real_key) {
             try env_vars.put("TYPESENSE_API_KEY", api_key.?);

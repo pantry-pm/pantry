@@ -18,6 +18,18 @@ Service management in pantry includes:
 
 ## Quick Start
 
+### Typesense credentials
+
+A project-scoped Typesense service reads `TYPESENSE_API_KEY` from the process
+environment first, then the project's local `.env`. Use the same key in your
+application. `pantry start typesense`, `pantry restart typesense` and autostart
+then keep the configured key without a shell wrapper. The generated service
+unit carries only that key, never the rest of your application's environment;
+the key stays out of the command line. Keep `.env` out of version control.
+
+`pantry services:ports` shows the API port assigned to this project. Point the
+application at that port; the service's peering port is assigned alongside it.
+
 ### MySQL project isolation
 
 When run inside a project, MySQL uses that project's hashed data directory and
