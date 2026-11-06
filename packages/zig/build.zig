@@ -504,6 +504,9 @@ pub fn build(b: *std.Build) void {
     const install_routing_step = b.step("test:install-routing", "Infer desktop package kinds without changing project installs");
     const install_routing_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "desktop routing", "an explicit kind retains control" } });
     install_routing_step.dependOn(&b.addRunArtifact(install_routing_tests).step);
+    const zig_resolution_step = b.step("test:zig-resolution", "Resolve Zig prereleases deterministically and preserve registry failures");
+    const zig_resolution_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "Zig prerelease ranges", "Zig resolution only" } });
+    zig_resolution_step.dependOn(&b.addRunArtifact(zig_resolution_tests).step);
     const materialization_test_step = b.step("test:materialization", "Run native install ownership and publication failure regressions");
     const focused_materialization_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"native materialization:"} });
     materialization_test_step.dependOn(&b.addRunArtifact(focused_materialization_tests).step);

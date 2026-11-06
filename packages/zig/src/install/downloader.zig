@@ -241,6 +241,10 @@ fn isShortDevVersion(version: []const u8) bool {
 ///   - Short dev like "0.16.0-dev" → full dev version (e.g. "0.16.0-dev.1484+d0ba6642b")
 ///   - Anything else → returned as-is
 pub fn resolveZigDevVersion(allocator: std.mem.Allocator, version: []const u8) ![]const u8 {
+    return resolveZigVersionUsing(allocator, version, lookupS3Registry, lookupZiglangIndexVersion);
+}
+
+fn resolveZigVersionUsing(allocator: std.mem.Allocator, version: []const u8, comptime registry: anytype, comptime upstream: anytype) ![]const u8 {
     const semver = @import("../packages/semver.zig");
     const is_wildcard = std.mem.eql(u8, version, "*") or std.mem.eql(u8, version, "latest");
     const is_short_dev = isShortDevVersion(version);
@@ -248,12 +252,12 @@ pub fn resolveZigDevVersion(allocator: std.mem.Allocator, version: []const u8) !
 
     if (!is_wildcard and !is_short_dev and !is_range) return allocator.dupe(u8, version);
 
-    if (try lookupS3Registry(allocator, "ziglang.org", version)) |result| {
+    if (try registry(allocator, "ziglang.org", version)) |result| {
         allocator.free(result.tarball_url);
         return result.version;
     }
 
-    if (lookupZiglangIndexVersion(allocator, version)) |resolved| return resolved;
+    if (upstream(allocator, version)) |resolved| return resolved;
 
     return allocator.dupe(u8, version);
 }
@@ -478,7 +482,11 @@ pub fn lookupS3Registry(
         style.print("  Registry metadata HTTP {d} for {s}\n", .{ response.status, domain });
         return if (response.status == 401 or response.status == 403) error.RegistryAuthenticationRequired else error.RegistryUnavailable;
     }
-    const parsed = std.json.parseFromSlice(std.json.Value, allocator, response.body, .{}) catch return error.InvalidRegistryMetadata;
+    return selectS3RegistryMetadata(allocator, version_constraint, response.body);
+}
+
+fn selectS3RegistryMetadata(allocator: std.mem.Allocator, version_constraint: []const u8, metadata: []const u8) !?S3PackageResult {
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, metadata, .{}) catch return error.InvalidRegistryMetadata;
     defer parsed.deinit();
     const root = parsed.value;
     if (root != .object) return error.InvalidRegistryMetadata;
@@ -538,15 +546,50 @@ test "zig dev build numbers compare numerically" {
     try std.testing.expectEqual(@as(?u64, null), zigDevBuildNumber("0.17.0"));
 }
 
+// The resolver is a unit test, not an availability probe for the live
+// registry. Use the production parser with controlled metadata; keep typed
+// transport failures intact rather than hiding them behind upstream fallback.
+const ZigResolutionFixture = struct {
+    fn registry(allocator: std.mem.Allocator, domain: []const u8, constraint: []const u8) !?S3PackageResult {
+        try std.testing.expectEqualStrings("ziglang.org", domain);
+        const platform = platform_core.binaryRegistryKey(platform_core.Platform.current(), platform_core.Architecture.current());
+        const metadata = try std.fmt.allocPrint(allocator,
+            \\{{"versions":{{"0.17.0-dev.1422+fixture":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-dev.tar.xz","sha256":"fixture"}}}}}},"0.17.0":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-stable.tar.xz","sha256":"fixture"}}}}}},"0.18.0-dev.1+fixture":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-next.tar.xz","sha256":"fixture"}}}}}}}}}}
+        , .{ platform, platform, platform });
+        defer allocator.free(metadata);
+        return selectS3RegistryMetadata(allocator, constraint, metadata);
+    }
+
+    fn unexpectedUpstream(_: std.mem.Allocator, _: []const u8) ?[]const u8 {
+        @panic("Registry results and failures must not reach upstream fallback");
+    }
+
+    fn absent(_: std.mem.Allocator, _: []const u8, _: []const u8) !?S3PackageResult {
+        return null;
+    }
+
+    fn unavailable(_: std.mem.Allocator, _: []const u8, _: []const u8) !?S3PackageResult {
+        return error.RegistryUnavailable;
+    }
+
+    fn upstream(allocator: std.mem.Allocator, _: []const u8) ?[]const u8 {
+        return allocator.dupe(u8, "0.17.0") catch null;
+    }
+};
+
 test "Zig prerelease ranges are resolved through registry metadata" {
     const allocator = std.testing.allocator;
-    const resolved = try resolveZigDevVersion(allocator, "^0.17.0-dev");
+    const resolved = try resolveZigVersionUsing(allocator, "^0.17.0-dev", ZigResolutionFixture.registry, ZigResolutionFixture.unexpectedUpstream);
     defer allocator.free(resolved);
-    // Zig 0.17.0 shipped, and ziglang.org's index then lists the release
-    // and master (0.18.0-dev) but no 0.17 dev build, so the range lands on
-    // the release. Either way it is a concrete 0.17.0 version.
-    try std.testing.expect(std.mem.startsWith(u8, resolved, "0.17.0"));
-    try std.testing.expect(!std.mem.eql(u8, resolved, "^0.17.0-dev"));
+    try std.testing.expectEqualStrings("0.17.0", resolved);
+}
+
+test "Zig resolution only falls back after confirmed registry absence" {
+    const allocator = std.testing.allocator;
+    const resolved = try resolveZigVersionUsing(allocator, "^0.17.0-dev", ZigResolutionFixture.absent, ZigResolutionFixture.upstream);
+    defer allocator.free(resolved);
+    try std.testing.expectEqualStrings("0.17.0", resolved);
+    try std.testing.expectError(error.RegistryUnavailable, resolveZigVersionUsing(allocator, "^0.17.0-dev", ZigResolutionFixture.unavailable, ZigResolutionFixture.unexpectedUpstream));
 }
 
 /// Try to find a package tarball published via `pantry publish` (packages/pantry/ prefix).
