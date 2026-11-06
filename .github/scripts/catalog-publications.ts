@@ -13,6 +13,7 @@ interface RecoveryOptions {
   receipt: (id: string, sha: string) => Promise<void>
   now?: () => number
   retryFailed?: boolean
+  createdAfter?: string
 }
 
 function git(cwd: string, ...args: string[]): string {
@@ -101,9 +102,16 @@ export async function preparePublications(cwd: string, id: string, claimedDomain
 export async function recoverPublication(publication: Publication & { sha: string }, options: RecoveryOptions): Promise<string> {
   const { repository, api } = options
   const title = `catalog:${publication.id}:${publication.sha}:all:false`
+  const sourceDate = options.createdAfter ?? (await api(`repos/${repository}/commits/${publication.sha}`)).commit.committer.date
+  const sourceTime = Date.parse(sourceDate)
+  if (!Number.isFinite(sourceTime)) throw new Error('Expected publication source timestamp')
+  // Historical unrelated runs cannot contain this request. Bound the search to
+  // its source commit, allowing a minute for clock skew, rather than spending
+  // the API budget scanning years of dispatches before a first publication.
+  const created = encodeURIComponent(`>=${new Date(sourceTime - 60_000).toISOString()}`)
   const matches: Run[] = []
   for (let page = 1; page <= 10; page++) {
-    const response = await api(`repos/${repository}/actions/workflows/publish-changed-packages.yml/runs?event=workflow_dispatch&per_page=100&page=${page}`) as { workflow_runs: Run[] }
+    const response = await api(`repos/${repository}/actions/workflows/publish-changed-packages.yml/runs?event=workflow_dispatch&created=${created}&per_page=100&page=${page}`) as { workflow_runs: Run[] }
     matches.push(...response.workflow_runs.filter(run => run.display_title === title
       && run.event === 'workflow_dispatch' && run.path === '.github/workflows/publish-changed-packages.yml'
       && run.head_repository.full_name === repository))
@@ -145,7 +153,7 @@ if (import.meta.main) {
     for (const publication of await pendingPublications(cwd)) {
       try {
         git(cwd, 'merge-base', '--is-ancestor', publication.sha, 'HEAD')
-        const result = await recoverPublication(publication, { repository, api, retryFailed: process.env.RETRY_FAILED === 'true',
+        const result = await recoverPublication(publication, { repository, api, createdAfter: git(cwd, 'show', '-s', '--format=%cI', publication.sha), retryFailed: process.env.RETRY_FAILED === 'true',
           receipt: async (id, sha) => { git(cwd, 'push', 'origin', `${sha}:${receiptPrefix}${id}`) } })
         console.log(`${publication.id}: ${result}`)
       }

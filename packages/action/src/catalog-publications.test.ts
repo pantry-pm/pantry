@@ -14,7 +14,7 @@ const jobs = ['linux-x86-64', 'linux-arm64'].map(platform => ({ name: `Publish (
 function fixture(runs: typeof run[] = []) {
   const calls: Array<{ path: string, init?: RequestInit }> = []
   const receipts: string[][] = []
-  return { calls, receipts, options: { repository: 'pantry-pm/pantry', now: () => Date.parse('2026-01-01T02:00:00Z'),
+  return { calls, receipts, options: { repository: 'pantry-pm/pantry', createdAfter: '2026-01-01T00:00:00Z', now: () => Date.parse('2026-01-01T02:00:00Z'),
     api: async (path: string, init?: RequestInit) => {
       calls.push({ path, init })
       return init?.method === 'POST' ? null : path.includes('/jobs?') ? { jobs } : { workflow_runs: runs }
@@ -151,4 +151,20 @@ test('publication workflow pins every checkout and recovery trusts only main', a
   const updater = Bun.YAML.parse(await readFile(new URL('update-packages.yml', base), 'utf8')) as any
   expect(updater.jobs['update-packages'].steps.find((step: any) => step.name === 'Prepare durable publication requests')).toBeDefined()
   expect(updater.jobs['update-packages'].steps.find((step: any) => step.name === 'Acknowledge processed releases').if).toContain("steps.land.outputs.landed == 'true'")
+})
+
+
+test('a busy repository cannot exhaust recovery by returning unrelated historical dispatches', async () => {
+  const f = fixture()
+  let requests = 0
+  const api = async (path: string, init?: RequestInit) => {
+    requests++
+    if (!init && path.includes('/runs?')) {
+      expect(path).toContain('created=%3E%3D2025-12-31T23%3A59%3A00.000Z')
+      return { workflow_runs: [] }
+    }
+    return f.options.api(path, init)
+  }
+  expect(await recoverPublication(publication, { ...f.options, api })).toBe('dispatched')
+  expect(requests).toBe(2)
 })
