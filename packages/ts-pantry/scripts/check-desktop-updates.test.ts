@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, test } from 'bun:test'
+import { recipe as claudeDesktop } from '../src/recipes/apps/claude.ai'
 import { commitSubject, latestGithub, needsMacos } from './check-desktop-updates'
 
 describe('desktop update flow', () => {
   test('routes disk images to a native macOS runner', () => {
     expect(needsMacos({ build: { script: ['hdiutil attach app.dmg'] } })).toBe(true)
+    expect(needsMacos({ build: { script: ['curl app.zip', 'unzip app.zip'] } })).toBe(false)
+  })
+
+  test('routes Claude ZIP updates to macOS for native signature and Gatekeeper verification', () => {
+    expect(needsMacos(claudeDesktop)).toBe(true)
+    expect(needsMacos({ build: { script: ['codesign --verify App.app'] } })).toBe(true)
+    expect(needsMacos({ build: { script: ['spctl --assess App.app'] } })).toBe(true)
     expect(needsMacos({ build: { script: ['curl app.zip', 'unzip app.zip'] } })).toBe(false)
   })
 

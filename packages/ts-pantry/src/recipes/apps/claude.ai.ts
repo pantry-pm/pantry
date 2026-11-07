@@ -20,6 +20,8 @@ export const recipe: Recipe = {
       'test -d claude-unpacked/Claude.app',
       'mkdir -p "{{prefix}}" && mv claude-unpacked/Claude.app "{{prefix}}/Claude.app"',
       'bun "{{srcroot}}/props/verify.ts" "{{prefix}}/Claude.app" "{{version}}"',
+      'codesign --verify --deep --strict "{{prefix}}/Claude.app"',
+      'spctl --assess --type execute "{{prefix}}/Claude.app"',
     ],
     // Rpath rewriting would invalidate Anthropic's signed and notarized bundle.
     skip: ['fix-machos'],

@@ -18,7 +18,7 @@
  *   bun scripts/check-desktop-updates.ts --require-current --commit
  *
  * Build-host selection: each recipe is classified by its build script as
- * needing macOS (mounts a .dmg / uses hdiutil/ditto/sips/installer/pkgutil)
+ * needing macOS (mounts a .dmg / uses hdiutil/ditto/sips/installer/pkgutil/codesign/spctl)
  * or being "ubuntu-safe" (curl + unzip a .zip — most fonts and zip-based
  * apps). The CI workflow splits publishing across a fast ubuntu-latest job and
  * a macos-latest job so the whole pipeline no longer waits on the scarce macOS
@@ -92,7 +92,7 @@ const platform: Platform = (() => {
  * are intentionally mounted with Apple's hdiutil: third-party Linux extractors
  * do not support every DMG filesystem/compression combination and had allowed
  * the updater to report success while publishing no artifact. */
-const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\.dmg\b/
+const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\bcodesign\b|\bspctl\b|\.dmg\b/
 
 /** Flatten a recipe's build script (strings + { run } step objects) to one
  * blob so we can scan it for macOS-only tooling. */

@@ -22,5 +22,8 @@ and version, and requires macOS code-signature and Gatekeeper checks before
 publication. The normal registry malware scan still gates publication.
 
 The daily desktop updater discovers the local app recipe, so future upstream
-releases use the same version source and publishing path. App data and sign-in
+releases use the same version source and publishing path. Signature verification
+requires macOS: the existing updater selects Claude for its gated macOS job only
+when a newer version needs publishing. Its final record step re-reads the public
+registry and cannot mark an unpublished version as current. App data and sign-in
 state are outside the package payload.
