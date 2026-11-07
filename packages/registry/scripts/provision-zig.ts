@@ -1,6 +1,7 @@
-import { existsSync, realpathSync } from 'node:fs'
+import { realpathSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { ensureQualifiedPantry } from '../src/qualified-pantry'
 import { prepareRegistryZig, registryZigCache, registryZigVersion } from '../src/zig-native-hash'
 
 const root = resolve(import.meta.dir, '..')
@@ -16,8 +17,9 @@ async function run(command: string[], env = process.env): Promise<void> {
 
 await mkdir(bootstrap, { recursive: true })
 const pantry = process.env.PANTRY_BIN || join(bootstrap, 'bin', process.platform === 'win32' ? 'pantry.exe' : 'pantry')
-if (!existsSync(pantry)) {
-  if (process.env.PANTRY_BIN) throw new Error('The declared Pantry executable is unavailable')
+// A cached bootstrap may have been upgraded independently. Restore the exact
+// qualified CLI through its maintained installer instead of trusting existence.
+await ensureQualifiedPantry({ executable: pantry, cwd: root, expectedVersion: `pantry ${pantryVersion} (${installerSource.slice(0, 9)})`, externallyManaged: Boolean(process.env.PANTRY_BIN), install: async () => {
   const response = await fetch(`https://raw.githubusercontent.com/pantry-pm/pantry/${installerSource}/public/install.sh`, { signal: AbortSignal.timeout(30_000) })
   if (!response.ok) throw new Error(`The maintained Pantry installer returned HTTP ${response.status}`)
   const bytes = new Uint8Array(await response.arrayBuffer())
@@ -26,10 +28,7 @@ if (!existsSync(pantry)) {
   const installer = join(bootstrap, 'install.sh')
   await writeFile(installer, bytes)
   await run(['bash', installer], { ...process.env, PANTRY_VERSION: pantryVersion, PANTRY_INSTALL_DIR: join(bootstrap, 'bin') })
-}
-const version = Bun.spawnSync([pantry, '--version'], { cwd: root, stdout: 'pipe', stderr: 'pipe', timeout: 10_000 })
-if (version.exitCode !== 0 || version.stdout.toString().trim() !== `pantry ${pantryVersion} (${installerSource.slice(0, 9)})`)
-  throw new Error(`Registry provisioning requires the qualified Pantry ${pantryVersion}`)
+} })
 // This is Pantry's normal installation path, not a compiler downloader.
 await run([pantry, 'install', '--no-save', `ziglang.org@${registryZigVersion}`])
 // Activate the public Pantry environment instead of guessing a workspace's
