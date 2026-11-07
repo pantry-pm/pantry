@@ -1,3 +1,31 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.179...v0.11.180)
+
+## ✨ Features
+
+- **desktop**: support recoverable user-package uninstall jobs ([2693f94](https://github.com/pantry-pm/pantry/commit/2693f94)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- retain relative activation links under the Node Action runtime ([c1a91ea](https://github.com/pantry-pm/pantry/commit/c1a91ea)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#300](https://github.com/pantry-pm/pantry/issues/300))
+- preserve active commands during Action cache restoration ([18cedbf](https://github.com/pantry-pm/pantry/commit/18cedbf)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#300](https://github.com/pantry-pm/pantry/issues/300))
+- preserve selected compiler over legacy Action caches ([da79b0d](https://github.com/pantry-pm/pantry/commit/da79b0d)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#300](https://github.com/pantry-pm/pantry/issues/300), [#297](https://github.com/pantry-pm/pantry/issues/297))
+- keep CI bootstraps on the qualified workspace toolchain ([d189376](https://github.com/pantry-pm/pantry/commit/d189376)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#297](https://github.com/pantry-pm/pantry/issues/297), [#299](https://github.com/pantry-pm/pantry/issues/299))
+- verify dtsx native recipes before installation ([f82683d](https://github.com/pantry-pm/pantry/commit/f82683d)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#299](https://github.com/pantry-pm/pantry/issues/299), [stacksjs/dtsx#24](https://github.com/stacksjs/dtsx/issues/24))
+
+## ✅ Tests
+
+- retain the actual historical JavaScript migration baseline ([ff293ff](https://github.com/pantry-pm/pantry/commit/ff293ff)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#300](https://github.com/pantry-pm/pantry/issues/300))
+
+## 🔧 Chores
+
+- release v0.11.180 ([4fa3176](https://github.com/pantry-pm/pantry/commit/4fa3176)) _(by Chris Breuer <chris@stacksjs.com>)_
+- commit the verified system toolchain lock ([e75b3da](https://github.com/pantry-pm/pantry/commit/e75b3da)) _(by Chris Breuer <chris@stacksjs.com>)_
+- qualify Bun 1.4.4 and Zig 0.17.1 toolchains ([2629f6d](https://github.com/pantry-pm/pantry/commit/2629f6d)) _(by Chris Breuer <chris@stacksjs.com>)_ ([stacksjs/dtsx#24](https://github.com/stacksjs/dtsx/issues/24), [#297](https://github.com/pantry-pm/pantry/issues/297))
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.178...v0.11.179)
 
 ## 🐛 Bug Fixes
