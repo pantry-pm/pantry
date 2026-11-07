@@ -295,6 +295,10 @@ pub const Installer = struct {
     hoisted_versions: *HoisteVersionCache,
     /// Lockfile for lockfile-first resolution (skip npm registry queries when locked)
     lockfile: ?*@import("../deps/resolution/lockfile.zig").LockFile = null,
+    /// Validate the complete native plan before any materialization in a frozen run.
+    frozen_native_lockfile: bool = false,
+    /// Environment-inferred services and their exclusive closure are intentionally unlocked.
+    unlocked_native_domains: ?*const std.StringHashMap(void) = null,
     /// bun.lock pins. When the project also has a bun.lock, an npm range is
     /// resolved to bun.lock's version whenever that version satisfies it, so
     /// pantry/ and node_modules/ hold the same tree (stacksjs/stacks#2848).
@@ -322,6 +326,11 @@ pub const Installer = struct {
     /// resolver threads under `payment_notes_mutex`.
     payment_notes: std.StringHashMapUnmanaged([]const u8) = .empty,
     payment_notes_mutex: io_helper.Mutex = .{},
+
+    pub fn preferredNativePin(self: *const Installer, name: []const u8, constraint: []const u8) ?[]const u8 {
+        const locked = self.lockfile orelse return null;
+        return @import("../deps/resolution/lockfile.zig").nativeVersionSatisfying(locked, name, constraint);
+    }
 
     /// The pin covering `name`, when the project pinned its scope.
     pub fn pinFor(self: *const Installer, name: []const u8) ?scopes.Pin {
@@ -4425,7 +4434,8 @@ pub const Installer = struct {
         const domain = pkg_info.domain;
 
         // Resolve version
-        const planned = if (self.planned_pantry) |plan| plannedVersionFor(plan, domain, version) else null;
+        const planned = (if (self.planned_pantry) |plan| plannedVersionFor(plan, domain, version) else null) orelse
+            self.preferredNativePin(domain, version);
         const resolved_version = planned orelse semver.resolveVersion(domain, version) orelse {
             if (!style.isCI()) style.print("  ! Could not resolve version for {s}{s}\n", .{ name, version });
             return error.VersionNotFound;

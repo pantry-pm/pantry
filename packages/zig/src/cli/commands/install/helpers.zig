@@ -2648,25 +2648,8 @@ pub fn lockedVersionSatisfying(
     dep_name: []const u8,
     declared: []const u8,
 ) ?[]const u8 {
-    const registry = @import("../../../packages/registry.zig");
     const clean_name = resolvePackageAlias(normalizePackageName(dep_name));
-    const locked = lib.deps.resolution.lockfile.getLockedVersion(lock_file, clean_name) orelse return null;
-    if (locked.version.len == 0) return null;
-
-    // `latest`, `*` and an empty spec are satisfied by anything, and a lock
-    // pin on one is the whole point of committing a lock: npm installs the
-    // locked version for `*` too.
-    if (declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*"))
-        return locked.version;
-
-    // Frozen validation also asks about exact pins. An identical literal
-    // version is covered; a different pin still resolves from its declaration.
-    // Rolling development selectors remain distinct from their resolved build.
-    if (std.mem.eql(u8, locked.version, declared)) return locked.version;
-    if (!isVersionSpecRange(declared)) return null;
-
-    const satisfies = registry.satisfiesConstraint(locked.version, declared) catch return null;
-    return if (satisfies) locked.version else null;
+    return lib.deps.resolution.lockfile.nativeVersionSatisfying(lock_file, clean_name, declared);
 }
 
 /// Does this spec admit more than one version?

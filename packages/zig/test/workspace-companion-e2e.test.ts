@@ -9,6 +9,98 @@ const binary = process.env.PANTRY_SOURCE_CLI
 // The normal unit pass runs before the CLI is built. CI invokes this suite
 // again with the source binary, and verifies its exact commit before testing.
 describe.skipIf(!binary)('source CLI companion workspace lifecycle', () => {
+  it('replays a compatible companion native pin instead of installing a newer release', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pantry-companion-pin-'))
+    try {
+      const member = join(root, 'packages/local')
+      mkdirSync(member, { recursive: true })
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'companion-pin', private: true, workspaces: ['packages/*'] }))
+      writeFileSync(join(member, 'package.json'), JSON.stringify({ name: '@pantry-fixture/pin', version: '1.0.0' }))
+      const deps = join(root, 'deps.yaml')
+      writeFileSync(deps, 'dependencies:\n  bun.sh: 1.4.2\n')
+      const env = { ...process.env, XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PANTRY_ENV_DEPS: '0' }
+      const run = (args: string[]) => {
+        const result = spawnSync(binary!, [...args, '--verbose'], { cwd: root, env, encoding: 'utf8', timeout: 45_000 })
+        if (result.error) throw result.error
+        if (result.status !== 0) throw new Error(result.stdout + result.stderr)
+      }
+      run(['install', '--ignore-scripts'])
+      writeFileSync(deps, 'dependencies:\n  bun.sh: ^1.4.2\n')
+      run(['install', '--ignore-scripts'])
+      const lockPath = join(root, 'pantry.lock')
+      const committed = readFileSync(lockPath, 'utf8')
+      const lock = JSON.parse(committed)
+      expect(lock.workspaces[''].system['bun.sh']).toBe('^1.4.2')
+      expect(lock.packages['bun.sh@1.4.2']?.version).toBe('1.4.2')
+
+      // Exercise a real fresh restore rather than the already-installed fast path.
+      rmSync(join(root, 'pantry'), { recursive: true, force: true })
+      rmSync(join(root, 'node_modules'), { recursive: true, force: true })
+      run(['install', '--ignore-scripts', '--frozen-lockfile'])
+      expect(readFileSync(lockPath, 'utf8')).toBe(committed)
+      const bun = spawnSync(join(root, 'pantry/.bin/bun'), ['--version'], { env, encoding: 'utf8' })
+      expect(bun.status).toBe(0)
+      expect(bun.stdout.trim()).toBe('1.4.2')
+
+      run(['install', '--ignore-scripts', '--force'])
+      const forced = spawnSync(join(root, 'pantry/.bin/bun'), ['--version'], { env, encoding: 'utf8' })
+      expect(forced.status).toBe(0)
+      expect(forced.stdout.trim()).not.toBe('1.4.2')
+
+      // Narrowing the declaration must still resolve a newly required version.
+      writeFileSync(deps, 'dependencies:\n  bun.sh: 1.4.4\n')
+      run(['install', '--ignore-scripts'])
+      expect(JSON.parse(readFileSync(lockPath, 'utf8')).packages['bun.sh@1.4.4']?.version).toBe('1.4.4')
+
+      // An uncovered frozen declaration must fail before native activation.
+      writeFileSync(deps, 'dependencies:\n  bun.sh: 1.4.2\n')
+      rmSync(join(root, 'pantry'), { recursive: true, force: true })
+      const uncovered = spawnSync(binary!, ['install', '--ignore-scripts', '--frozen-lockfile'], { cwd: root, env, encoding: 'utf8', timeout: 45_000 })
+      if (uncovered.error) throw uncovered.error
+      expect(uncovered.status).not.toBe(0)
+      expect(existsSync(join(root, 'pantry/.bin/bun'))).toBe(false)
+    }
+    finally { rmSync(root, { recursive: true, force: true }) }
+  }, 120_000)
+
+  it('retains a transitive lz4 pin through the real zstd parent in filtered and full restores', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pantry-companion-transitive-pin-'))
+    try {
+      const member = join(root, 'packages/local')
+      mkdirSync(member, { recursive: true })
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'transitive-pin', private: true, workspaces: ['packages/*'] }))
+      writeFileSync(join(member, 'package.json'), JSON.stringify({ name: '@pantry-fixture/transitive-pin', version: '1.0.0' }))
+      const deps = join(root, 'deps.yaml')
+      writeFileSync(deps, 'dependencies:\n  facebook.com/zstd: 1.5.7\n  lz4.org: 1.10.0\n')
+      const env = { ...process.env, XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PANTRY_ENV_DEPS: '0' }
+      const run = (args: string[]) => {
+        const result = spawnSync(binary!, args, { cwd: root, env, encoding: 'utf8', timeout: 60_000 })
+        if (result.error) throw result.error
+        if (result.status !== 0) throw new Error(result.stdout + result.stderr)
+      }
+      run(['install', '--ignore-scripts'])
+      // Only remove the direct lz4 declaration. zstd still needs lz4.org^1.
+      writeFileSync(deps, 'dependencies:\n  facebook.com/zstd: 1.5.7\n')
+      run(['install', '--ignore-scripts', '--filter', '@pantry-fixture/transitive-pin'])
+      const lockPath = join(root, 'pantry.lock')
+      const committed = readFileSync(lockPath, 'utf8')
+      const lock = JSON.parse(committed)
+      expect(lock.workspaces[''].system['lz4.org']).toBeUndefined()
+      expect(lock.packages['lz4.org@1.10.0']?.version).toBe('1.10.0')
+      expect(lock.packages['lz4.org@1.11.0']).toBeUndefined()
+      for (const args of [['install', '--ignore-scripts'], ['install', '--ignore-scripts', '--frozen-lockfile']]) {
+        rmSync(join(root, 'pantry'), { recursive: true, force: true })
+        run(args)
+        expect(readFileSync(lockPath, 'utf8')).toBe(committed)
+        const lz4 = spawnSync(join(root, 'pantry/.bin/lz4'), ['--version'], { env, encoding: 'utf8' })
+        expect(lz4.status).toBe(0)
+        expect(lz4.stdout + lz4.stderr).toContain('1.10.0')
+        expect(spawnSync(join(root, 'pantry/.bin/zstd'), ['--version'], { env }).status).toBe(0)
+      }
+    }
+    finally { rmSync(root, { recursive: true, force: true }) }
+  }, 180_000)
+
   it('reports required project setup failures and retries only incomplete setup', () => {
     const configurations = [
       { services: { postDatabaseSetup: ['exit 37', 'printf unexpected > after-hook.txt'] } },

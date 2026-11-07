@@ -622,10 +622,14 @@ fn enqueuePantryDeps(allocator: std.mem.Allocator, domain: []const u8, wave: *st
 
 fn resolvePantryRegistryTarball(
     allocator: std.mem.Allocator,
+    inst: *const Installer,
     name: []const u8,
-    version: []const u8,
+    constraint: []const u8,
 ) !?ResolvedPackage {
-    if (try downloader.lookupS3Registry(allocator, name, version)) |s3_result| {
+    const version = inst.preferredNativePin(name, constraint) orelse constraint;
+    const domain = if (generated.getPackageByName(name)) |info| info.domain else name;
+    if (inst.verbose) std.debug.print("[verbose:pipeline:native] {s} @ {s} (declared {s})\n", .{ name, version, constraint });
+    if (try downloader.lookupS3Registry(allocator, domain, version)) |s3_result| {
         return .{
             .name = allocator.dupe(u8, name) catch {
                 allocator.free(s3_result.version);
@@ -639,7 +643,7 @@ fn resolvePantryRegistryTarball(
         };
     }
 
-    if (try downloader.lookupPantryPublished(allocator, name, version)) |pub_result| {
+    if (try downloader.lookupPantryPublished(allocator, domain, version)) |pub_result| {
         return .{
             .name = allocator.dupe(u8, name) catch {
                 allocator.free(pub_result.version);
@@ -666,6 +670,7 @@ fn resolvePantryRegistryTarball(
 /// Best-effort: a dep missing from the registry is logged (verbose) and skipped.
 fn expandTransitivePantryDeps(
     allocator: std.mem.Allocator,
+    inst: *const Installer,
     resolved: *std.ArrayList(ResolvedPackage),
     verbose: bool,
 ) !void {
@@ -680,7 +685,7 @@ fn expandTransitivePantryDeps(
         for (info.dependencies) |spec| {
             const parsed = parsePantryDepSpec(spec) orelse continue;
             if (present.contains(parsed.domain)) continue;
-            const pkg = try resolvePantryRegistryTarball(allocator, parsed.domain, parsed.version) orelse {
+            const pkg = try resolvePantryRegistryTarball(allocator, inst, parsed.domain, parsed.version) orelse {
                 if (verbose) std.debug.print("[verbose:pipeline] transitive dep {s} not in registry — skipped\n", .{parsed.domain});
                 continue;
             };
@@ -878,7 +883,7 @@ fn resolveFullTree(
                         });
                     }
                 } else if (dep.source == .npm) {
-                    if (try resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
+                    if (try resolvePantryRegistryTarball(allocator, inst, dep.name, dep.version)) |pantry_pkg| {
                         if (!seen.contains(dep.name)) {
                             try seen.put(try allocator.dupe(u8, dep.name), {});
                             try resolved.append(allocator, pantry_pkg);
@@ -899,13 +904,13 @@ fn resolveFullTree(
                             const pantry_pkg = if (packages.isRollingZigDevChannel(dep.name, dep.version))
                                 null
                             else
-                                try resolvePantryRegistryTarball(allocator, dep.name, dep.version);
+                                try resolvePantryRegistryTarball(allocator, inst, dep.name, dep.version);
                             if (pantry_pkg) |resolved_pkg| {
                                 try resolved.append(allocator, resolved_pkg);
                             } else {
                                 try resolved.append(allocator, .{
                                     .name = try allocator.dupe(u8, dep.name),
-                                    .version = try allocator.dupe(u8, dep.version),
+                                    .version = try allocator.dupe(u8, inst.preferredNativePin(dep.name, dep.version) orelse dep.version),
                                     .tarball_url = try allocator.dupe(u8, ""),
                                     .integrity = null,
                                     .source = dep.source,
@@ -1477,14 +1482,14 @@ fn resolveViaRegistry(
     for (top_level_deps) |dep| {
         if (dep.source == .npm) continue;
         if (dep.source == .pantry and !packages.isRollingZigDevChannel(dep.name, dep.version)) {
-            if (try resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
+            if (try resolvePantryRegistryTarball(allocator, inst, dep.name, dep.version)) |pantry_pkg| {
                 try resolved.append(allocator, pantry_pkg);
                 continue;
             }
         }
         try resolved.append(allocator, .{
             .name = try allocator.dupe(u8, dep.name),
-            .version = try allocator.dupe(u8, dep.version),
+            .version = try allocator.dupe(u8, if (dep.source == .pantry) inst.preferredNativePin(dep.name, dep.version) orelse dep.version else dep.version),
             .tarball_url = try allocator.dupe(u8, ""),
             .integrity = null,
             .source = dep.source,
@@ -1955,7 +1960,17 @@ pub fn run(
 
     // Pull in transitive system (pantry) dependencies so dependent binaries can
     // load their shared libraries. Independent of which resolver ran above.
-    try expandTransitivePantryDeps(allocator, &resolved, verbose);
+    try expandTransitivePantryDeps(allocator, inst, &resolved, verbose);
+    if (inst.frozen_native_lockfile) {
+        for (resolved.items) |pkg| {
+            if (pkg.source != .pantry) continue;
+            if (inst.unlocked_native_domains) |domains| {
+                if (domains.contains(pkg.name)) continue;
+            }
+            if (inst.preferredNativePin(pkg.name, pkg.version) == null)
+                return error.FrozenLockfileOutOfDate;
+        }
+    }
 
     // Each pantry package also installs its own dependencies; tell the
     // installer which versions this run already chose, so those reuse them

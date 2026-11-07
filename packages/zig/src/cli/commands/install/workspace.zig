@@ -959,6 +959,7 @@ pub fn installWorkspaceCommandWithOptions(
     if (ws_resolution_lockfile) |*lf| {
         shared_installer.setLockfile(lf);
     }
+    shared_installer.frozen_native_lockfile = options.frozen_lockfile;
 
     // When Bun also locks this workspace, resolve npm ranges to bun.lock's pins
     // so pantry/ and node_modules/ install the same versions.

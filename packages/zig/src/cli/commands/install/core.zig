@@ -584,13 +584,11 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 if (lookup.deps_file) |df| {
                     defer allocator.free(df.path);
                     if (!std.mem.eql(u8, df.path, ws_file.path)) {
-                        var companion_options = options;
-                        if (staged_lockfile_path != null) companion_options.frozen_lockfile = false;
                         try mergeCompanionResult(allocator, &final_result, installCompanionDepsFile(
                             allocator,
                             df,
                             ws_file.root_dir,
-                            companion_options,
+                            options,
                             staged_lockfile_path,
                         ), df.path);
                     }
@@ -982,7 +980,9 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         }
 
         // Wire up lockfile for lockfile-first resolution (skip npm registry on subsequent installs)
-        shared_installer.setLockfile(&lock_file);
+        if (!options.force) shared_installer.setLockfile(&lock_file);
+        shared_installer.frozen_native_lockfile = options.frozen_lockfile;
+        shared_installer.unlocked_native_domains = &env_only_domains.map;
 
         // Prefer bun.lock's pins for npm ranges they satisfy, so a project
         // locked by both pantry and Bun gets one tree (stacksjs/stacks#2848).
@@ -1038,7 +1038,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
             pipeline_deps[di] = .{
                 .name = clean_name,
-                .version = helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) orelse dep.version,
+                .version = if (options.force) dep.version else helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) orelse dep.version,
                 .source = if (is_domain) .pantry else switch (dep.source) {
                     .registry => .npm,
                     .pantry => .pantry,
@@ -2217,6 +2217,20 @@ fn installCompanionDepsFile(
     defer scope_pins.deinit();
     shared_installer.scope_pins = &scope_pins;
 
+    // Read the committed complete lock, not the workspace-only staging file.
+    // A companion deps file follows the same lock-first contract as standalone
+    // installs, including the transitive native resolver's lock context.
+    var committed_lock = if (options.force)
+        null
+    else
+        try lockfile_hooks.loadOrCreateLockfile(allocator, project_root);
+    defer if (committed_lock) |*lock| lock.deinit();
+    if (committed_lock) |*lock| shared_installer.setLockfile(lock);
+    shared_installer.frozen_native_lockfile = options.frozen_lockfile;
+    var env_only_domains = try env_deps.inferredOnlyDomains(allocator, env_inferred, declared_deps);
+    defer env_only_domains.deinit();
+    shared_installer.unlocked_native_domains = &env_only_domains.map;
+
     var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, deps.len);
     defer allocator.free(pipeline_deps);
     for (deps, 0..) |dep, di| {
@@ -2268,19 +2282,16 @@ fn installCompanionDepsFile(
         // workspace are the ones the workspace declares. `env_only_domains`
         // keeps the same inference out of the resolved package entries, where
         // it arrives with everything it pulled in.
-        var env_only_domains = try env_deps.inferredOnlyDomains(allocator, env_inferred, declared_deps);
-        defer env_only_domains.deinit();
-
         const lockfile_changed = try syncCompanionLockfile(
             allocator,
             project_root,
             declared_deps,
             pipeline_result.results,
             &env_only_domains,
-            options.frozen_lockfile,
+            options.frozen_lockfile and lockfile_path == null,
             lockfile_path,
         );
-        if (options.frozen_lockfile and lockfile_changed) {
+        if (options.frozen_lockfile and lockfile_path == null and lockfile_changed) {
             return .{
                 .exit_code = 1,
                 .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),

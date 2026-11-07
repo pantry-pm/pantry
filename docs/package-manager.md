@@ -185,6 +185,14 @@ workspace constraint state. It supports lockfile-first restore, which avoids
 redundant registry resolution, and frozen validation, which compares the computed
 result to committed state and rejects a missing or changed lockfile.
 
+The same native pin policy applies to workspace companion files and transitive
+system dependencies, including filtered installs. A compatible committed pin
+wins over a newer registry release; aliases such as `bun.sh` and `bun.com`
+identify the same native package. An incompatible changed constraint resolves
+again, and `--force` ignores the pin preference. Frozen runs validate the native
+plan before downloading or activating it. Environment-inferred services and
+their exclusive dependency closure remain intentionally outside the lock.
+
 The lockfile does not create integrity evidence when an upstream package supplies
 none. Such an entry is reproducible by version and URL but has weaker content
 authentication and must not be described as cryptographically verified.

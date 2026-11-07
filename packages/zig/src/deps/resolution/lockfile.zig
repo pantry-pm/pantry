@@ -537,6 +537,61 @@ pub fn getLockedVersion(lock_file: *LockFile, name: []const u8) ?LockedVersion {
     return null;
 }
 
+/// Read-only native pin selection, shared by direct and transitive installs.
+/// Multiple versions can belong to different OS-guarded constraints. Choose a
+/// satisfying pin deterministically rather than the name index's first entry.
+pub fn nativeVersionSatisfying(lock_file: *const LockFile, name: []const u8, declared: []const u8) ?[]const u8 {
+    const registry = @import("../../packages/registry.zig");
+    const catalog = @import("../../packages/generated.zig");
+    const info = catalog.getPackageByName(name);
+    var selected: ?[]const u8 = null;
+    var it = lock_file.packages.valueIterator();
+    while (it.next()) |pkg| {
+        const same_package = std.mem.eql(u8, pkg.name, name) or if (info) |known| blk: {
+            if (std.mem.eql(u8, pkg.name, known.domain) or std.mem.eql(u8, pkg.name, known.name)) break :blk true;
+            for (known.aliases) |alias| {
+                if (std.mem.eql(u8, pkg.name, alias)) break :blk true;
+            }
+            break :blk false;
+        } else false;
+        if (!same_package or pkg.version.len == 0) continue;
+        const any_version = declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*");
+        const exact = std.mem.eql(u8, pkg.version, declared);
+        const range = declared.len > 0 and (switch (declared[0]) {
+            '^', '~', '>', '<', '=' => true,
+            else => std.mem.indexOfScalar(u8, declared, '*') != null or std.mem.indexOfScalar(u8, declared, 'x') != null,
+        });
+        if (!any_version and !exact and !(range and (registry.satisfiesConstraint(pkg.version, declared) catch false))) continue;
+        if (selected) |previous| {
+            const order = registry.compareVersions(pkg.version, previous) catch std.mem.order(u8, pkg.version, previous);
+            if (order != .gt) continue;
+        }
+        selected = pkg.version;
+    }
+    return selected;
+}
+
+test "native lock pins cover compatible ranges and preserve both platform constraints" {
+    var lock = try LockFile.parse(std.testing.allocator,
+        \\{"packages":{
+        \\"git-scm.org@2.53.0":{"name":"git-scm.org","version":"2.53.0","resolved":"registry:git-scm.org@2.53.0"},
+        \\"gnu.org/gettext@0.21.1":{"name":"gnu.org/gettext","version":"0.21.1","resolved":"registry:gnu.org/gettext@0.21.1"},
+        \\"gnu.org/gettext@1.0.0":{"name":"gnu.org/gettext","version":"1.0.0","resolved":"registry:gnu.org/gettext@1.0.0"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectEqualStrings("2.53.0", nativeVersionSatisfying(&lock, "git-scm.org", "^2.47").?);
+    try std.testing.expectEqualStrings("2.53.0", nativeVersionSatisfying(&lock, "git-scm.org", "latest").?);
+    try std.testing.expectEqualStrings("0.21.1", nativeVersionSatisfying(&lock, "gnu.org/gettext", "^0.21").?);
+    try std.testing.expectEqualStrings("1.0.0", nativeVersionSatisfying(&lock, "gnu.org/gettext", "^1").?);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "git-scm.org", "^2.56") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "git-scm.org", "2.56.0") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "missing.org", "*") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "git-scm.org", "not-a-range") == null);
+    try lock.addPackage("bun.sh", "1.4.2", "registry:bun.sh@1.4.2", null);
+    try std.testing.expectEqualStrings("1.4.2", nativeVersionSatisfying(&lock, "bun.com", "^1.4.2").?);
+}
+
 /// Options for resolving versions
 pub const ResolveOptions = struct {
     /// If true, only use versions from lockfile (fail if not found)
