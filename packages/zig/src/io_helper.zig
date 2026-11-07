@@ -1734,6 +1734,46 @@ pub fn uniqueTempPath(allocator: std.mem.Allocator, prefix: []const u8) ![]u8 {
     return std.fs.path.join(allocator, &[_][]const u8{ getTempDir(), name });
 }
 
+/// Exclusively create private staging. A random name alone does not establish
+/// ownership: callers must never write through an existing file or symlink.
+/// The caller owns the returned path and removes its tree when finished.
+pub fn createPrivateDirectory(allocator: std.mem.Allocator, parent: []const u8, prefix: []const u8) ![]u8 {
+    try makePath(parent);
+    for (0..8) |_| {
+        var random: [16]u8 = undefined;
+        randomBytes(&random);
+        const hex = std.fmt.bytesToHex(random, .lower);
+        const name = try std.fmt.allocPrint(allocator, "{s}-{s}", .{ prefix, hex });
+        defer allocator.free(name);
+        const root = try std.fs.path.join(allocator, &.{ parent, name });
+        cwd().createDir(io, root, if (is_windows) .default_dir else File.Permissions.fromMode(0o700)) catch |err| {
+            allocator.free(root);
+            if (err == error.PathAlreadyExists) continue;
+            return err;
+        };
+        return root;
+    }
+    return error.PrivateDirectoryCollision;
+}
+
+test "private staging creates distinct owned directories with private permissions" {
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try tmp.dir.realPathFile(io, ".", &buffer);
+    const first = try createPrivateDirectory(allocator, buffer[0..length], "staging");
+    defer allocator.free(first);
+    const second = try createPrivateDirectory(allocator, buffer[0..length], "staging");
+    defer allocator.free(second);
+    try std.testing.expect(!std.mem.eql(u8, first, second));
+    for ([_][]const u8{ first, second }) |root| {
+        const metadata = try cwd().statFile(io, root, .{ .follow_symlinks = false });
+        try std.testing.expectEqual(.directory, metadata.kind);
+        if (!is_windows) try std.testing.expectEqual(@as(u32, 0o700), metadata.permissions.toMode() & 0o777);
+    }
+}
+
 /// Sleep for the given number of nanoseconds
 /// Replacement for std.posix.nanosleep which was removed
 pub fn nanosleep(secs: u64, nsecs: u64) void {
