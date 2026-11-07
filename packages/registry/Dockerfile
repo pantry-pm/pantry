@@ -19,7 +19,7 @@ WORKDIR /app/packages/registry
 RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates && rm -r /var/lib/apt/lists/*
 COPY packages/registry/pantry.json ./
 COPY packages/registry/scripts/provision-zig.ts ./scripts/
-COPY packages/registry/src/zig-native-hash.ts ./src/
+COPY packages/registry/src/zig-native-hash.ts packages/registry/src/qualified-pantry.ts ./src/
 RUN bun scripts/provision-zig.ts
 
 FROM base AS production
