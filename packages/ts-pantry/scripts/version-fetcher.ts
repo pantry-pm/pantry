@@ -15,6 +15,8 @@ import { join } from 'node:path'
 import type { VersionSource, Recipe } from './recipe-types'
 import { revisedPackageVersions } from './package-revisions'
 import { findRecipeFile } from './recipe-loader'
+import { convertDomainToFileName } from '../src/utils'
+import { packageDomain } from './changed-package-domains'
 
 const recipesDir = join(import.meta.dir, '..', 'src', 'recipes')
 const packagesDir = join(import.meta.dir, '..', 'src', 'packages')
@@ -213,10 +215,6 @@ async function loadAllRecipes(): Promise<Recipe[]> {
 
 // ── Package Definition Updater ────────────────────────────────────────
 
-function domainToKey(domain: string): string {
-  return domain.replace(/[.\-/]/g, '').toLowerCase()
-}
-
 // Semver-style prerelease comparison (SemVer §11). Returns <0 if `a` has lower
 // precedence than `b`, >0 if higher, 0 if equal. Build metadata (everything
 // after `+`) carries no precedence and is ignored. Dotted identifiers are
@@ -248,20 +246,16 @@ function comparePrerelease(a: string, b: string): number {
   return 0
 }
 
-// Locate a package's metadata file. Most CLI packages are flat at
-// src/packages/<key>.ts, but apps and fonts live one level down
-// (src/packages/apps/<key>.ts, src/packages/fonts/<key>.ts). Without the
-// subdirectory search this returned undefined for every app and font, so
-// version-fetcher silently never bumped them — leaving the CLI's baked
-// `@latest` (generated.zig) permanently stale (e.g. raycast stuck at 1.89.0).
-function findPackageFile(key: string, domain: string): string | undefined {
-  for (const p of [join(packagesDir, `${key}.ts`), join(packagesDir, `${domain}.ts`)]) {
-    if (existsSync(p)) return p
-  }
-  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
-    const p = join(packagesDir, entry.name, `${key}.ts`)
-    if (existsSync(p)) return p
+// Prefer the generator's filename. Historical flattened keys remain readable,
+// but a filename alone must never select another domain's catalog entry.
+export function findPackageFile(domain: string, directory: string = packagesDir): string | undefined {
+  const names = [...new Set([convertDomainToFileName(domain), domain.replace(/[.\-/]/g, '').toLowerCase(), domain])]
+  const roots = [directory, ...readdirSync(directory, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => join(directory, entry.name))]
+  for (const root of roots) {
+    for (const name of names) {
+      const path = join(root, `${name}.ts`)
+      if (existsSync(path) && packageDomain(readFileSync(path, 'utf-8')) === domain) return path
+    }
   }
   return undefined
 }
@@ -313,9 +307,8 @@ export function mergeCatalogVersions(
 }
 
 function updatePackageVersions(domain: string, newVersions: string[]): boolean {
-  const key = domainToKey(domain)
-  const filePath = findPackageFile(key, domain)
-  if (!filePath) return false
+  const filePath = findPackageFile(domain)
+  if (!filePath) throw new Error(`No package metadata found for ${domain}`)
 
   const content = readFileSync(filePath, 'utf-8')
 
