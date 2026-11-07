@@ -1,3 +1,29 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.176...v0.11.177)
+
+## 🐛 Bug Fixes
+
+- **install**: isolate and verify Zig archive publication ([82f55d3](https://github.com/pantry-pm/pantry/commit/82f55d3)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#296](https://github.com/pantry-pm/pantry/issues/296))
+- **automation**: explicitly confirm completed publisher callbacks ([9388845](https://github.com/pantry-pm/pantry/commit/9388845)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **automation**: confirm named publisher runs and partial reruns ([be6aa41](https://github.com/pantry-pm/pantry/commit/be6aa41)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **automation**: bound recovery history by publication source time ([8e59bfe](https://github.com/pantry-pm/pantry/commit/8e59bfe)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ci**: make Zig registry resolution tests deterministic ([57ecaeb](https://github.com/pantry-pm/pantry/commit/57ecaeb)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **automation**: retain unchanged release rebuilds for publication ([e082f52](https://github.com/pantry-pm/pantry/commit/e082f52)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **automation**: recover release claims and catalog publications ([eea5ca2](https://github.com/pantry-pm/pantry/commit/eea5ca2)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **automation**: attest staged CI results before landing catalog updates ([75f7558](https://github.com/pantry-pm/pantry/commit/75f7558)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **automation**: record a live publication recovery request ([225efc7](https://github.com/pantry-pm/pantry/commit/225efc7)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.177 ([87e54d3](https://github.com/pantry-pm/pantry/commit/87e54d3)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update ansible, apko, argo-cd, Arkade, aux4, biome, bytebase, caddy, casdoor, chrome-for-testing, circleci, claude-code, CLIProxyAPI, cnquery, code-server, coder, codex, Codex, craft, Cursor, dblab, depot, Dia, Discord, doctl, dozzle, fluentci, fly, goreleaser, hasura, IINA, istioctl, jumppad, jupyter, keep, kubecm, libcxx.llvm, libomp, libsdl, libudev, LLaMA.cpp, llm, llrt, llvm, lz4, meilisearch, mercure, mise, mole, mpv, mz, neo4j, nghttp2, npmjs, Obsidian, oc, ollama, opa, pdm, perf, pip, pixi, pnp, projen, pscale, psycopg3, pulumi, qsv, Raycast, rclone, robot, rsync, rubygems, SeaweedFS, Slack, Stats, stripe, systemd, tailscale, tailwindcss, temporal, tofu, tox, vim, virtualenv, WhatsApp, xmlwf, xpra, Zed, zig, zlib ([4105f73](https://github.com/pantry-pm/pantry/commit/4105f73)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.175...v0.11.176)
 
 ## 🐛 Bug Fixes
