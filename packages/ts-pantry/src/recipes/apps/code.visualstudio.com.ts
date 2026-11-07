@@ -11,7 +11,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'microsoft/vscode',
-    tagPattern: /^v(.+)$/,
+    tagPattern: /^v?(\d+(?:\.\d+){1,3})$/,
   },
 
   build: {

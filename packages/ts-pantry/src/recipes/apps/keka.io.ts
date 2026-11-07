@@ -8,6 +8,8 @@ export const recipe: Recipe = {
   programs: ['keka'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
 
+  versionSource: { type: 'github-releases', repo: 'aonez/Keka', tagPattern: /^v?(\d+(?:\.\d+){1,3})$/ },
+
   build: {
     script: [
       'curl -fSL -L "https://github.com/aonez/Keka/releases/download/v{{version}}/Keka-{{version}}.dmg" -o /tmp/keka.dmg',

@@ -8,6 +8,8 @@ export const recipe: Recipe = {
   programs: ['dbeaver'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
 
+  versionSource: { type: 'github-releases', repo: 'dbeaver/dbeaver', tagPattern: /^v?(\d+(?:\.\d+){1,3})$/ },
+
   build: {
     script: [
       'if test {{hw.arch}} = "aarch64"; then ARCH="aarch64"; else ARCH="x86_64"; fi',

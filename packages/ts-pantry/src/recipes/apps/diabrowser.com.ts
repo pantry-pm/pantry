@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 // Desktop app — installs natively from pantry's registry into /Applications
@@ -27,7 +28,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://releases.diabrowser.com/release/Dia-latest.dmg', {
+      const res = await vendorResponse('https://releases.diabrowser.com/release/Dia-latest.dmg', {
         method: 'HEAD',
         redirect: 'follow',
       })

@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { textVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'blender.org',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://blender.org',
   programs: ['blender'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: textVersionSource('https://www.blender.org/download/', /blender-(\d+(?:\.\d+){2})-macos-arm64\.dmg/),
 
   build: {
     script: [

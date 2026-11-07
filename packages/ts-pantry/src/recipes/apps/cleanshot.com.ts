@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { textVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'cleanshot.com',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://cleanshot.com',
   programs: ['cleanshot'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+
+  versionSource: textVersionSource('https://cleanshot.com/changelog', /class=\x22number\x22[^>]*>([\d.]+)</),
 
   build: {
     script: [

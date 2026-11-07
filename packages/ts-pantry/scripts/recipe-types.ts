@@ -45,7 +45,17 @@ export interface CustomVersionSource {
 // (GitHub releases/tags, Sparkle appcast, vendor JSON API, or a download-
 // redirect filename) via `github-releases` or a `custom` fetch — never Homebrew.
 
-export type VersionSource = GitHubReleasesSource | GitHubTagsSource | URLPatternSource | CustomVersionSource
+/** Official rolling installer with no public version feed. Discovery compares HTTP validators;
+ * a changed archive is inspected on the gated native host before publication. */
+export interface DesktopBundleSource {
+  type: 'desktop-bundle'
+  url: string
+  format: 'zip' | 'dmg'
+  bundle: string
+  versionKey?: 'CFBundleShortVersionString' | 'CFBundleVersion'
+}
+
+export type VersionSource = DesktopBundleSource | GitHubReleasesSource | GitHubTagsSource | URLPatternSource | CustomVersionSource
 
 // ── Build Context ─────────────────────────────────────────────────────
 

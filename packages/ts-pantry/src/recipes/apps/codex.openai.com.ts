@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -18,7 +19,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async () => {
-      const res = await fetch('https://persistent.oaistatic.com/codex-app-prod/appcast.xml')
+      const res = await vendorResponse('https://persistent.oaistatic.com/codex-app-prod/appcast.xml')
       const xml = await res.text()
       return [...xml.matchAll(/<sparkle:shortVersionString>([^<]+)<\/sparkle:shortVersionString>/g)].map(m => m[1])
     },

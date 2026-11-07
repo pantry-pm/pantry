@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -15,7 +16,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const html = await (await fetch('https://download.documentfoundation.org/libreoffice/stable/')).text()
+      const html = await (await vendorResponse('https://download.documentfoundation.org/libreoffice/stable/')).text()
       const vs = [...html.matchAll(/href="(\d+\.\d+\.\d+)\//g)].map(m => m[1])
       vs.sort((a, b) => {
         const pa = a.split('.').map(Number)

@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { appcastVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'telegram.org',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://telegram.org',
   programs: ['telegram'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: appcastVersionSource('https://osx.telegram.org/updates/versions.xml'),
 
   build: {
     script: [

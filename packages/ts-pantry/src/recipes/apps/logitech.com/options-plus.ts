@@ -3,13 +3,6 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 // Desktop app — installs natively from pantry's registry into /Applications
 // (see zig/src/install/native_apps.zig).
 //
-// Logi Options+ ships a rolling installer zip with NO version in the URL
-// (logioptionsplus_installer.zip is always "latest"). Logitech publishes no
-// public version manifest (probed: all 404) and the zip carries no version in
-// its filename/headers, so there is no official feed to auto-resolve from.
-// We therefore PIN the version (no Homebrew); the rolling installer keeps the
-// binary itself current on any rebuild. Bump this string manually on a notable
-// Options+ release (it updates infrequently).
 export const recipe: Recipe = {
   domain: 'logitech.com/options-plus',
   name: 'Logi Options+',
@@ -17,11 +10,7 @@ export const recipe: Recipe = {
   homepage: 'https://www.logitech.com/software/logi-options-plus.html',
   programs: [],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
-  versionSource: {
-    type: 'custom',
-    fetch: async (): Promise<string[]> => ['2.3.879545'],
-  },
-  distributable: null,
+  versionSource: { type: 'desktop-bundle', url: 'https://download01.logi.com/web/ftp/pub/techsupport/optionsplus/logioptionsplus_installer.zip', bundle: 'logioptionsplus_installer.app', format: 'zip', versionKey: 'CFBundleVersion' },
 
   build: {
     script: [

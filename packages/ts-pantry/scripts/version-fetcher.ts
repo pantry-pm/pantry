@@ -172,7 +172,7 @@ async function fetchGitHubTags(repo: string, tagPattern?: RegExp): Promise<strin
 
 // ── Version Discovery ─────────────────────────────────────────────────
 
-async function fetchVersions(source: VersionSource): Promise<string[]> {
+export async function fetchVersions(source: VersionSource): Promise<string[]> {
   switch (source.type) {
     case 'github-releases':
       return fetchGitHubReleases(source.repo, source.tagPattern, source.stable !== false)
@@ -182,6 +182,12 @@ async function fetchVersions(source: VersionSource): Promise<string[]> {
       return source.knownVersions // URL pattern just returns known versions
     case 'custom':
       return source.fetch()
+    case 'desktop-bundle': {
+      // Native publication has already read the official bundle version. The
+      // verified manifest feeds it back into the normal catalog generator.
+      const manifest = JSON.parse(readFileSync(join(import.meta.dir, '..', 'desktop-versions.json'), 'utf8'))
+      return manifest.packages.filter((entry: any) => entry.sourceUrl === source.url && entry.latest && entry.published === entry.latest && !entry.needsUpdate).map((entry: any) => entry.latest)
+    }
     default:
       return []
   }
@@ -284,7 +290,7 @@ export function sortVersionsDesc(versions: string[]): string[] {
     const preA = a.includes('-')
     const preB = b.includes('-')
     if (preA !== preB) return preA ? 1 : -1
-    return 0
+    return preA && preB ? -comparePrerelease(a.slice(a.indexOf('-') + 1), b.slice(b.indexOf('-') + 1)) : 0
   })
 }
 

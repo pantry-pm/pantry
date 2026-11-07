@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -13,7 +14,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://orbstack.dev/download/stable/latest/arm64', { method: 'HEAD', redirect: 'follow' })
+      const res = await vendorResponse('https://orbstack.dev/download/stable/latest/arm64', { method: 'HEAD', redirect: 'follow' })
       const m = res.url.match(/OrbStack_v([\d.]+)_/)
       return m ? [m[1]] : []
     },

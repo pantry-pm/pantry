@@ -125,6 +125,7 @@ import { beyondgrepcomPackage } from './beyondgrepcom'
 import { biomejsdevPackage } from './biomejsdev'
 import { bitcoinorgPackage } from './bitcoinorg'
 import { bittensorcomPackage } from './bittensorcom'
+import { bitwardencomdesktopPackage } from './bitwardencomdesktop'
 import { blake2netlibb2Package } from './blake2.net/libb2'
 import { bloomreachcoms4cmdPackage } from './bloomreach.com/s4cmd'
 import { boostorgPackage } from './boostorg'
@@ -1938,6 +1939,7 @@ export interface Pantry {
   biomejsdev: typeof biomejsdevPackage
   bitcoinorg: typeof bitcoinorgPackage
   bittensorcom: typeof bittensorcomPackage
+  bitwardencomdesktop: typeof bitwardencomdesktopPackage
 
   blake2netlibb2: typeof blake2netlibb2Package
 
@@ -4814,6 +4816,9 @@ export interface Pantry {
   bison: typeof gnuorgbisonPackage
   bitcoin: typeof bitcoinorgPackage
   Bittensor: typeof bittensorcomPackage
+  Bitwarden: typeof bitwardencomdesktopPackage
+  'bitwarden-app': typeof bitwardencomdesktopPackage
+  'bitwarden-desktop': typeof bitwardencomdesktopPackage
   black: typeof blackPackage
   blender: typeof blenderorgPackage
   Blender: typeof blenderorgPackage
@@ -6654,6 +6659,7 @@ export const pantry: Pantry = {
   biomejsdev: biomejsdevPackage,
   bitcoinorg: bitcoinorgPackage,
   bittensorcom: bittensorcomPackage,
+  bitwardencomdesktop: bitwardencomdesktopPackage,
 
   blake2netlibb2: blake2netlibb2Package,
 
@@ -9530,6 +9536,9 @@ export const pantry: Pantry = {
   bison: gnuorgbisonPackage,
   bitcoin: bitcoinorgPackage,
   Bittensor: bittensorcomPackage,
+  Bitwarden: bitwardencomdesktopPackage,
+  'bitwarden-app': bitwardencomdesktopPackage,
+  'bitwarden-desktop': bitwardencomdesktopPackage,
   black: blackPackage,
   blender: blenderorgPackage,
   Blender: blenderorgPackage,

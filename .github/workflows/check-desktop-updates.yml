@@ -1,7 +1,7 @@
 name: Check Desktop App & Font Updates
 
-# Detect updates, publish each package on its native build host, then record the
-# registry state only after every publication succeeds and is externally visible.
+# One upstream snapshot drives both publishers. Record only clean, checksum-bound
+# artifacts for every maintained recipe target; unresolved sources fail visibly.
 
 on:
   schedule:
@@ -69,7 +69,7 @@ jobs:
           # and skip the very runner the operator asked for.
           FORCE_DOMAINS: ${{ inputs.force }}
         run: |
-          args=(--platform=macos --print-selected)
+          args=(--platform=macos --print-selected --plan="$RUNNER_TEMP/desktop-plan.json")
           if [[ -n "$FORCE_DOMAINS" ]]; then
             args+=("--force=$FORCE_DOMAINS")
           fi
@@ -78,6 +78,11 @@ jobs:
           macos_pending="$(bun scripts/check-desktop-updates.ts "${args[@]}")"
           echo "macos pending: ${macos_pending:-<none>}"
           echo "macos_pending=$macos_pending" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-update-plan
+          path: ${{ runner.temp }}/desktop-plan.json
+          retention-days: 7
 
   # ZIP/archive recipes are portable and stay on the fast Linux runner.
   publish-ubuntu:
@@ -89,16 +94,27 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-update-plan
+          path: ${{ runner.temp }}
       - name: Publish portable desktop updates
         working-directory: packages/ts-pantry
         env:
           FORCE_DOMAINS: ${{ inputs.force }}
         run: |
-          args=(--platform=ubuntu --publish)
+          args=(--platform=ubuntu --publish --from-plan="$RUNNER_TEMP/desktop-plan.json" --results="$RUNNER_TEMP/desktop-ubuntu.json")
           if [[ -n "$FORCE_DOMAINS" ]]; then
             args+=("--force=$FORCE_DOMAINS")
           fi
           bun scripts/check-desktop-updates.ts "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-results-ubuntu
+          path: ${{ runner.temp }}/desktop-ubuntu.json
+          if-no-files-found: error
+          retention-days: 7
 
   # DMG/pkg recipes use Apple's native tools. Unsupported Linux extraction was
   # the reason Karabiner and LibreOffice repeatedly failed without surfacing it.
@@ -119,16 +135,27 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-update-plan
+          path: ${{ runner.temp }}
       - name: Publish native macOS desktop updates
         working-directory: packages/ts-pantry
         env:
           FORCE_DOMAINS: ${{ inputs.force }}
         run: |
-          args=(--platform=macos --publish)
+          args=(--platform=macos --publish --from-plan="$RUNNER_TEMP/desktop-plan.json" --results="$RUNNER_TEMP/desktop-macos.json")
           if [[ -n "$FORCE_DOMAINS" ]]; then
             args+=("--force=$FORCE_DOMAINS")
           fi
           bun scripts/check-desktop-updates.ts "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-results-macos
+          path: ${{ runner.temp }}/desktop-macos.json
+          if-no-files-found: error
+          retention-days: 7
 
   # This is the only writer. It gets a fresh checkout and re-reads the public
   # registry after both publish jobs finish. --require-current makes the step
@@ -141,7 +168,7 @@ jobs:
   # registry anyway, so a package that went stale in the meantime still blocks
   # the commit — the gate cannot let a stale manifest through.
   record:
-    needs: [publish-ubuntu, publish-macos]
+    needs: [check, publish-ubuntu, publish-macos]
     permissions:
       contents: write
       actions: write
@@ -160,6 +187,15 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-update-plan
+          path: ${{ runner.temp }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-results-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/desktop-results
       - name: Configure git identity
         run: |
           git config user.name "github-actions[bot]"
@@ -168,7 +204,7 @@ jobs:
         id: manifest
         run: |
           before=$(git rev-parse HEAD)
-          (cd packages/ts-pantry && bun scripts/check-desktop-updates.ts --require-current --commit)
+          (cd packages/ts-pantry && bun scripts/check-desktop-updates.ts --from-plan="$RUNNER_TEMP/desktop-plan.json" --results-dir="$RUNNER_TEMP/desktop-results" --require-current --commit)
           if [ "$(git rev-parse HEAD)" != "$before" ]; then
             echo "committed=true" >> "$GITHUB_OUTPUT"
           fi

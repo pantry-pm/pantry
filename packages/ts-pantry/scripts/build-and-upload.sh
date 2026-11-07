@@ -18,15 +18,20 @@ VERSION="${2:?Usage: $0 <package> <version> [bucket] [region]}"
 BUCKET="${3:-pantry-registry}"
 REGION="${4:-us-east-1}"
 
-# Detect platform
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
-  ARCH="arm64"
+# Desktop callers pass the actual target explicitly. A Linux runner can repackage
+# an upstream Mac ZIP, but must never label that Mach-O as a Linux artifact.
+if [ -n "${5:-}" ]; then
+  PLATFORM="$5"
 else
-  ARCH="x86-64"
+  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+  ARCH=$(uname -m)
+  if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then ARCH="arm64"; else ARCH="x86-64"; fi
+  PLATFORM="${OS}-${ARCH}"
 fi
-PLATFORM="${OS}-${ARCH}"
+case "$PLATFORM" in
+  darwin-arm64|linux-arm64|linux-x86-64) ;;
+  *) echo "Unsupported publication target: $PLATFORM" >&2; exit 1 ;;
+esac
 
 # Slash-domains (e.g. "logitech.com/options-plus") must not leak their slash into
 # filesystem paths or the tarball name — otherwise the artifact/tarball paths gain
@@ -84,21 +89,9 @@ tar -czf "${ARTIFACT_DIR}/${TARBALL}" -C "${INSTALL_DIR}" .
 echo "Created: ${ARTIFACT_DIR}/${TARBALL}"
 echo "SHA256: $(cat "${ARTIFACT_DIR}/${TARBALL}.sha256")"
 
-# Step 3: Upload
-# Desktop apps/fonts produce a platform-agnostic artifact (a zip-extracted
-# .app bundle or font files) but are built on a single runner — so the artifact
-# dir is tagged with only the build host's platform (e.g. linux-x86-64 on the
-# ubuntu runner). The Zig CLI's registry lookup only matches the *client's* own
-# darwin-<arch> key, so we must register the artifact under every platform the
-# recipe targets. Derive those keys from the recipe; fall back to the build
-# host's platform when the recipe declares none (source-built CLI packages).
-RECIPE_PLATFORMS="$(bun scripts/recipe-platforms.ts "${PACKAGE}" 2>/dev/null || true)"
-PLATFORMS_ARG=()
-if [ -n "${RECIPE_PLATFORMS}" ]; then
-  PLATFORMS_CSV="$(echo "${RECIPE_PLATFORMS}" | tr ' ' ',')"
-  PLATFORMS_ARG=(--platforms "${PLATFORMS_CSV}")
-  echo "Publishing under recipe-declared platforms: ${PLATFORMS_CSV}"
-fi
+# Register only the architecture actually downloaded and verified. Recipes may
+# declare multiple platforms, but architecture-specific bytes cannot be fanned out.
+PLATFORMS_ARG=(--platforms "$PLATFORM")
 
 echo ""
 echo ">>> Step 3: Staging, scanning, and publishing..."
@@ -113,7 +106,7 @@ bun scripts/upload-to-s3.ts \
 # Cleanup
 echo ""
 echo ">>> Cleaning up build directories..."
-rm -rf "${BUILD_DIR}" "${INSTALL_DIR}"
+rm -rf "${BUILD_DIR}" "${INSTALL_DIR}" "${ARTIFACT_DIR}"
 
 echo ""
 echo "============================================================"

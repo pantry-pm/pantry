@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -15,7 +16,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://lmstudio.ai/download/latest/darwin/arm64', { method: 'HEAD', redirect: 'follow' })
+      const res = await vendorResponse('https://lmstudio.ai/download/latest/darwin/arm64', { method: 'HEAD', redirect: 'follow' })
       const m = res.url.match(/LM-Studio-([\d.\-]+)-arm64\.dmg/i)
       return m ? [m[1]] : []
     },

@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { appcastVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'iterm2.com',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://iterm2.com',
   programs: ['iterm2'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+
+  versionSource: appcastVersionSource('https://iterm2.com/appcasts/final_modern.xml'),
 
   build: {
     script: [

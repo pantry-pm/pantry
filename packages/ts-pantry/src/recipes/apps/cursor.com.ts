@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -12,7 +13,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://www.cursor.com/api/download?platform=darwin-arm64&releaseTrack=stable', { redirect: 'follow' })
+      const res = await vendorResponse('https://www.cursor.com/api/download?platform=darwin-arm64&releaseTrack=stable', { redirect: 'follow' })
       const data = await res.json() as any
       return data?.version ? [String(data.version)] : []
     },

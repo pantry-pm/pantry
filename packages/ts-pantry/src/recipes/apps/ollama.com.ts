@@ -8,6 +8,8 @@ export const recipe: Recipe = {
   programs: ['ollama'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
 
+  versionSource: { type: 'github-releases', repo: 'ollama/ollama', tagPattern: /^v?(\d+(?:\.\d+){1,3})$/ },
+
   build: {
     script: [
       'curl -fSL -L "https://github.com/ollama/ollama/releases/download/v{{version}}/Ollama-darwin.zip" -o /tmp/ollama.zip',

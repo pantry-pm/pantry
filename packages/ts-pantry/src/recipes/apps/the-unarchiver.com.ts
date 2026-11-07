@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -13,7 +14,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const xml = await (await fetch('https://updates.devmate.com/com.macpaw.site.theunarchiver.xml', { redirect: 'follow' })).text()
+      const xml = await (await vendorResponse('https://updates.devmate.com/com.macpaw.site.theunarchiver.xml', { redirect: 'follow' })).text()
       const m = xml.match(/sparkle:shortVersionString="([^"]+)"/)
       return m ? [m[1]] : []
     },

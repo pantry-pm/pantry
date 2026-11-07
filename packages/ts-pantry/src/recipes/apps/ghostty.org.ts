@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -18,7 +19,7 @@ export const recipe: Recipe = {
       const headers: Record<string, string> = { 'User-Agent': 'pantry-desktop' }
       if (process.env.GITHUB_TOKEN)
         headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
-      const res = await fetch('https://api.github.com/repos/ghostty-org/ghostty/tags?per_page=30', { headers })
+      const res = await vendorResponse('https://api.github.com/repos/ghostty-org/ghostty/tags?per_page=30', { headers })
       const tags = await res.json() as Array<{ name: string }>
       const vs = tags
         .map(t => t.name.match(/^v(\d+\.\d+\.\d+)$/)?.[1])

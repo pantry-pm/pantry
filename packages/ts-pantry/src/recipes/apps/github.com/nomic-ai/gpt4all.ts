@@ -21,6 +21,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'nomic-ai/gpt4all',
+    tagPattern: /^v?(\d+(?:\.\d+){1,3})$/,
   },
   // The Qt Installer Framework binary links libxkbcommon-x11 at LOAD time,
   // before QT_QPA_PLATFORM=minimal can spare it the X11 plugin — so the
@@ -47,10 +48,10 @@ export const recipe: Recipe = {
       'else',
       '  curl -Lfo gpt4all.dmg "${BASE}/gpt4all-installer-macos-v${VERSION}.dmg"',
       '  hdiutil attach -nobrowse -quiet gpt4all.dmg -mountpoint /tmp/g4a-mnt',
-      '  mkdir -p {{prefix}}/opt {{prefix}}/bin',
-      '  cp -R /tmp/g4a-mnt/*.app {{prefix}}/opt/ || cp -R /tmp/g4a-mnt/* {{prefix}}/opt/',
+      '  mkdir -p {{prefix}}/bin',
+      '  cp -R /tmp/g4a-mnt/*.app {{prefix}}/',
       '  hdiutil detach -quiet /tmp/g4a-mnt',
-      '  BIN=$(find "{{prefix}}/opt" -type f -perm -111 -name "gpt4all*" | head -1)',
+      '  BIN=$(find "{{prefix}}" -type f -perm -111 -name "gpt4all*" | head -1)',
       '  ln -sf "$BIN" {{prefix}}/bin/gpt4all',
       'fi',
     ],

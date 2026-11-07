@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { jsonVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'figma.com',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://figma.com',
   programs: ['figma'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: jsonVersionSource('https://desktop.figma.com/mac-arm/RELEASE.json', data => [data.version]),
 
   build: {
     script: [

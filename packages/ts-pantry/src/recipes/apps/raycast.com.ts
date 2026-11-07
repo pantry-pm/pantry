@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -12,7 +13,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://releases.raycast.com/releases/latest?build=universal')
+      const res = await vendorResponse('https://releases.raycast.com/releases/latest?build=universal')
       const data = await res.json() as any
       return data?.version ? [String(data.version)] : []
     },

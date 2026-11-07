@@ -8,6 +8,8 @@ export const recipe: Recipe = {
   programs: ['tableplus'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
 
+  versionSource: { type: 'desktop-bundle', url: 'https://tableplus.com/release/osx/tableplus_latest', bundle: 'TablePlus.app', format: 'dmg' },
+
   build: {
     script: [
       'curl -fSL "https://tableplus.com/release/osx/tableplus_latest" -o /tmp/tableplus.dmg',

@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 // Desktop app — installs natively from pantry's registry into /Applications
@@ -21,7 +22,7 @@ export const recipe: Recipe = {
     // The latest-dmg endpoint returns `Content-Disposition: attachment;
     // filename="Linear-<version>-universal.dmg"` — parse the version from it.
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://releases.linear.app/mac', { method: 'HEAD', redirect: 'follow' })
+      const res = await vendorResponse('https://releases.linear.app/mac', { method: 'HEAD', redirect: 'follow' })
       const cd = res.headers.get('content-disposition') || ''
       const m = cd.match(/Linear-([\d.]+)-universal\.dmg/i)
       return m ? [m[1]] : []

@@ -8,6 +8,8 @@ export const recipe: Recipe = {
   programs: ['spotify'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
 
+  versionSource: { type: 'desktop-bundle', url: 'https://download.scdn.co/SpotifyARM64.dmg', bundle: 'Spotify.app', format: 'dmg' },
+
   build: {
     script: [
       'if test {{hw.arch}} = "aarch64"; then DMG="SpotifyARM64.dmg"; else DMG="Spotify.dmg"; fi',

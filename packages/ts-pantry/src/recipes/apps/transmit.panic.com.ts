@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -14,7 +15,7 @@ export const recipe: Recipe = {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
       const url = 'https://www.panic.com/updates/update.php?osVersion=14.6.0&appName=Transmit%205&appVersion=5.0.0'
-      const xml = await (await fetch(url)).text()
+      const xml = await (await vendorResponse(url)).text()
       // Appcast is newest-first; take the first enclosure's short version string.
       const m = xml.match(/sparkle:shortVersionString="([^"]+)"/)
       return m ? [m[1]] : []

@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { jsonVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'postman.com',
@@ -8,10 +9,12 @@ export const recipe: Recipe = {
   programs: ['postman'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
 
+  versionSource: jsonVersionSource('https://dl.pstmn.io/update/status?channel=stable&platform=osx_arm64&currentVersion=11.0.0', data => [data.version]),
+
   build: {
     script: [
       'if test {{hw.arch}} = "aarch64"; then ARCH="osx_arm64"; else ARCH="osx64"; fi',
-      'curl -fSL -L "https://dl.pstmn.io/download/latest/${ARCH}" -o /tmp/postman.zip',
+      'curl -fSL -L "https://dl.pstmn.io/download/version/{{version}}/${ARCH}" -o /tmp/postman.zip',
       'cd /tmp && unzip -qo postman.zip',
       'mkdir -p {{prefix}}',
       'mv "/tmp/Postman.app" {{prefix}}/Postman.app',

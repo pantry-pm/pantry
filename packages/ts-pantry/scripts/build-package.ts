@@ -4,6 +4,7 @@
 // Reads package metadata from src/packages and build instructions from src/recipes
 // Uses buildkit to generate bash build scripts from YAML recipes (like brewkit)
 
+import { verifyDesktopInstall } from './desktop-artifacts'
 import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
@@ -1890,6 +1891,7 @@ else {
   selectPublishedFiles(prefix, normalizedRecipe.publish?.include)
   writeProgramInterfaces(prefix, normalizedRecipe.sourceablePrograms)
   await fixUp(prefix, platform, skips, runtimePackages)
+  if (loaded.desktopApp) verifyDesktopInstall(prefix, version, platform)
   verifyDeclaredPrograms(prefix, pkgName, normalizedRecipe.programs)
   const deploymentTarget = platformReduce(normalizedRecipe.build?.env ?? {}, platform).MACOSX_DEPLOYMENT_TARGET
   if (platform.startsWith('darwin-') && deploymentTarget !== undefined) {

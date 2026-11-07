@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { redirectVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'github.com/desktop',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://desktop.github.com',
   programs: ['github-desktop'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: redirectVersionSource('https://central.github.com/deployments/desktop/desktop/latest/darwin-arm64', /\/releases\/([\d.]+)-/),
 
   build: {
     script: [

@@ -169,7 +169,7 @@
       "category": "Security"
     },
     {
-      "domain": "bitwarden.com",
+      "domain": "bitwarden.com/desktop",
       "label": "Bitwarden",
       "desc": "Open-source password manager",
       "category": "Security"

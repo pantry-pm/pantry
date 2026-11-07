@@ -16,6 +16,7 @@ import type { NormalizedRecipe } from './buildkit'
 import { evaluateCondition } from './buildkit'
 import { programsForPlatform } from '../src/programs'
 import { recipeBuildVersion } from './package-revisions'
+import desktopCatalog from '../../../catalog/desktop.json'
 
 // package-overrides.ts removed — overrides migrated to src/recipes/*.ts
 const packageOverrides: Record<string, any> = {}
@@ -35,7 +36,7 @@ export async function loadRecipe(
   domain: string,
   _platform?: string,
   version?: string,
-): Promise<LoadedRecipe & { yamlPath?: string }> {
+): Promise<LoadedRecipe & { yamlPath?: string, desktopApp?: boolean }> {
   // 1. Try native TS recipe
   const recipePath = findRecipeFile(domain)
   if (recipePath) {
@@ -43,9 +44,13 @@ export async function loadRecipe(
       const mod = await import(recipePath)
       const def: Recipe = mod.recipe || mod.default
       if (def) {
+        const desktopApp = recipePath.includes('/recipes/apps/') || desktopCatalog.apps.some(app => app.domain === def.domain)
+        const normalized = recipeDefToNormalized(def, _platform, version ? recipeBuildVersion(version, def.revisions).upstream : undefined)
+        if (desktopApp) normalized.build.skip = [...new Set([...(normalized.build.skip ?? []), 'fix-machos'])]
         const identity = version ? recipeBuildVersion(version, def.revisions) : undefined
         return {
-          recipe: recipeDefToNormalized(def, _platform, identity?.upstream),
+          recipe: normalized,
+          desktopApp,
           upstreamVersion: identity?.upstream,
           publicationVersion: identity?.current,
           requiresRecipeBuild: Object.keys(def.revisions ?? {}).length > 0,
@@ -144,9 +149,13 @@ export function findRecipeFile(domain: string): string | null {
   // Fallback: a `<basename>.ts` file anywhere under recipes/ (subfolder layout).
   // For slash-domains (logitech.com/options-plus) the file is named by the last
   // path segment (options-plus.ts), not the whole domain — try both keys.
-  const idx = recipeIndex()
-  const lastSegment = parts[parts.length - 1]
-  return idx.get(`${domain}.ts`) ?? (parts.length > 1 ? idx.get(`${lastSegment}.ts`) ?? null : null)
+  for (const group of ['apps', 'fonts']) {
+    const grouped = join(recipesDir, group, `${domain}.ts`)
+    if (existsSync(grouped)) return grouped
+  }
+  // A basename cannot identify a slash-domain: bitwarden.com/desktop must
+  // never load docker.com/desktop simply because both end in desktop.ts.
+  return parts.length > 1 ? null : recipeIndex().get(`${domain}.ts`) ?? null
 }
 
 /** Find a YAML recipe file in pantry or desktop-pantry */

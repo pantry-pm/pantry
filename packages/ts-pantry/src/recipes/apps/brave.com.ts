@@ -8,14 +8,15 @@ export const recipe: Recipe = {
   programs: ['brave'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
 
+  versionSource: { type: 'github-releases', repo: 'brave/brave-browser', tagPattern: /^v?(\d+(?:\.\d+){1,3})$/ },
+
   build: {
     script: [
       'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="x64"; fi',
-      'curl -fSL "https://github.com/nicehash/nicehash-quickminer/releases/download/v{{version}}/Brave-Browser-${ARCH}.dmg" -o /tmp/brave.dmg || \\',
-      'curl -fSL "https://referrals.brave.com/latest/Brave-Browser-${ARCH}.dmg" -o /tmp/brave.dmg',
+      'curl -fSL "https://github.com/brave/brave-browser/releases/download/v{{version}}/Brave-Browser-${ARCH}.dmg" -o /tmp/brave.dmg',
       'hdiutil attach /tmp/brave.dmg -mountpoint /tmp/brave-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
-      'cp -R "/tmp/brave-mount/Brave Browser.app" {{prefix}}/Brave Browser.app',
+      'cp -R "/tmp/brave-mount/Brave Browser.app" "{{prefix}}/Brave Browser.app"',
       'hdiutil detach /tmp/brave-mount -quiet || true',
       'mkdir -p {{prefix}}/bin',
       'ln -sf "../Brave Browser.app/Contents/MacOS/Brave Browser" {{prefix}}/bin/brave',

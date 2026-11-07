@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { redirectVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'warp.dev',
@@ -8,9 +9,11 @@ export const recipe: Recipe = {
   programs: ['warp'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
 
+  versionSource: redirectVersionSource('https://app.warp.dev/download?package=dmg', /\/v([^/]+)\/Warp\.dmg$/),
+
   build: {
     script: [
-      'curl -fSL "https://app.warp.dev/download?package=dmg" -L -o /tmp/warp.dmg',
+      'curl -fSL "https://releases.warp.dev/stable/v{{version}}/Warp.dmg" -L -o /tmp/warp.dmg',
       'hdiutil attach /tmp/warp.dmg -mountpoint /tmp/warp-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/warp-mount/Warp.app" {{prefix}}/Warp.app',

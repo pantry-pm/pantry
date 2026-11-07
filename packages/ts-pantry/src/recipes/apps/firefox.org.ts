@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { jsonVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'firefox.org',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://www.mozilla.org/firefox',
   programs: ['firefox'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: jsonVersionSource('https://product-details.mozilla.org/1.0/firefox_versions.json', data => [data.LATEST_FIREFOX_VERSION]),
 
   build: {
     script: [

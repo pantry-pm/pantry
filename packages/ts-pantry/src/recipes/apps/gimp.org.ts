@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { jsonVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'gimp.org',
@@ -8,10 +9,12 @@ export const recipe: Recipe = {
   programs: ['gimp'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
 
+  versionSource: jsonVersionSource('https://www.gimp.org/gimp_versions.json', data => data.STABLE.filter((release: { macos?: { filename: string }[] }) => release.macos?.some(file => /arm64\.dmg$/.test(file.filename))).map((release: { version: string }) => release.version)),
+
   build: {
     script: [
       'if test {{hw.arch}} = "aarch64"; then ARCH="arm64"; else ARCH="x86_64"; fi',
-      'curl -fSL -L "https://download.gimp.org/gimp/v2.10/osx/gimp-{{version}}-${ARCH}.dmg" -o /tmp/gimp.dmg',
+      'curl -fSL -L "https://download.gimp.org/gimp/v{{version.marketing}}/macos/gimp-{{version}}-${ARCH}.dmg" -o /tmp/gimp.dmg',
       'hdiutil attach /tmp/gimp.dmg -mountpoint /tmp/gimp-mount -nobrowse -quiet',
       'mkdir -p {{prefix}}',
       'cp -R "/tmp/gimp-mount/GIMP-{{version.marketing}}.app" {{prefix}}/GIMP.app || cp -R /tmp/gimp-mount/GIMP*.app {{prefix}}/GIMP.app',

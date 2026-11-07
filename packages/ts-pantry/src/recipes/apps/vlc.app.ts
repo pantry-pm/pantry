@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -14,7 +15,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const html = await (await fetch('https://get.videolan.org/vlc/last/macosx/')).text()
+      const html = await (await vendorResponse('https://get.videolan.org/vlc/last/macosx/')).text()
       const m = html.match(/vlc-([\d.]+)-universal\.dmg/)
       return m ? [m[1]] : []
     },

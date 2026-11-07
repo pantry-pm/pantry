@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -14,7 +15,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://inkscape.org/release/', { redirect: 'follow' })
+      const res = await vendorResponse('https://inkscape.org/release/', { redirect: 'follow' })
       const m = res.url.match(/inkscape-([\d.]+)/i)
       return m ? [m[1]] : []
     },

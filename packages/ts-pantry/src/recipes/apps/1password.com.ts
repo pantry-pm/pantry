@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { textVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: '1password.com',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://1password.com',
   programs: ['1password'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: textVersionSource('https://releases.1password.com/mac/stable/', /1Password for Mac (\d+(?:\.\d+){1,3})/),
 
   build: {
     script: [

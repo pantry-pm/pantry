@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 // Desktop app — installs natively from pantry's registry into /Applications
@@ -17,7 +18,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const xml = await (await fetch('https://muzzleapp.com/api/1/appcast.xml')).text()
+      const xml = await (await vendorResponse('https://muzzleapp.com/api/1/appcast.xml')).text()
       const m = xml.match(/sparkle:shortVersionString="([^"]+)"/)
       return m ? [m[1]] : []
     },

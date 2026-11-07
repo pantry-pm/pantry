@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -13,7 +14,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://web.whatsapp.com/desktop/mac_native/release/?extension=zip', { method: 'HEAD', redirect: 'follow' })
+      const res = await vendorResponse('https://web.whatsapp.com/desktop/mac_native/release/?extension=zip', { method: 'HEAD', redirect: 'follow' })
       const m = res.url.match(/WhatsApp-([\d.]+)\.zip/i)
       return m ? [m[1]] : []
     },

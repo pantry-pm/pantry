@@ -299,6 +299,11 @@
     "sourceUrl": "https://bitwarden.com/favicon.ico",
     "sha256": "5b921e53a66275a4c3a23a46a3ee7a3e9241de0af3f104733fcfb1e4ab84ac1b"
   },
+  "bitwarden.com/desktop": {
+    "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/5b921e53a66275a4c3a23a46a3ee7a3e9241de0af3f104733fcfb1e4ab84ac1b.ico",
+    "sourceUrl": "https://bitwarden.com/favicon.ico",
+    "sha256": "5b921e53a66275a4c3a23a46a3ee7a3e9241de0af3f104733fcfb1e4ab84ac1b"
+  },
   "blake2.net/libb2": {
     "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/6b4ac40ac5c803a166195a3bc40739751b63bad28001740f98a25720c99bd3e3.ico",
     "sourceUrl": "https://www.blake2.net/favicon.ico",

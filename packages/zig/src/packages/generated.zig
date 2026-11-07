@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1769
+//! Total packages: 1770
 
 const std = @import("std");
 
@@ -29,7 +29,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1769 total)
+/// All known packages (1770 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -825,7 +825,7 @@ pub const packages = [_]PackageInfo{ .{
 }, .{
     .name = "bw",
     .domain = "bitwarden.com",
-    .kind = .app,
+    .kind = .cli,
     .description = "Secure and free password manager for all of your devices",
     .homepage_url = "https://bitwarden.com/",
     .programs = &[_][]const u8{"bw"},
@@ -833,6 +833,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "npmjs.com", "linux:python.org@^3" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "2026.10.1", "2026.10.0", "2026.9.1", "2026.9.0", "2026.8.0", "2026.7.0", "2026.6.0", "2026.5.0", "2026.4.2", "2026.4.1", "2026.3.0", "2026.2.0", "2026.1.0", "2025.12.1", "2025.12.0", "2025.11.0", "2025.10.0", "2025.9.0", "2025.8.0", "2025.7.0", "2025.6.1", "2025.6.0", "2025.5.0", "2025.4.0", "2025.3.0", "2025.2.0", "2025.1.3", "2025.1.2", "2025.1.1", "2025.1.0", "2024.12.0", "2024.11.1", "2024.11.0", "2024.10.0", "2024.9.0", "2024.8.2", "2024.8.1", "2024.8.0", "2024.7.2", "2024.7.1", "2024.6.1", "2024.6.0", "2024.4.1", "2024.4.0", "2024.3.1", "2024.2.1", "2024.2.0", "2024.1.0", "2023.12.1", "2023.12.0", "2023.10.0", "2023.9.1", "2023.9.0", "2023.8.2", "2023.7.0", "2023.5.0", "2023.4.0", "2023.3.0", "2023.2.0", "2023.1.0", "2022.11.0", "2022.10.0", "2022.9.0", "2022.8.0", "2022.6.2", "2022.6.1", "2022.6.0", "1.22.1", "1.22.0", "1.21.1", "1.21.0", "1.20.0", "1.19.1", "1.19.0", "1.18.1", "1.18.0", "1.17.1", "1.17.0", "1.16.0", "1.15.1", "1.15.0", "1.14.0", "1.13.3", "1.13.2", "1.13.1", "1.12.1", "1.12.0", "1.11.0", "1.10.0", "1.9.1", "1.9.0", "1.8.0", "1.7.4", "1.7.2", "1.7.1", "1.7.0", "1.6.0", "1.5.0", "1.4.0", "1.3.0", "1.2.0", "1.1.0", "1.0.1", "1.0.0", "0.3.1", "0.3.0", "0.2.1", "0.2.0", "0.1.2", "0.1.1", "0.1.0", "0.0.5", "0.0.4", "0.0.3", "0.0.2", "0.0.1" },
+}, .{
+    .name = "Bitwarden",
+    .domain = "bitwarden.com/desktop",
+    .kind = .app,
+    .description = "The Bitwarden desktop password manager.",
+    .homepage_url = "https://bitwarden.com",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{ "bitwarden-desktop", "bitwarden-app" },
+    .versions = &[_][]const u8{"2026.10.4"},
 }, .{
     .name = "libb2",
     .domain = "blake2.net/libb2",

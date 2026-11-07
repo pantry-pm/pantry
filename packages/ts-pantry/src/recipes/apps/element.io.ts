@@ -1,3 +1,4 @@
+import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -13,7 +14,7 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'custom',
     fetch: async (): Promise<string[]> => {
-      const res = await fetch('https://packages.element.io/desktop/update/macos/releases.json')
+      const res = await vendorResponse('https://packages.element.io/desktop/update/macos/releases.json')
       const data = await res.json() as any
       return data?.currentRelease ? [String(data.currentRelease)] : []
     },

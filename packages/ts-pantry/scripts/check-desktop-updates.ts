@@ -1,581 +1,292 @@
 #!/usr/bin/env bun
-/**
- * check-desktop-updates.ts — keep the desktop app & font recipes fresh.
- *
- * For every desktop-app and font recipe, resolve the latest upstream version
- * (GitHub releases, per the recipe's versionSource) and compare it to the
- * version currently published in the pantry registry. It then:
- *   - writes a `desktop-versions.json` manifest (the committed record),
- *   - with `--commit`, commits that manifest when it changed,
- *   - with `--require-current`, refuses to commit while any package is stale,
- *   - with `--publish`, builds + uploads any out-of-date package via
- *     build-and-upload.sh (needs S3/registry creds in the env — Hetzner Object
- *     Storage: STORAGE_PROVIDER=hetzner + S3_* + S3_ACCESS_KEY_ID/SECRET).
- *
- *   bun scripts/check-desktop-updates.ts                 # report only
- *   bun scripts/check-desktop-updates.ts --commit        # + commit manifest
- *   bun scripts/check-desktop-updates.ts --publish        # publish only
- *   bun scripts/check-desktop-updates.ts --require-current --commit
- *
- * Build-host selection: each recipe is classified by its build script as
- * needing macOS (mounts a .dmg / uses hdiutil/ditto/sips/installer/pkgutil/codesign/spctl)
- * or being "ubuntu-safe" (curl + unzip a .zip — most fonts and zip-based
- * apps). The CI workflow splits publishing across a fast ubuntu-latest job and
- * a macos-latest job so the whole pipeline no longer waits on the scarce macOS
- * runner queue. Select a host's slice with `--platform=ubuntu` / `--platform=macos`
- * (default: all). Affects which recipes get *published*; the manifest always
- * records every recipe.
- *
- *   bun scripts/check-desktop-updates.ts --platform=ubuntu --publish
- *   bun scripts/check-desktop-updates.ts --platform=macos  --publish
- *
- * `--print-selected` reports that same slice on stdout instead of building it,
- * so CI can gate a whole job on whether the slice is empty:
- *
- *   bun scripts/check-desktop-updates.ts --platform=macos --print-selected
- *
- * Scope: every `*.font.ts` recipe (fonts) plus darwin-only download recipes
- * with a github-releases source (desktop apps). CLI packages are untouched —
- * they have their own version pipeline (build-versions.yml).
- */
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+/** Daily desktop updates: recipe discovery → frozen plan → scan-gated publication → verified manifest. */
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import process from 'node:process'
 import { $ } from 'bun'
+import type { Recipe, VersionSource } from './recipe-types'
+import { findRecipeFile } from './recipe-loader'
+import { fetchVersions, sortVersionsDesc } from './version-fetcher'
+import { archiveFingerprint, desktopBundleVersion } from './desktop-bundle-source'
+import desktopCatalog from '../../../catalog/desktop.json'
 
 const ROOT = join(import.meta.dir, '..')
-const RECIPES_DIR = join(ROOT, 'src', 'recipes')
+const RECIPES_DIR = join(ROOT, 'src/recipes')
 const MANIFEST = join(ROOT, 'desktop-versions.json')
 const REGISTRY = process.env.PANTRY_REGISTRY_URL || 'https://registry.pantry.dev'
-const REGISTRY_TIMEOUT_MS = 10_000
-
-const args = process.argv.slice(2)
-const flags = new Set(args)
-const doCommit = flags.has('--commit')
-const doPublish = flags.has('--publish')
-const requireCurrent = flags.has('--require-current')
-/** Print the domains this run WOULD publish, comma-separated, to stdout — every
- * other line this script writes goes to stderr, so the output is safe to
- * capture straight into a workflow output. It exists so a job can decide
- * whether to allocate a runner at all: `--platform=macos --print-selected`
- * comes back empty on the overwhelming majority of runs, and the workflow
- * skips its macOS leg rather than booting a 10x-billed Mac to discover there
- * is nothing to build. */
-const printSelected = flags.has('--print-selected')
-
-/** Domains to (re)publish even when already at the latest published version —
- * `--force=roboto,pearcleaner.app`. Lets an operator re-run a publish after a
- * pipeline fix (e.g. re-keying a package's platforms) without bumping a version.
- * Empty/absent = no forcing. */
-const forceDomains = new Set(
-  (args.find(a => a.startsWith('--force='))?.slice('--force='.length) ?? '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean),
-)
-
-/** Build host this run publishes for: 'ubuntu' (zip-only), 'macos' (.dmg /
- * macOS-tool recipes) or 'all' (default). Drives which out-of-date packages
- * actually get built + uploaded — the manifest still records every recipe. */
-type Platform = 'ubuntu' | 'macos' | 'all'
-const platform: Platform = (() => {
-  const arg = args.find(a => a.startsWith('--platform=') || a.startsWith('--only='))
-  const v = arg?.split('=')[1]
-  if (v === 'ubuntu' || v === 'ubuntu-safe' || v === 'linux')
-    return 'ubuntu'
-  if (v === 'macos' || v === 'mac' || v === 'darwin')
-    return 'macos'
-  return 'all'
-})()
-
-/** Tokens in a build script that require a native macOS runner. Disk images
- * are intentionally mounted with Apple's hdiutil: third-party Linux extractors
- * do not support every DMG filesystem/compression combination and had allowed
- * the updater to report success while publishing no artifact. */
-const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\bcodesign\b|\bspctl\b|\.dmg\b/
-
-/** Flatten a recipe's build script (strings + { run } step objects) to one
- * blob so we can scan it for macOS-only tooling. */
-function buildScriptText(recipe: any): string {
-  const steps: any[] = recipe?.build?.script ?? []
-  const parts: string[] = []
-  for (const step of steps) {
-    if (typeof step === 'string')
-      parts.push(step)
-    else if (step && typeof step === 'object' && step.run)
-      parts.push(Array.isArray(step.run) ? step.run.join('\n') : String(step.run))
-  }
-  return parts.join('\n')
+const TIMEOUT = 15_000
+export type Host = 'ubuntu' | 'macos'
+export interface Target { platform: string, host: Host }
+export interface Entry {
+  domain: string, name: string, kind: 'app' | 'font', repo: string | null,
+  latest: string | null, published: string | null, needsUpdate: boolean, host: Host,
+  targets?: Target[], pendingTargets?: Target[], error?: string,
+  sourceUrl?: string, sourceFingerprint?: string, force?: boolean,
+}
+export interface Plan { schema: 1, packages: Entry[] }
+export interface RegistryMetadata {
+  latestVersion?: string
+  versions?: Record<string, { platforms?: Record<string, { tarball?: string, sha256?: string, size?: number, malwareScan?: { verdict?: string, artifactSha256?: string } }> }>
 }
 
-/** True when a recipe must build on macOS (mounts a .dmg or uses a macOS-only
- * tool). Zip-only recipes (most fonts, apps like maccy/pearcleaner) are false
- * and publish fine on the fast ubuntu-latest runner. */
-export function needsMacos(recipe: any): boolean {
-  return MACOS_BUILD.test(buildScriptText(recipe))
+const MACOS_BUILD = /\bhdiutil\b|\bditto\b|\bsips\b|\bpkgutil\b|\binstaller\b|\bcodesign\b|\bspctl\b|\bxcrun\b|\.dmg\b|\.pkg\b/
+export function needsMacos(recipe: Pick<Recipe, 'build' | 'versionSource'>): boolean {
+  const steps = recipe?.build?.script ?? []
+  const text = (Array.isArray(steps) ? steps : [steps]).map(step => typeof step === 'string' ? step : step.run).flat().join('\n')
+  return recipe.versionSource?.type === 'desktop-bundle' || MACOS_BUILD.test(text)
 }
 
-/** True when version `a` is strictly newer than `b` by dotted-numeric order.
- * Mirrors the guard in scripts/upload-to-s3.ts so the updater never *attempts*
- * a downgrade: some upstream feeds lag the registry (e.g. the logi-options+
- * Homebrew cask reports an older version than we've already published from its
- * rolling installer), and without this we'd rebuild + re-tag an OLDER version
- * every run — overwriting latestVersion in DynamoDB. Non-numeric segments parse
- * as 0, so font-style versions ("2.015", "26.05") order the same way they do at
- * publish time. A release (no `-suffix`) outranks a prerelease at equal numerics. */
-function isNewerVersion(a: string, b: string): boolean {
-  const parse = (v: string) => {
-    const dashIdx = v.indexOf('-')
-    const numeric = (dashIdx === -1 ? v : v.slice(0, dashIdx)).split('.').map((s) => {
-      const n = Number.parseInt(s, 10)
-      return Number.isNaN(n) ? 0 : n
-    })
-    const prerelease = dashIdx === -1 ? null : v.slice(dashIdx + 1)
-    return { numeric, prerelease }
-  }
-  const pa = parse(a)
-  const pb = parse(b)
-  const len = Math.max(pa.numeric.length, pb.numeric.length)
-  for (let i = 0; i < len; i++) {
-    const av = pa.numeric[i] ?? 0
-    const bv = pb.numeric[i] ?? 0
-    if (av !== bv)
-      return av > bv
-  }
-  // Equal numerics: a release outranks a prerelease; two prereleases are not "newer".
-  if (pa.prerelease === pb.prerelease)
-    return false
-  return pa.prerelease === null
+/** New publications target maintained architectures only; old Intel artifacts remain served. */
+export function publicationTargets(recipe: Recipe): Target[] {
+  const supported: Record<string, string> = { 'darwin/aarch64': 'darwin-arm64', 'darwin/arm64': 'darwin-arm64', 'linux/aarch64': 'linux-arm64', 'linux/arm64': 'linux-arm64', 'linux/x86-64': 'linux-x86-64', 'linux/x86_64': 'linux-x86-64' }
+  const targets = [...new Set((recipe.platforms ?? []).map(platform => supported[platform]).filter(Boolean))]
+  if (!targets.length) throw new Error(`${recipe.domain}: no maintained desktop publication platform`)
+  return targets.map(platform => ({ platform, host: platform.startsWith('darwin') && needsMacos(recipe) ? 'macos' : 'ubuntu' }))
 }
 
-interface Entry {
-  domain: string
-  name: string
-  kind: 'app' | 'font'
-  repo: string | null
-  latest: string | null
-  published: string | null
-  needsUpdate: boolean
-  /** 'macos' if the build script needs a macOS runner, else 'ubuntu'. */
-  host: 'macos' | 'ubuntu'
+/** A version number alone is not an installable, scanned artifact for this target. */
+export function hasPublishedArtifact(metadata: RegistryMetadata | null, version: string, platform: string): boolean {
+  const artifact = metadata?.versions?.[version]?.platforms?.[platform]
+  return Boolean(artifact?.tarball && /^[a-f0-9]{64}$/i.test(artifact.sha256 ?? '') && (artifact.size ?? 0) > 0
+    && artifact.malwareScan?.verdict === 'clean' && artifact.malwareScan.artifactSha256 === artifact.sha256)
+}
+
+export function isNewerVersion(a: string, b: string): boolean {
+  return a !== b && sortVersionsDesc([b, a])[0] === a
 }
 
 function ghHeaders(): Record<string, string> {
-  const h: Record<string, string> = {
-    Accept: 'application/vnd.github+json',
-    'User-Agent': 'pantry-desktop-version-check',
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+  return { Accept: 'application/vnd.github+json', 'User-Agent': 'pantry-desktop-updater', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+}
+function tagVersion(tag: unknown, pattern?: RegExp): string | null {
+  if (typeof tag !== 'string') return null
+  if (!pattern) return tag.replace(/^v/, '')
+  const match = tag.match(new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '')))
+  return match?.[1] ? match.slice(1).filter(Boolean).join('.') : null
+}
+const MOBILE_ASSET = /\.(?:apk|aab|ipa)$/i
+const DESKTOP_ASSET = /\.(?:dmg|zip|pkg|exe|msi|msix|appx|deb|rpm|AppImage|tar\.(?:gz|xz|bz2)|tgz)$/i
+function desktopRelease(release: any): boolean {
+  const assets: any[] = Array.isArray(release.assets) ? release.assets : []
+  return assets.length === 0 || assets.some(asset => typeof asset?.name === 'string' && DESKTOP_ASSET.test(asset.name) && !MOBILE_ASSET.test(asset.name))
+}
+/** Product tags and stable policy are authoritative, even when /latest points to another product. */
+export async function latestGithub(repo: string, pattern?: RegExp, stable = true): Promise<string | null> {
+  const get = async (path: string) => {
+    const response = await fetch(`https://api.github.com/repos/${repo}/${path}`, { headers: ghHeaders(), signal: AbortSignal.timeout(TIMEOUT) })
+    if (!response.ok) throw new Error(`${repo}: HTTP ${response.status}`)
+    return response.json() as Promise<any>
   }
-  if (process.env.GITHUB_TOKEN)
-    h.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
-  return h
+  const latest = await get('releases/latest')
+  const version = tagVersion(latest.tag_name, pattern)
+  if (version && !latest.draft && (!stable || !latest.prerelease) && desktopRelease(latest)) return version
+  const releases = await get('releases?per_page=100')
+  if (!Array.isArray(releases)) throw new Error(`${repo}: invalid GitHub releases response`)
+  const versions = releases.filter(release => !release.draft && (!stable || !release.prerelease) && desktopRelease(release))
+    .map(release => tagVersion(release.tag_name, pattern)).filter((value): value is string => Boolean(value))
+  return sortVersionsDesc(versions)[0] ?? null
 }
 
-/** Assets that only a phone can install. A release carrying nothing else is
- * not a desktop release, however new its tag is. */
-const MOBILE_ONLY_ASSET = /\.(?:apk|aab|ipa)$/i
-
-function tagToVersion(tag: string, tagPattern?: RegExp): string {
-  if (tagPattern) {
-    const m = tag.match(tagPattern)
-    if (m && m[1])
-      return m[1]
-  }
-  return tag.replace(/^v/, '')
-}
-
-/** Newest upstream version that this pipeline could actually build.
- *
- * `releases/latest` alone is not that. Several apps publish platform-partial
- * point releases to the same repo — Obsidian's v1.13.8 ships one `.apk` and no
- * desktop asset at all — and taking its tag as "the latest desktop version"
- * wedges the entire workflow: the build 404s on a `.dmg` upstream never
- * published, `publish-macos` fails, and because `record` needs both publish
- * jobs green, NO manifest commit lands for any app until upstream happens to
- * ship a desktop build again. That is what kept this workflow red for weeks.
- *
- * The step back happens ONLY for a latest release that ships assets of which
- * none are installable here. A release with no assets whatsoever carries no
- * signal — plenty of vendors tag on GitHub and host the installer on their own
- * CDN, VS Code being the obvious one — and stepping back there would walk years
- * into the past to whichever ancient release still had a file attached. Those
- * keep `releases/latest` exactly as before. */
-export async function latestGithub(repo: string, tagPattern?: RegExp): Promise<string | null> {
+export async function latestRecipeVersion(source: VersionSource | undefined): Promise<string> {
+  if (!source) throw new Error('No live version source')
+  const operation = async () => source.type === 'github-releases'
+    ? [await latestGithub(source.repo, source.tagPattern, source.stable !== false)]
+    : await fetchVersions(source)
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: ghHeaders() })
-    if (!res.ok)
-      return null
-    const latest = await res.json() as any
-    const tag = latest?.tag_name as string
-    if (!tag)
-      return null
+    const versions = await Promise.race([operation(), new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('Upstream version lookup timed out')), 30_000) })])
+    const valid = versions.filter((version): version is string => typeof version === 'string' && /^\d[\w.+-]*$/.test(version))
+    if (!valid.length) throw new Error('Upstream returned no usable desktop versions')
+    return sortVersionsDesc(valid)[0]
+  }
+  finally { clearTimeout(timer) }
+}
 
-    const assets: any[] = Array.isArray(latest.assets) ? latest.assets : []
-    const installable = (a: any) => typeof a?.name === 'string' && !MOBILE_ONLY_ASSET.test(a.name)
-    // No assets at all, or at least one we can install: nothing to step back from.
-    if (assets.length === 0 || assets.some(installable))
-      return tagToVersion(tag, tagPattern)
-
-    const list = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { headers: ghHeaders() })
-    if (list.ok) {
-      const releases = await list.json() as any[]
-      if (Array.isArray(releases)) {
-        const usable = releases.find(r =>
-          r && !r.draft && !r.prerelease && Array.isArray(r.assets) && r.assets.some(installable),
-        )
-        if (usable?.tag_name)
-          return tagToVersion(usable.tag_name as string, tagPattern)
-      }
+/** All local apps/fonts and catalog entries, including slash-domains outside apps/. */
+export async function discoverRecipes(): Promise<Array<{ recipe: Recipe, kind: 'app' | 'font' }>> {
+  const files = new Map<string, 'app' | 'font'>()
+  const walk = (dir: string, kind: 'app' | 'font') => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) walk(path, kind)
+      else if (entry.name.endsWith('.ts')) files.set(path, kind)
     }
-
-    // Mobile-only latest with nothing better in reach: report it rather than
-    // nothing, so the entry still appears in the run's summary.
-    return tagToVersion(tag, tagPattern)
   }
-  catch {
-    return null
+  walk(join(RECIPES_DIR, 'apps'), 'app')
+  walk(join(RECIPES_DIR, 'fonts'), 'font')
+  for (const app of desktopCatalog.apps) {
+    const file = findRecipeFile(app.domain)
+    if (!file) throw new Error(`Catalog app ${app.domain} has no recipe`)
+    files.set(file, 'app')
   }
+  const seen = new Set<string>()
+  const recipes = []
+  for (const [file, kind] of files) {
+    const recipe = (await import(file)).recipe as Recipe
+    if (!recipe?.domain) throw new Error(`Invalid desktop recipe: ${relative(ROOT, file)}`)
+    if (seen.has(recipe.domain)) throw new Error(`Duplicate desktop domain: ${recipe.domain}`)
+    seen.add(recipe.domain)
+    recipes.push({ recipe, kind })
+  }
+  for (const app of desktopCatalog.apps) {
+    if (!seen.has(app.domain)) throw new Error(`Catalog domain ${app.domain} resolved to a different recipe`)
+  }
+  return recipes
 }
 
-async function publishedVersion(domain: string, fresh = false): Promise<string | null> {
+async function metadata(domain: string): Promise<RegistryMetadata | null> {
+  const response = await fetch(`${REGISTRY}/binaries/${domain}/metadata.json?verify=${Date.now()}`, { cache: 'no-store', signal: AbortSignal.timeout(TIMEOUT) })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`${domain}: registry HTTP ${response.status}`)
+  const data = await response.json() as RegistryMetadata
+  if (!data || typeof data !== 'object' || !data.versions) throw new Error(`${domain}: invalid registry metadata`)
+  return data
+}
+
+export async function planEntry(recipe: Recipe, kind: 'app' | 'font', previous: Entry | undefined, published: RegistryMetadata | null, force = false): Promise<Entry> {
+  const targets = publicationTargets(recipe)
+  const source = recipe.versionSource
+  const entry: Entry = { domain: recipe.domain, name: recipe.name, kind, repo: source?.type === 'github-releases' ? source.repo : null,
+    host: needsMacos(recipe) ? 'macos' : 'ubuntu', targets, latest: null, published: published?.latestVersion ?? null, needsUpdate: false, pendingTargets: [], force }
   try {
-    const suffix = fresh ? `?verify=${Date.now()}` : ''
-    const res = await fetch(`${REGISTRY}/binaries/${encodeURI(domain)}/metadata.json${suffix}`, {
-      cache: fresh ? 'no-store' : 'default',
-      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
-    })
-    if (res.status === 404)
-      return null
-    if (!res.ok)
-      throw new Error(`HTTP ${res.status}`)
-    return (await res.json() as any)?.latestVersion || null
+    if (source?.type === 'desktop-bundle') {
+      entry.sourceUrl = source.url
+      entry.sourceFingerprint = await archiveFingerprint(source)
+      if (previous?.sourceFingerprint === entry.sourceFingerprint && previous.latest) entry.latest = previous.latest
+    }
+    else entry.latest = await latestRecipeVersion(source)
+    // Do not downgrade when a vendor feed lags the registry. Still repair a missing target.
+    if (entry.latest && entry.published && isNewerVersion(entry.published, entry.latest)) entry.latest = entry.published
+    entry.pendingTargets = targets.filter(target => force || !entry.latest || !hasPublishedArtifact(published, entry.latest, target.platform))
+    entry.needsUpdate = entry.pendingTargets.length > 0
   }
-  catch (err) {
-    throw new Error(`registry metadata unavailable for ${domain}: ${err}`)
-  }
+  catch (error) { entry.error = String(error) }
+  return entry
 }
 
-async function ensureRegistryAvailable(): Promise<void> {
-  let lastStatus = 'unreachable'
-  for (let attempt = 1; attempt <= 3; attempt++) {
+async function verifyEntry(entry: Entry): Promise<void> {
+  if (!entry.latest || entry.error) throw new Error(`${entry.domain}: unresolved upstream: ${entry.error ?? 'missing bundle version'}`)
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const data = await metadata(entry.domain)
+    if (entry.targets?.every(target => hasPublishedArtifact(data, entry.latest!, target.platform))) return
+    if (attempt < 5) await Bun.sleep((attempt + 1) * 1000)
+  }
+  throw new Error(`${entry.domain}@${entry.latest}: missing clean, checksum-bound publication for a required target`)
+}
+
+/** Continue independent packages after a failure; report all failed publications at the end. */
+export async function publishPlan(entries: Entry[], host: Host | 'all', ports: {
+  resolveBundle: (entry: Entry) => Promise<string>,
+  publish: (entry: Entry, target: Target) => Promise<void>,
+  verify: (entry: Entry, target: Target) => Promise<void>,
+}): Promise<{ packages: Entry[], failures: string[] }> {
+  const results: Entry[] = []
+  const failures = entries.filter(entry => entry.error).map(entry => `${entry.domain}: ${entry.error}`)
+  for (const input of entries) {
+    const targets = (input.pendingTargets ?? []).filter(target => host === 'all' || target.host === host)
+    if (!targets.length || input.error) continue
+    const entry = { ...input }
     try {
-      const res = await fetch(`${REGISTRY}/health?verify=${Date.now()}`, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
-      })
-      lastStatus = `HTTP ${res.status}`
-      if (res.ok)
-        return
-    }
-    catch (err) {
-      lastStatus = String(err)
-    }
-    if (attempt < 3)
-      await Bun.sleep(attempt * 1000)
-  }
-  throw new Error(`registry health check failed (${lastStatus}); refusing to infer package state`)
-}
-
-/** Confirm that the registry exposes the version before allowing the workflow
- * to record it. The cache-busting query avoids briefly stale CDN responses. */
-async function verifyPublishedVersion(domain: string, version: string): Promise<void> {
-  const attempts = 6
-  let lastObserved = 'unreachable'
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const published = await publishedVersion(domain, true)
-      lastObserved = published ?? 'not published'
-      if (published === version) {
-        console.warn(`  ✓ registry verified ${domain} @ ${version}`)
-        return
+      if (!entry.latest) entry.latest = await ports.resolveBundle(entry)
+      for (const target of targets) {
+        await ports.publish(entry, target)
+        await ports.verify(entry, target)
       }
+      results.push(entry)
     }
-    catch (err) {
-      lastObserved = String(err)
-    }
-    if (attempt < attempts)
-      await Bun.sleep(attempt * 1000)
+    catch (error) { failures.push(`${entry.domain}: ${error}`) }
   }
-  throw new Error(`registry did not expose ${domain} @ ${version} after upload (last result: ${lastObserved})`)
+  return { packages: results, failures }
 }
 
-/** List font recipes (every `.ts` under recipes/fonts/). */
-function listFontRecipes(dir: string): string[] {
-  const fontsDir = join(dir, 'fonts')
-  if (!existsSync(fontsDir))
-    return []
-  const out: string[] = []
-  const walk = (d: string): void => {
-    for (const name of readdirSync(d)) {
-      const full = join(d, name)
-      if (statSync(full).isDirectory())
-        walk(full)
-      else if (name.endsWith('.ts'))
-        out.push(full)
-    }
-  }
-  walk(fontsDir)
-  return out
-}
-
-/** List app recipes (every `.ts` under recipes/apps/) so a newly-added desktop
- * app publishes from its local recipe — no wait on the server-side catalogue. */
-function listAppRecipes(dir: string): string[] {
-  const appsDir = join(dir, 'apps')
-  if (!existsSync(appsDir))
-    return []
-  const out: string[] = []
-  const walk = (d: string): void => {
-    for (const name of readdirSync(d)) {
-      const full = join(d, name)
-      if (statSync(full).isDirectory())
-        walk(full)
-      else if (name.endsWith('.ts'))
-        out.push(full)
-    }
-  }
-  walk(appsDir)
-  return out
-}
-
-/** Locate `<domain>.ts` anywhere under recipes/ (recipes are organised into
- * fonts/ and apps/ subfolders). */
-function findRecipeFile(dir: string, filename: string): string | null {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name)
-    if (statSync(full).isDirectory()) {
-      const hit = findRecipeFile(full, filename)
-      if (hit)
-        return hit
-    }
-    else if (name === filename) {
-      return full
-    }
-  }
-  return null
-}
-
-/** The desktop-app domains the registry catalogues (so we only import ~40
- * recipes, not the thousands of CLI ones). Empty on network failure. */
-async function appDomains(): Promise<string[]> {
-  try {
-    const res = await fetch(`${REGISTRY}/desktop-apps`, {
-      signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
-    })
-    if (!res.ok)
-      throw new Error(`HTTP ${res.status}`)
-    const data = await res.json() as any
-    return (data.apps ?? []).map((a: any) => a.domain).filter(Boolean)
-  }
-  catch (err) {
-    throw new Error(`desktop app catalogue unavailable: ${err}`)
-  }
+function readPlan(path: string): Plan {
+  const plan = JSON.parse(readFileSync(path, 'utf8')) as Plan
+  if (plan.schema !== 1 || !Array.isArray(plan.packages)) throw new Error('Unsupported desktop update plan')
+  return plan
 }
 
 async function main(): Promise<void> {
-  if (doPublish && doCommit) {
-    throw new Error('publish and commit must be separate invocations so the commit re-reads verified registry state')
-  }
-
-  await ensureRegistryAvailable()
-
-  const previouslyPublished = new Map<string, string | null>()
-  if (existsSync(MANIFEST)) {
-    try {
-      const previous = JSON.parse(readFileSync(MANIFEST, 'utf8')) as { packages?: Array<{ domain?: string, published?: string | null }> }
-      for (const pkg of previous.packages ?? []) {
-        if (pkg.domain)
-          previouslyPublished.set(pkg.domain, pkg.published ?? null)
-      }
-    }
-    catch {
-      // A malformed manifest will be replaced below; git still preserves the
-      // before/after diff, but there is no safe prior version to put in the body.
-    }
-  }
-
-  // Build the candidate (file, kind) set: every font recipe + the app recipes
-  // that back the registry's desktop-app catalogue.
-  const candidates: Array<{ file: string, kind: 'app' | 'font' }> = []
-  const seen = new Set<string>()
-  const add = (file: string | null, kind: 'app' | 'font'): void => {
-    if (file && !seen.has(file)) {
-      seen.add(file)
-      candidates.push({ file, kind })
-    }
-  }
-  for (const file of listFontRecipes(RECIPES_DIR))
-    add(file, 'font')
-  // Every local app recipe — lets a freshly-added app publish from its file
-  // without first appearing in the live server-side desktop-app catalogue.
-  for (const file of listAppRecipes(RECIPES_DIR))
-    add(file, 'app')
-  // Plus any app domains the registry catalogues (covers slash-domains and any
-  // recipe that lives outside recipes/apps/).
-  for (const domain of await appDomains()) {
-    if (domain.includes('/'))
-      continue // slash-domains stay in their own nested path; skip here
-    add(findRecipeFile(RECIPES_DIR, `${domain}.ts`), 'app')
-  }
-
-  const entries: Entry[] = []
-  for (const { file, kind } of candidates) {
-    let recipe: any
-    try {
-      recipe = (await import(file)).recipe
-    }
-    catch {
-      continue
-    }
-    if (!recipe || typeof recipe.domain !== 'string')
-      continue
-
-    const repo: string | null = recipe.versionSource?.type === 'github-releases'
-      ? recipe.versionSource.repo
-      : null
-    const tagPattern: RegExp | undefined = recipe.versionSource?.tagPattern
-
-    // Resolve the latest upstream version. `github-releases` queries the GitHub
-    // API; `custom` calls the recipe's own `fetch()` (newest-first) — this lets
-    // apps with no GitHub feed but a machine-readable version source (e.g.
-    // Linear's Content-Disposition header) auto-update too. Other source types
-    // (`github-tags`, `url-pattern`) and pinned recipes resolve to null and are
-    // simply tracked at their published version (no auto-bump).
-    let latest: string | null = repo ? await latestGithub(repo, tagPattern) : null
-    if (!latest && recipe.versionSource?.type === 'custom' && typeof recipe.versionSource.fetch === 'function') {
-      try {
-        const versions = await recipe.versionSource.fetch()
-        latest = Array.isArray(versions) && versions.length > 0 ? versions[0] : null
-      }
-      catch {
-        latest = null
-      }
-    }
-    // Pinned recipes (no machine-readable upstream feed) declare their version
-    // via `knownVersions` — resolve to that so an unpublished pinned package
-    // still gets built/published. Already-published ones stay no-op (latest ===
-    // published), so this never causes spurious rebuilds.
-    if (!latest && Array.isArray(recipe.versionSource?.knownVersions) && recipe.versionSource.knownVersions.length > 0) {
-      latest = String(recipe.versionSource.knownVersions[0])
-    }
-    // The final record pass must bypass any stale CDN entry left from the
-    // preceding uploads; ordinary discovery can use the cache-friendly URL.
-    const published = await publishedVersion(recipe.domain, requireCurrent)
-    entries.push({
-      domain: recipe.domain,
-      name: recipe.name ?? recipe.domain,
-      kind,
-      repo,
-      latest,
-      published,
-      // Update only when we have a resolved upstream version that is genuinely
-      // NEWER than what's published (or nothing is published yet) — never on a
-      // mere string difference, which would let an upstream feed that lags the
-      // registry trigger an endless downgrade. `--force` still re-publishes the
-      // resolved latest regardless, for re-runs after a pipeline fix.
-      needsUpdate: !!latest && (forceDomains.has(recipe.domain) || !published || isNewerVersion(latest, published)),
-      host: needsMacos(recipe) ? 'macos' : 'ubuntu',
-    })
-  }
-
-  entries.sort((a, b) => a.domain.localeCompare(b.domain))
-  const outdated = entries.filter(e => e.needsUpdate)
-
-  // Report.
-  for (const e of entries) {
-    const mark = e.needsUpdate ? '⬆' : (e.published ? '✓' : '·')
-    console.warn(`  ${mark} [${e.host === 'macos' ? 'macos ' : 'ubuntu'}] ${e.domain.padEnd(34)} latest=${e.latest ?? '?'} published=${e.published ?? '—'}`)
-  }
-  const ubuntuOut = outdated.filter(e => e.host === 'ubuntu').length
-  const macosOut = outdated.length - ubuntuOut
-  console.warn(`\n${entries.length} desktop package(s), ${outdated.length} out of date (${ubuntuOut} ubuntu-safe, ${macosOut} macos).`)
-
-  // Publish out-of-date packages (requires storage creds in the env). Only the
-  // packages for this run's build host — so the ubuntu-latest job publishes the
-  // zip-only ones and the macos-latest job publishes the .dmg/macOS-tool ones.
-  const toPublish = platform === 'all'
-    ? outdated
-    : outdated.filter(e => e.host === platform)
-  if (printSelected)
-    console.log(toPublish.map(e => e.domain).join(','))
-
-  if (doPublish && toPublish.length > 0) {
-    console.warn(`\nPublishing ${toPublish.length} package(s) for host=${platform}.`)
-    const failures: string[] = []
-    for (const e of toPublish) {
-      if (!e.latest)
-        continue
-      console.warn(`\n==> Publishing ${e.domain} @ ${e.latest}`)
-      try {
-        await $`./scripts/build-and-upload.sh ${e.domain} ${e.latest}`.cwd(ROOT)
-        await verifyPublishedVersion(e.domain, e.latest)
-      }
-      catch (err) {
-        console.error(`  ! failed to publish ${e.domain}: ${err}`)
-        failures.push(`${e.domain}@${e.latest}`)
-      }
-    }
-    if (failures.length > 0) {
-      throw new Error(`desktop publication failed for ${failures.join(', ')}; manifest will not be committed`)
-    }
-  }
-
-  const manifest = {
-    generatedFromUpstreamAt: undefined as string | undefined, // stamped by CI, not here (keeps diffs clean)
-    packages: entries.map(({ domain, name, kind, host, latest, published, needsUpdate }) => ({
-      domain,
-      name,
-      kind,
-      host,
-      latest,
-      published,
-      needsUpdate,
-    })),
-  }
-  // A query does not write. `--print-selected` is the cheap discovery pass that
-  // decides whether to allocate a macOS runner at all, and it was falling
-  // through to rewrite the tracked manifest as a side effect — recording
-  // `latest: null` for every app whenever the upstream version lookups fail
-  // (no token, a rate limit, a flaky network). A manifest full of nulls makes
-  // every app compare as current, which would silently freeze desktop updates
-  // for as long as nobody noticed. The `record` job writes it deliberately,
-  // with `--require-current --commit`.
-  if (printSelected) {
-    console.warn(`Skipped writing ${MANIFEST} (--print-selected is a query)`)
-  }
+  const args = process.argv.slice(2)
+  const has = (flag: string) => args.includes(flag)
+  const value = (flag: string) => args.find(arg => arg.startsWith(`${flag}=`))?.slice(flag.length + 1)
+  const host = value('--platform') ?? 'all'
+  if (!['macos', 'ubuntu', 'all'].includes(host)) throw new Error(`Invalid build host: ${host}`)
+  if (has('--publish') && has('--commit')) throw new Error('Publish and record must be separate invocations')
+  const previous: Entry[] = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')).packages : []
+  const from = value('--from-plan')
+  let plan: Plan
+  if (from) plan = readPlan(resolve(from))
   else {
-    writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`)
-    console.warn(`Wrote ${MANIFEST}`)
-  }
-
-  if (requireCurrent && outdated.length > 0) {
-    const stale = outdated.map(e => `${e.domain} (${e.published ?? '—'} → ${e.latest})`).join(', ')
-    throw new Error(`refusing to commit a stale desktop manifest: ${stale}`)
-  }
-
-  // Commit the manifest when it changed. The committer is chosen by the
-  // WORKFLOW, not by this script. The final record job is the sole committer and
-  // runs only after both native publish jobs succeed.
-  if (doCommit) {
-    const status = await $`git status --porcelain ${MANIFEST}`.cwd(ROOT).text()
-    if (status.trim()) {
-      const publishedChanges = entries
-        .map(e => ({ ...e, previousPublished: previouslyPublished.get(e.domain) ?? null }))
-        .filter(e => e.published && e.published !== e.previousPublished)
-      const subject = commitSubject(publishedChanges)
-      const body = publishedChanges.map(e =>
-        `- ${e.kind} ${e.domain}: ${e.previousPublished ? `${e.previousPublished} → ${e.published}` : `published at ${e.published}`}`,
-      ).join('\n')
-      await $`git add ${MANIFEST}`.cwd(ROOT)
-      await $`git commit -m ${subject} -m ${body || 'no version changes'}`.cwd(ROOT)
-      console.warn(`Committed: ${subject}`)
+    const recipes = await discoverRecipes()
+    const forced = new Set((value('--force') ?? '').split(',').filter(Boolean))
+    for (const domain of forced) { if (!recipes.some(({ recipe }) => recipe.domain === domain)) throw new Error(`Unknown desktop package: ${domain}`) }
+    const entries: Entry[] = []
+    // Bound concurrency: one slow vendor cannot serialize the entire catalog.
+    for (let offset = 0; offset < recipes.length; offset += 6) {
+      entries.push(...await Promise.all(recipes.slice(offset, offset + 6).map(async ({ recipe, kind }) =>
+        planEntry(recipe, kind, previous.find(entry => entry.domain === recipe.domain), await metadata(recipe.domain), forced.has(recipe.domain)))))
     }
-    else {
-      console.warn('Manifest unchanged — nothing to commit.')
+    plan = { schema: 1, packages: entries.sort((a, b) => a.domain.localeCompare(b.domain)) }
+  }
+  const outputPlan = value('--plan')
+  if (outputPlan) writeFileSync(resolve(outputPlan), `${JSON.stringify(plan, null, 2)}\n`)
+  for (const entry of plan.packages) console.warn(`  ${entry.error ? '!' : entry.needsUpdate ? '⬆' : '✓'} ${entry.domain}: upstream=${entry.latest ?? 'native bundle discovery'} published=${entry.published ?? '—'}${entry.error ? ` (${entry.error})` : ''}`)
+  console.warn(`${plan.packages.length} desktop packages, ${plan.packages.filter(entry => entry.needsUpdate).length} pending, ${plan.packages.filter(entry => entry.error).length} lookup errors`)
+  if (has('--print-selected')) {
+    console.log(plan.packages.filter(entry => entry.pendingTargets?.some(target => host === 'all' || target.host === host)).map(entry => entry.domain).join(','))
+    return
+  }
+  if (has('--publish')) {
+    const result = await publishPlan(plan.packages, host as Host | 'all', {
+      resolveBundle: async entry => {
+        const file = findRecipeFile(entry.domain)
+        const recipe: Recipe = (await import(file!)).recipe
+        if (recipe.versionSource?.type !== 'desktop-bundle' || !entry.sourceFingerprint) throw new Error('Missing bundle source or fingerprint')
+        return desktopBundleVersion(recipe.versionSource, entry.sourceFingerprint)
+      },
+      publish: async (entry, target) => {
+        // A changed rolling installer may retain its version; immutable releases do not get overwritten.
+        if (hasPublishedArtifact(await metadata(entry.domain), entry.latest!, target.platform) && !entry.force) return
+        await $`./scripts/build-and-upload.sh ${entry.domain} ${entry.latest} pantry-registry us-east-1 ${target.platform}`.cwd(ROOT)
+      },
+      verify: async (entry, target) => verifyEntry({ ...entry, targets: [target] }),
+    })
+    const output = value('--results')
+    if (output) writeFileSync(resolve(output), `${JSON.stringify({ schema: 1, packages: result.packages }, null, 2)}\n`)
+    if (result.failures.length) throw new Error(`Desktop updates failed:\n${result.failures.join('\n')}`)
+    return
+  }
+  if (has('--require-current') || has('--commit')) {
+    const resultDirectory = value('--results-dir')
+    if (resultDirectory) {
+      for (const filename of readdirSync(resolve(resultDirectory))) {
+        if (!filename.endsWith('.json')) continue
+        for (const receipt of readPlan(join(resolve(resultDirectory), filename)).packages) {
+          const entry = plan.packages.find(candidate => candidate.domain === receipt.domain)
+          if (!entry || entry.sourceFingerprint !== receipt.sourceFingerprint) throw new Error('Publication receipt does not match update plan')
+          if (entry.latest && entry.latest !== receipt.latest) throw new Error('Publication changed the planned version')
+          entry.latest = receipt.latest
+        }
+      }
+    }
+    // Verify every package before writing anything. Unresolved vendors cannot silently become green.
+    const failures: string[] = []
+    for (const entry of plan.packages) {
+      try { await verifyEntry(entry) }
+      catch (error) { failures.push(String(error)) }
+    }
+    if (failures.length) throw new Error(`Refusing to record incomplete desktop updates:\n${failures.join('\n')}`)
+    const packages = plan.packages.map(entry => ({ ...entry, published: entry.latest, needsUpdate: false, pendingTargets: [] }))
+    writeFileSync(MANIFEST, `${JSON.stringify({ packages }, null, 2)}\n`)
+    if (has('--commit') && (await $`git status --porcelain ${MANIFEST}`.cwd(ROOT).text()).trim()) {
+      const changes = packages.map(entry => ({ ...entry, previousPublished: previous.find(old => old.domain === entry.domain)?.published ?? null })).filter(entry => entry.published !== entry.previousPublished)
+      await $`git add ${MANIFEST}`.cwd(ROOT)
+      await $`git commit -m ${commitSubject(changes)}`.cwd(ROOT)
     }
   }
 }
 
-/** A precise, readable commit subject (no "(s)" hedging). */
 export function commitSubject(published: Array<Entry & { previousPublished: string | null }>): string {
   if (published.length === 0)
     return 'chore(desktop): refresh version manifest'
@@ -603,8 +314,8 @@ export function commitSubject(published: Array<Entry & { previousPublished: stri
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
-    console.error(err)
-    process.exit(1)
+  main().catch(error => {
+    console.error(error)
+    process.exitCode = 1
   })
 }

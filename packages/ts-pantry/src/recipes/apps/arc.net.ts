@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { redirectVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'arc.net',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://arc.net',
   programs: ['arc'],
   platforms: ['darwin/aarch64', 'darwin/x86-64'],
+
+  versionSource: redirectVersionSource('https://releases.arc.net/release/Arc-latest.dmg', /Arc-([\d.]+)-/),
 
   build: {
     script: [

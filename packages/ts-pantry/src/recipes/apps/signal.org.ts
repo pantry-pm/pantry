@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { textVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'signal.org',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://signal.org',
   programs: ['signal'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: textVersionSource('https://updates.signal.org/desktop/latest-mac.yml', /^version: ([\d.]+)/m),
 
   build: {
     script: [

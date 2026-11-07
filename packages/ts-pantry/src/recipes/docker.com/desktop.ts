@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { appcastVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'docker.com/desktop',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://docker.com',
   programs: ['docker-desktop'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: appcastVersionSource('https://desktop.docker.com/mac/main/arm64/appcast.xml'),
 
   build: {
     script: [

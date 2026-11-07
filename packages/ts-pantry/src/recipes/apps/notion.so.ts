@@ -1,4 +1,5 @@
 import type { Recipe } from '../../../scripts/recipe-types'
+import { textVersionSource } from '../../../scripts/desktop-version-sources'
 
 export const recipe: Recipe = {
   domain: 'notion.so',
@@ -7,6 +8,8 @@ export const recipe: Recipe = {
   homepage: 'https://notion.so',
   programs: ['notion'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
+
+  versionSource: textVersionSource('https://desktop-release.notion-static.com/latest-mac.yml', /^version: ([\d.]+)/m),
 
   build: {
     script: [
