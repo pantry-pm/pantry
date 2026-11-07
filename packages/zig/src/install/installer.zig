@@ -2873,21 +2873,15 @@ pub const Installer = struct {
             try downloader.buildZiglangFallbackUrl(self.allocator, resolved_version);
         defer self.allocator.free(url);
 
-        // Create temp directory for downloading
+        // Download into an exclusively owned extraction. Concurrent installs of
+        // the same version must never share an archive or remove each other's files.
         const home = try Paths.home(self.allocator);
         defer self.allocator.free(home);
-
-        const temp_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/.pantry/.tmp/zig-{s}",
-            .{ home, resolved_version },
-        );
-        defer {
-            self.allocator.free(temp_dir);
-            io_helper.deleteTree(temp_dir) catch {};
-        }
-
-        try io_helper.makePath(temp_dir);
+        const staging_parent = try std.fmt.allocPrint(self.allocator, "{s}/.pantry/.tmp", .{home});
+        defer self.allocator.free(staging_parent);
+        var staging = try verified_staging.Extraction.init(self.allocator, staging_parent);
+        defer staging.deinit();
+        const temp_dir = staging.root;
 
         // Mirrored Unix archives are gzip; official Zig archives are xz.
         const is_windows = comptime @import("builtin").os.tag == .windows;
@@ -2926,48 +2920,7 @@ pub const Installer = struct {
             }
         }
 
-        // Extract archive to temp directory
-        const extract_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/extracted",
-            .{temp_dir},
-        );
-        defer self.allocator.free(extract_dir);
-
-        try io_helper.makePath(extract_dir);
-        try extractor.extractArchiveQuiet(self.allocator, archive_path, extract_dir, archive_ext, options.quiet);
-
-        // Find the actual source directory (zig archives nest contents in zig-{platform}-{arch}-{version}/)
-        var extracted_handle = try io_helper.openDirAbsoluteForIteration(extract_dir);
-        defer extracted_handle.close();
-
-        var zig_source_dir: ?[]const u8 = null;
-        var iter = extracted_handle.iterate();
-        while (iter.next() catch null) |entry| {
-            if (entry.kind == .directory and std.mem.startsWith(u8, entry.name, "zig-")) {
-                zig_source_dir = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ extract_dir, entry.name });
-                break;
-            }
-        }
-
-        if (zig_source_dir == null) {
-            zig_source_dir = try self.allocator.dupe(u8, extract_dir);
-        }
-        defer self.allocator.free(zig_source_dir.?);
-
-        // Create install directory and copy contents
-        try io_helper.makePath(install_dir);
-        try self.copyDirectoryStructure(zig_source_dir.?, install_dir);
-
-        // Ensure zig binary is executable (not needed on Windows)
-        if (comptime !is_windows) {
-            var chmod_buf: [std.fs.max_path_bytes:0]u8 = undefined;
-            const zig_path = std.fmt.bufPrint(chmod_buf[0..std.fs.max_path_bytes], "{s}/bin/zig", .{install_dir}) catch null;
-            if (zig_path) |p| {
-                chmod_buf[p.len] = 0;
-                _ = std.c.chmod(&chmod_buf, 0o755);
-            }
-        }
+        try self.materializeZigArchive(&staging, archive_path, archive_ext, url, resolved_version, install_dir, options.verbose);
 
         // Use the standard symlink creation — same as all other packages.
         // discoverBinaries now finds executables at the package root (e.g. zig binary),
@@ -2986,6 +2939,14 @@ pub const Installer = struct {
             .from_cache = false,
             .install_time_ms = @intCast(end_time - start_time),
         };
+    }
+
+    /// Verify and publish both official nested and mirrored Zig package layouts.
+    fn materializeZigArchive(self: *Installer, staging: *verified_staging.Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, version: []const u8, destination: []const u8, verbose: bool) !void {
+        try staging.extractVerified(archive, format, url, verbose);
+        const source = try self.findPackageRoot(staging.payload, "ziglang.org", version);
+        defer self.allocator.free(source);
+        try self.materializeVerifiedExtraction(staging, source, destination, "ziglang.org");
     }
 
     /// Install package globally (old behavior)
@@ -4265,7 +4226,7 @@ pub const Installer = struct {
         return self.materializePackage(.{ .shared = source }, dest, domain);
     }
 
-    /// Only these two cold-download paths hold a fresh verified extraction.
+    /// Cold downloads hold a fresh verified extraction rather than a shared cache.
     fn materializeVerifiedExtraction(self: *Installer, extraction: *const verified_staging.Extraction, source: []const u8, dest: []const u8, domain: []const u8) !void {
         return self.materializePackage(.{ .exclusive = .{ .extraction = extraction, .path = source } }, dest, domain);
     }
@@ -5210,6 +5171,85 @@ test "project links stay inside pantry/ when it is installed through a worktree'
         const result = try io_helper.childRunWithOptions(arena, &.{ "/bin/sh", "-c", case.cmd }, .{ .cwd = root });
         try std.testing.expect(result.term == .exited and result.term.exited == 0);
         try std.testing.expectEqualStrings(case.out, result.stdout);
+    }
+}
+
+test "native materialization: Zig archives have isolated staging and preserve prior installs on corruption" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root_len = try tmp.dir.realPathFile(io_helper.io, ".", &root_buffer);
+    const root = root_buffer[0..root_len];
+    const destination = try std.fs.path.join(allocator, &.{ root, "installed/ziglang.org/v0.17.1" });
+    defer allocator.free(destination);
+
+    for ([_][]const u8{ "zig-aarch64-macos-0.17.1", "ziglang.org/v0.17.1", "" }) |layout| {
+        const source = try std.fs.path.join(allocator, &.{ root, "source" });
+        defer allocator.free(source);
+        defer io_helper.deleteTree(source) catch {};
+        const package = try std.fs.path.join(allocator, &.{ source, layout });
+        defer allocator.free(package);
+        const lib_dir = try std.fs.path.join(allocator, &.{ package, "lib" });
+        defer allocator.free(lib_dir);
+        try io_helper.makePath(lib_dir);
+        const executable = try std.fs.path.join(allocator, &.{ package, if (std.mem.startsWith(u8, layout, "zig-")) "zig" else "bin/zig" });
+        defer allocator.free(executable);
+        try io_helper.makePath(std.fs.path.dirname(executable).?);
+        const program = "#!/bin/sh\nprintf '0.17.1\\n'\n";
+        const file = try io_helper.createFile(executable, .{});
+        try io_helper.writeAllToFile(file, program);
+        try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o755));
+        io_helper.closeFile(file);
+
+        var second = try verified_staging.Extraction.init(allocator, root);
+        defer second.deinit();
+        const second_archive = try std.fs.path.join(allocator, &.{ second.root, "zig.tar.gz" });
+        defer allocator.free(second_archive);
+        const archived = try io_helper.childRun(allocator, &.{ "tar", "-czf", second_archive, "-C", source, "." });
+        defer allocator.free(archived.stdout);
+        defer allocator.free(archived.stderr);
+        try std.testing.expect(archived.term == .exited and archived.term.exited == 0);
+        const checksum = try extractor.computeChecksum(allocator, second_archive);
+        defer allocator.free(checksum);
+        {
+            var first = try verified_staging.Extraction.init(allocator, root);
+            defer first.deinit();
+            try std.testing.expect(!std.mem.eql(u8, first.root, second.root));
+            const first_archive = try std.fs.path.join(allocator, &.{ first.root, "zig.tar.gz" });
+            defer allocator.free(first_archive);
+            try io_helper.copyFile(second_archive, first_archive);
+            try installer.materializeZigArchive(&first, first_archive, "tar.gz", null, "0.17.1", destination, false);
+        }
+        // Ending the first overlapping lifetime cannot erase or alter the second.
+        const after = try extractor.computeChecksum(allocator, second_archive);
+        defer allocator.free(after);
+        try std.testing.expectEqualStrings(checksum, after);
+        try installer.materializeZigArchive(&second, second_archive, "tar.gz", null, "0.17.1", destination, false);
+        const installed_program = try std.fs.path.join(allocator, &.{ destination, if (std.mem.startsWith(u8, layout, "zig-")) "zig" else "bin/zig" });
+        defer allocator.free(installed_program);
+        const result = try io_helper.childRun(allocator, &.{ installed_program, "version" });
+        defer allocator.free(result.stdout);
+        defer allocator.free(result.stderr);
+        try std.testing.expect(result.term == .exited and result.term.exited == 0);
+        try std.testing.expectEqualStrings("0.17.1\n", result.stdout);
+
+        var corrupt = try verified_staging.Extraction.init(allocator, root);
+        defer corrupt.deinit();
+        const corrupt_archive = try std.fs.path.join(allocator, &.{ corrupt.root, "zig.tar.gz" });
+        defer allocator.free(corrupt_archive);
+        const bad_file = try io_helper.createFile(corrupt_archive, .{});
+        try io_helper.writeAllToFile(bad_file, "incomplete archive");
+        io_helper.closeFile(bad_file);
+        try std.testing.expectError(error.CorruptArchive, installer.materializeZigArchive(&corrupt, corrupt_archive, "tar.gz", null, "0.17.1", destination, false));
+        const retained = try io_helper.readFileAlloc(allocator, installed_program, 4096);
+        defer allocator.free(retained);
+        try std.testing.expectEqualStrings(program, retained);
     }
 }
 
