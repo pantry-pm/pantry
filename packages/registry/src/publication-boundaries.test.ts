@@ -153,9 +153,16 @@ describe('first-party publication boundaries', () => {
     // app — and a manifest of nulls compares as "everything current", freezing
     // desktop updates silently. The `record` job writes it deliberately.
     const script = source('packages/ts-pantry/scripts/check-desktop-updates.ts')
-    expect(script).toContain('--print-selected is a query')
-    expect(script).toContain('if (printSelected) {')
-    expect(script).toContain('bun scripts/check-desktop-updates.ts --require-current --commit')
+    const query = script.indexOf("if (has('--print-selected')) {")
+    const publish = script.indexOf("if (has('--publish')) {", query)
+    const record = script.indexOf("if (has('--require-current') || has('--commit')) {", publish)
+    expect(query).toBeGreaterThan(0)
+    expect(script.slice(query, publish)).toContain('return')
+    expect(record).toBeGreaterThan(publish)
+    expect(script.slice(0, record)).not.toContain('writeFileSync(MANIFEST')
+    const workflow = source('.github/workflows/check-desktop-updates.yml')
+    expect(workflow).toContain("github.ref == 'refs/heads/main'")
+    expect(workflow).toContain('--from-plan=')
   })
 
   it('bounds retained-artifact backfill scans and closes every HTTP connection', () => {
