@@ -127,20 +127,24 @@ jobs:
           packages/zig/zig-out/bin/pantry install --frozen-lockfile
           git diff --exit-code -- pantry.lock bun.lock
 
-      - name: Install the native graph fixture archiver through Pantry
+      # This is the historical broken-layout migration fixture, not the
+      # workspace bootstrap. The source installer must migrate its actual 101
+      # graph; current versions no longer create that graph.
+      - name: Install the historical migration CLI and native graph fixture archiver
+        id: migration-baseline
         uses: ./packages/action
         with:
-          version: 0.11.179
+          version: 0.11.101
           install: 'false'
           packages: gnu.org/tar@1.35
 
       - name: Verify the source JavaScript workspace graph and published-version migration
         run: |
           source_cli="$GITHUB_WORKSPACE/packages/zig/zig-out/bin/pantry"
-          published_cli="$(command -v pantry)"
+          migration_baseline="${{ steps.migration-baseline.outputs.pantry-path }}"
           bun .github/scripts/verify-nested-js-graph.ts "$source_cli" single
           bun .github/scripts/verify-nested-js-graph.ts "$source_cli" workspace
-          bun .github/scripts/verify-nested-js-graph.ts "$source_cli" workspace "$published_cli"
+          bun .github/scripts/verify-nested-js-graph.ts "$source_cli" workspace "$migration_baseline"
           bun .github/scripts/verify-nested-js-graph.ts "$source_cli" members-only
           bun .github/scripts/verify-nested-js-graph.ts "$source_cli" mixed
           bun .github/scripts/verify-nested-js-graph.ts "$source_cli" dot-name

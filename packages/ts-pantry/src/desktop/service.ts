@@ -2,6 +2,8 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto
 import { chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
+import { isManagedUserPackage, uninstallUserPackage, validManagedDomain } from './uninstall'
+import type { UserPackageRemovalOptions } from './uninstall'
 import { scanInstalledApps } from '../desktop-apps'
 import { bundledPackageCatalog } from '../catalog/client'
 import type { PackageCatalogEntry } from '../catalog/types'
@@ -15,6 +17,7 @@ export interface DesktopBridgeOptions {
   catalog?: readonly PackageCatalogEntry[]
   run?: (args: string[], output: (text: string) => void) => Promise<number>
   applications?: () => DesktopInstalledPackage[]
+  removal?: UserPackageRemovalOptions
   now?: () => number
 }
 interface Client { id: string, name: string, tokenHash: string }
@@ -89,7 +92,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
   for (const job of state.jobs) {
     if (job.status === 'queued' || job.status === 'running') {
       job.status = 'failed'
-      job.error = 'Pantry restarted before this installation completed. Check installed packages before retrying.'
+      job.error = 'Pantry restarted before this package operation completed. Check installed packages before retrying.'
       job.finishedAt = new Date(now()).toISOString()
       job.timezoneOffset = new Date(now()).getTimezoneOffset()
     }
@@ -145,18 +148,30 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
         job.startedAt = new Date(now()).toISOString()
         persist()
         try {
-          const kind = packages.get(job.domain)!.kind
-          const exitCode = await run(['install', '--user', ...(['app', 'font'].includes(kind) ? ['--kind', kind] : []), job.domain], (text) => { job.output = (job.output + text).slice(-32000) })
-          job.status = exitCode === 0 ? 'succeeded' : 'failed'
-          if (exitCode) job.error = `Pantry installation exited with code ${exitCode}. Expand installation details for the error, then retry.`
-          if (exitCode === 0 && kind === 'app' && !applications().some(app => app.name === job.domain && app.applicationPath)) {
-            job.status = 'failed'
-            job.error = 'The download completed, but no usable application was found in Applications. Retry installation to install the app bundle.'
+          const kind = packages.get(job.domain)?.kind || job.kind || 'cli'
+          if (job.operation === 'uninstall') {
+            const task = commandTail.then(() => {
+              if (closing) throw new Error('Pantry Desktop is stopping')
+              return uninstallUserPackage(job.domain, { ...options.removal, protectedPaths: [...(options.removal?.protectedPaths || []), ...(executable ? [executable] : []), process.execPath] }, text => { job.output = (job.output + text).slice(-32000) })
+            })
+            commandTail = task.catch(() => {})
+            await task
+            if (await isManagedUserPackage(job.domain, options.removal)) throw new Error('Package files are still present after removal.')
+            job.status = 'succeeded'
+          }
+          else {
+            const exitCode = await run(['install', '--user', ...(['app', 'font'].includes(kind) ? ['--kind', kind] : []), job.domain], (text) => { job.output = (job.output + text).slice(-32000) })
+            job.status = exitCode === 0 ? 'succeeded' : 'failed'
+            if (exitCode) job.error = `Pantry installation exited with code ${exitCode}. Expand installation details for the error, then retry.`
+            if (exitCode === 0 && kind === 'app' && !applications().some(app => app.name === job.domain && app.applicationPath)) {
+              job.status = 'failed'
+              job.error = 'The download completed, but no usable application was found in Applications. Retry installation to install the app bundle.'
+            }
           }
         }
         catch (error) {
           job.status = 'failed'
-          job.error = error instanceof Error ? error.message : 'Pantry installation failed'
+          job.error = error instanceof Error ? error.message : 'Pantry package operation failed'
         }
         const finished = new Date(now())
         job.finishedAt = finished.toISOString()
@@ -174,7 +189,7 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
       const url = new URL(request.url)
       // No browser origins, wildcard CORS or DNS-based hostnames are accepted.
       if (request.headers.has('origin') || request.headers.get('host') !== `127.0.0.1:${server.port}`) return respond({ error: 'Forbidden origin or host' }, 403)
-      if (url.pathname === '/health' && request.method === 'GET') return respond({ protocolVersion: 1, service: 'pantry-desktop', capabilities: ['install:user', 'installed', 'jobs'] })
+      if (url.pathname === '/health' && request.method === 'GET') return respond({ protocolVersion: 1, service: 'pantry-desktop', capabilities: ['install:user', 'uninstall:user', 'installed', 'jobs'] })
       if (url.pathname === '/pair' && request.method === 'POST') {
         while (attempts.length && attempts[0]! < now() - 60000) attempts.shift()
         if (attempts.length >= 10) return respond({ error: 'Too many pairing attempts. Try again in a minute.' }, 429)
@@ -207,17 +222,25 @@ export function startDesktopBridge(options: DesktopBridgeOptions = {}): DesktopB
         try {
           const installed = JSON.parse(output) as DesktopInstalledPackage[]
           if (!Array.isArray(installed) || installed.some(item => typeof item.name !== 'string' || typeof item.version !== 'string')) throw new Error('Invalid installed package list')
-          return respond({ packages: mergeInstalledPackages(catalog, installed, applications()) })
+          const merged = mergeInstalledPackages(catalog, installed, applications())
+          const inventory = await Promise.all(merged.map(async item => ({ ...item, managed: await isManagedUserPackage(item.name, options.removal) })))
+          for (const item of installed) {
+            if (!inventory.some(record => record.name === item.name) && await isManagedUserPackage(item.name, options.removal)) inventory.push({ name: item.name, version: item.version, managed: true })
+          }
+          return respond({ packages: inventory })
         }
         catch { return respond({ error: 'Pantry returned an invalid installed package list.' }, 502) }
       }
-      if (url.pathname === '/v1/install' && request.method === 'POST') {
+      if (['/v1/install', '/v1/uninstall'].includes(url.pathname) && request.method === 'POST') {
+        const operation = url.pathname === '/v1/uninstall' ? 'uninstall' : 'install'
         const body = await request.json().catch(() => null) as { domain?: unknown, requestId?: unknown } | null
-        if (!body || typeof body.domain !== 'string' || !packages.has(body.domain) || typeof body.requestId !== 'string' || !uuid.test(body.requestId)) return respond({ error: 'Choose a package from the Pantry catalog and provide a request ID.' }, 422)
+        if (!body || typeof body.domain !== 'string' || !validManagedDomain(body.domain) || (operation === 'install' && !packages.has(body.domain)) || typeof body.requestId !== 'string' || !uuid.test(body.requestId)) return respond({ error: 'Choose a package from the Pantry catalog and provide a request ID.' }, 422)
         const previous = state.jobs.find(job => job.clientId === client.id && job.requestId === body.requestId)
-        if (previous) return previous.domain === body.domain ? respond({ job: publicJob(previous) }, 202) : respond({ error: 'This request ID already belongs to another package.' }, 409)
-        if (state.jobs.filter(job => job.status === 'queued' || job.status === 'running').length >= 3) return respond({ error: 'Wait for current Pantry installations to finish.' }, 429)
-        const job: StoredJob = { id: crypto.randomUUID(), requestId: body.requestId, clientId: client.id, domain: body.domain, kind: packages.get(body.domain)!.kind, status: 'queued', output: '', createdAt: new Date(now()).toISOString() }
+        if (previous) return previous.domain === body.domain && (previous.operation || 'install') === operation ? respond({ job: publicJob(previous) }, 202) : respond({ error: 'This request ID already belongs to another package or operation.' }, 409)
+        if (operation === 'uninstall' && !await isManagedUserPackage(body.domain, options.removal)) return respond({ error: 'This package is not managed in the Pantry user directory.' }, 409)
+        if (state.jobs.some(job => job.domain === body.domain && ['queued', 'running'].includes(job.status))) return respond({ error: 'Wait for this package operation to finish.' }, 409)
+        if (state.jobs.filter(job => job.status === 'queued' || job.status === 'running').length >= 3) return respond({ error: 'Wait for current Pantry package operations to finish.' }, 429)
+        const job: StoredJob = { id: crypto.randomUUID(), requestId: body.requestId, clientId: client.id, domain: body.domain, operation, kind: packages.get(body.domain)?.kind || 'cli', status: 'queued', output: '', createdAt: new Date(now()).toISOString() }
         state.jobs.push(job)
         if (state.jobs.length > 1000) state.jobs.splice(0, state.jobs.length - 1000)
         persist()
