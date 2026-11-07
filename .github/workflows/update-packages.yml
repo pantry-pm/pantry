@@ -72,7 +72,7 @@ jobs:
         uses: ./packages/action
         with:
           install: 'false'
-          packages: bun.com@1.4.3 ziglang.org@0.17.0 git-scm.org@2.53.0
+          packages: bun.com@1.4.4 ziglang.org@0.17.1 git-scm.org@2.53.0
 
       # Last word on node_modules. Any step below can rely on the hoisted
       # layout that bunfig.toml (and pantry.toml) ask for.

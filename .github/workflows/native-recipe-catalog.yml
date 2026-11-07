@@ -50,7 +50,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Install first-party JavaScript dependencies
         run: bun install --frozen-lockfile
       - name: Retain the Action generated from the exact committed source
@@ -110,16 +110,16 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: ziglang.org@0.17.0 bun.com@1.4.3
+          packages: ziglang.org@0.17.1 bun.com@1.4.4
       - name: Verify the actual managed compiler identity
         run: |
-          test "$(zig version)" = 0.17.0
+          test "$(zig version)" = 0.17.1
           case "$(command -v zig)" in "$GITHUB_WORKSPACE"/pantry/*) ;; *) exit 1 ;; esac
           zig version > artifacts/native-catalog/zig-version.txt
       - name: Install every declared native workspace dependency through Pantry
         run: |
           pantry install
-          test "$(zig version)" = 0.17.0
+          test "$(zig version)" = 0.17.1
           git diff --binary -- pantry.lock bun.lock > artifacts/native-catalog/workspace-locks.patch
       - name: Check native transport formatting and build the source CLI
         run: |
@@ -232,7 +232,7 @@ jobs:
         with:
           version: ${{ inputs.public-pantry-version }}
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Verify actual public archive bytes and ordinary CLI and SDK installs
         env:
           PANTRY_PUBLIC_CHROME_CLI: ${{ steps.public-pantry.outputs.pantry-path }}
@@ -261,7 +261,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - uses: actions/download-artifact@v4
         with:
           name: native-recipe-catalog
@@ -295,7 +295,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3 gnu.org/tar@1.35
+          packages: bun.com@1.4.4 gnu.org/tar@1.35
       - uses: actions/download-artifact@v4
         with:
           name: native-recipe-catalog
@@ -336,7 +336,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - uses: actions/download-artifact@v4
         with:
           name: native-recipe-catalog

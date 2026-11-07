@@ -34,7 +34,7 @@ jobs:
         with:
           version: 0.11.94
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - run: bun install --frozen-lockfile
       - name: Verify source types, service contracts and ownership guards
         run: |
@@ -50,7 +50,7 @@ jobs:
         with:
           version: ${{ inputs.pantry-version }}
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
           services: postgres@17.11 mysql@${{ matrix.mysql }} redis@8.8.0 typesense@30.2 ${{ runner.os == 'Linux' && 'dynamodb@3.3.0' || '' }}
       - name: Verify Action outputs and real PostgreSQL authentication
         env:
@@ -121,11 +121,11 @@ jobs:
         with:
           version: ${{ inputs.pantry-version }}
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Verify native bootstrap and portable ZIP/cache contracts
         run: |
           pantry --version | grep -F '${{ inputs.pantry-version }}'
-          bun --version | grep -Fx '1.4.3'
+          bun --version | grep -Fx '1.4.4'
           bun test packages/action/src/bootstrap.test.ts
 
   native-toolchain-pins:
@@ -144,7 +144,7 @@ jobs:
         with:
           version: 0.11.94
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - run: bun install --frozen-lockfile
       - run: bun run --cwd packages/action build
       - uses: ./packages/action
@@ -153,7 +153,7 @@ jobs:
         with:
           version: ${{ inputs.pantry-version }}
           install: 'false'
-          packages: openjdk.org@17.0.20.8 android.com/cmdline-tools@14742923.0.0 bun.com@1.4.3
+          packages: openjdk.org@17.0.20.8 android.com/cmdline-tools@14742923.0.0 bun.com@1.4.4
       - run: bun .github/scripts/native-toolchain-pins.ts
         env:
           PANTRY_EXPECT_VERSION: ${{ inputs.pantry-version }}

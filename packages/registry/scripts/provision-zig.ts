@@ -5,8 +5,8 @@ import { prepareRegistryZig, registryZigCache, registryZigVersion } from '../src
 
 const root = resolve(import.meta.dir, '..')
 const bootstrap = join(root, 'pantry/.bootstrap')
-const pantryVersion = '0.11.119'
-const installerSource = '6fbf7259c2764d18a12d915bf8bc68c500cb4931'
+const pantryVersion = '0.11.178'
+const installerSource = '1ead8b67da0e4cfacced1230c72d1cfb4e72a24d'
 const installerSha256 = 'cfdd3374c97ef179c0d32e71b8fdfa394674e917d32e20c822fa083790fc0cfe'
 
 async function run(command: string[], env = process.env): Promise<void> {

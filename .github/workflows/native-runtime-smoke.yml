@@ -33,7 +33,7 @@ jobs:
         with:
           version: ${{ inputs.pantry-version || '0.11.91' }}
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Verify a fresh production-user installation
         env:
           PANTRY_RUNTIME_SMOKE_URL: ${{ inputs.url || 'https://pantry.dev/' }}

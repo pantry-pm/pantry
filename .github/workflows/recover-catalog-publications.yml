@@ -42,7 +42,7 @@ jobs:
       - uses: ./packages/action
         with:
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Recover pending publications and record verified receipts
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}

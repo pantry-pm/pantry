@@ -10,6 +10,35 @@ permissions:
   contents: read
 
 jobs:
+  refresh-system-lock:
+    name: Refresh and verify system dependency lock
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the qualified bootstrap
+        uses: ./packages/action
+        with:
+          version: 0.11.178
+          install: 'false'
+      - name: Generate and verify the lock with normal Pantry installs
+        run: |
+          mkdir -p artifacts/system-lock
+          git rev-parse HEAD > artifacts/system-lock/source.txt
+          pantry install > artifacts/system-lock/install.log 2>&1
+          pantry install --frozen-lockfile > artifacts/system-lock/frozen.log 2>&1
+          bun --version > artifacts/system-lock/bun-version.txt
+          zig version > artifacts/system-lock/zig-version.txt
+          cp pantry.lock pantry.jsonc deps.yaml artifacts/system-lock/
+      - name: Retain system lock and installer evidence
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: qualified-system-lock
+          path: artifacts/system-lock
+          if-no-files-found: error
+
   verify:
     name: Registry checks (Bun ${{ matrix.bun }})
     # Keep Playwright's native dependency set stable across image migrations.
@@ -18,15 +47,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bun: ['1.4.2', '1.4.3']
+        bun: ['1.4.3', '1.4.4']
     steps:
       - uses: actions/checkout@v6
       - name: Set up the published managed runtime
         uses: ./packages/action
         with:
-          version: 0.11.93
+          version: 0.11.178
           install: 'false'
-          packages: bun.com@${{ matrix.bun }} ziglang.org@0.17.0
+          packages: bun.com@${{ matrix.bun }} ziglang.org@0.17.1
       - name: Install the locked workspace dependencies
         id: install
         run: bun install --frozen-lockfile
@@ -42,7 +71,7 @@ jobs:
           set -o pipefail
           bun test packages/registry 2>&1 | tee artifacts/registry-availability/tests.log
       - name: Configure browser dependency downloads
-        if: ${{ !cancelled() && steps.install.outcome == 'success' && matrix.bun == '1.4.3' }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && matrix.bun == '1.4.4' }}
         run: |
           # The Azure mirror can remain connected while delivering almost no
           # data, exhausting the job before Playwright's tests can start.
@@ -51,16 +80,16 @@ jobs:
           printf '%s\n' 'Acquire::Retries "2";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' \
             | sudo tee /etc/apt/apt.conf.d/80-pantry-ci-downloads >/dev/null
       - name: Install browser engines
-        if: ${{ !cancelled() && steps.install.outcome == 'success' && matrix.bun == '1.4.3' }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && matrix.bun == '1.4.4' }}
         timeout-minutes: 7
         run: bunx playwright install --with-deps chromium firefox webkit
       - name: Verify responsive UI and browser interactions
-        if: ${{ !cancelled() && steps.install.outcome == 'success' && matrix.bun == '1.4.3' }}
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && matrix.bun == '1.4.4' }}
         run: |
           bun run test:ui:types
           bun run test:ui
       - name: Retain browser failure evidence
-        if: ${{ failure() && matrix.bun == '1.4.3' }}
+        if: ${{ failure() && matrix.bun == '1.4.4' }}
         uses: actions/upload-artifact@v4
         with:
           name: registry-ui-failures
@@ -78,10 +107,10 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: bun run --cwd packages/registry build
       - name: Build the production registry container and execute its managed compiler
-        if: ${{ matrix.bun == '1.4.3' && !cancelled() && steps.install.outcome == 'success' }}
+        if: ${{ matrix.bun == '1.4.4' && !cancelled() && steps.install.outcome == 'success' }}
         run: |
           docker build -f packages/registry/Dockerfile -t pantry-registry:verification .
-          docker run --rm --entrypoint sh pantry-registry:verification -c 'test "$("$(cat pantry/registry-zig-path)" version)" = "0.17.0"'
+          docker run --rm --entrypoint sh pantry-registry:verification -c 'test "$("$(cat pantry/registry-zig-path)" version)" = "0.17.1"'
       - name: Retain registry verification evidence
         if: always()
         uses: actions/upload-artifact@v4

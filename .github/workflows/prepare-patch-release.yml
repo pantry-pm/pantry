@@ -41,7 +41,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3 git-scm.org@2.53.0
+          packages: bun.com@1.4.4 git-scm.org@2.53.0
       - name: Verify the exact source and adopt the public fixed publisher normally
         run: |
           test "$(git rev-parse HEAD)" = "$PANTRY_RELEASE_EXPECTED_SHA"
@@ -88,7 +88,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3 git-scm.org@2.53.0
+          packages: bun.com@1.4.4 git-scm.org@2.53.0
       - name: Set the configured release identity
         run: |
           git config user.name 'Chris Breuer'

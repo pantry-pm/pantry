@@ -252,7 +252,7 @@ jobs:
       - name: Zig Tests
         run: |
           command -v zig >/dev/null
-          test "$(zig version)" = 0.17.0
+          test "$(zig version)" = 0.17.1
           cd packages/zig
           zig build test -j2 --summary all
 
@@ -378,7 +378,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3 ziglang.org@0.17.0
+          packages: bun.com@1.4.4 ziglang.org@0.17.1
       - name: Bootstrap the compiler dependencies with the previous published installer
         run: pantry install
       - run: bun install --frozen-lockfile
@@ -485,7 +485,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - uses: actions/download-artifact@v4
         with:
           name: windows-source-runtime
@@ -514,7 +514,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Install first-party JavaScript dependencies
         run: bun install --frozen-lockfile
       - name: Build the actual source Action
@@ -547,7 +547,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: bun.com@1.4.3 ziglang.org@0.17.0
+          packages: bun.com@1.4.4 ziglang.org@0.17.1
       - name: Bootstrap the compiler dependencies with the previous published installer
         run: pantry install
       - run: bun install --frozen-lockfile
@@ -580,7 +580,7 @@ jobs:
         with:
           version: 0.11.101
           install: 'false'
-          packages: openjdk.org@17.0.20.8 android.com/cmdline-tools@14742923.0.0 bun.com@1.4.3
+          packages: openjdk.org@17.0.20.8 android.com/cmdline-tools@14742923.0.0 bun.com@1.4.4
       - name: Verify the Action's real Java-dependent commands before release
         env:
           PANTRY_EXPECT_VERSION: 0.11.101
