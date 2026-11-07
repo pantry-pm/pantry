@@ -7,10 +7,29 @@
 
 const std = @import("std");
 const io_helper = @import("../../io_helper.zig");
+const PackageSource = @import("../../packages/types.zig").PackageSource;
+const native_identity = @import("../../packages/native_identity.zig");
 
 /// Lock file format version
 pub const LOCK_FILE_VERSION = "1.0";
 pub const LOCK_FILE_NAME = "pantry.lock";
+
+/// Missing provenance follows the historical native lock contract, while an
+/// explicit invalid source remains distinct and cannot cover a typed request.
+pub const LockedSource = union(enum) {
+    absent,
+    known: PackageSource,
+    invalid: []const u8, // owned serialized JSON value, retained on round trip
+
+    pub fn matches(self: LockedSource, expected: PackageSource) bool {
+        const canonical = if (expected == .ziglang) PackageSource.pantry else expected;
+        return switch (self) {
+            .absent => canonical == .pantry,
+            .known => |actual| (if (actual == .ziglang) PackageSource.pantry else actual) == canonical,
+            .invalid => false,
+        };
+    }
+};
 
 /// Package entry in lock file
 pub const LockedPackage = struct {
@@ -18,6 +37,7 @@ pub const LockedPackage = struct {
     version: []const u8,
     resolved: []const u8, // URL or registry identifier
     integrity: ?[]const u8 = null, // SHA-512 hash
+    source: LockedSource = .absent,
     dependencies: std.StringHashMap([]const u8),
     dev: bool = false,
     optional: bool = false,
@@ -39,6 +59,11 @@ pub const LockedPackage = struct {
         self.allocator.free(self.resolved);
         if (self.integrity) |integrity| {
             self.allocator.free(integrity);
+        }
+
+        switch (self.source) {
+            .invalid => |json| self.allocator.free(json),
+            else => {},
         }
 
         var it = self.dependencies.iterator();
@@ -225,6 +250,18 @@ pub const LockFile = struct {
             try output.appendSlice(self.allocator, ",\n      \"resolved\": ");
             try appendJsonString(&output, self.allocator, pkg.resolved);
 
+            switch (pkg.source) {
+                .absent => {},
+                .known => |source| {
+                    try output.appendSlice(self.allocator, ",\n      \"source\": ");
+                    try appendJsonString(&output, self.allocator, source.toString());
+                },
+                .invalid => |json| {
+                    try output.appendSlice(self.allocator, ",\n      \"source\": ");
+                    try output.appendSlice(self.allocator, json);
+                },
+            }
+
             if (pkg.integrity) |integrity| {
                 try output.appendSlice(self.allocator, ",\n      \"integrity\": ");
                 try appendJsonString(&output, self.allocator, integrity);
@@ -305,6 +342,16 @@ pub const LockFile = struct {
 
                 var pkg = LockedPackage.init(allocator);
                 errdefer pkg.deinit();
+
+                // Preserve explicit provenance before native eligibility is
+                // checked. Never default an invalid explicit value to pantry.
+                if (pkg_val.object.get("source")) |source| {
+                    const known = if (source == .string) PackageSource.fromString(source.string) else null;
+                    pkg.source = if (known) |value|
+                        .{ .known = value }
+                    else
+                        .{ .invalid = try std.json.Stringify.valueAlloc(allocator, source, .{}) };
+                }
 
                 // Parse package fields
                 if (pkg_val.object.get("name")) |name| {
@@ -510,7 +557,7 @@ pub const LockedVersion = struct {
 
 /// Get locked version for a package if it exists in lockfile.
 /// Thread-safe: uses a pre-built name index (populated via buildNameIndex).
-pub fn getLockedVersion(lock_file: *LockFile, name: []const u8) ?LockedVersion {
+pub fn getLockedVersion(lock_file: *const LockFile, name: []const u8) ?LockedVersion {
     // Use the name index for O(1) lookup (built at load time via buildNameIndex)
     if (lock_file.name_index.get(name)) |key| {
         if (lock_file.packages.get(key)) |pkg| {
@@ -535,6 +582,262 @@ pub fn getLockedVersion(lock_file: *LockFile, name: []const u8) ?LockedVersion {
         }
     }
     return null;
+}
+
+/// A committed pin covering the active dependency edge, borrowed from the lock.
+/// Multiple compatible identities are ambiguous: a name index cannot identify
+/// which retained platform pin belongs to this edge. Never choose its first
+/// entry or replace ambiguity with a registry update. Callers must narrow the
+/// active constraint or explicitly request an update before materialization.
+pub fn lockedVersionSatisfying(
+    lock_file: *const LockFile,
+    name: []const u8,
+    declared: []const u8,
+) error{AmbiguousLockedVersion}!?[]const u8 {
+    return selectLockedVersions(lock_file, name, &.{declared}, null);
+}
+
+/// Typed callers must establish source identity before compatibility or
+/// ambiguity. The generic three-argument API retains its existing behavior.
+pub fn lockedVersionSatisfyingFromSource(
+    lock_file: *const LockFile,
+    name: []const u8,
+    declared: []const u8,
+    expected_source: PackageSource,
+) error{AmbiguousLockedVersion}!?[]const u8 {
+    return selectLockedVersions(lock_file, name, &.{declared}, expected_source);
+}
+
+pub fn lockedVersionSatisfyingAllFromSource(
+    lock_file: *const LockFile,
+    name: []const u8,
+    constraints: []const []const u8,
+    expected_source: PackageSource,
+) error{AmbiguousLockedVersion}!?[]const u8 {
+    return selectLockedVersions(lock_file, name, constraints, expected_source);
+}
+
+/// The native metadata matcher, shared by plan candidate validation.
+pub fn resolvedVersionSatisfies(version: []const u8, declared: []const u8) bool {
+    if (declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*")) return true;
+    if (std.mem.eql(u8, version, declared)) return true;
+    const semver = @import("../../packages/semver.zig");
+    const constraint = semver.parseConstraint(declared) catch return false;
+    return semver.satisfiesConstraint(version, constraint);
+}
+
+fn lockedPinSatisfies(version: []const u8, declared: []const u8) bool {
+    if (!std.mem.eql(u8, version, declared) and std.mem.endsWith(u8, declared, "-dev")) {
+        const semver = @import("../../packages/semver.zig");
+        const constraint = semver.parseConstraint(declared) catch return false;
+        if (constraint.type == .exact) return false;
+    }
+    return resolvedVersionSatisfies(version, declared);
+}
+
+fn selectLockedVersions(
+    lock_file: *const LockFile,
+    name: []const u8,
+    constraints: []const []const u8,
+    expected_source: ?PackageSource,
+) error{AmbiguousLockedVersion}!?[]const u8 {
+    var selected: ?[]const u8 = null;
+    var iterator = lock_file.packages.iterator();
+    while (iterator.next()) |entry| {
+        const package = entry.value_ptr.*;
+        if (package.version.len == 0) continue;
+        if (expected_source) |source| if (!package.source.matches(source)) continue;
+        const native = if (expected_source) |source| native_identity.isNative(source) else false;
+        if (native) {
+            if (!native_identity.same(package.name, name)) continue;
+        } else if (!std.mem.eql(u8, package.name, name)) continue;
+        var compatible = true;
+        for (constraints) |declared| {
+            if (!lockedPinSatisfies(package.version, declared)) {
+                compatible = false;
+                break;
+            }
+        }
+        if (!compatible) continue;
+        if (selected) |previous| {
+            if (!std.mem.eql(u8, previous, package.version)) return error.AmbiguousLockedVersion;
+        } else selected = package.version;
+    }
+    return selected;
+}
+
+test "native alias pins share constraints and ambiguity after source eligibility" {
+    const allocator = std.testing.allocator;
+    var lock = try LockFile.parse(allocator,
+        \\{"packages":{
+        \\ "legacy":{"name":"bun.sh","version":"1.4.3","source":"pantry","resolved":"registry:bun.sh@1.4.3"},
+        \\ "same":{"name":"bun.com","version":"1.4.3","source":"pantry","resolved":"registry:bun.com@1.4.3"},
+        \\ "npm":{"name":"bun.sh","version":"1.4.4","source":"npm"},
+        \\ "git":{"name":"bun.com","version":"1.4.5","source":"git"},
+        \\ "invalid":{"name":"bun.com","version":"1.4.6","source":false}
+        \\}}
+    );
+    defer lock.deinit();
+    inline for (.{ "bun", "bun.sh", "bun.com" }) |name| {
+        try std.testing.expectEqualStrings("1.4.3", (try lockedVersionSatisfyingFromSource(&lock, name, "^1", .pantry)).?);
+    }
+    try std.testing.expectEqualStrings("1.4.4", (try lockedVersionSatisfyingFromSource(&lock, "bun.sh", "^1", .npm)).?);
+    try std.testing.expect((try lockedVersionSatisfyingFromSource(&lock, "bun", "^1", .npm)) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "bun", "^1")) == null);
+    try lock.addPackage("bun", "1.4.4", "registry:bun@1.4.4", null);
+    try std.testing.expectError(error.AmbiguousLockedVersion, lockedVersionSatisfyingFromSource(&lock, "bun.com", "^1", .pantry));
+    try std.testing.expectEqualStrings("1.4.3", (try lockedVersionSatisfyingAllFromSource(&lock, "bun.com", &.{ "^1", "<1.4.4" }, .pantry)).?);
+    try std.testing.expectEqualStrings("1.4.3", (try lockedVersionSatisfyingAllFromSource(&lock, "bun.sh", &.{ "<1.4.4", "^1" }, .pantry)).?);
+}
+
+test "a unique compatible native lock pin covers its active constraint" {
+    const allocator = std.testing.allocator;
+    var lock = LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("lz4.org", "1.10.0", "registry:lz4.org@1.10.0", null);
+    try lock.addPackage("ziglang.org", "0.17.0-dev.123+abcdef", "registry:ziglang.org@0.17.0-dev.123+abcdef", null);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "^1.10.0")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "latest")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "*")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "1.10.0")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "=1.10.0")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "1")).?);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "lz4.org", "^1.11.0")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "lz4.org", "1.11.0")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "missing.org", "^1")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "lz4.org", "not-a-constraint")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "ziglang.org", "0.17.0-dev")) == null);
+}
+
+test "active native constraints disambiguate retained pins without removing foreign pins" {
+    const allocator = std.testing.allocator;
+    var lock = try LockFile.parse(allocator,
+        \\{"packages":{
+        \\  "gnu.org/gettext@0.21.1":{"name":"gnu.org/gettext","version":"0.21.1","resolved":"registry:gnu.org/gettext@0.21.1"},
+        \\  "gnu.org/gettext@0.22.0":{"name":"gnu.org/gettext","version":"0.22.0","resolved":"registry:gnu.org/gettext@0.22.0"},
+        \\  "gnu.org/gettext@1.0.0":{"name":"gnu.org/gettext","version":"1.0.0","resolved":"registry:gnu.org/gettext@1.0.0"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectEqualStrings("0.21.1", (try lockedVersionSatisfying(&lock, "gnu.org/gettext", "^0.21")).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfying(&lock, "gnu.org/gettext", "^1")).?);
+    try std.testing.expectError(error.AmbiguousLockedVersion, lockedVersionSatisfying(&lock, "gnu.org/gettext", "latest"));
+    try std.testing.expectError(error.AmbiguousLockedVersion, lockedVersionSatisfying(&lock, "gnu.org/gettext", ">=0"));
+    try std.testing.expectEqual(@as(usize, 3), lock.packages.count());
+}
+
+test "identical native versions under distinct retained keys are not ambiguous" {
+    const allocator = std.testing.allocator;
+    var lock = try LockFile.parse(allocator,
+        \\{"packages":{
+        \\  "lz4.org@1.10.0":{"name":"lz4.org","version":"1.10.0","resolved":"registry:lz4.org@1.10.0"},
+        \\  "retained/lz4.org@1.10.0":{"name":"lz4.org","version":"1.10.0","resolved":"registry:lz4.org@1.10.0"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&lock, "lz4.org", "^1")).?);
+    try std.testing.expectEqual(@as(usize, 2), lock.packages.count());
+}
+
+test "typed lock selection filters source before compatibility and ambiguity" {
+    const allocator = std.testing.allocator;
+    var lock = try LockFile.parse(allocator,
+        \\{"packages":{
+        \\ "lz4.org@1.10.0":{"name":"lz4.org","version":"1.10.0","source":"pantry"},
+        \\ "lz4.org@1.11.0":{"name":"lz4.org","version":"1.11.0","source":"npm"},
+        \\ "sqlite.org@3.53.4":{"name":"sqlite.org","version":"3.53.4","source":"npm"},
+        \\ "from-git@1.0.0":{"name":"from-git","version":"1.0.0","source":"git"},
+        \\ "from-local@1.0.0":{"name":"from-local","version":"1.0.0","source":"local"},
+        \\ "legacy.org@1.0.0":{"name":"legacy.org","version":"1.0.0"},
+        \\ "ziglang.org@0.16.0":{"name":"ziglang.org","version":"0.16.0","source":"ziglang"},
+        \\ "pkgx.org@1.0.0":{"name":"pkgx.org","version":"1.0.0","source":"pkgx"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfyingFromSource(&lock, "lz4.org", "^1", .pantry)).?);
+    try std.testing.expectEqualStrings("1.11.0", (try lockedVersionSatisfyingFromSource(&lock, "lz4.org", "^1", .npm)).?);
+    try std.testing.expectError(error.AmbiguousLockedVersion, lockedVersionSatisfying(&lock, "lz4.org", "^1"));
+    try std.testing.expect((try lockedVersionSatisfyingFromSource(&lock, "sqlite.org", "^3", .pantry)) == null);
+    try std.testing.expectEqualStrings("3.53.4", (try lockedVersionSatisfying(&lock, "sqlite.org", "^3")).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&lock, "from-git", "^1", .git)).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&lock, "from-local", "^1", .local)).?);
+    try std.testing.expect((try lockedVersionSatisfyingFromSource(&lock, "from-git", "^1", .pantry)) == null);
+    try std.testing.expect((try lockedVersionSatisfyingFromSource(&lock, "from-local", "^1", .pantry)) == null);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&lock, "legacy.org", "^1", .pantry)).?);
+    try std.testing.expectEqualStrings("0.16.0", (try lockedVersionSatisfyingFromSource(&lock, "ziglang.org", "0.16.0", .pantry)).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&lock, "pkgx.org", "^1", .pantry)).?);
+    try std.testing.expectEqual(@as(usize, 8), lock.packages.count());
+}
+
+test "source filtering does not conceal genuine native pin ambiguity" {
+    const allocator = std.testing.allocator;
+    var lock = try LockFile.parse(allocator,
+        \\{"packages":{
+        \\ "lz4.org@1.10.0":{"name":"lz4.org","version":"1.10.0","source":"pantry"},
+        \\ "lz4.org@1.11.0":{"name":"lz4.org","version":"1.11.0","source":"pantry"},
+        \\ "lz4.org@1.12.0":{"name":"lz4.org","version":"1.12.0","source":"git"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectError(error.AmbiguousLockedVersion, lockedVersionSatisfyingFromSource(&lock, "lz4.org", "^1", .pantry));
+    try std.testing.expectEqualStrings("1.12.0", (try lockedVersionSatisfyingFromSource(&lock, "lz4.org", "^1", .git)).?);
+}
+
+test "resolution lock round trips known invalid and absent source provenance" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    var path_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try directory.dir.realPath(io_helper.io, &path_buffer);
+    const path = try std.fs.path.join(allocator, &.{ path_buffer[0..path_len], "pantry.lock" });
+    defer allocator.free(path);
+    var lock = try LockFile.parse(allocator,
+        \\{"packages":{
+        \\ "native@1.0.0":{"name":"native","version":"1.0.0","source":"pantry"},
+        \\ "npm@1.0.0":{"name":"npm","version":"1.0.0","source":"npm"},
+        \\ "legacy@1.0.0":{"name":"legacy","version":"1.0.0"},
+        \\ "unknown@1.0.0":{"name":"unknown","version":"1.0.0","source":"mystery"},
+        \\ "null@1.0.0":{"name":"null","version":"1.0.0","source":null},
+        \\ "number@1.0.0":{"name":"number","version":"1.0.0","source":7},
+        \\ "object@1.0.0":{"name":"object","version":"1.0.0","source":{"provider":"npm"}},
+        \\ "pkgx@1.0.0":{"name":"pkgx","version":"1.0.0","source":"pkgx"},
+        \\ "zig@0.16.0":{"name":"zig","version":"0.16.0","source":"ziglang"}
+        \\}}
+    );
+    defer lock.deinit();
+    try lock.write(path);
+    var reloaded = try LockFile.read(allocator, path);
+    defer reloaded.deinit();
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&reloaded, "native", "^1", .pantry)).?);
+    try std.testing.expect((try lockedVersionSatisfyingFromSource(&reloaded, "npm", "^1", .pantry)) == null);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfying(&reloaded, "npm", "^1")).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&reloaded, "legacy", "^1", .pantry)).?);
+    const invalid_names = [_][]const u8{ "unknown", "null", "number", "object" };
+    for (invalid_names) |name| {
+        try std.testing.expect((try lockedVersionSatisfyingFromSource(&reloaded, name, "^1", .pantry)) == null);
+        // Untyped consumers retain their old version-only behavior.
+        try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfying(&reloaded, name, "^1")).?);
+    }
+    const bytes = try io_helper.readFileAlloc(allocator, path, 16384);
+    defer allocator.free(bytes);
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, bytes, .{});
+    defer parsed.deinit();
+    const entries = parsed.value.object.get("packages").?.object;
+    try std.testing.expect(entries.get("legacy@1.0.0").?.object.get("source") == null);
+    try std.testing.expectEqualStrings("npm", entries.get("npm@1.0.0").?.object.get("source").?.string);
+    try std.testing.expectEqualStrings("mystery", entries.get("unknown@1.0.0").?.object.get("source").?.string);
+    try std.testing.expect(entries.get("null@1.0.0").?.object.get("source").? == .null);
+    try std.testing.expectEqual(@as(i64, 7), entries.get("number@1.0.0").?.object.get("source").?.integer);
+    try std.testing.expectEqualStrings("npm", entries.get("object@1.0.0").?.object.get("source").?.object.get("provider").?.string);
+    try std.testing.expectEqualStrings("pantry", entries.get("pkgx@1.0.0").?.object.get("source").?.string);
+    try std.testing.expectEqualStrings("ziglang", entries.get("zig@0.16.0").?.object.get("source").?.string);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfyingFromSource(&reloaded, "pkgx", "^1", .pantry)).?);
+    try std.testing.expectEqualStrings("0.16.0", (try lockedVersionSatisfyingFromSource(&reloaded, "zig", "0.16.0", .pantry)).?);
+    try reloaded.write(path);
+    const repeated = try io_helper.readFileAlloc(allocator, path, 16384);
+    defer allocator.free(repeated);
+    try std.testing.expectEqualStrings(bytes, repeated);
 }
 
 /// Options for resolving versions

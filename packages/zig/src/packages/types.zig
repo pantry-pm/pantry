@@ -140,6 +140,9 @@ pub const LockfileEntry = struct {
     name: []const u8,
     version: []const u8,
     source: PackageSource,
+    /// An invalid explicit source must survive reading and cannot cover a
+    /// typed request. `source` is only a storage placeholder in this case.
+    invalid_source_json: ?[]const u8 = null,
     url: ?[]const u8 = null,
     resolved: ?[]const u8 = null, // Actual download URL (tarball)
     integrity: ?[]const u8 = null, // Integrity hash (sha512 or shasum)
@@ -148,9 +151,51 @@ pub const LockfileEntry = struct {
     bin: ?std.StringHashMap([]const u8) = null,
     optional_peers: ?std.StringHashMap(bool) = null,
 
+    pub fn matchesSource(self: *const LockfileEntry, expected: PackageSource) bool {
+        return self.invalid_source_json == null and self.source == expected;
+    }
+
+    /// Deep ownership for entries retained while a native identity is renamed.
+    pub fn clone(self: *const LockfileEntry, allocator: std.mem.Allocator) !LockfileEntry {
+        var result = LockfileEntry{ .name = "", .version = "", .source = self.source };
+        errdefer result.deinit(allocator);
+        result.name = try allocator.dupe(u8, self.name);
+        result.version = try allocator.dupe(u8, self.version);
+        inline for (.{ "invalid_source_json", "url", "resolved", "integrity" }) |field| {
+            if (@field(self, field)) |value| @field(result, field) = try allocator.dupe(u8, value);
+        }
+        inline for (.{ "dependencies", "peer_dependencies", "bin" }) |field| {
+            if (@field(self, field)) |map| @field(result, field) = try cloneMap([]const u8, allocator, map);
+        }
+        if (self.optional_peers) |map| result.optional_peers = try cloneMap(bool, allocator, map);
+        return result;
+    }
+
+    fn cloneMap(comptime Value: type, allocator: std.mem.Allocator, source_map: std.StringHashMap(Value)) !std.StringHashMap(Value) {
+        var result = std.StringHashMap(Value).init(allocator);
+        errdefer {
+            var owned = result.iterator();
+            while (owned.next()) |entry| {
+                allocator.free(entry.key_ptr.*);
+                if (Value == []const u8) allocator.free(entry.value_ptr.*);
+            }
+            result.deinit();
+        }
+        try result.ensureUnusedCapacity(source_map.count());
+        var iterator = source_map.iterator();
+        while (iterator.next()) |entry| {
+            const key = try allocator.dupe(u8, entry.key_ptr.*);
+            errdefer allocator.free(key);
+            const value = if (Value == []const u8) try allocator.dupe(u8, entry.value_ptr.*) else entry.value_ptr.*;
+            result.putAssumeCapacity(key, value);
+        }
+        return result;
+    }
+
     pub fn deinit(self: *LockfileEntry, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
         allocator.free(self.version);
+        if (self.invalid_source_json) |value| allocator.free(value);
         if (self.url) |u| allocator.free(u);
         if (self.resolved) |r| allocator.free(r);
         if (self.integrity) |i| allocator.free(i);
@@ -247,6 +292,9 @@ pub const Lockfile = struct {
     workspaces: std.StringHashMap(WorkspaceLockEntry),
     packages: std.StringHashMap(LockfileEntry),
     generated_at: i64,
+    /// In-memory native identity migration, never serialized. A normal
+    /// install persists it; a frozen install compares the view without writes.
+    native_identity_changed: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, version: []const u8) !Lockfile {
         return Lockfile{
@@ -277,7 +325,16 @@ pub const Lockfile = struct {
     }
 
     pub fn addEntry(self: *Lockfile, allocator: std.mem.Allocator, key: []const u8, entry: LockfileEntry) !void {
-        try self.packages.put(try allocator.dupe(u8, key), entry);
+        const slot = try self.packages.getOrPut(key);
+        if (slot.found_existing) {
+            slot.value_ptr.deinit(allocator);
+        } else {
+            slot.key_ptr.* = allocator.dupe(u8, key) catch |err| {
+                _ = self.packages.remove(key);
+                return err;
+            };
+        }
+        slot.value_ptr.* = entry;
     }
 
     pub fn addWorkspace(self: *Lockfile, allocator: std.mem.Allocator, path: []const u8, entry: WorkspaceLockEntry) !void {

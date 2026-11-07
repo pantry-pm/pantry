@@ -57,7 +57,7 @@ Build failure stops before release commit, tag, or push. The hook creates no
 version or publication itself. Release preflight retains its initial receipt
 even when a clean-tree or qualification check fails.
 
-After all thirteen source CI gates succeed on that commit, run the workflow's
+After every required source CI gate succeeds on that commit, run the workflow's
 `patch` operation with that exact commit hash. It uses the installed locked
 publisher and the canonical `release:patch` script. Bumpx checks the expected
 source after upstream synchronization and before release mutation. A newer Main

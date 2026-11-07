@@ -243,16 +243,8 @@ fn findConfigFile(allocator: std.mem.Allocator, dir_path: []const u8) !?[]const 
 
 /// Find deps file in a directory (package.json, pantry.json, etc.)
 fn findDepsFileInDir(allocator: std.mem.Allocator, dir_path: []const u8) !?[]const u8 {
-    const result = try detector.findDepsFile(allocator, dir_path);
-    if (result) |deps_file| {
-        // Check if the deps file is actually in this directory (not a parent)
-        const deps_dir = std.fs.path.dirname(deps_file.path) orelse return null;
-        if (std.mem.eql(u8, deps_dir, dir_path)) {
-            return deps_file.path;
-        }
-        allocator.free(deps_file.path);
-    }
-    return null;
+    const result = try detector.findDepsFileInDirectory(allocator, dir_path);
+    return if (result) |file| file.path else null;
 }
 
 /// Load workspace configuration from a file

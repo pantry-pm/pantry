@@ -17,6 +17,31 @@ fn stringMapsEqual(a: ?std.StringHashMap([]const u8), b: ?std.StringHashMap([]co
     } else return b == null;
 }
 
+pub fn entriesEqual(a: types.LockfileEntry, b: types.LockfileEntry) bool {
+    if (!std.mem.eql(u8, a.name, b.name) or !std.mem.eql(u8, a.version, b.version) or a.source != b.source) return false;
+    inline for (.{ "invalid_source_json", "url", "resolved", "integrity" }) |field| {
+        const first = @field(a, field);
+        const second = @field(b, field);
+        if (first) |value| {
+            if (second) |other| {
+                if (!std.mem.eql(u8, value, other)) return false;
+            } else return false;
+        } else if (second != null) return false;
+    }
+    inline for (.{ "dependencies", "peer_dependencies", "bin" }) |field| {
+        if (!stringMapsEqual(@field(a, field), @field(b, field))) return false;
+    }
+    if (a.optional_peers) |first| {
+        const second = b.optional_peers orelse return false;
+        if (first.count() != second.count()) return false;
+        var iterator = first.iterator();
+        while (iterator.next()) |entry| {
+            if ((second.get(entry.key_ptr.*) orelse return false) != entry.value_ptr.*) return false;
+        }
+    } else if (b.optional_peers != null) return false;
+    return true;
+}
+
 /// Compare two lockfiles, ignoring the generatedAt field
 /// Returns true if lockfiles are equal (excluding generatedAt)
 pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
@@ -60,26 +85,7 @@ pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
         // Check if key exists in b
         const b_pkg = b.packages.get(key) orelse return false;
 
-        // Compare package fields
-        if (!std.mem.eql(u8, a_pkg.name, b_pkg.name)) return false;
-        if (!std.mem.eql(u8, a_pkg.version, b_pkg.version)) return false;
-        if (a_pkg.source != b_pkg.source) return false;
-
-        // Compare optional string fields
-        inline for (.{ "url", "resolved", "integrity" }) |field| {
-            const a_val = @field(a_pkg, field);
-            const b_val = @field(b_pkg, field);
-            if (a_val) |av| {
-                if (b_val) |bv| {
-                    if (!std.mem.eql(u8, av, bv)) return false;
-                } else return false;
-            } else if (b_val != null) return false;
-        }
-
-        // Compare string map fields
-        if (!stringMapsEqual(a_pkg.dependencies, b_pkg.dependencies)) return false;
-        if (!stringMapsEqual(a_pkg.peer_dependencies, b_pkg.peer_dependencies)) return false;
-        if (!stringMapsEqual(a_pkg.bin, b_pkg.bin)) return false;
+        if (!entriesEqual(a_pkg, b_pkg)) return false;
     }
 
     return true;
@@ -276,9 +282,20 @@ fn writeLockfileForce(allocator: std.mem.Allocator, lockfile: *const types.Lockf
         try appendJsonEscaped(&buf, allocator, pkg.name);
         try buf.appendSlice(allocator, "\",\n      \"version\": \"");
         try appendJsonEscaped(&buf, allocator, pkg.version);
-        try buf.appendSlice(allocator, "\",\n      \"source\": \"");
-        try buf.appendSlice(allocator, pkg.source.toString());
-        try buf.appendSlice(allocator, "\"");
+        try buf.appendSlice(allocator, "\",\n      \"source\": ");
+        if (pkg.invalid_source_json) |invalid| {
+            try buf.appendSlice(allocator, invalid);
+        } else {
+            try buf.appendSlice(allocator, "\"");
+            try buf.appendSlice(allocator, pkg.source.toString());
+            try buf.appendSlice(allocator, "\"");
+        }
+
+        if (pkg.url) |url| {
+            try buf.appendSlice(allocator, ",\n      \"url\": \"");
+            try appendJsonEscaped(&buf, allocator, url);
+            try buf.appendSlice(allocator, "\"");
+        }
 
         if (pkg.resolved) |resolved| {
             try buf.appendSlice(allocator, ",\n      \"resolved\": \"");
@@ -495,12 +512,16 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
             else
                 "unknown";
 
-            const source_str = if (pkg_value.object.get("source")) |v|
-                if (v == .string) v.string else "pantry"
+            const raw_source = pkg_value.object.get("source");
+            const known_source = if (raw_source) |value|
+                if (value == .string) types.PackageSource.fromString(value.string) else null
             else
-                "pantry";
-
-            const source = types.PackageSource.fromString(source_str) orelse .pantry;
+                types.PackageSource.pantry;
+            const invalid_source_json = if (raw_source != null and known_source == null)
+                try std.json.Stringify.valueAlloc(allocator, raw_source.?, .{})
+            else
+                null;
+            errdefer if (invalid_source_json) |invalid| allocator.free(invalid);
 
             var url: ?[]const u8 = null;
             if (pkg_value.object.get("url")) |v| {
@@ -568,7 +589,8 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
             const lock_entry = types.LockfileEntry{
                 .name = try allocator.dupe(u8, name),
                 .version = try allocator.dupe(u8, pkg_version),
-                .source = source,
+                .source = known_source orelse .pantry,
+                .invalid_source_json = invalid_source_json,
                 .url = url,
                 .resolved = resolved,
                 .integrity = integrity,

@@ -24,6 +24,7 @@ const io_helper = @import("../io_helper.zig");
 const semver = @import("../packages/semver.zig");
 const generated = @import("../packages/generated.zig");
 const style = @import("../cli/style.zig");
+const native_deps = @import("native_deps.zig");
 
 /// A parsed pkgx shebang. Slices point into the line it was parsed from.
 pub const PkgxShebang = struct {
@@ -307,8 +308,9 @@ fn readHead(path: []const u8, buf: []u8) ?[]const u8 {
 /// the interpreter lands in the same tree.
 ///
 /// Best-effort: a script that cannot be resolved is left as it was and
-/// reported, and nothing here fails the install.
-pub fn fixInstalledPackage(installer: anytype, install_path: []const u8, domain: []const u8, version: []const u8, options: anytype) void {
+/// reported. Native plan/coverage failures are explicit install failures;
+/// an extracted script is not authority to admit an unplanned runtime.
+pub fn fixInstalledPackage(installer: anytype, install_path: []const u8, domain: []const u8, version: []const u8, options: anytype) !void {
     if (builtin.os.tag == .windows) return;
     const allocator = installer.allocator;
     const root = installRoot(install_path, domain, version) orelse return;
@@ -333,7 +335,7 @@ pub fn fixInstalledPackage(installer: anytype, install_path: []const u8, domain:
             const shebang = parse(head) orelse continue;
 
             var interp_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const interpreter = resolveInterpreter(installer, root, domain, &shebang, options, &interp_buf) orelse {
+            const interpreter = (try resolveInterpreter(installer, root, domain, &shebang, options, &interp_buf)) orelse {
                 style.print("  ! {s}/{s}: no installed interpreter for `pkgx {s}{s}`, left as-is\n", .{ domain, entry.name, shebang.program, shebang.raw_constraint });
                 continue;
             };
@@ -347,7 +349,7 @@ pub fn fixInstalledPackage(installer: anytype, install_path: []const u8, domain:
     }
 }
 
-fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, shebang: *const PkgxShebang, options: anytype, out: []u8) ?[]const u8 {
+fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, shebang: *const PkgxShebang, options: anytype, out: []u8) !?[]const u8 {
     const program = shebang.program;
     var own_cbuf: [64]u8 = undefined;
     var wanted = shebang.constraint(&own_cbuf);
@@ -376,19 +378,22 @@ fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, s
         const extra_domain = extra[0..op];
         if (std.mem.eql(u8, extra_domain, interp_domain) or std.mem.eql(u8, extra_domain, owner)) continue;
         var pkg_buf: [std.fs.max_path_bytes]u8 = undefined;
-        if (findInstalledVersion(root, extra_domain, "", &pkg_buf) != null) continue;
         var cbuf: [64]u8 = undefined;
         const c = normalizeConstraint(extra[op..], &cbuf) orelse "";
-        installQuietly(installer, extra_domain, c, options);
+        const selected = try plannedRuntime(options, extra_domain, c);
+        if (findInstalledVersion(root, extra_domain, selected orelse c, &pkg_buf) != null) continue;
+        try installQuietly(installer, extra_domain, selected orelse c, options);
     }
 
+    const selected = try plannedRuntime(options, interp_domain, wanted);
+    const effective_constraint = selected orelse wanted;
     var pkg_buf: [std.fs.max_path_bytes]u8 = undefined;
-    var pkg_dir = findInstalledVersion(root, interp_domain, wanted, &pkg_buf);
+    var pkg_dir = findInstalledVersion(root, interp_domain, effective_constraint, &pkg_buf);
     if (pkg_dir == null and !std.mem.eql(u8, interp_domain, owner)) {
-        installQuietly(installer, interp_domain, wanted, options);
-        pkg_dir = findInstalledVersion(root, interp_domain, wanted, &pkg_buf);
+        try installQuietly(installer, interp_domain, effective_constraint, options);
+        pkg_dir = findInstalledVersion(root, interp_domain, effective_constraint, &pkg_buf);
     }
-    if (pkg_dir == null and wanted.len > 0) {
+    if (pkg_dir == null and wanted.len > 0 and selected == null) {
         // Nothing satisfying could be installed. An interpreter of the wrong
         // version is still more use than `pkgx: No such file or directory`,
         // and says what it is.
@@ -401,9 +406,20 @@ fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, s
     return programPath(dir, exe_name, out);
 }
 
-fn installQuietly(installer: anytype, domain: []const u8, constraint: []const u8, options: anytype) void {
+fn plannedRuntime(options: anytype, domain: []const u8, constraint: []const u8) !?[]const u8 {
+    // The public helper also supports its pre-existing void-options callers.
+    if (comptime @typeInfo(@TypeOf(options)) == .@"struct") {
+        if (comptime @hasField(@TypeOf(options), "native_plan")) {
+            if (options.native_plan) |plan| return try plan.versionFor(domain, constraint);
+        }
+    }
+    return null;
+}
+
+fn installQuietly(installer: anytype, domain: []const u8, constraint: []const u8, options: anytype) native_deps.PolicyError!void {
     const version = if (constraint.len == 0) "latest" else constraint;
     var result = installer.install(.{ .name = domain, .version = version }, options) catch |err| {
+        if (native_deps.asPolicyError(err)) |policy_error| return policy_error;
         style.print("  ! could not install {s}@{s} for a pkgx shebang: {}\n", .{ domain, version, err });
         return;
     };
@@ -544,7 +560,7 @@ test "fixInstalledPackage rewrites aws's wrapper to the installed python" {
     }
 
     var fake = FakeInstaller{ .allocator = a };
-    fixInstalledPackage(&fake, pkg, "aws.amazon.com/cli", "2.34.15", {});
+    try fixInstalledPackage(&fake, pkg, "aws.amazon.com/cli", "2.34.15", {});
     try testing.expectEqual(@as(usize, 0), fake.calls);
 
     const got = try io_helper.readFileAllocAbsolute(a, aws, 1 << 20);
@@ -559,7 +575,7 @@ test "fixInstalledPackage rewrites aws's wrapper to the installed python" {
     try testing.expectEqualStrings("#!/usr/bin/env python3\n", untouched);
 
     // Idempotent: a second pass finds nothing to do.
-    fixInstalledPackage(&fake, pkg, "aws.amazon.com/cli", "2.34.15", {});
+    try fixInstalledPackage(&fake, pkg, "aws.amazon.com/cli", "2.34.15", {});
     const again = try io_helper.readFileAllocAbsolute(a, aws, 1 << 20);
     defer a.free(again);
     try testing.expectEqualStrings(want, again);
@@ -589,7 +605,7 @@ test "fixInstalledPackage installs the interpreter the shebang names when the tr
     }
 
     var fake = FakeInstaller{ .allocator = a, .root = root, .provide = "3.13.16" };
-    fixInstalledPackage(&fake, pkg, "aws.amazon.com/sam", "1.150.0", {});
+    try fixInstalledPackage(&fake, pkg, "aws.amazon.com/sam", "1.150.0", {});
     try testing.expectEqual(@as(usize, 1), fake.calls);
     try testing.expectEqualStrings("python.org", fake.last_name);
     try testing.expectEqualStrings("~3.13", fake.last_version);

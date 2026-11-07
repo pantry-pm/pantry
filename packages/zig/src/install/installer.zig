@@ -18,6 +18,8 @@ const registry_versions_mod = @import("registry_versions.zig");
 const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
 const scopes = @import("../registry/scopes.zig");
+const native_deps = @import("native_deps.zig");
+const native_identity = @import("../packages/native_identity.zig");
 
 const pantryError = errors.pantryError;
 const Paths = core.Paths;
@@ -55,6 +57,8 @@ pub const InstallOptions = struct {
     inline_progress: ?downloader.InlineProgressOptions = null,
     /// Skip transitive dependency resolution (caller handles it)
     skip_transitive_resolution: bool = false,
+    /// Exact preflight plan, borrowed until this invocation and descendants end.
+    native_plan: ?*const native_deps.Plan = null,
     /// npm-style installs: the tarball must hash to this (`sha256:<hex>`,
     /// raw hex, or SRI) or the install fails before anything is extracted.
     expected_integrity: ?[]const u8 = null,
@@ -294,7 +298,9 @@ pub const Installer = struct {
     /// In-memory cache of hoisted packages: name → installed version (avoids repeated filesystem checks)
     hoisted_versions: *HoisteVersionCache,
     /// Lockfile for lockfile-first resolution (skip npm registry queries when locked)
-    lockfile: ?*@import("../deps/resolution/lockfile.zig").LockFile = null,
+    lockfile: ?*const @import("../deps/resolution/lockfile.zig").LockFile = null,
+    native_policy: native_deps.Policy = .{},
+    native_session: ?*native_deps.Session = null,
     /// bun.lock pins. When the project also has a bun.lock, an npm range is
     /// resolved to bun.lock's version whenever that version satisfies it, so
     /// pantry/ and node_modules/ hold the same tree (stacksjs/stacks#2848).
@@ -385,6 +391,69 @@ pub const Installer = struct {
     /// Thread-safe cache tracking which packages are installed at the hoisted level.
     /// Eliminates redundant filesystem checks when the same transitive dep is encountered
     /// dozens of times in a dependency tree.
+    /// Immutable per-call preference. Legacy callers retain their generic
+    /// lock contract; an auto-npm call carries expected source and raw range.
+    pub const NpmLockPreference = union(enum) {
+        legacy,
+        npm: struct { declared_constraint: []const u8, force: bool = false },
+
+        fn constraint(self: NpmLockPreference, requested: []const u8) []const u8 {
+            return switch (self) {
+                .legacy => requested,
+                .npm => |context| context.declared_constraint,
+            };
+        }
+    };
+
+    fn npmPreferenceKey(name: []const u8, constraint: []const u8, force: bool) [64]u8 {
+        var hash = std.crypto.hash.sha2.Sha256.init(.{});
+        var length: [8]u8 = undefined;
+        std.mem.writeInt(u64, &length, @intCast(name.len), .little);
+        hash.update(&length);
+        hash.update(name);
+        std.mem.writeInt(u64, &length, @intCast(constraint.len), .little);
+        hash.update(&length);
+        hash.update(constraint);
+        const force_byte = [_]u8{@intFromBool(force)};
+        hash.update(&force_byte);
+        var digest: [32]u8 = undefined;
+        hash.final(&digest);
+        return std.fmt.bytesToHex(digest, .lower);
+    }
+
+    fn formatNpmResolutionKey(buffer: []u8, name: []const u8, requested: []const u8, preference: NpmLockPreference) ![]const u8 {
+        return switch (preference) {
+            .legacy => std.fmt.bufPrint(buffer, "{s}@{s}", .{ name, requested }),
+            .npm => |context| std.fmt.bufPrint(buffer, "npm-source:{s}", .{npmPreferenceKey(name, context.declared_constraint, context.force)}),
+        };
+    }
+
+    fn allocNpmResolutionKey(allocator: std.mem.Allocator, name: []const u8, requested: []const u8, preference: NpmLockPreference) ![]const u8 {
+        return switch (preference) {
+            .legacy => std.fmt.allocPrint(allocator, "{s}@{s}", .{ name, requested }),
+            .npm => |context| std.fmt.allocPrint(allocator, "npm-source:{s}", .{npmPreferenceKey(name, context.declared_constraint, context.force)}),
+        };
+    }
+
+    fn npmSourceLockPin(self: *Installer, name: []const u8, constraint: []const u8, force: bool) ?[]const u8 {
+        if (force) return null;
+        const original = self.lockfile orelse return null;
+        // Auto ambiguity remains pending until actual metadata establishes
+        // source. The pipeline validates it before payload admission.
+        const selected = @import("../deps/resolution/lockfile.zig").lockedVersionSatisfyingFromSource(original, name, constraint, .npm) catch return null;
+        const version = selected orelse return null;
+        if (self.preferredBunPin(name, constraint)) |bun| {
+            if (!std.mem.eql(u8, version, bun)) return null;
+        }
+        return version;
+    }
+
+    fn cacheResolutionWithPreference(self: *Installer, name: []const u8, requested: []const u8, preference: NpmLockPreference, version: []const u8, url: []const u8, integrity: ?[]const u8) void {
+        const key = allocNpmResolutionKey(self.allocator, name, requested, preference) catch return;
+        defer self.allocator.free(key);
+        self.npm_cache.putResolution(key, version, url, integrity);
+    }
+
     pub const HoisteVersionCache = struct {
         map: std.StringHashMap([]const u8),
         mutex: io_helper.Mutex,
@@ -556,7 +625,7 @@ pub const Installer = struct {
     }
 
     /// Set lockfile for lockfile-first resolution (skips npm registry on subsequent installs)
-    pub fn setLockfile(self: *Installer, lf: *@import("../deps/resolution/lockfile.zig").LockFile) void {
+    pub fn setLockfile(self: *Installer, lf: *const @import("../deps/resolution/lockfile.zig").LockFile) void {
         self.lockfile = lf;
     }
 
@@ -606,6 +675,12 @@ pub const Installer = struct {
         return self.npm_cache.getResolution(cache_key, self.allocator);
     }
 
+    pub fn getCachedNpmResolutionWithPreference(self: *Installer, name: []const u8, requested: []const u8, preference: NpmLockPreference) ?NpmResolution {
+        const key = allocNpmResolutionKey(self.allocator, name, requested, preference) catch return null;
+        defer self.allocator.free(key);
+        return self.npm_cache.getResolution(key, self.allocator);
+    }
+
     /// Batch install all packages from lockfile in parallel.
     /// This is the fast path when lockfile exists but modules are missing:
     /// 1. Flatten lockfile → list of {name, version, tarball_url}
@@ -634,6 +709,11 @@ pub const Installer = struct {
         var lf_iter = lf.packages.iterator();
         while (lf_iter.next()) |entry| {
             const pkg = entry.value_ptr.*;
+            switch (pkg.source) {
+                .known => |source| if (source != .npm) continue,
+                .invalid => continue,
+                .absent => {}, // legacy generic URL restore keeps its established behavior
+            }
             if (pkg.name.len == 0 or !canRestoreLockTarball(pkg.version, pkg.resolved)) continue;
 
             // Check if already installed on disk
@@ -762,9 +842,12 @@ pub const Installer = struct {
     /// Install a package
     pub fn install(
         self: *Installer,
-        spec: PackageSpec,
-        options: InstallOptions,
+        request: PackageSpec,
+        given_options: InstallOptions,
     ) !InstallResult {
+        var spec = request;
+        var options = given_options;
+        options.force = options.force or self.native_policy.force;
         const start_ts_ = io_helper.clockGettime();
         const start_time = @as(i64, @intCast(start_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(start_ts_.nsec)), 1_000_000);
 
@@ -822,6 +905,29 @@ pub const Installer = struct {
             return try self.installFromNpm(spec, options);
         }
 
+        // Check if package exists in registry (used for domain resolution and fallback)
+        const pkg_registry = @import("../packages/generated.zig");
+        const domain = native_identity.canonical(spec.name);
+        const pkg_info = pkg_registry.getPackageByDomain(domain);
+
+        // Use registry domain if available, otherwise use the package name as domain
+        // This allows S3-only packages that aren't in generated.zig to still be installed
+        spec.name = domain;
+
+        // Direct native entry has the same whole-closure preflight as pipeline
+        // entry. This precedes installed/global cache checks and any payload.
+        var own_plan: ?native_deps.Plan = null;
+        defer if (own_plan) |*plan| plan.deinit();
+        if (options.native_plan == null) {
+            own_plan = native_deps.Plan.init(self.allocator);
+            try own_plan.?.add(domain, spec.version);
+            var policy = self.native_policy;
+            policy.force = policy.force or options.force;
+            try own_plan.?.resolve(policy);
+            options.native_plan = &own_plan.?;
+        }
+        spec.version = try options.native_plan.?.versionFor(domain, spec.version);
+
         // Zig's official archive is a reliable fallback when the Pantry
         // binary registry is unavailable. Route the canonical domain through
         // the dedicated installer before generic Pantry package resolution.
@@ -829,14 +935,6 @@ pub const Installer = struct {
             if (options.verbose) std.debug.print("[verbose:installer] -> zig package: {s}\n", .{spec.name});
             return try self.installFromZiglang(spec, options);
         }
-
-        // Check if package exists in registry (used for domain resolution and fallback)
-        const pkg_registry = @import("../packages/generated.zig");
-        const pkg_info = pkg_registry.getPackageByName(spec.name);
-
-        // Use registry domain if available, otherwise use the package name as domain
-        // This allows S3-only packages that aren't in generated.zig to still be installed
-        const domain = if (pkg_info) |info| info.domain else spec.name;
 
         // Resolve version constraint to actual version
         // Try S3 registry first (has the most up-to-date versions), then generated.zig
@@ -873,7 +971,19 @@ pub const Installer = struct {
             }
         }
 
-        if (!skip_s3_lookup and !resolved_locally) {
+        // The plan already resolved this exact version and platform artifact.
+        // Keep that decision through installation instead of repeating remote
+        // metadata requests in every payload and recursive dependency worker.
+        const planned_artifact = try options.native_plan.?.artifactFor(domain, spec.version);
+        if (!resolved_locally) {
+            if (planned_artifact) |artifact| {
+                if (artifact.tarball_url) |url| {
+                    s3_tarball_url = try self.allocator.dupe(u8, url);
+                    from_s3 = true;
+                }
+            }
+        }
+        if (!skip_s3_lookup and !resolved_locally and planned_artifact == null) {
             if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| {
                 if (options.verbose) std.debug.print("[verbose:installer] S3 registry hit: {s} @ {s} url={s}\n", .{ domain, s3_result.version, s3_result.tarball_url });
                 s3_version_alloc = s3_result.version;
@@ -1011,7 +1121,7 @@ pub const Installer = struct {
         // -S pkgx python@3.11`, which nothing here can run. Point them at the
         // interpreter in this tree, installing a satisfying one if needed.
         if (install_path.len > 0) {
-            pkgx_shebang.fixInstalledPackage(self, install_path, domain, resolved_spec.version, options);
+            try pkgx_shebang.fixInstalledPackage(self, install_path, domain, resolved_spec.version, options);
         }
 
         const end_ts_ = io_helper.clockGettime();
@@ -2332,15 +2442,27 @@ pub const Installer = struct {
         name: []const u8,
         version_constraint: []const u8,
     ) !NpmResolution {
+        return self.resolveNpmPackageWithPreference(name, version_constraint, .legacy);
+    }
+
+    pub fn resolveNpmPackageWithPreference(
+        self: *Installer,
+        name: []const u8,
+        requested: []const u8,
+        preference: NpmLockPreference,
+    ) !NpmResolution {
+        const version_constraint = preference.constraint(requested);
         if (self.verbose) std.debug.print("[verbose:resolve] resolveNpmPackage: {s} @ {s}\n", .{ name, version_constraint });
 
         // --- Level 2 cache check: exact name@constraint match ---
         // Perf: Stack buffer for cache key (avoids heap alloc on every resolve call)
         var cache_key_stack: [512]u8 = undefined;
-        const cache_key = std.fmt.bufPrint(&cache_key_stack, "{s}@{s}", .{ name, version_constraint }) catch
-            try std.fmt.allocPrint(self.allocator, "{s}@{s}", .{ name, version_constraint });
-        const cache_key_is_heap = (name.len + 1 + version_constraint.len > 512);
-        defer if (cache_key_is_heap) self.allocator.free(cache_key);
+        var owned_cache_key: ?[]const u8 = null;
+        defer if (owned_cache_key) |key| self.allocator.free(key);
+        const cache_key = formatNpmResolutionKey(&cache_key_stack, name, version_constraint, preference) catch blk: {
+            owned_cache_key = try allocNpmResolutionKey(self.allocator, name, version_constraint, preference);
+            break :blk owned_cache_key.?;
+        };
 
         if (self.npm_cache.getResolution(cache_key, self.allocator)) |cached| {
             if (self.verbose) std.debug.print("[verbose:resolve] L2 cache hit: {s} -> {s}\n", .{ cache_key, cached.version });
@@ -2357,6 +2479,7 @@ pub const Installer = struct {
             errdefer self.allocator.free(version);
             const tarball_url = try self.allocator.dupe(u8, pinned.tarball_url);
             errdefer self.allocator.free(tarball_url);
+            self.cacheResolutionWithPreference(name, version_constraint, preference, version, tarball_url, pinned.integrity);
             return NpmResolution{
                 .version = version,
                 .tarball_url = tarball_url,
@@ -2369,35 +2492,37 @@ pub const Installer = struct {
         // and differs from pantry.lock's, skip this shortcut so the registry
         // path below selects it.
         const bun_pin = self.preferredBunPin(name, version_constraint);
-        if (self.lockfile) |lf| {
-            const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
-                // Verify the locked version satisfies the constraint
-                const npm_zig = @import("../registry/npm.zig");
-                const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
-                const satisfies = if (constraint) |c| c.satisfies(locked.version) else true;
+        if (preference == .legacy) {
+            if (self.lockfile) |lf| {
+                const lockfile_zig = @import("../deps/resolution/lockfile.zig");
+                if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
+                    // Verify the locked version satisfies the constraint
+                    const npm_zig = @import("../registry/npm.zig");
+                    const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
+                    const satisfies = if (constraint) |c| c.satisfies(locked.version) else true;
 
-                if (satisfies) {
-                    // Build tarball URL from locked resolved field or npm convention
-                    const tarball_url = if (locked.resolved.len > 0 and !std.mem.startsWith(u8, locked.resolved, "registry:"))
-                        try self.allocator.dupe(u8, locked.resolved)
-                    else
-                        try std.fmt.allocPrint(self.allocator, "https://registry.npmjs.org/{s}/-/{s}-{s}.tgz", .{
-                            name,
-                            // Strip scope prefix for tarball filename (e.g. @types/node → node)
-                            if (std.mem.indexOf(u8, name, "/")) |slash_idx| name[slash_idx + 1 ..] else name,
-                            locked.version,
-                        });
+                    if (satisfies) {
+                        // Build tarball URL from locked resolved field or npm convention
+                        const tarball_url = if (locked.resolved.len > 0 and !std.mem.startsWith(u8, locked.resolved, "registry:"))
+                            try self.allocator.dupe(u8, locked.resolved)
+                        else
+                            try std.fmt.allocPrint(self.allocator, "https://registry.npmjs.org/{s}/-/{s}-{s}.tgz", .{
+                                name,
+                                // Strip scope prefix for tarball filename (e.g. @types/node → node)
+                                if (std.mem.indexOf(u8, name, "/")) |slash_idx| name[slash_idx + 1 ..] else name,
+                                locked.version,
+                            });
 
-                    const result = NpmResolution{
-                        .version = try self.allocator.dupe(u8, locked.version),
-                        .tarball_url = tarball_url,
-                        .integrity = if (locked.integrity) |i| (self.allocator.dupe(u8, i) catch null) else null,
-                    };
+                        const result = NpmResolution{
+                            .version = try self.allocator.dupe(u8, locked.version),
+                            .tarball_url = tarball_url,
+                            .integrity = if (locked.integrity) |i| (self.allocator.dupe(u8, i) catch null) else null,
+                        };
 
-                    // Cache the lockfile resolution for future lookups
-                    self.npm_cache.putResolution(cache_key, result.version, result.tarball_url, result.integrity);
-                    return result;
+                        // Cache the lockfile resolution for future lookups
+                        self.npm_cache.putResolution(cache_key, result.version, result.tarball_url, result.integrity);
+                        return result;
+                    }
                 }
             }
         }
@@ -2450,7 +2575,15 @@ pub const Installer = struct {
         if (parsed.value != .object) return error.InvalidNpmResponse;
 
         // Resolve version
-        const target_version = try self.pickNpmVersion(parsed.value, name, version_constraint);
+        const typed_pin = switch (preference) {
+            .legacy => null,
+            .npm => |context| self.npmSourceLockPin(name, version_constraint, context.force),
+        };
+        const target_version = if (typed_pin) |pin| blk: {
+            const versions = parsed.value.object.get("versions") orelse return error.NoVersions;
+            if (versions != .object) return error.InvalidNpmResponse;
+            break :blk versions.object.getKey(pin) orelse try self.pickNpmVersion(parsed.value, name, version_constraint);
+        } else try self.pickNpmVersion(parsed.value, name, version_constraint);
 
         // Get tarball URL from versions[target_version].dist.tarball
         const versions_obj = parsed.value.object.get("versions") orelse return error.NoVersions;
@@ -2497,6 +2630,16 @@ pub const Installer = struct {
         name: []const u8,
         version_constraint: []const u8,
     ) !NpmResolutionWithDeps {
+        return self.resolveNpmPackageWithDepsWithPreference(name, version_constraint, .legacy);
+    }
+
+    pub fn resolveNpmPackageWithDepsWithPreference(
+        self: *Installer,
+        name: []const u8,
+        requested: []const u8,
+        preference: NpmLockPreference,
+    ) !NpmResolutionWithDeps {
+        const version_constraint = preference.constraint(requested);
         // A pinned scope is never looked up on npm (see resolveNpmPackage).
         if (self.pinFor(name)) |pin| {
             var pinned = try self.resolvePinned(pin, name, version_constraint);
@@ -2523,6 +2666,7 @@ pub const Installer = struct {
             const tarball_url = try self.allocator.dupe(u8, pinned.tarball_url);
             errdefer self.allocator.free(tarball_url);
             const integrity = if (pinned.integrity) |i| try self.allocator.dupe(u8, i) else null;
+            self.cacheResolutionWithPreference(name, version_constraint, preference, version, tarball_url, pinned.integrity);
             return NpmResolutionWithDeps{
                 .version = version,
                 .tarball_url = tarball_url,
@@ -2533,10 +2677,12 @@ pub const Installer = struct {
 
         // --- L2 cache check (same as resolveNpmPackage) ---
         var cache_key_stack: [512]u8 = undefined;
-        const cache_key = std.fmt.bufPrint(&cache_key_stack, "{s}@{s}", .{ name, version_constraint }) catch
-            try std.fmt.allocPrint(self.allocator, "{s}@{s}", .{ name, version_constraint });
-        const cache_key_is_heap = (name.len + 1 + version_constraint.len > 512);
-        defer if (cache_key_is_heap) self.allocator.free(cache_key);
+        var owned_cache_key: ?[]const u8 = null;
+        defer if (owned_cache_key) |key| self.allocator.free(key);
+        const cache_key = formatNpmResolutionKey(&cache_key_stack, name, version_constraint, preference) catch blk: {
+            owned_cache_key = try allocNpmResolutionKey(self.allocator, name, version_constraint, preference);
+            break :blk owned_cache_key.?;
+        };
 
         // --- L3 deps cache check: if we already resolved this exact version's deps ---
         // Build version key after L2 check since we need the resolved version
@@ -2555,13 +2701,20 @@ pub const Installer = struct {
         // and differs from pantry.lock's, pantryLockPin yields nothing and
         // pickNpmVersion selects bun's.
         var lock_pinned: ?[]const u8 = null;
-        if (self.lockfile) |lf| {
-            const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), self.preferredBunPin(name, version_constraint))) |locked| {
-                const npm_zig = @import("../registry/npm.zig");
-                const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
-                if (if (constraint) |c| c.satisfies(locked.version) else true) lock_pinned = locked.version;
-            }
+        switch (preference) {
+            .legacy => {
+                if (self.lockfile) |lf| {
+                    const lockfile_zig = @import("../deps/resolution/lockfile.zig");
+                    if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), self.preferredBunPin(name, version_constraint))) |locked| {
+                        const npm_zig = @import("../registry/npm.zig");
+                        const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
+                        if (if (constraint) |c| c.satisfies(locked.version) else true) lock_pinned = locked.version;
+                    }
+                }
+            },
+            .npm => |context| {
+                lock_pinned = self.npmSourceLockPin(name, version_constraint, context.force);
+            },
         }
 
         // --- L1 cache: get or fetch raw registry JSON ---
@@ -4301,40 +4454,12 @@ pub const Installer = struct {
     fn installDependencies(self: *Installer, dependencies: []const []const u8, options: InstallOptions) !void {
         if (dependencies.len == 0) return;
 
-        const Platform = @import("../core/platform.zig").Platform;
-        const current_platform = Platform.current();
-
-        // 1. Filter applicable dependencies (skip wrong-platform deps)
         const DepEntry = struct { dep: []const u8, is_optional: bool };
         var applicable: std.ArrayList(DepEntry) = .empty;
         defer applicable.deinit(self.allocator);
-
-        for (dependencies) |dep_str| {
-            const is_optional = std.mem.indexOf(u8, dep_str, "#") != null;
-
-            if (std.mem.startsWith(u8, dep_str, "linux:") or
-                std.mem.startsWith(u8, dep_str, "darwin:") or
-                std.mem.startsWith(u8, dep_str, "windows:") or
-                std.mem.startsWith(u8, dep_str, "freebsd:"))
-            {
-                const colon_pos = std.mem.indexOf(u8, dep_str, ":") orelse continue;
-                const platform = dep_str[0..colon_pos];
-                const actual_dep = dep_str[colon_pos + 1 ..];
-
-                const matches = blk: {
-                    if (std.mem.eql(u8, platform, "linux") and current_platform == .linux) break :blk true;
-                    if (std.mem.eql(u8, platform, "darwin") and current_platform == .darwin) break :blk true;
-                    if (std.mem.eql(u8, platform, "windows") and current_platform == .windows) break :blk true;
-                    if (std.mem.eql(u8, platform, "freebsd") and current_platform == .freebsd) break :blk true;
-                    break :blk false;
-                };
-
-                if (matches) {
-                    applicable.append(self.allocator, .{ .dep = actual_dep, .is_optional = is_optional }) catch continue;
-                }
-            } else {
-                applicable.append(self.allocator, .{ .dep = dep_str, .is_optional = is_optional }) catch continue;
-            }
+        for (dependencies) |spec| {
+            if (native_deps.parsePantryDepSpec(spec) == null) continue;
+            try applicable.append(self.allocator, .{ .dep = spec, .is_optional = std.mem.indexOfScalar(u8, spec, '#') != null });
         }
 
         if (applicable.items.len == 0) return;
@@ -4345,7 +4470,7 @@ pub const Installer = struct {
             // Fallback to sequential on alloc failure
             for (applicable.items) |item| {
                 self.installDependency(item.dep, options) catch |err| {
-                    if (!item.is_optional) return err;
+                    if (!item.is_optional or native_deps.isPolicyError(err)) return err;
                 };
             }
             return;
@@ -4406,7 +4531,7 @@ pub const Installer = struct {
 
         // Check for critical failures
         for (results) |result| {
-            if (result.err != null and !result.is_optional) {
+            if (result.err != null and (!result.is_optional or native_deps.isPolicyError(result.err.?))) {
                 return result.err.?;
             }
         }
@@ -4414,45 +4539,9 @@ pub const Installer = struct {
 
     /// Install a single dependency
     fn installDependency(self: *Installer, dep_str: []const u8, options: InstallOptions) anyerror!void {
-        // Strip out comment if present (e.g., "pkg^1.0 # comment" -> "pkg^1.0")
-        const dep_without_comment = blk: {
-            if (std.mem.indexOf(u8, dep_str, "#")) |comment_pos| {
-                // Trim whitespace before the comment
-                var end = comment_pos;
-                while (end > 0 and dep_str[end - 1] == ' ') {
-                    end -= 1;
-                }
-                break :blk dep_str[0..end];
-            }
-            break :blk dep_str;
-        };
-
-        // Parse dependency string (name@version or name^version, etc.)
-        const at_pos = std.mem.indexOfAny(u8, dep_without_comment, "@^~>=<");
-        const name = if (at_pos) |pos| dep_without_comment[0..pos] else dep_without_comment;
-        const raw_version = if (at_pos) |pos| dep_without_comment[pos..] else "latest";
-
-        // Normalize @X and @X.Y to ^X and ^X.Y (treat @ as caret for major/minor versions)
-        var version_owned: ?[]const u8 = null;
-        defer if (version_owned) |v| self.allocator.free(v);
-
-        const version = blk: {
-            if (std.mem.startsWith(u8, raw_version, "@")) {
-                const ver_without_at = raw_version[1..];
-                // Count dots to see if it's @X or @X.Y (not @X.Y.Z)
-                var dot_count: usize = 0;
-                for (ver_without_at) |c| {
-                    if (c == '.') dot_count += 1;
-                }
-                // If @X or @X.Y, convert to caret
-                if (dot_count < 2) {
-                    const normalized = try std.fmt.allocPrint(self.allocator, "^{s}", .{ver_without_at});
-                    version_owned = normalized;
-                    break :blk normalized;
-                }
-            }
-            break :blk raw_version;
-        };
+        const parsed = native_deps.parsePantryDepSpec(dep_str) orelse return;
+        const name = parsed.domain;
+        const version = parsed.version;
 
         // Check if already installed to avoid infinite recursion
         const pkg_registry = @import("../packages/generated.zig");
@@ -4464,7 +4553,12 @@ pub const Installer = struct {
         const domain = pkg_info.domain;
 
         // Resolve version
-        const planned = if (self.planned_pantry) |plan| plannedVersionFor(plan, domain, version) else null;
+        const planned = if (options.native_plan) |plan|
+            try plan.versionFor(domain, version)
+        else if (self.planned_pantry) |legacy_plan|
+            plannedVersionFor(legacy_plan, domain, version)
+        else
+            null;
         const resolved_version = planned orelse semver.resolveVersion(domain, version) orelse {
             if (!style.isCI()) style.print("  ! Could not resolve version for {s}{s}\n", .{ name, version });
             return error.VersionNotFound;
@@ -4556,6 +4650,28 @@ test "a planned version stands in for a dependency it satisfies" {
     // A plan entry that is still a range decides nothing.
     try std.testing.expect(plannedVersionFor(&plan, "mysql.com", "latest") == null);
     try std.testing.expect(plannedVersionFor(&plan, "zlib.net", "^1") == null);
+}
+
+test "direct native frozen installation preflights child coverage before payload" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    var path_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try directory.dir.realPath(io_helper.io, &path_buffer);
+    const root = path_buffer[0..path_len];
+    var original = @import("../deps/resolution/lockfile.zig").LockFile.init(allocator);
+    defer original.deinit();
+    try original.addPackage("facebook.com/zstd", "1.5.7", "registry:facebook.com/zstd@1.5.7", null);
+    var package_cache = try PackageCache.init(allocator);
+    defer package_cache.deinit();
+    var installer = try Installer.init(allocator, &package_cache);
+    defer installer.deinit();
+    allocator.free(installer.data_dir);
+    installer.data_dir = try allocator.dupe(u8, root);
+    installer.native_policy = .{ .original_lock = &original, .frozen = true };
+    try std.testing.expectError(error.NativeLockNotSatisfied, installer.install(.{ .name = "facebook.com/zstd", .version = "1.5.7", .source = .pantry }, .{ .project_root = root }));
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "pantry", .{}));
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "packages", .{}));
 }
 
 test "a sub-dependency installs at its constraint, not generated.zig's newest" {
@@ -5965,4 +6081,78 @@ test "native materialization: re-copying a tree over its own symlinks is repeata
     const repaired = try io_helper.readLinkAlloc(allocator, copied_link);
     defer allocator.free(repaired);
     try std.testing.expectEqualStrings("git", repaired);
+}
+
+fn freeNpmFixtureResolution(allocator: std.mem.Allocator, result: Installer.NpmResolution) void {
+    allocator.free(result.version);
+    allocator.free(result.tarball_url);
+    if (result.integrity) |integrity| allocator.free(integrity);
+}
+
+test "actual npm metadata routes keep per-call source preference isolated from legacy cache in either order" {
+    const allocator = std.testing.allocator;
+    var original = try @import("../deps/resolution/lockfile.zig").LockFile.parse(allocator,
+        \\{"packages":{"better-dx@0.2.24":{"name":"better-dx","version":"0.2.24","source":"pantry","resolved":"registry:better-dx@0.2.24"}}}
+    );
+    defer original.deinit();
+    for ([_]bool{ false, true }) |typed_first| {
+        var package_cache = try PackageCache.init(allocator);
+        defer package_cache.deinit();
+        var installer = try Installer.init(allocator, &package_cache);
+        defer installer.deinit();
+        installer.setLockfile(&original);
+        installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+        const typed = Installer.NpmLockPreference{ .npm = .{ .declared_constraint = "^0.2.24" } };
+        const first = try installer.resolveNpmPackageWithPreference("better-dx", "^0.2.24", if (typed_first) typed else .legacy);
+        defer freeNpmFixtureResolution(allocator, first);
+        const second = try installer.resolveNpmPackageWithPreference("better-dx", "^0.2.24", if (typed_first) .legacy else typed);
+        defer freeNpmFixtureResolution(allocator, second);
+        try std.testing.expectEqualStrings(if (typed_first) "0.2.27" else "0.2.24", first.version);
+        try std.testing.expectEqualStrings(if (typed_first) "0.2.24" else "0.2.27", second.version);
+        // The BFS metadata route independently reads the same real JSON. A
+        // provisional exact query cannot replace this call's raw declaration.
+        var with_deps = try installer.resolveNpmPackageWithDepsWithPreference("better-dx", "0.2.24", typed);
+        defer with_deps.deinit(allocator);
+        try std.testing.expectEqualStrings("0.2.27", with_deps.version);
+        const observed = installer.getCachedNpmResolutionWithPreference("better-dx", "0.2.24", typed).?;
+        defer freeNpmFixtureResolution(allocator, observed);
+        try std.testing.expectEqualStrings("0.2.27", observed.version);
+        const legacy = try installer.resolveNpmPackage("better-dx", "^0.2.24");
+        defer freeNpmFixtureResolution(allocator, legacy);
+        try std.testing.expectEqualStrings("0.2.24", legacy.version);
+    }
+}
+
+test "actual npm resolver filters mixed source pins and force is local to one resolution" {
+    const allocator = std.testing.allocator;
+    var original = try @import("../deps/resolution/lockfile.zig").LockFile.parse(allocator,
+        \\{"packages":{"better-dx@0.2.24":{"name":"better-dx","version":"0.2.24","source":"pantry"},"better-dx@0.2.25":{"name":"better-dx","version":"0.2.25","source":"npm"}}}
+    );
+    defer original.deinit();
+    var package_cache = try PackageCache.init(allocator);
+    defer package_cache.deinit();
+    var installer = try Installer.init(allocator, &package_cache);
+    defer installer.deinit();
+    installer.setLockfile(&original);
+    installer.native_policy = .{ .original_lock = &original, .frozen = true };
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+    const covered = Installer.NpmLockPreference{ .npm = .{ .declared_constraint = "^0.2.24" } };
+    var bfs = try installer.resolveNpmPackageWithDepsWithPreference("better-dx", "0.2.24", covered);
+    defer bfs.deinit(allocator);
+    try std.testing.expectEqualStrings("0.2.25", bfs.version);
+    try std.testing.expectEqualStrings("0.2.25", (try @import("../deps/resolution/lockfile.zig").lockedVersionSatisfyingFromSource(&original, "better-dx", "^0.2.24", .npm)).?);
+    // The direct metadata method is the registry accelerator's individual
+    // fallback. It must see the same source-eligible preference, not a
+    // legacy URL shortcut or the native .24 pin.
+    const individual = try installer.resolveNpmPackageWithPreference("better-dx", "0.2.24", covered);
+    defer freeNpmFixtureResolution(allocator, individual);
+    try std.testing.expectEqualStrings("0.2.25", individual.version);
+    const forced = try installer.resolveNpmPackageWithPreference("better-dx", "0.2.24", .{ .npm = .{ .declared_constraint = "^0.2.24", .force = true } });
+    defer freeNpmFixtureResolution(allocator, forced);
+    try std.testing.expectEqualStrings("0.2.27", forced.version);
+    const covered_again = try installer.resolveNpmPackageWithPreference("better-dx", "0.2.24", covered);
+    defer freeNpmFixtureResolution(allocator, covered_again);
+    try std.testing.expectEqualStrings("0.2.25", covered_again.version);
+    try std.testing.expect(!installer.native_policy.force);
+    try std.testing.expectEqual(@as(usize, 2), original.packages.count());
 }

@@ -111,7 +111,7 @@ jobs:
           command -v zig >/dev/null
           cd packages/zig
           zig build -Doptimize=Debug -j2
-          PANTRY_SOURCE_CLI="$PWD/zig-out/bin/pantry" bun test test/workspace-companion-e2e.test.ts
+          PANTRY_SOURCE_CLI="$PWD/zig-out/bin/pantry" bun test test/workspace-companion-e2e.test.ts test/native-metadata-e2e.test.ts
 
       - name: Verify this source migrates its published bootstrap to the committed workspace lock
         run: |

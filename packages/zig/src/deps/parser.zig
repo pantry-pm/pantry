@@ -343,69 +343,9 @@ pub fn parseTsConfigFile(allocator: std.mem.Allocator, file_path: []const u8) ![
     };
     defer allocator.free(json_output);
 
-    // Parse JSON output
-    const parsed = try std.json.parseFromSlice(
-        std.json.Value,
-        allocator,
-        json_output,
-        .{},
-    );
-    defer parsed.deinit();
-
-    // Extract dependencies from the parsed JSON
-    // The TS file should export an object with a "dependencies" field
-    var deps = try std.ArrayList(PackageDependency).initCapacity(allocator, 8);
-    errdefer {
-        for (deps.items) |*dep| dep.deinit(allocator);
-        deps.deinit(allocator);
-    }
-
-    if (parsed.value != .object) {
-        return deps.toOwnedSlice(allocator);
-    }
-
-    // Get dependencies object
-    if (parsed.value.object.get("dependencies")) |deps_value| {
-        if (deps_value != .object) return deps.toOwnedSlice(allocator);
-
-        var it = deps_value.object.iterator();
-        while (it.next()) |entry| {
-            const pkg_name = entry.key_ptr.*;
-            const pkg_spec = entry.value_ptr.*;
-
-            // Simple version: "package": "version"
-            if (pkg_spec == .string) {
-                const dep = PackageDependency{
-                    .name = try allocator.dupe(u8, pkg_name),
-                    .version = try allocator.dupe(u8, pkg_spec.string),
-                    .source = .registry,
-                };
-                try deps.append(allocator, dep);
-            }
-            // Object format: "package": { "version": "1.0.0", ... }
-            else if (pkg_spec == .object) {
-                var version: []const u8 = "latest";
-                var global = false;
-
-                if (pkg_spec.object.get("version")) |v| {
-                    if (v == .string) version = v.string;
-                }
-                if (pkg_spec.object.get("global")) |g| {
-                    if (g == .bool) global = g.bool;
-                }
-
-                const dep = PackageDependency{
-                    .name = try allocator.dupe(u8, pkg_name),
-                    .version = try allocator.dupe(u8, version),
-                    .global = global,
-                    .source = .registry,
-                };
-                try deps.append(allocator, dep);
-            }
-        }
-    }
-
-    return deps.toOwnedSlice(allocator);
+    // Evaluated configs and JSON manifests share the same provider, URL,
+    // Git and dependency-section semantics.
+    return parseEvaluatedDependencyJson(allocator, json_output);
 }
 
 /// Infer dependencies from a file based on its format
@@ -951,6 +891,16 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
     const content = try io_helper.readFileAlloc(allocator, file_path, 10 * 1024 * 1024);
     defer allocator.free(content);
 
+    return parseDependencyJson(allocator, content, .manifest);
+}
+
+/// Parse an evaluated Pantry config without losing its native declaration
+/// provenance. Ordinary JSON manifests retain their JS-manager auto names.
+pub fn parseEvaluatedDependencyJson(allocator: std.mem.Allocator, content: []const u8) ![]PackageDependency {
+    return parseDependencyJson(allocator, content, .evaluated_config);
+}
+
+fn parseDependencyJson(allocator: std.mem.Allocator, content: []const u8, origin: enum { manifest, evaluated_config }) ![]PackageDependency {
     const json_content = try stripJsonComments(allocator, content);
     defer allocator.free(json_content);
 
@@ -968,6 +918,8 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
         for (deps.items) |*dep| dep.deinit(allocator);
         deps.deinit(allocator);
     }
+
+    if (parsed.value != .object) return deps.toOwnedSlice(allocator);
 
     // Parse dependencies, devDependencies, peerDependencies, and pantry.dependencies
     const dep_sections = [_]struct { key: []const u8, dep_type: DependencyType }{
@@ -991,6 +943,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                     while (it.next()) |entry| {
                         const pkg_name = entry.key_ptr.*;
                         const pkg_spec = entry.value_ptr.*;
+                        if (pkg_spec != .string and pkg_spec != .object) continue;
                         var version: []const u8 = "latest";
 
                         if (pkg_spec == .string) {
@@ -1049,6 +1002,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
             while (sys_it.next()) |entry| {
                 const short_name = entry.key_ptr.*;
                 const pkg_spec = entry.value_ptr.*;
+                if (pkg_spec != .string and pkg_spec != .object) continue;
                 var version: []const u8 = "latest";
 
                 if (pkg_spec == .string) {
@@ -1095,6 +1049,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
             while (it.next()) |entry| {
                 const pkg_name = entry.key_ptr.*;
                 const pkg_spec = entry.value_ptr.*;
+                if (pkg_spec != .string and pkg_spec != .object) continue;
 
                 var version: []const u8 = "latest";
                 var source: []const u8 = "auto";
@@ -1214,6 +1169,7 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                         break :blk try allocator.dupe(u8, formatted);
                     }
 
+                    if (origin == .evaluated_config) break :blk try allocator.dupe(u8, pkg_name);
                     const formatted = std.fmt.bufPrint(&name_buf, "auto:{s}", .{pkg_name}) catch
                         try std.fmt.allocPrint(allocator, "auto:{s}", .{pkg_name});
                     break :blk try allocator.dupe(u8, formatted);
@@ -1499,4 +1455,38 @@ test "parseZigPackageJson with mixed explicit and simplified syntax" {
     // NOTE: Test disabled because Zig 0.16 Io.Dir doesn't have realpath.
     _ = test_content;
     _ = allocator;
+}
+
+test "evaluated dependency configs preserve explicit providers through the shared JSON parser" {
+    const allocator = std.testing.allocator;
+    const empty = try parseEvaluatedDependencyJson(allocator, "[]");
+    defer allocator.free(empty);
+    try std.testing.expectEqual(@as(usize, 0), empty.len);
+    const manifest = try parseDependencyJson(allocator,
+        \\{"dependencies":{"postgres":{"version":"17"}}}
+    , .manifest);
+    defer {
+        for (manifest) |dependency| {
+            var owned = dependency;
+            owned.deinit(allocator);
+        }
+        allocator.free(manifest);
+    }
+    try std.testing.expectEqualStrings("auto:postgres", manifest[0].name);
+    const dependencies = try parseEvaluatedDependencyJson(allocator,
+        \\{"dependencies":{"bun":{"version":"^1.4","source":"npm"},"bun.sh":{"version":"1.4.3","source":"pantry"},"disabled":false,"nullish":null,"number":7,"array":[]},"pantry":{"dependencies":{"disabled":false}},"system":{"redis":false,"bun":null,"node":7,"python":[]}}
+    );
+    defer {
+        for (dependencies) |dependency| {
+            var owned = dependency;
+            owned.deinit(allocator);
+        }
+        allocator.free(dependencies);
+    }
+    try std.testing.expectEqual(@as(usize, 2), dependencies.len);
+    try std.testing.expectEqualStrings("npm:bun", dependencies[0].name);
+    try std.testing.expectEqual(DependencySource.npm, dependencies[0].source);
+    try std.testing.expectEqualStrings("^1.4", dependencies[0].version);
+    try std.testing.expectEqualStrings("bun.sh", dependencies[1].name);
+    try std.testing.expectEqual(DependencySource.pantry, dependencies[1].source);
 }

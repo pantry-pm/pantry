@@ -21,13 +21,32 @@ pub fn loadOrCreateLockfile(allocator: std.mem.Allocator, cwd: []const u8) !Lock
     defer allocator.free(lockfile_path);
 
     // Try to load existing lockfile
-    return LockFile.read(allocator, lockfile_path) catch |err| {
+    var lock = LockFile.read(allocator, lockfile_path) catch |err| {
         // If file doesn't exist, create a new lockfile
         if (err == error.FileNotFound) {
             return LockFile.init(allocator);
         }
         return err;
     };
+    errdefer lock.deinit();
+    // Source-aware version lookup may coalesce equal-version aliases. Prove
+    // their complete metadata agrees before any install can materialize one.
+    const identity = @import("../../../packages/native_identity.zig");
+    var entries = lock.packages.iterator();
+    while (entries.next()) |entry| {
+        const package = entry.value_ptr.*;
+        if (!package.source.matches(.pantry)) continue;
+        const mirrored = switch (package.source) {
+            .known => |source| source == .ziglang,
+            else => false,
+        };
+        if (mirrored or identity.hasAlias(entry.key_ptr.*, package.name, package.version, package.resolved)) {
+            var view = try @import("../../../packages/native_lock.zig").read(allocator, lockfile_path);
+            defer view.deinit(allocator);
+            break;
+        }
+    }
+    return lock;
 }
 
 /// Save lockfile to disk
