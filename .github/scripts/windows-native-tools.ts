@@ -42,7 +42,7 @@ try {
     assert.equal((await run(`${phase}-execute`, [output])).trim(), 'NATIVE_ZIG_STDLIB_OK')
     if (phase === 'installed') {
       const moved = join(root, 'moved pantry')
-      // Exercise the Windows user operation itself. Bun 1.4.4's rename rejects
+      // Exercise the Windows user operation itself. Bun 1.4.3's rename rejects
       // this installed tree with EPERM while the native Windows move succeeds.
       // One native move must complete; source absence and the next phase's
       // symlink, byte identity, compile and execution assertions stay required.

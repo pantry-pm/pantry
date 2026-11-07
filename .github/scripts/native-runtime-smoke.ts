@@ -9,7 +9,7 @@ const work = await mkdtemp(join(tmpdir(), 'pantry-native-runtime-smoke-'))
 const target = new URL(process.env.PANTRY_RUNTIME_SMOKE_URL || 'https://pantry.dev/')
 assert.equal(target.protocol, 'https:')
 assert(!target.username && !target.password, 'Use a public HTTPS URL without inline credentials')
-const expectedPantry = process.env.PANTRY_RUNTIME_SMOKE_PANTRY_VERSION || '0.11.91'
+const expectedPantry = process.env.PANTRY_RUNTIME_SMOKE_PANTRY_VERSION || '0.11.179'
 assert(/^\d+\.\d+\.\d+$/.test(expectedPantry), 'Use an exact published Pantry version')
 const checks: Record<string, unknown> = { target: target.href, platform: process.platform, architecture: process.arch }
 const env = { ...process.env }
@@ -39,6 +39,7 @@ try {
   assert.equal(process.platform, 'linux')
   assert.equal(process.arch, 'x64')
   await copyFile(join(import.meta.dir, '../native-runtime-smoke/pantry.json'), join(work, 'pantry.json'))
+  const requested = await Bun.file(join(work, 'pantry.json')).json()
   const pantry = Bun.which('pantry')
   assert(pantry, 'The published Pantry CLI must be installed by the action')
   checks.pantry = (await run('pantry-version', [pantry, '--version'])).trim()
@@ -48,7 +49,7 @@ try {
   const paths = Object.fromEntries(await Promise.all(['bun', 'google-chrome-stable', 'ffmpeg', 'ffprobe', 'yt-dlp', 'python3'].map(async name => [name, await tool(name)])))
   checks.programs = paths
   checks.programModes = Object.fromEntries(await Promise.all(Object.entries(paths).map(async ([name, path]) => [name, ((await stat(path)).mode & 0o777).toString(8)])))
-  assert.match(await run('bun-version', [paths.bun, '--version']), /^1\.4\.3\s*$/)
+  assert.equal((await run('bun-version', [paths.bun, '--version'])).trim(), requested.dependencies['bun.com'])
   assert.match(await run('chrome-version', [paths['google-chrome-stable'], '--version']), /155\.0\.8059\.84/)
   assert.match(await run('ffmpeg-version', [paths.ffmpeg, '-version']), /ffmpeg version 8\.1/)
   checks.python = JSON.parse(await run('python-runtime', [paths.python3, '-c', 'import sys, ssl, decimal, ctypes, sqlite3, bz2, lzma, json; print(json.dumps({"version": sys.version, "minor": sys.version_info.minor, "major": sys.version_info.major}))']))

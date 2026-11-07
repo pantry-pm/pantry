@@ -54,6 +54,12 @@ describe('manual native publisher tool ownership', () => {
     const windows = workflow.jobs.build!.steps!.find(step => step.name === 'Setup Pantry and Bun (Windows)')!
     expect(windows.if).toBe("runner.os == 'Windows'")
     expect(windows.uses).toBe('./packages/action')
-    expect(windows.with?.packages).toBe('bun.com@1.4.3')
+    const manifest = Bun.JSONC.parse(readFileSync(new URL('../../../pantry.jsonc', import.meta.url), 'utf8'))
+    if (!manifest || typeof manifest !== 'object' || !('dependencies' in manifest)) throw new Error('Workspace dependencies are required')
+    const dependencies = manifest.dependencies
+    if (!dependencies || typeof dependencies !== 'object' || !('bun.sh' in dependencies)) throw new Error('The workspace Bun pin is required')
+    const bun = dependencies['bun.sh']
+    if (typeof bun !== 'string') throw new Error('The workspace Bun pin must be a string')
+    expect(windows.with?.packages).toBe(`bun.com@${bun}`)
   })
 })

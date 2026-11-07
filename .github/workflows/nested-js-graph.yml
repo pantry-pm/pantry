@@ -20,7 +20,7 @@ jobs:
         id: pantry
         uses: pantry-pm/pantry/packages/action@ae59a7b7fc5f4e6f7b8041a75e6b5772680bebdf
         with:
-          version: 0.11.101
+          version: 0.11.179
           install: 'false'
           packages: bun.com@1.4.4 gnu.org/tar@1.35
       - name: Compare actual parent dependency bindings with the normal Bun graph

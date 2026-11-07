@@ -6,7 +6,7 @@ on:
       pantry-version:
         description: 'Exact published Pantry CLI version to verify'
         type: string
-        default: 0.11.91
+        default: 0.11.179
       url:
         description: 'Public HTTPS page to load with the published Chrome and Bun WebView.'
         type: string
@@ -29,15 +29,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install the published Pantry CLI and bootstrap Bun
-        uses: pantry-pm/pantry/packages/action@2b6653b20b830c152f7491847a91d2d9d7cf4cc7 # v0.11.91
+        uses: pantry-pm/pantry/packages/action@6243f5d8af665b1568fdfdf4a225da3f35b4da29 # v0.11.179
         with:
-          version: ${{ inputs.pantry-version || '0.11.91' }}
+          version: ${{ inputs.pantry-version || '0.11.179' }}
           install: 'false'
           packages: bun.com@1.4.4
       - name: Verify a fresh production-user installation
         env:
           PANTRY_RUNTIME_SMOKE_URL: ${{ inputs.url || 'https://pantry.dev/' }}
-          PANTRY_RUNTIME_SMOKE_PANTRY_VERSION: ${{ inputs.pantry-version || '0.11.91' }}
+          PANTRY_RUNTIME_SMOKE_PANTRY_VERSION: ${{ inputs.pantry-version || '0.11.179' }}
         # The production API runs as root; retain its normal Chrome backend policy.
         run: sudo -n env PATH="$PATH" PANTRY_RUNTIME_SMOKE_URL="$PANTRY_RUNTIME_SMOKE_URL" PANTRY_RUNTIME_SMOKE_PANTRY_VERSION="$PANTRY_RUNTIME_SMOKE_PANTRY_VERSION" bun .github/scripts/native-runtime-smoke.ts
       - name: Retain exact runtime evidence
