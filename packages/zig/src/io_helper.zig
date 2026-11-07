@@ -255,8 +255,8 @@ pub fn statFile(path: []const u8) !StatResult {
             .size = @intCast(stat.size),
             .mtime = stat.mtime.toNanoseconds(),
             .ctime = stat.ctime.toNanoseconds(),
-            .mode = if (@hasField(@TypeOf(stat), "mode")) stat.mode else 0,
-            .kind = .file,
+            .mode = if (@hasField(@TypeOf(stat), "mode")) stat.mode else if (is_windows) 0 else stat.permissions.toMode(),
+            .kind = std.meta.stringToEnum(FileKind, @tagName(stat.kind)) orelse .unknown,
         };
     } else |_| {
         // Try to open as directory
