@@ -7,6 +7,9 @@ export const recipe: Recipe = {
   homepage: 'https://libexpat.github.io/',
   github: 'https://github.com/libexpat/libexpat',
   programs: ['xmlwf'],
+  // Keep the original build identity immutable. The first local 2.10 Darwin
+  // build inherited macOS 27 from its host; this revision declares the baseline.
+  revisions: { '2.10.0': 1 },
   versionSource: {
     type: 'github-releases',
     repo: 'libexpat/libexpat',
@@ -18,6 +21,9 @@ export const recipe: Recipe = {
   },
 
   build: {
+    env: {
+      darwin: { MACOSX_DEPLOYMENT_TARGET: '14.0' },
+    },
     script: [
       './configure --prefix={{prefix}}',
       'make --jobs {{hw.concurrency}} install',

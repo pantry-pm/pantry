@@ -11,11 +11,12 @@ import type { BuildArchiveOptions } from '../../action/src/build-archive-cache'
 import { ArchiveChecksumError, obtainBuildArchive } from '../../action/src/build-archive-cache'
 import { join, dirname } from 'node:path'
 import { parseArgs } from 'node:util'
-import { generateBuildScript, getSkips, type PackageRecipe, type NormalizedRecipe, type RecipeScriptStep, type RecipeTest } from './buildkit.ts'
+import { generateBuildScript, getSkips, platformReduce, type PackageRecipe, type NormalizedRecipe, type RecipeScriptStep, type RecipeTest } from './buildkit.ts'
 import { fixUp } from './fix-up.ts'
 import { selectPublishedFiles, writeProgramInterfaces } from './published-files'
 import { copyRecipeProps } from './copy-recipe-props'
 import { verifyDeclaredPrograms } from './declared-programs'
+import { verifyMacOSDeploymentTarget } from './macos-deployment-target'
 import type { RuntimePackage } from './native-runtime'
 import { reportBuild } from './report-build.ts'
 import { persistBuildDiagnostics, sanitizeBuildDiagnostic } from './build-diagnostics.ts'
@@ -1890,6 +1891,11 @@ else {
   writeProgramInterfaces(prefix, normalizedRecipe.sourceablePrograms)
   await fixUp(prefix, platform, skips, runtimePackages)
   verifyDeclaredPrograms(prefix, pkgName, normalizedRecipe.programs)
+  const deploymentTarget = platformReduce(normalizedRecipe.build?.env ?? {}, platform).MACOSX_DEPLOYMENT_TARGET
+  if (platform.startsWith('darwin-') && deploymentTarget !== undefined) {
+    const images = verifyMacOSDeploymentTarget(prefix, deploymentTarget)
+    console.log(`Verified ${images.length} runtime images against macOS ${deploymentTarget}`)
+  }
 
   console.log(`\n✅ Build completed successfully!`)
   console.log(`📁 Installed to: ${prefix}`)

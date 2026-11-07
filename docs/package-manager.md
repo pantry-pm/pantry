@@ -171,6 +171,14 @@ catalog generation retain accepted older versions. The producer refuses to
 rebuild a superseded identity with the revised recipe. Pin the full revised
 package version to select its separate archive, installation and cache entry.
 
+A source recipe can declare its supported Mac baseline with
+`build.env.darwin.MACOSX_DEPLOYMENT_TARGET`, for example `'14.0'`. After relocation,
+the producer checks every shipped Mach-O runtime image and every architecture
+against that baseline. A newer minimum OS or unreadable deployment metadata
+fails the build before publication; an SDK version alone does not establish
+compatibility. Recipes without an explicit baseline retain their host-target
+build policy.
+
 `pantry.lock` is the reproducibility boundary for Pantry-owned dependencies. It records exact package versions,
 resolved locations, integrity when available, dependency relationships, and
 workspace constraint state. It supports lockfile-first restore, which avoids
