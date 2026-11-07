@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.182...v0.11.183)
+
+## 🐛 Bug Fixes
+
+- resolve generated catalog filenames when discovering versions ([80e5cec](https://github.com/pantry-pm/pantry/commit/80e5cec)) _(by Chris Breuer <chris@stacksjs.com>)_
+- qualify declared macOS deployment baselines before publishing ([3791156](https://github.com/pantry-pm/pantry/commit/3791156)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.183 ([4b28154](https://github.com/pantry-pm/pantry/commit/4b28154)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.181...v0.11.182)
 
 ## 🐛 Bug Fixes
