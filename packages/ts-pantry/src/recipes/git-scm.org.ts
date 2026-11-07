@@ -83,6 +83,8 @@ export const recipe: Recipe = {
       },
     ],
     env: {
+      // Keep source builds portable when the supervised producer runs newer macOS.
+      darwin: { MACOSX_DEPLOYMENT_TARGET: '14.0' },
       V: '1',
       INSTALL_STRIP: '-s',
     },
