@@ -1,6 +1,14 @@
-import { cpSync, existsSync, lstatSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readlinkSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+// Node's cpSync rejects a standalone dangling symlink even with dereference
+// disabled. Relative command links are intentionally dangling inside a private
+// snapshot; preserve their link text without asking the runtime to follow it.
+function copyActivation(source: string, target: string): void {
+  if (lstatSync(source).isSymbolicLink()) symlinkSync(readlinkSync(source), target, 'file')
+  else cpSync(source, target, { recursive: true, dereference: false, verbatimSymlinks: true, preserveTimestamps: true })
+}
 
 /** Package bytes may be cached; a previous setup still owns its command selection. */
 export async function preserveCommandActivations<T>(binDir: string, restore: () => Promise<T>): Promise<T> {
@@ -10,7 +18,8 @@ export async function preserveCommandActivations<T>(binDir: string, restore: () 
   const owned = mkdtempSync(join(tmpdir(), 'pantry-action-activations-'))
   const snapshot = join(owned, 'bin')
   try {
-    cpSync(binDir, snapshot, { recursive: true, dereference: false, verbatimSymlinks: true, preserveTimestamps: true })
+    mkdirSync(snapshot)
+    for (const entry of readdirSync(binDir)) copyActivation(join(binDir, entry), join(snapshot, entry))
     try {
       return await restore()
     }
@@ -22,7 +31,7 @@ export async function preserveCommandActivations<T>(binDir: string, restore: () 
       for (const entry of readdirSync(snapshot)) {
         const target = join(binDir, entry)
         rmSync(target, { recursive: true, force: true })
-        cpSync(join(snapshot, entry), target, { recursive: true, dereference: false, verbatimSymlinks: true, preserveTimestamps: true })
+        copyActivation(join(snapshot, entry), target)
       }
     }
   }

@@ -73,3 +73,16 @@ test.skipIf(process.platform === 'win32')('an unsafe activation directory fails 
   }
   finally { rmSync(root, { recursive: true, force: true }) }
 })
+
+test.skipIf(process.platform === 'win32')('the shipped Node runtime restores relative links from private snapshots', async () => {
+  const node = Bun.which('node')
+  expect(node).toBeDefined()
+  const root = mkdtempSync(join(tmpdir(), 'pantry-node-cache-runner-'))
+  try {
+    const build = await Bun.build({ entrypoints: [join(import.meta.dir, 'fixtures/cache-activations-node.ts')], outdir: root, target: 'node', format: 'cjs' })
+    expect(build.success).toBe(true)
+    const result = Bun.spawnSync([node!, join(root, 'cache-activations-node.js')], { timeout: 4000, stdout: 'pipe', stderr: 'pipe' })
+    expect(result.exitCode, result.stdout.toString() + result.stderr.toString()).toBe(0)
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
