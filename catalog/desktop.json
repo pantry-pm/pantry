@@ -311,6 +311,12 @@
       "label": "GitHub Desktop",
       "desc": "A desktop application for contributing to projects on GitHub.",
       "category": "Development"
+    },
+    {
+      "domain": "claude.ai",
+      "label": "Claude Desktop",
+      "desc": "Anthropic desktop app with Claude Code, chat and Cowork.",
+      "category": "Development"
     }
   ],
   "fonts": [

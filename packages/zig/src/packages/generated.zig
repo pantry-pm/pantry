@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1768
+//! Total packages: 1769
 
 const std = @import("std");
 
@@ -29,7 +29,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1768 total)
+/// All known packages (1769 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -1504,6 +1504,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "npmjs.com", "gnu.org/patch" },
     .aliases = &[_][]const u8{"yarn"},
     .versions = &[_][]const u8{ "1.22.22", "1.22.21", "1.22.20", "1.22.19", "1.22.18", "1.22.17", "1.22.16", "1.22.15", "1.22.14", "1.22.13", "1.22.12", "1.22.11", "1.22.10", "1.22.5", "1.22.4", "1.22.3", "1.22.2", "1.22.1", "1.22.0", "1.21.1", "1.21.0", "1.19.2", "1.19.1", "1.19.0", "1.18.0", "1.17.3", "1.16.0", "1.15.2", "1.14.0", "1.13.0", "1.12.3", "1.12.1", "1.10.1", "1.10.0", "1.9.4", "1.9.3", "1.9.2" },
+}, .{
+    .name = "Claude Desktop",
+    .domain = "claude.ai",
+    .kind = .app,
+    .description = "Anthropic desktop app with Claude Code, chat and Cowork.",
+    .homepage_url = "https://claude.com/download",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{ "claude-desktop", "claude-code-desktop", "claude-app" },
+    .versions = &[_][]const u8{"4.23118.0"},
 }, .{
     .name = "CleanShot X",
     .domain = "cleanshot.com",

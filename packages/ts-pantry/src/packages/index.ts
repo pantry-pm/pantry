@@ -182,6 +182,7 @@ import { ciliumiohubblePackage } from './cilium.io/hubble'
 import { circlecicomPackage } from './circlecicom'
 import { ciscocomlibsrtpPackage } from './cisco.com/libsrtp'
 import { classicYarnPackage } from './classicyarnpkgcom'
+import { claudeaiPackage } from './claudeai'
 import { cligithubcomPackage } from './cligithubcom'
 import { clisporgPackage } from './clisporg'
 import { clogtoolgithubioPackage } from './clog-toolgithubio'
@@ -2025,6 +2026,7 @@ export interface Pantry {
 
   ciscocomlibsrtp: typeof ciscocomlibsrtpPackage
   classicyarnpkgcom: typeof classicYarnPackage
+  claudeai: typeof claudeaiPackage
   cligithubcom: typeof cligithubcomPackage
   clisporg: typeof clisporgPackage
   clog_toolgithubio: typeof clogtoolgithubioPackage
@@ -4898,7 +4900,11 @@ export interface Pantry {
   cJSON: typeof cjsonPackage
   'clang-format': typeof llvmorgclangformatPackage
   'classic.yarnpkg': typeof classicYarnPackage
+  'Claude Desktop': typeof claudeaiPackage
+  'claude-app': typeof claudeaiPackage
   'claude-code': typeof anthropiccomclaudecodePackage
+  'claude-code-desktop': typeof claudeaiPackage
+  'claude-desktop': typeof claudeaiPackage
   cleanshot: typeof cleanshotcomPackage
   'CleanShot X': typeof cleanshotcomPackage
   click: typeof cratesioclickPackage
@@ -6736,6 +6742,7 @@ export const pantry: Pantry = {
 
   ciscocomlibsrtp: ciscocomlibsrtpPackage,
   classicyarnpkgcom: classicYarnPackage,
+  claudeai: claudeaiPackage,
   cligithubcom: cligithubcomPackage,
   clisporg: clisporgPackage,
   clog_toolgithubio: clogtoolgithubioPackage,
@@ -9609,7 +9616,11 @@ export const pantry: Pantry = {
   cJSON: cjsonPackage,
   'clang-format': llvmorgclangformatPackage,
   'classic.yarnpkg': classicYarnPackage,
+  'Claude Desktop': claudeaiPackage,
+  'claude-app': claudeaiPackage,
   'claude-code': anthropiccomclaudecodePackage,
+  'claude-code-desktop': claudeaiPackage,
+  'claude-desktop': claudeaiPackage,
   cleanshot: cleanshotcomPackage,
   'CleanShot X': cleanshotcomPackage,
   click: cratesioclickPackage,

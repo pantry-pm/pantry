@@ -494,6 +494,11 @@
     "sourceUrl": "https://yarnpkg.com/img/yarn-favicon.svg",
     "sha256": "2dd2aa230223252264522450e035654d21fb8ad0217e471d9449db7b97ac0570"
   },
+  "claude.ai": {
+    "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/b150888bc7257af83e3b85d3c2be4294f88986026f8168f6c12fc1fde6697350.svg",
+    "sourceUrl": "https://claude.com/icon.svg",
+    "sha256": "b150888bc7257af83e3b85d3c2be4294f88986026f8168f6c12fc1fde6697350"
+  },
   "cleanshot.com": {
     "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/6c1606b5b5a4568b5ee2378cc3e140593b4430147de99adffa6437fa10fa1ab8.png",
     "sourceUrl": "https://cleanshot.com/favicon@2x.png",
@@ -2268,6 +2273,11 @@
     "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/0213b161fc92052b308f40d34d89590236aec9309953cb228fd4dc654452e11b.png",
     "sourceUrl": "https://raw.githubusercontent.com/skylot/jadx/master/jadx-gui/src/main/resources/logos/jadx-logo.png",
     "sha256": "0213b161fc92052b308f40d34d89590236aec9309953cb228fd4dc654452e11b"
+  },
+  "github.com/stacksjs/launchpad": {
+    "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/732814037efb630f03e0cd513438bbbbce21fc527abba63de3455df236673458.png",
+    "sourceUrl": "https://raw.githubusercontent.com/stacksjs/launchpad/main/assets/app-icon.png",
+    "sha256": "732814037efb630f03e0cd513438bbbbce21fc527abba63de3455df236673458"
   },
   "github.com/strukturag/libheif": {
     "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/08fac0b77d83323550d94da7ed06c212f3836df86cfd68929388e60b569dd8a8.jpg",
@@ -5658,10 +5668,5 @@
     "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/9282718e8c1b781466d466bd81bb6e57bb1a5fcc362e7ba813d9b114d3df6add.svg",
     "sourceUrl": "https://www.zsh.org/favicon.svg",
     "sha256": "9282718e8c1b781466d466bd81bb6e57bb1a5fcc362e7ba813d9b114d3df6add"
-  },
-  "github.com/stacksjs/launchpad": {
-    "url": "https://raw.githubusercontent.com/pantry-pm/pantry/main/assets/package-logos/732814037efb630f03e0cd513438bbbbce21fc527abba63de3455df236673458.png",
-    "sourceUrl": "https://raw.githubusercontent.com/stacksjs/launchpad/main/assets/app-icon.png",
-    "sha256": "732814037efb630f03e0cd513438bbbbce21fc527abba63de3455df236673458"
   }
 }
