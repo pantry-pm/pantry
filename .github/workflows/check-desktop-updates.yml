@@ -157,7 +157,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # This is the only writer. It gets a fresh checkout and re-reads the public
+  # This is the only writer, and only a main run may record a manifest. Manual
+  # branch qualification can publish verified artifacts without landing source
+  # changes through the manifest workflow. It gets a fresh checkout and re-reads the public
   # registry after both publish jobs finish. --require-current makes the step
   # fail before commit if even one upstream version lacks a published artifact.
   #
@@ -174,7 +176,7 @@ jobs:
       actions: write
       statuses: write
     if: >-
-      always() &&
+      always() && github.ref == 'refs/heads/main' &&
       needs.publish-ubuntu.result == 'success' &&
       (needs.publish-macos.result == 'success' || needs.publish-macos.result == 'skipped') &&
       (github.event_name == 'schedule' || inputs.publish == true)
