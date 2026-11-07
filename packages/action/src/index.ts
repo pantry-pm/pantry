@@ -1019,30 +1019,11 @@ export async function run(): Promise<void> {
       )
     }
 
-    // ── Configure PATH for zig install directories ──
-    // (pantry/.bin and ~/.pantry/bin were added earlier so `pantry install`
-    // could already see them; here we only handle zig's versioned layout.)
-    // Also add any zig install directories to PATH (zig is installed into
-    // pantry/zig/<version>/ or ~/.pantry/global/packages/ziglang.org/v<version>/)
-    const zigDirs = [
-      path.join(pantryDir, 'zig'),
-      path.join(homeDir, '.pantry', 'global', 'packages', 'ziglang.org'),
-    ]
-    for (const zigParent of zigDirs) {
-      try {
-        if (fs.existsSync(zigParent)) {
-          for (const entry of fs.readdirSync(zigParent)) {
-            const zigBinDir = path.join(zigParent, entry)
-            const zigExe = path.join(zigBinDir, platform.os === 'windows' ? 'zig.exe' : 'zig')
-            if (fs.existsSync(zigExe)) {
-              core.addPath(zigBinDir)
-              core.info(`Added zig to PATH: ${zigBinDir}`)
-            }
-          }
-        }
-      }
-      catch { /* zig not installed */ }
-    }
+    // The installer's .bin links select the requested versions. Historical
+    // version directories may remain in a restored cache, but cannot select
+    // commands merely because they exist. Keep the project activations ahead
+    // of both inherited paths and the global Pantry environment.
+    core.addPath(pantryBinDir)
 
     // Pantry activates bun and bunx separately; retain their executor arguments.
     const bunPath = path.join(pantryBinDir, 'bun')

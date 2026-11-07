@@ -230,6 +230,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Seed a stale legacy Zig cache beside the selected compiler
+        run: |
+          mkdir -p pantry/zig/legacy-activation-fixture
+          printf '#!/bin/sh\nprintf "stale-compiler-cache\\n"\n' > pantry/zig/legacy-activation-fixture/zig
+          chmod 755 pantry/zig/legacy-activation-fixture/zig
+
       - name: Setup pinned Pantry and workspace dependencies
         uses: ./packages/action
         with:
@@ -584,7 +590,7 @@ jobs:
           packages: openjdk.org@17.0.20.8 android.com/cmdline-tools@14742923.0.0 bun.com@1.4.4
       - name: Verify the Action's real Java-dependent commands before release
         env:
-          PANTRY_EXPECT_VERSION: 0.11.101
+          PANTRY_EXPECT_VERSION: 0.11.179
         run: bun .github/scripts/native-toolchain-pins.ts
       - uses: actions/upload-artifact@v4
         if: always()
