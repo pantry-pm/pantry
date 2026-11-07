@@ -118,9 +118,11 @@ pub fn publishBinaryCommand(allocator: std.mem.Allocator, args: []const []const 
 
     const tarball_name = try std.fmt.allocPrint(allocator, "{s}-{s}.tar.gz", .{ domain_slug, options.version });
     defer allocator.free(tarball_name);
-    const tarball_path = try std.fs.path.join(allocator, &.{ io_helper.getTempDir(), tarball_name });
+    const staging = try io_helper.createPrivateDirectory(allocator, io_helper.getTempDir(), "pantry-publish-binary");
+    defer allocator.free(staging);
+    defer io_helper.deleteTree(staging) catch {};
+    const tarball_path = try std.fs.path.join(allocator, &.{ staging, tarball_name });
     defer allocator.free(tarball_path);
-    defer io_helper.deleteFile(tarball_path) catch {};
 
     style.print("  Creating tarball...\n", .{});
     const tar_result = try io_helper.childRun(allocator, &.{

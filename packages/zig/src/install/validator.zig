@@ -133,6 +133,9 @@ pub fn hasUsableDeclaredProgramsAtVersion(allocator: std.mem.Allocator, package_
     if (package.programs.len == 0) return true;
 
     if (programsAreUsable(allocator, package, package_root, version)) return true;
+    // An explicit selected version binds validation to this root. Nested
+    // version discovery is only for an unversioned package container.
+    if (version != null) return false;
 
     var root = io_helper.openDirAbsoluteForIteration(package_root) catch return false;
     defer root.close();
@@ -176,7 +179,29 @@ fn programIsRequired(package: *const package_registry.PackageInfo, program: []co
     return true;
 }
 
+fn visitProgramCandidates(allocator: std.mem.Allocator, package_root: []const u8, program: []const u8, windows: bool, comptime visit: fn ([]const u8) bool) bool {
+    const suffix_count: usize = if (windows and !io_helper.isWindowsExecutableName(program)) 1 + io_helper.windows_executable_extensions.len else 1;
+    for ([_][]const u8{ "bin", "sbin", "" }) |directory| {
+        for (0..suffix_count) |index| {
+            const suffix = if (index == 0) "" else io_helper.windows_executable_extensions[index - 1];
+            const filename = std.fmt.allocPrint(allocator, "{s}{s}", .{ program, suffix }) catch continue;
+            defer allocator.free(filename);
+            const candidate = if (directory.len > 0)
+                std.fs.path.join(allocator, &.{ package_root, directory, filename }) catch continue
+            else
+                std.fs.path.join(allocator, &.{ package_root, filename }) catch continue;
+            defer allocator.free(candidate);
+            if (visit(candidate)) return true;
+        }
+    }
+    return false;
+}
+
 fn programsAreUsable(allocator: std.mem.Allocator, package: *const package_registry.PackageInfo, package_root: []const u8, version: ?[]const u8) bool {
+    return programsAreUsableForPlatform(allocator, package, package_root, version, @import("builtin").os.tag == .windows);
+}
+
+fn programsAreUsableForPlatform(allocator: std.mem.Allocator, package: *const package_registry.PackageInfo, package_root: []const u8, version: ?[]const u8, windows: bool) bool {
     var checked: usize = 0;
     for (package.programs) |program| {
         // Catalog templates cannot be resolved without the package's recipe
@@ -184,20 +209,7 @@ fn programsAreUsable(allocator: std.mem.Allocator, package: *const package_regis
         if (std.mem.indexOf(u8, program, "{{") != null) continue;
         if (!programIsRequired(package, program, version)) continue;
         checked += 1;
-
-        var usable = false;
-        for ([_][]const u8{ "bin", "sbin", "" }) |directory| {
-            const candidate = if (directory.len > 0)
-                std.fs.path.join(allocator, &.{ package_root, directory, program }) catch continue
-            else
-                std.fs.path.join(allocator, &.{ package_root, program }) catch continue;
-            defer allocator.free(candidate);
-            if (isUsableExecutable(candidate)) {
-                usable = true;
-                break;
-            }
-        }
-        if (!usable) return false;
+        if (!visitProgramCandidates(allocator, package_root, program, windows, isUsableExecutable)) return false;
     }
     return checked > 0 or package.programs.len > 0;
 }
@@ -219,16 +231,44 @@ pub fn reportUnusableDeclaredPrograms(allocator: std.mem.Allocator, package_name
         var single = package.*;
         single.programs = &.{program};
         if (programsAreUsable(allocator, &single, package_root, version)) continue;
-        for ([_][]const u8{ "bin", "sbin", "" }) |directory| {
-            const path = std.fs.path.join(allocator, &.{ package_root, directory, program }) catch continue;
-            defer allocator.free(path);
-            const stat = io_helper.statFile(path) catch |err| {
-                std.debug.print("[pantry:validate] {s}: {s}\n", .{ path, @errorName(err) });
-                continue;
-            };
-            std.debug.print("[pantry:validate] {s}: kind={s} size={d} executable={}\n", .{ path, @tagName(stat.kind), stat.size, io_helper.isExecutable(path) });
-        }
+        _ = visitProgramCandidates(allocator, package_root, program, @import("builtin").os.tag == .windows, reportUnusableCandidate);
     }
+}
+
+fn reportUnusableCandidate(path: []const u8) bool {
+    const stat = io_helper.statFile(path) catch |err| {
+        std.debug.print("[pantry:validate] {s}: {s}\n", .{ path, @errorName(err) });
+        return false;
+    };
+    std.debug.print("[pantry:validate] {s}: kind={s} size={d} executable={}\n", .{ path, @tagName(stat.kind), stat.size, io_helper.isExecutable(path) });
+    return false;
+}
+
+test "Windows declared program filenames resolve native suffixes at the selected root" {
+    const allocator = std.testing.allocator;
+    const package = package_registry.getPackageByName("ziglang.org").?;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root_len = try directory.dir.realPathFile(io_helper.io, ".", &root_buffer);
+    const root = root_buffer[0..root_len];
+    try std.testing.expect(!programsAreUsableForPlatform(allocator, package, root, "0.17.1", true));
+    for (io_helper.windows_executable_extensions) |extension| {
+        const name = try std.fmt.allocPrint(allocator, "zig{s}", .{extension});
+        defer allocator.free(name);
+        const empty = try directory.dir.createFile(io_helper.io, name, .{ .permissions = .executable_file });
+        empty.close(io_helper.io);
+        try std.testing.expect(!programsAreUsableForPlatform(allocator, package, root, "0.17.1", true));
+        const valid = try directory.dir.createFile(io_helper.io, name, .{ .permissions = .executable_file, .truncate = true });
+        try io_helper.writeAllToFile(valid, "nonempty package interface fixture");
+        valid.close(io_helper.io);
+        try std.testing.expect(programsAreUsableForPlatform(allocator, package, root, "0.17.1", true));
+        // POSIX still requires the declared literal rather than a Windows name.
+        try std.testing.expect(!programsAreUsableForPlatform(allocator, package, root, "0.17.1", false));
+        try directory.dir.deleteFile(io_helper.io, name);
+    }
+    try std.testing.expect(io_helper.isWindowsExecutableName("zig.EXE"));
+    try std.testing.expect(!io_helper.isWindowsExecutableName("zig.txt"));
 }
 
 test "JDK executable validation follows upstream major release boundaries" {
@@ -364,7 +404,8 @@ test "declared program validation repairs only from usable versioned packages" {
     defer tmp_dir.cleanup();
     try tmp_dir.dir.createDirPath(io_helper.io, "ziglang.org/v0.17.0/bin");
 
-    const empty = try tmp_dir.dir.createFile(io_helper.io, "ziglang.org/v0.17.0/bin/zig", .{ .permissions = .executable_file });
+    const program = if (@import("builtin").os.tag == .windows) "ziglang.org/v0.17.0/bin/zig.exe" else "ziglang.org/v0.17.0/bin/zig";
+    const empty = try tmp_dir.dir.createFile(io_helper.io, program, .{ .permissions = .executable_file });
     empty.close(io_helper.io);
 
     var root_buf: [std.fs.max_path_bytes]u8 = undefined;
@@ -372,9 +413,34 @@ test "declared program validation repairs only from usable versioned packages" {
     const package_root = root_buf[0..root_len];
     try std.testing.expect(!hasUsableDeclaredPrograms(allocator, "ziglang.org", package_root));
 
-    const usable = try tmp_dir.dir.createFile(io_helper.io, "ziglang.org/v0.17.0/bin/zig", .{ .permissions = .executable_file, .truncate = true });
+    const usable = try tmp_dir.dir.createFile(io_helper.io, program, .{ .permissions = .executable_file, .truncate = true });
     try io_helper.writeAllToFile(usable, "#!/bin/sh\nexit 0\n");
     usable.close(io_helper.io);
+    try std.testing.expect(hasUsableDeclaredPrograms(allocator, "ziglang.org", package_root));
+}
+
+test "selected native version validation cannot borrow a nested older program" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    try directory.dir.createDirPath(io_helper.io, "ziglang.org/v0.17.1/v0.17.0/bin");
+    const old = try directory.dir.createFile(io_helper.io, "ziglang.org/v0.17.1/v0.17.0/bin/zig", .{ .permissions = .executable_file });
+    try io_helper.writeAllToFile(old, "#!/bin/sh\nexit 0\n");
+    old.close(io_helper.io);
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root_len = try directory.dir.realPathFile(io_helper.io, "ziglang.org", &root_buffer);
+    const package_root = root_buffer[0..root_len];
+    const selected = try std.fs.path.join(allocator, &.{ package_root, "v0.17.1" });
+    defer allocator.free(selected);
+    try std.testing.expect(!hasUsableDeclaredProgramsAtVersion(allocator, "ziglang.org", selected, "0.17.1"));
+    try std.testing.expect(!hasUsableDeclaredPrograms(allocator, "ziglang.org", selected));
+    try std.testing.expect(!hasUsableDeclaredPrograms(allocator, "ziglang.org", package_root));
+    try directory.dir.createDirPath(io_helper.io, "ziglang.org/v0.17.1/bin");
+    const valid = try directory.dir.createFile(io_helper.io, "ziglang.org/v0.17.1/bin/zig", .{ .permissions = .executable_file });
+    try io_helper.writeAllToFile(valid, "#!/bin/sh\nexit 0\n");
+    valid.close(io_helper.io);
+    try std.testing.expect(hasUsableDeclaredProgramsAtVersion(allocator, "ziglang.org", selected, "0.17.1"));
     try std.testing.expect(hasUsableDeclaredPrograms(allocator, "ziglang.org", package_root));
 }
 

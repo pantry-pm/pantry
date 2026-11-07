@@ -19,6 +19,7 @@ const style = @import("../cli/style.zig");
 const offline = @import("offline.zig");
 const patches_mod = @import("patches.zig");
 const downloader = @import("downloader.zig");
+const native_archives = @import("native_archives.zig");
 const scopes = @import("../registry/scopes.zig");
 
 const Installer = installer_mod.Installer;
@@ -853,6 +854,7 @@ const DownloadThreadCtx = struct {
     verbose: bool,
     show_progress: bool,
     native_plan: *const native_deps.Plan,
+    prepared_archives: *native_archives.Prepared,
 
     fn worker(ctx: *DownloadThreadCtx) void {
         const alloc = ctx.installer.allocator;
@@ -899,19 +901,25 @@ const DownloadThreadCtx = struct {
                     // lines while the live spinner owns the terminal line.
                     .quiet = ctx.show_progress,
                     .native_plan = ctx.native_plan,
+                    .prepared_archives = ctx.prepared_archives,
                     .force = ctx.installer.native_policy.force,
                 };
                 if (ctx.installer.install(spec, opts)) |install_result_| {
                     var ir = install_result_;
                     defer ir.deinit(alloc);
+                    // Transfer the observed installed version, replacing the
+                    // provisional row allocation without another duplicate.
+                    const installed_version = ir.version;
+                    ir.version = "";
+                    alloc.free(owned_version);
                     ctx.results[i] = .{
                         .name = owned_name,
-                        .version = alloc.dupe(u8, ir.version) catch owned_version,
+                        .version = installed_version,
                         .success = true,
                         .from_cache = ir.from_cache,
                     };
                     if (ctx.verbose) {
-                        std.debug.print("[verbose:pipeline:download] pantry-source installed: {s} @ {s}\n", .{ pkg.name, ir.version });
+                        std.debug.print("[verbose:pipeline:download] pantry-source installed: {s} @ {s}\n", .{ pkg.name, installed_version });
                     }
                 } else |err| {
                     const msg = std.fmt.allocPrint(alloc, "{s}", .{@errorName(err)}) catch null;
@@ -957,9 +965,14 @@ const DownloadThreadCtx = struct {
                 if (ctx.installer.install(spec, opts)) |install_result_| {
                     var ir = install_result_;
                     defer ir.deinit(alloc);
+                    // Transfer the observed installed version, replacing the
+                    // provisional row allocation without another duplicate.
+                    const installed_version = ir.version;
+                    ir.version = "";
+                    alloc.free(owned_version);
                     ctx.results[i] = .{
                         .name = owned_name,
-                        .version = alloc.dupe(u8, ir.version) catch owned_version,
+                        .version = installed_version,
                         .success = true,
                         .from_cache = ir.from_cache,
                     };
@@ -1940,6 +1953,13 @@ pub fn run(
         };
     }
 
+    // Freeze selected native metadata/body acquisition before payload workers.
+    // Native mutation remains one synchronous traversal; independent bodies
+    // still overlap and every installer verifies its own staged copy. This
+    // scope outlives all joined worker/recursive borrows below.
+    var prepared_archives = try inst.prepareNativeArchives(native_plan, project_root, inst.native_policy.force);
+    defer prepared_archives.deinit();
+
     // ── Phase 1.5: Bulk tarball prefetch through Pantry ──
     // For large npm trees, this turns N individual tarball downloads into one
     // registry response stream. The normal worker phase still handles cache
@@ -1982,46 +2002,39 @@ pub fn run(
         .verbose = verbose,
         .show_progress = show_progress,
         .native_plan = native_plan,
+        .prepared_archives = &prepared_archives,
     };
 
-    var stop_progress = std.atomic.Value(bool).init(false);
-    var progress_ctx = ProgressCtx{ .completed = &completed, .total = resolved.items.len, .stop = &stop_progress };
-    const progress_thread: ?std.Thread = if (show_progress)
-        (std.Thread.spawn(.{}, ProgressCtx.run, .{&progress_ctx}) catch null)
-    else
-        null;
+    {
+        var stop_progress = std.atomic.Value(bool).init(false);
+        var progress_ctx = ProgressCtx{ .completed = &completed, .total = resolved.items.len, .stop = &stop_progress };
+        const progress_thread: ?std.Thread = if (show_progress)
+            (std.Thread.spawn(.{}, ProgressCtx.run, .{&progress_ctx}) catch null)
+        else
+            null;
+        defer if (progress_thread) |thread| {
+            stop_progress.store(true, .release);
+            thread.join();
+            style.clearLine();
+        };
 
-    // Use up to 16 threads for download + extract
-    const cpu_count = std.Thread.getCpuCount() catch 4;
-    const max_threads = @min(cpu_count, 16);
-    const thread_count = @min(resolved.items.len, max_threads);
+        // The caller is one of at most sixteen workers. Handle storage is
+        // bounded too, so no fallible allocation can strand live progress or
+        // its borrowed stack state before the workers are joined.
+        const maximum_threads = 16;
+        const cpu_count = std.Thread.getCpuCount() catch 4;
+        const thread_count = @min(resolved.items.len, @min(cpu_count, maximum_threads));
 
-    if (thread_count <= 1) {
-        DownloadThreadCtx.worker(&dl_ctx);
-    } else {
-        const spawned = thread_count - 1;
-        var threads = try allocator.alloc(?std.Thread, spawned);
-        defer allocator.free(threads);
-        for (threads) |*t| t.* = null;
-
-        for (0..spawned) |t| {
-            threads[t] = std.Thread.spawn(.{}, DownloadThreadCtx.worker, .{&dl_ctx}) catch null;
-        }
-        DownloadThreadCtx.worker(&dl_ctx);
-
-        for (threads) |*t| {
-            if (t.*) |thread| {
-                thread.join();
-                t.* = null;
+        if (thread_count <= 1) {
+            DownloadThreadCtx.worker(&dl_ctx);
+        } else {
+            var threads: [maximum_threads - 1]?std.Thread = @splat(null);
+            for (threads[0 .. thread_count - 1]) |*thread| {
+                thread.* = std.Thread.spawn(.{}, DownloadThreadCtx.worker, .{&dl_ctx}) catch null;
             }
+            DownloadThreadCtx.worker(&dl_ctx);
+            for (threads) |thread| if (thread) |running| running.join();
         }
-    }
-
-    // Stop the progress animation and wipe its line before any result output.
-    if (progress_thread) |pt| {
-        stop_progress.store(true, .release);
-        pt.join();
-        style.clearLine();
     }
 
     const phase2_ts = io_helper.clockGettime();

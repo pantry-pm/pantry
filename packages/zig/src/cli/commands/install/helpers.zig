@@ -202,6 +202,8 @@ pub fn resolvePackageAlias(name: []const u8) []const u8 {
 // ============================================================================
 
 pub const PantryPackageInfo = struct {
+    /// Binary metadata is native provenance, not an npm package response.
+    source: lib.packages.PackageSource = .npm,
     s3_path: []const u8,
     version: []const u8,
     tarball_url: []const u8,
@@ -336,6 +338,9 @@ pub fn gatedLookupMessage(allocator: std.mem.Allocator, err: anyerror, name: []c
 /// why exact pins used to skip Pantry altogether. A range takes the newest
 /// only if it satisfies the range, and otherwise picks from the version list.
 ///
+/// Native results establish provider identity; their latest version/URL must
+/// not be installed directly. The named caller sends its authored constraint
+/// through the completed native plan for final version/artifact selection.
 /// Null means "not a Pantry package, try elsewhere". A gated name (401/402/
 /// 403) is an error, so the caller stops instead of falling back to npm.
 pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, version: []const u8, exact: bool) !?PantryPackageInfo {
@@ -362,6 +367,11 @@ pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, ve
     }
 
     if (try lookupPantryRegistry(allocator, name)) |info| {
+        // Native binary metadata proves the provider, not the final version.
+        // Our named caller closes the native graph and resolves every authored
+        // constraint together before any payload. Do not cross into the JS
+        // registry because the latest native version misses this one range.
+        if (info.source == .pantry) return info;
         if (scopes.satisfies(info.version, version) catch false) return info;
         var stale = info;
         stale.deinit(allocator);
@@ -496,6 +506,7 @@ fn lookupViaS3Metadata(allocator: std.mem.Allocator, name: []const u8, platform:
     };
 
     return PantryPackageInfo{
+        .source = .pantry,
         .s3_path = s3_path,
         .version = allocator.dupe(u8, version) catch {
             allocator.free(s3_path);
@@ -558,6 +569,7 @@ fn resolveFromMetadataUrl(allocator: std.mem.Allocator, s3_path: []const u8, ver
     };
 
     return PantryPackageInfo{
+        .source = .pantry,
         .s3_path = duped_s3_path,
         .version = duped_version,
         .tarball_url = tarball_url,

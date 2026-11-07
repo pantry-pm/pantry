@@ -320,3 +320,27 @@ jobs:
           path: ${{ runner.temp }}/pantry-build-diagnostics
           if-no-files-found: ignore
           retention-days: 7
+
+  request-recovery:
+    name: Request publication recovery
+    needs: [detect, build, publish-darwin-native]
+    if: >-
+      always() && !cancelled() && inputs.request-id != '' &&
+      inputs.platform == 'all' && inputs.verify-tools-only != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      # Explicit workflow_dispatch survives suppression of events caused by
+      # GITHUB_TOKEN. Recovery awaits this run's final state before inspecting
+      # native job verdicts, so dispatching from its final job cannot race ACK.
+      - name: Wake publication recovery after the native jobs
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh workflow run recover-catalog-publications.yml \
+            --repo "$REPOSITORY" --ref main \
+            -f publisher-run="$GITHUB_RUN_ID"

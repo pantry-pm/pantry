@@ -1,5 +1,5 @@
 # Build from the workspace root: docker build -f packages/registry/Dockerfile .
-FROM oven/bun:1.4.3 AS base
+FROM oven/bun:1.4.4@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d AS base
 WORKDIR /app
 
 FROM base AS dependencies

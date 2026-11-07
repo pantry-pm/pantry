@@ -6,10 +6,15 @@ on:
   schedule:
     - cron: '23 * * * *'
   workflow_run:
-    workflows: [Update Packages, Publish Changed Packages]
+    # Per-request publisher run-name values are also completion event names.
+    workflows: [Update Packages, Publish Changed Packages, 'catalog:*']
     types: [completed]
   workflow_dispatch:
     inputs:
+      publisher-run:
+        description: Publisher run to await before confirming its durable request
+        required: false
+        type: string
       retry-failed:
         description: Retry requests that exhausted their three automatic attempts after inspecting build diagnostics
         type: boolean
@@ -37,11 +42,12 @@ jobs:
       - uses: ./packages/action
         with:
           install: 'false'
-          packages: bun.com@1.4.3
+          packages: bun.com@1.4.4
       - name: Recover pending publications and record verified receipts
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
           RETRY_FAILED: ${{ inputs.retry-failed }}
+          PUBLISHER_RUN: ${{ inputs.publisher-run }}
         run: bun .github/scripts/catalog-publications.ts recover
       - name: discord-failure-alert
         if: failure()

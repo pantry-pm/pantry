@@ -19,7 +19,9 @@ const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
 const scopes = @import("../registry/scopes.zig");
 const native_deps = @import("native_deps.zig");
+const native_archives = @import("native_archives.zig");
 const native_identity = @import("../packages/native_identity.zig");
+const analytics = @import("analytics.zig");
 
 const pantryError = errors.pantryError;
 const Paths = core.Paths;
@@ -38,6 +40,27 @@ fn canRestoreLockTarball(version: []const u8, resolved: []const u8) bool {
         else => true,
     };
 }
+
+/// Verbose-only observations of the real native install phases. The awake
+/// clock excludes wall-clock adjustments; normal installs do no clock/log work.
+const InstallPhaseTimer = struct {
+    enabled: bool,
+    domain: []const u8,
+    version: []const u8,
+    phase: []const u8,
+    started_ms: i64,
+
+    fn start(enabled: bool, domain: []const u8, version: []const u8, phase: []const u8) InstallPhaseTimer {
+        if (enabled) std.debug.print("[verbose:installer:phase] {s}@{s} {s} start\n", .{ domain, version, phase });
+        return .{ .enabled = enabled, .domain = domain, .version = version, .phase = phase, .started_ms = if (enabled) std.Io.Clock.awake.now(io_helper.getIo()).toMilliseconds() else 0 };
+    }
+
+    fn finish(self: InstallPhaseTimer) void {
+        if (!self.enabled) return;
+        const elapsed = std.Io.Clock.awake.now(io_helper.getIo()).toMilliseconds() - self.started_ms;
+        std.debug.print("[verbose:installer:phase] {s}@{s} {s} elapsed={d}ms\n", .{ self.domain, self.version, self.phase, elapsed });
+    }
+};
 
 /// Installation options
 pub const InstallOptions = struct {
@@ -59,6 +82,10 @@ pub const InstallOptions = struct {
     skip_transitive_resolution: bool = false,
     /// Exact preflight plan, borrowed until this invocation and descendants end.
     native_plan: ?*const native_deps.Plan = null,
+    /// Invocation-owned, joined preparation. Entries contain unverified bytes.
+    prepared_archives: ?*native_archives.Prepared = null,
+    /// This invocation's record, never shared by concurrent descendants.
+    http_capture: ?*io_helper.TransientGetCapture = null,
     /// npm-style installs: the tarball must hash to this (`sha256:<hex>`,
     /// raw hex, or SRI) or the install fails before anything is extracted.
     expected_integrity: ?[]const u8 = null,
@@ -99,6 +126,41 @@ const InstallingStack = struct {
     map: std.StringHashMap(void),
     mutex: io_helper.Mutex,
     allocator: std.mem.Allocator,
+    native_gate: std.Io.Mutex = .init,
+    native_owner_mutex: io_helper.Mutex = .{},
+    native_owner: ?std.Thread.Id = null,
+    native_depth: usize = 0,
+
+    // Native callbacks and recursive children stay on their caller's OS
+    // thread in the Threaded backend. Only independent acquisition uses pools.
+    fn enterNative(self: *InstallingStack) std.Io.Cancelable!void {
+        const thread = std.Thread.getCurrentId();
+        self.native_owner_mutex.lock();
+        if (self.native_owner == thread) {
+            self.native_depth += 1;
+            self.native_owner_mutex.unlock();
+            return;
+        }
+        self.native_owner_mutex.unlock();
+
+        // Never park while holding the short owner-state or cycle-map lock.
+        try self.native_gate.lock(io_helper.getIo());
+        self.native_owner_mutex.lock();
+        std.debug.assert(self.native_owner == null and self.native_depth == 0);
+        self.native_owner = thread;
+        self.native_depth = 1;
+        self.native_owner_mutex.unlock();
+    }
+
+    fn leaveNative(self: *InstallingStack) void {
+        self.native_owner_mutex.lock();
+        std.debug.assert(self.native_owner == std.Thread.getCurrentId() and self.native_depth > 0);
+        self.native_depth -= 1;
+        const finished = self.native_depth == 0;
+        if (finished) self.native_owner = null;
+        self.native_owner_mutex.unlock();
+        if (finished) self.native_gate.unlock(io_helper.getIo());
+    }
 
     fn init(allocator: std.mem.Allocator) InstallingStack {
         return .{
@@ -139,6 +201,43 @@ const InstallingStack = struct {
         }
     }
 };
+
+test "native readiness: traversal permits owner recursion, cancels a waiting caller, and admits its successor" {
+    const io = std.testing.io;
+    var stack = InstallingStack.init(std.testing.allocator);
+    defer stack.deinit();
+    try stack.enterNative();
+    var held: usize = 1;
+    defer while (held > 0) : (held -= 1) stack.leaveNative();
+    try stack.enterNative();
+    held += 1;
+
+    const Waiter = struct {
+        stack: *InstallingStack,
+        started: std.Io.Event = .unset,
+        entered: std.atomic.Value(bool) = .init(false),
+
+        fn run(self: *@This()) !void {
+            self.started.set(std.testing.io);
+            try self.stack.enterNative();
+            defer self.stack.leaveNative();
+            self.entered.store(true, .release);
+        }
+    };
+    var blocked: Waiter = .{ .stack = &stack };
+    var waiting = try io.concurrent(Waiter.run, .{&blocked});
+    defer waiting.cancel(io) catch {};
+    try blocked.started.wait(io);
+    try std.testing.expectError(error.Canceled, waiting.cancel(io));
+    try std.testing.expect(!blocked.entered.load(.acquire));
+
+    while (held > 0) : (held -= 1) stack.leaveNative();
+    var successor: Waiter = .{ .stack = &stack };
+    var recovered = try io.concurrent(Waiter.run, .{&successor});
+    defer recovered.cancel(io) catch {};
+    try recovered.await(io);
+    try std.testing.expect(successor.entered.load(.acquire));
+}
 
 /// Thread-safe two-level npm cache.
 /// Level 1: package name → raw registry JSON bytes (avoids duplicate HTTP fetches).
@@ -928,6 +1027,12 @@ pub const Installer = struct {
         }
         spec.version = try options.native_plan.?.versionFor(domain, spec.version);
 
+        // An active key is an ancestor only inside this synchronous traversal.
+        // Unrelated native callers wait for full dependency/finalizer readiness,
+        // then use the ordinary validated cache path instead of empty success.
+        try self.installing_stack.enterNative();
+        defer self.installing_stack.leaveNative();
+
         // Zig's official archive is a reliable fallback when the Pantry
         // binary registry is unavailable. Route the canonical domain through
         // the dedicated installer before generic Pantry package resolution.
@@ -941,6 +1046,8 @@ pub const Installer = struct {
         var resolved_spec = spec;
         var s3_version_alloc: ?[]const u8 = null;
         var s3_tarball_url: ?[]const u8 = null;
+        // Artifact state belongs to this invocation, never recursive options.
+        var native_archive_sha256: ?[32]u8 = null;
         var from_s3 = false;
         defer if (s3_version_alloc) |v| self.allocator.free(v);
         // If tarball URL wasn't consumed by download functions, free it here
@@ -971,12 +1078,24 @@ pub const Installer = struct {
             }
         }
 
+        // The selected global source can satisfy this project install too.
+        // Check its existing usability contract before consulting speculative
+        // preparation failures or making a redundant metadata request. The
+        // actual materializer still validates and copies it below.
+        if (!resolved_locally and options.project_root != null) {
+            const global_path = try self.getGlobalPackageDir(domain, spec.version);
+            defer self.allocator.free(global_path);
+            if (self.hasUsableGlobalProjectSource(domain, global_path)) resolved_locally = true;
+        }
+
         // The plan already resolved this exact version and platform artifact.
         // Keep that decision through installation instead of repeating remote
         // metadata requests in every payload and recursive dependency worker.
-        const planned_artifact = try options.native_plan.?.artifactFor(domain, spec.version);
+        const prepared_artifact = if (!resolved_locally) (if (options.prepared_archives) |prepared| try prepared.artifactFor(domain, spec.version, options.http_capture) else null) else null;
+        const planned_artifact = prepared_artifact orelse try options.native_plan.?.artifactFor(domain, spec.version);
         if (!resolved_locally) {
             if (planned_artifact) |artifact| {
+                native_archive_sha256 = artifact.sha256;
                 if (artifact.tarball_url) |url| {
                     s3_tarball_url = try self.allocator.dupe(u8, url);
                     from_s3 = true;
@@ -984,19 +1103,21 @@ pub const Installer = struct {
             }
         }
         if (!skip_s3_lookup and !resolved_locally and planned_artifact == null) {
-            if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| {
+            if (try downloader.lookupS3RegistryWithCapture(self.allocator, domain, spec.version, options.http_capture)) |s3_result| {
                 if (options.verbose) std.debug.print("[verbose:installer] S3 registry hit: {s} @ {s} url={s}\n", .{ domain, s3_result.version, s3_result.tarball_url });
                 s3_version_alloc = s3_result.version;
                 s3_tarball_url = s3_result.tarball_url;
+                native_archive_sha256 = s3_result.sha256;
                 resolved_spec = PackageSpec{
                     .name = spec.name,
                     .version = s3_result.version,
                 };
                 from_s3 = true;
-            } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| {
+            } else if (try downloader.lookupPantryPublishedWithCapture(self.allocator, domain, spec.version, options.http_capture)) |pub_result| {
                 if (options.verbose) std.debug.print("[verbose:installer] pantry published hit: {s} @ {s}\n", .{ domain, pub_result.version });
                 s3_version_alloc = pub_result.version;
                 s3_tarball_url = pub_result.tarball_url;
+                native_archive_sha256 = pub_result.sha256;
                 resolved_spec = PackageSpec{
                     .name = spec.name,
                     .version = pub_result.version,
@@ -1070,10 +1191,10 @@ pub const Installer = struct {
 
         const install_path = if (options.project_root) |project_root| blk: {
             if (options.verbose) std.debug.print("[verbose:installer] -> installToProject: {s} to {s}/{s}\n", .{ resolved_spec.name, project_root, self.modules_dir });
-            break :blk try self.installToProject(resolved_spec, domain, project_root, options, &used_cache, transfer_url);
+            break :blk try self.installToProject(resolved_spec, domain, project_root, options, &used_cache, transfer_url, native_archive_sha256);
         } else blk: {
             if (options.verbose) std.debug.print("[verbose:installer] -> installGlobal: {s}\n", .{resolved_spec.name});
-            break :blk try self.installGlobal(resolved_spec, domain, options, &used_cache, transfer_url);
+            break :blk try self.installGlobal(resolved_spec, domain, options, &used_cache, transfer_url, native_archive_sha256);
         };
 
         if (options.verbose) std.debug.print("[verbose:installer] installed {s} @ {s} -> {s} (cached={})\n", .{ resolved_spec.name, resolved_spec.version, install_path, used_cache });
@@ -1088,7 +1209,9 @@ pub const Installer = struct {
         // for already-present deps is cheap.
         if (pkg_info) |info| {
             if (options.verbose) std.debug.print("[verbose:installer] installing sub-dependencies for {s} (count={d})\n", .{ resolved_spec.name, info.dependencies.len });
+            const dependency_timer = InstallPhaseTimer.start(options.verbose, domain, resolved_spec.version, "recursive_dependencies");
             try self.installDependencies(info.dependencies, options);
+            dependency_timer.finish();
 
             // Re-fix this package's libraries now that its dependencies are on
             // disk: cross-package references (e.g. a Homebrew-built libssh2 that
@@ -1096,6 +1219,7 @@ pub const Installer = struct {
             // package — openssl.org here — is installed. The first pass ran
             // before deps existed. Idempotent: rpath re-adds are refused and
             // install-name -change is a no-op when already correct.
+            const final_library_timer = InstallPhaseTimer.start(options.verbose, domain, resolved_spec.version, "final_library_fix");
             if (install_path.len > 0) {
                 const tree_root = self.projectTreeRoot(options);
                 defer if (tree_root) |root| self.allocator.free(root);
@@ -1109,6 +1233,7 @@ pub const Installer = struct {
                     markLibraryPathsCurrent(self.allocator, install_path, tree_root);
                 }
             }
+            final_library_timer.finish();
         }
 
         // An OpenSSL finds its CA bundle at `<prefix>/ssl/cert.pem`, which only
@@ -1117,6 +1242,7 @@ pub const Installer = struct {
             if (ca_certs.treeRootOf(install_path, domain)) |root| ca_certs.linkBundles(self.allocator, root);
         }
 
+        const shebang_timer = InstallPhaseTimer.start(options.verbose, domain, resolved_spec.version, "interpreter_fix");
         // Scripts mirrored from pkgx name their interpreter as `#!/usr/bin/env
         // -S pkgx python@3.11`, which nothing here can run. Point them at the
         // interpreter in this tree, installing a satisfying one if needed.
@@ -1124,12 +1250,14 @@ pub const Installer = struct {
             try pkgx_shebang.fixInstalledPackage(self, install_path, domain, resolved_spec.version, options);
         }
 
+        shebang_timer.finish();
+
         const end_ts_ = io_helper.clockGettime();
         const end_time = @as(i64, @intCast(end_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(end_ts_.nsec)), 1_000_000);
 
         // Report download analytics (fire-and-forget, never blocks install)
         if (!used_cache) {
-            reportDownloadAnalytics(self.allocator, domain, resolved_spec.version);
+            analytics.record(domain, resolved_spec.version);
         }
 
         if (options.verbose) std.debug.print("[verbose:installer] install() complete: {s} @ {s} ({d}ms)\n", .{ resolved_spec.name, resolved_spec.version, @as(u64, @intCast(end_time - start_time)) });
@@ -2976,11 +3104,10 @@ pub const Installer = struct {
         };
         errdefer self.allocator.free(install_dir);
 
-        // Check if already installed (lightweight access check, no dir handle)
-        const already_installed = !options.force and blk: {
-            io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
-            break :blk true;
-        };
+        // Reuse only a complete executable interface. An existing version
+        // directory can be a partial cache or a previously interrupted install.
+        const already_installed = !options.force and
+            validator.hasUsableDeclaredProgramsAtVersion(self.allocator, "ziglang.org", install_dir, resolved_version);
 
         if (already_installed) {
             if (options.project_root) |project_root| {
@@ -3026,21 +3153,15 @@ pub const Installer = struct {
             try downloader.buildZiglangFallbackUrl(self.allocator, resolved_version);
         defer self.allocator.free(url);
 
-        // Create temp directory for downloading
+        // Download into an exclusively owned extraction. Concurrent installs of
+        // the same version must never share an archive or remove each other's files.
         const home = try Paths.home(self.allocator);
         defer self.allocator.free(home);
-
-        const temp_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/.pantry/.tmp/zig-{s}",
-            .{ home, resolved_version },
-        );
-        defer {
-            self.allocator.free(temp_dir);
-            io_helper.deleteTree(temp_dir) catch {};
-        }
-
-        try io_helper.makePath(temp_dir);
+        const staging_parent = try std.fmt.allocPrint(self.allocator, "{s}/.pantry/.tmp", .{home});
+        defer self.allocator.free(staging_parent);
+        var staging = try verified_staging.Extraction.init(self.allocator, staging_parent);
+        defer staging.deinit();
+        const temp_dir = staging.root;
 
         // Mirrored Unix archives are gzip; official Zig archives are xz.
         const is_windows = comptime @import("builtin").os.tag == .windows;
@@ -3079,48 +3200,7 @@ pub const Installer = struct {
             }
         }
 
-        // Extract archive to temp directory
-        const extract_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/extracted",
-            .{temp_dir},
-        );
-        defer self.allocator.free(extract_dir);
-
-        try io_helper.makePath(extract_dir);
-        try extractor.extractArchiveQuiet(self.allocator, archive_path, extract_dir, archive_ext, options.quiet);
-
-        // Find the actual source directory (zig archives nest contents in zig-{platform}-{arch}-{version}/)
-        var extracted_handle = try io_helper.openDirAbsoluteForIteration(extract_dir);
-        defer extracted_handle.close();
-
-        var zig_source_dir: ?[]const u8 = null;
-        var iter = extracted_handle.iterate();
-        while (iter.next() catch null) |entry| {
-            if (entry.kind == .directory and std.mem.startsWith(u8, entry.name, "zig-")) {
-                zig_source_dir = try std.fmt.allocPrint(self.allocator, "{s}/{s}", .{ extract_dir, entry.name });
-                break;
-            }
-        }
-
-        if (zig_source_dir == null) {
-            zig_source_dir = try self.allocator.dupe(u8, extract_dir);
-        }
-        defer self.allocator.free(zig_source_dir.?);
-
-        // Create install directory and copy contents
-        try io_helper.makePath(install_dir);
-        try self.copyDirectoryStructure(zig_source_dir.?, install_dir);
-
-        // Ensure zig binary is executable (not needed on Windows)
-        if (comptime !is_windows) {
-            var chmod_buf: [std.fs.max_path_bytes:0]u8 = undefined;
-            const zig_path = std.fmt.bufPrint(chmod_buf[0..std.fs.max_path_bytes], "{s}/bin/zig", .{install_dir}) catch null;
-            if (zig_path) |p| {
-                chmod_buf[p.len] = 0;
-                _ = std.c.chmod(&chmod_buf, 0o755);
-            }
-        }
+        try self.materializeZigArchiveWithChecksum(&staging, archive_path, archive_ext, url, resolved_version, install_dir, options.verbose, if (registry_artifact) |artifact| artifact.sha256 else null);
 
         // Use the standard symlink creation — same as all other packages.
         // discoverBinaries now finds executables at the package root (e.g. zig binary),
@@ -3141,6 +3221,18 @@ pub const Installer = struct {
         };
     }
 
+    /// Verify and publish both official nested and mirrored Zig package layouts.
+    fn materializeZigArchive(self: *Installer, staging: *verified_staging.Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, version: []const u8, destination: []const u8, verbose: bool) !void {
+        return self.materializeZigArchiveWithChecksum(staging, archive, format, url, version, destination, verbose, null);
+    }
+
+    fn materializeZigArchiveWithChecksum(self: *Installer, staging: *verified_staging.Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, version: []const u8, destination: []const u8, verbose: bool, expected_sha256: ?[32]u8) !void {
+        try staging.extractVerifiedWithChecksum(archive, format, url, verbose, expected_sha256);
+        const source = try self.findPackageRoot(staging.payload, "ziglang.org", version);
+        defer self.allocator.free(source);
+        try self.materializeVerifiedExtraction(staging, source, destination, "ziglang.org");
+    }
+
     /// Install package globally (old behavior)
     fn installGlobal(
         self: *Installer,
@@ -3149,6 +3241,7 @@ pub const Installer = struct {
         options: InstallOptions,
         used_cache: *bool,
         s3_url: ?[]const u8,
+        native_sha256: ?[32]u8,
     ) ![]const u8 {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
@@ -3166,7 +3259,7 @@ pub const Installer = struct {
             break :blk try self.installFromCache(spec, "");
         } else blk: {
             // Download and install to global cache (transfers ownership of s3_url)
-            break :blk try self.installFromNetwork(spec, options, s3_url);
+            break :blk try self.installFromNetwork(spec, options, s3_url, native_sha256);
         };
 
         // Create symlinks under the SAME base getGlobalPackageDir installs into:
@@ -3192,6 +3285,45 @@ pub const Installer = struct {
         return install_path;
     }
 
+    fn hasUsableProjectPackage(self: *Installer, domain: []const u8, path: []const u8) bool {
+        return self.hasPackageStructure(path) and validator.hasUsableDeclaredPrograms(self.allocator, domain, path);
+    }
+
+    fn hasUsableGlobalProjectSource(self: *Installer, domain: []const u8, path: []const u8) bool {
+        return self.hasUsableProjectPackage(domain, path) and verified_staging.canMaterializeTree(self.allocator, path);
+    }
+
+    /// Prepare only cold project archives after complete native preflight.
+    /// Materialization and recursive dependency readiness remain ordered.
+    pub fn prepareNativeArchives(self: *Installer, plan: *const native_deps.Plan, project_root: []const u8, force: bool) !native_archives.Prepared {
+        var requests: std.ArrayList(native_archives.Request) = .empty;
+        defer requests.deinit(self.allocator);
+        for (plan.names.items) |domain| {
+            // Zig has its own verified installer and payload format.
+            if (std.mem.eql(u8, domain, "ziglang.org")) continue;
+            const version = try plan.versionFor(domain, "latest");
+            const project_path = try self.getProjectPackageDir(project_root, domain, version);
+            defer self.allocator.free(project_path);
+            if (!(force or self.native_policy.force) and self.hasUsableProjectPackage(domain, project_path)) continue;
+            const global_path = try self.getGlobalPackageDir(domain, version);
+            defer self.allocator.free(global_path);
+            // installToProject can reuse a usable global tree even with force.
+            if (self.hasUsableGlobalProjectSource(domain, global_path)) continue;
+            if (self.cache.get(domain, version) catch null) |metadata| {
+                // Presence is only a reuse hint. Ordinary staging still reads,
+                // verifies, evicts corruption and handles disappearance.
+                if (io_helper.accessAbsolute(metadata.cache_path, .{})) |_| continue else |_| {}
+            }
+            try requests.append(self.allocator, .{ .name = domain, .version = version, .artifact = try plan.artifactFor(domain, version) });
+        }
+        if (requests.items.len == 0) return native_archives.Prepared.init(self.allocator, "", requests.items);
+        const home = try Paths.home(self.allocator);
+        defer self.allocator.free(home);
+        const parent = try std.fs.path.join(self.allocator, &.{ home, ".pantry", ".tmp" });
+        defer self.allocator.free(parent);
+        return native_archives.Prepared.init(self.allocator, parent, requests.items);
+    }
+
     /// Install package to project's pantry directory
     fn installToProject(
         self: *Installer,
@@ -3201,6 +3333,7 @@ pub const Installer = struct {
         options: InstallOptions,
         used_cache: *bool,
         s3_url_param: ?[]const u8,
+        native_sha256: ?[32]u8,
     ) ![]const u8 {
         // Track URL ownership locally so we can free on any error path
         var owned_url = s3_url_param;
@@ -3213,8 +3346,7 @@ pub const Installer = struct {
 
         // Check if already installed in project (verify actual package structure, not just dir existence)
         const already_installed = !options.force and
-            self.hasPackageStructure(project_pkg_dir) and
-            validator.hasUsableDeclaredPrograms(self.allocator, domain, project_pkg_dir);
+            self.hasUsableProjectPackage(domain, project_pkg_dir);
 
         if (already_installed) {
             if (self.verbose) std.debug.print("[verbose:project] already installed in project: {s}\n", .{project_pkg_dir});
@@ -3232,9 +3364,7 @@ pub const Installer = struct {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
 
-        const has_global = self.hasPackageStructure(global_pkg_dir) and
-            validator.hasUsableDeclaredPrograms(self.allocator, domain, global_pkg_dir) and
-            verified_staging.canMaterializeTree(self.allocator, global_pkg_dir);
+        const has_global = self.hasUsableGlobalProjectSource(domain, global_pkg_dir);
 
         if (has_global) {
             // Copy from global cache - free unused S3 URL
@@ -3252,7 +3382,7 @@ pub const Installer = struct {
         used_cache.* = false;
         const url_to_transfer = owned_url;
         owned_url = null; // Transfer ownership BEFORE call to prevent double-free on error
-        try self.downloadAndInstallToProject(spec, domain, project_pkg_dir, options, url_to_transfer);
+        try self.downloadAndInstallToProject(spec, domain, project_pkg_dir, options, url_to_transfer, native_sha256);
         try self.createProjectSymlinks(project_root, domain, spec.version, project_pkg_dir);
 
         return project_pkg_dir;
@@ -3282,7 +3412,7 @@ pub const Installer = struct {
     }
 
     /// Download and install package directly to project directory (bypassing global cache)
-    fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, options: InstallOptions, transferred_url: ?[]const u8) !void {
+    fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, options: InstallOptions, transferred_url: ?[]const u8, native_sha256: ?[32]u8) !void {
         const home = try Paths.home(self.allocator);
         defer self.allocator.free(home);
 
@@ -3297,15 +3427,19 @@ pub const Installer = struct {
         var used_format: []const u8 = undefined;
         var used_url: []const u8 = undefined;
 
+        const url_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "artifact_url");
         // Use transferred URL if available, otherwise do a fresh S3 lookup
         // Checks: binaries/ (publish:binary) → packages/pantry/ (publish) → fallback URL
+        var expected_sha256 = native_sha256;
         const s3_url: ?[]const u8 = if (transferred_url) |url|
             url
-        else if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| blk: {
+        else if (try downloader.lookupS3RegistryWithCapture(self.allocator, domain, spec.version, options.http_capture)) |s3_result| blk: {
             self.allocator.free(s3_result.version);
+            expected_sha256 = s3_result.sha256;
             break :blk s3_result.tarball_url;
-        } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| blk: {
+        } else if (try downloader.lookupPantryPublishedWithCapture(self.allocator, domain, spec.version, options.http_capture)) |pub_result| blk: {
             self.allocator.free(pub_result.version);
+            expected_sha256 = pub_result.sha256;
             break :blk pub_result.tarball_url;
         } else blk: {
             // Fallback: construct URL directly from known pattern when S3 lookup fails
@@ -3318,6 +3452,10 @@ pub const Installer = struct {
             ) catch null;
         };
 
+        url_timer.finish();
+        const archive_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "archive_acquire");
+        var archive_from_cache = false;
+        var archive_prepared = false;
         // Path of the content-addressed cache file backing this archive, if it was
         // served from cache — used to evict a poisoned entry on checksum mismatch.
         var cached_archive_path: ?[]const u8 = null;
@@ -3330,6 +3468,17 @@ pub const Installer = struct {
             );
 
             const s3_ok = blk: {
+                if (options.prepared_archives) |prepared| {
+                    const copied = prepared.copyTo(domain, spec.version, temp_archive_path) catch |err| {
+                        self.allocator.free(temp_archive_path);
+                        self.allocator.free(@constCast(url));
+                        return err;
+                    };
+                    if (copied) {
+                        archive_prepared = true;
+                        break :blk true;
+                    }
+                }
                 const cached_meta = self.cache.get(domain, spec.version) catch blk_cache: {
                     if (!std.mem.eql(u8, domain, spec.name)) {
                         break :blk_cache self.cache.get(spec.name, spec.version) catch null;
@@ -3346,18 +3495,19 @@ pub const Installer = struct {
                         // bad download would otherwise poison it forever. Remember the
                         // backing file so a checksum mismatch below can evict + re-fetch.
                         cached_archive_path = self.allocator.dupe(u8, meta.cache_path) catch null;
+                        archive_from_cache = true;
                         break :blk true;
                     } else |_| {}
                 }
 
                 if (options.inline_progress) |progress_opts| {
-                    downloader.downloadFileInline(self.allocator, url, temp_archive_path, progress_opts) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, false, progress_opts, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
                     };
                 } else {
-                    downloader.downloadFileQuiet(self.allocator, url, temp_archive_path, options.quiet) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, options.quiet, null, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
@@ -3387,6 +3537,8 @@ pub const Installer = struct {
             }
             return error.DownloadFailed;
         }
+        archive_timer.finish();
+        if (options.verbose) std.debug.print("[verbose:installer:phase] {s}@{s} archive_from_cache={}\n", .{ domain, spec.version, archive_from_cache });
         defer self.allocator.free(archive_path);
         defer self.allocator.free(@constCast(used_url));
 
@@ -3413,7 +3565,11 @@ pub const Installer = struct {
         // Extract archive to temp directory with verification
         const extract_dir = staging.payload;
         defer if (cached_archive_path) |p| self.allocator.free(p);
-        staging.extractVerified(archive_path, used_format, used_url, options.verbose) catch |err| {
+        const verify_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "verify_extract_or_cache_repair");
+        staging.extractVerifiedWithChecksum(archive_path, used_format, used_url, options.verbose, expected_sha256) catch |err| {
+            if (archive_prepared) {
+                if (options.prepared_archives) |prepared| prepared.invalidate(domain, spec.version);
+            }
             // A poisoned cache entry (bad bytes stored before checksum verification)
             // would fail every install forever. If the archive came from cache and
             // failed to verify/extract (corrupt or checksum mismatch), evict it and
@@ -3424,34 +3580,46 @@ pub const Installer = struct {
                     style.print("  {s}evicting bad cached archive for {s}@{s}, re-downloading…{s}\n", .{ style.dim, spec.name, spec.version, style.reset });
                 }
                 if (options.inline_progress) |progress_opts| {
-                    try downloader.downloadFileInline(self.allocator, used_url, archive_path, progress_opts);
+                    try downloader.downloadFileWithCapture(self.allocator, used_url, archive_path, false, progress_opts, options.http_capture);
                 } else {
-                    try downloader.downloadFileQuiet(self.allocator, used_url, archive_path, options.quiet);
+                    try downloader.downloadFileWithCapture(self.allocator, used_url, archive_path, options.quiet, null, options.http_capture);
                 }
-                try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
+                try staging.extractVerifiedWithChecksum(archive_path, used_format, used_url, options.verbose, expected_sha256);
             } else {
                 return err;
             }
         };
 
+        verify_timer.finish();
+        const root_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "select_root");
         // Find the actual package root
         const package_source = try self.findPackageRoot(extract_dir, domain, spec.version);
         defer self.allocator.free(package_source);
 
+        root_timer.finish();
+        const materialize_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "materialize");
         // Downloads and cache repairs use the same verified, atomic copy.
         try self.materializeVerifiedExtraction(&staging, package_source, project_pkg_dir, domain);
 
+        materialize_timer.finish();
+        const library_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "initial_library_fix");
         // Fix library paths for macOS; references to other packages in this
         // project's pantry/ are written relative to the referencing binary.
         const tree_root = self.projectTreeRoot(options);
         defer if (tree_root) |root| self.allocator.free(root);
         try libfixer.fixDirectoryLibraryPathsInTree(self.allocator, project_pkg_dir, tree_root);
 
+        library_timer.finish();
         // Remove macOS quarantine/provenance xattrs so launchd can run service binaries
         if (comptime @import("builtin").os.tag == .macos) {
-            _ = io_helper.childRun(self.allocator, &[_][]const u8{
+            const xattr_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "quarantine_cleanup");
+            if (io_helper.childRun(self.allocator, &[_][]const u8{
                 "/usr/bin/xattr", "-cr", project_pkg_dir,
-            }) catch {};
+            })) |result| {
+                self.allocator.free(result.stdout);
+                self.allocator.free(result.stderr);
+            } else |_| {}
+            xattr_timer.finish();
         }
     }
 
@@ -3872,7 +4040,7 @@ pub const Installer = struct {
     }
 
     /// Install from network (download)
-    fn installFromNetwork(self: *Installer, spec: PackageSpec, options: InstallOptions, transferred_url: ?[]const u8) ![]const u8 {
+    fn installFromNetwork(self: *Installer, spec: PackageSpec, options: InstallOptions, transferred_url: ?[]const u8, native_sha256: ?[32]u8) ![]const u8 {
         // Resolve package name to domain
         const pkg_registry = @import("../packages/generated.zig");
         const pkg_info = pkg_registry.getPackageByName(spec.name);
@@ -3911,13 +4079,16 @@ pub const Installer = struct {
 
         // Use transferred URL if available, otherwise do a fresh S3 lookup
         // Checks: binaries/ (publish:binary) → packages/pantry/ (publish) → fallback URL
+        var expected_sha256 = native_sha256;
         const s3_url: ?[]const u8 = if (transferred_url) |url|
             url
-        else if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| blk: {
+        else if (try downloader.lookupS3RegistryWithCapture(self.allocator, domain, spec.version, options.http_capture)) |s3_result| blk: {
             self.allocator.free(s3_result.version);
+            expected_sha256 = s3_result.sha256;
             break :blk s3_result.tarball_url;
-        } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| blk: {
+        } else if (try downloader.lookupPantryPublishedWithCapture(self.allocator, domain, spec.version, options.http_capture)) |pub_result| blk: {
             self.allocator.free(pub_result.version);
+            expected_sha256 = pub_result.sha256;
             break :blk pub_result.tarball_url;
         } else blk: {
             // Fallback: construct URL directly from known pattern when S3 lookup fails
@@ -3938,13 +4109,13 @@ pub const Installer = struct {
 
             const s3_ok = blk: {
                 if (options.inline_progress) |progress_opts| {
-                    downloader.downloadFileInline(self.allocator, url, temp_archive_path, progress_opts) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, false, progress_opts, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
                     };
                 } else {
-                    downloader.downloadFileQuiet(self.allocator, url, temp_archive_path, options.quiet) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, options.quiet, null, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
@@ -3999,7 +4170,7 @@ pub const Installer = struct {
 
         // Extract archive to temp directory with verification
         const extract_dir = staging.payload;
-        try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
+        try staging.extractVerifiedWithChecksum(archive_path, used_format, used_url, options.verbose, expected_sha256);
 
         // Find the actual package root (might be nested like domain/v{version}/)
         const package_source = try self.findPackageRoot(extract_dir, domain, spec.version);
@@ -4418,7 +4589,7 @@ pub const Installer = struct {
         return self.materializePackage(.{ .shared = source }, dest, domain);
     }
 
-    /// Only these two cold-download paths hold a fresh verified extraction.
+    /// Cold downloads hold a fresh verified extraction rather than a shared cache.
     fn materializeVerifiedExtraction(self: *Installer, extraction: *const verified_staging.Extraction, source: []const u8, dest: []const u8, domain: []const u8) !void {
         return self.materializePackage(.{ .exclusive = .{ .extraction = extraction, .path = source } }, dest, domain);
     }
@@ -4454,86 +4625,22 @@ pub const Installer = struct {
     fn installDependencies(self: *Installer, dependencies: []const []const u8, options: InstallOptions) !void {
         if (dependencies.len == 0) return;
 
-        const DepEntry = struct { dep: []const u8, is_optional: bool };
-        var applicable: std.ArrayList(DepEntry) = .empty;
-        defer applicable.deinit(self.allocator);
-        for (dependencies) |spec| {
-            if (native_deps.parsePantryDepSpec(spec) == null) continue;
-            try applicable.append(self.allocator, .{ .dep = spec, .is_optional = std.mem.indexOfScalar(u8, spec, '#') != null });
-        }
-
-        if (applicable.items.len == 0) return;
-
-        // 2. Install in parallel using thread pool
-        const DepResult = struct { err: ?anyerror, is_optional: bool };
-        const results = self.allocator.alloc(DepResult, applicable.items.len) catch {
-            // Fallback to sequential on alloc failure
-            for (applicable.items) |item| {
-                self.installDependency(item.dep, options) catch |err| {
-                    if (!item.is_optional or native_deps.isPolicyError(err)) return err;
-                };
-            }
-            return;
-        };
-        defer self.allocator.free(results);
-        @memset(results, .{ .err = null, .is_optional = false });
-
-        const DepCtx = struct {
-            items: []const DepEntry,
-            results: []DepResult,
-            next: *std.atomic.Value(usize),
-            installer: *Installer,
-            options: InstallOptions,
-
-            fn worker(ctx: *@This()) void {
-                while (true) {
-                    const i = ctx.next.fetchAdd(1, .monotonic);
-                    if (i >= ctx.items.len) break;
-
-                    const item = ctx.items[i];
-                    ctx.results[i].is_optional = item.is_optional;
-                    ctx.installer.installDependency(item.dep, ctx.options) catch |err| {
-                        if (!style.isCI()) style.print("  ! Failed to install dependency {s}: {}\n", .{ item.dep, err });
-                        ctx.results[i].err = err;
-                    };
+        // Native traversal has one reentrant owner. Child materialization and
+        // finalizers complete before the parent proceeds; archive acquisition
+        // can still overlap through the invocation's prepared archive set.
+        for (dependencies) |dep| {
+            if (native_deps.parsePantryDepSpec(dep) == null) continue;
+            const optional = std.mem.indexOfScalar(u8, dep, '#') != null;
+            var capture: io_helper.TransientGetCapture = .{};
+            var child_options = options;
+            child_options.http_capture = &capture;
+            self.installDependency(dep, child_options) catch |err| {
+                if (!style.isCI()) style.print("  ! Failed to install dependency {s}: {}\n", .{ dep, err });
+                if (err == error.Canceled or !optional or native_deps.isPolicyError(err)) {
+                    if (options.http_capture) |parent| parent.* = capture;
+                    return err;
                 }
-            }
-        };
-
-        var next_idx = std.atomic.Value(usize).init(0);
-        var ctx = DepCtx{
-            .items = applicable.items,
-            .results = results,
-            .next = &next_idx,
-            .installer = self,
-            .options = options,
-        };
-
-        const cpu_count = std.Thread.getCpuCount() catch 4;
-        const max_threads = @min(cpu_count, 8);
-        const thread_count = @min(applicable.items.len, max_threads);
-
-        if (thread_count <= 1) {
-            // Single dep: just run inline, no thread overhead
-            DepCtx.worker(&ctx);
-        } else {
-            var threads: [8]?std.Thread = .{ null, null, null, null, null, null, null, null };
-            for (0..thread_count) |t| {
-                threads[t] = std.Thread.spawn(.{}, DepCtx.worker, .{&ctx}) catch null;
-            }
-            for (&threads) |*t| {
-                if (t.*) |thread| {
-                    thread.join();
-                    t.* = null;
-                }
-            }
-        }
-
-        // Check for critical failures
-        for (results) |result| {
-            if (result.err != null and (!result.is_optional or native_deps.isPolicyError(result.err.?))) {
-                return result.err.?;
-            }
+            };
         }
     }
 
@@ -4564,33 +4671,16 @@ pub const Installer = struct {
             return error.VersionNotFound;
         };
 
-        // Check if already installed
-        const global_pkg_dir = try self.getGlobalPackageDir(domain, resolved_version);
-        defer self.allocator.free(global_pkg_dir);
-
-        var check_dir = io_helper.cwd().openDir(io_helper.io, global_pkg_dir, .{}) catch |err| {
-            if (err != error.FileNotFound) return err;
-            // Not installed, continue
-            const spec = PackageSpec{
-                .name = name,
-                .version = planned orelse dependencyInstallVersion(version, resolved_version),
-            };
-
-            if (self.verbose) style.print("    → Installing dependency: {s}@{s}\n", .{ name, spec.version });
-
-            // Install the dependency (this will recursively install its dependencies)
-            const result = self.install(spec, options) catch |e| {
-                if (!style.isCI()) style.print("  ! Failed to install dependency: {}\n", .{e});
-                return e;
-            };
-            var mut_result = result;
-            defer mut_result.deinit(self.allocator);
-            return;
-        };
-        check_dir.close(io_helper.io);
-
-        // Already installed, skip
-        if (self.verbose) style.print("    ✓ Dependency already installed: {s}@{s}\n", .{ name, resolved_version });
+        // A directory in the global cache does not establish readiness in
+        // this project's target tree or of the dependency's own descendants.
+        // The public install path validates/reuses the selected source and
+        // handles genuine ancestor cycles under the traversal owner.
+        var result = try self.install(.{
+            .name = name,
+            .version = planned orelse dependencyInstallVersion(version, resolved_version),
+            .source = .pantry,
+        }, options);
+        defer result.deinit(self.allocator);
     }
 };
 
@@ -5081,90 +5171,13 @@ test "HoisteVersionCache releaseReservation lets a retry win" {
     try std.testing.expect(hcache.tryReserve("lodash", "^4"));
 }
 
-/// Report a package download to the pantry.dev analytics API.
-/// Truly fire-and-forget: runs in a detached thread so installs are never blocked.
-/// Perf: Analytics is fire-and-forget and non-critical. Instead of spawning a
-/// detached 2MB-stack thread per package, we batch events and send them in a
-/// single request at the end of the install. This eliminates thread explosion
-/// during installs with many packages.
-var analytics_events: std.ArrayList(AnalyticsEvent) = .empty;
-var analytics_mutex: io_helper.Mutex = .{};
-
-const AnalyticsEvent = struct {
-    domain: []const u8,
-    version: []const u8,
-};
-
-fn reportDownloadAnalytics(allocator: std.mem.Allocator, domain: []const u8, version: []const u8) void {
-    const owned_domain = allocator.dupe(u8, domain) catch return;
-    const owned_version = allocator.dupe(u8, version) catch {
-        allocator.free(owned_domain);
-        return;
-    };
-    analytics_mutex.lock();
-    defer analytics_mutex.unlock();
-    analytics_events.append(allocator, .{ .domain = owned_domain, .version = owned_version }) catch {
-        allocator.free(owned_domain);
-        allocator.free(owned_version);
-    };
+/// Submit pending download events without borrowing the caller's allocator.
+pub fn flushAnalytics(_: std.mem.Allocator) void {
+    analytics.flush();
 }
 
-/// Flush all batched analytics events in a single detached thread.
-/// Call this once after install completes.
-pub fn flushAnalytics(allocator: std.mem.Allocator) void {
-    analytics_mutex.lock();
-    const events = analytics_events.items;
-    if (events.len == 0) {
-        analytics_mutex.unlock();
-        return;
-    }
-    // Take ownership of the events. `owned_items` is a shallow copy, so it
-    // shares each event's domain/version allocations — the flush worker frees
-    // them when it's done. We must NOT free them here (doing so left owned_items
-    // dangling and the worker double-freed them). clearRetainingCapacity drops
-    // the entries without touching the strings they referenced.
-    const owned_items = allocator.dupe(AnalyticsEvent, events) catch {
-        analytics_mutex.unlock();
-        return;
-    };
-    analytics_events.clearRetainingCapacity();
-    analytics_mutex.unlock();
-
-    // Send in a single detached thread
-    const thread = std.Thread.spawn(.{ .stack_size = 2 * 1024 * 1024 }, analyticsFlushWorker, .{ allocator, owned_items }) catch {
-        for (owned_items) |ev| {
-            allocator.free(ev.domain);
-            allocator.free(ev.version);
-        }
-        allocator.free(owned_items);
-        return;
-    };
-    thread.detach();
-}
-
-fn analyticsFlushWorker(allocator: std.mem.Allocator, events: []const AnalyticsEvent) void {
-    defer {
-        for (events) |ev| {
-            allocator.free(ev.domain);
-            allocator.free(ev.version);
-        }
-        allocator.free(events);
-    }
-
-    // Build a JSON array of events
-    var buf = std.ArrayList(u8).empty;
-    defer buf.deinit(allocator);
-    buf.appendSlice(allocator, "[") catch return;
-    for (events, 0..) |ev, i| {
-        if (i > 0) buf.appendSlice(allocator, ",") catch return;
-        const entry = std.fmt.allocPrint(allocator, "{{\"packageName\":\"{s}\",\"category\":\"download\",\"version\":\"{s}\"}}", .{ ev.domain, ev.version }) catch return;
-        defer allocator.free(entry);
-        buf.appendSlice(allocator, entry) catch return;
-    }
-    buf.appendSlice(allocator, "]") catch return;
-
-    _ = io_helper.httpPostJson(allocator, "https://registry.pantry.dev/analytics/events", buf.items) catch return;
-}
+/// Stop telemetry before the host tears down its I/O backend or exits.
+pub const shutdownAnalytics = analytics.shutdown;
 
 /// sqld 0.24.1-pre.42 as the npm registry publishes it: the CLI package names
 /// one optional build per platform, and each build says where it runs.
@@ -5326,6 +5339,85 @@ test "project links stay inside pantry/ when it is installed through a worktree'
         const result = try io_helper.childRunWithOptions(arena, &.{ "/bin/sh", "-c", case.cmd }, .{ .cwd = root });
         try std.testing.expect(result.term == .exited and result.term.exited == 0);
         try std.testing.expectEqualStrings(case.out, result.stdout);
+    }
+}
+
+test "native materialization: Zig archives have isolated staging and preserve prior installs on corruption" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root_len = try tmp.dir.realPathFile(io_helper.io, ".", &root_buffer);
+    const root = root_buffer[0..root_len];
+    const destination = try std.fs.path.join(allocator, &.{ root, "installed/ziglang.org/v0.17.1" });
+    defer allocator.free(destination);
+
+    for ([_][]const u8{ "zig-aarch64-macos-0.17.1", "ziglang.org/v0.17.1", "" }) |layout| {
+        const source = try std.fs.path.join(allocator, &.{ root, "source" });
+        defer allocator.free(source);
+        defer io_helper.deleteTree(source) catch {};
+        const package = try std.fs.path.join(allocator, &.{ source, layout });
+        defer allocator.free(package);
+        const lib_dir = try std.fs.path.join(allocator, &.{ package, "lib" });
+        defer allocator.free(lib_dir);
+        try io_helper.makePath(lib_dir);
+        const executable = try std.fs.path.join(allocator, &.{ package, if (std.mem.startsWith(u8, layout, "zig-")) "zig" else "bin/zig" });
+        defer allocator.free(executable);
+        try io_helper.makePath(std.fs.path.dirname(executable).?);
+        const program = "#!/bin/sh\nprintf '0.17.1\\n'\n";
+        const file = try io_helper.createFile(executable, .{});
+        try io_helper.writeAllToFile(file, program);
+        try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o755));
+        io_helper.closeFile(file);
+
+        var second = try verified_staging.Extraction.init(allocator, root);
+        defer second.deinit();
+        const second_archive = try std.fs.path.join(allocator, &.{ second.root, "zig.tar.gz" });
+        defer allocator.free(second_archive);
+        const archived = try io_helper.childRun(allocator, &.{ "tar", "-czf", second_archive, "-C", source, "." });
+        defer allocator.free(archived.stdout);
+        defer allocator.free(archived.stderr);
+        try std.testing.expect(archived.term == .exited and archived.term.exited == 0);
+        const checksum = try extractor.computeChecksum(allocator, second_archive);
+        defer allocator.free(checksum);
+        {
+            var first = try verified_staging.Extraction.init(allocator, root);
+            defer first.deinit();
+            try std.testing.expect(!std.mem.eql(u8, first.root, second.root));
+            const first_archive = try std.fs.path.join(allocator, &.{ first.root, "zig.tar.gz" });
+            defer allocator.free(first_archive);
+            try io_helper.copyFile(second_archive, first_archive);
+            try installer.materializeZigArchive(&first, first_archive, "tar.gz", null, "0.17.1", destination, false);
+        }
+        // Ending the first overlapping lifetime cannot erase or alter the second.
+        const after = try extractor.computeChecksum(allocator, second_archive);
+        defer allocator.free(after);
+        try std.testing.expectEqualStrings(checksum, after);
+        try installer.materializeZigArchive(&second, second_archive, "tar.gz", null, "0.17.1", destination, false);
+        const installed_program = try std.fs.path.join(allocator, &.{ destination, if (std.mem.startsWith(u8, layout, "zig-")) "zig" else "bin/zig" });
+        defer allocator.free(installed_program);
+        const result = try io_helper.childRun(allocator, &.{ installed_program, "version" });
+        defer allocator.free(result.stdout);
+        defer allocator.free(result.stderr);
+        try std.testing.expect(result.term == .exited and result.term.exited == 0);
+        try std.testing.expectEqualStrings("0.17.1\n", result.stdout);
+
+        var corrupt = try verified_staging.Extraction.init(allocator, root);
+        defer corrupt.deinit();
+        const corrupt_archive = try std.fs.path.join(allocator, &.{ corrupt.root, "zig.tar.gz" });
+        defer allocator.free(corrupt_archive);
+        const bad_file = try io_helper.createFile(corrupt_archive, .{});
+        try io_helper.writeAllToFile(bad_file, "incomplete archive");
+        io_helper.closeFile(bad_file);
+        try std.testing.expectError(error.CorruptArchive, installer.materializeZigArchive(&corrupt, corrupt_archive, "tar.gz", null, "0.17.1", destination, false));
+        const retained = try io_helper.readFileAlloc(allocator, installed_program, 4096);
+        defer allocator.free(retained);
+        try std.testing.expectEqualStrings(program, retained);
     }
 }
 

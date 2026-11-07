@@ -42,7 +42,7 @@ try {
   assert(process.env.PANTRY_TEST_ACTION, 'The fixture requires the actual built source Action')
   proof.sourceActionSha256 = Bun.SHA256.hash(await readFile(action), 'hex')
   await run('source-action-cold-install', [process.execPath, action], workspace, {
-    INPUT_VERSION: '0.11.113', INPUT_INSTALL: 'false', INPUT_PACKAGES: 'bun.com@1.4.3 git-scm.org@2.53.0',
+    INPUT_VERSION: '0.11.113', INPUT_INSTALL: 'false', INPUT_PACKAGES: 'bun.com@1.4.4 git-scm.org@2.53.0',
     INPUT_CACHE: 'false', INPUT_SERVICES: '', INPUT_RELEASE: 'false', INPUT_PUBLISH: '',
     ...commandFiles,
   })

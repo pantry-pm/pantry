@@ -20,6 +20,7 @@ pub const Installer = installer.Installer;
 pub const InstallOptions = installer.InstallOptions;
 pub const InstallResult = installer.InstallResult;
 pub const flushAnalytics = installer.flushAnalytics;
+pub const shutdownAnalytics = installer.shutdownAnalytics;
 pub const pipeline = @import("install/pipeline.zig");
 
 // Re-export runtime types

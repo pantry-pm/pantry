@@ -1,4 +1,4 @@
-import type { DockerInstruction, DockerStage } from './types'
+import type { DockerInstruction } from './types'
 import type { BuildOptions, BuildResult, OciImageConfig } from './types'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'

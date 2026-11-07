@@ -10,7 +10,7 @@
  *   bun scripts/bulk-sync.ts -b pantry-registry --start 50 -n 20
  */
 
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'

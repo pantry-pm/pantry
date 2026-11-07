@@ -27,7 +27,7 @@ try {
   assert.match(version, /^pantry \d+\.\d+\.\d+ \([0-9a-f]+\)$/)
   proof.cliVersion = version
   let tree = join(root, 'pantry')
-  await installPackage('ziglang.org', '0.17.0', { installDir: tree })
+  await installPackage('ziglang.org', '0.17.1', { installDir: tree })
   const compilerSha256 = Bun.SHA256.hash(await readFile(join(tree, '.bin/zig.exe')), 'hex')
   proof.compilerSha256 = compilerSha256
   const source = join(root, 'fixture.zig')
@@ -36,7 +36,7 @@ try {
     const alias = join(tree, '.bin/zig.exe')
     assert((await lstat(alias)).isSymbolicLink())
     assert.equal(Bun.SHA256.hash(await readFile(alias), 'hex'), compilerSha256)
-    assert.equal((await run(`${phase}-version`, [alias, 'version'])).trim(), '0.17.0')
+    assert.equal((await run(`${phase}-version`, [alias, 'version'])).trim(), '0.17.1')
     const output = join(root, `${phase}.exe`)
     await run(`${phase}-compile`, [alias, 'build-exe', source, '-OReleaseSafe', `-femit-bin=${output}`])
     assert.equal((await run(`${phase}-execute`, [output])).trim(), 'NATIVE_ZIG_STDLIB_OK')

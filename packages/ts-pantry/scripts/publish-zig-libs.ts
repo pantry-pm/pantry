@@ -4,7 +4,7 @@
  * These are platform-independent source packages, so we upload the same
  * tarball for all platforms.
  */
-import { execSync, spawnSync } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import { mkdirSync, existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { uploadToS3 } from './upload-to-s3'

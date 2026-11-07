@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-import { join, dirname, basename, extname } from 'node:path'
+import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const pagesDir = join(__dirname, 'pages')

@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'bun:test'
-import { parsePublication, pendingPublications, preparePublications, publicationDirectory, recoverPublication } from '../../../.github/scripts/catalog-publications'
+import { parsePublication, pendingPublications, preparePublications, publicationDirectory, recoverPublication, waitForPublisherCompletion } from '../../../.github/scripts/catalog-publications'
 
 const publication = { id: '123-1', sha: 'a'.repeat(40), domains: ['curl.se'] }
 const title = `catalog:${publication.id}:${publication.sha}:all:false`
@@ -142,11 +142,13 @@ test('publication workflow pins every checkout and recovery trusts only main', a
   const publisher = Bun.YAML.parse(await readFile(new URL('publish-changed-packages.yml', base), 'utf8')) as any
   for (const job of Object.values(publisher.jobs) as any[]) {
     const checkout = job.steps.find((step: any) => step.uses?.startsWith('actions/checkout'))
-    expect(checkout.with.ref).toBe('${{ inputs.source-sha || github.sha }}')
+    if (checkout) expect(checkout.with.ref).toBe('${{ inputs.source-sha || github.sha }}')
   }
   expect(publisher.jobs.detect.steps.find((step: any) => step.id === 'detect').run).toContain('--diff-filter=A')
   const recovery = Bun.YAML.parse(await readFile(new URL('recover-catalog-publications.yml', base), 'utf8')) as any
   expect(recovery.jobs.recover.steps[0].with.ref).toBe('main')
+  expect(recovery.on.workflow_run.workflows.some((pattern: string) => new Bun.Glob(pattern).match(title))).toBe(true)
+  expect(recovery.on.workflow_run.workflows.some((pattern: string) => new Bun.Glob(pattern).match(recovery.name))).toBe(false)
   expect(recovery.concurrency['cancel-in-progress']).toBe(false)
   const updater = Bun.YAML.parse(await readFile(new URL('update-packages.yml', base), 'utf8')) as any
   expect(updater.jobs['update-packages'].steps.find((step: any) => step.name === 'Prepare durable publication requests')).toBeDefined()
@@ -167,4 +169,43 @@ test('a busy repository cannot exhaust recovery by returning unrelated historica
   }
   expect(await recoverPublication(publication, { ...f.options, api })).toBe('dispatched')
   expect(requests).toBe(2)
+})
+
+
+test('partial publisher reruns retain prior successful platforms and use the latest job execution', async () => {
+  const f = fixture([run])
+  const api = async (path: string) => {
+    if (!path.includes('/jobs?')) return { workflow_runs: [run] }
+    expect(path).toContain('filter=all')
+    return { total_count: 3, jobs: [
+      { ...jobs[0], id: 3 }, { ...jobs[0], id: 1, conclusion: 'failure' }, { ...jobs[1], id: 2 },
+    ] }
+  }
+  expect(await recoverPublication(publication, { ...f.options, api })).toBe('confirmed')
+  expect(f.receipts).toEqual([[publication.id, publication.sha]])
+})
+
+
+test('the publisher explicitly wakes recovery and waits for its final parent verdict', async () => {
+  let time = 0
+  let reads = 0
+  await waitForPublisherCompletion({ repository: 'pantry-pm/pantry', runId: '10', budgetMs: 20_000,
+    now: () => time, sleep: async ms => { time += ms }, api: async () => ({
+      ...run, status: ++reads === 1 ? 'in_progress' : 'completed',
+    }),
+  })
+  expect(reads).toBe(2)
+  const workflow = Bun.YAML.parse(await readFile(new URL('../../../.github/workflows/publish-changed-packages.yml', import.meta.url), 'utf8')) as any
+  const callback = workflow.jobs['request-recovery']
+  expect(callback.needs).toEqual(['detect', 'build', 'publish-darwin-native'])
+  expect(callback.permissions.actions).toBe('write')
+  expect(callback.steps[0].run).toContain('publisher-run="$GITHUB_RUN_ID"')
+})
+
+test('publisher callback rejects unrelated runs and retains work on finalization timeout', async () => {
+  await expect(waitForPublisherCompletion({ repository: 'pantry-pm/pantry', runId: '10', api: async () => ({ ...run, path: '.github/workflows/ci.yml' }) })).rejects.toThrow('owning publication')
+  let time = 0
+  await expect(waitForPublisherCompletion({ repository: 'pantry-pm/pantry', runId: '10', budgetMs: 1,
+    now: () => time, sleep: async ms => { time += ms }, api: async () => ({ ...run, status: 'in_progress' }),
+  })).rejects.toThrow('wait budget')
 })

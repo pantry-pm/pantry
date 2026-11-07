@@ -9,7 +9,7 @@ interface Publication { id: string, domains: string[] }
 interface Run { id: number, display_title: string, event: string, path: string, status: string, conclusion: string | null, updated_at: string, head_repository: { full_name: string } }
 interface RecoveryOptions {
   repository: string
-  api: (path: string, init?: RequestInit) => Promise<any>
+  api: (path: string, init?: RequestInit, budgetMs?: number) => Promise<any>
   receipt: (id: string, sha: string) => Promise<void>
   now?: () => number
   retryFailed?: boolean
@@ -121,7 +121,16 @@ export async function recoverPublication(publication: Publication & { sha: strin
   if (matches.some(run => run.status !== 'completed')) return 'running'
   const successful = matches.find(run => run.conclusion === 'success')
   if (successful) {
-    const { jobs } = await api(`repos/${repository}/actions/runs/${successful.id}/jobs?per_page=100`)
+    // A partial rerun keeps earlier successful jobs in earlier attempts. Read
+    // all attempts and verify the newest execution of each required job.
+    const jobs: any[] = []
+    for (let page = 1; page <= 10; page++) {
+      const result = await api(`repos/${repository}/actions/runs/${successful.id}/jobs?filter=all&per_page=100&page=${page}`)
+      jobs.push(...result.jobs)
+      if (jobs.length >= (result.total_count ?? result.jobs.length)) break
+      if (!result.jobs.length || page === 10) throw new Error('Incomplete publication job read-back')
+    }
+    jobs.sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
     for (const platform of ['linux-x86-64', 'linux-arm64']) {
       const job = jobs.find((job: any) => job.name === `Publish (${platform})`)
       if (job?.conclusion !== 'success' || !job.steps.some((step: any) => step.name === 'Publish changed packages (download-first)' && step.conclusion === 'success'))
@@ -142,6 +151,27 @@ export async function recoverPublication(publication: Publication & { sha: strin
   return 'dispatched'
 }
 
+/** Dispatch callbacks run before their parent workflow is fully finalized. */
+export async function waitForPublisherCompletion(options: {
+  repository: string, runId: string, api: RecoveryOptions['api'],
+  now?: () => number, sleep?: (ms: number) => Promise<void>, budgetMs?: number,
+}): Promise<void> {
+  if (!/^[1-9][0-9]*$/.test(options.runId)) throw new Error('Expected publisher callback run ID')
+  const now = options.now ?? Date.now
+  const sleep = options.sleep ?? Bun.sleep
+  const deadline = now() + (options.budgetMs ?? 120_000)
+  while (now() < deadline) {
+    const run = await options.api(`repos/${options.repository}/actions/runs/${options.runId}`, {}, Math.min(30_000, deadline - now()))
+    if (run.path !== '.github/workflows/publish-changed-packages.yml'
+      || run.event !== 'workflow_dispatch' || run.head_repository?.full_name !== options.repository)
+      throw new Error('Callback run is not the owning publication workflow')
+    if (now() >= deadline) break
+    if (run.status === 'completed') return
+    await sleep(Math.min(5000, deadline - now()))
+  }
+  throw new Error('Publisher callback did not finalize within its wait budget')
+}
+
 if (import.meta.main) {
   const cwd = process.cwd()
   if (process.argv[2] === 'prepare') await preparePublications(cwd, `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`, (process.env.CLAIMED_DOMAINS ?? '').split(/\s+/).filter(Boolean))
@@ -149,6 +179,7 @@ if (import.meta.main) {
     const repository = process.env.GITHUB_REPOSITORY ?? ''
     if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error('Expected repository')
     const api = createGitHubApi({ token: process.env.GH_TOKEN ?? '' })
+    if (process.env.PUBLISHER_RUN) await waitForPublisherCompletion({ repository, runId: process.env.PUBLISHER_RUN, api })
     const failures = []
     for (const publication of await pendingPublications(cwd)) {
       try {

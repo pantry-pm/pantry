@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 
-export const registryZigVersion = '0.17.0'
+export const registryZigVersion = '0.17.1'
 
 /** The provisioner records the actual executable from Pantry's normal environment. */
 export function managedRegistryZig(root: string = resolve(import.meta.dir, '..')): string | undefined {

@@ -904,12 +904,10 @@ pub fn discoverBinaries(
                 allocator.free(full_path);
                 continue;
             };
-            // Only pick up files that are actually executable (strict check — no mode=0 fallback)
-            const windows_program = builtin.os.tag == .windows and
-                (std.ascii.endsWithIgnoreCase(entry.name, ".exe") or
-                    std.ascii.endsWithIgnoreCase(entry.name, ".cmd") or
-                    std.ascii.endsWithIgnoreCase(entry.name, ".bat"));
-            if (windows_program or (stat.mode != 0 and (stat.mode & 0o111) != 0)) {
+            // Mode metadata is optional on supported Zig versions. The owning
+            // executable predicate works on every platform; stat still excludes
+            // empty files and symbolic links to directories.
+            if (stat.kind == .file and stat.size > 0 and io_helper.isExecutable(full_path)) {
                 try binaries.append(allocator, .{
                     .name = try allocator.dupe(u8, entry.name),
                     .path = full_path,
@@ -1717,6 +1715,44 @@ test "native activation: concurrent sourceable commands remain complete" {
 
 test "native activation: legacy sourceable entries remain complete during concurrent reactivation" {
     try expectConcurrentActivation(true, true);
+}
+
+test "native activation: root programs use executable permissions without optional stat mode" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try tmp.dir.realPathFile(io_helper.io, ".", &buffer);
+    const root = buffer[0..length];
+    try tmp.dir.createDirPath(io_helper.io, "lib");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "zig", .data = "#!/bin/sh\nprintf 'compiler-ok\\n'\n" });
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "README", .data = "ordinary data" });
+    const executable = try std.fs.path.join(allocator, &.{ root, "zig" });
+    defer allocator.free(executable);
+    const file = try io_helper.openFileAbsolute(executable, .{});
+    try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o755));
+    file.close(io_helper.io);
+    const link = try std.fs.path.join(allocator, &.{ root, "compiler" });
+    defer allocator.free(link);
+    try io_helper.symLink("zig", link);
+    const directory_link = try std.fs.path.join(allocator, &.{ root, "directory" });
+    defer allocator.free(directory_link);
+    try io_helper.symLink("lib", directory_link);
+    const binaries = try discoverBinaries(allocator, root);
+    defer {
+        for (binaries) |*binary| binary.deinit(allocator);
+        allocator.free(binaries);
+    }
+    try std.testing.expectEqual(@as(usize, 2), binaries.len);
+    for (binaries) |binary| {
+        try std.testing.expect(std.mem.eql(u8, binary.name, "zig") or std.mem.eql(u8, binary.name, "compiler"));
+        const result = try io_helper.childRun(allocator, &.{binary.path});
+        defer allocator.free(result.stdout);
+        defer allocator.free(result.stderr);
+        try std.testing.expect(result.term == .exited and result.term.exited == 0);
+        try std.testing.expectEqualStrings("compiler-ok\n", result.stdout);
+    }
 }
 
 test "native activation: shell shims retain declared source semantics" {

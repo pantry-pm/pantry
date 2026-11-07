@@ -9,6 +9,7 @@ interface Workflow {
   file: string
   /** The `name:` other workflows have to spell exactly to depend on it. */
   name: string
+  runNameExample?: string
   /** Every workflow this one triggers on, by that same name. */
   triggersOn: string[]
 }
@@ -24,13 +25,16 @@ function workflows(): Workflow[] {
       return {
         file,
         name: typeof parsed?.name === 'string' ? parsed.name : '',
+        runNameExample: typeof parsed?.['run-name'] === 'string'
+          ? parsed['run-name'].match(/format\(['"]([^{}'"]+)\{/u)?.[1]?.concat('example') : undefined,
         triggersOn: Array.isArray(listed) ? listed.filter((w: unknown) => typeof w === 'string') : [],
       }
     })
 }
 
 /**
- * `workflow_run.workflows` is a list of display names, matched as strings.
+ * `workflow_run.workflows` accepts display names and glob patterns. Dynamic
+ * run names must remain covered by their producer's declared format prefix.
  *
  * A name that matches nothing is not an error anywhere: the trigger is
  * accepted, the workflow is valid, and it simply never fires. That is the same
@@ -45,9 +49,9 @@ function workflows(): Workflow[] {
 describe('workflow_run references', () => {
   it('names a workflow that exists', () => {
     const all = workflows()
-    const known = new Set(all.map(w => w.name).filter(Boolean))
+    const known = all.flatMap(w => [w.name, w.runNameExample]).filter((name): name is string => Boolean(name))
     const dangling = all.flatMap(w =>
-      w.triggersOn.filter(t => !known.has(t)).map(t => `${w.file} triggers on "${t}", which no workflow is named`),
+      w.triggersOn.filter(t => !known.some(name => new Bun.Glob(t).match(name))).map(t => `${w.file} triggers on "${t}", which no workflow is named`),
     )
 
     expect(dangling).toEqual([])
@@ -57,7 +61,7 @@ describe('workflow_run references', () => {
     // A workflow in its own list either never fires or fires forever, and
     // which one it is depends on GitHub rather than on anything reviewable.
     const selfReferencing = workflows()
-      .filter(w => w.name && w.triggersOn.includes(w.name))
+      .filter(w => [w.name, w.runNameExample].some(name => name && w.triggersOn.some(pattern => new Bun.Glob(pattern).match(name))))
       .map(w => w.file)
 
     expect(selfReferencing).toEqual([])

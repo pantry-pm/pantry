@@ -15,6 +15,7 @@ pub const DownloadError = error{
 };
 
 pub const DownloadOptions = struct {
+    capture: ?*io_helper.TransientGetCapture = null,
     // Total GET attempts, including the initial request. Header and body
     // recovery consume this same limit rather than nesting retry loops.
     max_retries: u32 = 3,
@@ -73,7 +74,11 @@ pub fn downloadFileInline(allocator: std.mem.Allocator, url: []const u8, dest_pa
 }
 
 fn downloadFileWithOptions(allocator: std.mem.Allocator, url: []const u8, dest_path: []const u8, quiet: bool, inline_progress: ?InlineProgressOptions) !void {
-    return io_helper.runDownloadWithRetry(downloadFileTask, .{ allocator, url, dest_path, quiet, inline_progress }, dest_path, .{});
+    return downloadFileWithCapture(allocator, url, dest_path, quiet, inline_progress, null);
+}
+
+pub fn downloadFileWithCapture(allocator: std.mem.Allocator, url: []const u8, dest_path: []const u8, quiet: bool, inline_progress: ?InlineProgressOptions, capture: ?*io_helper.TransientGetCapture) !void {
+    return io_helper.runDownloadWithRetry(downloadFileTask, .{ allocator, url, dest_path, quiet, inline_progress }, dest_path, .{ .capture = capture });
 }
 
 fn reportArchiveFailure(stream: *io_helper.HttpStream, file: std.Io.File, stage: []const u8, cause: anyerror, expected: ?u64) void {
@@ -409,6 +414,7 @@ pub fn buildPackageUrl(
 
 /// S3 registry lookup result
 pub const S3PackageResult = struct {
+    sha256: ?[32]u8 = null,
     tarball_url: []const u8,
     version: []const u8,
 };
@@ -473,9 +479,18 @@ pub fn lookupS3Registry(
     domain: []const u8,
     version_constraint: []const u8,
 ) !?S3PackageResult {
+    return lookupS3RegistryWithCapture(allocator, domain, version_constraint, null);
+}
+
+pub fn lookupS3RegistryWithCapture(
+    allocator: std.mem.Allocator,
+    domain: []const u8,
+    version_constraint: []const u8,
+    capture: ?*io_helper.TransientGetCapture,
+) !?S3PackageResult {
     const metadata_url = try std.fmt.allocPrint(allocator, "https://registry.pantry.dev/binaries/{s}/metadata.json", .{domain});
     defer allocator.free(metadata_url);
-    const response = try io_helper.httpGetStatusTimeout(allocator, metadata_url, 30_000);
+    const response = try io_helper.httpGetStatusTimeoutWithCapture(allocator, metadata_url, 30_000, capture);
     defer response.deinit(allocator);
     if (response.status == 404) return null;
     if (!response.ok()) {
@@ -483,6 +498,14 @@ pub fn lookupS3Registry(
         return if (response.status == 401 or response.status == 403) error.RegistryAuthenticationRequired else error.RegistryUnavailable;
     }
     return selectS3RegistryMetadata(allocator, version_constraint, response.body);
+}
+
+fn selectedSha256(value: ?std.json.Value) !?[32]u8 {
+    const supplied = value orelse return null;
+    if (supplied != .string or supplied.string.len != 64) return error.InvalidRegistryMetadata;
+    var digest: [32]u8 = undefined;
+    _ = std.fmt.hexToBytes(&digest, supplied.string) catch return error.InvalidRegistryMetadata;
+    return digest;
 }
 
 fn selectS3RegistryMetadata(allocator: std.mem.Allocator, version_constraint: []const u8, metadata: []const u8) !?S3PackageResult {
@@ -533,10 +556,12 @@ fn selectS3RegistryMetadata(allocator: std.mem.Allocator, version_constraint: []
     );
     errdefer allocator.free(tarball_url);
     const version_dupe = try allocator.dupe(u8, matched_version);
+    errdefer allocator.free(version_dupe);
 
     return S3PackageResult{
         .tarball_url = tarball_url,
         .version = version_dupe,
+        .sha256 = try selectedSha256(platform_info.object.get("sha256")),
     };
 }
 
@@ -554,7 +579,7 @@ const ZigResolutionFixture = struct {
         try std.testing.expectEqualStrings("ziglang.org", domain);
         const platform = platform_core.binaryRegistryKey(platform_core.Platform.current(), platform_core.Architecture.current());
         const metadata = try std.fmt.allocPrint(allocator,
-            \\{{"versions":{{"0.17.0-dev.1422+fixture":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-dev.tar.xz","sha256":"fixture"}}}}}},"0.17.0":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-stable.tar.xz","sha256":"fixture"}}}}}},"0.18.0-dev.1+fixture":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-next.tar.xz","sha256":"fixture"}}}}}}}}}}
+            \\{{"versions":{{"0.17.0-dev.1422+fixture":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-dev.tar.xz","sha256":"0000000000000000000000000000000000000000000000000000000000000000"}}}}}},"0.17.0":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-stable.tar.xz","sha256":"0000000000000000000000000000000000000000000000000000000000000000"}}}}}},"0.18.0-dev.1+fixture":{{"platforms":{{"{s}":{{"tarball":"binaries/zig-next.tar.xz","sha256":"0000000000000000000000000000000000000000000000000000000000000000"}}}}}}}}}}
         , .{ platform, platform, platform });
         defer allocator.free(metadata);
         return selectS3RegistryMetadata(allocator, constraint, metadata);
@@ -600,6 +625,15 @@ pub fn lookupPantryPublished(
     domain: []const u8,
     version_constraint: []const u8,
 ) !?S3PackageResult {
+    return lookupPantryPublishedWithCapture(allocator, domain, version_constraint, null);
+}
+
+pub fn lookupPantryPublishedWithCapture(
+    allocator: std.mem.Allocator,
+    domain: []const u8,
+    version_constraint: []const u8,
+    capture: ?*io_helper.TransientGetCapture,
+) !?S3PackageResult {
     const semver = @import("../packages/semver.zig");
     const pkg_registry = @import("../packages/generated.zig");
 
@@ -626,7 +660,7 @@ pub fn lookupPantryPublished(
     );
     defer allocator.free(metadata_url);
 
-    const response = try io_helper.httpGetStatusTimeout(allocator, metadata_url, 30_000);
+    const response = try io_helper.httpGetStatusTimeoutWithCapture(allocator, metadata_url, 30_000, capture);
     defer response.deinit(allocator);
     if (response.status == 404) return null;
     if (!response.ok()) {
@@ -676,10 +710,12 @@ pub fn lookupPantryPublished(
     );
     errdefer allocator.free(tarball_url);
     const version_dupe = try allocator.dupe(u8, version_str);
+    errdefer allocator.free(version_dupe);
 
     return S3PackageResult{
         .tarball_url = tarball_url,
         .version = version_dupe,
+        .sha256 = try selectedSha256(root.object.get("sha256")),
     };
 }
 
@@ -733,6 +769,7 @@ pub fn downloadFileWithRetry(allocator: std.mem.Allocator, url: []const u8, dest
     return io_helper.runDownloadWithRetry(downloadFileTask, .{ allocator, url, dest_path, false, @as(?InlineProgressOptions, null) }, dest_path, .{
         .max_attempts = options.max_retries,
         .initial_retry_delay_ms = options.initial_retry_delay_ms,
+        .capture = options.capture,
     });
 }
 

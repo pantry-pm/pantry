@@ -13,27 +13,14 @@ pub const Extraction = struct {
     root_inode: ?std.Io.File.INode = null,
 
     pub fn init(allocator: std.mem.Allocator, parent: []const u8) !Extraction {
-        try io_helper.makePath(parent);
-        for (0..8) |_| {
-            var random: [16]u8 = undefined;
-            io_helper.randomBytes(&random);
-            const root = try std.fmt.allocPrint(allocator, "{s}/extract-{x}-{x}", .{
-                parent, std.mem.readInt(u64, random[0..8], .little), std.mem.readInt(u64, random[8..16], .little),
-            });
-            io_helper.cwd().createDir(io_helper.io, root, if (builtin.os.tag == .windows) .default_dir else io_helper.File.Permissions.fromMode(0o700)) catch |err| {
-                allocator.free(root);
-                if (err == error.PathAlreadyExists) continue;
-                return err;
-            };
-            errdefer {
-                io_helper.deleteTree(root) catch {};
-                allocator.free(root);
-            }
-            const private_metadata = try io_helper.cwd().statFile(io_helper.io, root, .{ .follow_symlinks = false });
-            const payload = try std.fs.path.join(allocator, &.{ root, "extracted" });
-            return .{ .allocator = allocator, .root = root, .payload = payload, .root_inode = private_metadata.inode };
+        const root = try io_helper.createPrivateDirectory(allocator, parent, "extract");
+        errdefer {
+            io_helper.deleteTree(root) catch {};
+            allocator.free(root);
         }
-        return error.ExtractionDirectoryCollision;
+        const private_metadata = try io_helper.cwd().statFile(io_helper.io, root, .{ .follow_symlinks = false });
+        const payload = try std.fs.path.join(allocator, &.{ root, "extracted" });
+        return .{ .allocator = allocator, .root = root, .payload = payload, .root_inode = private_metadata.inode };
     }
 
     pub fn deinit(self: *Extraction) void {
@@ -43,12 +30,16 @@ pub const Extraction = struct {
     }
 
     pub fn extractVerified(self: *Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, verbose: bool) !void {
+        return self.extractVerifiedWithChecksum(archive, format, url, verbose, null);
+    }
+
+    pub fn extractVerifiedWithChecksum(self: *Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, verbose: bool, expected_sha256: ?[32]u8) !void {
         self.verified = false;
         // A poisoned archive retry starts with a fresh payload in this same
         // exclusively created directory, not another install's temporary path.
         io_helper.deleteTree(self.payload) catch {};
         try io_helper.makePath(self.payload);
-        try extractor.extractArchiveWithVerification(self.allocator, archive, self.payload, format, url, verbose);
+        try extractor.extractArchiveWithChecksum(self.allocator, archive, self.payload, format, url, verbose, expected_sha256);
         if (builtin.os.tag != .windows) try prepareTree(self.allocator, self.payload);
         self.verified = true;
     }

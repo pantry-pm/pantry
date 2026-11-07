@@ -25,6 +25,17 @@ const cache = lib.cache;
 const string = lib.string;
 const install = lib.install;
 
+/// Provider identity survives a version/range change. The completed native
+/// plan, not discovery, decides which locked version satisfies every edge.
+fn hasNativeLockIdentity(original: *const lib.deps.resolution.LockFile, name: []const u8) bool {
+    var entries = original.packages.iterator();
+    while (entries.next()) |entry| {
+        const package = entry.value_ptr.*;
+        if (package.source.matches(.pantry) and std.mem.eql(u8, native_identity.canonical(package.name), native_identity.canonical(name))) return true;
+    }
+    return false;
+}
+
 fn shouldInstallWithNativePipeline(delegates_js_dependencies: bool, source: dependency_parser.DependencySource) bool {
     return !delegates_js_dependencies or source == .pantry;
 }
@@ -1723,10 +1734,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     const start_time = @as(i64, @intCast(start_ts2.sec)) * 1000 + @as(i64, @intCast(@divFloor(start_ts2.nsec, 1_000_000)));
 
     const user_requested_count = package_args.items.len;
-    var named_original = if (options.force and !options.frozen_lockfile)
-        lib.deps.resolution.LockFile.init(allocator)
-    else
-        try lockfile_hooks.loadOrCreateLockfile(allocator, project_root);
+    // Force bypasses version preference, not the recorded provider identity.
+    var named_original = try lockfile_hooks.loadOrCreateLockfile(allocator, project_root);
     defer named_original.deinit();
     installer.native_policy = .{ .original_lock = &named_original, .frozen = options.frozen_lockfile, .force = options.force };
     if (!options.force) installer.setLockfile(&named_original);
@@ -1814,7 +1823,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .name = "ziglang.org",
             .version = version,
             .source = .pantry,
-        } else if (pkg_info != null) lib.packages.PackageSpec{
+        } else if (pkg_info != null or hasNativeLockIdentity(&named_original, name)) lib.packages.PackageSpec{
             .name = name,
             .version = version,
         } else npm_fallback: {
@@ -1837,13 +1846,20 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 var pantry_info = info;
                 defer pantry_info.deinit(allocator);
 
+                // Native discovery establishes provider identity only. The
+                // completed plan resolves every authored range together.
+                if (pantry_info.source == .pantry) break :npm_fallback lib.packages.PackageSpec{
+                    .name = name,
+                    .version = version,
+                    .source = .pantry,
+                };
                 break :npm_fallback lib.packages.PackageSpec{
                     .name = name,
                     .version = blk: {
                         discovered_version = try allocator.dupe(u8, pantry_info.version);
                         break :blk discovered_version.?;
                     },
-                    .source = .npm,
+                    .source = pantry_info.source,
                     .url = blk: {
                         discovered_url = try allocator.dupe(u8, pantry_info.tarball_url);
                         break :blk discovered_url.?;
@@ -1967,6 +1983,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         if (explicit) continue;
         try appendNamedRequest(allocator, &named_requests, .{ .name = domain, .version = try named_native_plan.versionFor(domain, "latest"), .source = .pantry }, "latest", false, null);
     }
+    var prepared_archives = try installer.prepareNativeArchives(&named_native_plan, project_root, options.force);
+    defer prepared_archives.deinit();
     style.printInstalling(user_requested_count);
 
     packages: for (named_requests.items) |request| {
@@ -1984,6 +2002,10 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // the case it cannot, a Retry-After longer than that deadline.
         io_helper.resetTransientGetRecord();
         var retried = false;
+        var http_capture: io_helper.TransientGetCapture = .{};
+        // Unmigrated non-native and dedicated Zig paths retain their existing
+        // diagnostic. Prepared generic native requests use only owned records.
+        const owns_capture = spec.source == .pantry and !std.mem.eql(u8, spec.name, "ziglang.org");
         var result = attempt: while (true) {
             break :attempt installer.install(spec, .{
                 .project_root = project_root,
@@ -1992,6 +2014,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 .expected_integrity = request.integrity,
                 .record_integrity = installer.pinFor(name) != null,
                 .native_plan = if (spec.source == .pantry) &named_native_plan else null,
+                .prepared_archives = if (spec.source == .pantry) &prepared_archives else null,
+                .http_capture = if (owns_capture) &http_capture else null,
                 .force = options.force,
             }) catch |err| {
                 style.clearLine();
@@ -2002,14 +2026,16 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                     else => style.friendlyErrorName(err),
                 };
                 var reason_buffer: [512]u8 = undefined;
-                const error_msg = describeInstallFailure(&reason_buffer, base_msg, io_helper.lastTransientGetRecord(), retried);
+                const transient = if (owns_capture) http_capture.record else io_helper.lastTransientGetRecord();
+                const error_msg = describeInstallFailure(&reason_buffer, base_msg, transient, retried);
                 if (native_deps.isPolicyError(err)) return err;
                 if (!is_transitive_dep and !retried and style.isTransientInstallError(err)) {
                     retried = true;
-                    const delay = transientRetryDelaySeconds(io_helper.lastTransientGetRecord());
+                    const delay = transientRetryDelaySeconds(transient);
                     style.printForced("\n  ! {s}@{s}: {s} (transient); retrying once in {d}s\n", .{ name, spec.version, error_msg, delay });
                     io_helper.sleepMs(delay * 1000);
                     io_helper.resetTransientGetRecord();
+                    http_capture = .{};
                     style.print("  {s}>{s} {s}@{s}...", .{ style.dim, style.reset, name, spec.version });
                     continue :attempt;
                 }
@@ -3143,4 +3169,16 @@ test "auto npm preference defers identity ambiguity and explicit non-native beha
     defer original.deinit();
     try std.testing.expectEqualStrings("1.0.0", (try preferredPipelineVersion(&original, .{ .name = "fixture", .version = "^1", .source = .registry })).?);
     try std.testing.expectError(error.AmbiguousLockedVersion, preferredPipelineVersion(&original, .{ .name = "fixture", .version = "^1", .source = .npm }));
+}
+
+test "named discovery preserves locked native provider identity independently of range selection" {
+    const allocator = std.testing.allocator;
+    var original = try lib.deps.resolution.LockFile.parse(allocator,
+        \\{"packages":{"first.example@1.0.0":{"name":"first.example","version":"1.0.0","source":"pantry"},"bun.sh@1.4.3":{"name":"bun.sh","version":"1.4.3","source":"pantry"},"npm.example@1.0.0":{"name":"npm.example","version":"1.0.0","source":"npm"}}}
+    );
+    defer original.deinit();
+    try std.testing.expect(hasNativeLockIdentity(&original, "first.example"));
+    try std.testing.expect(hasNativeLockIdentity(&original, "bun.com"));
+    try std.testing.expect(!hasNativeLockIdentity(&original, "npm.example"));
+    try std.testing.expect(!hasNativeLockIdentity(&original, "missing.example"));
 }

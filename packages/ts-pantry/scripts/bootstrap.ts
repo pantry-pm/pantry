@@ -4,11 +4,10 @@
 // Resolves dependency tree, builds in correct order, uploads to S3
 
 import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import { mkdirSync, rmSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { homedir } from 'node:os'
 import { pantry } from '../src/packages'
 
 interface BootstrapOptions {

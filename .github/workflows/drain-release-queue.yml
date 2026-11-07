@@ -86,6 +86,7 @@ on:
       - Build Package Binaries
       - Build Multi-Version Packages
       - Publish Changed Packages
+      - 'catalog:*'
       - Check Desktop App & Font Updates
       - Sync Zig Dev
       - Mirror (pkgx download-only)

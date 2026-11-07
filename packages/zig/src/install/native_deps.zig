@@ -186,6 +186,7 @@ pub const Entry = struct {
     committed_version: ?[]const u8 = null, // borrowed from the original lock
     tarball_url: ?[]const u8 = null,
     metadata_resolved: bool = false,
+    sha256: ?[32]u8 = null,
 
     fn deinit(self: *Entry, allocator: std.mem.Allocator) void {
         for (self.constraints.items) |constraint| allocator.free(constraint);
@@ -264,6 +265,7 @@ pub const Plan = struct {
             if (entry.tarball_url) |url| self.allocator.free(url);
             entry.tarball_url = null;
             entry.metadata_resolved = false;
+            entry.sha256 = null;
         }
         for (self.names.items) |name| {
             const entry = self.entries.getPtr(name).?;
@@ -338,6 +340,7 @@ pub const Plan = struct {
                 const artifact = try lookup(ctx.plan.allocator, name, requested);
                 entry.version = artifact.version;
                 entry.tarball_url = artifact.tarball_url;
+                entry.sha256 = artifact.sha256;
                 entry.metadata_resolved = true;
                 for (entry.constraints.items) |constraint| {
                     if (!lockfile.resolvedVersionSatisfies(entry.version.?, constraint)) return error.NativeConstraintConflict;
@@ -378,7 +381,7 @@ pub const Plan = struct {
         const version = try self.versionFor(name, constraint);
         const entry = self.entries.get(native_identity.canonical(name)).?;
         if (!entry.metadata_resolved) return null;
-        return .{ .version = version, .tarball_url = entry.tarball_url };
+        return .{ .version = version, .tarball_url = entry.tarball_url, .sha256 = entry.sha256 };
     }
 
     pub fn versionFor(self: *const Plan, name: []const u8, constraint: []const u8) ![]const u8 {
@@ -398,14 +401,14 @@ pub const Plan = struct {
 
 /// Lookup results own both slices. A completed plan retains them until deinit;
 /// artifactFor returns borrowed slices to installers sharing that plan.
-pub const Artifact = struct { version: []const u8, tarball_url: ?[]const u8 = null };
+pub const Artifact = struct { version: []const u8, tarball_url: ?[]const u8 = null, sha256: ?[32]u8 = null };
 
 fn lookupNativeArtifact(allocator: std.mem.Allocator, name: []const u8, requested: []const u8) !Artifact {
     if (try downloader.lookupS3Registry(allocator, name, requested)) |found| {
-        return .{ .version = found.version, .tarball_url = found.tarball_url };
+        return .{ .version = found.version, .tarball_url = found.tarball_url, .sha256 = found.sha256 };
     }
     if (try downloader.lookupPantryPublished(allocator, name, requested)) |found| {
-        return .{ .version = found.version, .tarball_url = found.tarball_url };
+        return .{ .version = found.version, .tarball_url = found.tarball_url, .sha256 = found.sha256 };
     }
     if (std.mem.eql(u8, name, "ziglang.org")) return .{ .version = try downloader.resolveZigDevVersion(allocator, requested) };
     return .{ .version = try lookupCatalogVersion(allocator, name, requested) };

@@ -7,9 +7,9 @@
  * Ensures built binaries work when installed to any prefix.
  */
 
-import { chmodSync, existsSync, readdirSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, statSync, lstatSync, realpathSync, openSync, readSync, closeSync } from 'node:fs'
+import { chmodSync, existsSync, readdirSync, readFileSync, writeFileSync, unlinkSync, statSync, lstatSync, realpathSync, openSync, readSync, closeSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
-import { join, relative, dirname, extname, basename, sep } from 'node:path'
+import { join, relative, dirname, basename, sep } from 'node:path'
 import { bundleRuntimeLibraries, normalizeMachoRuntime, writeRuntimeProvenance, type RuntimePackage } from './native-runtime'
 import { isDynamicMachO } from './macho'
 

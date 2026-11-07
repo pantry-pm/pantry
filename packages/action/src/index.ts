@@ -18,6 +18,7 @@ import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantry
 import { installResolvedSystemPackages } from './system-packages'
 import { nativeArtifactCacheIdentity } from './native-cache'
 import { dependencyCache } from './cache-service'
+import { preserveCommandActivations } from './cache-activations'
 import { exportBuildCacheEnvironment } from './build-archive-cache-env'
 import { buildArchiveCacheDir } from './build-archive-cache'
 import type { ServiceSpec } from './services'
@@ -862,24 +863,20 @@ export async function run(): Promise<void> {
     // system-package links that need re-asserting afterwards
     let ranPantryInstall = false
 
-    // Try restoring from cache
-    try {
-      const hit = artifactIdentity ? await dependencyCacheService.restore([pantryDir], cacheKey, restoreKeys) : undefined
-      if (hit) {
-        // Verify cache is valid — .bin dir should exist with actual binaries
-        const binDirExists = fs.existsSync(pantryBinDir)
-        const hasEntries = binDirExists && fs.readdirSync(pantryBinDir).length > 0
-        if (hasEntries) {
-          cacheHit = hit === cacheKey
-          core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
-        }
-        else {
-          core.info('Cache restored but incomplete — reinstalling')
-        }
+    // Cache extraction must not overwrite an earlier setup's selected commands.
+    // A cache miss is optional; losing an existing activation is a hard failure.
+    const hit = artifactIdentity ? await preserveCommandActivations(pantryBinDir, () =>
+      dependencyCacheService.restore([pantryDir], cacheKey, restoreKeys).catch(() => undefined)) : undefined
+    if (hit) {
+      const binDirExists = fs.existsSync(pantryBinDir)
+      const hasEntries = binDirExists && fs.readdirSync(pantryBinDir).length > 0
+      if (hasEntries) {
+        cacheHit = hit === cacheKey
+        core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
       }
-    }
-    catch {
-      // cache miss or unavailable
+      else {
+        core.info('Cache restored but incomplete — reinstalling')
+      }
     }
 
     // Lockfile-pinned versions (map of domain → concrete version). Consulted
@@ -1019,30 +1016,11 @@ export async function run(): Promise<void> {
       )
     }
 
-    // ── Configure PATH for zig install directories ──
-    // (pantry/.bin and ~/.pantry/bin were added earlier so `pantry install`
-    // could already see them; here we only handle zig's versioned layout.)
-    // Also add any zig install directories to PATH (zig is installed into
-    // pantry/zig/<version>/ or ~/.pantry/global/packages/ziglang.org/v<version>/)
-    const zigDirs = [
-      path.join(pantryDir, 'zig'),
-      path.join(homeDir, '.pantry', 'global', 'packages', 'ziglang.org'),
-    ]
-    for (const zigParent of zigDirs) {
-      try {
-        if (fs.existsSync(zigParent)) {
-          for (const entry of fs.readdirSync(zigParent)) {
-            const zigBinDir = path.join(zigParent, entry)
-            const zigExe = path.join(zigBinDir, platform.os === 'windows' ? 'zig.exe' : 'zig')
-            if (fs.existsSync(zigExe)) {
-              core.addPath(zigBinDir)
-              core.info(`Added zig to PATH: ${zigBinDir}`)
-            }
-          }
-        }
-      }
-      catch { /* zig not installed */ }
-    }
+    // The installer's .bin links select the requested versions. Historical
+    // version directories may remain in a restored cache, but cannot select
+    // commands merely because they exist. Keep the project activations ahead
+    // of both inherited paths and the global Pantry environment.
+    core.addPath(pantryBinDir)
 
     // Pantry activates bun and bunx separately; retain their executor arguments.
     const bunPath = path.join(pantryBinDir, 'bun')

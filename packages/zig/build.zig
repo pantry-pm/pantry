@@ -501,6 +501,9 @@ pub fn build(b: *std.Build) void {
         },
     });
     const run_install_tests = b.addRunArtifact(b.addTest(.{ .root_module = install_test_mod }));
+    const native_readiness_step = b.step("test:native-readiness", "Return complete native installs to concurrent callers");
+    const native_readiness_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{ "native readiness:", "native analytics:" } });
+    native_readiness_step.dependOn(&b.addRunArtifact(native_readiness_tests).step);
     const install_routing_step = b.step("test:install-routing", "Infer desktop package kinds without changing project installs");
     const install_routing_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "desktop routing", "an explicit kind retains control" } });
     install_routing_step.dependOn(&b.addRunArtifact(install_routing_tests).step);
@@ -510,6 +513,10 @@ pub fn build(b: *std.Build) void {
     const materialization_test_step = b.step("test:materialization", "Run native install ownership and publication failure regressions");
     const focused_materialization_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"native materialization:"} });
     materialization_test_step.dependOn(&b.addRunArtifact(focused_materialization_tests).step);
+    const private_staging_step = b.step("test:private-staging", "Keep archive staging exclusive and preserve verified extraction ownership");
+    const private_staging_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "private staging", "verified execute-only archive", "legacy cache refusal and private preparation" } });
+    const run_private_staging_tests = b.addRunArtifact(private_staging_tests);
+    private_staging_step.dependOn(&run_private_staging_tests.step);
     const binary_platform_step = b.step("test:binary-platform", "Keep native registry URLs on the requested operating system");
     const binary_platform_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"binary registry platform:"} });
     binary_platform_step.dependOn(&b.addRunArtifact(binary_platform_tests).step);
@@ -661,6 +668,7 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_pm_commands_tests.step);
     test_step.dependOn(&run_token_tests.step);
     test_step.dependOn(&run_install_tests.step);
+    test_step.dependOn(&run_private_staging_tests.step);
     test_step.dependOn(&run_activation_tests.step);
     test_step.dependOn(&run_registry_tests.step);
     test_step.dependOn(publish_archive_step);
@@ -717,6 +725,7 @@ pub fn build(b: *std.Build) void {
     test_all_step.dependOn(&run_pm_commands_tests.step);
     test_all_step.dependOn(&run_token_tests.step);
     test_all_step.dependOn(&run_install_tests.step);
+    test_all_step.dependOn(&run_private_staging_tests.step);
     test_all_step.dependOn(&run_activation_tests.step);
     test_all_step.dependOn(&run_auto_link_tests.step);
     test_all_step.dependOn(&run_relocatable_tree_tests.step);
