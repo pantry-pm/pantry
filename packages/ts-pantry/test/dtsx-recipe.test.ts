@@ -9,13 +9,13 @@ import { loadRecipe } from '../scripts/recipe-loader'
 
 // Component tests start with downloaded bytes. Public release/download and
 // native registry qualification remain separate integration boundaries.
-for (const variant of ['valid', 'wrong digest', 'missing entry', 'duplicate entry', 'malformed digest', 'nonhex digest', 'extra fields', 'invalid zip']) {
+for (const variant of ['valid', 'fresh prefix', 'wrong digest', 'missing entry', 'duplicate entry', 'malformed digest', 'nonhex digest', 'extra fields', 'invalid zip']) {
   test(`dtsx recipe verifies and installs only its requested payload: ${variant}`, async () => {
     const root = await mkdtemp(join(tmpdir(), 'pantry-dtsx-recipe-'))
     try {
       const prefix = join(root, 'install')
       const binary = join(prefix, 'bin/zig-dtsx')
-      if (variant !== 'valid') {
+      if (variant !== 'fresh prefix') {
         await mkdir(join(prefix, 'bin'), { recursive: true })
         await writeFile(binary, 'previous usable binary', { mode: 0o755 })
       }
@@ -42,11 +42,11 @@ for (const variant of ['valid', 'wrong digest', 'missing entry', 'duplicate entr
         : variant === 'nonhex digest' ? `${'0'.repeat(63)}g  ${asset}\n`
         : variant === 'extra fields' ? `${digest}  ${asset} unexpected\n` : line
       await writeFile(join(root, 'checksums.txt'), checksums)
-      if (variant === 'valid') expect(existsSync(prefix)).toBe(false)
+      if (variant === 'fresh prefix') expect(existsSync(prefix)).toBe(false)
       const result = Bun.spawnSync(['bash', '-euo', 'pipefail', scriptPath], {
         cwd: root, env: { ...process.env, ASSET: asset, prefix, PATH: `/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH}` }, timeout: 4000,
       })
-      if (variant === 'valid') {
+      if (variant === 'valid' || variant === 'fresh prefix') {
         expect(result.exitCode, result.stderr.toString()).toBe(0)
         expect(await readFile(binary, 'utf8')).toBe("#!/bin/sh\nprintf 'recipe fixture\\n'\n")
         expect((await stat(binary)).mode & 0o777).toBe(0o755)
