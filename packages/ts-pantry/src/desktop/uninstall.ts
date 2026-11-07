@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { createReadStream } from 'node:fs'
 import { lstat, mkdir, mkdtemp, readFile, readdir, readlink, realpath, rename, rmdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
 
 export interface UserPackageRemovalOptions {
   /** Explicit roots allow isolated filesystem tests, never client-supplied paths. */
