@@ -32,6 +32,17 @@ test('native mirrors cannot bypass a packaging repair or replace its accepted pr
   expect(recipeAllowsMirror('1.2.4', recipeBuildVersion('1.2.4', revisions), true)).toBe(false)
 })
 
+test('PostgreSQL two-component releases keep their vendor identity when client tools are repackaged', async () => {
+  const loaded = await loadRecipe('postgresql.org', 'linux-x86-64', '18.6.1')
+  expect(loaded.upstreamVersion).toBe('18.6')
+  expect(loaded.publicationVersion).toBe('18.6.1')
+  expect(loaded.requiresRecipeBuild).toBe(true)
+  expect(recipeAllowsMirror('18.6.1', { upstream: loaded.upstreamVersion!, current: loaded.publicationVersion! })).toBe(false)
+  expect(() => requireCurrentRecipeBuild('18.6', loaded.publicationVersion!)).toThrow('refusing to replace')
+  const tokens = buildTokens('postgresql.org', loaded.upstreamVersion!, 'linux-x86-64', '/package/v18.6.1', '/source', {})
+  expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toContain('/REL_18_6.tar.gz')
+})
+
 test('ambiguous tuples and invalid revisions fail before catalog generation or a build', () => {
   for (const revision of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])
     expect(() => revisedPackageVersions(['1.2.3'], { '1.2.3': revision })).toThrow('Invalid')
