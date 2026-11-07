@@ -3,7 +3,7 @@
  *
  * @domain `invisible-island.net/ncurses`
  * @programs `captoinfo`, `clear`, `infocmp`, `infotocap`, `ncurses6-config`, ... (+7 more)
- * @version `6.6.0` (4 versions available)
+ * @version `6.6.0.1` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install invisible-island.net/ncurses`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "ncurses"
  * console.log(pkg.description) // "Text-based UI library"
  * console.log(pkg.programs)    // ["captoinfo", "clear", ...]
- * console.log(pkg.versions[0]) // "6.6.0" (latest)
+ * console.log(pkg.versions[0]) // "6.6.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/invisible-island-net/ncurses.md
@@ -82,6 +82,7 @@ export const invisibleislandnetncursesPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.6.0.1',
     '6.6.0',
     '6.5.0',
     '6.4.0',
