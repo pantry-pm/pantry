@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -13,9 +14,11 @@ for (const variant of ['valid', 'wrong digest', 'missing entry', 'duplicate entr
     const root = await mkdtemp(join(tmpdir(), 'pantry-dtsx-recipe-'))
     try {
       const prefix = join(root, 'install')
-      await mkdir(join(prefix, 'bin'), { recursive: true })
       const binary = join(prefix, 'bin/zig-dtsx')
-      await writeFile(binary, 'previous usable binary', { mode: 0o755 })
+      if (variant !== 'valid') {
+        await mkdir(join(prefix, 'bin'), { recursive: true })
+        await writeFile(binary, 'previous usable binary', { mode: 0o755 })
+      }
       const { recipe } = await loadRecipe('zig-dtsx.stacksjs.org', 'darwin-arm64', '1.0.0')
       const steps = recipe.build?.script
       expect(Array.isArray(steps)).toBe(true)
@@ -39,6 +42,7 @@ for (const variant of ['valid', 'wrong digest', 'missing entry', 'duplicate entr
         : variant === 'nonhex digest' ? `${'0'.repeat(63)}g  ${asset}\n`
         : variant === 'extra fields' ? `${digest}  ${asset} unexpected\n` : line
       await writeFile(join(root, 'checksums.txt'), checksums)
+      if (variant === 'valid') expect(existsSync(prefix)).toBe(false)
       const result = Bun.spawnSync(['bash', '-euo', 'pipefail', scriptPath], {
         cwd: root, env: { ...process.env, ASSET: asset, prefix, PATH: `/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH}` }, timeout: 4000,
       })
