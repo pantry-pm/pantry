@@ -3,6 +3,8 @@ export interface DesktopInstallJob {
   id: string
   requestId: string
   domain: string
+  /** Missing on legacy install-only services. */
+  operation?: 'install' | 'uninstall'
   /** Added in 0.11.141; absent on jobs created by older desktop services. */
   kind?: 'app' | 'cli' | 'library' | 'font'
   startedAt?: string
@@ -13,7 +15,7 @@ export interface DesktopInstallJob {
   finishedAt?: string
   error?: string
 }
-export interface DesktopInstalledPackage { name: string, version: string, applicationPath?: string }
+export interface DesktopInstalledPackage { name: string, version: string, applicationPath?: string, managed?: boolean }
 export type DesktopFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
 export class PantryDesktopError extends Error {
@@ -55,6 +57,10 @@ export class PantryDesktopClient {
   async installed(): Promise<DesktopInstalledPackage[]> { return (await this.request('/v1/installed')).packages as DesktopInstalledPackage[] }
   async install(domain: string, requestId: string = crypto.randomUUID()): Promise<DesktopInstallJob> {
     return (await this.request('/v1/install', { method: 'POST', body: JSON.stringify({ domain, requestId }) })).job as DesktopInstallJob
+  }
+
+  async uninstall(domain: string, requestId: string = crypto.randomUUID()): Promise<DesktopInstallJob> {
+    return (await this.request('/v1/uninstall', { method: 'POST', body: JSON.stringify({ domain, requestId }) })).job as DesktopInstallJob
   }
 
   async jobs(): Promise<DesktopInstallJob[]> { return (await this.request('/v1/jobs')).jobs as DesktopInstallJob[] }
