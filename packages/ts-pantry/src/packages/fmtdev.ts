@@ -2,7 +2,7 @@
  * **fmt** - A modern formatting library
  *
  * @domain `fmt.dev`
- * @version `12.1.0` (17 versions available)
+ * @version `12.2.1` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fmt.dev`
@@ -16,7 +16,7 @@
  * const pkg = pantry.fmtdev
  * console.log(pkg.name)        // "fmt"
  * console.log(pkg.description) // "A modern formatting library"
- * console.log(pkg.versions[0]) // "12.1.0" (latest)
+ * console.log(pkg.versions[0]) // "12.2.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fmt-dev.md
@@ -59,6 +59,7 @@ export const fmtdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '12.2.1',
     '12.2.0',
     '12.1.0',
     '12.0.0',
