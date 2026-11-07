@@ -6,6 +6,39 @@ const lib = @import("lib");
 // Detector Tests — workspace file detection
 // ============================================================================
 
+test "root companion lookup does not select a member manifest or escape to a parent" {
+    const allocator = testing.allocator;
+    const tmp = try createTempDir(allocator);
+    defer cleanupTempDir(allocator, tmp);
+    const root_pkg = try std.fs.path.join(allocator, &.{ tmp, "package.json" });
+    defer allocator.free(root_pkg);
+    try writeFile(root_pkg, "{\"workspaces\":[\"packages/*\"]}");
+    const root_deps = try std.fs.path.join(allocator, &.{ tmp, "deps.yaml" });
+    defer allocator.free(root_deps);
+    try writeFile(root_deps, "dependencies:\n  bun.sh: 1.4.4\n");
+    const member = try std.fs.path.join(allocator, &.{ tmp, "packages", "member" });
+    defer allocator.free(member);
+    try lib.io_helper.makePath(member);
+    const member_pkg = try std.fs.path.join(allocator, &.{ member, "package.json" });
+    defer allocator.free(member_pkg);
+    try writeFile(member_pkg, "{\"devDependencies\":{\"prettier\":\"^3.9.10\"}}");
+    const lookup = try lib.deps.detector.findDepsAndWorkspaceFile(allocator, member);
+    defer if (lookup.deps_file) |df| allocator.free(df.path);
+    defer if (lookup.workspace_file) |ws| {
+        allocator.free(ws.path);
+        allocator.free(ws.root_dir);
+    };
+    try testing.expectEqualStrings(member_pkg, lookup.deps_file.?.path);
+    const companion = (try lib.deps.detector.findDepsFileInDirectory(allocator, lookup.workspace_file.?.root_dir)).?;
+    defer allocator.free(companion.path);
+    try testing.expectEqualStrings(root_deps, companion.path);
+    try testing.expectEqual(lib.deps.detector.DepsFile.FileFormat.deps_yaml, companion.format);
+    const empty = try std.fs.path.join(allocator, &.{ tmp, "empty" });
+    defer allocator.free(empty);
+    try lib.io_helper.makePath(empty);
+    try testing.expect((try lib.deps.detector.findDepsFileInDirectory(allocator, empty)) == null);
+}
+
 test "detector.findWorkspaceFile - returns null when no workspace file exists" {
     const allocator = testing.allocator;
 

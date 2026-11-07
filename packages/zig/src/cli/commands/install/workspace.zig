@@ -463,20 +463,26 @@ fn carryForwardForeignOsPins(
     allocator: std.mem.Allocator,
     lockfile: *lib.packages.Lockfile,
     existing: *const lib.packages.Lockfile,
+    declared_roots: []const []const u8,
 ) !void {
-    // Which pins are foreign-OS, asked of the lock that still has them.
-    //
-    // Read from `existing` rather than the regenerated lock, because the
-    // regenerated one does not carry system packages at all at this point -
-    // those are merged afterwards by the companion step, so looking there finds
-    // nothing and the whole pass becomes a no-op.
+    // Walk today's declared graph, including parents reached on other OSes.
+    // Seeding from every old pin made removed tools preserve their obsolete
+    // guarded dependencies forever (e.g. Prettier -> Node -> zlib).
     var seeds = std.ArrayList([]const u8).empty;
     defer seeds.deinit(allocator);
-
-    var declared_it = existing.packages.iterator();
-    while (declared_it.next()) |entry| {
-        if (entry.value_ptr.source != .pantry) continue;
-        try seeds.append(allocator, entry.value_ptr.name);
+    try seeds.appendSlice(allocator, declared_roots);
+    var seen = std.StringHashMap(void).init(allocator);
+    defer seen.deinit();
+    var index: usize = 0;
+    while (index < seeds.items.len) : (index += 1) {
+        const domain = helpers.resolvePackageAlias(helpers.normalizePackageName(seeds.items[index]));
+        if ((try seen.getOrPut(domain)).found_existing) continue;
+        seeds.items[index] = domain;
+        const info = @import("../../../packages/generated.zig").getPackageByDomain(domain) orelse continue;
+        for (info.dependencies) |spec| {
+            const parsed = install_pipeline.parseAnyOsDepSpec(spec) orelse continue;
+            try seeds.append(allocator, parsed.domain);
+        }
     }
 
     var wanted = try install_pipeline.platformDependentClosure(allocator, seeds.items);
@@ -493,6 +499,40 @@ fn carryForwardForeignOsPins(
         const copied = try dupeLockfileEntry(allocator, entry.value_ptr);
         try lockfile.addEntry(allocator, entry.key_ptr.*, copied);
     }
+}
+
+test "foreign pins disappear when their declaring tool is removed" {
+    const allocator = std.testing.allocator;
+    var previous = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer previous.deinit(allocator);
+    try previous.addEntry(allocator, "gnu.org/gettext@0.21.1", .{
+        .name = try allocator.dupe(u8, "gnu.org/gettext"),
+        .version = try allocator.dupe(u8, "0.21.1"),
+        .source = .pantry,
+    });
+    var active = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer active.deinit(allocator);
+    try carryForwardForeignOsPins(allocator, &active, &previous, &.{"git-scm.org"});
+    try std.testing.expect(active.packages.contains("gnu.org/gettext@0.21.1"));
+    var removed = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer removed.deinit(allocator);
+    try carryForwardForeignOsPins(allocator, &removed, &previous, &.{"bun.sh"});
+    try std.testing.expectEqual(@as(usize, 0), removed.packages.count());
+}
+
+test "foreign pins retain guards reached through a live transitive native parent" {
+    const allocator = std.testing.allocator;
+    var previous = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer previous.deinit(allocator);
+    try previous.addEntry(allocator, "zlib.net@1.3.2", .{
+        .name = try allocator.dupe(u8, "zlib.net"),
+        .version = try allocator.dupe(u8, "1.3.2"),
+        .source = .pantry,
+    });
+    var active = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer active.deinit(allocator);
+    try carryForwardForeignOsPins(allocator, &active, &previous, &.{"prettier.io"});
+    try std.testing.expect(active.packages.contains("zlib.net@1.3.2"));
 }
 
 /// Hand the JS and PHP trees to the package managers that own them (bun/pnpm/
@@ -1634,7 +1674,27 @@ pub fn installWorkspaceCommandWithOptions(
     // longer points at from any platform is obsolete and still disappears,
     // which is the property that keeps regeneration able to prune.
     if (existing_lockfile) |*existing| {
-        try carryForwardForeignOsPins(allocator, &lockfile, existing);
+        var native_roots = std.ArrayList([]const u8).empty;
+        defer native_roots.deinit(allocator);
+        for (all_deps_buffer[0..all_deps_count]) |dep| try native_roots.append(allocator, dep.name);
+        const detector = @import("../../../deps/detector.zig");
+        const companion = try detector.findDepsFileInDirectory(allocator, workspace_root);
+        defer if (companion) |df| allocator.free(df.path);
+        // The companion phase owns parse errors and preserves the committed
+        // lock on failure. Do not replace its contextual error here.
+        const companion_deps = if (companion) |df| parser.inferDependencies(allocator, df) catch null else null;
+        defer if (companion_deps) |deps| {
+            for (deps) |*dep| dep.deinit(allocator);
+            allocator.free(deps);
+        };
+        if (companion_deps) |deps| {
+            for (deps) |dep| {
+                if (dep.source == .npm) continue;
+                const domain = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
+                if (std.mem.indexOfScalar(u8, domain, '.') != null) try native_roots.append(allocator, domain);
+            }
+        }
+        try carryForwardForeignOsPins(allocator, &lockfile, existing, native_roots.items);
     }
 
     // A workspace with a separate companion deps file stages its workspace

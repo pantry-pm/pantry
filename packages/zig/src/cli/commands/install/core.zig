@@ -547,7 +547,11 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         // If we're in a workspace, handle that first
         if (lookup.workspace_file) |ws_file| {
-            const has_companion_deps = if (lookup.deps_file) |df|
+            // The nearest file can be a member's package.json. It belongs to
+            // the JS workspace, never to the root's companion native phase.
+            const root_deps_file = try detector.findDepsFileInDirectory(allocator, ws_file.root_dir);
+            defer if (root_deps_file) |df| allocator.free(df.path);
+            const has_companion_deps = if (root_deps_file) |df|
                 !std.mem.eql(u8, df.path, ws_file.path)
             else
                 false;
@@ -581,8 +585,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
                 // Monorepos often keep system/runtime deps in deps.yaml (or pantry.json)
                 // alongside package.json workspaces. Install that companion file too.
-                if (lookup.deps_file) |df| {
-                    defer allocator.free(df.path);
+                defer if (lookup.deps_file) |df| allocator.free(df.path);
+                if (root_deps_file) |df| {
                     if (!std.mem.eql(u8, df.path, ws_file.path)) {
                         try mergeCompanionResult(allocator, &final_result, installCompanionDepsFile(
                             allocator,

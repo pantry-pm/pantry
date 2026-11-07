@@ -2,7 +2,7 @@
  * **zlib** - A massively spiffy yet delicately unobtrusive compression library.
  *
  * @domain `zlib.net`
- * @version `1.4` (7 versions available)
+ * @version `1.4` (8 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zlib.net`
@@ -53,6 +53,7 @@ export const zlibnetPackage = {
   */
   versions: [
     '1.4',
+    '1.3.2.1',
     '1.3.2',
     '1.3.1',
     '1.3',

@@ -11646,7 +11646,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "gnu.org/make", "gnu.org/sed", "freedesktop.org/pkg-config", "linux:gnu.org/binutils" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "6.6.0", "6.5.0", "6.4.0", "6.3.0" },
+    .versions = &[_][]const u8{ "6.6.0.1", "6.6.0", "6.5.0", "6.4.0", "6.3.0" },
 }, .{
     .name = "ipfs",
     .domain = "ipfs.tech",
@@ -19457,7 +19457,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.4", "1.3.2", "1.3.1", "1.3", "1.3.0", "1.2.13", "1.2.12" },
+    .versions = &[_][]const u8{ "1.4", "1.3.2.1", "1.3.2", "1.3.1", "1.3", "1.3.0", "1.2.13", "1.2.12" },
 }, .{
     .name = "minizip",
     .domain = "zlib.net/minizip",

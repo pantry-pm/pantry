@@ -43,6 +43,23 @@ test('PostgreSQL two-component releases keep their vendor identity when client t
   expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toContain('/REL_18_6.tar.gz')
 })
 
+test('PostgreSQL runtime dependencies rebuild their macOS 14 packaging without replacing vendor identities', async () => {
+  for (const [domain, upstream, publication] of [
+    ['invisible-island.net/ncurses', '6.6.0', '6.6.0.1'],
+    ['zlib.net', '1.3.2', '1.3.2.1'],
+  ]) {
+    const loaded = await loadRecipe(domain, 'darwin-arm64', publication)
+    expect(loaded.upstreamVersion).toBe(upstream)
+    expect(loaded.publicationVersion).toBe(publication)
+    expect(loaded.requiresRecipeBuild).toBe(true)
+    expect(loaded.recipe.build?.env?.darwin?.MACOSX_DEPLOYMENT_TARGET).toBe('14.0')
+    expect(recipeAllowsMirror(publication, { upstream, current: publication })).toBe(false)
+    expect(() => requireCurrentRecipeBuild(upstream, publication)).toThrow('refusing to replace')
+    const tokens = buildTokens(domain, upstream, 'darwin-arm64', '/package/' + publication, '/source', {})
+    expect(applyTokens(loaded.recipe.distributable!.url, tokens)).not.toContain(publication)
+  }
+})
+
 test('ambiguous tuples and invalid revisions fail before catalog generation or a build', () => {
   for (const revision of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])
     expect(() => revisedPackageVersions(['1.2.3'], { '1.2.3': revision })).toThrow('Invalid')

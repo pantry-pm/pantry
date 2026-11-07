@@ -3,6 +3,7 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'invisible-island.net/ncurses',
   name: 'ncurses',
+  revisions: { '6.6.0': 1 },
   programs: [
     'captoinfo',
     'clear',
@@ -42,6 +43,7 @@ export const recipe: Recipe = {
       "sed -i 's|{{prefix}}|$(dirname \"$0\")/..|g' {{prefix}}/bin/ncurses{{version.major}}-config {{prefix}}/bin/ncursesw{{version.major}}-config",
     ],
     env: {
+      darwin: { MACOSX_DEPLOYMENT_TARGET: '14.0' },
       PCDIR: '{{prefix}}/lib/pkgconfig',
       ARGS: [
         '--prefix={{prefix}}',
