@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.184...v0.11.185)
+
+## 🐛 Bug Fixes
+
+- qualify PostgreSQL client loader closure before publishing ([1086d5c](https://github.com/pantry-pm/pantry/commit/1086d5c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.185 ([5b12e4d](https://github.com/pantry-pm/pantry/commit/5b12e4d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update CLIProxyAPI, fluentci, fmt, mise, Tunnelblick ([ce7e4eb](https://github.com/pantry-pm/pantry/commit/ce7e4eb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([b74a4e3](https://github.com/pantry-pm/pantry/commit/b74a4e3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.183...v0.11.184)
 
 ## 🐛 Bug Fixes
