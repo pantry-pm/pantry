@@ -1,0 +1,15 @@
+{
+  "id": "42361635138-1",
+  "domains": [
+    "coder.com/code-server",
+    "freetds.org",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/router-for-me/CLIProxyAPI",
+    "grpc.io",
+    "opencode.ai",
+    "projen.io",
+    "systemd.io",
+    "systemd.io/libudev",
+    "ziglang.org"
+  ]
+}

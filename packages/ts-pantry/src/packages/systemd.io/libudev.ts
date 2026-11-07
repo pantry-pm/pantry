@@ -2,7 +2,7 @@
  * **libudev** - Native libudev shared library and development interface.
  *
  * @domain `systemd.io/libudev`
- * @version `262.2` (22 versions available)
+ * @version `262.2` (24 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install systemd.io/libudev`
@@ -76,6 +76,7 @@ export const libudevPackage = {
     '261.2',
     '261.1',
     '261',
+    '260.7',
     '260.6',
     '260.5',
     '260.4',
@@ -83,6 +84,7 @@ export const libudevPackage = {
     '260.2',
     '260.1',
     '260',
+    '259.11',
     '259.10',
     '259.9',
     '259.8',

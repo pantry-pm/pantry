@@ -3,7 +3,7 @@
  *
  * @domain `coder.com/code-server`
  * @programs `code-server`
- * @version `4.145.0` (101 versions available)
+ * @version `4.145.2` (102 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install coder.com/code-server`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "code-server"
  * console.log(pkg.description) // "Access VS Code through the browser"
  * console.log(pkg.programs)    // ["code-server"]
- * console.log(pkg.versions[0]) // "4.145.0" (latest)
+ * console.log(pkg.versions[0]) // "4.145.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/coder-com/code-server.md
@@ -80,6 +80,7 @@ export const codercomcodeserverPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.145.2',
     '4.145.0',
     '4.144.0',
     '4.143.1',
