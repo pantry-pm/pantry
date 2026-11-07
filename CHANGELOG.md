@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.178...v0.11.179)
+
+## 🐛 Bug Fixes
+
+- isolate native binary publication archives ([e8aad07](https://github.com/pantry-pm/pantry/commit/e8aad07)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#298](https://github.com/pantry-pm/pantry/issues/298), [stacksjs/dtsx#24](https://github.com/stacksjs/dtsx/issues/24))
+
+## 🔧 Chores
+
+- release v0.11.179 ([7e61835](https://github.com/pantry-pm/pantry/commit/7e61835)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.177...v0.11.178)
 
 ## 🐛 Bug Fixes
