@@ -19,7 +19,17 @@ export const sourcecodeproPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['2.042'] as const,
+  versions: [
+    '2.042',
+    '2.038',
+    '2.032',
+    '2.030',
+    '2.010',
+    '1.017',
+    '1.013',
+    '1.010',
+    '1.009',
+  ] as const,
   aliases: [] as const,
 }
 export type SourcecodeproPackage = typeof sourcecodeproPackage

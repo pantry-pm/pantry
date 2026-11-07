@@ -3,7 +3,7 @@
  *
  * @domain `git-town.com`
  * @programs `git-town`
- * @version `22.7.0` (70 versions available)
+ * @version `24.1.1` (78 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-town.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "git-town"
  * console.log(pkg.description) // "High-level command-line interface for Git"
  * console.log(pkg.programs)    // ["git-town"]
- * console.log(pkg.versions[0]) // "22.7.0" (latest)
+ * console.log(pkg.versions[0]) // "24.1.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/git-town-com.md
@@ -67,6 +67,14 @@ export const gittowncomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '24.1.1',
+    '24.1.0',
+    '24.0.0',
+    '23.0.3',
+    '23.0.2',
+    '23.0.1',
+    '23.0.0',
+    '22.7.1',
     '22.7.0',
     '22.6.0',
     '22.5.0',

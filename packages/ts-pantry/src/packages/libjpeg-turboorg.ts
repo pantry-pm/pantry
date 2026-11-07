@@ -3,7 +3,7 @@
  *
  * @domain `libjpeg-turbo.org`
  * @programs `cjpeg`, `djpeg`, `jpegtran`, `rdjpgcom`, `tjbench`, ... (+1 more)
- * @version `3.1.3` (10 versions available)
+ * @version `3.2.1` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install libjpeg-turbo.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "libjpeg-turbo"
  * console.log(pkg.description) // "Main libjpeg-turbo repository"
  * console.log(pkg.programs)    // ["cjpeg", "djpeg", ...]
- * console.log(pkg.versions[0]) // "3.1.3" (latest)
+ * console.log(pkg.versions[0]) // "3.2.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/libjpeg-turbo-org.md
@@ -72,6 +72,10 @@ export const libjpegturboorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.2.1',
+    '3.2.0',
+    '3.1.4.1',
+    '3.1.4',
     '3.1.3',
     '3.1.2',
     '3.1.1',
@@ -82,6 +86,12 @@ export const libjpegturboorgPackage = {
     '3.0.1',
     '3.0.0',
     '2.1.5.1',
+    '2.1.5',
+    '2.1.4',
+    '2.1.3',
+    '2.1.2',
+    '2.1.1',
+    '2.1.0',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `ninja-build.org`
  * @programs `ninja`
- * @version `1.13.2` (7 versions available)
+ * @version `1.13.2` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ninja-build.org`
@@ -74,6 +74,19 @@ export const ninjabuildorgPackage = {
     '1.12.0',
     '1.11.1',
     '1.11.0',
+    '1.10.2',
+    '1.10.1',
+    '1.10.0',
+    '1.9.0',
+    '1.8.2',
+    '1.7.2',
+    '1.7.1',
+    '1.6.0',
+    '1.5.3',
+    '1.5.1',
+    '1.4.0',
+    '1.3.4',
+    '1.3.3',
   ] as const,
   aliases: [] as const,
 }

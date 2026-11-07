@@ -2,7 +2,7 @@
  * **glm.g-truc** - OpenGL Mathematics (GLM)
  *
  * @domain `glm.g-truc.net`
- * @version `1.0.3` (5 versions available)
+ * @version `1.0.3` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install glm.g-truc.net`
@@ -64,6 +64,21 @@ export const glmgtrucnetPackage = {
     '1.0.1',
     '1.0.0',
     '0.9.9.8',
+    '0.9.9.7',
+    '0.9.9.6',
+    '0.9.9.5',
+    '0.9.9.4',
+    '0.9.9.3',
+    '0.9.9.2',
+    '0.9.9.1',
+    '0.9.9.0',
+    '0.9.8.5',
+    '0.9.8.4',
+    '0.9.8.3',
+    '0.9.8.2',
+    '0.9.8.1',
+    '0.9.8.0',
+    '0.9.7.6',
   ] as const,
   aliases: [] as const,
 }

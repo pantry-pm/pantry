@@ -3,7 +3,7 @@
  *
  * @domain `linux-pam.org`
  * @programs `faillock`, `mkhomedir_helper`, `pam_namespace_helper`, `pam_timestamp_check`, `unix_chkpwd`
- * @version `1.7.2` (6 versions available)
+ * @version `1.7.3` (12 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install linux-pam.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "linux-pam"
  * console.log(pkg.description) // "Linux PAM (Pluggable Authentication Modules for..."
  * console.log(pkg.programs)    // ["faillock", "mkhomedir_helper", ...]
- * console.log(pkg.versions[0]) // "1.7.2" (latest)
+ * console.log(pkg.versions[0]) // "1.7.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/linux-pam-org.md
@@ -81,12 +81,18 @@ export const linuxpamorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.7.3',
     '1.7.2',
     '1.7.1',
     '1.7.0',
     '1.6.1',
     '1.6.0',
     '1.5.3',
+    '1.5.2',
+    '1.5.1',
+    '1.5.0',
+    '1.4.0',
+    '1.3.1',
   ] as const,
   aliases: [] as const,
 }

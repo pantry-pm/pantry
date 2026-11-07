@@ -3,7 +3,7 @@
  *
  * @domain `midnight-commander.org`
  * @programs `mc`, `mcdiff`, `mcedit`, `mcview`
- * @version `4.8.33` (6 versions available)
+ * @version `4.8.33` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install midnight-commander.org`
@@ -82,11 +82,25 @@ export const midnightcommanderorgPackage = {
   */
   versions: [
     '4.8.33',
+    '4.8.33-pre1',
     '4.8.32',
+    '4.8.32-pre1',
     '4.8.31',
+    '4.8.31-pre1',
     '4.8.30',
+    '4.8.30-pre1',
     '4.8.29',
+    '4.8.29-pre1',
     '4.8.28',
+    '4.8.28-pre1',
+    '4.8.27',
+    '4.8.27-pre1',
+    '4.8.26',
+    '4.8.25',
+    '4.8.24',
+    '4.8.23',
+    '4.8.22',
+    '4.8.21',
   ] as const,
   aliases: [] as const,
 }

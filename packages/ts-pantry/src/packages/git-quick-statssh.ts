@@ -3,7 +3,7 @@
  *
  * @domain `git-quick-stats.sh`
  * @programs `git-quick-stats`
- * @version `2.8.0` (15 versions available)
+ * @version `2.11.0` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-quick-stats.sh`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "git-quick-stats"
  * console.log(pkg.description) // "▁▅▆▃▅ Git quick statistics is a simple and effi..."
  * console.log(pkg.programs)    // ["git-quick-stats"]
- * console.log(pkg.versions[0]) // "2.8.0" (latest)
+ * console.log(pkg.versions[0]) // "2.11.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/git-quick-stats-sh.md
@@ -70,6 +70,9 @@ export const gitquickstatsshPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.0',
+    '2.10.0',
+    '2.9.0',
     '2.8.0',
     '2.7.0',
     '2.6.2',
@@ -85,6 +88,8 @@ export const gitquickstatsshPackage = {
     '2.5.1',
     '2.5.0',
     '2.4.1',
+    '2.4.0',
+    '2.3.0',
   ] as const,
   aliases: [] as const,
 }

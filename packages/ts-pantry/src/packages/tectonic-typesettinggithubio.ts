@@ -3,7 +3,7 @@
  *
  * @domain `tectonic-typesetting.github.io`
  * @programs `tectonic`
- * @version `0.15.0` (6 versions available)
+ * @version `0.17.0` (8 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tectonic-typesetting.github.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "tectonic"
  * console.log(pkg.description) // "A modernized, complete, self-contained TeX/LaTe..."
  * console.log(pkg.programs)    // ["tectonic"]
- * console.log(pkg.versions[0]) // "0.15.0" (latest)
+ * console.log(pkg.versions[0]) // "0.17.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/tectonic-typesetting-github-io.md
@@ -72,6 +72,8 @@ export const tectonictypesettinggithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.17.0',
+    '0.16.9',
     '0.15.0',
     '0.14.1',
     '0.14.0',

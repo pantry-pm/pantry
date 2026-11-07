@@ -3,7 +3,7 @@
  *
  * @domain `git-lfs.com`
  * @programs `git-lfs`
- * @version `3.7.1` (8 versions available)
+ * @version `3.8.1` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-lfs.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "git-lfs"
  * console.log(pkg.description) // "Git extension for versioning large files"
  * console.log(pkg.programs)    // ["git-lfs"]
- * console.log(pkg.versions[0]) // "3.7.1" (latest)
+ * console.log(pkg.versions[0]) // "3.8.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/git-lfs-com.md
@@ -74,6 +74,8 @@ export const gitlfscomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.8.1',
+    '3.8.0',
     '3.7.1',
     '3.7.0',
     '3.6.1',
@@ -82,6 +84,16 @@ export const gitlfscomPackage = {
     '3.4.1',
     '3.4.0',
     '3.3.0',
+    '3.2.0',
+    '3.1.4',
+    '3.1.2',
+    '3.1.1',
+    '3.0.2',
+    '3.0.1',
+    '2.13.3',
+    '2.13.2',
+    '2.13.1',
+    '2.12.1',
   ] as const,
   aliases: [] as const,
 }

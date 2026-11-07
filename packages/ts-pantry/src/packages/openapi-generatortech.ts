@@ -3,7 +3,7 @@
  *
  * @domain `openapi-generator.tech`
  * @programs `openapi-generator`
- * @version `7.20.0` (19 versions available)
+ * @version `7.27.0` (26 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openapi-generator.tech`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "openapi-generator"
  * console.log(pkg.description) // "OpenAPI Generator allows generation of API clie..."
  * console.log(pkg.programs)    // ["openapi-generator"]
- * console.log(pkg.versions[0]) // "7.20.0" (latest)
+ * console.log(pkg.versions[0]) // "7.27.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/openapi-generator-tech.md
@@ -74,6 +74,13 @@ export const openapigeneratortechPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.27.0',
+    '7.26.0',
+    '7.25.0',
+    '7.24.0',
+    '7.23.0',
+    '7.22.0',
+    '7.21.0',
     '7.20.0',
     '7.19.0',
     '7.18.0',

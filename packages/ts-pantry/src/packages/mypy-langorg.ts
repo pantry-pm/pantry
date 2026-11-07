@@ -3,7 +3,7 @@
  *
  * @domain `mypy-lang.org`
  * @programs `mypy`, `mypyc`, `dmypy`
- * @version `1.19.1` (31 versions available)
+ * @version `2.4.1` (41 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mypy-lang.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "mypy-lang"
  * console.log(pkg.description) // "Experimental optional static type checker for P..."
  * console.log(pkg.programs)    // ["mypy", "mypyc", ...]
- * console.log(pkg.versions[0]) // "1.19.1" (latest)
+ * console.log(pkg.versions[0]) // "2.4.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/mypy-lang-org.md
@@ -76,6 +76,16 @@ export const mypylangorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.4.1',
+    '2.4.0',
+    '2.3.1',
+    '2.3.0',
+    '2.2.0',
+    '2.1.0',
+    '2.0.0',
+    '1.20.2',
+    '1.20.1',
+    '1.20.0',
     '1.19.1',
     '1.19.0',
     '1.18.2',

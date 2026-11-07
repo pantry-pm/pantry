@@ -3,7 +3,7 @@
  *
  * @domain `helix-editor.com`
  * @programs `hx`
- * @version `25.7.1` (10 versions available)
+ * @version `25.07.1` (30 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install helix-editor.com`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "hx"
  * console.log(pkg.description) // "A post-modern modal text editor."
  * console.log(pkg.programs)    // ["hx"]
- * console.log(pkg.versions[0]) // "25.7.1" (latest)
+ * console.log(pkg.versions[0]) // "25.07.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/helix-editor-com.md
@@ -60,16 +60,36 @@ export const helixeditorcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '25.07.1',
     '25.7.1',
+    '25.07',
     '25.7.0',
+    '25.01.1',
     '25.1.1',
+    '25.01',
     '25.1.0',
+    '24.07',
     '24.7.0',
+    '24.03',
     '24.3.0',
+    '23.10',
     '23.10.0',
+    '23.05',
     '23.5.0',
+    '23.03',
     '23.3.0',
+    '22.12',
     '22.12.0',
+    '22.08.1',
+    '22.08',
+    '22.05',
+    '22.03',
+    '0.6.0',
+    '0.5.0',
+    '0.4.1',
+    '0.4.0',
+    '0.3.0',
+    '0.2.1',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `dhall-lang.org`
  * @programs `dhall`
- * @version `1.42.3` (3 versions available)
+ * @version `1.42.3` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install dhall-lang.org`
@@ -79,6 +79,24 @@ export const dhalllangorgPackage = {
     '1.42.3',
     '1.42.2',
     '1.42.1',
+    '1.42.0',
+    '1.41.2',
+    '1.41.1',
+    '1.41.0',
+    '1.40.2',
+    '1.40.1',
+    '1.40.0',
+    '1.39.0',
+    '1.38.1',
+    '1.38.0',
+    '1.37.1',
+    '1.37.0',
+    '1.36.0',
+    '1.35.0',
+    '1.34.0',
+    '1.33.1',
+    '1.33.0',
+    '1.32.0',
   ] as const,
   aliases: [] as const,
 }

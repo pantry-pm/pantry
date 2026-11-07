@@ -3,7 +3,7 @@
  *
  * @domain `tesseract-ocr.github.io`
  * @programs `tesseract`
- * @version `5.5.2` (10 versions available)
+ * @version `5.5.4` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tesseract-ocr.github.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "tesseract"
  * console.log(pkg.description) // "Tesseract Open Source OCR Engine (main repository)"
  * console.log(pkg.programs)    // ["tesseract"]
- * console.log(pkg.versions[0]) // "5.5.2" (latest)
+ * console.log(pkg.versions[0]) // "5.5.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/tesseract-ocr-github-io.md
@@ -81,6 +81,8 @@ export const tesseractocrgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.5.4',
+    '5.5.3',
     '5.5.2',
     '5.5.1',
     '5.5.0',
@@ -91,6 +93,14 @@ export const tesseractocrgithubioPackage = {
     '5.3.2',
     '5.3.1',
     '5.3.0',
+    '5.2.0',
+    '5.1.0',
+    '5.0.1',
+    '5.0.0',
+    '4.1.3',
+    '4.1.2',
+    '4.1.1',
+    '4.1.0',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `amber-lang.com`
  * @programs `amber`
- * @version `0.6.0-alpha` (13 versions available)
+ * @version `0.6.0-alpha` (17 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install amber-lang.com`
@@ -61,18 +61,22 @@ export const amberlangcomPackage = {
   */
   versions: [
     '0.6.0-alpha',
-    '0.5.1-alpha',
     '0.5.1',
-    '0.5.0-alpha',
+    '0.5.1-alpha',
     '0.5.0',
-    '0.4.0-alpha',
+    '0.5.0-alpha',
     '0.4.0',
-    '0.3.5-alpha',
+    '0.4.0-alpha',
     '0.3.5',
+    '0.3.5-alpha',
     '0.3.4',
+    '0.3.4-alpha',
     '0.3.3',
+    '0.3.3-alpha',
     '0.3.2',
+    '0.3.2-alpha',
     '0.3.1',
+    '0.3.1-alpha',
   ] as const,
   aliases: [] as const,
 }

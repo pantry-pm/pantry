@@ -3,7 +3,7 @@
  *
  * @domain `youtube-dl.org`
  * @programs `youtube-dl`
- * @version `2023.8.4` (2 versions available)
+ * @version `2023.08.04` (3 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install youtube-dl.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "youtube-dl"
  * console.log(pkg.description) // "Command-line program to download videos from Yo..."
  * console.log(pkg.programs)    // ["youtube-dl"]
- * console.log(pkg.versions[0]) // "2023.8.4" (latest)
+ * console.log(pkg.versions[0]) // "2023.08.04" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/youtube-dl-org.md
@@ -67,6 +67,7 @@ export const youtubedlorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2023.08.04',
     '2023.8.4',
     '2021.12.17',
   ] as const,

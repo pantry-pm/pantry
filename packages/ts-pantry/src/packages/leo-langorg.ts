@@ -3,7 +3,7 @@
  *
  * @domain `leo-lang.org`
  * @programs `leo`
- * @version `3.5.0` (24 versions available)
+ * @version `4.0.2` (27 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install leo-lang.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "leo"
  * console.log(pkg.description) // "🦁 The Leo Programming Language. A Programming ..."
  * console.log(pkg.programs)    // ["leo"]
- * console.log(pkg.versions[0]) // "3.5.0" (latest)
+ * console.log(pkg.versions[0]) // "4.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/leo-lang-org.md
@@ -75,6 +75,9 @@ export const leolangorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.0.2',
+    '4.0.1',
+    '4.0.0',
     '3.5.0',
     '3.4.0',
     '3.3.1',

@@ -3,7 +3,7 @@
  *
  * @domain `clog-tool.github.io`
  * @programs `clog`
- * @version `0.9.3` (1 versions available)
+ * @version `1.3.0` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install clog-tool.github.io`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "clog"
  * console.log(pkg.description) // "Colorized pattern-matching log tail utility"
  * console.log(pkg.programs)    // ["clog"]
- * console.log(pkg.versions[0]) // "0.9.3" (latest)
+ * console.log(pkg.versions[0]) // "1.3.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/clog-tool-github-io.md
@@ -60,6 +60,10 @@ export const clogtoolgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.3.0',
+    '1.2.1',
+    '1.2.0',
+    '1.1.0',
     '0.9.3',
   ] as const,
   aliases: [] as const,

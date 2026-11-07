@@ -3,7 +3,7 @@
  *
  * @domain `git-scm.org`
  * @programs `git`, `git-cvsserver`, `git-receive-pack`, `git-shell`, `git-upload-archive`, ... (+2 more)
- * @version `2.56.0` (35 versions available)
+ * @version `2.56.0` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-scm.org`
@@ -80,7 +80,25 @@ export const gitscmorgPackage = {
   */
   versions: [
     '2.56.0',
+    '2.56.0-rc2',
+    '2.56.0-rc1',
+    '2.56.0-rc0',
+    '2.55.0',
+    '2.55.0-rc2',
+    '2.55.0-rc1',
+    '2.55.0-rc0',
+    '2.54.0',
+    '2.54.0-rc2',
+    '2.54.0-rc1',
+    '2.54.0-rc0',
     '2.53.0',
+    '2.53.0-rc2',
+    '2.53.0-rc1',
+    '2.53.0-rc0',
+    '2.52.0',
+    '2.52.0-rc2',
+    '2.52.0-rc1',
+    '2.52.0-rc0',
     '2.51.2',
     '2.51.1',
     '2.51.0',

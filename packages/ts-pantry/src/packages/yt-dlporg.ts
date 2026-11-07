@@ -3,7 +3,7 @@
  *
  * @domain `yt-dlp.org`
  * @programs `yt-dlp`
- * @version `2026.3.17` (68 versions available)
+ * @version `2026.10.26` (85 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install yt-dlp.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "yt-dlp"
  * console.log(pkg.description) // "A feature-rich command-line audio/video downloader"
  * console.log(pkg.programs)    // ["yt-dlp"]
- * console.log(pkg.versions[0]) // "2026.3.17" (latest)
+ * console.log(pkg.versions[0]) // "2026.10.26" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/yt-dlp-org.md
@@ -68,20 +68,37 @@ export const ytdlporgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2026.10.26',
+    '2026.10.21',
+    '2026.08.19',
+    '2026.07.04',
+    '2026.06.09',
+    '2026.03.17',
     '2026.3.17',
+    '2026.03.13',
     '2026.3.13',
+    '2026.03.03',
     '2026.3.3',
+    '2026.02.21',
     '2026.2.21',
+    '2026.02.04',
     '2026.2.4',
+    '2026.01.31',
     '2026.1.31',
+    '2026.01.29',
     '2026.1.29',
+    '2025.12.08',
     '2025.12.8',
     '2025.11.12',
     '2025.10.22',
     '2025.10.14',
+    '2025.09.26',
     '2025.9.26',
+    '2025.09.23',
     '2025.9.23',
+    '2025.09.05',
     '2025.9.5',
+    '2025.08.27',
     '2025.8.27',
     '2025.8.22',
     '2025.8.20',

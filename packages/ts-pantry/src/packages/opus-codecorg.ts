@@ -2,7 +2,7 @@
  * **opus-codec** - Modern audio compression for the internet.
  *
  * @domain `opus-codec.org`
- * @version `1.6.1` (7 versions available)
+ * @version `1.6.1` (10 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install opus-codec.org`
@@ -66,9 +66,12 @@ export const opuscodecorgPackage = {
     '1.6.0',
     '1.5.2',
     '1.5.1',
+    '1.5',
     '1.5.0',
+    '1.4',
     '1.4.0',
     '1.3.1',
+    '1.1.2',
   ] as const,
   aliases: [] as const,
 }

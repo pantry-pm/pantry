@@ -3,7 +3,7 @@
  *
  * @domain `pre-commit.com`
  * @programs `pre-commit`
- * @version `4.5.1` (26 versions available)
+ * @version `4.7.0` (30 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pre-commit.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pre-commit"
  * console.log(pkg.description) // "A framework for managing and maintaining multi-..."
  * console.log(pkg.programs)    // ["pre-commit"]
- * console.log(pkg.versions[0]) // "4.5.1" (latest)
+ * console.log(pkg.versions[0]) // "4.7.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pre-commit-com.md
@@ -67,6 +67,10 @@ export const precommitcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.7.0',
+    '4.6.2',
+    '4.6.1',
+    '4.6.0',
     '4.5.1',
     '4.5.0',
     '4.4.0',

@@ -3,7 +3,7 @@
  *
  * @domain `capstone-engine.org`
  * @programs `cstool`
- * @version `5.0.7` (8 versions available)
+ * @version `5.0.9` (19 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install capstone-engine.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "cstool"
  * console.log(pkg.description) // "Capstone disassembly/disassembler framework for..."
  * console.log(pkg.programs)    // ["cstool"]
- * console.log(pkg.versions[0]) // "5.0.7" (latest)
+ * console.log(pkg.versions[0]) // "5.0.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/capstone-engine-org.md
@@ -67,14 +67,25 @@ export const capstoneengineorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.0.9',
+    '5.0.8',
     '5.0.7',
     '5.0.6',
     '5.0.5',
     '5.0.3',
     '5.0.2',
     '5.0.1',
+    '5.0',
     '5.0.0',
     '4.0.2',
+    '4.0.1',
+    '4.0',
+    '3.0.5',
+    '3.0.4',
+    '3.0.3',
+    '3.0.2',
+    '3.0.1',
+    '3.0',
   ] as const,
   aliases: [] as const,
 }

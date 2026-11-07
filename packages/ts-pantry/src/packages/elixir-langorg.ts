@@ -3,7 +3,7 @@
  *
  * @domain `elixir-lang.org`
  * @programs `elixir`, `elixirc`, `iex`, `mix`
- * @version `1.19.5` (30 versions available)
+ * @version `1.20.5` (42 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install elixir-lang.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "elixir-lang"
  * console.log(pkg.description) // "Elixir is a dynamic, functional language for bu..."
  * console.log(pkg.programs)    // ["elixir", "elixirc", ...]
- * console.log(pkg.versions[0]) // "1.19.5" (latest)
+ * console.log(pkg.versions[0]) // "1.20.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/elixir-lang-org.md
@@ -70,12 +70,24 @@ export const elixirlangorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.20.5',
+    '1.20.4',
+    '1.20.3',
+    '1.20.2',
+    '1.20.1',
+    '1.20.0',
+    '1.20-latest',
+    '1.19.7',
+    '1.19.6',
     '1.19.5',
     '1.19.4',
     '1.19.3',
     '1.19.2',
     '1.19.1',
     '1.19.0',
+    '1.19-latest',
+    '1.18.6',
+    '1.18.5',
     '1.18.4',
     '1.18.3',
     '1.18.2',

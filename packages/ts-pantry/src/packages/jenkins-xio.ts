@@ -3,7 +3,7 @@
  *
  * @domain `jenkins-x.io`
  * @programs `jx`
- * @version `3.16.56` (87 versions available)
+ * @version `3.17.120` (93 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install jenkins-x.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "Jenkins X"
  * console.log(pkg.description) // "Jenkins X provides automated CI+CD for Kubernet..."
  * console.log(pkg.programs)    // ["jx"]
- * console.log(pkg.versions[0]) // "3.16.56" (latest)
+ * console.log(pkg.versions[0]) // "3.17.120" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/jenkins-x-io.md
@@ -67,6 +67,12 @@ export const jenkinsxioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.17.120',
+    '3.17.116',
+    '3.17.111',
+    '3.17.98',
+    '3.17.97',
+    '3.17.74',
     '3.16.56',
     '3.16.54',
     '3.16.49',

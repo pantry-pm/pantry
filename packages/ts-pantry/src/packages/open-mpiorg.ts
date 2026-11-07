@@ -3,7 +3,7 @@
  *
  * @domain `open-mpi.org`
  * @programs `mpic++`, `mpiCC`, `mpicc`, `mpicxx`, `mpiexec`, ... (+6 more)
- * @version `5.0.10` (13 versions available)
+ * @version `6.0.0rc3` (29 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install open-mpi.org`
@@ -20,7 +20,7 @@
  * console.log(pkg.name)        // "open-mpi"
  * console.log(pkg.description) // "Open MPI main development repository"
  * console.log(pkg.programs)    // ["mpic++", "mpiCC", ...]
- * console.log(pkg.versions[0]) // "5.0.10" (latest)
+ * console.log(pkg.versions[0]) // "6.0.0rc3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/open-mpi-org.md
@@ -97,10 +97,26 @@ export const openmpiorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.0.0rc3',
+    '6.0.0rc2',
+    '6.0.0rc1',
+    '5.0.11',
+    '5.0.11rc1',
     '5.0.10',
+    '5.0.10rc2',
+    '5.0.10rc1',
     '5.0.9',
+    '5.0.9rc2',
+    '5.0.9rc1',
+    '5.0.9amzn1',
     '5.0.8',
+    '5.0.8rc3',
+    '5.0.8rc2',
+    '5.0.8rc1',
+    '5.0.8amzn1',
     '5.0.7',
+    '5.0.7rc2',
+    '5.0.7rc1',
     '5.0.6',
     '5.0.5',
     '5.0.4',

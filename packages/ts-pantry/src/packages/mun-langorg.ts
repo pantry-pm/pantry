@@ -3,7 +3,7 @@
  *
  * @domain `mun-lang.org`
  * @programs `mun`
- * @version `0.5.0` (1 versions available)
+ * @version `0.5.0` (6 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install mun-lang.org`
@@ -77,6 +77,11 @@ export const munlangorgPackage = {
   */
   versions: [
     '0.5.0',
+    '0.4.0',
+    '0.3.0',
+    '0.2.1',
+    '0.2.0',
+    '0.1.0',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `project-copacetic.github.io`
  * @programs `copa`
- * @version `0.13.0` (9 versions available)
+ * @version `0.15.0` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install project-copacetic.github.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "copa"
  * console.log(pkg.description) // "Tool to directly patch container images given t..."
  * console.log(pkg.programs)    // ["copa"]
- * console.log(pkg.versions[0]) // "0.13.0" (latest)
+ * console.log(pkg.versions[0]) // "0.15.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/project-copacetic-github-io.md
@@ -67,6 +67,10 @@ export const projectcopaceticgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.15.0',
+    '0.14.2',
+    '0.14.1',
+    '0.14.0',
     '0.13.0',
     '0.12.0',
     '0.11.1',
@@ -76,6 +80,13 @@ export const projectcopaceticgithubioPackage = {
     '0.8.0',
     '0.7.0',
     '0.6.2',
+    '0.6.1',
+    '0.6.0',
+    '0.5.1',
+    '0.5.0',
+    '0.4.1',
+    '0.4.0',
+    '0.3.0',
   ] as const,
   aliases: [] as const,
 }

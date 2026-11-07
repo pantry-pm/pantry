@@ -3,7 +3,7 @@
  *
  * @domain `html-tidy.org`
  * @programs `tidy`
- * @version `5.8.0` (1 versions available)
+ * @version `5.8.0` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install html-tidy.org`
@@ -68,6 +68,10 @@ export const htmltidyorgPackage = {
   */
   versions: [
     '5.8.0',
+    '5.6.0',
+    '5.4.0',
+    '5.2.0',
+    '5.0.0',
   ] as const,
   aliases: [] as const,
 }

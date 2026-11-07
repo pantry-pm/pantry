@@ -3,7 +3,7 @@
  *
  * @domain `terraform-docs.io`
  * @programs `terraform-docs`
- * @version `0.21.0` (6 versions available)
+ * @version `0.24.0` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install terraform-docs.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "terraform-docs"
  * console.log(pkg.description) // "Generate documentation from Terraform modules i..."
  * console.log(pkg.programs)    // ["terraform-docs"]
- * console.log(pkg.versions[0]) // "0.21.0" (latest)
+ * console.log(pkg.versions[0]) // "0.24.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/terraform-docs-io.md
@@ -67,12 +67,26 @@ export const terraformdocsioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.24.0',
+    '0.23.0',
+    '0.22.0',
     '0.21.0',
     '0.20.0',
     '0.19.0',
     '0.18.0',
     '0.17.0',
     '0.16.0',
+    '0.15.0',
+    '0.14.1',
+    '0.14.0',
+    '0.13.0',
+    '0.12.1',
+    '0.12.0',
+    '0.11.2',
+    '0.11.1',
+    '0.11.0',
+    '0.10.1',
+    '0.10.0',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `cloudnative-pg.io`
  * @programs `kubectl-cnpg`
- * @version `1.28.1` (17 versions available)
+ * @version `1.30.1` (31 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cloudnative-pg.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "kubectl-cnpg"
  * console.log(pkg.description) // "CloudNativePG is a comprehensive platform desig..."
  * console.log(pkg.programs)    // ["kubectl-cnpg"]
- * console.log(pkg.versions[0]) // "1.28.1" (latest)
+ * console.log(pkg.versions[0]) // "1.30.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/cloudnative-pg-io.md
@@ -67,8 +67,22 @@ export const cloudnativepgioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.30.1',
+    '1.30.0',
+    '1.30.0-rc1',
+    '1.29.3',
+    '1.29.2',
+    '1.29.1',
+    '1.29.0',
+    '1.29.0-rc1',
+    '1.28.4',
+    '1.28.3',
+    '1.28.2',
     '1.28.1',
     '1.28.0',
+    '1.28.0-rc2',
+    '1.28.0-rc1',
+    '1.27.4',
     '1.27.3',
     '1.27.2',
     '1.27.1',
