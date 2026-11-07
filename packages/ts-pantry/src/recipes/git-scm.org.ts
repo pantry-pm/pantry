@@ -19,6 +19,11 @@ export const recipe: Recipe = {
       'gnu.org/libiconv': '*',
     },
   },
+  buildDependencies: {
+    // Git 2.56 builds libgitcore through Cargo; never depend on a runner's rustup.
+    'rust-lang.org': '>=1.49',
+    'rust-lang.org/cargo': '*',
+  },
   versionSource: {
     type: 'github-tags',
     repo: 'git/git',
