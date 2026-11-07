@@ -94,7 +94,7 @@ export interface PackageRecipe {
   programs?: string[]
   publish?: { include: string[] }
   sourceablePrograms?: string[]
-  distributable?: RecipeDistributable
+  distributable?: RecipeDistributable | null
   dependencies?: RecipeDependencyMap
   buildDependencies?: RecipeDependencyMap
   build?: RecipeBuildConfig | string | RecipeScriptStep[]
