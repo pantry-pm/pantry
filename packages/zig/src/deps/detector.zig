@@ -70,6 +70,20 @@ const deps_files_table = [_]DepsFileInfo{
     .{ .name = "composer.json", .format = .composer_json },
 };
 
+/// Find a dependency file owned by this directory, without walking to a parent.
+pub fn findDepsFileInDirectory(allocator: std.mem.Allocator, directory: []const u8) !?DepsFile {
+    for (deps_files_table) |entry| {
+        const path = try std.fs.path.join(allocator, &.{ directory, entry.name });
+        errdefer allocator.free(path);
+        io_helper.accessAbsolute(path, .{}) catch {
+            allocator.free(path);
+            continue;
+        };
+        return .{ .path = path, .format = entry.format };
+    }
+    return null;
+}
+
 /// Find dependency file in directory or parent directories
 pub fn findDepsFile(allocator: std.mem.Allocator, start_dir: []const u8) !?DepsFile {
     var current_dir_buf: [std.fs.max_path_bytes]u8 = undefined;

@@ -9,6 +9,47 @@ const binary = process.env.PANTRY_SOURCE_CLI
 // The normal unit pass runs before the CLI is built. CI invokes this suite
 // again with the source binary, and verifies its exact commit before testing.
 describe.skipIf(!binary)('source CLI companion workspace lifecycle', () => {
+  it('uses the root companion from a member and prunes removed native parents', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pantry-member-companion-'))
+    try {
+      const member = join(root, 'packages/app')
+      const formatter = join(root, 'packages/formatter')
+      mkdirSync(member, { recursive: true })
+      mkdirSync(formatter, { recursive: true })
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'member-companion', private: true, workspaces: ['packages/*'] }))
+      writeFileSync(join(root, 'deps.yaml'), 'dependencies:\n')
+      writeFileSync(join(member, 'package.json'), JSON.stringify({ name: '@fixture/app', version: '1.0.0', devDependencies: { prettier: 'file:../formatter' } }))
+      writeFileSync(join(formatter, 'package.json'), JSON.stringify({ name: 'prettier', version: '1.0.0' }))
+      const env = { ...process.env, XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PANTRY_ENV_DEPS: '0' }
+      const run = (cwd: string, args: string[]) => {
+        const child = spawnSync(binary!, ['install', '--ignore-scripts', ...args], { cwd, env, encoding: 'utf8', timeout: 30_000 })
+        if (child.error) throw child.error
+        expect(child.status, child.stdout + child.stderr).toBe(0)
+      }
+      run(root, [])
+      const path = join(root, 'pantry.lock')
+      const committed = readFileSync(path, 'utf8')
+      run(member, ['--frozen-lockfile'])
+      expect(readFileSync(path, 'utf8')).toBe(committed)
+      run(member, [])
+      expect(readFileSync(path, 'utf8')).toBe(committed)
+      expect(Object.keys(JSON.parse(committed).workspaces[''].system ?? {})).toEqual([])
+
+      // Removed Node once declared the OS-guarded zlib pin. An obsolete parent
+      // cannot keep that pin alive after today's workspace no longer needs it.
+      const old = JSON.parse(committed)
+      for (const [name, version] of [['nodejs.org', '20.20.2'], ['zlib.net', '1.3.2']]) {
+        old.packages[`${name}@${version}`] = { name, version, source: 'pantry', resolved: `registry:${name}@${version}` }
+      }
+      writeFileSync(path, JSON.stringify(old))
+      run(member, [])
+      expect(readFileSync(path, 'utf8')).toBe(committed)
+      run(member, ['--frozen-lockfile'])
+      expect(readFileSync(path, 'utf8')).toBe(committed)
+    }
+    finally { rmSync(root, { recursive: true, force: true }) }
+  }, 45_000)
+
   it('replays a compatible companion native pin instead of installing a newer release', () => {
     const root = mkdtempSync(join(tmpdir(), 'pantry-companion-pin-'))
     try {

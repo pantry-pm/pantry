@@ -4,6 +4,7 @@ test {
     // The install failure report and transient-failure classification.
     _ = @import("cli/style.zig");
     _ = @import("cli/commands/install/core.zig");
+    _ = @import("cli/commands/install/workspace.zig");
     // Scope pinning: private scopes resolve from their Pantry registry only.
     // Rooted here rather than in test_registry_root.zig because reading a
     // manifest reaches the dependency parser, which needs zig_config.

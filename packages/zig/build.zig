@@ -510,6 +510,8 @@ pub fn build(b: *std.Build) void {
     const native_lock_step = b.step("test:native-lock", "Keep direct, transitive and foreign-platform native pins stable");
     const native_lock_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "native lock pins", "a lock pin decides", "a frozen lock accepts", "platformDependentClosure", "foreign", "companion workspace" } });
     native_lock_step.dependOn(&b.addRunArtifact(native_lock_tests).step);
+    const workspace_pin_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{"foreign pins"} });
+    native_lock_step.dependOn(&b.addRunArtifact(workspace_pin_tests).step);
     const materialization_test_step = b.step("test:materialization", "Run native install ownership and publication failure regressions");
     const focused_materialization_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"native materialization:"} });
     materialization_test_step.dependOn(&b.addRunArtifact(focused_materialization_tests).step);
