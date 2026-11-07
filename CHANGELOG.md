@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.181...v0.11.182)
+
+## 🐛 Bug Fixes
+
+- **desktop**: recognize the installed Claude bundle by its native name ([f0c37e3](https://github.com/pantry-pm/pantry/commit/f0c37e3)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.182 ([8e220de](https://github.com/pantry-pm/pantry/commit/8e220de)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.180...v0.11.181)
 
 ## ✨ Features
