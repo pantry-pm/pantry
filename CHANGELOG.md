@@ -1,3 +1,34 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.185...v0.11.186)
+
+## 🐛 Bug Fixes
+
+- build ncurses and zlib for the declared macOS baseline ([6fe9e0d](https://github.com/pantry-pm/pantry/commit/6fe9e0d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **desktop**: separate GPT4All app from its legacy CLI and extract the real bundle ([39f11dc](https://github.com/pantry-pm/pantry/commit/39f11dc)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **workflows**: record desktop manifests only from main ([d776945](https://github.com/pantry-pm/pantry/commit/d776945)) _(by Chris Breuer <chris@stacksjs.com>)_
+- resolve workspace companion dependencies from their root ([026cf43](https://github.com/pantry-pm/pantry/commit/026cf43)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#305](https://github.com/pantry-pm/pantry/issues/305))
+- **desktop**: publish every app from a verified platform-specific update plan ([e15f59b](https://github.com/pantry-pm/pantry/commit/e15f59b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 💄 Styles
+
+- **zig**: format generated desktop aliases with the pinned compiler ([d875a95](https://github.com/pantry-pm/pantry/commit/d875a95)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **desktop**: enforce query and manifest publication boundaries ([3b6dbd7](https://github.com/pantry-pm/pantry/commit/3b6dbd7)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.186 ([a979040](https://github.com/pantry-pm/pantry/commit/a979040)) _(by Chris Breuer <chris@stacksjs.com>)_
+- integrate current main before desktop publishing ([11a7687](https://github.com/pantry-pm/pantry/commit/11a7687)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/desktop-update-coverage ([6353c6d](https://github.com/pantry-pm/pantry/commit/6353c6d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.184...v0.11.185)
 
 ## 🐛 Bug Fixes
