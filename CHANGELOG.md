@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.177...v0.11.178)
+
+## 🐛 Bug Fixes
+
+- **install**: preserve filesystem metadata and activate root programs ([629868c](https://github.com/pantry-pm/pantry/commit/629868c)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#297](https://github.com/pantry-pm/pantry/issues/297), [#296](https://github.com/pantry-pm/pantry/issues/296))
+
+## 🔧 Chores
+
+- release v0.11.178 ([303451b](https://github.com/pantry-pm/pantry/commit/303451b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.176...v0.11.177)
 
 ## 🐛 Bug Fixes
