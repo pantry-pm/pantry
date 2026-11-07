@@ -18,6 +18,7 @@ import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantry
 import { installResolvedSystemPackages } from './system-packages'
 import { nativeArtifactCacheIdentity } from './native-cache'
 import { dependencyCache } from './cache-service'
+import { preserveCommandActivations } from './cache-activations'
 import { exportBuildCacheEnvironment } from './build-archive-cache-env'
 import { buildArchiveCacheDir } from './build-archive-cache'
 import type { ServiceSpec } from './services'
@@ -862,24 +863,20 @@ export async function run(): Promise<void> {
     // system-package links that need re-asserting afterwards
     let ranPantryInstall = false
 
-    // Try restoring from cache
-    try {
-      const hit = artifactIdentity ? await dependencyCacheService.restore([pantryDir], cacheKey, restoreKeys) : undefined
-      if (hit) {
-        // Verify cache is valid — .bin dir should exist with actual binaries
-        const binDirExists = fs.existsSync(pantryBinDir)
-        const hasEntries = binDirExists && fs.readdirSync(pantryBinDir).length > 0
-        if (hasEntries) {
-          cacheHit = hit === cacheKey
-          core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
-        }
-        else {
-          core.info('Cache restored but incomplete — reinstalling')
-        }
+    // Cache extraction must not overwrite an earlier setup's selected commands.
+    // A cache miss is optional; losing an existing activation is a hard failure.
+    const hit = artifactIdentity ? await preserveCommandActivations(pantryBinDir, () =>
+      dependencyCacheService.restore([pantryDir], cacheKey, restoreKeys).catch(() => undefined)) : undefined
+    if (hit) {
+      const binDirExists = fs.existsSync(pantryBinDir)
+      const hasEntries = binDirExists && fs.readdirSync(pantryBinDir).length > 0
+      if (hasEntries) {
+        cacheHit = hit === cacheKey
+        core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
       }
-    }
-    catch {
-      // cache miss or unavailable
+      else {
+        core.info('Cache restored but incomplete — reinstalling')
+      }
     }
 
     // Lockfile-pinned versions (map of domain → concrete version). Consulted

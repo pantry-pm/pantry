@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, realpathSync } from 'node:fs'
 
 const manifest = Bun.JSONC.parse(readFileSync(new URL('../../pantry.jsonc', import.meta.url), 'utf8'))
 assert(manifest && typeof manifest === 'object' && 'dependencies' in manifest, 'Workspace dependencies are required')
@@ -14,5 +14,5 @@ const zig = Bun.which('zig')
 assert(zig, 'The declared Zig compiler must be activated through Pantry')
 const result = Bun.spawnSync([zig, 'version'], { stdout: 'pipe', stderr: 'pipe', timeout: 10000 })
 assert.equal(result.exitCode, 0, result.stderr.toString())
+console.log(JSON.stringify({ bun: Bun.version, zig: result.stdout.toString().trim(), executable: zig, resolvedExecutable: realpathSync(zig) }))
 assert.equal(result.stdout.toString().trim(), expectedZig, 'A later tool install must preserve the workspace compiler pin')
-console.log(JSON.stringify({ bun: Bun.version, zig: result.stdout.toString().trim(), executable: zig }))

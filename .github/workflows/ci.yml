@@ -232,9 +232,9 @@ jobs:
 
       - name: Seed a stale legacy Zig cache beside the selected compiler
         run: |
-          mkdir -p pantry/zig/legacy-activation-fixture
-          printf '#!/bin/sh\nprintf "stale-compiler-cache\\n"\n' > pantry/zig/legacy-activation-fixture/zig
-          chmod 755 pantry/zig/legacy-activation-fixture/zig
+          mkdir -p "$HOME/.pantry/global/packages/ziglang.org/v0.0.0-stale"
+          printf '#!/bin/sh\nprintf "stale-compiler-cache\\n"\n' > "$HOME/.pantry/global/packages/ziglang.org/v0.0.0-stale/zig"
+          chmod 755 "$HOME/.pantry/global/packages/ziglang.org/v0.0.0-stale/zig"
 
       - name: Setup pinned Pantry and workspace dependencies
         uses: ./packages/action
