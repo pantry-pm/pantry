@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.183...v0.11.184)
+
+## 🐛 Bug Fixes
+
+- replay native lock pins throughout workspace installs ([1276cd7](https://github.com/pantry-pm/pantry/commit/1276cd7)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: include the bootstrap qualifier in container builds ([dabdc0c](https://github.com/pantry-pm/pantry/commit/dabdc0c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: restore stale owned bootstrap executables before provisioning ([2a44559](https://github.com/pantry-pm/pantry/commit/2a44559)) _(by Chris Breuer <chris@stacksjs.com>)_
+- declare the Rust toolchain required by Git 2.56 ([bf1c263](https://github.com/pantry-pm/pantry/commit/bf1c263)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **updates**: route signed Claude app releases through native macOS verification ([4fd33c8](https://github.com/pantry-pm/pantry/commit/4fd33c8)) _(by Chris Breuer <chris@stacksjs.com>)_
+- preserve the macOS 14 baseline for Git source builds ([f135f22](https://github.com/pantry-pm/pantry/commit/f135f22)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.184 ([c802130](https://github.com/pantry-pm/pantry/commit/c802130)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update ast-grep.github, browser-use, clog, copa, craft, crystal, cstool, elixir-lang, fna-xna.github, git-cliff, git-lfs, git-quick-stats, git-town, golangci-lint, hx, Jenkins X, kamal-deploy, kubectl-cnpg, leo, libjpeg-turbo, lima-vm, linux-pam, LLaMA.cpp, mypy-lang, nim-lang, oauth2-proxy, open-mpi, openapi-generator, pkl-lang, poetry, pre-commit, prql, python-pillow, ruby-lang, rust, sbt, scala-lang, sing-box, sphinx, tectonic, terraform-docs, tesseract, tree-sitter, youtube-dl, yt-dlp, zig ([6b5cdb0](https://github.com/pantry-pm/pantry/commit/6b5cdb0)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.182...v0.11.183)
 
 ## 🐛 Bug Fixes
