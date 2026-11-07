@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1770
+//! Total packages: 1771
 
 const std = @import("std");
 
@@ -29,7 +29,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1770 total)
+/// All known packages (1771 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -10932,6 +10932,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "linux:gnu.org/gcc", "linux:systemd.io" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "2.5.33", "2.5.32", "2.5.31" },
+}, .{
+    .name = "GPT4All",
+    .domain = "gpt4all.io",
+    .kind = .app,
+    .description = "Run local AI models in the GPT4All desktop app.",
+    .homepage_url = "https://gpt4all.io",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{},
+    .aliases = &[_][]const u8{ "gpt4all-desktop", "gpt4all-app" },
+    .versions = &[_][]const u8{"3.10.0"},
 }, .{
     .name = "gqlgen",
     .domain = "gqlgen.com",

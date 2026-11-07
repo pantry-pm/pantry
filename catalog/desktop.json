@@ -317,6 +317,12 @@
       "label": "Claude",
       "desc": "Anthropic desktop app with Claude Code, chat and Cowork.",
       "category": "Development"
+    },
+    {
+      "domain": "gpt4all.io",
+      "label": "GPT4All",
+      "desc": "Run local AI models in a desktop app",
+      "category": "Development"
     }
   ],
   "fonts": [

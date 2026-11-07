@@ -1036,6 +1036,7 @@ import { googlegithubiosnappyPackage } from './google.github.io/snappy'
 import { goreleasercomPackage } from './goreleasercom'
 import { gourceioPackage } from './gourceio'
 import { gphotoorglibgphoto2Package } from './gphoto.org/libgphoto2'
+import { gpt4allioPackage } from './gpt4allio'
 import { gqlgencomPackage } from './gqlgencom'
 import { gradlePackage } from './gradleorg'
 import { grafanacomlokiPackage } from './grafana.com/loki'
@@ -3622,6 +3623,7 @@ export interface Pantry {
   gourceio: typeof gourceioPackage
   libgphoto2: typeof gphotoorglibgphoto2Package
   gphotoorglibgphoto2: typeof gphotoorglibgphoto2Package
+  gpt4allio: typeof gpt4allioPackage
   gqlgencom: typeof gqlgencomPackage
   gradleorg: typeof gradlePackage
 
@@ -5271,6 +5273,9 @@ export interface Pantry {
   gpp: typeof logologicalorggppPackage
   'GPT Engineer': typeof gptengineerPackage
   gpt4all: typeof gpt4allPackage
+  GPT4All: typeof gpt4allioPackage
+  'gpt4all-app': typeof gpt4allioPackage
+  'gpt4all-desktop': typeof gpt4allioPackage
   gql: typeof graphqleditorcomgqlPackage
   gqlgen: typeof gqlgencomPackage
   gr2fonttest: typeof graphitesilorgPackage
@@ -8342,6 +8347,7 @@ export const pantry: Pantry = {
   gourceio: gourceioPackage,
   libgphoto2: gphotoorglibgphoto2Package,
   gphotoorglibgphoto2: gphotoorglibgphoto2Package,
+  gpt4allio: gpt4allioPackage,
   gqlgencom: gqlgencomPackage,
   gradleorg: gradlePackage,
 
@@ -9991,6 +9997,9 @@ export const pantry: Pantry = {
   gpp: logologicalorggppPackage,
   'GPT Engineer': gptengineerPackage,
   gpt4all: gpt4allPackage,
+  GPT4All: gpt4allioPackage,
+  'gpt4all-app': gpt4allioPackage,
+  'gpt4all-desktop': gpt4allioPackage,
   gql: graphqleditorcomgqlPackage,
   gqlgen: gqlgencomPackage,
   gr2fonttest: graphitesilorgPackage,

@@ -63,6 +63,22 @@ describe('latestGithub', () => {
     expect(calls.some(c => c.includes('per_page'))).toBe(false)
   })
 
+  test('includes newer prereleases only when the recipe opts in', async () => {
+    stubGithub({ tag_name: 'v1.0.0', assets: [] }, [
+      { tag_name: 'v1.0.0', assets: [] },
+      { tag_name: 'v2.0.0-rc.1', prerelease: true, assets: [] },
+    ])
+    expect(await latestGithub('example/app', undefined, false)).toBe('2.0.0-rc.1')
+  })
+
+  test('checks the release list when GitHub has no latest stable release', async () => {
+    globalThis.fetch = (async (url: string | URL | Request) => String(url).includes('/releases/latest')
+      ? new Response('{}', { status: 404 })
+      : Response.json([{ tag_name: 'v1.0.0-rc.1', prerelease: true, assets: [] }])) as typeof fetch
+    expect(await latestGithub('example/app', undefined, false)).toBe('1.0.0-rc.1')
+    expect(await latestGithub('example/app')).toBeNull()
+  })
+
   test('steps back past a release whose only assets are mobile builds', async () => {
     // Obsidian's v1.13.8 is Android-only; the newest desktop build is v1.13.7.
     stubGithub(
@@ -121,6 +137,10 @@ describe('catalog-wide publication contracts', () => {
     expect(domains).toContain('github.com/desktop')
     expect(domains).toContain('github.com/stacksjs/launchpad')
     expect(domains).toContain('bitwarden.com/desktop')
+    expect(domains).toContain('gpt4all.io')
+    expect(domains).not.toContain('github.com/nomic-ai/gpt4all')
+    expect((await loadRecipe('gpt4all.io')).recipe.programs).toEqual([])
+    expect((await loadRecipe('github.com/nomic-ai/gpt4all')).desktopApp).toBe(false)
     expect(domains).not.toContain('bitwarden.com')
     expect((await loadRecipe('bitwarden.com/desktop')).recipe.programs).toEqual([])
     expect((await loadRecipe('docker.com/desktop')).recipe.programs).toEqual(['docker-desktop'])

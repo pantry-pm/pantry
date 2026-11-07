@@ -75,12 +75,13 @@ function desktopRelease(release: any): boolean {
 export async function latestGithub(repo: string, pattern?: RegExp, stable = true): Promise<string | null> {
   const get = async (path: string) => {
     const response = await fetch(`https://api.github.com/repos/${repo}/${path}`, { headers: ghHeaders(), signal: AbortSignal.timeout(TIMEOUT) })
+    if (response.status === 404 && path === 'releases/latest') return null
     if (!response.ok) throw new Error(`${repo}: HTTP ${response.status}`)
     return response.json() as Promise<any>
   }
   const latest = await get('releases/latest')
-  const version = tagVersion(latest.tag_name, pattern)
-  if (version && !latest.draft && (!stable || !latest.prerelease) && desktopRelease(latest)) return version
+  const version = tagVersion(latest?.tag_name, pattern)
+  if (stable && version && !latest.draft && (!stable || !latest.prerelease) && desktopRelease(latest)) return version
   const releases = await get('releases?per_page=100')
   if (!Array.isArray(releases)) throw new Error(`${repo}: invalid GitHub releases response`)
   const versions = releases.filter(release => !release.draft && (!stable || !release.prerelease) && desktopRelease(release))
