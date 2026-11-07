@@ -1,3 +1,31 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.180...v0.11.181)
+
+## ✨ Features
+
+- **apps**: package the signed Claude desktop app with Code support ([22f3030](https://github.com/pantry-pm/pantry/commit/22f3030)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **types**: include Claude desktop in generated package names ([2b1b592](https://github.com/pantry-pm/pantry/commit/2b1b592)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- retain existing DTSX recipe upgrade coverage ([648ec2f](https://github.com/pantry-pm/pantry/commit/648ec2f)) _(by Chris Breuer <chris@stacksjs.com>)_
+- cover fresh DTSX native recipe installation ([4b92033](https://github.com/pantry-pm/pantry/commit/4b92033)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.181 ([144d933](https://github.com/pantry-pm/pantry/commit/144d933)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update CLIProxyAPI, code-server, Codex, freetds, LLaMA.cpp, opencode.ai, projen, zig ([4cd9758](https://github.com/pantry-pm/pantry/commit/4cd9758)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## 🎉 Miscellaneous
+
+- Merge remote-tracking branch 'origin/main' into codex/claude-desktop-package ([7cbd19f](https://github.com/pantry-pm/pantry/commit/7cbd19f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.179...v0.11.180)
 
 ## ✨ Features
