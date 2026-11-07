@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "0e8f5715a3bb99577a071c73f9c9de9cdf4a169ade6c1b1c150b22be9af36796",
+  "revision": "e8dd43c7c66906d7712ddeea8695ee182d83c6f8c077d002a76d3f3133f8653a",
   "packages": [
     {
       "domain": "1password.com",
@@ -3026,7 +3026,7 @@
     },
     {
       "domain": "claude.ai",
-      "name": "Claude Desktop",
+      "name": "Claude",
       "description": "Anthropic desktop app with Claude Code, chat and Cowork.",
       "kind": "app",
       "aliases": [

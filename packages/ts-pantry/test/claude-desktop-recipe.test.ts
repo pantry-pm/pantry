@@ -44,6 +44,7 @@ test('Claude is a signed native app with separate desktop aliases and no termina
   const catalog = bundledPackageCatalog()
   const desktop = catalog.find(entry => entry.domain === 'claude.ai')
   expect(desktop?.kind).toBe('app')
+  expect(desktop?.name).toBe('Claude') // Match CFBundleName so native app discovery recognizes the installed bundle.
   expect(desktop?.programs).toEqual([])
   expect(typeof desktop?.latestVersion).toBe('string')
   expect(createPackageCatalogSearch(catalog)('claude-code-desktop')[0]?.domain).toBe('claude.ai')

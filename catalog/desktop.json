@@ -314,7 +314,7 @@
     },
     {
       "domain": "claude.ai",
-      "label": "Claude Desktop",
+      "label": "Claude",
       "desc": "Anthropic desktop app with Claude Code, chat and Cowork.",
       "category": "Development"
     }
