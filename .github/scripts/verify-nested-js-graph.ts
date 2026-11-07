@@ -95,6 +95,10 @@ try {
   const untouchedModule = join(project, 'node_modules/.user-file')
   await writeFile(untouchedModule, 'Unrelated module data\n')
   if (baseline) {
+    const identity = await run('baseline-version', [baseline, '--version'])
+    assert.match(identity.trim(), /^pantry 0\.11\.101(?:\s|$)/, 'Migration requires the actual historical 101 graph producer')
+    proof.baselineCliVersion = identity.trim()
+    proof.baselineCliSha256 = Bun.SHA256.hash(await readFile(baseline), 'hex')
     await run('baseline-install', [baseline, 'install'])
     proof.baselineParentBinding = await evaluate('pantry', parent, 'baseline-parent-binding')
     assert.equal(proof.baselineParentBinding, '1.0.0', 'The published 101 baseline must exercise the actual wrong shadow graph')
