@@ -18,6 +18,10 @@ const registry_versions_mod = @import("registry_versions.zig");
 const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
 const scopes = @import("../registry/scopes.zig");
+const native_deps = @import("native_deps.zig");
+const native_archives = @import("native_archives.zig");
+const native_identity = @import("../packages/native_identity.zig");
+const analytics = @import("analytics.zig");
 
 const pantryError = errors.pantryError;
 const Paths = core.Paths;
@@ -37,6 +41,27 @@ fn canRestoreLockTarball(version: []const u8, resolved: []const u8) bool {
     };
 }
 
+/// Verbose-only observations of the real native install phases. The awake
+/// clock excludes wall-clock adjustments; normal installs do no clock/log work.
+const InstallPhaseTimer = struct {
+    enabled: bool,
+    domain: []const u8,
+    version: []const u8,
+    phase: []const u8,
+    started_ms: i64,
+
+    fn start(enabled: bool, domain: []const u8, version: []const u8, phase: []const u8) InstallPhaseTimer {
+        if (enabled) std.debug.print("[verbose:installer:phase] {s}@{s} {s} start\n", .{ domain, version, phase });
+        return .{ .enabled = enabled, .domain = domain, .version = version, .phase = phase, .started_ms = if (enabled) std.Io.Clock.awake.now(io_helper.getIo()).toMilliseconds() else 0 };
+    }
+
+    fn finish(self: InstallPhaseTimer) void {
+        if (!self.enabled) return;
+        const elapsed = std.Io.Clock.awake.now(io_helper.getIo()).toMilliseconds() - self.started_ms;
+        std.debug.print("[verbose:installer:phase] {s}@{s} {s} elapsed={d}ms\n", .{ self.domain, self.version, self.phase, elapsed });
+    }
+};
+
 /// Installation options
 pub const InstallOptions = struct {
     /// Catalog installs may use bare Pantry domains, including font families.
@@ -55,6 +80,12 @@ pub const InstallOptions = struct {
     inline_progress: ?downloader.InlineProgressOptions = null,
     /// Skip transitive dependency resolution (caller handles it)
     skip_transitive_resolution: bool = false,
+    /// Exact preflight plan, borrowed until this invocation and descendants end.
+    native_plan: ?*const native_deps.Plan = null,
+    /// Invocation-owned, joined preparation. Entries contain unverified bytes.
+    prepared_archives: ?*native_archives.Prepared = null,
+    /// This invocation's record, never shared by concurrent descendants.
+    http_capture: ?*io_helper.TransientGetCapture = null,
     /// npm-style installs: the tarball must hash to this (`sha256:<hex>`,
     /// raw hex, or SRI) or the install fails before anything is extracted.
     expected_integrity: ?[]const u8 = null,
@@ -95,6 +126,41 @@ const InstallingStack = struct {
     map: std.StringHashMap(void),
     mutex: io_helper.Mutex,
     allocator: std.mem.Allocator,
+    native_gate: std.Io.Mutex = .init,
+    native_owner_mutex: io_helper.Mutex = .{},
+    native_owner: ?std.Thread.Id = null,
+    native_depth: usize = 0,
+
+    // Native callbacks and recursive children stay on their caller's OS
+    // thread in the Threaded backend. Only independent acquisition uses pools.
+    fn enterNative(self: *InstallingStack) std.Io.Cancelable!void {
+        const thread = std.Thread.getCurrentId();
+        self.native_owner_mutex.lock();
+        if (self.native_owner == thread) {
+            self.native_depth += 1;
+            self.native_owner_mutex.unlock();
+            return;
+        }
+        self.native_owner_mutex.unlock();
+
+        // Never park while holding the short owner-state or cycle-map lock.
+        try self.native_gate.lock(io_helper.getIo());
+        self.native_owner_mutex.lock();
+        std.debug.assert(self.native_owner == null and self.native_depth == 0);
+        self.native_owner = thread;
+        self.native_depth = 1;
+        self.native_owner_mutex.unlock();
+    }
+
+    fn leaveNative(self: *InstallingStack) void {
+        self.native_owner_mutex.lock();
+        std.debug.assert(self.native_owner == std.Thread.getCurrentId() and self.native_depth > 0);
+        self.native_depth -= 1;
+        const finished = self.native_depth == 0;
+        if (finished) self.native_owner = null;
+        self.native_owner_mutex.unlock();
+        if (finished) self.native_gate.unlock(io_helper.getIo());
+    }
 
     fn init(allocator: std.mem.Allocator) InstallingStack {
         return .{
@@ -135,6 +201,43 @@ const InstallingStack = struct {
         }
     }
 };
+
+test "native readiness: traversal permits owner recursion, cancels a waiting caller, and admits its successor" {
+    const io = std.testing.io;
+    var stack = InstallingStack.init(std.testing.allocator);
+    defer stack.deinit();
+    try stack.enterNative();
+    var held: usize = 1;
+    defer while (held > 0) : (held -= 1) stack.leaveNative();
+    try stack.enterNative();
+    held += 1;
+
+    const Waiter = struct {
+        stack: *InstallingStack,
+        started: std.Io.Event = .unset,
+        entered: std.atomic.Value(bool) = .init(false),
+
+        fn run(self: *@This()) !void {
+            self.started.set(std.testing.io);
+            try self.stack.enterNative();
+            defer self.stack.leaveNative();
+            self.entered.store(true, .release);
+        }
+    };
+    var blocked: Waiter = .{ .stack = &stack };
+    var waiting = try io.concurrent(Waiter.run, .{&blocked});
+    defer waiting.cancel(io) catch {};
+    try blocked.started.wait(io);
+    try std.testing.expectError(error.Canceled, waiting.cancel(io));
+    try std.testing.expect(!blocked.entered.load(.acquire));
+
+    while (held > 0) : (held -= 1) stack.leaveNative();
+    var successor: Waiter = .{ .stack = &stack };
+    var recovered = try io.concurrent(Waiter.run, .{&successor});
+    defer recovered.cancel(io) catch {};
+    try recovered.await(io);
+    try std.testing.expect(successor.entered.load(.acquire));
+}
 
 /// Thread-safe two-level npm cache.
 /// Level 1: package name → raw registry JSON bytes (avoids duplicate HTTP fetches).
@@ -294,7 +397,9 @@ pub const Installer = struct {
     /// In-memory cache of hoisted packages: name → installed version (avoids repeated filesystem checks)
     hoisted_versions: *HoisteVersionCache,
     /// Lockfile for lockfile-first resolution (skip npm registry queries when locked)
-    lockfile: ?*@import("../deps/resolution/lockfile.zig").LockFile = null,
+    lockfile: ?*const @import("../deps/resolution/lockfile.zig").LockFile = null,
+    native_policy: native_deps.Policy = .{},
+    native_session: ?*native_deps.Session = null,
     /// bun.lock pins. When the project also has a bun.lock, an npm range is
     /// resolved to bun.lock's version whenever that version satisfies it, so
     /// pantry/ and node_modules/ hold the same tree (stacksjs/stacks#2848).
@@ -385,6 +490,69 @@ pub const Installer = struct {
     /// Thread-safe cache tracking which packages are installed at the hoisted level.
     /// Eliminates redundant filesystem checks when the same transitive dep is encountered
     /// dozens of times in a dependency tree.
+    /// Immutable per-call preference. Legacy callers retain their generic
+    /// lock contract; an auto-npm call carries expected source and raw range.
+    pub const NpmLockPreference = union(enum) {
+        legacy,
+        npm: struct { declared_constraint: []const u8, force: bool = false },
+
+        fn constraint(self: NpmLockPreference, requested: []const u8) []const u8 {
+            return switch (self) {
+                .legacy => requested,
+                .npm => |context| context.declared_constraint,
+            };
+        }
+    };
+
+    fn npmPreferenceKey(name: []const u8, constraint: []const u8, force: bool) [64]u8 {
+        var hash = std.crypto.hash.sha2.Sha256.init(.{});
+        var length: [8]u8 = undefined;
+        std.mem.writeInt(u64, &length, @intCast(name.len), .little);
+        hash.update(&length);
+        hash.update(name);
+        std.mem.writeInt(u64, &length, @intCast(constraint.len), .little);
+        hash.update(&length);
+        hash.update(constraint);
+        const force_byte = [_]u8{@intFromBool(force)};
+        hash.update(&force_byte);
+        var digest: [32]u8 = undefined;
+        hash.final(&digest);
+        return std.fmt.bytesToHex(digest, .lower);
+    }
+
+    fn formatNpmResolutionKey(buffer: []u8, name: []const u8, requested: []const u8, preference: NpmLockPreference) ![]const u8 {
+        return switch (preference) {
+            .legacy => std.fmt.bufPrint(buffer, "{s}@{s}", .{ name, requested }),
+            .npm => |context| std.fmt.bufPrint(buffer, "npm-source:{s}", .{npmPreferenceKey(name, context.declared_constraint, context.force)}),
+        };
+    }
+
+    fn allocNpmResolutionKey(allocator: std.mem.Allocator, name: []const u8, requested: []const u8, preference: NpmLockPreference) ![]const u8 {
+        return switch (preference) {
+            .legacy => std.fmt.allocPrint(allocator, "{s}@{s}", .{ name, requested }),
+            .npm => |context| std.fmt.allocPrint(allocator, "npm-source:{s}", .{npmPreferenceKey(name, context.declared_constraint, context.force)}),
+        };
+    }
+
+    fn npmSourceLockPin(self: *Installer, name: []const u8, constraint: []const u8, force: bool) ?[]const u8 {
+        if (force) return null;
+        const original = self.lockfile orelse return null;
+        // Auto ambiguity remains pending until actual metadata establishes
+        // source. The pipeline validates it before payload admission.
+        const selected = @import("../deps/resolution/lockfile.zig").lockedVersionSatisfyingFromSource(original, name, constraint, .npm) catch return null;
+        const version = selected orelse return null;
+        if (self.preferredBunPin(name, constraint)) |bun| {
+            if (!std.mem.eql(u8, version, bun)) return null;
+        }
+        return version;
+    }
+
+    fn cacheResolutionWithPreference(self: *Installer, name: []const u8, requested: []const u8, preference: NpmLockPreference, version: []const u8, url: []const u8, integrity: ?[]const u8) void {
+        const key = allocNpmResolutionKey(self.allocator, name, requested, preference) catch return;
+        defer self.allocator.free(key);
+        self.npm_cache.putResolution(key, version, url, integrity);
+    }
+
     pub const HoisteVersionCache = struct {
         map: std.StringHashMap([]const u8),
         mutex: io_helper.Mutex,
@@ -556,7 +724,7 @@ pub const Installer = struct {
     }
 
     /// Set lockfile for lockfile-first resolution (skips npm registry on subsequent installs)
-    pub fn setLockfile(self: *Installer, lf: *@import("../deps/resolution/lockfile.zig").LockFile) void {
+    pub fn setLockfile(self: *Installer, lf: *const @import("../deps/resolution/lockfile.zig").LockFile) void {
         self.lockfile = lf;
     }
 
@@ -606,6 +774,12 @@ pub const Installer = struct {
         return self.npm_cache.getResolution(cache_key, self.allocator);
     }
 
+    pub fn getCachedNpmResolutionWithPreference(self: *Installer, name: []const u8, requested: []const u8, preference: NpmLockPreference) ?NpmResolution {
+        const key = allocNpmResolutionKey(self.allocator, name, requested, preference) catch return null;
+        defer self.allocator.free(key);
+        return self.npm_cache.getResolution(key, self.allocator);
+    }
+
     /// Batch install all packages from lockfile in parallel.
     /// This is the fast path when lockfile exists but modules are missing:
     /// 1. Flatten lockfile → list of {name, version, tarball_url}
@@ -634,6 +808,11 @@ pub const Installer = struct {
         var lf_iter = lf.packages.iterator();
         while (lf_iter.next()) |entry| {
             const pkg = entry.value_ptr.*;
+            switch (pkg.source) {
+                .known => |source| if (source != .npm) continue,
+                .invalid => continue,
+                .absent => {}, // legacy generic URL restore keeps its established behavior
+            }
             if (pkg.name.len == 0 or !canRestoreLockTarball(pkg.version, pkg.resolved)) continue;
 
             // Check if already installed on disk
@@ -762,9 +941,12 @@ pub const Installer = struct {
     /// Install a package
     pub fn install(
         self: *Installer,
-        spec: PackageSpec,
-        options: InstallOptions,
+        request: PackageSpec,
+        given_options: InstallOptions,
     ) !InstallResult {
+        var spec = request;
+        var options = given_options;
+        options.force = options.force or self.native_policy.force;
         const start_ts_ = io_helper.clockGettime();
         const start_time = @as(i64, @intCast(start_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(start_ts_.nsec)), 1_000_000);
 
@@ -822,6 +1004,35 @@ pub const Installer = struct {
             return try self.installFromNpm(spec, options);
         }
 
+        // Check if package exists in registry (used for domain resolution and fallback)
+        const pkg_registry = @import("../packages/generated.zig");
+        const domain = native_identity.canonical(spec.name);
+        const pkg_info = pkg_registry.getPackageByDomain(domain);
+
+        // Use registry domain if available, otherwise use the package name as domain
+        // This allows S3-only packages that aren't in generated.zig to still be installed
+        spec.name = domain;
+
+        // Direct native entry has the same whole-closure preflight as pipeline
+        // entry. This precedes installed/global cache checks and any payload.
+        var own_plan: ?native_deps.Plan = null;
+        defer if (own_plan) |*plan| plan.deinit();
+        if (options.native_plan == null) {
+            own_plan = native_deps.Plan.init(self.allocator);
+            try own_plan.?.add(domain, spec.version);
+            var policy = self.native_policy;
+            policy.force = policy.force or options.force;
+            try own_plan.?.resolve(policy);
+            options.native_plan = &own_plan.?;
+        }
+        spec.version = try options.native_plan.?.versionFor(domain, spec.version);
+
+        // An active key is an ancestor only inside this synchronous traversal.
+        // Unrelated native callers wait for full dependency/finalizer readiness,
+        // then use the ordinary validated cache path instead of empty success.
+        try self.installing_stack.enterNative();
+        defer self.installing_stack.leaveNative();
+
         // Zig's official archive is a reliable fallback when the Pantry
         // binary registry is unavailable. Route the canonical domain through
         // the dedicated installer before generic Pantry package resolution.
@@ -830,19 +1041,13 @@ pub const Installer = struct {
             return try self.installFromZiglang(spec, options);
         }
 
-        // Check if package exists in registry (used for domain resolution and fallback)
-        const pkg_registry = @import("../packages/generated.zig");
-        const pkg_info = pkg_registry.getPackageByName(spec.name);
-
-        // Use registry domain if available, otherwise use the package name as domain
-        // This allows S3-only packages that aren't in generated.zig to still be installed
-        const domain = if (pkg_info) |info| info.domain else spec.name;
-
         // Resolve version constraint to actual version
         // Try S3 registry first (has the most up-to-date versions), then generated.zig
         var resolved_spec = spec;
         var s3_version_alloc: ?[]const u8 = null;
         var s3_tarball_url: ?[]const u8 = null;
+        // Artifact state belongs to this invocation, never recursive options.
+        var native_archive_sha256: ?[32]u8 = null;
         var from_s3 = false;
         defer if (s3_version_alloc) |v| self.allocator.free(v);
         // If tarball URL wasn't consumed by download functions, free it here
@@ -873,20 +1078,46 @@ pub const Installer = struct {
             }
         }
 
-        if (!skip_s3_lookup and !resolved_locally) {
-            if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| {
+        // The selected global source can satisfy this project install too.
+        // Check its existing usability contract before consulting speculative
+        // preparation failures or making a redundant metadata request. The
+        // actual materializer still validates and copies it below.
+        if (!resolved_locally and options.project_root != null) {
+            const global_path = try self.getGlobalPackageDir(domain, spec.version);
+            defer self.allocator.free(global_path);
+            if (self.hasUsableGlobalProjectSource(domain, global_path)) resolved_locally = true;
+        }
+
+        // The plan already resolved this exact version and platform artifact.
+        // Keep that decision through installation instead of repeating remote
+        // metadata requests in every payload and recursive dependency worker.
+        const prepared_artifact = if (!resolved_locally) (if (options.prepared_archives) |prepared| try prepared.artifactFor(domain, spec.version, options.http_capture) else null) else null;
+        const planned_artifact = prepared_artifact orelse try options.native_plan.?.artifactFor(domain, spec.version);
+        if (!resolved_locally) {
+            if (planned_artifact) |artifact| {
+                native_archive_sha256 = artifact.sha256;
+                if (artifact.tarball_url) |url| {
+                    s3_tarball_url = try self.allocator.dupe(u8, url);
+                    from_s3 = true;
+                }
+            }
+        }
+        if (!skip_s3_lookup and !resolved_locally and planned_artifact == null) {
+            if (try downloader.lookupS3RegistryWithCapture(self.allocator, domain, spec.version, options.http_capture)) |s3_result| {
                 if (options.verbose) std.debug.print("[verbose:installer] S3 registry hit: {s} @ {s} url={s}\n", .{ domain, s3_result.version, s3_result.tarball_url });
                 s3_version_alloc = s3_result.version;
                 s3_tarball_url = s3_result.tarball_url;
+                native_archive_sha256 = s3_result.sha256;
                 resolved_spec = PackageSpec{
                     .name = spec.name,
                     .version = s3_result.version,
                 };
                 from_s3 = true;
-            } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| {
+            } else if (try downloader.lookupPantryPublishedWithCapture(self.allocator, domain, spec.version, options.http_capture)) |pub_result| {
                 if (options.verbose) std.debug.print("[verbose:installer] pantry published hit: {s} @ {s}\n", .{ domain, pub_result.version });
                 s3_version_alloc = pub_result.version;
                 s3_tarball_url = pub_result.tarball_url;
+                native_archive_sha256 = pub_result.sha256;
                 resolved_spec = PackageSpec{
                     .name = spec.name,
                     .version = pub_result.version,
@@ -960,10 +1191,10 @@ pub const Installer = struct {
 
         const install_path = if (options.project_root) |project_root| blk: {
             if (options.verbose) std.debug.print("[verbose:installer] -> installToProject: {s} to {s}/{s}\n", .{ resolved_spec.name, project_root, self.modules_dir });
-            break :blk try self.installToProject(resolved_spec, domain, project_root, options, &used_cache, transfer_url);
+            break :blk try self.installToProject(resolved_spec, domain, project_root, options, &used_cache, transfer_url, native_archive_sha256);
         } else blk: {
             if (options.verbose) std.debug.print("[verbose:installer] -> installGlobal: {s}\n", .{resolved_spec.name});
-            break :blk try self.installGlobal(resolved_spec, domain, options, &used_cache, transfer_url);
+            break :blk try self.installGlobal(resolved_spec, domain, options, &used_cache, transfer_url, native_archive_sha256);
         };
 
         if (options.verbose) std.debug.print("[verbose:installer] installed {s} @ {s} -> {s} (cached={})\n", .{ resolved_spec.name, resolved_spec.version, install_path, used_cache });
@@ -978,7 +1209,9 @@ pub const Installer = struct {
         // for already-present deps is cheap.
         if (pkg_info) |info| {
             if (options.verbose) std.debug.print("[verbose:installer] installing sub-dependencies for {s} (count={d})\n", .{ resolved_spec.name, info.dependencies.len });
+            const dependency_timer = InstallPhaseTimer.start(options.verbose, domain, resolved_spec.version, "recursive_dependencies");
             try self.installDependencies(info.dependencies, options);
+            dependency_timer.finish();
 
             // Re-fix this package's libraries now that its dependencies are on
             // disk: cross-package references (e.g. a Homebrew-built libssh2 that
@@ -986,6 +1219,7 @@ pub const Installer = struct {
             // package — openssl.org here — is installed. The first pass ran
             // before deps existed. Idempotent: rpath re-adds are refused and
             // install-name -change is a no-op when already correct.
+            const final_library_timer = InstallPhaseTimer.start(options.verbose, domain, resolved_spec.version, "final_library_fix");
             if (install_path.len > 0) {
                 const tree_root = self.projectTreeRoot(options);
                 defer if (tree_root) |root| self.allocator.free(root);
@@ -999,6 +1233,7 @@ pub const Installer = struct {
                     markLibraryPathsCurrent(self.allocator, install_path, tree_root);
                 }
             }
+            final_library_timer.finish();
         }
 
         // An OpenSSL finds its CA bundle at `<prefix>/ssl/cert.pem`, which only
@@ -1007,19 +1242,22 @@ pub const Installer = struct {
             if (ca_certs.treeRootOf(install_path, domain)) |root| ca_certs.linkBundles(self.allocator, root);
         }
 
+        const shebang_timer = InstallPhaseTimer.start(options.verbose, domain, resolved_spec.version, "interpreter_fix");
         // Scripts mirrored from pkgx name their interpreter as `#!/usr/bin/env
         // -S pkgx python@3.11`, which nothing here can run. Point them at the
         // interpreter in this tree, installing a satisfying one if needed.
         if (install_path.len > 0) {
-            pkgx_shebang.fixInstalledPackage(self, install_path, domain, resolved_spec.version, options);
+            try pkgx_shebang.fixInstalledPackage(self, install_path, domain, resolved_spec.version, options);
         }
+
+        shebang_timer.finish();
 
         const end_ts_ = io_helper.clockGettime();
         const end_time = @as(i64, @intCast(end_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(end_ts_.nsec)), 1_000_000);
 
         // Report download analytics (fire-and-forget, never blocks install)
         if (!used_cache) {
-            reportDownloadAnalytics(self.allocator, domain, resolved_spec.version);
+            analytics.record(domain, resolved_spec.version);
         }
 
         if (options.verbose) std.debug.print("[verbose:installer] install() complete: {s} @ {s} ({d}ms)\n", .{ resolved_spec.name, resolved_spec.version, @as(u64, @intCast(end_time - start_time)) });
@@ -2332,15 +2570,27 @@ pub const Installer = struct {
         name: []const u8,
         version_constraint: []const u8,
     ) !NpmResolution {
+        return self.resolveNpmPackageWithPreference(name, version_constraint, .legacy);
+    }
+
+    pub fn resolveNpmPackageWithPreference(
+        self: *Installer,
+        name: []const u8,
+        requested: []const u8,
+        preference: NpmLockPreference,
+    ) !NpmResolution {
+        const version_constraint = preference.constraint(requested);
         if (self.verbose) std.debug.print("[verbose:resolve] resolveNpmPackage: {s} @ {s}\n", .{ name, version_constraint });
 
         // --- Level 2 cache check: exact name@constraint match ---
         // Perf: Stack buffer for cache key (avoids heap alloc on every resolve call)
         var cache_key_stack: [512]u8 = undefined;
-        const cache_key = std.fmt.bufPrint(&cache_key_stack, "{s}@{s}", .{ name, version_constraint }) catch
-            try std.fmt.allocPrint(self.allocator, "{s}@{s}", .{ name, version_constraint });
-        const cache_key_is_heap = (name.len + 1 + version_constraint.len > 512);
-        defer if (cache_key_is_heap) self.allocator.free(cache_key);
+        var owned_cache_key: ?[]const u8 = null;
+        defer if (owned_cache_key) |key| self.allocator.free(key);
+        const cache_key = formatNpmResolutionKey(&cache_key_stack, name, version_constraint, preference) catch blk: {
+            owned_cache_key = try allocNpmResolutionKey(self.allocator, name, version_constraint, preference);
+            break :blk owned_cache_key.?;
+        };
 
         if (self.npm_cache.getResolution(cache_key, self.allocator)) |cached| {
             if (self.verbose) std.debug.print("[verbose:resolve] L2 cache hit: {s} -> {s}\n", .{ cache_key, cached.version });
@@ -2357,6 +2607,7 @@ pub const Installer = struct {
             errdefer self.allocator.free(version);
             const tarball_url = try self.allocator.dupe(u8, pinned.tarball_url);
             errdefer self.allocator.free(tarball_url);
+            self.cacheResolutionWithPreference(name, version_constraint, preference, version, tarball_url, pinned.integrity);
             return NpmResolution{
                 .version = version,
                 .tarball_url = tarball_url,
@@ -2369,35 +2620,37 @@ pub const Installer = struct {
         // and differs from pantry.lock's, skip this shortcut so the registry
         // path below selects it.
         const bun_pin = self.preferredBunPin(name, version_constraint);
-        if (self.lockfile) |lf| {
-            const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
-                // Verify the locked version satisfies the constraint
-                const npm_zig = @import("../registry/npm.zig");
-                const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
-                const satisfies = if (constraint) |c| c.satisfies(locked.version) else true;
+        if (preference == .legacy) {
+            if (self.lockfile) |lf| {
+                const lockfile_zig = @import("../deps/resolution/lockfile.zig");
+                if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), bun_pin)) |locked| {
+                    // Verify the locked version satisfies the constraint
+                    const npm_zig = @import("../registry/npm.zig");
+                    const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
+                    const satisfies = if (constraint) |c| c.satisfies(locked.version) else true;
 
-                if (satisfies) {
-                    // Build tarball URL from locked resolved field or npm convention
-                    const tarball_url = if (locked.resolved.len > 0 and !std.mem.startsWith(u8, locked.resolved, "registry:"))
-                        try self.allocator.dupe(u8, locked.resolved)
-                    else
-                        try std.fmt.allocPrint(self.allocator, "https://registry.npmjs.org/{s}/-/{s}-{s}.tgz", .{
-                            name,
-                            // Strip scope prefix for tarball filename (e.g. @types/node → node)
-                            if (std.mem.indexOf(u8, name, "/")) |slash_idx| name[slash_idx + 1 ..] else name,
-                            locked.version,
-                        });
+                    if (satisfies) {
+                        // Build tarball URL from locked resolved field or npm convention
+                        const tarball_url = if (locked.resolved.len > 0 and !std.mem.startsWith(u8, locked.resolved, "registry:"))
+                            try self.allocator.dupe(u8, locked.resolved)
+                        else
+                            try std.fmt.allocPrint(self.allocator, "https://registry.npmjs.org/{s}/-/{s}-{s}.tgz", .{
+                                name,
+                                // Strip scope prefix for tarball filename (e.g. @types/node → node)
+                                if (std.mem.indexOf(u8, name, "/")) |slash_idx| name[slash_idx + 1 ..] else name,
+                                locked.version,
+                            });
 
-                    const result = NpmResolution{
-                        .version = try self.allocator.dupe(u8, locked.version),
-                        .tarball_url = tarball_url,
-                        .integrity = if (locked.integrity) |i| (self.allocator.dupe(u8, i) catch null) else null,
-                    };
+                        const result = NpmResolution{
+                            .version = try self.allocator.dupe(u8, locked.version),
+                            .tarball_url = tarball_url,
+                            .integrity = if (locked.integrity) |i| (self.allocator.dupe(u8, i) catch null) else null,
+                        };
 
-                    // Cache the lockfile resolution for future lookups
-                    self.npm_cache.putResolution(cache_key, result.version, result.tarball_url, result.integrity);
-                    return result;
+                        // Cache the lockfile resolution for future lookups
+                        self.npm_cache.putResolution(cache_key, result.version, result.tarball_url, result.integrity);
+                        return result;
+                    }
                 }
             }
         }
@@ -2450,7 +2703,15 @@ pub const Installer = struct {
         if (parsed.value != .object) return error.InvalidNpmResponse;
 
         // Resolve version
-        const target_version = try self.pickNpmVersion(parsed.value, name, version_constraint);
+        const typed_pin = switch (preference) {
+            .legacy => null,
+            .npm => |context| self.npmSourceLockPin(name, version_constraint, context.force),
+        };
+        const target_version = if (typed_pin) |pin| blk: {
+            const versions = parsed.value.object.get("versions") orelse return error.NoVersions;
+            if (versions != .object) return error.InvalidNpmResponse;
+            break :blk versions.object.getKey(pin) orelse try self.pickNpmVersion(parsed.value, name, version_constraint);
+        } else try self.pickNpmVersion(parsed.value, name, version_constraint);
 
         // Get tarball URL from versions[target_version].dist.tarball
         const versions_obj = parsed.value.object.get("versions") orelse return error.NoVersions;
@@ -2497,6 +2758,16 @@ pub const Installer = struct {
         name: []const u8,
         version_constraint: []const u8,
     ) !NpmResolutionWithDeps {
+        return self.resolveNpmPackageWithDepsWithPreference(name, version_constraint, .legacy);
+    }
+
+    pub fn resolveNpmPackageWithDepsWithPreference(
+        self: *Installer,
+        name: []const u8,
+        requested: []const u8,
+        preference: NpmLockPreference,
+    ) !NpmResolutionWithDeps {
+        const version_constraint = preference.constraint(requested);
         // A pinned scope is never looked up on npm (see resolveNpmPackage).
         if (self.pinFor(name)) |pin| {
             var pinned = try self.resolvePinned(pin, name, version_constraint);
@@ -2523,6 +2794,7 @@ pub const Installer = struct {
             const tarball_url = try self.allocator.dupe(u8, pinned.tarball_url);
             errdefer self.allocator.free(tarball_url);
             const integrity = if (pinned.integrity) |i| try self.allocator.dupe(u8, i) else null;
+            self.cacheResolutionWithPreference(name, version_constraint, preference, version, tarball_url, pinned.integrity);
             return NpmResolutionWithDeps{
                 .version = version,
                 .tarball_url = tarball_url,
@@ -2533,10 +2805,12 @@ pub const Installer = struct {
 
         // --- L2 cache check (same as resolveNpmPackage) ---
         var cache_key_stack: [512]u8 = undefined;
-        const cache_key = std.fmt.bufPrint(&cache_key_stack, "{s}@{s}", .{ name, version_constraint }) catch
-            try std.fmt.allocPrint(self.allocator, "{s}@{s}", .{ name, version_constraint });
-        const cache_key_is_heap = (name.len + 1 + version_constraint.len > 512);
-        defer if (cache_key_is_heap) self.allocator.free(cache_key);
+        var owned_cache_key: ?[]const u8 = null;
+        defer if (owned_cache_key) |key| self.allocator.free(key);
+        const cache_key = formatNpmResolutionKey(&cache_key_stack, name, version_constraint, preference) catch blk: {
+            owned_cache_key = try allocNpmResolutionKey(self.allocator, name, version_constraint, preference);
+            break :blk owned_cache_key.?;
+        };
 
         // --- L3 deps cache check: if we already resolved this exact version's deps ---
         // Build version key after L2 check since we need the resolved version
@@ -2555,13 +2829,20 @@ pub const Installer = struct {
         // and differs from pantry.lock's, pantryLockPin yields nothing and
         // pickNpmVersion selects bun's.
         var lock_pinned: ?[]const u8 = null;
-        if (self.lockfile) |lf| {
-            const lockfile_zig = @import("../deps/resolution/lockfile.zig");
-            if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), self.preferredBunPin(name, version_constraint))) |locked| {
-                const npm_zig = @import("../registry/npm.zig");
-                const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
-                if (if (constraint) |c| c.satisfies(locked.version) else true) lock_pinned = locked.version;
-            }
+        switch (preference) {
+            .legacy => {
+                if (self.lockfile) |lf| {
+                    const lockfile_zig = @import("../deps/resolution/lockfile.zig");
+                    if (pantryLockPin(lockfile_zig.getLockedVersion(lf, name), self.preferredBunPin(name, version_constraint))) |locked| {
+                        const npm_zig = @import("../registry/npm.zig");
+                        const constraint = npm_zig.SemverConstraint.parse(version_constraint) catch null;
+                        if (if (constraint) |c| c.satisfies(locked.version) else true) lock_pinned = locked.version;
+                    }
+                }
+            },
+            .npm => |context| {
+                lock_pinned = self.npmSourceLockPin(name, version_constraint, context.force);
+            },
         }
 
         // --- L1 cache: get or fetch raw registry JSON ---
@@ -2823,11 +3104,10 @@ pub const Installer = struct {
         };
         errdefer self.allocator.free(install_dir);
 
-        // Check if already installed (lightweight access check, no dir handle)
-        const already_installed = !options.force and blk: {
-            io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
-            break :blk true;
-        };
+        // Reuse only a complete executable interface. An existing version
+        // directory can be a partial cache or a previously interrupted install.
+        const already_installed = !options.force and
+            validator.hasUsableDeclaredProgramsAtVersion(self.allocator, "ziglang.org", install_dir, resolved_version);
 
         if (already_installed) {
             if (options.project_root) |project_root| {
@@ -2920,7 +3200,7 @@ pub const Installer = struct {
             }
         }
 
-        try self.materializeZigArchive(&staging, archive_path, archive_ext, url, resolved_version, install_dir, options.verbose);
+        try self.materializeZigArchiveWithChecksum(&staging, archive_path, archive_ext, url, resolved_version, install_dir, options.verbose, if (registry_artifact) |artifact| artifact.sha256 else null);
 
         // Use the standard symlink creation — same as all other packages.
         // discoverBinaries now finds executables at the package root (e.g. zig binary),
@@ -2943,7 +3223,11 @@ pub const Installer = struct {
 
     /// Verify and publish both official nested and mirrored Zig package layouts.
     fn materializeZigArchive(self: *Installer, staging: *verified_staging.Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, version: []const u8, destination: []const u8, verbose: bool) !void {
-        try staging.extractVerified(archive, format, url, verbose);
+        return self.materializeZigArchiveWithChecksum(staging, archive, format, url, version, destination, verbose, null);
+    }
+
+    fn materializeZigArchiveWithChecksum(self: *Installer, staging: *verified_staging.Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, version: []const u8, destination: []const u8, verbose: bool, expected_sha256: ?[32]u8) !void {
+        try staging.extractVerifiedWithChecksum(archive, format, url, verbose, expected_sha256);
         const source = try self.findPackageRoot(staging.payload, "ziglang.org", version);
         defer self.allocator.free(source);
         try self.materializeVerifiedExtraction(staging, source, destination, "ziglang.org");
@@ -2957,6 +3241,7 @@ pub const Installer = struct {
         options: InstallOptions,
         used_cache: *bool,
         s3_url: ?[]const u8,
+        native_sha256: ?[32]u8,
     ) ![]const u8 {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
@@ -2974,7 +3259,7 @@ pub const Installer = struct {
             break :blk try self.installFromCache(spec, "");
         } else blk: {
             // Download and install to global cache (transfers ownership of s3_url)
-            break :blk try self.installFromNetwork(spec, options, s3_url);
+            break :blk try self.installFromNetwork(spec, options, s3_url, native_sha256);
         };
 
         // Create symlinks under the SAME base getGlobalPackageDir installs into:
@@ -3000,6 +3285,45 @@ pub const Installer = struct {
         return install_path;
     }
 
+    fn hasUsableProjectPackage(self: *Installer, domain: []const u8, path: []const u8) bool {
+        return self.hasPackageStructure(path) and validator.hasUsableDeclaredPrograms(self.allocator, domain, path);
+    }
+
+    fn hasUsableGlobalProjectSource(self: *Installer, domain: []const u8, path: []const u8) bool {
+        return self.hasUsableProjectPackage(domain, path) and verified_staging.canMaterializeTree(self.allocator, path);
+    }
+
+    /// Prepare only cold project archives after complete native preflight.
+    /// Materialization and recursive dependency readiness remain ordered.
+    pub fn prepareNativeArchives(self: *Installer, plan: *const native_deps.Plan, project_root: []const u8, force: bool) !native_archives.Prepared {
+        var requests: std.ArrayList(native_archives.Request) = .empty;
+        defer requests.deinit(self.allocator);
+        for (plan.names.items) |domain| {
+            // Zig has its own verified installer and payload format.
+            if (std.mem.eql(u8, domain, "ziglang.org")) continue;
+            const version = try plan.versionFor(domain, "latest");
+            const project_path = try self.getProjectPackageDir(project_root, domain, version);
+            defer self.allocator.free(project_path);
+            if (!(force or self.native_policy.force) and self.hasUsableProjectPackage(domain, project_path)) continue;
+            const global_path = try self.getGlobalPackageDir(domain, version);
+            defer self.allocator.free(global_path);
+            // installToProject can reuse a usable global tree even with force.
+            if (self.hasUsableGlobalProjectSource(domain, global_path)) continue;
+            if (self.cache.get(domain, version) catch null) |metadata| {
+                // Presence is only a reuse hint. Ordinary staging still reads,
+                // verifies, evicts corruption and handles disappearance.
+                if (io_helper.accessAbsolute(metadata.cache_path, .{})) |_| continue else |_| {}
+            }
+            try requests.append(self.allocator, .{ .name = domain, .version = version, .artifact = try plan.artifactFor(domain, version) });
+        }
+        if (requests.items.len == 0) return native_archives.Prepared.init(self.allocator, "", requests.items);
+        const home = try Paths.home(self.allocator);
+        defer self.allocator.free(home);
+        const parent = try std.fs.path.join(self.allocator, &.{ home, ".pantry", ".tmp" });
+        defer self.allocator.free(parent);
+        return native_archives.Prepared.init(self.allocator, parent, requests.items);
+    }
+
     /// Install package to project's pantry directory
     fn installToProject(
         self: *Installer,
@@ -3009,6 +3333,7 @@ pub const Installer = struct {
         options: InstallOptions,
         used_cache: *bool,
         s3_url_param: ?[]const u8,
+        native_sha256: ?[32]u8,
     ) ![]const u8 {
         // Track URL ownership locally so we can free on any error path
         var owned_url = s3_url_param;
@@ -3021,8 +3346,7 @@ pub const Installer = struct {
 
         // Check if already installed in project (verify actual package structure, not just dir existence)
         const already_installed = !options.force and
-            self.hasPackageStructure(project_pkg_dir) and
-            validator.hasUsableDeclaredPrograms(self.allocator, domain, project_pkg_dir);
+            self.hasUsableProjectPackage(domain, project_pkg_dir);
 
         if (already_installed) {
             if (self.verbose) std.debug.print("[verbose:project] already installed in project: {s}\n", .{project_pkg_dir});
@@ -3040,9 +3364,7 @@ pub const Installer = struct {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
 
-        const has_global = self.hasPackageStructure(global_pkg_dir) and
-            validator.hasUsableDeclaredPrograms(self.allocator, domain, global_pkg_dir) and
-            verified_staging.canMaterializeTree(self.allocator, global_pkg_dir);
+        const has_global = self.hasUsableGlobalProjectSource(domain, global_pkg_dir);
 
         if (has_global) {
             // Copy from global cache - free unused S3 URL
@@ -3060,7 +3382,7 @@ pub const Installer = struct {
         used_cache.* = false;
         const url_to_transfer = owned_url;
         owned_url = null; // Transfer ownership BEFORE call to prevent double-free on error
-        try self.downloadAndInstallToProject(spec, domain, project_pkg_dir, options, url_to_transfer);
+        try self.downloadAndInstallToProject(spec, domain, project_pkg_dir, options, url_to_transfer, native_sha256);
         try self.createProjectSymlinks(project_root, domain, spec.version, project_pkg_dir);
 
         return project_pkg_dir;
@@ -3090,7 +3412,7 @@ pub const Installer = struct {
     }
 
     /// Download and install package directly to project directory (bypassing global cache)
-    fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, options: InstallOptions, transferred_url: ?[]const u8) !void {
+    fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, options: InstallOptions, transferred_url: ?[]const u8, native_sha256: ?[32]u8) !void {
         const home = try Paths.home(self.allocator);
         defer self.allocator.free(home);
 
@@ -3105,15 +3427,19 @@ pub const Installer = struct {
         var used_format: []const u8 = undefined;
         var used_url: []const u8 = undefined;
 
+        const url_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "artifact_url");
         // Use transferred URL if available, otherwise do a fresh S3 lookup
         // Checks: binaries/ (publish:binary) → packages/pantry/ (publish) → fallback URL
+        var expected_sha256 = native_sha256;
         const s3_url: ?[]const u8 = if (transferred_url) |url|
             url
-        else if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| blk: {
+        else if (try downloader.lookupS3RegistryWithCapture(self.allocator, domain, spec.version, options.http_capture)) |s3_result| blk: {
             self.allocator.free(s3_result.version);
+            expected_sha256 = s3_result.sha256;
             break :blk s3_result.tarball_url;
-        } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| blk: {
+        } else if (try downloader.lookupPantryPublishedWithCapture(self.allocator, domain, spec.version, options.http_capture)) |pub_result| blk: {
             self.allocator.free(pub_result.version);
+            expected_sha256 = pub_result.sha256;
             break :blk pub_result.tarball_url;
         } else blk: {
             // Fallback: construct URL directly from known pattern when S3 lookup fails
@@ -3126,6 +3452,10 @@ pub const Installer = struct {
             ) catch null;
         };
 
+        url_timer.finish();
+        const archive_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "archive_acquire");
+        var archive_from_cache = false;
+        var archive_prepared = false;
         // Path of the content-addressed cache file backing this archive, if it was
         // served from cache — used to evict a poisoned entry on checksum mismatch.
         var cached_archive_path: ?[]const u8 = null;
@@ -3138,6 +3468,17 @@ pub const Installer = struct {
             );
 
             const s3_ok = blk: {
+                if (options.prepared_archives) |prepared| {
+                    const copied = prepared.copyTo(domain, spec.version, temp_archive_path) catch |err| {
+                        self.allocator.free(temp_archive_path);
+                        self.allocator.free(@constCast(url));
+                        return err;
+                    };
+                    if (copied) {
+                        archive_prepared = true;
+                        break :blk true;
+                    }
+                }
                 const cached_meta = self.cache.get(domain, spec.version) catch blk_cache: {
                     if (!std.mem.eql(u8, domain, spec.name)) {
                         break :blk_cache self.cache.get(spec.name, spec.version) catch null;
@@ -3154,18 +3495,19 @@ pub const Installer = struct {
                         // bad download would otherwise poison it forever. Remember the
                         // backing file so a checksum mismatch below can evict + re-fetch.
                         cached_archive_path = self.allocator.dupe(u8, meta.cache_path) catch null;
+                        archive_from_cache = true;
                         break :blk true;
                     } else |_| {}
                 }
 
                 if (options.inline_progress) |progress_opts| {
-                    downloader.downloadFileInline(self.allocator, url, temp_archive_path, progress_opts) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, false, progress_opts, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
                     };
                 } else {
-                    downloader.downloadFileQuiet(self.allocator, url, temp_archive_path, options.quiet) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, options.quiet, null, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
@@ -3195,6 +3537,8 @@ pub const Installer = struct {
             }
             return error.DownloadFailed;
         }
+        archive_timer.finish();
+        if (options.verbose) std.debug.print("[verbose:installer:phase] {s}@{s} archive_from_cache={}\n", .{ domain, spec.version, archive_from_cache });
         defer self.allocator.free(archive_path);
         defer self.allocator.free(@constCast(used_url));
 
@@ -3221,7 +3565,11 @@ pub const Installer = struct {
         // Extract archive to temp directory with verification
         const extract_dir = staging.payload;
         defer if (cached_archive_path) |p| self.allocator.free(p);
-        staging.extractVerified(archive_path, used_format, used_url, options.verbose) catch |err| {
+        const verify_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "verify_extract_or_cache_repair");
+        staging.extractVerifiedWithChecksum(archive_path, used_format, used_url, options.verbose, expected_sha256) catch |err| {
+            if (archive_prepared) {
+                if (options.prepared_archives) |prepared| prepared.invalidate(domain, spec.version);
+            }
             // A poisoned cache entry (bad bytes stored before checksum verification)
             // would fail every install forever. If the archive came from cache and
             // failed to verify/extract (corrupt or checksum mismatch), evict it and
@@ -3232,34 +3580,46 @@ pub const Installer = struct {
                     style.print("  {s}evicting bad cached archive for {s}@{s}, re-downloading…{s}\n", .{ style.dim, spec.name, spec.version, style.reset });
                 }
                 if (options.inline_progress) |progress_opts| {
-                    try downloader.downloadFileInline(self.allocator, used_url, archive_path, progress_opts);
+                    try downloader.downloadFileWithCapture(self.allocator, used_url, archive_path, false, progress_opts, options.http_capture);
                 } else {
-                    try downloader.downloadFileQuiet(self.allocator, used_url, archive_path, options.quiet);
+                    try downloader.downloadFileWithCapture(self.allocator, used_url, archive_path, options.quiet, null, options.http_capture);
                 }
-                try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
+                try staging.extractVerifiedWithChecksum(archive_path, used_format, used_url, options.verbose, expected_sha256);
             } else {
                 return err;
             }
         };
 
+        verify_timer.finish();
+        const root_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "select_root");
         // Find the actual package root
         const package_source = try self.findPackageRoot(extract_dir, domain, spec.version);
         defer self.allocator.free(package_source);
 
+        root_timer.finish();
+        const materialize_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "materialize");
         // Downloads and cache repairs use the same verified, atomic copy.
         try self.materializeVerifiedExtraction(&staging, package_source, project_pkg_dir, domain);
 
+        materialize_timer.finish();
+        const library_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "initial_library_fix");
         // Fix library paths for macOS; references to other packages in this
         // project's pantry/ are written relative to the referencing binary.
         const tree_root = self.projectTreeRoot(options);
         defer if (tree_root) |root| self.allocator.free(root);
         try libfixer.fixDirectoryLibraryPathsInTree(self.allocator, project_pkg_dir, tree_root);
 
+        library_timer.finish();
         // Remove macOS quarantine/provenance xattrs so launchd can run service binaries
         if (comptime @import("builtin").os.tag == .macos) {
-            _ = io_helper.childRun(self.allocator, &[_][]const u8{
+            const xattr_timer = InstallPhaseTimer.start(options.verbose, domain, spec.version, "quarantine_cleanup");
+            if (io_helper.childRun(self.allocator, &[_][]const u8{
                 "/usr/bin/xattr", "-cr", project_pkg_dir,
-            }) catch {};
+            })) |result| {
+                self.allocator.free(result.stdout);
+                self.allocator.free(result.stderr);
+            } else |_| {}
+            xattr_timer.finish();
         }
     }
 
@@ -3680,7 +4040,7 @@ pub const Installer = struct {
     }
 
     /// Install from network (download)
-    fn installFromNetwork(self: *Installer, spec: PackageSpec, options: InstallOptions, transferred_url: ?[]const u8) ![]const u8 {
+    fn installFromNetwork(self: *Installer, spec: PackageSpec, options: InstallOptions, transferred_url: ?[]const u8, native_sha256: ?[32]u8) ![]const u8 {
         // Resolve package name to domain
         const pkg_registry = @import("../packages/generated.zig");
         const pkg_info = pkg_registry.getPackageByName(spec.name);
@@ -3719,13 +4079,16 @@ pub const Installer = struct {
 
         // Use transferred URL if available, otherwise do a fresh S3 lookup
         // Checks: binaries/ (publish:binary) → packages/pantry/ (publish) → fallback URL
+        var expected_sha256 = native_sha256;
         const s3_url: ?[]const u8 = if (transferred_url) |url|
             url
-        else if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| blk: {
+        else if (try downloader.lookupS3RegistryWithCapture(self.allocator, domain, spec.version, options.http_capture)) |s3_result| blk: {
             self.allocator.free(s3_result.version);
+            expected_sha256 = s3_result.sha256;
             break :blk s3_result.tarball_url;
-        } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| blk: {
+        } else if (try downloader.lookupPantryPublishedWithCapture(self.allocator, domain, spec.version, options.http_capture)) |pub_result| blk: {
             self.allocator.free(pub_result.version);
+            expected_sha256 = pub_result.sha256;
             break :blk pub_result.tarball_url;
         } else blk: {
             // Fallback: construct URL directly from known pattern when S3 lookup fails
@@ -3746,13 +4109,13 @@ pub const Installer = struct {
 
             const s3_ok = blk: {
                 if (options.inline_progress) |progress_opts| {
-                    downloader.downloadFileInline(self.allocator, url, temp_archive_path, progress_opts) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, false, progress_opts, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
                     };
                 } else {
-                    downloader.downloadFileQuiet(self.allocator, url, temp_archive_path, options.quiet) catch |err| {
+                    downloader.downloadFileWithCapture(self.allocator, url, temp_archive_path, options.quiet, null, options.http_capture) catch |err| {
                         self.allocator.free(temp_archive_path);
                         self.allocator.free(@constCast(url));
                         return err;
@@ -3807,7 +4170,7 @@ pub const Installer = struct {
 
         // Extract archive to temp directory with verification
         const extract_dir = staging.payload;
-        try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
+        try staging.extractVerifiedWithChecksum(archive_path, used_format, used_url, options.verbose, expected_sha256);
 
         // Find the actual package root (might be nested like domain/v{version}/)
         const package_source = try self.findPackageRoot(extract_dir, domain, spec.version);
@@ -4262,158 +4625,30 @@ pub const Installer = struct {
     fn installDependencies(self: *Installer, dependencies: []const []const u8, options: InstallOptions) !void {
         if (dependencies.len == 0) return;
 
-        const Platform = @import("../core/platform.zig").Platform;
-        const current_platform = Platform.current();
-
-        // 1. Filter applicable dependencies (skip wrong-platform deps)
-        const DepEntry = struct { dep: []const u8, is_optional: bool };
-        var applicable: std.ArrayList(DepEntry) = .empty;
-        defer applicable.deinit(self.allocator);
-
-        for (dependencies) |dep_str| {
-            const is_optional = std.mem.indexOf(u8, dep_str, "#") != null;
-
-            if (std.mem.startsWith(u8, dep_str, "linux:") or
-                std.mem.startsWith(u8, dep_str, "darwin:") or
-                std.mem.startsWith(u8, dep_str, "windows:") or
-                std.mem.startsWith(u8, dep_str, "freebsd:"))
-            {
-                const colon_pos = std.mem.indexOf(u8, dep_str, ":") orelse continue;
-                const platform = dep_str[0..colon_pos];
-                const actual_dep = dep_str[colon_pos + 1 ..];
-
-                const matches = blk: {
-                    if (std.mem.eql(u8, platform, "linux") and current_platform == .linux) break :blk true;
-                    if (std.mem.eql(u8, platform, "darwin") and current_platform == .darwin) break :blk true;
-                    if (std.mem.eql(u8, platform, "windows") and current_platform == .windows) break :blk true;
-                    if (std.mem.eql(u8, platform, "freebsd") and current_platform == .freebsd) break :blk true;
-                    break :blk false;
-                };
-
-                if (matches) {
-                    applicable.append(self.allocator, .{ .dep = actual_dep, .is_optional = is_optional }) catch continue;
+        // Native traversal has one reentrant owner. Child materialization and
+        // finalizers complete before the parent proceeds; archive acquisition
+        // can still overlap through the invocation's prepared archive set.
+        for (dependencies) |dep| {
+            if (native_deps.parsePantryDepSpec(dep) == null) continue;
+            const optional = std.mem.indexOfScalar(u8, dep, '#') != null;
+            var capture: io_helper.TransientGetCapture = .{};
+            var child_options = options;
+            child_options.http_capture = &capture;
+            self.installDependency(dep, child_options) catch |err| {
+                if (!style.isCI()) style.print("  ! Failed to install dependency {s}: {}\n", .{ dep, err });
+                if (err == error.Canceled or !optional or native_deps.isPolicyError(err)) {
+                    if (options.http_capture) |parent| parent.* = capture;
+                    return err;
                 }
-            } else {
-                applicable.append(self.allocator, .{ .dep = dep_str, .is_optional = is_optional }) catch continue;
-            }
-        }
-
-        if (applicable.items.len == 0) return;
-
-        // 2. Install in parallel using thread pool
-        const DepResult = struct { err: ?anyerror, is_optional: bool };
-        const results = self.allocator.alloc(DepResult, applicable.items.len) catch {
-            // Fallback to sequential on alloc failure
-            for (applicable.items) |item| {
-                self.installDependency(item.dep, options) catch |err| {
-                    if (!item.is_optional) return err;
-                };
-            }
-            return;
-        };
-        defer self.allocator.free(results);
-        @memset(results, .{ .err = null, .is_optional = false });
-
-        const DepCtx = struct {
-            items: []const DepEntry,
-            results: []DepResult,
-            next: *std.atomic.Value(usize),
-            installer: *Installer,
-            options: InstallOptions,
-
-            fn worker(ctx: *@This()) void {
-                while (true) {
-                    const i = ctx.next.fetchAdd(1, .monotonic);
-                    if (i >= ctx.items.len) break;
-
-                    const item = ctx.items[i];
-                    ctx.results[i].is_optional = item.is_optional;
-                    ctx.installer.installDependency(item.dep, ctx.options) catch |err| {
-                        if (!style.isCI()) style.print("  ! Failed to install dependency {s}: {}\n", .{ item.dep, err });
-                        ctx.results[i].err = err;
-                    };
-                }
-            }
-        };
-
-        var next_idx = std.atomic.Value(usize).init(0);
-        var ctx = DepCtx{
-            .items = applicable.items,
-            .results = results,
-            .next = &next_idx,
-            .installer = self,
-            .options = options,
-        };
-
-        const cpu_count = std.Thread.getCpuCount() catch 4;
-        const max_threads = @min(cpu_count, 8);
-        const thread_count = @min(applicable.items.len, max_threads);
-
-        if (thread_count <= 1) {
-            // Single dep: just run inline, no thread overhead
-            DepCtx.worker(&ctx);
-        } else {
-            var threads: [8]?std.Thread = .{ null, null, null, null, null, null, null, null };
-            for (0..thread_count) |t| {
-                threads[t] = std.Thread.spawn(.{}, DepCtx.worker, .{&ctx}) catch null;
-            }
-            for (&threads) |*t| {
-                if (t.*) |thread| {
-                    thread.join();
-                    t.* = null;
-                }
-            }
-        }
-
-        // Check for critical failures
-        for (results) |result| {
-            if (result.err != null and !result.is_optional) {
-                return result.err.?;
-            }
+            };
         }
     }
 
     /// Install a single dependency
     fn installDependency(self: *Installer, dep_str: []const u8, options: InstallOptions) anyerror!void {
-        // Strip out comment if present (e.g., "pkg^1.0 # comment" -> "pkg^1.0")
-        const dep_without_comment = blk: {
-            if (std.mem.indexOf(u8, dep_str, "#")) |comment_pos| {
-                // Trim whitespace before the comment
-                var end = comment_pos;
-                while (end > 0 and dep_str[end - 1] == ' ') {
-                    end -= 1;
-                }
-                break :blk dep_str[0..end];
-            }
-            break :blk dep_str;
-        };
-
-        // Parse dependency string (name@version or name^version, etc.)
-        const at_pos = std.mem.indexOfAny(u8, dep_without_comment, "@^~>=<");
-        const name = if (at_pos) |pos| dep_without_comment[0..pos] else dep_without_comment;
-        const raw_version = if (at_pos) |pos| dep_without_comment[pos..] else "latest";
-
-        // Normalize @X and @X.Y to ^X and ^X.Y (treat @ as caret for major/minor versions)
-        var version_owned: ?[]const u8 = null;
-        defer if (version_owned) |v| self.allocator.free(v);
-
-        const version = blk: {
-            if (std.mem.startsWith(u8, raw_version, "@")) {
-                const ver_without_at = raw_version[1..];
-                // Count dots to see if it's @X or @X.Y (not @X.Y.Z)
-                var dot_count: usize = 0;
-                for (ver_without_at) |c| {
-                    if (c == '.') dot_count += 1;
-                }
-                // If @X or @X.Y, convert to caret
-                if (dot_count < 2) {
-                    const normalized = try std.fmt.allocPrint(self.allocator, "^{s}", .{ver_without_at});
-                    version_owned = normalized;
-                    break :blk normalized;
-                }
-            }
-            break :blk raw_version;
-        };
+        const parsed = native_deps.parsePantryDepSpec(dep_str) orelse return;
+        const name = parsed.domain;
+        const version = parsed.version;
 
         // Check if already installed to avoid infinite recursion
         const pkg_registry = @import("../packages/generated.zig");
@@ -4425,39 +4660,27 @@ pub const Installer = struct {
         const domain = pkg_info.domain;
 
         // Resolve version
-        const planned = if (self.planned_pantry) |plan| plannedVersionFor(plan, domain, version) else null;
+        const planned = if (options.native_plan) |plan|
+            try plan.versionFor(domain, version)
+        else if (self.planned_pantry) |legacy_plan|
+            plannedVersionFor(legacy_plan, domain, version)
+        else
+            null;
         const resolved_version = planned orelse semver.resolveVersion(domain, version) orelse {
             if (!style.isCI()) style.print("  ! Could not resolve version for {s}{s}\n", .{ name, version });
             return error.VersionNotFound;
         };
 
-        // Check if already installed
-        const global_pkg_dir = try self.getGlobalPackageDir(domain, resolved_version);
-        defer self.allocator.free(global_pkg_dir);
-
-        var check_dir = io_helper.cwd().openDir(io_helper.io, global_pkg_dir, .{}) catch |err| {
-            if (err != error.FileNotFound) return err;
-            // Not installed, continue
-            const spec = PackageSpec{
-                .name = name,
-                .version = planned orelse dependencyInstallVersion(version, resolved_version),
-            };
-
-            if (self.verbose) style.print("    → Installing dependency: {s}@{s}\n", .{ name, spec.version });
-
-            // Install the dependency (this will recursively install its dependencies)
-            const result = self.install(spec, options) catch |e| {
-                if (!style.isCI()) style.print("  ! Failed to install dependency: {}\n", .{e});
-                return e;
-            };
-            var mut_result = result;
-            defer mut_result.deinit(self.allocator);
-            return;
-        };
-        check_dir.close(io_helper.io);
-
-        // Already installed, skip
-        if (self.verbose) style.print("    ✓ Dependency already installed: {s}@{s}\n", .{ name, resolved_version });
+        // A directory in the global cache does not establish readiness in
+        // this project's target tree or of the dependency's own descendants.
+        // The public install path validates/reuses the selected source and
+        // handles genuine ancestor cycles under the traversal owner.
+        var result = try self.install(.{
+            .name = name,
+            .version = planned orelse dependencyInstallVersion(version, resolved_version),
+            .source = .pantry,
+        }, options);
+        defer result.deinit(self.allocator);
     }
 };
 
@@ -4517,6 +4740,28 @@ test "a planned version stands in for a dependency it satisfies" {
     // A plan entry that is still a range decides nothing.
     try std.testing.expect(plannedVersionFor(&plan, "mysql.com", "latest") == null);
     try std.testing.expect(plannedVersionFor(&plan, "zlib.net", "^1") == null);
+}
+
+test "direct native frozen installation preflights child coverage before payload" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    var path_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try directory.dir.realPath(io_helper.io, &path_buffer);
+    const root = path_buffer[0..path_len];
+    var original = @import("../deps/resolution/lockfile.zig").LockFile.init(allocator);
+    defer original.deinit();
+    try original.addPackage("facebook.com/zstd", "1.5.7", "registry:facebook.com/zstd@1.5.7", null);
+    var package_cache = try PackageCache.init(allocator);
+    defer package_cache.deinit();
+    var installer = try Installer.init(allocator, &package_cache);
+    defer installer.deinit();
+    allocator.free(installer.data_dir);
+    installer.data_dir = try allocator.dupe(u8, root);
+    installer.native_policy = .{ .original_lock = &original, .frozen = true };
+    try std.testing.expectError(error.NativeLockNotSatisfied, installer.install(.{ .name = "facebook.com/zstd", .version = "1.5.7", .source = .pantry }, .{ .project_root = root }));
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "pantry", .{}));
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "packages", .{}));
 }
 
 test "a sub-dependency installs at its constraint, not generated.zig's newest" {
@@ -4926,90 +5171,13 @@ test "HoisteVersionCache releaseReservation lets a retry win" {
     try std.testing.expect(hcache.tryReserve("lodash", "^4"));
 }
 
-/// Report a package download to the pantry.dev analytics API.
-/// Truly fire-and-forget: runs in a detached thread so installs are never blocked.
-/// Perf: Analytics is fire-and-forget and non-critical. Instead of spawning a
-/// detached 2MB-stack thread per package, we batch events and send them in a
-/// single request at the end of the install. This eliminates thread explosion
-/// during installs with many packages.
-var analytics_events: std.ArrayList(AnalyticsEvent) = .empty;
-var analytics_mutex: io_helper.Mutex = .{};
-
-const AnalyticsEvent = struct {
-    domain: []const u8,
-    version: []const u8,
-};
-
-fn reportDownloadAnalytics(allocator: std.mem.Allocator, domain: []const u8, version: []const u8) void {
-    const owned_domain = allocator.dupe(u8, domain) catch return;
-    const owned_version = allocator.dupe(u8, version) catch {
-        allocator.free(owned_domain);
-        return;
-    };
-    analytics_mutex.lock();
-    defer analytics_mutex.unlock();
-    analytics_events.append(allocator, .{ .domain = owned_domain, .version = owned_version }) catch {
-        allocator.free(owned_domain);
-        allocator.free(owned_version);
-    };
+/// Submit pending download events without borrowing the caller's allocator.
+pub fn flushAnalytics(_: std.mem.Allocator) void {
+    analytics.flush();
 }
 
-/// Flush all batched analytics events in a single detached thread.
-/// Call this once after install completes.
-pub fn flushAnalytics(allocator: std.mem.Allocator) void {
-    analytics_mutex.lock();
-    const events = analytics_events.items;
-    if (events.len == 0) {
-        analytics_mutex.unlock();
-        return;
-    }
-    // Take ownership of the events. `owned_items` is a shallow copy, so it
-    // shares each event's domain/version allocations — the flush worker frees
-    // them when it's done. We must NOT free them here (doing so left owned_items
-    // dangling and the worker double-freed them). clearRetainingCapacity drops
-    // the entries without touching the strings they referenced.
-    const owned_items = allocator.dupe(AnalyticsEvent, events) catch {
-        analytics_mutex.unlock();
-        return;
-    };
-    analytics_events.clearRetainingCapacity();
-    analytics_mutex.unlock();
-
-    // Send in a single detached thread
-    const thread = std.Thread.spawn(.{ .stack_size = 2 * 1024 * 1024 }, analyticsFlushWorker, .{ allocator, owned_items }) catch {
-        for (owned_items) |ev| {
-            allocator.free(ev.domain);
-            allocator.free(ev.version);
-        }
-        allocator.free(owned_items);
-        return;
-    };
-    thread.detach();
-}
-
-fn analyticsFlushWorker(allocator: std.mem.Allocator, events: []const AnalyticsEvent) void {
-    defer {
-        for (events) |ev| {
-            allocator.free(ev.domain);
-            allocator.free(ev.version);
-        }
-        allocator.free(events);
-    }
-
-    // Build a JSON array of events
-    var buf = std.ArrayList(u8).empty;
-    defer buf.deinit(allocator);
-    buf.appendSlice(allocator, "[") catch return;
-    for (events, 0..) |ev, i| {
-        if (i > 0) buf.appendSlice(allocator, ",") catch return;
-        const entry = std.fmt.allocPrint(allocator, "{{\"packageName\":\"{s}\",\"category\":\"download\",\"version\":\"{s}\"}}", .{ ev.domain, ev.version }) catch return;
-        defer allocator.free(entry);
-        buf.appendSlice(allocator, entry) catch return;
-    }
-    buf.appendSlice(allocator, "]") catch return;
-
-    _ = io_helper.httpPostJson(allocator, "https://registry.pantry.dev/analytics/events", buf.items) catch return;
-}
+/// Stop telemetry before the host tears down its I/O backend or exits.
+pub const shutdownAnalytics = analytics.shutdown;
 
 /// sqld 0.24.1-pre.42 as the npm registry publishes it: the CLI package names
 /// one optional build per platform, and each build says where it runs.
@@ -6005,4 +6173,78 @@ test "native materialization: re-copying a tree over its own symlinks is repeata
     const repaired = try io_helper.readLinkAlloc(allocator, copied_link);
     defer allocator.free(repaired);
     try std.testing.expectEqualStrings("git", repaired);
+}
+
+fn freeNpmFixtureResolution(allocator: std.mem.Allocator, result: Installer.NpmResolution) void {
+    allocator.free(result.version);
+    allocator.free(result.tarball_url);
+    if (result.integrity) |integrity| allocator.free(integrity);
+}
+
+test "actual npm metadata routes keep per-call source preference isolated from legacy cache in either order" {
+    const allocator = std.testing.allocator;
+    var original = try @import("../deps/resolution/lockfile.zig").LockFile.parse(allocator,
+        \\{"packages":{"better-dx@0.2.24":{"name":"better-dx","version":"0.2.24","source":"pantry","resolved":"registry:better-dx@0.2.24"}}}
+    );
+    defer original.deinit();
+    for ([_]bool{ false, true }) |typed_first| {
+        var package_cache = try PackageCache.init(allocator);
+        defer package_cache.deinit();
+        var installer = try Installer.init(allocator, &package_cache);
+        defer installer.deinit();
+        installer.setLockfile(&original);
+        installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+        const typed = Installer.NpmLockPreference{ .npm = .{ .declared_constraint = "^0.2.24" } };
+        const first = try installer.resolveNpmPackageWithPreference("better-dx", "^0.2.24", if (typed_first) typed else .legacy);
+        defer freeNpmFixtureResolution(allocator, first);
+        const second = try installer.resolveNpmPackageWithPreference("better-dx", "^0.2.24", if (typed_first) .legacy else typed);
+        defer freeNpmFixtureResolution(allocator, second);
+        try std.testing.expectEqualStrings(if (typed_first) "0.2.27" else "0.2.24", first.version);
+        try std.testing.expectEqualStrings(if (typed_first) "0.2.24" else "0.2.27", second.version);
+        // The BFS metadata route independently reads the same real JSON. A
+        // provisional exact query cannot replace this call's raw declaration.
+        var with_deps = try installer.resolveNpmPackageWithDepsWithPreference("better-dx", "0.2.24", typed);
+        defer with_deps.deinit(allocator);
+        try std.testing.expectEqualStrings("0.2.27", with_deps.version);
+        const observed = installer.getCachedNpmResolutionWithPreference("better-dx", "0.2.24", typed).?;
+        defer freeNpmFixtureResolution(allocator, observed);
+        try std.testing.expectEqualStrings("0.2.27", observed.version);
+        const legacy = try installer.resolveNpmPackage("better-dx", "^0.2.24");
+        defer freeNpmFixtureResolution(allocator, legacy);
+        try std.testing.expectEqualStrings("0.2.24", legacy.version);
+    }
+}
+
+test "actual npm resolver filters mixed source pins and force is local to one resolution" {
+    const allocator = std.testing.allocator;
+    var original = try @import("../deps/resolution/lockfile.zig").LockFile.parse(allocator,
+        \\{"packages":{"better-dx@0.2.24":{"name":"better-dx","version":"0.2.24","source":"pantry"},"better-dx@0.2.25":{"name":"better-dx","version":"0.2.25","source":"npm"}}}
+    );
+    defer original.deinit();
+    var package_cache = try PackageCache.init(allocator);
+    defer package_cache.deinit();
+    var installer = try Installer.init(allocator, &package_cache);
+    defer installer.deinit();
+    installer.setLockfile(&original);
+    installer.native_policy = .{ .original_lock = &original, .frozen = true };
+    installer.npm_cache.putRegistryJson("better-dx", better_dx_registry_fixture);
+    const covered = Installer.NpmLockPreference{ .npm = .{ .declared_constraint = "^0.2.24" } };
+    var bfs = try installer.resolveNpmPackageWithDepsWithPreference("better-dx", "0.2.24", covered);
+    defer bfs.deinit(allocator);
+    try std.testing.expectEqualStrings("0.2.25", bfs.version);
+    try std.testing.expectEqualStrings("0.2.25", (try @import("../deps/resolution/lockfile.zig").lockedVersionSatisfyingFromSource(&original, "better-dx", "^0.2.24", .npm)).?);
+    // The direct metadata method is the registry accelerator's individual
+    // fallback. It must see the same source-eligible preference, not a
+    // legacy URL shortcut or the native .24 pin.
+    const individual = try installer.resolveNpmPackageWithPreference("better-dx", "0.2.24", covered);
+    defer freeNpmFixtureResolution(allocator, individual);
+    try std.testing.expectEqualStrings("0.2.25", individual.version);
+    const forced = try installer.resolveNpmPackageWithPreference("better-dx", "0.2.24", .{ .npm = .{ .declared_constraint = "^0.2.24", .force = true } });
+    defer freeNpmFixtureResolution(allocator, forced);
+    try std.testing.expectEqualStrings("0.2.27", forced.version);
+    const covered_again = try installer.resolveNpmPackageWithPreference("better-dx", "0.2.24", covered);
+    defer freeNpmFixtureResolution(allocator, covered_again);
+    try std.testing.expectEqualStrings("0.2.25", covered_again.version);
+    try std.testing.expect(!installer.native_policy.force);
+    try std.testing.expectEqual(@as(usize, 2), original.packages.count());
 }

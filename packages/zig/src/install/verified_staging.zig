@@ -30,12 +30,16 @@ pub const Extraction = struct {
     }
 
     pub fn extractVerified(self: *Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, verbose: bool) !void {
+        return self.extractVerifiedWithChecksum(archive, format, url, verbose, null);
+    }
+
+    pub fn extractVerifiedWithChecksum(self: *Extraction, archive: []const u8, format: []const u8, url: ?[]const u8, verbose: bool, expected_sha256: ?[32]u8) !void {
         self.verified = false;
         // A poisoned archive retry starts with a fresh payload in this same
         // exclusively created directory, not another install's temporary path.
         io_helper.deleteTree(self.payload) catch {};
         try io_helper.makePath(self.payload);
-        try extractor.extractArchiveWithVerification(self.allocator, archive, self.payload, format, url, verbose);
+        try extractor.extractArchiveWithChecksum(self.allocator, archive, self.payload, format, url, verbose, expected_sha256);
         if (builtin.os.tag != .windows) try prepareTree(self.allocator, self.payload);
         self.verified = true;
     }

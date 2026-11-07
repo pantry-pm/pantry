@@ -21,7 +21,6 @@ import { existsSync, mkdirSync, rmSync, writeFileSync, chmodSync, readFileSync }
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { createHash } from 'node:crypto'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 import { uploadToS3 as uploadToS3Impl } from './upload-to-s3.ts'
 import { BINARY_SYNC_DOMAIN_SET } from './binary-sync-packages.ts'

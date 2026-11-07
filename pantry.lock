@@ -81,8 +81,8 @@
     }
   },
   "packages": {
-    "bun.sh@1.4.4": {
-      "name": "bun.sh",
+    "bun.com@1.4.4": {
+      "name": "bun.com",
       "version": "1.4.4",
       "source": "pantry"
     },

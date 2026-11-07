@@ -12,7 +12,7 @@
  *   pantry run <cmd>  # Run a command with packages in PATH
  */
 
-import { existsSync, readFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { execSync, spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { homedir } from 'node:os'

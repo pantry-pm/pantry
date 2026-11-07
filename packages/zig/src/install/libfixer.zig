@@ -4,6 +4,33 @@ const Paths = @import("../core/platform.zig").Paths;
 const style = @import("../cli/style.zig");
 const symlink = @import("symlink.zig");
 
+/// Conservative tool admission, not Mach-O validity. Every thin/universal
+/// byte order stays on the existing tool path. Read failures also preserve
+/// that path; only confirmed non-candidates avoid subprocesses and signing.
+fn isMachOCandidate(path: []const u8) bool {
+    const file = io_helper.cwd().openFile(io_helper.io, path, .{ .mode = .read_only }) catch return true;
+    defer file.close(io_helper.io);
+    var magic: [4]u8 = undefined;
+    var used: usize = 0;
+    while (used < magic.len) {
+        const count = io_helper.platformRead(file.handle, magic[used..]) catch return true;
+        if (count == 0) return false;
+        used += count;
+    }
+    return switch (std.mem.readInt(u32, &magic, .big)) {
+        std.macho.MH_MAGIC,
+        std.macho.MH_CIGAM,
+        std.macho.MH_MAGIC_64,
+        std.macho.MH_CIGAM_64,
+        std.macho.FAT_MAGIC,
+        std.macho.FAT_CIGAM,
+        std.macho.FAT_MAGIC_64,
+        std.macho.FAT_CIGAM_64,
+        => true,
+        else => false,
+    };
+}
+
 /// Fix macOS library paths using install_name_tool
 /// This discovers @rpath dependencies using otool and fixes them to use absolute paths
 pub fn fixMacOSLibraryPaths(
@@ -32,6 +59,8 @@ pub fn fixMacOSLibraryPathsInTree(
     if (builtin.os.tag != .macos) {
         return;
     }
+
+    if (!isMachOCandidate(binary_path)) return;
 
     // Use otool to get current library dependencies
     const otool_result = io_helper.childRun(allocator, &[_][]const u8{
@@ -342,6 +371,8 @@ fn addRpathEntries(
     const builtin = @import("builtin");
     if (builtin.os.tag != .macos) return;
 
+    if (!isMachOCandidate(binary_path)) return;
+
     // Resolve the canonical user-level global dir so dynamic libs in
     // `<global>/packages/<dep>/v<ver>/lib` (openssl.org, nodejs.org, etc.)
     // remain reachable from a freshly installed binary's rpath.
@@ -384,6 +415,8 @@ fn fixDylibInstallName(
 ) void {
     const builtin = @import("builtin");
     if (builtin.os.tag != .macos) return;
+
+    if (!isMachOCandidate(dylib_path)) return;
 
     // Use otool -D to get the install name
     const otool_result = io_helper.childRun(allocator, &[_][]const u8{
@@ -625,6 +658,7 @@ fn codesignDirectory(allocator: std.mem.Allocator, dir_path: []const u8) void {
 
         var path_buf: [std.fs.max_path_bytes]u8 = undefined;
         const file_path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
+        if (!isMachOCandidate(file_path)) continue;
 
         const result = io_helper.childRun(allocator, &[_][]const u8{
             "codesign", "-s", "-", "-f", file_path,

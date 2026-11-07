@@ -70,6 +70,23 @@ const deps_files_table = [_]DepsFileInfo{
     .{ .name = "composer.json", .format = .composer_json },
 };
 
+/// Select this directory's own dependency source, including recognized nested
+/// config paths, without inheriting a parent's declarations.
+pub fn findDepsFileInDirectory(allocator: std.mem.Allocator, directory: []const u8) !?DepsFile {
+    var real_directory: [std.fs.max_path_bytes]u8 = undefined;
+    return findDepsInRealDirectory(allocator, try io_helper.realpath(directory, &real_directory));
+}
+
+fn findDepsInRealDirectory(allocator: std.mem.Allocator, directory: []const u8) !?DepsFile {
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    for (deps_files_table) |entry| {
+        const full_path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ directory, entry.name }) catch continue;
+        io_helper.accessAbsolute(full_path, .{}) catch continue;
+        return .{ .path = try allocator.dupe(u8, full_path), .format = entry.format };
+    }
+    return null;
+}
+
 /// Find dependency file in directory or parent directories
 pub fn findDepsFile(allocator: std.mem.Allocator, start_dir: []const u8) !?DepsFile {
     var current_dir_buf: [std.fs.max_path_bytes]u8 = undefined;
@@ -80,24 +97,7 @@ pub fn findDepsFile(allocator: std.mem.Allocator, start_dir: []const u8) !?DepsF
 
     // Walk up the directory tree
     while (true) {
-        // Perf: Use stack buffer for path construction (avoids allocator per candidate)
-        var path_buf: [std.fs.max_path_bytes]u8 = undefined;
-
-        // Try each dependency file name
-        for (deps_files_table) |entry| {
-            const full_path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
-
-            // Check if file exists
-            io_helper.accessAbsolute(full_path, .{}) catch {
-                continue;
-            };
-
-            // Found a dependency file!
-            return DepsFile{
-                .path = try allocator.dupe(u8, full_path),
-                .format = entry.format,
-            };
-        }
+        if (try findDepsInRealDirectory(allocator, dir_path)) |file| return file;
 
         // Move to parent directory
         const parent = std.fs.path.dirname(dir_path) orelse break;
@@ -323,5 +323,34 @@ test "findDepsFile" {
     if (result) |deps_file| {
         defer allocator.free(deps_file.path);
         style.print("Found: {s}\n", .{deps_file.path});
+    }
+}
+
+test "own dependency discovery supports nested configs without inheriting parents" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.json", .data = "{}" });
+    try directory.dir.createDirPath(io_helper.io, "child/config");
+    try directory.dir.createDirPath(io_helper.io, "child/.config");
+    const child = try std.fmt.allocPrint(allocator, ".zig-cache/tmp/{s}/child", .{directory.sub_path});
+    defer allocator.free(child);
+    try std.testing.expect((try findDepsFileInDirectory(allocator, child)) == null);
+    const inherited = (try findDepsFile(allocator, child)).?;
+    defer allocator.free(inherited.path);
+    try std.testing.expect(std.mem.endsWith(u8, inherited.path, "/pantry.json"));
+    for ([_]struct { path: []const u8, format: DepsFile.FileFormat }{
+        .{ .path = "config/deps.ts", .format = .config_deps_ts },
+        .{ .path = ".config/deps.ts", .format = .dotconfig_deps_ts },
+        .{ .path = ".config/pantry.ts", .format = .dotconfig_pantry_ts },
+    }) |fixture| {
+        const relative = try std.fs.path.join(allocator, &.{ "child", fixture.path });
+        defer allocator.free(relative);
+        try directory.dir.writeFile(io_helper.io, .{ .sub_path = relative, .data = "export default {}" });
+        defer directory.dir.deleteFile(io_helper.io, relative) catch {};
+        const selected = (try findDepsFileInDirectory(allocator, child)).?;
+        defer allocator.free(selected.path);
+        try std.testing.expectEqual(fixture.format, selected.format);
+        try std.testing.expect(std.mem.endsWith(u8, selected.path, fixture.path));
     }
 }

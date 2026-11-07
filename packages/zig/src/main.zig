@@ -50,7 +50,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const linker: ?lib.config.LinkerMode = if (ctx.getOption("linker")) |value|
         lib.config.LinkerMode.fromString(value) orelse {
             style.printForced("Error: --linker must be 'isolated' or 'hoisted'\n", .{});
-            std.process.exit(1);
+            exitCommand(1);
         }
     else
         pantry_config.install.linker;
@@ -73,11 +73,11 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const kind = kind_override orelse "cli";
     if (!std.mem.eql(u8, kind, "cli") and !std.mem.eql(u8, kind, "library") and !std.mem.eql(u8, kind, "app") and !std.mem.eql(u8, kind, "font")) {
         style.printForced("--kind must be app, cli, library or font\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
     if ((std.mem.eql(u8, kind, "app") or std.mem.eql(u8, kind, "font")) and packages.items.len == 0) {
         style.printForced("Application and font installs require an explicit package name\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
     const routing = lib.commands.install_routing;
     var desktop_packages = std.ArrayList([]const u8).empty;
@@ -90,17 +90,17 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (desktop_packages.items.len > 0) {
         if (builtin.os.tag != .macos) {
             style.printForced("Application and font activation currently requires macOS\n", .{});
-            std.process.exit(1);
+            exitCommand(1);
         }
         if (dry_run) {
             for (desktop_packages.items) |package| style.printForced("Would install {s} from the Pantry registry and activate it for this user\n", .{package});
             for (ordinary_packages.items) |package| style.printForced("Would install {s} in the {s} scope\n", .{ package, if (user) "user" else if (global) "system" else "project" });
-            std.process.exit(0);
+            exitCommand(0);
         }
         var result = try lib.commands.installPackagesUserLocalCommand(allocator, desktop_packages.items, true);
         defer result.deinit(allocator);
         if (result.message) |message| style.printForced("{s}\n", .{message});
-        if (result.exit_code != 0 or ordinary_packages.items.len == 0) std.process.exit(result.exit_code);
+        if (result.exit_code != 0 or ordinary_packages.items.len == 0) exitCommand(result.exit_code);
         packages.clearRetainingCapacity();
         try packages.appendSlice(allocator, ordinary_packages.items);
     }
@@ -119,7 +119,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
             style.print("{s}\n", .{msg});
         }
 
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     // Global install with explicit packages — these go straight into the
@@ -133,7 +133,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
             style.print("{s}\n", .{msg});
         }
 
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     // Call existing install logic with options
@@ -183,7 +183,7 @@ fn installAction(ctx: *cli.BaseCommand.ParseContext) !void {
         try sc.runProjectPostInstall(cwd_buf, force);
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn ciAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -218,7 +218,7 @@ fn ciAction(ctx: *cli.BaseCommand.ParseContext) !void {
         }
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -235,7 +235,7 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     if (packages.items.len == 0) {
         style.print("Error: No packages specified. Usage: pantry add <package>[@version] ...\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
 
     const global = ctx.hasOption("global");
@@ -255,7 +255,7 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
             style.print("{s}\n", .{msg});
         }
 
-        std.process.exit(global_result.exit_code);
+        exitCommand(global_result.exit_code);
     }
 
     // Load pantry.toml config for linker/peer settings
@@ -287,7 +287,7 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     // Exit if install failed
     if (result.exit_code != 0) {
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     // Save packages to config file
@@ -315,7 +315,7 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
             // Forced: a save failure must surface even under quiet/--quiet.
             style.printForced("\n⚠ Warning: Failed to save to config file: {}\n", .{err});
             style.printForced("[33m Note:[0m To save to config, manually add to {s}\n", .{std.fs.path.basename(path)});
-            std.process.exit(0);
+            exitCommand(0);
         };
 
         style.print("\n[32m✓[0m Installed and saved {d} package(s) to {s}\n", .{ packages.items.len, std.fs.path.basename(path) });
@@ -324,7 +324,7 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
         // No config file, so dev and peer flags are not used
     }
 
-    std.process.exit(0);
+    exitCommand(0);
 }
 
 /// Wrapper for ArrayList that provides writer interface for Zig 0.16-dev
@@ -620,7 +620,7 @@ fn removeAction(ctx: *cli.BaseCommand.ParseContext) !void {
         }
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn uninstallAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -637,7 +637,7 @@ fn uninstallAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     if (packages.items.len == 0) {
         style.print("Error: No packages specified to uninstall\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
 
     const result = try lib.commands.package_commands.uninstallCommand(allocator, packages.items);
@@ -647,7 +647,7 @@ fn uninstallAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn runAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -655,7 +655,7 @@ fn runAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const script_name = ctx.getArgument(0) orelse {
         style.print("Error: No script name provided\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     // Check if --filter flag is set
@@ -709,7 +709,7 @@ fn runAction(ctx: *cli.BaseCommand.ParseContext) !void {
             style.print("{s}\n", .{msg});
         }
 
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     // Otherwise, run normally (with timeout if specified)
@@ -722,7 +722,7 @@ fn runAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn updateAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -759,7 +759,7 @@ fn updateAction(ctx: *cli.BaseCommand.ParseContext) !void {
         }
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 /// The desktop service is an independently installed Pantry CLI capability.
@@ -767,7 +767,7 @@ fn desktopAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const action = ctx.getArgument(0) orelse "serve";
     if (!std.mem.eql(u8, action, "serve") and !std.mem.eql(u8, action, "pair") and !std.mem.eql(u8, action, "setup")) {
         style.printForced("Usage: pantry desktop serve|pair|setup [--yes] [--json]\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
     var args: std.ArrayList([]const u8) = .empty;
     defer args.deinit(ctx.allocator);
@@ -777,7 +777,7 @@ fn desktopAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const result = try lib.commands.pxCommand(ctx.allocator, args.items, .{ .silent = true });
     defer result.deinit(ctx.allocator);
     if (result.message) |message| style.printForced("{s}\n", .{message});
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pxAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -811,7 +811,7 @@ fn pxAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn outdatedAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -833,7 +833,7 @@ fn outdatedAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn scriptsListAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -846,7 +846,7 @@ fn scriptsListAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn listAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -862,7 +862,7 @@ fn listAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn whichAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -871,7 +871,7 @@ fn whichAction(ctx: *cli.BaseCommand.ParseContext) !void {
     defer result.deinit(ctx.allocator);
     if (result.exit_code != 0) style.setDiagnosticsToStderr(true);
     if (result.message) |message| style.printForced("{s}\n", .{message});
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn loginAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -883,7 +883,7 @@ fn loginAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn whoamiAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -896,7 +896,7 @@ fn whoamiAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 /// `--confirm-timeout <seconds>` as milliseconds, or null for the default.
@@ -953,7 +953,7 @@ fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn publisherAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -966,7 +966,7 @@ fn publisherAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const owner = ctx.getOption("owner");
     const repository = ctx.getOption("repository") orelse {
         style.print("Error: --repository is required\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const workflow = ctx.getOption("workflow");
     const environment = ctx.getOption("environment");
@@ -993,7 +993,7 @@ fn publisherAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn publisherListAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1021,7 +1021,7 @@ fn publisherListAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn publisherRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1029,12 +1029,12 @@ fn publisherRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const package_name = ctx.getOption("package") orelse {
         style.print("Error: --package is required\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const publisher_id = ctx.getOption("publisher-id") orelse {
         style.print("Error: --publisher-id is required\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const registry = ctx.getOption("registry") orelse "https://registry.npmjs.org";
@@ -1056,7 +1056,7 @@ fn publisherRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 // ============================================================================
@@ -1070,7 +1070,7 @@ fn finishTokenResult(allocator: std.mem.Allocator, result: lib.commands.CommandR
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 /// The credential key a token subcommand acts on: the first positional
@@ -1118,7 +1118,7 @@ fn tokenSyncAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const repo = ctx.getOption("repo") orelse {
         style.print("Error: --repo is required (e.g. --repo pantry-pm/pantry)\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const result = try lib.commands.token_commands.syncCommand(allocator, .{
         .key = tokenKeyArg(ctx),
@@ -1207,7 +1207,7 @@ fn registryMemberAddAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const email = ctx.getArgument(0) orelse {
         style.print("Error: an email address is required (pantry registry member add dev@yourco.com --password '…')\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const result = try lib.commands.registry_ops.memberAddCommand(allocator, .{
         .registry = ctx.getOption("registry"),
@@ -1224,11 +1224,11 @@ fn registryPlanSetAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const email = ctx.getArgument(0) orelse {
         style.print("Error: an email address is required (pantry registry plan set releases@yourco.com team)\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const tier = ctx.getArgument(1) orelse {
         style.print("Error: a plan is required: free, pro or team\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const result = try lib.commands.registry_ops.planSetCommand(allocator, .{
         .registry = ctx.getOption("registry"),
@@ -1244,7 +1244,7 @@ fn registryTokenIssueAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const email = ctx.getArgument(0) orelse {
         style.print("Error: an email address is required (pantry registry token issue dev@yourco.com)\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const result = try lib.commands.registry_ops.tokenIssueCommand(allocator, .{
         .registry = ctx.getOption("registry"),
@@ -1262,7 +1262,7 @@ fn registryTokenRevokeAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     const email = ctx.getArgument(0) orelse {
         style.print("Error: an email address is required (pantry registry token revoke dev@yourco.com --id …)\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const result = try lib.commands.registry_ops.tokenRevokeCommand(allocator, .{
         .registry = ctx.getOption("registry"),
@@ -1298,7 +1298,7 @@ fn priceOptions(ctx: *cli.BaseCommand.ParseContext, package: []const u8) lib.com
 fn requirePackageArg(ctx: *cli.BaseCommand.ParseContext, usage: []const u8) []const u8 {
     return ctx.getArgument(0) orelse {
         style.print("Error: a package name is required ({s})\n", .{usage});
-        std.process.exit(1);
+        exitCommand(1);
     };
 }
 
@@ -1517,7 +1517,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (use_npm or std.mem.eql(u8, registry, "npm")) {
         if (verify_existing) {
             style.print("--verify-existing is supported by the Pantry registry, not npm.\n", .{});
-            std.process.exit(1);
+            exitCommand(1);
         }
         const npm_options = lib.commands.PublishOptions{
             .access = access,
@@ -1546,7 +1546,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
             style.print("{s}\n", .{msg});
         }
 
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     const options = lib.commands.RegistryPublishOptions{
@@ -1568,7 +1568,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn releaseAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1604,7 +1604,7 @@ fn releaseAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn publishBinaryAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1612,15 +1612,15 @@ fn publishBinaryAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const domain = ctx.getOption("domain") orelse {
         style.print("Error: --domain is required\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const version = ctx.getOption("version") orelse {
         style.print("Error: --version is required\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     const binary = ctx.getOption("binary") orelse {
         style.print("Error: --binary is required\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const options = lib.commands.PublishBinaryOptions{
@@ -1641,7 +1641,7 @@ fn publishBinaryAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn publishCheckAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1669,7 +1669,7 @@ fn publishCheckAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn publishCommitAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1706,7 +1706,7 @@ fn publishCommitAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn whyAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1741,7 +1741,7 @@ fn whyAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn auditAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1784,7 +1784,7 @@ fn auditAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn cacheStatsAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1799,7 +1799,7 @@ fn cacheStatsAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn cacheClearAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1819,7 +1819,7 @@ fn cacheClearAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn cacheCleanAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1832,7 +1832,7 @@ fn cacheCleanAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn cleanAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1860,7 +1860,7 @@ fn cleanAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn envListAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1876,7 +1876,7 @@ fn envListAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn envInspectAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1884,7 +1884,7 @@ fn envInspectAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const hash = ctx.getArgument(0) orelse {
         style.print("Error: env:inspect requires a hash argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const verbose = ctx.hasOption("verbose");
@@ -1896,7 +1896,7 @@ fn envInspectAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn envCleanAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1916,7 +1916,7 @@ fn envCleanAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn envRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1924,7 +1924,7 @@ fn envRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const hash = ctx.getArgument(0) orelse {
         style.print("Error: env:remove requires a hash argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const force = ctx.hasOption("force");
@@ -1936,7 +1936,7 @@ fn envRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shellIntegrateAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1949,7 +1949,7 @@ fn shellIntegrateAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shellLookupAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1957,7 +1957,7 @@ fn shellLookupAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const dir = ctx.getArgument(0) orelse {
         style.print("Error: shell:lookup requires a directory argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const result = try lib.commands.shellLookupCommand(allocator, dir);
@@ -1967,7 +1967,7 @@ fn shellLookupAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shellRouteAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1975,7 +1975,7 @@ fn shellRouteAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const dir = ctx.getArgument(0) orelse {
         style.print("Error: shell:route requires a directory argument\n", .{});
-        std.process.exit(2);
+        exitCommand(2);
     };
 
     const result = try lib.commands.shellRouteCommand(allocator, dir);
@@ -1985,7 +1985,7 @@ fn shellRouteAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shellActivateAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -1993,7 +1993,7 @@ fn shellActivateAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const dir = ctx.getArgument(0) orelse {
         style.print("Error: shell:activate requires a directory argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const result = try lib.commands.shellActivateCommand(allocator, dir);
@@ -2003,7 +2003,7 @@ fn shellActivateAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn envAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2019,7 +2019,7 @@ fn envAction(ctx: *cli.BaseCommand.ParseContext) !void {
     // Get current working directory
     const cwd = io_helper.getCwdAlloc(allocator) catch {
         style.print("Error: Could not get current directory\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
     defer allocator.free(cwd);
 
@@ -2045,7 +2045,7 @@ fn envAction(ctx: *cli.BaseCommand.ParseContext) !void {
         const stdout_file = std.Io.File.stdout();
         if (result.message) |msg| io_helper.writeAllToFile(stdout_file, msg) catch {};
         io_helper.writeAllToFile(stdout_file, "\n") catch {};
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     if (result.message) |msg| {
@@ -2063,7 +2063,7 @@ fn envAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("No project detected in current directory\n", .{});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn devShellcodeAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2078,7 +2078,7 @@ fn devShellcodeAction(ctx: *cli.BaseCommand.ParseContext) !void {
         try io_helper.writeAllToFile(stdout, msg);
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 /// Background, best-effort: detect a newer pantry release and drop the
@@ -2086,7 +2086,7 @@ fn devShellcodeAction(ctx: *cli.BaseCommand.ParseContext) !void {
 /// Throttled to ~once/day internally; safe to fire on every shell start.
 fn devCheckUpdatesAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const result = try lib.commands.devCheckUpdatesCommand(ctx.allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn servicesAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2099,7 +2099,7 @@ fn servicesAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn startAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2107,7 +2107,7 @@ fn startAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: start requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     // `--port` forwarded, which it was not.
@@ -2137,7 +2137,7 @@ fn startAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn stopAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2145,7 +2145,7 @@ fn stopAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: stop requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2156,7 +2156,7 @@ fn stopAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn restartAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2164,7 +2164,7 @@ fn restartAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: restart requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2175,7 +2175,7 @@ fn restartAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn statusAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2183,7 +2183,7 @@ fn statusAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: status requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2194,7 +2194,7 @@ fn statusAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn enableAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2202,7 +2202,7 @@ fn enableAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: enable requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2213,7 +2213,7 @@ fn enableAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn disableAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2221,7 +2221,7 @@ fn disableAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: disable requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2232,7 +2232,7 @@ fn disableAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn logsAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2243,12 +2243,12 @@ fn logsAction(ctx: *cli.BaseCommand.ParseContext) !void {
         const prune_result = try lib.commands.servicePruneLogsCommand(allocator);
         defer prune_result.deinit(allocator);
         if (prune_result.message) |msg| style.print("{s}\n", .{msg});
-        std.process.exit(prune_result.exit_code);
+        exitCommand(prune_result.exit_code);
     }
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: logs requires a service name argument (or --prune)\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const follow = ctx.hasOption("follow");
@@ -2261,7 +2261,7 @@ fn logsAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn serviceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2269,7 +2269,7 @@ fn serviceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: services:remove requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2280,7 +2280,7 @@ fn serviceRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn servicePortsAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2293,7 +2293,7 @@ fn servicePortsAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn servicesPruneAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2306,7 +2306,7 @@ fn servicesPruneAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn inspectorAction(_: *cli.BaseCommand.ParseContext) !void {
@@ -2332,12 +2332,12 @@ fn inspectorAction(_: *cli.BaseCommand.ParseContext) !void {
         var buf: [1024]u8 = undefined;
         const installed_path = std.fmt.bufPrint(&buf, "{s}/.local/share/pantry/inspector", .{home}) catch {
             style.print("Error: Could not find inspector directory\n", .{});
-            std.process.exit(1);
+            exitCommand(1);
         };
         var pages_buf: [1024]u8 = undefined;
         const pages_path = std.fmt.bufPrint(&pages_buf, "{s}/pages", .{installed_path}) catch {
             style.print("Error: Could not find inspector directory\n", .{});
-            std.process.exit(1);
+            exitCommand(1);
         };
         if (io_helper.openDir(pages_path, .{})) |dir| {
             var d = dir;
@@ -2347,7 +2347,7 @@ fn inspectorAction(_: *cli.BaseCommand.ParseContext) !void {
             style.print("Error: Could not find inspector directory\n", .{});
             style.print("  Looked in: packages/inspector\n", .{});
             style.print("  Looked in: {s}\n", .{installed_path});
-            std.process.exit(1);
+            exitCommand(1);
         }
     }
 
@@ -2363,7 +2363,7 @@ fn inspectorAction(_: *cli.BaseCommand.ParseContext) !void {
     var serve_buf: [1024]u8 = undefined;
     const serve_path = std.fmt.bufPrint(&serve_buf, "{s}/serve.ts", .{inspector_dir.?}) catch {
         style.print("Error: Could not construct serve path\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const user_shell = io_helper.getenv("SHELL") orelse "/bin/sh";
@@ -2372,7 +2372,7 @@ fn inspectorAction(_: *cli.BaseCommand.ParseContext) !void {
     }) catch |err| {
         style.print("Error: Could not start inspector server: {any}\n", .{err});
         style.print("Make sure 'bun' is installed.\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 }
 
@@ -2393,7 +2393,7 @@ fn inspectAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn execAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2410,7 +2410,7 @@ fn execAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     if (args_list.items.len < 2) {
         style.print("Error: exec requires a service name and a command\nUsage: pantry exec <service> <command> [args...]\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
 
     const result = try lib.commands.serviceExecCommand(allocator, args_list.items);
@@ -2420,7 +2420,7 @@ fn execAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn snapshotAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2428,7 +2428,7 @@ fn snapshotAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: snapshot requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2439,7 +2439,7 @@ fn snapshotAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn restoreAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2455,7 +2455,7 @@ fn restoreAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     if (args_list.items.len == 0) {
         style.print("Error: restore requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     }
 
     const result = try lib.commands.serviceRestoreCommand(allocator, args_list.items);
@@ -2465,7 +2465,7 @@ fn restoreAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn snapshotsAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2473,7 +2473,7 @@ fn snapshotsAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const service_name = ctx.getArgument(0) orelse {
         style.print("Error: snapshots requires a service name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{service_name};
@@ -2484,7 +2484,7 @@ fn snapshotsAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn bootstrapAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2509,7 +2509,7 @@ fn bootstrapAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shimAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2541,7 +2541,7 @@ fn shimAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shimListAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2554,7 +2554,7 @@ fn shimListAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn shimRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2576,7 +2576,7 @@ fn shimRemoveAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn verifyAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2584,7 +2584,7 @@ fn verifyAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const package_path = ctx.getArgument(0) orelse {
         style.print("Error: verify requires a package path argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const keyring_path = ctx.getOption("keyring");
@@ -2612,7 +2612,7 @@ fn verifyAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn signAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2620,12 +2620,12 @@ fn signAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const package_path = ctx.getArgument(0) orelse {
         style.print("Error: sign requires a package path argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const key = ctx.getArgument(1) orelse {
         style.print("Error: sign requires a private key argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const output = ctx.getOption("output");
@@ -2654,7 +2654,7 @@ fn signAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn generateKeyAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2684,7 +2684,7 @@ fn generateKeyAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn initAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2727,7 +2727,7 @@ fn runInitCommand(allocator: std.mem.Allocator, args: []const []const u8) !void 
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn doctorAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2743,7 +2743,7 @@ fn doctorAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn oidcSetupAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2759,7 +2759,7 @@ fn oidcSetupAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn dedupeAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2784,7 +2784,7 @@ fn dedupeAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn searchAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2792,7 +2792,7 @@ fn searchAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const query = ctx.getArgument(0) orelse {
         style.print("Error: search requires a query argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{query};
@@ -2806,7 +2806,7 @@ fn searchAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn infoAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2814,7 +2814,7 @@ fn infoAction(ctx: *cli.BaseCommand.ParseContext) !void {
 
     const package_name = ctx.getArgument(0) orelse {
         style.print("Error: info requires a package name argument\n", .{});
-        std.process.exit(1);
+        exitCommand(1);
     };
 
     const args = [_][]const u8{package_name};
@@ -2828,7 +2828,7 @@ fn infoAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn treeAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2871,7 +2871,7 @@ fn treeAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn linkAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2890,7 +2890,7 @@ fn linkAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn unlinkAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -2909,7 +2909,7 @@ fn unlinkAction(ctx: *cli.BaseCommand.ParseContext) !void {
         style.print("{s}\n", .{msg});
     }
 
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 // ============================================================================
@@ -3066,35 +3066,35 @@ fn pmBinAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const global = ctx.hasOption("global");
     var result = try lib.commands.pmBinCommand(allocator, global);
     defer result.deinit(allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmHashAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     var result = try lib.commands.pmHashCommand(allocator);
     defer result.deinit(allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmHashStringAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     var result = try lib.commands.pmHashStringCommand(allocator);
     defer result.deinit(allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmHashPrintAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     var result = try lib.commands.pmHashPrintCommand(allocator);
     defer result.deinit(allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmCacheAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     var result = try lib.commands.pmCacheCommand(allocator);
     defer result.deinit(allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmCacheRmAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3104,7 +3104,7 @@ fn pmCacheRmAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmMigrateAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3114,7 +3114,7 @@ fn pmMigrateAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmVersionAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3139,7 +3139,7 @@ fn pmVersionAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmPkgAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3158,7 +3158,7 @@ fn pmPkgAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmTrustAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3174,7 +3174,7 @@ fn pmTrustAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmUntrustedAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3184,14 +3184,14 @@ fn pmUntrustedAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmDefaultTrustedAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
     var result = try lib.commands.pmDefaultTrustedCommand(allocator);
     defer result.deinit(allocator);
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn pmLsAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3203,7 +3203,7 @@ fn pmLsAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn patchAction(ctx: *cli.BaseCommand.ParseContext) !void {
@@ -3223,7 +3223,7 @@ fn patchAction(ctx: *cli.BaseCommand.ParseContext) !void {
     if (result.message) |msg| {
         style.print("{s}\n", .{msg});
     }
-    std.process.exit(result.exit_code);
+    exitCommand(result.exit_code);
 }
 
 fn helpAction(_: *cli.BaseCommand.ParseContext) !void {
@@ -3275,7 +3275,7 @@ fn upgradeAction(ctx: *cli.BaseCommand.ParseContext) !void {
         if (result.message) |msg| {
             style.printError("{s}", .{msg});
         }
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 }
 
@@ -3320,7 +3320,7 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
     // it in this short-lived child means such a crash never takes down the
     // parent `pantry install`. See install/mas.zig (installIsolated).
     if (args.len == 3 and std.mem.eql(u8, args[1], "__mas-install")) {
-        std.process.exit(if (lib.install.mas.install(args[2])) 0 else 1);
+        exitCommand(if (lib.install.mas.install(args[2])) 0 else 1);
     }
 
     if (args.len == 3 and std.mem.eql(u8, args[1], "shell:lookup") and
@@ -3330,7 +3330,7 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
         if (result.message) |msg| {
             style.print("{s}\n", .{msg});
         }
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     // Asked by the shell hooks before an auto-install (#204).
@@ -3341,7 +3341,7 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
         if (result.message) |msg| {
             style.print("{s}\n", .{msg});
         }
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     if (args.len == 2 and std.mem.eql(u8, args[1], "dev:shellcode")) {
@@ -3349,10 +3349,17 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
         if (result.message) |msg| {
             // Write to stdout for eval to capture (same as devShellcodeAction).
             const stdout = std.Io.File.stdout();
-            io_helper.writeAllToFile(stdout, msg) catch std.process.exit(1);
+            io_helper.writeAllToFile(stdout, msg) catch exitCommand(1);
         }
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
+}
+
+/// Command handlers terminate directly, so main's defers do not run there.
+/// Join noncritical telemetry before process teardown on both exit paths.
+fn exitCommand(code: u8) noreturn {
+    lib.install.shutdownAnalytics();
+    std.process.exit(code);
 }
 
 pub fn main() !void {
@@ -3378,6 +3385,7 @@ pub fn main() !void {
         .Debug, .ReleaseSafe => _ = debug_allocator.deinit(),
         .ReleaseFast, .ReleaseSmall => {},
     };
+    defer lib.install.shutdownAnalytics();
 
     // Hot path first: shell:lookup / dev:shellcode exit here when matched,
     // skipping the launchpad warning + migration probe and the command tree.
@@ -3897,7 +3905,7 @@ pub fn main() !void {
                     style.print("{s}\n", .{msg});
                 }
 
-                std.process.exit(result.exit_code);
+                exitCommand(result.exit_code);
             }
         };
 
@@ -5213,7 +5221,7 @@ pub fn main() !void {
                     style.print("{s}\n", .{msg});
                     allocator.free(msg);
                 }
-                std.process.exit(@intCast(result.exit_code));
+                exitCommand(@intCast(result.exit_code));
             }
             return;
         }
@@ -5262,14 +5270,14 @@ pub fn main() !void {
         var result = try lib.commands.runScriptCommand(allocator, forwarded);
         defer result.deinit(allocator);
         if (result.message) |msg| style.print("{s}\n", .{msg});
-        std.process.exit(result.exit_code);
+        exitCommand(result.exit_code);
     }
 
     parser.parse(root, args[1..]) catch |err| {
         if (err == error.UnknownOption or err == error.TooManyArguments) {
             style.print("Error: {}\n\n", .{err});
             printHelp();
-            std.process.exit(1);
+            exitCommand(1);
         }
         return err;
     };

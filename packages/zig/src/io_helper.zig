@@ -85,32 +85,6 @@ var io_instance: Threaded = blk: {
 };
 var io_initialized = false;
 
-/// One-time flag: have we pointed the global Io's child-process environment at
-/// the real OS environment yet?
-var environ_initialized = false;
-
-/// Populate the global Io instance's `process_environ` from the real OS
-/// environment (libc `environ`) on POSIX.
-///
-/// `Threaded.init_single_threaded` ships an EMPTY `process_environ` on non-Windows
-/// targets, and `std.process.run`/`spawn` pass that environ to children whenever
-/// `environ_map == null`. The practical effect: every child process pantry spawns
-/// (git, bump, changelog, …) ran with an EMPTY environment — no `HOME`, so git
-/// could not read `~/.gitconfig` (commits failed with "Author identity unknown")
-/// or `~/.config/git/ignore`. Capturing the libc `environ` here makes spawned
-/// children inherit pantry's full environment, exactly as a shell-launched child
-/// would. (Windows already uses the global block via `init_single_threaded`.)
-fn ensureEnvironInitialized() void {
-    if (is_windows or environ_initialized) return;
-    environ_initialized = true;
-    // libc `environ` is a null-terminated array of "KEY=VALUE" C strings. Span it
-    // into the [:null] slice shape PosixBlock expects; the memory is owned by libc
-    // and lives for the whole process, so no allocation/free is needed.
-    // Populate the raw OS block; leave `io_instance.environ_initialized = false`
-    // so std's lazy `scanEnviron` still memoizes PATH/HOME from this block.
-    io_instance.environ.process_environ = .{ .block = .{ .slice = std.mem.span(c.environ) } };
-}
-
 /// Initialize Pantry's cancelable, concurrent I/O backend.
 ///
 /// `Threaded.init_single_threaded` rejects concurrent tasks and ignores
@@ -119,9 +93,15 @@ fn ensureEnvironInitialized() void {
 /// the full backend before using any I/O helper.
 pub fn initializeIo() void {
     if (@import("builtin").is_test or io_initialized) return;
-    io_instance = Threaded.init(std.heap.page_allocator, .{});
+    // Threaded derives cached PATH/HOME state from InitOptions.environ.
+    // Supply the real environment before initialization; injecting only its raw
+    // block afterward leaves an empty cached PATH on Darwin process launches.
+    const environment: std.process.Environ = if (is_windows)
+        .{ .block = .global }
+    else
+        .{ .block = .{ .slice = std.mem.span(c.environ) } };
+    io_instance = Threaded.init(std.heap.page_allocator, .{ .environ = environment });
     io_initialized = true;
-    ensureEnvironInitialized();
 }
 
 pub fn deinitializeIo() void {
@@ -138,7 +118,6 @@ pub fn getIo() Io {
         return std.testing.io;
     }
     if (!io_initialized) initializeIo();
-    ensureEnvironInitialized();
     return io_instance.io();
 }
 
@@ -854,15 +833,24 @@ test "PATH lookup skips missing entries and resolves native executable names" {
     try std.testing.expect((try findExecutableInPath(allocator, "absent-runtime", path)) == null);
 }
 
+/// Executable filename classes recognized by Windows activation and validation.
+pub const windows_executable_extensions = [_][]const u8{ ".com", ".exe", ".bat", ".cmd" };
+
+pub fn isWindowsExecutableName(path: []const u8) bool {
+    const extension = std.fs.path.extension(path);
+    for (windows_executable_extensions) |candidate| {
+        if (std.ascii.eqlIgnoreCase(extension, candidate)) return true;
+    }
+    return false;
+}
+
 /// Check if `path` exists and is regular-or-symlink with at least one
 /// execute bit set. Uses libc `access(path, X_OK)` for portability.
 pub fn isExecutable(path: []const u8) bool {
     if (comptime is_windows) {
         const metadata = statFile(path) catch return false;
         if (metadata.kind != .file or metadata.size == 0) return false;
-        const extension = std.fs.path.extension(path);
-        return std.ascii.eqlIgnoreCase(extension, ".exe") or std.ascii.eqlIgnoreCase(extension, ".com") or
-            std.ascii.eqlIgnoreCase(extension, ".cmd") or std.ascii.eqlIgnoreCase(extension, ".bat");
+        return isWindowsExecutableName(path);
     }
     var path_buf: [std.fs.max_path_bytes:0]u8 = undefined;
     if (path.len >= path_buf.len) return false;
@@ -1964,6 +1952,8 @@ pub fn httpDownloadFile(allocator: std.mem.Allocator, url: []const u8, dest_path
 }
 
 pub const HttpDownloadOptions = struct {
+    /// Borrowed until the owned request and cancellation cleanup have joined.
+    capture: ?*TransientGetCapture = null,
     max_attempts: u32 = 3,
     initial_retry_delay_ms: u64 = 1000,
 };
@@ -1972,6 +1962,7 @@ pub const HttpDownloadOptions = struct {
 /// Only an incomplete body or an identified transient transport failure earns
 /// a fresh GET. File writes, credentials, invalid input and cancellation do not.
 pub const HttpGetRetryBudget = struct {
+    capture: ?*TransientGetCapture = null,
     used: u32 = 0,
     max_retries: u32 = 2,
     initial_delay_ms: u64 = 1000,
@@ -2005,7 +1996,7 @@ pub fn runDownloadWithRetry(comptime task: anytype, args: anytype, dest_path: []
     if (options.max_attempts == 0) return error.InvalidDownloadOptions;
     const Operation = struct {
         fn run(inner_args: @TypeOf(args), path: []const u8, opts: HttpDownloadOptions) anyerror!void {
-            var budget: HttpGetRetryBudget = .{ .max_retries = opts.max_attempts - 1, .initial_delay_ms = opts.initial_retry_delay_ms };
+            var budget: HttpGetRetryBudget = .{ .max_retries = opts.max_attempts - 1, .initial_delay_ms = opts.initial_retry_delay_ms, .capture = opts.capture };
             while (true) {
                 var created = false;
                 var body_failure = false;
@@ -2037,6 +2028,7 @@ const ArchiveGetFixture = struct {
     responses: []const []const u8,
     requests: std.atomic.Value(usize) = .init(0),
     reset_count: usize = 0,
+    arrival_barrier: ?*std.atomic.Value(usize) = null,
 
     fn serve(self: *ArchiveGetFixture) !void {
         for (self.responses, 0..) |response, index| {
@@ -2051,6 +2043,10 @@ const ArchiveGetFixture = struct {
                 if (std.mem.eql(u8, line, "\r\n")) break;
             }
             _ = self.requests.fetchAdd(1, .monotonic);
+            if (self.arrival_barrier) |barrier| {
+                _ = barrier.fetchAdd(1, .monotonic);
+                while (barrier.load(.monotonic) < 2) try std.testing.io.sleep(.{ .nanoseconds = std.time.ns_per_ms }, .awake);
+            }
             var buffer: [1024]u8 = undefined;
             var writer = connection.writer(std.testing.io, &buffer);
             try writer.interface.writeAll(response);
@@ -2396,6 +2392,7 @@ pub fn httpStreamGetWithRetryBudget(allocator: std.mem.Allocator, url: []const u
         }
         const status = @backingInt(stream.response.head.status);
         const retry_delay = responseRetryDelay(&stream.response, budget.used +| 1);
+        if (budget.capture) |capture| capture.observe(status, responseRetryAfter(&stream.response));
         if (transientGetStatus(status) and budget.used < budget.max_retries and retry_delay != null) {
             budget.used += 1;
             stream.req.deinit();
@@ -2663,11 +2660,11 @@ fn sameHttpOrigin(a: std.Uri, b: std.Uri) bool {
     return std.ascii.eqlIgnoreCase(a_host, b_host) and (a.port orelse default_port) == (b.port orelse default_port);
 }
 
-fn httpGetResponseTask(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool, timeout_ms: u64) anyerror!HttpResponse {
+fn httpGetResponseTask(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool, timeout_ms: u64, capture: ?*TransientGetCapture) anyerror!HttpResponse {
     var client: std.http.Client = .{ .allocator = allocator, .io = io };
     defer client.deinit();
     const deadline_ms = getMilliTimestamp() +| @as(i64, @intCast(@min(timeout_ms, std.math.maxInt(i64))));
-    return httpGetResponseWithClientDeadline(&client, allocator, url, extra_headers, status_only_errors, deadline_ms);
+    return httpGetResponseWithClientDeadline(&client, allocator, url, extra_headers, status_only_errors, deadline_ms, capture);
 }
 
 /// Safe GETs share a fixed retry budget across gateway and connection failures.
@@ -2680,11 +2677,17 @@ fn transientGetStatus(status: u16) bool {
 // A delay that cannot finish inside the caller's deadline is not waited out:
 // the status is returned instead (see `retryFitsDeadline`), so the caller
 // reports the registry's answer rather than a bare `Timeout`.
-fn responseRetryDelay(response: *std.http.Client.Response, retries: u32) ?u64 {
+fn responseRetryAfter(response: *std.http.Client.Response) ?u64 {
     var headers = response.head.iterateHeaders();
     while (headers.next()) |header| {
         if (!std.ascii.eqlIgnoreCase(header.name, "Retry-After")) continue;
-        const seconds = http_retry.retryAfterSeconds(header.value, @divFloor(getMilliTimestamp(), 1000)) orelse continue;
+        return http_retry.retryAfterSeconds(header.value, @divFloor(getMilliTimestamp(), 1000)) orelse continue;
+    }
+    return null;
+}
+
+fn responseRetryDelay(response: *std.http.Client.Response, retries: u32) ?u64 {
+    if (responseRetryAfter(response)) |seconds| {
         if (seconds > http_retry.max_delay_seconds) return null;
         return @max(@as(u64, retries), seconds);
     }
@@ -2717,6 +2720,17 @@ var last_transient_get_retry_after = std.atomic.Value(u32).init(0);
 
 pub const TransientGetRecord = struct { status: u16, retry_after_seconds: u32 };
 
+/// One caller owns this record until its request has joined. Concurrent
+/// requests use separate captures; readers never consult process-global state.
+pub const TransientGetCapture = struct {
+    record: ?TransientGetRecord = null,
+
+    pub fn observe(self: *TransientGetCapture, status: u16, delay: ?u64) void {
+        if (!transientGetStatus(status)) return;
+        self.record = .{ .status = status, .retry_after_seconds = @intCast(@min(delay orelse 0, std.math.maxInt(u32))) };
+    }
+};
+
 pub fn resetTransientGetRecord() void {
     last_transient_get_status.store(0, .monotonic);
     last_transient_get_retry_after.store(0, .monotonic);
@@ -2732,6 +2746,84 @@ fn recordTransientGet(status: u16, delay: ?u64) void {
     if (!transientGetStatus(status)) return;
     last_transient_get_status.store(status, .monotonic);
     last_transient_get_retry_after.store(@intCast(@min(delay orelse 0, std.math.maxInt(u32))), .monotonic);
+}
+
+test "concurrent metadata and archive GETs retain their own transient answers" {
+    const address = try std.Io.net.IpAddress.parse("127.0.0.1", 0);
+    const unavailable = "HTTP/1.1 503 Service Unavailable\r\nRetry-After: 401\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+    const limited = "HTTP/1.1 429 Too Many Requests\r\nRetry-After: 503\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+    var arrivals: std.atomic.Value(usize) = .init(0);
+    var finished: std.atomic.Value(usize) = .init(0);
+    var first: ArchiveGetFixture = .{ .server = try address.listen(std.testing.io, .{ .reuse_address = true }), .responses = &.{ unavailable, unavailable }, .arrival_barrier = &arrivals };
+    defer first.server.deinit(std.testing.io);
+    var second: ArchiveGetFixture = .{ .server = try address.listen(std.testing.io, .{ .reuse_address = true }), .responses = &.{ limited, limited }, .arrival_barrier = &arrivals };
+    defer second.server.deinit(std.testing.io);
+    var serving_first = try std.testing.io.concurrent(ArchiveGetFixture.serve, .{&first});
+    defer serving_first.cancel(std.testing.io) catch {};
+    var serving_second = try std.testing.io.concurrent(ArchiveGetFixture.serve, .{&second});
+    defer serving_second.cancel(std.testing.io) catch {};
+    const Worker = struct {
+        fn run(port: u16, status: u16, delay: u32, cause: anyerror, completed: *std.atomic.Value(usize)) !void {
+            const alloc = std.testing.allocator;
+            const url = try std.fmt.allocPrint(alloc, "http://127.0.0.1:{d}/archive", .{port});
+            defer alloc.free(url);
+            var capture: TransientGetCapture = .{};
+            const response = try httpGetStatusTimeoutWithCapture(alloc, url, 5000, &capture);
+            defer response.deinit(alloc);
+            try std.testing.expectEqual(status, response.status);
+            try std.testing.expectEqual(status, capture.record.?.status);
+            try std.testing.expectEqual(delay, capture.record.?.retry_after_seconds);
+            capture = .{};
+            const path = try uniqueTempPath(alloc, "pantry-request-capture");
+            defer alloc.free(path);
+            defer deleteFile(path) catch {};
+            try std.testing.expectError(cause, runDownloadWithRetry(httpDownloadFileTask, .{ alloc, url, path }, path, .{ .max_attempts = 1, .capture = &capture }));
+            _ = completed.fetchAdd(1, .monotonic);
+            while (completed.load(.monotonic) < 2) try std.testing.io.sleep(.{ .nanoseconds = std.time.ns_per_ms }, .awake);
+            try std.testing.expectEqual(status, capture.record.?.status);
+            try std.testing.expectEqual(delay, capture.record.?.retry_after_seconds);
+        }
+    };
+    var requesting_first = try std.testing.io.concurrent(Worker.run, .{ first.server.socket.address.getPort(), @as(u16, 503), @as(u32, 401), error.RegistryUnavailable, &finished });
+    defer requesting_first.cancel(std.testing.io) catch {};
+    var requesting_second = try std.testing.io.concurrent(Worker.run, .{ second.server.socket.address.getPort(), @as(u16, 429), @as(u32, 503), error.RegistryRateLimited, &finished });
+    defer requesting_second.cancel(std.testing.io) catch {};
+    try requesting_first.await(std.testing.io);
+    try requesting_second.await(std.testing.io);
+    try serving_first.await(std.testing.io);
+    try serving_second.await(std.testing.io);
+    try std.testing.expectEqual(@as(usize, 2), first.requests.load(.monotonic));
+    try std.testing.expectEqual(@as(usize, 2), second.requests.load(.monotonic));
+}
+
+test "owned GET capture does not report local backoff as server Retry-After" {
+    const allocator = std.testing.allocator;
+    const address = try std.Io.net.IpAddress.parse("127.0.0.1", 0);
+    for ([_][]const u8{ "", "Retry-After: invalid\r\n", "Retry-After: 0\r\n" }) |header| {
+        const response_bytes = try std.fmt.allocPrint(allocator, "HTTP/1.1 503 Service Unavailable\r\n{s}Content-Length: 0\r\nConnection: close\r\n\r\n", .{header});
+        defer allocator.free(response_bytes);
+        var fixture: ArchiveGetFixture = .{ .server = try address.listen(std.testing.io, .{ .reuse_address = true }), .responses = &.{ response_bytes, response_bytes, response_bytes, response_bytes } };
+        defer fixture.server.deinit(std.testing.io);
+        var serving = try std.testing.io.concurrent(ArchiveGetFixture.serve, .{&fixture});
+        defer serving.cancel(std.testing.io) catch {};
+        const url = try std.fmt.allocPrint(allocator, "http://127.0.0.1:{d}/archive", .{fixture.server.socket.address.getPort()});
+        defer allocator.free(url);
+        var capture: TransientGetCapture = .{};
+        const response = try httpGetStatusTimeoutWithCapture(allocator, url, 5000, &capture);
+        defer response.deinit(allocator);
+        try std.testing.expectEqual(@as(u16, 503), response.status);
+        try std.testing.expectEqual(@as(u16, 503), capture.record.?.status);
+        try std.testing.expectEqual(@as(u32, 0), capture.record.?.retry_after_seconds);
+        capture = .{};
+        const path = try uniqueTempPath(allocator, "pantry-raw-retry-after");
+        defer allocator.free(path);
+        defer deleteFile(path) catch {};
+        try std.testing.expectError(error.RegistryUnavailable, runDownloadWithRetry(httpDownloadFileTask, .{ allocator, url, path }, path, .{ .max_attempts = 1, .capture = &capture }));
+        try std.testing.expectEqual(@as(u16, 503), capture.record.?.status);
+        try std.testing.expectEqual(@as(u32, 0), capture.record.?.retry_after_seconds);
+        try serving.await(std.testing.io);
+        try std.testing.expectEqual(@as(usize, 4), fixture.requests.load(.monotonic));
+    }
 }
 
 test "transient registry answers are kept for the failure report" {
@@ -2826,7 +2918,7 @@ const HttpGetAttempt = union(enum) {
 
 /// Own all buffers and the request within one attempt, closing the connection
 /// before returning an error or a retryable status to the bounded outer loop.
-fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocator, current_url: []const u8, initial_uri: std.Uri, extra_headers: []const std.http.Header, status_only_errors: bool, retries: u8, deadline_ms: ?i64) !HttpGetAttempt {
+fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocator, current_url: []const u8, initial_uri: std.Uri, extra_headers: []const std.http.Header, status_only_errors: bool, retries: u8, deadline_ms: ?i64, capture: ?*TransientGetCapture) !HttpGetAttempt {
     const decoration = decorateRequest(allocator, current_url);
     defer decoration.deinit(allocator);
     const uri = try std.Uri.parse(decoration.effectiveUrl(current_url));
@@ -2867,6 +2959,7 @@ fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocat
     const status = @backingInt(response.head.status);
     if (transientGetStatus(status)) {
         const delay = responseRetryDelay(&response, retries + 1);
+        if (capture) |owned| owned.observe(status, responseRetryAfter(&response));
         if (retries < 2 and delay != null) {
             if (retryFitsDeadline(delay.?, deadline_ms, getMilliTimestamp())) {
                 printGetStatus(uri, status, retries + 1, delay, 2);
@@ -2891,10 +2984,10 @@ fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocat
 }
 
 fn httpGetResponseWithClient(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool) anyerror!HttpResponse {
-    return httpGetResponseWithClientDeadline(client, allocator, url, extra_headers, status_only_errors, null);
+    return httpGetResponseWithClientDeadline(client, allocator, url, extra_headers, status_only_errors, null, null);
 }
 
-fn httpGetResponseWithClientDeadline(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool, deadline_ms: ?i64) anyerror!HttpResponse {
+fn httpGetResponseWithClientDeadline(client: *std.http.Client, allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, status_only_errors: bool, deadline_ms: ?i64, capture: ?*TransientGetCapture) anyerror!HttpResponse {
     var current_url = try allocator.dupe(u8, url);
     defer allocator.free(current_url);
     const initial_decoration = decorateRequest(allocator, url);
@@ -2903,7 +2996,7 @@ fn httpGetResponseWithClientDeadline(client: *std.http.Client, allocator: std.me
     var redirects: u8 = 0;
     var retries: u8 = 0;
     while (true) {
-        const result = httpGetAttemptWithClient(client, allocator, current_url, initial_uri, extra_headers, status_only_errors, retries, deadline_ms) catch |err| {
+        const result = httpGetAttemptWithClient(client, allocator, current_url, initial_uri, extra_headers, status_only_errors, retries, deadline_ms, capture) catch |err| {
             if (try retrySafeGetTransport(err, &retries)) continue;
             return err;
         };
@@ -2954,19 +3047,23 @@ test "safe GET transport recovery leaves cancellation and permanent failures ter
 /// Status-preserving GET with one deadline for headers, redirects and body.
 /// Every redirect recomputes registry credentials for its exact origin.
 pub fn httpGetResponseTimeout(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, timeout_ms: u64) !HttpResponse {
-    return httpGetResponseWithPolicy(allocator, url, extra_headers, timeout_ms, false);
+    return httpGetResponseWithPolicy(allocator, url, extra_headers, timeout_ms, false, null);
 }
 
 /// Metadata lookup needs the failure status immediately, even if an error body stalls.
 pub fn httpGetStatusTimeout(allocator: std.mem.Allocator, url: []const u8, timeout_ms: u64) !HttpResponse {
-    return httpGetResponseWithPolicy(allocator, url, &.{}, timeout_ms, true);
+    return httpGetStatusTimeoutWithCapture(allocator, url, timeout_ms, null);
 }
 
-fn httpGetResponseWithPolicy(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, timeout_ms: u64, status_only_errors: bool) !HttpResponse {
+pub fn httpGetStatusTimeoutWithCapture(allocator: std.mem.Allocator, url: []const u8, timeout_ms: u64, capture: ?*TransientGetCapture) !HttpResponse {
+    return httpGetResponseWithPolicy(allocator, url, &.{}, timeout_ms, true, capture);
+}
+
+fn httpGetResponseWithPolicy(allocator: std.mem.Allocator, url: []const u8, extra_headers: []const std.http.Header, timeout_ms: u64, status_only_errors: bool, capture: ?*TransientGetCapture) !HttpResponse {
     const Selection = union(enum) { response: anyerror!HttpResponse, timeout: void };
     var buffer: [2]Selection = undefined;
     var select = std.Io.Select(Selection).init(getIo(), &buffer);
-    try select.concurrent(.response, httpGetResponseTask, .{ allocator, url, extra_headers, status_only_errors, timeout_ms });
+    try select.concurrent(.response, httpGetResponseTask, .{ allocator, url, extra_headers, status_only_errors, timeout_ms, capture });
     select.concurrent(.timeout, httpTimeoutTask, .{timeout_ms}) catch |err| {
         while (select.cancel()) |result| {
             if (result == .response) {

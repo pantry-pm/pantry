@@ -7,8 +7,8 @@ import { resolve, dirname, relative } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { installRegistryShutdown } from './shutdown'
-import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
-import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
+import type { AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
+import { Registry, createRegistryFromEnv } from './registry'
 import { PackageVersionExistsError } from './publication'
 import { verifyExistingPublication } from './publication-verification'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -38,7 +38,6 @@ import {
   type SubscriptionChange,
 } from './paywall'
 import {
-  calculateFee,
   DISCOVERY_FEE_BPS,
   effectiveTier,
   formatBps,

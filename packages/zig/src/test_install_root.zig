@@ -1,6 +1,8 @@
 // Import these files explicitly so their launch and install invariants run in CI.
 test {
     _ = @import("io_helper.zig");
+    _ = @import("install/native_archives.zig");
+    _ = @import("install/native_readiness_test.zig");
     // The install failure report and transient-failure classification.
     _ = @import("cli/style.zig");
     _ = @import("cli/commands/install/core.zig");

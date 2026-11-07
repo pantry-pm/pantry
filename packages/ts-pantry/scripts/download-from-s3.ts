@@ -10,9 +10,9 @@
  */
 
 import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
-import { join, dirname } from 'node:path'
+import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { homedir, platform, arch } from 'node:os'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'

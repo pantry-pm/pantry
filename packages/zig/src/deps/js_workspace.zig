@@ -69,6 +69,149 @@ pub const Ownership = struct {
         }
     }
 
+    fn loadManifest(allocator: std.mem.Allocator, directory: []const u8) !?std.json.Parsed(std.json.Value) {
+        var content: ?[]u8 = null;
+        var is_jsonc = false;
+        for ([_][]const u8{ "package.json", "package.jsonc" }) |name| {
+            const path = try std.fs.path.join(allocator, &.{ directory, name });
+            defer allocator.free(path);
+            content = io_helper.readFileAlloc(allocator, path, 4 * 1024 * 1024) catch |err| switch (err) {
+                error.FileNotFound => continue,
+                else => return err,
+            };
+            is_jsonc = std.mem.endsWith(u8, name, ".jsonc");
+            break;
+        }
+        const source = content orelse return null;
+        defer allocator.free(source);
+        const jsonc = @import("../utils/jsonc.zig");
+        const stripped = if (is_jsonc) try jsonc.stripComments(allocator, source) else source;
+        defer if (stripped.ptr != source.ptr) allocator.free(stripped);
+        const json = try jsonc.stripTrailingCommas(allocator, stripped);
+        defer if (json.ptr != stripped.ptr) allocator.free(json);
+        const parsed = try std.json.parseFromSlice(std.json.Value, allocator, json, .{ .allocate = .alloc_always });
+        if (parsed.value != .object) {
+            parsed.deinit();
+            return error.InvalidJavaScriptManifest;
+        }
+        return parsed;
+    }
+
+    fn localEdge(versions: *const std.StringHashMap([]const u8), name: []const u8, version: []const u8) bool {
+        if (std.mem.startsWith(u8, version, "workspace:") or std.mem.startsWith(u8, version, "file:") or
+            std.mem.startsWith(u8, version, "link:") or std.mem.startsWith(u8, version, "./") or
+            std.mem.startsWith(u8, version, "../") or std.fs.path.isAbsolute(version)) return true;
+        const local_version = versions.get(name) orelse return false;
+        return @import("../packages.zig").satisfiesConstraint(local_version, version) catch false;
+    }
+
+    fn readExternalManifest(self: *Ownership, directory: []const u8, versions: *const std.StringHashMap([]const u8), catalogs: *@import("catalogs.zig").CatalogManager) !void {
+        if (try loadManifest(self.allocator, directory)) |parsed| {
+            defer parsed.deinit();
+            for ([_][]const u8{ "dependencies", "devDependencies", "optionalDependencies", "peerDependencies" }) |section| {
+                const deps = parsed.value.object.get(section) orelse continue;
+                if (deps != .object) continue;
+                var entries = deps.object.iterator();
+                while (entries.next()) |entry| {
+                    if (entry.value_ptr.* == .string) {
+                        const declared = entry.value_ptr.string;
+                        const effective = if (@import("catalogs.zig").CatalogManager.isCatalogReference(declared))
+                            catalogs.resolveCatalogReference(entry.key_ptr.*, declared) orelse continue
+                        else
+                            declared;
+                        if (localEdge(versions, entry.key_ptr.*, effective)) continue;
+                    }
+                    try self.add(entry.key_ptr.*);
+                }
+            }
+        }
+        // Share the detector's own-file authority, including config/deps.ts and
+        // .config sources. Do not inherit another directory's declarations.
+        const detector = @import("detector.zig");
+        const file = try detector.findDepsFileInDirectory(self.allocator, directory) orelse return;
+        defer self.allocator.free(file.path);
+        if (file.format == .package_json or file.format == .package_jsonc) return;
+        const dependencies = try @import("parser.zig").inferDependencies(self.allocator, file);
+        defer {
+            for (dependencies) |dependency| {
+                var owned = dependency;
+                owned.deinit(self.allocator);
+            }
+            if (dependencies.len > 0) self.allocator.free(dependencies);
+        }
+        for (dependencies) |dependency| {
+            // Auto declarations have no established remote provider yet. Explicit
+            // providers retain literal identities; native aliases never apply.
+            switch (dependency.source) {
+                .registry, .pantry => continue,
+                else => {},
+            }
+            var name = dependency.name;
+            for ([_][]const u8{ "npm:", "github:", "git:", "http:" }) |prefix| {
+                if (std.mem.startsWith(u8, name, prefix)) {
+                    name = name[prefix.len..];
+                    break;
+                }
+            }
+            const effective = if (@import("catalogs.zig").CatalogManager.isCatalogReference(dependency.version))
+                catalogs.resolveCatalogReference(name, dependency.version) orelse continue
+            else
+                dependency.version;
+            if (!localEdge(versions, name, effective)) try self.add(name);
+        }
+    }
+
+    /// Actual external owners are independent of lock preferences and --force.
+    /// A same-named member only owns an edge when its version satisfies it.
+    pub fn readExternalProjectDependencies(self: *Ownership, project_root: []const u8) !void {
+        const root_manifest = try loadManifest(self.allocator, project_root);
+        defer if (root_manifest) |parsed| parsed.deinit();
+        var config: ?package_types.WorkspaceConfig = null;
+        defer if (config) |*value| value.deinit(self.allocator);
+        const detector = @import("detector.zig");
+        if (try detector.findWorkspaceFile(self.allocator, project_root)) |workspace| {
+            defer {
+                self.allocator.free(workspace.path);
+                self.allocator.free(workspace.root_dir);
+            }
+            var real_root: [std.fs.max_path_bytes]u8 = undefined;
+            if (std.mem.eql(u8, workspace.root_dir, try io_helper.realpath(project_root, &real_root)))
+                config = try @import("../packages/workspace.zig").loadWorkspaceConfig(self.allocator, workspace.path, workspace.root_dir);
+        }
+        var catalogs = if (root_manifest) |parsed|
+            try @import("catalogs.zig").parseFromPackageJson(self.allocator, parsed)
+        else
+            @import("catalogs.zig").CatalogManager.init(self.allocator);
+        defer catalogs.deinit();
+        var versions = std.StringHashMap([]const u8).init(self.allocator);
+        defer {
+            var entries = versions.iterator();
+            while (entries.next()) |entry| {
+                self.allocator.free(entry.key_ptr.*);
+                self.allocator.free(entry.value_ptr.*);
+            }
+            versions.deinit();
+        }
+        if (config) |value| {
+            for (value.members) |member| {
+                const parsed = try loadManifest(self.allocator, member.abs_path) orelse continue;
+                defer parsed.deinit();
+                const name = parsed.value.object.get("name") orelse continue;
+                const version = parsed.value.object.get("version") orelse continue;
+                if (name != .string or version != .string or versions.contains(name.string)) continue;
+                const owned_name = try self.allocator.dupe(u8, name.string);
+                errdefer self.allocator.free(owned_name);
+                const owned_version = try self.allocator.dupe(u8, version.string);
+                errdefer self.allocator.free(owned_version);
+                try versions.put(owned_name, owned_version);
+            }
+        }
+        try self.readExternalManifest(project_root, &versions, &catalogs);
+        if (config) |value| {
+            for (value.members) |member| try self.readExternalManifest(member.abs_path, &versions, &catalogs);
+        }
+    }
+
     fn retain(self: *Ownership, raw_name: []const u8) !void {
         const name = if (std.mem.startsWith(u8, raw_name, "npm:")) raw_name[4..] else if (std.mem.startsWith(u8, raw_name, "auto:")) raw_name[5..] else raw_name;
         if (self.retained.contains(name)) return;

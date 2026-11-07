@@ -3,6 +3,8 @@
 //! Handles installation for workspace/monorepo setups.
 
 const std = @import("std");
+const native_identity = @import("../../../packages/native_identity.zig");
+const native_lock = @import("../../../packages/native_lock.zig");
 const io_helper = @import("../../../io_helper.zig");
 const lib = @import("../../../lib.zig");
 const types = @import("types.zig");
@@ -429,21 +431,9 @@ const WorkspaceThreadContext = struct {
 
 /// Copy a lockfile entry, so the regenerated lock owns its own memory.
 fn dupeLockfileEntry(allocator: std.mem.Allocator, entry: *const lib.packages.LockfileEntry) !lib.packages.LockfileEntry {
-    return .{
-        .name = try allocator.dupe(u8, entry.name),
-        .version = try allocator.dupe(u8, entry.version),
-        .source = entry.source,
-        .url = if (entry.url) |u| try allocator.dupe(u8, u) else null,
-        .resolved = if (entry.resolved) |r| try allocator.dupe(u8, r) else null,
-        .integrity = if (entry.integrity) |i| try allocator.dupe(u8, i) else null,
-        // Deliberately not carried: the maps describe how this pin was reached,
-        // and a foreign-OS pin was not reached from here. The identity - name,
-        // version, tarball, integrity - is the part that has to survive.
-        .dependencies = null,
-        .peer_dependencies = null,
-        .bin = null,
-        .optional_peers = null,
-    };
+    // This host cannot regenerate another platform's package metadata. Retain
+    // every field alongside the exact pin instead of discarding its maps.
+    return entry.clone(allocator);
 }
 
 /// Restore pins another platform resolves differently.
@@ -475,7 +465,7 @@ fn carryForwardForeignOsPins(
 
     var declared_it = existing.packages.iterator();
     while (declared_it.next()) |entry| {
-        if (entry.value_ptr.source != .pantry) continue;
+        if (!native_lock.isNative(entry.value_ptr.*)) continue;
         try seeds.append(allocator, entry.value_ptr.name);
     }
 
@@ -486,8 +476,8 @@ fn carryForwardForeignOsPins(
 
     var existing_it = existing.packages.iterator();
     while (existing_it.next()) |entry| {
-        if (entry.value_ptr.source != .pantry) continue;
-        if (!wanted.contains(entry.value_ptr.name)) continue;
+        if (!native_lock.isNative(entry.value_ptr.*)) continue;
+        if (!wanted.contains(native_identity.canonical(entry.value_ptr.name))) continue;
         if (lockfile.packages.contains(entry.key_ptr.*)) continue;
 
         const copied = try dupeLockfileEntry(allocator, entry.value_ptr);
@@ -650,12 +640,8 @@ pub fn installWorkspaceCommandWithOptions(
         style.printWorkspaceMembers(workspace_config.members.len);
     }
 
-    if (workspace_config.members.len == 0) {
-        return .{
-            .exit_code = 0,
-            .message = try allocator.dupe(u8, "No workspace members found to install"),
-        };
-    }
+    // A workspace with no discovered members can still own root runtimes or
+    // companion declarations. Continue through native planning and lock output.
 
     // Index published workspace package names and versions before collecting
     // dependencies. Package managers prefer a matching local workspace member
@@ -710,9 +696,24 @@ pub fn installWorkspaceCommandWithOptions(
     } else filter_module.Filter.init(allocator);
     defer filter.deinit();
 
+    const native = @import("../../../install/native_deps.zig");
+    var owned_native_original = if (options.native_session == null and (!options.force or options.frozen_lockfile))
+        try @import("lockfile_hooks.zig").loadOrCreateLockfile(allocator, workspace_root)
+    else
+        null;
+    defer if (owned_native_original) |*original| original.deinit();
+    var local_native_session = native.Session.init(allocator, if (owned_native_original) |*original| original else null, options.frozen_lockfile, options.force);
+    defer local_native_session.deinit();
+    const native_session = options.native_session orelse &local_native_session;
+
     // Collect all dependencies from all workspace members
     var all_deps_buffer: [1024]parser.PackageDependency = undefined;
     var all_deps_count: usize = 0;
+    // Each collected dependency is an owned clone, including early failures
+    // before the installer is constructed.
+    defer {
+        for (all_deps_buffer[0..all_deps_count]) |*dep| dep.deinit(allocator);
+    }
 
     // Track which deps are for which members
     var deps_seen = std.StringHashMap(void).init(allocator);
@@ -735,12 +736,15 @@ pub fn installWorkspaceCommandWithOptions(
         };
         const root_deps = parser.inferDependencies(allocator, root_deps_file) catch null;
         if (root_deps) |deps| {
-            defer allocator.free(deps);
+            defer @import("env_deps.zig").freeDeps(allocator, deps);
             for (deps) |dep| {
                 if (js_ownership.owns(workspaceDependencyName(dep.name), workspaceDependencySource(dep))) continue;
                 if (workspaceDependencyIsLocal(&workspace_package_versions, dep.name, dep.version)) continue;
 
                 const clean_dep_name = workspaceDependencyName(dep.name);
+                const source = workspaceDependencySource(dep);
+                if (!helpers.isLocalDependency(dep))
+                    try native_session.captureRoot(.{ .name = clean_dep_name, .version = dep.version, .source = source, .allow_pantry_fallback = dep.source == .registry, .github_owner = if (dep.github_ref) |ref| ref.owner else null, .github_repo = if (dep.github_ref) |ref| ref.repo else null });
                 if (!deps_seen.contains(clean_dep_name)) {
                     try deps_seen.put(try allocator.dupe(u8, clean_dep_name), {});
                     if (all_deps_count < all_deps_buffer.len) {
@@ -764,7 +768,7 @@ pub fn installWorkspaceCommandWithOptions(
         // Load dependencies for this member
         var member_deps: ?[]parser.PackageDependency = null;
         defer if (member_deps) |deps| {
-            allocator.free(deps);
+            @import("env_deps.zig").freeDeps(allocator, deps);
         };
 
         // Try deps file first (fast: just filesystem access)
@@ -819,9 +823,10 @@ pub fn installWorkspaceCommandWithOptions(
                 if (lib.deps.catalogs.CatalogManager.isCatalogReference(dep.version)) {
                     const catalog_package_name = workspaceDependencyName(dep.name);
                     if (helpers.resolveWorkspaceCatalogReference(&catalog_manager, dep.name, dep.version)) |resolved_version| {
-                        // Replace catalog reference with actual version
-                        allocator.free(resolved_dep.version);
-                        resolved_dep.version = try allocator.dupe(u8, resolved_version);
+                        // Borrow the catalog's value for this view. The
+                        // parsed dependency still owns its original reference;
+                        // captureRoot and clone below take their own copies.
+                        resolved_dep.version = resolved_version;
                     } else {
                         // Catalog reference not found - warn user
                         const catalog_name = lib.deps.catalogs.CatalogManager.getCatalogName(dep.version);
@@ -844,6 +849,9 @@ pub fn installWorkspaceCommandWithOptions(
                 // Dedup by clean package name only — flat pantry/ install resolves
                 // each package to a single version.
                 const clean_dep_name = workspaceDependencyName(resolved_dep.name);
+                const source = workspaceDependencySource(resolved_dep);
+                if (!helpers.isLocalDependency(resolved_dep))
+                    try native_session.captureRoot(.{ .name = clean_dep_name, .version = resolved_dep.version, .source = source, .allow_pantry_fallback = resolved_dep.source == .registry, .github_owner = if (resolved_dep.github_ref) |ref| ref.owner else null, .github_repo = if (resolved_dep.github_ref) |ref| ref.repo else null });
                 if (!deps_seen.contains(clean_dep_name)) {
                     try deps_seen.put(try allocator.dupe(u8, clean_dep_name), {});
                     if (all_deps_count >= all_deps_buffer.len) {
@@ -949,16 +957,12 @@ pub fn installWorkspaceCommandWithOptions(
     // Force ignores lock-driven restore and resolution without deleting the
     // committed lock before this install (and any companion phase) succeeds.
 
-    // Wire up resolution lockfile for lockfile-first resolution (avoids npm registry queries for locked packages)
-    const lockfile_hooks = @import("lockfile_hooks.zig");
-    var ws_resolution_lockfile = if (options.force)
-        null
-    else
-        lockfile_hooks.loadOrCreateLockfile(allocator, workspace_root) catch null;
-    defer if (ws_resolution_lockfile) |*lf| lf.deinit();
-    if (ws_resolution_lockfile) |*lf| {
-        shared_installer.setLockfile(lf);
+    // Both native planning and generic registry resolution borrow the same
+    // original owner. Neither phase reloads a partially generated output.
+    if (!options.force) {
+        if (native_session.original_lock) |original| shared_installer.setLockfile(original);
     }
+    shared_installer.native_session = native_session;
 
     // When Bun also locks this workspace, resolve npm ranges to bun.lock's pins
     // so pantry/ and node_modules/ install the same versions.
@@ -968,18 +972,8 @@ pub fn installWorkspaceCommandWithOptions(
         shared_installer.setBunLockPins(pins);
     }
 
-    // ── FAST PATH: batch install from lockfile ──
-    // If lockfile has packages resolved but they're missing from disk (e.g. after
-    // clean checkout), extract them all in parallel without any resolution/registry queries.
-    if (!options.force and !js_ownership.enabled) {
-        if (shared_installer.installAllFromLockfile(workspace_root)) |batch_count_opt| {
-            if (batch_count_opt) |batch_count| {
-                if (batch_count > 0) {
-                    style.print("{s}{s}{s} Restored {d} packages from lockfile\n", .{ style.green, style.check, style.reset, batch_count });
-                }
-            }
-        } else |_| {}
-    }
+    // The pipeline owns restore/cache reuse after native closure validation;
+    // batch restoration here would run before sibling constraints are known.
 
     defer shared_installer.deinit();
 
@@ -991,18 +985,22 @@ pub fn installWorkspaceCommandWithOptions(
     var existing_lockfile: ?lib.packages.Lockfile = if (options.force)
         null
     else
-        lockfile_reader.readLockfile(allocator, ws_lockfile_path) catch null;
+        native_lock.read(allocator, ws_lockfile_path) catch |err| switch (err) {
+            error.FileNotFound => null,
+            else => return err,
+        };
     defer if (existing_lockfile) |*lf| lf.deinit(allocator);
 
-    // Clean up dependencies after installation
-    defer {
-        for (all_deps_buffer[0..all_deps_count]) |*dep| {
-            var d = dep.*;
-            d.deinit(allocator);
-        }
-    }
-
     const all_deps = all_deps_buffer[0..all_deps_count];
+    if (native_session.plan == null) {
+        const combined_declared = try std.mem.concat(allocator, lib.deps.parser.PackageDependency, &.{ all_deps, options.companion_declarations orelse &.{} });
+        defer allocator.free(combined_declared);
+        var inferred_only = try @import("env_deps.zig").inferredOnlyDomains(allocator, options.companion_inferred orelse &.{}, combined_declared);
+        defer inferred_only.deinit();
+        native_session.adoptExemptDomains(inferred_only.map);
+        inferred_only.map = std.StringHashMap(void).init(allocator);
+    }
+    shared_installer.native_policy = native_session.policy();
 
     // Check if all packages can be skipped (lockfile + destination match + version constraint match)
     // Build name set once for O(1) lookups instead of O(n) iteration per dep
@@ -1044,6 +1042,89 @@ pub fn installWorkspaceCommandWithOptions(
 
     if (ws_skipped_count > 0) {
         style.printSkipping(ws_skipped_count, all_deps_count - ws_skipped_count);
+    }
+
+    var installed_versions = std.StringHashMap([]const u8).init(allocator);
+    defer {
+        var version_it = installed_versions.iterator();
+        while (version_it.next()) |entry| {
+            allocator.free(entry.key_ptr.*);
+            allocator.free(entry.value_ptr.*);
+        }
+        installed_versions.deinit();
+    }
+
+    // ---- Pass 2: Install remote deps via parallel pipeline ----
+    // Count remote deps
+    var remote_count: usize = 0;
+    for (all_deps) |dep| {
+        if (!helpers.isLocalDependency(dep)) remote_count += 1;
+    }
+
+    if (remote_count > 0 or native_session.supplemental_roots.len > 0 or native_session.captured_roots.items.len > 0) {
+        const pipeline = @import("../../../install/pipeline.zig");
+
+        // Build pipeline dep list from remote deps
+        var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, remote_count);
+        defer allocator.free(pipeline_deps);
+        {
+            var ri: usize = 0;
+            for (all_deps) |dep| {
+                if (helpers.isLocalDependency(dep)) continue;
+                const clean_name = workspaceDependencyName(dep.name);
+                // Domain-style names (containing '.') are pantry/system packages, not npm
+                pipeline_deps[ri] = .{
+                    .name = clean_name,
+                    .version = dep.version,
+                    .source = workspaceDependencySource(dep),
+                    .allow_pantry_fallback = dep.source == .registry,
+                    .github_owner = if (dep.github_ref) |ref| ref.owner else null,
+                    .github_repo = if (dep.github_ref) |ref| ref.repo else null,
+                };
+                ri += 1;
+            }
+        }
+
+        // Run the 3-phase parallel pipeline
+        var pipeline_result = pipeline.run(
+            allocator,
+            &shared_installer,
+            pipeline_deps,
+            workspace_root,
+            options.verbose,
+        ) catch |err| {
+            if (err == error.NativeLockNotSatisfied) return .{ .exit_code = 1, .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)") };
+            return err;
+        };
+        defer pipeline_result.deinit(allocator);
+
+        // Print results and collect resolution data for lockfile
+        for (pipeline_result.results) |result| {
+            if (result.name.len == 0) continue;
+            if (result.success) {
+                if (!installed_versions.contains(result.name)) {
+                    try installed_versions.put(
+                        try allocator.dupe(u8, result.name),
+                        try allocator.dupe(u8, result.version),
+                    );
+                }
+                // Another platform's optional build: locked, not installed.
+                if (result.lock_only) continue;
+                style.printInstalled(result.name, result.version);
+                success_count += 1;
+                if (result.from_cache) cached_count += 1;
+                checkpoint.recordPackage(result.name) catch {};
+            } else {
+                style.printFailed(result.name, result.version, result.error_msg);
+                failed_count += 1;
+            }
+        }
+
+        if (options.verbose) {
+            const phase_ts = io_helper.clockGettime();
+            const phase_ms = @as(i64, @intCast(phase_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(phase_ts.nsec)), 1_000_000);
+            std.debug.print("[verbose:timer] parallel install phase complete: {d}ms\n", .{phase_ms - install_start_ms});
+        }
     }
 
     // ---- Pass 1: Handle local/link deps sequentially (just symlinks, microseconds) ----
@@ -1122,85 +1203,6 @@ pub fn installWorkspaceCommandWithOptions(
             dep.version;
         style.printLinked(clean_name, display_version);
         success_count += 1;
-    }
-
-    var installed_versions = std.StringHashMap([]const u8).init(allocator);
-    defer {
-        var version_it = installed_versions.iterator();
-        while (version_it.next()) |entry| {
-            allocator.free(entry.key_ptr.*);
-            allocator.free(entry.value_ptr.*);
-        }
-        installed_versions.deinit();
-    }
-
-    // ---- Pass 2: Install remote deps via parallel pipeline ----
-    // Count remote deps
-    var remote_count: usize = 0;
-    for (all_deps) |dep| {
-        if (!helpers.isLocalDependency(dep)) remote_count += 1;
-    }
-
-    if (remote_count > 0) {
-        const pipeline = @import("../../../install/pipeline.zig");
-
-        // Build pipeline dep list from remote deps
-        var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, remote_count);
-        defer allocator.free(pipeline_deps);
-        {
-            var ri: usize = 0;
-            for (all_deps) |dep| {
-                if (helpers.isLocalDependency(dep)) continue;
-                const clean_name = workspaceDependencyName(dep.name);
-                // Domain-style names (containing '.') are pantry/system packages, not npm
-                pipeline_deps[ri] = .{
-                    .name = clean_name,
-                    .version = dep.version,
-                    .source = workspaceDependencySource(dep),
-                    .github_owner = if (dep.github_ref) |ref| ref.owner else null,
-                    .github_repo = if (dep.github_ref) |ref| ref.repo else null,
-                };
-                ri += 1;
-            }
-        }
-
-        // Run the 3-phase parallel pipeline
-        var pipeline_result = try pipeline.run(
-            allocator,
-            &shared_installer,
-            pipeline_deps,
-            workspace_root,
-            options.verbose,
-        );
-        defer pipeline_result.deinit(allocator);
-
-        // Print results and collect resolution data for lockfile
-        for (pipeline_result.results) |result| {
-            if (result.name.len == 0) continue;
-            if (result.success) {
-                if (!installed_versions.contains(result.name)) {
-                    try installed_versions.put(
-                        try allocator.dupe(u8, result.name),
-                        try allocator.dupe(u8, result.version),
-                    );
-                }
-                // Another platform's optional build: locked, not installed.
-                if (result.lock_only) continue;
-                style.printInstalled(result.name, result.version);
-                success_count += 1;
-                if (result.from_cache) cached_count += 1;
-                checkpoint.recordPackage(result.name) catch {};
-            } else {
-                style.printFailed(result.name, result.version, result.error_msg);
-                failed_count += 1;
-            }
-        }
-
-        if (options.verbose) {
-            const phase_ts = io_helper.clockGettime();
-            const phase_ms = @as(i64, @intCast(phase_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(phase_ts.nsec)), 1_000_000);
-            std.debug.print("[verbose:timer] parallel install phase complete: {d}ms\n", .{phase_ms - install_start_ms});
-        }
     }
 
     // Ensure pantry/.bin has symlinks for all installed package binaries. This
@@ -1417,10 +1419,9 @@ pub fn installWorkspaceCommandWithOptions(
     var moved_pins = std.StringHashMap(void).init(allocator);
     defer moved_pins.deinit();
     for (all_deps_buffer[0..all_deps_count]) |dep| {
-        const clean_dep_name = workspaceDependencyName(dep.name);
-
         // Determine the correct source
         const lock_source = workspaceDependencySource(dep);
+        const clean_dep_name = if (native_identity.isNative(lock_source)) native_identity.canonical(workspaceDependencyName(dep.name)) else workspaceDependencyName(dep.name);
 
         // Read installed package.json for dependencies and bin entries
         var installed_version: ?[]const u8 = null;
@@ -1542,7 +1543,7 @@ pub fn installWorkspaceCommandWithOptions(
         else
             null;
         const compatible_existing_entry: ?*const lib.packages.LockfileEntry = if (existing_entry) |entry|
-            if (entry.source == lock_source) entry else null
+            if (entry.matchesSource(lock_source)) entry else null
         else
             null;
 
@@ -1550,8 +1551,12 @@ pub fn installWorkspaceCommandWithOptions(
         // the package was already installed, the pipeline may legitimately do
         // no resolution work; resolve that installed exact version only when
         // the old lock entry cannot supply complete matching metadata.
+        const npm_preference: install.Installer.NpmLockPreference = if (lock_source == .npm and dep.source == .registry)
+            .{ .npm = .{ .declared_constraint = dep.version, .force = shared_installer.native_policy.force } }
+        else
+            .legacy;
         var resolution = if (lock_source == .npm)
-            shared_installer.getCachedNpmResolution(clean_dep_name, dep.version)
+            shared_installer.getCachedNpmResolutionWithPreference(clean_dep_name, dep.version, npm_preference)
         else
             null;
         if (lock_source == .npm and resolution == null) {
@@ -1561,7 +1566,7 @@ pub fn installWorkspaceCommandWithOptions(
             else
                 false;
             if (!existing_is_complete)
-                resolution = shared_installer.resolveNpmPackage(clean_dep_name, desired_version) catch null;
+                resolution = shared_installer.resolveNpmPackageWithPreference(clean_dep_name, desired_version, if (dep.source == .registry) .{ .npm = .{ .declared_constraint = desired_version, .force = shared_installer.native_policy.force } } else .legacy) catch null;
         }
         defer if (resolution) |*r| {
             allocator.free(r.version);
@@ -1571,6 +1576,20 @@ pub fn installWorkspaceCommandWithOptions(
         const resolved_version = if (resolution) |r| r.version else null;
 
         const entry_version = resolved_version orelse installed_versions.get(clean_dep_name) orelse installed_version orelse if (compatible_existing_entry) |entry| entry.version else dep.version;
+        if (native_identity.isNative(lock_source)) {
+            var native_entry = if (existing_lockfile) |*existing|
+                try native_lock.selectedEntry(allocator, existing, clean_dep_name, entry_version, null)
+            else blk: {
+                var empty = try lib.packages.Lockfile.init(allocator, "1.0.0");
+                defer empty.deinit(allocator);
+                break :blk try native_lock.selectedEntry(allocator, &empty, clean_dep_name, entry_version, null);
+            };
+            errdefer native_entry.deinit(allocator);
+            const native_key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_dep_name, entry_version });
+            defer allocator.free(native_key);
+            try lockfile.addEntry(allocator, native_key, native_entry);
+            continue;
+        }
         const can_reuse_existing = if (compatible_existing_entry) |entry|
             std.mem.eql(u8, entry.version, entry_version)
         else

@@ -31,6 +31,7 @@
 //!   - `PANTRY_ENV_DEPS=0` (or `false`/`off`) turns the whole thing off.
 
 const std = @import("std");
+const native_identity = @import("../../../packages/native_identity.zig");
 const io_helper = @import("../../../io_helper.zig");
 const style = @import("../../style.zig");
 const parser = @import("../../../deps/parser.zig");
@@ -133,12 +134,23 @@ pub fn canonicalDomain(dep_name: []const u8) []const u8 {
     if (std.mem.lastIndexOfScalar(u8, name, '@')) |at| {
         if (at > 0) name = name[0..at];
     }
-    return helpers.resolvePackageAlias(name);
+    return native_identity.canonical(helpers.resolvePackageAlias(name));
+}
+
+fn isNativeDeclaration(dep: parser.PackageDependency) bool {
+    return switch (dep.source) {
+        .npm, .github, .git, .url => false,
+        .pantry => true,
+        // Ordinary package.json dependencies belong to its JS manager. The
+        // parser marks those names auto:, unlike explicit system declarations.
+        .registry => !std.mem.startsWith(u8, dep.name, "auto:") and !std.mem.startsWith(u8, dep.name, "npm:"),
+    };
 }
 
 /// Does the dependency list already name `domain`, in any spelling?
 pub fn isDeclared(declared: []const parser.PackageDependency, domain: []const u8) bool {
     for (declared) |dep| {
+        if (!isNativeDeclaration(dep)) continue;
         if (std.mem.eql(u8, canonicalDomain(dep.name), domain)) return true;
     }
     return false;
@@ -201,7 +213,7 @@ pub const DomainSet = struct {
     map: std.StringHashMap(void),
 
     pub fn contains(self: DomainSet, domain: []const u8) bool {
-        return self.map.contains(domain);
+        return self.map.contains(native_identity.canonical(domain));
     }
 
     pub fn deinit(self: *DomainSet) void {
@@ -229,7 +241,8 @@ fn walkCatalog(
     defer frontier.deinit(allocator);
     for (seeds) |seed| try frontier.append(allocator, seed);
 
-    while (frontier.pop()) |domain| {
+    while (frontier.pop()) |requested| {
+        const domain = native_identity.canonical(requested);
         if ((try seen.getOrPut(domain)).found_existing) continue;
         try visit(context, domain);
         const info = generated.getPackageByDomain(domain) orelse continue;
@@ -283,7 +296,9 @@ pub fn inferredOnlyDomains(
 
     var declared_roots: std.ArrayList([]const u8) = .empty;
     defer declared_roots.deinit(allocator);
-    for (declared) |dep| try declared_roots.append(allocator, canonicalDomain(dep.name));
+    for (declared) |dep| {
+        if (isNativeDeclaration(dep)) try declared_roots.append(allocator, canonicalDomain(dep.name));
+    }
 
     const Remove = struct {
         fn visit(target: *DomainSet, domain: []const u8) anyerror!void {
@@ -301,6 +316,23 @@ pub fn freeDeps(allocator: std.mem.Allocator, deps: []const parser.PackageDepend
         owned.deinit(allocator);
     }
     if (deps.len > 0) allocator.free(deps);
+}
+
+test "native alias provenance does not adopt explicit or delegated npm roots" {
+    const allocator = std.testing.allocator;
+    const inferred = [_]parser.PackageDependency{.{ .name = "bun.com", .version = "^1", .source = .pantry }};
+    const declared = [_]parser.PackageDependency{
+        .{ .name = "bun.sh", .version = "^1", .source = .npm },
+        .{ .name = "auto:bun", .version = "^1", .source = .registry },
+        .{ .name = "bun", .version = "^1", .source = .git },
+    };
+    var only_inferred = try inferredOnlyDomains(allocator, &inferred, &declared);
+    defer only_inferred.deinit();
+    try testing.expect(only_inferred.contains("bun.sh"));
+    try testing.expect(only_inferred.contains("bun.com"));
+    var shared = try inferredOnlyDomains(allocator, &inferred, &.{.{ .name = "bun.sh", .version = "^1", .source = .pantry }});
+    defer shared.deinit();
+    try testing.expect(!shared.contains("bun.com"));
 }
 
 // ============================================================================
@@ -372,7 +404,9 @@ test "an explicit declaration in any spelling suppresses inference" {
     try testing.expect(isDeclared(&.{mk("postgresql.org")}, "postgresql.org"));
     try testing.expect(isDeclared(&.{mk("postgres")}, "postgresql.org"));
     try testing.expect(isDeclared(&.{mk("postgresql.org@17")}, "postgresql.org"));
-    try testing.expect(isDeclared(&.{mk("auto:redis")}, "redis.io"));
+    try testing.expect(isDeclared(&.{mk("redis")}, "redis.io"));
+    // An npm dependency named redis cannot replace the native Redis service.
+    try testing.expect(!isDeclared(&.{mk("auto:redis")}, "redis.io"));
     try testing.expect(isDeclared(&.{mk("mariadb")}, "mariadb.com/server"));
     try testing.expect(!isDeclared(&.{ mk("bun.sh"), mk("@stacksjs/cli") }, "postgresql.org"));
 }

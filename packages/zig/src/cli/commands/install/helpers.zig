@@ -3,6 +3,7 @@
 //! Utility functions used across install command implementations.
 
 const std = @import("std");
+const native_identity = @import("../../../packages/native_identity.zig");
 const lib = @import("../../../lib.zig");
 const io_helper = @import("../../../io_helper.zig");
 const types = @import("types.zig");
@@ -201,6 +202,8 @@ pub fn resolvePackageAlias(name: []const u8) []const u8 {
 // ============================================================================
 
 pub const PantryPackageInfo = struct {
+    /// Binary metadata is native provenance, not an npm package response.
+    source: lib.packages.PackageSource = .npm,
     s3_path: []const u8,
     version: []const u8,
     tarball_url: []const u8,
@@ -335,6 +338,9 @@ pub fn gatedLookupMessage(allocator: std.mem.Allocator, err: anyerror, name: []c
 /// why exact pins used to skip Pantry altogether. A range takes the newest
 /// only if it satisfies the range, and otherwise picks from the version list.
 ///
+/// Native results establish provider identity; their latest version/URL must
+/// not be installed directly. The named caller sends its authored constraint
+/// through the completed native plan for final version/artifact selection.
 /// Null means "not a Pantry package, try elsewhere". A gated name (401/402/
 /// 403) is an error, so the caller stops instead of falling back to npm.
 pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, version: []const u8, exact: bool) !?PantryPackageInfo {
@@ -361,6 +367,11 @@ pub fn lookupPantryForRequest(allocator: std.mem.Allocator, name: []const u8, ve
     }
 
     if (try lookupPantryRegistry(allocator, name)) |info| {
+        // Native binary metadata proves the provider, not the final version.
+        // Our named caller closes the native graph and resolves every authored
+        // constraint together before any payload. Do not cross into the JS
+        // registry because the latest native version misses this one range.
+        if (info.source == .pantry) return info;
         if (scopes.satisfies(info.version, version) catch false) return info;
         var stale = info;
         stale.deinit(allocator);
@@ -495,6 +506,7 @@ fn lookupViaS3Metadata(allocator: std.mem.Allocator, name: []const u8, platform:
     };
 
     return PantryPackageInfo{
+        .source = .pantry,
         .s3_path = s3_path,
         .version = allocator.dupe(u8, version) catch {
             allocator.free(s3_path);
@@ -557,6 +569,7 @@ fn resolveFromMetadataUrl(allocator: std.mem.Allocator, s3_path: []const u8, ver
     };
 
     return PantryPackageInfo{
+        .source = .pantry,
         .s3_path = duped_s3_path,
         .version = duped_version,
         .tarball_url = tarball_url,
@@ -924,27 +937,25 @@ pub fn installSinglePackage(
     const pkg_registry = @import("../../../packages/generated.zig");
     const stripped_name = normalizePackageName(dep.name);
     // Resolve well-known package aliases (e.g. "meilisearch" -> "meilisearch.com")
-    const lookup_name = resolvePackageAlias(stripped_name);
-    const pkg_info = pkg_registry.getPackageByName(lookup_name);
+    const lookup_name = dependencyName(dep);
+    const pkg_info = if (effectiveDependencySource(dep) == .pantry) pkg_registry.getPackageByDomain(lookup_name) else null;
 
     if (options.verbose) {
         std.debug.print("[verbose:helper] resolved: {s} -> stripped={s} -> lookup={s} (in_registry={})\n", .{ dep.name, stripped_name, lookup_name, pkg_info != null });
     }
 
     // Keep every Zig spelling on the mirrored Pantry registry path.
-    const is_zig_package = std.mem.eql(u8, lookup_name, "zig") or
+    const is_zig_package = effectiveDependencySource(dep) == .pantry and (std.mem.eql(u8, lookup_name, "zig") or
         std.mem.eql(u8, lookup_name, "ziglang") or
-        std.mem.eql(u8, lookup_name, "ziglang.org");
+        std.mem.eql(u8, lookup_name, "ziglang.org"));
 
     // Check if this is a git dependency (git+https://, git+ssh://, git://)
-    const is_git_dep = std.mem.startsWith(u8, dep.version, "git+") or
-        std.mem.startsWith(u8, dep.version, "git://") or
-        (dep.source == .git);
+    const is_git_dep = dep.source == .git or (dep.source == .registry and
+        (std.mem.startsWith(u8, dep.version, "git+") or std.mem.startsWith(u8, dep.version, "git://")));
 
     // Check if this is a URL dependency (https:// tarball)
-    const is_url_dep = !is_git_dep and
-        (std.mem.startsWith(u8, dep.version, "https://") or
-            std.mem.startsWith(u8, dep.version, "http://"));
+    const is_url_dep = dep.source == .url or (dep.source == .registry and !is_git_dep and
+        (std.mem.startsWith(u8, dep.version, "https://") or std.mem.startsWith(u8, dep.version, "http://")));
 
     // Check if this is a GitHub dependency
     const spec = if (is_git_dep) blk: {
@@ -984,6 +995,10 @@ pub fn installSinglePackage(
             .source = .github,
             .repo = try allocator.dupe(u8, repo_str),
         };
+    } else if (dep.source == .npm) lib.packages.PackageSpec{
+        .name = lookup_name,
+        .version = dep.version,
+        .source = .npm,
     } else if (is_zig_package) blk: {
         // Zig packages are always resolved and downloaded from Pantry's mirror.
         break :blk lib.packages.PackageSpec{
@@ -2626,6 +2641,39 @@ test "addDependencyToDepsYaml repairs a file the append bug already duplicated" 
     , repaired);
 }
 
+/// The source both core install paths actually route this parsed declaration
+/// to. Keep lock eligibility and pipeline dispatch on this same authority.
+pub fn effectiveDependencySource(dep: lib.deps.parser.PackageDependency) lib.packages.PackageSource {
+    // Explicit provenance wins before any native alias or domain heuristic.
+    switch (dep.source) {
+        .npm => return .npm,
+        .github => return .github,
+        .git => return .git,
+        .url => return .http,
+        .pantry => return .pantry,
+        .registry => {},
+    }
+    const clean_name = resolvePackageAlias(normalizePackageName(dep.name));
+    if (std.mem.indexOfScalar(u8, clean_name, '.') != null) return .pantry;
+    return .npm;
+}
+
+/// Resolve a dispatched name only after its provider has been established.
+/// Non-native names are literal registry/Git identities, even when the native
+/// catalog happens to use the same word as a runtime alias.
+pub fn dependencyName(dep: lib.deps.parser.PackageDependency) []const u8 {
+    const name = normalizePackageName(dep.name);
+    return if (native_identity.isNative(effectiveDependencySource(dep))) native_identity.canonical(resolvePackageAlias(name)) else name;
+}
+
+test "explicit providers win over native domain and runtime aliases" {
+    const Dependency = lib.deps.parser.PackageDependency;
+    try std.testing.expectEqual(lib.packages.PackageSource.npm, effectiveDependencySource(Dependency{ .name = "bun", .version = "^1", .source = .npm }));
+    try std.testing.expectEqual(lib.packages.PackageSource.npm, effectiveDependencySource(Dependency{ .name = "bun.sh", .version = "^1", .source = .npm }));
+    try std.testing.expectEqual(lib.packages.PackageSource.git, effectiveDependencySource(Dependency{ .name = "bun.sh", .version = "main", .source = .git }));
+    try std.testing.expectEqual(lib.packages.PackageSource.github, effectiveDependencySource(Dependency{ .name = "bun.com", .version = "main", .source = .github }));
+}
+
 /// The version an install should use for `dep_name`: `pantry.lock`'s pin when
 /// it still satisfies `declared`, else null to resolve `declared` afresh.
 ///
@@ -2641,32 +2689,33 @@ test "addDependencyToDepsYaml repairs a file the append bug already duplicated" 
 /// longer satisfies — the range was narrowed or bumped — resolves again, which
 /// is what lets a dependency edit take effect.
 ///
-/// An unparseable spec reads as "not satisfied", so resolution falls back to
+/// A nonidentical unparseable spec reads as "not satisfied", so resolution falls back to
 /// the declared spec rather than installing a pin nothing has vouched for.
+/// Compatibility adapter for callers that supply only a name and constraint.
 pub fn lockedVersionSatisfying(
-    lock_file: *lib.deps.resolution.LockFile,
+    lock_file: *const lib.deps.resolution.LockFile,
     dep_name: []const u8,
     declared: []const u8,
-) ?[]const u8 {
-    const registry = @import("../../../packages/registry.zig");
-    const clean_name = resolvePackageAlias(normalizePackageName(dep_name));
-    const locked = lib.deps.resolution.lockfile.getLockedVersion(lock_file, clean_name) orelse return null;
-    if (locked.version.len == 0) return null;
+) error{AmbiguousLockedVersion}!?[]const u8 {
+    return lockedDependencyVersionSatisfying(lock_file, .{ .name = dep_name, .version = declared });
+}
 
-    // `latest`, `*` and an empty spec are satisfied by anything, and a lock
-    // pin on one is the whole point of committing a lock: npm installs the
-    // locked version for `*` too.
-    if (declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*"))
-        return locked.version;
-
-    // Frozen validation also asks about exact pins. An identical literal
-    // version is covered; a different pin still resolves from its declaration.
-    // Rolling development selectors remain distinct from their resolved build.
-    if (std.mem.eql(u8, locked.version, declared)) return locked.version;
-    if (!isVersionSpecRange(declared)) return null;
-
-    const satisfies = registry.satisfiesConstraint(locked.version, declared) catch return null;
-    return if (satisfies) locked.version else null;
+/// Actual install callers retain the parsed source and original constraint.
+/// Explicit Pantry requests need native coverage even without a dotted name.
+pub fn lockedDependencyVersionSatisfying(
+    lock_file: *const lib.deps.resolution.LockFile,
+    dep: lib.deps.parser.PackageDependency,
+) error{AmbiguousLockedVersion}!?[]const u8 {
+    const clean_name = dependencyName(dep);
+    const resolution = lib.deps.resolution.lockfile;
+    const selected = if (effectiveDependencySource(dep) == .pantry)
+        resolution.lockedVersionSatisfyingFromSource(lock_file, clean_name, dep.version, .pantry)
+    else
+        resolution.lockedVersionSatisfying(lock_file, clean_name, dep.version);
+    return selected catch |err| {
+        style.printWarn("Multiple locked versions satisfy {s}@{s}; declare an exact version or run pantry install --force to refresh the lock\n", .{ clean_name, dep.version });
+        return err;
+    };
 }
 
 /// Does this spec admit more than one version?
@@ -2699,23 +2748,23 @@ test "a lock pin decides while it satisfies the declared spec" {
 
     // The reported case: 3.54.1 exists upstream and `^3.53.4` admits it, but
     // the lock says 3.53.4, so that is what installs (#260).
-    try std.testing.expectEqualStrings("3.53.4", lockedVersionSatisfying(&lock, "sqlite.org", "^3.53.4").?);
+    try std.testing.expectEqualStrings("3.53.4", (try lockedVersionSatisfying(&lock, "sqlite.org", "^3.53.4")).?);
     // Any pin covers a rolling spec, which is what committing a lock is for.
-    try std.testing.expectEqualStrings("3.53.4", lockedVersionSatisfying(&lock, "sqlite.org", "latest").?);
-    try std.testing.expectEqualStrings("3.53.4", lockedVersionSatisfying(&lock, "sqlite.org", "*").?);
+    try std.testing.expectEqualStrings("3.53.4", (try lockedVersionSatisfying(&lock, "sqlite.org", "latest")).?);
+    try std.testing.expectEqualStrings("3.53.4", (try lockedVersionSatisfying(&lock, "sqlite.org", "*")).?);
     // curl.se 8.22.0 -> 8.23.0 upstream is exactly what reddened a frozen CI
     // run with no change in the project (stacksjs/stacks#2905); the pin holds.
-    try std.testing.expectEqualStrings("8.22.0", lockedVersionSatisfying(&lock, "curl.se", "^8").?);
+    try std.testing.expectEqualStrings("8.22.0", (try lockedVersionSatisfying(&lock, "curl.se", "^8")).?);
 
     // A spec the pin no longer satisfies resolves again, or editing a
     // dependency could never take effect.
-    try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "^3.54.0") == null);
-    try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "~3.52.0") == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "sqlite.org", "^3.54.0")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "sqlite.org", "~3.52.0")) == null);
     // An exact spec needs no lock to be deterministic, and letting it resolve
     // keeps a pin/spec disagreement visible rather than silently pinned.
-    try std.testing.expect(lockedVersionSatisfying(&lock, "sqlite.org", "3.54.1") == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "sqlite.org", "3.54.1")) == null);
     // Nothing locked, nothing to honor.
-    try std.testing.expect(lockedVersionSatisfying(&lock, "zlib.net", "^1") == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "zlib.net", "^1")) == null);
 }
 
 test "a frozen lock accepts an identical exact system pin" {
@@ -2724,11 +2773,123 @@ test "a frozen lock accepts an identical exact system pin" {
     defer lock.deinit();
     try lock.addPackage("bun.sh", "1.4.4", "registry:bun.sh@1.4.4", null);
     try lock.addPackage("ziglang.org", "0.17.0-dev.123+abcdef", "registry:ziglang.org@0.17.0-dev.123+abcdef", null);
-    const exact = lockedVersionSatisfying(&lock, "bun.sh", "1.4.4");
+    const exact = try lockedVersionSatisfying(&lock, "bun.sh", "1.4.4");
     try std.testing.expect(exact != null);
     try std.testing.expectEqualStrings("1.4.4", exact.?);
-    try std.testing.expectEqualStrings("1.4.4", lockedVersionSatisfying(&lock, "bun", "1.4.4").?);
-    try std.testing.expect(lockedVersionSatisfying(&lock, "bun.sh", "1.4.5") == null);
-    try std.testing.expect(lockedVersionSatisfying(&lock, "bun.sh", "1.4.3") == null);
-    try std.testing.expect(lockedVersionSatisfying(&lock, "ziglang.org", "0.17.0-dev") == null);
+    try std.testing.expectEqualStrings("1.4.4", (try lockedVersionSatisfying(&lock, "bun", "1.4.4")).?);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "bun.sh", "1.4.5")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "bun.sh", "1.4.3")) == null);
+    try std.testing.expect((try lockedVersionSatisfying(&lock, "ziglang.org", "0.17.0-dev")) == null);
+}
+
+test "effective dependency source preserves actual install routing" {
+    const Source = lib.packages.PackageSource;
+    try std.testing.expectEqual(Source.pantry, effectiveDependencySource(.{ .name = "zig-config", .version = "^0", .source = .pantry }));
+    try std.testing.expectEqual(Source.npm, effectiveDependencySource(.{ .name = "zig-config", .version = "^0", .source = .npm }));
+    try std.testing.expectEqual(Source.npm, effectiveDependencySource(.{ .name = "bunfig", .version = "^0.15" }));
+    try std.testing.expectEqual(Source.github, effectiveDependencySource(.{ .name = "zig-config", .version = "0.18.0", .source = .github }));
+    try std.testing.expectEqual(Source.git, effectiveDependencySource(.{ .name = "git-tool", .version = "1.0.0", .source = .git }));
+    try std.testing.expectEqual(Source.http, effectiveDependencySource(.{ .name = "url-tool", .version = "1.0.0", .source = .url }));
+    try std.testing.expectEqual(Source.pantry, effectiveDependencySource(.{ .name = "sqlite", .version = "^3" }));
+    try std.testing.expectEqual(Source.pantry, effectiveDependencySource(.{ .name = "zig", .version = "0.16.0" }));
+    // Existing core routing gives normalized domains priority. Centralization
+    // preserves that behavior rather than introducing a new source policy.
+    try std.testing.expectEqual(Source.pantry, effectiveDependencySource(.{ .name = "lz4.org", .version = "^1", .source = .registry }));
+}
+
+test "explicit non-dotted Pantry dependencies require native lock identities" {
+    const allocator = std.testing.allocator;
+    var lock = try lib.deps.resolution.LockFile.parse(allocator,
+        \\{"packages":{
+        \\ "native-tool@1.0.0":{"name":"native-tool","version":"1.0.0","source":"npm"},
+        \\ "zig-config@0.17.0":{"name":"zig-config","version":"0.17.0","source":"pantry"},
+        \\ "zig-config@0.18.0":{"name":"zig-config","version":"0.18.0","source":"npm"},
+        \\ "from-git@1.0.0":{"name":"from-git","version":"1.0.0","source":"github"},
+        \\ "bunfig@0.15.15":{"name":"bunfig","version":"0.15.15","source":"npm"},
+        \\ "legacy-tool@1.0.0":{"name":"legacy-tool","version":"1.0.0"},
+        \\ "sqlite.org@3.53.4":{"name":"sqlite.org","version":"3.53.4","source":"npm"}
+        \\}}
+    );
+    defer lock.deinit();
+    const native = lib.deps.parser.PackageDependency{ .name = "native-tool", .version = "^1", .source = .pantry };
+    try std.testing.expect((try lockedDependencyVersionSatisfying(&lock, native)) == null);
+    // A name-only compatibility request and non-native source keep the generic
+    // behavior. They do not pretend to carry an explicit native declaration.
+    try std.testing.expectEqualStrings("1.0.0", (try lockedVersionSatisfying(&lock, "native-tool", "^1")).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedDependencyVersionSatisfying(&lock, .{ .name = "native-tool", .version = "^1", .source = .npm })).?);
+    const mixed = lib.deps.parser.PackageDependency{ .name = "zig-config", .version = "^0", .source = .pantry };
+    try std.testing.expectEqualStrings("0.17.0", (try lockedDependencyVersionSatisfying(&lock, mixed)).?);
+    try std.testing.expectEqualStrings("^0", mixed.version);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedDependencyVersionSatisfying(&lock, .{ .name = "from-git", .version = "1.0.0", .source = .github })).?);
+    try std.testing.expectEqualStrings("0.15.15", (try lockedDependencyVersionSatisfying(&lock, .{ .name = "bunfig", .version = "^0.15", .source = .npm })).?);
+    try std.testing.expectEqualStrings("1.0.0", (try lockedDependencyVersionSatisfying(&lock, .{ .name = "legacy-tool", .version = "^1", .source = .pantry })).?);
+    try std.testing.expect((try lockedDependencyVersionSatisfying(&lock, .{ .name = "sqlite", .version = "^3", .source = .registry })) == null);
+    try std.testing.expectEqual(@as(usize, 7), lock.packages.count());
+}
+
+test "native CLI lock coverage excludes an explicit npm source behind a native alias" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    var path_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const path_len = try directory.dir.realPath(io_helper.io, &path_buffer);
+    const lock_path = try std.fs.path.join(allocator, &.{ path_buffer[0..path_len], "pantry.lock" });
+    defer allocator.free(lock_path);
+
+    // Exercise the actual comprehensive writer and lower parser. This is an
+    // accepted source-identity boundary fixture, not an npm publication claim
+    // or a hand-edited generated input in the maintained public CLI E2E.
+    var complete = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer complete.deinit(allocator);
+    const Fixture = struct {
+        name: []const u8,
+        version: []const u8,
+        source: lib.packages.PackageSource,
+    };
+    const fixtures = [_]Fixture{
+        .{ .name = "sqlite.org", .version = "3.53.4", .source = .npm },
+        .{ .name = "bunfig", .version = "0.15.15", .source = .npm },
+        .{ .name = "zig-config", .version = "0.18.0", .source = .github },
+        .{ .name = "lz4.org", .version = "1.10.0", .source = .pantry },
+    };
+    for (fixtures) |fixture| {
+        const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ fixture.name, fixture.version });
+        defer allocator.free(key);
+        try complete.addEntry(allocator, key, .{
+            .name = try allocator.dupe(u8, fixture.name),
+            .version = try allocator.dupe(u8, fixture.version),
+            .source = fixture.source,
+        });
+    }
+    const writer = @import("../../../packages/lockfile.zig");
+    try writer.writeLockfile(allocator, &complete, lock_path);
+    var read_complete = try writer.readLockfile(allocator, lock_path);
+    defer read_complete.deinit(allocator);
+    try std.testing.expectEqual(lib.packages.PackageSource.npm, read_complete.packages.get("sqlite.org@3.53.4").?.source);
+    var parsed = try lib.deps.resolution.LockFile.read(allocator, lock_path);
+    defer parsed.deinit();
+
+    // Generic resolution still sees an accepted npm record. Non-native CLI
+    // requests and genuine native records must keep their existing behavior.
+    try std.testing.expectEqualStrings("3.53.4", (try lib.deps.resolution.lockfile.lockedVersionSatisfying(&parsed, "sqlite.org", "^3")).?);
+    try std.testing.expectEqualStrings("0.15.15", (try lockedVersionSatisfying(&parsed, "bunfig", "^0.15")).?);
+    try std.testing.expectEqualStrings("0.18.0", (try lockedVersionSatisfying(&parsed, "zig-config", "0.18.0")).?);
+    try std.testing.expectEqualStrings("1.10.0", (try lockedVersionSatisfying(&parsed, "lz4.org", "^1")).?);
+
+    // The existing resolution writer produces source-less legacy native locks.
+    // Their established native-alias coverage must remain compatible.
+    const legacy_path = try std.fs.path.join(allocator, &.{ path_buffer[0..path_len], "legacy.lock" });
+    defer allocator.free(legacy_path);
+    var legacy = lib.deps.resolution.LockFile.init(allocator);
+    defer legacy.deinit();
+    try legacy.addPackage("curl.se", "8.22.0", "registry:curl.se@8.22.0", null);
+    try legacy.write(legacy_path);
+    var read_legacy = try lib.deps.resolution.LockFile.read(allocator, legacy_path);
+    defer read_legacy.deinit();
+    try std.testing.expectEqualStrings("8.22.0", (try lockedVersionSatisfying(&read_legacy, "curl", "^8")).?);
+
+    // Both actual core callers route this normalized alias to source=.pantry.
+    // An explicitly npm-owned version cannot establish native frozen coverage
+    // or replace a native declaration with an unrelated source's exact pin.
+    try std.testing.expect((try lockedVersionSatisfying(&parsed, "sqlite", "^3")) == null);
 }

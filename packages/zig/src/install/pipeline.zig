@@ -8,6 +8,7 @@
 //! Phase 3: Extract all packages + create bin shims
 
 const std = @import("std");
+const native_identity = @import("../packages/native_identity.zig");
 const builtin = @import("builtin");
 const io_helper = @import("../io_helper.zig");
 const installer_mod = @import("installer.zig");
@@ -18,6 +19,7 @@ const style = @import("../cli/style.zig");
 const offline = @import("offline.zig");
 const patches_mod = @import("patches.zig");
 const downloader = @import("downloader.zig");
+const native_archives = @import("native_archives.zig");
 const scopes = @import("../registry/scopes.zig");
 
 const Installer = installer_mod.Installer;
@@ -318,11 +320,14 @@ pub fn freeResolved(allocator: std.mem.Allocator, pkg: ResolvedPackage) void {
 }
 
 pub const PackageResult = struct {
+    /// Actual resolved provider. Null supports older manually authored callers.
+    source: ?packages.PackageSource = null,
     name: []const u8,
     version: []const u8,
     success: bool,
     error_msg: ?[]const u8 = null,
     from_cache: bool = false,
+    policy_failure: bool = false,
     /// See `ResolvedPackage.lock_only`: belongs in the lock, not on disk, and
     /// is not reported as installed.
     lock_only: bool = false,
@@ -353,11 +358,15 @@ pub const PipelineResult = struct {
 pub const PipelineDep = struct {
     name: []const u8,
     version: []const u8,
+    /// Authored range survives a provisional generic/npm lock preference.
+    declared_constraint: ?[]const u8 = null,
     source: packages.PackageSource,
     github_owner: ?[]const u8 = null,
     github_repo: ?[]const u8 = null,
     /// Reached through an `optionalDependencies` entry.
     optional: bool = false,
+    /// Only an original auto-registry declaration may discover native fallback.
+    allow_pantry_fallback: bool = false,
 };
 
 fn canUseNpmFastPath(top_level_count: usize, npm_count: usize, missing_npm_count: usize) bool {
@@ -410,143 +419,23 @@ const ResolveThreadCtx = struct {
                 std.debug.print("[verbose:pipeline:resolve] resolving: {s} @ {s}\n", .{ dep.name, dep.version });
             }
 
-            ctx.results[i] = ctx.installer.resolveNpmPackageWithDeps(dep.name, dep.version) catch |err| blk: {
+            ctx.results[i] = ctx.installer.resolveNpmPackageWithDepsWithPreference(dep.name, dep.version, npmPreferenceForDep(ctx.installer, dep)) catch |err| blk: {
                 if (ctx.verbose) {
                     std.debug.print("[verbose:pipeline:resolve] FAILED: {s} @ {s}: {}\n", .{ dep.name, dep.version, err });
                 }
-                if (pinned) ctx.errors[i] = err;
+                ctx.errors[i] = err;
                 break :blk null;
             };
         }
     }
 };
 
-/// Parse a generated-catalog dependency spec into a domain + version
-/// constraint, honoring `os:` / `os/arch:` prefixes and stripping ` # comments`.
-/// Examples: `apache.org/apr^1`, `linux:gnu.org/gcc/libstdcxx^14 # since …`,
-/// `gnome.org/libxml2~2.13`, `apache.org/thrift=0.22.0`, `…libstdcxx@14`.
-/// Returns null when the spec targets a different OS or architecture. Returned slices point
-/// into `spec_in` (a static catalog string), so callers dupe before storing.
-fn parsePantryDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
-    const parsed = parseDepSpecForOs(spec_in) orelse return null;
-    return if (parsed.foreign) null else .{ .domain = parsed.domain, .version = parsed.version };
-}
-
-/// The same spec, but only when its OS or architecture guard excludes this host.
-///
-/// `parsePantryDepSpec` answers null for those, which is right for installing -
-/// there is nothing to fetch. It is wrong for *recording*: the lockfile
-/// describes the dependency graph, and that graph contains the Linux-only
-/// libstdc++ whether or not this machine can install it. Discarding it on
-/// regeneration is what made a committed pantry.lock unable to survive an
-/// install on a second platform (pantry-pm/pantry#231).
-///
-/// Returns null for a spec meant for this host, and for a malformed one -
-/// callers want "which pins does this host legitimately not know about", and a
-/// spec nobody can parse is not one of them.
-pub fn parseForeignOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
-    const parsed = parseDepSpecForOs(spec_in) orelse return null;
-    return if (parsed.foreign) .{ .domain = parsed.domain, .version = parsed.version } else null;
-}
-
-/// The same spec, but only when it carries an OS or architecture guard.
-///
-/// This is the question the lockfile actually needs answered, and it is not the
-/// same as `parseForeignOsDepSpec`. An OS guard on a VERSION CONSTRAINT means
-/// the package resolves differently per platform, in both directions:
-/// `git-scm.org` declares `linux:gnu.org/gettext^0.21`, so Linux resolves
-/// gettext to 0.21.1 and macOS - where the guard does not apply, and no other
-/// constraint does - resolves it to 1.0.0. Both records belong in a
-/// cross-platform lock.
-///
-/// Asking "is this guarded for an OS I am not" gets that right on macOS and
-/// wrong on Linux, where the guard is the native one and nothing marks the
-/// macOS version as belonging to somebody else. Asking "is this guarded at all"
-/// is symmetric, which is what a lockfile that has to survive a round trip
-/// needs (pantry-pm/pantry#232).
-pub fn parseOsGuardedDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
-    const parsed = parseDepSpecForOs(spec_in) orelse return null;
-    return if (parsed.guarded) .{ .domain = parsed.domain, .version = parsed.version } else null;
-}
-
-/// The spec's domain and version whatever OS it is guarded for, if any.
-///
-/// Used when walking what a platform-dependent pin itself depends on: those
-/// deps are usually unguarded, because the package they belong to already only
-/// exists on that platform. Asking "is this guarded" of them answers no and
-/// loses them.
-pub fn parseAnyOsDepSpec(spec_in: []const u8) ?struct { domain: []const u8, version: []const u8 } {
-    const parsed = parseDepSpecForOs(spec_in) orelse return null;
-    return .{ .domain = parsed.domain, .version = parsed.version };
-}
-
-const ParsedPlatformDep = struct { domain: []const u8, version: []const u8, foreign: bool, guarded: bool };
-
-fn normalizedDepArch(arch: []const u8) []const u8 {
-    if (std.mem.eql(u8, arch, "x64") or std.mem.eql(u8, arch, "x86_64")) return "x86-64";
-    if (std.mem.eql(u8, arch, "arm64")) return "aarch64";
-    return arch;
-}
-
-fn parseDepSpecForOs(spec_in: []const u8) ?ParsedPlatformDep {
-    const os = switch (builtin.os.tag) {
-        .linux => "linux",
-        .macos => "darwin",
-        .windows => "windows",
-        else => @tagName(builtin.os.tag),
-    };
-    return parseDepSpecForPlatform(spec_in, os, @tagName(builtin.cpu.arch));
-}
-
-fn parseDepSpecForPlatform(spec_in: []const u8, os: []const u8, arch: []const u8) ?ParsedPlatformDep {
-    var spec = spec_in;
-    if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
-    spec = std.mem.trim(u8, spec, " \t");
-    if (spec.len == 0) return null;
-
-    var foreign = false;
-    var guarded = false;
-
-    // The same OS/architecture guards as recipe and TypeScript metadata.
-    if (std.mem.indexOfScalar(u8, spec, ':')) |colon| {
-        const prefix = spec[0..colon];
-        const slash = std.mem.indexOfScalar(u8, prefix, '/');
-        const guard_os = if (slash) |at| prefix[0..at] else prefix;
-        const is_os = std.mem.eql(u8, guard_os, "linux") or std.mem.eql(u8, guard_os, "darwin") or std.mem.eql(u8, guard_os, "windows");
-        if (is_os) {
-            guarded = true;
-            foreign = !std.mem.eql(u8, guard_os, os);
-            if (slash) |at| {
-                const guard_arch = prefix[at + 1 ..];
-                if (guard_arch.len == 0 or std.mem.indexOfScalar(u8, guard_arch, '/') != null) return null;
-                foreign = foreign or !std.mem.eql(u8, normalizedDepArch(guard_arch), normalizedDepArch(arch));
-            }
-            spec = std.mem.trim(u8, spec[colon + 1 ..], " \t");
-        }
-    }
-    if (spec.len == 0) return null;
-
-    // Split the domain from its version constraint at the first operator char.
-    var vstart: usize = spec.len;
-    for (spec, 0..) |c, i| {
-        if (c == '^' or c == '~' or c == '>' or c == '<' or c == '=' or c == '@') {
-            vstart = i;
-            break;
-        }
-    }
-    const domain = std.mem.trim(u8, spec[0..vstart], " \t");
-    if (domain.len == 0) return null;
-    // Skip malformed platform-tag pseudo-domains (e.g. `darwin/x86-64`).
-    if (std.mem.startsWith(u8, domain, "darwin/") or std.mem.startsWith(u8, domain, "linux/") or std.mem.startsWith(u8, domain, "windows/")) return null;
-    var version: []const u8 = "latest";
-    if (vstart < spec.len) {
-        var v = spec[vstart..];
-        if (v.len > 0 and v[0] == '@') v = v[1..]; // `domain@14` → exact 14
-        v = std.mem.trim(u8, v, " \t");
-        if (v.len > 0) version = v;
-    }
-    return .{ .domain = domain, .version = version, .foreign = foreign, .guarded = guarded };
-}
+const native_deps = @import("native_deps.zig");
+const parsePantryDepSpec = native_deps.parsePantryDepSpec;
+pub const parseForeignOsDepSpec = native_deps.parseForeignOsDepSpec;
+pub const parseOsGuardedDepSpec = native_deps.parseOsGuardedDepSpec;
+pub const parseAnyOsDepSpec = native_deps.parseAnyOsDepSpec;
+const parseDepSpecForPlatform = native_deps.parseDepSpecForPlatform;
 
 /// Every package whose resolved version depends on which platform installs it.
 ///
@@ -578,12 +467,14 @@ pub fn platformDependentClosure(allocator: std.mem.Allocator, seeds: []const []c
     var frontier = std.ArrayList([]const u8).empty;
     defer frontier.deinit(allocator);
 
-    for (seeds) |domain| {
+    for (seeds) |seed| {
+        const domain = native_identity.canonical(seed);
         const info = generated.getPackageByDomain(domain) orelse continue;
         for (info.dependencies) |spec| {
             const guarded = parseOsGuardedDepSpec(spec) orelse continue;
-            if ((try wanted.getOrPut(guarded.domain)).found_existing) continue;
-            try frontier.append(allocator, guarded.domain);
+            const child = native_identity.canonical(guarded.domain);
+            if ((try wanted.getOrPut(child)).found_existing) continue;
+            try frontier.append(allocator, child);
         }
     }
 
@@ -591,33 +482,13 @@ pub fn platformDependentClosure(allocator: std.mem.Allocator, seeds: []const []c
         const info = generated.getPackageByDomain(domain) orelse continue;
         for (info.dependencies) |spec| {
             const parsed = parseAnyOsDepSpec(spec) orelse continue;
-            if ((try wanted.getOrPut(parsed.domain)).found_existing) continue;
-            try frontier.append(allocator, parsed.domain);
+            const child = native_identity.canonical(parsed.domain);
+            if ((try wanted.getOrPut(child)).found_existing) continue;
+            try frontier.append(allocator, child);
         }
     }
 
     return wanted;
-}
-
-/// Append `domain`'s transitive system (pantry) dependencies — read from the
-/// embedded package catalog — to `wave` so they get resolved + downloaded too.
-/// Without this, a package's shared-library deps (php → libpq/libonig/…,
-/// nginx → libpcre) are never installed and the binary fails to load.
-/// Best-effort; never fails the install.
-fn enqueuePantryDeps(allocator: std.mem.Allocator, domain: []const u8, wave: *std.ArrayList(PipelineDep)) void {
-    const info = generated.getPackageByDomain(domain) orelse return;
-    for (info.dependencies) |spec| {
-        const parsed = parsePantryDepSpec(spec) orelse continue;
-        const name = allocator.dupe(u8, parsed.domain) catch continue;
-        const ver = allocator.dupe(u8, parsed.version) catch {
-            allocator.free(name);
-            continue;
-        };
-        wave.append(allocator, .{ .name = name, .version = ver, .source = .pantry }) catch {
-            allocator.free(name);
-            allocator.free(ver);
-        };
-    }
 }
 
 fn resolvePantryRegistryTarball(
@@ -656,41 +527,108 @@ fn resolvePantryRegistryTarball(
     return null;
 }
 
-/// Post-resolution pass: walk the resolved set and pull in the transitive
-/// system (pantry) dependencies of every pantry package, reading the dep specs
-/// from the embedded catalog and resolving each from the registry. Runs after
-/// resolution regardless of which resolver produced the set (server-side bulk
-/// `resolveViaRegistry` OR the client-side BFS), so a package's shared-library
-/// deps (php → libpq/libonig/libxml2/icu/libsodium, nginx → libpcre) are always
-/// installed alongside it. BFS via index walk — appended deps get expanded too.
-/// Best-effort: a dep missing from the registry is logged (verbose) and skipped.
-fn expandTransitivePantryDeps(
-    allocator: std.mem.Allocator,
-    resolved: *std.ArrayList(ResolvedPackage),
-    verbose: bool,
-) !void {
-    var present = std.StringHashMap(void).init(allocator);
-    defer present.deinit();
-    for (resolved.items) |p| present.put(p.name, {}) catch {};
+fn npmPreferenceForDep(installer: *const Installer, dep: PipelineDep) Installer.NpmLockPreference {
+    return if (dep.source == .npm and dep.allow_pantry_fallback)
+        .{ .npm = .{ .declared_constraint = nativeConstraint(dep), .force = installer.native_policy.force } }
+    else
+        .legacy;
+}
 
-    var i: usize = 0;
-    while (i < resolved.items.len) : (i += 1) {
-        if (resolved.items[i].source != .pantry) continue;
-        const info = generated.getPackageByDomain(resolved.items[i].name) orelse continue;
-        for (info.dependencies) |spec| {
-            const parsed = parsePantryDepSpec(spec) orelse continue;
-            if (present.contains(parsed.domain)) continue;
-            const pkg = try resolvePantryRegistryTarball(allocator, parsed.domain, parsed.version) orelse {
-                if (verbose) std.debug.print("[verbose:pipeline] transitive dep {s} not in registry — skipped\n", .{parsed.domain});
-                continue;
-            };
-            present.put(pkg.name, {}) catch {};
-            resolved.append(allocator, pkg) catch {
-                allocator.free(pkg.name);
-                allocator.free(pkg.version);
-                allocator.free(pkg.tarball_url);
-                if (pkg.integrity) |x| allocator.free(x);
-            };
+fn nativeConstraint(dep: PipelineDep) []const u8 {
+    return dep.declared_constraint orelse dep.version;
+}
+
+fn nativeFallbackRoot(allocator: std.mem.Allocator, native_plan: *native_deps.Plan, dep: PipelineDep) !bool {
+    return nativeFallbackRootUsing(allocator, native_plan, dep, resolvePantryRegistryTarball);
+}
+
+fn nativeFallbackRootUsing(allocator: std.mem.Allocator, native_plan: *native_deps.Plan, dep: PipelineDep, comptime lookup: anytype) !bool {
+    if (!dep.allow_pantry_fallback) return false;
+    const declared = nativeConstraint(dep);
+    const witness = lookup(allocator, native_identity.canonical(dep.name), declared) catch |err| {
+        // Missing optional npm metadata is not native authority. Retain its
+        // ordinary optional failure when the independent witness is unavailable.
+        if (dep.optional and err != error.OutOfMemory and !native_deps.isPolicyError(err)) return false;
+        return err;
+    } orelse return false;
+    defer freeResolved(allocator, witness);
+    try native_plan.add(dep.name, declared);
+    return true;
+}
+
+fn unresolvedNpm(allocator: std.mem.Allocator, dep: PipelineDep, err: anyerror) !ResolvedPackage {
+    const name = try allocator.dupe(u8, dep.name);
+    errdefer allocator.free(name);
+    const version = try allocator.dupe(u8, dep.version);
+    errdefer allocator.free(version);
+    const url = try allocator.dupe(u8, "");
+    errdefer allocator.free(url);
+    return .{ .name = name, .version = version, .tarball_url = url, .integrity = null, .source = .npm, .optional = dep.optional, .resolve_error = try std.fmt.allocPrint(allocator, "{s}", .{@errorName(err)}) };
+}
+
+fn freeWaveDeps(allocator: std.mem.Allocator, deps: []const PipelineDep) void {
+    for (deps) |dep| {
+        allocator.free(dep.name);
+        allocator.free(dep.version);
+    }
+}
+
+fn appendOwnedWaveDep(allocator: std.mem.Allocator, wave: *std.ArrayList(PipelineDep), dep: PipelineDep) !void {
+    const name = try allocator.dupe(u8, dep.name);
+    errdefer allocator.free(name);
+    const version = try allocator.dupe(u8, dep.version);
+    errdefer allocator.free(version);
+    var owned = dep;
+    owned.name = name;
+    owned.version = version;
+    try wave.append(allocator, owned);
+}
+
+fn rememberResolvedName(allocator: std.mem.Allocator, seen: *std.StringHashMap(void), name: []const u8) !void {
+    const owned = try allocator.dupe(u8, name);
+    errdefer allocator.free(owned);
+    try seen.put(owned, {});
+}
+
+fn requireNativeSourceCompatible(plan: *const native_deps.Plan, npm_name: []const u8) !void {
+    if (plan.entries.contains(npm_name)) return error.NativeSourceConflict;
+}
+
+fn copyNpmResolution(allocator: std.mem.Allocator, name: []const u8, result: Installer.NpmResolutionWithDeps, optional: bool, pinned: bool) !ResolvedPackage {
+    const owned_name = try allocator.dupe(u8, name);
+    errdefer allocator.free(owned_name);
+    const version = try allocator.dupe(u8, result.version);
+    errdefer allocator.free(version);
+    const url = try allocator.dupe(u8, result.tarball_url);
+    errdefer allocator.free(url);
+    return .{ .name = owned_name, .version = version, .tarball_url = url, .integrity = if (result.integrity) |integrity| try allocator.dupe(u8, integrity) else null, .source = .npm, .optional = optional, .pinned = pinned, .lock_only = !result.platform_ok };
+}
+
+fn resolveMetadataWave(ctx: *ResolveThreadCtx) !void {
+    // Cap at 8 threads for metadata resolution. Higher values (12+) cause
+    // connection hangs on macOS. 8 is the stable sweet spot.
+    const cpu_count = std.Thread.getCpuCount() catch 4;
+    const max_threads = @min(cpu_count, 8);
+    const thread_count = @min(ctx.deps.len, max_threads);
+
+    if (thread_count <= 1) {
+        ResolveThreadCtx.worker(ctx);
+    } else {
+        const spawned = thread_count - 1;
+        var threads = try ctx.installer.allocator.alloc(?std.Thread, spawned);
+        defer ctx.installer.allocator.free(threads);
+        for (threads) |*t| t.* = null;
+
+        for (0..spawned) |t| {
+            threads[t] = std.Thread.spawn(.{}, ResolveThreadCtx.worker, .{ctx}) catch null;
+        }
+        ResolveThreadCtx.worker(ctx);
+
+        for (threads) |*t| {
+            if (t.*) |thread| {
+                thread.join();
+                t.* = null;
+            }
         }
     }
 }
@@ -702,6 +640,18 @@ fn resolveFullTree(
     inst: *Installer,
     top_level_deps: []const PipelineDep,
     verbose: bool,
+    native_plan: *native_deps.Plan,
+) !std.ArrayList(ResolvedPackage) {
+    return resolveFullTreeUsing(allocator, inst, top_level_deps, verbose, native_plan, resolveMetadataWave);
+}
+
+fn resolveFullTreeUsing(
+    allocator: std.mem.Allocator,
+    inst: *Installer,
+    top_level_deps: []const PipelineDep,
+    verbose: bool,
+    native_plan: *native_deps.Plan,
+    comptime resolve_wave: anytype,
 ) !std.ArrayList(ResolvedPackage) {
     var resolved = std.ArrayList(ResolvedPackage).empty;
     errdefer {
@@ -713,11 +663,19 @@ fn resolveFullTree(
 
     // Track resolved packages by name to deduplicate
     var seen = std.StringHashMap(void).init(allocator);
-    defer seen.deinit();
+    defer {
+        var keys = seen.keyIterator();
+        while (keys.next()) |key| allocator.free(key.*);
+        seen.deinit();
+    }
 
     // BFS wave queue: starts with top-level deps
     var current_wave = std.ArrayList(PipelineDep).empty;
-    defer current_wave.deinit(allocator);
+    var current_wave_owned = false;
+    defer {
+        if (current_wave_owned) freeWaveDeps(allocator, current_wave.items);
+        current_wave.deinit(allocator);
+    }
 
     // Seed with top-level deps
     for (top_level_deps) |dep| {
@@ -736,8 +694,11 @@ fn resolveFullTree(
 
         // Resolve this wave in parallel
         const results = try allocator.alloc(?Installer.NpmResolutionWithDeps, wave_size);
-        defer allocator.free(results);
         for (results) |*r| r.* = null;
+        defer {
+            for (results) |*pending| if (pending.*) |*result| result.deinit(allocator);
+            allocator.free(results);
+        }
         const resolve_errors = try allocator.alloc(?anyerror, wave_size);
         defer allocator.free(resolve_errors);
         for (resolve_errors) |*e| e.* = null;
@@ -752,101 +713,37 @@ fn resolveFullTree(
             .verbose = verbose,
         };
 
-        // Cap at 8 threads for metadata resolution. Higher values (12+) cause
-        // connection hangs on macOS. 8 is the stable sweet spot.
-        const cpu_count = std.Thread.getCpuCount() catch 4;
-        const max_threads = @min(cpu_count, 8);
-        const thread_count = @min(wave_size, max_threads);
-
-        if (thread_count <= 1) {
-            ResolveThreadCtx.worker(&ctx);
-        } else {
-            const spawned = thread_count - 1;
-            var threads = try allocator.alloc(?std.Thread, spawned);
-            defer allocator.free(threads);
-            for (threads) |*t| t.* = null;
-
-            for (0..spawned) |t| {
-                threads[t] = std.Thread.spawn(.{}, ResolveThreadCtx.worker, .{&ctx}) catch null;
-            }
-            ResolveThreadCtx.worker(&ctx);
-
-            for (threads) |*t| {
-                if (t.*) |thread| {
-                    thread.join();
-                    t.* = null;
-                }
-            }
-        }
+        try resolve_wave(&ctx);
 
         // Collect results and build next wave from transitive deps
         var next_wave = std.ArrayList(PipelineDep).empty;
+        defer {
+            freeWaveDeps(allocator, next_wave.items);
+            next_wave.deinit(allocator);
+        }
 
         for (results, 0..) |maybe_result, ri| {
             if (maybe_result) |res| {
-                const result = res;
-                // Add to resolved list if not seen
-                if (!seen.contains(result.version)) {
-                    // Use name as dedup key (hoisted: first version wins)
-                    const name_key = current_wave.items[ri].name;
-                    if (!seen.contains(name_key)) {
-                        try seen.put(try allocator.dupe(u8, name_key), {});
-                        try resolved.append(allocator, .{
-                            .name = result.version, // transfer ownership
-                            .version = result.version,
-                            .tarball_url = result.tarball_url,
-                            .integrity = result.integrity,
-                            .source = .npm,
-                            .optional = current_wave.items[ri].optional,
-                            .lock_only = !result.platform_ok,
-                            .pinned = inst.pinFor(current_wave.items[ri].name) != null,
-                        });
-                        // Fix: name should be the dep name, not the version
-                        resolved.items[resolved.items.len - 1].name = try allocator.dupe(u8, name_key);
-
-                        // Record in hoisted cache for dedup in later waves
-                        if (result.platform_ok) inst.hoisted_versions.put(name_key, result.version);
-                    } else {
-                        // Already resolved, free the result
-                        allocator.free(result.version);
-                        allocator.free(result.tarball_url);
-                        if (result.integrity) |i| allocator.free(i);
-                    }
-                } else {
-                    allocator.free(result.version);
-                    allocator.free(result.tarball_url);
-                    if (result.integrity) |i| allocator.free(i);
-                }
-
-                // Enqueue transitive deps for next wave. A package for
-                // another platform is not installed, so neither is anything
-                // it needs.
-                for (result.dependencies) |dep| {
-                    // Skip already-resolved
-                    if (!result.platform_ok or seen.contains(dep.name)) {
-                        allocator.free(dep.name);
-                        allocator.free(dep.version_constraint);
-                        continue;
-                    }
-                    // Skip already-installed
-                    if (inst.hoisted_versions.checkSatisfies(dep.name, dep.version_constraint)) {
-                        allocator.free(dep.name);
-                        allocator.free(dep.version_constraint);
-                        continue;
-                    }
-                    // Optional deps are tolerated if they fail (see run()).
-                    next_wave.append(allocator, .{
-                        .name = dep.name,
-                        .version = dep.version_constraint,
-                        .source = .npm,
-                        .optional = dep.is_optional,
-                    }) catch {
-                        allocator.free(dep.name);
-                        allocator.free(dep.version_constraint);
-                        continue;
+                var result = res;
+                results[ri] = null;
+                defer result.deinit(allocator);
+                try requireNativeSourceCompatible(native_plan, current_wave.items[ri].name);
+                const name_key = current_wave.items[ri].name;
+                if (!seen.contains(name_key)) {
+                    try rememberResolvedName(allocator, &seen, name_key);
+                    const owned = try copyNpmResolution(allocator, name_key, result, current_wave.items[ri].optional, inst.pinFor(name_key) != null);
+                    resolved.append(allocator, owned) catch |err| {
+                        freeResolved(allocator, owned);
+                        return err;
                     };
+                    if (result.platform_ok) inst.hoisted_versions.put(name_key, result.version);
                 }
-                allocator.free(result.dependencies);
+
+                for (result.dependencies) |dep| {
+                    if (!result.platform_ok or seen.contains(dep.name)) continue;
+                    if (inst.hoisted_versions.checkSatisfies(dep.name, dep.version_constraint)) continue;
+                    try appendOwnedWaveDep(allocator, &next_wave, .{ .name = dep.name, .version = dep.version_constraint, .source = .npm, .optional = dep.is_optional });
+                }
             } else {
                 // Resolution returned no result — add non-npm packages
                 // directly with their original source preserved. .pantry,
@@ -857,7 +754,7 @@ fn resolveFullTree(
                     // A pinned scope that did not resolve is an install error.
                     // No Pantry binary lookup, no npm: nothing else is tried.
                     if (!seen.contains(dep.name)) {
-                        try seen.put(try allocator.dupe(u8, dep.name), {});
+                        try rememberResolvedName(allocator, &seen, dep.name);
                         const err = resolve_errors[ri] orelse error.PinnedUnavailable;
                         const message = inst.describePinnedFailure(allocator, err, dep.name, dep.version) orelse
                             try std.fmt.allocPrint(allocator, "{s}", .{@errorName(err)});
@@ -878,42 +775,33 @@ fn resolveFullTree(
                         });
                     }
                 } else if (dep.source == .npm) {
-                    if (try resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
+                    if (try nativeFallbackRoot(allocator, native_plan, dep)) {
                         if (!seen.contains(dep.name)) {
-                            try seen.put(try allocator.dupe(u8, dep.name), {});
-                            try resolved.append(allocator, pantry_pkg);
-                            inst.hoisted_versions.put(pantry_pkg.name, pantry_pkg.version);
-                            // Pull in its transitive system deps (shared libs).
-                            enqueuePantryDeps(allocator, dep.name, &next_wave);
-                        } else {
-                            allocator.free(pantry_pkg.name);
-                            allocator.free(pantry_pkg.version);
-                            allocator.free(pantry_pkg.tarball_url);
-                            if (pantry_pkg.integrity) |i| allocator.free(i);
+                            try rememberResolvedName(allocator, &seen, dep.name);
+                            try resolved.append(allocator, .{
+                                .name = try allocator.dupe(u8, dep.name),
+                                .version = try allocator.dupe(u8, dep.version),
+                                .tarball_url = try allocator.dupe(u8, ""),
+                                .integrity = null,
+                                .source = .pantry,
+                            });
                         }
+                    } else if (!seen.contains(dep.name)) {
+                        try rememberResolvedName(allocator, &seen, dep.name);
+                        try resolved.append(allocator, try unresolvedNpm(allocator, dep, resolve_errors[ri] orelse error.NpmRegistryUnavailable));
                     }
                 } else {
+                    if (dep.source == .pantry) try native_plan.add(dep.name, nativeConstraint(dep));
                     if (!seen.contains(dep.name)) {
-                        try seen.put(try allocator.dupe(u8, dep.name), {});
+                        try rememberResolvedName(allocator, &seen, dep.name);
                         if (dep.source == .pantry) {
-                            const pantry_pkg = if (packages.isRollingZigDevChannel(dep.name, dep.version))
-                                null
-                            else
-                                try resolvePantryRegistryTarball(allocator, dep.name, dep.version);
-                            if (pantry_pkg) |resolved_pkg| {
-                                try resolved.append(allocator, resolved_pkg);
-                            } else {
-                                try resolved.append(allocator, .{
-                                    .name = try allocator.dupe(u8, dep.name),
-                                    .version = try allocator.dupe(u8, dep.version),
-                                    .tarball_url = try allocator.dupe(u8, ""),
-                                    .integrity = null,
-                                    .source = dep.source,
-                                });
-                            }
-                            // Pull in its transitive system deps (shared libs)
-                            // from the embedded catalog so the binary can load.
-                            enqueuePantryDeps(allocator, dep.name, &next_wave);
+                            try resolved.append(allocator, .{
+                                .name = try allocator.dupe(u8, dep.name),
+                                .version = try allocator.dupe(u8, dep.version),
+                                .tarball_url = try allocator.dupe(u8, ""),
+                                .integrity = null,
+                                .source = dep.source,
+                            });
                         } else {
                             try resolved.append(allocator, .{
                                 .name = try allocator.dupe(u8, dep.name),
@@ -930,42 +818,18 @@ fn resolveFullTree(
             }
         }
 
-        // Swap waves
-        // Free old wave dep strings only if they were allocated for transitive deps (depth > 0)
-        if (depth > 0) {
-            for (current_wave.items) |dep| {
-                allocator.free(dep.name);
-                allocator.free(dep.version);
-            }
-        }
+        if (current_wave_owned) freeWaveDeps(allocator, current_wave.items);
         current_wave.clearRetainingCapacity();
+        current_wave_owned = true;
 
-        // Deduplicate next wave by name
         var next_seen = std.StringHashMap(void).init(allocator);
         defer next_seen.deinit();
         for (next_wave.items) |dep| {
-            if (next_seen.contains(dep.name) or seen.contains(dep.name)) {
-                allocator.free(dep.name);
-                allocator.free(dep.version);
-                continue;
-            }
-            next_seen.put(dep.name, {}) catch continue;
-            current_wave.append(allocator, dep) catch {
-                allocator.free(dep.name);
-                allocator.free(dep.version);
-            };
+            if (next_seen.contains(dep.name) or seen.contains(dep.name)) continue;
+            try next_seen.put(dep.name, {});
+            try appendOwnedWaveDep(allocator, &current_wave, dep);
         }
-        next_wave.deinit(allocator);
-
         depth += 1;
-    }
-
-    // Free remaining wave items
-    if (depth > 0) {
-        for (current_wave.items) |dep| {
-            allocator.free(dep.name);
-            allocator.free(dep.version);
-        }
     }
 
     if (verbose) {
@@ -989,6 +853,8 @@ const DownloadThreadCtx = struct {
     completed: *std.atomic.Value(usize),
     verbose: bool,
     show_progress: bool,
+    native_plan: *const native_deps.Plan,
+    prepared_archives: *native_archives.Prepared,
 
     fn worker(ctx: *DownloadThreadCtx) void {
         const alloc = ctx.installer.allocator;
@@ -1004,6 +870,7 @@ const DownloadThreadCtx = struct {
             defer _ = ctx.completed.fetchAdd(1, .release);
 
             const pkg = ctx.packages[i];
+            defer ctx.results[i].source = pkg.source;
             // Dupe name+version so results outlive the resolved list
             const owned_name = alloc.dupe(u8, pkg.name) catch "";
             const owned_version = alloc.dupe(u8, pkg.version) catch "";
@@ -1033,18 +900,26 @@ const DownloadThreadCtx = struct {
                     // Silence the installer's own per-package download/extract
                     // lines while the live spinner owns the terminal line.
                     .quiet = ctx.show_progress,
+                    .native_plan = ctx.native_plan,
+                    .prepared_archives = ctx.prepared_archives,
+                    .force = ctx.installer.native_policy.force,
                 };
                 if (ctx.installer.install(spec, opts)) |install_result_| {
                     var ir = install_result_;
                     defer ir.deinit(alloc);
+                    // Transfer the observed installed version, replacing the
+                    // provisional row allocation without another duplicate.
+                    const installed_version = ir.version;
+                    ir.version = "";
+                    alloc.free(owned_version);
                     ctx.results[i] = .{
                         .name = owned_name,
-                        .version = alloc.dupe(u8, ir.version) catch owned_version,
+                        .version = installed_version,
                         .success = true,
                         .from_cache = ir.from_cache,
                     };
                     if (ctx.verbose) {
-                        std.debug.print("[verbose:pipeline:download] pantry-source installed: {s} @ {s}\n", .{ pkg.name, ir.version });
+                        std.debug.print("[verbose:pipeline:download] pantry-source installed: {s} @ {s}\n", .{ pkg.name, installed_version });
                     }
                 } else |err| {
                     const msg = std.fmt.allocPrint(alloc, "{s}", .{@errorName(err)}) catch null;
@@ -1053,6 +928,7 @@ const DownloadThreadCtx = struct {
                         .version = owned_version,
                         .success = false,
                         .error_msg = msg,
+                        .policy_failure = native_deps.isPolicyError(err),
                     };
                     if (ctx.verbose) {
                         std.debug.print("[verbose:pipeline:download] pantry-source FAILED: {s} @ {s}: {s}\n", .{ pkg.name, pkg.version, @errorName(err) });
@@ -1089,9 +965,14 @@ const DownloadThreadCtx = struct {
                 if (ctx.installer.install(spec, opts)) |install_result_| {
                     var ir = install_result_;
                     defer ir.deinit(alloc);
+                    // Transfer the observed installed version, replacing the
+                    // provisional row allocation without another duplicate.
+                    const installed_version = ir.version;
+                    ir.version = "";
+                    alloc.free(owned_version);
                     ctx.results[i] = .{
                         .name = owned_name,
-                        .version = alloc.dupe(u8, ir.version) catch owned_version,
+                        .version = installed_version,
                         .success = true,
                         .from_cache = ir.from_cache,
                     };
@@ -1339,13 +1220,14 @@ fn resolveViaRegistry(
     inst: *Installer,
     top_level_deps: []const PipelineDep,
     verbose: bool,
+    native_plan: *native_deps.Plan,
 ) !std.ArrayList(ResolvedPackage) {
     // Build JSON body: {"dependencies":{"react":"^18","lodash":"^4",...}}
     // Only include npm packages (skip domain-style/pantry packages)
     var body_buf = std.ArrayList(u8).empty;
     defer body_buf.deinit(allocator);
     body_buf.appendSlice(allocator, "{\"dependencies\":{") catch
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
 
     var first = true;
     var npm_count: usize = 0;
@@ -1361,10 +1243,10 @@ fn resolveViaRegistry(
         npm_count += 1;
     }
     body_buf.appendSlice(allocator, "}}") catch
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
 
     if (npm_count == 0) {
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
     }
 
     if (verbose) {
@@ -1379,25 +1261,25 @@ fn resolveViaRegistry(
         5000,
     ) catch {
         if (verbose) std.debug.print("[verbose:pipeline:registry] server unreachable, falling back to client-side resolution\n", .{});
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
     };
     defer allocator.free(response);
 
     if (response.len == 0) {
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
     }
 
     // Parse response
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, response, .{}) catch {
         if (verbose) std.debug.print("[verbose:pipeline:registry] failed to parse response, falling back\n", .{});
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
     };
     defer parsed.deinit();
 
-    if (parsed.value != .object) return resolveFullTree(allocator, inst, top_level_deps, verbose);
+    if (parsed.value != .object) return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
     const resolved_obj = parsed.value.object.get("resolved") orelse
-        return resolveFullTree(allocator, inst, top_level_deps, verbose);
-    if (resolved_obj != .object) return resolveFullTree(allocator, inst, top_level_deps, verbose);
+        return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
+    if (resolved_obj != .object) return resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
 
     // Build resolved list from server response
     var resolved = std.ArrayList(ResolvedPackage).empty;
@@ -1441,18 +1323,21 @@ fn resolveViaRegistry(
         var found = false;
         for (resolved.items) |pkg| {
             if (std.mem.eql(u8, pkg.name, dep.name)) {
+                if (pkg.source == .pantry and dep.allow_pantry_fallback) try native_plan.add(dep.name, nativeConstraint(dep));
                 found = true;
                 break;
             }
         }
         if (!found) {
-            // This dependency entered the bulk request explicitly as npm. If
-            // the server has not observed a just-published version yet, resolve
-            // it directly against npm instead of reclassifying it through the
-            // Pantry registry. Reclassification can return Pantry metadata for
-            // a same-named package and then route the npm tarball through the
-            // system-package installer, ending in PackageNotFound.
-            const npm_info = inst.resolveNpmPackage(dep.name, dep.version) catch continue;
+            // Explicit npm/scoped ownership stays on npm. Only retained auto
+            // context can discover a real Pantry metadata fallback witness;
+            // neither branch chooses a native version before graph closure.
+            const npm_info = inst.resolveNpmPackageWithPreference(dep.name, dep.version, npmPreferenceForDep(inst, dep)) catch |err| {
+                if (try nativeFallbackRoot(allocator, native_plan, dep)) {
+                    try resolved.append(allocator, .{ .name = try allocator.dupe(u8, dep.name), .version = try allocator.dupe(u8, dep.version), .tarball_url = try allocator.dupe(u8, ""), .integrity = null, .source = .pantry });
+                } else try resolved.append(allocator, try unresolvedNpm(allocator, dep, err));
+                continue;
+            };
             defer allocator.free(npm_info.version);
             defer allocator.free(npm_info.tarball_url);
             defer if (npm_info.integrity) |i| allocator.free(i);
@@ -1476,12 +1361,7 @@ fn resolveViaRegistry(
     // Add non-npm top-level deps (pantry/github/etc) that weren't sent to the server
     for (top_level_deps) |dep| {
         if (dep.source == .npm) continue;
-        if (dep.source == .pantry and !packages.isRollingZigDevChannel(dep.name, dep.version)) {
-            if (try resolvePantryRegistryTarball(allocator, dep.name, dep.version)) |pantry_pkg| {
-                try resolved.append(allocator, pantry_pkg);
-                continue;
-            }
-        }
+        if (dep.source == .pantry) try native_plan.add(dep.name, nativeConstraint(dep));
         try resolved.append(allocator, .{
             .name = try allocator.dupe(u8, dep.name),
             .version = try allocator.dupe(u8, dep.version),
@@ -1873,13 +1753,78 @@ const ProgressCtx = struct {
     }
 };
 
+fn validateResolvedAutoNpmLock(policy: native_deps.Policy, inputs: []const PipelineDep, resolved: []const ResolvedPackage) !void {
+    if (policy.force and !policy.frozen) return;
+    const lower = @import("../deps/resolution/lockfile.zig");
+    for (inputs) |dep| {
+        if (dep.source != .npm or !dep.allow_pantry_fallback) continue;
+        if (policy.exempt_domains) |exempt| if (exempt.contains(dep.name)) continue;
+        // The resolved source, not the original auto guess, decides coverage.
+        for (resolved) |pkg| {
+            if (pkg.source != .npm or pkg.resolve_error != null or !std.mem.eql(u8, pkg.name, dep.name)) continue;
+            const pin = if (policy.original_lock) |original|
+                try lower.lockedVersionSatisfyingFromSource(original, dep.name, nativeConstraint(dep), .npm)
+            else
+                null;
+            if (policy.frozen and (pin == null or !std.mem.eql(u8, pin.?, pkg.version))) return error.NativeLockNotSatisfied;
+            break;
+        }
+    }
+}
+
+fn sameOptionalText(first: ?[]const u8, second: ?[]const u8) bool {
+    if (first) |value| return if (second) |other| std.mem.eql(u8, value, other) else false;
+    return second == null;
+}
+
+fn appendRootInput(allocator: std.mem.Allocator, inputs: *std.ArrayList(PipelineDep), root: native_deps.Root) !void {
+    for (inputs.items) |input| {
+        if (input.source == root.source and input.allow_pantry_fallback == root.allow_pantry_fallback and !input.optional and
+            std.mem.eql(u8, input.name, root.name) and std.mem.eql(u8, nativeConstraint(input), root.version) and
+            sameOptionalText(input.github_owner, root.github_owner) and sameOptionalText(input.github_repo, root.github_repo)) return;
+    }
+    try inputs.append(allocator, .{ .name = root.name, .version = root.version, .source = root.source, .github_owner = root.github_owner, .github_repo = root.github_repo, .allow_pantry_fallback = root.allow_pantry_fallback });
+}
+
 pub fn run(
     allocator: std.mem.Allocator,
     inst: *Installer,
-    top_level_deps: []const PipelineDep,
+    requested_deps: []const PipelineDep,
     project_root: []const u8,
     verbose: bool,
 ) !PipelineResult {
+    var inputs: std.ArrayList(PipelineDep) = .empty;
+    defer inputs.deinit(allocator);
+    try inputs.appendSlice(allocator, requested_deps);
+    if (inst.native_session) |session| {
+        for (session.supplemental_roots) |root| {
+            try appendRootInput(allocator, &inputs, root);
+        }
+        for (session.captured_roots.items) |root| {
+            try appendRootInput(allocator, &inputs, root);
+        }
+    }
+    for (inputs.items) |*dep| {
+        if (dep.source == .ziglang) {
+            dep.name = "ziglang.org";
+            dep.source = .pantry;
+        }
+        if (dep.source == .pantry) dep.name = native_identity.canonical(dep.name);
+    }
+    const top_level_deps = inputs.items;
+    var local_plan = native_deps.Plan.init(allocator);
+    defer local_plan.deinit();
+    const native_plan = if (inst.native_session) |session| blk: {
+        if (session.plan == null) session.plan = native_deps.Plan.init(allocator);
+        break :blk &session.plan.?;
+    } else &local_plan;
+    // Collect authored native edges before either resolver's name dedup. The
+    // catalog closure also makes native/source conflicts independent of order.
+    for (top_level_deps) |dep| {
+        if (dep.source == .pantry) try native_plan.add(dep.name, nativeConstraint(dep));
+    }
+    try native_plan.expand();
+
     const total_start = io_helper.clockGettime();
     const total_start_ms = @as(i64, @intCast(total_start.sec)) * 1000 + @divFloor(@as(i64, @intCast(total_start.nsec)), 1_000_000);
 
@@ -1893,6 +1838,7 @@ pub fn run(
     {
         var present_count: usize = 0;
         var npm_count: usize = 0;
+        var identity_validation_pending = false;
         for (top_level_deps) |dep| {
             // Only check npm packages — system/pantry packages aren't in ./pantry/
             if (dep.source != .npm) continue;
@@ -1900,13 +1846,33 @@ pub fn run(
             // With a bun.lock pin in range, only that exact version counts as
             // present: an older in-range copy is the drift this must repair.
             const bun_pin = inst.preferredBunPin(dep.name, dep.version);
+            var frozen_pin: ?[]const u8 = null;
+            if (dep.allow_pantry_fallback and (!inst.native_policy.force or inst.native_policy.frozen)) {
+                const pin = if (inst.native_policy.original_lock) |original|
+                    @import("../deps/resolution/lockfile.zig").lockedVersionSatisfyingFromSource(original, dep.name, nativeConstraint(dep), .npm) catch blk: {
+                        identity_validation_pending = true;
+                        break :blk null;
+                    }
+                else
+                    null;
+                const exempt = if (inst.native_policy.exempt_domains) |domains| domains.contains(dep.name) else false;
+                if (inst.native_policy.frozen and !exempt) {
+                    frozen_pin = pin;
+                    if (pin == null) identity_validation_pending = true;
+                    if (pin) |locked| {
+                        if (bun_pin) |bun| {
+                            if (!std.mem.eql(u8, locked, bun)) identity_validation_pending = true;
+                        }
+                    }
+                }
+            }
             if (installedNpmPackageMatches(
                 allocator,
                 project_root,
                 inst.modules_dir,
                 dep.name,
-                bun_pin orelse dep.version,
-                bun_pin == null,
+                frozen_pin orelse bun_pin orelse dep.version,
+                frozen_pin == null and bun_pin == null,
             )) present_count += 1;
         }
 
@@ -1914,7 +1880,7 @@ pub fn run(
         // packages must go through resolution/download; otherwise a fresh
         // project can get an empty pantry/ with an "up to date" summary.
         const missing = npm_count - present_count;
-        if (canUseNpmFastPath(top_level_deps.len, npm_count, missing)) {
+        if (!identity_validation_pending and native_plan.names.items.len == 0 and canUseNpmFastPath(top_level_deps.len, npm_count, missing)) {
             if (verbose) {
                 const check_ts = io_helper.clockGettime();
                 const check_ms = @as(i64, @intCast(check_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(check_ts.nsec)), 1_000_000);
@@ -1943,9 +1909,9 @@ pub fn run(
         std.debug.print("[verbose:pipeline] Phase 1: resolving dependency tree via {s}...\n", .{source});
     }
     var resolved = if (use_registry_acceleration)
-        try resolveViaRegistry(allocator, inst, top_level_deps, verbose)
+        try resolveViaRegistry(allocator, inst, top_level_deps, verbose, native_plan)
     else
-        try resolveFullTree(allocator, inst, top_level_deps, verbose);
+        try resolveFullTree(allocator, inst, top_level_deps, verbose, native_plan);
     defer {
         for (resolved.items) |pkg| {
             freeResolved(allocator, pkg);
@@ -1953,22 +1919,24 @@ pub fn run(
         resolved.deinit(allocator);
     }
 
-    // Pull in transitive system (pantry) dependencies so dependent binaries can
-    // load their shared libraries. Independent of which resolver ran above.
-    try expandTransitivePantryDeps(allocator, &resolved, verbose);
-
-    // Each pantry package also installs its own dependencies; tell the
-    // installer which versions this run already chose, so those reuse them
-    // instead of adding a second version (see Installer.planned_pantry).
-    var planned_pantry = std.StringHashMap([]const u8).init(allocator);
-    defer planned_pantry.deinit();
-    for (resolved.items) |pkg| {
-        if (pkg.source != .pantry) continue;
-        planned_pantry.put(pkg.name, pkg.version) catch {};
+    // Both resolution routes discover all genuine native roots first. Only
+    // now close active edges and choose versions, before any payload workers.
+    try native_plan.resolve(inst.native_policy);
+    var native_index: usize = 0;
+    while (native_index < resolved.items.len) {
+        if (resolved.items[native_index].source == .pantry) {
+            freeResolved(allocator, resolved.swapRemove(native_index));
+            continue;
+        }
+        if (native_plan.entries.contains(resolved.items[native_index].name)) return error.NativeSourceConflict;
+        native_index += 1;
     }
-    const previous_plan = inst.planned_pantry;
-    inst.planned_pantry = &planned_pantry;
-    defer inst.planned_pantry = previous_plan;
+    for (native_plan.names.items) |name| {
+        const version = try native_plan.versionFor(name, "latest");
+        try resolved.append(allocator, .{ .name = try allocator.dupe(u8, name), .version = try allocator.dupe(u8, version), .tarball_url = try allocator.dupe(u8, ""), .integrity = null, .source = .pantry });
+    }
+
+    try validateResolvedAutoNpmLock(inst.native_policy, top_level_deps, resolved.items);
 
     const phase1_ts = io_helper.clockGettime();
     const phase1_ms = @as(i64, @intCast(phase1_ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(phase1_ts.nsec)), 1_000_000);
@@ -1984,6 +1952,13 @@ pub fn run(
             .results = try allocator.alloc(PackageResult, 0),
         };
     }
+
+    // Freeze selected native metadata/body acquisition before payload workers.
+    // Native mutation remains one synchronous traversal; independent bodies
+    // still overlap and every installer verifies its own staged copy. This
+    // scope outlives all joined worker/recursive borrows below.
+    var prepared_archives = try inst.prepareNativeArchives(native_plan, project_root, inst.native_policy.force);
+    defer prepared_archives.deinit();
 
     // ── Phase 1.5: Bulk tarball prefetch through Pantry ──
     // For large npm trees, this turns N individual tarball downloads into one
@@ -2026,46 +2001,40 @@ pub fn run(
         .completed = &completed,
         .verbose = verbose,
         .show_progress = show_progress,
+        .native_plan = native_plan,
+        .prepared_archives = &prepared_archives,
     };
 
-    var stop_progress = std.atomic.Value(bool).init(false);
-    var progress_ctx = ProgressCtx{ .completed = &completed, .total = resolved.items.len, .stop = &stop_progress };
-    const progress_thread: ?std.Thread = if (show_progress)
-        (std.Thread.spawn(.{}, ProgressCtx.run, .{&progress_ctx}) catch null)
-    else
-        null;
+    {
+        var stop_progress = std.atomic.Value(bool).init(false);
+        var progress_ctx = ProgressCtx{ .completed = &completed, .total = resolved.items.len, .stop = &stop_progress };
+        const progress_thread: ?std.Thread = if (show_progress)
+            (std.Thread.spawn(.{}, ProgressCtx.run, .{&progress_ctx}) catch null)
+        else
+            null;
+        defer if (progress_thread) |thread| {
+            stop_progress.store(true, .release);
+            thread.join();
+            style.clearLine();
+        };
 
-    // Use up to 16 threads for download + extract
-    const cpu_count = std.Thread.getCpuCount() catch 4;
-    const max_threads = @min(cpu_count, 16);
-    const thread_count = @min(resolved.items.len, max_threads);
+        // The caller is one of at most sixteen workers. Handle storage is
+        // bounded too, so no fallible allocation can strand live progress or
+        // its borrowed stack state before the workers are joined.
+        const maximum_threads = 16;
+        const cpu_count = std.Thread.getCpuCount() catch 4;
+        const thread_count = @min(resolved.items.len, @min(cpu_count, maximum_threads));
 
-    if (thread_count <= 1) {
-        DownloadThreadCtx.worker(&dl_ctx);
-    } else {
-        const spawned = thread_count - 1;
-        var threads = try allocator.alloc(?std.Thread, spawned);
-        defer allocator.free(threads);
-        for (threads) |*t| t.* = null;
-
-        for (0..spawned) |t| {
-            threads[t] = std.Thread.spawn(.{}, DownloadThreadCtx.worker, .{&dl_ctx}) catch null;
-        }
-        DownloadThreadCtx.worker(&dl_ctx);
-
-        for (threads) |*t| {
-            if (t.*) |thread| {
-                thread.join();
-                t.* = null;
+        if (thread_count <= 1) {
+            DownloadThreadCtx.worker(&dl_ctx);
+        } else {
+            var threads: [maximum_threads - 1]?std.Thread = @splat(null);
+            for (threads[0 .. thread_count - 1]) |*thread| {
+                thread.* = std.Thread.spawn(.{}, DownloadThreadCtx.worker, .{&dl_ctx}) catch null;
             }
+            DownloadThreadCtx.worker(&dl_ctx);
+            for (threads) |thread| if (thread) |running| running.join();
         }
-    }
-
-    // Stop the progress animation and wipe its line before any result output.
-    if (progress_thread) |pt| {
-        stop_progress.store(true, .release);
-        pt.join();
-        style.clearLine();
     }
 
     const phase2_ts = io_helper.clockGettime();
@@ -2080,7 +2049,7 @@ pub fn run(
         if (r.success) {
             if (r.from_cache) cached += 1 else installed += 1;
         } else if (r.name.len > 0) {
-            if (resolved.items[ri].optional) {
+            if (resolved.items[ri].optional and !r.policy_failure) {
                 // npm and bun both carry on past an optional dependency that
                 // will not install; it is neither reported nor locked.
                 if (verbose) std.debug.print("[verbose:pipeline] optional {s}@{s} did not install, skipping\n", .{ r.name, r.version });
@@ -2143,4 +2112,107 @@ test "dependency architecture guards select the actual target and retain foreign
     try std.testing.expect(!parseDepSpecForPlatform("windows/x86_64:zlib.net", "windows", "x64").?.foreign);
     try std.testing.expect(!parseDepSpecForPlatform("zlib.net^1", "linux", "x64").?.guarded);
     try std.testing.expect(parseDepSpecForPlatform("darwin//x64:zlib.net", "darwin", "x64") == null);
+}
+
+const NativeConflictMetadata = struct {
+    fn result(allocator: std.mem.Allocator, children: []const []const u8) !Installer.NpmResolutionWithDeps {
+        const version = try allocator.dupe(u8, "1.0.0");
+        errdefer allocator.free(version);
+        const url = try allocator.dupe(u8, "https://metadata.fixture/archive.tgz");
+        errdefer allocator.free(url);
+        const deps = try allocator.alloc(Installer.NpmResolutionWithDeps.DepEntry, children.len);
+        var initialized: usize = 0;
+        errdefer {
+            for (deps[0..initialized]) |dependency| {
+                allocator.free(dependency.name);
+                allocator.free(dependency.version_constraint);
+            }
+            allocator.free(deps);
+        }
+        for (children, 0..) |child, index| {
+            const name = try allocator.dupe(u8, child);
+            errdefer allocator.free(name);
+            deps[index] = .{ .name = name, .version_constraint = try allocator.dupe(u8, "^1"), .is_optional = false };
+            initialized += 1;
+        }
+        return .{ .version = version, .tarball_url = url, .dependencies = deps };
+    }
+
+    fn resolve(ctx: *ResolveThreadCtx) !void {
+        for (ctx.deps, 0..) |dep, index| {
+            ctx.results[index] = try result(ctx.installer.allocator, if (std.mem.eql(u8, dep.name, "root")) &.{ "queued-child", "native-conflict", "pending-child" } else &.{"queued-grandchild"});
+        }
+    }
+};
+
+test "BFS native conflict releases pending metadata both owned waves and collected packages" {
+    const allocator = std.testing.allocator;
+    var package_cache = try @import("../cache.zig").PackageCache.init(allocator);
+    defer package_cache.deinit();
+    var installer = try Installer.init(allocator, &package_cache);
+    defer installer.deinit();
+    var plan = native_deps.Plan.init(allocator);
+    defer plan.deinit();
+    try plan.add("native-conflict", "^1");
+    // The second wave owns current strings, one collected result plus its
+    // next-wave child, and an unprocessed later result when conflict occurs.
+    try std.testing.expectError(error.NativeSourceConflict, resolveFullTreeUsing(allocator, &installer, &.{.{ .name = "root", .version = "^1", .source = .npm }}, false, &plan, NativeConflictMetadata.resolve));
+}
+
+test "native fallback retains authored range instead of a wrong-source provisional npm pin" {
+    const allocator = std.testing.allocator;
+    const lower = @import("../deps/resolution/lockfile.zig");
+    var original = try lower.LockFile.parse(allocator,
+        \\{"packages":{"fixture.example@1.10.0":{"name":"fixture.example","version":"1.10.0","source":"npm"}}}
+    );
+    defer original.deinit();
+    const Metadata = struct {
+        fn witness(a: std.mem.Allocator, name: []const u8, declared: []const u8) !?ResolvedPackage {
+            try std.testing.expectEqualStrings("^1", declared);
+            return .{ .name = try a.dupe(u8, name), .version = try a.dupe(u8, "1.11.0"), .tarball_url = try a.dupe(u8, "https://metadata.fixture/native.tgz"), .integrity = null, .source = .pantry };
+        }
+        fn fresh(a: std.mem.Allocator, name: []const u8, declared: []const u8) ![]const u8 {
+            const metadata = (try witness(a, name, declared)).?;
+            a.free(metadata.name);
+            a.free(metadata.tarball_url);
+            return metadata.version;
+        }
+        fn unexpected(_: std.mem.Allocator, _: []const u8, _: []const u8) ![]const u8 {
+            return error.UnexpectedMetadataLookup;
+        }
+    };
+    var plan = native_deps.Plan.init(allocator);
+    defer plan.deinit();
+    try std.testing.expect(try nativeFallbackRootUsing(allocator, &plan, .{ .name = "fixture.example", .version = "1.10.0", .declared_constraint = "^1", .source = .npm, .allow_pantry_fallback = true }, Metadata.witness));
+    try std.testing.expectEqualStrings("1.10.0", (try lower.lockedVersionSatisfying(&original, "fixture.example", "^1")).?);
+    try plan.resolveUsing(.{ .original_lock = &original }, Metadata.fresh);
+    try std.testing.expectEqualStrings("1.11.0", try plan.versionFor("fixture.example", "^1"));
+    var frozen = native_deps.Plan.init(allocator);
+    defer frozen.deinit();
+    try frozen.add("fixture.example", "^1");
+    try std.testing.expectError(error.NativeLockNotSatisfied, frozen.resolveUsing(.{ .original_lock = &original, .frozen = true }, Metadata.unexpected));
+    try std.testing.expectEqual(@as(usize, 1), original.packages.count());
+}
+
+test "actual npm identity enforces frozen coverage and deferred ambiguity before materialization" {
+    const allocator = std.testing.allocator;
+    const lower = @import("../deps/resolution/lockfile.zig");
+    var original = try lower.LockFile.parse(allocator,
+        \\{"packages":{"fixture@1.0.0":{"name":"fixture","version":"1.0.0","source":"npm"},"fixture@1.1.0":{"name":"fixture","version":"1.1.0","source":"npm"}}}
+    );
+    defer original.deinit();
+    var metadata = try NativeConflictMetadata.result(allocator, &.{});
+    defer metadata.deinit(allocator);
+    const actual_npm = try copyNpmResolution(allocator, "fixture", metadata, false, false);
+    defer freeResolved(allocator, actual_npm);
+    const inputs = [_]PipelineDep{.{ .name = "fixture", .version = "^1", .declared_constraint = "^1", .source = .npm, .allow_pantry_fallback = true }};
+    try std.testing.expectError(error.AmbiguousLockedVersion, validateResolvedAutoNpmLock(.{ .original_lock = &original }, &inputs, &.{actual_npm}));
+    try validateResolvedAutoNpmLock(.{ .original_lock = &original, .force = true }, &inputs, &.{actual_npm});
+    try std.testing.expectError(error.AmbiguousLockedVersion, validateResolvedAutoNpmLock(.{ .original_lock = &original, .force = true, .frozen = true }, &inputs, &.{actual_npm}));
+    var native_only = try lower.LockFile.parse(allocator,
+        \\{"packages":{"fixture@1.0.0":{"name":"fixture","version":"1.0.0","source":"pantry"}}}
+    );
+    defer native_only.deinit();
+    try std.testing.expectError(error.NativeLockNotSatisfied, validateResolvedAutoNpmLock(.{ .original_lock = &native_only, .frozen = true }, &inputs, &.{actual_npm}));
+    try validateResolvedAutoNpmLock(.{ .original_lock = &native_only }, &inputs, &.{actual_npm});
 }

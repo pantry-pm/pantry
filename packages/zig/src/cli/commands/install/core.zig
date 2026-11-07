@@ -3,6 +3,8 @@
 //! Main installation command implementation for project dependencies.
 
 const std = @import("std");
+const native_identity = @import("../../../packages/native_identity.zig");
+const native_lock = @import("../../../packages/native_lock.zig");
 const io_helper = @import("../../../io_helper.zig");
 const lib = @import("../../../lib.zig");
 const types = @import("types.zig");
@@ -17,10 +19,22 @@ const recovery = @import("../../../install/recovery.zig");
 const style = @import("../../style.zig");
 const dependency_parser = @import("../../../deps/parser.zig");
 const scopes = @import("../../../registry/scopes.zig");
+const native_deps = @import("../../../install/native_deps.zig");
 
 const cache = lib.cache;
 const string = lib.string;
 const install = lib.install;
+
+/// Provider identity survives a version/range change. The completed native
+/// plan, not discovery, decides which locked version satisfies every edge.
+fn hasNativeLockIdentity(original: *const lib.deps.resolution.LockFile, name: []const u8) bool {
+    var entries = original.packages.iterator();
+    while (entries.next()) |entry| {
+        const package = entry.value_ptr.*;
+        if (package.source.matches(.pantry) and std.mem.eql(u8, native_identity.canonical(package.name), native_identity.canonical(name))) return true;
+    }
+    return false;
+}
 
 fn shouldInstallWithNativePipeline(delegates_js_dependencies: bool, source: dependency_parser.DependencySource) bool {
     return !delegates_js_dependencies or source == .pantry;
@@ -161,6 +175,16 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
 
     if (deps.len == 0) return null;
 
+    // Native identity/frozen/active-edge validation belongs to the shared plan,
+    // even when every native program is already present. No metadata is needed
+    // for covered pins, so declining this shortcut is not an update request.
+    for (deps) |dep| {
+        if (helpers.effectiveDependencySource(dep) == .pantry or isProvisionalNpmDependency(dep)) return null;
+    }
+    const native_env_dependencies = env_deps.infer(allocator, effective_dir, deps, .{}) catch return null;
+    defer env_deps.freeDeps(allocator, native_env_dependencies);
+    if (native_env_dependencies.len > 0) return null;
+
     // 4. Check all deps against lockfile + verify dirs exist (O(1) per dep via name set)
     // Perf: For small dep lists, skip HashMap construction and use direct lockfile lookup
     // (HashMap has allocation + hashing overhead; direct lookup is O(1) per dep via StringHashMap.get)
@@ -258,42 +282,10 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
 const DepSpec = struct { domain: []const u8, constraint: []const u8 };
 
 fn depDomainFromSpec(spec_in: []const u8) ?DepSpec {
-    var spec = spec_in;
-    if (std.mem.indexOfScalar(u8, spec, '#')) |h| spec = spec[0..h];
-    spec = std.mem.trim(u8, spec, " \t");
-    if (spec.len == 0) return null;
-    if (std.mem.indexOfScalar(u8, spec, ':')) |colon| {
-        const prefix = spec[0..colon];
-        const is_os = std.mem.eql(u8, prefix, "linux") or std.mem.eql(u8, prefix, "darwin") or std.mem.eql(u8, prefix, "windows");
-        if (is_os) {
-            const cur = switch (@import("builtin").os.tag) {
-                .linux => "linux",
-                .macos => "darwin",
-                .windows => "windows",
-                else => "",
-            };
-            if (!std.mem.eql(u8, prefix, cur)) return null;
-            spec = std.mem.trim(u8, spec[colon + 1 ..], " \t");
-        }
-    }
-    var vend: usize = spec.len;
-    for (spec, 0..) |c, i| {
-        if (c == '^' or c == '~' or c == '>' or c == '<' or c == '=' or c == '@') {
-            vend = i;
-            break;
-        }
-    }
-    const domain = std.mem.trim(u8, spec[0..vend], " \t");
-    if (domain.len == 0) return null;
-    // Skip malformed platform-tag pseudo-domains (e.g. `darwin/x86-64`) some
-    // catalog entries carry — not installable packages.
-    if (std.mem.startsWith(u8, domain, "darwin/") or std.mem.startsWith(u8, domain, "linux/") or std.mem.startsWith(u8, domain, "windows/")) return null;
-
-    var constraint = std.mem.trim(u8, spec[vend..], " \t");
-    // The catalog spells an exact pin `@1.1`; everything downstream speaks
-    // `name@version`, so drop the redundant leading `@`.
-    if (constraint.len > 0 and constraint[0] == '@') constraint = constraint[1..];
-    return .{ .domain = domain, .constraint = constraint };
+    const parsed = native_deps.parsePantryDepSpec(spec_in) orelse return null;
+    // Preserve this legacy test adapter's empty spelling for an unversioned
+    // edge; active production traversal and guard parsing live in one module.
+    return .{ .domain = parsed.domain, .constraint = if (std.mem.indexOfAny(u8, spec_in, "^~<>=@") == null) "" else parsed.version };
 }
 
 /// The exit code a manifest install ends on.
@@ -329,77 +321,257 @@ fn isExactVersion(version: []const u8) bool {
     return true;
 }
 
-/// Append the transitive system-dependency closure of the explicitly-requested
-/// packages to `package_args` (deduped) so a package's shared-library deps
-/// (php → libpq/libonig/libxml2/icu/libsodium, nginx → libpcre) are installed
-/// alongside it. Deps are read from the embedded catalog and installed at the
-/// version each parent declares. Best-effort.
-fn appendTransitiveDeps(allocator: std.mem.Allocator, package_args: *std.ArrayList([]const u8)) void {
-    const generated = @import("../../../packages/generated.zig");
-    var seen = std.StringHashMap(void).init(allocator);
-    defer seen.deinit();
-    var queue = std.ArrayList([]const u8).empty;
-    defer queue.deinit(allocator);
+fn isProvisionalNpmDependency(dep: dependency_parser.PackageDependency) bool {
+    return dep.source == .registry and helpers.effectiveDependencySource(dep) == .npm;
+}
 
-    // Seed with the resolved domains of the requested packages.
-    for (package_args.items) |a| {
-        const domain = helpers.resolvePackageAlias(helpers.splitPackageSpec(a).name);
-        if (seen.contains(domain)) continue;
-        seen.put(domain, {}) catch {};
-        queue.append(allocator, domain) catch {};
+fn preferredPipelineVersion(original: *const lib.deps.resolution.LockFile, dep: dependency_parser.PackageDependency) !?[]const u8 {
+    if (isProvisionalNpmDependency(dep)) {
+        // Auto identity is not yet established. An npm preference cannot use a
+        // native/unknown-source record or narrow a later native declaration.
+        return lib.deps.resolution.lockfile.lockedVersionSatisfyingFromSource(original, helpers.dependencyName(dep), dep.version, .npm) catch null;
     }
+    return helpers.lockedDependencyVersionSatisfying(original, dep);
+}
 
-    // BFS the dependency graph from the embedded catalog.
-    var i: usize = 0;
-    while (i < queue.items.len) : (i += 1) {
-        const info = generated.getPackageByDomain(queue.items[i]) orelse continue;
-        for (info.dependencies) |spec| {
-            const dep = depDomainFromSpec(spec) orelse continue;
-            if (seen.contains(dep.domain)) continue;
-            seen.put(dep.domain, {}) catch {};
-            queue.append(allocator, dep.domain) catch {};
+fn pipelineDependency(dep: dependency_parser.PackageDependency, version: []const u8) @import("../../../install/pipeline.zig").PipelineDep {
+    return .{
+        .name = helpers.dependencyName(dep),
+        .version = version,
+        .declared_constraint = dep.version,
+        .source = helpers.effectiveDependencySource(dep),
+        .allow_pantry_fallback = dep.source == .registry,
+        .github_owner = if (dep.github_ref) |ref| ref.owner else null,
+        .github_repo = if (dep.github_ref) |ref| ref.repo else null,
+    };
+}
 
-            // Install each dep at the version its parent declares, not `latest`.
-            // A package links the library it was BUILT against: node v26 wants
-            // unicode.org v73 and openssl v1.1 (the catalog pins both), so
-            // resolving them to latest installed icu 78 / openssl 3.6 and left
-            // node unable to start at all — `dyld: Library not loaded:
-            // @rpath/unicode.org/v73/lib/libicui18n.dylib`.
-            const owned = if (dep.constraint.len > 0)
-                std.fmt.allocPrint(allocator, "{s}@{s}", .{ dep.domain, dep.constraint }) catch continue
-            else
-                allocator.dupe(u8, dep.domain) catch continue;
-            package_args.append(allocator, owned) catch {
-                allocator.free(owned);
-            };
+/// Stale wrong-source pins may be repaired normally. A record still owned by
+/// an authored JS edge cannot instead be reassigned by a native named add.
+fn validateNamedProviderOwnership(allocator: std.mem.Allocator, project_root: []const u8, plan: *const native_deps.Plan) !void {
+    var ownership = @import("../../../deps/js_workspace.zig").Ownership.init(allocator);
+    defer ownership.deinit();
+    try ownership.readExternalProjectDependencies(project_root);
+    var names = plan.entries.keyIterator();
+    while (names.next()) |name| {
+        if (ownership.names.contains(name.*)) return error.NativeSourceConflict;
+    }
+}
+
+test "parsed explicit npm names reach the real pipeline adapter without native aliasing" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.json", .data =
+        \\{"dependencies":{"bun":{"version":"^1.4","source":"npm"},"bun.sh":{"version":"1.4.3","source":"pantry"}}}
+    });
+    const path = try std.fmt.allocPrint(allocator, ".zig-cache/tmp/{s}/pantry.json", .{directory.sub_path});
+    defer allocator.free(path);
+    const parsed = try dependency_parser.inferDependencies(allocator, .{ .path = path, .format = .pantry_json });
+    defer env_deps.freeDeps(allocator, parsed);
+    try std.testing.expectEqual(@as(usize, 2), parsed.len);
+    for (parsed) |dep| {
+        const dispatched = pipelineDependency(dep, "1.4.3");
+        if (dep.source == .npm) {
+            try std.testing.expectEqualStrings("npm:bun", dep.name);
+            try std.testing.expectEqualStrings("bun", dispatched.name);
+            try std.testing.expectEqual(lib.packages.PackageSource.npm, dispatched.source);
+            try std.testing.expectEqualStrings("^1.4", dispatched.declared_constraint.?);
+            try std.testing.expect(!dispatched.allow_pantry_fallback);
+        } else {
+            try std.testing.expectEqualStrings("bun.com", dispatched.name);
+            try std.testing.expectEqual(lib.packages.PackageSource.pantry, dispatched.source);
         }
     }
+    var original = try lib.deps.resolution.LockFile.parse(allocator,
+        \\{"packages":{"npm":{"name":"bun","version":"1.4.3","source":"npm"},"native":{"name":"bun.sh","version":"1.4.4","source":"pantry"}}}
+    );
+    defer original.deinit();
+    try std.testing.expectEqualStrings("1.4.3", (try helpers.lockedDependencyVersionSatisfying(&original, .{ .name = "npm:bun", .version = "^1", .source = .npm })).?);
 }
 
-/// Recursive installers must see the same explicit pins as the CLI's closure.
-fn explicitNativePlan(allocator: std.mem.Allocator, args: []const []const u8) !std.StringHashMap([]const u8) {
-    var plan = std.StringHashMap([]const u8).init(allocator);
+test "named native additions protect active JS owners while permitting stale provenance repair" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    const cwd = try io_helper.getCwdAlloc(allocator);
+    defer allocator.free(cwd);
+    const root = try std.fs.path.join(allocator, &.{ cwd, ".zig-cache", "tmp", directory.sub_path[0..] });
+    defer allocator.free(root);
+    var plan = native_deps.Plan.init(allocator);
+    defer plan.deinit();
+    try plan.add("bun.sh", "1.4.3");
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"name":"fixture","dependencies":{"bun.com":"1.4.3"}}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"name":"fixture","dependencies":{}}
+    });
+    try validateNamedProviderOwnership(allocator, root, &plan);
+    try directory.dir.createDirPath(io_helper.io, "packages/local");
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"name":"fixture","workspaces":["packages/*"]}
+    });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/local/package.json", .data =
+        \\{"name":"@fixture/local","version":"1.0.0","dependencies":{"bun.com":"1.4.3"}}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    // A member name alone cannot hide a remotely satisfied dependency.
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/local/package.json", .data =
+        \\{"name":"bun.com","version":"1.0.0"}
+    });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"name":"fixture","workspaces":["packages/*"],"dependencies":{"bun.com":"^2"}}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"name":"fixture","workspaces":["packages/*"],"dependencies":{"bun.com":"^1"}}
+    });
+    try validateNamedProviderOwnership(allocator, root, &plan);
+    // Explicit companion providers keep their literal identity even without a
+    // lockfile, including the empty preference view used by --force.
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.json", .data =
+        \\{"dependencies":{"bun.com":{"version":"^2","source":"npm"}}}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.json", .data =
+        \\{"dependencies":{}}
+    });
+    try validateNamedProviderOwnership(allocator, root, &plan);
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "pantry", .{}));
+}
+
+test "named provider ownership uses catalogs, Pantry workspaces and JSONC declarations" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    const root = try std.fmt.allocPrint(allocator, ".zig-cache/tmp/{s}", .{directory.sub_path});
+    defer allocator.free(root);
+    var plan = native_deps.Plan.init(allocator);
+    defer plan.deinit();
+    try plan.add("bun.sh", "1.4.3");
+    try directory.dir.createDirPath(io_helper.io, "packages/local");
+    try directory.dir.createDirPath(io_helper.io, "packages/consumer");
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/local/package.json", .data =
+        \\{"name":"bun.com","version":"1.0.0"}
+    });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/consumer/package.json", .data =
+        \\{"name":"consumer","dependencies":{"bun.com":"catalog:"}}
+    });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"workspaces":["packages/*"],"catalog":{"bun.com":"^1"},"catalogs":{"remote":{"bun.com":"^2"}}}
+    });
+    try validateNamedProviderOwnership(allocator, root, &plan);
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/consumer/package.json", .data =
+        \\{"name":"consumer","dependencies":{"bun.com":"catalog:remote"}}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    // Member discovery follows the actual Pantry workspace even when package.json
+    // contains no workspaces field.
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data = "{}" });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.json", .data =
+        \\{"workspaces":["packages/*"]}
+    });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/consumer/package.json", .data =
+        \\{"name":"consumer","dependencies":{"bun.com":"^2"}}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    try directory.dir.deleteFile(io_helper.io, "pantry.json");
+    try directory.dir.deleteFile(io_helper.io, "package.json");
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.jsonc", .data =
+        \\{/* authored npm dependency */ "dependencies":{"bun.com":"^2",},}
+    });
+    try std.testing.expectError(error.NativeSourceConflict, validateNamedProviderOwnership(allocator, root, &plan));
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "pantry", .{}));
+}
+
+test "member discovery retains recognized nested dependency configs" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    const root = try std.fmt.allocPrint(allocator, ".zig-cache/tmp/{s}", .{directory.sub_path});
+    defer allocator.free(root);
+    try directory.dir.createDirPath(io_helper.io, "packages/typed/config");
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "package.json", .data =
+        \\{"workspaces":["packages/*"]}
+    });
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "packages/typed/config/deps.ts", .data =
+        \\export default { dependencies: { 'bun.com': { version: '^2', source: 'npm' } } }
+    });
+    const manifest = try std.fs.path.join(allocator, &.{ root, "package.json" });
+    defer allocator.free(manifest);
+    var config = try @import("../../../packages/workspace.zig").loadWorkspaceConfig(allocator, manifest, root);
+    defer config.deinit(allocator);
+    try std.testing.expectEqual(@as(usize, 1), config.members.len);
+    try std.testing.expect(std.mem.endsWith(u8, config.members[0].deps_file_path.?, "config/deps.ts"));
+}
+
+test "evaluated native config declarations retain dispatch and environment ownership" {
+    const allocator = std.testing.allocator;
+    const declarations = try dependency_parser.parseEvaluatedDependencyJson(allocator,
+        \\{"dependencies":{"postgres":{"version":"17"},"redis":"7","npmredis":{"version":"7","source":"npm"}}}
+    );
+    defer env_deps.freeDeps(allocator, declarations);
+    try std.testing.expectEqual(@as(usize, 3), declarations.len);
+    try std.testing.expectEqualStrings("postgres", declarations[0].name);
+    try std.testing.expectEqualStrings("postgresql.org", pipelineDependency(declarations[0], "17").name);
+    try std.testing.expectEqual(lib.packages.PackageSource.pantry, pipelineDependency(declarations[0], "17").source);
+    try std.testing.expect(env_deps.isDeclared(declarations, "postgresql.org"));
+    try std.testing.expect(env_deps.isDeclared(declarations, "redis.io"));
+    const inferred = [_]dependency_parser.PackageDependency{
+        .{ .name = "postgresql.org", .version = "latest", .source = .pantry },
+        .{ .name = "redis.io", .version = "latest", .source = .pantry },
+    };
+    var env_only = try env_deps.inferredOnlyDomains(allocator, &inferred, declarations);
+    defer env_only.deinit();
+    try std.testing.expect(!env_only.contains("postgresql.org"));
+    try std.testing.expect(!env_only.contains("redis.io"));
+    try std.testing.expect(!env_deps.isDeclared(&.{.{ .name = "auto:redis", .version = "7", .source = .registry }}, "redis.io"));
+}
+
+const NamedInstallRequest = struct {
+    spec: lib.packages.PackageSpec,
+    declared_constraint: []const u8,
+    direct: bool,
+    integrity: ?[]const u8 = null,
+
+    fn init(allocator: std.mem.Allocator, input: lib.packages.PackageSpec, declared: []const u8, direct: bool, integrity: ?[]const u8) !NamedInstallRequest {
+        var spec = lib.packages.PackageSpec{ .name = try allocator.dupe(u8, input.name), .version = input.version, .source = input.source };
+        errdefer allocator.free(spec.name);
+        spec.version = try allocator.dupe(u8, input.version);
+        errdefer allocator.free(spec.version);
+        spec.url = if (input.url) |url| try allocator.dupe(u8, url) else null;
+        errdefer if (spec.url) |url| allocator.free(url);
+        const constraint = try allocator.dupe(u8, declared);
+        errdefer allocator.free(constraint);
+        return .{ .spec = spec, .declared_constraint = constraint, .direct = direct, .integrity = if (integrity) |value| try allocator.dupe(u8, value) else null };
+    }
+
+    fn deinit(self: *NamedInstallRequest, allocator: std.mem.Allocator) void {
+        self.spec.deinit(allocator);
+        allocator.free(self.declared_constraint);
+        if (self.integrity) |integrity| allocator.free(integrity);
+    }
+};
+
+fn appendNamedRequest(allocator: std.mem.Allocator, requests: *std.ArrayList(NamedInstallRequest), spec: lib.packages.PackageSpec, declared: []const u8, direct: bool, integrity: ?[]const u8) !void {
+    var owned = try NamedInstallRequest.init(allocator, spec, declared, direct, integrity);
+    errdefer owned.deinit(allocator);
+    try requests.append(allocator, owned);
+}
+
+fn collectNamedNativePlan(allocator: std.mem.Allocator, requests: []const NamedInstallRequest) !native_deps.Plan {
+    var plan = native_deps.Plan.init(allocator);
     errdefer plan.deinit();
-    const registry = @import("../../../packages/generated.zig");
-    for (args) |arg| {
-        const parts = helpers.splitPackageSpec(arg);
-        if (!isExactVersion(parts.version)) continue;
-        const name = helpers.resolvePackageAlias(parts.name);
-        const info = registry.getPackageByName(name) orelse continue;
-        try plan.put(info.domain, parts.version);
+    for (requests) |request| {
+        if (request.spec.source == .pantry) try plan.add(request.spec.name, request.declared_constraint);
+    }
+    try plan.expand();
+    for (requests) |request| {
+        if (request.spec.source != .pantry and plan.entries.contains(request.spec.name)) return error.NativeSourceConflict;
     }
     return plan;
-}
-
-test "explicit native pins remain available to recursive installs in either root order" {
-    const forward = [_][]const u8{ "openjdk.org@17.0.20.8", "android.com/cmdline-tools@14742923.0.0" };
-    const reverse = [_][]const u8{ forward[1], forward[0] };
-    for ([_][]const []const u8{ &forward, &reverse }) |roots| {
-        var plan = try explicitNativePlan(std.testing.allocator, roots);
-        defer plan.deinit();
-        try std.testing.expectEqualStrings("17.0.20.8", plan.get("openjdk.org").?);
-        try std.testing.expectEqual(@as(usize, 2), plan.count());
-    }
 }
 
 /// Install packages - main entry point
@@ -543,7 +715,14 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         // Combined lookup: find both deps file and workspace file in a single directory walk
         // (avoids two separate realpath + directory traversals)
-        const lookup = try detector.findDepsAndWorkspaceFile(allocator, cwd);
+        var lookup = try detector.findDepsAndWorkspaceFile(allocator, cwd);
+        defer {
+            if (lookup.deps_file) |file| allocator.free(file.path);
+            if (lookup.workspace_file) |file| {
+                allocator.free(file.path);
+                allocator.free(file.root_dir);
+            }
+        }
 
         // If we're in a workspace, handle that first
         if (lookup.workspace_file) |ws_file| {
@@ -557,7 +736,51 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 allocator.free(path);
             };
 
+            var original_native_lock: ?lib.deps.resolution.LockFile = if (has_companion_deps)
+                if (options.force and !options.frozen_lockfile) lib.deps.resolution.LockFile.init(allocator) else try lockfile_hooks.loadOrCreateLockfile(allocator, ws_file.root_dir)
+            else
+                null;
+            defer if (original_native_lock) |*original| original.deinit();
+            var native_session: ?native_deps.Session = if (original_native_lock) |*original|
+                native_deps.Session.init(allocator, original, options.frozen_lockfile, options.force)
+            else
+                null;
+            defer if (native_session) |*session| session.deinit();
+            const companion_declarations = if (has_companion_deps)
+                parser.inferDependencies(allocator, lookup.deps_file.?) catch |err| {
+                    var failure = types.CommandResult{ .exit_code = 0 };
+                    try mergeCompanionResult(allocator, &failure, err, lookup.deps_file.?.path);
+                    return failure;
+                }
+            else
+                null;
+            defer if (companion_declarations) |declared| env_deps.freeDeps(allocator, declared);
+            const companion_inferred = if (companion_declarations) |declared|
+                env_deps.infer(allocator, ws_file.root_dir, declared, .{}) catch &.{}
+            else
+                null;
+            defer if (companion_inferred) |inferred| env_deps.freeDeps(allocator, inferred);
+            const supplemental = if (companion_declarations) |declared| blk: {
+                const inferred = companion_inferred orelse &.{};
+                const roots = try allocator.alloc(native_deps.Root, declared.len + inferred.len);
+                for (declared, 0..) |dep, index| roots[index] = .{
+                    .name = helpers.dependencyName(dep),
+                    .version = dep.version,
+                    .source = helpers.effectiveDependencySource(dep),
+                    .allow_pantry_fallback = dep.source == .registry,
+                    .github_owner = if (dep.github_ref) |ref| ref.owner else null,
+                    .github_repo = if (dep.github_ref) |ref| ref.repo else null,
+                };
+                for (inferred, 0..) |dep, index| roots[declared.len + index] = .{ .name = helpers.dependencyName(dep), .version = dep.version, .source = helpers.effectiveDependencySource(dep), .allow_pantry_fallback = dep.source == .registry };
+                break :blk roots;
+            } else null;
+            defer if (supplemental) |roots| allocator.free(roots);
+            if (native_session) |*session| session.supplemental_roots = supplemental orelse &.{};
+
             var workspace_options = options;
+            if (native_session) |*session| workspace_options.native_session = session;
+            workspace_options.companion_declarations = companion_declarations;
+            workspace_options.companion_inferred = companion_inferred;
             // Bun/Node/PHP may be declared only in the companion deps file.
             // Finish the ecosystem install once those runtimes are installed,
             // without requiring an already configured host PATH or a retry.
@@ -582,15 +805,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 // Monorepos often keep system/runtime deps in deps.yaml (or pantry.json)
                 // alongside package.json workspaces. Install that companion file too.
                 if (lookup.deps_file) |df| {
-                    defer allocator.free(df.path);
-                    if (!std.mem.eql(u8, df.path, ws_file.path)) {
-                        var companion_options = options;
-                        if (staged_lockfile_path != null) companion_options.frozen_lockfile = false;
+                    if (final_result.exit_code == 0 and !std.mem.eql(u8, df.path, ws_file.path)) {
                         try mergeCompanionResult(allocator, &final_result, installCompanionDepsFile(
                             allocator,
                             df,
                             ws_file.root_dir,
-                            companion_options,
+                            workspace_options,
                             staged_lockfile_path,
                         ), df.path);
                     }
@@ -607,17 +827,11 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                     try finalizeCombinedWorkspaceLock(allocator, ws_file.root_dir, generated_path, options.frozen_lockfile, &final_result);
                 }
 
-                defer {
-                    allocator.free(ws_file.path);
-                    allocator.free(ws_file.root_dir);
-                }
                 return final_result;
             } else |err| {
                 // Workspace config couldn't be loaded (e.g. no valid workspaces patterns,
                 // JSON parse error, or "workspaces" was just a substring match).
                 // Fall through to normal dep handling.
-                allocator.free(ws_file.path);
-                allocator.free(ws_file.root_dir);
                 if (err != error.NoWorkspacePatternsFound) return err;
             }
         }
@@ -633,10 +847,10 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         if (lookup.deps_file) |deps_file| {
             if (parser.inferDependencies(allocator, deps_file)) |parsed_deps| {
                 deps_file_path = deps_file.path;
+                lookup.deps_file = null; // Transfer to deps_file_path's defer.
                 deps = parsed_deps;
                 delegates_js_dependencies = deps_file.format == .package_json or deps_file.format == .package_jsonc;
             } else |err| {
-                allocator.free(deps_file.path);
                 if (err == error.NoRuntimeAvailable) {
                     // TS config file detected but no bun/node runtime available — exit silently.
                     return .{ .exit_code = 0, .message = null };
@@ -983,6 +1197,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         // Wire up lockfile for lockfile-first resolution (skip npm registry on subsequent installs)
         shared_installer.setLockfile(&lock_file);
+        shared_installer.native_policy = .{ .original_lock = &lock_file, .frozen = options.frozen_lockfile, .force = options.force, .exempt_domains = &env_only_domains.map };
 
         // Prefer bun.lock's pins for npm ranges they satisfy, so a project
         // locked by both pantry and Bun gets one tree (stacksjs/stacks#2848).
@@ -992,15 +1207,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         defer shared_installer.deinit();
 
-        // Batch install from lockfile: if lockfile has all packages resolved,
-        // extract them in parallel (skips individual resolution + recursive dep walking)
-        if (shared_installer.installAllFromLockfile(proj_dir)) |batch_count_opt| {
-            if (batch_count_opt) |batch_count| {
-                if (batch_count > 0) {
-                    style.print("{s}{s}{s} Restored {d} packages from lockfile\n", .{ style.green, style.check, style.reset, batch_count });
-                }
-            }
-        } else |_| {}
+        // All restoration now goes through pipeline preflight, so native
+        // sibling/frozen validation precedes cache materialization too.
 
         // ── Parallel pipeline: resolve tree → download → extract ──
         const pipeline = @import("../../../install/pipeline.zig");
@@ -1016,8 +1224,9 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // `pantry/` first.
         if (options.frozen_lockfile) {
             for (deps_to_install) |dep| {
-                if (env_only_domains.contains(helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name)))) continue;
-                if (helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) != null) continue;
+                if (helpers.effectiveDependencySource(dep) == .pantry and env_only_domains.contains(helpers.dependencyName(dep))) continue;
+                if (helpers.effectiveDependencySource(dep) == .pantry or isProvisionalNpmDependency(dep)) continue;
+                if ((try helpers.lockedDependencyVersionSatisfying(&lock_file, dep)) != null) continue;
                 // `latest`-style specs are covered by any pin, so reaching
                 // here means the lock does not cover this dependency at all,
                 // or its pin falls outside the declared spec.
@@ -1033,32 +1242,20 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, deps_to_install.len);
         defer allocator.free(pipeline_deps);
         for (deps_to_install, 0..) |dep, di| {
-            const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
-            // Domain-style names (containing '.') are pantry/system packages, not npm
-            const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
-            pipeline_deps[di] = .{
-                .name = clean_name,
-                .version = helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) orelse dep.version,
-                .source = if (is_domain) .pantry else switch (dep.source) {
-                    .registry => .npm,
-                    .pantry => .pantry,
-                    .npm => .npm,
-                    .github => .github,
-                    .git => .git,
-                    .url => .http,
-                },
-                .github_owner = if (dep.github_ref) |ref| ref.owner else null,
-                .github_repo = if (dep.github_ref) |ref| ref.repo else null,
-            };
+            const selected_version = if (helpers.effectiveDependencySource(dep) == .pantry) dep.version else (try preferredPipelineVersion(&lock_file, dep)) orelse dep.version;
+            pipeline_deps[di] = pipelineDependency(dep, selected_version);
         }
 
-        var pipeline_result = try pipeline.run(
+        var pipeline_result = pipeline.run(
             allocator,
             &shared_installer,
             pipeline_deps,
             proj_dir,
             options.verbose,
-        );
+        ) catch |err| {
+            if (err == error.NativeLockNotSatisfied) return .{ .exit_code = 1, .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)") };
+            return err;
+        };
         defer pipeline_result.deinit(allocator);
 
         // Print results
@@ -1536,18 +1733,17 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     const start_ts2 = io_helper.clockGettime();
     const start_time = @as(i64, @intCast(start_ts2.sec)) * 1000 + @as(i64, @intCast(@divFloor(start_ts2.nsec, 1_000_000)));
 
-    // Expand the requested packages with their transitive system-dependency
-    // closure so dependent binaries can load their shared libraries. The first
-    // `user_requested_count` entries are what the user asked for; the rest are
-    // pulled-in deps whose install failures are non-fatal.
     const user_requested_count = package_args.items.len;
-    var explicit_plan = try explicitNativePlan(allocator, package_args.items);
-    defer explicit_plan.deinit();
-    installer.planned_pantry = &explicit_plan;
-    defer installer.planned_pantry = null;
-    appendTransitiveDeps(allocator, &package_args);
-
-    style.printInstalling(user_requested_count);
+    // Force bypasses version preference, not the recorded provider identity.
+    var named_original = try lockfile_hooks.loadOrCreateLockfile(allocator, project_root);
+    defer named_original.deinit();
+    installer.native_policy = .{ .original_lock = &named_original, .frozen = options.frozen_lockfile, .force = options.force };
+    if (!options.force) installer.setLockfile(&named_original);
+    var named_requests: std.ArrayList(NamedInstallRequest) = .empty;
+    defer {
+        for (named_requests.items) |*request| request.deinit(allocator);
+        named_requests.deinit(allocator);
+    }
 
     var success_count: usize = 0;
     var failed_count: usize = 0;
@@ -1573,7 +1769,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         installed_packages.deinit(allocator);
     }
 
-    packages: for (package_args.items, 0..) |pkg_spec_str, arg_idx| {
+    for (package_args.items, 0..) |pkg_spec_str, arg_idx| {
         const is_transitive_dep = arg_idx >= user_requested_count;
         // Parse package spec (name@version). Scope-aware: a scoped name begins
         // with '@', so splitting on the FIRST '@' emptied the name and turned
@@ -1612,6 +1808,11 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             };
         }
 
+        var discovered_version: ?[]const u8 = null;
+        defer if (discovered_version) |owned| allocator.free(owned);
+        var discovered_url: ?[]const u8 = null;
+        defer if (discovered_url) |owned| allocator.free(owned);
+
         // Determine the package spec - use npm fallback if not in pantry registry
         const spec = if (pinned_resolution) |pinned| lib.packages.PackageSpec{
             .name = name,
@@ -1622,7 +1823,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .name = "ziglang.org",
             .version = version,
             .source = .pantry,
-        } else if (pkg_info != null) lib.packages.PackageSpec{
+        } else if (pkg_info != null or hasNativeLockIdentity(&named_original, name)) lib.packages.PackageSpec{
             .name = name,
             .version = version,
         } else npm_fallback: {
@@ -1645,11 +1846,24 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 var pantry_info = info;
                 defer pantry_info.deinit(allocator);
 
+                // Native discovery establishes provider identity only. The
+                // completed plan resolves every authored range together.
+                if (pantry_info.source == .pantry) break :npm_fallback lib.packages.PackageSpec{
+                    .name = name,
+                    .version = version,
+                    .source = .pantry,
+                };
                 break :npm_fallback lib.packages.PackageSpec{
                     .name = name,
-                    .version = try allocator.dupe(u8, pantry_info.version),
-                    .source = .npm,
-                    .url = try allocator.dupe(u8, pantry_info.tarball_url),
+                    .version = blk: {
+                        discovered_version = try allocator.dupe(u8, pantry_info.version);
+                        break :blk discovered_version.?;
+                    },
+                    .source = pantry_info.source,
+                    .url = blk: {
+                        discovered_url = try allocator.dupe(u8, pantry_info.tarball_url);
+                        break :blk discovered_url.?;
+                    },
                 };
             }
 
@@ -1664,27 +1878,27 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
             // Fall back to npm registry — fetch directly into memory (no temp file, no curl)
             const npm_url = std.fmt.allocPrint(allocator, "https://registry.npmjs.org/{s}", .{name}) catch {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             };
             defer allocator.free(npm_url);
 
             const npm_response = io_helper.httpGet(allocator, npm_url) catch {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             };
             defer allocator.free(npm_response);
 
             if (npm_response.len == 0) {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             }
 
             // Parse npm response
             const parsed = std.json.parseFromSlice(std.json.Value, allocator, npm_response, .{}) catch {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             };
             defer parsed.deinit();
 
             if (parsed.value != .object) {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             }
 
             // Get target version
@@ -1697,22 +1911,22 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             } else version;
 
             if (target_version == null) {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             }
 
             // Get tarball URL
             const versions_obj = parsed.value.object.get("versions") orelse {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             };
             if (versions_obj != .object) {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             }
 
             const version_data = versions_obj.object.get(target_version.?) orelse {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             };
             if (version_data != .object) {
-                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version };
+                break :npm_fallback lib.packages.PackageSpec{ .name = name, .version = version, .source = .npm };
             }
 
             var tarball_url: ?[]const u8 = null;
@@ -1724,7 +1938,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                             if (std.mem.startsWith(u8, tarball.string, "https://") or
                                 std.mem.startsWith(u8, tarball.string, "http://"))
                             {
-                                tarball_url = allocator.dupe(u8, tarball.string) catch null;
+                                discovered_url = try allocator.dupe(u8, tarball.string);
+                                tarball_url = discovered_url;
                             }
                         }
                     }
@@ -1733,11 +1948,50 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
             break :npm_fallback lib.packages.PackageSpec{
                 .name = name,
-                .version = allocator.dupe(u8, target_version.?) catch version,
+                .version = blk: {
+                    discovered_version = try allocator.dupe(u8, target_version.?);
+                    break :blk discovered_version.?;
+                },
                 .source = .npm,
                 .url = tarball_url,
             };
         };
+
+        var discovered_spec = spec;
+        if (discovered_spec.source == .pantry) {
+            if (pkg_info) |info| discovered_spec.name = info.domain;
+        }
+        try appendNamedRequest(allocator, &named_requests, discovered_spec, version, !is_transitive_dep, if (pinned_resolution) |resolved| resolved.integrity else null);
+    }
+
+    // Discovery has closed every authored native root before any payload.
+    var named_native_plan = try collectNamedNativePlan(allocator, named_requests.items);
+    defer named_native_plan.deinit();
+    try validateNamedProviderOwnership(allocator, project_root, &named_native_plan);
+    named_native_plan.resolve(installer.native_policy) catch |err| {
+        if (err == error.NativeLockNotSatisfied) return .{ .exit_code = 1, .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)") };
+        return err;
+    };
+    for (named_native_plan.names.items) |domain| {
+        var explicit = false;
+        for (named_requests.items) |request| {
+            if (request.spec.source == .pantry and std.mem.eql(u8, request.spec.name, domain)) {
+                explicit = true;
+                break;
+            }
+        }
+        if (explicit) continue;
+        try appendNamedRequest(allocator, &named_requests, .{ .name = domain, .version = try named_native_plan.versionFor(domain, "latest"), .source = .pantry }, "latest", false, null);
+    }
+    var prepared_archives = try installer.prepareNativeArchives(&named_native_plan, project_root, options.force);
+    defer prepared_archives.deinit();
+    style.printInstalling(user_requested_count);
+
+    packages: for (named_requests.items) |request| {
+        const is_transitive_dep = !request.direct;
+        const name = request.spec.name;
+        var spec = request.spec;
+        if (spec.source == .pantry) spec.version = try named_native_plan.versionFor(spec.name, request.declared_constraint);
 
         // Show what we're installing
         style.print("  {s}>{s} {s}@{s}...", .{ style.dim, style.reset, name, spec.version });
@@ -1748,13 +2002,21 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // the case it cannot, a Retry-After longer than that deadline.
         io_helper.resetTransientGetRecord();
         var retried = false;
+        var http_capture: io_helper.TransientGetCapture = .{};
+        // Unmigrated non-native and dedicated Zig paths retain their existing
+        // diagnostic. Prepared generic native requests use only owned records.
+        const owns_capture = spec.source == .pantry and !std.mem.eql(u8, spec.name, "ziglang.org");
         var result = attempt: while (true) {
             break :attempt installer.install(spec, .{
                 .project_root = project_root,
                 .quiet = false, // Show download progress
                 .verbose = options.verbose,
-                .expected_integrity = if (pinned_resolution) |r| r.integrity else null,
-                .record_integrity = pinned_resolution != null,
+                .expected_integrity = request.integrity,
+                .record_integrity = installer.pinFor(name) != null,
+                .native_plan = if (spec.source == .pantry) &named_native_plan else null,
+                .prepared_archives = if (spec.source == .pantry) &prepared_archives else null,
+                .http_capture = if (owns_capture) &http_capture else null,
+                .force = options.force,
             }) catch |err| {
                 style.clearLine();
                 // Provide friendly error messages
@@ -1764,13 +2026,16 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                     else => style.friendlyErrorName(err),
                 };
                 var reason_buffer: [512]u8 = undefined;
-                const error_msg = describeInstallFailure(&reason_buffer, base_msg, io_helper.lastTransientGetRecord(), retried);
+                const transient = if (owns_capture) http_capture.record else io_helper.lastTransientGetRecord();
+                const error_msg = describeInstallFailure(&reason_buffer, base_msg, transient, retried);
+                if (native_deps.isPolicyError(err)) return err;
                 if (!is_transitive_dep and !retried and style.isTransientInstallError(err)) {
                     retried = true;
-                    const delay = transientRetryDelaySeconds(io_helper.lastTransientGetRecord());
+                    const delay = transientRetryDelaySeconds(transient);
                     style.printForced("\n  ! {s}@{s}: {s} (transient); retrying once in {d}s\n", .{ name, spec.version, error_msg, delay });
                     io_helper.sleepMs(delay * 1000);
                     io_helper.resetTransientGetRecord();
+                    http_capture = .{};
                     style.print("  {s}>{s} {s}@{s}...", .{ style.dim, style.reset, name, spec.version });
                     continue :attempt;
                 }
@@ -1821,7 +2086,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         // And route by source: system packages are declared in deps.yaml, npm
         // packages in package.json. Writing a domain like `curl.se/ca-certs` into
         // package.json left pnpm unable to install the project at all.
-        if (!options.no_save and !is_transitive_dep) {
+        if (!options.no_save and !options.frozen_lockfile and !is_transitive_dep) {
             if (spec.source == .pantry) {
                 helpers.addDependencyToDepsYaml(allocator, project_root, name, result.version) catch |err| {
                     style.printWarn("Failed to update deps.yaml: {}\n", .{err});
@@ -1838,29 +2103,41 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     helpers.ensureBinSymlinks(allocator, project_root, options.modules_dir);
 
     // Generate/update lockfile for installed packages
-    if (installed_packages.items.len > 0 and !options.no_save) {
+    if (installed_packages.items.len > 0 and !options.no_save and !options.frozen_lockfile) {
         const lockfile_path = try std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{project_root});
         defer allocator.free(lockfile_path);
 
         const lockfile_writer = @import("../../../packages/lockfile.zig");
 
         // Try to read existing lockfile first, or create a new one
-        var lockfile = lockfile_writer.readLockfile(allocator, lockfile_path) catch |err| blk: {
+        var lockfile = native_lock.read(allocator, lockfile_path) catch |err| blk: {
             // If file doesn't exist or is invalid, create a new lockfile
             if (err == error.FileNotFound or err == error.InvalidLockfile) {
                 break :blk lib.packages.Lockfile.init(allocator, "1.0.0") catch |init_err| {
                     style.printWarn("Failed to create lockfile: {}\n", .{init_err});
-                    return .{ .exit_code = 0 };
+                    return .{ .exit_code = 1 };
                 };
             }
             style.printWarn("Failed to read lockfile: {}\n", .{err});
-            return .{ .exit_code = 0 };
+            return .{ .exit_code = 1 };
         };
         defer lockfile.deinit(allocator);
 
         // Add new packages to the lockfile (replace existing versions of same package)
         for (installed_packages.items) |pkg| {
             try recordNamedSystemConstraint(allocator, &lockfile, pkg.name, pkg.version, pkg.source, pkg.direct);
+
+            var selected = if (native_identity.isNative(pkg.source))
+                try native_lock.selectedEntry(allocator, &lockfile, pkg.name, pkg.version, pkg.integrity)
+            else
+                lib.packages.LockfileEntry{
+                    .name = try allocator.dupe(u8, pkg.name),
+                    .version = try allocator.dupe(u8, pkg.version),
+                    .source = pkg.source,
+                    .integrity = if (pkg.integrity) |value| try allocator.dupe(u8, value) else null,
+                };
+            var transferred = false;
+            defer if (!transferred) selected.deinit(allocator);
 
             // First, remove any existing entries for this package (different versions)
             var keys_to_remove = std.ArrayList([]const u8).empty;
@@ -1869,6 +2146,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             var iter = lockfile.packages.iterator();
             while (iter.next()) |existing| {
                 const existing_key = existing.key_ptr.*;
+                if (!existing.value_ptr.matchesSource(pkg.source)) continue;
                 // Check if this is the same package (starts with "name@")
                 if (std.mem.startsWith(u8, existing_key, pkg.name)) {
                     if (existing_key.len > pkg.name.len and existing_key[pkg.name.len] == '@') {
@@ -1886,28 +2164,17 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 }
             }
 
-            // Add the new version
-            const entry = lib.packages.LockfileEntry{
-                .name = allocator.dupe(u8, pkg.name) catch continue,
-                .version = allocator.dupe(u8, pkg.version) catch continue,
-                .source = pkg.source,
-                .url = null,
-                .resolved = null,
-                .integrity = if (pkg.integrity) |i| (allocator.dupe(u8, i) catch null) else null,
-                .dependencies = null,
-            };
-
-            const key = std.fmt.allocPrint(allocator, "{s}@{s}", .{ pkg.name, pkg.version }) catch continue;
+            const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ pkg.name, pkg.version });
             defer allocator.free(key);
-            lockfile.addEntry(allocator, key, entry) catch |err| {
-                style.print("Warning: Failed to add lockfile entry for {s}: {}\n", .{ pkg.name, err });
-            };
+            try lockfile.addEntry(allocator, key, selected);
+            transferred = true;
         }
 
         // Write merged lockfile
         style.printLockfileSaving();
         lockfile_writer.writeLockfile(allocator, &lockfile, lockfile_path) catch |err| {
             style.printWarn("Failed to write lockfile: {}\n", .{err});
+            return .{ .exit_code = 1 };
         };
         style.printLockfileSaved();
     }
@@ -2075,9 +2342,9 @@ fn finalizeCombinedWorkspaceLock(allocator: std.mem.Allocator, project_root: []c
     if (!frozen) return std.Io.Dir.renameAbsolute(generated_path, committed_path, io_helper.getIo());
 
     const writer = @import("../../../packages/lockfile.zig");
-    var committed = writer.readLockfile(allocator, committed_path) catch null;
+    var committed = native_lock.read(allocator, committed_path) catch null;
     defer if (committed) |*lockfile| lockfile.deinit(allocator);
-    var generated = writer.readLockfile(allocator, generated_path) catch null;
+    var generated = native_lock.read(allocator, generated_path) catch null;
     defer if (generated) |*lockfile| lockfile.deinit(allocator);
     const matches = if (committed) |*existing|
         if (generated) |*candidate| writer.lockfilesEqual(existing, candidate) else false
@@ -2149,23 +2416,60 @@ fn installCompanionDepsFile(
     const parser = @import("../../../deps/parser.zig");
     const pipeline = @import("../../../install/pipeline.zig");
 
-    const declared_deps = try parser.inferDependencies(allocator, df);
-    defer {
+    const declared_deps = options.companion_declarations orelse try parser.inferDependencies(allocator, df);
+    defer if (options.companion_declarations == null) {
         for (declared_deps) |*dep| {
             var owned_dep = dep.*;
             owned_dep.deinit(allocator);
         }
         allocator.free(declared_deps);
-    }
+    };
 
     // Services the project's .env names, unless declared (#36). What they
     // resolve to is installed but never locked (#253), so a frozen run infers
     // exactly what any other run does.
-    const env_inferred = env_deps.infer(allocator, project_root, declared_deps, .{}) catch &.{};
-    defer env_deps.freeDeps(allocator, env_inferred);
+    const env_inferred = options.companion_inferred orelse (env_deps.infer(allocator, project_root, declared_deps, .{}) catch &.{});
+    defer if (options.companion_inferred == null) env_deps.freeDeps(allocator, env_inferred);
     const deps = if (env_inferred.len == 0) declared_deps else try std.mem.concat(allocator, parser.PackageDependency, &.{ declared_deps, env_inferred });
     defer if (env_inferred.len > 0) allocator.free(deps);
     if (deps.len == 0) return .{ .exit_code = 0 };
+
+    // The workspace phase may have produced an npm-only staged output. Native
+    // selection must use the still-committed complete lock, never that output.
+    // Force bypasses preference; an explicit frozen request still validates
+    // committed coverage before resolving. Validation is not pin preference.
+    const session_original = if (options.native_session) |session| session.original_lock else null;
+    var owned_lock_file: ?lib.deps.resolution.LockFile = if (session_original == null)
+        if (options.native_session != null or (options.force and !options.frozen_lockfile)) lib.deps.resolution.LockFile.init(allocator) else try lockfile_hooks.loadOrCreateLockfile(allocator, project_root)
+    else
+        null;
+    defer if (owned_lock_file) |*original| original.deinit();
+    const lock_file = session_original orelse &owned_lock_file.?;
+    var env_only_domains = if (options.native_session) |session|
+        env_deps.DomainSet{ .allocator = allocator, .map = session.exempt_domains }
+    else
+        try env_deps.inferredOnlyDomains(allocator, env_inferred, declared_deps);
+    defer if (options.native_session == null) env_only_domains.deinit();
+
+    var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, deps.len);
+    defer allocator.free(pipeline_deps);
+    for (deps, 0..) |dep, di| {
+        const clean_name = helpers.dependencyName(dep);
+        const native = helpers.effectiveDependencySource(dep) == .pantry;
+        const env_only = native and env_only_domains.contains(clean_name);
+        const locked_version = if (native or env_only or (options.force and !options.frozen_lockfile))
+            null
+        else
+            try preferredPipelineVersion(lock_file, dep);
+        if (options.frozen_lockfile and !native and !isProvisionalNpmDependency(dep) and !env_only and locked_version == null) {
+            style.printWarn("Lockfile does not satisfy {s}@{s} but --frozen-lockfile is set\n", .{ dep.name, dep.version });
+            return .{
+                .exit_code = 1,
+                .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),
+            };
+        }
+        pipeline_deps[di] = pipelineDependency(dep, if (options.force) dep.version else locked_version orelse dep.version);
+    }
 
     const proj_basename = std.fs.path.basename(project_root);
 
@@ -2210,6 +2514,9 @@ fn installCompanionDepsFile(
     shared_installer.modules_dir = options.modules_dir;
     shared_installer.verbose = options.verbose;
     defer shared_installer.deinit();
+    if (!options.force) shared_installer.setLockfile(lock_file);
+    shared_installer.native_session = options.native_session;
+    shared_installer.native_policy = if (options.native_session) |session| session.policy() else .{ .original_lock = lock_file, .frozen = options.frozen_lockfile, .force = options.force, .exempt_domains = &env_only_domains.map };
 
     var scope_diag: scopes.Diagnostic = .{};
     var scope_pins = scopes.loadForProject(allocator, project_root, &scope_diag) catch |err|
@@ -2217,28 +2524,10 @@ fn installCompanionDepsFile(
     defer scope_pins.deinit();
     shared_installer.scope_pins = &scope_pins;
 
-    var pipeline_deps = try allocator.alloc(pipeline.PipelineDep, deps.len);
-    defer allocator.free(pipeline_deps);
-    for (deps, 0..) |dep, di| {
-        const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
-        const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
-        pipeline_deps[di] = .{
-            .name = clean_name,
-            .version = dep.version,
-            .source = if (is_domain) .pantry else switch (dep.source) {
-                .registry => .npm,
-                .pantry => .pantry,
-                .npm => .npm,
-                .github => .github,
-                .git => .git,
-                .url => .http,
-            },
-            .github_owner = if (dep.github_ref) |ref| ref.owner else null,
-            .github_repo = if (dep.github_ref) |ref| ref.repo else null,
-        };
-    }
-
-    var pipeline_result = try pipeline.run(allocator, &shared_installer, pipeline_deps, project_root, options.verbose);
+    var pipeline_result = pipeline.run(allocator, &shared_installer, pipeline_deps, project_root, options.verbose) catch |err| {
+        if (err == error.NativeLockNotSatisfied) return .{ .exit_code = 1, .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)") };
+        return err;
+    };
     defer pipeline_result.deinit(allocator);
 
     var failed_count: usize = 0;
@@ -2259,28 +2548,29 @@ fn installCompanionDepsFile(
         };
     }
 
-    // The workspace installer writes pantry.lock before this companion
-    // deps.yaml pass. Merge the resolved system packages back into that same
-    // lockfile so `pantry install` actually refreshes stale runtime pins while
+    // Merge the resolved native packages into the workspace's lock output,
+    // which may still be private staging until both phases succeed. Normal
+    // resolution refreshes only missing or incompatible runtime pins while
     // preserving every workspace and npm entry.
     if (!options.no_save) {
         // `declared_deps`, not `deps`: the constraints recorded on the root
         // workspace are the ones the workspace declares. `env_only_domains`
         // keeps the same inference out of the resolved package entries, where
         // it arrives with everything it pulled in.
-        var env_only_domains = try env_deps.inferredOnlyDomains(allocator, env_inferred, declared_deps);
-        defer env_only_domains.deinit();
-
+        // Frozen resolution remains strict. A private combined output can be
+        // written provisionally; finalization compares it with the original
+        // complete lock before publishing anything to pantry.lock.
+        const frozen_output = options.frozen_lockfile and lockfile_path == null;
         const lockfile_changed = try syncCompanionLockfile(
             allocator,
             project_root,
             declared_deps,
             pipeline_result.results,
             &env_only_domains,
-            options.frozen_lockfile,
+            frozen_output,
             lockfile_path,
         );
-        if (options.frozen_lockfile and lockfile_changed) {
+        if (frozen_output and lockfile_changed) {
             return .{
                 .exit_code = 1,
                 .message = try allocator.dupe(u8, "Error: lockfile is out of date (--frozen-lockfile)"),
@@ -2289,6 +2579,88 @@ fn installCompanionDepsFile(
     }
 
     return .{ .exit_code = 0 };
+}
+
+test "native plan consumes the existing inferred-only closure without exempting declared shared dependencies" {
+    const allocator = std.testing.allocator;
+    const Dependency = lib.deps.parser.PackageDependency;
+    const inferred = [_]Dependency{.{ .name = "postgresql.org", .version = "latest", .source = .pantry }};
+    var only_env = try env_deps.inferredOnlyDomains(allocator, &inferred, &.{});
+    defer only_env.deinit();
+    var inferred_plan = native_deps.Plan.init(allocator);
+    defer inferred_plan.deinit();
+    try inferred_plan.add("postgresql.org", "latest");
+    try inferred_plan.expand();
+    try inferred_plan.preflight(.{ .frozen = true, .exempt_domains = &only_env.map });
+    const declared = [_]Dependency{.{ .name = "gnome.org/libxslt", .version = "latest", .source = .pantry }};
+    var shared = try env_deps.inferredOnlyDomains(allocator, &inferred, &declared);
+    defer shared.deinit();
+    var shared_plan = native_deps.Plan.init(allocator);
+    defer shared_plan.deinit();
+    try shared_plan.add("postgresql.org", "latest");
+    try shared_plan.add("gnome.org/libxslt", "latest");
+    try shared_plan.expand();
+    try std.testing.expectError(error.NativeLockNotSatisfied, shared_plan.preflight(.{ .frozen = true, .exempt_domains = &shared.map }));
+}
+
+test "companion frozen preflight uses the committed lock instead of staged output" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "deps.yaml", .data = "dependencies:\n  lz4.org: ^1.10.0\n" });
+    const cwd_path = try io_helper.getCwdAlloc(allocator);
+    defer allocator.free(cwd_path);
+    const root = try std.fs.path.join(allocator, &.{ cwd_path, ".zig-cache", "tmp", directory.sub_path[0..] });
+    defer allocator.free(root);
+    const deps_path = try std.fs.path.join(allocator, &.{ root, "deps.yaml" });
+    defer allocator.free(deps_path);
+    const staged_path = try std.fs.path.join(allocator, &.{ root, "staged.lock" });
+    defer allocator.free(staged_path);
+    var staged = lib.deps.resolution.LockFile.init(allocator);
+    defer staged.deinit();
+    try staged.addPackage("lz4.org", "1.10.0", "registry:lz4.org@1.10.0", null);
+    try staged.write(staged_path);
+    const before = try directory.dir.readFileAlloc(io_helper.io, "staged.lock", allocator, .limited(4096));
+    defer allocator.free(before);
+    var result = try installCompanionDepsFile(allocator, .{ .path = deps_path, .format = .deps_yaml }, root, .{ .frozen_lockfile = true }, staged_path);
+    defer result.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 1), result.exit_code);
+    try std.testing.expectEqualStrings("Error: lockfile is out of date (--frozen-lockfile)", result.message.?);
+    const after = try directory.dir.readFileAlloc(io_helper.io, "staged.lock", allocator, .limited(4096));
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings(before, after);
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "pantry.lock", .{}));
+}
+
+test "ambiguous companion native pins fail normal and frozen resolution before installation" {
+    const allocator = std.testing.allocator;
+    var directory = std.testing.tmpDir(.{});
+    defer directory.cleanup();
+    try directory.dir.writeFile(io_helper.io, .{ .sub_path = "deps.yaml", .data = "dependencies:\n  lz4.org: ^1\n" });
+    const cwd_path = try io_helper.getCwdAlloc(allocator);
+    defer allocator.free(cwd_path);
+    const root = try std.fs.path.join(allocator, &.{ cwd_path, ".zig-cache", "tmp", directory.sub_path[0..] });
+    defer allocator.free(root);
+    const deps_path = try std.fs.path.join(allocator, &.{ root, "deps.yaml" });
+    defer allocator.free(deps_path);
+    const lock_path = try std.fs.path.join(allocator, &.{ root, "pantry.lock" });
+    defer allocator.free(lock_path);
+    var lock = try lib.deps.resolution.LockFile.parse(allocator,
+        \\{"packages":{
+        \\  "lz4.org@1.10.0":{"name":"lz4.org","version":"1.10.0","resolved":"registry:lz4.org@1.10.0"},
+        \\  "lz4.org@1.11.0":{"name":"lz4.org","version":"1.11.0","resolved":"registry:lz4.org@1.11.0"}
+        \\}}
+    );
+    defer lock.deinit();
+    try lock.write(lock_path);
+    const before = try directory.dir.readFileAlloc(io_helper.io, "pantry.lock", allocator, .limited(4096));
+    defer allocator.free(before);
+    try std.testing.expectError(error.AmbiguousLockedVersion, installCompanionDepsFile(allocator, .{ .path = deps_path, .format = .deps_yaml }, root, .{}, null));
+    try std.testing.expectError(error.AmbiguousLockedVersion, installCompanionDepsFile(allocator, .{ .path = deps_path, .format = .deps_yaml }, root, .{ .frozen_lockfile = true }, null));
+    const after = try directory.dir.readFileAlloc(io_helper.io, "pantry.lock", allocator, .limited(4096));
+    defer allocator.free(after);
+    try std.testing.expectEqualStrings(before, after);
+    try std.testing.expectError(error.FileNotFound, directory.dir.access(io_helper.io, "pantry", .{}));
 }
 
 /// Merge packages installed from a workspace's companion deps file into the
@@ -2310,19 +2682,29 @@ fn syncCompanionLockfile(
     defer if (owned_lockfile_path) |path| allocator.free(path);
     const lockfile_path = lockfile_path_override orelse owned_lockfile_path.?;
 
-    var original: ?lib.packages.Lockfile = lockfile_writer.readLockfile(allocator, lockfile_path) catch null;
+    var original: ?lib.packages.Lockfile = native_lock.read(allocator, lockfile_path) catch |err| switch (err) {
+        error.FileNotFound => null,
+        else => return err,
+    };
     defer if (original) |*lockfile| lockfile.deinit(allocator);
 
     var lockfile = if (original != null)
-        try lockfile_writer.readLockfile(allocator, lockfile_path)
+        try native_lock.read(allocator, lockfile_path)
     else
         try lib.packages.Lockfile.init(allocator, "1.0.0");
     defer lockfile.deinit(allocator);
 
-    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results, env_only_domains);
+    const committed_path = if (lockfile_path_override != null) try std.fs.path.join(allocator, &.{ project_root, "pantry.lock" }) else null;
+    defer if (committed_path) |path| allocator.free(path);
+    var committed = if (committed_path) |path| native_lock.read(allocator, path) catch |err| switch (err) {
+        error.FileNotFound => null,
+        else => return err,
+    } else null;
+    defer if (committed) |*view| view.deinit(allocator);
+    try mergeCompanionLockfileEntriesUsingMetadata(allocator, &lockfile, deps, results, env_only_domains, if (committed) |*view| view else null);
 
     const changed = if (original) |*existing|
-        !lockfile_writer.lockfilesEqual(existing, &lockfile)
+        (!frozen and existing.native_identity_changed) or !lockfile_writer.lockfilesEqual(existing, &lockfile)
     else
         true;
 
@@ -2344,6 +2726,17 @@ fn mergeCompanionLockfileEntries(
     results: []const @import("../../../install/pipeline.zig").PackageResult,
     env_only_domains: *const env_deps.DomainSet,
 ) !void {
+    return mergeCompanionLockfileEntriesUsingMetadata(allocator, lockfile, deps, results, env_only_domains, null);
+}
+
+fn mergeCompanionLockfileEntriesUsingMetadata(
+    allocator: std.mem.Allocator,
+    lockfile: *lib.packages.Lockfile,
+    deps: []const @import("../../../deps/parser.zig").PackageDependency,
+    results: []const @import("../../../install/pipeline.zig").PackageResult,
+    env_only_domains: *const env_deps.DomainSet,
+    metadata_origin: ?*const lib.packages.Lockfile,
+) !void {
     // Packages whose resolved version depends on which platform installs them,
     // so the sweep below can tell a stale pin from another platform's.
     //
@@ -2361,14 +2754,15 @@ fn mergeCompanionLockfileEntries(
     {
         var seed_it = lockfile.packages.iterator();
         while (seed_it.next()) |entry| {
-            if (entry.value_ptr.source == .pantry)
+            if (native_lock.isNative(entry.value_ptr.*))
                 try foreign_seeds.append(allocator, entry.value_ptr.name);
         }
         for (results) |result| {
             if (!result.success or result.name.len == 0) continue;
-            const seed_name = helpers.resolvePackageAlias(helpers.normalizePackageName(result.name));
-            if (std.mem.indexOfScalar(u8, seed_name, '.') == null) continue;
-            try foreign_seeds.append(allocator, seed_name);
+            const raw_name = helpers.normalizePackageName(result.name);
+            const source = result.source orelse if (std.mem.indexOfScalar(u8, raw_name, '.') != null) lib.packages.PackageSource.pantry else lib.packages.PackageSource.npm;
+            if (!native_identity.isNative(source)) continue;
+            try foreign_seeds.append(allocator, native_identity.canonical(raw_name));
         }
     }
     var platform_pins = try @import("../../../install/pipeline.zig")
@@ -2385,7 +2779,7 @@ fn mergeCompanionLockfileEntries(
         var system = &root_workspace.system.?;
         for (deps) |dep| {
             const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
-            if (std.mem.indexOfScalar(u8, clean_name, '.') == null) continue;
+            if (!native_identity.isNative(helpers.effectiveDependencySource(dep))) continue;
 
             const owned_version = try allocator.dupe(u8, dep.version);
             if (system.getPtr(clean_name)) |existing_version| {
@@ -2399,8 +2793,20 @@ fn mergeCompanionLockfileEntries(
 
     for (results) |result| {
         if (!result.success or result.name.len == 0) continue;
-        const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(result.name));
-        if (env_only_domains.contains(clean_name)) continue;
+        const raw_name = helpers.normalizePackageName(result.name);
+        const source = result.source orelse if (std.mem.indexOfScalar(u8, raw_name, '.') != null) lib.packages.PackageSource.pantry else lib.packages.PackageSource.npm;
+        const native = native_identity.isNative(source);
+        const clean_name = if (native) native_identity.canonical(raw_name) else raw_name;
+        if (native and env_only_domains.contains(clean_name)) continue;
+        var selected = if (native) try native_lock.selectedEntry(allocator, metadata_origin orelse lockfile, clean_name, result.version, result.integrity) else lib.packages.LockfileEntry{
+            .name = try allocator.dupe(u8, clean_name),
+            .version = try allocator.dupe(u8, result.version),
+            .source = source,
+            .resolved = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version }),
+            .integrity = if (result.integrity) |value| try allocator.dupe(u8, value) else null,
+        };
+        var transferred = false;
+        defer if (!transferred) selected.deinit(allocator);
 
         // Replace every older pin for this package, regardless of its key's
         // version spelling (constraint or resolved version).
@@ -2412,7 +2818,9 @@ fn mergeCompanionLockfileEntries(
 
         var package_it = lockfile.packages.iterator();
         while (package_it.next()) |entry| {
-            if (!std.mem.eql(u8, entry.value_ptr.name, clean_name)) continue;
+            if (native) {
+                if (!native_lock.isNative(entry.value_ptr.*) or !native_identity.same(entry.value_ptr.name, clean_name)) continue;
+            } else if (!entry.value_ptr.matchesSource(source) or !std.mem.eql(u8, entry.value_ptr.name, clean_name)) continue;
 
             // Unless it is another platform's pin of the same package.
             //
@@ -2425,7 +2833,7 @@ fn mergeCompanionLockfileEntries(
             // deleted whichever one the running host did not resolve - a lock
             // that cannot survive the trip to the other platform
             // (pantry-pm/pantry#231, #232).
-            if (platform_pins.contains(entry.value_ptr.name) and !std.mem.eql(u8, entry.value_ptr.version, result.version)) continue;
+            if (platform_pins.contains(native_identity.canonical(entry.value_ptr.name)) and !std.mem.eql(u8, entry.value_ptr.version, result.version)) continue;
 
             try keys_to_remove.append(allocator, try allocator.dupe(u8, entry.key_ptr.*));
         }
@@ -2438,17 +2846,10 @@ fn mergeCompanionLockfileEntries(
             }
         }
 
-        const entry = lib.packages.LockfileEntry{
-            .name = try allocator.dupe(u8, clean_name),
-            .version = try allocator.dupe(u8, result.version),
-            .source = if (std.mem.indexOfScalar(u8, clean_name, '.') != null) .pantry else .npm,
-            .resolved = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version }),
-            // Set for pinned Pantry scopes (see pipeline.PackageResult).
-            .integrity = if (result.integrity) |i| try allocator.dupe(u8, i) else null,
-        };
         const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, result.version });
         defer allocator.free(key);
-        try lockfile.addEntry(allocator, key, entry);
+        try lockfile.addEntry(allocator, key, selected);
+        transferred = true;
     }
 }
 
@@ -2557,7 +2958,8 @@ test "companion deps replace stale system pins without dropping workspace packag
 
     try t.expectEqualStrings("^1.3.14", lockfile.workspaces.get("").?.system.?.get("bun.sh").?);
     try t.expect(lockfile.packages.get("bun.sh@^1.3.4") == null);
-    try t.expectEqualStrings("1.3.14", lockfile.packages.get("bun.sh@1.3.14").?.version);
+    try t.expect(lockfile.packages.get("bun.sh@1.3.14") == null);
+    try t.expectEqualStrings("1.3.14", lockfile.packages.get("bun.com@1.3.14").?.version);
     try t.expect(lockfile.packages.get("lit@3.3.1") != null);
     try t.expect(lockfile.workspaces.get("packages/ui") != null);
 }
@@ -2686,4 +3088,97 @@ test "an unpinned 402 repeats what the registry said instead of a credential hin
     const generic = helpers.gatedLookupMessage(t.allocator, error.PaymentRequired, "@hq/platform", "1.4.0").?;
     defer t.allocator.free(generic);
     try t.expect(std.mem.indexOf(u8, generic, "is a paid package") != null);
+}
+
+test "named native discovery keeps sibling constraints under both root orders" {
+    const allocator = std.testing.allocator;
+    const semver = @import("../../../packages/semver.zig");
+    const NoMetadata = struct {
+        fn lookup(_: std.mem.Allocator, _: []const u8, _: []const u8) ![]const u8 {
+            return error.UnexpectedMetadataLookup;
+        }
+    };
+    for ([_]bool{ false, true }) |reverse| {
+        var requests: std.ArrayList(NamedInstallRequest) = .empty;
+        defer {
+            for (requests.items) |*request| request.deinit(allocator);
+            requests.deinit(allocator);
+        }
+        const roots = [_]lib.packages.PackageSpec{ .{ .name = "facebook.com/zstd", .version = "1.5.7", .source = .pantry }, .{ .name = "lz4.org", .version = "1.10.0", .source = .pantry } };
+        for (0..roots.len) |index| {
+            const spec = roots[if (reverse) roots.len - index - 1 else index];
+            try appendNamedRequest(allocator, &requests, spec, spec.version, true, null);
+        }
+        var plan = try collectNamedNativePlan(allocator, requests.items);
+        defer plan.deinit();
+        var original = lib.deps.resolution.LockFile.init(allocator);
+        defer original.deinit();
+        for (plan.names.items) |name| {
+            const entry = plan.entries.get(name).?;
+            const pin = if (std.mem.eql(u8, name, "lz4.org")) "1.10.0" else semver.resolveVersion(name, entry.constraints.items[0]) orelse return error.MissingCatalogFixtureVersion;
+            try original.addPackage(name, pin, "registry:fixture", null);
+        }
+        try plan.resolveUsing(.{ .original_lock = &original, .frozen = true }, NoMetadata.lookup);
+        try std.testing.expectEqualStrings("1.10.0", try plan.versionFor("lz4.org", "^1"));
+        try std.testing.expectEqualStrings("1.10.0", try plan.versionFor("lz4.org", "1.10.0"));
+        try appendNamedRequest(allocator, &requests, .{ .name = "lz4.org", .version = "^2", .source = .pantry }, "^2", true, null);
+        var incompatible = try collectNamedNativePlan(allocator, requests.items);
+        defer incompatible.deinit();
+        try std.testing.expectError(error.NativeLockNotSatisfied, incompatible.resolveUsing(.{ .original_lock = &original, .frozen = true }, NoMetadata.lookup));
+    }
+}
+
+test "named native authored ranges retain normal pins and force still obeys frozen coverage" {
+    const allocator = std.testing.allocator;
+    const Metadata = struct {
+        fn lookup(a: std.mem.Allocator, _: []const u8, constraint: []const u8) ![]const u8 {
+            const parsed = try std.json.parseFromSlice(std.json.Value, a,
+                \\{"1.10.0":{"platforms":{"fixture":{"tarball":"old","sha256":"a","size":1}}},"1.11.0":{"platforms":{"fixture":{"tarball":"new","sha256":"b","size":1}}}}
+            , .{});
+            defer parsed.deinit();
+            const selected = @import("../../../install/registry_versions.zig").select(parsed.value.object, constraint, "fixture") orelse return error.NativeConstraintConflict;
+            return a.dupe(u8, selected.version);
+        }
+    };
+    var requests: std.ArrayList(NamedInstallRequest) = .empty;
+    defer {
+        for (requests.items) |*request| request.deinit(allocator);
+        requests.deinit(allocator);
+    }
+    try appendNamedRequest(allocator, &requests, .{ .name = "lz4.org", .version = "^1", .source = .pantry }, "^1", true, null);
+    var original = lib.deps.resolution.LockFile.init(allocator);
+    defer original.deinit();
+    try original.addPackage("lz4.org", "1.10.0", "registry:lz4.org@1.10.0", null);
+    for ([_]bool{ false, true }) |force| {
+        var plan = try collectNamedNativePlan(allocator, requests.items);
+        defer plan.deinit();
+        try plan.resolveUsing(.{ .original_lock = &original, .force = force }, Metadata.lookup);
+        try std.testing.expectEqualStrings(if (force) "1.11.0" else "1.10.0", try plan.versionFor("lz4.org", "^1"));
+    }
+    var frozen = try collectNamedNativePlan(allocator, requests.items);
+    defer frozen.deinit();
+    try std.testing.expectError(error.NativeLockNotSatisfied, frozen.resolveUsing(.{ .original_lock = &original, .frozen = true, .force = true }, Metadata.lookup));
+    try std.testing.expectError(error.NativePlanNotResolved, frozen.versionFor("lz4.org", "^1"));
+}
+
+test "auto npm preference defers identity ambiguity and explicit non-native behavior remains generic" {
+    const allocator = std.testing.allocator;
+    var original = try lib.deps.resolution.LockFile.parse(allocator,
+        \\{"packages":{"fixture@1.0.0":{"name":"fixture","version":"1.0.0","source":"npm"},"fixture@1.1.0":{"name":"fixture","version":"1.1.0","source":"pantry"}}}
+    );
+    defer original.deinit();
+    try std.testing.expectEqualStrings("1.0.0", (try preferredPipelineVersion(&original, .{ .name = "fixture", .version = "^1", .source = .registry })).?);
+    try std.testing.expectError(error.AmbiguousLockedVersion, preferredPipelineVersion(&original, .{ .name = "fixture", .version = "^1", .source = .npm }));
+}
+
+test "named discovery preserves locked native provider identity independently of range selection" {
+    const allocator = std.testing.allocator;
+    var original = try lib.deps.resolution.LockFile.parse(allocator,
+        \\{"packages":{"first.example@1.0.0":{"name":"first.example","version":"1.0.0","source":"pantry"},"bun.sh@1.4.3":{"name":"bun.sh","version":"1.4.3","source":"pantry"},"npm.example@1.0.0":{"name":"npm.example","version":"1.0.0","source":"npm"}}}
+    );
+    defer original.deinit();
+    try std.testing.expect(hasNativeLockIdentity(&original, "first.example"));
+    try std.testing.expect(hasNativeLockIdentity(&original, "bun.com"));
+    try std.testing.expect(!hasNativeLockIdentity(&original, "npm.example"));
+    try std.testing.expect(!hasNativeLockIdentity(&original, "missing.example"));
 }

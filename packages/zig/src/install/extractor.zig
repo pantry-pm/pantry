@@ -395,6 +395,27 @@ pub fn extractArchiveWithVerification(
     archive_url: ?[]const u8,
     verbose: bool,
 ) !void {
+    return extractArchiveWithChecksum(allocator, archive_path, dest_dir, format, archive_url, verbose, null);
+}
+
+/// A selected metadata digest is mandatory verification. It cannot be replaced
+/// by an absent/unavailable sidecar or downgraded after a mismatch.
+pub fn extractArchiveWithChecksum(
+    allocator: std.mem.Allocator,
+    archive_path: []const u8,
+    dest_dir: []const u8,
+    format: []const u8,
+    archive_url: ?[]const u8,
+    verbose: bool,
+    expected_sha256: ?[32]u8,
+) !void {
+    if (expected_sha256) |expected| {
+        const actual = try computeChecksum(allocator, archive_path);
+        defer allocator.free(actual);
+        const expected_hex = std.fmt.bytesToHex(expected, .lower);
+        if (!std.mem.eql(u8, actual, &expected_hex)) return error.ChecksumMismatch;
+    }
+
     // Step 1: Verify archive integrity first
     const is_valid = try verifyArchiveIntegrity(allocator, archive_path, format);
     if (!is_valid) {
@@ -405,7 +426,7 @@ pub fn extractArchiveWithVerification(
     }
 
     // Step 2: Try to verify checksum if URL is provided
-    if (archive_url) |url| {
+    if (expected_sha256 == null) if (archive_url) |url| {
         const verified = tryVerifyWithSidecarChecksum(allocator, archive_path, url) catch |err| blk: {
             if (err == error.ChecksumMismatch) {
                 return err;
@@ -417,7 +438,7 @@ pub fn extractArchiveWithVerification(
         if (verified and verbose) {
             style.print("  ✓ Checksum verified\n", .{});
         }
-    }
+    };
 
     // Step 3: Extract the archive
     try extractArchiveQuiet(allocator, archive_path, dest_dir, format, !verbose);
