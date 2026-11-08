@@ -541,9 +541,13 @@ pub fn getLockedVersion(lock_file: *LockFile, name: []const u8) ?LockedVersion {
 /// Multiple versions can belong to different OS-guarded constraints. Choose a
 /// satisfying pin deterministically rather than the name index's first entry.
 pub fn nativeVersionSatisfying(lock_file: *const LockFile, name: []const u8, declared: []const u8) ?[]const u8 {
-    const registry = @import("../../packages/registry.zig");
+    const semver = @import("../../packages/semver.zig");
     const catalog = @import("../../packages/generated.zig");
     const info = catalog.getPackageByName(name);
+    const any_version = declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*");
+    // Initial native resolution uses this parser too. In particular, a bare
+    // major/minor is a range, not an exact string to compare with its pin.
+    const constraint: ?semver.Constraint = if (any_version) null else semver.parseConstraint(declared) catch null;
     var selected: ?[]const u8 = null;
     var it = lock_file.packages.valueIterator();
     while (it.next()) |pkg| {
@@ -555,15 +559,16 @@ pub fn nativeVersionSatisfying(lock_file: *const LockFile, name: []const u8, dec
             break :blk false;
         } else false;
         if (!same_package or pkg.version.len == 0) continue;
-        const any_version = declared.len == 0 or std.mem.eql(u8, declared, "latest") or std.mem.eql(u8, declared, "*");
         const exact = std.mem.eql(u8, pkg.version, declared);
-        const range = declared.len > 0 and (switch (declared[0]) {
-            '^', '~', '>', '<', '=' => true,
-            else => std.mem.indexOfScalar(u8, declared, '*') != null or std.mem.indexOfScalar(u8, declared, 'x') != null,
-        });
-        if (!any_version and !exact and !(range and (registry.satisfiesConstraint(pkg.version, declared) catch false))) continue;
+        const satisfies = if (constraint) |bound| blk: {
+            // A bare rolling development channel still needs its registry
+            // resolution; a lock alone cannot vouch for a published build.
+            if (bound.type == .exact and bound.and_rest == null and std.mem.endsWith(u8, bound.raw_version orelse "", "-dev")) break :blk false;
+            break :blk semver.satisfiesConstraint(pkg.version, bound);
+        } else false;
+        if (!any_version and !exact and !satisfies) continue;
         if (selected) |previous| {
-            const order = registry.compareVersions(pkg.version, previous) catch std.mem.order(u8, pkg.version, previous);
+            const order = semver.compareVersions(pkg.version, previous);
             if (order != .gt) continue;
         }
         selected = pkg.version;
@@ -590,6 +595,43 @@ test "native lock pins cover compatible ranges and preserve both platform constr
     try std.testing.expect(nativeVersionSatisfying(&lock, "git-scm.org", "not-a-range") == null);
     try lock.addPackage("bun.sh", "1.4.2", "registry:bun.sh@1.4.2", null);
     try std.testing.expectEqualStrings("1.4.2", nativeVersionSatisfying(&lock, "bun.com", "^1.4.2").?);
+}
+
+test "native lock pins reuse the registry's partial and bounded version grammar" {
+    var lock = try LockFile.parse(std.testing.allocator,
+        \\{"packages":{
+        \\"postgresql.org@17.11":{"name":"postgresql.org","version":"17.11","resolved":"registry:postgresql.org@17.11"},
+        \\"postgresql.org@18.6.1":{"name":"postgresql.org","version":"18.6.1","resolved":"registry:postgresql.org@18.6.1"},
+        \\"chromium.org@155.0.8059.84.1":{"name":"chromium.org","version":"155.0.8059.84.1","resolved":"registry:chromium.org@155.0.8059.84.1"},
+        \\"chromium.org@155.0.8059.84.2":{"name":"chromium.org","version":"155.0.8059.84.2","resolved":"registry:chromium.org@155.0.8059.84.2"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectEqualStrings("17.11", nativeVersionSatisfying(&lock, "postgresql.org", "17").?);
+    try std.testing.expectEqualStrings("17.11", nativeVersionSatisfying(&lock, "postgresql.org", "17.11").?);
+    try std.testing.expectEqualStrings("17.11", nativeVersionSatisfying(&lock, "postgresql.org", ">=17 <18").?);
+    try std.testing.expectEqualStrings("18.6.1", nativeVersionSatisfying(&lock, "postgresql.org", "18.6").?);
+    try std.testing.expectEqualStrings("18.6.1", nativeVersionSatisfying(&lock, "postgresql.org", "=18.6.1").?);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "postgresql.org", "16") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "postgresql.org", "17.10") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "postgresql.org", "18.6.0") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "postgresql.org", "17.invalid") == null);
+    try std.testing.expectEqualStrings("155.0.8059.84.2", nativeVersionSatisfying(&lock, "chromium.org", ">=155.0.8059.84.1 <155.0.8059.85").?);
+    try std.testing.expectEqualStrings("155.0.8059.84.1", nativeVersionSatisfying(&lock, "chromium.org", "155.0.8059.84.1").?);
+}
+
+test "native lock ordering follows concrete registry versions without trusting a rolling channel" {
+    var lock = try LockFile.parse(std.testing.allocator,
+        \\{"packages":{
+        \\"ziglang.org@0.17.0-dev.900+aaaa":{"name":"ziglang.org","version":"0.17.0-dev.900+aaaa","resolved":"registry:ziglang.org@0.17.0-dev.900+aaaa"},
+        \\"ziglang.org@0.17.0-dev.1000+bbbb":{"name":"ziglang.org","version":"0.17.0-dev.1000+bbbb","resolved":"registry:ziglang.org@0.17.0-dev.1000+bbbb"}
+        \\}}
+    );
+    defer lock.deinit();
+    try std.testing.expectEqualStrings("0.17.0-dev.1000+bbbb", nativeVersionSatisfying(&lock, "ziglang.org", "latest").?);
+    try std.testing.expectEqualStrings("0.17.0-dev.1000+bbbb", nativeVersionSatisfying(&lock, "ziglang.org", "^0.17.0-dev").?);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "ziglang.org", "0.17.0-dev") == null);
+    try std.testing.expect(nativeVersionSatisfying(&lock, "ziglang.org", "^0.18.0-dev") == null);
 }
 
 /// Options for resolving versions
