@@ -1,4 +1,3 @@
-import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -8,25 +7,21 @@ export const recipe: Recipe = {
   homepage: 'https://whatsapp.com',
   programs: ['whatsapp'],
   platforms: ['darwin/aarch64', 'darwin/x86-64', 'windows/x64'],
-  // Resolve the version from WhatsApp's own official download (no Homebrew): the
-  // stable rolling URL redirects to a CDN filename WhatsApp-<version>.zip. The
-  // build downloads that same rolling URL below.
+  // The CDN filename includes an extra version prefix. Inspect the signed
+  // bundle's own marketing version and bind it to the rolling archive validators.
   versionSource: {
-    type: 'custom',
-    fetch: async (): Promise<string[]> => {
-      const res = await vendorResponse('https://web.whatsapp.com/desktop/mac_native/release/?extension=zip', { method: 'HEAD', redirect: 'follow' })
-      const m = res.url.match(/WhatsApp-([\d.]+)\.zip/i)
-      return m ? [m[1]] : []
-    },
+    type: 'desktop-bundle',
+    url: 'https://web.whatsapp.com/desktop/mac_native/release/?extension=zip&configuration=Release',
+    format: 'zip',
+    bundle: 'WhatsApp.app',
   },
 
   build: {
     script: [
-      '# WhatsApp downloads as ZIP from the official stable rolling endpoint',
-      'curl -fSL -L --retry 3 "https://web.whatsapp.com/desktop/mac_native/release/?extension=zip&configuration=Release" -o /tmp/whatsapp.zip',
-      'cd /tmp && unzip -qo whatsapp.zip',
-      'mkdir -p "{{prefix}}"',
-      'find /tmp -maxdepth 1 -name "WhatsApp.app" -exec mv {} "{{prefix}}/WhatsApp.app" \\;',
+      'curl --proto "=https" --tlsv1.2 -fSL --connect-timeout 30 --max-time 600 --retry 2 "https://web.whatsapp.com/desktop/mac_native/release/?extension=zip&configuration=Release" -o "$PWD/whatsapp.zip"',
+      'mkdir -p "$PWD/unpacked" && unzip -qo "$PWD/whatsapp.zip" -d "$PWD/unpacked"',
+      'test -d "$PWD/unpacked/WhatsApp.app"',
+      'mkdir -p "{{prefix}}" && mv "$PWD/unpacked/WhatsApp.app" "{{prefix}}/WhatsApp.app"',
       'mkdir -p "{{prefix}}/bin"',
       'ln -sf "../WhatsApp.app/Contents/MacOS/WhatsApp" "{{prefix}}/bin/whatsapp"',
     ],
