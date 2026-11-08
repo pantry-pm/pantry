@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.186...v0.11.187)
+
+## 🐛 Bug Fixes
+
+- download zlib releases from the official archive ([0e31520](https://github.com/pantry-pm/pantry/commit/0e31520)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.187 ([f0c3700](https://github.com/pantry-pm/pantry/commit/f0c3700)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.185...v0.11.186)
 
 ## 🐛 Bug Fixes
