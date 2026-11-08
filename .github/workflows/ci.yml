@@ -161,6 +161,7 @@ jobs:
           cd packages/zig
           zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug -j2 --prefix ../../artifacts/windows-source-cli
           zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter deleteTree -femit-bin=../../artifacts/windows-source-cli/bin/file-tree-tests.exe
+          zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter "access checks" -femit-bin=../../artifacts/windows-source-cli/bin/access-tests.exe
 
       - name: Retain the source Windows CLI and Action
         uses: actions/upload-artifact@v4
@@ -169,6 +170,8 @@ jobs:
           path: |
             artifacts/windows-source-cli/bin/pantry.exe
             artifacts/windows-source-cli/bin/file-tree-tests.exe
+            artifacts/windows-source-cli/bin/access-tests.exe
+            artifacts/windows-source-cli/bin/*.pdb
             packages/action/dist/index.js
             packages/action/dist/post.js
           if-no-files-found: error
@@ -503,6 +506,8 @@ jobs:
           path: artifacts/windows-source-runtime
       - name: Test source preservation through directory and nested links
         run: '& ./artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/file-tree-tests.exe'
+      - name: Verify native access semantics
+        run: '& ./artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/access-tests.exe'
       - name: Verify the actual source installer and required workspace failures
         env:
           PANTRY_TEST_CLI: artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/pantry.exe
