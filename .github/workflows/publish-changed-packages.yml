@@ -86,7 +86,8 @@ jobs:
     name: Detect changed packages
     runs-on: ubuntu-latest
     outputs:
-      domains: ${{ steps.detect.outputs.domains }}
+      domains: ${{ steps.owners.outputs.domains }}
+      desktop: ${{ steps.owners.outputs.desktop }}
       darwin_native: ${{ steps.darwin.outputs.domains }}
       # Forced rebuilding requires an explicit manual input, never a recipe diff.
       rebuild_existing: ${{ steps.detect.outputs.rebuild_existing }}
@@ -147,6 +148,21 @@ jobs:
           echo "Explicitly rebuild accepted versions: $REBUILD"
           echo "rebuild_existing=$REBUILD" >> "$GITHUB_OUTPUT"
 
+      - name: Select the native publication owner
+        id: owners
+        env:
+          DOMAINS: ${{ steps.detect.outputs.domains }}
+          PLATFORM: ${{ inputs.platform }}
+          VERIFY_ONLY: ${{ inputs.verify-tools-only }}
+          REQUEST_ID: ${{ inputs.request-id }}
+        run: |
+          if [ "$PLATFORM" = linux ] || [ "$VERIFY_ONLY" = true ] || [ -n "$REQUEST_ID" ]; then
+            echo "domains=$DOMAINS" >> "$GITHUB_OUTPUT"
+            echo "desktop=" >> "$GITHUB_OUTPUT"
+          else
+            bun packages/ts-pantry/scripts/publication-owners.ts "$DOMAINS" >> "$GITHUB_OUTPUT"
+          fi
+
       # Darwin artifacts require native Mach-O inspection, loader normalization,
       # and health checks, including packages that download a vendor archive.
       - name: Determine darwin-native domains
@@ -155,7 +171,7 @@ jobs:
         working-directory: packages/ts-pantry
         shell: bash
         run: |
-          DOMAINS="${{ steps.detect.outputs.domains }}"
+          DOMAINS="${{ steps.owners.outputs.domains }}"
           if [ -z "$DOMAINS" ]; then echo "domains=" >> "$GITHUB_OUTPUT"; exit 0; fi
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           # Native library normalization needs Mach-O tooling even when an
@@ -164,6 +180,21 @@ jobs:
             --platform darwin-arm64 -p "$PKGS" --print-selected | tr -s ' ' | sed 's/^ *//; s/ *$//')
           echo "darwin-native (need a real Mac): ${NATIVE:-<none>}"
           echo "domains=$NATIVE" >> "$GITHUB_OUTPUT"
+
+  desktop-updates:
+    name: Publish desktop changes through the vendor planner
+    needs: detect
+    if: github.ref == 'refs/heads/main' && needs.detect.outputs.desktop != '' && inputs.verify-tools-only != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Wake the native desktop update workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: gh workflow run check-desktop-updates.yml --repo "$REPOSITORY" --ref main -f publish=true
 
   build:
     name: Publish (${{ matrix.platform.name }})
