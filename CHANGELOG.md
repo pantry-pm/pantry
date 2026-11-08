@@ -1,3 +1,21 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.191...v0.11.192)
+
+## 🐛 Bug Fixes
+
+- use native version constraints for frozen lock selection ([00dc6ee](https://github.com/pantry-pm/pantry/commit/00dc6ee)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- qualify PostgreSQL majors without host ELF repair ([f1afcce](https://github.com/pantry-pm/pantry/commit/f1afcce)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.192 ([b2a5818](https://github.com/pantry-pm/pantry/commit/b2a5818)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.190...v0.11.191)
 
 ## 🐛 Bug Fixes
