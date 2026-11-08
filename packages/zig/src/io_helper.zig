@@ -338,22 +338,51 @@ pub fn makePath(path: []const u8) !void {
 
 /// Check access to a path (relative)
 pub fn access(path: []const u8, flags: Dir.AccessOptions) !void {
-    _ = flags;
-    if (comptime is_windows) {
-        const file = cwd().openFile(io, path, .{ .mode = .read_only }) catch return error.FileNotFound;
-        file.close(io);
-        return;
-    }
-    const open_flags: std.posix.O = .{ .ACCMODE = .RDONLY, .CLOEXEC = true };
-    const fd = std.posix.openat(std.posix.AT.FDCWD, path, open_flags, 0) catch return error.FileNotFound;
-    _ = std.c.close(fd);
+    // Existence/access is not a read: opening a Unix socket fails and opening
+    // a FIFO can block. The native backend handles file types and requested
+    // permissions without opening a stream or discarding the access flags.
+    try cwd().access(io, path, flags);
 }
 
 /// Check access to an absolute path
 pub fn accessAbsolute(path: []const u8, flags: Dir.AccessOptions) !void {
-    _ = flags;
-    const file = cwd().openFile(io, path, .{ .mode = .read_only }) catch return error.FileNotFound;
-    file.close(io);
+    try Dir.accessAbsolute(io, path, flags);
+}
+
+test "access checks recognize a bound Unix socket without opening it" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    // A relative bind path stays below sockaddr_un's limit even in a deeply
+    // nested checkout. AccessAbsolute still checks the actual absolute path.
+    const relative = try std.fmt.allocPrint(allocator, ".zig-cache/tmp/{s}/access.sock", .{temp.sub_path});
+    defer allocator.free(relative);
+    const address = try std.Io.net.UnixAddress.init(relative);
+    var server = try address.listen(io, .{});
+    defer server.deinit(io);
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const parent = buffer[0..try temp.dir.realPath(io, &buffer)];
+    const absolute = try std.fs.path.join(allocator, &.{ parent, "access.sock" });
+    defer allocator.free(absolute);
+    try accessAbsolute(absolute, .{});
+    try access(relative, .{});
+}
+
+test "access checks preserve directories, missing paths and requested permissions" {
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    try temp.dir.writeFile(io, .{ .sub_path = "readable", .data = "synthetic" });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const parent = buffer[0..try temp.dir.realPath(io, &buffer)];
+    try accessAbsolute(parent, .{});
+    const file = try std.fs.path.join(std.testing.allocator, &.{ parent, "readable" });
+    defer std.testing.allocator.free(file);
+    try accessAbsolute(file, .{ .read = true });
+    if (builtin.os.tag != .windows) try std.testing.expectError(error.AccessDenied, accessAbsolute(file, .{ .execute = true }));
+    const missing = try std.fs.path.join(std.testing.allocator, &.{ parent, "missing" });
+    defer std.testing.allocator.free(missing);
+    try std.testing.expectError(error.FileNotFound, accessAbsolute(missing, .{}));
 }
 
 /// Open a directory in the current working directory

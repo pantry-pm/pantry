@@ -103,6 +103,17 @@ try {
   await run('restart', [cli, 'start', 'postgres', '--port', String(port)])
   assert.equal((await run('retained-data', query('SELECT COUNT(*) FROM acceptance_items;'))).trim(), '1')
   qualified = true
+} catch (error) {
+  if (unit && existsSync(join(runtime, 'systemd/private'))) {
+    await run('failure-unit-state', ['systemctl', '--user', 'show', unit, '-p', 'ActiveState', '-p', 'SubState', '-p', 'Result', '-p', 'ExecMainStatus'], { allowFailure: true })
+    await run('failure-unit-journal', ['journalctl', '--user', '--unit', unit, '--no-pager', '--lines=50'], { allowFailure: true })
+    const content = readFileSync(join(unitDirectory, unit), 'utf8')
+    const log = content.match(/^StandardError=append:(.+)$/m)?.[1]
+    const hash = unit.match(/^pantry-([a-f0-9]+)-postgres\.service$/)?.[1]
+    if (hash && log?.startsWith(join(homedir(), '.local/share/pantry/logs', hash) + '/') && existsSync(log))
+      writeFileSync(join(evidence, 'failure-postgres.stderr'), readFileSync(log))
+  }
+  throw error
 } finally {
   const cleanupFailures: string[] = []
   const cleanup = async (action: () => Promise<unknown> | void) => {
@@ -120,7 +131,7 @@ try {
   if (enabledLinger) await cleanup(() => run('restore-linger', ['sudo', '-n', 'loginctl', 'disable-linger', username]))
   qualified &&= cleanupFailures.length === 0
   writeFileSync(join(evidence, 'receipt.json'), JSON.stringify({
-    qualified, cli, version: process.env.PANTRY_SERVICE_TEST_VERSION, nativePackage: 'postgresql.org18.6.1',
+    qualified, cli, version: process.env.PANTRY_SERVICE_TEST_VERSION, sourceSha: process.env.GITHUB_SHA, nativePackage: 'postgresql.org18.6.1',
     root, unit, actualUserManager: true, normalCliLifecycle: true, productionAccess: false,
     manualLoaderOverrides: false, steps, cleanupFailures,
   }, null, 2) + '\n')
