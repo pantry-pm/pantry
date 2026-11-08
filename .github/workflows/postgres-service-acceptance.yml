@@ -1,0 +1,52 @@
+name: PostgreSQL user service acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published CLI version, or source to build the checked-out CLI
+        default: '0.11.185'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-user-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install the public CLI and native test tools
+        id: pantry
+        uses: pantry-pm/pantry/packages/action@40edb8cd30b4e58a2be08352c6961722af58b47c # v0.11.185
+        with:
+          version: ${{ inputs.version == 'source' && '0.11.185' || inputs.version }}
+          install: 'false'
+          packages: bun.com@1.4.4
+      - name: Install the managed source compiler
+        if: inputs.version == 'source'
+        uses: pantry-pm/pantry/packages/action@40edb8cd30b4e58a2be08352c6961722af58b47c # v0.11.185
+        with:
+          version: 0.11.185
+          install: 'false'
+          packages: ziglang.org@0.17.1
+      - name: Build the source CLI when requested
+        if: inputs.version == 'source'
+        run: |
+          bun install --frozen-lockfile
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+      - name: Verify the normal project-scoped PostgreSQL user service
+        env:
+          PANTRY_SERVICE_TEST_CLI: ${{ inputs.version == 'source' && format('{0}/packages/zig/zig-out/bin/pantry', github.workspace) || steps.pantry.outputs.pantry-path }}
+          PANTRY_SERVICE_TEST_VERSION: ${{ inputs.version }}
+        run: bun --no-env-file .github/scripts/postgres-service-acceptance.ts
+      - name: Retain actual service and SQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-user-service
+          path: artifacts/postgres-user-service
+          if-no-files-found: error
