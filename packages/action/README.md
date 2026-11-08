@@ -221,6 +221,11 @@ and masked in action logs. `postgres-url`, `postgres-version`, `typesense-url`
 `mysql-url`, `mysql-version` and `typesense-version` are also action outputs. Keep these services on the
 provided addresses; no fixed host ports or pre-existing databases are needed.
 
+Service pins identify Pantry packages. For example, `postgres@17.11.1` selects
+the repaired package for upstream PostgreSQL `17.11`. Readiness checks the
+vendor's reported version; package/service conflicts still compare the full
+package identity. The original `17.11` archive remains immutable.
+
 ### DynamoDB Local
 
 Use `services: dynamodb@3.3.0` on Linux x86-64. `dynamodb-local` and

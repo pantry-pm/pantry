@@ -65,6 +65,22 @@ test('PostgreSQL runtime dependencies rebuild their macOS 14 packaging without r
   }
 })
 
+test('PostgreSQL 17 closure repairs use a new package identity and the original vendor source', async () => {
+  for (const platform of ['darwin-arm64', 'linux-x86-64'] as const) {
+    const loaded = await loadRecipe('postgresql.org', platform, '17.11.1')
+    expect(loaded.upstreamVersion).toBe('17.11')
+    expect(loaded.publicationVersion).toBe('17.11.1')
+    expect(loaded.requiresRecipeBuild).toBe(true)
+    expect(recipeAllowsMirror('17.11.1', { upstream: loaded.upstreamVersion!, current: loaded.publicationVersion! })).toBe(false)
+    expect(() => requireCurrentRecipeBuild('17.11', loaded.publicationVersion!)).toThrow('refusing to replace')
+    const tokens = buildTokens('postgresql.org', loaded.upstreamVersion!, platform, '/package/v17.11.1', '/source', {})
+    expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toContain('/REL_17_11.tar.gz')
+    expect(loaded.recipe.test?.required).toBe(true)
+    expect(loaded.recipe.test?.script.join('\n')).toContain('psql')
+    expect(loaded.recipe.test?.script.join('\n')).toContain('env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH')
+  }
+})
+
 test('ambiguous tuples and invalid revisions fail before catalog generation or a build', () => {
   for (const revision of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])
     expect(() => revisedPackageVersions(['1.2.3'], { '1.2.3': revision })).toThrow('Invalid')

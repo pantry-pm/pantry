@@ -1,10 +1,13 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { resolveNativeExecutable } from './native-executable'
+import { recipeBuildVersion } from '../../ts-pantry/scripts/package-revisions'
+import { recipe as postgresRecipe } from '../../ts-pantry/src/recipes/postgresql.org'
 
 export interface ServiceSpec {
   name: 'redis' | 'postgres' | 'typesense' | 'mysql' | 'dynamodb'
   packageSpec: string
+  /** The server's vendor version, distinct from a repaired package identity. */
   expectedVersion?: string
 }
 
@@ -47,7 +50,10 @@ export function parseServiceSpecs(input: string): ServiceSpec[] {
       throw new Error(`Service versions must be exact semantic versions: ${raw}`)
     seen.add(name)
     const domain = serviceDomains[name]
-    services.push({ name, packageSpec: version ? `${domain}@${version}` : domain, expectedVersion: version })
+    const expectedVersion = name === 'postgres' && version
+      ? recipeBuildVersion(version, postgresRecipe.revisions).upstream
+      : version
+    services.push({ name, packageSpec: version ? `${domain}@${version}` : domain, expectedVersion })
   }
   return services
 }
@@ -56,7 +62,7 @@ export function mergeServicePackages(packages: string, services: ServiceSpec[]):
   const requested = packages.split(/\s+/).filter(Boolean)
   for (const service of services) {
     const existing = requested.find(spec => serviceName(spec.split('@')[0] || '') === service.name)
-    if (existing && existing.split('@')[1] !== service.expectedVersion)
+    if (existing && existing.split('@')[1] !== service.packageSpec.split('@')[1])
       throw new Error(`Conflicting package and service versions for ${service.name}: ${existing} vs ${service.packageSpec}`)
     if (!existing) requested.push(service.packageSpec)
   }

@@ -3,7 +3,7 @@
  *
  * @domain `postgresql.org`
  * @programs `clusterdb`, `createdb`, `dropdb`, `dropuser`, `ecpg`, ... (+23 more)
- * @version `18.6.1` (89 versions available)
+ * @version `18.6.1` (90 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install postgresql.org`
@@ -122,6 +122,7 @@ export const postgresPackage = {
     '18.1',
     '18.0',
     '18.0.0',
+    '17.11.1',
     '17.11',
     '17.10',
     '17.9',

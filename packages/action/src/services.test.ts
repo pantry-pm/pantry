@@ -84,6 +84,26 @@ describe('GitHub Actions services', () => {
     expect(() => mergeServicePackages('redis@8.0.4', services)).toThrow('Conflicting')
   })
 
+  test('checks PostgreSQL vendor versions while retaining immutable package revisions', () => {
+    for (const [publication, upstream] of [['17.11.1', '17.11'], ['18.6.1', '18.6']]) {
+      expect(parseServiceSpecs(`postgres@${publication}`)).toEqual([
+        { name: 'postgres', packageSpec: `postgresql.org@${publication}`, expectedVersion: upstream },
+      ])
+    }
+    expect(parseServiceSpecs('postgres@17.11')[0].expectedVersion).toBe('17.11')
+    expect(parseServiceSpecs('postgres@9.6.24')[0].expectedVersion).toBe('9.6.24')
+    expect(() => parseServiceSpecs('postgres@17.11.2')).toThrow('Undeclared package build revision')
+  })
+
+  test('compares package identities when the service reports a different vendor version', () => {
+    const services = parseServiceSpecs('postgres@17.11.1')
+    expect(mergeServicePackages('postgresql.org@17.11.1', services)).toBe('postgresql.org@17.11.1')
+    expect(mergeServicePackages('postgres@17.11.1', services)).toBe('postgres@17.11.1')
+    expect(mergeServicePackages('bun@1.4.4', services)).toBe('bun@1.4.4 postgresql.org@17.11.1')
+    expect(() => mergeServicePackages('postgresql.org@17.11', services)).toThrow('Conflicting')
+    expect(() => mergeServicePackages('postgres@17.10', services)).toThrow('Conflicting')
+  })
+
   test('builds a loopback-only, non-persistent CI service and parses its version', () => {
     const args = redisLaunchArgs('/runner/temp')
     expect(args).toContain('127.0.0.1')
