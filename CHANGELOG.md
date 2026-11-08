@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.187...v0.11.188)
+
+## 🐛 Bug Fixes
+
+- **desktop**: qualify vendor bundles and resume publication after registry drains ([1bd8e4f](https://github.com/pantry-pm/pantry/commit/1bd8e4f)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.188 ([cf6771d](https://github.com/pantry-pm/pantry/commit/cf6771d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.186...v0.11.187)
 
 ## 🐛 Bug Fixes
