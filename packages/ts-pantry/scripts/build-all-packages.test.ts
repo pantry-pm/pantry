@@ -568,6 +568,29 @@ test('every exact pin survives the automatic version selection limit', async () 
   expect(await selectVersionsForBuild(pinned, 1)).toEqual(['26.7.0', '8.4.11'])
 })
 
+describe('automatic package build revisions', () => {
+  const postgres = { domain: 'postgresql.org', name: 'postgresql', versions: ['18.6.1', '18.6', '17.11.1', '17.11', '17.10'], latestVersion: '18.6.1', pantryYamlPath: '', hasDistributable: true, hasBuildScript: true, needsProps: false, hasProps: false, depDomains: [], isApp: false, isDownloadRecipe: false }
+
+  test('selects only current recipe identities while preserving unrevised releases', async () => {
+    expect(await selectVersionsForBuild(postgres, 10)).toEqual(['18.6.1', '17.11.1', '17.10'])
+  })
+
+  test('does not spend a one-version budget on a superseded latest marker', async () => {
+    const chrome = { ...postgres, domain: 'google.com/chrome', name: 'chrome', versions: ['155.0.8059.84.1', '155.0.8059.84', '155.0.8059.83'], latestVersion: '155.0.8059.84' }
+    expect(await selectVersionsForBuild(chrome, 1)).toEqual(['155.0.8059.84.1'])
+  })
+
+  test('preserves explicit historical pins for the immutable build guard', async () => {
+    const pinned = applyVersionPins(postgres, new Map([['postgresql.org', ['18.6']]]))
+    expect(await selectVersionsForBuild(pinned, 1)).toEqual(['18.6'])
+  })
+
+  test('resolves recipe revisions independently of vendor tuple length', async () => {
+    const chrome = { ...postgres, domain: 'google.com/chrome', name: 'chrome', versions: ['155.0.8059.84.1', '155.0.8059.84', '155.0.8059.83'], latestVersion: '155.0.8059.84.1' }
+    expect(await selectVersionsForBuild(chrome, 10)).toEqual(['155.0.8059.84.1', '155.0.8059.83'])
+  })
+})
+
 test('Android publication executes the repaired recipe instead of mirroring old launchers', () => {
   expect(CUSTOM_BUILD_DOMAINS.has('android.com/cmdline-tools')).toBe(true)
 })

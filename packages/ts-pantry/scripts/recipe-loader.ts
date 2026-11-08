@@ -15,7 +15,7 @@ import type { Recipe, LoadedRecipe } from './recipe-types'
 import type { NormalizedRecipe } from './buildkit'
 import { evaluateCondition } from './buildkit'
 import { programsForPlatform } from '../src/programs'
-import { recipeBuildVersion } from './package-revisions'
+import { recipeBuildVersion, type PackageRevisions } from './package-revisions'
 import desktopCatalog from '../../../catalog/desktop.json'
 
 // package-overrides.ts removed — overrides migrated to src/recipes/*.ts
@@ -23,6 +23,17 @@ const packageOverrides: Record<string, any> = {}
 
 const scriptsDir = fileURLToPath(new URL('.', import.meta.url))
 const tsPackagesDir = join(scriptsDir, '..', 'src')
+
+async function readRecipeDefinition(recipePath: string): Promise<Recipe | undefined> {
+  const mod = await import(recipePath)
+  return mod.recipe || mod.default
+}
+
+/** Read publication identities without normalizing a version-specific build. */
+export async function loadRecipeRevisions(domain: string): Promise<PackageRevisions | undefined> {
+  const recipePath = findRecipeFile(domain)
+  return recipePath ? (await readRecipeDefinition(recipePath))?.revisions : undefined
+}
 
 /**
  * Load a recipe for a package domain.
@@ -41,8 +52,7 @@ export async function loadRecipe(
   const recipePath = findRecipeFile(domain)
   if (recipePath) {
     try {
-      const mod = await import(recipePath)
-      const def: Recipe = mod.recipe || mod.default
+      const def = await readRecipeDefinition(recipePath)
       if (def) {
         const desktopApp = recipePath.includes('/recipes/apps/') || desktopCatalog.apps.some(app => app.domain === def.domain)
         const normalized = recipeDefToNormalized(def, _platform, version ? recipeBuildVersion(version, def.revisions).upstream : undefined)

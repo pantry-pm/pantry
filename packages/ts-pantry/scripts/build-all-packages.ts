@@ -39,8 +39,8 @@ import { uploadToS3 as uploadToS3Impl } from './upload-to-s3.ts'
 import { BINARY_SYNC_DOMAIN_SET } from './binary-sync-packages.ts'
 import { parseDep, versionSatisfies } from './build-package'
 import { publicationOrder } from './publication-order'
-import { recipeAllowsMirror } from './package-revisions'
-import { loadRecipe } from './recipe-loader'
+import { recipeAllowsMirror, recipeBuildVersion } from './package-revisions'
+import { loadRecipe, loadRecipeRevisions } from './recipe-loader'
 // package-overrides.ts removed — all build logic now in src/recipes/*.ts
 const packageOverrides: Record<string, any> = {}
 
@@ -1178,6 +1178,17 @@ const POPULAR_PACKAGES = new Set<string>([
 
 export async function selectVersionsForBuild(pkg: BuildablePackage, maxVersions: number): Promise<string[]> {
   if (pkg.pinnedVersions?.length) return [...pkg.pinnedVersions]
+  // Historical identities remain installable, but a current recipe cannot
+  // republish them. Filter before spending the automatic version budget.
+  const revisions = await loadRecipeRevisions(pkg.domain)
+  const currentVersions = revisions
+    ? pkg.versions.filter(version => recipeBuildVersion(version, revisions).current === version)
+    : pkg.versions
+  const candidates = {
+    ...pkg,
+    versions: currentVersions,
+    latestVersion: currentVersions.includes(pkg.latestVersion) ? pkg.latestVersion : currentVersions[0],
+  }
   // Tier the version count: popular packages get POPULAR_MAX_VERSIONS (deeper history),
   // everyone else the standard maxVersions.
   const effectiveMax = POPULAR_PACKAGES.has(pkg.domain) ? Math.max(maxVersions, POPULAR_MAX_VERSIONS) : maxVersions
@@ -1188,8 +1199,8 @@ export async function selectVersionsForBuild(pkg: BuildablePackage, maxVersions:
   // 20). Source builds keep the important-version spread (an old major's compile cost
   // is only worth it for compat coverage).
   let versions = (PKGX_MIRROR_MODE || DOWNLOAD_ONLY_MODE)
-    ? selectRecentVersions(pkg, effectiveMax)
-    : selectImportantVersions(pkg, effectiveMax)
+    ? selectRecentVersions(candidates, effectiveMax)
+    : selectImportantVersions(candidates, effectiveMax)
 
   // For ziglang.org, build ALL versions >= 0.14.1 + latest dev from ziglang.org index.
   if (pkg.domain === 'ziglang.org') {
