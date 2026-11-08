@@ -8,6 +8,7 @@ import { version as sdkVersion } from '../package.json'
 import type { NativeCommand } from '../src/native'
 import { assessNativeMacArtifact, auditNativeEnvironment, craftDependencyPlan, deliverReleaseToGooglePlay, exportAppleKeychainIdentity, loadNativeEnvironment, lockedCraftCompilerVersion, nativeEntitlementsPlist, nativeRuntimeCacheKey, notarizeNativeArtifact, packageNativeAppStore, prepareNativeAppBuild, prepareNativeRelease, provisionNativeRuntime, readNativeAppConfig, recordNativeArtifact, resolveNotaryCredentials, setupAppleSigning, signNativeAndroidBundle, signNativeDiskImage } from '../src/native'
 import { releaseNativeApp } from '../src/native/release'
+import { validateNativeMacApp } from '../src/native/pipeline'
 
 const directories: string[] = []
 function temporary(): string {
@@ -186,6 +187,38 @@ describe('native configuration and builds', () => {
 })
 
 describe('Apple native publishing', () => {
+  for (const exitCode of [0, 1]) {
+    test(`native launch checks isolate user data and clean up after ${exitCode ? 'failure' : 'success'}`, async () => {
+      const root = temporary()
+      const app = join(root, 'Example.app')
+      mkdirSync(join(app, 'Contents/MacOS'), { recursive: true })
+      mkdirSync(join(app, 'Contents/Resources'), { recursive: true })
+      for (const file of ['Contents/Info.plist', 'Contents/Resources/index.html', 'Contents/Resources/craft.json']) writeFileSync(join(app, file), 'fixture')
+      writeFileSync(join(app, 'Contents/MacOS/Example'), Buffer.from('cffaedfe', 'hex'))
+      const userData = join(root, 'existing-user-data')
+      mkdirSync(userData)
+      writeFileSync(join(userData, 'history'), 'private existing history')
+      let profile = ''
+      const artifact = { path: app, appPath: app, name: 'Example', bundleId: 'com.example.app', version: '1.0.0', buildNumber: '1', target: 'macos' }
+      const command: NativeCommand = async (name, args, options) => {
+        if (name === 'plutil') return { ...ok, stdout: JSON.stringify({ CFBundleIdentifier: artifact.bundleId, CFBundleShortVersionString: artifact.version, CFBundleVersion: artifact.buildNumber }) }
+        expect(args).toEqual(['--benchmark'])
+        profile = options?.env?.STX_DATA_HOME ?? ''
+        expect(profile).not.toBe(userData)
+        expect(existsSync(profile)).toBe(true)
+        expect(options?.env?.RUNTIME_FIXTURE).toBe('preserved')
+        expect(options?.timeoutMs).toBe(30000)
+        writeFileSync(join(profile, 'test-data'), 'disposable')
+        return { exitCode, stdout: exitCode ? '' : 'ready', stderr: exitCode ? 'refused' : '' }
+      }
+      const validation = validateNativeMacApp(artifact, undefined, command, { STX_DATA_HOME: userData, RUNTIME_FIXTURE: 'preserved' })
+      if (exitCode) await expect(validation).rejects.toThrow('Native launch check failed')
+      else await validation
+      expect(profile).not.toBe('')
+      expect(existsSync(profile)).toBe(false)
+      expect(readFileSync(join(userData, 'history'), 'utf8')).toBe('private existing history')
+    })
+  }
   test('requires the outer DMG to have a timestamped Developer ID Application signature', async () => {
     const dmg = join(temporary(), 'Example.dmg')
     writeFileSync(dmg, 'image')

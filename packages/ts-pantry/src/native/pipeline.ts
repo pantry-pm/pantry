@@ -2,7 +2,8 @@ import type { NativeArtifact } from './build'
 import type { NativeCommand } from './command'
 import type { NativeAppConfig } from './config'
 import process from 'node:process'
-import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { signNativeAndroidBundle } from './android'
 import { auditNativeEnvironment, loadNativeEnvironment } from './environment'
@@ -54,7 +55,7 @@ export async function validateNativeMacBundle(artifact: NativeArtifact, maxBytes
 }
 
 /** Launch only locally runnable builds; Store distribution profiles require Store delivery. */
-export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand): Promise<void> {
+export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: number | undefined, command: NativeCommand = runNativeCommand, env: NodeJS.ProcessEnv = process.env): Promise<void> {
   await validateNativeMacBundle(artifact, maxBytes, command)
   const executable = join(artifact.appPath ?? artifact.path, 'Contents/MacOS', artifact.name)
   // The AppKit host has no readiness benchmark: it opens a window. Running it
@@ -64,8 +65,16 @@ export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: n
     if (!`${version.stdout}${version.stderr}`.includes('craft native macOS renderer')) throw new Error('Native app did not report the AppKit renderer')
     return
   }
-  const benchmark = succeeded('Native launch check', await command(executable, ['--benchmark']))
-  if (!`${benchmark.stdout}${benchmark.stderr}`.includes('ready')) throw new Error('Native app did not report ready')
+  // An unsigned local check cannot open a signed app's protected container.
+  // More importantly, qualification must never read or mutate a user's store.
+  const dataRoot = mkdtempSync(join(tmpdir(), 'pantry-native-launch-'))
+  try {
+    const benchmark = succeeded('Native launch check', await command(executable, ['--benchmark'], {
+      env: { ...env, STX_DATA_HOME: dataRoot }, timeoutMs: 30000,
+    }))
+    if (!`${benchmark.stdout}${benchmark.stderr}`.includes('ready')) throw new Error('Native app did not report ready')
+  }
+  finally { rmSync(dataRoot, { recursive: true }) }
 }
 
 /** Shared local/CI pipeline. It prepares artifacts; providers deliver only after checks pass. */
@@ -111,7 +120,7 @@ export async function prepareNativeRelease(root: string, mode: 'check' | 'releas
     const artifact = config.macos ? readNativeArtifact(root) : undefined
     if (artifact) {
       if (artifact.version !== pkg.version) throw new Error('Native artifact belongs to a different package version')
-      await validateNativeMacApp(artifact, config.macos?.maxBundleSize, command)
+      await validateNativeMacApp(artifact, config.macos?.maxBundleSize, command, env)
     }
     for (const check of config.checks?.after ?? []) await run(check)
     const files = artifact ? [artifact.path] : config.android ? [insideProject(root, config.android.bundle)] : []
