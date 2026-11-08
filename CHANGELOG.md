@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.189...v0.11.190)
+
+## 🐛 Bug Fixes
+
+- pass native publication selectors through the step environment ([26c3256](https://github.com/pantry-pm/pantry/commit/26c3256)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.190 ([5961ff6](https://github.com/pantry-pm/pantry/commit/5961ff6)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.188...v0.11.189)
 
 ## 🐛 Bug Fixes
