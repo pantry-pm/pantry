@@ -13,7 +13,7 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import type { VersionSource, Recipe } from './recipe-types'
-import { revisedPackageVersions } from './package-revisions'
+import { recipeBuildVersion, revisedPackageVersions } from './package-revisions'
 import { findRecipeFile } from './recipe-loader'
 import { convertDomainToFileName } from '../src/utils'
 import { packageDomain } from './changed-package-domains'
@@ -449,11 +449,27 @@ async function main() {
     try {
       const mod = await import(file)
       const recipe: Recipe = mod.recipe || mod.default
-      if (!recipe?.domain || !recipe?.versionSource) return { checked: 0, updated: 0, errors: 0, unavailable: 0 }
+      if (!recipe?.domain || (!recipe.versionSource && !Object.keys(recipe.revisions ?? {}).length)) return { checked: 0, updated: 0, errors: 0, unavailable: 0 }
 
       if (targetDomain && recipe.domain !== targetDomain) return { checked: 0, updated: 0, errors: 0, unavailable: 0 }
 
-      const versions = revisedPackageVersions(await fetchVersions(recipe.versionSource), recipe.revisions)
+      let upstream: string[]
+      if (recipe.versionSource) {
+        upstream = await fetchVersions(recipe.versionSource)
+      }
+      else {
+        // A packaging repair does not require a new vendor release or a
+        // network version source. Materialize its declared revision from the
+        // existing catalog through this same updater, preserving old entries.
+        const metadata = findPackageFile(recipe.domain)
+        if (!metadata) throw new Error(`No package metadata found for ${recipe.domain}`)
+        const content = readFileSync(metadata, 'utf8')
+        const match = content.match(/versions:\s*\[([\s\S]*?)\]\s*as const/)
+        if (!match) throw new Error(`No catalog versions found for ${recipe.domain}`)
+        const current = match[1].split(',').map(value => value.trim().replace(/'/g, '')).filter(Boolean)
+        upstream = [...new Set(current.map(version => recipeBuildVersion(version, recipe.revisions).upstream))]
+      }
+      const versions = revisedPackageVersions(upstream, recipe.revisions)
       if (versions.length === 0) {
         console.log(`  ${recipe.domain}: no versions found`)
         noVersionDomains.push(recipe.domain)

@@ -2,7 +2,7 @@
  * **readline** - pkgx package
  *
  * @domain `gnu.org/readline`
- * @version `8.3.0` (4 versions available)
+ * @version `8.3.0.1` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/readline`
@@ -14,7 +14,7 @@
  *
  * const pkg = pantry.gnuorgreadline
  * console.log(pkg.name)        // "readline"
- * console.log(pkg.versions[0]) // "8.3.0" (latest)
+ * console.log(pkg.versions[0]) // "8.3.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/gnu-org/readline.md
@@ -57,6 +57,7 @@ export const gnuorgreadlinePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.3.0.1',
     '8.3.0',
     '8.2.13',
     '8.2.0',

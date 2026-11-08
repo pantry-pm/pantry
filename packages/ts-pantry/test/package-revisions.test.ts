@@ -5,6 +5,8 @@ import { buildTokens, applyTokens } from '../scripts/buildkit'
 import { compareVersions } from '../src/generate-zig'
 import { compareVersionsDesc, resolveVersionFromMetadata } from '../src/version-utils'
 import { parseInstallerConstraint, satisfiesInstallerConstraint } from '../src/installer'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 test('packaging revisions preserve vendor releases and existing unrevised identities', () => {
   expect(revisedPackageVersions(['1.2.3', '1.2.2'])).toEqual(['1.2.3', '1.2.2'])
@@ -47,6 +49,7 @@ test('PostgreSQL runtime dependencies rebuild their macOS 14 packaging without r
   for (const [domain, upstream, publication] of [
     ['invisible-island.net/ncurses', '6.6.0', '6.6.0.1'],
     ['zlib.net', '1.3.2', '1.3.2.1'],
+    ['gnu.org/readline', '8.3.0', '8.3.0.1'],
   ]) {
     const loaded = await loadRecipe(domain, 'darwin-arm64', publication)
     expect(loaded.upstreamVersion).toBe(upstream)
@@ -94,4 +97,17 @@ test('both JavaScript catalogs and installer bounds preserve all five identity c
   expect(resolveVersionFromMetadata(`${base}.2`, [base, revised])).toBeNull()
   expect(satisfiesInstallerConstraint(base, parseInstallerConstraint(`>=${revised}`)!)).toBe(false)
   expect(satisfiesInstallerConstraint(`${base}.2`, parseInstallerConstraint(`<=${revised}`)!)).toBe(false)
+})
+
+test('packaging repairs do not block a vendor changing its unrelated release tuple length', () => {
+  expect(revisedPackageVersions(['1.4', '1.3.2'], { '1.3.2': 1 })).toEqual(['1.4', '1.3.2.1'])
+})
+
+test('the normal version updater checks declared packaging repairs without an upstream version source', () => {
+  const metadata = resolve(import.meta.dir, '../src/packages/gnu.org/readline.ts')
+  const before = readFileSync(metadata, 'utf8')
+  const result = Bun.spawnSync([process.execPath, '--no-env-file', resolve(import.meta.dir, '../scripts/version-fetcher.ts'), '--domain', 'gnu.org/readline', '--dry-run'])
+  expect(result.exitCode).toBe(0)
+  expect(result.stdout.toString()).toContain('Done: 1 checked,')
+  expect(readFileSync(metadata, 'utf8')).toBe(before)
 })

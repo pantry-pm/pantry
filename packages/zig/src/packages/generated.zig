@@ -10447,7 +10447,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"invisible-island.net/ncurses^6"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "8.3.0", "8.2.13", "8.2.0", "8.1.0" },
+    .versions = &[_][]const u8{ "8.3.0.1", "8.3.0", "8.2.13", "8.2.0", "8.1.0" },
 }, .{
     .name = "sed",
     .domain = "gnu.org/sed",

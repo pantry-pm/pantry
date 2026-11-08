@@ -23,9 +23,12 @@ function entries(revisions: PackageRevisions = {}): Array<[string, number]> {
 export function revisedPackageVersions(upstream: readonly string[], revisions?: PackageRevisions): string[] {
   const declared = entries(revisions)
   if (!declared.length) return [...upstream]
-  const length = declared[0]![0].split('.').length
   for (const version of upstream) {
-    if (!/^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))+$/u.test(version) || version.split('.').length !== length)
+    // Unrelated vendor releases can shorten their tuple (zlib1.4 follows
+    // 1.3.2). Only an actual collision with a declared packaging identity is
+    // ambiguous; the existence of one repair must not freeze discovery.
+    if (!/^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))+$/u.test(version)
+      || declared.some(([base]) => version.startsWith(`${base}.`)))
       throw new Error(`Upstream version ${version} conflicts with the recipe's package build revision format`)
   }
   return upstream.map(version => revisions?.[version] ? `${version}.${revisions[version]}` : version)
