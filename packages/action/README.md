@@ -226,6 +226,11 @@ the repaired package for upstream PostgreSQL `17.11`. Readiness checks the
 vendor's reported version; package/service conflicts still compare the full
 package identity. The original `17.11` archive remains immutable.
 
+Library discovery follows the selected executable activations. Inactive cached
+versions and ambiguous, unactivated library-only versions do not enter the
+service environment. Re-activation removes stale managed library paths while
+preserving explicit external paths; no installed package is modified or removed.
+
 ### DynamoDB Local
 
 Use `services: dynamodb@3.3.0` on Linux x86-64. `dynamodb-local` and

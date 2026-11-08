@@ -69,39 +69,89 @@ export function mergeServicePackages(packages: string, services: ServiceSpec[]):
   return requested.join(' ')
 }
 
-export function pantryLibraryPaths(pantryBinDir: string): string[] {
-  const pantryRoot = path.dirname(pantryBinDir)
-  const libraries: string[] = []
-  const seen = new Set<string>()
+function canonicalPath(location: string): string {
+  try { return fs.realpathSync(location) }
+  catch (error) {
+    if (!['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code || '')) throw error
+    return path.resolve(location)
+  }
+}
 
+function nativeVersionRoot(location: string): string | undefined {
+  let directory = path.dirname(path.resolve(location))
+  for (;;) {
+    if (/^v\d/.test(path.basename(directory))) return directory
+    const parent = path.dirname(directory)
+    if (parent === directory) return undefined
+    directory = parent
+  }
+}
+
+function nativeLibrarySelection(pantryBinDir: string): { libraries: string[], installed: Set<string>, activeParents: Set<string> } {
+  const pantryRoot = path.resolve(path.dirname(pantryBinDir))
+  const groups = new Map<string, Array<{ root: string, library: string }>>()
+  const entriesAt = (directory: string): fs.Dirent[] => {
+    try { return fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name)) }
+    catch (error) {
+      if (!['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code || '')) throw error
+      return []
+    }
+  }
   const visit = (directory: string, depth: number): void => {
     if (depth > 5) return
-    let entries: fs.Dirent[]
-    try {
-      entries = fs.readdirSync(directory, { withFileTypes: true })
-    }
-    catch {
-      return
-    }
-    entries.sort((left, right) => left.name.localeCompare(right.name))
-
-    for (const entry of entries) {
+    for (const entry of entriesAt(directory)) {
       if (!entry.isDirectory() || entry.name.startsWith('.')) continue
       const child = path.join(directory, entry.name)
       if (/^v\d/.test(entry.name)) {
-        const libraryDirectory = path.join(child, 'lib')
-        if (fs.existsSync(libraryDirectory) && !seen.has(libraryDirectory)) {
-          seen.add(libraryDirectory)
-          libraries.push(libraryDirectory)
+        const library = path.join(child, 'lib')
+        if (fs.existsSync(library)) {
+          const records = groups.get(directory) || []
+          records.push({ root: canonicalPath(child), library })
+          groups.set(directory, records)
         }
-        continue
       }
-      visit(child, depth + 1)
+      else visit(child, depth + 1)
     }
   }
-
   visit(pantryRoot, 0)
-  return libraries
+
+  // Inspect the installer's activation contract without executing any launcher.
+  const activeRoots = new Set<string>()
+  for (const entry of entriesAt(pantryBinDir)) {
+    if (entry.name.startsWith('.')) continue
+    try {
+      const executable = path.join(pantryBinDir, entry.name)
+      if (!fs.statSync(executable).isFile()) continue
+      const root = nativeVersionRoot(resolveNativeExecutable(executable))
+      if (root) activeRoots.add(root)
+    }
+    catch (error) {
+      if (!['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code || '')) throw error
+    }
+  }
+  const records = [...groups.values()].flat()
+  const libraries: string[] = []
+  for (const root of activeRoots) {
+    const library = records.find(record => record.root === root)?.library || path.join(root, 'lib')
+    if (fs.existsSync(library)) libraries.push(library)
+  }
+  for (const [directory, versions] of groups) {
+    const domain = path.relative(pantryRoot, directory)
+    const active = [...activeRoots].some(root => versions.some(record => record.root === root)
+      || (domain && path.dirname(root).endsWith(path.sep + domain)))
+    // Library-only providers are useful when unambiguous. A historical cache
+    // is not an activation: never guess among its competing ABI versions.
+    if (!active && versions.length === 1) libraries.push(versions[0].library)
+  }
+  return {
+    libraries: [...new Set(libraries)],
+    installed: new Set(records.flatMap(record => [path.resolve(record.library), canonicalPath(record.library)])),
+    activeParents: new Set([...activeRoots].map(root => canonicalPath(path.dirname(root)))),
+  }
+}
+
+export function pantryLibraryPaths(pantryBinDir: string): string[] {
+  return nativeLibrarySelection(pantryBinDir).libraries
 }
 
 /** Follow the selected java executable, including globally cached JDK links. */
@@ -132,8 +182,16 @@ export function nativeServiceEnvironment(
   if (javaHome) environment.JAVA_HOME = javaHome
   const javaLibraries = javaHome ? ['lib', 'jre/lib'].map(directory => path.join(javaHome, directory)).filter(directory => fs.existsSync(directory)) : []
   const variable = platform === 'darwin' ? 'DYLD_LIBRARY_PATH' : 'LD_LIBRARY_PATH'
-  const value = [...new Set([...javaLibraries, ...pantryLibraryPaths(pantryBinDir), ...(environment[variable]?.split(path.delimiter) || [])].filter(Boolean))].join(path.delimiter)
+  const selection = nativeLibrarySelection(pantryBinDir)
+  const inherited = (environment[variable]?.split(path.delimiter) || []).filter(library => {
+    if (!library) return false
+    if (selection.installed.has(canonicalPath(library))) return false
+    const root = nativeVersionRoot(library)
+    return !root || !selection.activeParents.has(canonicalPath(path.dirname(root)))
+  })
+  const value = [...new Set([...javaLibraries, ...selection.libraries, ...inherited])].join(path.delimiter)
   if (value) environment[variable] = value
+  else delete environment[variable]
   return environment
 }
 

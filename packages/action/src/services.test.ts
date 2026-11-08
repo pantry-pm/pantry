@@ -113,6 +113,73 @@ describe('GitHub Actions services', () => {
     expect(parseRedisVersion('Redis server v=8.8.0 sha=00000000:0 malloc=libc')).toBe('8.8.0')
   })
 
+  test('uses activated provider libraries and removes stale managed paths after a version switch', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-active-libraries-'))
+    const pantryBin = join(directory, 'pantry', '.bin')
+    const old = join(directory, 'pantry', 'postgresql.org', 'v17.11')
+    const current = join(directory, 'pantry', 'postgresql.org', 'v17.11.1')
+    const openssl = join(directory, 'pantry', 'openssl.org', 'v3.6.2', 'lib')
+    try {
+      mkdirSync(pantryBin, { recursive: true })
+      for (const root of [old, current]) {
+        mkdirSync(join(root, 'bin'), { recursive: true })
+        mkdirSync(join(root, 'lib'))
+        writeFileSync(join(root, 'bin', 'psql'), '')
+      }
+      mkdirSync(openssl, { recursive: true })
+      for (const version of ['v1.3.2.1', 'v1.4']) mkdirSync(join(directory, 'pantry', 'zlib.net', version, 'lib'), { recursive: true })
+      symlinkSync(join(current, 'bin', 'psql'), join(pantryBin, 'psql'))
+      const selected = [join(current, 'lib'), openssl]
+      expect(pantryLibraryPaths(pantryBin)).toEqual(selected)
+      const base = { DYLD_LIBRARY_PATH: `${join(old, 'lib')}:/host/lib` }
+      const environment = nativeServiceEnvironment(pantryBin, 'darwin', base)
+      expect(environment.DYLD_LIBRARY_PATH).toBe([...selected, '/host/lib'].join(':'))
+      expect(base.DYLD_LIBRARY_PATH).toBe(`${join(old, 'lib')}:/host/lib`)
+      expect(nativeServiceEnvironment(pantryBin, 'darwin', environment)).toEqual(environment)
+      rmSync(join(pantryBin, 'psql'))
+      writeFileSync(join(pantryBin, 'psql'), `#!/bin/sh\nexec "${join(old, 'bin', 'psql')}" "$@"\n`)
+      expect(pantryLibraryPaths(pantryBin)).toEqual([join(old, 'lib'), openssl])
+      expect(nativeServiceEnvironment(pantryBin, 'darwin', environment).DYLD_LIBRARY_PATH)
+        .toBe(`${join(old, 'lib')}:${openssl}:/host/lib`)
+    }
+    finally { rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  test('honors a selected global provider without loading its historical project or global libraries', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-global-libraries-'))
+    const pantryBin = join(directory, 'pantry', '.bin')
+    const oldProject = join(directory, 'pantry', 'postgresql.org', 'v17.11')
+    const oldGlobal = join(directory, 'global', 'postgresql.org', 'v17.11')
+    const current = join(directory, 'global', 'postgresql.org', 'v17.11.1')
+    try {
+      mkdirSync(pantryBin, { recursive: true })
+      for (const root of [oldProject, oldGlobal, current]) {
+        mkdirSync(join(root, 'lib'), { recursive: true })
+        mkdirSync(join(root, 'bin'))
+        writeFileSync(join(root, 'bin', 'psql'), '')
+      }
+      symlinkSync(join(current, 'bin', 'psql'), join(pantryBin, 'psql'))
+      const library = join(realpathSync(current), 'lib')
+      expect(pantryLibraryPaths(pantryBin)).toEqual([library])
+      expect(nativeServiceEnvironment(pantryBin, 'linux', { LD_LIBRARY_PATH: `${join(oldGlobal, 'lib')}:/host/lib` }).LD_LIBRARY_PATH)
+        .toBe(`${library}:/host/lib`)
+    }
+    finally { rmSync(directory, { recursive: true, force: true }) }
+  })
+
+  test('does not retain an inherited ambiguous library-only cache when no provider is active', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-ambiguous-libraries-'))
+    const pantryBin = join(directory, 'pantry', '.bin')
+    try {
+      mkdirSync(pantryBin, { recursive: true })
+      for (const version of ['v1.3.2.1', 'v1.4']) mkdirSync(join(directory, 'pantry', 'zlib.net', version, 'lib'), { recursive: true })
+      expect(pantryLibraryPaths(pantryBin)).toEqual([])
+      expect(nativeServiceEnvironment(pantryBin, 'linux', { LD_LIBRARY_PATH: join(directory, 'pantry', 'zlib.net', 'v1.3.2.1', 'lib') }).LD_LIBRARY_PATH)
+        .toBeUndefined()
+    }
+    finally { rmSync(directory, { recursive: true, force: true }) }
+  })
+
   test('exposes native dependency libraries to service processes', () => {
     const directory = mkdtempSync(join(tmpdir(), 'pantry-action-libraries-'))
     const pantryBin = join(directory, 'pantry', '.bin')
