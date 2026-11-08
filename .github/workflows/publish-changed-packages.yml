@@ -170,8 +170,9 @@ jobs:
         id: darwin
         working-directory: packages/ts-pantry
         shell: bash
+        env:
+          DOMAINS: ${{ steps.owners.outputs.domains }}
         run: |
-          DOMAINS="${{ steps.owners.outputs.domains }}"
           if [ -z "$DOMAINS" ]; then echo "domains=" >> "$GITHUB_OUTPUT"; exit 0; fi
           PKGS=$(echo "$DOMAINS" | tr ' ' ',')
           # Native library normalization needs Mach-O tooling even when an

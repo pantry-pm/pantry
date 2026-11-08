@@ -60,20 +60,25 @@ test('targeted mirror dispatch preserves exact selectors and keeps scheduled run
 
 test('Darwin vendor downloads are selected for the native Mach-O publisher', () => {
   const workflow = Bun.YAML.parse(readFileSync(new URL('../../../.github/workflows/publish-changed-packages.yml', import.meta.url), 'utf8')) as {
-    jobs: Record<string, { 'runs-on'?: string, if?: string, strategy?: { matrix: { platform: Array<{ name: string, os: string }> } }, steps: Array<{ name?: string, run?: string }> }>
+    jobs: Record<string, { 'runs-on'?: string, if?: string, strategy?: { matrix: { platform: Array<{ name: string, os: string }> } }, steps: Array<{ name?: string, run?: string, env?: Record<string, string> }> }>
   }
   const root = mkdtempSync(join(tmpdir(), 'pantry-native-darwin-selection-'))
   try {
-    const select = workflow.jobs.detect.steps.find(step => step.name === 'Determine darwin-native domains')!.run!
-      .replace('${{ steps.detect.outputs.domains }}', 'bun.com@1.4.3')
+    const select = workflow.jobs.detect.steps.find(step => step.name === 'Determine darwin-native domains')!
+    expect(select.env?.DOMAINS).toBe('${{ steps.owners.outputs.domains }}')
     const output = join(root, 'output')
-    const result = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', select], {
-      cwd: new URL('..', import.meta.url),
-      env: { ...process.env, GITHUB_OUTPUT: output },
-      encoding: 'utf8',
-    })
-    expect(result.status, result.stderr).toBe(0)
-    expect(readFileSync(output, 'utf8').trim()).toBe('domains=bun.com@1.4.3')
+    for (const domains of ['bun.com@1.4.3', '']) {
+      writeFileSync(output, '')
+      // Execute the real script unchanged, with the same environment handoff
+      // Actions provides. No step-name-specific source substitution is needed.
+      const result = spawnSync('bash', ['-e', '-o', 'pipefail', '-c', select.run!], {
+        cwd: new URL('..', import.meta.url),
+        env: { ...process.env, DOMAINS: domains, GITHUB_OUTPUT: output },
+        encoding: 'utf8',
+      })
+      expect(result.status, result.stderr).toBe(0)
+      expect(readFileSync(output, 'utf8').trim()).toBe(`domains=${domains}`)
+    }
     const native = workflow.jobs['publish-darwin-native']
     expect(native['runs-on']).toBe('macos-15')
     expect(native.steps.find(step => step.name === 'Build and publish darwin-arm64 (native)')!.run).not.toContain('--source-only')
