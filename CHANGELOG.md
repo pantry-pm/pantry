@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.192...v0.11.193)
+
+## 🐛 Bug Fixes
+
+- exclude superseded identities from automatic publication ([10a6ae4](https://github.com/pantry-pm/pantry/commit/10a6ae4)) _(by Chris Breuer <chris@stacksjs.com>)_
+- select service libraries from active native packages ([fd7ebf0](https://github.com/pantry-pm/pantry/commit/fd7ebf0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- revise PostgreSQL 17 closure and service version checks ([047cdf1](https://github.com/pantry-pm/pantry/commit/047cdf1)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.193 ([0269c8d](https://github.com/pantry-pm/pantry/commit/0269c8d)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update 1Password, Arc, Blender, Brave Browser, Bruno, CleanShot X, DBeaver, Docker Desktop, Figma, Firefox, GIMP, GitHub Desktop, iTerm2, KeePassXC, Keka, LLaMA.cpp, mailpit, Notion, Ollama, Postman, Signal, squawk, Telegram, Visual Studio Code, Warp ([cfeb8a3](https://github.com/pantry-pm/pantry/commit/cfeb8a3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.486 ([02208f3](https://github.com/pantry-pm/pantry/commit/02208f3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([9e2a874](https://github.com/pantry-pm/pantry/commit/9e2a874)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.484 ([2bd4e5d](https://github.com/pantry-pm/pantry/commit/2bd4e5d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.191...v0.11.192)
 
 ## 🐛 Bug Fixes
