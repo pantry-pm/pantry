@@ -15,8 +15,16 @@ const beforeUnits = new Set(existsSync(unitDirectory) ? readdirSync(unitDirector
 const uid = process.getuid!()
 const username = userInfo().username
 const runtime = `/run/user/${uid}`
+const postgresVersion = process.env.PANTRY_SERVICE_TEST_POSTGRES_VERSION || '18.6.1'
+assert(/^\d+(?:\.\d+){0,3}$/.test(postgresVersion), 'Use a numeric native PostgreSQL version or major range')
+// A portable published artifact must run when the optional host ELF repair
+// utility is absent. Refuse that repair explicitly in this isolated fixture;
+// the actual CLI, native database tools and service manager stay unchanged.
+const noRepairBin = join(root, 'without-host-elf-repair')
+mkdirSync(noRepairBin)
+writeFileSync(join(noRepairBin, 'patchelf'), '#!/bin/sh\nexit 127\n', { mode: 0o755 })
 const env: Record<string, string> = {
-  PATH: process.env.PATH || '/usr/bin:/bin', HOME: homedir(), USER: username, LOGNAME: username,
+  PATH: `${noRepairBin}:${process.env.PATH || '/usr/bin:/bin'}`, HOME: homedir(), USER: username, LOGNAME: username,
   LANG: 'C.UTF-8', XDG_RUNTIME_DIR: runtime, PANTRY_SERVICE_SCOPE: 'user', PANTRY_ENV_DEPS: '0',
 }
 const steps: Array<{ phase: string, exit: number, elapsedMs: number }> = []
@@ -24,6 +32,9 @@ let unit: string | undefined
 let enabledLinger = false
 let serviceAttempted = false
 let qualified = false
+let actualCliVersion: string | undefined
+let installedNativeVersion: string | undefined
+let actualUserManager = false
 
 async function run(phase: string, command: string[], options: { expectedFailure?: boolean, allowFailure?: boolean, environment?: Record<string, string>, timeoutMs?: number } = {}): Promise<string> {
   const started = Date.now()
@@ -50,20 +61,30 @@ function discoverUnit(): string | undefined {
 }
 
 try {
-  writeFileSync(join(root, 'deps.yaml'), 'dependencies:\n  postgresql.org: 18.6.1\n')
+  writeFileSync(join(root, 'deps.yaml'), `dependencies:\n  postgresql.org: "${postgresVersion}"\n`)
   const server = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('synthetic admission') })
   const port = server.port!
   server.stop(true)
   const version = await run('cli-version', [cli, '--version'])
+  actualCliVersion = version.trim()
   const expected = process.env.PANTRY_SERVICE_TEST_VERSION
   assert(expected === 'source' || (expected && version.includes(`pantry ${expected} `)), 'The actual public CLI must match the requested release')
   await run('install', [cli, 'install', '--ignore-scripts'])
   await run('frozen', [cli, 'install', '--frozen-lockfile', '--ignore-scripts'])
-  const postgres = join(root, 'pantry/postgresql.org/v18.6.1/bin/postgres')
+  const versions = readdirSync(join(root, 'pantry/postgresql.org'), { withFileTypes: true }).filter(entry => entry.isDirectory() && entry.name.startsWith('v'))
+  assert.equal(versions.length, 1, 'The fresh project must own exactly one native PostgreSQL version')
+  installedNativeVersion = versions[0].name.slice(1)
+  const prefix = join(root, 'pantry/postgresql.org', versions[0].name)
+  const postgres = join(prefix, 'bin/postgres')
   const psql = join(root, 'pantry/.bin/psql')
   assert(existsSync(postgres) && existsSync(psql))
-  assert((await run('native-version', [postgres, '--version'])).includes('18.6'))
-  await run('native-initdb-version', [join(root, 'pantry/postgresql.org/v18.6.1/bin/initdb'), '--version'])
+  assert((await run('native-version', [postgres, '--version'])).includes(`PostgreSQL) ${postgresVersion.split('.').slice(0, 2).join('.')}`))
+  await run('native-initdb-version', [join(prefix, 'bin/initdb'), '--version'])
+  const libraries = await run('native-initdb-libraries', ['ldd', join(prefix, 'bin/initdb')])
+  assert(!libraries.includes('not found'), 'The public artifact must resolve its native libraries without host repair')
+  for (const line of libraries.split('\n').filter(line => /libpq\.so.*=>/.test(line)))
+    assert(line.includes(`${prefix}/`), 'Do not borrow libpq from the CI host to hide an invalid package RPATH')
+  writeFileSync(join(evidence, 'pantry.lock'), readFileSync(join(root, 'pantry.lock')))
 
   // The reported defect also affected --user routing and activated native
   // binaries. Keep that install in this fixture's home, never the CI user's
@@ -72,8 +93,10 @@ try {
   mkdirSync(userHome)
   const userEnv = { ...env, HOME: userHome, XDG_DATA_HOME: join(userHome, '.local/share') }
   const userGlobal = join(userHome, '.local/share/pantry/global')
-  const userInstall = await run('user-local-install', [cli, 'install', '--user', 'postgresql.org@18.6.1'], { environment: userEnv })
+  const userInstall = await run('user-local-install', [cli, 'install', '--user', `postgresql.org@${postgresVersion}`], { environment: userEnv })
   assert(userInstall.includes(userGlobal) && !userInstall.includes('to /usr/local'), 'Explicit --user installation must select its user-owned global prefix')
+  const userAlias = await run('user-local-short-alias', [cli, 'install', '-u', `postgresql.org@${postgresVersion}`], { environment: userEnv })
+  assert(userAlias.includes(userGlobal) && !userAlias.includes('to /usr/local'), 'The -u alias must preserve explicit user scope')
   await run('user-local-native-version', [join(userGlobal, 'bin/postgres'), '--version'], { environment: userEnv })
   await run('user-local-initdb-version', [join(userGlobal, 'bin/initdb'), '--version'], { environment: userEnv })
 
@@ -102,6 +125,7 @@ try {
     await run('user-manager', ['sudo', '-n', 'systemctl', 'start', `user@${uid}.service`])
   }
   assert(existsSync(join(runtime, 'systemd/private')), 'The actual user bus must be available')
+  actualUserManager = true
   serviceAttempted = true
   await run('start', [cli, 'start', 'postgres', '--port', String(port)])
   const verifiedUnit = await run('verify-unit', ['systemd-analyze', '--user', 'verify', path])
@@ -109,6 +133,8 @@ try {
   const status = await run('service-status', ['systemctl', '--user', 'show', unit, '-p', 'ActiveState', '-p', 'SubState', '-p', 'MainPID'])
   assert(status.includes('ActiveState=active') && status.includes('SubState=running'))
   const query = (sql: string) => [psql, '-X', '-A', '-t', '-w', '-h', '127.0.0.1', '-p', String(port), '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql]
+  const serverVersion = Number((await run('server-version', query('SHOW server_version_num;'))).trim())
+  assert.equal(Math.floor(serverVersion / 10000), Number(postgresVersion.split('.')[0]), 'The actual service must run the requested PostgreSQL major')
   // psql sends one -c string as one query message. Commit the seed separately
   // so the rollback exercises its own transaction rather than also removing
   // the table created earlier in that same message.
@@ -147,8 +173,8 @@ try {
   if (enabledLinger) await cleanup(() => run('restore-linger', ['sudo', '-n', 'loginctl', 'disable-linger', username]))
   qualified &&= cleanupFailures.length === 0
   writeFileSync(join(evidence, 'receipt.json'), JSON.stringify({
-    qualified, cli, version: process.env.PANTRY_SERVICE_TEST_VERSION, sourceSha: process.env.GITHUB_SHA, nativePackage: 'postgresql.org18.6.1',
-    root, unit, actualUserManager: true, normalCliLifecycle: true, productionAccess: false,
+    qualified, cli, version: process.env.PANTRY_SERVICE_TEST_VERSION, sourceSha: process.env.GITHUB_SHA, nativePackage: `postgresql.org@${postgresVersion}`, installedNativeVersion, actualCliVersion, hostElfRepairAllowed: false,
+    root, unit, actualUserManager, normalCliLifecycle: true, productionAccess: false,
     manualLoaderOverrides: false, steps, cleanupFailures,
   }, null, 2) + '\n')
   assert.equal(cleanupFailures.length, 0, `Cleanup did not complete: ${cleanupFailures.join('; ')}`)

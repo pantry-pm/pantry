@@ -8,6 +8,11 @@ on:
         default: '0.11.185'
         required: true
         type: string
+      postgres-version:
+        description: Native PostgreSQL version or major range to qualify
+        default: '18.6.1'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -42,6 +47,7 @@ jobs:
         env:
           PANTRY_SERVICE_TEST_CLI: ${{ inputs.version == 'source' && format('{0}/packages/zig/zig-out/bin/pantry', github.workspace) || steps.pantry.outputs.pantry-path }}
           PANTRY_SERVICE_TEST_VERSION: ${{ inputs.version }}
+          PANTRY_SERVICE_TEST_POSTGRES_VERSION: ${{ inputs.postgres-version }}
         run: bun --no-env-file .github/scripts/postgres-service-acceptance.ts
       - name: Retain actual service and SQL evidence
         if: always()
