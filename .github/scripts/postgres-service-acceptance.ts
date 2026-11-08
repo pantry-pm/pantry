@@ -65,6 +65,18 @@ try {
   assert((await run('native-version', [postgres, '--version'])).includes('18.6'))
   await run('native-initdb-version', [join(root, 'pantry/postgresql.org/v18.6.1/bin/initdb'), '--version'])
 
+  // The reported defect also affected --user routing and activated native
+  // binaries. Keep that install in this fixture's home, never the CI user's
+  // existing global tree, and require the normal CLI's printed destination.
+  const userHome = join(root, 'user-home')
+  mkdirSync(userHome)
+  const userEnv = { ...env, HOME: userHome, XDG_DATA_HOME: join(userHome, '.local/share') }
+  const userGlobal = join(userHome, '.local/share/pantry/global')
+  const userInstall = await run('user-local-install', [cli, 'install', '--user', 'postgresql.org@18.6.1'], { environment: userEnv })
+  assert(userInstall.includes(userGlobal) && !userInstall.includes('to /usr/local'), 'Explicit --user installation must select its user-owned global prefix')
+  await run('user-local-native-version', [join(userGlobal, 'bin/postgres'), '--version'], { environment: userEnv })
+  await run('user-local-initdb-version', [join(userGlobal, 'bin/initdb'), '--version'], { environment: userEnv })
+
   // Exercise the real missing-bus decision before enabling the normal user
   // manager. No shim or hand-written service takes the CLI's place.
   const missingBus = await run('missing-user-bus', [cli, 'start', 'postgres', '--port', String(port)], {
