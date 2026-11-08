@@ -97,7 +97,11 @@ try {
   const status = await run('service-status', ['systemctl', '--user', 'show', unit, '-p', 'ActiveState', '-p', 'SubState', '-p', 'MainPID'])
   assert(status.includes('ActiveState=active') && status.includes('SubState=running'))
   const query = (sql: string) => [psql, '-X', '-A', '-t', '-w', '-h', '127.0.0.1', '-p', String(port), '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', sql]
-  const sql = await run('actual-sql', query('CREATE TABLE acceptance_items (id INTEGER PRIMARY KEY); INSERT INTO acceptance_items VALUES (1); BEGIN; INSERT INTO acceptance_items VALUES (2); ROLLBACK; SELECT COUNT(*) FROM acceptance_items;'))
+  // psql sends one -c string as one query message. Commit the seed separately
+  // so the rollback exercises its own transaction rather than also removing
+  // the table created earlier in that same message.
+  await run('seed-committed-sql', query('CREATE TABLE acceptance_items (id INTEGER PRIMARY KEY); INSERT INTO acceptance_items VALUES (1);'))
+  const sql = await run('actual-sql', query('BEGIN; INSERT INTO acceptance_items VALUES (2); ROLLBACK; SELECT COUNT(*) FROM acceptance_items;'))
   assert.equal(sql.trim().split('\n').at(-1), '1')
   await run('stop', [cli, 'stop', 'postgres'])
   await run('restart', [cli, 'start', 'postgres', '--port', String(port)])
