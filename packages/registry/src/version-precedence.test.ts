@@ -139,6 +139,14 @@ describe('latestPublishedVersion', () => {
     })).toBe('3.14.1')
   })
 
+  it('promotes the signed desktop build version instead of the CDN filename prerelease spelling', () => {
+    expect(latestPublishedVersion({
+      '0.3.8': { platforms: { 'darwin-arm64': complete } },
+      '0.4.28-2': { platforms: { 'darwin-arm64': complete } },
+      '0.4.28+2': { platforms: { 'darwin-arm64': complete } },
+    })).toBe('0.4.28+2')
+  })
+
   it('still answers when nothing is complete', () => {
     expect(latestPublishedVersion({ '1.0.0': { platforms: { 'linux-x86-64': stub } } })).toBe('1.0.0')
     expect(latestPublishedVersion({})).toBeUndefined()

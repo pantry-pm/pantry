@@ -1,4 +1,3 @@
-import { vendorResponse } from '../../../scripts/desktop-version-sources'
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
@@ -7,31 +6,20 @@ export const recipe: Recipe = {
   description: 'A desktop app for discovering, downloading, and running local LLMs.',
   homepage: 'https://lmstudio.ai',
   programs: ['lm-studio'],
-  // LM Studio's macOS build is Apple-Silicon only (the x64 download endpoint
-  // 400s), so we ship darwin/aarch64 only.
+  // LM Studio's macOS distribution supports Apple Silicon.
   platforms: ['darwin/aarch64'],
-  // Resolve the version from LM Studio's own official download redirect (no
-  // Homebrew): the latest URL redirects to LM-Studio-<version>-arm64.dmg. The
-  // build downloads that same rolling URL below.
-  versionSource: {
-    type: 'custom',
-    fetch: async (): Promise<string[]> => {
-      const res = await vendorResponse('https://lmstudio.ai/download/latest/darwin/arm64', { method: 'HEAD', redirect: 'follow' })
-      const m = res.url.match(/LM-Studio-([\d.\-]+)-arm64\.dmg/i)
-      return m ? [m[1]] : []
-    },
-  },
-
+  // CDN filenames carry a build suffix; the signed bundle owns the app version.
+  versionSource: { type: 'desktop-bundle', url: 'https://lmstudio.ai/download/latest/darwin/arm64', bundle: 'LM Studio.app', format: 'dmg' },
   build: {
     script: [
-      'curl -fSL -L --retry 3 "https://lmstudio.ai/download/latest/darwin/arm64" -o /tmp/lmstudio.dmg',
-      'hdiutil attach /tmp/lmstudio.dmg -mountpoint /tmp/lm-studio-mount -nobrowse -noverify -quiet',
-      'mkdir -p {{prefix}}',
-      'cp -R "/tmp/lm-studio-mount/LM Studio.app" {{prefix}}/LM Studio.app 2>/dev/null || \\',
-      '  find /tmp/lm-studio-mount -maxdepth 1 -name "*.app" -exec cp -R {} {{prefix}}/ \\;',
-      'hdiutil detach /tmp/lm-studio-mount -quiet || true',
-      'mkdir -p {{prefix}}/bin',
-      'ln -sf "../LM Studio.app/Contents/MacOS/LM Studio" {{prefix}}/bin/lm-studio',
+      'curl --proto "=https" --tlsv1.2 -fSL --connect-timeout 30 --max-time 600 --retry 2 "https://lmstudio.ai/download/latest/darwin/arm64" -o "$PWD/lmstudio.dmg"',
+      'MOUNT="$PWD/lm-studio-mount" && mkdir -p "$MOUNT"',
+      'trap \'hdiutil detach "$MOUNT" -quiet >/dev/null 2>&1 || true\' EXIT',
+      'hdiutil attach "$PWD/lmstudio.dmg" -mountpoint "$MOUNT" -readonly -nobrowse -quiet',
+      'test -d "$MOUNT/LM Studio.app"',
+      'mkdir -p "{{prefix}}/bin"',
+      'ditto --norsrc --noextattr --qtn "$MOUNT/LM Studio.app" "{{prefix}}/LM Studio.app"',
+      'ln -sf "../LM Studio.app/Contents/MacOS/LM Studio" "{{prefix}}/bin/lm-studio"',
     ],
   },
 }

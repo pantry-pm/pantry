@@ -279,5 +279,7 @@ describe('vendor metadata parsers and installed versions', () => {
     expect(desktopVersionMatches('2.1.0-r123', '2.1.0', '900')).toBe(true)
     expect(desktopVersionMatches('2.1.0', '2.2.0', '901')).toBe(false)
     expect(desktopVersionMatches('2.1.0', '2.1.01', '900')).toBe(false)
+    expect(desktopVersionMatches('0.4.28+2', '0.4.28+2', '0.4.28+2')).toBe(true)
+    expect(desktopVersionMatches('0.4.28-2', '0.4.28+2', '0.4.28+2')).toBe(false)
   })
 })
