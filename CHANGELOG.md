@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.190...v0.11.191)
+
+## 🐛 Bug Fixes
+
+- **native**: isolate release launch checks from existing user data ([fe48775](https://github.com/pantry-pm/pantry/commit/fe48775)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **recipes**: resolve LM Studio stable versions from signed bundles ([ff2fd5c](https://github.com/pantry-pm/pantry/commit/ff2fd5c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.191 ([03a04ab](https://github.com/pantry-pm/pantry/commit/03a04ab)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.189...v0.11.190)
 
 ## 🐛 Bug Fixes
