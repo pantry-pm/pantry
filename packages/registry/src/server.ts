@@ -1981,7 +1981,7 @@ export function createHandler(
   const active = new Set<Promise<Response>>()
   const handler = (req: Request): Promise<Response> => {
     if (drainingAdmission && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-      return Promise.resolve(Response.json({ error: 'Registry is draining active publication work', code: 'REGISTRY_DRAINING' }, { status: 503, headers: { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } }))
+      return Promise.resolve(Response.json({ error: 'Registry is draining active publication work', code: 'REGISTRY_DRAINING', retryable: true, retryAfterSeconds: 30 }, { status: 503, headers: { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*', 'Retry-After': '30' } }))
     }
     const result = dispatch(req, !drainingAdmission)
     active.add(result)

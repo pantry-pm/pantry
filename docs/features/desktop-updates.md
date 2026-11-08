@@ -30,7 +30,15 @@ verify signed bundles with codesign. Every upload still goes through the registr
 malware scan gate. Successful publication requires registry metadata for every
 required target, a non-empty tarball, a SHA-256 and a clean scan bound to that digest.
 
-One failed package does not stop the remaining packages from publishing. The run
+Vendor bundle formats can declare an anchored product-version capture, such as
+Brave’s Chromium-prefixed version. The expected product version must still match
+exactly. Vendors whose release tags disagree with their bundles, such as
+MeetingBar, use fingerprint-bound native bundle discovery instead. Copies omit
+Finder metadata and resource forks while retaining the signed file bytes.
+
+Registry restarts preserve the built artifact and retry the same staged upload
+within a bounded deadline, honoring `Retry-After`. Malware detections remain
+terminal failures. One failed package does not stop the remaining packages from publishing. The run
 reports all failures and cannot record an incomplete manifest. The final writer
 merges native discovery receipts, verifies the public registry, then commits via
 the existing checked-push workflow. Reports and discovery do not modify the manifest.

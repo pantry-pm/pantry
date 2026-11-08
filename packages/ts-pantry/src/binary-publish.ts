@@ -13,6 +13,8 @@ export interface PublishBinaryArtifactOptions {
   token?: string
   /** Attempts for the initiate call. Injectable for tests. */
   initiateAttempts?: number
+  /** Maximum time to preserve a built artifact while the registry restarts. */
+  initiateDeadlineMs?: number
   fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
   sleep?: (milliseconds: number) => Promise<void>
 }
@@ -169,6 +171,7 @@ function completionMayStillBeRunning(response: Response, completed: any): boolea
     // permanent. A real detection is 422 and is never marked retryable, so
     // failing closed on malware is unaffected.
     || completed?.retryable === true
+    || (response.status === 503 && completed?.code === 'REGISTRY_DRAINING')
     || (response.status >= 500 && !completed.code)
     || (response.status === 404 && completed.code === 'BINARY_STAGING_NOT_FOUND')
   )
@@ -285,11 +288,17 @@ async function initiateBinaryUpload(
   options: PublishBinaryArtifactOptions,
 ): Promise<{ response: Response, initiated: any }> {
   const attempts = Math.max(1, options.initiateAttempts ?? DEFAULT_INITIATE_ATTEMPTS)
+  const deadline = Date.now() + (options.initiateDeadlineMs ?? DEFAULT_CLIENT_DEADLINE_MS)
   const fetchInitiate = options.fetch ?? fetch
   const sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)))
   let lastError: Error = new Error('binary upload initiation did not run')
+  let failures = 0
+  let attemptsMade = 0
 
-  for (let attempt = 1; attempt <= attempts; attempt++) {
+  while (failures < attempts) {
+    attemptsMade++
+    let waitMs = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.min(attemptsMade - 1, 5))
+    let maintenance = false
     try {
       const response = await fetchInitiate(`${registryUrl}/api/v1/binaries/uploads`, {
         method: 'POST',
@@ -300,17 +309,25 @@ async function initiateBinaryUpload(
       if (response.ok || !initiateMayBeTransient(response))
         return { response, initiated }
       lastError = new Error(`${initiated.code || response.status}: ${initiated.error || response.statusText}`)
+      maintenance = response.status === 503 && initiated.code === 'REGISTRY_DRAINING'
+      waitMs = Math.max(waitMs, retryAfterMs(response, initiated) ?? 0)
     }
     catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
     }
 
-    if (attempt >= attempts)
+    // A planned drain is neither a failed build nor a lost connection. Keep the
+    // already-built bytes until the bounded maintenance window ends. Ordinary
+    // connection failures retain the short retry budget; explicit test/caller
+    // attempt limits still bound every request.
+    if (!maintenance) failures++
+    if (failures >= attempts || (options.initiateAttempts !== undefined && attemptsMade >= attempts)
+      || Date.now() >= deadline || Date.now() + waitMs > deadline)
       break
-    await sleep(Math.min(MAX_BACKOFF_MS, 1000 * 2 ** (attempt - 1)))
+    await sleep(waitMs)
   }
 
-  throw new Error(`Could not reach the registry to start the upload after ${attempts} attempts: ${lastError.message}`)
+  throw new Error(`Could not reach the registry to start the upload after ${attemptsMade} attempts: ${lastError.message}`)
 }
 
 /**

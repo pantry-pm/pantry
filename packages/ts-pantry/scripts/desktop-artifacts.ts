@@ -2,15 +2,20 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-export function desktopVersionMatches(expected: string, short: string, build: string): boolean {
+export function desktopVersionMatches(expected: string, short: string, build: string, pattern?: RegExp): boolean {
   // Vendors sometimes keep the release-build suffix outside the marketing version.
   const normalized = expected.replace(/^v/, '')
+  if (pattern) {
+    if (!pattern.source.startsWith('^') || !pattern.source.endsWith('$')) throw new Error('Bundle version patterns must match the whole vendor version')
+    const match = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '')).exec(short)
+    if (match?.[1] === normalized) return true
+  }
   return [short, build, `${short}.${build}`].some(value => value.replace(/^v/, '') === normalized)
     || (normalized.includes('-') && normalized.split('-')[0] === short.replace(/^v/, ''))
 }
 
 /** Validate the actual bundle instead of trusting curl's exit status or a bin symlink. */
-export function verifyDesktopInstall(prefix: string, expectedVersion: string, platform: string): void {
+export function verifyDesktopInstall(prefix: string, expectedVersion: string, platform: string, pattern?: RegExp): void {
   if (!platform.startsWith('darwin-')) return
   const bundles = readdirSync(prefix).filter(name => name.endsWith('.app'))
   if (!bundles.length) throw new Error('Desktop recipe produced no application bundle')
@@ -19,7 +24,7 @@ export function verifyDesktopInstall(prefix: string, expectedVersion: string, pl
     const plist = join(bundle, 'Contents/Info.plist')
     if (!existsSync(plist)) throw new Error(`${name}: missing Info.plist`)
     const metadata = JSON.parse(execFileSync('python3', ['-c', 'import json,plistlib,sys; print(json.dumps(plistlib.load(open(sys.argv[1],"rb"))))', plist], { encoding: 'utf8' }))
-    if (!desktopVersionMatches(expectedVersion, metadata.CFBundleShortVersionString ?? '', metadata.CFBundleVersion ?? '')) {
+    if (!desktopVersionMatches(expectedVersion, metadata.CFBundleShortVersionString ?? '', metadata.CFBundleVersion ?? '', pattern)) {
       throw new Error(`${name}: requested ${expectedVersion}, downloaded ${metadata.CFBundleShortVersionString} (${metadata.CFBundleVersion})`)
     }
     const executable = metadata.CFBundleExecutable

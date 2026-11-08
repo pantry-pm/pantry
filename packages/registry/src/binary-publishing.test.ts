@@ -1713,7 +1713,8 @@ it('server drain keeps native metadata readable while a detached completion sett
     expect(drained).toBe(false)
     const refused = await fetch(`${base}/api/v1/binaries/uploads`, { method: 'POST', body: '{}' })
     expect(refused.status).toBe(503)
-    expect(await refused.json()).toMatchObject({ code: 'REGISTRY_DRAINING' })
+    expect(refused.headers.get('Retry-After')).toBe('30')
+    expect(await refused.json()).toMatchObject({ code: 'REGISTRY_DRAINING', retryable: true, retryAfterSeconds: 30 })
     scanner.release()
     await draining
     expect(store.files.has('binaries/example.com/tool/metadata.json')).toBe(true)

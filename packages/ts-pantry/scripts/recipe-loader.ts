@@ -36,7 +36,7 @@ export async function loadRecipe(
   domain: string,
   _platform?: string,
   version?: string,
-): Promise<LoadedRecipe & { yamlPath?: string, desktopApp?: boolean }> {
+): Promise<LoadedRecipe & { yamlPath?: string, desktopApp?: boolean, bundleVersionPattern?: RegExp }> {
   // 1. Try native TS recipe
   const recipePath = findRecipeFile(domain)
   if (recipePath) {
@@ -51,6 +51,7 @@ export async function loadRecipe(
         return {
           recipe: normalized,
           desktopApp,
+          bundleVersionPattern: def.bundleVersionPattern,
           upstreamVersion: identity?.upstream,
           publicationVersion: identity?.current,
           requiresRecipeBuild: Object.keys(def.revisions ?? {}).length > 0,

@@ -122,6 +122,9 @@ export interface Recipe {
   /** Files that belong to this product, including when repackaging an upstream archive. */
   publish?: { include: string[] }
 
+  /** Anchored vendor bundle-version format; first capture is the product version. */
+  bundleVersionPattern?: RegExp
+
   /** How to discover new versions */
   versionSource?: VersionSource
 

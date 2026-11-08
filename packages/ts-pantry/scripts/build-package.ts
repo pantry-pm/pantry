@@ -1891,7 +1891,7 @@ else {
   selectPublishedFiles(prefix, normalizedRecipe.publish?.include)
   writeProgramInterfaces(prefix, normalizedRecipe.sourceablePrograms)
   await fixUp(prefix, platform, skips, runtimePackages)
-  if (loaded.desktopApp) verifyDesktopInstall(prefix, version, platform)
+  if (loaded.desktopApp) verifyDesktopInstall(prefix, version, platform, loaded.bundleVersionPattern)
   verifyDeclaredPrograms(prefix, pkgName, normalizedRecipe.programs)
   const deploymentTarget = platformReduce(normalizedRecipe.build?.env ?? {}, platform).MACOSX_DEPLOYMENT_TARGET
   if (platform.startsWith('darwin-') && deploymentTarget !== undefined) {

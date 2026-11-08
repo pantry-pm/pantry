@@ -396,6 +396,29 @@ describe('upload initiation', () => {
     expect(calls).toBe(2)
   })
 
+  test('preserves a built artifact through registry maintenance and honors its retry interval', async () => {
+    let calls = 0
+    const waits: number[] = []
+    const fetchStub = async () => {
+      calls++
+      if (calls <= 6) return Response.json({ code: 'REGISTRY_DRAINING', error: 'restarting' }, { status: 503, headers: { 'Retry-After': '30' } })
+      return Response.json({ code: 'NO_SLOT', error: 'no staging slot' })
+    }
+    await expect(publishBinaryArtifact(options({ fetch: fetchStub, sleep: async (ms: number) => { waits.push(ms) } }))).rejects.toThrow('NO_SLOT')
+    expect(calls).toBe(7)
+    expect(waits).toHaveLength(6)
+    expect(waits.every(ms => ms >= 30000)).toBe(true)
+  })
+
+  test('maintenance cannot wait beyond the initiation deadline or an explicit attempt limit', async () => {
+    for (const budget of [{ initiateDeadlineMs: 0 }, { initiateAttempts: 2 }]) {
+      let calls = 0
+      const fetchStub = async () => { calls++; return Response.json({ code: 'REGISTRY_DRAINING', error: 'restarting' }, { status: 503 }) }
+      await expect(publishBinaryArtifact(options({ fetch: fetchStub, ...budget }))).rejects.toThrow('REGISTRY_DRAINING')
+      expect(calls).toBe(budget.initiateAttempts ?? 1)
+    }
+  })
+
   test('does not retry a rejected request', async () => {
     let calls = 0
     const fetchStub = async () => {
@@ -445,6 +468,21 @@ describe('retryable completion errors', () => {
     })
     expect(completed.success).toBe(true)
     expect(calls).toBe(3)
+  })
+
+  it('resumes the same staged upload after an older registry drains without retry metadata', async () => {
+    const bodies: string[] = []
+    const completed = await completeBinaryUpload('https://r.example', 'same-upload', auth, {
+      fetch: async (_url, init) => {
+        bodies.push(String(init?.body))
+        return bodies.length < 3
+          ? Response.json({ code: 'REGISTRY_DRAINING', error: 'restarting' }, { status: 503 })
+          : Response.json({ success: true, scan: { verdict: 'clean' } })
+      },
+      sleep: async () => {},
+    })
+    expect(completed.scan.verdict).toBe('clean')
+    expect(bodies).toEqual(Array(3).fill(JSON.stringify({ uploadId: 'same-upload' })))
   })
 
   // Failing closed on malware is the whole point of the scan gate.

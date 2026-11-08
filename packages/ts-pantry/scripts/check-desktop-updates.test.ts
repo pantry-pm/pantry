@@ -263,6 +263,17 @@ describe('vendor metadata parsers and installed versions', () => {
     expect(await redirectVersionSource('https://vendor.example/latest', /App-([\d.]+)\.zip/).fetch()).toEqual(['3.1'])
     expect(cancelled).toBe(true)
   })
+  test('only a declared anchored vendor format can strip a companion runtime version', async () => {
+    const { loadRecipe } = await import('./recipe-loader')
+    const loaded = await loadRecipe('brave.com', 'darwin-arm64', '1.99.55')
+    expect(loaded.bundleVersionPattern).toBeInstanceOf(RegExp)
+    expect(desktopVersionMatches('1.99.55', '157.1.99.55', '199.55')).toBe(false)
+    expect(desktopVersionMatches('1.99.55', '157.1.99.55', '199.55', loaded.bundleVersionPattern)).toBe(true)
+    expect(desktopVersionMatches('1.99.55', '157.1.99.56', '199.56', loaded.bundleVersionPattern)).toBe(false)
+    expect(desktopVersionMatches('1.99.55', '157.1.99.550', '199.550', loaded.bundleVersionPattern)).toBe(false)
+    expect(desktopVersionMatches('1.99.55', '157.1.99.55.extra', '199.55', loaded.bundleVersionPattern)).toBe(false)
+    expect(() => desktopVersionMatches('1.99.55', '157.1.99.55', '', /(1\.99\.55)/)).toThrow('whole vendor version')
+  })
   test('refuses rolling installers whose real bundle version differs from the requested version', () => {
     expect(desktopVersionMatches('2.1.0', '2.1.0', '900')).toBe(true)
     expect(desktopVersionMatches('2.1.0-r123', '2.1.0', '900')).toBe(true)

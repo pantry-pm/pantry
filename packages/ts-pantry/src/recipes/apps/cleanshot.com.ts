@@ -13,13 +13,15 @@ export const recipe: Recipe = {
 
   build: {
     script: [
-      'curl -fSL "https://updates.getcleanshot.com/v3/CleanShot-X-{{version}}.dmg" -o /tmp/cleanshot.dmg',
-      'hdiutil attach /tmp/cleanshot.dmg -mountpoint /tmp/cleanshot-mount -nobrowse -quiet',
-      'mkdir -p {{prefix}}',
-      'cp -R "/tmp/cleanshot-mount/CleanShot X.app" {{prefix}}/CleanShot X.app',
-      'hdiutil detach /tmp/cleanshot-mount -quiet || true',
-      'mkdir -p {{prefix}}/bin',
-      'ln -sf "../CleanShot X.app/Contents/MacOS/CleanShot X" {{prefix}}/bin/cleanshot',
+      'curl --proto "=https" --tlsv1.2 -fSL --connect-timeout 30 --max-time 600 --retry 2 "https://updates.getcleanshot.com/v3/CleanShot-X-{{version}}.dmg" -o "$PWD/app.dmg"',
+      'MOUNT="$PWD/mount"; mkdir -p "$MOUNT"',
+      'trap \'hdiutil detach "$MOUNT" -quiet >/dev/null 2>&1 || true\' EXIT',
+      'hdiutil attach "$PWD/app.dmg" -mountpoint "$MOUNT" -readonly -nobrowse -quiet',
+      'mkdir -p "{{prefix}}"',
+      'ditto --norsrc --noextattr --qtn "$MOUNT/CleanShot X.app" "{{prefix}}/CleanShot X.app"',
+      'hdiutil detach "$MOUNT" -quiet; trap - EXIT',
+      'mkdir -p "{{prefix}}/bin"',
+      'ln -sf "../CleanShot X.app/Contents/MacOS/CleanShot X" "{{prefix}}/bin/cleanshot"',
     ],
   },
 }
