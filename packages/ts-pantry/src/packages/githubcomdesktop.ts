@@ -3,7 +3,7 @@
  *
  * @domain `github.com/desktop`
  * @programs `github-desktop`
- * @version `3.4.12` (2 versions available)
+ * @version `3.6.10` (3 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/desktop`
@@ -21,7 +21,11 @@ export const githubcomdesktopPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['3.4.12', '3.4.11'] as const,
+  versions: [
+    '3.6.10',
+    '3.4.12',
+    '3.4.11',
+  ] as const,
   aliases: ['github-desktop', 'gh-desktop'] as const,
 }
 export type GithubcomdesktopPackage = typeof githubcomdesktopPackage

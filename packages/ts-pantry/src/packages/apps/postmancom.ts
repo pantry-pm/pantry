@@ -3,7 +3,7 @@
  *
  * @domain `postman.com`
  * @programs `postman`
- * @version `11.27.0` (3 versions available)
+ * @version `11.117.0` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install postman.com`
@@ -21,7 +21,12 @@ export const postmancomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['11.27.0', '11.26.0', '11.25.0'] as const,
+  versions: [
+    '11.117.0',
+    '11.27.0',
+    '11.26.0',
+    '11.25.0',
+  ] as const,
   aliases: ['postman'] as const,
 }
 export type PostmancomPackage = typeof postmancomPackage

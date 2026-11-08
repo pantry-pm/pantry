@@ -3,7 +3,7 @@
  *
  * @domain `keka.io`
  * @programs `keka`
- * @version `1.4.7` (2 versions available)
+ * @version `1.6.8` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install keka.io`
@@ -21,7 +21,28 @@ export const kekaioPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.4.7', '1.4.6'] as const,
+  versions: [
+    '1.6.8',
+    '1.6.7',
+    '1.6.6',
+    '1.6.5',
+    '1.6.4',
+    '1.6.3',
+    '1.6.2',
+    '1.6.1',
+    '1.6.0',
+    '1.5.2',
+    '1.5.1',
+    '1.5.0',
+    '1.4.8',
+    '1.4.7',
+    '1.4.6',
+    '1.4.5',
+    '1.4.4',
+    '1.4.3',
+    '1.4.2',
+    '1.4.1',
+  ] as const,
   aliases: ['keka'] as const,
 }
 export type KekaioPackage = typeof kekaioPackage

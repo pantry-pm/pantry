@@ -3,7 +3,7 @@
  *
  * @domain `signal.org`
  * @programs `signal`
- * @version `7.36.0` (2 versions available)
+ * @version `8.34.0` (3 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install signal.org`
@@ -21,7 +21,11 @@ export const signalorgPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['7.36.0', '7.35.0'] as const,
+  versions: [
+    '8.34.0',
+    '7.36.0',
+    '7.35.0',
+  ] as const,
   aliases: ['signal'] as const,
 }
 export type SignalorgPackage = typeof signalorgPackage

@@ -3,7 +3,7 @@
  *
  * @domain `notion.so`
  * @programs `notion`
- * @version `4.5.0` (3 versions available)
+ * @version `7.42.3` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install notion.so`
@@ -21,7 +21,12 @@ export const notionsoPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['4.5.0', '4.4.0', '4.3.0'] as const,
+  versions: [
+    '7.42.3',
+    '4.5.0',
+    '4.4.0',
+    '4.3.0',
+  ] as const,
   aliases: ['notion'] as const,
 }
 export type NotiosoPackage = typeof notionsoPackage

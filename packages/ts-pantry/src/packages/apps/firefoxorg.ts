@@ -3,7 +3,7 @@
  *
  * @domain `firefox.org`
  * @programs `firefox`
- * @version `134.0.2` (3 versions available)
+ * @version `159.0.1` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install firefox.org`
@@ -21,7 +21,12 @@ export const firefoxorgPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['134.0.2', '134.0.1', '134.0'] as const,
+  versions: [
+    '159.0.1',
+    '134.0.2',
+    '134.0.1',
+    '134.0',
+  ] as const,
   aliases: ['firefox'] as const,
 }
 export type FirefoxorgPackage = typeof firefoxorgPackage

@@ -3,7 +3,7 @@
  *
  * @domain `docker.com/desktop`
  * @programs `docker-desktop`
- * @version `4.37.2` (3 versions available)
+ * @version `4.98.0` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install docker.com/desktop`
@@ -21,7 +21,12 @@ export const dockercomdesktopPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['4.37.2', '4.37.1', '4.37.0'] as const,
+  versions: [
+    '4.98.0',
+    '4.37.2',
+    '4.37.1',
+    '4.37.0',
+  ] as const,
   aliases: ['docker-desktop'] as const,
 }
 export type DockercomdesktopPackage = typeof dockercomdesktopPackage

@@ -3,7 +3,7 @@
  *
  * @domain `dbeaver.io`
  * @programs `dbeaver`
- * @version `24.3.4` (2 versions available)
+ * @version `26.2.4` (22 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install dbeaver.io`
@@ -21,7 +21,30 @@ export const dbeaverioPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['24.3.4', '24.3.3'] as const,
+  versions: [
+    '26.2.4',
+    '26.2.3',
+    '26.2.2',
+    '26.2.1',
+    '26.2.0',
+    '26.1.5',
+    '26.1.4',
+    '26.1.3',
+    '26.1.2',
+    '26.1.1',
+    '26.1.0',
+    '26.0.5',
+    '26.0.4',
+    '26.0.3',
+    '26.0.2',
+    '26.0.1',
+    '26.0.0',
+    '25.3.5',
+    '25.3.4',
+    '25.3.3',
+    '24.3.4',
+    '24.3.3',
+  ] as const,
   aliases: ['dbeaver'] as const,
 }
 export type DbeaverioPackage = typeof dbeaverioPackage

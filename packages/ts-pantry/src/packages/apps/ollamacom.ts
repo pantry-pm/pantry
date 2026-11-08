@@ -3,7 +3,7 @@
  *
  * @domain `ollama.com`
  * @programs `ollama`
- * @version `0.5.7` (2 versions available)
+ * @version `0.40.15` (22 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ollama.com`
@@ -21,7 +21,30 @@ export const ollamacomPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['0.5.7', '0.5.6'] as const,
+  versions: [
+    '0.40.15',
+    '0.40.14',
+    '0.40.13',
+    '0.40.12',
+    '0.40.11',
+    '0.40.10',
+    '0.40.9',
+    '0.40.8',
+    '0.40.7',
+    '0.40.6',
+    '0.40.5',
+    '0.40.4',
+    '0.40.3',
+    '0.40.2',
+    '0.40.1',
+    '0.40.0',
+    '0.35.1',
+    '0.35.0',
+    '0.34.4',
+    '0.34.3',
+    '0.5.7',
+    '0.5.6',
+  ] as const,
   aliases: ['ollama'] as const,
 }
 export type OllamacomPackage = typeof ollamacomPackage

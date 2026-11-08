@@ -3,7 +3,7 @@
  *
  * @domain `warp.dev`
  * @programs `warp`
- * @version `0.2025.01.21` (3 versions available)
+ * @version `0.2026.11.04.08.17.stable_01` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install warp.dev`
@@ -21,7 +21,12 @@ export const warpdevPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['0.2025.01.21', '0.2025.01.14', '0.2025.01.07'] as const,
+  versions: [
+    '0.2026.11.04.08.17.stable_01',
+    '0.2025.01.21',
+    '0.2025.01.14',
+    '0.2025.01.07',
+  ] as const,
   aliases: ['warp'] as const,
 }
 export type WarpdevPackage = typeof warpdevPackage

@@ -3,7 +3,7 @@
  *
  * @domain `iterm2.com`
  * @programs `iterm2`
- * @version `3.5.6` (3 versions available)
+ * @version `3.7.7` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install iterm2.com`
@@ -21,7 +21,13 @@ export const iterm2comPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['3.5.6', '3.5.5', '3.5.4'] as const,
+  versions: [
+    '3.7.7',
+    '3.6.11',
+    '3.5.6',
+    '3.5.5',
+    '3.5.4',
+  ] as const,
   aliases: ['iterm', 'iterm2'] as const,
 }
 export type Iterm2comPackage = typeof iterm2comPackage

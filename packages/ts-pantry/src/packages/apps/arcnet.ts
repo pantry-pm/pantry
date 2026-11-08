@@ -3,7 +3,7 @@
  *
  * @domain `arc.net`
  * @programs `arc`
- * @version `1.76.0` (3 versions available)
+ * @version `1.172.1` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install arc.net`
@@ -21,7 +21,12 @@ export const arcnetPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['1.76.0', '1.75.0', '1.74.0'] as const,
+  versions: [
+    '1.172.1',
+    '1.76.0',
+    '1.75.0',
+    '1.74.0',
+  ] as const,
   aliases: ['arc'] as const,
 }
 export type ArcnetPackage = typeof arcnetPackage

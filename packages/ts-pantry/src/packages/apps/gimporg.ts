@@ -3,7 +3,7 @@
  *
  * @domain `gimp.org`
  * @programs `gimp`
- * @version `2.10.38` (2 versions available)
+ * @version `3.2.8` (14 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gimp.org`
@@ -21,7 +21,22 @@ export const gimporgPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['2.10.38', '2.10.36'] as const,
+  versions: [
+    '3.2.8',
+    '3.2.6',
+    '3.2.4',
+    '3.2.2',
+    '3.2.0',
+    '3.0.8',
+    '3.0.6',
+    '3.0.4',
+    '3.0.2',
+    '3.0.0',
+    '2.10.38',
+    '2.10.36',
+    '2.10.34',
+    '2.10.32',
+  ] as const,
   aliases: ['gimp'] as const,
 }
 export type GimporgPackage = typeof gimporgPackage

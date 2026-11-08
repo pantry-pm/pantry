@@ -1,0 +1,12 @@
+{
+  "id": "42457574838-1",
+  "domains": [
+    "bitwarden.com/desktop",
+    "docker.com/desktop",
+    "github.com/desktop",
+    "github.com/ggerganov/llama.cpp",
+    "gpt4all.io",
+    "mailpit.axllent.org",
+    "squawkhq.com"
+  ]
+}
