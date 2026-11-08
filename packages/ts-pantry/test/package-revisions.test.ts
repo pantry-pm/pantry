@@ -57,6 +57,8 @@ test('PostgreSQL runtime dependencies rebuild their macOS 14 packaging without r
     expect(() => requireCurrentRecipeBuild(upstream, publication)).toThrow('refusing to replace')
     const tokens = buildTokens(domain, upstream, 'darwin-arm64', '/package/' + publication, '/source', {})
     expect(applyTokens(loaded.recipe.distributable!.url, tokens)).not.toContain(publication)
+    if (domain === 'zlib.net')
+      expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toBe('https://zlib.net/fossils/zlib-1.3.2.tar.gz')
   }
 })
 

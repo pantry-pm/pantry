@@ -13,7 +13,9 @@ export const recipe: Recipe = {
     repo: 'madler/zlib',
   },
   distributable: {
-    url: 'https://zlib.net/zlib-{{version.raw}}.tar.gz',
+    // The homepage only keeps the current release; the official archive keeps
+    // previous versions available after a new upstream release.
+    url: 'https://zlib.net/fossils/zlib-{{version.raw}}.tar.gz',
     stripComponents: 1,
   },
 
