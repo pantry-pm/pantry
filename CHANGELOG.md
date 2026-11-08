@@ -1,3 +1,28 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.188...v0.11.189)
+
+## 🐛 Bug Fixes
+
+- **ci**: route desktop recipe changes through vendor update planning ([613e516](https://github.com/pantry-pm/pantry/commit/613e516)) _(by Chris Breuer <chris@stacksjs.com>)_
+- preserve native absolute paths in the shared path resolver ([ebd0c95](https://github.com/pantry-pm/pantry/commit/ebd0c95)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **recipes**: discover WhatsApp versions from signed desktop bundles ([068e7e8](https://github.com/pantry-pm/pantry/commit/068e7e8)) _(by Chris Breuer <chris@stacksjs.com>)_
+- check filesystem access without opening special files ([e17f9b4](https://github.com/pantry-pm/pantry/commit/e17f9b4)) _(by Chris Breuer <chris@stacksjs.com>)_
+- rebuild readline against the repaired macOS dependency closure ([7fd31b3](https://github.com/pantry-pm/pantry/commit/7fd31b3)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- verify user scoped PostgreSQL installation and native activation ([0f82e97](https://github.com/pantry-pm/pantry/commit/0f82e97)) _(by Chris Breuer <chris@stacksjs.com>)_
+- retain Windows debug symbols and qualify native access semantics ([55f01c8](https://github.com/pantry-pm/pantry/commit/55f01c8)) _(by Chris Breuer <chris@stacksjs.com>)_
+- commit the PostgreSQL service fixture before testing rollback ([ce666e4](https://github.com/pantry-pm/pantry/commit/ce666e4)) _(by Chris Breuer <chris@stacksjs.com>)_
+- qualify normal PostgreSQL user service lifecycle on Linux ([134b8f6](https://github.com/pantry-pm/pantry/commit/134b8f6)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.189 ([0dd0d66](https://github.com/pantry-pm/pantry/commit/0dd0d66)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.187...v0.11.188)
 
 ## 🐛 Bug Fixes
