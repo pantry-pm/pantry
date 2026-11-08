@@ -385,6 +385,21 @@ test "access checks preserve directories, missing paths and requested permission
     try std.testing.expectError(error.FileNotFound, accessAbsolute(missing, .{}));
 }
 
+test "access checks preserve resolved native absolute paths" {
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    try temp.dir.writeFile(io, .{ .sub_path = "readable", .data = "synthetic" });
+    var parent_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const parent = parent_buffer[0..try temp.dir.realPath(io, &parent_buffer)];
+    var resolved_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const resolved = try realpath(parent, &resolved_buffer);
+    try std.testing.expectEqualStrings(parent, resolved);
+    const file = try std.fs.path.join(std.testing.allocator, &.{ resolved, "readable" });
+    defer std.testing.allocator.free(file);
+    try accessAbsolute(file, .{ .read = true });
+    try access(file, .{});
+}
+
 /// Open a directory in the current working directory
 pub fn openDir(path: []const u8, options: Dir.OpenOptions) !Dir {
     return try cwd().openDir(io, path, options);
@@ -444,8 +459,10 @@ pub fn realpath(path: []const u8, out_buffer: []u8) ![]u8 {
         return getCwdPath(out_buffer);
     }
 
-    // For absolute paths, just copy
-    if (path.len > 0 and path[0] == '/') {
+    // Preserve native absolute paths, including Windows drive and UNC paths.
+    // Treating C:\... as relative prepends a second drive to the path and
+    // makes native metadata/access queries fail with OBJECT_NAME_INVALID.
+    if (std.fs.path.isAbsolute(path)) {
         if (path.len > out_buffer.len) return error.NameTooLong;
         @memcpy(out_buffer[0..path.len], path);
         return out_buffer[0..path.len];
@@ -460,7 +477,7 @@ pub fn realpath(path: []const u8, out_buffer: []u8) ![]u8 {
     if (total_len > out_buffer.len) return error.NameTooLong;
 
     // Append separator and path
-    out_buffer[cwd_len] = '/';
+    out_buffer[cwd_len] = std.fs.path.sep;
     @memcpy(out_buffer[cwd_len + 1 ..][0..path.len], path);
 
     return out_buffer[0..total_len];
