@@ -22,6 +22,7 @@ export const codexopenaicomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '26.1103.60933',
     '26.1103.41825',
     '26.1103.32239',
     '26.1103.31037',

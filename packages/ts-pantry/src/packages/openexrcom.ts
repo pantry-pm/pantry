@@ -3,7 +3,7 @@
  *
  * @domain `openexr.com`
  * @programs `exr2aces`, `exrenvmap`, `exrheader`, `exrmakepreview`, `exrmaketiled`, ... (+3 more)
- * @version `3.5.3` (147 versions available)
+ * @version `3.5.3` (148 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openexr.com`
@@ -95,6 +95,7 @@ export const openexrcomPackage = {
     '3.5.0',
     '3.5.0-rc2',
     '3.5.0-rc',
+    '3.4.18',
     '3.4.18-rc2',
     '3.4.18-rc',
     '3.4.17',

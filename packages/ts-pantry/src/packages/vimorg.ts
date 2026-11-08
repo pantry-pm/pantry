@@ -3,7 +3,7 @@
  *
  * @domain `vim.org`
  * @programs `vim`, `vi`
- * @version `9.2.1302` (3257 versions available)
+ * @version `9.2.1310` (3265 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install vim.org`
@@ -25,7 +25,7 @@
  * console.log(pkg.name)        // "vim"
  * console.log(pkg.description) // "The official Vim repository"
  * console.log(pkg.programs)    // ["vim", "vi"]
- * console.log(pkg.versions[0]) // "9.2.1302" (latest)
+ * console.log(pkg.versions[0]) // "9.2.1310" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/vim-org.md
@@ -85,6 +85,14 @@ export const vimPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '9.2.1310',
+    '9.2.1309',
+    '9.2.1308',
+    '9.2.1307',
+    '9.2.1306',
+    '9.2.1305',
+    '9.2.1304',
+    '9.2.1303',
     '9.2.1302',
     '9.2.1301',
     '9.2.1300',
