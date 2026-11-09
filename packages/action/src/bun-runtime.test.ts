@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
+import { bunInstallCacheDir, requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
 
 const dirs: string[] = []
 function tempBinDir(): string {
@@ -103,5 +103,20 @@ describe('setup-only (install: false) Bun runtime', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout.toString().trim().split('\n')).toEqual(['x', '--bun', '@stacksjs/buddy@0.75.283', '--version'])
     expect(fs.readFileSync(path.join(binDir, 'bunx'), 'utf8')).toBe(activation)
+  })
+})
+
+describe('Bun package cache', () => {
+  test('lives in the runner home, not the job checkout behind BUN_INSTALL', () => {
+    expect(bunInstallCacheDir({ BUN_INSTALL: '/tmp/job-1/pantry' }, '/home/runner')).toBe('/home/runner/.bun/install/cache')
+    expect(bunInstallCacheDir({}, '/home/runner/')).toBe('/home/runner/.bun/install/cache')
+  })
+
+  test('a workflow\'s own cache directory wins', () => {
+    expect(bunInstallCacheDir({ BUN_INSTALL_CACHE_DIR: '/mnt/cache/bun' }, '/home/runner')).toBeNull()
+  })
+
+  test('no home, no guess', () => {
+    expect(bunInstallCacheDir({}, '')).toBeNull()
   })
 })

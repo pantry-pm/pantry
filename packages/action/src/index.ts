@@ -12,7 +12,7 @@ import type { ReleaseClient } from './release-draft'
 import { findReleaseForTag, settleCreatedDraft } from './release-draft'
 import { mirrorReleaseToS3 } from './release-s3'
 import { isRollingVersionSpec, normalizeLockedVersion, reassertVersionSpec, shouldUseLockedVersion } from './lock-version'
-import { requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
+import { bunInstallCacheDir, requiredBunPackageSpec, setupBunRuntime } from './bun-runtime'
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantryConfigMaySetLinker, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import { installResolvedSystemPackages } from './system-packages'
@@ -38,6 +38,16 @@ import * as github from '@actions/github'
 import * as glob from '@actions/glob'
 import { getPrimaryBinary } from '../../ts-pantry/src/installer'
 import { isKnownAlias, resolvePackageDomain } from '../../ts-pantry/src/utils'
+
+/** Activate the prefix's Bun, keeping its package cache outside the checkout. */
+function exportBunInstall(pantryDir: string): void {
+  core.exportVariable('BUN_INSTALL', pantryDir)
+  const cacheDir = bunInstallCacheDir(process.env, os.homedir())
+  if (cacheDir) {
+    fs.mkdirSync(cacheDir, { recursive: true })
+    core.exportVariable('BUN_INSTALL_CACHE_DIR', cacheDir)
+  }
+}
 
 export * from './types'
 
@@ -811,7 +821,7 @@ export async function run(): Promise<void> {
         install: () => installSystemPackages([requiredBunPackageSpec(extractSystemDeps())], pantryDir, readLockedVersions(), path.join(installDir, platform.binaryName)),
         binDir: pantryBinDir,
         preserveExisting: process.env.BUN_INSTALL === pantryDir,
-        onLinked: () => core.exportVariable('BUN_INSTALL', pantryDir),
+        onLinked: () => exportBunInstall(pantryDir),
       })
 
       // Configure PATH so pantry-installed bins (incl. bun) are available
@@ -1025,7 +1035,7 @@ export async function run(): Promise<void> {
     // Pantry activates bun and bunx separately; retain their executor arguments.
     const bunPath = path.join(pantryBinDir, 'bun')
     if (fs.existsSync(bunPath))
-      core.exportVariable('BUN_INSTALL', pantryDir)
+      exportBunInstall(pantryDir)
 
     // Launch only after Pantry has installed the complete service dependency
     // graph and all executable-link reconciliation has finished.

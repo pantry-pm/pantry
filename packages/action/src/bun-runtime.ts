@@ -59,3 +59,19 @@ export async function setupBunRuntime({ install, binDir, onLinked, preserveExist
 
   onLinked?.()
 }
+
+/**
+ * Where Bun keeps downloaded packages, when the workflow has not chosen.
+ *
+ * The action points BUN_INSTALL at the checkout's `pantry/` prefix, and Bun's
+ * default cache is `$BUN_INSTALL/install/cache`, so every job started with an
+ * empty cache inside its fresh checkout and downloaded every package again,
+ * GitHub-hosted tarballs included. On a self-hosted runner that is the same
+ * dozens of release downloads from one address on every job, enough for
+ * GitHub's edge to start answering 504. The runner's home outlives the job,
+ * and on a hosted runner the cache simply ends with it.
+ */
+export function bunInstallCacheDir(env: Record<string, string | undefined>, home: string): string | null {
+  if (env.BUN_INSTALL_CACHE_DIR) return null
+  return home ? `${home.replace(/[\\/]+$/, '')}/.bun/install/cache` : null
+}
