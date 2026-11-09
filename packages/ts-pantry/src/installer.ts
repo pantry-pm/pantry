@@ -553,12 +553,17 @@ export async function installPackage(
       expectedSha256 = checksum.toLowerCase()
     }
 
+    const cachedArchive = archiveCachePath(url, format)
+    const fromCache = cachedArchive ? restoreCachedArchive(cachedArchive, archivePath, expectedSha256) : false
+    if (fromCache && !options.quiet) console.log(`  ↺ ${domain}@${version} archive from the local cache`)
     try {
-      await downloadFileReliably(url, archivePath, {
-        quiet: options.quiet,
-        onRetry: options.onRetry,
-        expectedSha256,
-      })
+      if (!fromCache) {
+        await downloadFileReliably(url, archivePath, {
+          quiet: options.quiet,
+          onRetry: options.onRetry,
+          expectedSha256,
+        })
+      }
     }
     catch (error) {
       // A purged Zig dev build fails here as a bare 404 that names neither the
@@ -572,7 +577,16 @@ export async function installPackage(
     // Extract
     const extractDir = path.join(tmpDir, 'extracted')
     fs.mkdirSync(extractDir, { recursive: true })
-    await extractArchive(archivePath, extractDir, format)
+    try {
+      await extractArchive(archivePath, extractDir, format)
+    }
+    catch (error) {
+      // A cached archive that no longer unpacks is dropped, so the next run downloads it.
+      if (fromCache && cachedArchive) fs.rmSync(cachedArchive, { force: true })
+      throw error
+    }
+    // Only an archive that verified and unpacked is kept for the next run.
+    if (cachedArchive && !fromCache) storeCachedArchive(archivePath, cachedArchive)
 
     // Find the source directory (archives usually have a top-level folder)
     let sourceDir = extractDir
@@ -1479,6 +1493,55 @@ async function downloadFileOnce(url: string, dest: string, options: DownloadFile
   finally {
     if (showProgress && lastPrintAt > 0) process.stderr.write('\r\x1b[K')
   }
+}
+
+/**
+ * Where a downloaded release archive is kept between runs, or null to keep none.
+ *
+ * Release URLs name an exact version, so one URL is one archive. CI runners
+ * otherwise fetched the same archives from GitHub releases on every job, and
+ * a self-hosted runner doing that from one address was answered with 504s by
+ * GitHub's edge until installs failed. `PANTRY_ARCHIVE_CACHE_DIR` chooses the
+ * directory; `PANTRY_ARCHIVE_CACHE=0` turns the cache off.
+ */
+export function archiveCachePath(url: string, format: string, env: Record<string, string | undefined> = process.env, home: string = os.homedir()): string | null {
+  // Only published releases: a local or plain-HTTP source can serve new bytes at the same URL.
+  if (env.PANTRY_ARCHIVE_CACHE === '0' || !url.startsWith('https://')) return null
+  const base = env.PANTRY_ARCHIVE_CACHE_DIR
+    || (env.XDG_CACHE_HOME ? path.join(env.XDG_CACHE_HOME, 'pantry', 'archives') : home ? path.join(home, '.cache', 'pantry', 'archives') : '')
+  if (!base) return null
+  return path.join(base, `${createHash('sha256').update(url).digest('hex')}.${format}`)
+}
+
+function fileSha256(file: string): string {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+}
+
+/** Copy a cached archive into place when it is present and still matches the published digest. */
+export function restoreCachedArchive(cached: string, dest: string, expectedSha256?: string): boolean {
+  try {
+    if (!fs.existsSync(cached)) return false
+    if (expectedSha256 && fileSha256(cached) !== expectedSha256.toLowerCase()) {
+      fs.rmSync(cached, { force: true })
+      return false
+    }
+    fs.copyFileSync(cached, dest)
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
+/** Keep a verified archive for later runs; a cache that cannot be written only costs a download. */
+export function storeCachedArchive(archive: string, cached: string): void {
+  try {
+    fs.mkdirSync(path.dirname(cached), { recursive: true })
+    const partial = `${cached}.${process.pid}.${randomUUID()}.partial`
+    fs.copyFileSync(archive, partial)
+    fs.renameSync(partial, cached)
+  }
+  catch {}
 }
 
 export async function downloadFileReliably(url: string, dest: string, options: DownloadFileOptions = {}): Promise<void> {
