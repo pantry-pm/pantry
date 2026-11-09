@@ -67,7 +67,10 @@ describe.skipIf(process.platform === 'win32')('installed binary entrypoints', ()
 
   it('keeps wrapper and binary entrypoints working when the environment moves', async () => {
     const { root, tree, pkg } = fixture()
-    symlinkSync('/bin/echo', join(pkg, 'bin/native-echo'))
+    // A native executable that does not dispatch on the name it is run as:
+    // Ubuntu 26.04's /bin/echo is a multicall coreutils binary, which refuses
+    // to run as `native-echo`.
+    symlinkSync(process.execPath, join(pkg, 'bin/native-echo'))
     await installPackage('wrapper.test', '1.0.0', { installDir: tree, platform: detectPlatform(), quiet: true })
     expect(lstatSync(join(tree, '.bin/native-echo')).isSymbolicLink()).toBe(true)
     const moved = `${root} moved`
@@ -75,7 +78,7 @@ describe.skipIf(process.platform === 'win32')('installed binary entrypoints', ()
     scratch.push(moved)
     run(join(moved, 'pantry/.bin/tool'))
     expect(realpathSync(join(moved, 'pantry/.bin/native-echo'))).toBe(realpathSync(join(moved, 'pantry/wrapper.test/v1.0.0/bin/native-echo')))
-    const result = Bun.spawnSync([join(moved, 'pantry/.bin/native-echo'), 'works after moving'])
+    const result = Bun.spawnSync([join(moved, 'pantry/.bin/native-echo'), '-e', 'console.log("works after moving")'])
     expect(result.exitCode).toBe(0)
     expect(result.stdout.toString()).toBe('works after moving\n')
   }, 15_000)
