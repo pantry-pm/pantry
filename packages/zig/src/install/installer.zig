@@ -3098,6 +3098,25 @@ pub const Installer = struct {
         return std.mem.eql(u8, version.string, wanted);
     }
 
+    /// Keep a registry archive that has just passed verification.
+    ///
+    /// Project installs read this cache but never wrote it, so a CI job that
+    /// installs into a fresh checkout downloaded every registry binary again
+    /// (git and its 21 dependencies on every HQ job). The registry limits
+    /// binary downloads per client, so a burst of such jobs from one runner
+    /// was answered with 429. Only an archive that extracted and verified is
+    /// stored, and a cached one that later fails verification is evicted and
+    /// fetched again, so the cache cannot hand out bad bytes for long. A cache
+    /// that cannot be written costs only a download.
+    fn storeVerifiedArchive(self: *Installer, domain: []const u8, version: []const u8, url: []const u8, archive_path: []const u8) void {
+        const bytes = io_helper.readFileAlloc(self.allocator, archive_path, 512 * 1024 * 1024) catch return;
+        defer self.allocator.free(bytes);
+        var digest: [32]u8 = undefined;
+        std.crypto.hash.sha2.Sha256.hash(bytes, &digest, .{});
+        self.cache.put(domain, version, url, digest, bytes) catch return;
+        if (self.verbose) std.debug.print("[verbose:project] cached verified archive for {s} @ {s}\n", .{ domain, version });
+    }
+
     /// Download and install package directly to project directory (bypassing global cache)
     fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, options: InstallOptions, transferred_url: ?[]const u8) !void {
         const home = try Paths.home(self.allocator);
@@ -3163,6 +3182,7 @@ pub const Installer = struct {
                         // bad download would otherwise poison it forever. Remember the
                         // backing file so a checksum mismatch below can evict + re-fetch.
                         cached_archive_path = self.allocator.dupe(u8, meta.cache_path) catch null;
+                        if (self.verbose) std.debug.print("[verbose:project] using cached archive for {s} @ {s}\n", .{ domain, spec.version });
                         break :blk true;
                     } else |_| {}
                 }
@@ -3230,6 +3250,7 @@ pub const Installer = struct {
         // Extract archive to temp directory with verification
         const extract_dir = staging.payload;
         defer if (cached_archive_path) |p| self.allocator.free(p);
+        var served_from_cache = cached_archive_path != null;
         staging.extractVerified(archive_path, used_format, used_url, options.verbose) catch |err| {
             // A poisoned cache entry (bad bytes stored before checksum verification)
             // would fail every install forever. If the archive came from cache and
@@ -3246,10 +3267,14 @@ pub const Installer = struct {
                     try downloader.downloadFileQuiet(self.allocator, used_url, archive_path, options.quiet);
                 }
                 try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
+                served_from_cache = false;
             } else {
                 return err;
             }
         };
+        // Verified now, so keep it: the next project install reads it from the
+        // cache instead of downloading it again.
+        if (!served_from_cache) self.storeVerifiedArchive(domain, spec.version, used_url, archive_path);
 
         // Find the actual package root
         const package_source = try self.findPackageRoot(extract_dir, domain, spec.version);
@@ -4534,6 +4559,58 @@ test "a sub-dependency installs at its constraint, not generated.zig's newest" {
     try std.testing.expectEqualStrings(">=10.30", dependencyInstallVersion(">=10.30", "10.47.0"));
     try std.testing.expectEqualStrings("latest", dependencyInstallVersion("latest", "8.5.11"));
     try std.testing.expectEqualStrings("1.6.58", dependencyInstallVersion("", "1.6.58"));
+}
+
+test "a verified registry archive is kept for the next project install" {
+    // The defect this guards: project installs read the package cache but
+    // never wrote it, so every CI job installing into a fresh checkout
+    // downloaded each registry binary again until the registry rate-limited
+    // the runner.
+    const allocator = std.testing.allocator;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const tmp_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const root = path_buf[0..tmp_len];
+
+    var pkg_cache = PackageCache{
+        .cache_dir = try std.fmt.allocPrint(allocator, "{s}/cache", .{root}),
+        .metadata = std.StringHashMap(cache.PackageMetadata).init(allocator),
+        .allocator = allocator,
+        .lock = .{},
+        .max_size_bytes = 0,
+    };
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    try tmp_dir.dir.writeFile(io_helper.io, .{ .sub_path = "package.tar.gz", .data = "verified archive bytes" });
+    const archive = try std.fmt.allocPrint(allocator, "{s}/package.tar.gz", .{root});
+    defer allocator.free(archive);
+    const url = "https://registry.pantry.dev/binaries/git-scm.org/2.53.0/linux-x86-64/git-scm.org-2.53.0.tar.gz";
+
+    try std.testing.expect((try pkg_cache.get("git-scm.org", "2.53.0")) == null);
+    installer.storeVerifiedArchive("git-scm.org", "2.53.0", url, archive);
+
+    const meta = (try pkg_cache.get("git-scm.org", "2.53.0")) orelse return error.TestExpectedCachedArchive;
+    const cached = try io_helper.readFileAlloc(allocator, meta.cache_path, 1024);
+    defer allocator.free(cached);
+    try std.testing.expectEqualStrings("verified archive bytes", cached);
+    var digest: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash("verified archive bytes", &digest, .{});
+    try std.testing.expectEqualSlices(u8, &digest, &meta.checksum);
+
+    // The next job is a new process: only the file on disk carries over.
+    var next_job = PackageCache{
+        .cache_dir = try std.fmt.allocPrint(allocator, "{s}/cache", .{root}),
+        .metadata = std.StringHashMap(cache.PackageMetadata).init(allocator),
+        .allocator = allocator,
+        .lock = .{},
+        .max_size_bytes = 0,
+    };
+    defer next_job.deinit();
+    try std.testing.expect((try next_job.get("git-scm.org", "2.53.0")) != null);
 }
 
 test "Installer basic operations" {

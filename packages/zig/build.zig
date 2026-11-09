@@ -519,6 +519,9 @@ pub fn build(b: *std.Build) void {
     const private_staging_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "private staging", "verified execute-only archive", "legacy cache refusal and private preparation" } });
     const run_private_staging_tests = b.addRunArtifact(private_staging_tests);
     private_staging_step.dependOn(&run_private_staging_tests.step);
+    const registry_archive_cache_step = b.step("test:registry-archive-cache", "Keep verified registry archives for the next project install");
+    const registry_archive_cache_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"a verified registry archive is kept"} });
+    registry_archive_cache_step.dependOn(&b.addRunArtifact(registry_archive_cache_tests).step);
     const binary_platform_step = b.step("test:binary-platform", "Keep native registry URLs on the requested operating system");
     const binary_platform_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"binary registry platform:"} });
     binary_platform_step.dependOn(&b.addRunArtifact(binary_platform_tests).step);
