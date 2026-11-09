@@ -1,3 +1,26 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.193...v0.11.194)
+
+## 🐛 Bug Fixes
+
+- **install**: keep verified registry archives for the next project install ([b2fbf89](https://github.com/pantry-pm/pantry/commit/b2fbf89)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **installer**: keep verified release archives between runs ([5e95020](https://github.com/pantry-pm/pantry/commit/5e95020)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **action**: keep Bun's package cache outside the job checkout ([1cb1249](https://github.com/pantry-pm/pantry/commit/1cb1249)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **installer**: move a native entrypoint that ignores its name ([8f46a87](https://github.com/pantry-pm/pantry/commit/8f46a87)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.194 ([0d91d0f](https://github.com/pantry-pm/pantry/commit/0d91d0f)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update ccache, Codex, depot, dozzle, fluentci, LLaMA.cpp, oh-my-posh, SeaweedFS, vim ([c6ea9c5](https://github.com/pantry-pm/pantry/commit/c6ea9c5)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.487 ([0bf9f25](https://github.com/pantry-pm/pantry/commit/0bf9f25)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update CLIProxyAPI, LLaMA.cpp, mole, Stats ([f29b0ea](https://github.com/pantry-pm/pantry/commit/f29b0ea)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.192...v0.11.193)
 
 ## 🐛 Bug Fixes
