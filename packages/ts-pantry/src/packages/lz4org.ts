@@ -3,7 +3,7 @@
  *
  * @domain `lz4.org`
  * @programs `lz4`
- * @version `1.11.0` (14 versions available)
+ * @version `1.11.1` (15 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install lz4.org`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "lz4"
  * console.log(pkg.description) // "Extremely Fast Compression algorithm"
  * console.log(pkg.programs)    // ["lz4"]
- * console.log(pkg.versions[0]) // "1.11.0" (latest)
+ * console.log(pkg.versions[0]) // "1.11.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/lz4-org.md
@@ -60,6 +60,7 @@ export const lz4orgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.11.1',
     '1.11.0',
     '1.10.0',
     '1.9.4',

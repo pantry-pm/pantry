@@ -3,7 +3,7 @@
  *
  * @domain `brave.com`
  * @programs `brave`
- * @version `1.101.38` (26 versions available)
+ * @version `1.101.38` (27 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install brave.com`
@@ -41,6 +41,7 @@ export const bravecomPackage = {
     '1.101.5',
     '1.101.4',
     '1.101.3',
+    '1.100.52',
     '1.100.49',
     '1.100.48',
     '1.100.44',

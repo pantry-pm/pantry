@@ -1,0 +1,16 @@
+{
+  "id": "42781101706-1",
+  "domains": [
+    "anthropic.com/claude-code",
+    "browser-use.com",
+    "cnquery.io",
+    "craft-native.org",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/router-for-me/CLIProxyAPI",
+    "lz4.org",
+    "nushell.sh",
+    "pnpm.io",
+    "werf.io",
+    "zarf.dev"
+  ]
+}
