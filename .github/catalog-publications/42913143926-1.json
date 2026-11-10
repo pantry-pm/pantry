@@ -1,0 +1,21 @@
+{
+  "id": "42913143926-1",
+  "domains": [
+    "casdoor.org",
+    "chezmoi.io",
+    "cnquery.io",
+    "craft-native.org",
+    "dblab.danvergara.com",
+    "fly.io",
+    "git-scm.org",
+    "github.com/ggerganov/llama.cpp",
+    "go.dev",
+    "kernel.org/perf",
+    "openai.com/codex",
+    "podman.io",
+    "postgresql.org",
+    "spacetimedb.com",
+    "stripe.com",
+    "vim.org"
+  ]
+}

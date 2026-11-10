@@ -3,7 +3,7 @@
  *
  * @domain `notion.so`
  * @programs `notion`
- * @version `7.42.3` (4 versions available)
+ * @version `7.43.0` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install notion.so`
@@ -22,6 +22,7 @@ export const notionsoPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '7.43.0',
     '7.42.3',
     '4.5.0',
     '4.4.0',
