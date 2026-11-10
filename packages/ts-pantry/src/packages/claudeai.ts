@@ -12,6 +12,7 @@ export const claudeaiPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '5.1231.0',
     '4.23118.1',
     '4.23118.0',
   ] as const,

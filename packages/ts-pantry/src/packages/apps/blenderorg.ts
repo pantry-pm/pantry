@@ -3,7 +3,7 @@
  *
  * @domain `blender.org`
  * @programs `blender`
- * @version `5.2.3` (3 versions available)
+ * @version `5.3.0` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install blender.org`
@@ -22,6 +22,7 @@ export const blenderorgPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '5.3.0',
     '5.2.3',
     '4.3.2',
     '4.3.1',

@@ -3,7 +3,7 @@
  *
  * @domain `digitalocean.com/doctl`
  * @programs `doctl`
- * @version `2.3.0` (94 versions available)
+ * @version `2.4.0` (95 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install digitalocean.com/doctl`
@@ -16,7 +16,7 @@
  * console.log(pkg.name)        // "doctl"
  * console.log(pkg.description) // "The official command line interface for the Dig..."
  * console.log(pkg.programs)    // ["doctl"]
- * console.log(pkg.versions[0]) // "2.3.0" (latest)
+ * console.log(pkg.versions[0]) // "2.4.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/digitalocean-com/doctl.md
@@ -59,6 +59,7 @@ export const digitaloceancomdoctlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.4.0',
     '2.3.0',
     '2.2.1',
     '2.1.0',
