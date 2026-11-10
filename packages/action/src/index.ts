@@ -3,6 +3,7 @@ import { boolInput } from './bool-input'
 import { preferArchivedReleaseAssets, rawAssetNamesForArchives, resolveReleaseFilePatterns } from './release-assets'
 import { normalizeReleaseMakeLatest, resolveSemanticMakeLatest } from './release-latest'
 import { installBootstrap } from './bootstrap'
+import { runRetryingTransientInstall } from './transient-install'
 import { isRetryableGitHubReleaseError, retryGitHubReleaseOperation, uploadReleaseAssetReliably } from './release-upload'
 import { deliverReleaseToAppStore } from './release-app-store'
 import { deliverReleaseToGooglePlay, prepareNativeRelease, publishPreparedNativeRegistry, readNativeAppConfig } from '../../ts-pantry/src/native'
@@ -55,6 +56,33 @@ export { boolInput } from './bool-input'
 
 const REPO = 'pantry-pm/pantry'
 
+/**
+ * Run `pantry install`, rerunning it when Pantry reports a transient failure
+ * (a download that timed out, a registry outage). Returns the exit code.
+ */
+async function execPantryInstall(
+  executable: string,
+  args: string[],
+  options: { cwd?: string, env: { [key: string]: string } },
+): Promise<number> {
+  return runRetryingTransientInstall(
+    `${path.basename(executable)} ${args.join(' ')}`,
+    listeners => exec.exec(executable, args, { ...options, ignoreReturnCode: true, listeners }),
+    { onRetry: message => core.warning(message) },
+  )
+}
+
+/** As `execPantryInstall`, but throw on failure the way `exec.exec` does. */
+async function execPantryInstallOrThrow(
+  executable: string,
+  args: string[],
+  options: { cwd?: string, env: { [key: string]: string } },
+): Promise<void> {
+  const code = await execPantryInstall(executable, args, options)
+  if (code !== 0)
+    throw new Error(`The process '${executable}' failed with exit code ${code}`)
+}
+
 async function installRequestedServicePackages(services: ServiceSpec[], pantryExecutable: string, platform: Platform): Promise<void> {
   if (!services.length) return
   if (platform.os === 'windows') throw new Error('Pantry Action services are not yet supported on Windows runners')
@@ -62,7 +90,7 @@ async function installRequestedServicePackages(services: ServiceSpec[], pantryEx
   core.startGroup(`Installing service packages through Pantry: ${services.map(service => service.packageSpec).join(', ')}`)
   try {
     for (const service of services) {
-      const exitCode = await exec.exec(pantryExecutable, ['install', service.packageSpec, '--no-save'], {
+      const exitCode = await execPantryInstall(pantryExecutable, ['install', service.packageSpec, '--no-save'], {
         env: { ...process.env, CI: 'true', NO_COLOR: '1' } as { [key: string]: string },
       })
       if (exitCode !== 0) throw new Error(`Pantry could not install service package ${service.packageSpec}`)
@@ -347,7 +375,7 @@ async function installSystemPackages(
     // bundled catalog because a version source was unreachable installs an
     // older version than upstream has, and CI is where that happens.
     onWarn: message => core.warning(message),
-    nativeInstall: packageSpecs => exec.exec(pantryExecutable, ['install', ...packageSpecs, '--no-save'], {
+    nativeInstall: packageSpecs => execPantryInstall(pantryExecutable, ['install', ...packageSpecs, '--no-save'], {
       cwd: path.dirname(pantryDir),
       env: { ...process.env, CI: 'true', NO_COLOR: '1' } as { [key: string]: string },
     }),
@@ -957,7 +985,7 @@ export async function run(): Promise<void> {
             // Not on PATH, or it failed: let `pantry install` do it in full
             core.info(`${pm} install ${code === null ? 'could not start' : `exited with code ${code}`} — running pantry install`)
             ranPantryInstall = true
-            await exec.exec('pantry', ['install', '--no-save'], {
+            await execPantryInstallOrThrow('pantry', ['install', '--no-save'], {
               env: installEnv as { [key: string]: string },
             })
           }
@@ -967,7 +995,7 @@ export async function run(): Promise<void> {
           core.info(missingWorkspace.length > 0
             ? `Cache hit but missing workspace deps: ${missingWorkspace.join(', ')} — running pantry install`
             : 'Cache hit — installing JS deps into node_modules')
-          await exec.exec('pantry', ['install', '--no-save'], {
+          await execPantryInstallOrThrow('pantry', ['install', '--no-save'], {
             env: installEnv as { [key: string]: string },
           })
         }
@@ -981,7 +1009,7 @@ export async function run(): Promise<void> {
         // Also run workspace install for JS deps (package.json)
         ranPantryInstall = true
         core.startGroup('Installing workspace dependencies')
-        await exec.exec('pantry', ['install', '--no-save'], {
+        await execPantryInstallOrThrow('pantry', ['install', '--no-save'], {
           env: installEnv as { [key: string]: string },
         })
         core.endGroup()
