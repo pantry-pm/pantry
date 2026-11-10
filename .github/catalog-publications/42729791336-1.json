@@ -1,0 +1,28 @@
+{
+  "id": "42729791336-1",
+  "domains": [
+    "anthropic.com/claude-code",
+    "assimp.org",
+    "claude.ai",
+    "docker.com/desktop",
+    "fly.io",
+    "github.com/chainguard-dev/apko",
+    "github.com/firecracker-microvm/firecracker",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/router-for-me/CLIProxyAPI",
+    "google.com/chrome",
+    "hasura.io",
+    "istio.io",
+    "kerberos.org",
+    "meilisearch.com",
+    "mise.jdx.dev",
+    "ollama.ai",
+    "openexr.com",
+    "pipenv.pypa.io",
+    "stripe.com",
+    "surrealdb.com",
+    "vim.org",
+    "xtls.github.io",
+    "ziglang.org"
+  ]
+}

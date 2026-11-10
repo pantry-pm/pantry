@@ -11,7 +11,10 @@ export const claudeaiPackage = {
   companions: [] as const,
   dependencies: [] as const,
   buildDependencies: [] as const,
-  versions: ['4.23118.0'] as const,
+  versions: [
+    '4.23118.1',
+    '4.23118.0',
+  ] as const,
   aliases: ['claude-desktop', 'claude-code-desktop', 'claude-app'] as const,
 }
 export type ClaudeaiPackage = typeof claudeaiPackage

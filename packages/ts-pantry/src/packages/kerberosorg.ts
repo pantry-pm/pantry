@@ -3,7 +3,7 @@
  *
  * @domain `kerberos.org`
  * @programs `compile_et`, `gss-client`, `k5srvutil`, `kadmin`, `kdestroy`, ... (+22 more)
- * @version `1.22.2` (74 versions available)
+ * @version `1.22.3` (75 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install kerberos.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "kerberos"
  * console.log(pkg.description) // "mirror of MIT krb5 repository"
  * console.log(pkg.programs)    // ["compile_et", "gss-client", ...]
- * console.log(pkg.versions[0]) // "1.22.2" (latest)
+ * console.log(pkg.versions[0]) // "1.22.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/kerberos-org.md
@@ -99,6 +99,7 @@ export const kerberosorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.22.3',
     '1.22.2',
     '1.22.1',
     '1.22',

@@ -3,7 +3,7 @@
  *
  * @domain `github.com/firecracker-microvm/firecracker`
  * @programs `firecracker`, `jailer`
- * @version `1.17.0` (20 versions available)
+ * @version `1.18.0` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/firecracker-microvm/firecracker`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "firecracker"
  * console.log(pkg.description) // "Native KVM microVM monitor and jailer."
  * console.log(pkg.programs)    // ["firecracker", "jailer"]
- * console.log(pkg.versions[0]) // "1.17.0" (latest)
+ * console.log(pkg.versions[0]) // "1.18.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/firecracker-microvm/firecracker.md
@@ -70,6 +70,7 @@ export const firecrackerPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.18.0',
     '1.17.0',
     '1.16.2',
     '1.16.1',

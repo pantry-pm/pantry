@@ -3,7 +3,7 @@
  *
  * @domain `assimp.org`
  * @programs `assimp`
- * @version `6.0.4` (11 versions available)
+ * @version `6.0.6` (36 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install assimp.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "assimp"
  * console.log(pkg.description) // "The official Open-Asset-Importer-Library Reposi..."
  * console.log(pkg.programs)    // ["assimp"]
- * console.log(pkg.versions[0]) // "6.0.4" (latest)
+ * console.log(pkg.versions[0]) // "6.0.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/assimp-org.md
@@ -78,6 +78,7 @@ export const assimporgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.0.6',
     '6.0.5',
     '6.0.4',
     '6.0.3',
