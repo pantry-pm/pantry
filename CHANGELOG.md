@@ -1,3 +1,28 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.194...v0.11.195)
+
+## ✨ Features
+
+- resume verified native archives within existing download budgets ([64e03a9](https://github.com/pantry-pm/pantry/commit/64e03a9)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#316](https://github.com/pantry-pm/pantry/issues/316))
+
+## 🐛 Bug Fixes
+
+- resolve setup roots and retain relative discovery paths ([9c55da4](https://github.com/pantry-pm/pantry/commit/9c55da4)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#317](https://github.com/pantry-pm/pantry/issues/317))
+- **action**: rerun a pantry install that failed with a transient error ([a12908c](https://github.com/pantry-pm/pantry/commit/a12908c)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.195 ([39d5928](https://github.com/pantry-pm/pantry/commit/39d5928)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update casdoor, chezmoi, cnquery, codex, craft, dblab, Dia, fly, git, go, LLaMA.cpp, Notion, perf, podman, postgresql, stripe, vim, Visual Studio Code ([d9cd908](https://github.com/pantry-pm/pantry/commit/d9cd908)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.491 ([64a4bef](https://github.com/pantry-pm/pantry/commit/64a4bef)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update Arc, Blender, Brave Browser, browser-use, Claude Desktop, CLIProxyAPI, cnquery, coder, composer, Dia, doctl, dotnet, Firefox, infracost, laravel, lavinmq, LLaMA.cpp, mise, mole, opa, opencode.ai, pixi, Raycast, traefik, vcluster ([ddbe7fc](https://github.com/pantry-pm/pantry/commit/ddbe7fc)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([ab6c395](https://github.com/pantry-pm/pantry/commit/ab6c395)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update browser-use, claude-code, CLIProxyAPI, cnquery, craft, LLaMA.cpp, lz4, nu, pnp, zarf ([730765c](https://github.com/pantry-pm/pantry/commit/730765c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update apko, assimp, Brave Browser, chrome-for-testing, Claude Desktop, claude-code, CLIProxyAPI, Cursor, Docker Desktop, exr, firecracker, fly, hasura, istioctl, kerberos, LLaMA.cpp, meilisearch, mise, ollama, Ollama, Slack, stripe, vim, xray-core, zig ([d24251f](https://github.com/pantry-pm/pantry/commit/d24251f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.193...v0.11.194)
 
 ## 🐛 Bug Fixes
