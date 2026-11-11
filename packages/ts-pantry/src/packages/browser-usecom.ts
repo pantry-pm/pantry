@@ -2,7 +2,7 @@
  * **browser-use** - Make websites accessible for AI agents
  *
  * @domain `browser-use.com`
- * @version `1.0.1` (106 versions available)
+ * @version `1.0.2` (107 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install browser-use.com`
@@ -16,7 +16,7 @@
  * const pkg = pantry.browserusecom
  * console.log(pkg.name)        // "browser-use"
  * console.log(pkg.description) // "Make websites accessible for AI agents"
- * console.log(pkg.versions[0]) // "1.0.1" (latest)
+ * console.log(pkg.versions[0]) // "1.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/browser-use-com.md
@@ -59,6 +59,7 @@ export const browserusecomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.2',
     '1.0.1',
     '1.0.0',
     '0.13.14',
