@@ -1010,8 +1010,7 @@ pub const Installer = struct {
                 // package (postgresql.org: 9.8s) on an install with nothing to do.
                 const unchanged = used_cache and self.fresh_installs.load(.monotonic) == fresh_before;
                 if (!(unchanged and libraryPathsCurrent(self.allocator, install_path, tree_root))) {
-                    libfixer.fixDirectoryLibraryPathsInTree(self.allocator, install_path, tree_root) catch {};
-                    markLibraryPathsCurrent(self.allocator, install_path, tree_root);
+                    try reconcileLibraryPaths(self.allocator, install_path, tree_root);
                 }
             }
         }
@@ -3405,7 +3404,20 @@ pub const Installer = struct {
         defer allocator.free(marker);
         const recorded = io_helper.readFileAlloc(allocator, marker, 64 * 1024) catch return false;
         defer allocator.free(recorded);
-        return std.mem.eql(u8, recorded, tree_root orelse "");
+        return std.mem.startsWith(u8, recorded, libfixer.normalization_revision) and
+            std.mem.eql(u8, recorded[libfixer.normalization_revision.len..], tree_root orelse "");
+    }
+
+    fn reconcileLibraryPaths(allocator: std.mem.Allocator, install_path: []const u8, tree_root: ?[]const u8) !void {
+        const marker = try std.fs.path.join(allocator, &.{ install_path, library_paths_marker });
+        defer allocator.free(marker);
+        // A dependency change can force a pass over an already-current install.
+        // Never let its old success marker survive a partially completed repair.
+        io_helper.deleteFile(marker) catch |err| {
+            if (err != error.FileNotFound) return err;
+        };
+        try libfixer.fixDirectoryLibraryPathsInTree(allocator, install_path, tree_root);
+        markLibraryPathsCurrent(allocator, install_path, tree_root);
     }
 
     fn markLibraryPathsCurrent(allocator: std.mem.Allocator, install_path: []const u8, tree_root: ?[]const u8) void {
@@ -3413,6 +3425,7 @@ pub const Installer = struct {
         defer allocator.free(marker);
         const file = io_helper.createFileAbsolute(marker, .{ .truncate = true }) catch return;
         defer io_helper.closeFile(file);
+        io_helper.writeAllToFile(file, libfixer.normalization_revision) catch return;
         io_helper.writeAllToFile(file, tree_root orelse "") catch {};
     }
 
@@ -6096,4 +6109,50 @@ test "native materialization: re-copying a tree over its own symlinks is repeata
     const repaired = try io_helper.readLinkAlloc(allocator, copied_link);
     defer allocator.free(repaired);
     try std.testing.expectEqualStrings("git", repaired);
+}
+
+test "library normalization revision invalidates an older installed marker" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+    const a = std.testing.allocator;
+    const marker = try std.fs.path.join(a, &.{ root, Installer.library_paths_marker });
+    defer a.free(marker);
+    const old = try io_helper.createFileAbsolute(marker, .{ .truncate = true });
+    try io_helper.writeAllToFile(old, "/fixture/pantry");
+    io_helper.closeFile(old);
+    try std.testing.expect(!Installer.libraryPathsCurrent(a, root, "/fixture/pantry"));
+    Installer.markLibraryPathsCurrent(a, root, "/fixture/pantry");
+    try std.testing.expect(Installer.libraryPathsCurrent(a, root, "/fixture/pantry"));
+    try std.testing.expect(!Installer.libraryPathsCurrent(a, root, "/other/pantry"));
+    try std.testing.expect(!Installer.libraryPathsCurrent(a, root, null));
+    Installer.markLibraryPathsCurrent(a, root, null);
+    try std.testing.expect(Installer.libraryPathsCurrent(a, root, null));
+    try std.testing.expect(!Installer.libraryPathsCurrent(a, root, "/fixture/pantry"));
+}
+
+test "library normalization failure invalidates a previously current marker" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const a = std.testing.allocator;
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+    const lib_dir = try std.fs.path.join(a, &.{ root, "lib" });
+    defer a.free(lib_dir);
+    try io_helper.makePath(lib_dir);
+    Installer.markLibraryPathsCurrent(a, root, root);
+    try std.testing.expect(Installer.libraryPathsCurrent(a, root, root));
+    const chmod = try io_helper.childRun(a, &.{ "/bin/chmod", "000", lib_dir });
+    defer a.free(chmod.stdout);
+    defer a.free(chmod.stderr);
+    try std.testing.expect(chmod.term == .exited and chmod.term.exited == 0);
+    defer {
+        const restore = io_helper.childRun(a, &.{ "/bin/chmod", "700", lib_dir }) catch unreachable;
+        a.free(restore.stdout);
+        a.free(restore.stderr);
+    }
+    try std.testing.expectError(error.AccessDenied, Installer.reconcileLibraryPaths(a, root, root));
+    try std.testing.expect(!Installer.libraryPathsCurrent(a, root, root));
 }

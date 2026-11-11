@@ -531,6 +531,9 @@ pub fn build(b: *std.Build) void {
     const archive_resume_tests = b.addTest(.{ .root_module = archive_resume_mod, .filters = &.{ "native archive resume:", "transient failures are told apart" } });
     const run_archive_resume_tests = b.addRunArtifact(archive_resume_tests);
     const archive_resume_step = b.step("test:archive-resume", "Resume quarantined native archives without weakening verification or deadlines");
+    const library_paths_step = b.step("test:library-paths", "Keep installed Mach-O libraries usable by new compiler consumers");
+    const library_paths_tests = b.addTest(.{ .root_module = lib_test_mod, .filters = &.{ "install.libfixer.", "library normalization" } });
+    library_paths_step.dependOn(&b.addRunArtifact(library_paths_tests).step);
     archive_resume_step.dependOn(&run_archive_resume_tests.step);
     const binary_platform_step = b.step("test:binary-platform", "Keep native registry URLs on the requested operating system");
     const binary_platform_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"binary registry platform:"} });

@@ -4,6 +4,8 @@ const Paths = @import("../core/platform.zig").Paths;
 const style = @import("../cli/style.zig");
 const symlink = @import("symlink.zig");
 
+pub const normalization_revision = "2\n";
+
 /// Fix macOS library paths using install_name_tool
 /// This discovers @rpath dependencies using otool and fixes them to use absolute paths
 pub fn fixMacOSLibraryPaths(
@@ -180,17 +182,16 @@ pub fn fixMacOSLibraryPathsInTree(
         if (std.mem.eql(u8, new_ref, dep.original_ref)) continue;
 
         // Fix the library path using install_name_tool
-        const fix_result = io_helper.childRun(allocator, &[_][]const u8{
+        const fix_result = try io_helper.childRun(allocator, &[_][]const u8{
             "install_name_tool",
             "-change",
             dep.original_ref,
             new_ref,
             binary_path,
-        }) catch {
-            continue;
-        };
+        });
         defer allocator.free(fix_result.stdout);
         defer allocator.free(fix_result.stderr);
+        if (fix_result.term != .exited or fix_result.term.exited != 0) return error.MacOSLibraryDependencyFixFailed;
     }
 }
 
@@ -254,6 +255,127 @@ test "originRelativeDir points a binary at its package's lib dir from where it s
     const from_lib = originRelativeDir(a, "$ORIGIN", "/p/pantry/curl.se/v8.22.0/lib/libcurl.so.4", "/p/pantry/curl.se/v8.22.0/lib").?;
     defer a.free(from_lib);
     try std.testing.expectEqualStrings("$ORIGIN", from_lib);
+}
+
+test "nested compiler runtime remains usable by a newly linked consumer" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+    const pkg = try std.fmt.allocPrint(a, "{s}/pantry/example.org/v1.2.3", .{root});
+    const nested = try std.fmt.allocPrint(a, "{s}/lib/clang/23/lib/darwin", .{pkg});
+    try io_helper.makePath(nested);
+    const source = try std.fmt.allocPrint(a, "{s}/probe.c", .{root});
+    const main_source = try std.fmt.allocPrint(a, "{s}/main.c", .{root});
+    const Writer = struct {
+        fn write(path: []const u8, text: []const u8) !void {
+            const file = try io_helper.createFileAbsolute(path, .{ .truncate = true });
+            defer io_helper.closeFile(file);
+            try io_helper.writeAllToFile(file, text);
+        }
+    };
+    try Writer.write(source, "int answer(void) { return 42; }\n");
+    try Writer.write(main_source, "#include <stdio.h>\nextern int answer(void);\nint main(void) { printf(\"%d\\n\", answer()); return 0; }\n");
+    const dylib = try std.fmt.allocPrint(a, "{s}/libprobe.dylib", .{nested});
+    const binary = try std.fmt.allocPrint(a, "{s}/consumer", .{root});
+    const cc_lib = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-arch", "arm64", "-arch", "x86_64", "-dynamiclib", source, "-Wl,-install_name,@rpath/example.org/v1.2.3/lib/clang/23/lib/darwin/libprobe.dylib", "-o", dylib });
+    try std.testing.expect(cc_lib.term == .exited and cc_lib.term.exited == 0);
+
+    // Symlink aliases and bundled applications belong to their own owners.
+    const outside = try std.fmt.allocPrint(a, "{s}/outside.dylib", .{root});
+    const bundled_dir = try std.fmt.allocPrint(a, "{s}/lib/Owned.app/Contents", .{pkg});
+    try io_helper.makePath(bundled_dir);
+    const bundled = try std.fmt.allocPrint(a, "{s}/bundled.dylib", .{bundled_dir});
+    try io_helper.copyFile(dylib, outside);
+    try io_helper.copyFile(dylib, bundled);
+    try io_helper.symLink(outside, try std.fmt.allocPrint(a, "{s}/alias.dylib", .{nested}));
+    try io_helper.symLink(bundled_dir, try std.fmt.allocPrint(a, "{s}/external", .{nested}));
+    const untouched_id = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", outside });
+
+    try fixDirectoryLibraryPathsInTree(a, pkg, try std.fmt.allocPrint(a, "{s}/pantry", .{root}));
+    const alias_package = try std.fmt.allocPrint(a, "{s}/alias-package", .{root});
+    try io_helper.makePath(alias_package);
+    try io_helper.symLink(bundled_dir, try std.fmt.allocPrint(a, "{s}/lib", .{alias_package}));
+    try fixDirectoryLibraryPathsInTree(a, alias_package, null);
+    const outside_id = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", outside });
+    try std.testing.expectEqualStrings(untouched_id.stdout, outside_id.stdout);
+    const bundled_id = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", bundled });
+    try std.testing.expect(std.mem.indexOf(u8, bundled_id.stdout, "@rpath/example.org/v1.2.3/lib/clang/23/lib/darwin/libprobe.dylib") != null);
+    // Existing installs reconcile again without changing the normalized ID.
+    try fixDirectoryLibraryPathsInTree(a, pkg, try std.fmt.allocPrint(a, "{s}/pantry", .{root}));
+    const rpath = try std.fmt.allocPrint(a, "-Wl,-rpath,{s}", .{nested});
+    const cc_bin = try io_helper.childRun(a, &.{ "/usr/bin/clang", main_source, dylib, rpath, "-o", binary });
+    try std.testing.expect(cc_bin.term == .exited and cc_bin.term.exited == 0);
+    const run = try io_helper.childRun(a, &.{binary});
+    if (run.term != .exited or run.term.exited != 0) std.debug.print("{s}\n", .{run.stderr});
+    try std.testing.expect(run.term == .exited and run.term.exited == 0);
+    try std.testing.expectEqualStrings("42\n", run.stdout);
+    const id = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", dylib });
+    try std.testing.expect(id.term == .exited and id.term.exited == 0);
+    try std.testing.expect(std.mem.indexOf(u8, id.stdout, "\n@rpath/libprobe.dylib\n") != null);
+    var ids = std.mem.splitSequence(u8, id.stdout, "\n@rpath/libprobe.dylib\n");
+    _ = ids.next();
+    try std.testing.expect(ids.next() != null);
+    try std.testing.expect(ids.next() != null);
+    try std.testing.expect(ids.next() == null);
+    const signed = try io_helper.childRun(a, &.{ "/usr/bin/codesign", "--verify", "--strict", dylib });
+    try std.testing.expect(signed.term == .exited and signed.term.exited == 0);
+}
+
+test "nested compiler runtime identity preserves foreign and mixed architecture IDs" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+    const lib_dir = try std.fmt.allocPrint(a, "{s}/pantry/example.org/v1.2.3/lib", .{root});
+    try io_helper.makePath(lib_dir);
+    const source = try std.fmt.allocPrint(a, "{s}/probe.c", .{root});
+    const file = try io_helper.createFileAbsolute(source, .{ .truncate = true });
+    try io_helper.writeAllToFile(file, "int answer(void) { return 42; }\n");
+    io_helper.closeFile(file);
+    const local_id = "@rpath/example.org/v1.2.3/lib/libprobe.dylib";
+    const other_id = "@rpath/example.org/v1.2.3/lib/other.dylib";
+    const unresolved_id = "@rpath/foreign.org/v9/lib/libprobe.dylib";
+    const dylib = try std.fmt.allocPrint(a, "{s}/libprobe.dylib", .{lib_dir});
+    const other = try std.fmt.allocPrint(a, "{s}/other.dylib", .{lib_dir});
+    const thin = try std.fmt.allocPrint(a, "{s}/thin.dylib", .{root});
+    const arm = try std.fmt.allocPrint(a, "{s}/arm.dylib", .{root});
+    for ([_][]const u8{ other_id, unresolved_id, "/usr/lib/libprobe.dylib", "@loader_path/libprobe.dylib" }) |id| {
+        const cc = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-dynamiclib", source, try std.fmt.allocPrint(a, "-Wl,-install_name,{s}", .{id}), "-o", dylib });
+        try std.testing.expect(cc.term == .exited and cc.term.exited == 0);
+        // The other reference resolves, but to a different image.
+        try io_helper.copyFile(dylib, other);
+        const before = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", dylib });
+        try std.testing.expect(try fixDylibInstallName(a, dylib, lib_dir));
+        const after = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", dylib });
+        try std.testing.expectEqualStrings(before.stdout, after.stdout);
+    }
+    for ([_][2][]const u8{
+        .{ local_id, unresolved_id },
+        .{ "/foreign/arm64/libprobe.dylib", "/foreign/x86_64/libprobe.dylib" },
+    }) |identities| {
+        for ([_]struct { arch: []const u8, id: []const u8, path: []const u8 }{
+            .{ .arch = "arm64", .id = identities[0], .path = arm },
+            .{ .arch = "x86_64", .id = identities[1], .path = thin },
+        }) |slice| {
+            const cc = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-arch", slice.arch, "-dynamiclib", source, try std.fmt.allocPrint(a, "-Wl,-install_name,{s}", .{slice.id}), "-o", slice.path });
+            try std.testing.expect(cc.term == .exited and cc.term.exited == 0);
+        }
+        const lipo = try io_helper.childRun(a, &.{ "/usr/bin/lipo", "-create", arm, thin, "-output", dylib });
+        try std.testing.expect(lipo.term == .exited and lipo.term.exited == 0);
+        const before = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", dylib });
+        try std.testing.expect(try fixDylibInstallName(a, dylib, lib_dir));
+        const after = try io_helper.childRun(a, &.{ "/usr/bin/otool", "-D", dylib });
+        try std.testing.expectEqualStrings(before.stdout, after.stdout);
+    }
 }
 
 /// Resolve an `@rpath`-relative registry path (`<domain>/v<ver>/lib/<name>`)
@@ -345,7 +467,7 @@ fn addRpathEntries(
     // Resolve the canonical user-level global dir so dynamic libs in
     // `<global>/packages/<dep>/v<ver>/lib` (openssl.org, nodejs.org, etc.)
     // remain reachable from a freshly installed binary's rpath.
-    const global = Paths.globalDir(allocator) catch return;
+    const global = try Paths.globalDir(allocator);
     defer allocator.free(global);
 
     // Add rpath entries for:
@@ -361,70 +483,308 @@ fn addRpathEntries(
     const rp2 = std.fmt.bufPrint(&rp_buf2, "{s}", .{global}) catch return;
     const rpath_entries = [_][]const u8{ rp1, rp2 };
 
-    // Add each rpath entry (codesigning is done later by codesignDirectory)
+    // Inspect first so scripts are skipped and duplicate RPATHs are true no-ops.
+    const commands = try io_helper.childRun(allocator, &.{ "otool", "-l", binary_path });
+    defer allocator.free(commands.stdout);
+    defer allocator.free(commands.stderr);
+    if (commands.term != .exited or commands.term.exited != 0) return;
+    // The image's own LC_ID_DYLIB is a linker identity, not a runtime
+    // dependency. Adding unused paths can overflow an otherwise valid header.
+    if (!hasRpathDependencies(commands.stdout)) return;
     for (rpath_entries) |rpath| {
-        const result = io_helper.childRun(allocator, &[_][]const u8{
-            "install_name_tool",
-            "-add_rpath",
-            rpath,
-            binary_path,
-        }) catch continue; // Ignore if already exists
-
-        allocator.free(result.stdout);
-        allocator.free(result.stderr);
+        const coverage = rpathArchitectureCoverage(commands.stdout, rpath);
+        if (coverage.architectures > 0 and coverage.matching == coverage.architectures) continue;
+        if (coverage.matching > 0) {
+            try addRpathToMissingArchitectures(allocator, binary_path, rpath);
+            continue;
+        }
+        const result = try io_helper.childRun(allocator, &.{ "install_name_tool", "-add_rpath", rpath, binary_path });
+        defer allocator.free(result.stdout);
+        defer allocator.free(result.stderr);
+        if (result.term != .exited or result.term.exited != 0) {
+            style.printError("Could not add RPATH to {s}: {s}", .{ binary_path, result.stderr });
+            if (@import("builtin").is_test) std.debug.print("RPATH {s}: {s}\n", .{ rpath, result.stderr });
+            return error.MacOSLibraryRpathFixFailed;
+        }
     }
 }
 
-/// Fix a dylib's install name (-id) if it has a hardcoded build path
+fn hasRpathDependencies(commands: []const u8) bool {
+    var dependency = false;
+    var lines = std.mem.tokenizeScalar(u8, commands, '\n');
+    while (lines.next()) |line| {
+        const text = std.mem.trim(u8, line, " \t\r");
+        if (std.mem.startsWith(u8, text, "cmd ")) {
+            dependency = std.mem.eql(u8, text, "cmd LC_LOAD_DYLIB") or
+                std.mem.eql(u8, text, "cmd LC_LOAD_WEAK_DYLIB") or
+                std.mem.eql(u8, text, "cmd LC_REEXPORT_DYLIB") or
+                std.mem.eql(u8, text, "cmd LC_LOAD_UPWARD_DYLIB");
+        } else if (dependency and std.mem.startsWith(u8, text, "name @rpath/")) return true;
+    }
+    return false;
+}
+
+fn rpathArchitectureCoverage(commands: []const u8, rpath: []const u8) struct { architectures: usize, matching: usize } {
+    var architectures: usize = 0;
+    var matching: usize = 0;
+    var in_rpath = false;
+    var found_in_architecture = false;
+    var lines = std.mem.tokenizeScalar(u8, commands, '\n');
+    while (lines.next()) |line| {
+        const text = std.mem.trim(u8, line, " \t\r");
+        if (std.mem.endsWith(u8, text, ":")) {
+            architectures += 1;
+            found_in_architecture = false;
+            in_rpath = false;
+        } else if (std.mem.startsWith(u8, text, "cmd ")) {
+            in_rpath = std.mem.eql(u8, text, "cmd LC_RPATH");
+        } else if (in_rpath and !found_in_architecture and std.mem.startsWith(u8, text, "path ")) {
+            const end = std.mem.lastIndexOf(u8, text, " (offset ") orelse continue;
+            if (std.mem.eql(u8, text["path ".len..end], rpath)) {
+                matching += 1;
+                found_in_architecture = true;
+            }
+        }
+    }
+    return .{ .architectures = architectures, .matching = matching };
+}
+
+fn hasRpathInEveryArchitecture(commands: []const u8, rpath: []const u8) bool {
+    const coverage = rpathArchitectureCoverage(commands, rpath);
+    return coverage.architectures > 0 and coverage.matching == coverage.architectures;
+}
+
+// install_name_tool has no per-architecture option and rejects an add if
+// any slice already has that path. Rebuild only this mixed case in private
+// sibling staging, preserving all other slice commands and the file mode.
+fn addRpathToMissingArchitectures(allocator: std.mem.Allocator, binary_path: []const u8, rpath: []const u8) !void {
+    const archs = try io_helper.childRun(allocator, &.{ "lipo", "-archs", binary_path });
+    defer allocator.free(archs.stdout);
+    defer allocator.free(archs.stderr);
+    if (archs.term != .exited or archs.term.exited != 0) return error.MacOSLibraryArchitectureReadFailed;
+    const metadata = try io_helper.cwd().statFile(io_helper.io, binary_path, .{ .follow_symlinks = false });
+    if (metadata.kind != .file) return error.MacOSLibraryArchitectureReadFailed;
+    const staging = try io_helper.createPrivateDirectory(allocator, std.fs.path.dirname(binary_path) orelse return error.InvalidPath, ".pantry-rpath");
+    defer allocator.free(staging);
+    defer io_helper.deleteTree(staging) catch {};
+    var merge = try std.ArrayList([]const u8).initCapacity(allocator, 8);
+    defer {
+        for (merge.items[2..]) |path| allocator.free(path);
+        merge.deinit(allocator);
+    }
+    try merge.appendSlice(allocator, &.{ "lipo", "-create" });
+    var names = std.mem.tokenizeAny(u8, archs.stdout, " \t\r\n");
+    while (names.next()) |arch| {
+        for (arch) |c| if (!std.ascii.isAlphanumeric(c) and c != '_') return error.MacOSLibraryArchitectureReadFailed;
+        const slice = try std.fs.path.join(allocator, &.{ staging, arch });
+        // Keep slice paths owned by merge, including all error exits.
+        merge.append(allocator, slice) catch |err| {
+            allocator.free(slice);
+            return err;
+        };
+        const thin = try io_helper.childRun(allocator, &.{ "lipo", binary_path, "-thin", arch, "-output", slice });
+        defer allocator.free(thin.stdout);
+        defer allocator.free(thin.stderr);
+        if (thin.term != .exited or thin.term.exited != 0) return error.MacOSLibraryArchitectureReadFailed;
+        const commands = try io_helper.childRun(allocator, &.{ "otool", "-l", slice });
+        defer allocator.free(commands.stdout);
+        defer allocator.free(commands.stderr);
+        if (commands.term != .exited or commands.term.exited != 0) return error.MacOSLibraryArchitectureReadFailed;
+        if (!hasRpathInEveryArchitecture(commands.stdout, rpath)) {
+            const add = try io_helper.childRun(allocator, &.{ "install_name_tool", "-add_rpath", rpath, slice });
+            defer allocator.free(add.stdout);
+            defer allocator.free(add.stderr);
+            if (add.term != .exited or add.term.exited != 0) return error.MacOSLibraryRpathFixFailed;
+        }
+    }
+    if (merge.items.len < 4) return error.MacOSLibraryArchitectureReadFailed;
+    const output = try std.fs.path.join(allocator, &.{ staging, "rebuilt" });
+    defer allocator.free(output);
+    // The tail is borrowed, unlike the owned slice paths above.
+    const owned_len = merge.items.len;
+    try merge.appendSlice(allocator, &.{ "-output", output });
+    const combined = io_helper.childRun(allocator, merge.items) catch |err| {
+        merge.shrinkRetainingCapacity(owned_len);
+        return err;
+    };
+    merge.shrinkRetainingCapacity(owned_len);
+    defer allocator.free(combined.stdout);
+    defer allocator.free(combined.stderr);
+    if (combined.term != .exited or combined.term.exited != 0) return error.MacOSLibraryArchitectureWriteFailed;
+    const file = try io_helper.cwd().openFile(io_helper.io, output, .{ .mode = .read_write });
+    defer io_helper.closeFile(file);
+    try file.setPermissions(io_helper.io, metadata.permissions);
+    try io_helper.rename(output, binary_path);
+}
+
+test "library normalization fills missing universal RPATHs and preserves other slice paths" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buf[0..try tmp.dir.realPath(io_helper.io, &root_buf)];
+    const bin = try std.fs.path.join(a, &.{ root, "bin" });
+    const lib = try std.fs.path.join(a, &.{ root, "lib" });
+    try io_helper.makePath(bin);
+    try io_helper.makePath(lib);
+    const source = try std.fs.path.join(a, &.{ root, "main.c" });
+    const library_source = try std.fs.path.join(a, &.{ root, "probe.c" });
+    for ([_][2][]const u8{
+        .{ source, "#include <stdio.h>\nextern int answer(void);\nint main(void) { printf(\"%d\\n\", answer()); return 0; }\n" },
+        .{ library_source, "int answer(void) { return 42; }\n" },
+    }) |entry| {
+        const file = try io_helper.createFileAbsolute(entry[0], .{});
+        defer io_helper.closeFile(file);
+        try io_helper.writeAllToFile(file, entry[1]);
+    }
+    const library = try std.fs.path.join(a, &.{ lib, "libprobe.dylib" });
+    const cc_lib = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-arch", "arm64", "-arch", "x86_64", "-dynamiclib", library_source, "-Wl,-install_name,@rpath/libprobe.dylib", "-o", library });
+    try std.testing.expect(cc_lib.term == .exited and cc_lib.term.exited == 0);
+    const arm = try std.fs.path.join(a, &.{ root, "arm" });
+    const intel = try std.fs.path.join(a, &.{ root, "intel" });
+    const binary = try std.fs.path.join(a, &.{ bin, "consumer" });
+    const cc_arm = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-arch", "arm64", source, library, "-Wl,-headerpad,4096", "-Wl,-rpath,@loader_path/../lib", "-Wl,-rpath,@loader_path/arm-only", "-o", arm });
+    try std.testing.expect(cc_arm.term == .exited and cc_arm.term.exited == 0);
+    const cc_intel = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-arch", "x86_64", source, library, "-Wl,-headerpad,4096", "-Wl,-rpath,@loader_path/intel-only", "-o", intel });
+    try std.testing.expect(cc_intel.term == .exited and cc_intel.term.exited == 0);
+    const merged = try io_helper.childRun(a, &.{ "lipo", "-create", arm, intel, "-output", binary });
+    try std.testing.expect(merged.term == .exited and merged.term.exited == 0);
+    const original_metadata = try io_helper.cwd().statFile(io_helper.io, binary, .{});
+    try addRpathEntries(a, binary, root);
+    try addRpathEntries(a, binary, root);
+    const final_metadata = try io_helper.cwd().statFile(io_helper.io, binary, .{});
+    try std.testing.expectEqual(original_metadata.permissions.toMode(), final_metadata.permissions.toMode());
+    const commands = try io_helper.childRun(a, &.{ "otool", "-l", binary });
+    const global = try Paths.globalDir(a);
+    try std.testing.expect(hasRpathInEveryArchitecture(commands.stdout, "@loader_path/../lib"));
+    try std.testing.expect(hasRpathInEveryArchitecture(commands.stdout, global));
+    const arm_commands = try io_helper.childRun(a, &.{ "otool", "-arch", "arm64", "-l", binary });
+    const intel_commands = try io_helper.childRun(a, &.{ "otool", "-arch", "x86_64", "-l", binary });
+    try std.testing.expect(hasRpathInEveryArchitecture(arm_commands.stdout, "@loader_path/arm-only"));
+    try std.testing.expect(hasRpathInEveryArchitecture(intel_commands.stdout, "@loader_path/intel-only"));
+    try codesignDirectory(a, bin);
+    const run = try io_helper.childRun(a, &.{binary});
+    if (run.term != .exited or run.term.exited != 0) std.debug.print("{s}\n", .{run.stderr});
+    try std.testing.expect(run.term == .exited and run.term.exited == 0);
+    try std.testing.expectEqualStrings("42\n", run.stdout);
+}
+
+test "library normalization RPATH inspection requires each universal slice" {
+    const both = "lib (architecture arm64):\ncmd LC_RPATH\npath @loader_path/lib with spaces (offset 12)\nlib (architecture x86_64):\ncmd LC_RPATH\npath @loader_path/lib with spaces (offset 12)\n";
+    try std.testing.expect(hasRpathInEveryArchitecture(both, "@loader_path/lib with spaces"));
+    try std.testing.expect(!hasRpathInEveryArchitecture(both, "@loader_path/lib"));
+    const partial = both ++ "lib (architecture x86_64h):\ncmd LC_LOAD_DYLIB\npath @loader_path/lib with spaces (offset 12)\n";
+    try std.testing.expect(!hasRpathInEveryArchitecture(partial, "@loader_path/lib with spaces"));
+    try std.testing.expect(!hasRpathInEveryArchitecture("", "anything"));
+    try std.testing.expect(!hasRpathDependencies("cmd LC_ID_DYLIB\nname @rpath/libprobe.dylib (offset 24)\ncmd LC_LOAD_DYLIB\nname /usr/lib/libSystem.B.dylib (offset 24)\n"));
+    try std.testing.expect(hasRpathDependencies("cmd LC_LOAD_WEAK_DYLIB\nname @rpath/libprobe.dylib (offset 24)\n"));
+}
+
+/// Normalize a proven package-store identity or a hardcoded build path.
 fn fixDylibInstallName(
     allocator: std.mem.Allocator,
     dylib_path: []const u8,
     lib_dir: []const u8,
-    entry_name: []const u8,
-) void {
+) !bool {
     const builtin = @import("builtin");
-    if (builtin.os.tag != .macos) return;
+    if (builtin.os.tag != .macos) return false;
 
     // Use otool -D to get the install name
-    const otool_result = io_helper.childRun(allocator, &[_][]const u8{
+    const otool_result = try io_helper.childRun(allocator, &[_][]const u8{
         "otool", "-D", dylib_path,
-    }) catch return;
+    });
     defer allocator.free(otool_result.stdout);
     defer allocator.free(otool_result.stderr);
 
-    if (otool_result.term.exited != 0) return;
+    if (otool_result.term != .exited or otool_result.term.exited != 0) return false;
 
-    // otool -D output: first line is the file path, second line is the install name
-    var lines_iter = std.mem.tokenizeScalar(u8, otool_result.stdout, '\n');
-    _ = lines_iter.next(); // Skip first line (file path)
-    const install_name = std.mem.trim(u8, lines_iter.next() orelse return, " \t\r");
-
-    // Check if install name points to a non-standard location
-    const system_prefixes = [_][]const u8{
-        "/usr/lib/",
-        "/System/Library/",
-        "/Library/Apple/",
-    };
-
-    if (install_name.len == 0 or install_name[0] != '/') return;
-
-    for (system_prefixes) |prefix| {
-        if (std.mem.startsWith(u8, install_name, prefix)) return;
-    }
-
-    // Build the correct absolute path for this dylib
+    // Universal images report one header and ID per architecture. Only rewrite
+    // when every slice agrees on the same proven identity; -id changes all of
+    // them, so checking just the first could overwrite a different slice's ID.
+    const Identity = enum { rpath, absolute };
+    var identity: ?Identity = null;
+    var needs_change = false;
+    var found_id = false;
+    var absolute_id: ?[]const u8 = null;
     var new_id_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const new_id = std.fmt.bufPrint(&new_id_buf, "{s}/{s}", .{ lib_dir, entry_name }) catch return;
-
-    // Skip if already correct
-    if (std.mem.eql(u8, install_name, new_id)) return;
+    const rpath_id = try std.fmt.bufPrint(&new_id_buf, "@rpath/{s}", .{std.fs.path.basename(dylib_path)});
+    var lines_iter = std.mem.tokenizeScalar(u8, otool_result.stdout, '\n');
+    while (lines_iter.next()) |line| {
+        const install_name = std.mem.trim(u8, line, " \t\r");
+        if (std.mem.endsWith(u8, install_name, ":")) continue;
+        found_id = true;
+        const proposed: Identity = if (std.mem.startsWith(u8, install_name, "@rpath/")) blk: {
+            if (std.mem.eql(u8, install_name, rpath_id)) break :blk .rpath;
+            // A compiler supplies its runtime's directory to the linker. An ID
+            // rooted at the package store repeats that store beneath it.
+            var resolved_buf: [std.fs.max_path_bytes]u8 = undefined;
+            const resolved = findRpathRefInAncestors(lib_dir, install_name["@rpath/".len..], &resolved_buf) orelse return true;
+            const actual = try io_helper.realpathAlloc(allocator, dylib_path);
+            defer allocator.free(actual);
+            const target = try io_helper.realpathAlloc(allocator, resolved);
+            defer allocator.free(target);
+            if (!std.mem.eql(u8, actual, target)) return true;
+            break :blk .rpath;
+        } else blk: {
+            if (install_name.len == 0 or install_name[0] != '/') return true;
+            for ([_][]const u8{ "/usr/lib/", "/System/Library/", "/Library/Apple/" }) |prefix| {
+                if (std.mem.startsWith(u8, install_name, prefix)) return true;
+            }
+            if (absolute_id) |previous| {
+                if (!std.mem.eql(u8, previous, install_name)) return true;
+            } else absolute_id = install_name;
+            break :blk .absolute;
+        };
+        if (identity) |previous| {
+            if (previous != proposed) return true;
+        } else identity = proposed;
+        const desired = if (proposed == .rpath) rpath_id else dylib_path;
+        needs_change = needs_change or !std.mem.eql(u8, install_name, desired);
+    }
+    if (!found_id) return false;
+    if (!needs_change) return true;
+    const new_id = if (identity.? == .rpath) rpath_id else dylib_path;
 
     // Fix the install name
-    const result = io_helper.childRun(allocator, &[_][]const u8{
+    const result = try io_helper.childRun(allocator, &[_][]const u8{
         "install_name_tool", "-id", new_id, dylib_path,
-    }) catch return;
-    allocator.free(result.stdout);
-    allocator.free(result.stderr);
+    });
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+    if (result.term != .exited or result.term.exited != 0) return error.MacOSLibraryIdentityFixFailed;
+    return true;
+}
+
+fn fixMacOSLibraryDirectory(
+    allocator: std.mem.Allocator,
+    directory: []const u8,
+    lib_dir: []const u8,
+    package_dir: []const u8,
+    tree_root: []const u8,
+) !void {
+    const metadata = try io_helper.cwd().statFile(io_helper.io, directory, .{ .follow_symlinks = false });
+    if (metadata.kind != .directory) return;
+    var dir = try io_helper.openDirAbsoluteForIteration(directory);
+    defer dir.close();
+    var iterator = dir.iterate();
+    while (try iterator.next()) |entry| {
+        const path = try std.fs.path.join(allocator, &.{ directory, entry.name });
+        defer allocator.free(path);
+        if (entry.kind == .directory and !std.mem.endsWith(u8, entry.name, ".app")) {
+            try fixMacOSLibraryDirectory(allocator, path, lib_dir, package_dir, tree_root);
+        } else if (entry.kind == .file and std.mem.endsWith(u8, entry.name, ".dylib")) {
+            if (!try fixDylibInstallName(allocator, path, lib_dir)) continue;
+            try fixMacOSLibraryPathsInTree(allocator, path, lib_dir, tree_root);
+            try addRpathEntries(allocator, path, package_dir);
+            const signed = try io_helper.childRun(allocator, &.{ "codesign", "-s", "-", "-f", path });
+            defer allocator.free(signed.stdout);
+            defer allocator.free(signed.stderr);
+            if (signed.term != .exited or signed.term.exited != 0) return error.MacOSLibrarySigningFailed;
+        }
+    }
 }
 
 /// Fix ELF RPATH/RUNPATH entries on Linux using `patchelf`.
@@ -544,34 +904,15 @@ pub fn fixDirectoryLibraryPathsInTree(
     const lib_dir = std.fmt.bufPrint(&lib_buf, "{s}/lib", .{package_dir}) catch return;
 
     // Check if lib directory exists (we need it for absolute paths)
-    io_helper.accessAbsolute(lib_dir, .{}) catch {
-        // No lib directory - nothing to fix
-        return;
+    const lib_metadata = io_helper.cwd().statFile(io_helper.io, lib_dir, .{ .follow_symlinks = false }) catch |err| {
+        if (err == error.FileNotFound) return;
+        return err;
     };
+    if (lib_metadata.kind != .directory) return;
 
-    // First fix dylib install names, then fix references in binaries/dylibs
-    {
-        var dir = io_helper.openDirAbsoluteForIteration(lib_dir) catch return;
-        defer dir.close();
-
-        var it = dir.iterate();
-        while (it.next() catch null) |entry| {
-            if (entry.kind != .file) continue;
-            if (!std.mem.endsWith(u8, entry.name, ".dylib")) continue;
-
-            var dl_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const dylib_path = std.fmt.bufPrint(&dl_buf, "{s}/{s}", .{ lib_dir, entry.name }) catch continue;
-
-            // Fix the dylib's own install name first
-            fixDylibInstallName(allocator, dylib_path, lib_dir, entry.name);
-
-            // Add rpath entries for dylibs
-            addRpathEntries(allocator, dylib_path, package_dir) catch {};
-
-            // Fix library paths for this dylib (inter-dylib deps)
-            fixMacOSLibraryPathsInTree(allocator, dylib_path, lib_dir, tree_root orelse package_dir) catch {};
-        }
-    }
+    // Compiler runtimes and other libraries can live below lib/. Each real
+    // image is normalized and signed before a successful install is recorded.
+    try fixMacOSLibraryDirectory(allocator, lib_dir, lib_dir, package_dir, tree_root orelse package_dir);
 
     // Fix binaries in bin/ directory. A missing bin/ (library-only packages like
     // zlib.net, openssl.org, libexpat) must NOT abort: the rpath rewrites above
@@ -587,50 +928,61 @@ pub fn fixDirectoryLibraryPathsInTree(
     var sbin_buf: [std.fs.max_path_bytes]u8 = undefined;
     const sbin_dir = std.fmt.bufPrint(&sbin_buf, "{s}/sbin", .{package_dir}) catch return;
     for ([_][]const u8{ bin_dir, sbin_dir }) |exec_dir| {
+        const metadata = io_helper.cwd().statFile(io_helper.io, exec_dir, .{ .follow_symlinks = false }) catch |err| {
+            if (err == error.FileNotFound) continue;
+            return err;
+        };
+        if (metadata.kind != .directory) continue;
         if (io_helper.openDirAbsoluteForIteration(exec_dir)) |*dir_ptr| {
             var dir = dir_ptr.*;
             defer dir.close();
 
             var it = dir.iterate();
-            while (it.next() catch null) |entry| {
+            while (try it.next()) |entry| {
                 if (entry.kind != .file) continue;
 
                 var bp_buf: [std.fs.max_path_bytes]u8 = undefined;
                 const binary_path = std.fmt.bufPrint(&bp_buf, "{s}/{s}", .{ exec_dir, entry.name }) catch continue;
 
-                // Add rpath entries for finding dependencies
-                addRpathEntries(allocator, binary_path, package_dir) catch {};
-
-                // Fix library paths (both @rpath/ and hardcoded absolute paths)
-                fixMacOSLibraryPathsInTree(allocator, binary_path, lib_dir, tree_root orelse package_dir) catch {};
+                try fixMacOSLibraryPathsInTree(allocator, binary_path, lib_dir, tree_root orelse package_dir);
+                try addRpathEntries(allocator, binary_path, package_dir);
             }
-        } else |_| {}
+        } else |err| return err;
     }
 
     // Re-sign all modified binaries and dylibs. This MUST run even when bin/ is
     // absent — see the note above.
-    codesignDirectory(allocator, bin_dir);
-    codesignDirectory(allocator, sbin_dir);
-    codesignDirectory(allocator, lib_dir);
+    try codesignDirectory(allocator, bin_dir);
+    try codesignDirectory(allocator, sbin_dir);
 }
 
 /// Re-sign all Mach-O files in a directory after modifications
-fn codesignDirectory(allocator: std.mem.Allocator, dir_path: []const u8) void {
-    var dir = io_helper.openDirAbsoluteForIteration(dir_path) catch return;
+fn codesignDirectory(allocator: std.mem.Allocator, dir_path: []const u8) !void {
+    const metadata = io_helper.cwd().statFile(io_helper.io, dir_path, .{ .follow_symlinks = false }) catch |err| {
+        if (err == error.FileNotFound) return;
+        return err;
+    };
+    if (metadata.kind != .directory) return;
+    var dir = try io_helper.openDirAbsoluteForIteration(dir_path);
     defer dir.close();
 
     var it = dir.iterate();
-    while (it.next() catch null) |entry| {
+    while (try it.next()) |entry| {
         if (entry.kind != .file) continue;
 
         var path_buf: [std.fs.max_path_bytes]u8 = undefined;
         const file_path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
 
-        const result = io_helper.childRun(allocator, &[_][]const u8{
+        const image = try io_helper.childRun(allocator, &.{ "otool", "-h", file_path });
+        defer allocator.free(image.stdout);
+        defer allocator.free(image.stderr);
+        if (image.term != .exited or image.term.exited != 0) continue;
+        const result = try io_helper.childRun(allocator, &[_][]const u8{
             "codesign", "-s", "-", "-f", file_path,
-        }) catch continue;
-        allocator.free(result.stdout);
-        allocator.free(result.stderr);
+        });
+        defer allocator.free(result.stdout);
+        defer allocator.free(result.stderr);
+        if (result.term != .exited or result.term.exited != 0) return error.MacOSLibrarySigningFailed;
     }
 }
 
