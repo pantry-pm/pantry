@@ -445,7 +445,7 @@ pub fn detectMonorepoPackages(allocator: std.mem.Allocator, project_root: []cons
     defer allocator.free(packages_dir);
 
     // Check if packages/ directory exists
-    io_helper.accessAbsolute(packages_dir, .{}) catch {
+    io_helper.access(packages_dir, .{}) catch {
         return null; // No packages/ directory
     };
 
@@ -520,7 +520,7 @@ fn scanForPackages(allocator: std.mem.Allocator, dir_path: []const u8, packages:
 
         // Check if this directory has a package.json
         const has_pkg_json = blk: {
-            io_helper.accessAbsolute(config_path, .{}) catch {
+            io_helper.access(config_path, .{}) catch {
                 break :blk false;
             };
             break :blk true;
@@ -564,7 +564,7 @@ pub fn appendPackageFromDir(
     errdefer allocator.free(config_path);
 
     // Must have a package.json to be a package.
-    io_helper.accessAbsolute(config_path, .{}) catch {
+    io_helper.access(config_path, .{}) catch {
         allocator.free(config_path);
         return;
     };

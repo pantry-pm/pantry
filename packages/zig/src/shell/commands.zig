@@ -2562,7 +2562,12 @@ pub const ShellCommands = struct {
     /// like `migrate --seed` don't repeat (and re-seed) every time. `force`
     /// (e.g. `pantry install --force`) re-runs regardless; deleting `pantry/`
     /// (a clean rebuild) also re-arms it.
-    fn executePostSetupCommands(self: *ShellCommands, project_root: []const u8, force: bool) !void {
+    fn executePostSetupCommands(self: *ShellCommands, project_path: []const u8, force: bool) !void {
+        // Config imports, runtime lookup and hook working directories share one
+        // absolute root even when the caller supplied a relative project path.
+        const project_root = try io_helper.realpathAlloc(self.allocator, project_path);
+        defer self.allocator.free(project_root);
+
         // No JS/TS config → no postSetup possible. Skip without writing a marker
         // so a project that later adds a config still runs on the next install.
         if (!self.projectHasPantryConfig(project_root)) return;
@@ -3149,7 +3154,7 @@ test "ShellCommands executePostSetupCommands runs config deps hooks" {
         defer file.close(io_helper.io);
         try io_helper.writeAllToFile(
             file,
-            "#!/bin/sh\nprintf '%s' '{\"postSetup\":{\"commands\":[{\"name\":\"seed\",\"description\":\"seed\",\"command\":\"printf seeded > post-setup.txt\"}]}}'\n",
+            "#!/bin/sh\nprintf '%s' \"$2\" > \"${0%/*}/evaluated-config.txt\"\nprintf '%s' '{\"postSetup\":{\"commands\":[{\"name\":\"seed\",\"description\":\"seed\",\"command\":\"printf seeded > post-setup.txt\"}]}}'\n",
         );
     }
 
@@ -3166,6 +3171,25 @@ test "ShellCommands executePostSetupCommands runs config deps hooks" {
     defer allocator.free(marker);
 
     try std.testing.expectEqualStrings("seeded", marker);
+
+    const evaluated_path = try std.fs.path.join(allocator, &.{ runtime_dir, "evaluated-config.txt" });
+    defer allocator.free(evaluated_path);
+    const evaluated = try io_helper.readFileAlloc(allocator, evaluated_path, 4096);
+    defer allocator.free(evaluated);
+    const absolute_config = try io_helper.realpathAlloc(allocator, config_path);
+    defer allocator.free(absolute_config);
+    const expected_wrapper = try std.fmt.allocPrint(allocator, "import c from '{s}'; console.log(JSON.stringify(c.default || c));", .{absolute_config});
+    defer allocator.free(expected_wrapper);
+    try std.testing.expectEqualStrings(expected_wrapper, evaluated);
+
+    // The marker belongs to the same project for relative and absolute callers.
+    try io_helper.deleteFile(marker_path);
+    const absolute_root = try io_helper.realpathAlloc(allocator, test_dir);
+    defer allocator.free(absolute_root);
+    try commands.executePostSetupCommands(absolute_root, false);
+    try std.testing.expectError(error.FileNotFound, io_helper.access(marker_path, .{}));
+    try commands.executePostSetupCommands(test_dir, false);
+    try std.testing.expectError(error.FileNotFound, io_helper.access(marker_path, .{}));
 }
 
 // Regression: a failing `required: false` postSetup command must not abort the

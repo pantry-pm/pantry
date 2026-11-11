@@ -214,6 +214,18 @@ test "detectMonorepoPackages finds packages in packages/ directory" {
     }
     try testing.expect(found_a);
     try testing.expect(found_b);
+
+    // The public API preserves the caller's path form and supports both forms.
+    const absolute_root = try io_helper.realpathAlloc(allocator, tmp_dir);
+    defer allocator.free(absolute_root);
+    const absolute_packages = (try lib.commands.registry_commands.detectMonorepoPackages(allocator, absolute_root, null)).?;
+    defer {
+        for (absolute_packages) |*pkg| pkg.deinit(allocator);
+        allocator.free(absolute_packages);
+    }
+    try testing.expectEqual(pkgs.len, absolute_packages.len);
+    for (pkgs) |pkg| try testing.expect(!std.fs.path.isAbsolute(pkg.path));
+    for (absolute_packages) |pkg| try testing.expect(std.fs.path.isAbsolute(pkg.path));
 }
 
 test "detectMonorepoPackages returns null when no packages/ dir" {
