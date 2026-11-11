@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.196...v0.11.197)
+
+## 🐛 Bug Fixes
+
+- **publish**: honor Pantry lifecycle script controls ([f75661a](https://github.com/pantry-pm/pantry/commit/f75661a)) _(by Chris <chris@stacksjs.com>)_ ([#319](https://github.com/pantry-pm/pantry/issues/319))
+
+## 🔧 Chores
+
+- release v0.11.197 ([3f157a8](https://github.com/pantry-pm/pantry/commit/3f157a8)) _(by Chris <chris@stacksjs.com>)_
+- update ast-grep.github, browser-use, CLIProxyAPI, dart, lavinmq, LLaMA.cpp, Visual Studio Code ([9ac0877](https://github.com/pantry-pm/pantry/commit/9ac0877)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.497 ([b0ad202](https://github.com/pantry-pm/pantry/commit/b0ad202)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.195...v0.11.196)
 
 ## 🐛 Bug Fixes
