@@ -2,7 +2,7 @@
  * **boost** - Super-project for modularized Boost
  *
  * @domain `boost.org`
- * @version `1.92.0` (23 versions available)
+ * @version `1.93.0.beta1` (24 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install boost.org`
@@ -16,7 +16,7 @@
  * const pkg = pantry.boostorg
  * console.log(pkg.name)        // "boost"
  * console.log(pkg.description) // "Super-project for modularized Boost"
- * console.log(pkg.versions[0]) // "1.92.0" (latest)
+ * console.log(pkg.versions[0]) // "1.93.0.beta1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/boost-org.md
@@ -59,6 +59,7 @@ export const boostorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.93.0.beta1',
     '1.92.0',
     '1.92.0.beta1',
     '1.91.0-1',

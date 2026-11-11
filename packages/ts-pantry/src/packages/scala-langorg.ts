@@ -3,7 +3,7 @@
  *
  * @domain `scala-lang.org`
  * @programs `scalac`, `scala`, `scala-cli`, `sbtn`, `amm`
- * @version `3.10.0` (22 versions available)
+ * @version `3.10.1` (23 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install scala-lang.org`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "scala-lang"
  * console.log(pkg.description) // "The Scala 3 compiler, also known as Dotty."
  * console.log(pkg.programs)    // ["scalac", "scala", ...]
- * console.log(pkg.versions[0]) // "3.10.0" (latest)
+ * console.log(pkg.versions[0]) // "3.10.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/scala-lang-org.md
@@ -83,6 +83,7 @@ export const scalaPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.10.1',
     '3.10.0',
     '3.9.0',
     '3.8.4',

@@ -1,0 +1,16 @@
+{
+  "id": "43078937771-1",
+  "domains": [
+    "boost.org",
+    "github.com/ggerganov/llama.cpp",
+    "llm.datasette.io",
+    "mongodb.com/shell",
+    "nodejs.org",
+    "plantuml.com",
+    "prettier.io",
+    "scala-lang.org",
+    "terraform.io",
+    "terragrunt.gruntwork.io",
+    "ziglang.org"
+  ]
+}
