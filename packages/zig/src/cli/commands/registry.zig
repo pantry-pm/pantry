@@ -699,6 +699,8 @@ pub const RegistryPublishOptions = struct {
     dry_run: bool = false,
     /// Verify an immutable existing version against the complete packed payload.
     verify_existing: bool = false,
+    /// Publish the already-built payload without running lifecycle scripts.
+    ignore_scripts: bool = false,
 };
 
 /// Publish a package to the Pantry registry
@@ -958,7 +960,7 @@ fn publishSingleToRegistry(
     // Run prepublish lifecycle scripts if defined
     // Priority: prepublishOnly > prepublish > build (pantry convenience fallback)
     if (root.object.get("scripts")) |scripts_val| {
-        if (scripts_val == .object) {
+        if (!options.ignore_scripts and scripts_val == .object) {
             const script_info: struct { script: ?[]const u8, name: []const u8 } =
                 if (scripts_val.object.get("prepublishOnly")) |s|
                     .{ .script = if (s == .string) s.string else null, .name = "prepublishOnly" }

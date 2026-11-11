@@ -1556,6 +1556,7 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .tag = tag orelse "latest",
         .dry_run = dry_run,
         .verify_existing = verify_existing,
+        .ignore_scripts = ignore_scripts,
     };
 
     const result = try lib.commands.registryPublishCommand(allocator, &[_][]const u8{}, options);

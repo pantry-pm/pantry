@@ -407,6 +407,10 @@ jobs:
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
         run: bun .github/scripts/verify-publication-retry.ts
+      - name: Verify publish lifecycle controls through the native transport
+        env:
+          PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
+        run: bun .github/scripts/verify-publication-lifecycle.ts
       - name: Verify gateway recovery and terminal authentication through the native transport
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
