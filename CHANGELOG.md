@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.195...v0.11.196)
+
+## 🐛 Bug Fixes
+
+- **install**: reconcile nested Mach-O compiler runtimes ([1abe49a](https://github.com/pantry-pm/pantry/commit/1abe49a)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#318](https://github.com/pantry-pm/pantry/issues/318))
+
+## 🔧 Chores
+
+- release v0.11.196 ([28eae43](https://github.com/pantry-pm/pantry/commit/28eae43)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update certbot, circleci, Claude Desktop, CLIProxyAPI, Codex, GitHub Desktop, goreleaser, hasura, LLaMA.cpp, mongodb, opendap, tailscale ([bffe50c](https://github.com/pantry-pm/pantry/commit/bffe50c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.496 ([6a0cc34](https://github.com/pantry-pm/pantry/commit/6a0cc34)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.194...v0.11.195)
 
 ## ✨ Features
