@@ -1,0 +1,16 @@
+{
+  "id": "42947675682-1",
+  "domains": [
+    "certbot.eff.org",
+    "circleci.com",
+    "claude.ai",
+    "github.com/desktop",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/router-for-me/CLIProxyAPI",
+    "goreleaser.com",
+    "hasura.io",
+    "mongodb.com",
+    "opendap.org",
+    "tailscale.com"
+  ]
+}
