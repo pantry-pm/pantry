@@ -411,6 +411,7 @@ pub fn buildPackageUrl(
 pub const S3PackageResult = struct {
     tarball_url: []const u8,
     version: []const u8,
+    archive_identity: ?@import("archive_resume.zig").Identity = null,
 };
 
 fn zigDevBuildNumber(version: []const u8) ?u64 {
@@ -533,10 +534,22 @@ fn selectS3RegistryMetadata(allocator: std.mem.Allocator, version_constraint: []
     );
     errdefer allocator.free(tarball_url);
     const version_dupe = try allocator.dupe(u8, matched_version);
+    errdefer allocator.free(version_dupe);
+    var archive_identity: ?@import("archive_resume.zig").Identity = null;
+    if (platform_info.object.get("sha256")) |checksum| {
+        if (platform_info.object.get("size")) |size| {
+            if (checksum == .string and checksum.string.len == 64 and size == .integer and size.integer > 0) {
+                var digest: [32]u8 = undefined;
+                _ = std.fmt.hexToBytes(&digest, checksum.string) catch return error.InvalidRegistryMetadata;
+                archive_identity = .{ .sha256 = digest, .size = @intCast(size.integer) };
+            }
+        }
+    }
 
     return S3PackageResult{
         .tarball_url = tarball_url,
         .version = version_dupe,
+        .archive_identity = archive_identity,
     };
 }
 
@@ -544,6 +557,23 @@ test "zig dev build numbers compare numerically" {
     try std.testing.expectEqual(@as(?u64, 1422), zigDevBuildNumber("0.17.0-dev.1422+e863bf3be"));
     try std.testing.expectEqual(@as(?u64, 986), zigDevBuildNumber("0.17.0-dev.986_f3544a707"));
     try std.testing.expectEqual(@as(?u64, null), zigDevBuildNumber("0.17.0"));
+}
+
+test "native archive resume: registry selection retains the complete immutable identity" {
+    const allocator = std.testing.allocator;
+    const platform = platform_core.binaryRegistryKey(platform_core.Platform.current(), platform_core.Architecture.current());
+    var digest: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash("abcdefghij", &digest, .{});
+    const metadata = try std.fmt.allocPrint(allocator,
+        \\{{"versions":{{"1.0.0":{{"platforms":{{"{s}":{{"tarball":"binaries/fixture.tar.gz","sha256":"{s}","size":10}}}}}}}}}}
+    , .{ platform, std.fmt.bytesToHex(digest, .lower) });
+    defer allocator.free(metadata);
+    const selected = (try selectS3RegistryMetadata(allocator, "1.0.0", metadata)).?;
+    defer allocator.free(selected.tarball_url);
+    defer allocator.free(selected.version);
+    try std.testing.expectEqual(@as(u64, 10), selected.archive_identity.?.size);
+    try std.testing.expectEqualSlices(u8, &digest, &selected.archive_identity.?.sha256);
+    try std.testing.expectEqualStrings("https://registry.pantry.dev/binaries/fixture.tar.gz", selected.tarball_url);
 }
 
 // The resolver is a unit test, not an availability probe for the live

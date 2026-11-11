@@ -39,6 +39,9 @@ fn canRestoreLockTarball(version: []const u8, resolved: []const u8) bool {
 
 /// Installation options
 pub const InstallOptions = struct {
+    /// Resolver-owned identity for quarantined native archive resumption.
+    /// Each new package resolution resets this before choosing its artifact.
+    native_archive: ?@import("archive_resume.zig").Identity = null,
     /// Catalog installs may use bare Pantry domains, including font families.
     pantry_registry: bool = false,
     /// Force reinstall even if cached
@@ -772,8 +775,10 @@ pub const Installer = struct {
     pub fn install(
         self: *Installer,
         spec: PackageSpec,
-        options: InstallOptions,
+        input_options: InstallOptions,
     ) !InstallResult {
+        var options = input_options;
+        options.native_archive = null;
         const start_ts_ = io_helper.clockGettime();
         const start_time = @as(i64, @intCast(start_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(start_ts_.nsec)), 1_000_000);
 
@@ -887,6 +892,7 @@ pub const Installer = struct {
                 if (options.verbose) std.debug.print("[verbose:installer] S3 registry hit: {s} @ {s} url={s}\n", .{ domain, s3_result.version, s3_result.tarball_url });
                 s3_version_alloc = s3_result.version;
                 s3_tarball_url = s3_result.tarball_url;
+                options.native_archive = s3_result.archive_identity;
                 resolved_spec = PackageSpec{
                     .name = spec.name,
                     .version = s3_result.version,
@@ -2902,12 +2908,9 @@ pub const Installer = struct {
         );
         defer self.allocator.free(archive_path);
 
-        // Try to download
-        if (options.inline_progress) |progress_opts| {
-            try downloader.downloadFileInline(self.allocator, url, archive_path, progress_opts);
-        } else {
-            try downloader.downloadFileQuiet(self.allocator, url, archive_path, options.quiet);
-        }
+        var download_options = options;
+        download_options.native_archive = if (registry_artifact) |artifact| artifact.archive_identity else null;
+        try self.downloadNativeArchive(url, archive_path, download_options);
 
         // Show "extracting..." status if inline progress is enabled
         if (options.inline_progress) |progress_opts| {
@@ -3098,6 +3101,23 @@ pub const Installer = struct {
         return std.mem.eql(u8, version.string, wanted);
     }
 
+    /// Resumption is available only when the resolver supplied a complete
+    /// immutable identity. Other sources retain the existing download path.
+    fn downloadNativeArchive(self: *Installer, url: []const u8, destination: []const u8, options: InstallOptions) !void {
+        if (options.native_archive) |identity| {
+            const cache_root = try Paths.cache(self.allocator);
+            defer self.allocator.free(cache_root);
+            const partials = try std.fs.path.join(self.allocator, &.{ cache_root, "native-partials-v1" });
+            defer self.allocator.free(partials);
+            return @import("archive_resume.zig").download(self.allocator, url, destination, identity, partials, .{});
+        }
+        if (options.inline_progress) |progress_opts| {
+            try downloader.downloadFileInline(self.allocator, url, destination, progress_opts);
+        } else {
+            try downloader.downloadFileQuiet(self.allocator, url, destination, options.quiet);
+        }
+    }
+
     /// Keep a registry archive that has just passed verification.
     ///
     /// Project installs read this cache but never wrote it, so a CI job that
@@ -3118,7 +3138,8 @@ pub const Installer = struct {
     }
 
     /// Download and install package directly to project directory (bypassing global cache)
-    fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, options: InstallOptions, transferred_url: ?[]const u8) !void {
+    fn downloadAndInstallToProject(self: *Installer, spec: PackageSpec, domain: []const u8, project_pkg_dir: []const u8, input_options: InstallOptions, transferred_url: ?[]const u8) !void {
+        var options = input_options;
         const home = try Paths.home(self.allocator);
         defer self.allocator.free(home);
 
@@ -3138,6 +3159,7 @@ pub const Installer = struct {
         const s3_url: ?[]const u8 = if (transferred_url) |url|
             url
         else if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| blk: {
+            options.native_archive = s3_result.archive_identity;
             self.allocator.free(s3_result.version);
             break :blk s3_result.tarball_url;
         } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| blk: {
@@ -3187,19 +3209,11 @@ pub const Installer = struct {
                     } else |_| {}
                 }
 
-                if (options.inline_progress) |progress_opts| {
-                    downloader.downloadFileInline(self.allocator, url, temp_archive_path, progress_opts) catch |err| {
-                        self.allocator.free(temp_archive_path);
-                        self.allocator.free(@constCast(url));
-                        return err;
-                    };
-                } else {
-                    downloader.downloadFileQuiet(self.allocator, url, temp_archive_path, options.quiet) catch |err| {
-                        self.allocator.free(temp_archive_path);
-                        self.allocator.free(@constCast(url));
-                        return err;
-                    };
-                }
+                self.downloadNativeArchive(url, temp_archive_path, options) catch |err| {
+                    self.allocator.free(temp_archive_path);
+                    self.allocator.free(@constCast(url));
+                    return err;
+                };
                 break :blk true;
             };
 
@@ -3261,11 +3275,7 @@ pub const Installer = struct {
                 if (!options.quiet) {
                     style.print("  {s}evicting bad cached archive for {s}@{s}, re-downloading…{s}\n", .{ style.dim, spec.name, spec.version, style.reset });
                 }
-                if (options.inline_progress) |progress_opts| {
-                    try downloader.downloadFileInline(self.allocator, used_url, archive_path, progress_opts);
-                } else {
-                    try downloader.downloadFileQuiet(self.allocator, used_url, archive_path, options.quiet);
-                }
+                try self.downloadNativeArchive(used_url, archive_path, options);
                 try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
                 served_from_cache = false;
             } else {
@@ -3714,7 +3724,8 @@ pub const Installer = struct {
     }
 
     /// Install from network (download)
-    fn installFromNetwork(self: *Installer, spec: PackageSpec, options: InstallOptions, transferred_url: ?[]const u8) ![]const u8 {
+    fn installFromNetwork(self: *Installer, spec: PackageSpec, input_options: InstallOptions, transferred_url: ?[]const u8) ![]const u8 {
+        var options = input_options;
         // Resolve package name to domain
         const pkg_registry = @import("../packages/generated.zig");
         const pkg_info = pkg_registry.getPackageByName(spec.name);
@@ -3756,6 +3767,7 @@ pub const Installer = struct {
         const s3_url: ?[]const u8 = if (transferred_url) |url|
             url
         else if (try downloader.lookupS3Registry(self.allocator, domain, spec.version)) |s3_result| blk: {
+            options.native_archive = s3_result.archive_identity;
             self.allocator.free(s3_result.version);
             break :blk s3_result.tarball_url;
         } else if (try downloader.lookupPantryPublished(self.allocator, domain, spec.version)) |pub_result| blk: {
@@ -3779,19 +3791,11 @@ pub const Installer = struct {
             );
 
             const s3_ok = blk: {
-                if (options.inline_progress) |progress_opts| {
-                    downloader.downloadFileInline(self.allocator, url, temp_archive_path, progress_opts) catch |err| {
-                        self.allocator.free(temp_archive_path);
-                        self.allocator.free(@constCast(url));
-                        return err;
-                    };
-                } else {
-                    downloader.downloadFileQuiet(self.allocator, url, temp_archive_path, options.quiet) catch |err| {
-                        self.allocator.free(temp_archive_path);
-                        self.allocator.free(@constCast(url));
-                        return err;
-                    };
-                }
+                self.downloadNativeArchive(url, temp_archive_path, options) catch |err| {
+                    self.allocator.free(temp_archive_path);
+                    self.allocator.free(@constCast(url));
+                    return err;
+                };
                 break :blk true;
             };
 

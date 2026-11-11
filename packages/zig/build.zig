@@ -522,6 +522,16 @@ pub fn build(b: *std.Build) void {
     const registry_archive_cache_step = b.step("test:registry-archive-cache", "Keep verified registry archives for the next project install");
     const registry_archive_cache_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"a verified registry archive is kept"} });
     registry_archive_cache_step.dependOn(&b.addRunArtifact(registry_archive_cache_tests).step);
+    const archive_resume_mod = b.createModule(.{
+        .root_source_file = b.path("src/test_archive_resume_root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const archive_resume_tests = b.addTest(.{ .root_module = archive_resume_mod, .filters = &.{ "native archive resume:", "transient failures are told apart" } });
+    const run_archive_resume_tests = b.addRunArtifact(archive_resume_tests);
+    const archive_resume_step = b.step("test:archive-resume", "Resume quarantined native archives without weakening verification or deadlines");
+    archive_resume_step.dependOn(&run_archive_resume_tests.step);
     const binary_platform_step = b.step("test:binary-platform", "Keep native registry URLs on the requested operating system");
     const binary_platform_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"binary registry platform:"} });
     binary_platform_step.dependOn(&b.addRunArtifact(binary_platform_tests).step);
@@ -658,6 +668,7 @@ pub fn build(b: *std.Build) void {
     shell_bench_step.dependOn(&run_shell_bench.step);
 
     const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(archive_resume_step);
     test_step.dependOn(&run_lib_tests.step);
     test_step.dependOn(&run_core_tests.step);
     test_step.dependOn(&run_env_tests.step);
@@ -714,6 +725,7 @@ pub fn build(b: *std.Build) void {
     workspace_step.dependOn(&run_workspace_tests.step);
 
     const test_all_step = b.step("test:all", "Run all tests");
+    test_all_step.dependOn(archive_resume_step);
     test_all_step.dependOn(&run_lib_tests.step);
     test_all_step.dependOn(&run_core_tests.step);
     test_all_step.dependOn(&run_integration_tests.step);

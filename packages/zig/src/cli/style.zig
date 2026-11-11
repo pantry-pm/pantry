@@ -503,6 +503,7 @@ pub fn isTransientInstallError(err: anyerror) bool {
         error.NameServerFailure,
         error.RegistryUnavailable,
         error.RegistryRateLimited,
+        error.PartialArchiveBusy,
         error.UnexpectedEndOfStream,
         error.EndOfStream,
         => true,
@@ -551,6 +552,9 @@ test "failure report keeps a count past its record limit and nothing when clean"
 test "transient failures are told apart from permanent ones" {
     try std.testing.expect(isTransientInstallError(error.Timeout));
     try std.testing.expect(isTransientInstallError(error.RegistryUnavailable));
+    try std.testing.expect(isTransientInstallError(error.PartialArchiveBusy));
+    try std.testing.expect(isTransientReason(friendlyErrorName(error.PartialArchiveBusy)));
+    try std.testing.expect(!isTransientInstallError(error.PartialArchiveCacheFull));
     try std.testing.expect(!isTransientInstallError(error.PackageNotFound));
     try std.testing.expect(!isTransientInstallError(error.ChecksumMismatch));
     try std.testing.expect(isTransientReason("Registry GET HTTP 503"));
@@ -648,6 +652,8 @@ pub fn friendlyErrorName(err: anyerror) []const u8 {
         error.UnknownHostName => "unknown host",
         error.RegistryUnavailable => "registry unavailable",
         error.RegistryRateLimited => "registry rate limited (HTTP 429)",
+        error.PartialArchiveBusy => "archive temporarily busy with another install",
+        error.PartialArchiveCacheFull => "native partial archive cache is full",
         error.RegistryAuthenticationRequired => "registry authentication required (HTTP 401/403)",
         error.RegistryArtifactNotFound => "artifact missing from registry (HTTP 404)",
         error.InvalidRegistryMetadata => "invalid registry metadata",

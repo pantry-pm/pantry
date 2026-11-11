@@ -20,6 +20,27 @@ An existing cached tree that cannot be read for copying is left intact.
 Pantry obtains the original verified archive and prepares a fresh private
 extraction instead. The archive bytes and checksum remain unchanged.
 
+### Interrupted native downloads
+
+Native registry archives can resume when their metadata supplies the full
+size and SHA-256 checksum. Pantry keeps incomplete bytes in a private
+`native-partials-v1/` directory inside its cache. A later install requests the
+missing range only when the server supplied a strong ETag for those bytes.
+A server that ignores the range starts a fresh download instead.
+
+The existing deadlines and retry budgets still apply. An incomplete download
+fails the install, and the retained partial is never extracted or activated.
+The complete archive must match the registry checksum before it leaves this
+quarantine. Different URLs, checksums or sizes have separate entries.
+
+Concurrent access to one active archive reports a temporary busy failure.
+The cache reserves each archive's complete size, with limits of 64 entries,
+8 GiB in total and 4 GiB per archive. New downloads reclaim idle entries older
+than two days. Active entries are left alone, and completed entries are removed
+after their verified bytes reach the installation's private staging directory.
+If the cache has no capacity or cannot be written, Pantry uses a fresh download
+within the same deadline and still verifies the complete size and checksum.
+
 ## Cache Structure
 
 pantry stores cached data in the following locations:

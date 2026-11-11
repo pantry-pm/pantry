@@ -2027,7 +2027,7 @@ pub const HttpGetRetryBudget = struct {
         return self.retry(err);
     }
 
-    fn body(self: *HttpGetRetryBudget, err: anyerror) !bool {
+    pub fn body(self: *HttpGetRetryBudget, err: anyerror) !bool {
         if (err != error.IncompleteDownload and !transientGetTransport(err)) return false;
         if (self.used >= self.max_retries) return false;
         return self.retry(err);
@@ -2344,7 +2344,9 @@ pub const HttpStream = struct {
     redirect_buf: [8192]u8,
     request_url: []u8,
     authorization: ?[]u8 = null,
-    auth_headers: [1]std.http.Header = undefined,
+    range: ?struct { offset: u64, etag: []const u8 } = null,
+    range_buffer: [40]u8 = undefined,
+    request_headers: [3]std.http.Header = undefined,
 
     /// Content-Length from the response headers, if provided by the server.
     pub fn contentLength(self: *const HttpStream) ?u64 {
@@ -2379,6 +2381,16 @@ pub fn httpStreamGet(allocator: std.mem.Allocator, url: []const u8) !*HttpStream
 }
 
 pub fn httpStreamGetWithRetryBudget(allocator: std.mem.Allocator, url: []const u8, budget: *HttpGetRetryBudget) !*HttpStream {
+    return httpStreamGetOptions(allocator, url, budget, null);
+}
+
+/// A range request retains the same redirect, credential and retry ownership
+/// as an ordinary GET. Only this explicit path can return 206 or 416.
+pub fn httpStreamGetRange(allocator: std.mem.Allocator, url: []const u8, budget: *HttpGetRetryBudget, offset: u64, etag: []const u8) !*HttpStream {
+    return httpStreamGetOptions(allocator, url, budget, .{ .offset = offset, .etag = etag });
+}
+
+fn httpStreamGetOptions(allocator: std.mem.Allocator, url: []const u8, budget: *HttpGetRetryBudget, range: @FieldType(HttpStream, "range")) !*HttpStream {
     const stream = try allocator.create(HttpStream);
     errdefer allocator.destroy(stream);
     const initial = decorateRequest(allocator, url);
@@ -2389,6 +2401,7 @@ pub fn httpStreamGetWithRetryBudget(allocator: std.mem.Allocator, url: []const u
         .response = undefined,
         .redirect_buf = undefined,
         .request_url = try allocator.dupe(u8, initial.effectiveUrl(url)),
+        .range = range,
     };
     errdefer {
         stream.client.deinit();
@@ -2407,7 +2420,6 @@ pub fn httpStreamGetWithRetryBudget(allocator: std.mem.Allocator, url: []const u
         }
         const uri = try std.Uri.parse(stream.request_url);
         if (uri.user != null or uri.password != null) return error.InvalidUrl;
-        if (stream.authorization) |authorization| stream.auth_headers[0] = .{ .name = "Authorization", .value = authorization };
         beginStreamGetRequest(stream, uri) catch |err| {
             // The failed attempt has already closed its request. Rebuild the
             // same origin-scoped headers before the next connection attempt.
@@ -2452,7 +2464,7 @@ pub fn httpStreamGetWithRetryBudget(allocator: std.mem.Allocator, url: []const u
             try waitGetRetrySeconds(retry_delay.?);
             continue;
         }
-        if (status != 200) {
+        if (status != 200 and !(range != null and (status == 206 or status == 416))) {
             printGetStatus(uri, status, null, retry_delay, budget.max_retries);
             return switch (status) {
                 401, 403 => error.RegistryAuthenticationRequired,
@@ -2468,11 +2480,22 @@ pub fn httpStreamGetWithRetryBudget(allocator: std.mem.Allocator, url: []const u
 
 /// A failed head attempt owns and closes its request before any retry delay.
 fn beginStreamGetRequest(stream: *HttpStream, uri: std.Uri) !void {
+    var count: usize = 0;
+    if (stream.authorization) |authorization| {
+        stream.request_headers[count] = .{ .name = "Authorization", .value = authorization };
+        count += 1;
+    }
+    if (stream.range) |range| {
+        stream.request_headers[count] = .{ .name = "Range", .value = try std.fmt.bufPrint(&stream.range_buffer, "bytes={d}-", .{range.offset}) };
+        count += 1;
+        stream.request_headers[count] = .{ .name = "If-Range", .value = range.etag };
+        count += 1;
+    }
     stream.req = try stream.client.request(.GET, uri, .{
         .redirect_behavior = .unhandled,
         .keep_alive = false,
         .headers = .{ .accept_encoding = .{ .override = "identity" } },
-        .extra_headers = if (stream.authorization != null) &stream.auth_headers else &.{},
+        .extra_headers = stream.request_headers[0..count],
     });
     errdefer stream.req.deinit();
     stream.req.sendBodiless() catch |err| return requestTransportError(&stream.req, err);
