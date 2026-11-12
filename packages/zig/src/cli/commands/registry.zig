@@ -15,6 +15,7 @@ const advanced_glob = @import("../../packages/advanced_glob.zig");
 const workspace_publish = @import("workspace_publish.zig");
 const publish_ignore = @import("publish_ignore.zig");
 const publish_bins = @import("publish_bins.zig");
+const publish_archive = @import("publish_archive.zig");
 const token_commands = @import("token.zig");
 const http = std.http;
 
@@ -1272,18 +1273,19 @@ fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, sta
     // Package bin metadata promises executables even when a bundler wrote 0644.
     // Normalize only the owned staged copy, before either registry upload.
     try publish_bins.normalizeWithConfig(allocator, staging_base, config_content);
-    const metadata_free = io_helper.childRun(allocator, &[_][]const u8{
+    const archive_path = try publish_archive.outputPath(allocator, staging_base, tarball_path);
+    defer allocator.free(archive_path);
+    const metadata_free = io_helper.childRunWithOptions(allocator, &[_][]const u8{
         "/usr/bin/env", "COPYFILE_DISABLE=1", "tar",
         "--no-xattrs",  "--exclude=._*",      "--exclude=.DS_Store",
-        "-czf",         tarball_path,         "-C",
-        staging_base,   "package",
-    }) catch null;
+        "-czf",         archive_path,         "package",
+    }, .{ .cwd = staging_base }) catch null;
     if (metadata_free) |result| {
         if (result.term == .exited and result.term.exited == 0) return result;
         allocator.free(result.stdout);
         allocator.free(result.stderr);
     }
-    return io_helper.childRun(allocator, &[_][]const u8{ "tar", "--exclude=._*", "--exclude=.DS_Store", "-czf", tarball_path, "-C", staging_base, "package" });
+    return io_helper.childRunWithOptions(allocator, &[_][]const u8{ "tar", "--exclude=._*", "--exclude=.DS_Store", "-czf", archive_path, "package" }, .{ .cwd = staging_base });
 }
 
 /// Default tarball creation - use .pantryignore or .gitignore for exclusions

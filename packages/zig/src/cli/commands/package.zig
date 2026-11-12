@@ -10,6 +10,7 @@ const workspace_publish = @import("workspace_publish.zig");
 const publish_plan = @import("publish_plan.zig");
 const publish_ignore = @import("publish_ignore.zig");
 const publish_bins = @import("publish_bins.zig");
+const publish_archive = @import("publish_archive.zig");
 
 const CommandResult = common.CommandResult;
 
@@ -2888,6 +2889,8 @@ fn createTarball(
 /// plain command, which on those systems has nothing to add anyway.
 fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_path: []const u8) !io_helper.ChildRunResult {
     try publish_bins.normalize(allocator, staging_base);
+    const archive_path = try publish_archive.outputPath(allocator, staging_base, tarball_path);
+    defer allocator.free(archive_path);
     const list_path = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, ".pantry-files" });
     defer allocator.free(list_path);
 
@@ -2925,7 +2928,7 @@ fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_pa
 
         const packed_files = io_helper.childRunWithOptions(allocator, &[_][]const u8{
             "/usr/bin/env",   "COPYFILE_DISABLE=1", "tar",        "--no-xattrs",
-            "--no-recursion", "-czf",               tarball_path, "-T",
+            "--no-recursion", "-czf",               archive_path, "-T",
             ".pantry-files",
         }, .{ .cwd = staging_base }) catch break :hardened;
         if (packed_files.term == .exited and packed_files.term.exited == 0) return packed_files;
@@ -2933,7 +2936,7 @@ fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_pa
         allocator.free(packed_files.stderr);
     }
 
-    return io_helper.childRun(allocator, &[_][]const u8{ "tar", "-czf", tarball_path, "-C", staging_base, "package" });
+    return io_helper.childRunWithOptions(allocator, &[_][]const u8{ "tar", "-czf", archive_path, "package" }, .{ .cwd = staging_base });
 }
 
 /// Sort monorepo packages by dependency order using topological sort (Kahn's algorithm).

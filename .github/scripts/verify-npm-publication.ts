@@ -82,7 +82,7 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
     },
   })
   await writeFile(join(cwd, 'package.json'), JSON.stringify({
-    name, version, files: linkedBin ? ['index.txt', 'cli', 'cli-alias'] : ['index.txt'], bin: { fixture: linkedBin ? './cli-alias' : './cli' }, publishConfig: {
+    name, version, files: linkedBin ? ['index.txt', 'cli', 'cli-alias'] : ['index.txt'], bin: { fixture: linkedBin ? './cli-alias' : './cli', 'text-fixture': './index.txt' }, publishConfig: {
       // The generic command must use the explicit option ahead of this
       // different private manifest URL, without contacting a public registry.
       registry: mode === 'generic-command' ? 'http://127.0.0.1:1' : server.url.origin,
@@ -99,6 +99,7 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
     const output = stdout + stderr
     if (uploads !== 1) throw new Error(`${mode}: expected exactly one upload, got ${uploads}; requests=${JSON.stringify(requests)}; exit=${code}\n${output}`)
     if (archiveMemberMode(tarball, 'package/cli') !== 0o755) throw new Error(`${mode}: uploaded bin lost its executable mode`)
+    if (archiveMemberMode(tarball, 'package/index.txt') !== 0o755) throw new Error(`${mode}: declared text bin lost its executable mode`)
     if (linkedBin) {
       const link = archiveMember(tarball, 'package/cli-alias')
       if (link?.type !== '2' || link.link !== 'cli') throw new Error('The npm archive lost its internal bin link')
