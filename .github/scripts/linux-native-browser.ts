@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, statfs } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readdir, readFile, rm, statfs } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { resolveNativeExecutable } from '../../packages/action/src/native-executable'
@@ -49,6 +49,14 @@ async function run(name: string, args: string[], timeout = 30_000): Promise<stri
     if (name === 'install')
       assert.match(output, /\[verbose:installer\]/, 'Named native installs must preserve --verbose diagnostics')
     assert.equal(code, 0, `${name}: ${output}`)
+    if (name === 'install') {
+      // Exercise the real CLI's observation contract only after its original
+      // success assertion. Failures still retain their original diagnostics.
+      for (const phase of ['project-install', 'archive-acquisition', 'verification-extraction', 'materialization', 'library-path-repair', 'project-links']) {
+        for (const event of ['enter', 'leave'])
+          assert.match(output, new RegExp(`\\[verbose:native-phase\\] ${event} package=\\S+ version=\\S+ phase=${phase} clock_ms=\\d+`), `Missing native installation phase: ${event} ${phase}`)
+      }
+    }
     return output
   }
   finally {
@@ -60,7 +68,6 @@ async function run(name: string, args: string[], timeout = 30_000): Promise<stri
     }
   }
 }
-
 
 try {
   proof.cliVersion = (await run('cli-version', [cli, '--version'])).trim()

@@ -2792,6 +2792,17 @@ pub const Installer = struct {
         return install_path;
     }
 
+    /// Scope markers are observations, not success verdicts: a leave marker is
+    /// emitted on error returns too. The process outcome remains authoritative.
+    fn traceProjectPhase(self: *Installer, domain: []const u8, version: []const u8, phase: []const u8, event: []const u8) void {
+        if (!self.verbose) return;
+        const ts = io_helper.clockGettimeMonotonic();
+        const clock_ms = @as(i64, @intCast(ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(ts.nsec)), 1_000_000);
+        // Keep one complete event in one print across dependency worker threads.
+        // Do not print archive URLs: redirect URLs may carry credentials.
+        std.debug.print("[verbose:native-phase] {s} package={s} version={s} phase={s} clock_ms={d} thread={d}\n", .{ event, domain, version, phase, clock_ms, std.Thread.getCurrentId() });
+    }
+
     /// Install package to project's pantry directory
     fn installToProject(
         self: *Installer,
@@ -2802,6 +2813,8 @@ pub const Installer = struct {
         used_cache: *bool,
         s3_url_param: ?[]const u8,
     ) ![]const u8 {
+        self.traceProjectPhase(domain, spec.version, "project-install", "enter");
+        defer self.traceProjectPhase(domain, spec.version, "project-install", "leave");
         // Track URL ownership locally so we can free on any error path
         var owned_url = s3_url_param;
         errdefer if (owned_url) |url| self.allocator.free(@constCast(url));
@@ -2968,6 +2981,8 @@ pub const Installer = struct {
             );
 
             const s3_ok = blk: {
+                self.traceProjectPhase(domain, spec.version, "archive-acquisition", "enter");
+                defer self.traceProjectPhase(domain, spec.version, "archive-acquisition", "leave");
                 const cached_meta = self.cache.get(domain, spec.version) catch blk_cache: {
                     if (!std.mem.eql(u8, domain, spec.name)) {
                         break :blk_cache self.cache.get(spec.name, spec.version) catch null;
@@ -3045,39 +3060,59 @@ pub const Installer = struct {
         const extract_dir = staging.payload;
         defer if (cached_archive_path) |p| self.allocator.free(p);
         var served_from_cache = cached_archive_path != null;
-        staging.extractVerified(archive_path, used_format, used_url, options.verbose) catch |err| {
-            // A poisoned cache entry (bad bytes stored before checksum verification)
-            // would fail every install forever. If the archive came from cache and
-            // failed to verify/extract (corrupt or checksum mismatch), evict it and
-            // re-download once from the registry before giving up.
-            if (cached_archive_path != null) {
-                io_helper.deleteFile(cached_archive_path.?) catch {};
-                if (!options.quiet) {
-                    style.print("  {s}evicting bad cached archive for {s}@{s}, re-downloading…{s}\n", .{ style.dim, spec.name, spec.version, style.reset });
+        {
+            self.traceProjectPhase(domain, spec.version, "verification-extraction", "enter");
+            defer self.traceProjectPhase(domain, spec.version, "verification-extraction", "leave");
+            staging.extractVerified(archive_path, used_format, used_url, options.verbose) catch |err| {
+                // A poisoned cache entry (bad bytes stored before checksum verification)
+                // would fail every install forever. If the archive came from cache and
+                // failed to verify/extract (corrupt or checksum mismatch), evict it and
+                // re-download once from the registry before giving up.
+                if (cached_archive_path != null) {
+                    io_helper.deleteFile(cached_archive_path.?) catch {};
+                    if (!options.quiet) {
+                        style.print("  {s}evicting bad cached archive for {s}@{s}, re-downloading…{s}\n", .{ style.dim, spec.name, spec.version, style.reset });
+                    }
+                    try self.downloadNativeArchive(used_url, archive_path, options);
+                    try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
+                    served_from_cache = false;
+                } else {
+                    return err;
                 }
-                try self.downloadNativeArchive(used_url, archive_path, options);
-                try staging.extractVerified(archive_path, used_format, used_url, options.verbose);
-                served_from_cache = false;
-            } else {
-                return err;
-            }
-        };
+            };
+        }
         // Verified now, so keep it: the next project install reads it from the
         // cache instead of downloading it again.
-        if (!served_from_cache) self.storeVerifiedArchive(domain, spec.version, used_url, archive_path);
+        if (!served_from_cache) {
+            self.traceProjectPhase(domain, spec.version, "verified-archive-cache", "enter");
+            defer self.traceProjectPhase(domain, spec.version, "verified-archive-cache", "leave");
+            self.storeVerifiedArchive(domain, spec.version, used_url, archive_path);
+        }
 
         // Find the actual package root
-        const package_source = try self.findPackageRoot(extract_dir, domain, spec.version);
+        const package_source = blk: {
+            self.traceProjectPhase(domain, spec.version, "package-root-discovery", "enter");
+            defer self.traceProjectPhase(domain, spec.version, "package-root-discovery", "leave");
+            break :blk try self.findPackageRoot(extract_dir, domain, spec.version);
+        };
         defer self.allocator.free(package_source);
 
         // Downloads and cache repairs use the same verified, atomic copy.
-        try self.materializeVerifiedExtraction(&staging, package_source, project_pkg_dir, domain);
+        {
+            self.traceProjectPhase(domain, spec.version, "materialization", "enter");
+            defer self.traceProjectPhase(domain, spec.version, "materialization", "leave");
+            try self.materializeVerifiedExtraction(&staging, package_source, project_pkg_dir, domain);
+        }
 
         // Fix library paths for macOS; references to other packages in this
         // project's pantry/ are written relative to the referencing binary.
         const tree_root = self.projectTreeRoot(options);
         defer if (tree_root) |root| self.allocator.free(root);
-        try libfixer.fixDirectoryLibraryPathsInTree(self.allocator, project_pkg_dir, tree_root);
+        {
+            self.traceProjectPhase(domain, spec.version, "library-path-repair", "enter");
+            defer self.traceProjectPhase(domain, spec.version, "library-path-repair", "leave");
+            try libfixer.fixDirectoryLibraryPathsInTree(self.allocator, project_pkg_dir, tree_root);
+        }
 
         // Remove macOS quarantine/provenance xattrs so launchd can run service binaries
         if (comptime @import("builtin").os.tag == .macos) {
@@ -3313,6 +3348,8 @@ pub const Installer = struct {
     }
 
     fn createProjectSymlinks(self: *Installer, project_root: []const u8, domain: []const u8, version: []const u8, package_dir: []const u8) !void {
+        self.traceProjectPhase(domain, version, "project-links", "enter");
+        defer self.traceProjectPhase(domain, version, "project-links", "leave");
         // Project bin directory (pantry/.bin)
         const project_bin_dir = try std.fmt.allocPrint(
             self.allocator,
