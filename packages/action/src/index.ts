@@ -17,7 +17,7 @@ import { bunInstallCacheDir, requiredBunPackageSpec, setupBunRuntime } from './b
 import { ensurePackageExecutorAliases } from './executor-aliases'
 import { installRequiredSystemPackages, jsPackageManager, needsJsInstall, pantryConfigMaySetLinker, selectSystemPackages, shouldInstallWorkspace } from './install-mode'
 import { installResolvedSystemPackages } from './system-packages'
-import { nativeArtifactCacheIdentity } from './native-cache'
+import { nativeArtifactCachePlan } from './native-cache'
 import { dependencyCache } from './cache-service'
 import { preserveCommandActivations } from './cache-activations'
 import { exportBuildCacheEnvironment } from './build-archive-cache-env'
@@ -33,6 +33,8 @@ import * as process from 'node:process'
 import * as crypto from 'node:crypto'
 import * as cache from '@actions/cache'
 import { dependencyCacheKeys } from './dependency-cache-key'
+import { dependencyCachePaths } from './dependency-cache-paths'
+import type { CachedNativePrefix } from './dependency-cache-paths'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as github from '@actions/github'
@@ -885,9 +887,12 @@ export async function run(): Promise<void> {
     if (!dependencyCacheService.available)
       core.info('Dependency cache service unavailable; installing without cache restore or archive creation')
     let artifactIdentity: string | undefined
+    let cachePrefixes: CachedNativePrefix[] = []
     if (dependencyCacheService.available) {
       try {
-        artifactIdentity = await nativeArtifactCacheIdentity(cacheDeps, platform, undefined, undefined, lockedVersions)
+        const plan = await nativeArtifactCachePlan(cacheDeps, platform, undefined, undefined, lockedVersions)
+        artifactIdentity = plan.identity
+        cachePrefixes = plan.prefixes
       }
       catch (error) {
         core.warning(`Native artifact identity unavailable; installing without a dependency cache: ${error}`)
@@ -897,6 +902,7 @@ export async function run(): Promise<void> {
       platform, artifactIdentity || 'unavailable', resolvedVer, lockHash, depsHash, cachePackages,
     )
     let cacheHit = false
+    const cachePaths = dependencyCachePaths(pantryDir, cachePrefixes)
     // Whether `pantry install` ran in this step, and so may have re-pointed
     // system-package links that need re-asserting afterwards
     let ranPantryInstall = false
@@ -904,17 +910,12 @@ export async function run(): Promise<void> {
     // Cache extraction must not overwrite an earlier setup's selected commands.
     // A cache miss is optional; losing an existing activation is a hard failure.
     const hit = artifactIdentity ? await preserveCommandActivations(pantryBinDir, () =>
-      dependencyCacheService.restore([pantryDir], cacheKey, restoreKeys).catch(() => undefined)) : undefined
+      dependencyCacheService.restore(cachePaths, cacheKey, restoreKeys).catch(() => undefined)) : undefined
     if (hit) {
-      const binDirExists = fs.existsSync(pantryBinDir)
-      const hasEntries = binDirExists && fs.readdirSync(pantryBinDir).length > 0
-      if (hasEntries) {
-        cacheHit = hit === cacheKey
-        core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
-      }
-      else {
-        core.info('Cache restored but incomplete — reinstalling')
-      }
+      // The archive owns native prefixes, never .bin or workspace sources.
+      // Fresh checkouts activate their commands through normal installation.
+      cacheHit = hit === cacheKey
+      core.info(cacheHit ? `Exact cache hit: ${hit}` : `Restore-key cache hit: ${hit}; reconciling and saving ${cacheKey}`)
     }
 
     // Lockfile-pinned versions (map of domain → concrete version). Consulted
@@ -966,7 +967,7 @@ export async function run(): Promise<void> {
           const depDir = path.join(pantryDir, dep)
           return !fs.existsSync(depDir)
         })
-        // The cache holds pantry/, not node_modules: JS deps the install hands
+        // The cache holds native prefixes, not node_modules: JS deps the install hands
         // to bun (or npm, pnpm, yarn) are missing from every fresh checkout.
         const jsMissing = needsJsInstall(process.cwd())
         if (jsMissing && missingWorkspace.length === 0 && !pantryConfigMaySetLinker(process.cwd())) {
@@ -1022,7 +1023,7 @@ export async function run(): Promise<void> {
       // Save to cache for next run
       try {
         if (artifactIdentity) {
-          const cacheId = await dependencyCacheService.save([pantryDir], cacheKey)
+          const cacheId = await dependencyCacheService.save(cachePaths, cacheKey)
           if (cacheId !== undefined)
             core.info('Dependencies cached')
           else

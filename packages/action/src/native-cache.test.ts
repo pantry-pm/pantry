@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { nativeArtifactCacheIdentity } from './native-cache'
+import { nativeArtifactCacheIdentity, nativeArtifactCachePlan } from './native-cache'
 import type { RegistryMetadata } from '../../ts-pantry/src/installer'
 import type { Platform } from './types'
 import { packages } from '../../ts-pantry/src/packages'
@@ -108,4 +108,21 @@ test('Windows Git uses its versioned standalone bundle while Unix Git keeps nati
   const seen: string[] = []
   await nativeArtifactCacheIdentity(['git-scm.org@10.2.0'], platform, async domain => { seen.push(domain); return metadata('a') }, async () => ['openssl.org@10.2.0'])
   expect(seen.sort()).toEqual(['git-scm.org', 'openssl.org'])
+})
+
+test('the canonical native cache plan owns selected artifacts and SDK runtime prefixes only', async () => {
+  const read = async (): Promise<RegistryMetadata> => ({ versions: {
+    '1.0.0': { platforms: { 'linux-x86-64': { tarball: 'old.tar.gz', sha256: 'a'.repeat(64) } } },
+    '2.0.0': { platforms: { 'linux-x86-64': { tarball: 'current.tar.gz', sha256: 'b'.repeat(64) } } },
+  } })
+  const plan = await nativeArtifactCachePlan(['native-root.test@2.0.0', 'ziglang.org@0.17.1'], platform, read,
+    async domain => domain === 'native-root.test' ? ['nested.test/library@1.0.0'] : [],
+    new Map([['native-root.test', '1.0.0']]))
+  expect(plan.prefixes).toEqual([
+    { domain: 'bun.com' },
+    { domain: 'native-root.test', version: '1.0.0' },
+    { domain: 'native-root.test', version: '2.0.0' },
+    { domain: 'nested.test/library', version: '1.0.0' },
+    { domain: 'ziglang.org' },
+  ])
 })

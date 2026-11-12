@@ -63,6 +63,14 @@ dependencies. Rebuilding a package at the same version therefore invalidates
 its previous cached installation. Restore keys retain the artifact identity;
 they cannot restore an older binary after a registry rebuild.
 
+Archives contain the dependency plan's selected native version prefixes and
+upstream SDK runtime version directories. They do not contain workspace Git
+checkouts, npm source trees, or `.bin` command selections. Consecutive package
+setups therefore cannot replace an earlier setup's declared build inputs.
+Historical whole-workspace cache archives are a different format and are not
+restored into this native prefix cache. Normal installation activates commands
+and reconciles the workspace after restoration.
+
 When the registry cannot establish a verified dependency graph, the action
 reports the reason and installs normally without restoring or saving a native
 dependency cache. It does not treat an uncertain cache as a valid installation.

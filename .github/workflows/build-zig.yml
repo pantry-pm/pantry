@@ -28,9 +28,18 @@ jobs:
       # Let the action install the complete workspace. Passing only Zig switches
       # the action into explicit-package mode and omits zig-cli, zig-config, and
       # zig-test-framework, which build.zig imports from the Pantry directory.
-      # deps.yaml already declares the rolling Zig 0.17 development toolchain.
+      # The workspace manifest declares the supported stable compiler.
       - name: Setup Pantry and workspace dependencies
         uses: ./packages/action
+
+      - name: Restore and verify the declared Git compiler inputs
+        run: |
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+          cd ../..
+          packages/zig/zig-out/bin/pantry install --ignore-scripts
+          bun .github/scripts/verify-workspace-toolchain.ts
+          git diff --exit-code -- pantry.lock bun.lock
 
       - name: Verify native copy modes and Windows argument parsing
         working-directory: packages/zig

@@ -25,8 +25,12 @@ describe('dependency cache reuse', () => {
       expect(current.restoreKeys.some(prefix => key.startsWith(prefix))).toBe(false)
   })
 
-  it('can seed the new layout from the existing CLI-specific cache', () => {
-    const previous = 'pantry-v4-0.11.117-linux-x64-digest-lock-deps-ziglang.org'
-    expect(keys('digest').restoreKeys.some(prefix => previous.startsWith(prefix))).toBe(true)
+  it('cannot restore historical whole-workspace archives into a native prefix cache', () => {
+    const previous = [
+      'pantry-v4-0.11.117-linux-x64-digest-lock-deps-ziglang.org',
+      'pantry-v5-linux-x64-digest-0.11.117-lock-deps-ziglang.org',
+    ]
+    for (const key of previous)
+      expect(keys('digest').restoreKeys.some(prefix => key.startsWith(prefix))).toBe(false)
   })
 })

@@ -4,9 +4,15 @@ import { compareInstallerVersionsDesc, isSupported, registryMetadata, resolveIns
 import type { RegistryMetadata } from '../../ts-pantry/src/installer'
 import { resolvePackageDomain } from '../../ts-pantry/src/utils'
 import type { Platform } from './types'
+import type { CachedNativePrefix } from './dependency-cache-paths'
 
-/** Registry artifacts can be rebuilt without changing their package version. */
-export async function nativeArtifactCacheIdentity(
+export interface NativeArtifactCachePlan {
+  identity: string
+  prefixes: CachedNativePrefix[]
+}
+
+/** Registry artifacts and their selected prefixes describe one cache payload. */
+export async function nativeArtifactCachePlan(
   specs: string[],
   platform: Platform,
   readMetadata: (domain: string) => Promise<RegistryMetadata> = async (domain) => {
@@ -17,13 +23,21 @@ export async function nativeArtifactCacheIdentity(
   dependencies: (domain: string) => Promise<string[]> = async domain =>
     (await resolveTransitiveDependencies(domain, { targetOs: platform.os, targetArch: platform.arch })).map(dep => `${dep.name}@${dep.constraint.replace(/^@/, '')}`),
   lockedVersions: Map<string, string> = new Map(),
-): Promise<string> {
+): Promise<NativeArtifactCachePlan> {
   const sdkPlatform = { os: platform.os, arch: platform.arch === 'arm64' ? 'aarch64' as const : 'x86_64' as const }
   const domains = new Map<string, Set<string>>()
+  // SDK runtime archives are upstream-versioned. Their version directories may
+  // be reused, while registry artifacts below are scoped to verified selections.
+  const prefixes = new Map<string, CachedNativePrefix>()
+  const addRuntime = (domain: string) => prefixes.set(`${domain}/v*`, { domain })
+  addRuntime(resolvePackageDomain('bun.sh'))
   const add = (spec: string) => {
     const [name, constraint = 'latest'] = spec.split('@', 2)
     const domain = resolvePackageDomain(name)
-    if (isSupported(domain, sdkPlatform)) return domain
+    if (isSupported(domain, sdkPlatform)) {
+      addRuntime(domain)
+      return domain
+    }
     if (!domains.has(domain)) domains.set(domain, new Set())
     domains.get(domain)!.add(constraint || 'latest')
     const locked = lockedVersions.get(domain)
@@ -55,10 +69,19 @@ export async function nativeArtifactCacheIdentity(
       if (!version) throw new Error(`${domain}: no matching ${platformKey} artifact`)
       const artifact = metadata.versions![version].platforms![platformKey]
       if (!artifact.sha256?.match(/^[a-f0-9]{64}$/i)) throw new Error(`${domain}@${version}: missing artifact digest`)
+      prefixes.set(`${domain}/v${version}`, { domain, version })
       return [version, artifact.tarball, artifact.sha256.toLowerCase()]
     })
     if (!versions.length) throw new Error(`${domain}: no verified ${platformKey} artifacts`)
     return [domain, versions]
   }))
-  return createHash('sha256').update(JSON.stringify(artifacts)).digest('hex')
+  return {
+    identity: createHash('sha256').update(JSON.stringify(artifacts)).digest('hex'),
+    prefixes: [...prefixes].sort(([a], [b]) => a.localeCompare(b)).map(([, prefix]) => prefix),
+  }
+}
+
+/** Registry artifacts can be rebuilt without changing their package version. */
+export async function nativeArtifactCacheIdentity(...args: Parameters<typeof nativeArtifactCachePlan>): Promise<string> {
+  return (await nativeArtifactCachePlan(...args)).identity
 }
