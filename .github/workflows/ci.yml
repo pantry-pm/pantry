@@ -125,6 +125,11 @@ jobs:
           command -v zig >/dev/null
           cd packages/zig
           zig build -Doptimize=Debug -j2
+          cd ../..
+          packages/zig/zig-out/bin/pantry install --ignore-scripts
+          bun .github/scripts/verify-workspace-toolchain.ts
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
           PANTRY_SOURCE_CLI="$PWD/zig-out/bin/pantry" bun test test/workspace-companion-e2e.test.ts
 
       - name: Verify this source migrates its published bootstrap to the committed workspace lock
@@ -261,6 +266,10 @@ jobs:
 
       - name: Zig Tests
         run: |
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+          cd ../..
+          packages/zig/zig-out/bin/pantry install --ignore-scripts
           bun .github/scripts/verify-workspace-toolchain.ts
           cd packages/zig
           zig build test -j2 --summary all
@@ -398,6 +407,8 @@ jobs:
           packages/zig/zig-out/bin/pantry install
           packages/zig/zig-out/bin/pantry install --frozen-lockfile
           git diff --exit-code -- pantry.lock bun.lock
+          bun .github/scripts/verify-workspace-toolchain.ts
+          cd packages/zig && zig build -Doptimize=Debug -j2
       - name: Verify immutable publication retries through the native transport
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
@@ -411,6 +422,10 @@ jobs:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
           PANTRY_LOOKUP_SEGMENT: gateway-recovery
         run: bun .github/scripts/verify-registry-lookup.ts
+      - name: Verify real Git revision identity through the source installer
+        env:
+          PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry
+        run: bun .github/scripts/git-revision-identity.ts
       - name: Verify the real Linux browser package through the source installer
         env:
           PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry
@@ -422,6 +437,7 @@ jobs:
           name: source-linux-native-browser
           path: |
             artifacts/linux-native-browser
+            artifacts/git-revision-identity
             artifacts/native-catalog/native-registry-lookup.json
           if-no-files-found: error
 
@@ -500,6 +516,11 @@ jobs:
 
       - name: Cross-compile the source CLI for native Windows qualification
         run: |
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+          cd ../..
+          packages/zig/zig-out/bin/pantry install --ignore-scripts
+          bun .github/scripts/verify-workspace-toolchain.ts
           cd packages/zig
           zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug -j2 --prefix ../../artifacts/windows-source-cli
           zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter deleteTree -femit-bin=../../artifacts/windows-source-cli/bin/file-tree-tests.exe
@@ -610,6 +631,8 @@ jobs:
           packages/zig/zig-out/bin/pantry install
           packages/zig/zig-out/bin/pantry install --frozen-lockfile
           git diff --exit-code -- pantry.lock bun.lock
+          bun .github/scripts/verify-workspace-toolchain.ts
+          cd packages/zig && zig build -Doptimize=Debug -j2
       - name: Verify explicit pins through the recursive native installer
         env:
           PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry

@@ -161,6 +161,12 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
 
     if (deps.len == 0) return null;
 
+    for (deps) |dep| {
+        if (helpers.canSkipGitDependency(allocator, &lockfile.packages, dep, effective_dir, modules_dir)) |current| {
+            if (!current) return null;
+        }
+    }
+
     // 4. Check all deps against lockfile + verify dirs exist (O(1) per dep via name set)
     // Perf: For small dep lists, skip HashMap construction and use direct lockfile lookup
     // (HashMap has allocation + hashing overhead; direct lookup is O(1) per dep via StringHashMap.get)
@@ -1039,10 +1045,10 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         for (deps_to_install, 0..) |dep, di| {
             const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
             // Domain-style names (containing '.') are pantry/system packages, not npm
-            const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
+            const is_domain = (dep.source == .registry or dep.source == .pantry) and std.mem.indexOfScalar(u8, clean_name, '.') != null;
             pipeline_deps[di] = .{
                 .name = clean_name,
-                .version = if (options.force) dep.version else helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) orelse dep.version,
+                .version = if (options.force or dep.source == .git or dep.source == .github) dep.version else helpers.lockedVersionSatisfying(&lock_file, dep.name, dep.version) orelse dep.version,
                 .source = if (is_domain) .pantry else switch (dep.source) {
                     .registry => .npm,
                     .pantry => .pantry,
@@ -2239,7 +2245,7 @@ fn installCompanionDepsFile(
     defer allocator.free(pipeline_deps);
     for (deps, 0..) |dep, di| {
         const clean_name = helpers.resolvePackageAlias(helpers.normalizePackageName(dep.name));
-        const is_domain = std.mem.indexOfScalar(u8, clean_name, '.') != null;
+        const is_domain = (dep.source == .registry or dep.source == .pantry) and std.mem.indexOfScalar(u8, clean_name, '.') != null;
         pipeline_deps[di] = .{
             .name = clean_name,
             .version = dep.version,

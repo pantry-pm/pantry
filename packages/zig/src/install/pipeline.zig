@@ -1066,25 +1066,30 @@ const DownloadThreadCtx = struct {
                 continue;
             }
 
-            if (pkg.source == .github) {
-                const owner = pkg.github_owner orelse {
-                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "missing GitHub owner") catch null };
-                    continue;
-                };
-                const repo_name = pkg.github_repo orelse {
-                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "missing GitHub repository") catch null };
-                    continue;
-                };
+            if (pkg.source == .github or pkg.source == .git) {
                 var repo_buf: [512]u8 = undefined;
-                const repo = std.fmt.bufPrint(&repo_buf, "{s}/{s}", .{ owner, repo_name }) catch {
-                    ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "GitHub repository name is too long") catch null };
-                    continue;
-                };
-                const spec = PackageSpec{
-                    .name = pkg.name,
-                    .version = pkg.version,
-                    .source = .github,
-                    .repo = repo,
+                const spec: PackageSpec = if (pkg.source == .github) blk: {
+                    const owner = pkg.github_owner orelse {
+                        ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "missing GitHub owner") catch null };
+                        continue;
+                    };
+                    const repo_name = pkg.github_repo orelse {
+                        ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "missing GitHub repository") catch null };
+                        continue;
+                    };
+                    const repo = std.fmt.bufPrint(&repo_buf, "{s}/{s}", .{ owner, repo_name }) catch {
+                        ctx.results[i] = .{ .name = owned_name, .version = owned_version, .success = false, .error_msg = alloc.dupe(u8, "GitHub repository name is too long") catch null };
+                        continue;
+                    };
+                    break :blk .{ .name = pkg.name, .version = pkg.version, .source = .github, .repo = repo };
+                } else blk: {
+                    const hash = std.mem.indexOfScalar(u8, pkg.version, '#');
+                    break :blk .{
+                        .name = pkg.name,
+                        .version = if (hash) |at| pkg.version[at + 1 ..] else "HEAD",
+                        .source = .git,
+                        .url = if (hash) |at| pkg.version[0..at] else pkg.version,
+                    };
                 };
                 const opts = installer_mod.InstallOptions{
                     .verbose = ctx.verbose,
@@ -1096,7 +1101,7 @@ const DownloadThreadCtx = struct {
                     defer ir.deinit(alloc);
                     ctx.results[i] = .{
                         .name = owned_name,
-                        .version = alloc.dupe(u8, ir.version) catch owned_version,
+                        .version = owned_version,
                         .success = true,
                         .from_cache = ir.from_cache,
                     };

@@ -811,6 +811,42 @@ pub fn canSkipFromLockfile(
     return isPackageInstalled(proj_dir, modules_dir, clean_name);
 }
 
+/// Git cache reuse needs both the unchanged declared source and the actual
+/// checkout identity. A directory/name-only fast path cannot establish either.
+/// Null means this dependency is not Git and uses the ordinary cache check.
+pub fn canSkipGitDependency(
+    allocator: std.mem.Allocator,
+    locked: *const std.StringHashMap(lib.packages.LockfileEntry),
+    dep: lib.deps.parser.PackageDependency,
+    project: []const u8,
+    modules: []const u8,
+) ?bool {
+    if (dep.source != .github and dep.source != .git) return null;
+    const name = resolvePackageAlias(normalizePackageName(dep.name));
+    var matches = false;
+    var entries = locked.valueIterator();
+    while (entries.next()) |entry| {
+        if (std.mem.eql(u8, entry.name, name) and std.mem.eql(u8, entry.version, dep.version)) {
+            matches = true;
+            break;
+        }
+    }
+    if (!matches) return false;
+    const destination = std.fs.path.join(allocator, &.{ project, modules, name }) catch return false;
+    defer allocator.free(destination);
+    const git = @import("../../../install/git_revision.zig");
+    if (dep.github_ref) |ref| {
+        const url = std.fmt.allocPrint(allocator, "https://github.com/{s}/{s}.git", .{ ref.owner, ref.repo }) catch return false;
+        defer allocator.free(url);
+        return git.isCurrent(allocator, destination, url, ref.ref);
+    }
+    const hash = std.mem.indexOfScalar(u8, dep.version, '#');
+    const raw = if (hash) |at| dep.version[0..at] else dep.version;
+    const url = if (std.mem.startsWith(u8, raw, "git+")) raw[4..] else raw;
+    const ref = if (hash) |at| dep.version[at + 1 ..] else "HEAD";
+    return git.isCurrent(allocator, destination, url, ref);
+}
+
 /// Is this package present and usable under `proj_dir/modules_dir`?
 ///
 /// The half of `canSkipFromLockfile` that does not consult the lock, for the

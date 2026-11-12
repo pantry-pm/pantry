@@ -48,6 +48,18 @@ jobs:
       - name: Setup Pantry and Zig from the registry
         uses: ./packages/action
 
+      # Old published bootstraps can supply default HEAD in place of a Git SHA.
+      # Use this source installer to repair the graph, then compile the release
+      # against the verified declared inputs rather than the bootstrap graph.
+      - name: Restore and verify the declared Git compiler dependencies
+        run: |
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+          cd ../..
+          packages/zig/zig-out/bin/pantry install --ignore-scripts
+          bun .github/scripts/verify-workspace-toolchain.ts
+          git diff --exit-code -- pantry.lock bun.lock
+
       - name: Build for All Platforms
         run: |
           set -e

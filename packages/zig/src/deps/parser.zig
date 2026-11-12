@@ -102,7 +102,7 @@ pub const PackageDependency = struct {
 pub fn parseGitHubUrl(allocator: std.mem.Allocator, version: []const u8) !?GitHubRef {
     var owner: []const u8 = undefined;
     var repo: []const u8 = undefined;
-    var ref: []const u8 = "main"; // default branch
+    var ref: []const u8 = "HEAD"; // the remote's default branch
 
     if (std.mem.startsWith(u8, version, "github:")) {
         // Format: github:owner/repo#ref
@@ -194,7 +194,7 @@ test "parseGitHubUrl with github: prefix" {
         try std.testing.expectEqualStrings("4.17.21", gh_ref.?.ref);
     }
 
-    // Test: github:owner/repo (no ref, should default to main)
+    // Test: github:owner/repo (no ref, should use the remote default branch)
     {
         const gh_ref = try parseGitHubUrl(allocator, "github:chalk/chalk");
         try std.testing.expect(gh_ref != null);
@@ -205,7 +205,7 @@ test "parseGitHubUrl with github: prefix" {
 
         try std.testing.expectEqualStrings("chalk", gh_ref.?.owner);
         try std.testing.expectEqualStrings("chalk", gh_ref.?.repo);
-        try std.testing.expectEqualStrings("main", gh_ref.?.ref);
+        try std.testing.expectEqualStrings("HEAD", gh_ref.?.ref);
     }
 }
 
@@ -1233,9 +1233,22 @@ pub fn parseZigPackageJson(allocator: std.mem.Allocator, file_path: []const u8) 
                 else
                     .registry;
 
+                // Preserve the complete source specification in the field
+                // passed through resolution, lock comparison and installation.
+                // Object-only URL/ref fields must not disappear at this boundary.
+                const source_version = if (parsed_github_ref) |ref|
+                    try allocator.dupe(u8, ref.ref)
+                else if (dep_source == .git and url != null) blk: {
+                    const raw = url.?;
+                    const hash = std.mem.indexOfScalar(u8, raw, '#');
+                    const base = if (hash) |i| raw[0..i] else raw;
+                    const ref = tag orelse branch orelse if (hash) |i| raw[i + 1 ..] else version;
+                    break :blk try std.fmt.allocPrint(allocator, "{s}#{s}", .{ base, if (std.mem.eql(u8, ref, raw)) "HEAD" else ref });
+                } else try allocator.dupe(u8, version);
+
                 try deps.append(allocator, .{
                     .name = full_name,
-                    .version = try allocator.dupe(u8, version),
+                    .version = source_version,
                     .global = global,
                     .dep_type = section.dep_type,
                     .source = dep_source,

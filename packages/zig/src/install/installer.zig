@@ -1147,262 +1147,43 @@ pub const Installer = struct {
         };
     }
 
-    /// Install a package from GitHub
-    fn installFromGitHub(
-        self: *Installer,
-        spec: PackageSpec,
-        options: InstallOptions,
-    ) !InstallResult {
-        const start_ts_ = io_helper.clockGettime();
-        const start_time = @as(i64, @intCast(start_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(start_ts_.nsec)), 1_000_000);
-
-        if (spec.repo == null) {
-            return error.InvalidGitHubSpec;
-        }
-
-        const repo = spec.repo.?;
-
-        // Determine install location
-        // For project installations, don't include version in path to match build expectations
-        const install_dir = if (options.project_root) |project_root| blk: {
-            break :blk try std.fmt.allocPrint(
-                self.allocator,
-                "{s}/{s}/{s}",
-                .{ project_root, self.modules_dir, spec.name },
-            );
-        } else blk: {
-            break :blk try std.fmt.allocPrint(
-                self.allocator,
-                "{s}/packages/{s}/{s}",
-                .{ self.data_dir, spec.name, spec.version },
-            );
-        };
-        errdefer self.allocator.free(install_dir);
-
-        // Check if already installed (lightweight access check, no dir handle)
-        const already_installed = !options.force and blk: {
-            io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
-            break :blk true;
-        };
-
-        if (already_installed) {
-            const end_ts_ = io_helper.clockGettime();
-            const end_time = @as(i64, @intCast(end_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(end_ts_.nsec)), 1_000_000);
-            return InstallResult{
-                .name = try self.allocator.dupe(u8, spec.name),
-                .version = try self.allocator.dupe(u8, spec.version),
-                .install_path = install_dir,
-                .from_cache = true,
-                .install_time_ms = @intCast(end_time - start_time),
-            };
-        }
-
-        if (!options.quiet) {
-            if (!style.isCI()) style.print("  → Cloning from GitHub: {s}#{s}\n", .{ repo, spec.version });
-        }
-
-        // Create temp directory for cloning
-        const home_dir = try Paths.home(self.allocator);
-        defer self.allocator.free(home_dir);
-        const temp_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/.pantry/.tmp/github-{s}-{s}",
-            .{ home_dir, spec.name, spec.version },
-        );
-        defer {
-            self.allocator.free(temp_dir);
-            io_helper.deleteTree(temp_dir) catch {};
-        }
-
-        // Clone the repository
-        const clone_url = try std.fmt.allocPrint(
-            self.allocator,
-            "https://github.com/{s}.git",
-            .{repo},
-        );
-        defer self.allocator.free(clone_url);
-
-        // Try cloning with the specified branch/tag first
-        var clone_result = try io_helper.childRun(self.allocator, &[_][]const u8{ "git", "clone", "--depth", "1", "--branch", spec.version, clone_url, temp_dir });
-
-        // If the branch-specific clone failed, try without branch (use default branch)
-        if (clone_result.term != .exited or clone_result.term.exited != 0) {
-            self.allocator.free(clone_result.stdout);
-            self.allocator.free(clone_result.stderr);
-
-            clone_result = try io_helper.childRun(self.allocator, &[_][]const u8{ "git", "clone", "--depth", "1", clone_url, temp_dir });
-        }
-        defer {
-            self.allocator.free(clone_result.stdout);
-            self.allocator.free(clone_result.stderr);
-        }
-
-        if (clone_result.term != .exited or clone_result.term.exited != 0) {
-            if (!options.quiet and !style.isCI()) {
-                style.print("  ✗ Failed to clone: {s}\n", .{clone_result.stderr});
-            }
-            return error.GitCloneFailed;
-        }
-
-        // Create install directory
-        try io_helper.makePath(install_dir);
-
-        // Move contents from temp to final location
-        // Git clone creates a directory, so we need to move the contents
-        // Use std.fs.Dir for iteration (Io.Dir doesn't have iterate() in Zig 0.16)
-        var temp_dir_handle = try io_helper.openDirForIteration(temp_dir);
-        defer temp_dir_handle.close();
-
-        var iter = temp_dir_handle.iterate();
-        while (iter.next() catch null) |entry| {
-            var src_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const src_path = std.fmt.bufPrint(&src_buf, "{s}/{s}", .{ temp_dir, entry.name }) catch continue;
-
-            var dst_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const dest_path = std.fmt.bufPrint(&dst_buf, "{s}/{s}", .{ install_dir, entry.name }) catch continue;
-
-            io_helper.rename(src_path, dest_path) catch continue;
-        }
-
-        // Create project symlinks if installing to project
-        if (options.project_root) |project_root| {
-            try self.createProjectSymlinks(project_root, spec.name, spec.version, install_dir);
-        }
-
-        const end_ts_ = io_helper.clockGettime();
-        const end_time = @as(i64, @intCast(end_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(end_ts_.nsec)), 1_000_000);
-
-        return InstallResult{
-            .name = try self.allocator.dupe(u8, spec.name),
-            .version = try self.allocator.dupe(u8, spec.version),
-            .install_path = install_dir,
-            .from_cache = false,
-            .install_time_ms = @intCast(end_time - start_time),
-        };
+    /// Install a package from GitHub with its actual requested Git identity.
+    fn installFromGitHub(self: *Installer, spec: PackageSpec, options: InstallOptions) !InstallResult {
+        const repo = spec.repo orelse return error.InvalidGitHubSpec;
+        const url = try std.fmt.allocPrint(self.allocator, "https://github.com/{s}.git", .{repo});
+        defer self.allocator.free(url);
+        return self.installGitRepository(spec, options, url);
     }
 
-    /// Install a package from a generic git URL (git+https://, git+ssh://, git://)
-    fn installFromGit(
-        self: *Installer,
-        spec: PackageSpec,
-        options: InstallOptions,
-    ) !InstallResult {
-        const start_ts_ = io_helper.clockGettime();
-        const start_time = @as(i64, @intCast(start_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(start_ts_.nsec)), 1_000_000);
+    /// Generic Git and GitHub use the same checkout, verification and transaction.
+    fn installFromGit(self: *Installer, spec: PackageSpec, options: InstallOptions) !InstallResult {
+        const raw = spec.url orelse return error.InvalidGitUrl;
+        const url = if (std.mem.startsWith(u8, raw, "git+")) raw[4..] else raw;
+        return self.installGitRepository(spec, options, url);
+    }
 
-        const git_url_raw = spec.url orelse return error.InvalidGitUrl;
-
-        // Strip git+ prefix if present (git+https:// -> https://, git+ssh:// -> ssh://)
-        const git_url = if (std.mem.startsWith(u8, git_url_raw, "git+"))
-            git_url_raw[4..]
-        else
-            git_url_raw;
-
-        // Determine ref (branch/tag/commit) from spec
+    fn installGitRepository(self: *Installer, spec: PackageSpec, options: InstallOptions, url: []const u8) !InstallResult {
+        const started = io_helper.clockGettimeMonotonic();
+        const start_ms = @as(i64, @intCast(started.sec)) * 1000 + @divFloor(@as(i64, @intCast(started.nsec)), 1_000_000);
         const ref = spec.branch orelse spec.tag orelse spec.version;
-
-        // Determine install location
-        const install_dir = if (options.project_root) |project_root| blk: {
-            break :blk try std.fmt.allocPrint(
-                self.allocator,
-                "{s}/{s}/{s}",
-                .{ project_root, self.modules_dir, spec.name },
-            );
-        } else blk: {
-            break :blk try std.fmt.allocPrint(
-                self.allocator,
-                "{s}/packages/git/{s}/{s}",
-                .{ self.data_dir, spec.name, spec.version },
-            );
-        };
+        const install_dir = if (options.project_root) |root|
+            try std.fmt.allocPrint(self.allocator, "{s}/{s}/{s}", .{ root, self.modules_dir, spec.name })
+        else
+            try std.fmt.allocPrint(self.allocator, "{s}/packages/{s}{s}/{s}", .{ self.data_dir, if (spec.source == .git) "git/" else "", spec.name, spec.version });
         errdefer self.allocator.free(install_dir);
-
-        // Check if already installed
-        const already_installed = !options.force and blk: {
-            io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
-            break :blk true;
-        };
-
-        if (already_installed) {
-            const end_ts_ = io_helper.clockGettime();
-            const end_time = @as(i64, @intCast(end_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(end_ts_.nsec)), 1_000_000);
-            return InstallResult{
-                .name = try self.allocator.dupe(u8, spec.name),
-                .version = try self.allocator.dupe(u8, spec.version),
-                .install_path = install_dir,
-                .from_cache = true,
-                .install_time_ms = @intCast(end_time - start_time),
-            };
-        }
-
-        if (!options.quiet) {
-            if (!style.isCI()) style.print("  → Cloning from git: {s}#{s}\n", .{ git_url, ref });
-        }
-
-        // Create temp directory for cloning
-        const home_dir = try Paths.home(self.allocator);
-        defer self.allocator.free(home_dir);
-        const temp_dir = try std.fmt.allocPrint(
-            self.allocator,
-            "{s}/.pantry/.tmp/git-{s}-{s}",
-            .{ home_dir, spec.name, spec.version },
-        );
-        defer {
-            self.allocator.free(temp_dir);
-            io_helper.deleteTree(temp_dir) catch {};
-        }
-
-        // Clone with specified ref
-        var clone_result = try io_helper.childRun(self.allocator, &[_][]const u8{
-            "git", "clone", "--depth", "1", "--branch", ref, git_url, temp_dir,
-        });
-
-        // If branch-specific clone failed, try without branch
-        if (clone_result.term != .exited or clone_result.term.exited != 0) {
-            self.allocator.free(clone_result.stdout);
-            self.allocator.free(clone_result.stderr);
-            clone_result = try io_helper.childRun(self.allocator, &[_][]const u8{
-                "git", "clone", "--depth", "1", git_url, temp_dir,
-            });
-        }
-        defer {
-            self.allocator.free(clone_result.stdout);
-            self.allocator.free(clone_result.stderr);
-        }
-
-        if (clone_result.term != .exited or clone_result.term.exited != 0) {
-            if (!options.quiet and !style.isCI()) {
-                style.print("  ✗ Failed to clone: {s}\n", .{clone_result.stderr});
-            }
-            return error.GitCloneFailed;
-        }
-
-        // Move contents to install directory
-        try io_helper.makePath(install_dir);
-        var temp_dir_handle = try io_helper.openDirForIteration(temp_dir);
-        defer temp_dir_handle.close();
-
-        var iter = temp_dir_handle.iterate();
-        while (iter.next() catch null) |entry| {
-            var src_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const src_path = std.fmt.bufPrint(&src_buf, "{s}/{s}", .{ temp_dir, entry.name }) catch continue;
-            var dst_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const dest_path = std.fmt.bufPrint(&dst_buf, "{s}/{s}", .{ install_dir, entry.name }) catch continue;
-            io_helper.rename(src_path, dest_path) catch continue;
-        }
-
-        if (options.project_root) |project_root| {
-            try self.createProjectSymlinks(project_root, spec.name, spec.version, install_dir);
-        }
-
-        const end_ts_ = io_helper.clockGettime();
-        const end_time = @as(i64, @intCast(end_ts_.sec)) * 1000 + @divFloor(@as(i64, @intCast(end_ts_.nsec)), 1_000_000);
-        return InstallResult{
+        const operations = MaterializationOperations{ .installer = self };
+        const from_cache = try @import("git_revision.zig").install(self.allocator, url, ref, install_dir, options.force, options.quiet, &operations);
+        // A proven cached tree must still restore missing project activation.
+        if (options.project_root) |root|
+            try self.createProjectSymlinks(root, spec.name, spec.version, install_dir);
+        const ended = io_helper.clockGettimeMonotonic();
+        const end_ms = @as(i64, @intCast(ended.sec)) * 1000 + @divFloor(@as(i64, @intCast(ended.nsec)), 1_000_000);
+        return .{
             .name = try self.allocator.dupe(u8, spec.name),
             .version = try self.allocator.dupe(u8, spec.version),
             .install_path = install_dir,
-            .from_cache = false,
-            .install_time_ms = @intCast(end_time - start_time),
+            .from_cache = from_cache,
+            .install_time_ms = @intCast(@max(0, end_ms - start_ms)),
         };
     }
 
