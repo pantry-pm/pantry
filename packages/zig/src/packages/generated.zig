@@ -19446,7 +19446,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "curl.se", "info-zip.org/unzip", "gnu.org/coreutils" },
     .aliases = &[_][]const u8{"dtsx-native"},
-    .versions = &[_][]const u8{"0.11.52"},
+    .versions = &[_][]const u8{ "0.11.53", "0.11.52" },
 }, .{
     .name = "zig",
     .domain = "ziglang.org",
