@@ -32,22 +32,28 @@ fn makeStagedBinExecutable(allocator: std.mem.Allocator, package_root: []const u
 }
 
 pub fn normalize(allocator: std.mem.Allocator, staging_base: []const u8) !void {
+    const manifest_path = try std.fs.path.join(allocator, &.{ staging_base, "package", "package.json" });
+    defer allocator.free(manifest_path);
+    const bytes = try io_helper.readFileAlloc(allocator, manifest_path, 10 * 1024 * 1024);
+    defer allocator.free(bytes);
+    try normalizeWithConfig(allocator, staging_base, bytes);
+}
+
+/// Pantry publications may select pantry.json instead of package.json.
+pub fn normalizeWithConfig(allocator: std.mem.Allocator, staging_base: []const u8, bytes: []const u8) !void {
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, bytes, .{});
+    defer parsed.deinit();
+    if (parsed.value != .object) return error.InvalidPackageConfig;
+    const bin = parsed.value.object.get("bin") orelse return;
     const package_path = try std.fs.path.join(allocator, &.{ staging_base, "package" });
     defer allocator.free(package_path);
     const package_root = try io_helper.cwd().realPathFileAlloc(io_helper.io, package_path, allocator);
     defer allocator.free(package_root);
-    const manifest_path = try std.fs.path.join(allocator, &.{ package_root, "package.json" });
-    defer allocator.free(manifest_path);
-    const bytes = try io_helper.readFileAlloc(allocator, manifest_path, 10 * 1024 * 1024);
-    defer allocator.free(bytes);
-    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, bytes, .{});
-    defer parsed.deinit();
-    if (parsed.value != .object) return error.InvalidPackageConfig;
-    if (parsed.value.object.get("bin")) |bin| switch (bin) {
+    switch (bin) {
         .string => |name| try makeStagedBinExecutable(allocator, package_root, name),
         .object => |commands| for (commands.values()) |value| {
             if (value == .string) try makeStagedBinExecutable(allocator, package_root, value.string);
         },
         else => {},
-    };
+    }
 }

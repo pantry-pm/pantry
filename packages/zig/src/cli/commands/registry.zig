@@ -1113,7 +1113,7 @@ pub fn createTarball(
     // Parse package.json to get "files" array and "bin" field
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, config_content, .{}) catch {
         style.print("Warning: Could not parse package.json, using default file inclusion\n", .{});
-        return createTarballDefault(allocator, package_dir, staging_pkg, staging_base, tarball_path);
+        return createTarballDefault(allocator, package_dir, staging_pkg, staging_base, tarball_path, config_content);
     };
     defer parsed.deinit();
     const root = parsed.value;
@@ -1235,7 +1235,7 @@ pub fn createTarball(
         } else |_| {}
     } else {
         // No "files" field - use default behavior (exclude common non-publishable files)
-        return createTarballDefault(allocator, package_dir, staging_pkg, staging_base, tarball_path);
+        return createTarballDefault(allocator, package_dir, staging_pkg, staging_base, tarball_path, config_content);
     }
 
     // Rewrite workspace: protocol ranges in the staged package.json (same
@@ -1252,7 +1252,7 @@ pub fn createTarball(
     }
 
     // Create tarball with "package" directory at root
-    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base);
+    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base, config_content);
     defer allocator.free(tar_result.stdout);
     defer allocator.free(tar_result.stderr);
 
@@ -1268,10 +1268,10 @@ pub fn createTarball(
 }
 
 /// Pack without AppleDouble and other host metadata, preserving portable bin modes.
-fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8) !io_helper.ChildRunResult {
+fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8, config_content: []const u8) !io_helper.ChildRunResult {
     // Package bin metadata promises executables even when a bundler wrote 0644.
     // Normalize only the owned staged copy, before either registry upload.
-    try publish_bins.normalize(allocator, staging_base);
+    try publish_bins.normalizeWithConfig(allocator, staging_base, config_content);
     const metadata_free = io_helper.childRun(allocator, &[_][]const u8{
         "/usr/bin/env", "COPYFILE_DISABLE=1", "tar",
         "--no-xattrs",  "--exclude=._*",      "--exclude=.DS_Store",
@@ -1293,6 +1293,7 @@ fn createTarballDefault(
     staging_pkg: []const u8,
     staging_base: []const u8,
     tarball_path: []const u8,
+    config_content: []const u8,
 ) ![]const u8 {
     const src_path = try std.fmt.allocPrint(allocator, "{s}/", .{package_dir});
     defer allocator.free(src_path);
@@ -1431,7 +1432,7 @@ fn createTarballDefault(
     }
 
     // Create tarball with "package" directory at root
-    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base);
+    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base, config_content);
     defer allocator.free(tar_result.stdout);
     defer allocator.free(tar_result.stderr);
 

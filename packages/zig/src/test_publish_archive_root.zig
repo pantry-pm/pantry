@@ -62,41 +62,43 @@ test "publish archive: declared bins execute without changing source or library 
     var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
-    for ([_]bool{ false, true }) |explicit_files| {
-        for ([_]bool{ false, true }) |object_bin| {
-            const root = try io_helper.uniqueTempPath(allocator, "pantry-publish-bin-mode");
-            defer io_helper.deleteTree(root) catch {};
-            try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "dist" }));
-            try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "bin" }));
-            const cli = try std.fs.path.join(allocator, &.{ root, "bin", "cli" });
-            const library = try std.fs.path.join(allocator, &.{ root, "dist", "index.js" });
-            try write(cli, "#!/bin/sh\nprintf 'published-bin-ok'\n");
-            try write(library, "export const value = 1;\n");
-            for ([_][]const u8{ cli, library }) |path| {
-                const file = try io_helper.openFileAbsolute(path, .{});
-                defer file.close(io_helper.io);
-                try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o644));
+    for ([_][]const u8{ "package.json", "pantry.json" }) |manifest_name| {
+        for ([_]bool{ false, true }) |explicit_files| {
+            for ([_]bool{ false, true }) |object_bin| {
+                const root = try io_helper.uniqueTempPath(allocator, "pantry-publish-bin-mode");
+                defer io_helper.deleteTree(root) catch {};
+                try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "dist" }));
+                try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "bin" }));
+                const cli = try std.fs.path.join(allocator, &.{ root, "bin", "cli" });
+                const library = try std.fs.path.join(allocator, &.{ root, "dist", "index.js" });
+                try write(cli, "#!/bin/sh\nprintf 'published-bin-ok'\n");
+                try write(library, "export const value = 1;\n");
+                for ([_][]const u8{ cli, library }) |path| {
+                    const file = try io_helper.openFileAbsolute(path, .{});
+                    defer file.close(io_helper.io);
+                    try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o644));
+                }
+                const manifest = try std.fmt.allocPrint(
+                    allocator,
+                    "{{\"name\":\"archive-bin-fixture\",\"version\":\"1.0.0\",{s}\"bin\":{s}}}",
+                    .{ if (explicit_files) "\"files\":[\"dist\"]," else "", if (object_bin) "{\"fixture\":\"./bin/cli\"}" else "\"./bin/cli\"" },
+                );
+                try write(try std.fs.path.join(allocator, &.{ root, manifest_name }), manifest);
+                const archive = try registry.createTarball(allocator, root, std.fs.path.basename(root), "1.0.0", manifest);
+                defer io_helper.deleteFile(archive) catch {};
+                const unpacked = try std.fs.path.join(allocator, &.{ root, "unpacked" });
+                try io_helper.makePath(unpacked);
+                const extract = try io_helper.childRun(allocator, &.{ "tar", "-xzf", archive, "-C", unpacked });
+                try std.testing.expect(extract.term == .exited and extract.term.exited == 0);
+                const published_cli = try std.fs.path.join(allocator, &.{ unpacked, "package", "bin", "cli" });
+                const published_library = try std.fs.path.join(allocator, &.{ unpacked, "package", "dist", "index.js" });
+                try std.testing.expectEqual(@as(u32, 0o755), (try io_helper.statFile(published_cli)).mode & 0o777);
+                try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(published_library)).mode & 0o777);
+                try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(cli)).mode & 0o777);
+                const executed = try io_helper.childRun(allocator, &.{published_cli});
+                try std.testing.expect(executed.term == .exited and executed.term.exited == 0);
+                try std.testing.expectEqualStrings("published-bin-ok", executed.stdout);
             }
-            const manifest = try std.fmt.allocPrint(
-                allocator,
-                "{{\"name\":\"archive-bin-fixture\",\"version\":\"1.0.0\",{s}\"bin\":{s}}}",
-                .{ if (explicit_files) "\"files\":[\"dist\"]," else "", if (object_bin) "{\"fixture\":\"./bin/cli\"}" else "\"./bin/cli\"" },
-            );
-            try write(try std.fs.path.join(allocator, &.{ root, "package.json" }), manifest);
-            const archive = try registry.createTarball(allocator, root, std.fs.path.basename(root), "1.0.0", manifest);
-            defer io_helper.deleteFile(archive) catch {};
-            const unpacked = try std.fs.path.join(allocator, &.{ root, "unpacked" });
-            try io_helper.makePath(unpacked);
-            const extract = try io_helper.childRun(allocator, &.{ "tar", "-xzf", archive, "-C", unpacked });
-            try std.testing.expect(extract.term == .exited and extract.term.exited == 0);
-            const published_cli = try std.fs.path.join(allocator, &.{ unpacked, "package", "bin", "cli" });
-            const published_library = try std.fs.path.join(allocator, &.{ unpacked, "package", "dist", "index.js" });
-            try std.testing.expectEqual(@as(u32, 0o755), (try io_helper.statFile(published_cli)).mode & 0o777);
-            try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(published_library)).mode & 0o777);
-            try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(cli)).mode & 0o777);
-            const executed = try io_helper.childRun(allocator, &.{published_cli});
-            try std.testing.expect(executed.term == .exited and executed.term.exited == 0);
-            try std.testing.expectEqualStrings("published-bin-ok", executed.stdout);
         }
     }
 }
