@@ -2810,17 +2810,8 @@ fn createTarball(
     }
 
     // Create tarball with "package" directory at root
-    const result = try packStaged(allocator, staging_base, tarball_path);
-    defer allocator.free(result.stdout);
-    defer allocator.free(result.stderr);
-
-    // Cleanup staging
+    try packStaged(allocator, staging_base, tarball_path);
     io_helper.deleteTree(staging_base) catch {};
-
-    if (result.term != .exited or result.term.exited != 0) {
-        style.print("Error: package archive creation failed: {s}\n", .{result.stderr});
-        return error.TarballCreationFailed;
-    }
 
     // Get packed (tarball) size
     const packed_size: u64 = blk: {
@@ -2887,7 +2878,14 @@ fn createTarball(
 /// entries (as npm's own tarballs do), with extended attributes off and
 /// AppleDouble disabled. A tar too minimal for those flags (BusyBox) gets the
 /// plain command, which on those systems has nothing to add anyway.
-fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_path: []const u8) !io_helper.ChildRunResult {
+fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_path: []const u8) !void {
+    if (comptime @import("builtin").os.tag == .windows) {
+        const manifest = try std.fs.path.join(allocator, &.{ staging_base, "package", "package.json" });
+        defer allocator.free(manifest);
+        const config = try io_helper.readFileAlloc(allocator, manifest, 10 * 1024 * 1024);
+        defer allocator.free(config);
+        return publish_archive.packPortable(allocator, staging_base, tarball_path, config);
+    }
     try publish_bins.normalize(allocator, staging_base);
     const archive_path = try publish_archive.outputPath(allocator, staging_base, tarball_path);
     defer allocator.free(archive_path);
@@ -2931,12 +2929,12 @@ fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_pa
             "--no-recursion", "-czf",               archive_path, "-T",
             ".pantry-files",
         }, .{ .cwd = staging_base }) catch break :hardened;
-        if (packed_files.term == .exited and packed_files.term.exited == 0) return packed_files;
+        if (packed_files.term == .exited and packed_files.term.exited == 0) return publish_archive.checkResult(allocator, packed_files);
         allocator.free(packed_files.stdout);
         allocator.free(packed_files.stderr);
     }
 
-    return io_helper.childRunWithOptions(allocator, &[_][]const u8{ "tar", "-czf", archive_path, "package" }, .{ .cwd = staging_base });
+    return publish_archive.checkResult(allocator, try io_helper.childRunWithOptions(allocator, &[_][]const u8{ "tar", "-czf", archive_path, "package" }, .{ .cwd = staging_base }));
 }
 
 /// Sort monorepo packages by dependency order using topological sort (Kahn's algorithm).

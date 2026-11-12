@@ -1253,23 +1253,16 @@ pub fn createTarball(
     }
 
     // Create tarball with "package" directory at root
-    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base, config_content);
-    defer allocator.free(tar_result.stdout);
-    defer allocator.free(tar_result.stderr);
-
-    // Cleanup staging
+    try packStagedPackage(allocator, tarball_path, staging_base, config_content);
     io_helper.deleteTree(staging_base) catch {};
-
-    if (tar_result.term != .exited or tar_result.term.exited != 0) {
-        style.print("tar failed: {s}\n", .{tar_result.stderr});
-        return error.TarballCreationFailed;
-    }
 
     return tarball_path;
 }
 
 /// Pack without AppleDouble and other host metadata, preserving portable bin modes.
-fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8, config_content: []const u8) !io_helper.ChildRunResult {
+fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8, config_content: []const u8) !void {
+    if (comptime @import("builtin").os.tag == .windows)
+        return publish_archive.packPortable(allocator, staging_base, tarball_path, config_content);
     // Package bin metadata promises executables even when a bundler wrote 0644.
     // Normalize only the owned staged copy, before either registry upload.
     try publish_bins.normalizeWithConfig(allocator, staging_base, config_content);
@@ -1281,11 +1274,11 @@ fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, sta
         "-czf",         archive_path,         "package",
     }, .{ .cwd = staging_base }) catch null;
     if (metadata_free) |result| {
-        if (result.term == .exited and result.term.exited == 0) return result;
+        if (result.term == .exited and result.term.exited == 0) return publish_archive.checkResult(allocator, result);
         allocator.free(result.stdout);
         allocator.free(result.stderr);
     }
-    return io_helper.childRunWithOptions(allocator, &[_][]const u8{ "tar", "--exclude=._*", "--exclude=.DS_Store", "-czf", archive_path, "package" }, .{ .cwd = staging_base });
+    return publish_archive.checkResult(allocator, try io_helper.childRunWithOptions(allocator, &[_][]const u8{ "tar", "--exclude=._*", "--exclude=.DS_Store", "-czf", archive_path, "package" }, .{ .cwd = staging_base }));
 }
 
 /// Default tarball creation - use .pantryignore or .gitignore for exclusions
@@ -1434,17 +1427,8 @@ fn createTarballDefault(
     }
 
     // Create tarball with "package" directory at root
-    const tar_result = try packStagedPackage(allocator, tarball_path, staging_base, config_content);
-    defer allocator.free(tar_result.stdout);
-    defer allocator.free(tar_result.stderr);
-
-    // Cleanup staging
+    try packStagedPackage(allocator, tarball_path, staging_base, config_content);
     io_helper.deleteTree(staging_base) catch {};
-
-    if (tar_result.term != .exited or tar_result.term.exited != 0) {
-        style.print("tar failed: {s}\n", .{tar_result.stderr});
-        return error.TarballCreationFailed;
-    }
 
     return tarball_path;
 }
