@@ -156,26 +156,6 @@ jobs:
           PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry
         run: bun .github/scripts/linux-native-tools.ts
 
-      - name: Cross-compile the source CLI for native Windows qualification
-        run: |
-          cd packages/zig
-          zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug -j2 --prefix ../../artifacts/windows-source-cli
-          zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter deleteTree -femit-bin=../../artifacts/windows-source-cli/bin/file-tree-tests.exe
-          zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter "access checks" -femit-bin=../../artifacts/windows-source-cli/bin/access-tests.exe
-
-      - name: Retain the source Windows CLI and Action
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-source-runtime
-          path: |
-            artifacts/windows-source-cli/bin/pantry.exe
-            artifacts/windows-source-cli/bin/file-tree-tests.exe
-            artifacts/windows-source-cli/bin/access-tests.exe
-            artifacts/windows-source-cli/bin/*.pdb
-            packages/action/dist/index.js
-            packages/action/dist/post.js
-          if-no-files-found: error
-
       - name: Verify Android tools installation with the source Linux CLI
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         env:
@@ -491,8 +471,40 @@ jobs:
             ]
           webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
+  windows-source-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Pantry
+        uses: ./packages/action
+      - name: Install committed dependencies
+        run: bun install --frozen-lockfile
+      - name: Build the source Action for Windows runtime qualification
+        run: cd packages/action && bun run build
+
+      - name: Cross-compile the source CLI for native Windows qualification
+        run: |
+          cd packages/zig
+          zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug -j2 --prefix ../../artifacts/windows-source-cli
+          zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter deleteTree -femit-bin=../../artifacts/windows-source-cli/bin/file-tree-tests.exe
+          zig test src/io_helper.zig -lc -target x86_64-windows-gnu --test-no-exec --test-filter "access checks" -femit-bin=../../artifacts/windows-source-cli/bin/access-tests.exe
+
+      - name: Retain the source Windows CLI and Action
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-source-runtime
+          path: |
+            artifacts/windows-source-cli/bin/pantry.exe
+            artifacts/windows-source-cli/bin/file-tree-tests.exe
+            artifacts/windows-source-cli/bin/access-tests.exe
+            artifacts/windows-source-cli/bin/*.pdb
+            packages/action/dist/index.js
+            packages/action/dist/post.js
+          if-no-files-found: error
+
   windows-native-runtime:
-    needs: test
+    needs: windows-source-build
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
