@@ -1260,6 +1260,7 @@ pub fn installWorkspaceCommandWithOptions(
         // Root workspace entry
         var root_ws_deps: ?std.StringHashMap([]const u8) = null;
         var root_ws_dev_deps: ?std.StringHashMap([]const u8) = null;
+        var root_ws_peers: ?std.StringHashMap([]const u8) = null;
         var root_ws_system: ?std.StringHashMap([]const u8) = null;
         const root_pkg_path = try std.fmt.allocPrint(allocator, "{s}/package.json", .{workspace_root});
         defer allocator.free(root_pkg_path);
@@ -1273,6 +1274,7 @@ pub fn installWorkspaceCommandWithOptions(
                     inline for (.{
                         .{ "dependencies", &root_ws_deps },
                         .{ "devDependencies", &root_ws_dev_deps },
+                        .{ "peerDependencies", &root_ws_peers },
                         .{ "system", &root_ws_system },
                     }) |pair| {
                         if (root_parsed.value.object.get(pair[0])) |deps_val| {
@@ -1330,6 +1332,8 @@ pub fn installWorkspaceCommandWithOptions(
                         .version = null,
                         .dependencies = root_ws_deps,
                         .dev_dependencies = root_ws_dev_deps,
+                        .peer_dependencies = root_ws_peers,
+                        .optional_peers = try workspaceOptionalPeers(allocator, root_parsed.value),
                         .system = root_ws_system,
                         .isolation = ws_isolation,
                     });
@@ -1362,8 +1366,9 @@ pub fn installWorkspaceCommandWithOptions(
 
             var m_deps: ?std.StringHashMap([]const u8) = null;
             var m_dev_deps: ?std.StringHashMap([]const u8) = null;
+            var m_peers: ?std.StringHashMap([]const u8) = null;
 
-            inline for (.{ .{ "dependencies", &m_deps }, .{ "devDependencies", &m_dev_deps } }) |pair| {
+            inline for (.{ .{ "dependencies", &m_deps }, .{ "devDependencies", &m_dev_deps }, .{ "peerDependencies", &m_peers } }) |pair| {
                 if (m_parsed.value.object.get(pair[0])) |deps_val| {
                     if (deps_val == .object) {
                         var map = std.StringHashMap([]const u8).init(allocator);
@@ -1446,6 +1451,8 @@ pub fn installWorkspaceCommandWithOptions(
                 .version = m_version,
                 .dependencies = m_deps,
                 .dev_dependencies = m_dev_deps,
+                .peer_dependencies = m_peers,
+                .optional_peers = try workspaceOptionalPeers(allocator, m_parsed.value),
                 .system = m_system,
                 .isolation = member_isolation,
             });
@@ -1975,4 +1982,30 @@ test "ecosystem delegates carry on when there is nothing to install" {
     const path_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
 
     try std.testing.expect((try delegateEcosystemInstalls(allocator, path_buf[0..path_len], .{})) == null);
+}
+
+// Peer declarations describe the workspace even when peer installation is not
+// selected. Only optional:true marks a peer as optional.
+fn workspaceOptionalPeers(allocator: std.mem.Allocator, manifest: std.json.Value) !?std.StringHashMap(bool) {
+    const meta = manifest.object.get("peerDependenciesMeta") orelse return null;
+    if (meta != .object) return null;
+    var peers = std.StringHashMap(bool).init(allocator);
+    errdefer {
+        var keys = peers.keyIterator();
+        while (keys.next()) |key| allocator.free(key.*);
+        peers.deinit();
+    }
+    var it = meta.object.iterator();
+    while (it.next()) |entry| {
+        if (entry.value_ptr.* != .object) continue;
+        const optional = entry.value_ptr.object.get("optional") orelse continue;
+        if (optional == .bool and optional.bool) {
+            const key = try allocator.dupe(u8, entry.key_ptr.*);
+            errdefer allocator.free(key);
+            try peers.put(key, true);
+        }
+    }
+    if (peers.count() > 0) return peers;
+    peers.deinit();
+    return null;
 }

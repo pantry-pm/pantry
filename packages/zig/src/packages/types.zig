@@ -220,6 +220,8 @@ pub const WorkspaceLockEntry = struct {
     version: ?[]const u8 = null,
     dependencies: ?std.StringHashMap([]const u8) = null,
     dev_dependencies: ?std.StringHashMap([]const u8) = null,
+    peer_dependencies: ?std.StringHashMap([]const u8) = null,
+    optional_peers: ?std.StringHashMap(bool) = null,
     system: ?std.StringHashMap([]const u8) = null,
     /// Per-workspace dependency isolation mode
     isolation: WorkspaceIsolation = .shared,
@@ -227,7 +229,7 @@ pub const WorkspaceLockEntry = struct {
     pub fn deinit(self: *WorkspaceLockEntry, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
         if (self.version) |v| allocator.free(v);
-        inline for (.{ "dependencies", "dev_dependencies", "system" }) |field_name| {
+        inline for (.{ "dependencies", "dev_dependencies", "peer_dependencies", "system" }) |field_name| {
             if (@field(self, field_name)) |*deps| {
                 var it = deps.iterator();
                 while (it.next()) |entry| {
@@ -236,6 +238,11 @@ pub const WorkspaceLockEntry = struct {
                 }
                 deps.deinit();
             }
+        }
+        if (self.optional_peers) |*peers| {
+            var it = peers.keyIterator();
+            while (it.next()) |key| allocator.free(key.*);
+            peers.deinit();
         }
     }
 };

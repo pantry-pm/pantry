@@ -9,6 +9,60 @@ const binary = process.env.PANTRY_SOURCE_CLI
 // The normal unit pass runs before the CLI is built. CI invokes this suite
 // again with the source binary, and verifies its exact commit before testing.
 describe.skipIf(!binary)('source CLI companion workspace lifecycle', () => {
+  it('records required and optional workspace peers without changing frozen restores', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pantry-workspace-peers-'))
+    try {
+      const peers = { '@fixture/required': 'workspace:*', '@fixture/optional': 'workspace:^' }
+      const optional = { '@fixture/optional': { optional: true }, '@fixture/required': { optional: false } }
+      const rootManifest = { name: 'workspace-peers', private: true, workspaces: ['packages/*'], peerDependencies: peers, peerDependenciesMeta: optional }
+      writeFileSync(join(root, 'package.json'), JSON.stringify(rootManifest))
+      for (const [name, fields] of Object.entries({
+        consumer: { peerDependencies: peers, peerDependenciesMeta: optional },
+        required: {},
+        optional: {},
+      })) {
+        mkdirSync(join(root, 'packages', name), { recursive: true })
+        writeFileSync(join(root, 'packages', name, 'package.json'), JSON.stringify({ name: `@fixture/${name}`, version: '1.0.0', ...fields }))
+      }
+      const run = (args: string[] = []) => {
+        const child = spawnSync(binary!, ['install', '--ignore-scripts', ...args], { cwd: root, encoding: 'utf8', timeout: 30_000 })
+        if (child.error) throw child.error
+        expect(child.status, child.stdout + child.stderr).toBe(0)
+      }
+      run()
+      const lockPath = join(root, 'pantry.lock')
+      const committed = readFileSync(lockPath, 'utf8')
+      const lock = JSON.parse(committed)
+      for (const workspace of ['', 'packages/consumer']) {
+        expect(lock.workspaces[workspace].peerDependencies).toEqual(peers)
+        expect(lock.workspaces[workspace].optionalPeers).toEqual(['@fixture/optional'])
+      }
+      expect(lock.workspaces['packages/required'].peerDependencies).toBeUndefined()
+      expect(lock.workspaces['packages/required'].optionalPeers).toBeUndefined()
+      for (const args of [[], ['--frozen-lockfile']]) {
+        rmSync(join(root, 'node_modules'), { recursive: true, force: true })
+        run(args)
+        expect(readFileSync(lockPath, 'utf8')).toBe(committed)
+      }
+      // Removing only the optional flag must update metadata, while retaining
+      // both declarations. Recording peers does not depend on --peer install.
+      delete (rootManifest as Partial<typeof rootManifest>).peerDependenciesMeta
+      writeFileSync(join(root, 'package.json'), JSON.stringify(rootManifest))
+      const stale = spawnSync(binary!, ['install', '--ignore-scripts', '--frozen-lockfile'], { cwd: root, encoding: 'utf8', timeout: 30_000 })
+      if (stale.error) throw stale.error
+      expect(stale.status, stale.stdout + stale.stderr).not.toBe(0)
+      expect(readFileSync(lockPath, 'utf8')).toBe(committed)
+      run()
+      const updated = readFileSync(lockPath, 'utf8')
+      expect(updated).not.toBe(committed)
+      expect(JSON.parse(updated).workspaces[''].peerDependencies).toEqual(peers)
+      expect(JSON.parse(updated).workspaces[''].optionalPeers).toBeUndefined()
+      run(['--frozen-lockfile'])
+      expect(readFileSync(lockPath, 'utf8')).toBe(updated)
+    }
+    finally { rmSync(root, { recursive: true, force: true }) }
+  }, 45_000)
+
   it('uses the root companion from a member and prunes removed native parents', () => {
     const root = mkdtempSync(join(tmpdir(), 'pantry-member-companion-'))
     try {

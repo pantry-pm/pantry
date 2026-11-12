@@ -17,6 +17,19 @@ fn stringMapsEqual(a: ?std.StringHashMap([]const u8), b: ?std.StringHashMap([]co
     } else return b == null;
 }
 
+fn optionalPeersEqual(a: ?std.StringHashMap(bool), b: ?std.StringHashMap(bool)) bool {
+    if (a) |a_map| {
+        const b_map = b orelse return false;
+        if (a_map.count() != b_map.count()) return false;
+        var keys = a_map.keyIterator();
+        while (keys.next()) |key| {
+            if (a_map.get(key.*).? != b_map.get(key.*)) return false;
+        }
+        return true;
+    }
+    return b == null;
+}
+
 /// Compare two lockfiles, ignoring the generatedAt field
 /// Returns true if lockfiles are equal (excluding generatedAt)
 pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
@@ -45,6 +58,8 @@ pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
         if (a_ws.isolation != b_ws.isolation) return false;
         if (!stringMapsEqual(a_ws.dependencies, b_ws.dependencies)) return false;
         if (!stringMapsEqual(a_ws.dev_dependencies, b_ws.dev_dependencies)) return false;
+        if (!stringMapsEqual(a_ws.peer_dependencies, b_ws.peer_dependencies)) return false;
+        if (!optionalPeersEqual(a_ws.optional_peers, b_ws.optional_peers)) return false;
         if (!stringMapsEqual(a_ws.system, b_ws.system)) return false;
     }
 
@@ -83,6 +98,49 @@ pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
     }
 
     return true;
+}
+
+fn readOptionalPeers(allocator: std.mem.Allocator, value: std.json.Value) !?std.StringHashMap(bool) {
+    var optional_peers: ?std.StringHashMap(bool) = null;
+    if (value.object.get("optionalPeers")) |op_val| {
+        if (op_val == .array) {
+            var op_map = std.StringHashMap(bool).init(allocator);
+            errdefer {
+                var op_it = op_map.keyIterator();
+                while (op_it.next()) |k| allocator.free(k.*);
+                op_map.deinit();
+            }
+            for (op_val.array.items) |item| {
+                if (item == .string) {
+                    const duped = try allocator.dupe(u8, item.string);
+                    errdefer allocator.free(duped);
+                    try op_map.put(duped, true);
+                }
+            }
+            if (op_map.count() > 0) optional_peers = op_map else op_map.deinit();
+        }
+    }
+    return optional_peers;
+}
+
+fn writeOptionalPeers(buf: *std.ArrayList(u8), allocator: std.mem.Allocator, peers: ?std.StringHashMap(bool)) !void {
+    // Write optionalPeers (sorted)
+    if (peers) |op| {
+        if (op.count() > 0) {
+            try buf.appendSlice(allocator, ",\n      \"optionalPeers\": [");
+            const op_keys = try sortedKeys(allocator, op);
+            defer allocator.free(op_keys);
+            var first_op = true;
+            for (op_keys) |op_key| {
+                if (!first_op) try buf.appendSlice(allocator, ", ");
+                first_op = false;
+                try buf.appendSlice(allocator, "\"");
+                try appendJsonEscaped(buf, allocator, op_key);
+                try buf.appendSlice(allocator, "\"");
+            }
+            try buf.appendSlice(allocator, "]");
+        }
+    }
 }
 
 /// Write lockfile to disk in JSON format, but only if it differs from existing file
@@ -247,6 +305,14 @@ fn writeLockfileForce(allocator: std.mem.Allocator, lockfile: *const types.Lockf
                 }
             }
 
+            if (ws.peer_dependencies) |*deps| {
+                if (deps.count() > 0) {
+                    try buf.appendSlice(allocator, ",\n      \"peerDependencies\": ");
+                    try writeJsonStringMap(&buf, allocator, deps, "      ");
+                }
+            }
+            try writeOptionalPeers(&buf, allocator, ws.optional_peers);
+
             if (ws.system) |*deps| {
                 if (deps.count() > 0) {
                     try buf.appendSlice(allocator, ",\n      \"system\": ");
@@ -315,23 +381,7 @@ fn writeLockfileForce(allocator: std.mem.Allocator, lockfile: *const types.Lockf
             }
         }
 
-        // Write optionalPeers (sorted)
-        if (pkg.optional_peers) |*op| {
-            if (op.count() > 0) {
-                try buf.appendSlice(allocator, ",\n      \"optionalPeers\": [");
-                const op_keys = try sortedKeys(allocator, op.*);
-                defer allocator.free(op_keys);
-                var first_op = true;
-                for (op_keys) |op_key| {
-                    if (!first_op) try buf.appendSlice(allocator, ", ");
-                    first_op = false;
-                    try buf.appendSlice(allocator, "\"");
-                    try appendJsonEscaped(&buf, allocator, op_key);
-                    try buf.appendSlice(allocator, "\"");
-                }
-                try buf.appendSlice(allocator, "]");
-            }
-        }
+        try writeOptionalPeers(&buf, allocator, pkg.optional_peers);
 
         try buf.appendSlice(allocator, "\n    }");
     }
@@ -432,11 +482,13 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
 
                 var ws_deps: ?std.StringHashMap([]const u8) = null;
                 var ws_dev_deps: ?std.StringHashMap([]const u8) = null;
+                var ws_peers: ?std.StringHashMap([]const u8) = null;
                 var ws_system: ?std.StringHashMap([]const u8) = null;
 
                 inline for (.{
                     .{ "dependencies", &ws_deps },
                     .{ "devDependencies", &ws_dev_deps },
+                    .{ "peerDependencies", &ws_peers },
                     .{ "system", &ws_system },
                 }) |pair| {
                     if (ws_val.object.get(pair[0])) |deps_val| {
@@ -468,6 +520,8 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
                     .version = ws_version,
                     .dependencies = ws_deps,
                     .dev_dependencies = ws_dev_deps,
+                    .peer_dependencies = ws_peers,
+                    .optional_peers = try readOptionalPeers(allocator, ws_val),
                     .system = ws_system,
                     .isolation = ws_isolation,
                 });
@@ -544,26 +598,7 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
                 }
             }
 
-            // Parse optionalPeers (array of strings)
-            var optional_peers: ?std.StringHashMap(bool) = null;
-            if (pkg_value.object.get("optionalPeers")) |op_val| {
-                if (op_val == .array) {
-                    var op_map = std.StringHashMap(bool).init(allocator);
-                    errdefer {
-                        var op_it = op_map.keyIterator();
-                        while (op_it.next()) |k| allocator.free(k.*);
-                        op_map.deinit();
-                    }
-                    for (op_val.array.items) |item| {
-                        if (item == .string) {
-                            const duped = try allocator.dupe(u8, item.string);
-                            errdefer allocator.free(duped);
-                            try op_map.put(duped, true);
-                        }
-                    }
-                    if (op_map.count() > 0) optional_peers = op_map else op_map.deinit();
-                }
-            }
+            const optional_peers = try readOptionalPeers(allocator, pkg_value);
 
             const lock_entry = types.LockfileEntry{
                 .name = try allocator.dupe(u8, name),
