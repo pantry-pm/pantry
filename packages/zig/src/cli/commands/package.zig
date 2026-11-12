@@ -2485,6 +2485,8 @@ fn createTarball(
     // Create tarball in temp directory to avoid "file changed as we read it" error
     const tmp_dir = io_helper.getTempDir();
     const tarball_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir, tarball_name });
+    errdefer allocator.free(tarball_path);
+    errdefer io_helper.deleteFile(tarball_path) catch {};
 
     // npm requires all files to be inside a "package/" directory in the tarball.
     // One staging directory per publish. A fixed /tmp/pantry-staging was
@@ -2815,6 +2817,7 @@ fn createTarball(
     io_helper.deleteTree(staging_base) catch {};
 
     if (result.term != .exited or result.term.exited != 0) {
+        style.print("Error: package archive creation failed: {s}\n", .{result.stderr});
         return error.TarballCreationFailed;
     }
 
