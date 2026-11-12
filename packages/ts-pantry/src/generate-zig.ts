@@ -544,19 +544,20 @@ export async function generateZigAliases(packagesDir: string, outputFile: string
 
       // Add aliases
       if (pkgData.aliases && Array.isArray(pkgData.aliases)) {
-        for (const alias of pkgData.aliases) {
+        for (const alias of mergeAliases(pkgData.domain, pkgData.aliases)) {
           aliases[alias] = pkgData.domain
         }
       }
 
       // Add friendly name if different from domain
-      if (pkgData.name && pkgData.name !== pkgData.domain) {
+      if (!shouldReplaceAliases(pkgData.domain) && pkgData.name && pkgData.name !== pkgData.domain) {
         aliases[pkgData.name] = pkgData.domain
       }
 
-      // Add common short names
+      // A replacement list is authoritative, including for guessed aliases.
+      // Never recreate a deliberately excluded JavaScript package identity.
       const shortName = pkgData.domain.split('.')[0]
-      if (shortName && !aliases[shortName]) {
+      if (!shouldReplaceAliases(pkgData.domain) && shortName && !aliases[shortName]) {
         aliases[shortName] = pkgData.domain
       }
     }
@@ -604,6 +605,7 @@ test "Alias resolution works" {
 `
 
   fs.writeFileSync(outputFile, zigCode, 'utf-8')
+  formatZig(outputFile)
   console.log(`✅ Generated Zig aliases: ${outputFile}`)
   console.log(`📊 Total aliases: ${Object.keys(aliases).length}`)
 }

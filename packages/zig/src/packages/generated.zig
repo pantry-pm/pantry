@@ -19445,7 +19445,7 @@ pub const packages = [_]PackageInfo{ .{
     .programs = &[_][]const u8{"zig-dtsx"},
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "curl.se", "info-zip.org/unzip", "gnu.org/coreutils" },
-    .aliases = &[_][]const u8{},
+    .aliases = &[_][]const u8{"dtsx-native"},
     .versions = &[_][]const u8{"0.11.52"},
 }, .{
     .name = "zig",

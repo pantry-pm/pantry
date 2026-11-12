@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { savePackageAsTypeScript } from '../../packages/ts-pantry/src/fetch'
 import { recipeDepsToSpecs } from '../../packages/ts-pantry/src/dependency-spec'
 import { generateIndex, generateAliases } from '../../packages/ts-pantry/src/generate'
-import { generateZigDefinitions } from '../../packages/ts-pantry/src/generate-zig'
+import { generateZigDefinitions, generateZigAliases } from '../../packages/ts-pantry/src/generate-zig'
 import { compareInstallerVersionsDesc } from '../../packages/ts-pantry/src/installer'
 import type { Recipe } from '../../packages/ts-pantry/scripts/recipe-types'
 import type { PkgxPackage } from '../../packages/ts-pantry/src/types'
@@ -48,6 +48,7 @@ if (import.meta.main) {
   if (!await generateIndex(output)) throw new Error('Native package index generation failed')
   await generateAliases(output)
   await generateZigDefinitions(output, path.resolve(source, '../zig/src/packages/generated.zig'))
+  await generateZigAliases(output, path.resolve(source, '../zig/src/packages/aliases.zig'))
   mkdirSync('artifacts/native-catalog', { recursive: true })
   await Bun.write('artifacts/native-catalog/registration.json', JSON.stringify({ at: new Date().toISOString(), seeds, bun: Bun.version }, null, 2) + '\n')
 }

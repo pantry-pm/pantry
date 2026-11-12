@@ -6497,6 +6497,7 @@ export interface Pantry {
   zstd: typeof facebookcomzstdPackage
   awscdk: typeof cdkPackage
   bunsh: typeof bunPackage
+  dtsxnative: typeof zigdtsxPackage
 }
 
 export type Packages = Pantry
@@ -11224,6 +11225,7 @@ export const pantry: Pantry = {
   zstd: facebookcomzstdPackage,
   awscdk: cdkPackage,
   bunsh: bunPackage,
+  dtsxnative: zigdtsxPackage,
 }
 
 export const packages: Packages = pantry

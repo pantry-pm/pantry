@@ -20,6 +20,13 @@ export interface AliasOverride {
  * Add entries here to define aliases that should persist through regeneration
  */
 export const ALIAS_OVERRIDES: AliasOverride[] = [
+  // The native CLI and the JavaScript FFI SDK share an executable name,
+  // but the SDK's bare package identity must remain on the JavaScript route.
+  {
+    domain: 'zig-dtsx.stacksjs.org',
+    aliases: ['dtsx-native'],
+    replace: true,
+  },
   // Programming languages
   {
     domain: 'php.net',

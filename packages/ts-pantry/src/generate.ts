@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { getAllAliasOverrides } from './alias-overrides'
+import { getAllAliasOverrides, shouldReplaceAliases } from './alias-overrides'
 import { convertDomainToVarName, guessOriginalDomain, toPropertyKey } from './utils'
 
 // The packages directory path
@@ -1338,15 +1338,15 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
 
       const moduleName = path.basename(file, '.ts')
       // Extract actual domain from the file content instead of guessing from filename
-      const domainMatch = content.match(/domain:\s*['"]([^'"]*)['"]\s*as const/)
+      const domainMatch = content.match(/domain:\s*['"]([^'"]*)['"]/)
       const domain = domainMatch ? domainMatch[1] : guessOriginalDomain(moduleName)
 
       // Extract package name from the file content
-      const nameMatch = content.match(/name:\s*['"]([^'"]*)['"]\s*as const/)
+      const nameMatch = content.match(/name:\s*['"]([^'"]*)['"]/)
       const packageName = nameMatch ? nameMatch[1] : ''
 
       // If package name differs from domain and is a valid alias, add it automatically
-      if (packageName && packageName !== domain && isValidAlias(packageName, domain)) {
+      if (!shouldReplaceAliases(domain) && packageName && packageName !== domain && isValidAlias(packageName, domain)) {
         if (!allAliases[packageName]) {
           allAliases[packageName] = domain
           console.log(`Auto-generated alias: ${packageName} -> ${domain}`)
@@ -1358,7 +1358,7 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
 
       // Extract aliases array from the file content
       const aliasesMatch = content.match(/aliases:\s*\[([\s\S]*?)\]/)
-      if (aliasesMatch && aliasesMatch[1]) {
+      if (!shouldReplaceAliases(domain) && aliasesMatch && aliasesMatch[1]) {
         const aliases = aliasesMatch[1].match(/["']([^"']*)["']/g)
         if (aliases) {
           // Add each alias to the map - for explicit aliases, be more permissive
