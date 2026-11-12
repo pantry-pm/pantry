@@ -1,3 +1,32 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.199...v0.11.200)
+
+## ✨ Features
+
+- deliver standalone DTSX through the native catalog ([961a560](https://github.com/pantry-pm/pantry/commit/961a560)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- align patch release with qualified publisher contract ([b0a1448](https://github.com/pantry-pm/pantry/commit/b0a1448)) _(by Chris <chris@stacksjs.com>)_
+- **sdk**: qualify portable installed Pantry declarations ([d27880a](https://github.com/pantry-pm/pantry/commit/d27880a)) _(by Chris <chris@stacksjs.com>)_ ([#289](https://github.com/pantry-pm/pantry/issues/289), [stacksjs/dtsx#3145](https://github.com/stacksjs/dtsx/issues/3145), [stacksjs/better-dx#970](https://github.com/stacksjs/better-dx/issues/970))
+- preserve extraction failures after a backend writes ([0223f4c](https://github.com/pantry-pm/pantry/commit/0223f4c)) _(by Chris <chris@stacksjs.com>)_ ([#327](https://github.com/pantry-pm/pantry/issues/327))
+- honor declared replacement aliases during native registration ([167cc04](https://github.com/pantry-pm/pantry/commit/167cc04)) _(by Chris Breuer <chris@stacksjs.com>)_
+- preserve the zig-dtsx SDK route beside its native CLI ([c7ecc86](https://github.com/pantry-pm/pantry/commit/c7ecc86)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- verify native payload bytes through the installed launcher ([97d204a](https://github.com/pantry-pm/pantry/commit/97d204a)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.200 ([b283e1d](https://github.com/pantry-pm/pantry/commit/b283e1d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **action**: rebuild the current native catalog ([4db2d94](https://github.com/pantry-pm/pantry/commit/4db2d94)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_ ([#289](https://github.com/pantry-pm/pantry/issues/289), [#327](https://github.com/pantry-pm/pantry/issues/327))
+- register the qualified DTSX 0.11.53 native release ([f570cf2](https://github.com/pantry-pm/pantry/commit/f570cf2)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.198...v0.11.199)
 
 ## 🐛 Bug Fixes
