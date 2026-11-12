@@ -206,7 +206,7 @@ fn hasJsDeps(obj: std.json.ObjectMap) bool {
     // A JS workspace can declare every external dependency in its members.
     // The manager still owns member links and the complete locked graph.
     if (@import("js_workspace.zig").hasWorkspacePatterns(obj)) return true;
-    const sections = [_][]const u8{ "dependencies", "devDependencies", "optionalDependencies" };
+    const sections = [_][]const u8{ "dependencies", "devDependencies", "peerDependencies", "optionalDependencies" };
     for (sections) |section| {
         if (obj.get(section)) |val| {
             if (val != .object) continue;

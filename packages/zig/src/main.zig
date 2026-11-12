@@ -273,6 +273,15 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .filter = null,
         .linker = add_config.install.linker,
     };
+    // JavaScript additions belong to the same manifest/workspace/lock owner
+    // as an ordinary install. The named native installer saves dependencies
+    // itself and cannot update node_modules or the JavaScript lockfile.
+    if (try addJavaScriptDependencies(allocator, add_cwd, packages.items, dev, peer, optional, exact, install_options)) |js_result| {
+        var result = js_result;
+        defer result.deinit(allocator);
+        if (result.message) |message| style.printForced("{s}\n", .{message});
+        std.process.exit(result.exit_code);
+    }
     var result = try lib.commands.installCommandWithOptions(allocator, packages.items, install_options);
     defer result.deinit(allocator);
 
@@ -325,6 +334,43 @@ fn addAction(ctx: *cli.BaseCommand.ParseContext) !void {
     }
 
     std.process.exit(0);
+}
+
+fn addJavaScriptDependencies(
+    allocator: std.mem.Allocator,
+    cwd: []const u8,
+    packages: []const []const u8,
+    dev: bool,
+    peer: bool,
+    optional: bool,
+    exact: bool,
+    options: lib.commands.InstallOptions,
+) !?lib.commands.CommandResult {
+    for (packages) |spec| {
+        if (lib.commands.install_commands.helpers.isNativePackageSpec(spec)) return null;
+    }
+    const path = try std.fs.path.join(allocator, &.{ cwd, "package.json" });
+    defer allocator.free(path);
+    const original = io_helper.readFileAlloc(allocator, path, 4 * 1024 * 1024) catch |err| {
+        if (err == error.FileNotFound) return null;
+        return err;
+    };
+    defer allocator.free(original);
+
+    // Record the requested section once, then let the normal installer
+    // bootstrap companion runtimes, install the JS graph and write its locks.
+    // In a member, the edit stays here while workspace discovery owns the
+    // root graph. A failure must not leave a successful-looking manifest.
+    var committed = false;
+    defer if (!committed) {
+        io_helper.cwd().writeFile(io_helper.io, .{ .sub_path = path, .data = original }) catch |err| {
+            style.printForced("Error restoring manifest {s}: {}\n", .{ path, err });
+        };
+    };
+    try saveDependenciesToConfig(allocator, path, packages, dev, peer, optional, exact);
+    const result = try lib.commands.installCommandWithOptions(allocator, &.{}, options);
+    committed = result.exit_code == 0;
+    return result;
 }
 
 /// Wrapper for ArrayList that provides writer interface for Zig 0.16-dev

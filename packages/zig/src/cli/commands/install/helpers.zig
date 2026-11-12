@@ -24,6 +24,19 @@ pub const PackageSpecParts = struct {
     version: []const u8,
 };
 
+/// Keep catalog names/aliases and domain-style system dependencies on their
+/// existing native route when `add` selects the JavaScript graph owner.
+pub fn isNativePackageSpec(spec: []const u8) bool {
+    const name = resolvePackageAlias(splitPackageSpec(spec).name);
+    if (@import("../../../packages/generated.zig").getPackageByName(name) != null) return true;
+    return !std.mem.startsWith(u8, name, "@") and std.mem.indexOfScalar(u8, name, '.') != null;
+}
+
+test "add routing keeps native aliases and scoped npm names distinct" {
+    for ([_][]const u8{ "bun@1.4.4", "ziglang.org@0.17.1", "curl", "unknown.example" }) |name| try std.testing.expect(isNativePackageSpec(name));
+    for ([_][]const u8{ "is-number@7.0.0", "pickier@^0.1.93", "@scope.example/package@1.0.0" }) |name| try std.testing.expect(!isNativePackageSpec(name));
+}
+
 /// Split `name@version` into its parts, correctly for scoped packages.
 ///
 /// A scoped npm name BEGINS with '@' — `@stacksjs/tlsx` — so the first '@' in
