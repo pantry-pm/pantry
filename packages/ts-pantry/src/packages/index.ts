@@ -5054,6 +5054,7 @@ export interface Pantry {
   driftctl: typeof snykiodriftctlPackage
   drill: typeof cratesiodrillPackage
   dssim: typeof kornelskidssimPackage
+  'dtsx-native': typeof zigdtsxPackage
   dua: typeof cratesioduaPackage
   duckdb: typeof duckdborgPackage
   ducker: typeof cratesioduckerPackage
@@ -6480,7 +6481,6 @@ export interface Pantry {
   zellij: typeof cratesiozellijPackage
   zeromq: typeof zeromqorgPackage
   zig: typeof ziglangorgPackage
-  'zig-dtsx': typeof zigdtsxPackage
   zimg: typeof zimgPackage
   zip: typeof zipPackage
   zippy: typeof zippyPackage
@@ -9781,6 +9781,7 @@ export const pantry: Pantry = {
   driftctl: snykiodriftctlPackage,
   drill: cratesiodrillPackage,
   dssim: kornelskidssimPackage,
+  'dtsx-native': zigdtsxPackage,
   dua: cratesioduaPackage,
   duckdb: duckdborgPackage,
   ducker: cratesioduckerPackage,
@@ -11207,7 +11208,6 @@ export const pantry: Pantry = {
   zellij: cratesiozellijPackage,
   zeromq: zeromqorgPackage,
   zig: ziglangorgPackage,
-  'zig-dtsx': zigdtsxPackage,
   zimg: zimgPackage,
   zip: zipPackage,
   zippy: zippyPackage,

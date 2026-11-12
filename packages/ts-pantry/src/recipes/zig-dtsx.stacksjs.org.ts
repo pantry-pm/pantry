@@ -2,7 +2,7 @@ import type { Recipe } from '../../scripts/recipe-types'
 
 export const recipe: Recipe = {
   domain: 'zig-dtsx.stacksjs.org',
-  name: 'zig-dtsx',
+  name: 'dtsx-native',
   description: 'High-performance .d.ts emitter for TypeScript, written in Zig. The standalone CLI is distributed separately from the zig-dtsx JavaScript FFI package.',
   homepage: 'https://github.com/stacksjs/dtsx#readme',
   github: 'https://github.com/stacksjs/dtsx',

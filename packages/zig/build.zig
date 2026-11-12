@@ -502,7 +502,7 @@ pub fn build(b: *std.Build) void {
     });
     const run_install_tests = b.addRunArtifact(b.addTest(.{ .root_module = install_test_mod }));
     const install_routing_step = b.step("test:install-routing", "Infer desktop package kinds without changing project installs");
-    const install_routing_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "desktop routing", "an explicit kind retains control" } });
+    const install_routing_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "desktop routing", "an explicit kind retains control", "add routing" } });
     install_routing_step.dependOn(&b.addRunArtifact(install_routing_tests).step);
     const zig_resolution_step = b.step("test:zig-resolution", "Resolve Zig prereleases deterministically and preserve registry failures");
     const zig_resolution_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "Zig prerelease ranges", "Zig resolution only" } });

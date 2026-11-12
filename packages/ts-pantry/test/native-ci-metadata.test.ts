@@ -6,6 +6,16 @@ import { pathToFileURL } from 'node:url'
 import { savePackageAsTypeScript } from '../src/fetch'
 import { recipe } from '../src/recipes/zig-dtsx.stacksjs.org'
 import { mergeRecipeVersions, nativeRecipePackage } from '../../../.github/scripts/register-native-ci-packages'
+import { pantry } from '../src/packages'
+import { aliases } from '../src/packages/aliases'
+
+test('the native DTSX catalog preserves the existing zig-dtsx JavaScript SDK identity', () => {
+  const native = Object.values(pantry).find(pkg => pkg.domain === recipe.domain)
+  expect(native?.name).toBe('dtsx-native')
+  expect(native?.programs).toEqual(['zig-dtsx'])
+  expect(aliases['dtsx-native']).toBe(recipe.domain)
+  expect(Object.hasOwn(aliases, 'zig-dtsx')).toBe(false)
+})
 
 test('registering an older CI pin never downgrades or deletes a newer catalogued release', () => {
   expect(mergeRecipeVersions(['2.0.0', '1.0.0'], ['1.5.0', '1.0.0'])).toEqual(['2.0.0', '1.5.0', '1.0.0'])

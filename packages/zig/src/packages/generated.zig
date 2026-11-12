@@ -19437,7 +19437,7 @@ pub const packages = [_]PackageInfo{ .{
     .aliases = &[_][]const u8{"czmq"},
     .versions = &[_][]const u8{ "4.2.1", "4.2.0", "4.1.1", "4.1.0", "4.0.2", "4.0.1", "4.0.0", "3.0.2", "3.0.1", "3.0.0", "2.2.0", "2.1.0", "2.0.2", "2.0.1", "2.0.0", "1.4.1", "1.4.0", "1.3.2", "1.3.1", "1.2.0" },
 }, .{
-    .name = "zig-dtsx",
+    .name = "dtsx-native",
     .domain = "zig-dtsx.stacksjs.org",
     .kind = .cli,
     .description = "High-performance .d.ts emitter for TypeScript, written in Zig. The standalone CLI is distributed separately from the zig-dtsx JavaScript FFI package.",

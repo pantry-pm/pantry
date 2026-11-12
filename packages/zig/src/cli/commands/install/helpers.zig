@@ -37,6 +37,11 @@ test "add routing keeps native aliases and scoped npm names distinct" {
     for ([_][]const u8{ "is-number@7.0.0", "pickier@^0.1.93", "@scope.example/package@1.0.0" }) |name| try std.testing.expect(!isNativePackageSpec(name));
 }
 
+test "add routing keeps the zig-dtsx FFI SDK distinct from its native CLI" {
+    for ([_][]const u8{ "zig-dtsx", "zig-dtsx@0.11.52", "zig-dtsx@^0.11.52" }) |spec| try std.testing.expect(!isNativePackageSpec(spec));
+    for ([_][]const u8{ "dtsx-native", "dtsx-native@0.11.52", "zig-dtsx.stacksjs.org@0.11.52" }) |spec| try std.testing.expect(isNativePackageSpec(spec));
+}
+
 /// Split `name@version` into its parts, correctly for scoped packages.
 ///
 /// A scoped npm name BEGINS with '@' — `@stacksjs/tlsx` — so the first '@' in

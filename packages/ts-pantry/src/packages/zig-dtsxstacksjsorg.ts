@@ -1,5 +1,5 @@
 /**
- * **zig-dtsx** - High-performance .d.ts emitter for TypeScript, written in Zig. The standalone CLI is distributed separately from the zig-dtsx JavaScript FFI package.
+ * **dtsx-native** - High-performance .d.ts emitter for TypeScript, written in Zig. The standalone CLI is distributed separately from the zig-dtsx JavaScript FFI package.
  *
  * @domain `zig-dtsx.stacksjs.org`
  * @programs `zig-dtsx`
@@ -15,7 +15,7 @@
  * import { pantry } from 'ts-pantry'
  *
  * const pkg = pantry.zigdtsxstacksjsorg
- * console.log(pkg.name)        // "zig-dtsx"
+ * console.log(pkg.name)        // "dtsx-native"
  * console.log(pkg.description) // "High-performance .d.ts emitter for TypeScript, ..."
  * console.log(pkg.programs)    // ["zig-dtsx"]
  * console.log(pkg.versions[0]) // "0.11.52" (latest)
@@ -28,7 +28,7 @@ export const zigdtsxPackage = {
   /**
   * The display name of this package.
   */
-  name: 'zig-dtsx' as const,
+  name: 'dtsx-native' as const,
   /**
   * The canonical domain name for this package.
   */
