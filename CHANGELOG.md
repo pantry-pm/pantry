@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.200...v0.11.201)
+
+## 🐛 Bug Fixes
+
+- **action**: scope native caches to their owned package prefixes ([e688f5b](https://github.com/pantry-pm/pantry/commit/e688f5b)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#330](https://github.com/pantry-pm/pantry/issues/330), [#331](https://github.com/pantry-pm/pantry/issues/331))
+- **install**: honor and verify Git dependency revisions ([8bd0e63](https://github.com/pantry-pm/pantry/commit/8bd0e63)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#330](https://github.com/pantry-pm/pantry/issues/330))
+
+## ✅ Tests
+
+- **install**: trace native project installation phases ([03fb648](https://github.com/pantry-pm/pantry/commit/03fb648)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#325](https://github.com/pantry-pm/pantry/issues/325))
+
+## 🔧 Chores
+
+- release v0.11.201 ([073eb11](https://github.com/pantry-pm/pantry/commit/073eb11)) _(by Chris Breuer <chris@stacksjs.com>)_
+- register the DTSX 0.11.54 native release ([1025875](https://github.com/pantry-pm/pantry/commit/1025875)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.199...v0.11.200)
 
 ## ✨ Features
