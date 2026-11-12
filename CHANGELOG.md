@@ -1,3 +1,33 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.197...v0.11.198)
+
+## 🐛 Bug Fixes
+
+- **publish**: encode portable executable metadata on Windows ([396f958](https://github.com/pantry-pm/pantry/commit/396f958)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320))
+- **publish**: keep tar archive destinations local on Windows ([c693f09](https://github.com/pantry-pm/pantry/commit/c693f09)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320))
+- **publish**: retain archive errors and clean failed outputs ([c590966](https://github.com/pantry-pm/pantry/commit/c590966)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320))
+- **publish**: normalize bins from the selected Pantry manifest ([ff53319](https://github.com/pantry-pm/pantry/commit/ff53319)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320), [stacksjs/dtsx#3187](https://github.com/stacksjs/dtsx/issues/3187))
+- **publish**: apply declared bin permissions to staged archives ([49279c5](https://github.com/pantry-pm/pantry/commit/49279c5)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320), [stacksjs/dtsx#3187](https://github.com/stacksjs/dtsx/issues/3187))
+- **install**: retain workspace peer declarations in lockfile ([2098ac9](https://github.com/pantry-pm/pantry/commit/2098ac9)) _(by Chris <chris@stacksjs.com>)_ ([#321](https://github.com/pantry-pm/pantry/issues/321))
+
+## ✅ Tests
+
+- **publish**: report missing uploads before parsing archives ([4995174](https://github.com/pantry-pm/pantry/commit/4995174)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320))
+
+## 💚 Continuous Integration
+
+- qualify Windows runtime independently of unit tests ([ac610ef](https://github.com/pantry-pm/pantry/commit/ac610ef)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#320](https://github.com/pantry-pm/pantry/issues/320))
+
+## 🔧 Chores
+
+- release v0.11.198 ([5712355](https://github.com/pantry-pm/pantry/commit/5712355)) _(by Chris <chris@stacksjs.com>)_
+- update craft to 0.0.499 ([e5dacaf](https://github.com/pantry-pm/pantry/commit/e5dacaf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update boost, Element, LLaMA.cpp, llm, mongosh, node, plantuml, prettier, scala-lang, terraform, terragrunt, zig ([1948ccb](https://github.com/pantry-pm/pantry/commit/1948ccb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.196...v0.11.197)
 
 ## 🐛 Bug Fixes
