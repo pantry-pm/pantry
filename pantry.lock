@@ -6,7 +6,7 @@
       "name": "pantry",
       "dependencies": {
         "@cwcss/crosswind": "^0.2.16",
-        "@stacksjs/bumpx": "^0.2.29",
+        "@stacksjs/bumpx": "0.2.31",
         "@stacksjs/stx": "^0.2.192",
         "@stacksjs/ts-cloud": "^0.16.68"
       },

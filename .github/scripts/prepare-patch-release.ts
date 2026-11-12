@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import { mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+const qualifiedPublisherVersion = '0.2.31'
+
+interface PublisherManifest { dependencies?: Record<string, unknown>, devDependencies?: Record<string, unknown> }
 interface SourceRun { id: number, name: string, head_sha: string, status: string, conclusion: string | null }
 interface SourceJob { name: string, status: string, conclusion: string | null }
 
@@ -30,15 +33,17 @@ export function requireReleaseIdentity(identity: string, message: string): void 
   assert.doesNotMatch(message, /^Co-authored-by:/im)
 }
 
-export function requireReleaseToolchain(declared: unknown, installed: unknown): void {
-  assert.equal(declared, '0.2.25', 'The publisher must be an exact normal dependency on the fixed public release')
+export function requireReleaseToolchain(manifest: PublisherManifest, installed: unknown): void {
+  const declared = manifest.dependencies?.['@stacksjs/bumpx']
+  assert.equal(declared, qualifiedPublisherVersion, 'The publisher must be an exact real dependency on the qualified public release')
+  assert.equal(manifest.devDependencies?.['@stacksjs/bumpx'], undefined, 'The publisher must not be duplicated in dev dependencies')
   assert.equal(installed, declared, 'The installed publisher must match the qualified lockfile dependency')
 }
 
 async function verifyToolchain(): Promise<void> {
   const manifest = JSON.parse(await readFile('package.json', 'utf8'))
   const installed = JSON.parse(await readFile('node_modules/@stacksjs/bumpx/package.json', 'utf8'))
-  requireReleaseToolchain(manifest.devDependencies?.['@stacksjs/bumpx'], installed.version)
+  requireReleaseToolchain(manifest, installed.version)
   const probe = Bun.spawnSync(['bun', 'x', '--bun', '@stacksjs/bumpx', 'patch', '--expected-source', 'invalid', '--dry-run', '--yes'], { stdout: 'pipe', stderr: 'pipe', timeout: 30_000 })
   assert.notEqual(probe.exitCode, 0, 'The public publisher must reject an invalid expected source')
   assert.match(Buffer.from(probe.stdout).toString() + Buffer.from(probe.stderr).toString(), /Expected source must be a full Git commit hash/)
@@ -73,7 +78,7 @@ async function main(): Promise<void> {
     if (process.argv[2] === 'toolchain') {
       const changedFiles = git('diff', '--name-only').split('\n').filter(Boolean)
       assert(changedFiles.every(file => ['package.json', 'bun.lock', 'pantry.lock', 'packages/action/dist/index.js', 'packages/action/dist/post.js'].includes(file)), 'Normal dependency adoption changed unexpected source files')
-      await Bun.write(receipt, JSON.stringify({ phase: 'normal-public-toolchain-and-frozen-locks-verified', expectedSource: expected, bumpxVersion: '0.2.25', changedFiles, producerInvoked: false, publicationInvoked: false }, null, 2) + '\n')
+      await Bun.write(receipt, JSON.stringify({ phase: 'normal-public-toolchain-and-frozen-locks-verified', expectedSource: expected, bumpxVersion: qualifiedPublisherVersion, changedFiles, producerInvoked: false, publicationInvoked: false }, null, 2) + '\n')
     }
   }
   else if (process.argv[2] === 'preflight') {

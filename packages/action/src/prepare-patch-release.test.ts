@@ -47,8 +47,18 @@ test('patch calculation rejects ambiguous versions rather than choosing another 
 })
 
 
-test('the public source guard must come from the exact installed release dependency', () => {
-  expect(() => requireReleaseToolchain('0.2.25', '0.2.25')).not.toThrow()
-  for (const [declared, installed] of [['^0.2.25', '0.2.25'], ['0.2.24', '0.2.24'], ['0.2.25', '0.2.24'], [undefined, '0.2.25']])
-    expect(() => requireReleaseToolchain(declared, installed)).toThrow()
+test('the public source guard requires the exact installed real dependency', () => {
+  const manifest = { dependencies: { '@stacksjs/bumpx': '0.2.31' } }
+  expect(() => requireReleaseToolchain(manifest, '0.2.31')).not.toThrow()
+  for (const version of ['^0.2.31', '~0.2.31', '0.2.25', '0.2.29', undefined])
+    expect(() => requireReleaseToolchain({ dependencies: { '@stacksjs/bumpx': version } }, '0.2.31')).toThrow()
+  for (const installed of ['0.2.25', '0.2.29', undefined, null])
+    expect(() => requireReleaseToolchain(manifest, installed)).toThrow()
+})
+
+test('the publisher cannot move into dev dependencies or be declared twice', () => {
+  const devDependencies = { '@stacksjs/bumpx': '0.2.31' }
+  expect(() => requireReleaseToolchain({ devDependencies }, '0.2.31')).toThrow()
+  expect(() => requireReleaseToolchain({ dependencies: devDependencies, devDependencies }, '0.2.31')).toThrow()
+  expect(() => requireReleaseToolchain({}, '0.2.31')).toThrow()
 })

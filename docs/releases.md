@@ -36,8 +36,10 @@ version again can produce a staged-version conflict.
 
 The **Prepare Patch Release** workflow runs on Main with an exact
 `expected_source_sha`. Its default `toolchain` operation generates the normal
-manifest and JavaScript lockfile update for public Bumpx 0.2.25, verifies Bun's
-frozen install and tests the installed publisher's expected-source guard. It builds
+manifest and JavaScript lockfile update for public Bumpx 0.2.31, exactly pinned
+in the existing real dependency section with `bun add --exact`. It verifies Bun's
+frozen install, rejects a dev dependency duplicate, checks the actual installed
+version and tests the installed publisher's expected-source guard. It builds
 the Action with that same normal dependency graph and uploads the manifest,
 lockfiles and both Action bundles in `normal-locked-publisher-toolchain`. It does
 not create a release commit or tag. Adopt those normal generated outputs as a

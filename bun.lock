@@ -6,7 +6,7 @@
       "name": "pantry",
       "dependencies": {
         "@cwcss/crosswind": "^0.2.16",
-        "@stacksjs/bumpx": "^0.2.29",
+        "@stacksjs/bumpx": "0.2.31",
         "@stacksjs/stx": "^0.2.192",
         "@stacksjs/ts-cloud": "^0.16.68",
       },
@@ -176,7 +176,7 @@
 
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 
-    "@stacksjs/bumpx": ["@stacksjs/bumpx@0.2.29", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0", "@stacksjs/logsmith": "^0.2.14", "bunfig": "^0.15.6" }, "bin": { "bumpx": "./dist/bin/cli.js" } }, "sha512-bMBFUiYbWBoLv6yyeVGJQNLab4bV6aKfr9oA7g8MKYhvfsjVsiwARkGnKHa7TEvmU/rl565ONl+pFX+hkdkxhg=="],
+    "@stacksjs/bumpx": ["@stacksjs/bumpx@0.2.31", "", { "dependencies": { "@stacksjs/clapp": "^0.2.0", "@stacksjs/logsmith": "^0.2.14", "bunfig": "^0.15.6" }, "bin": { "bumpx": "./dist/bin/cli.js" } }, "sha512-nmQ14cVa/G7mIa61wG7geKuvz2gNt6r/tU8vZk6e01mPwLIwt1ozjxA7NeC9F7h3NA+8D7fbjyhX54PEbpEFag=="],
 
     "@stacksjs/bunpress": ["@stacksjs/bunpress@0.2.8", "", { "dependencies": { "@cwcss/crosswind": "^0.2.16", "@stacksjs/clapp": "^0.2.0", "@stacksjs/stx": "^0.2.171", "@stacksjs/ts-i18n": "^0.1.11", "bunfig": "^0.15.17", "ts-syntax-highlighter": "^0.2.14" }, "peerDependencies": { "@stacksjs/ts-cloud": "^0.7.51" }, "optionalPeers": ["@stacksjs/ts-cloud"], "bin": { "bunpress": "./dist/bin/cli.js" } }, "sha512-QE/6X2o96IJhlJVLWbXA//m33vt6jtcbURDfJ8aVYOrLWiz2jUJa+l20VxJ5vTm3SrYnaybsKHpn5ULFbH+X1Q=="],
 
