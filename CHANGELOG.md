@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.198...v0.11.199)
+
+## 🐛 Bug Fixes
+
+- **add**: install npm additions through their JavaScript graph ([775ac57](https://github.com/pantry-pm/pantry/commit/775ac57)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.199 ([549d65b](https://github.com/pantry-pm/pantry/commit/549d65b)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update biome, Brave Browser, chrome-for-testing, codex, flutter, fly, grpc, LLaMA.cpp, mise, mz, pandoc, pnp, prettier, projen, pscale, psycopg3, pulumi, Signal, stripe, talosctl, templ, vault, vim, zarf, Zed ([1d60fcb](https://github.com/pantry-pm/pantry/commit/1d60fcb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.197...v0.11.198)
 
 ## 🐛 Bug Fixes
