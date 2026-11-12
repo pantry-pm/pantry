@@ -97,12 +97,12 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
   try {
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     const output = stdout + stderr
+    if (uploads !== 1) throw new Error(`${mode}: expected exactly one upload, got ${uploads}; requests=${JSON.stringify(requests)}; exit=${code}\n${output}`)
     if (archiveMemberMode(tarball, 'package/cli') !== 0o755) throw new Error(`${mode}: uploaded bin lost its executable mode`)
     if (linkedBin) {
       const link = archiveMember(tarball, 'package/cli-alias')
       if (link?.type !== '2' || link.link !== 'cli') throw new Error('The npm archive lost its internal bin link')
     }
-    if (uploads !== 1) throw new Error(`${mode}: expected exactly one upload, got ${uploads}; requests=${JSON.stringify(requests)}; exit=${code}\n${output}`)
     if (!metadataReads) throw new Error(`${mode}: CLI reported completion without reading public version metadata\n${output}`)
     if (!privateMode && credentialReads) throw new Error(`${mode}: public verification forwarded publishing credentials`)
     if (privateMode && !credentialReads) throw new Error(`${mode}: private readback never authenticated to its registry`)
