@@ -35,7 +35,9 @@ try {
   await mkdir(project)
   await writeFile(join(project, 'deps.yaml'), `dependencies:\n  zig-dtsx.stacksjs.org: ${version}\n`)
   await run([cli, 'install'], project)
-  const binary = join(project, 'pantry/.bin/zig-dtsx')
+  const launcher = join(project, 'pantry/.bin/zig-dtsx')
+  const binary = join(project, `pantry/zig-dtsx.stacksjs.org/v${version}/bin/zig-dtsx`)
+  assert.equal((await stat(launcher)).mode & 0o777, 0o755)
   assert.equal((await stat(binary)).mode & 0o777, 0o755, 'The normally installed CLI must already be executable')
   assert.equal(existsSync(join(project, 'node_modules')), false, 'Native installation must not create a JavaScript dependency tree')
   const archive = join(qualified, `assets/zig-dtsx-${platform}.zip`)
@@ -44,6 +46,7 @@ try {
   assert.equal(extracted.exitCode, 0, extracted.stderr.toString())
   assert.equal(hash(new Uint8Array(await readFile(binary))), hash(extracted.stdout), 'The public native package must contain the original release executable')
   receipt.binarySHA256 = hash(extracted.stdout)
+  receipt.launcher = { path: launcher, sha256: hash(new Uint8Array(await readFile(launcher))) }
   receipt.nativeRuntimeNpmDependencies = 0
   const lock = await readFile(join(project, 'pantry.lock'), 'utf8')
   await run([cli, 'install', '--frozen-lockfile'], project)
@@ -51,7 +54,7 @@ try {
   receipt.nativeLockSHA256 = hash(new TextEncoder().encode(lock))
   assert.equal(hash(new Uint8Array(await readFile(binary))), hash(extracted.stdout))
   const nativeEnvironment = { ...process.env, PATH: '/usr/bin:/bin' }
-  const stdinOutput = await run([binary], project, true, nativeEnvironment, 'export const answer = 42;\n')
+  const stdinOutput = await run([launcher], project, true, nativeEnvironment, 'export const answer = 42;\n')
   assert(stdinOutput.includes('export declare const answer: 42;'))
 
   const library = join(owned, 'library')
@@ -79,7 +82,7 @@ try {
   await controls('../library/src/nested/index.js')
   // The native executable runs with system tools alone, without a Bun/Node
   // command on PATH. The compiler above is an independent verification tool.
-  await run([binary, '--project', 'src', '--outdir', 'dist'], library, true, nativeEnvironment)
+  await run([launcher, '--project', 'src', '--outdir', 'dist'], library, true, nativeEnvironment)
   const emitted = await readFile(join(library, 'dist/nested/index.d.ts'), 'utf8')
   receipt.declarationSHA256 = hash(new TextEncoder().encode(emitted))
   assert(emitted.includes('| undefined') && emitted.includes('last: number'))
