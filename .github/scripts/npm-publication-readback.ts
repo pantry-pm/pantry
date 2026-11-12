@@ -77,6 +77,8 @@ interface ReadbackOptions {
   wait?: (ms: number) => Promise<void>
   timeoutMs?: number
   expectedOriginal?: OriginalNpmPublication
+  /** Keep the already verified bytes for downstream installed-SDK checks. */
+  archivePath?: string
 }
 
 /** npm's 202 acknowledgement can precede public metadata and tarball visibility. */
@@ -117,6 +119,10 @@ export async function waitForNpmPublication(name: string, version: string, optio
           || `sha512-${createHash('sha512').update(bytes).digest('base64')}` !== original.integrity))
           throw new Error('Public npm bytes do not match the original accepted archive')
         const integrity = verifyPublishedTarball(bytes, metadata.dist.integrity, name, version)
+        if (options.archivePath) {
+          await mkdir(dirname(options.archivePath), { recursive: true })
+          await Bun.write(options.archivePath, bytes)
+        }
         return { name, version, tarball: url.href, integrity, bytes: bytes.length }
       }
       if (archive.status !== 404 && archive.status !== 429 && archive.status < 500)
@@ -131,6 +137,7 @@ export async function waitForNpmPublication(name: string, version: string, optio
 
 if (import.meta.main) {
   const output = 'artifacts/npm-publication/proof.json'
+  const archivePath = 'artifacts/npm-publication/package.tgz'
   await mkdir(dirname(output), { recursive: true })
   const manifest = await Bun.file('packages/ts-pantry/package.json').json()
   const publishExit = process.env.PANTRY_NPM_PUBLISH_EXIT_CODE
@@ -141,8 +148,8 @@ if (import.meta.main) {
       const log = await Bun.file('artifacts/npm-publication/publish.log').text()
       original = publicationReadbackReceipt(Number(publishExit), log, manifest.name, manifest.version)
     }
-    const result = await waitForNpmPublication(manifest.name, manifest.version, { expectedOriginal: original })
-    await Bun.write(output, JSON.stringify({ at: new Date().toISOString(), passed: true, publishExitCode: publishExit === undefined ? null : Number(publishExit), original, ...result }, null, 2) + '\n')
+    const result = await waitForNpmPublication(manifest.name, manifest.version, { expectedOriginal: original, archivePath })
+    await Bun.write(output, JSON.stringify({ at: new Date().toISOString(), passed: true, publishExitCode: publishExit === undefined ? null : Number(publishExit), original, archivePath, ...result }, null, 2) + '\n')
     console.log(`Verified public ${result.name}@${result.version}, ${result.bytes} archive bytes and SHA512 integrity`)
   }
   catch (error) {

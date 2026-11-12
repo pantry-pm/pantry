@@ -95,6 +95,20 @@ jobs:
         id: build
         run: bun run build
 
+      - name: Verify the normally packed SDK with strict installed consumers
+        id: sdk
+        run: bun run test:sdk
+        env:
+          PANTRY_SDK_EVIDENCE: ${{ runner.temp }}/pantry-sdk
+
+      - name: Retain installed SDK evidence
+        if: always() && steps.sdk.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pantry-sdk-source
+          path: ${{ runner.temp }}/pantry-sdk
+          if-no-files-found: error
+
       - name: Build pantry GitHub Action
         id: build_action
         run: cd packages/action && bun run build

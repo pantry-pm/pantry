@@ -2,7 +2,7 @@ import process from 'node:process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { dts } from 'bun-plugin-dtsx'
+import { dts } from '@dtsx/bun'
 
 /**
  * Everything the last build left behind.
@@ -94,7 +94,7 @@ const entries: PackageCatalogEntry[] = search('git', { kind: 'cli', limit: 5 })
 entries.map(entry => entry.domain)
 `)
   try {
-    const check = Bun.spawn([process.execPath, 'x', '--bun', 'tsc', '--ignoreConfig', '--noEmit', '--skipLibCheck', '--moduleResolution', 'bundler', '--module', 'esnext', '--target', 'esnext', contract], { stdout: 'inherit', stderr: 'inherit' })
+    const check = Bun.spawn([process.execPath, 'x', '--bun', 'tsc', '--ignoreConfig', '--noEmit', '--moduleResolution', 'bundler', '--module', 'esnext', '--target', 'esnext', contract], { stdout: 'inherit', stderr: 'inherit' })
     if (await check.exited !== 0) throw new Error('Published catalog declarations failed their consumer contract')
   }
   finally { fs.rmSync(contract, { force: true }) }
@@ -142,18 +142,6 @@ async function build() {
   if (!runtimeResult.success) {
     console.error('Runtime build failed:', runtimeResult.logs)
     process.exit(1)
-  }
-
-  // Manually copy generated-package-names.ts as .d.ts to preserve formatting
-  // This file has special formatting requirements that bun-plugin-dtsx mangles
-  const generatedSrc = path.join(process.cwd(), 'src', 'generated-package-names.ts')
-  const generatedDest = path.join(process.cwd(), 'dist', 'generated-package-names.d.ts')
-  if (fs.existsSync(generatedSrc)) {
-    const content = fs.readFileSync(generatedSrc, 'utf-8')
-    // Convert .ts to .d.ts by removing any non-type exports
-    const dtsContent = content.replace(/^(export\s+)(?!type\s|interface\s)/gm, '$1declare ')
-    fs.writeFileSync(generatedDest, dtsContent, 'utf-8')
-    console.log('Copied generated-package-names.ts -> generated-package-names.d.ts')
   }
 
   const broken = findBrokenChunks()

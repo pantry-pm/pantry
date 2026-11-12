@@ -8,6 +8,28 @@ TypeScript types for Pantry package manager configuration with **full type valid
 bun add -d ts-pantry
 ```
 
+## SDK qualification
+
+The SDK build uses the published `@dtsx/bun` adapter with its Node target policy.
+Relative declaration references follow resolved source modules and emitted
+declaration locations. The build does not rewrite generated declarations.
+
+After building, run `bun run test:sdk` from the repository root. The gate packs
+the SDK, installs that archive normally and into a fresh frozen installation,
+then checks its complete declaration graph in strict NodeNext and Bundler modes.
+It uses the maintained TypeScript 7.1.0-dev.20261011.1 compiler and Bun 1.4.4
+types, without application aliases or library-check suppression. Positive,
+NoAny, package-domain and exact TS2322 controls accompany Node and Bun imports.
+Every installed SDK file must match its archive and the frozen lock stays fixed.
+
+Pass an existing archive to `bun .github/scripts/verify-ts-sdk.ts archive.tgz`
+to check those exact bytes. Set `PANTRY_SDK_EVIDENCE` to retain receipts, raw
+logs, archives and locks beneath a chosen directory. Failed consumers remain
+available for inspection; successful consumers remove only derived dependency
+directories. CI checks packed source candidates before publication. The release
+workflow repeats the gate on the original public archive after integrity
+readback; candidate checks alone do not qualify a public release.
+
 ## Usage
 
 ```typescript

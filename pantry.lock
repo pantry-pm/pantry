@@ -71,6 +71,7 @@
         "@stacksjs/env": "^0.75.311"
       },
       "devDependencies": {
+        "@dtsx/bun": "^0.11.52",
         "@stacksjs/bunpress": "^0.2.8",
         "@stacksjs/clapp": "^0.2.10",
         "@stacksjs/ts-cloud": "^0.16.68",

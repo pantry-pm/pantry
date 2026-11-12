@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test'
 import { createHash } from 'node:crypto'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { originalPublication, publicationReadbackReceipt, verifyPublishedTarball, waitForNpmPublication } from '../../../.github/scripts/npm-publication-readback'
 
@@ -41,6 +44,41 @@ test('an accepted asynchronous publication must expose both metadata and verifie
   expect(requests).toBe(5)
   expect(clock).toBe(10_000)
   expect(result.integrity).toBe(archive.integrity)
+})
+
+test('installed SDK checks receive the exact original verified publication bytes', async () => {
+  const archive = fixture()
+  const directory = await mkdtemp(join(tmpdir(), 'pantry-original-sdk-'))
+  const archivePath = join(directory, 'retained/package.tgz')
+  const original = { name: 'ts-pantry', version: '1.2.3', integrity: archive.integrity, shasum: createHash('sha1').update(archive.bytes).digest('hex') }
+  try {
+    await waitForNpmPublication(original.name, original.version, {
+      expectedOriginal: original,
+      archivePath,
+      fetcher: async url => String(url).endsWith('.tgz')
+        ? new Response(new Uint8Array(archive.bytes))
+        : Response.json({ ...original, dist: { tarball: 'https://registry.npmjs.org/ts-pantry/-/ts-pantry-1.2.3.tgz', integrity: archive.integrity, shasum: original.shasum } }),
+    })
+    expect(Array.from(await readFile(archivePath))).toEqual(Array.from(archive.bytes))
+  }
+  finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+test('rejected public bytes cannot overwrite retained publication evidence', async () => {
+  const archive = fixture()
+  const directory = await mkdtemp(join(tmpdir(), 'pantry-rejected-sdk-'))
+  const archivePath = join(directory, 'package.tgz')
+  await writeFile(archivePath, 'previous evidence')
+  try {
+    await expect(waitForNpmPublication('ts-pantry', '1.2.3', {
+      archivePath,
+      fetcher: async url => String(url).endsWith('.tgz')
+        ? new Response(new Uint8Array(archive.bytes))
+        : Response.json({ name: 'ts-pantry', version: '1.2.3', dist: { tarball: 'https://registry.npmjs.org/ts-pantry/-/ts-pantry-1.2.3.tgz', integrity: 'sha512-wrong' } }),
+    })).rejects.toThrow('integrity mismatch')
+    expect(await readFile(archivePath, 'utf8')).toBe('previous evidence')
+  }
+  finally { await rm(directory, { recursive: true, force: true }) }
 })
 
 test('a staged version that never becomes readable fails within the readback deadline', async () => {

@@ -134,6 +134,16 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      - name: Build the SDK before publication
+        working-directory: packages/ts-pantry
+        run: bun build.ts
+
+      - name: Verify strict packed consumers before publication
+        id: sdk-candidate
+        run: bun run test:sdk
+        env:
+          PANTRY_SDK_EVIDENCE: ${{ runner.temp }}/pantry-sdk-candidate
+
       - name: Publish once and verify the original public npm archive
         id: npm-readback
         run: |
@@ -149,6 +159,22 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Verify the original public archive with strict installed consumers
+        id: sdk-public
+        run: bun .github/scripts/verify-ts-sdk.ts artifacts/npm-publication/package.tgz
+        env:
+          PANTRY_SDK_EVIDENCE: ${{ runner.temp }}/pantry-sdk-public
+
+      - name: Retain strict candidate and public SDK evidence
+        if: always() && (steps.sdk-candidate.outcome != 'skipped' || steps.sdk-public.outcome != 'skipped')
+        uses: actions/upload-artifact@v4
+        with:
+          name: pantry-sdk-release
+          path: |
+            ${{ runner.temp }}/pantry-sdk-candidate
+            ${{ runner.temp }}/pantry-sdk-public
+          if-no-files-found: error
+
       - name: Retain public npm publication evidence
         if: always() && steps.npm-readback.outcome != 'skipped'
         uses: actions/upload-artifact@v4
@@ -157,6 +183,7 @@ jobs:
           path: |
             artifacts/npm-publication/proof.json
             artifacts/npm-publication/publish.log
+            artifacts/npm-publication/package.tgz
           if-no-files-found: error
 
   notify:

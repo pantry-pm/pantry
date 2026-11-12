@@ -24,6 +24,7 @@
     "build": "for dir in packages/*; do if [ -f \"$dir/package.json\" ]; then echo \"Building $dir\" && bun run --cwd $dir build; fi; done",
     "fresh": "bunx rimraf node_modules/ bun.lock && bun i",
     "test": "bun test",
+    "test:sdk": "bun .github/scripts/verify-ts-sdk.ts",
     "test:ui": "playwright test",
     "test:ui:types": "bun --bun tsc --noEmit -p packages/registry/tests/ui/tsconfig.json",
     "lint": "bunx --bun pickier .",
