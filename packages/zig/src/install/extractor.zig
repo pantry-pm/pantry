@@ -26,13 +26,25 @@ pub fn extractArchive(
     return extractArchiveQuiet(allocator, archive_path, dest_dir, format, false);
 }
 
-/// Extract a tar archive with optional quiet mode (native Zig, no subprocess)
+/// Extract an archive, preferring platform tools when available.
 pub fn extractArchiveQuiet(
     allocator: std.mem.Allocator,
     archive_path: []const u8,
     dest_dir: []const u8,
     format: []const u8,
     _: bool, // quiet parameter unused now
+) !void {
+    return extractArchiveWithTarProgram(allocator, archive_path, dest_dir, format, "/usr/bin/tar");
+}
+
+// The public entrypoint fixes the backend program. Tests exercise this same
+// orchestration with an actual external stand-in, without runtime overrides.
+fn extractArchiveWithTarProgram(
+    allocator: std.mem.Allocator,
+    archive_path: []const u8,
+    dest_dir: []const u8,
+    format: []const u8,
+    tar_program: []const u8,
 ) !void {
     // Ensure destination directory exists
     try io_helper.makePath(dest_dir);
@@ -42,31 +54,27 @@ pub fn extractArchiveQuiet(
         return extractZipArchive(allocator, archive_path, dest_dir);
     }
 
-    // Use system tar as primary extraction method — it handles all entry types
-    // (symlinks, hard links, large archives) reliably. Zig's native tar takes
-    // over when system tar is unavailable or fails.
-    var system_tar_stderr: ?[]u8 = null;
-    defer if (system_tar_stderr) |s| allocator.free(s);
-    const system_tar_ok = blk: {
-        extractWithSystemTar(allocator, archive_path, dest_dir, &system_tar_stderr) catch break :blk false;
-        break :blk true;
+    // Select the native backend only before any preferred process can write.
+    // A failed launch/capture may follow child execution, and a nonzero tar
+    // can leave partial output. Never start a second writer in either case.
+    io_helper.access(tar_program, .{}) catch |err| {
+        if (err == error.FileNotFound) {
+            if (verboseExtract()) style.print("  [pantry:extract] system tar absent before launch ({s}), using native extractor\n", .{tar_program});
+            return extractNative(allocator, archive_path, dest_dir, format);
+        }
+        return err;
     };
 
-    if (system_tar_ok) return;
-
-    // A tar that ran and failed says why (a full disk, a damaged archive), and
-    // that reason is the one to act on, so it is printed whether or not the
-    // native extractor then manages: falling back used to bury it under the
-    // fallback's own error.
-    if (system_tar_stderr) |s| {
-        if (std.mem.startsWith(u8, s, "spawn failed")) {
-            if (verboseExtract()) style.print("  [pantry:extract] system tar unavailable ({s}), using native extractor\n", .{s});
+    var system_tar_stderr: ?[]u8 = null;
+    defer if (system_tar_stderr) |message| allocator.free(message);
+    extractWithSystemTar(allocator, tar_program, archive_path, dest_dir, &system_tar_stderr) catch |err| {
+        if (system_tar_stderr) |message| {
+            style.printForced("  [pantry:extract] tar failed on {s}: {s}\n", .{ archive_path, std.mem.trim(u8, message, " \t\r\n") });
         } else {
-            style.printForced("  [pantry:extract] tar failed on {s}: {s}\n", .{ archive_path, std.mem.trim(u8, s, " \t\r\n") });
+            style.printForced("  [pantry:extract] tar failed ({s}): archive={s} destination={s}\n", .{ @errorName(err), archive_path, dest_dir });
         }
-    }
-
-    return extractNative(allocator, archive_path, dest_dir, format);
+        return err;
+    };
 }
 
 /// Zig's own tar, streaming the archive from disk: an archive of any size
@@ -184,16 +192,18 @@ const no_same_owner = "--no-same-owner";
 
 fn extractWithSystemTar(
     allocator: std.mem.Allocator,
+    tar_program: []const u8,
     archive_path: []const u8,
     dest_dir: []const u8,
     stderr_out: *?[]u8,
 ) !void {
     const result = io_helper.childRun(allocator, &[_][]const u8{
-        "/usr/bin/tar", no_same_owner, "-xf", archive_path, "-C", dest_dir,
+        tar_program, no_same_owner, "-xf", archive_path, "-C", dest_dir,
     }) catch |err| {
-        // tar binary not present — no stderr to surface, treat as unavailable
-        stderr_out.* = std.fmt.allocPrint(allocator, "spawn failed: {s}", .{@errorName(err)}) catch null;
-        return error.ExtractionFailed;
+        // Capture can fail after the child has written. Preserve the error;
+        // the caller must not mistake it for permission to try another writer.
+        stderr_out.* = std.fmt.allocPrint(allocator, "launch/capture failed: {s}", .{@errorName(err)}) catch null;
+        return err;
     };
     defer allocator.free(result.stdout);
 
@@ -263,10 +273,117 @@ test "system tar extracts a package without its builder's owners" {
     // The flag is accepted by this platform's tar, and the package extracts.
     var stderr: ?[]u8 = null;
     defer if (stderr) |s| allocator.free(s);
-    try extractWithSystemTar(allocator, archive, out, &stderr);
+    try extractWithSystemTar(allocator, "/usr/bin/tar", archive, out, &stderr);
     const data = try temp.dir.readFileAlloc(io_helper.io, "out/pkg/file", allocator, .limited(16));
     defer allocator.free(data);
     try std.testing.expectEqualStrings("x", data);
+}
+
+const ArchiveBackendFixture = struct {
+    temporary: std.testing.TmpDir,
+    memory: std.heap.ArenaAllocator,
+    archive: []const u8,
+    destination: []const u8,
+    program: []const u8,
+
+    fn init(allocator: std.mem.Allocator) !@This() {
+        var temporary = std.testing.tmpDir(.{});
+        errdefer temporary.cleanup();
+        var memory = std.heap.ArenaAllocator.init(allocator);
+        errdefer memory.deinit();
+        const scratch = memory.allocator();
+        try temporary.dir.createDirPath(io_helper.io, "src");
+        try temporary.dir.createDirPath(io_helper.io, "out");
+        try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "src/native-only", .data = "a second backend wrote this" });
+        try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "src/partial-entry", .data = "archive content" });
+        var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+        const root = root_buffer[0..try temporary.dir.realPathFile(io_helper.io, ".", &root_buffer)];
+        const archive = try std.fs.path.join(scratch, &.{ root, "fixture.tar.gz" });
+        const source = try std.fs.path.join(scratch, &.{ root, "src" });
+        const destination = try std.fs.path.join(scratch, &.{ root, "out" });
+        const program = try std.fs.path.join(scratch, &.{ root, "tar-stand-in" });
+        // Ordering makes an erroneous second writer visible before its collision.
+        const made = try io_helper.childRun(scratch, &.{ "/usr/bin/tar", "-czf", archive, "-C", source, "native-only", "partial-entry" });
+        try std.testing.expect(made.term == .exited and made.term.exited == 0);
+        return .{ .temporary = temporary, .memory = memory, .archive = archive, .destination = destination, .program = program };
+    }
+
+    fn deinit(self: *@This()) void {
+        self.temporary.cleanup();
+        self.memory.deinit();
+    }
+
+    fn writeProgram(self: *@This(), contents: []const u8, mode: std.posix.mode_t) !void {
+        try self.temporary.dir.writeFile(io_helper.io, .{ .sub_path = "tar-stand-in", .data = contents });
+        const file = try self.temporary.dir.openFile(io_helper.io, "tar-stand-in", .{});
+        defer file.close(io_helper.io);
+        try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(mode));
+    }
+
+    fn nativeOutputExists(self: *@This()) bool {
+        self.temporary.dir.access(io_helper.io, "out/native-only", .{}) catch return false;
+        return true;
+    }
+};
+
+const partial_tar_failure = "#!/bin/sh\nprintf 'preferred backend partial output' > \"$5/partial-entry\"\nprintf 'preferred backend failed after writing partial-entry\\n' >&2\nexit 42\n";
+
+test "archive backend: a failed system tar keeps its error and never invokes a second writer" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    var fixture = try ArchiveBackendFixture.init(std.testing.allocator);
+    defer fixture.deinit();
+    try fixture.writeProgram(partial_tar_failure, 0o755);
+    const result = extractArchiveWithTarProgram(std.testing.allocator, fixture.archive, fixture.destination, "tar.gz", fixture.program);
+    const native_output_exists = fixture.nativeOutputExists();
+    try std.testing.expectError(error.ExtractionFailed, result);
+    try std.testing.expect(!native_output_exists);
+    const partial = try fixture.temporary.dir.readFileAlloc(io_helper.io, "out/partial-entry", std.testing.allocator, .limited(1024));
+    defer std.testing.allocator.free(partial);
+    try std.testing.expectEqualStrings("preferred backend partial output", partial);
+}
+
+test "archive backend: a tool absent before launch selects the native extractor" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    var fixture = try ArchiveBackendFixture.init(std.testing.allocator);
+    defer fixture.deinit();
+    // The program path was never created; no child has had access to the output.
+    try extractArchiveWithTarProgram(std.testing.allocator, fixture.archive, fixture.destination, "tar.gz", fixture.program);
+    try std.testing.expect(fixture.nativeOutputExists());
+    const partial = try fixture.temporary.dir.readFileAlloc(io_helper.io, "out/partial-entry", std.testing.allocator, .limited(1024));
+    defer std.testing.allocator.free(partial);
+    try std.testing.expectEqualStrings("archive content", partial);
+}
+
+test "archive backend: a non-executable preferred tool preserves its launch error" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    var fixture = try ArchiveBackendFixture.init(std.testing.allocator);
+    defer fixture.deinit();
+    try fixture.writeProgram(partial_tar_failure, 0o644);
+    try std.testing.expectError(error.AccessDenied, extractArchiveWithTarProgram(std.testing.allocator, fixture.archive, fixture.destination, "tar.gz", fixture.program));
+    try std.testing.expect(!fixture.nativeOutputExists());
+    try std.testing.expectError(error.FileNotFound, fixture.temporary.dir.access(io_helper.io, "out/partial-entry", .{}));
+}
+
+test "archive backend: nonzero exit without output also forbids a second writer" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    var fixture = try ArchiveBackendFixture.init(std.testing.allocator);
+    defer fixture.deinit();
+    try fixture.writeProgram("#!/bin/sh\nprintf 'preferred backend rejected the archive\\n' >&2\nexit 42\n", 0o755);
+    try std.testing.expectError(error.ExtractionFailed, extractArchiveWithTarProgram(std.testing.allocator, fixture.archive, fixture.destination, "tar.gz", fixture.program));
+    try std.testing.expect(!fixture.nativeOutputExists());
+    try std.testing.expectError(error.FileNotFound, fixture.temporary.dir.access(io_helper.io, "out/partial-entry", .{}));
+}
+
+test "archive backend: preferred stderr survives a failure after partial output" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    var fixture = try ArchiveBackendFixture.init(std.testing.allocator);
+    defer fixture.deinit();
+    try fixture.writeProgram(partial_tar_failure, 0o755);
+    var stderr: ?[]u8 = null;
+    defer if (stderr) |message| std.testing.allocator.free(message);
+    try std.testing.expectError(error.ExtractionFailed, extractWithSystemTar(std.testing.allocator, fixture.program, fixture.archive, fixture.destination, &stderr));
+    try std.testing.expectEqualStrings("preferred backend failed after writing partial-entry\n", stderr.?);
+    try std.testing.expect(!fixture.nativeOutputExists());
 }
 
 test "isValidArchive" {

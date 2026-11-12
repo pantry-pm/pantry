@@ -515,6 +515,15 @@ pub fn build(b: *std.Build) void {
     const materialization_test_step = b.step("test:materialization", "Run native install ownership and publication failure regressions");
     const focused_materialization_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"native materialization:"} });
     materialization_test_step.dependOn(&b.addRunArtifact(focused_materialization_tests).step);
+    const archive_backend_step = b.step("test:archive-backends", "Keep extraction backend failures from starting another writer");
+    const archive_backend_mod = b.createModule(.{
+        .root_source_file = b.path("src/test_archive_backend_root.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const archive_backend_tests = b.addTest(.{ .root_module = archive_backend_mod, .filters = &.{ "archive backend:", "the native extractor streams", "system tar extracts a package" } });
+    archive_backend_step.dependOn(&b.addRunArtifact(archive_backend_tests).step);
     const private_staging_step = b.step("test:private-staging", "Keep archive staging exclusive and preserve verified extraction ownership");
     const private_staging_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "private staging", "verified execute-only archive", "legacy cache refusal and private preparation" } });
     const run_private_staging_tests = b.addRunArtifact(private_staging_tests);
