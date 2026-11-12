@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { archiveMemberMode } from './published-archive'
 import { AuthService, InMemoryAuthStorage } from '../../packages/registry/src/auth'
 import { InMemoryAnalytics } from '../../packages/registry/src/analytics'
 import { DevelopmentScanner } from '../../packages/registry/src/malware-scanning'
@@ -41,7 +42,9 @@ async function main(): Promise<void> {
   async function uploadedModule(name: string): Promise<string> {
     const response = await fetch(`${origin}/packages/${encodeURIComponent(name)}/1.0.0/tarball`)
     assert.equal(response.status, 200)
-    const files = await new Bun.Archive(await response.arrayBuffer()).files()
+    const archive = new Uint8Array(await response.arrayBuffer())
+    assert.equal(archiveMemberMode(archive, 'package/dist/cli'), 0o755, 'Uploaded bin must have normal executable permissions')
+    const files = await new Bun.Archive(archive).files()
     const file = files.get('package/dist/index.js')
     assert.ok(file, 'The real uploaded archive must contain the qualified module')
     return file.text()
@@ -52,8 +55,10 @@ async function main(): Promise<void> {
     await mkdir(join(directory, 'dist'), { recursive: true })
     const name = `@fixture/lifecycle-${label}`
     const commands = Object.fromEntries(scripts.map(script => [script, `bun lifecycle.ts ${script}`]))
-    await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version: '1.0.0', files: ['dist'], scripts: commands }))
+    await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version: '1.0.0', files: ['dist'], bin: { fixture: './dist/cli' }, scripts: commands }))
     await writeFile(join(directory, 'dist/index.js'), 'export const value = "qualified";\n')
+    await writeFile(join(directory, 'dist/cli'), '#!/bin/sh\nprintf "qualified-bin"\n')
+    await chmod(join(directory, 'dist/cli'), 0o644)
     await writeFile(join(directory, 'lifecycle.ts'), `await Bun.write('hook-marker', process.argv[2]);
   await Bun.write('dist/index.js', 'export const value = "rebuilt-' + process.argv[2] + '";\\n');
   ${fails ? 'process.exit(9)' : ''}`)

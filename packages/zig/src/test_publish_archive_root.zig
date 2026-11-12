@@ -56,3 +56,107 @@ test "publish archive: a missing explicit source entry refuses an incomplete pac
     defer io_helper.deleteFile(archive) catch {};
     try std.testing.expectError(error.TarballCreationFailed, registry.createTarball(allocator, root, std.fs.path.basename(root), "1.0.0", manifest));
 }
+
+test "publish archive: declared bins execute without changing source or library permissions" {
+    if (!io_helper.File.Permissions.has_executable_bit) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    for ([_]bool{ false, true }) |explicit_files| {
+        for ([_]bool{ false, true }) |object_bin| {
+            const root = try io_helper.uniqueTempPath(allocator, "pantry-publish-bin-mode");
+            defer io_helper.deleteTree(root) catch {};
+            try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "dist" }));
+            try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "bin" }));
+            const cli = try std.fs.path.join(allocator, &.{ root, "bin", "cli" });
+            const library = try std.fs.path.join(allocator, &.{ root, "dist", "index.js" });
+            try write(cli, "#!/bin/sh\nprintf 'published-bin-ok'\n");
+            try write(library, "export const value = 1;\n");
+            for ([_][]const u8{ cli, library }) |path| {
+                const file = try io_helper.openFileAbsolute(path, .{});
+                defer file.close(io_helper.io);
+                try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o644));
+            }
+            const manifest = try std.fmt.allocPrint(
+                allocator,
+                "{{\"name\":\"archive-bin-fixture\",\"version\":\"1.0.0\",{s}\"bin\":{s}}}",
+                .{ if (explicit_files) "\"files\":[\"dist\"]," else "", if (object_bin) "{\"fixture\":\"./bin/cli\"}" else "\"./bin/cli\"" },
+            );
+            try write(try std.fs.path.join(allocator, &.{ root, "package.json" }), manifest);
+            const archive = try registry.createTarball(allocator, root, std.fs.path.basename(root), "1.0.0", manifest);
+            defer io_helper.deleteFile(archive) catch {};
+            const unpacked = try std.fs.path.join(allocator, &.{ root, "unpacked" });
+            try io_helper.makePath(unpacked);
+            const extract = try io_helper.childRun(allocator, &.{ "tar", "-xzf", archive, "-C", unpacked });
+            try std.testing.expect(extract.term == .exited and extract.term.exited == 0);
+            const published_cli = try std.fs.path.join(allocator, &.{ unpacked, "package", "bin", "cli" });
+            const published_library = try std.fs.path.join(allocator, &.{ unpacked, "package", "dist", "index.js" });
+            try std.testing.expectEqual(@as(u32, 0o755), (try io_helper.statFile(published_cli)).mode & 0o777);
+            try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(published_library)).mode & 0o777);
+            try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(cli)).mode & 0o777);
+            const executed = try io_helper.childRun(allocator, &.{published_cli});
+            try std.testing.expect(executed.term == .exited and executed.term.exited == 0);
+            try std.testing.expectEqualStrings("published-bin-ok", executed.stdout);
+        }
+    }
+}
+
+test "publish archive: every declared bin is included beyond sixteen commands" {
+    if (!io_helper.File.Permissions.has_executable_bit) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const root = try io_helper.uniqueTempPath(allocator, "pantry-publish-many-bins");
+    defer io_helper.deleteTree(root) catch {};
+    try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "dist" }));
+    try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "scripts" }));
+    try write(try std.fs.path.join(allocator, &.{ root, "dist", "index.js" }), "export const value = 1;");
+    var manifest: std.ArrayList(u8) = .empty;
+    try manifest.appendSlice(allocator, "{\"name\":\"many-bins\",\"version\":\"1.0.0\",\"files\":[\"dist\"],\"bin\":{");
+    for (0..20) |index| {
+        if (index > 0) try manifest.append(allocator, ',');
+        const entry = try std.fmt.allocPrint(allocator, "\"cli{d}\":\"./scripts/cli{d}\"", .{ index, index });
+        try manifest.appendSlice(allocator, entry);
+        const path = try std.fmt.allocPrint(allocator, "{s}/scripts/cli{d}", .{ root, index });
+        try write(path, "#!/bin/sh\nexit 0\n");
+    }
+    try manifest.appendSlice(allocator, "}}");
+    try write(try std.fs.path.join(allocator, &.{ root, "package.json" }), manifest.items);
+    const archive = try registry.createTarball(allocator, root, std.fs.path.basename(root), "1.0.0", manifest.items);
+    defer io_helper.deleteFile(archive) catch {};
+    const unpacked = try std.fs.path.join(allocator, &.{ root, "unpacked" });
+    try io_helper.makePath(unpacked);
+    const extract = try io_helper.childRun(allocator, &.{ "tar", "-xzf", archive, "-C", unpacked });
+    try std.testing.expect(extract.term == .exited and extract.term.exited == 0);
+    for (0..20) |index| {
+        const path = try std.fmt.allocPrint(allocator, "{s}/package/scripts/cli{d}", .{ unpacked, index });
+        try std.testing.expectEqual(@as(u32, 0o755), (try io_helper.statFile(path)).mode & 0o777);
+    }
+}
+
+test "publish archive: external bin links cannot alter files outside the stage" {
+    if (!io_helper.File.Permissions.has_executable_bit) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    for ([_]bool{ false, true }) |explicit_files| {
+        const root = try io_helper.uniqueTempPath(allocator, "pantry-publish-outside-bin");
+        defer io_helper.deleteTree(root) catch {};
+        const package = try std.fs.path.join(allocator, &.{ root, "pkg" });
+        try io_helper.makePath(package);
+        const outside = try std.fs.path.join(allocator, &.{ root, "outside" });
+        try write(outside, "#!/bin/sh\nexit 0\n");
+        const file = try io_helper.openFileAbsolute(outside, .{});
+        defer file.close(io_helper.io);
+        try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o644));
+        try io_helper.symLink(outside, try std.fs.path.join(allocator, &.{ package, "link" }));
+        const manifest = try std.fmt.allocPrint(
+            allocator,
+            "{{\"name\":\"outside-bin\",\"version\":\"1.0.0\",{s}\"bin\":\"link\"}}",
+            .{if (explicit_files) "\"files\":[\"link\"]," else ""},
+        );
+        try write(try std.fs.path.join(allocator, &.{ package, "package.json" }), manifest);
+        try std.testing.expectError(error.InvalidBinTarget, registry.createTarball(allocator, package, std.fs.path.basename(root), "1.0.0", manifest));
+        try std.testing.expectEqual(@as(u32, 0o644), (try io_helper.statFile(outside)).mode & 0o777);
+    }
+}

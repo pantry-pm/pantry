@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { archiveMember, archiveMemberMode } from './published-archive'
 
 const executable = resolve(process.argv[2] || '')
 if (!process.argv[2]) throw new Error('Pass the actual published or normally built Pantry executable')
@@ -17,6 +18,10 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
   const cwd = join(root, mode)
   await mkdir(cwd)
   await writeFile(join(cwd, 'index.txt'), 'Immutable publication fixture\n')
+  await writeFile(join(cwd, 'cli'), '#!/bin/sh\nprintf "published-bin"\n')
+  await chmod(join(cwd, 'cli'), 0o644)
+  const linkedBin = mode === 'compressed-tarball' && process.platform !== 'win32'
+  if (linkedBin) await symlink('cli', join(cwd, 'cli-alias'))
   let uploads = 0, metadataReads = 0, tarballReads = 0, credentialReads = 0, foreignCredentialReads = 0, foreignTarballReads = 0
   const requests: Array<{ method: string, path: string }> = []
   let tarball = Buffer.alloc(0), metadata: Record<string, unknown> = {}
@@ -77,7 +82,7 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
     },
   })
   await writeFile(join(cwd, 'package.json'), JSON.stringify({
-    name, version, files: ['index.txt'], publishConfig: {
+    name, version, files: linkedBin ? ['index.txt', 'cli', 'cli-alias'] : ['index.txt'], bin: { fixture: linkedBin ? './cli-alias' : './cli' }, publishConfig: {
       // The generic command must use the explicit option ahead of this
       // different private manifest URL, without contacting a public registry.
       registry: mode === 'generic-command' ? 'http://127.0.0.1:1' : server.url.origin,
@@ -92,6 +97,11 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
   try {
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     const output = stdout + stderr
+    if (archiveMemberMode(tarball, 'package/cli') !== 0o755) throw new Error(`${mode}: uploaded bin lost its executable mode`)
+    if (linkedBin) {
+      const link = archiveMember(tarball, 'package/cli-alias')
+      if (link?.type !== '2' || link.link !== 'cli') throw new Error('The npm archive lost its internal bin link')
+    }
     if (uploads !== 1) throw new Error(`${mode}: expected exactly one upload, got ${uploads}; requests=${JSON.stringify(requests)}; exit=${code}\n${output}`)
     if (!metadataReads) throw new Error(`${mode}: CLI reported completion without reading public version metadata\n${output}`)
     if (!privateMode && credentialReads) throw new Error(`${mode}: public verification forwarded publishing credentials`)
@@ -200,7 +210,7 @@ async function checkAmbiguousUpload(mode: 'lost-response' | 'server-error-after-
   if (!address || typeof address === 'string') throw new Error('Missing owned registry listener')
   const origin = `http://127.0.0.1:${address.port}`
   await writeFile(join(cwd, 'package.json'), JSON.stringify({
-    name, version, files: ['index.txt'], publishConfig: { registry: origin },
+    name, version, files: ['index.txt'], bin: { fixture: './cli' }, publishConfig: { registry: origin },
     scripts: {
       prepublishOnly: `bun -e 'await Bun.write("prepublish-ran", "yes")'`,
       postpublish: `bun -e 'await Bun.write("postpublish-ran", "yes")'`,

@@ -517,6 +517,9 @@ jobs:
           PANTRY_TEST_CLI: artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/pantry.exe
           PANTRY_TEST_ACTION: artifacts/windows-source-runtime/packages/action/dist/index.js
         run: bun .github/scripts/windows-native-runtime.ts
+      - name: Verify executable bin metadata in real Windows npm uploads
+        shell: bash
+        run: bun .github/scripts/verify-npm-publication.ts artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/pantry.exe encoding
       - uses: actions/upload-artifact@v4
         if: always()
         with:

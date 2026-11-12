@@ -14,6 +14,7 @@ const style = @import("../style.zig");
 const advanced_glob = @import("../../packages/advanced_glob.zig");
 const workspace_publish = @import("workspace_publish.zig");
 const publish_ignore = @import("publish_ignore.zig");
+const publish_bins = @import("publish_bins.zig");
 const token_commands = @import("token.zig");
 const http = std.http;
 
@@ -1124,30 +1125,18 @@ pub fn createTarball(
     } else null;
 
     // Get bin files to include
-    var bin_files_list: [16][]const u8 = undefined;
-    var bin_files_count: usize = 0;
+    var bin_files_list: std.ArrayList([]const u8) = .empty;
+    defer bin_files_list.deinit(allocator);
     if (root.object.get("bin")) |bin_val| {
         switch (bin_val) {
-            .string => |s| {
-                if (bin_files_count < 16) {
-                    bin_files_list[bin_files_count] = s;
-                    bin_files_count += 1;
-                }
-            },
-            .object => |obj| {
-                for (obj.values()) |v| {
-                    if (bin_files_count < 16) {
-                        if (v == .string) {
-                            bin_files_list[bin_files_count] = v.string;
-                            bin_files_count += 1;
-                        }
-                    }
-                }
+            .string => |s| try bin_files_list.append(allocator, s),
+            .object => |obj| for (obj.values()) |value| {
+                if (value == .string) try bin_files_list.append(allocator, value.string);
             },
             else => {},
         }
     }
-    const bin_files = bin_files_list[0..bin_files_count];
+    const bin_files = bin_files_list.items;
 
     if (files_array) |files| {
         // Use explicit "files" list - only copy specified files/folders
@@ -1199,7 +1188,7 @@ pub fn createTarball(
             const clean_bin = if (bin_file.len > 2 and bin_file[0] == '.' and bin_file[1] == '/') bin_file[2..] else bin_file;
             const bin_src = try std.fs.path.join(allocator, &[_][]const u8{ package_dir, clean_bin });
             defer allocator.free(bin_src);
-            const bin_dst = try std.fs.path.join(allocator, &[_][]const u8{ staging_pkg, clean_bin });
+            const bin_dst = try publish_bins.stagedPath(allocator, staging_pkg, clean_bin);
             defer allocator.free(bin_dst);
 
             if (std.fs.path.dirname(bin_dst)) |parent| {
@@ -1278,12 +1267,11 @@ pub fn createTarball(
     return tarball_path;
 }
 
-/// Pack `staging_base/package` without the platform's file metadata. macOS
-/// tar writes an AppleDouble `._name` beside every file that carries extended
-/// attributes (quarantine, provenance), so a package published from a Mac
-/// unpacked on Linux with thousands of `._*` files, which a migration runner
-/// then tried to execute as SQL. `pantry pack` already packs this way.
+/// Pack without AppleDouble and other host metadata, preserving portable bin modes.
 fn packStagedPackage(allocator: std.mem.Allocator, tarball_path: []const u8, staging_base: []const u8) !io_helper.ChildRunResult {
+    // Package bin metadata promises executables even when a bundler wrote 0644.
+    // Normalize only the owned staged copy, before either registry upload.
+    try publish_bins.normalize(allocator, staging_base);
     const metadata_free = io_helper.childRun(allocator, &[_][]const u8{
         "/usr/bin/env", "COPYFILE_DISABLE=1", "tar",
         "--no-xattrs",  "--exclude=._*",      "--exclude=.DS_Store",

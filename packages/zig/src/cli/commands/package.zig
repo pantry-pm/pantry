@@ -9,6 +9,7 @@ const style = @import("../style.zig");
 const workspace_publish = @import("workspace_publish.zig");
 const publish_plan = @import("publish_plan.zig");
 const publish_ignore = @import("publish_ignore.zig");
+const publish_bins = @import("publish_bins.zig");
 
 const CommandResult = common.CommandResult;
 
@@ -2628,11 +2629,15 @@ fn createTarball(
                         if (p.value.object.get("bin")) |bin_val| {
                             switch (bin_val) {
                                 .string => |s| {
+                                    const staged = try publish_bins.stagedPath(allocator, staging_pkg, s);
+                                    defer allocator.free(staged);
                                     autoIncludeEntry(allocator, package_dir, staging_pkg, s);
                                 },
                                 .object => |obj| {
                                     for (obj.values()) |v| {
                                         if (v == .string) {
+                                            const staged = try publish_bins.stagedPath(allocator, staging_pkg, v.string);
+                                            defer allocator.free(staged);
                                             autoIncludeEntry(allocator, package_dir, staging_pkg, v.string);
                                         }
                                     }
@@ -2879,11 +2884,12 @@ fn createTarball(
 /// AppleDouble disabled. A tar too minimal for those flags (BusyBox) gets the
 /// plain command, which on those systems has nothing to add anyway.
 fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_path: []const u8) !io_helper.ChildRunResult {
+    try publish_bins.normalize(allocator, staging_base);
     const list_path = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, ".pantry-files" });
     defer allocator.free(list_path);
 
     hardened: {
-        const found = io_helper.childRunWithOptions(allocator, &[_][]const u8{ "find", "package", "-type", "f" }, .{ .cwd = staging_base }) catch break :hardened;
+        const found = io_helper.childRunWithOptions(allocator, &[_][]const u8{ "find", "package", "(", "-type", "f", "-o", "-type", "l", ")" }, .{ .cwd = staging_base }) catch break :hardened;
         defer allocator.free(found.stdout);
         defer allocator.free(found.stderr);
         if (found.term != .exited or found.term.exited != 0) break :hardened;
