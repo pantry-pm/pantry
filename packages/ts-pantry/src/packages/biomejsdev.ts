@@ -3,7 +3,7 @@
  *
  * @domain `biomejs.dev`
  * @programs `biome`
- * @version `2.6.6` (84 versions available)
+ * @version `2.6.7` (85 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install biomejs.dev`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "biome"
  * console.log(pkg.description) // "A toolchain for web projects, aimed to provide ..."
  * console.log(pkg.programs)    // ["biome"]
- * console.log(pkg.versions[0]) // "2.6.6" (latest)
+ * console.log(pkg.versions[0]) // "2.6.7" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/biomejs-dev.md
@@ -60,6 +60,7 @@ export const biomejsdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.6.7',
     '2.6.6',
     '2.6.5',
     '2.6.4',

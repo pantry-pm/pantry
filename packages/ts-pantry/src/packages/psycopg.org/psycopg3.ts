@@ -2,7 +2,7 @@
  * **psycopg3** - New generation PostgreSQL database adapter for the Python programming language
  *
  * @domain `psycopg.org/psycopg3`
- * @version `3.3.8` (68 versions available)
+ * @version `3.3.9` (69 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install psycopg.org/psycopg3`
@@ -16,7 +16,7 @@
  * const pkg = pantry.psycopgorgpsycopg3
  * console.log(pkg.name)        // "psycopg3"
  * console.log(pkg.description) // "New generation PostgreSQL database adapter for ..."
- * console.log(pkg.versions[0]) // "3.3.8" (latest)
+ * console.log(pkg.versions[0]) // "3.3.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/psycopg-org/psycopg3.md
@@ -60,6 +60,7 @@ export const psycopgorgpsycopg3Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.3.9',
     '3.3.8',
     '3.3.7',
     '3.3.6',

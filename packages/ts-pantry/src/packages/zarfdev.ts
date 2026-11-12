@@ -3,7 +3,7 @@
  *
  * @domain `zarf.dev`
  * @programs `zarf`
- * @version `1.0.0` (59 versions available)
+ * @version `1.0.1` (60 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zarf.dev`
@@ -17,7 +17,7 @@
  * console.log(pkg.name)        // "zarf"
  * console.log(pkg.description) // "DevSecOps for Air Gap & Limited-Connection Syst..."
  * console.log(pkg.programs)    // ["zarf"]
- * console.log(pkg.versions[0]) // "1.0.0" (latest)
+ * console.log(pkg.versions[0]) // "1.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/zarf-dev.md
@@ -66,6 +66,7 @@ export const zarfdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.1',
     '1.0.0',
     '0.89.0',
     '0.88.0',

@@ -1,0 +1,27 @@
+{
+  "id": "43193494577-1",
+  "domains": [
+    "biomejs.dev",
+    "flutter.dev",
+    "fly.io",
+    "github.com/ggerganov/llama.cpp",
+    "google.com/chrome",
+    "grpc.io",
+    "materialize.com",
+    "mise.jdx.dev",
+    "openai.com/codex",
+    "pandoc.org",
+    "planetscale.com",
+    "pnpm.io",
+    "prettier.io",
+    "projen.io",
+    "psycopg.org/psycopg3",
+    "pulumi.io",
+    "stripe.com",
+    "talos.dev",
+    "templ.guide",
+    "vaultproject.io",
+    "vim.org",
+    "zarf.dev"
+  ]
+}
