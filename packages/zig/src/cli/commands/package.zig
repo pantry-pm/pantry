@@ -1359,8 +1359,7 @@ fn publishSingleToNpm(
         }
         return err;
     };
-    defer allocator.free(tarball_info.path);
-    defer io_helper.deleteFile(tarball_info.path) catch {};
+    defer tarball_info.deinit(allocator);
 
     // Print tarball summary (bun-style)
     style.print("Total files: {d}\n", .{tarball_info.total_files});
@@ -2442,12 +2441,51 @@ fn attemptOIDCPublishUnverified(
 /// Info about a created tarball for clean publish output
 const TarballInfo = struct {
     path: []const u8,
+    directory: []const u8,
     packed_size: u64,
     unpacked_size: u64,
     total_files: usize,
     shasum: [40]u8,
     integrity: [95]u8,
+
+    fn deinit(self: @This(), allocator: std.mem.Allocator) void {
+        io_helper.deleteTree(self.directory) catch {};
+        allocator.free(self.path);
+        allocator.free(self.directory);
+    }
 };
+
+test "pack archive: another invocation with the same package identity cannot replace returned bytes" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    try temporary.dir.createDirPath(io_helper.io, "first");
+    try temporary.dir.createDirPath(io_helper.io, "second");
+    var root_buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root = root_buffer[0..try temporary.dir.realPathFile(io_helper.io, ".", &root_buffer)];
+    var digest: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash(root, &digest, .{});
+    const hex = std.fmt.bytesToHex(digest, .lower);
+    const name = try std.fmt.allocPrint(allocator, "archive-snapshot-{s}", .{hex[0..16]});
+    const manifest = try std.fmt.allocPrint(allocator, "{{\"name\":\"{s}\",\"version\":\"1.0.0\",\"files\":[\"value.txt\"]}}", .{name});
+    for ([_][]const u8{ "first", "second" }) |directory| {
+        const file = try std.fmt.allocPrint(allocator, "{s}/package.json", .{directory});
+        try temporary.dir.writeFile(io_helper.io, .{ .sub_path = file, .data = manifest });
+    }
+    try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "first/value.txt", .data = "first invocation\n" });
+    try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "second/value.txt", .data = "second invocation\n" });
+    const first = try createTarball(allocator, try std.fs.path.join(allocator, &.{ root, "first" }), name, "1.0.0");
+    defer first.deinit(allocator);
+    const original = try io_helper.readFileAlloc(allocator, first.path, 1024 * 1024);
+    const second = try createTarball(allocator, try std.fs.path.join(allocator, &.{ root, "second" }), name, "1.0.0");
+    defer second.deinit(allocator);
+    const retained = try io_helper.readFileAlloc(allocator, first.path, 1024 * 1024);
+    try std.testing.expectEqualSlices(u8, original, retained);
+    try std.testing.expect(!std.mem.eql(u8, first.path, second.path));
+}
 
 /// Format byte size as human-readable string (e.g. "3.56KB", "0.98MB")
 fn formatSize(buf: []u8, size: u64) []const u8 {
@@ -2485,16 +2523,20 @@ fn createTarball(
 
     // Create tarball in temp directory to avoid "file changed as we read it" error
     const tmp_dir = io_helper.getTempDir();
-    const tarball_path = try std.fs.path.join(allocator, &[_][]const u8{ tmp_dir, tarball_name });
+    const archive_directory = try io_helper.createPrivateDirectory(allocator, tmp_dir, "npm-archive");
+    errdefer {
+        io_helper.deleteTree(archive_directory) catch {};
+        allocator.free(archive_directory);
+    }
+    const tarball_path = try std.fs.path.join(allocator, &.{ archive_directory, tarball_name });
     errdefer allocator.free(tarball_path);
-    errdefer io_helper.deleteFile(tarball_path) catch {};
 
     // npm requires all files to be inside a "package/" directory in the tarball.
     // One staging directory per publish. A fixed /tmp/pantry-staging was
     // shared by every publish on the machine: a monorepo publishing a
     // dependency layer in parallel had each publish delete the others'
     // staged files mid-copy, and packages went up without their dist.
-    const staging_base = try io_helper.uniqueTempPath(allocator, "pantry-staging");
+    const staging_base = try std.fs.path.join(allocator, &.{ archive_directory, "stage" });
     defer allocator.free(staging_base);
     const staging_pkg = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, "package" });
     defer allocator.free(staging_pkg);
@@ -2824,16 +2866,7 @@ fn createTarball(
     }
 
     // Compute SHA-1 shasum and SHA-512 integrity from tarball
-    const tarball_data = io_helper.readFileAlloc(allocator, tarball_path, 100 * 1024 * 1024) catch {
-        return TarballInfo{
-            .path = tarball_path,
-            .packed_size = packed_size,
-            .unpacked_size = unpacked_size,
-            .total_files = total_files,
-            .shasum = @splat('0'),
-            .integrity = @splat('0'),
-        };
-    };
+    const tarball_data = try io_helper.readFileAlloc(allocator, tarball_path, 100 * 1024 * 1024);
     defer allocator.free(tarball_data);
 
     // SHA-1 shasum (hex)
@@ -2855,6 +2888,7 @@ fn createTarball(
 
     return TarballInfo{
         .path = tarball_path,
+        .directory = archive_directory,
         .packed_size = packed_size,
         .unpacked_size = unpacked_size,
         .total_files = total_files,

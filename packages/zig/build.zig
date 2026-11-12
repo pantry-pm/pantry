@@ -595,6 +595,9 @@ pub fn build(b: *std.Build) void {
         run_publish_archive_tests.setEnvironmentVariable("PATH", "/usr/bin:/bin:/usr/sbin:/sbin");
     const publish_archive_step = b.step("test:publish-archive", "Preserve explicit package entries in the published archive");
     publish_archive_step.dependOn(&run_publish_archive_tests.step);
+    const pack_step = b.step("test:pack", "Keep canonical package archives owned by each invocation");
+    const pack_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"pack archive:"} });
+    pack_step.dependOn(&b.addRunArtifact(pack_tests).step);
     if (target.result.os.tag == .macos) {
         const ambient_publish_archive_tests = b.addRunArtifact(publish_archive_tests);
         publish_archive_step.dependOn(&ambient_publish_archive_tests.step);
