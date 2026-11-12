@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1771
+//! Total packages: 1772
 
 const std = @import("std");
 
@@ -29,7 +29,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1771 total)
+/// All known packages (1772 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -19436,6 +19436,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{"freedesktop.org/pkg-config"},
     .aliases = &[_][]const u8{"czmq"},
     .versions = &[_][]const u8{ "4.2.1", "4.2.0", "4.1.1", "4.1.0", "4.0.2", "4.0.1", "4.0.0", "3.0.2", "3.0.1", "3.0.0", "2.2.0", "2.1.0", "2.0.2", "2.0.1", "2.0.0", "1.4.1", "1.4.0", "1.3.2", "1.3.1", "1.2.0" },
+}, .{
+    .name = "zig-dtsx",
+    .domain = "zig-dtsx.stacksjs.org",
+    .kind = .cli,
+    .description = "High-performance .d.ts emitter for TypeScript, written in Zig. The standalone CLI is distributed separately from the zig-dtsx JavaScript FFI package.",
+    .homepage_url = "https://github.com/stacksjs/dtsx#readme",
+    .programs = &[_][]const u8{"zig-dtsx"},
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{ "curl.se", "info-zip.org/unzip", "gnu.org/coreutils" },
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"0.11.52"},
 }, .{
     .name = "zig",
     .domain = "ziglang.org",

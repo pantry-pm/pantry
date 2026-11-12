@@ -19,6 +19,7 @@ export const recipe: Recipe = {
     type: 'github-releases',
     repo: 'stacksjs/dtsx',
     tagPattern: /^v(.+)$/,
+    stable: true,
   },
 
   build: {
@@ -40,5 +41,9 @@ export const recipe: Recipe = {
       'mkdir -p "{{prefix}}/bin"',
       'install -m755 zig-dtsx "{{prefix}}/bin/zig-dtsx"',
     ],
+  },
+  test: {
+    required: true,
+    script: ['printf \'export const answer = 42;\\n\' | zig-dtsx | grep -F \'export declare const answer: 42;\''],
   },
 }

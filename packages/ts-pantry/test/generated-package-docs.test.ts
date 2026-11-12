@@ -9,6 +9,7 @@ import { generateAliases, generateIndex } from '../src/generate'
 for (const [name, domain] of [
   ['dynamodb-local', 'aws.amazon.com/dynamodb-local'],
   ['custom.tool', 'example.test/nested/tool'],
+  ['zig-dtsx', 'zig-dtsx.stacksjs.org'],
 ] as const) {
   test(`the generated ${name} documentation example runs against its real generated package index`, async () => {
     const directory = mkdtempSync(join(tmpdir(), 'pantry-generated-docs-'))

@@ -1765,6 +1765,7 @@ import { yuigithubioyuicompressorPackage } from './yui.github.io/yuicompressor'
 import { zarfdevPackage } from './zarfdev'
 import { czmqPackage } from './zeromq.org/czmq'
 import { zeromqorgPackage } from './zeromqorg'
+import { zigdtsxPackage } from './zig-dtsxstacksjsorg'
 import { ziglangorgPackage } from './ziglangorg'
 import { zlibnetminizipPackage } from './zlib.net/minizip'
 import { zlibnetPackage } from './zlibnet'
@@ -4702,6 +4703,8 @@ export interface Pantry {
 
   zeromqorgczmq: typeof czmqPackage
   zeromqorg: typeof zeromqorgPackage
+  zig_dtsxstacksjsorg: typeof zigdtsxPackage
+  zigdtsxstacksjsorg: typeof zigdtsxPackage
   ziglangorg: typeof ziglangorgPackage
 
   zlibnetminizip: typeof zlibnetminizipPackage
@@ -6477,6 +6480,7 @@ export interface Pantry {
   zellij: typeof cratesiozellijPackage
   zeromq: typeof zeromqorgPackage
   zig: typeof ziglangorgPackage
+  'zig-dtsx': typeof zigdtsxPackage
   zimg: typeof zimgPackage
   zip: typeof zipPackage
   zippy: typeof zippyPackage
@@ -9426,6 +9430,8 @@ export const pantry: Pantry = {
 
   zeromqorgczmq: czmqPackage,
   zeromqorg: zeromqorgPackage,
+  zig_dtsxstacksjsorg: zigdtsxPackage,
+  zigdtsxstacksjsorg: zigdtsxPackage,
   ziglangorg: ziglangorgPackage,
 
   zlibnetminizip: zlibnetminizipPackage,
@@ -11201,6 +11207,7 @@ export const pantry: Pantry = {
   zellij: cratesiozellijPackage,
   zeromq: zeromqorgPackage,
   zig: ziglangorgPackage,
+  'zig-dtsx': zigdtsxPackage,
   zimg: zimgPackage,
   zip: zipPackage,
   zippy: zippyPackage,

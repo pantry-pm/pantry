@@ -1,0 +1,71 @@
+name: Verify published native DTSX
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Qualified stable DTSX release tag already published to the native registry
+        required: true
+        type: string
+
+      pantry-version:
+        description: Published qualified Pantry version containing the native DTSX catalog
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  native-consumer:
+    name: Public native DTSX (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install the published CLI and managed verification tools
+        id: pantry
+        uses: pantry-pm/pantry/packages/action@ada000b82afec8e198f915bb2aafa6791fa01abd # v0.11.199
+        with:
+          version: ${{ inputs.pantry-version }}
+          install: 'false'
+          packages: bun.com@1.4.4 info-zip.org/unzip@6.0.0
+      - name: Read the qualified native release verifier
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: stacksjs/homebrew-tap
+          ref: e31a6333a845bded0bd85ac01241bc319d2a0395
+          path: .dtsx-release-verifier
+      - name: Require exact-source CI, SDK, benchmark and release qualification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node .dtsx-release-verifier/scripts/prepare-dtsx.mjs --tag "$RELEASE_TAG" --out "$RUNNER_TEMP/dtsx-qualified-release"
+      - name: Verify the actual public CLI and strict installed contracts
+        id: native-contract
+        env:
+          PANTRY_DTSX_EVIDENCE: ${{ runner.temp }}/pantry-public-dtsx
+          PANTRY_CLI: ${{ steps.pantry.outputs.pantry-path }}
+        run: bun .github/scripts/verify-public-dtsx.ts "$PANTRY_CLI" "$RUNNER_TEMP/dtsx-qualified-release"
+      - name: Retain public native qualification and consumer evidence
+        if: always() && steps.native-contract.outcome != 'skipped'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: public-native-dtsx-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/dtsx-qualified-release/qualification.json
+            ${{ runner.temp }}/pantry-public-dtsx/**/receipt.json
+            ${{ runner.temp }}/pantry-public-dtsx/**/*.log
+            ${{ runner.temp }}/pantry-public-dtsx/**/*.lock
+            ${{ runner.temp }}/pantry-public-dtsx/**/*.tgz
+            ${{ runner.temp }}/pantry-public-dtsx/**/package.json
+            ${{ runner.temp }}/pantry-public-dtsx/**/tsconfig*.json
+            ${{ runner.temp }}/pantry-public-dtsx/**/src/**/*.ts
+            ${{ runner.temp }}/pantry-public-dtsx/**/dist/**/*.d.ts
+            !${{ runner.temp }}/pantry-public-dtsx/**/node_modules/**
+            !${{ runner.temp }}/pantry-public-dtsx/**/pantry/**
+          if-no-files-found: error

@@ -1770,6 +1770,7 @@ export const aliases: Record<string, string> = {
   'zellij': 'crates.io/zellij',
   'zeromq': 'zeromq.org',
   'zig': 'ziglang.org',
+  'zig-dtsx': 'zig-dtsx.stacksjs.org',
   'zimg': 'github.com/sekrit-twc/zimg',
   'zip': 'info-zip.org/zip',
   'zippy': 'github.com/thinkst/zippy',

@@ -16,6 +16,21 @@ export function mergeRecipeVersions(previous: readonly string[], requested: read
   return [...new Set([...previous, ...requested])].sort(compareInstallerVersionsDesc)
 }
 
+/** Build the canonical metadata persisted by a native recipe registration. */
+export function nativeRecipePackage(recipe: Recipe, current: PkgxPackage | undefined, requested: readonly string[]): PkgxPackage {
+  return {
+    ...current,
+    name: recipe.name, domain: recipe.domain, description: recipe.description || '', packageYmlUrl: current?.packageYmlUrl || '',
+    homepageUrl: recipe.homepage || '', githubUrl: recipe.github || '',
+    installCommand: `pantry install ${recipe.domain}`, pantryInstallCommand: `pantry install ${recipe.domain}`,
+    programs: recipe.programs, ...(recipe.platformPrograms ? { platformPrograms: recipe.platformPrograms } : {}),
+    ...(recipe.programVersions ? { programVersions: recipe.programVersions } : {}),
+    companions: current?.companions || [], dependencies: recipeDepsToSpecs(recipe.dependencies),
+    buildDependencies: recipeDepsToSpecs(recipe.buildDependencies),
+    versions: mergeRecipeVersions(current?.versions || [], requested), aliases: current?.aliases || [],
+  }
+}
+
 if (import.meta.main) {
   const source = path.resolve(import.meta.dir, '../../packages/ts-pantry')
   const output = path.join(source, 'src/packages')
@@ -28,17 +43,7 @@ if (import.meta.main) {
     const { recipe } = await import(pathToFileURL(path.join(source, 'src/recipes', `${domain}.ts`)).href) as { recipe: Recipe }
     if (recipe.domain !== domain) throw new Error(`Recipe identity mismatch: ${domain}`)
     const current = previous.find(pkg => pkg.domain === domain)
-    savePackageAsTypeScript(output, domain, {
-      ...current,
-      name: recipe.name, domain, description: recipe.description || '', packageYmlUrl: current?.packageYmlUrl || '',
-      homepageUrl: recipe.homepage || '', githubUrl: recipe.github || '',
-      installCommand: `pantry install ${domain}`, pantryInstallCommand: `pantry install ${domain}`,
-      programs: recipe.programs, ...(recipe.platformPrograms ? { platformPrograms: recipe.platformPrograms } : {}),
-      ...(recipe.programVersions ? { programVersions: recipe.programVersions } : {}),
-      companions: current?.companions || [], dependencies: recipeDepsToSpecs(recipe.dependencies),
-      buildDependencies: recipeDepsToSpecs(recipe.buildDependencies),
-      versions: mergeRecipeVersions(current?.versions || [], requested), aliases: current?.aliases || [recipe.name],
-    })
+    savePackageAsTypeScript(output, domain, nativeRecipePackage(recipe, current, requested))
   }
   if (!await generateIndex(output)) throw new Error('Native package index generation failed')
   await generateAliases(output)

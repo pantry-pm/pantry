@@ -20,6 +20,7 @@ on:
           - all
           - darwin-arm64
           - linux-x86-64
+          - linux-arm64
 
 env:
   # Share verified dependency archives across packages, stripes, and CI runs.
@@ -64,15 +65,15 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: Provision managed producer tools through Pantry
-        uses: ./packages/action
+        uses: pantry-pm/pantry/packages/action@ada000b82afec8e198f915bb2aafa6791fa01abd # v0.11.199
         with:
-          version: '0.11.93'
+          version: '0.11.199'
           install: 'false'
           packages: >-
-            bun.com@1.4.1 git-scm.org@2.53.0 darwinsys.com/file@5.47.0
+            bun.com@1.4.4 git-scm.org@2.53.0 darwinsys.com/file@5.47.0
             curl.se@8.23.0 gnu.org/tar@1.35.0 gnu.org/coreutils@9.10.0
             ${{ runner.os == 'Linux' && 'nixos.org/patchelf@0.18.0' || '' }}
 
@@ -83,17 +84,34 @@ jobs:
         id: version
         run: bun packages/ts-pantry/scripts/resolve-build-version.ts
 
+      - name: Read native DTSX release verifier
+        if: inputs.package == 'zig-dtsx.stacksjs.org'
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: stacksjs/homebrew-tap
+          ref: e31a6333a845bded0bd85ac01241bc319d2a0395
+          path: .dtsx-release-verifier
+
+      - name: Require qualified native DTSX producer release
+        if: inputs.package == 'zig-dtsx.stacksjs.org'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DTSX_VERSION: ${{ steps.version.outputs.version }}
+        run: node .dtsx-release-verifier/scripts/prepare-dtsx.mjs --tag "v$DTSX_VERSION" --out "$RUNNER_TEMP/dtsx-qualified-release"
+
       - name: Set build matrix
         id: matrix
         run: |
           PLATFORMS="$REQUESTED_PLATFORMS"
 
           if [ "$PLATFORMS" = "all" ]; then
-            MATRIX='{"include":[{"os":"macos-14","platform":"darwin-arm64"},{"os":"ubuntu-latest","platform":"linux-x86-64"}]}'
+            MATRIX='{"include":[{"os":"macos-latest","platform":"darwin-arm64"},{"os":"ubuntu-latest","platform":"linux-x86-64"},{"os":"ubuntu-24.04-arm","platform":"linux-arm64"}]}'
           elif [ "$PLATFORMS" = "darwin-arm64" ]; then
-            MATRIX='{"include":[{"os":"macos-14","platform":"darwin-arm64"}]}'
+            MATRIX='{"include":[{"os":"macos-latest","platform":"darwin-arm64"}]}'
           elif [ "$PLATFORMS" = "linux-x86-64" ]; then
             MATRIX='{"include":[{"os":"ubuntu-latest","platform":"linux-x86-64"}]}'
+          elif [ "$PLATFORMS" = "linux-arm64" ]; then
+            MATRIX='{"include":[{"os":"ubuntu-24.04-arm","platform":"linux-arm64"}]}'
           else
             echo "::error::Unsupported target platform: $PLATFORMS"
             exit 1
@@ -111,15 +129,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: Provision managed producer tools through Pantry
-        uses: ./packages/action
+        uses: pantry-pm/pantry/packages/action@ada000b82afec8e198f915bb2aafa6791fa01abd # v0.11.199
         with:
-          version: '0.11.93'
+          version: '0.11.199'
           install: 'false'
           packages: >-
-            bun.com@1.4.1 git-scm.org@2.53.0 darwinsys.com/file@5.47.0
+            bun.com@1.4.4 git-scm.org@2.53.0 darwinsys.com/file@5.47.0
             curl.se@8.23.0 gnu.org/tar@1.35.0 gnu.org/coreutils@9.10.0
             ${{ runner.os == 'Linux' && 'nixos.org/patchelf@0.18.0' || '' }}
 
@@ -193,7 +211,7 @@ jobs:
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ${{ steps.package.outputs.artifact_name }}
           path: |
@@ -217,15 +235,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.1
 
       - name: Provision managed producer tools through Pantry
-        uses: ./packages/action
+        uses: pantry-pm/pantry/packages/action@ada000b82afec8e198f915bb2aafa6791fa01abd # v0.11.199
         with:
-          version: '0.11.93'
+          version: '0.11.199'
           install: 'false'
           packages: >-
-            bun.com@1.4.1 git-scm.org@2.53.0 darwinsys.com/file@5.47.0
+            bun.com@1.4.4 git-scm.org@2.53.0 darwinsys.com/file@5.47.0
             curl.se@8.23.0 gnu.org/tar@1.35.0 gnu.org/coreutils@9.10.0
             ${{ runner.os == 'Linux' && 'nixos.org/patchelf@0.18.0' || '' }}
 
@@ -234,7 +252,7 @@ jobs:
 
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           path: artifacts
 
@@ -281,7 +299,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.1
       - uses: ./.github/actions/discord-notify
         with:
           title: >-
