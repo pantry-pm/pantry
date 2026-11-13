@@ -138,7 +138,14 @@ export function detectPlatform(): Platform {
 
 // ── Package Resolvers ──
 
+/** Zig's three-component vendor versions gain one Pantry repair component. */
+function isZigPackagingRevision(version: string): boolean {
+  return /^\d+\.\d+\.\d+\.\d+$/.test(version)
+}
+
 export function ziglangOfficialDownload(version: string, platform: Platform): { url: string, format: 'tar.xz' | 'zip', prefix: string } {
+  if (isZigPackagingRevision(version))
+    throw new Error(`Zig package ${version} requires a published Pantry artifact for ${registryPlatformKey(platform)}`)
   const upstreamVersion = version.replace(/(-dev\.\d+)_([0-9A-Za-z-]+)$/, '$1+$2')
   const osName = platform.os === 'darwin' ? 'macos' : platform.os
   const arch = platform.arch === 'aarch64' ? 'aarch64' : 'x86_64'
@@ -508,14 +515,15 @@ export async function installPackage(
     return { name: domain, version, installPath: pkgDir, binaries, globalLinks }
   }
 
-  // One metadata read serves both registry cases: the Zig dev-build mirror, and
-  // every package that has no built-in resolver at all.
-  const needsMetadata = !resolver || (domain === 'ziglang.org' && version.includes('-dev.'))
+  // Repaired Zig packages exist only in Pantry; vendor archives cannot supply
+  // their source changes. Purged dev builds can also require our mirror.
+  const needsZigRegistry = domain === 'ziglang.org' && (version.includes('-dev.') || isZigPackagingRevision(version))
+  const needsMetadata = !resolver || needsZigRegistry
   const metadata = needsMetadata ? await registryMetadata(domain, { onRetry: options.onRetry }) : null
 
   // Prefer our own mirror when upstream is known to purge the artifact.
   const mirror = resolver
-    ? (domain === 'ziglang.org' && version.includes('-dev.')
+    ? (needsZigRegistry
         ? zigRegistryMirror(metadata, version, platform)
         : null)
     : registryDownloadSource(metadata, version, platform)
@@ -531,7 +539,7 @@ export async function installPackage(
   const format = mirror?.format ?? resolver!.getArchiveFormat(platform)
   // The registry lists the digest alongside the artifact, so use it rather than
   // paying a second request for the `.sha256` sidecar that says the same thing.
-  const publishedSha256 = (mirror as { sha256?: string } | null)?.sha256
+  const publishedSha256 = mirror?.sha256
 
   if (!options.quiet) console.log(`  → ${domain}@${version} from ${new URL(url).hostname}`)
 
@@ -954,6 +962,8 @@ export interface DownloadSource {
   format: 'tar.xz' | 'tar.gz' | 'zip'
   /** Top-level directory inside the archive; '' when it extracts to the root. */
   prefix: string
+  /** Digest declared alongside the exact registry artifact, when available. */
+  sha256?: string
 }
 
 /**
@@ -966,15 +976,15 @@ export interface DownloadSource {
  * left every mirrored-but-purged build resolving fine and 404ing on download —
  * e.g. linux-arm64, whose newest mirrored dev build is long gone upstream.
  *
- * Tagged releases deliberately stay on ziglang.org: upstream keeps those
- * indefinitely, so serving them ourselves would spend our own egress for
- * nothing.
+ * Unmodified tagged releases stay on ziglang.org. Pantry repair revisions
+ * require their exact registry archive; falling back would lose the repair.
  */
 export function zigRegistryMirror(
   metadata: RegistryMetadata | null,
   version: string,
   platform: Platform,
 ): DownloadSource | null {
+  if (isZigPackagingRevision(version)) return registryDownloadSource(metadata, version, platform)
   if (!version.includes('-dev.') || !metadata) return null
   const platformKey = registryPlatformKey(platform)
   // The registry indexes some dev builds under `+<hash>` and others under
@@ -1291,7 +1301,8 @@ export async function resolveInstallerVersionConstraint(
   platform: Platform,
   options: Pick<InstallOptions, 'quiet' | 'onWarn'> = {},
 ): Promise<string> {
-  if (!parseInstallerConstraint(constraint)) return resolveLatestVersion(domain, platform)
+  const parsedConstraint = parseInstallerConstraint(constraint)
+  if (!parsedConstraint) return resolveLatestVersion(domain, platform)
 
   // Union of upstream + bundled, sorted so the first match is the highest one.
   // Merging rather than preferring either list keeps resolution working when
@@ -1299,7 +1310,11 @@ export async function resolveInstallerVersionConstraint(
   //
   // The Pantry registry is authoritative for Zig binaries: bundled recipe
   // versions do not prove that a particular target artifact was published.
-  const live = await fetchLiveVersions(domain, platform)
+  // An explicitly requested Pantry repair must be resolved from actual
+  // platform artifacts. The vendor index has no packaging revision entries.
+  const live = domain === 'ziglang.org' && isZigPackagingRevision(parsedConstraint.target)
+    ? [await versionSource(registrySourceName(domain, platform), () => registryVersions(domain, platform))]
+    : await fetchLiveVersions(domain, platform)
   const outcomes: VersionSourceOutcome[] = domain === 'ziglang.org'
     ? live
     : [...live, { source: 'bundled catalog (this pantry build)', versions: await bundledCatalogVersions(domain) }]

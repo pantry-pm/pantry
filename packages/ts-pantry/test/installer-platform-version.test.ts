@@ -30,6 +30,9 @@ describe('registry platform version resolution', () => {
 })
 
 describe('official Zig fallback downloads', () => {
+  it('cannot substitute an upstream archive for a source-repaired package', () => {
+    expect(() => ziglangOfficialDownload('0.17.1.1', { os: 'linux', arch: 'x86_64' })).toThrow('requires a published Pantry artifact')
+  })
   it('normalizes Pantry dev versions for upstream macOS archives', () => {
     expect(ziglangOfficialDownload('0.17.0-dev.1509_bb296ab9b', { os: 'darwin', arch: 'aarch64' })).toEqual({
       url: 'https://ziglang.org/builds/zig-aarch64-macos-0.17.0-dev.1509+bb296ab9b.tar.xz',
@@ -45,6 +48,16 @@ describe('official Zig fallback downloads', () => {
 })
 
 describe('Zig registry mirror selection', () => {
+  it('selects the exact source-repaired archive and checksum', () => {
+    const source = zigRegistryMirror({ versions: { '0.17.1.1': { platforms: {
+      'linux-x86-64': { tarball: 'binaries/ziglang.org/0.17.1.1/linux-x86-64/ziglang.org-0.17.1.1.tar.gz', sha256: 'a'.repeat(64) },
+    } } } }, '0.17.1.1', { os: 'linux', arch: 'x86_64' })
+    expect(source).toEqual({ url: 'https://registry.pantry.dev/binaries/ziglang.org/0.17.1.1/linux-x86-64/ziglang.org-0.17.1.1.tar.gz', format: 'tar.gz', prefix: '', sha256: 'a'.repeat(64) })
+  })
+
+  it('does not invent a repaired artifact for an unpublished platform', () => {
+    expect(zigRegistryMirror({ versions: { '0.17.1.1': { platforms: { 'linux-x86-64': {} } } } }, '0.17.1.1', { os: 'windows', arch: 'x86_64' })).toBeNull()
+  })
   // linux-arm64 mirrors an older dev build than the other targets — and
   // ziglang.org has long since deleted that archive, so upstream is a 404.
   const metadata = {

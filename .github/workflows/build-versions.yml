@@ -95,6 +95,10 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
+          # Source repairs to shipped compiler libraries must also run on the
+          # Intel macOS platform advertised by those native recipes.
+          - os: macos-15-intel
+            name: darwin-x86-64
           - os: ubuntu-latest
             name: linux-x86-64
           - os: ubuntu-24.04-arm

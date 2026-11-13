@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, mkdirSync, writeFileSync, chmodSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 
 const PACKAGE = 'example.test'
 const TAMPERED = 'tampered.test'
@@ -32,7 +32,7 @@ let installer: typeof import('../src/installer')
 const scratch: string[] = []
 
 /** A tarball laid out the way the registry publishes them: `./bin/<program>`. */
-function buildTarball(programs: string[]): Buffer {
+function buildTarball(programs: string[], files: Record<string, string> = {}): Buffer {
   const stage = mkdtempSync(join(tmpdir(), 'registry-pkg-'))
   scratch.push(stage)
   mkdirSync(join(stage, 'bin'), { recursive: true })
@@ -41,8 +41,13 @@ function buildTarball(programs: string[]): Buffer {
     writeFileSync(file, `#!/bin/sh\necho ${program}\n`)
     chmodSync(file, 0o755)
   }
+  for (const [relative, contents] of Object.entries(files)) {
+    const file = join(stage, relative)
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, contents)
+  }
   const archive = join(stage, 'package.tar.gz')
-  execFileSync('tar', ['-czf', archive, '-C', stage, './bin'])
+  execFileSync('tar', ['-czf', archive, '-C', stage, './bin', ...Object.keys(files)])
   return readFileSync(archive)
 }
 
@@ -55,6 +60,12 @@ function temp(prefix: string): string {
 beforeAll(async () => {
   const tarball = buildTarball(['demo', 'demo-helper'])
   const sha256 = createHash('sha256').update(tarball).digest('hex')
+  // Layout fixture only: actual native source qualification is separate.
+  const zigTarball = buildTarball(['zig'], { 'lib/compiler/Maker.zig': 'registry source repair fixture\n' })
+  const zigSha256 = createHash('sha256').update(zigTarball).digest('hex')
+  const zigMetadata = { versions: { '0.17.1.1': { platforms: {
+    'darwin-arm64': { tarball: 'binaries/ziglang.org/0.17.1.1/darwin-arm64/ziglang.org-0.17.1.1.tar.gz', sha256: zigSha256 },
+  } } } }
 
   const metadata = {
     name: PACKAGE,
@@ -97,6 +108,17 @@ beforeAll(async () => {
 
   server = createServer((req, res) => {
     const url = req.url || ''
+    if (url === '/binaries/ziglang.org/metadata.json') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify(zigMetadata))
+      return
+    }
+    if (url === '/binaries/ziglang.org/0.17.1.1/darwin-arm64/ziglang.org-0.17.1.1.tar.gz') {
+      downloads.push(url)
+      res.writeHead(200, { 'Content-Type': 'application/gzip' })
+      res.end(zigTarball)
+      return
+    }
     if (url === `/binaries/${PACKAGE}/metadata.json`) {
       res.writeHead(200, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify(metadata))
@@ -141,6 +163,36 @@ afterAll(async () => {
 const darwin = { os: 'darwin', arch: 'aarch64' } as const
 const linux = { os: 'linux', arch: 'x86_64' } as const
 const windowsArm = { os: 'windows', arch: 'aarch64' } as const
+
+describe('installing a source-repaired Zig package', () => {
+  it('preserves the exact registry library source through normal and cached installs', async () => {
+    const installDir = temp('repaired-zig-sdk-')
+    const url = '/binaries/ziglang.org/0.17.1.1/darwin-arm64/ziglang.org-0.17.1.1.tar.gz'
+    const before = downloads.filter(path => path === url).length
+    const result = await installer.installPackage('ziglang.org', '0.17.1.1', { installDir, platform: darwin, quiet: true })
+    expect(result.version).toBe('0.17.1.1')
+    expect(result.binaries).toEqual(['zig'])
+    expect(readFileSync(join(result.installPath, 'lib/compiler/Maker.zig'), 'utf8')).toBe('registry source repair fixture\n')
+    expect(downloads.filter(path => path === url).length).toBe(before + 1)
+    const again = await installer.installPackage('ziglang.org', '0.17.1.1', { installDir, platform: darwin, quiet: true })
+    expect(again.installPath).toBe(result.installPath)
+    expect(readFileSync(join(again.installPath, 'lib/compiler/Maker.zig'), 'utf8')).toBe('registry source repair fixture\n')
+    expect(downloads.filter(path => path === url).length).toBe(before + 1)
+  })
+
+  it('refuses an unpublished repair platform before attempting a vendor archive', async () => {
+    const before = downloads.length
+    await expect(installer.installPackage('ziglang.org', '0.17.1.1', { installDir: temp('unpublished-zig-sdk-'), platform: linux, quiet: true }))
+      .rejects.toThrow('requires a published Pantry artifact for linux-x86-64')
+    expect(downloads.length).toBe(before)
+  })
+
+  it('resolves an explicitly requested repair range from published platform artifacts', async () => {
+    const result = await installer.installPackage('ziglang.org', '^0.17.1.1', { installDir: temp('ranged-zig-sdk-'), platform: darwin, quiet: true })
+    expect(result.version).toBe('0.17.1.1')
+    expect(readFileSync(join(result.installPath, 'lib/compiler/Maker.zig'), 'utf8')).toBe('registry source repair fixture\n')
+  })
+})
 
 describe('installability of a registry-published package', () => {
   it('is not a built-in resolver', () => {
