@@ -1,9 +1,10 @@
 import type { Recipe } from '../../../scripts/recipe-types'
 
 export const recipe: Recipe = {
+  propsDir: '../props/facebook.com/zstd',
   domain: 'facebook.com/zstd',
   name: 'zstd',
-  revisions: { '1.5.7': 1 },
+  revisions: { '1.5.7': 2 },
   programs: [
     'pzstd',
     'unzstd',
@@ -21,13 +22,16 @@ export const recipe: Recipe = {
   buildDependencies: {
     'cmake.org': '^3',
     'ninja-build.org': '^1',
+    'gnu.org/patch': '*',
   },
   distributable: {
-    url: 'https://github.com/facebook/zstd/archive/v{{version}}.tar.gz',
+    url: 'https://github.com/meta/zstd/archive/v{{version}}.tar.gz',
     stripComponents: 1,
   },
   build: {
     script: [
+      // Source backport for meta/zstd#4897; retain every compression format.
+      { run: 'patch --batch --fuzz=0 -p1 < props/lz4-canonical-checksum.patch', if: '=1.5.7' },
       'cmake build/cmake $ARGS',
       'cmake --build .',
       'cmake --install .',

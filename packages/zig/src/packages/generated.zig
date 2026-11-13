@@ -4284,9 +4284,9 @@ pub const packages = [_]PackageInfo{ .{
     .homepage_url = "https://facebook.github.io/zstd/",
     .programs = &[_][]const u8{ "pzstd", "unzstd", "zstd", "zstdcat", "zstdgrep", "zstdless", "zstdmt" },
     .dependencies = &[_][]const u8{ "lz4.org^1", "tukaani.org/xz^5.8.2.1", "zlib.net^1" },
-    .build_dependencies = &[_][]const u8{ "cmake.org^3", "ninja-build.org^1" },
+    .build_dependencies = &[_][]const u8{ "cmake.org^3", "ninja-build.org^1", "gnu.org/patch" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.5.7.1", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.2" },
+    .versions = &[_][]const u8{ "1.5.7.2", "1.5.7.1", "1.5.7", "1.5.6", "1.5.5", "1.5.4", "1.5.2" },
 }, .{
     .name = "pluto",
     .domain = "fairwinds.com/pluto",
