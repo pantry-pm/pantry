@@ -8,15 +8,20 @@ export const recipe: Recipe = {
   ],
   dependencies: {
     'zlib.net': '^1',
-    'libgit2.org': '~1.7',
+    'libgit2.org': '~1.9',
     'curl.se/ca-certs': '*',
     'curl.se': '8',
     linux: {
       'llvm.org': '*',
     },
   },
+  // Cargo.lock's libgit2-sys version records the required native ABI.
+  dependencyOverrides: [
+    { if: '<0.87.0', dependencies: { 'libgit2.org': '~1.8' } },
+    { if: '<0.82.0', dependencies: { 'libgit2.org': '~1.7' } },
+  ],
   buildDependencies: {
-    'rust-lang.org': '^1.85',
+    'rust-lang.org': '^1.89',
     'gnu.org/tar': '*',
     'tukaani.org/xz': '*',
     'rust-lang.org/cargo': '*',

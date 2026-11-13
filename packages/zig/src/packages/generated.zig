@@ -16561,8 +16561,8 @@ pub const packages = [_]PackageInfo{ .{
     .description = "The Rust package manager",
     .homepage_url = "https://doc.rust-lang.org/cargo",
     .programs = &[_][]const u8{"cargo"},
-    .dependencies = &[_][]const u8{ "zlib.net^1", "libgit2.org~1.7", "curl.se/ca-certs", "linux:llvm.org", "linux:curl.se", "curl.se@8" },
-    .build_dependencies = &[_][]const u8{ "gnu.org/tar", "tukaani.org/xz" },
+    .dependencies = &[_][]const u8{ "zlib.net^1", "libgit2.org~1.9", "curl.se/ca-certs", "curl.se@8", "linux:llvm.org" },
+    .build_dependencies = &[_][]const u8{ "rust-lang.org^1.89", "gnu.org/tar", "tukaani.org/xz", "rust-lang.org/cargo" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "0.95.0", "0.94.0", "0.93.0", "0.92.0", "0.91.0", "0.90.0", "0.89.0", "0.88.0", "0.87.0", "0.86.0", "0.85.0", "0.84.0", "0.83.0", "0.82.0", "0.81.0", "0.80.0", "0.79.0", "0.78.1", "0.78.0", "0.77.0", "0.76.0", "0.75.0", "0.74.0", "0.73.1", "0.72.1", "0.72.0", "0.71.0", "0.70.1", "0.70.0", "0.69.1", "0.69.0", "0.66.0", "0.65.0" },
 }, .{
