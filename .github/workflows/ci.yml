@@ -79,8 +79,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    # Source CLI and Bun checks share their prepared compiler. The independent
-    # Zig suite below must not spend its budget downloading Android tools.
+    # Keep the full suite and its short incremental metadata check together.
+    # SDK, migration, Git, and Android acceptance have independent job budgets.
     timeout-minutes: 20
 
     steps:
@@ -97,6 +97,79 @@ jobs:
         id: build
         run: bun run build
 
+      - name: Build pantry GitHub Action
+        id: build_action
+        run: cd packages/action && bun run build
+
+      - name: Verify consecutive normal releases retain their generated Action bundles
+        run: bun test ./packages/action/src/build-release-action.test.ts
+
+      # The source CLI build prepares the pinned compiler before the Bun
+      # incremental-metadata test. That regression keeps its short rebuild
+      # budget; a cold compiler bootstrap is setup rather than a cache check.
+      - name: Prepare the source compiler for the incremental metadata regression
+        id: source_cli
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          command -v zig >/dev/null
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+          cd ../..
+          packages/zig/zig-out/bin/pantry install --ignore-scripts
+          bun .github/scripts/verify-workspace-toolchain.ts
+          cd packages/zig
+          zig build -Doptimize=Debug -j2
+
+      - name: Install native runtime fixture tools through Pantry
+        uses: ./packages/action
+        with:
+          install: 'false'
+          packages: nixos.org/patchelf@0.18.0 llvm.org@23.1.3 gnu.org/binutils@2.46.0
+
+      - name: Verify the managed package-build compiler
+        run: |
+          set -e
+          case "$(command -v clang)" in "$GITHUB_WORKSPACE"/pantry/*) ;; *) exit 1 ;; esac
+          clang --version | head -1 | grep -F '23.1.3'
+
+      # Report Bun and Zig independently even when either suite fails.
+      - name: Verify registry test storage is released
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.build_action.outcome == 'success' }}
+        run: |
+          fixture_tmp="$(mktemp -d)"
+          trap 'rm -rf -- "$fixture_tmp"' EXIT
+          TMPDIR="$fixture_tmp" bun test ./packages/registry/src/tiers.test.ts
+          leaked_fixture="$(find "$fixture_tmp" -type d -name 'pantry-registry-*' -print -quit)"
+          if [ -n "$leaked_fixture" ]; then
+            printf '::error::Registry tests retained owned storage: %s\n' "$leaked_fixture"
+            exit 1
+          fi
+
+      - name: Unit Test
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.build_action.outcome == 'success' }}
+        env:
+          PANTRY_TEST_CC: '["clang"]'
+        run: |
+          bun .github/scripts/verify-workspace-toolchain.ts
+          bun test
+
+  sdk-consumers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Pantry
+        uses: ./packages/action
+
+      - name: Install Dependencies
+        id: install
+        run: bun install
+
+      - name: Build TypeScript packages
+        run: bun run build
+
       - name: Verify the normally packed SDK with strict installed consumers
         id: sdk
         run: bun run test:sdk
@@ -111,16 +184,25 @@ jobs:
           path: ${{ runner.temp }}/pantry-sdk
           if-no-files-found: error
 
-      - name: Build pantry GitHub Action
-        id: build_action
-        run: cd packages/action && bun run build
+  source-cli-integrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
-      - name: Verify consecutive normal releases retain their generated Action bundles
-        run: bun test ./packages/action/src/build-release-action.test.ts
+    steps:
+      - uses: actions/checkout@v6
 
-      # The source CLI build prepares the pinned compiler before the Bun
-      # incremental-metadata test. That regression keeps its short rebuild
-      # budget; a cold compiler bootstrap is setup rather than a cache check.
+      - name: Setup Pantry
+        uses: ./packages/action
+
+      - name: Install Dependencies
+        id: install
+        run: bun install
+
+      - name: Build TypeScript packages
+        run: bun run build
+
+      # Exercise lifecycle and migration with the CLI built from this revision.
+      # Keep these external tool integrations outside the full unit job.
       - name: Test the source CLI workspace lifecycle
         id: source_cli
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -217,39 +299,6 @@ jobs:
           name: source-linux-native-tools
           path: artifacts/linux-native-tools
           if-no-files-found: error
-
-      - name: Install native runtime fixture tools through Pantry
-        uses: ./packages/action
-        with:
-          install: 'false'
-          packages: nixos.org/patchelf@0.18.0 llvm.org@23.1.3 gnu.org/binutils@2.46.0
-
-      - name: Verify the managed package-build compiler
-        run: |
-          set -e
-          case "$(command -v clang)" in "$GITHUB_WORKSPACE"/pantry/*) ;; *) exit 1 ;; esac
-          clang --version | head -1 | grep -F '23.1.3'
-
-      # Report Bun and Zig independently even when either suite fails.
-      - name: Verify registry test storage is released
-        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.build_action.outcome == 'success' }}
-        run: |
-          fixture_tmp="$(mktemp -d)"
-          trap 'rm -rf -- "$fixture_tmp"' EXIT
-          TMPDIR="$fixture_tmp" bun test ./packages/registry/src/tiers.test.ts
-          leaked_fixture="$(find "$fixture_tmp" -type d -name 'pantry-registry-*' -print -quit)"
-          if [ -n "$leaked_fixture" ]; then
-            printf '::error::Registry tests retained owned storage: %s\n' "$leaked_fixture"
-            exit 1
-          fi
-
-      - name: Unit Test
-        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.build_action.outcome == 'success' }}
-        env:
-          PANTRY_TEST_CC: '["clang"]'
-        run: |
-          bun .github/scripts/verify-workspace-toolchain.ts
-          bun test
 
   zig-tests:
     runs-on: ubuntu-latest
