@@ -332,13 +332,14 @@ fn collectGlobPackages(
         try std.fs.path.join(allocator, &[_][]const u8{ root, prefix });
     defer allocator.free(base);
 
-    try walkForGlob(allocator, root, base, pattern, packages, 0);
+    try walkForGlob(allocator, root, base, prefix, pattern, packages, 0);
 }
 
 fn walkForGlob(
     allocator: std.mem.Allocator,
     root: []const u8,
     dir: []const u8,
+    relative_dir: []const u8,
     pattern: []const u8,
     packages: *std.StringHashMap([]const u8),
     depth: usize,
@@ -357,14 +358,19 @@ fn walkForGlob(
         const sub = try std.fs.path.join(allocator, &[_][]const u8{ dir, entry.name });
         defer allocator.free(sub);
 
-        // `sub` always descends from `root`, so the workspace-relative path
-        // is a simple slice.
-        const rel = sub[root.len + 1 ..];
+        // Workspace declarations use portable '/' globs. Build their logical
+        // path separately from the native filesystem path: slicing `sub`
+        // passes Windows backslashes to a forward-slash glob matcher.
+        const rel = if (relative_dir.len == 0)
+            try allocator.dupe(u8, entry.name)
+        else
+            try std.fmt.allocPrint(allocator, "{s}/{s}", .{ relative_dir, entry.name });
+        defer allocator.free(rel);
 
         if (advanced_glob.matchGlob(pattern, rel)) {
             try tryAddPackageDir(allocator, root, rel, packages);
         }
-        try walkForGlob(allocator, root, sub, pattern, packages, depth + 1);
+        try walkForGlob(allocator, root, sub, rel, pattern, packages, depth + 1);
     }
 }
 
@@ -409,6 +415,24 @@ test "catalogVersion resolves default and named catalogs" {
     try std.testing.expectEqualStrings("^19.0.0", catalogVersion(parsed.value, "", "react").?);
     try std.testing.expectEqualStrings("^3.0.0", catalogVersion(parsed.value, "testing", "vitest").?);
     try std.testing.expect(catalogVersion(parsed.value, "", "missing") == null);
+}
+
+test "pack archive: portable workspace globs discover native paths and nested siblings" {
+    const allocator = std.testing.allocator;
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    try temporary.dir.createDirPath(io_helper.io, "workspace root/packages/sibling");
+    try temporary.dir.createDirPath(io_helper.io, "workspace root/nested/group/second");
+    try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "workspace root/package.json", .data = "{\"workspaces\":[\"packages/*\",\"nested/**\"]}" });
+    try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "workspace root/packages/sibling/package.json", .data = "{\"name\":\"@fixture/sibling\",\"version\":\"2.4.0\"}" });
+    try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "workspace root/nested/group/second/package.json", .data = "{\"name\":\"@fixture/second\",\"version\":\"3.0.0\"}" });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buffer[0..try temporary.dir.realPathFile(io_helper.io, "workspace root", &buffer)];
+    var packages = try resolveWorkspacePackages(allocator, root);
+    defer freeWorkspacePackages(allocator, &packages);
+    try std.testing.expectEqual(@as(usize, 2), packages.count());
+    try std.testing.expectEqualStrings("2.4.0", packages.get("@fixture/sibling").?);
+    try std.testing.expectEqualStrings("3.0.0", packages.get("@fixture/second").?);
 }
 
 test "catalogVersion supports catalogs nested under workspaces" {
