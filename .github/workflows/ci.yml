@@ -777,9 +777,9 @@ jobs:
           path: |
             artifacts/native-toolchain-pins
             artifacts/source-native-toolchain-pins
-            artifacts/runtime-environment/**/receipt.json
-            artifacts/runtime-environment/**/*.log
-            artifacts/runtime-environment/**/pantry.lock
+            artifacts/runtime-environment/*/receipt.json
+            artifacts/runtime-environment/*/*.log
+            artifacts/runtime-environment/*/pantry.lock
           if-no-files-found: error
 
   runtime-environment-arm64:
@@ -805,7 +805,7 @@ jobs:
         with:
           name: runtime-environment-linux-arm64
           path: |
-            artifacts/runtime-environment/**/receipt.json
-            artifacts/runtime-environment/**/*.log
-            artifacts/runtime-environment/**/pantry.lock
+            artifacts/runtime-environment/*/receipt.json
+            artifacts/runtime-environment/*/*.log
+            artifacts/runtime-environment/*/pantry.lock
           if-no-files-found: error

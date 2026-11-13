@@ -4,7 +4,7 @@ const Paths = @import("../core/platform.zig").Paths;
 const style = @import("../cli/style.zig");
 const symlink = @import("symlink.zig");
 
-pub const normalization_revision = "2\n";
+pub const normalization_revision = "3\n";
 
 /// Fix macOS library paths using install_name_tool
 /// This discovers @rpath dependencies using otool and fixes them to use absolute paths
@@ -469,12 +469,10 @@ fn addRpathEntries(
     // remain reachable from a freshly installed binary's rpath.
     const global = try Paths.globalDir(allocator);
     defer allocator.free(global);
+    try addRpathEntriesWithGlobal(allocator, binary_path, package_dir, global);
+}
 
-    // Add rpath entries for:
-    // 1. The package's own lib directory
-    // 2. The global pantry directory (for finding openssl.org, nodejs.org, etc.)
-    // The package's own lib dir is named relative to the binary
-    // (`@loader_path/../lib`), so it survives the package moving.
+fn addRpathEntriesWithGlobal(allocator: std.mem.Allocator, binary_path: []const u8, package_dir: []const u8, global: []const u8) !void {
     var rp_buf1: [std.fs.max_path_bytes]u8 = undefined;
     const pkg_lib = std.fmt.bufPrint(&rp_buf1, "{s}/lib", .{package_dir}) catch return;
     const rp1 = originRelativeDir(allocator, "@loader_path", binary_path, pkg_lib) orelse return;
@@ -483,15 +481,16 @@ fn addRpathEntries(
     const rp2 = std.fmt.bufPrint(&rp_buf2, "{s}", .{global}) catch return;
     const rpath_entries = [_][]const u8{ rp1, rp2 };
 
-    // Inspect first so scripts are skipped and duplicate RPATHs are true no-ops.
-    const commands = try io_helper.childRun(allocator, &.{ "otool", "-l", binary_path });
-    defer allocator.free(commands.stdout);
-    defer allocator.free(commands.stderr);
-    if (commands.term != .exited or commands.term.exited != 0) return;
-    // The image's own LC_ID_DYLIB is a linker identity, not a runtime
-    // dependency. Adding unused paths can overflow an otherwise valid header.
-    if (!hasRpathDependencies(commands.stdout)) return;
     for (rpath_entries) |rpath| {
+        // Re-read after each actual edit: a required package-local path can
+        // make a second, global path unnecessary. Never consume header space
+        // for paths that cannot resolve an outstanding dependency.
+        const commands = try io_helper.childRun(allocator, &.{ "otool", "-l", binary_path });
+        defer allocator.free(commands.stdout);
+        defer allocator.free(commands.stderr);
+        if (commands.term != .exited or commands.term.exited != 0) return;
+        if (!hasRpathDependencies(commands.stdout)) return;
+        if (!try rpathNeeded(allocator, commands.stdout, binary_path, rpath)) continue;
         const coverage = rpathArchitectureCoverage(commands.stdout, rpath);
         if (coverage.architectures > 0 and coverage.matching == coverage.architectures) continue;
         if (coverage.matching > 0) {
@@ -509,16 +508,84 @@ fn addRpathEntries(
     }
 }
 
+fn rpathLibraryExists(allocator: std.mem.Allocator, binary_path: []const u8, rpath: []const u8, reference: []const u8, executable: bool) !bool {
+    const directory = std.fs.path.dirname(binary_path) orelse return false;
+    const path = if (std.mem.eql(u8, rpath, "@loader_path"))
+        try std.fs.path.resolve(allocator, &.{ directory, reference })
+    else if (std.mem.startsWith(u8, rpath, "@loader_path/"))
+        try std.fs.path.resolve(allocator, &.{ directory, rpath["@loader_path/".len..], reference })
+    else if (executable and std.mem.eql(u8, rpath, "@executable_path"))
+        try std.fs.path.resolve(allocator, &.{ directory, reference })
+    else if (executable and std.mem.startsWith(u8, rpath, "@executable_path/"))
+        try std.fs.path.resolve(allocator, &.{ directory, rpath["@executable_path/".len..], reference })
+    else if (std.fs.path.isAbsolute(rpath))
+        try std.fs.path.resolve(allocator, &.{ rpath, reference })
+    else
+        return false;
+    defer allocator.free(path);
+    const metadata = io_helper.cwd().statFile(io_helper.io, path, .{}) catch return false;
+    return metadata.kind == .file;
+}
+
+fn sliceNeedsRpath(allocator: std.mem.Allocator, binary_path: []const u8, paths: []const []const u8, references: []const []const u8, candidate: []const u8, executable: bool) !bool {
+    for (references) |reference| {
+        var resolved = false;
+        for (paths) |path| {
+            if (try rpathLibraryExists(allocator, binary_path, path, reference, executable)) {
+                resolved = true;
+                break;
+            }
+        }
+        if (!resolved and try rpathLibraryExists(allocator, binary_path, candidate, reference, executable)) return true;
+    }
+    return false;
+}
+
+/// Dependencies and search paths belong to their own architecture slice.
+fn rpathNeeded(allocator: std.mem.Allocator, commands: []const u8, binary_path: []const u8, candidate: []const u8) !bool {
+    var paths: std.ArrayList([]const u8) = .empty;
+    defer paths.deinit(allocator);
+    var references: std.ArrayList([]const u8) = .empty;
+    defer references.deinit(allocator);
+    var kind: enum { other, rpath, dependency } = .other;
+    var executable = false;
+    var lines = std.mem.tokenizeScalar(u8, commands, '\n');
+    while (lines.next()) |line| {
+        const text = std.mem.trim(u8, line, " \t\r");
+        if (std.mem.endsWith(u8, text, ":")) {
+            if (try sliceNeedsRpath(allocator, binary_path, paths.items, references.items, candidate, executable)) return true;
+            paths.clearRetainingCapacity();
+            references.clearRetainingCapacity();
+            kind = .other;
+            executable = false;
+        } else if (std.mem.startsWith(u8, text, "cmd ")) {
+            if (std.mem.eql(u8, text, "cmd LC_MAIN") or std.mem.eql(u8, text, "cmd LC_UNIXTHREAD")) executable = true;
+            kind = if (std.mem.eql(u8, text, "cmd LC_RPATH")) .rpath else if (runtimeLibraryCommand(text)) .dependency else .other;
+        } else if (kind == .rpath and std.mem.startsWith(u8, text, "path ")) {
+            const end = std.mem.lastIndexOf(u8, text, " (offset ") orelse continue;
+            try paths.append(allocator, text["path ".len..end]);
+        } else if (kind == .dependency and std.mem.startsWith(u8, text, "name @rpath/")) {
+            const end = std.mem.lastIndexOf(u8, text, " (offset ") orelse continue;
+            try references.append(allocator, text["name @rpath/".len..end]);
+        }
+    }
+    return sliceNeedsRpath(allocator, binary_path, paths.items, references.items, candidate, executable);
+}
+
+fn runtimeLibraryCommand(text: []const u8) bool {
+    return std.mem.eql(u8, text, "cmd LC_LOAD_DYLIB") or
+        std.mem.eql(u8, text, "cmd LC_LOAD_WEAK_DYLIB") or
+        std.mem.eql(u8, text, "cmd LC_REEXPORT_DYLIB") or
+        std.mem.eql(u8, text, "cmd LC_LOAD_UPWARD_DYLIB");
+}
+
 fn hasRpathDependencies(commands: []const u8) bool {
     var dependency = false;
     var lines = std.mem.tokenizeScalar(u8, commands, '\n');
     while (lines.next()) |line| {
         const text = std.mem.trim(u8, line, " \t\r");
         if (std.mem.startsWith(u8, text, "cmd ")) {
-            dependency = std.mem.eql(u8, text, "cmd LC_LOAD_DYLIB") or
-                std.mem.eql(u8, text, "cmd LC_LOAD_WEAK_DYLIB") or
-                std.mem.eql(u8, text, "cmd LC_REEXPORT_DYLIB") or
-                std.mem.eql(u8, text, "cmd LC_LOAD_UPWARD_DYLIB");
+            dependency = runtimeLibraryCommand(text);
         } else if (dependency and std.mem.startsWith(u8, text, "name @rpath/")) return true;
     }
     return false;
@@ -660,7 +727,9 @@ test "library normalization fills missing universal RPATHs and preserves other s
     const commands = try io_helper.childRun(a, &.{ "otool", "-l", binary });
     const global = try Paths.globalDir(a);
     try std.testing.expect(hasRpathInEveryArchitecture(commands.stdout, "@loader_path/../lib"));
-    try std.testing.expect(hasRpathInEveryArchitecture(commands.stdout, global));
+    // Both slices now resolve their real library locally; adding the unused
+    // global path would consume header space without repairing a dependency.
+    try std.testing.expect(!hasRpathInEveryArchitecture(commands.stdout, global));
     const arm_commands = try io_helper.childRun(a, &.{ "otool", "-arch", "arm64", "-l", binary });
     const intel_commands = try io_helper.childRun(a, &.{ "otool", "-arch", "x86_64", "-l", binary });
     try std.testing.expect(hasRpathInEveryArchitecture(arm_commands.stdout, "@loader_path/arm-only"));
@@ -670,6 +739,78 @@ test "library normalization fills missing universal RPATHs and preserves other s
     if (run.term != .exited or run.term.exited != 0) std.debug.print("{s}\n", .{run.stderr});
     try std.testing.expect(run.term == .exited and run.term.exited == 0);
     try std.testing.expectEqualStrings("42\n", run.stdout);
+}
+
+test "library normalization leaves an already resolving executable's load commands unchanged" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(io_helper.io, "package/bin");
+    try tmp.dir.createDirPath(io_helper.io, "package/lib");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "library.c", .data = "int answer(void) { return 42; }\n" });
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "main.c", .data = "extern int answer(void); int main(void) { return answer() == 42 ? 0 : 1; }\n" });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try tmp.dir.realPathFile(io_helper.io, ".", &buffer);
+    const root = buffer[0..length];
+    const package = try std.fs.path.join(a, &.{ root, "package" });
+    const source = try std.fs.path.join(a, &.{ root, "main.c" });
+    const library_source = try std.fs.path.join(a, &.{ root, "library.c" });
+    const library = try std.fs.path.join(a, &.{ package, "lib/libprobe.dylib" });
+    const binary = try std.fs.path.join(a, &.{ package, "bin/consumer" });
+    const compiled_library = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-dynamiclib", library_source, "-Wl,-install_name,@rpath/libprobe.dylib", "-o", library });
+    try std.testing.expect(compiled_library.term == .exited and compiled_library.term.exited == 0);
+    for ([_][]const u8{ "-Wl,-rpath,@loader_path/../lib", "-Wl,-rpath,@executable_path/../lib" }) |rpath| {
+        const compiled = try io_helper.childRun(a, &.{ "/usr/bin/clang", source, library, "-Wl,-headerpad,0", rpath, "-o", binary });
+        try std.testing.expect(compiled.term == .exited and compiled.term.exited == 0);
+        const before = try @import("extractor.zig").computeChecksum(a, binary);
+        const before_run = try io_helper.childRun(a, &.{ "env", "-u", "DYLD_LIBRARY_PATH", "-u", "DYLD_FALLBACK_LIBRARY_PATH", binary });
+        try std.testing.expect(before_run.term == .exited and before_run.term.exited == 0);
+        try addRpathEntries(a, binary, package);
+        try std.testing.expectEqualStrings(before, try @import("extractor.zig").computeChecksum(a, binary));
+        const after_run = try io_helper.childRun(a, &.{ "env", "-u", "DYLD_LIBRARY_PATH", "-u", "DYLD_FALLBACK_LIBRARY_PATH", binary });
+        try std.testing.expect(after_run.term == .exited and after_run.term.exited == 0);
+    }
+}
+
+test "library normalization still adds a required global path and executes its real library" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(io_helper.io, "package/bin");
+    try tmp.dir.createDirPath(io_helper.io, "package/lib");
+    try tmp.dir.createDirPath(io_helper.io, "owned global");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "library.c", .data = "int answer(void) { return 42; }\n" });
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "main.c", .data = "extern int answer(void); int main(void) { return answer() == 42 ? 0 : 1; }\n" });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try tmp.dir.realPathFile(io_helper.io, ".", &buffer);
+    const root = buffer[0..length];
+    const package = try std.fs.path.join(a, &.{ root, "package" });
+    const global = try std.fs.path.join(a, &.{ root, "owned global" });
+    const source = try std.fs.path.join(a, &.{ root, "main.c" });
+    const library_source = try std.fs.path.join(a, &.{ root, "library.c" });
+    const library = try std.fs.path.join(a, &.{ global, "libprobe.dylib" });
+    const bin = try std.fs.path.join(a, &.{ package, "bin" });
+    const binary = try std.fs.path.join(a, &.{ bin, "consumer" });
+    const compiled_library = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-dynamiclib", library_source, "-Wl,-install_name,@rpath/libprobe.dylib", "-o", library });
+    try std.testing.expect(compiled_library.term == .exited and compiled_library.term.exited == 0);
+    const compiled = try io_helper.childRun(a, &.{ "/usr/bin/clang", source, library, "-Wl,-headerpad,4096", "-o", binary });
+    try std.testing.expect(compiled.term == .exited and compiled.term.exited == 0);
+    const before_run = try io_helper.childRun(a, &.{ "env", "-u", "DYLD_LIBRARY_PATH", "-u", "DYLD_FALLBACK_LIBRARY_PATH", binary });
+    try std.testing.expect(before_run.term != .exited or before_run.term.exited != 0);
+    try addRpathEntriesWithGlobal(a, binary, package, global);
+    try addRpathEntriesWithGlobal(a, binary, package, global);
+    const commands = try io_helper.childRun(a, &.{ "otool", "-l", binary });
+    try std.testing.expect(hasRpathInEveryArchitecture(commands.stdout, global));
+    try std.testing.expect(!hasRpathInEveryArchitecture(commands.stdout, "@loader_path/../lib"));
+    try codesignDirectory(a, bin);
+    const after_run = try io_helper.childRun(a, &.{ "env", "-u", "DYLD_LIBRARY_PATH", "-u", "DYLD_FALLBACK_LIBRARY_PATH", binary });
+    try std.testing.expect(after_run.term == .exited and after_run.term.exited == 0);
 }
 
 test "library normalization RPATH inspection requires each universal slice" {

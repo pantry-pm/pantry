@@ -373,3 +373,8 @@ native payload bytes unchanged. This environment contract currently supports
 POSIX executable launchers. Sourceable shell libraries and native Windows
 activations with nonempty runtime declarations fail explicitly because those
 activation forms cannot apply the defaults.
+
+Mach-O RPATH selection considers each architecture's actual runtime dependencies
+and existing search paths. An already sufficient search-path set receives no
+extra RPATH; unused paths must not consume limited header space. Required edit
+failures still fail installation.

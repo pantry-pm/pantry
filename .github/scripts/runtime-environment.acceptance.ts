@@ -79,5 +79,9 @@ try {
   console.log(`Runtime environment acceptance PASS: ${owned}`)
 }
 finally {
+  // Keep bounded, top-level evidence paths so artifact collection never walks
+  // installed Python package symlinks or duplicates the native payloads.
+  const lock = Bun.file(join(project, 'pantry.lock'))
+  if (await lock.exists()) await writeFile(join(owned, 'pantry.lock'), await lock.bytes())
   await writeFile(join(owned, 'receipt.json'), JSON.stringify(receipt, null, 2) + '\n')
 }
