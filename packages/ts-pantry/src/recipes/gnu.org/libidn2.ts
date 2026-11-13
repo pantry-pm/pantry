@@ -4,13 +4,13 @@ export const recipe: Recipe = {
   domain: 'gnu.org/libidn2',
   name: 'libidn2',
   // Preserve the accepted archive; the repaired build records library owners.
-  revisions: { '2.3.8': 1 },
+  revisions: { '2.3.8': 2 },
   programs: [
     'idn2',
   ],
   dependencies: {
     'gnu.org/gettext': '*',
-    'gnu.org/libunistring': '^1',
+    'gnu.org/libunistring': '^1.4.2.2',
   },
   buildDependencies: {
     'gnu.org/texinfo': '*',
@@ -21,6 +21,7 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   build: {
+    env: { darwin: { MACOSX_DEPLOYMENT_TARGET: '14.0' } },
     script: [
       './configure --prefix={{ prefix }}',
       'make install',

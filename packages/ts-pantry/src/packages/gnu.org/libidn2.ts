@@ -3,12 +3,12 @@
  *
  * @domain `gnu.org/libidn2`
  * @programs `idn2`
- * @version `2.3.8.1` (6 versions available)
+ * @version `2.3.8.2` (7 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/libidn2`
  * @homepage https://www.gnu.org/software/libidn/#libidn2
- * @dependencies `gnu.org/gettext`, `gnu.org/libunistring^1`
+ * @dependencies `gnu.org/gettext`, `gnu.org/libunistring^1.4.2.2`
  * @buildDependencies `gnu.org/texinfo`, `freedesktop.org/pkg-config` - required only when building from source
  *
  * @example
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "idn2"
  * console.log(pkg.description) // "International domain name library (IDNA2008, Pu..."
  * console.log(pkg.programs)    // ["idn2"]
- * console.log(pkg.versions[0]) // "2.3.8.1" (latest)
+ * console.log(pkg.versions[0]) // "2.3.8.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/gnu-org/libidn2.md
@@ -61,7 +61,7 @@ export const gnuorglibidn2Package = {
   */
   dependencies: [
     'gnu.org/gettext',
-    'gnu.org/libunistring^1',
+    'gnu.org/libunistring^1.4.2.2',
   ] as const,
   /**
   * Build dependencies for this package.
@@ -76,6 +76,7 @@ export const gnuorglibidn2Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.8.2',
     '2.3.8.1',
     '2.3.8',
     '2.3.7',
