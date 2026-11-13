@@ -403,14 +403,16 @@ jobs:
         run: pantry install
       - run: bun install --frozen-lockfile
       - name: Build this checkout's native CLI
-        run: cd packages/zig && zig build -Doptimize=Debug -j2
+        # This binary is executed on another runner by native-publication.
+        # Host CPU extensions must not become an artifact requirement.
+        run: cd packages/zig && zig build -Doptimize=Debug -Dcpu=baseline -j2
       - name: Require the source installer to restore the committed canonical workspace lock
         run: |
           packages/zig/zig-out/bin/pantry install
           packages/zig/zig-out/bin/pantry install --frozen-lockfile
           git diff --exit-code -- pantry.lock bun.lock
           bun .github/scripts/verify-workspace-toolchain.ts
-          cd packages/zig && zig build -Doptimize=Debug -j2
+          cd packages/zig && zig build -Doptimize=Debug -Dcpu=baseline -j2
       - name: Retain the verified source CLI for independent publication checks
         id: source-cli
         run: |
@@ -418,7 +420,8 @@ jobs:
           cp packages/zig/zig-out/bin/pantry artifacts/source-linux-cli/pantry
           pantry_source_cli_sha256=$(sha256sum artifacts/source-linux-cli/pantry | cut -d ' ' -f 1)
           printf 'sha256=%s\n' "$pantry_source_cli_sha256" >> "$GITHUB_OUTPUT"
-          printf '{"sourceCommit":"%s","sha256":"%s"}\n' "$GITHUB_SHA" "$pantry_source_cli_sha256" > artifacts/source-linux-cli/identity.json
+          printf '{"sourceCommit":"%s","sha256":"%s","targetCPU":"baseline"}\n' "$GITHUB_SHA" "$pantry_source_cli_sha256" > artifacts/source-linux-cli/identity.json
+          lscpu
       - name: Preserve the compiled source CLI
         uses: actions/upload-artifact@v4
         with:
@@ -487,8 +490,10 @@ jobs:
             const identity = await Bun.file("artifacts/source-linux-cli/identity.json").json();
             assert.equal(identity.sourceCommit, process.env.GITHUB_SHA);
             assert.equal(identity.sha256, process.env.PANTRY_SOURCE_CLI_SHA256);
+            assert.equal(identity.targetCPU, "baseline");
           '
           chmod 755 artifacts/source-linux-cli/pantry
+          lscpu
       - name: Verify canonical package archives through the source CLI
         env:
           PANTRY_SOURCE_CLI: artifacts/source-linux-cli/pantry
