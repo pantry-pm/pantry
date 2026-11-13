@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 
 export const requiredSourceJobs = [
   'lint', 'typecheck', 'test', 'zig-tests', 'windows-native-runtime',
-  'windows-git', 'native-browser', 'action-native-tools', 'action-redis-service',
+  'windows-git', 'native-browser', 'native-publication', 'action-native-tools', 'action-redis-service',
   'action-native-services (8.4.11)', 'action-native-services (26.7.0)',
   'Explicit native toolchain pins (ubuntu-latest)',
   'Explicit native toolchain pins (macos-latest)', 'continuous-release',

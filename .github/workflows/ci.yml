@@ -389,6 +389,8 @@ jobs:
   native-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      cli-sha256: ${{ steps.source-cli.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v6
       - name: Bootstrap the published compiler and Bun runtime
@@ -409,27 +411,24 @@ jobs:
           git diff --exit-code -- pantry.lock bun.lock
           bun .github/scripts/verify-workspace-toolchain.ts
           cd packages/zig && zig build -Doptimize=Debug -j2
+      - name: Retain the verified source CLI for independent publication checks
+        id: source-cli
+        run: |
+          mkdir -p artifacts/source-linux-cli
+          cp packages/zig/zig-out/bin/pantry artifacts/source-linux-cli/pantry
+          pantry_source_cli_sha256=$(sha256sum artifacts/source-linux-cli/pantry | cut -d ' ' -f 1)
+          printf 'sha256=%s\n' "$pantry_source_cli_sha256" >> "$GITHUB_OUTPUT"
+          printf '{"sourceCommit":"%s","sha256":"%s"}\n' "$GITHUB_SHA" "$pantry_source_cli_sha256" > artifacts/source-linux-cli/identity.json
+      - name: Preserve the compiled source CLI
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-linux-publication-cli
+          path: artifacts/source-linux-cli
+          if-no-files-found: error
       - name: Verify immutable publication retries through the native transport
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
         run: bun .github/scripts/verify-publication-retry.ts
-      - name: Verify canonical package archives through the source CLI
-        env:
-          PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
-        run: |
-          bun .github/scripts/canonical-pack.ts
-          bun .github/scripts/verify-canonical-archive.ts artifacts/canonical-pack/pack-before-hooks.tgz artifacts/canonical-pack/uploaded.tgz
-      - name: Verify the canonical SDK archive with strict installed consumers
-        env:
-          PANTRY_SDK_EVIDENCE: artifacts/canonical-pack/sdk-consumer
-        run: |
-          bun run --cwd packages/ts-pantry build
-          packages/zig/zig-out/bin/pantry pack packages/ts-pantry --ignore-scripts --filename artifacts/canonical-pack/sdk.tgz
-          bun .github/scripts/verify-ts-sdk.ts artifacts/canonical-pack/sdk.tgz
-      - name: Verify npm publication archives and transport deadlines
-        run: |
-          set -o pipefail
-          bun .github/scripts/verify-npm-publication.ts packages/zig/zig-out/bin/pantry 2>&1 | tee artifacts/canonical-pack/npm-publication.log
       - name: Verify publish lifecycle controls through the native transport
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
@@ -455,12 +454,68 @@ jobs:
           path: |
             artifacts/linux-native-browser
             artifacts/git-revision-identity
-            artifacts/canonical-pack
             artifacts/native-catalog/native-registry-lookup.json
           if-no-files-found: error
 
+  # The new pack and npm deadline controls must not consume the browser's
+  # existing 600-second command budget inside its unchanged 20-minute job.
+  native-publication:
+    needs: native-browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up the qualified published Bun runtime
+        uses: pantry-pm/pantry/packages/action@ed77c935472bfe352e1119c8e2c3c6be9d23cf9e # v0.11.201
+        with:
+          version: 0.11.201
+          install: 'false'
+          packages: bun.com@1.4.4
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-linux-publication-cli
+          path: artifacts/source-linux-cli
+      - name: Verify the exact compiled source input
+        env:
+          PANTRY_SOURCE_CLI_SHA256: ${{ needs.native-browser.outputs.cli-sha256 }}
+        run: |
+          test -n "$PANTRY_SOURCE_CLI_SHA256"
+          printf '%s  artifacts/source-linux-cli/pantry\n' "$PANTRY_SOURCE_CLI_SHA256" | sha256sum --check --strict
+          bun -e '
+            const assert = (await import("node:assert/strict")).default;
+            const identity = await Bun.file("artifacts/source-linux-cli/identity.json").json();
+            assert.equal(identity.sourceCommit, process.env.GITHUB_SHA);
+            assert.equal(identity.sha256, process.env.PANTRY_SOURCE_CLI_SHA256);
+          '
+          chmod 755 artifacts/source-linux-cli/pantry
+      - name: Verify canonical package archives through the source CLI
+        env:
+          PANTRY_SOURCE_CLI: artifacts/source-linux-cli/pantry
+        run: |
+          bun .github/scripts/canonical-pack.ts
+          bun .github/scripts/verify-canonical-archive.ts artifacts/canonical-pack/pack-before-hooks.tgz artifacts/canonical-pack/uploaded.tgz
+      - name: Verify the canonical SDK archive with strict installed consumers
+        env:
+          PANTRY_SDK_EVIDENCE: artifacts/canonical-pack/sdk-consumer
+        run: |
+          bun run --cwd packages/ts-pantry build
+          artifacts/source-linux-cli/pantry pack packages/ts-pantry --ignore-scripts --filename artifacts/canonical-pack/sdk.tgz
+          bun .github/scripts/verify-ts-sdk.ts artifacts/canonical-pack/sdk.tgz
+      - name: Verify npm publication archives and transport deadlines
+        run: |
+          set -o pipefail
+          bun .github/scripts/verify-npm-publication.ts artifacts/source-linux-cli/pantry 2>&1 | tee artifacts/canonical-pack/npm-publication.log
+      - name: Preserve canonical publication diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-linux-native-publication
+          path: artifacts/canonical-pack
+          if-no-files-found: error
+
   continuous-release:
-    needs: [lint, typecheck, test, action-redis-service, action-native-services, action-native-tools, native-browser, windows-native-runtime, windows-git]
+    needs: [lint, typecheck, test, action-redis-service, action-native-services, action-native-tools, native-browser, native-publication, windows-native-runtime, windows-git]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Best-effort commit-preview publishing. Don't fail the whole workflow

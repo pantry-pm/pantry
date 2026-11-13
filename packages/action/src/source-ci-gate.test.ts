@@ -21,12 +21,18 @@ describe('full source CI publication and deployment gate', () => {
     })
     expect(polls).toBe(3)
     expect(result.sha).toBe(sha)
-    expect(result.requiredJobs).toHaveLength(14)
+    expect(result.requiredJobs).toHaveLength(15)
     expect(paths.at(-1)).toContain('/runs/42/jobs?')
   })
 
   test.each(['failure', 'cancelled', 'timed_out', 'neutral', 'skipped'])('refuses a completed %s source verdict', async conclusion => {
     await expect(waitForSourceCi({ repository, sha, read: async () => ({ workflow_runs: [{ ...completed, conclusion }] }) })).rejects.toThrow(`concluded ${conclusion}`)
+  })
+
+  test.each(['missing', 'skipped', 'failure'])('refuses %s independent publication controls even if the overall run is green', async conclusion => {
+    const actual = jobs().filter(job => job.name !== 'native-publication')
+    if (conclusion !== 'missing') actual.push({ id: 100, name: 'native-publication', status: 'completed', conclusion })
+    await expect(waitForSourceCi({ repository, sha, read: async path => path.includes('/jobs?') ? { total_count: actual.length, jobs: actual } : { workflow_runs: [completed] } })).rejects.toThrow('must execute and pass native-publication')
   })
 
   test.each(['missing', 'skipped', 'duplicate', 'failed'])('refuses a %s native acceptance job even if the workflow is green', async kind => {
@@ -47,11 +53,11 @@ describe('full source CI publication and deployment gate', () => {
     const result = await waitForSourceCi({ repository, sha, read: async path => {
       if (!path.includes('/jobs?')) return { workflow_runs: [completed] }
       pages++
-      return { total_count: 14, jobs: pages === 1 ? jobs().slice(0, 7) : jobs().slice(7) }
+      return { total_count: 15, jobs: pages === 1 ? jobs().slice(0, 7) : jobs().slice(7) }
     } })
     expect(pages).toBe(2)
-    expect(result.requiredJobs).toHaveLength(14)
-    await expect(waitForSourceCi({ repository, sha, read: async path => path.includes('/jobs?') ? { total_count: 14, jobs: [] } : { workflow_runs: [completed] } })).rejects.toThrow('Incomplete source CI')
+    expect(result.requiredJobs).toHaveLength(15)
+    await expect(waitForSourceCi({ repository, sha, read: async path => path.includes('/jobs?') ? { total_count: 15, jobs: [] } : { workflow_runs: [completed] } })).rejects.toThrow('Incomplete source CI')
   })
 
   test('bounds API reads by one deadline and refuses a late successful response', async () => {
