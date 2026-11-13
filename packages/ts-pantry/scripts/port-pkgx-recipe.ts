@@ -15,6 +15,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { resolveRuntimeEnvironment } from './runtime-environment'
 
 const RAW = 'https://raw.githubusercontent.com/pkgxdev/pantry/main/projects'
 const RECIPES_DIR = join(import.meta.dir, '..', 'src', 'recipes')
@@ -101,7 +102,7 @@ function normScript(script: any): any[] {
   })
 }
 
-function build(domain: string, yaml: any): string {
+export function buildRecipeSource(domain: string, yaml: any): string {
   const name = domain.split('/').pop()!.replace(/\.[a-z]+$/, '') || domain
   const recipe: any = { domain, name }
 
@@ -109,6 +110,10 @@ function build(domain: string, yaml: any): string {
   recipe.programs = programs
 
   if (yaml.dependencies) recipe.dependencies = yaml.dependencies
+  if (yaml.runtime?.env) {
+    resolveRuntimeEnvironment(yaml.runtime.env, '/package-prefix-validation')
+    recipe.runtime = { env: yaml.runtime.env }
+  }
 
   const b = yaml.build
   const buildObj = (b && typeof b === 'object' && !Array.isArray(b)) ? b : null
@@ -131,6 +136,7 @@ function build(domain: string, yaml: any): string {
   const ordered: any = { domain: recipe.domain, name: recipe.name, programs: recipe.programs }
   if (recipe.dependencies) ordered.dependencies = recipe.dependencies
   if (recipe.buildDependencies) ordered.buildDependencies = recipe.buildDependencies
+  if (recipe.runtime) ordered.runtime = recipe.runtime
   ordered.distributable = recipe.distributable
   ordered.build = recipe.build
   if (recipe.test) ordered.test = recipe.test
@@ -154,7 +160,12 @@ async function port(domain: string): Promise<'ok' | 'no-yaml' | 'no-build' | 'ex
   try { yaml = (Bun as any).YAML.parse(text) }
   catch { return 'error' }
   if (!yaml || (!yaml.build && !yaml.distributable)) return 'no-build'
-  const ts = build(domain, yaml)
+  let ts: string
+  try { ts = buildRecipeSource(domain, yaml) }
+  catch (error) {
+    console.error(`Invalid recipe for ${domain}: ${error instanceof Error ? error.message : String(error)}`)
+    return 'error'
+  }
   mkdirSync(dirname(outPath), { recursive: true })
   writeFileSync(outPath, ts)
   // sanity: import the freshly-written file (absolute path). If it doesn't load
@@ -205,4 +216,4 @@ async function main() {
   writeFileSync('/tmp/ported-ok.txt', okList.join('\n'))
 }
 
-main()
+if (import.meta.main) main()

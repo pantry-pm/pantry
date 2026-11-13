@@ -22,6 +22,7 @@ export async function syncRecipeDependencies(domains: string[]): Promise<void> {
     savePackageAsTypeScript(output, domain, {
       ...current,
       programs: recipe.programs ?? current.programs,
+      runtimeEnvironment: recipe.runtime?.env,
       ...(recipe.platformPrograms ? { platformPrograms: recipe.platformPrograms } : {}),
       ...(recipe.platformProgramOverrides ? { platformProgramOverrides: recipe.platformProgramOverrides } : {}),
       ...(recipe.programVersions ? { programVersions: recipe.programVersions } : {}),

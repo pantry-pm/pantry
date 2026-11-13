@@ -14,7 +14,7 @@ import { join, dirname } from 'node:path'
 import { parseArgs } from 'node:util'
 import { generateBuildScript, getSkips, platformReduce, type PackageRecipe, type NormalizedRecipe, type RecipeScriptStep, type RecipeTest } from './buildkit.ts'
 import { fixUp } from './fix-up.ts'
-import { selectPublishedFiles, writeProgramInterfaces } from './published-files'
+import { selectPublishedFiles, writeProgramInterfaces, writeRuntimeEnvironment } from './published-files'
 import { copyRecipeProps } from './copy-recipe-props'
 import { verifyDeclaredPrograms } from './declared-programs'
 import { verifyMacOSDeploymentTarget } from './macos-deployment-target'
@@ -24,6 +24,7 @@ import { persistBuildDiagnostics, sanitizeBuildDiagnostic } from './build-diagno
 import { compareInstallerVersionsDesc, parseInstallerConstraint, satisfiesInstallerConstraint } from '../src/installer'
 import { normalizeDependencyArch } from '../src/dependency-spec'
 import { dependencyPythonPaths } from './python-build-environment'
+import { dependencyRuntimeEnvironment, resolveRuntimeEnvironment, runtimeEnvironmentScript, type RuntimeEnvironment } from './runtime-environment'
 // package-overrides.ts removed — all build logic now in src/recipes/*.ts
 type ScriptStep = string | { run: string, 'working-directory'?: string, if?: string }
 const packageOverrides: Record<string, any> = {} // stub — overrides migrated to recipes
@@ -958,6 +959,7 @@ function runHealthCheck(
   templateVars: Record<string, string>,
   depPaths: Record<string, string>,
   platform: string,
+  runtimeEnvironment?: RuntimeEnvironment,
 ): void {
   // Build test script from recipe's test section
   let testCommands: string[] = []
@@ -1028,6 +1030,7 @@ else if (Array.isArray(test.script)) {
     `export PATH="${testPath}"`,
     `export ${libVar}="${libParts.join(':')}"`,
     `export PKG_CONFIG_PATH="${prefix}/lib/pkgconfig"`,
+    runtimeEnvironmentScript(resolveRuntimeEnvironment(runtimeEnvironment, prefix)),
     fixture ? `export FIXTURE="${join(testDir, 'FIXTURE')}"` : '',
     `cd "${testDir}"`,
     ...testCommands,
@@ -1276,7 +1279,10 @@ export async function installBuildDependencyGraphs(
       if (key === domain || key.startsWith(`deps.${domain}.`)) depPaths[key] = value
     }
     for (const child of tools.keys()) {
-      if (child !== domain) depPaths[`build-tools.${domain}:${child}.prefix`] = paths[`deps.${child}.prefix`]
+      if (child !== domain) {
+        depPaths[`build-tools.${domain}:${child}.prefix`] = paths[`deps.${child}.prefix`]
+        depPaths[`build-tools.${domain}:${child}.version`] = paths[`deps.${child}.version`]
+      }
     }
   }
   return { depPaths, runtimePackages }
@@ -1794,6 +1800,9 @@ else {
     depPaths,
     templateVars['version.tag'],
     dependencyPythonPaths(Object.entries(depPaths).filter(([key]) => key.endsWith('.prefix')).map(([, prefix]) => prefix)),
+    await dependencyRuntimeEnvironment(depPaths, async (domain, selectedVersion) =>
+      (await loadRecipe(domain, platform, selectedVersion)).recipe.runtime?.env,
+    ),
   )
 
   const scriptPath = join(buildDir, '_build.sh')
@@ -1890,6 +1899,7 @@ else {
   const skips = getSkips(recipe as PackageRecipe)
   selectPublishedFiles(prefix, normalizedRecipe.publish?.include)
   writeProgramInterfaces(prefix, normalizedRecipe.sourceablePrograms)
+  writeRuntimeEnvironment(prefix, normalizedRecipe.runtime?.env)
   await fixUp(prefix, platform, skips, runtimePackages)
   if (loaded.desktopApp) verifyDesktopInstall(prefix, version, platform, loaded.bundleVersionPattern)
   verifyDeclaredPrograms(prefix, pkgName, normalizedRecipe.programs)
@@ -1941,7 +1951,7 @@ catch {
 else if (recipe.test) {
     console.log('\n🧪 Running health check...')
     try {
-      runHealthCheck(recipe.test, prefix, templateVars, depPaths, platform)
+      runHealthCheck(recipe.test, prefix, templateVars, depPaths, platform, normalizedRecipe.runtime?.env)
       console.log('✅ Health check passed!')
     }
 catch (error: unknown) {

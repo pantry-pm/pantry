@@ -6,6 +6,7 @@ import { getAliasOverrides, shouldReplaceAliases } from './alias-overrides'
 import { programsForPlatform } from './programs'
 import type { PlatformPrograms, ProgramVersions } from './programs'
 import { desktopApps, desktopFonts } from './catalog/desktop'
+import { resolveRuntimeEnvironment } from '../scripts/runtime-environment'
 
 const desktopKinds = new Map<string, 'app' | 'font'>([
   ...desktopApps.map(pkg => [pkg.domain, 'app'] as const),
@@ -27,6 +28,7 @@ interface ZigPackageDefinition {
   platformProgramOverrides?: PlatformPrograms
   programVersions?: ProgramVersions
   sourceablePrograms: string[]
+  runtimeEnvironment: Readonly<Record<string, string>>
   dependencies: string[]
   buildDependencies: string[]
   aliases: string[]
@@ -174,6 +176,9 @@ function packageToZigStruct(pkg: ZigPackageDefinition): string {
   const buildDeps = pkg.buildDependencies.map(d => `"${escapeZigString(d)}"`).join(', ')
   const aliases = pkg.aliases.map(a => `"${escapeZigString(a)}"`).join(', ')
   const versions = pkg.versions.map(v => `"${escapeZigString(v)}"`).join(', ')
+  const runtimeEnvironment = Object.entries(pkg.runtimeEnvironment).map(([name, value]) =>
+    `.{ .name = "${escapeZigString(name)}", .value = "${escapeZigString(value)}" }`,
+  ).join(', ')
   const programVersions = Object.entries(pkg.programVersions || {}).map(([name, bounds]) => {
     for (const value of [bounds.since, bounds.before]) {
       if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) throw new Error(`Invalid program release boundary: ${name}`)
@@ -188,7 +193,7 @@ function packageToZigStruct(pkg: ZigPackageDefinition): string {
         .kind = .${desktopKinds.get(pkg.domain) ?? (pkg.programs.length ? 'cli' : 'library')},
         .description = "${escapeZigString(pkg.description)}",
         .homepage_url = ${pkg.homepageUrl ? `"${escapeZigString(pkg.homepageUrl)}"` : 'null'},
-        .programs = ${programs},${programVersions ? `\n        .program_versions = &[_]ProgramVersion{ ${programVersions} },` : ''}
+        .programs = ${programs},${programVersions ? `\n        .program_versions = &[_]ProgramVersion{ ${programVersions} },` : ''}${runtimeEnvironment ? `\n        .runtime_environment = &[_]RuntimeEnvironmentVariable{ ${runtimeEnvironment} },` : ''}
 ${pkg.sourceablePrograms.length ? `        .sourceable_programs = &[_][]const u8{ ${pkg.sourceablePrograms.map(name => `"${escapeZigString(name)}"`).join(', ')} },\n` : ''}        .dependencies = &[_][]const u8{ ${deps} },
         .build_dependencies = &[_][]const u8{ ${buildDeps} },
         .aliases = &[_][]const u8{ ${aliases} },
@@ -221,10 +226,10 @@ function depKey(spec: string): string {
 /** Load a package's build-recipe runtime dependencies (src/recipes/<domain>.ts),
  * if any, as metadata-style specs. The recipe is authoritative for what we
  * actually compiled against, so its deps must flow into the catalog. */
-async function loadRecipeMetadata(recipesDir: string, domain: string, programs: string[]): Promise<{ dependencies: string[], sourceablePrograms: string[] }> {
+async function loadRecipeMetadata(recipesDir: string, domain: string, programs: string[]): Promise<{ dependencies: string[], sourceablePrograms: string[], runtimeEnvironment: Readonly<Record<string, string>> }> {
   const file = path.join(recipesDir, `${domain}.ts`)
   if (!fs.existsSync(file))
-    return { dependencies: [], sourceablePrograms: [] }
+    return { dependencies: [], sourceablePrograms: [], runtimeEnvironment: {} }
   // Recipe modules retain their normal relative imports. Only the generated
   // data catalogs are re-evaluated when their bytes change within one run.
   const url = pathToFileURL(path.resolve(file))
@@ -232,7 +237,9 @@ async function loadRecipeMetadata(recipesDir: string, domain: string, programs: 
   const sourceable = mod.recipe?.sourceablePrograms ?? []
   if (!Array.isArray(sourceable) || sourceable.some(name => typeof name !== 'string' || !/^[a-zA-Z0-9_.+-]+$/.test(name) || !programs.includes(name)) || new Set(sourceable).size !== sourceable.length)
     throw new Error(`Invalid recipe program interfaces for ${domain}`)
-  return { dependencies: recipeDepsToSpecs(mod.recipe?.dependencies), sourceablePrograms: sourceable }
+  const runtimeEnvironment = mod.recipe?.runtime?.env ?? {}
+  resolveRuntimeEnvironment(runtimeEnvironment, '/package-prefix-validation')
+  return { dependencies: recipeDepsToSpecs(mod.recipe?.dependencies), sourceablePrograms: sourceable, runtimeEnvironment }
 }
 
 /** A dependency spec without a trailing note: `git-scm.org^2 # v0.7.0 requires it`
@@ -327,6 +334,7 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
         platformProgramOverrides: pkgData.platformProgramOverrides,
         programVersions: pkgData.programVersions,
         sourceablePrograms: recipe.sourceablePrograms,
+        runtimeEnvironment: recipe.runtimeEnvironment,
         // Merge the build recipe's runtime deps into the metadata deps so the
         // catalog reflects what we actually compiled against (e.g. php links
         // libpq, so php.net must depend on postgresql.org even though pkgx's
@@ -419,6 +427,11 @@ pub const ProgramVersion = struct {
     before: ?u32 = null,
 };
 
+pub const RuntimeEnvironmentVariable = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
 /// Package information
 pub const PackageInfo = struct {
     name: []const u8,
@@ -429,6 +442,7 @@ pub const PackageInfo = struct {
     programs: []const []const u8,
     program_versions: []const ProgramVersion = &.{},
     sourceable_programs: []const []const u8 = &.{},
+    runtime_environment: []const RuntimeEnvironmentVariable = &.{},
     dependencies: []const []const u8,
     build_dependencies: []const []const u8,
     aliases: []const []const u8,

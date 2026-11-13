@@ -745,6 +745,10 @@ jobs:
         env:
           PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry
         run: bun .github/scripts/native-toolchain-pins.ts
+      - name: Verify package runtime environments with real SWIG and Python
+        env:
+          PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry
+        run: bun .github/scripts/runtime-environment.acceptance.ts
       - name: Preserve the source CLI proof
         run: |
           mv artifacts/native-toolchain-pins artifacts/source-native-toolchain-pins
@@ -773,4 +777,35 @@ jobs:
           path: |
             artifacts/native-toolchain-pins
             artifacts/source-native-toolchain-pins
+            artifacts/runtime-environment/**/receipt.json
+            artifacts/runtime-environment/**/*.log
+            artifacts/runtime-environment/**/pantry.lock
+          if-no-files-found: error
+
+  runtime-environment-arm64:
+    name: Package runtime environments (Linux arm64)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Bootstrap qualified published Pantry and declared workspace tools
+        uses: pantry-pm/pantry/packages/action@124b91b915f302a4a7cba19700045ee56cd4b9dc # v0.11.206
+        with:
+          version: '0.11.206'
+      - run: bun install --frozen-lockfile
+      - name: Build this checkout's native CLI
+        run: cd packages/zig && zig build -Doptimize=Debug -j2
+      - name: Verify normal, relocated and fresh frozen package environments
+        env:
+          PANTRY_TEST_CLI: packages/zig/zig-out/bin/pantry
+        run: bun .github/scripts/runtime-environment.acceptance.ts
+      - name: Retain original source acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-environment-linux-arm64
+          path: |
+            artifacts/runtime-environment/**/receipt.json
+            artifacts/runtime-environment/**/*.log
+            artifacts/runtime-environment/**/pantry.lock
           if-no-files-found: error

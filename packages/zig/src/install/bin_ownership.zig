@@ -277,6 +277,7 @@ fn buildGraph(arena: std.mem.Allocator, proj_dir: []const u8, modules_dir: []con
 /// directory (`exec "$d/../pkg/cli.js"`); that is resolved against the shim's
 /// directory, the way the shim resolves it at run time.
 fn shimTarget(arena: std.mem.Allocator, shim_path: []const u8) ?[]const u8 {
+    if (symlink.resolvedActivationTarget(arena, shim_path)) |target| return target;
     if (io_helper.readLinkAlloc(arena, shim_path)) |target| {
         const dir = std.fs.path.dirname(shim_path) orelse return target;
         return std.fs.path.resolve(arena, &.{ dir, target }) catch target;

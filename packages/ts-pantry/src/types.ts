@@ -51,6 +51,8 @@ export interface PkgxPackage {
   /** Replace the common executable interface on platforms with a different archive layout. */
   platformProgramOverrides?: import('./programs').PlatformPrograms
   programVersions?: import('./programs').ProgramVersions
+  /** Literal package defaults; the prefix token follows the installed package. */
+  runtimeEnvironment?: Readonly<Record<string, string>>
   companions: string[]
   /**
    * Runtime dependencies (from top-level dependencies in package.yml)

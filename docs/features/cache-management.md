@@ -349,3 +349,27 @@ can source them, including libraries without a shebang. Another installed
 provider of the same command keeps ownership; uninstalling a colliding package
 does not remove its command. Launcher creation failures fail installation rather
 than silently substituting a link that changes resource lookup.
+
+Recipes can also declare literal environment defaults for executables that need
+a package data directory. For example, SWIG declares:
+
+```ts
+runtime: {
+  env: { SWIG_LIB: '{{prefix}}/lib' },
+}
+```
+
+Both `{{prefix}}` and `${{prefix}}` follow the installed package when its tree
+moves. Other double-brace placeholders are rejected. Values are literal strings;
+shell substitutions are never evaluated. A nonempty variable supplied by the
+caller takes precedence, while an unset or empty variable uses the package
+default. Dependency builds receive the defaults for their actual selected
+packages; conflicting defaults fail rather than choosing one silently.
+
+Published packages retain these declarations in `share/pantry/runtime.json`.
+For older archives without that record, activation uses the authoritative recipe
+catalog. Pantry validates declarations before replacing an activation and leaves
+native payload bytes unchanged. This environment contract currently supports
+POSIX executable launchers. Sourceable shell libraries and native Windows
+activations with nonempty runtime declarations fail explicitly because those
+activation forms cannot apply the defaults.

@@ -34,7 +34,7 @@ import { parseArgs } from 'node:util'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 import { reportBuild, reportBuildLog } from './report-build'
 import { fixElfRpaths, fixUp } from './fix-up'
-import { selectPublishedFiles, writeProgramInterfaces } from './published-files'
+import { selectPublishedFiles, writeProgramInterfaces, writeRuntimeEnvironment } from './published-files'
 import { uploadToS3 as uploadToS3Impl } from './upload-to-s3.ts'
 import { BINARY_SYNC_DOMAIN_SET } from './binary-sync-packages.ts'
 import { parseDep, versionSatisfies } from './build-package'
@@ -2156,6 +2156,7 @@ else {
         const recipe = (await loadRecipe(domain, platform, candidateVersion)).recipe
         selectPublishedFiles(installDir, recipe.publish?.include)
         writeProgramInterfaces(installDir, recipe.sourceablePrograms)
+        writeRuntimeEnvironment(installDir, recipe.runtime?.env)
         const runtime = await downloadRuntimePackages(domain, candidateVersion, platform, depsDir, bucket, region)
         await fixUp(installDir, platform, [], runtime)
         usedVersion = candidateVersion

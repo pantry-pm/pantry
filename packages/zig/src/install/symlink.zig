@@ -1,4 +1,5 @@
 const std = @import("std");
+const runtime_environment = @import("runtime_environment.zig");
 const io_helper = @import("../io_helper.zig");
 const lib = @import("../lib.zig");
 const builtin = @import("builtin");
@@ -158,6 +159,12 @@ pub fn resolvedActivationTarget(allocator: std.mem.Allocator, path: []const u8) 
     if (metadata.size > 64 * 1024) return null;
     const content = io_helper.readFileAlloc(allocator, path, 64 * 1024) catch return null;
     defer allocator.free(content);
+    if (std.mem.startsWith(u8, content, runtime_environment.marker)) {
+        const target = runtime_environment.activationTarget(allocator, content, shim_locate_self) orelse return null;
+        if (std.fs.path.isAbsolute(target)) return target;
+        defer allocator.free(target);
+        return std.fs.path.resolve(allocator, &.{ std.fs.path.dirname(path) orelse ".", target }) catch null;
+    }
     const suffix = "\" \"$@\"\n";
     if (!std.mem.endsWith(u8, content, suffix)) return null;
     const relative_prefix = "#!/bin/sh\n" ++ shim_locate_self ++ "exec \"$d/";
@@ -310,6 +317,7 @@ fn createBinaryActivation(
     // Reject invalid package interfaces even when an existing owner keeps the
     // link. Validation must precede every successful return and link mutation.
     const use_shim = try requiresForwardingShimForPackage(allocator, bin_path, package_domain);
+    try validateActivationRuntime(allocator, bin_path, package_domain, use_shim);
 
     // Check if symlink already exists from a different package — don't overwrite.
     // Always log a structured message (even in CI) so `pantry doctor` and CI logs
@@ -347,7 +355,7 @@ fn createBinaryActivation(
 
     // Ownership was checked above; use the same atomic publication primitive
     // for project, environment and legacy global entries.
-    try publishProgramActivation(allocator, symlink_path, bin_path, install_base, use_shim);
+    try publishProgramActivation(allocator, symlink_path, bin_path, install_base, use_shim, package_domain);
     if (!style.isCI()) style.print("  ✓ Created activation: {s} -> {s}\n", .{ bin_name, bin_path });
 }
 
@@ -414,7 +422,7 @@ fn requiresForwardingShimForPackage(allocator: std.mem.Allocator, path: []const 
 pub fn createProgramActivation(allocator: std.mem.Allocator, link: []const u8, source: []const u8, tree_root: ?[]const u8) !void {
     const domain = try managedPackageDomain(allocator, source, tree_root);
     const use_shim = try requiresForwardingShimForPackage(allocator, source, domain);
-    try publishProgramActivation(allocator, link, source, tree_root, use_shim);
+    try publishProgramActivation(allocator, link, source, tree_root, use_shim, domain);
 }
 
 /// Repair scans recover package identity only from the installer's managed
@@ -451,10 +459,11 @@ fn managedPackageDomain(allocator: std.mem.Allocator, source: []const u8, tree_r
     return package.domain;
 }
 
-fn publishProgramActivation(allocator: std.mem.Allocator, link: []const u8, source: []const u8, tree_root: ?[]const u8, use_shim: bool) !void {
+fn publishProgramActivation(allocator: std.mem.Allocator, link: []const u8, source: []const u8, tree_root: ?[]const u8, use_shim: bool, domain: ?[]const u8) !void {
     io_helper.cwd().access(io_helper.io, source, .{}) catch return error.TargetNotFound;
+    try validateActivationRuntime(allocator, source, domain, use_shim);
     if (use_shim) {
-        if (!writeForwardingShim(allocator, link, source, tree_root)) return error.ProgramActivationFailed;
+        if (!writeShimWithContext(allocator, link, "", source, tree_root, &.{}, domain)) return error.ProgramActivationFailed;
     } else if (builtin.os.tag == .windows) {
         io_helper.deleteFile(link) catch {};
         try symLinkInTree(allocator, tree_root, source, link);
@@ -481,7 +490,7 @@ fn publishProgramActivation(allocator: std.mem.Allocator, link: []const u8, sour
 /// Activate a program with its explicit canonical package context.
 pub fn createPackageProgramActivation(allocator: std.mem.Allocator, domain: []const u8, link: []const u8, source: []const u8, tree_root: ?[]const u8) !void {
     const use_shim = try requiresForwardingShimForPackage(allocator, source, domain);
-    try publishProgramActivation(allocator, link, source, tree_root, use_shim);
+    try publishProgramActivation(allocator, link, source, tree_root, use_shim, domain);
 }
 
 /// Shell that sets `d` to the directory a shim really lives in: `$0`, after
@@ -563,9 +572,69 @@ pub fn writeShimWithArguments(
     tree_root: ?[]const u8,
     arguments: []const []const u8,
 ) bool {
+    return writeShimWithContext(allocator, shim_path, prefix, target_path, tree_root, arguments, null);
+}
+
+fn packageRuntimeEnvironment(allocator: std.mem.Allocator, source: []const u8, domain: ?[]const u8) ![]const runtime_environment.Variable {
+    const bin_dir = std.fs.path.dirname(source) orelse return &.{};
+    const bin_name = std.fs.path.basename(bin_dir);
+    if (!std.mem.eql(u8, bin_name, "bin") and !std.mem.eql(u8, bin_name, "sbin")) return &.{};
+    const package_dir = std.fs.path.dirname(bin_dir) orelse return &.{};
+    const file = try std.fs.path.join(allocator, &.{ package_dir, "share", "pantry", "runtime.json" });
+    const content = io_helper.readFileAlloc(allocator, file, 64 * 1024) catch |err| {
+        if (err != error.FileNotFound) return err;
+        if (domain) |canonical| {
+            if (@import("../packages/generated.zig").getPackageByDomain(canonical)) |package| {
+                const variables = try allocator.alloc(runtime_environment.Variable, package.runtime_environment.len);
+                for (package.runtime_environment, variables) |variable, *copy| {
+                    copy.* = .{ .name = variable.name, .value = variable.value };
+                    try runtime_environment.validate(copy.*);
+                }
+                return variables;
+            }
+        }
+        return &.{};
+    };
+    const Record = struct { version: u32, environment: []const runtime_environment.Variable };
+    const parsed = std.json.parseFromSlice(Record, allocator, content, .{ .allocate = .alloc_always }) catch return error.InvalidPackageRuntimeEnvironment;
+    if (parsed.value.version != 1) return error.InvalidPackageRuntimeEnvironment;
+    for (parsed.value.environment, 0..) |variable, index| {
+        try runtime_environment.validate(variable);
+        for (parsed.value.environment[0..index]) |earlier| {
+            if (std.mem.eql(u8, earlier.name, variable.name)) return error.InvalidPackageRuntimeEnvironment;
+        }
+    }
+    return parsed.value.environment;
+}
+
+fn validateActivationRuntime(allocator: std.mem.Allocator, source: []const u8, domain: ?[]const u8, use_shim: bool) !void {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const environment = try packageRuntimeEnvironment(arena_state.allocator(), source, domain);
+    if (environment.len > 0 and !use_shim) return error.UnsupportedPackageRuntimeEnvironment;
+}
+
+fn writeShimWithContext(
+    allocator: std.mem.Allocator,
+    shim_path: []const u8,
+    prefix: []const u8,
+    target_path: []const u8,
+    tree_root: ?[]const u8,
+    arguments: []const []const u8,
+    provided_domain: ?[]const u8,
+) bool {
+    var arena_state = std.heap.ArenaAllocator.init(allocator);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+    const domain = provided_domain orelse (managedPackageDomain(arena, target_path, tree_root) catch return false);
+    const environment = packageRuntimeEnvironment(arena, target_path, domain) catch return false;
+    if (environment.len > 0 and prefix.len > 0) return false;
     const target = treeLinkTarget(allocator, tree_root, target_path, shim_path) catch return false;
     defer allocator.free(target);
-    const content = shimScriptWithArguments(allocator, prefix, target, arguments) catch return false;
+    const content = if (environment.len > 0)
+        runtime_environment.script(allocator, .{ .target = target, .arguments = arguments, .environment = environment }, shim_locate_self) catch return false
+    else
+        shimScriptWithArguments(allocator, prefix, target, arguments) catch return false;
     defer allocator.free(content);
 
     var random: [8]u8 = undefined;

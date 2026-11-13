@@ -12,6 +12,7 @@
  */
 
 import { cpus } from 'node:os'
+import { runtimeEnvironmentScript, type RuntimeEnvironment } from './runtime-environment'
 
 // Token for template interpolation
 export interface Token {
@@ -94,6 +95,7 @@ export interface PackageRecipe {
   programs?: string[]
   publish?: { include: string[] }
   sourceablePrograms?: string[]
+  runtime?: { env?: import('./runtime-environment').RuntimeEnvironment }
   distributable?: RecipeDistributable | null
   dependencies?: RecipeDependencyMap
   buildDependencies?: RecipeDependencyMap
@@ -551,6 +553,7 @@ export function generateBuildScript(
   depPaths: Record<string, string>,
   versionTag?: string,
   pythonModulePaths: readonly string[] = [],
+  dependencyEnvironment: RuntimeEnvironment = {},
 ): string {
   const tokens = buildTokens(pkg, version, platform, prefix, buildDir, depPaths, versionTag)
   const dashIdx = platform.indexOf('-')
@@ -1044,6 +1047,9 @@ export function generateBuildScript(
 
     sections.push('')
   }
+
+  const runtimeDefaults = runtimeEnvironmentScript(dependencyEnvironment)
+  if (runtimeDefaults) sections.push('# Declared dependency runtime defaults', runtimeDefaults, '')
 
   // Compiler wrapper: filter -Werror, resolve -shared/-pie conflicts, and work around
   // GCC ./specs directory issue. On Linux (Ubuntu 24.04), GCC reads `./specs` from CWD.

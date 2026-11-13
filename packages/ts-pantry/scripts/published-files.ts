@@ -1,5 +1,6 @@
 import { existsSync, lstatSync, mkdirSync, readdirSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { resolveRuntimeEnvironment, type RuntimeEnvironment } from './runtime-environment'
 
 /** Apply the recipe's public product boundary before inspecting native runtimes. */
 export function selectPublishedFiles(prefix: string, patterns?: string[]): void {
@@ -35,4 +36,17 @@ export function writeProgramInterfaces(prefix: string, sourceablePrograms?: stri
   const directory = join(prefix, 'share/pantry')
   mkdirSync(directory, { recursive: true })
   writeFileSync(join(directory, 'interfaces.json'), JSON.stringify({ version: 1, sourceablePrograms }) + '\n')
+}
+
+/** Keep runtime defaults with the checksummed package instead of its build prefix. */
+export function writeRuntimeEnvironment(prefix: string, environment?: RuntimeEnvironment): void {
+  if (!environment) return
+  resolveRuntimeEnvironment(environment, prefix)
+  const variables = Object.entries(environment).map(([name, value]) => ({ name, value }))
+  const content = JSON.stringify({ version: 1, environment: variables }) + '\n'
+  if (Buffer.byteLength(content) > 64 * 1024)
+    throw new Error('Package runtime environment exceeds its metadata limit')
+  const directory = join(prefix, 'share/pantry')
+  mkdirSync(directory, { recursive: true })
+  writeFileSync(join(directory, 'runtime.json'), content)
 }

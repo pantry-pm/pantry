@@ -99,6 +99,8 @@ export interface Recipe {
   sourceablePrograms?: string[]
   /** Data needed beside this package's libraries when another artifact bundles them. */
   runtimeResources?: string[] | ((version: string) => string[])
+  /** Literal runtime defaults, including package-relative data directories. */
+  runtime?: { env?: import('./runtime-environment').RuntimeEnvironment }
 
   /**
    * Runtime dependencies (domain → version constraint). Values may also be a
@@ -203,6 +205,7 @@ export interface LoadedRecipe {
     platforms?: string[]
     publish?: { include: string[] }
     sourceablePrograms?: string[]
+    runtime?: { env?: import('./runtime-environment').RuntimeEnvironment }
     runtimeResources?: string[]
     test?: any
   }

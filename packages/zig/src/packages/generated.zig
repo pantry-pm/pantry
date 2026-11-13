@@ -13,6 +13,11 @@ pub const ProgramVersion = struct {
     before: ?u32 = null,
 };
 
+pub const RuntimeEnvironmentVariable = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
 /// Package information
 pub const PackageInfo = struct {
     name: []const u8,
@@ -23,6 +28,7 @@ pub const PackageInfo = struct {
     programs: []const []const u8,
     program_versions: []const ProgramVersion = &.{},
     sourceable_programs: []const []const u8 = &.{},
+    runtime_environment: []const RuntimeEnvironmentVariable = &.{},
     dependencies: []const []const u8,
     build_dependencies: []const []const u8,
     aliases: []const []const u8,
@@ -17452,6 +17458,7 @@ pub const packages = [_]PackageInfo{ .{
     .description = "SWIG is a software development tool that connects programs written in C and C++ with a variety of high-level programming languages.",
     .homepage_url = "https://www.swig.org/",
     .programs = &[_][]const u8{ "swig", "ccache-swig" },
+    .runtime_environment = &[_]RuntimeEnvironmentVariable{.{ .name = "SWIG_LIB", .value = "{{prefix}}/lib" }},
     .dependencies = &[_][]const u8{"pcre.org/v2"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},

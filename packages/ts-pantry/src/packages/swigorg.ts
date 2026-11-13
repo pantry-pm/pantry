@@ -138,6 +138,9 @@ export const swigorgPackage = {
     '1.3.6',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: {
+    SWIG_LIB: '{{prefix}}/lib' as const,
+  },
 }
 
 export type SwigorgPackage = typeof swigorgPackage

@@ -2,12 +2,31 @@ import { expect, test } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { selectPublishedFiles } from '../scripts/published-files'
+import { selectPublishedFiles, writeRuntimeEnvironment } from '../scripts/published-files'
 import { recipe } from '../src/recipes/postgresql.org/libpq'
 import { recipe as freetype } from '../src/recipes/freetype.org'
 import { recipe as x11 } from '../src/recipes/x.org/x11'
 import { recipe as xcb } from '../src/recipes/x.org/xcb'
 import { recipe as kerberos } from '../src/recipes/kerberos.org'
+
+test('published runtime metadata retains relocatable templates and survives rejected updates', () => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-runtime-metadata-'))
+  try {
+    const file = join(root, 'share/pantry/runtime.json')
+    writeRuntimeEnvironment(root, { DATA_ROOT: '${{prefix}}/share', LITERAL: 'dollar$ " quote\'' })
+    const original = readFileSync(file, 'utf8')
+    const metadata = JSON.parse(original) as { version: number, environment: Array<{ name: string, value: string }> }
+    expect(metadata.version).toBe(1)
+    expect(Object.fromEntries(metadata.environment.map(variable => [variable.name, variable.value])))
+      .toEqual({ DATA_ROOT: '${{prefix}}/share', LITERAL: 'dollar$ " quote\'' })
+    expect(original.includes(root)).toBe(false)
+    expect(() => writeRuntimeEnvironment(root, { 'BAD-NAME': 'value' })).toThrow('runtime variable')
+    expect(readFileSync(file, 'utf8')).toBe(original)
+    expect(() => writeRuntimeEnvironment(root, { TOO_LARGE: 'x'.repeat(65536) })).toThrow('metadata limit')
+    expect(readFileSync(file, 'utf8')).toBe(original)
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
 
 test('Kerberos excludes private OpenSSL linker aliases before canonical runtime bundling', () => {
   const root = mkdtempSync(join(tmpdir(), 'pantry-kerberos-products-'))

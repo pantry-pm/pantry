@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.20)
+project(PantryRuntimeEnvironment LANGUAGES C)
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+find_package(SWIG 4 REQUIRED)
+set(LLDB_ENABLE_SWIG ON)
+find_package(PythonAndSwig REQUIRED)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/discovered.txt"
+  "${SWIG_EXECUTABLE}\n${Python3_EXECUTABLE}\n${Python3_LIBRARIES}\n${Python3_INCLUDE_DIRS}\n")
+include(UseSWIG)
+swig_add_library(pantry_runtime_environment_probe LANGUAGE python SOURCES probe.i)
+target_link_libraries(pantry_runtime_environment_probe PRIVATE Python3::Python)

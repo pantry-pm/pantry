@@ -18,6 +18,9 @@ export const recipe: Recipe = {
   dependencies: {
     'pcre.org/v2': '*',
   },
+  runtime: {
+    env: { SWIG_LIB: '{{prefix}}/lib' },
+  },
 
   build: {
     script: [
@@ -25,6 +28,24 @@ export const recipe: Recipe = {
       'make --jobs {{hw.concurrency}}',
       'make install',
       '',
+    ],
+  },
+  test: {
+    required: true,
+    script: [
+      '"{{prefix}}/bin/swig" -version',
+      'test -f "$("{{prefix}}/bin/swig" -swiglib)/swig.swg"',
+      `cat > probe.i <<'PANTRY_SWIG'
+%module pantry_swig_probe
+%inline %{
+int answer(void) {
+  return 42;
+}
+%}
+PANTRY_SWIG`,
+      '"{{prefix}}/bin/swig" -python -o probe_wrap.c probe.i',
+      'test -s probe_wrap.c',
+      'test -s pantry_swig_probe.py',
     ],
   },
 }
