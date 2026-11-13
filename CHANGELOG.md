@@ -1,3 +1,24 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.204...HEAD)
+
+## 🐛 Bug Fixes
+
+- export authoritative package metadata without fabrication (#349) ([0d2eb1e](https://github.com/pantry-pm/pantry/commit/0d2eb1e)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#349](https://github.com/pantry-pm/pantry/issues/349))
+- own portable Darwin Git inputs and verify real native consumers (#346) ([b83e1c0](https://github.com/pantry-pm/pantry/commit/b83e1c0)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#346](https://github.com/pantry-pm/pantry/issues/346))
+- build portable Curl with qualified IDN and compression runtimes (#346) ([97c887c](https://github.com/pantry-pm/pantry/commit/97c887c)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#346](https://github.com/pantry-pm/pantry/issues/346))
+- **ci**: retain each native Zig build qualification ([57692f1](https://github.com/pantry-pm/pantry/commit/57692f1)) _(by Chris Breuer <chris@stacksjs.com>)_
+- build portable IDN against the owned Unicode runtime (#346) ([bbdfa5e](https://github.com/pantry-pm/pantry/commit/bbdfa5e)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#346](https://github.com/pantry-pm/pantry/issues/346))
+- backport the supported Zstd LZ4 checksum API (#348) ([8158beb](https://github.com/pantry-pm/pantry/commit/8158beb)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#348](https://github.com/pantry-pm/pantry/issues/348))
+- preserve macOS 14 across Unicode and zstd dependencies ([8e7f165](https://github.com/pantry-pm/pantry/commit/8e7f165)) _(by Chris Breuer <chris@stacksjs.com>)_
+- build portable Darwin compression and iconv prerequisites ([6bcf130](https://github.com/pantry-pm/pantry/commit/6bcf130)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.205 ([d2aa61e](https://github.com/pantry-pm/pantry/commit/d2aa61e)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.203...v0.11.204)
 
 ## 🐛 Bug Fixes
