@@ -117,6 +117,13 @@ describe('pkgxHasPrebuilt', () => {
 describe('targeted-build failure classification', () => {
   const latest = new Map([['cmake.org', '4.4.3'], ['lz4.org', '1.10.0']])
 
+  test.each([true, false])('a current targeted version remains required when its domain is excluded from broad sweeps (multi-version: %s)', (multiVersion) => {
+    const failed: Array<[string, { version: string }]> = [[multiVersion ? 'llvm.org@23.1.5.1' : 'llvm.org', { version: '23.1.5.1' }]]
+    const { fatal, backfill } = classify(failed, new Map([['llvm.org', '23.1.5.1']]), new Set(['llvm.org']), multiVersion)
+    expect(fatal).toEqual(failed)
+    expect(backfill).toEqual([])
+  })
+
   test('every exact LTS pin is fatal even when a newer family succeeds', () => {
     const failed: Array<[string, { version: string }]> = [['mysql.com@8.4.11', { version: '8.4.11' }]]
     const latest = new Map([['mysql.com', '26.7.0']])
@@ -147,9 +154,17 @@ describe('targeted-build failure classification', () => {
     expect(fatal.map(([k]) => k)).toEqual(['cmake.org@4.4.3'])
   })
 
-  test('known-broken domains are excluded from both buckets', () => {
+  test('known-broken domains do not rescue a current targeted failure', () => {
     const { fatal, backfill } = classify(
       [['cmake.org@4.4.3', { version: '4.4.3' }]], latest, new Set(['cmake.org']),
+    )
+    expect(fatal).toHaveLength(1)
+    expect(backfill).toHaveLength(0)
+  })
+
+  test('unrequested historical versions of known-broken domains remain outside both buckets', () => {
+    const { fatal, backfill } = classify(
+      [['cmake.org@3.28.5', { version: '3.28.5' }]], latest, new Set(['cmake.org']),
     )
     expect(fatal).toHaveLength(0)
     expect(backfill).toHaveLength(0)

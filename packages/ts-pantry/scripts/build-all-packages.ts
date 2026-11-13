@@ -1685,7 +1685,7 @@ export const CUSTOM_BUILD_DOMAINS: ReadonlySet<string> = new Set<string>([
   'freedesktop.org/at-spi2-core/libatspi', // client ABI only; no accessibility session services
 ])
 
-/** Every explicitly pinned version is required, including an older LTS release. */
+/** Current targeted versions and every exact pin are required, even when broad sweeps exclude the domain. */
 export function classifyTargetedFailures<T extends { version: string }>(
   failed: Array<[string, T]>,
   latestOf: ReadonlyMap<string, string>,
@@ -1699,7 +1699,7 @@ export function classifyTargetedFailures<T extends { version: string }>(
     const latest = latestOf.get(domainOf(entry[0]))
     return explicitlyPinned(entry) || latest === undefined || entry[1].version === latest
   }
-  const eligible = failed.filter(entry => explicitlyPinned(entry) || !knownBroken.has(domainOf(entry[0])))
+  const eligible = failed.filter(entry => required(entry) || !knownBroken.has(domainOf(entry[0])))
   return { fatal: eligible.filter(required), backfill: eligible.filter(entry => !required(entry)) }
 }
 
