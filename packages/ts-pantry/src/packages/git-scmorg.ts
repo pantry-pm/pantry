@@ -7,7 +7,8 @@
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-scm.org`
- * @dependencies `zlib.net@1`, `curl.se>=5`, `curl.se/ca-certs`, ... (+4 more) (includes platform-specific dependencies)
+ * @dependencies `zlib.net@1`, `curl.se^8.23.0.2`, `curl.se/ca-certs`, ... (+5 more) (includes platform-specific dependencies)
+ * @buildDependencies `rust-lang.org>=1.49`, `rust-lang.org/cargo` - required only when building from source
  *
  * @example
  * ```typescript
@@ -66,14 +67,22 @@ export const gitscmorgPackage = {
   */
   dependencies: [
     'zlib.net@1',
-    'curl.se>=5',
+    'curl.se^8.23.0.2',
     'curl.se/ca-certs',
     'perl.org',
     'libexpat.github.io~2',
     'gnu.org/gettext^0.21',
     'linux:gnu.org/libiconv',
+    'darwin:gnu.org/libiconv^1.19.0.2',
   ] as const,
-  buildDependencies: [] as const,
+  /**
+  * Build dependencies for this package.
+  * These are only required when building the package from source.
+  */
+  buildDependencies: [
+    'rust-lang.org>=1.49',
+    'rust-lang.org/cargo',
+  ] as const,
   /**
   * Available versions from newest to oldest.
   * @see https://ts-pantry.netlify.app/usage for installation instructions
@@ -139,10 +148,10 @@ export const gitscmorgPackage = {
   ] as const,
   aliases: [] as const,
   platformPrograms: {
-  darwin: [
-    'git-credential-osxkeychain',
-  ] as const,
-},
+    darwin: [
+      'git-credential-osxkeychain',
+    ] as const,
+  },
 }
 
 export type GitscmorgPackage = typeof gitscmorgPackage

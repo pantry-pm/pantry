@@ -247,7 +247,7 @@ function formatObjectWithAsConst(obj: Record<string, any>): string {
     }
     else if (typeof value === 'object') {
       // Nested objects
-      lines.push(`  ${key}: ${formatObjectWithAsConst(value)},`)
+      lines.push(`  ${key}: ${formatObjectWithAsConst(value).replace(/\n/g, '\n  ')},`)
     }
     else {
       // Fallback for other types - convert JSON.stringify output to use single quotes

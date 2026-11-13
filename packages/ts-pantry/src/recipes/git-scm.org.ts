@@ -10,13 +10,16 @@ export const recipe: Recipe = {
   platformPrograms: { darwin: ['git-credential-osxkeychain'] },
   dependencies: {
     'zlib.net': '1',
-    'curl.se': '>=5',
+    'curl.se': '^8.23.0.2',
     'curl.se/ca-certs': '*',
     'perl.org': '*',
     'libexpat.github.io': '~2',
     'gnu.org/gettext': '^0.21',
     linux: {
       'gnu.org/libiconv': '*',
+    },
+    darwin: {
+      'gnu.org/libiconv': '^1.19.0.2',
     },
   },
   buildDependencies: {
@@ -36,6 +39,10 @@ export const recipe: Recipe = {
   build: {
     script: [
       'mv props/config.mak .',
+      {
+        run: 'printf \'%s\\n\' \'NO_HOMEBREW = YesPlease\' \'ICONVDIR = {{deps.gnu.org/libiconv.prefix}}\' \'HAS_GOOD_LIBICONV = YesPlease\' >> config.mak',
+        if: 'darwin',
+      },
 
       [
         './configure',
@@ -97,11 +104,12 @@ export const recipe: Recipe = {
   test: {
     required: true,
     script: [
-      // Build dependencies have temporary paths. Reproduce the installation
-      // layout before checking Linux's loader without the build environment.
-      `if [ "$(uname -s)" = Linux ]; then
-        runtime="$(mktemp -d)"
-        trap 'rm -rf "$runtime"' EXIT
+      // Reproduce Linux's installed loader layout, then exercise the same
+      // native Git configuration and alias paths required by real consumers.
+      `runtime="$(mktemp -d)"
+      trap 'rm -rf "$runtime"' EXIT
+      git="{{prefix}}/bin/git"
+      if [ "$(uname -s)" = Linux ]; then
         mkdir -p "$runtime/git-scm.org/v{{version}}"
         cp -a "{{prefix}}/." "$runtime/git-scm.org/v{{version}}/"
         IFS=: read -r -a runtime_libs <<< "\${LD_LIBRARY_PATH:-}"
@@ -114,12 +122,17 @@ export const recipe: Recipe = {
         done
         mkdir -p "$runtime/gnu.org/gettext/v{{deps.gnu.org/gettext.version}}"
         ln -s "{{deps.gnu.org/gettext.prefix}}/bin" "$runtime/gnu.org/gettext/v{{deps.gnu.org/gettext.version}}/bin"
-        env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" --version
-        env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" init "$runtime/repo"
-        env -u LD_LIBRARY_PATH "$runtime/git-scm.org/v{{version}}/bin/git" -C "$runtime/repo" submodule foreach --recursive true
-      else
-        "{{prefix}}/bin/git" --version
-      fi`,
+        git="$runtime/git-scm.org/v{{version}}/bin/git"
+      fi
+      env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" --version
+      env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" init "$runtime/repo"
+      env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" submodule foreach --recursive true
+      env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" config pantry.nativeprobe PantryGit
+      env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" config alias.nativeprobe 'config --get pantry.nativeprobe'
+      test "$(env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" nativeprobe)" = PantryGit
+      printf '%s\\n' PantryGit > "$runtime/repo/native-probe"
+      env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" add native-probe
+      test "$(env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" ls-files)" = native-probe`,
     ],
   },
 }
