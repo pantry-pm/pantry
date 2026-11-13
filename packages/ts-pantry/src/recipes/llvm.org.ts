@@ -3,10 +3,11 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'llvm.org',
   name: 'llvm',
+  revisions: { '23.1.5': 1 },
   description: 'The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.',
   homepage: 'https://llvm.org',
   github: 'https://github.com/llvm/llvm-project',
-  programs: ['lld', 'clang', 'clang++', 'cc', 'c++', 'cpp', 'nm', 'objcopy', 'ranlib', 'readelf', 'strings', 'strip', 'llvm-profdata', 'llvm-cov'],
+  programs: ['lld', 'lldb', 'clang', 'clang++', 'cc', 'c++', 'cpp', 'nm', 'objcopy', 'ranlib', 'readelf', 'strings', 'strip', 'llvm-profdata', 'llvm-cov'],
   versionSource: {
     type: 'github-releases',
     repo: 'llvm/llvm-project',
@@ -19,6 +20,7 @@ export const recipe: Recipe = {
   dependencies: {
     'zlib.net': '1',
     'facebook.com/zstd': '*',
+    'invisible-island.net/ncurses': '^6.6.0.1',
   },
   buildDependencies: {
     'cmake.org': '>=3<3.29',
@@ -71,6 +73,7 @@ export const recipe: Recipe = {
     script: [
       '"{{prefix}}/bin/clang" --version',
       '"{{prefix}}/bin/clang++" --version',
+      '"{{prefix}}/bin/lldb" --version',
       `cat > compiler-consumer.cpp <<'PANTRY_CPP'
 #include <cstdio>
 #include <vector>

@@ -2,14 +2,14 @@
  * **llvm** - The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.
  *
  * @domain `llvm.org`
- * @programs `lld`, `clang`, `clang++`, `cc`, `c++`, ... (+9 more)
- * @version `23.1.5` (69 versions available)
+ * @programs `lld`, `lldb`, `clang`, `clang++`, `cc`, ... (+10 more)
+ * @version `23.1.5.1` (70 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install llvm.org`
  * @homepage http://llvm.org
- * @dependencies `zlib.net@1`, `facebook.com/zstd`
- * @buildDependencies `cmake.org@>=3<3.29`, `python.org@>=3<3.12`, `crates.io/semverator` - required only when building from source
+ * @dependencies `zlib.net@1`, `facebook.com/zstd`, `invisible-island.net/ncurses^6.6.0.1`
+ * @buildDependencies `cmake.org>=3<3.29`, `ninja-build.org@1`, `python.org>=3<3.12`, ... (+1 more) - required only when building from source
  *
  * @example
  * ```typescript
@@ -18,8 +18,8 @@
  * const pkg = pantry.llvmorg
  * console.log(pkg.name)        // "llvm"
  * console.log(pkg.description) // "The LLVM Project is a collection of modular and..."
- * console.log(pkg.programs)    // ["lld", "clang", ...]
- * console.log(pkg.versions[0]) // "23.1.5" (latest)
+ * console.log(pkg.programs)    // ["lld", "lldb", ...]
+ * console.log(pkg.versions[0]) // "23.1.5.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/llvm-org.md
@@ -53,6 +53,7 @@ export const llvmorgPackage = {
   */
   programs: [
     'lld',
+    'lldb',
     'clang',
     'clang++',
     'cc',
@@ -75,14 +76,16 @@ export const llvmorgPackage = {
   dependencies: [
     'zlib.net@1',
     'facebook.com/zstd',
+    'invisible-island.net/ncurses^6.6.0.1',
   ] as const,
   /**
   * Build dependencies for this package.
   * These are only required when building the package from source.
   */
   buildDependencies: [
-    'cmake.org@>=3<3.29',
-    'python.org@>=3<3.12',
+    'cmake.org>=3<3.29',
+    'ninja-build.org@1',
+    'python.org>=3<3.12',
     'crates.io/semverator',
   ] as const,
   /**
@@ -90,6 +93,7 @@ export const llvmorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '23.1.5.1',
     '23.1.5',
     '23.1.4',
     '23.1.3',

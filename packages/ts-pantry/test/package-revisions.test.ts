@@ -7,6 +7,30 @@ import { compareVersionsDesc, resolveVersionFromMetadata } from '../src/version-
 import { parseInstallerConstraint, satisfiesInstallerConstraint } from '../src/installer'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { llvmorgPackage } from '../src/packages/llvmorg'
+import { versionSatisfies } from '../scripts/build-package'
+
+test('the LLVM runtime repair executes its owned recipe and retains the vendor source identity', async () => {
+  for (const platform of ['darwin-arm64', 'linux-x86-64', 'linux-arm64']) {
+    const loaded = await loadRecipe('llvm.org', platform, '23.1.5.1')
+    expect(loaded.upstreamVersion).toBe('23.1.5')
+    expect(loaded.publicationVersion).toBe('23.1.5.1')
+    expect(loaded.requiresRecipeBuild).toBe(true)
+    expect(recipeAllowsMirror('23.1.5.1', {
+      upstream: loaded.upstreamVersion!, current: loaded.publicationVersion!,
+    }, loaded.requiresRecipeBuild)).toBe(false)
+    expect(() => requireCurrentRecipeBuild('23.1.5', loaded.publicationVersion!)).toThrow('refusing to replace')
+    const tokens = buildTokens('llvm.org', loaded.upstreamVersion!, platform, '/package/v23.1.5.1', '/source', {})
+    expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toBe('https://github.com/llvm/llvm-project/releases/download/llvmorg-23.1.5/llvm-project-23.1.5.src.tar.xz')
+    expect(loaded.recipe.test?.required).toBe(true)
+    const constraint = loaded.recipe.dependencies?.['invisible-island.net/ncurses']
+    expect(constraint).toBeString()
+    expect(versionSatisfies('6.6.0', constraint)).toBe(false)
+    expect(versionSatisfies('6.6.0.1', constraint)).toBe(true)
+  }
+  expect(llvmorgPackage.versions[0]).toBe('23.1.5.1')
+  expect(llvmorgPackage.dependencies).toContain('invisible-island.net/ncurses^6.6.0.1')
+})
 
 test('packaging revisions preserve vendor releases and existing unrevised identities', () => {
   expect(revisedPackageVersions(['1.2.3', '1.2.2'])).toEqual(['1.2.3', '1.2.2'])
