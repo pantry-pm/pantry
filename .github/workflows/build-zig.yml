@@ -13,8 +13,9 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: build-zig-${{ github.ref }}
-  cancel-in-progress: true
+  # Each source revision must finish its native qualification independently.
+  group: build-zig-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   compile-all:
