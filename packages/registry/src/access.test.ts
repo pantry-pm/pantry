@@ -9,6 +9,8 @@ import { S3RequestError } from './storage/aws-client'
 import { effectiveTier } from './subscriptions'
 
 const ADMIN_TOKEN = 'ptry_test_admin_token_for_access_tests'
+const OWNED_QUERY = 'registry-visibility-fixture'
+const OWNED_PACKAGES = Array.from({ length: 20 }, (_, index) => `${OWNED_QUERY}-${String(index).padStart(2, '0')}`)
 
 /** Binary storage stub so /binaries/... has something real to gate. */
 class MockBinaryStorage implements BinaryStorage {
@@ -53,7 +55,17 @@ describe('registry visibility', () => {
     auth = new AuthService(authStorage)
     binaries = new MockBinaryStorage()
     binaries.put('binaries/curl.se/metadata.json', JSON.stringify({ name: 'curl.se', versions: {} }))
-    server = createServer(createLocalRegistry(baseUrl), port, undefined, undefined, binaries, undefined, authStorage)
+    const registry = createLocalRegistry(baseUrl)
+    // Keep the real default fallback policy. A complete owned search page and
+    // local metadata reads keep access-policy tests independent of npm latency.
+    for (const name of OWNED_PACKAGES) {
+      await registry.metadata.putVersion(name, '1.0.0', {
+        name, version: '1.0.0', description: 'Owned registry visibility fixture',
+        publishedAt: '2026-11-13T00:00:00Z',
+      })
+    }
+    expect(registry.npmFallbackEnabled).toBe(true)
+    server = createServer(registry, port, undefined, undefined, binaries, undefined, authStorage)
     server.start()
   }
 
@@ -129,8 +141,10 @@ describe('registry visibility', () => {
 
   describe('public registry', () => {
     it('serves reads without a credential', async () => {
-      const search = await fetch(`${baseUrl}/search?q=curl&format=json`)
+      const search = await fetch(`${baseUrl}/search?q=${OWNED_QUERY}&format=json`)
       expect(search.status).toBe(200)
+      const results = await search.json() as { results: Array<{ name: string }> }
+      expect(results.results.map(result => result.name).sort()).toEqual(OWNED_PACKAGES)
 
       const binary = await fetch(`${baseUrl}/binaries/curl.se/metadata.json`)
       expect(binary.status).toBe(200)
@@ -448,8 +462,11 @@ describe('registry visibility', () => {
       const events: string[] = []
       setPlugins([{ name: 'audit', onEvent: e => { events.push(e.type) } }])
 
-      await fetch(`${baseUrl}/packages/left-pad`)
-      await fetch(`${baseUrl}/packages/left-pad`, { headers: { Authorization: `Bearer ${ADMIN_TOKEN}` } })
+      const denied = await fetch(`${baseUrl}/packages/${OWNED_PACKAGES[0]}`)
+      expect(denied.status).toBe(401)
+      const granted = await fetch(`${baseUrl}/packages/${OWNED_PACKAGES[0]}`, { headers: { Authorization: `Bearer ${ADMIN_TOKEN}` } })
+      expect(granted.status).toBe(200)
+      expect((await granted.json() as { name: string }).name).toBe(OWNED_PACKAGES[0])
       await Bun.sleep(50)
 
       expect(events).toContain('access-denied')
