@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.203...v0.11.204)
+
+## 🐛 Bug Fixes
+
+- publish owned curl runtime closures as new revisions ([43afc01](https://github.com/pantry-pm/pantry/commit/43afc01)) _(by Chris Breuer <chris@stacksjs.com>)_
+- publish owned libunistring runtime closure as a new revision ([8bac403](https://github.com/pantry-pm/pantry/commit/8bac403)) _(by Chris Breuer <chris@stacksjs.com>)_
+- publish owned libiconv runtime closure as a new revision ([605bef7](https://github.com/pantry-pm/pantry/commit/605bef7)) _(by Chris Breuer <chris@stacksjs.com>)_
+- publish owned libidn2 runtime closure as a new revision ([be2bdd7](https://github.com/pantry-pm/pantry/commit/be2bdd7)) _(by Chris Breuer <chris@stacksjs.com>)_
+- retain declared build tool libraries in loader paths ([8065904](https://github.com/pantry-pm/pantry/commit/8065904)) _(by Chris Breuer <chris@stacksjs.com>)_
+- resolve Cargo against its required libgit2 ABI ([2d24bba](https://github.com/pantry-pm/pantry/commit/2d24bba)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **runtime**: resolve bundled libraries against the current cohort ([9fed93f](https://github.com/pantry-pm/pantry/commit/9fed93f)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#343](https://github.com/pantry-pm/pantry/issues/343), [#342](https://github.com/pantry-pm/pantry/issues/342), [stacksjs/stacks#3293](https://github.com/stacksjs/stacks/issues/3293), [stacksjs/stacks#3288](https://github.com/stacksjs/stacks/issues/3288))
+
+## 🔧 Chores
+
+- release v0.11.204 ([f838316](https://github.com/pantry-pm/pantry/commit/f838316)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.202...v0.11.203)
 
 ## 🐛 Bug Fixes
