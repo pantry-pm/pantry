@@ -3,7 +3,7 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/libiconv',
   name: 'iconv',
-  revisions: { '1.19.0': 1 },
+  revisions: { '1.19.0': 2 },
   description: 'GNU charset conversion library and iconv program',
   homepage: 'https://www.gnu.org/software/libiconv/',
   programs: ['iconv'],
@@ -57,6 +57,7 @@ export const recipe: Recipe = {
       },
     ],
     env: {
+      darwin: { MACOSX_DEPLOYMENT_TARGET: '14.0' },
       ARGS: [
         '--prefix={{prefix}}',
         '--disable-debug',

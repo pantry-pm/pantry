@@ -3,7 +3,7 @@
  *
  * @domain `gnu.org/libiconv`
  * @programs `iconv`
- * @version `1.19.0.1` (4 versions available)
+ * @version `1.19.0.2` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/libiconv`
@@ -16,7 +16,7 @@
  * const pkg = pantry.gnuorglibiconv
  * console.log(pkg.name)        // "iconv"
  * console.log(pkg.programs)    // ["iconv"]
- * console.log(pkg.versions[0]) // "1.19.0.1" (latest)
+ * console.log(pkg.versions[0]) // "1.19.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/gnu-org/libiconv.md
@@ -67,6 +67,7 @@ export const gnuorglibiconvPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.19.0.2',
     '1.19.0.1',
     '1.19.0',
     '1.18.0',

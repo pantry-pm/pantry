@@ -3,7 +3,7 @@
  *
  * @domain `github.com/google/brotli`
  * @programs `brotli`
- * @version `1.2.0` (3 versions available)
+ * @version `1.2.0.1` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/google/brotli`
@@ -13,11 +13,11 @@
  * ```typescript
  * import { pantry } from 'ts-pantry'
  *
- * const pkg = pantry.githubcomgooglebrotli
+ * const pkg = pantry.githubcomgoogle
  * console.log(pkg.name)        // "brotli"
  * console.log(pkg.description) // "Generic-purpose lossless compression algorithm ..."
  * console.log(pkg.programs)    // ["brotli"]
- * console.log(pkg.versions[0]) // "1.2.0" (latest)
+ * console.log(pkg.versions[0]) // "1.2.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/google/brotli.md
@@ -66,6 +66,7 @@ export const brotliPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.2.0.1',
     '1.2.0',
     '1.1.0',
     '1.0.9',

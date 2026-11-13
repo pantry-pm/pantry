@@ -6673,7 +6673,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"cmake.org"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.2.0", "1.1.0", "1.0.9" },
+    .versions = &[_][]const u8{ "1.2.0.1", "1.2.0", "1.1.0", "1.0.9" },
 }, .{
     .name = "gops",
     .domain = "github.com/google/gops",
@@ -10271,7 +10271,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "darwin:gnu.org/gettext", "linux:gnu.org/gcc/libstdcxx@14" },
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.19.0.1", "1.19.0", "1.18.0", "1.17.0" },
+    .versions = &[_][]const u8{ "1.19.0.2", "1.19.0.1", "1.19.0", "1.18.0", "1.17.0" },
 }, .{
     .name = "idn",
     .domain = "gnu.org/libidn",
@@ -18060,7 +18060,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"darwin:gnu.org/gettext"},
     .build_dependencies = &[_][]const u8{ "gnu.org/make", "freedesktop.org/pkg-config" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "5.8.2", "5.8.1", "5.8.0", "5.6.4", "5.6.3", "5.6.2", "5.4.7", "5.4.6", "5.4.5", "5.4.4", "5.4.3", "5.4.2", "5.4.1", "5.4.0", "5.2.13", "5.2.12", "5.2.11", "5.2.10", "5.2.7" },
+    .versions = &[_][]const u8{ "5.8.2.1", "5.8.2", "5.8.1", "5.8.0", "5.6.4", "5.6.3", "5.6.2", "5.4.7", "5.4.6", "5.4.5", "5.4.4", "5.4.3", "5.4.2", "5.4.1", "5.4.0", "5.2.13", "5.2.12", "5.2.11", "5.2.10", "5.2.7" },
 }, .{
     .name = "Tunnelblick",
     .domain = "tunnelblick.net",

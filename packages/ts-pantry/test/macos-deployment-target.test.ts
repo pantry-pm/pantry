@@ -21,6 +21,25 @@ const legacy = (minimum: string): string => `Load command 1
       sdk 27.0
 `
 
+for (const [domain, upstream, publication] of [
+  ['gnu.org/libiconv', '1.19.0', '1.19.0.2'],
+  ['github.com/google/brotli', '1.2.0', '1.2.0.1'],
+  ['tukaani.org/xz', '5.8.2', '5.8.2.1'],
+]) {
+  test(`${domain} publishes a portable source revision with required real consumers`, async () => {
+    const loaded = await loadRecipe(domain, 'darwin-arm64', upstream)
+    expect(loaded.upstreamVersion).toBe(upstream)
+    expect(loaded.publicationVersion).toBe(publication)
+    expect(loaded.requiresRecipeBuild).toBe(true)
+    expect(loaded.recipe.test?.required).toBe(true)
+    const env = loaded.recipe.build!.env ?? {}
+    expect(platformReduce(env, 'darwin-arm64').MACOSX_DEPLOYMENT_TARGET).toBe('14.0')
+    expect(platformReduce(env, 'linux-arm64').MACOSX_DEPLOYMENT_TARGET).toBeUndefined()
+    const script = generateBuildScript(loaded.recipe, domain, upstream, 'darwin-arm64', `/package/v${publication}`, '/source', {})
+    expect(script).toContain('export MACOSX_DEPLOYMENT_TARGET="14.0"')
+  })
+}
+
 test('the revised expat recipe declares its Darwin baseline through the normal recipe loader', async () => {
   const loaded = await loadRecipe('libexpat.github.io', 'darwin-arm64', '2.10.0.1')
   expect(loaded.upstreamVersion).toBe('2.10.0')
