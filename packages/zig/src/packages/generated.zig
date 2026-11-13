@@ -10290,10 +10290,10 @@ pub const packages = [_]PackageInfo{ .{
     .description = "International domain name library (IDNA2008, Punycode and TR46)",
     .homepage_url = "https://www.gnu.org/software/libidn/#libidn2",
     .programs = &[_][]const u8{"idn2"},
-    .dependencies = &[_][]const u8{"gnu.org/gettext"},
-    .build_dependencies = &[_][]const u8{"gnu.org/texinfo"},
+    .dependencies = &[_][]const u8{ "gnu.org/gettext", "gnu.org/libunistring^1" },
+    .build_dependencies = &[_][]const u8{ "gnu.org/texinfo", "freedesktop.org/pkg-config" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.3.8", "2.3.7", "2.3.6", "2.3.5", "2.3.4" },
+    .versions = &[_][]const u8{ "2.3.8.1", "2.3.8", "2.3.7", "2.3.6", "2.3.5", "2.3.4" },
 }, .{
     .name = "libmicrohttpd",
     .domain = "gnu.org/libmicrohttpd",
