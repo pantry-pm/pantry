@@ -3,13 +3,13 @@
  *
  * @domain `facebook.com/zstd`
  * @programs `pzstd`, `unzstd`, `zstd`, `zstdcat`, `zstdgrep`, ... (+2 more)
- * @version `1.5.7` (5 versions available)
+ * @version `1.5.7.1` (6 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install facebook.com/zstd`
  * @homepage https://facebook.github.io/zstd/
- * @dependencies `lz4.org^1`, `tukaani.org/xz^5`, `zlib.net^1`
- * @buildDependencies `cmake.org@^3` - required only when building from source
+ * @dependencies `lz4.org^1`, `tukaani.org/xz^5.8.2.1`, `zlib.net^1`
+ * @buildDependencies `cmake.org^3`, `ninja-build.org^1` - required only when building from source
  *
  * @example
  * ```typescript
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "zstd"
  * console.log(pkg.description) // "Zstandard - Fast real-time compression algorithm"
  * console.log(pkg.programs)    // ["pzstd", "unzstd", ...]
- * console.log(pkg.versions[0]) // "1.5.7" (latest)
+ * console.log(pkg.versions[0]) // "1.5.7.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/facebook-com/zstd.md
@@ -67,7 +67,7 @@ export const facebookcomzstdPackage = {
   */
   dependencies: [
     'lz4.org^1',
-    'tukaani.org/xz^5',
+    'tukaani.org/xz^5.8.2.1',
     'zlib.net^1',
   ] as const,
   /**
@@ -75,13 +75,15 @@ export const facebookcomzstdPackage = {
   * These are only required when building the package from source.
   */
   buildDependencies: [
-    'cmake.org@^3',
+    'cmake.org^3',
+    'ninja-build.org^1',
   ] as const,
   /**
   * Available versions from newest to oldest.
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.5.7.1',
     '1.5.7',
     '1.5.6',
     '1.5.5',

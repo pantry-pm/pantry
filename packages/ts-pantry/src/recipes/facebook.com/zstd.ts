@@ -3,6 +3,7 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'facebook.com/zstd',
   name: 'zstd',
+  revisions: { '1.5.7': 1 },
   programs: [
     'pzstd',
     'unzstd',
@@ -14,7 +15,7 @@ export const recipe: Recipe = {
   ],
   dependencies: {
     'lz4.org': '^1',
-    'tukaani.org/xz': '^5',
+    'tukaani.org/xz': '^5.8.2.1',
     'zlib.net': '^1',
   },
   buildDependencies: {
@@ -49,6 +50,7 @@ export const recipe: Recipe = {
         '-DZSTD_LZ4_SUPPORT=ON',
       ],
       darwin: {
+        MACOSX_DEPLOYMENT_TARGET: '14.0',
         ARGS: [
           '-DCMAKE_CXX_FLAGS=-std=c++11',
         ],
@@ -56,12 +58,29 @@ export const recipe: Recipe = {
     },
   },
   test: {
+    required: true,
     script: [
-      'test $(echo "$STRING" | zstd  | zstd -d) = "$STRING"',
-      'test $(echo "$STRING" | pzstd | zstd -d) = "$STRING"',
-      'test $(echo "$STRING" | xz    | zstd -d) = "$STRING"',
-      'test $(echo "$STRING" | lz4   | zstd -d) = "$STRING"',
-      'test $(echo "$STRING" | gzip  | zstd -d) = "$STRING"',
+      'STRING=PantryNativeZstd',
+      'test "$(printf %s "$STRING" | "{{prefix}}/bin/zstd" | "{{prefix}}/bin/zstd" -d)" = "$STRING"',
+      'test "$(printf %s "$STRING" | "{{prefix}}/bin/pzstd" | "{{prefix}}/bin/zstd" -d)" = "$STRING"',
+      'test "$(printf %s "$STRING" | xz | "{{prefix}}/bin/zstd" -d)" = "$STRING"',
+      'test "$(printf %s "$STRING" | lz4 | "{{prefix}}/bin/zstd" -d)" = "$STRING"',
+      'test "$(printf %s "$STRING" | gzip | "{{prefix}}/bin/zstd" -d)" = "$STRING"',
+      `cat > zstd-consumer.c <<'PANTRY_C'
+#include <zstd.h>
+#include <string.h>
+int main(void) {
+  const char input[] = "Pantry native Zstd API";
+  char encoded[256], decoded[sizeof(input)];
+  if (ZSTD_versionNumber() != ZSTD_VERSION_NUMBER) return 1;
+  size_t encoded_size = ZSTD_compress(encoded, sizeof(encoded), input, sizeof(input), 1);
+  if (ZSTD_isError(encoded_size)) return 2;
+  size_t decoded_size = ZSTD_decompress(decoded, sizeof(decoded), encoded, encoded_size);
+  return ZSTD_isError(decoded_size) || decoded_size != sizeof(input) || memcmp(input, decoded, sizeof(input)) != 0;
+}
+PANTRY_C`,
+      'cc -I"{{prefix}}/include" zstd-consumer.c -L"{{prefix}}/lib" -Wl,-rpath,"{{prefix}}/lib" -lzstd -o zstd-consumer',
+      'env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH ./zstd-consumer',
     ],
   },
 }

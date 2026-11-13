@@ -25,6 +25,8 @@ for (const [domain, upstream, publication] of [
   ['gnu.org/libiconv', '1.19.0', '1.19.0.2'],
   ['github.com/google/brotli', '1.2.0', '1.2.0.1'],
   ['tukaani.org/xz', '5.8.2', '5.8.2.1'],
+  ['gnu.org/libunistring', '1.4.2', '1.4.2.2'],
+  ['facebook.com/zstd', '1.5.7', '1.5.7.1'],
 ]) {
   test(`${domain} publishes a portable source revision with required real consumers`, async () => {
     const loaded = await loadRecipe(domain, 'darwin-arm64', upstream)

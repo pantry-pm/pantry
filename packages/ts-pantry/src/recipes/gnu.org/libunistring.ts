@@ -3,11 +3,11 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/libunistring',
   name: 'libunistring',
-  revisions: { '1.4.2': 1 },
+  revisions: { '1.4.2': 2 },
   programs: [],
   dependencies: {
     darwin: {
-      'gnu.org/libiconv': '^1.19.0.1',
+      'gnu.org/libiconv': '^1.19.0.2',
     },
   },
   buildDependencies: {
@@ -19,6 +19,7 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   build: {
+    env: { darwin: { MACOSX_DEPLOYMENT_TARGET: '14.0' } },
     script: [
       './configure --prefix={{ prefix }}',
       'make --jobs {{ hw.concurrency }} install',

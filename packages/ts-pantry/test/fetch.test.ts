@@ -152,10 +152,12 @@ describe('Fetch Module', () => {
       // First save a package to cache
       const options: PackageFetchOptions = {
         cacheDir: tempCacheDir,
+        outputDir: tempOutputDir,
         cacheExpirationMinutes: 60, // 1 hour
       }
 
-      saveToCacheAndOutput('nodejs.org', mockPackageInfo, options)
+      const saved = saveToCacheAndOutput('nodejs.org', mockPackageInfo, options)
+      expect(saved.outputPath.startsWith(`${tempOutputDir}${path.sep}`)).toBe(true)
 
       // Now try to get it from cache
       const cached = getValidCachedPackage('nodejs.org', options)
@@ -210,10 +212,12 @@ describe('Fetch Module', () => {
     test('should handle nested package names correctly', () => {
       const options: PackageFetchOptions = {
         cacheDir: tempCacheDir,
+        outputDir: tempOutputDir,
         cacheExpirationMinutes: 60,
       }
 
-      saveToCacheAndOutput('agwa.name/git-crypt', mockNestedPackageInfo, options)
+      const saved = saveToCacheAndOutput('agwa.name/git-crypt', mockNestedPackageInfo, options)
+      expect(saved.outputPath.startsWith(`${tempOutputDir}${path.sep}`)).toBe(true)
 
       const cached = getValidCachedPackage('agwa.name/git-crypt', options)
 
