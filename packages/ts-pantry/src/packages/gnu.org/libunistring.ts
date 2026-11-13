@@ -2,11 +2,11 @@
  * **libunistring** - pkgx package
  *
  * @domain `gnu.org/libunistring`
- * @version `1.4.2` (6 versions available)
+ * @version `1.4.2.1` (7 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/libunistring`
- * @dependencies `darwin:gnu.org/libiconv` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `darwin:gnu.org/libiconv^1.19.0.1` (includes platform-specific dependencies)
  * @buildDependencies `gnu.org/gmp`, `gnu.org/m4` - required only when building from source
  *
  * @example
@@ -15,7 +15,7 @@
  *
  * const pkg = pantry.gnuorglibunistring
  * console.log(pkg.name)        // "libunistring"
- * console.log(pkg.versions[0]) // "1.4.2" (latest)
+ * console.log(pkg.versions[0]) // "1.4.2.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/gnu-org/libunistring.md
@@ -48,10 +48,10 @@ export const gnuorglibunistringPackage = {
   /**
   * Runtime dependencies for this package.
   * These are required when running the package.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'darwin:gnu.org/libiconv',
+    'darwin:gnu.org/libiconv^1.19.0.1',
   ] as const,
   /**
   * Build dependencies for this package.
@@ -66,6 +66,7 @@ export const gnuorglibunistringPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.2.1',
     '1.4.2',
     '1.4.1',
     '1.4.0',

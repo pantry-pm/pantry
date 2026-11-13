@@ -10345,10 +10345,10 @@ pub const packages = [_]PackageInfo{ .{
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{},
-    .dependencies = &[_][]const u8{"darwin:gnu.org/libiconv"},
+    .dependencies = &[_][]const u8{"darwin:gnu.org/libiconv^1.19.0.1"},
     .build_dependencies = &[_][]const u8{ "gnu.org/gmp", "gnu.org/m4" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.4.2", "1.4.1", "1.4.0", "1.3.0", "1.2.0", "1.1.0" },
+    .versions = &[_][]const u8{ "1.4.2.1", "1.4.2", "1.4.1", "1.4.0", "1.3.0", "1.2.0", "1.1.0" },
 }, .{
     .name = "m4",
     .domain = "gnu.org/m4",
