@@ -28,7 +28,7 @@ describe('full source CI publication and deployment gate', () => {
     })
     expect(polls).toBe(3)
     expect(result.sha).toBe(sha)
-    expect(result.requiredJobs).toHaveLength(15)
+    expect(result.requiredJobs).toHaveLength(17)
     expect(paths.at(-1)).toContain('/runs/42/jobs?')
   })
 
@@ -77,6 +77,20 @@ describe('full source CI publication and deployment gate', () => {
     await expect(waitForSourceCi({ repository, sha, read: async path => path.includes('/jobs?') ? { total_count: actual.length, jobs: actual } : { workflow_runs: [completed] } })).rejects.toThrow('must execute and pass native-publication')
   })
 
+  for (const name of ['sdk-consumers', 'source-cli-integrations'] as const) {
+    test.each(['missing', 'skipped', 'failure'])('refuses %s separated ' + name + ' checks even if the overall run is green', async conclusion => {
+      const actual = jobs().filter(job => job.name !== name)
+      if (conclusion !== 'missing') actual.push({ id: 100, name, status: 'completed', conclusion })
+      await expect(waitForSourceCi({ repository, sha, read: async path => path.includes('/jobs?') ? { total_count: actual.length, jobs: actual } : { workflow_runs: [completed] } })).rejects.toThrow('must execute and pass ' + name)
+    })
+  }
+
+  test('commit previews wait for both separated acceptance jobs', async () => {
+    const workflow = Bun.YAML.parse(await readFile(new URL('../../../.github/workflows/ci.yml', import.meta.url), 'utf8')) as { jobs: Record<string, { needs?: string[] }> }
+    expect(workflow.jobs['continuous-release']!.needs).toContain('sdk-consumers')
+    expect(workflow.jobs['continuous-release']!.needs).toContain('source-cli-integrations')
+  })
+
   test.each(['missing', 'skipped', 'duplicate', 'failed'])('refuses a %s native acceptance job even if the workflow is green', async kind => {
     const actual = jobs()
     if (kind === 'missing') actual.pop()
@@ -98,7 +112,7 @@ describe('full source CI publication and deployment gate', () => {
       return { total_count: 15, jobs: pages === 1 ? jobs().slice(0, 7) : jobs().slice(7) }
     } })
     expect(pages).toBe(2)
-    expect(result.requiredJobs).toHaveLength(15)
+    expect(result.requiredJobs).toHaveLength(17)
     await expect(waitForSourceCi({ repository, sha, read: async path => path.includes('/jobs?') ? { total_count: 15, jobs: [] } : { workflow_runs: [completed] } })).rejects.toThrow('Incomplete source CI')
   })
 
@@ -135,7 +149,7 @@ describe('full source CI publication and deployment gate', () => {
       throw new Error(`Unexpected source CI read: ${path}`)
     } })
     expect(result.runId).toBe(42)
-    expect(result.requiredJobs).toHaveLength(15)
+    expect(result.requiredJobs).toHaveLength(17)
     expect(result.mainLineage).toEqual({ source: sha, mainHead: mainSha, kind: 'ancestor-of-main' })
     expect(paths).toEqual([`repos/${repository}/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100`,
       `repos/${repository}/git/ref/heads/main`, `repos/${repository}/compare/${sha}...${mainSha}`,
@@ -195,7 +209,7 @@ describe('full source CI publication and deployment gate', () => {
     } })).rejects.toThrow('Source CI read-back HTTP 403')
   })
 
-  test.each(['missing', 'skipped', 'failure'])('requires all15 jobs after dispatch lineage, including %s publication control', async conclusion => {
+  test.each(['missing', 'skipped', 'failure'])('requires all17 jobs after dispatch lineage, including %s publication control', async conclusion => {
     const actual = jobs().filter(job => job.name !== 'native-publication')
     if (conclusion !== 'missing') actual.push({ id: 100, name: 'native-publication', status: 'completed', conclusion })
     await expect(waitForSourceCi({ repository, sha, read: async path => {

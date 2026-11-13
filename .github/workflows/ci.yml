@@ -589,7 +589,7 @@ jobs:
           if-no-files-found: error
 
   continuous-release:
-    needs: [lint, typecheck, test, action-redis-service, action-native-services, action-native-tools, native-browser, native-publication, windows-native-runtime, windows-git]
+    needs: [lint, typecheck, test, sdk-consumers, source-cli-integrations, action-redis-service, action-native-services, action-native-tools, native-browser, native-publication, windows-native-runtime, windows-git]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Best-effort commit-preview publishing. Don't fail the whole workflow
