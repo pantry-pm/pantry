@@ -38,7 +38,7 @@ async function run(phase: string, args: string[], cwd = consumer): Promise<{ cod
   return { code, output }
 }
 
-const positive = `import { programsForPlatform, type PackageDomain } from 'ts-pantry'
+const positive = `import { fetchPantryPackage, programsForPlatform, type PackageDomain, type PkgxPackage } from 'ts-pantry'
 import { createPackageCatalogSearch, type PackageCatalogEntry } from 'ts-pantry/catalog'
 const programs: string[] = programsForPlatform({ programs: ['common'], platformPrograms: { linux: ['native'] } }, 'linux-x86-64', '3.0')
 programs.push('another')
@@ -48,9 +48,11 @@ type IsAny<T> = 0 extends (1 & T) ? true : false
 const functionIsPrecise: false = null as unknown as IsAny<typeof programsForPlatform>
 const returnIsPrecise: false = null as unknown as IsAny<ReturnType<typeof programsForPlatform>>
 const catalogIsPrecise: false = null as unknown as IsAny<typeof createPackageCatalogSearch>
+const metadataIsPrecise: false = null as unknown as IsAny<Awaited<ReturnType<typeof fetchPantryPackage>>['packageInfo']>
+async function metadata(): Promise<PkgxPackage> { return (await fetchPantryPackage('facebook.com/zstd')).packageInfo }
 const knownDomain: PackageDomain = 'git-scm.org'
 const domainIsNarrow: false = null as unknown as (string extends PackageDomain ? true : false)
-export { functionIsPrecise, returnIsPrecise, catalogIsPrecise, knownDomain, domainIsNarrow }
+export { functionIsPrecise, returnIsPrecise, catalogIsPrecise, metadataIsPrecise, metadata, knownDomain, domainIsNarrow }
 `
 const negative = `import { programsForPlatform } from 'ts-pantry'
 const programs: number[] = programsForPlatform({ programs: ['common'], platformPrograms: { linux: ['native'] } }, 'linux-x86-64', '3.0')
@@ -81,14 +83,36 @@ try {
   }))
   await writeFile(join(consumer, 'positive.ts'), positive)
   await writeFile(join(consumer, 'negative.ts'), negative)
+  await writeFile(join(consumer, 'negative-metadata.ts'), `import { fetchPantryPackage } from 'ts-pantry'
+const metadata = await fetchPantryPackage('facebook.com/zstd')
+const programs: number[] = metadata.packageInfo.programs
+export { programs }
+`)
   await writeFile(join(consumer, 'negative-domain.ts'), `import type { PackageDomain } from 'ts-pantry'
 const domain: PackageDomain = 'not-a-pantry-domain'
 export { domain }
 `)
-  await writeFile(join(consumer, 'runtime.mjs'), `import { programsForPlatform } from 'ts-pantry'
+  await writeFile(join(consumer, 'runtime.mjs'), `import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fetchPantryPackage, pantry, programsForPlatform } from 'ts-pantry'
 const actual = programsForPlatform({ programs: ['common'], platformPrograms: { linux: ['native'] } }, 'linux-x86-64', '3.0')
 if (JSON.stringify(actual) !== JSON.stringify(['common', 'native'])) throw new Error('Incorrect public platform programs')
 console.log('platform programs: ok')
+const metadata = await fetchPantryPackage('facebook.com/zstd')
+assert.equal(metadata.fullDomainName, 'facebook.com/zstd')
+assert.deepEqual(metadata.packageInfo, pantry.facebookcomzstd)
+metadata.packageInfo.programs.push('not-in-the-shared-catalog')
+assert.deepEqual((await fetchPantryPackage('zstd')).packageInfo, pantry.facebookcomzstd)
+await assert.rejects(fetchPantryPackage('unknown.invalid/no-metadata'), /metadata/)
+console.log('canonical independent metadata: ok')
+const output = mkdtempSync(join(process.cwd(), 'metadata-export-'))
+const cli = join(process.cwd(), 'node_modules/ts-pantry/dist/bin/cli.js')
+const exported = spawnSync(process.execPath, [cli, 'fetch', 'zstd', '--json', '--no-cache', '--output-dir', output], { encoding: 'utf8', timeout: 5000 })
+assert.equal(exported.status, 0, String(exported.error ?? exported.stderr))
+assert.deepEqual(JSON.parse(readFileSync(join(output, 'facebook.com/zstd.json'), 'utf8')), pantry.facebookcomzstd)
+console.log('installed canonical metadata CLI: ok')
 `)
   let normalLock: string | undefined
   for (const frozen of [false, true]) {
@@ -112,13 +136,14 @@ console.log('platform programs: ok')
         strict: true, skipLibCheck: false, skipDefaultLibCheck: false, target: 'ESNext',
         module: mode === 'NodeNext' ? 'NodeNext' : 'ESNext', moduleResolution: mode, types: ['bun'], paths: {}, noEmit: true,
       }
-      for (const name of ['positive', 'negative', 'negative-domain']) {
+      for (const name of ['positive', 'negative', 'negative-domain', 'negative-metadata']) {
         await writeFile(join(consumer, 'tsconfig.json'), JSON.stringify({ compilerOptions, files: [`${name}.ts`] }))
         const result = await run(`${phase}-${mode}-${name}`, [process.execPath, '--no-env-file', compiler, '--project', 'tsconfig.json', '--pretty', 'false'])
         if (name === 'positive') assert(result.code === 0, result.output)
         else {
           const diagnostics = [...result.output.matchAll(/error TS(\d+)/g)].map(match => Number(match[1]))
-          assert(result.code !== 0 && diagnostics.length === 1 && diagnostics[0] === 2322 && result.output.includes(`${name}.ts(2,`), result.output)
+          const expectedLine = name === 'negative-metadata' ? 3 : 2
+          assert(result.code !== 0 && diagnostics.length === 1 && diagnostics[0] === 2322 && result.output.includes(`${name}.ts(${expectedLine},`), result.output)
         }
       }
     }

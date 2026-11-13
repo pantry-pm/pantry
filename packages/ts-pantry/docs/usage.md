@@ -4,6 +4,8 @@ ts-pantry provides both a TypeScript library and CLI tools for working with Pant
 
 ## CLI Usage
 
+`fetch` exports complete metadata from the catalog shipped with the installed `ts-pantry` version. It resolves aliases to canonical package identifiers and performs no web scraping. Unknown packages fail before output or cache files change. In a source checkout, upstream version discovery is maintained separately by `scripts/version-fetcher.ts`.
+
 After installing the package, you can use the CLI tools to fetch and manage packages:
 
 ```bash
@@ -45,10 +47,10 @@ You can also use the Bun scripts:
 
 ```bash
 # Fetch a single package
-bun run pkgx:fetch nodejs.org
+bun bin/cli.ts fetch nodejs.org
 
 # Fetch all packages
-bun run pkgx:fetch-all
+bun bin/cli.ts fetch --all
 
 # Fetch multiple specific packages
 bun bin/cli.ts fetch --pkg="nodejs.org,bun.sh,deno.land"
@@ -63,7 +65,7 @@ bun bin/cli.ts generate-ts
 bun bin/cli.ts generate-aliases
 
 # Generate documentation
-bun run pkgx:docs
+bun bin/cli.ts generate-docs
 
 # Update pantry
 bun bin/cli.ts update-pantry
@@ -86,22 +88,18 @@ The fetch command supports several options:
 - `--pkg="pkg1,pkg2"`: Fetch multiple specific packages
 - `--output-dir=<dir>`: Set custom output directory (default: `src/packages`)
 - `--cache-dir=<dir>`: Set custom cache directory (default: `.cache/packages`)
-- `--no-cache`: Disable caching
-- `--cache-expiration=<minutes>`: Set cache expiration time (default: `1440` minutes)
-- `--timeout=<ms>`: Set timeout in milliseconds (default: `20000`)
-- `--max-retries=<n>`: Number of retries for failed fetches (default: `3`)
+- `--no-cache`: Do not write metadata cache files
+- `--cache-expiration`, `--timeout`, `--max-retries`, `--concurrency`, and `--debug`: Accepted legacy discovery arguments; catalog exports are local
 - `--limit=<n>`: Limit the number of packages to fetch
-- `--concurrency=<n>`: Number of packages to fetch concurrently (default: `8`)
 - `--json`: Output as JSON instead of TypeScript
 - `--verbose`: Enable verbose logging
-- `--debug`: Enable debug mode (saves screenshots)
 - `--output-json`: Output results as JSON for CI integration
 
 ### Examples
 
 ```bash
-# Fetch with custom settings
-ts-pantry fetch --all --concurrency 12 --timeout 60000 --cache-expiration 60
+# Export a subset without deleting other packages
+ts-pantry fetch --all --limit 10 --no-cache
 
 # Fetch specific packages with verbose output
 ts-pantry fetch --pkg "node,bun,python,go" --verbose
@@ -112,8 +110,8 @@ ts-pantry fetch --pkg "rust-lang.org,deno.land" --no-cache --json
 # Fetch for CI integration
 ts-pantry fetch --pkg "nodejs.org,bun.sh" --output-json
 
-# Debug mode for troubleshooting
-ts-pantry fetch agwa.name/git-crypt --debug --verbose
+# Inspect canonical export paths
+ts-pantry fetch agwa.name/git-crypt --verbose
 ```
 
 ## Dependency Resolution

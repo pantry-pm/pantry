@@ -1,6 +1,6 @@
 # Multiple Package Fetching
 
-ts-pantry provides flexible options for fetching multiple packages at once using the pantry-based approach, giving you precise control over which packages to fetch.
+`ts-pantry fetch` exports full metadata from its maintained installed catalog. Alias inputs resolve to canonical identifiers, including nested packages. A mixed request containing an unknown package fails before writing any output or cache files. This command does not scrape upstream websites or discover new releases.
 
 ## Using the `--pkg` Option
 
@@ -11,10 +11,10 @@ The `--pkg` option allows you to fetch multiple specific packages in a single co
 ts-pantry fetch --pkg node,bun,python
 
 # With custom options
-ts-pantry fetch --pkg "go.dev,python.org,rust-lang.org" --json --timeout 60000
+ts-pantry fetch --pkg "go.dev,python.org,rust-lang.org" --json
 
 # Using Bun scripts (alternative)
-bun run pkgx:fetch --pkg node,bun,python
+bun bin/cli.ts fetch --pkg node,bun,python
 ```
 
 This is particularly useful when you need information about several specific packages without having to fetch the entire pantry.
@@ -47,16 +47,16 @@ ts-pantry fetch --pkg node,bun --json
 # Custom output directory
 ts-pantry fetch --pkg node,bun --output-dir ./custom-packages
 
-# Increased timeout for complex packages
-ts-pantry fetch --pkg "rust-lang.org,go.dev" --timeout 60000
+# Limit an export without pruning other files
+ts-pantry fetch --all --limit 10
 
-# Debug mode for troubleshooting
-ts-pantry fetch --pkg "rust-lang.org,go.dev" --debug --verbose
+# Report canonical export paths
+ts-pantry fetch --pkg "rust-lang.org,go.dev" --verbose
 
 # Custom cache settings
-ts-pantry fetch --pkg node,bun --cache-dir ./my-cache --cache-expiration 30
+ts-pantry fetch --pkg node,bun --cache-dir ./my-cache
 
-# Disable caching for fresh data
+# Do not write metadata cache files
 ts-pantry fetch --pkg node,bun --no-cache
 
 # CI integration with JSON output
@@ -72,7 +72,7 @@ Fetching multiple packages at once offers several advantages:
 3. **Simplified Commands**: One command instead of multiple individual ones
 4. **Consistent Output**: All packages are processed with the same options
 5. **Automatic Index Generation**: The index is only regenerated once after all packages are fetched
-6. **Enhanced Caching**: Intelligent cache sharing between packages
+6. **Metadata Authority**: Legacy cache contents cannot replace curated catalog fields
 
 ## API-Based Multiple Fetching
 
@@ -94,7 +94,7 @@ async function fetchMultiplePackages(packageNames: string[], options = {}) {
 
         if (result) {
           // Save to cache and output
-          const { outputPath } = saveToCacheAndOutput(pkg, result.packageInfo, {
+          const { outputPath } = saveToCacheAndOutput(result.fullDomainName, result.packageInfo, {
             cacheDir: '.cache/packages',
             outputDir: 'src/packages',
             cache: true,

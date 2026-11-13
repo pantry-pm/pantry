@@ -26,7 +26,7 @@ bun install ts-pantry
 
 ## fetch Command
 
-The `fetch` command retrieves package information from Pantry for one or more packages using the pantry-based approach.
+The `fetch` command exports full metadata from the installed Pantry catalog. Aliases and nested identifiers retain the canonical package identity. All requested lookups must succeed before output or cache files are changed; unknown metadata returns a nonzero exit code. Version discovery is owned by the separate version updater.
 
 ### Usage
 
@@ -53,15 +53,15 @@ ts-pantry fetch --all [options]
 | `-p, --pkg <packageNames>` | Comma-separated list of package names to fetch | - |
 | `-o, --output-dir <dir>` | Directory to save package data | `src/packages` |
 | `-c, --cache-dir <dir>` | Directory to cache package data | `.cache/packages` |
-| `-n, --no-cache` | Disable caching | `false` |
-| `-e, --cache-expiration <minutes>` | Cache expiration time in minutes | `1440` (24 hours) |
+| `-n, --no-cache` | Do not write metadata cache files | `false` |
+| `-e, --cache-expiration <minutes>` | Legacy discovery argument | `1440` |
 | `-l, --limit <count>` | Limit the number of packages to fetch (use with --all) | - |
-| `-t, --timeout <ms>` | Timeout for network requests in milliseconds | `20000` |
-| `-r, --max-retries <count>` | Maximum retry attempts for failed requests | `3` |
+| `-t, --timeout <ms>` | Legacy discovery argument; catalog reads are local | `20000` |
+| `-r, --max-retries <count>` | Legacy discovery argument | `3` |
 | `-j, --json` | Save as JSON instead of TypeScript | `false` |
-| `-d, --debug` | Enable debug mode (save screenshots) | `false` |
+| `-d, --debug` | Legacy discovery argument | `false` |
 | `-v, --verbose` | Enable verbose output | `false` |
-| `-y, --concurrency <count>` | Number of packages to fetch concurrently | `8` |
+| `-y, --concurrency <count>` | Legacy discovery argument | `8` |
 | `--output-json` | Output results as JSON (for CI integration) | `false` |
 
 ### Examples

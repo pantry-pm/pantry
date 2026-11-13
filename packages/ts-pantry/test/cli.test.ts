@@ -446,7 +446,7 @@ describe('CLI Module', () => {
       expect(result2.fullDomainName).toBe(packageName)
     }, 60000)
 
-    test('should handle fetch errors gracefully', async () => {
+    test('rejects unknown metadata without creating placeholder files', async () => {
       // Test with an invalid package name
       const result = await fetchAndSavePackage(
         'invalid-package-that-does-not-exist.invalid',
@@ -464,16 +464,10 @@ describe('CLI Module', () => {
         },
       )
 
-      // With improved error handling, the system now succeeds but creates a minimal package
-      // This is better behavior - the system is robust and doesn't fail completely
-      expect(result.success).toBe(true)
-
-      // The created package should have minimal/incomplete data
-      if (result.filePath && fs.existsSync(result.filePath)) {
-        const content = fs.readFileSync(result.filePath, 'utf-8')
-        // Should contain the package name but may have minimal data
-        expect(content).toContain('invalid-package-that-does-not-exist.invalid')
-      }
+      expect(result.success).toBe(false)
+      expect(result.filePath).toBeUndefined()
+      expect(fs.readdirSync(tempPackagesDir)).toEqual([])
+      expect(fs.readdirSync(tempCacheDir)).toEqual([])
     }, 30000)
   })
 

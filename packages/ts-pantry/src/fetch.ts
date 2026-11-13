@@ -2,43 +2,16 @@ import type { FetchProjectsOptions, GitHubContent, PackageFetchOptions, PkgxPack
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { getAliasOverrides, shouldReplaceAliases } from './alias-overrides'
-import { DEFAULT_CACHE_DIR, DEFAULT_CACHE_EXPIRATION_MINUTES, DEFAULT_TIMEOUT_MS } from './consts'
+import { DEFAULT_CACHE_DIR, DEFAULT_CACHE_EXPIRATION_MINUTES } from './consts'
 import { aliases } from './packages/aliases'
 import { dependencyPlatform, recipeDepsToSpecs } from './dependency-spec'
 import { convertDomainToVarName } from './utils'
-// pkgx-scraper removed — version discovery now via scripts/version-fetcher.ts
-const scrapePkgxPackage = async (..._args: any[]): Promise<any> => null
 
 // Legacy browser references - keeping for backwards compatibility but not used
 type Browser = any
 const _sharedBrowser: Browser | null = null
 const browserPool: { browser: Browser, inUse: boolean, createdAt: number }[] = []
 const MAX_BROWSER_POOL_SIZE = 10
-
-/**
- * Compare version strings numerically (newest first).
- * Handles non-semver versions like "2026.2.23.0" by comparing each
- * dot-separated component as a number.
- */
-function compareVersionsNumeric(a: string, b: string): number {
-  const partsA = a.replace(/^v/, '').split('.')
-  const partsB = b.replace(/^v/, '').split('.')
-  for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-    const numA = Number.parseInt(partsA[i] || '0', 10)
-    const numB = Number.parseInt(partsB[i] || '0', 10)
-    if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
-      if (numA !== numB)
-        return numB - numA // descending (newest first)
-    }
-    else {
-      const cmp = (partsB[i] || '').localeCompare(partsA[i] || '')
-      if (cmp !== 0)
-        return cmp
-    }
-  }
-  return 0
-}
 
 /**
  * Helper function to get domain as TypeScript variable name
@@ -167,9 +140,12 @@ function getPropertyJSDoc(key: string, value: any): string | null {
   return null
 }
 
-/**
- * Format an object with 'as const' assertions for TypeScript
- */
+/** Quote metadata without changing backslashes, newlines or quotation marks. */
+function quoteTypeScriptString(value: string): string {
+  return `'${JSON.stringify(value).slice(1, -1).replace(/'/g, '\\\'')}'`
+}
+
+/** Format an object with literal assertions while preserving its authored data. */
 function formatObjectWithAsConst(obj: Record<string, any>): string {
   const lines: string[] = []
 
@@ -187,72 +163,47 @@ function formatObjectWithAsConst(obj: Record<string, any>): string {
       lines.push(jsdocComment)
     }
 
+    const property = /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key)
+
     if (value === undefined) {
-      lines.push(`  ${key}: undefined,`)
+      lines.push(`  ${property}: undefined,`)
       continue
     }
 
     if (Array.isArray(value)) {
       if (value.length === 0) {
         // Empty array
-        lines.push(`  ${key}: [] as const,`)
+        lines.push(`  ${property}: [] as const,`)
       }
       else if (typeof value[0] === 'string') {
-        // For aliases array, filter out shell command patterns and package name duplicates
-        let filteredArray = value
-        if (key === 'aliases') {
-          const packageName = obj.name
-          filteredArray = value.filter((alias) => {
-            // Filter out shell command patterns
-            if (alias.includes('--') || alias.includes('$SHELL') || alias.includes('+') || alias.includes('(') || alias.includes(')')) {
-              return false
-            }
-            // Filter out aliases that are the same as the package name
-            if (alias === packageName) {
-              return false
-            }
-            return true
-          })
+        // Export authored metadata without interpreting aliases or string contents.
+        lines.push(`  ${property}: [`)
+        for (const item of value) {
+          lines.push(`    ${quoteTypeScriptString(item)},`)
         }
-
-        // Format string array with line breaks for readability
-        if (filteredArray.length === 0) {
-          lines.push(`  ${key}: [] as const,`)
-        }
-        else {
-          lines.push(`  ${key}: [`)
-          for (const item of filteredArray) {
-            lines.push(`    '${String(item).replace(/'/g, '\\\'')}',`)
-          }
-          lines.push(`  ] as const,`)
-        }
+        lines.push(`  ] as const,`)
       }
       else {
-        // Other array types - convert JSON.stringify output to use single quotes
-        const jsonStr = JSON.stringify(value).replace(/"/g, '\'')
-        lines.push(`  ${key}: ${jsonStr} as const,`)
+        lines.push(`  ${property}: ${JSON.stringify(value)} as const,`)
       }
     }
     else if (typeof value === 'string') {
-      // String with 'as const' using single quotes
-      lines.push(`  ${key}: '${String(value).replace(/'/g, '\\\'')}' as const,`)
+      lines.push(`  ${property}: ${quoteTypeScriptString(value)} as const,`)
     }
     else if (typeof value === 'number' || typeof value === 'boolean') {
       // Numbers and booleans with 'as const'
-      lines.push(`  ${key}: ${value} as const,`)
+      lines.push(`  ${property}: ${value} as const,`)
     }
     else if (value === null) {
       // Null values
-      lines.push(`  ${key}: null,`)
+      lines.push(`  ${property}: null,`)
     }
     else if (typeof value === 'object') {
       // Nested objects
-      lines.push(`  ${key}: ${formatObjectWithAsConst(value).replace(/\n/g, '\n  ')},`)
+      lines.push(`  ${property}: ${formatObjectWithAsConst(value).replace(/\n/g, '\n  ')},`)
     }
     else {
-      // Fallback for other types - convert JSON.stringify output to use single quotes
-      const jsonStr = JSON.stringify(value).replace(/"/g, '\'')
-      lines.push(`  ${key}: ${jsonStr},`)
+      lines.push(`  ${property}: ${JSON.stringify(value)},`)
     }
   }
 
@@ -543,7 +494,7 @@ function sanitizeFilename(packageName: string): string {
   return cleanName
 }
 
-export function savePackageAsTypeScript(outputDir: string, domainName: string, packageInfo: PkgxPackage): string {
+function packageOutputPath(outputDir: string, domainName: string, extension: 'ts' | 'json'): string {
   // Ensure base output directory exists
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true })
@@ -575,7 +526,7 @@ export function savePackageAsTypeScript(outputDir: string, domainName: string, p
 
     // Use the last part as filename: repo.ts
     const filename = sanitizeFilename(subParts[subParts.length - 1])
-    filePath = path.join(packageDir, `${filename}.ts`)
+    filePath = path.join(packageDir, `${filename}.${extension}`)
   }
   else {
     // For root domains, use consistent domain-based naming
@@ -583,9 +534,22 @@ export function savePackageAsTypeScript(outputDir: string, domainName: string, p
     const filename = domainName.replace(/\./g, '')
 
     // Create the TypeScript file path in the base directory
-    filePath = path.join(outputDir, `${filename}.ts`)
+    filePath = path.join(outputDir, `${filename}.${extension}`)
   }
 
+  return filePath
+}
+
+function savePackageAsJson(outputDir: string, domainName: string, packageInfo: PkgxPackage): string {
+  const filePath = packageOutputPath(outputDir, domainName, 'json')
+  const cleanPackageInfo = { ...packageInfo }
+  delete cleanPackageInfo.fetchedAt
+  fs.writeFileSync(filePath, `${JSON.stringify(cleanPackageInfo, null, 2)}\n`)
+  return filePath
+}
+
+export function savePackageAsTypeScript(outputDir: string, domainName: string, packageInfo: PkgxPackage): string {
+  const filePath = packageOutputPath(outputDir, domainName, 'ts')
   // Remove fetchedAt from the package info before generating TypeScript
   const cleanPackageInfo = { ...packageInfo }
   delete cleanPackageInfo.fetchedAt
@@ -762,36 +726,17 @@ export function saveToCacheAndOutput(
   packageInfo: PkgxPackage,
   options: PackageFetchOptions = {},
 ): { cachePath: string, outputPath: string } {
-  // Add timestamp to the package info for cache
-  const enhancedPackageInfo = {
-    ...packageInfo,
-    fetchedAt: Date.now(),
-  }
-
-  // Determine cache directory and ensure it exists
   const cacheDir = options.cacheDir || DEFAULT_CACHE_DIR
-  if (!fs.existsSync(cacheDir)) {
+  const cachePath = path.join(cacheDir, `${packageName.replace(/\//g, '-')}.json`)
+  if (options.cache !== false) {
     fs.mkdirSync(cacheDir, { recursive: true })
+    fs.writeFileSync(cachePath, JSON.stringify({ ...packageInfo, fetchedAt: Date.now() }, null, 2))
   }
-
-  // Create a safe filename for the cache file - always use domain-based naming for cache
-  const safeFilename = packageName.replace(/\//g, '-')
-  const cacheFilePath = path.join(cacheDir, `${safeFilename}.json`)
-
-  // Save to cache with fetchedAt timestamp
-  fs.writeFileSync(cacheFilePath, JSON.stringify(enhancedPackageInfo, null, 2))
-
-  // Determine output directory and ensure it exists
   const outputDir = options.outputDir || 'packages'
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true })
-  }
-
-  // Create TypeScript file in the output directory
-  // Pass the original packageName (domain) to savePackageAsTypeScript so it can decide the best filename
-  const outputFilePath = savePackageAsTypeScript(outputDir, packageName, packageInfo)
-
-  return { cachePath: cacheFilePath, outputPath: outputFilePath }
+  const outputPath = options.json
+    ? savePackageAsJson(outputDir, packageName, packageInfo)
+    : savePackageAsTypeScript(outputDir, packageName, packageInfo)
+  return { cachePath, outputPath }
 }
 
 // Function to check system resources and adjust behavior
@@ -870,187 +815,24 @@ export async function fetchPkgxProjects(options: FetchProjectsOptions = {}): Pro
 }
 
 /**
- * Fetches package information from pkgx.dev using ts-web-scraper
- * @param packageName The name of the package to fetch
- * @param options Optional configuration
- * @returns Promise resolving to package information with original name and full domain name
+ * Preserve mutable return values while checking the readonly catalog's schema.
  */
+type ReadonlyMetadata<T> = T extends readonly unknown[]
+  ? readonly ReadonlyMetadata<T[number]>[]
+  : T extends object ? { readonly [K in keyof T]: ReadonlyMetadata<T[K]> } : T
+
+/** Query the maintained catalog; upstream version discovery belongs to the version updater. */
 export async function fetchPantryPackage(
   packageName: string,
-  options: PackageFetchOptions = {},
+  _options: PackageFetchOptions = {},
 ): Promise<{ packageInfo: PkgxPackage, originalName: string, fullDomainName: string }> {
-  const originalName = packageName
-  let fullDomainName = packageName
-
-  // Special handling for known patterns
-  // For paths like 'agwa.name/git-crypt', treat 'git-crypt' as the name
-  // and 'agwa.name' as the domain
-  if (packageName.includes('/')) {
-    const [domain, name] = packageName.split('/')
-    console.log(`Identified nested package: domain=${domain}, name=${name}`)
-  }
-
-  // Handle common package aliases
-  if (aliases[packageName]) {
-    console.log(`'${packageName}' is an alias for '${aliases[packageName]}', redirecting...`)
-    fullDomainName = aliases[packageName]
-    packageName = aliases[packageName]
-  }
-
-  try {
-    // Use ts-web-scraper via scrapePkgxPackage
-    const timeout = options.timeout || DEFAULT_TIMEOUT_MS
-
-    // Scrape the package data
-    const scrapedData = await scrapePkgxPackage(packageName, {
-      timeout,
-      useClientSideScraper: true,
-    })
-
-    if (!scrapedData || typeof scrapedData !== 'object') {
-      return createMinimalPackageInfo(packageName, originalName, fullDomainName)
-    }
-
-    // Convert scraped data to PkgxPackage format
-    const packageInfo: PkgxPackage = {
-      name: scrapedData.displayName || scrapedData.name || packageName.split('/').pop() || packageName,
-      domain: scrapedData.domain || packageName,
-      description: scrapedData.description || scrapedData.brief || '',
-      packageYmlUrl: `https://github.com/pkgxdev/pantry/tree/main/projects/${packageName}/package.yml`,
-      homepageUrl: scrapedData.homepage || '',
-      githubUrl: scrapedData.github || '',
-      installCommand: `pantry install ${packageName}`,
-      pantryInstallCommand: `pantry install ${packageName}`,
-      programs: scrapedData.provides || [],
-      companions: Array.isArray(scrapedData.companions) ? scrapedData.companions : [],
-      dependencies: Array.isArray(scrapedData.dependencies) ? scrapedData.dependencies : [],
-      buildDependencies: scrapedData.buildDependencies || [],
-      versions: scrapedData.versions || [],
-      aliases: [],
-    }
-
-    // Try to get versions from GitHub API if not available
-    if (!packageInfo.versions || packageInfo.versions.length === 0) {
-      const domain = packageInfo.domain || packageName
-      const skipGitHubAPI = [
-        'apache.org',
-        'breakfastquay.com',
-        'catb.org',
-        'bloomreach.com',
-        'cairographics.org',
-        'certifi.io',
-        'charm.sh',
-        'aws.amazon.com',
-        'google.com',
-        'microsoft.com',
-        'mozilla.org',
-        'freedesktop.org',
-        'gnome.org',
-        'kde.org',
-        'sourceforge.net',
-        'sf.net',
-      ].some(skipDomain => domain.startsWith(skipDomain))
-
-      if (!skipGitHubAPI) {
-        try {
-          const githubPath = packageInfo.domain || packageName
-          const versions = await fetchVersionsFromGitHub(githubPath)
-          packageInfo.versions = versions
-        }
-        catch (error) {
-          console.warn(`Failed to fetch versions for ${packageName} from GitHub API:`, error)
-          packageInfo.versions = []
-        }
-      }
-    }
-
-    // Sort versions using semver if they exist
-    if (packageInfo.versions && packageInfo.versions.length > 0) {
-      try {
-        packageInfo.versions.sort((a: string, b: string) => {
-          try {
-            return -1 * Bun.semver.order(a, b)
-          }
-          catch {
-            return compareVersionsNumeric(a, b)
-          }
-        })
-      }
-      catch (error) {
-        console.warn(`Warning: Failed to sort versions for ${packageName} using semver:`, error)
-      }
-    }
-
-    // Ensure we have values for required fields
-    packageInfo.name = packageInfo.name || originalName
-    packageInfo.domain = packageInfo.domain || fullDomainName
-    packageInfo.programs = packageInfo.programs || []
-    packageInfo.companions = packageInfo.companions || []
-    packageInfo.dependencies = packageInfo.dependencies || []
-    packageInfo.versions = packageInfo.versions || []
-
-    return { packageInfo, originalName, fullDomainName }
-  }
-  catch (error) {
-    console.error(`Error in fetchPantryPackage for ${packageName}:`, error)
-
-    // Return minimal package info on error
-    return createMinimalPackageInfo(packageName, originalName, fullDomainName)
-  }
-}
-
-/**
- * Attempts to fetch package versions from GitHub API
- */
-async function fetchVersionsFromGitHub(packageName: string): Promise<string[]> {
-  try {
-    // Lazy import to avoid module loading issues
-    const { shouldProceedWithGitHubRequest, saveRateLimitInfo } = await import('./utils')
-
-    // Check if we're rate limited before making the request
-    if (!shouldProceedWithGitHubRequest()) {
-      console.warn(`Skipping GitHub API request for versions due to rate limiting`)
-      return []
-    }
-
-    const response = await fetch(`https://api.github.com/repos/pkgxdev/pantry/contents/projects/${packageName}`, {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'ts-pantry',
-      },
-      // Add a timeout to prevent hanging
-      signal: AbortSignal.timeout(15000),
-    })
-
-    // Save rate limit information to file
-    saveRateLimitInfo(response.headers)
-
-    // Handle rate limiting
-    if (response.status === 403) {
-      const rateLimitRemaining = response.headers.get('X-RateLimit-Remaining')
-      const rateLimitReset = response.headers.get('X-RateLimit-Reset')
-
-      const resetTime = rateLimitReset ? new Date(Number(rateLimitReset) * 1000).toLocaleString() : 'unknown'
-      console.warn(`GitHub API rate limit exceeded. Remaining: ${rateLimitRemaining || 0}, Reset: ${resetTime}`)
-
-      // Return empty array instead of throwing to avoid breaking the flow
-      return []
-    }
-
-    if (!response.ok) {
-      throw new Error(`GitHub API responded with ${response.status}: ${response.statusText}`)
-    }
-
-    const data = await response.json() as any[]
-    // Look for version files or directories
-    return data
-      .filter(item => item.name.match(/^v\d+/))
-      .map(item => item.name)
-  }
-  catch (error) {
-    console.error('Error fetching versions from GitHub:', error)
-    return []
-  }
+  const { pantry } = await import('./packages')
+  const canonical = aliases[packageName] ?? packageName
+  const source: ReadonlyMetadata<PkgxPackage> | undefined = Object.values(pantry).find(pkg => pkg.domain === canonical)
+  if (!source) throw new Error(`No maintained package metadata for ${packageName}`)
+  // The catalog is shared readonly data; return an actual independent mutable copy.
+  const packageInfo = structuredClone(source) as PkgxPackage
+  return { packageInfo, originalName: packageName, fullDomainName: source.domain }
 }
 
 // Add periodic cleanup function for browser resources
@@ -1155,358 +937,19 @@ export function startPeriodicCleanup(): void {
 }
 
 /**
- * Fetches and saves all packages using the local pantry as source of truth
+ * Exports complete maintained catalog metadata, optionally limited to a subset
  */
 export async function fetchAndSaveAllPackages(options: PackageFetchOptions = {}): Promise<string[]> {
-  const timeout = options.timeout || DEFAULT_TIMEOUT_MS
-  const outputDir = options.outputDir || 'packages'
-  const cacheDir = options.cacheDir || DEFAULT_CACHE_DIR
-  const useCache = options.cache !== false
-  const cacheExpirationMinutes = options.cacheExpirationMinutes || DEFAULT_CACHE_EXPIRATION_MINUTES
-  const concurrency = Math.min(options.concurrency || 6, 8) // Further reduce concurrency for stability
-  const pantryDir = options.pantryDir || 'src/pantry'
-
-  if (!options.outputJson) {
-    console.log(`Starting bulk fetch with concurrency: ${concurrency}, timeout: ${timeout}ms`)
-  }
-
-  const startTime = Date.now()
-  let allPackageNames: string[] = []
-
-  try {
-    // Use the local pantry as the source of truth
-    if (!options.outputJson) {
-      console.log('Scanning local pantry for packages...')
-    }
-
-    try {
-      allPackageNames = await scanPantryPackages(pantryDir)
-
-      if (!options.outputJson) {
-        console.log(`Found ${allPackageNames.length} packages in local pantry`)
-      }
-    }
-    catch (error) {
-      if (!options.outputJson) {
-        console.warn('Failed to scan local pantry, falling back to consts:', error)
-      }
-
-      // Fallback to the comprehensive known packages list
-      try {
-        const { ALL_KNOWN_PACKAGES } = await import('./consts')
-        allPackageNames = [...ALL_KNOWN_PACKAGES].filter(name =>
-          name && name !== 'undefined' && name !== 'aliases' && name !== 'index',
-        )
-
-        if (!options.outputJson) {
-          console.log(`Using comprehensive package list: ${allPackageNames.length} packages`)
-        }
-      }
-      catch (constError) {
-        if (!options.outputJson) {
-          console.warn('Failed to load consts, falling back to GitHub API:', constError)
-        }
-
-        // Final fallback: GitHub API
-        try {
-          const response = await fetch('https://api.github.com/repos/pkgxdev/pantry/contents/projects', {
-            headers: {
-              'User-Agent': 'ts-pantry-fetcher',
-              'Accept': 'application/vnd.github.v3+json',
-            },
-          })
-
-          if (response.ok) {
-            const projects = await response.json() as Array<{ name: string, type: string }>
-            const packageNames = projects
-              .filter(item => item.type === 'dir')
-              .map(item => item.name)
-              .sort()
-
-            if (!options.outputJson) {
-              console.log(`Retrieved ${packageNames.length} projects from GitHub API`)
-            }
-            allPackageNames = packageNames
-          }
-          else {
-            throw new Error(`GitHub API returned ${response.status}`)
-          }
-        }
-        catch (githubError) {
-          if (!options.outputJson) {
-            console.warn('Failed to fetch from GitHub API, falling back to local discovery:', githubError)
-          }
-          // Final fallback: scan existing package files
-          if (fs.existsSync(outputDir)) {
-            const existingFiles = fs.readdirSync(outputDir).filter(f => f.endsWith('.ts'))
-            allPackageNames = existingFiles.map(f => path.basename(f, '.ts'))
-            console.log(`Found ${allPackageNames.length} existing packages`)
-          }
-        }
-      }
-    }
-
-    if (allPackageNames.length === 0) {
-      console.error('No packages found to process')
-      return []
-    }
-
-    // Filter out packages that shouldn't exist as standalone packages
-    const PARENT_DOMAINS_ONLY = [
-      'android.com',
-      'apache.org',
-      'akuity.io',
-      'alsa-project.org',
-      'anchore.com',
-      'aomedia.googlesource.com',
-      'apollographql.com',
-      'facebook.com',
-      'google.com',
-      'microsoft.com',
-      'mozilla.org',
-      'sourceforge.net',
-      'x.org',
-      'xiph.org',
-      'yui.github.io',
-      'crates.io', // Only has nested packages like crates.io/ripgrep
-      'gitlab.com', // Only has nested packages
-      'github.com', // Only has nested packages
-    ]
-
-    // For GitHub packages, filter out parent paths that only exist as containers for nested packages
-    const githubParentsToFilter = new Set<string>()
-
-    // Find all github.com packages
-    const githubPackages = allPackageNames.filter(name => name.startsWith('github.com/'))
-
-    // For each github package with multiple path segments, mark the parent as potentially filterable
-    for (const pkg of githubPackages) {
-      const pathParts = pkg.split('/')
-      if (pathParts.length > 2) { // github.com/user/repo or deeper
-        const parentPath = pathParts.slice(0, 2).join('/') // github.com/user
-        githubParentsToFilter.add(parentPath)
-      }
-    }
-
-    allPackageNames = allPackageNames.filter((name) => {
-      // Filter out .pkgroot entries - these are just markers, not actual packages
-      if (name.endsWith('/.pkgroot')) {
-        console.log(`Filtering out .pkgroot marker: ${name}`)
-        return false
-      }
-
-      // Filter out README.rst files - these are documentation, not packages
-      if (name.endsWith('/README.rst')) {
-        console.log(`Filtering out README.rst documentation: ${name}`)
-        return false
-      }
-
-      // Filter out agwa.name as standalone - only agwa.name/git-crypt is valid
-      if (name === 'agwa.name') {
-        console.log(`Filtering out standalone agwa.name - only agwa.name/git-crypt is valid`)
-        return false
-      }
-
-      // Filter out known parent domains that don't have standalone packages
-      if (PARENT_DOMAINS_ONLY.includes(name)) {
-        console.log(`Filtering out parent domain ${name} - only has nested packages`)
-        return false
-      }
-
-      // Filter out GitHub parent paths that only exist as containers for nested packages
-      if (githubParentsToFilter.has(name)) {
-        console.log(`Filtering out GitHub parent path ${name} - only has nested packages`)
-        return false
-      }
-
-      // Filter out other invalid standalone packages
-      if (name === 'undefined' || name === 'aliases' || name === 'index') {
-        return false
-      }
-
-      return true
-    })
-
-    console.log(`Found ${allPackageNames.length} packages to process`)
-
-    // Apply limit if specified
-    if (options.limit && options.limit > 0) {
-      allPackageNames = allPackageNames.slice(0, options.limit)
-      console.log(`Limited to ${allPackageNames.length} packages`)
-    }
-
-    // No browser needed - fetchPantryPackage now uses ts-web-scraper
-    const successfulPackages: string[] = []
-    const failedPackages: string[] = []
-    let processed = 0
-
-    // Process packages in smaller batches to avoid overwhelming the system
-    const batchSize = Math.min(concurrency, 6)
-    const batches = []
-    for (let i = 0; i < allPackageNames.length; i += batchSize) {
-      batches.push(allPackageNames.slice(i, i + batchSize))
-    }
-
-    if (!options.outputJson) {
-      console.log(`Processing ${allPackageNames.length} packages in ${batches.length} batches...`)
-    }
-
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex]
-      if (!options.outputJson) {
-        console.log(`Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} packages)`)
-      }
-
-      // Process batch with controlled concurrency using pantry-based approach
-      const batchPromises = batch.map(async (packageName) => {
-        try {
-          // Check cache first
-          const cacheFile = path.join(cacheDir, `${packageName.replace(/\//g, '-')}.json`)
-          if (useCache && fs.existsSync(cacheFile)) {
-            const stats = fs.statSync(cacheFile)
-            const ageMinutes = (Date.now() - stats.mtime.getTime()) / (1000 * 60)
-
-            if (ageMinutes < cacheExpirationMinutes) {
-              if (!options.outputJson) {
-                console.log(`Using cached data for ${packageName} (age: ${Math.round(ageMinutes)} minutes)`)
-              }
-              try {
-                const cachedData = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'))
-                // Remove fetchedAt before generating TypeScript
-                delete cachedData.fetchedAt
-                const tsFilePath = savePackageAsTypeScript(outputDir, packageName, cachedData)
-                if (!options.outputJson) {
-                  console.log(`Using cached data for ${packageName} (saved to ${tsFilePath})`)
-                }
-                return { success: true, packageName }
-              }
-              catch {
-                console.warn(`Cache file corrupted for ${packageName}, will refetch`)
-              }
-            }
-          }
-
-          // Use the new pantry-based fetch approach - no browser needed (uses ts-web-scraper)
-          const result = await fetchPantryPackageWithMetadata(packageName, {
-            ...options,
-            pantryDir,
-            timeout,
-            cache: useCache,
-            cacheDir,
-            cacheExpirationMinutes,
-          })
-
-          if (result) {
-            // Save to cache and output
-            const { outputPath } = saveToCacheAndOutput(packageName, result.packageInfo, {
-              cacheDir,
-              outputDir,
-              cache: useCache,
-            })
-
-            if (!options.outputJson) {
-              console.log(`Successfully processed ${packageName} (saved to ${outputPath})`)
-            }
-            return { success: true, packageName }
-          }
-          else {
-            console.warn(`Failed to fetch ${packageName}`)
-            return { success: false, packageName }
-          }
-        }
-        catch (error) {
-          console.error(`Error processing ${packageName}:`, error)
-          return { success: false, packageName }
-        }
-      })
-
-      // Wait for batch to complete
-      const batchResults = await Promise.allSettled(batchPromises)
-
-      // Process results
-      for (const result of batchResults) {
-        processed++
-        if (result.status === 'fulfilled') {
-          if (result.value.success) {
-            successfulPackages.push(result.value.packageName)
-          }
-          else {
-            failedPackages.push(result.value.packageName)
-          }
-        }
-        else {
-          console.error('Batch promise rejected:', result.reason)
-          failedPackages.push('unknown')
-        }
-      }
-
-      // Progress update
-      const elapsed = Math.round((Date.now() - startTime) / 1000)
-      const rate = Math.round(processed / elapsed * 10) / 10
-      const eta = Math.round((allPackageNames.length - processed) / rate)
-
-      if (!options.outputJson) {
-        console.log(`Batch ${batchIndex + 1}/${batches.length} complete. Progress: ${processed}/${allPackageNames.length} (${Math.round(processed / allPackageNames.length * 100)}%) | Success: ${successfulPackages.length} | Failed: ${failedPackages.length} | Rate: ${rate}/s | ETA: ${eta}s`)
-      }
-
-      // Small delay between batches to prevent overwhelming the system
-      if (batchIndex < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-      }
-    }
-
-    // No browser cleanup needed - ts-web-scraper doesn't use browsers
-    const totalTime = Math.round((Date.now() - startTime) / 1000)
-    if (!options.outputJson) {
-      console.log(`\nCompleted in ${totalTime}s. Successfully processed: ${successfulPackages.length}, Failed: ${failedPackages.length}`)
-
-      if (failedPackages.length > 0) {
-        console.log(`Failed packages: ${failedPackages.slice(0, 10).join(', ')}${failedPackages.length > 10 ? ` ... and ${failedPackages.length - 10} more` : ''}`)
-      }
-    }
-
-    return successfulPackages
-  }
-  catch (error) {
-    console.error('Error in fetchAndSaveAllPackages:', error)
-    return []
-  }
+  const { pantry } = await import('./packages')
+  const domains = [...new Set(Object.values(pantry).map(pkg => pkg.domain))].sort()
+  const requested = options.limit && options.limit > 0 ? domains.slice(0, options.limit) : domains
+  const results = await Promise.all(requested.map(domain => fetchPantryPackage(domain, options)))
+  for (const result of results) saveToCacheAndOutput(result.fullDomainName, result.packageInfo, options)
+  return results.map(result => result.fullDomainName)
 }
 
 /**
- * Creates a minimal package info object when browser launch fails
- */
-function createMinimalPackageInfo(
-  packageName: string,
-  originalName: string,
-  fullDomainName: string,
-): { packageInfo: PkgxPackage, originalName: string, fullDomainName: string } {
-  // If it's a nested path like 'agwa.name/git-crypt', extract parts
-  const parts = packageName.split('/')
-  const domain = parts[0]
-  const subPath = parts.length > 1 ? parts.slice(1).join('/') : null
-
-  // Create a minimal package info object
-  const packageInfo: PkgxPackage = {
-    name: subPath || packageName,
-    domain,
-    description: `Package information for ${packageName}`,
-    packageYmlUrl: '',
-    homepageUrl: '',
-    githubUrl: '',
-    installCommand: `pantry install ${packageName}`,
-    pantryInstallCommand: `pantry install ${packageName}`,
-    programs: [],
-    companions: [],
-    dependencies: [],
-    versions: [],
-  }
-
-  return { packageInfo, originalName, fullDomainName }
-}
-
-/**
- * Fetch and save a single package with improved handling for problematic packages
+ * Export a single package from the maintained catalog.
  * @param packageName The name of the package to fetch
  * @param outputDir Directory to save package data
  * @param timeout Timeout in milliseconds
@@ -1520,453 +963,23 @@ function createMinimalPackageInfo(
 export async function fetchAndSavePackage(
   packageName: string,
   outputDir: string,
-  timeout: number,
+  _timeout: number,
   saveAsJson = false,
-  retryNumber = 1,
-  maxRetries = 3,
-  debug = false,
+  _retryNumber = 1,
+  _maxRetries = 3,
+  _debug = false,
   options: PackageFetchOptions = {},
 ): Promise<{ success: boolean, fullDomainName?: string, aliases?: string[], filePath?: string }> {
   try {
-    // Special handling for known problematic packages
-    // agwa.name is filtered out - only agwa.name/git-crypt should be processed
-
-    // Check cache first if caching is enabled
-    const useCache = options.cache !== false
-    const cacheDir = options.cacheDir || DEFAULT_CACHE_DIR
-
-    // If caching is disabled, log it and skip cache check completely
-    if (!useCache) {
-      console.log(`Cache disabled for ${packageName}, will fetch directly`)
-    }
-    else {
-      // Handle aliases - need to check the canonical name
-      // const resolvedName = PACKAGE_ALIASES[packageName] || packageName
-
-      const cachedPackage = getValidCachedPackage(packageName, {
-        cacheDir,
-        cacheExpirationMinutes: options.cacheExpirationMinutes,
-        cache: options.cache,
-      })
-
-      if (cachedPackage) {
-        // We found valid cached data
-        const { packageInfo } = cachedPackage
-
-        const fullDomainName = packageInfo.domain || packageName
-
-        // Get aliases from the cached package
-        const knownAliases = packageInfo.aliases || []
-
-        // Save the package data to the output directory
-        const filePath: string = savePackageAsTypeScript(outputDir, packageName, packageInfo)
-
-        console.log(`Using cached data for ${packageName} (saved to ${filePath})`)
-        return {
-          success: true,
-          fullDomainName,
-          aliases: knownAliases,
-          filePath,
-        }
-      }
-    }
-
-    // Use progressive timeout based on retry attempt - longer timeouts for retries
-    const baseTimeout = timeout
-    const actualTimeout = baseTimeout + (retryNumber - 1) * 10000 // Add 10s per retry
-
-    console.log(`Using timeout for ${packageName} (attempt ${retryNumber}): ${actualTimeout}ms`)
-
-    // Set an overall operation timeout to prevent hanging the entire process
-    // This is different from the browser navigation timeout
-    const operationTimeout = actualTimeout // Use the same timeout
-    let timeoutId: ReturnType<typeof setTimeout>
-    const operationTimeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        console.error(`Operation timeout for ${packageName} after ${operationTimeout}ms`)
-        reject(new Error(`Operation timeout after ${operationTimeout}ms`))
-      }, operationTimeout)
-    })
-
-    // Handle nested package paths
-    if (packageName.includes('/')) {
-      const pathParts = packageName.split('/')
-      const domain = pathParts[0]
-      const subPath = pathParts.slice(1).join('/')
-
-      console.log(`Processing nested package: domain=${domain}, subPath=${subPath}`)
-
-      try {
-        // Use a try/catch here to handle 404 errors
-        // Race the fetch operation against the timeout
-        const fetchPromise = fetchPantryPackage(`${domain}/${subPath}`, {
-          timeout: actualTimeout,
-          browser: options.browser,
-        })
-
-        const fetchResult = await Promise.race([fetchPromise, operationTimeoutPromise])
-        clearTimeout(timeoutId!)
-
-        // The timeout promise will reject if it times out, so we can directly use the result
-        const { packageInfo, originalName, fullDomainName } = fetchResult
-
-        // Sort versions using semver if they exist
-        if (packageInfo.versions && packageInfo.versions.length > 0) {
-          try {
-            // Sort versions in descending order (newest first)
-            packageInfo.versions.sort((a: string, b: string) => {
-              try {
-                // Use Bun.semver.order with negative multiplier for descending sort (newest first)
-                return -1 * Bun.semver.order(a, b)
-              }
-              catch {
-                // Fallback to string comparison if semver fails
-                return compareVersionsNumeric(a, b)
-              }
-            })
-          }
-          catch (error) {
-            console.warn(`Warning: Failed to sort versions for ${packageName} using semver:`, error)
-          }
-        }
-
-        // Create a safe version of the fullDomainName for filenames
-        const safeFilename = fullDomainName.replace(/\//g, '-')
-
-        // Add aliases information to the package info
-        const knownAliases: string[] = []
-
-        // Start with aliases that were extracted from the web scraping
-        if (packageInfo.aliases && packageInfo.aliases.length > 0) {
-          knownAliases.push(...packageInfo.aliases)
-        }
-
-        // Check if this is the target of an alias in PACKAGE_ALIASES
-        for (const [alias, target] of Object.entries(aliases)) {
-          if (target === fullDomainName && !knownAliases.includes(alias)) {
-            knownAliases.push(alias)
-          }
-        }
-
-        // Add the original name or path components as aliases
-        if (originalName !== fullDomainName && !knownAliases.includes(originalName)) {
-          knownAliases.push(originalName)
-        }
-
-        // Only add the subpath component as an alias if it makes sense
-        // Don't add generic words like 'cli', 'app', 'tool' as standalone aliases
-        const genericWords = ['cli', 'app', 'tool', 'server', 'client', 'api', 'lib', 'core']
-        if (!knownAliases.includes(subPath) && !genericWords.includes(subPath.toLowerCase())) {
-          knownAliases.push(subPath)
-        }
-
-        // Add the aliases to the package info
-        const enhancedPackageInfo = {
-          ...packageInfo,
-          fullPath: packageName, // Store the full path in the package info
-          aliases: knownAliases.length > 0 ? knownAliases : [],
-        }
-
-        // Save to cache first
-        if (useCache) {
-          // Save to cache directory
-          const cachePath = path.join(cacheDir, `${safeFilename}.json`)
-          const cacheData = {
-            ...enhancedPackageInfo,
-            fetchedAt: Date.now(),
-          }
-
-          // Ensure cache directory exists
-          if (!fs.existsSync(cacheDir)) {
-            fs.mkdirSync(cacheDir, { recursive: true })
-          }
-
-          // Write to cache
-          fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2))
-          console.log(`Saved package data to cache: ${cachePath}`)
-        }
-
-        // Always save the TypeScript file to the output directory
-        const filePath: string = savePackageAsTypeScript(outputDir, fullDomainName, enhancedPackageInfo)
-
-        console.log(`Successfully saved nested package ${packageName} to ${filePath} with aliases: ${knownAliases.join(', ') || 'none'}`)
-        return {
-          success: true,
-          fullDomainName,
-          aliases: knownAliases,
-          filePath,
-        }
-      }
-      catch (error: any) {
-        clearTimeout(timeoutId!)
-        if (error.toString().includes('404') || error.toString().includes('Not Found')) {
-          console.error(`Package ${packageName} returned 404 Not Found.`)
-          // Don't retry on 404 errors, skip to avoid overwriting existing files
-          console.error(`Skipping ${packageName} to avoid overwriting existing files.`)
-          return { success: false, fullDomainName: packageName }
-        }
-        throw error // Re-throw for other errors to allow retries
-      }
-    }
-    else {
-      // Handle standard (non-nested) packages
-      try {
-        // Race the fetch operation against the timeout
-        const fetchPromise = fetchPantryPackage(packageName, {
-          timeout: actualTimeout,
-          browser: options.browser,
-        })
-
-        const fetchResult = await Promise.race([fetchPromise, operationTimeoutPromise])
-        clearTimeout(timeoutId!)
-
-        // The timeout promise will reject if it times out, so we can directly use the result
-        const { packageInfo, originalName, fullDomainName } = fetchResult
-
-        // Validate that we have meaningful package data before proceeding - be more lenient
-        const hasDescription = packageInfo.description && packageInfo.description.trim() !== ''
-        const hasVersions = packageInfo.versions && packageInfo.versions.length > 0
-        const hasPrograms = packageInfo.programs && packageInfo.programs.length > 0
-        const hasPackageYml = packageInfo.packageYmlUrl && packageInfo.packageYmlUrl.length > 0
-        const hasDependencies = packageInfo.dependencies && packageInfo.dependencies.length > 0
-        const hasCompanions = packageInfo.companions && packageInfo.companions.length > 0
-
-        // Only skip if clearly problematic descriptions
-        const hasClearlyBadDescription = hasDescription && (
-          packageInfo.description.toLowerCase().trim() === 'go home.'
-          || packageInfo.description.toLowerCase().trim() === 'page not found'
-          || packageInfo.description.toLowerCase().trim() === 'not found'
-          || packageInfo.description.toLowerCase().trim() === '404'
-          || packageInfo.description.toLowerCase().trim() === 'error'
-        )
-
-        // Be more permissive - consider a package valid if it has:
-        // 1. A non-problematic description (even if generic), OR
-        // 2. Any structural data (versions, programs, dependencies, companions, packageYml), OR
-        // 3. A valid domain name (for external packages that may have minimal pkgx data)
-        const hasValidDescription = hasDescription && !hasClearlyBadDescription
-        const hasStructuralData = hasVersions || hasPrograms || hasPackageYml || hasDependencies || hasCompanions
-        const hasValidDomain = packageInfo.domain && packageInfo.domain.includes('.')
-
-        const hasValidData = hasValidDescription || hasStructuralData || hasValidDomain
-
-        if (!hasValidData) {
-          console.error(`Package ${packageName} appears to have no meaningful data. Skipping to avoid creating empty files.`)
-          return { success: false, fullDomainName: packageName }
-        }
-
-        // Additional validation: Check if we're about to overwrite a file with better data
-        // We need to check both possible filenames: package name and domain-based
-        const packageBasedFilename = packageInfo.name
-          && packageInfo.name !== fullDomainName
-          && packageInfo.name !== fullDomainName.split('/')[0]
-          && packageInfo.name.length > 1
-          && !packageInfo.name.includes('/')
-          ? sanitizeFilename(packageInfo.name)
-          : null
-        const domainBasedFilename = fullDomainName.replace(/\//g, '-')
-
-        const existingFilePath = packageBasedFilename
-          ? path.join(outputDir, `${packageBasedFilename}.ts`)
-          : path.join(outputDir, `${domainBasedFilename}.ts`)
-
-        if (fs.existsSync(existingFilePath)) {
-          const existingContent = fs.readFileSync(existingFilePath, 'utf-8')
-
-          // Check if existing file has dependencies but new fetch doesn't
-          const existingHasDependencies = existingContent.includes('dependencies: [')
-            && !existingContent.includes('dependencies: [] as const')
-          const newHasNoDependencies = packageInfo.dependencies.length === 0
-
-          // Check if existing file has a real description but new fetch has generic one
-          const existingHasRealDescription = !existingContent.includes('description: \'Package information for')
-            && !existingContent.includes('description: \'\' as const')
-          const newHasGenericDescription = packageInfo.description.includes('Package information for')
-            || packageInfo.description.trim() === ''
-
-          // If existing file is better, skip to avoid data degradation
-          if ((existingHasDependencies && newHasNoDependencies)
-            || (existingHasRealDescription && newHasGenericDescription)) {
-            console.warn(`⚠️  Existing file ${existingFilePath} has better data than new fetch. Skipping to prevent data loss.`)
-            console.warn(`   Existing deps: ${existingHasDependencies}, New deps: ${!newHasNoDependencies}`)
-            console.warn(`   Existing desc: ${existingHasRealDescription}, New desc: ${!newHasGenericDescription}`)
-            return { success: false, fullDomainName: packageName }
-          }
-        }
-
-        // Sort versions using semver if they exist
-        if (packageInfo.versions && packageInfo.versions.length > 0) {
-          try {
-            // Sort versions in descending order (newest first)
-            packageInfo.versions.sort((a: string, b: string) => {
-              try {
-                // Use Bun.semver.order with negative multiplier for descending sort (newest first)
-                return -1 * Bun.semver.order(a, b)
-              }
-              catch {
-                // Fallback to string comparison if semver fails
-                return compareVersionsNumeric(a, b)
-              }
-            })
-          }
-          catch (error) {
-            console.warn(`Warning: Failed to sort versions for ${packageName} using semver:`, error)
-          }
-        }
-
-        // Create a safe version of the fullDomainName for filenames
-        const safeFilename = fullDomainName.replace(/\//g, '-')
-
-        // Add aliases information to the package info
-        const knownAliases: string[] = []
-
-        // Start with aliases that were extracted from the web scraping
-        if (packageInfo.aliases && packageInfo.aliases.length > 0) {
-          knownAliases.push(...packageInfo.aliases)
-        }
-
-        // Check if this is the target of an alias in PACKAGE_ALIASES
-        for (const [alias, target] of Object.entries(aliases)) {
-          if (target === fullDomainName && !knownAliases.includes(alias)) {
-            knownAliases.push(alias)
-          }
-        }
-
-        // Add the original name or path components as aliases
-        if (originalName !== fullDomainName && !knownAliases.includes(originalName)) {
-          knownAliases.push(originalName)
-        }
-
-        // Add the aliases to the package info
-        const enhancedPackageInfo = {
-          ...packageInfo,
-          fullPath: packageName, // Store the full path in the package info
-          aliases: knownAliases.length > 0 ? knownAliases : [],
-        }
-
-        // Save to cache first
-        if (useCache) {
-          // Save to cache directory
-          const cachePath = path.join(cacheDir, `${safeFilename}.json`)
-          const cacheData = {
-            ...enhancedPackageInfo,
-            fetchedAt: Date.now(),
-          }
-
-          // Ensure cache directory exists
-          if (!fs.existsSync(cacheDir)) {
-            fs.mkdirSync(cacheDir, { recursive: true })
-          }
-
-          // Write to cache
-          fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2))
-          console.log(`Saved package data to cache: ${cachePath}`)
-        }
-
-        // Always save the TypeScript file to the output directory
-        const filePath: string = savePackageAsTypeScript(outputDir, fullDomainName, enhancedPackageInfo)
-
-        console.log(`Successfully saved ${packageName} to ${filePath} with aliases: ${knownAliases.join(', ') || 'none'}`)
-        return {
-          success: true,
-          fullDomainName,
-          aliases: knownAliases,
-          filePath,
-        }
-      }
-      catch (error: any) {
-        clearTimeout(timeoutId!)
-        if (error.toString().includes('404') || error.toString().includes('Not Found')) {
-          console.error(`Package ${packageName} returned 404 Not Found. Skipping to avoid overwriting existing files.`)
-          return { success: false, fullDomainName: packageName }
-        }
-        throw error // Re-throw for other errors to allow retries
-      }
-    }
+    const result = await fetchPantryPackage(packageName, options)
+    const { outputPath } = saveToCacheAndOutput(result.fullDomainName, result.packageInfo, { ...options, outputDir, json: saveAsJson })
+    return { success: true, fullDomainName: result.fullDomainName, aliases: result.packageInfo.aliases, filePath: outputPath }
   }
-  catch (error: any) {
-    const errorString = String(error)
-
-    // Check for timeout errors that should be retried
-    const isTimeoutError = errorString.includes('Operation timed out after')
-      || errorString.includes('Operation timeout after')
-      || errorString.includes('timeout')
-      || errorString.includes('Timeout')
-      || errorString.includes('Navigation timeout')
-
-    // Check for Playwright connection errors that indicate browser issues
-    const isBrowserError = errorString.includes('No target found')
-      || errorString.includes('targetId')
-      || errorString.includes('Target page, context or browser has been closed')
-      || errorString.includes('Protocol error')
-      || errorString.includes('Connection closed')
-      || errorString.includes('Assertion error')
-      || errorString.includes('Browser has been closed')
-      || errorString.includes('Target closed')
-      || errorString.includes('Session closed')
-      || errorString.includes('WebSocket connection closed')
-
-    if (isTimeoutError) {
-      console.error(`Timeout error for ${packageName}:`, errorString.substring(0, 200))
-
-      // Wait a bit before retrying timeout errors
-      await new Promise(resolve => setTimeout(resolve, 1000 * retryNumber))
-    }
-    else if (isBrowserError) {
-      console.error(`Browser connection error for ${packageName}:`, errorString.substring(0, 200))
-
-      // Force cleanup and wait longer for browser errors
-      if (options.browser) {
-        try {
-          // Try to close the problematic browser
-          await options.browser.close().catch(() => {})
-        }
-        catch {
-          // Ignore errors when closing
-        }
-      }
-
-      // Wait longer before retrying browser errors
-      await new Promise(resolve => setTimeout(resolve, 3000 * retryNumber))
-    }
-
-    // If we've exceeded retry attempts, create a minimal placeholder package
-    if (retryNumber >= maxRetries) {
-      console.error(`Failed to fetch package ${packageName} after ${retryNumber} attempts:`, error)
-
-      // Save debugging information if debug mode is enabled
-      if (debug) {
-        const debugPath = path.join(process.cwd(), `${packageName.replace(/\//g, '-')}-error.txt`)
-        fs.writeFileSync(debugPath, `Error fetching ${packageName}:\n${error.toString()}\n\nStack:\n${error.stack || 'No stack trace available'}`)
-        console.error(`Saved error details to ${debugPath}`)
-      }
-
-      // Don't create placeholder packages to avoid overwriting existing good files
-      console.error(`Skipping ${packageName} after ${retryNumber} failed attempts to avoid overwriting existing files.`)
-      return { success: false, fullDomainName: packageName }
-    }
-
-    console.error(`Attempt ${retryNumber} failed for ${packageName}, retrying...`, error)
-
-    // Different wait times based on error type
-    let waitTime = 500 * retryNumber // default
-    if (isBrowserError) {
-      waitTime = 2000 * retryNumber // longer for browser errors
-    }
-    else if (isTimeoutError) {
-      waitTime = 1000 * retryNumber // medium for timeout errors
-    }
-
-    await new Promise(resolve => setTimeout(resolve, waitTime))
-
-    // Retry with same base timeout (actual timeout will still increase due to retry counter)
-    return fetchAndSavePackage(packageName, outputDir, timeout, saveAsJson, retryNumber + 1, maxRetries, debug, options)
+  catch (error) {
+    console.error(`Could not export package metadata for ${packageName}:`, error)
+    return { success: false, fullDomainName: packageName }
   }
 }
-
-/**
- * Check if a package has meaningful data and should be saved
- */
 
 /**
  * Scans the local pantry directory and extracts all available packages
@@ -2181,7 +1194,7 @@ export async function readPantryPackageInfo(packageName: string, pantryDir = 'sr
       programs,
       homepageUrl,
       githubUrl,
-      // We'll get the rest from pkgx.dev
+      // This is partial raw-recipe inspection, not complete export metadata.
     }
 
     return packageInfo
@@ -2193,216 +1206,14 @@ export async function readPantryPackageInfo(packageName: string, pantryDir = 'sr
 }
 
 /**
- * Combines pantry package data with additional metadata from pkgx.dev
+ * Compatibility entry point for complete maintained catalog metadata
  * @param packageName The package name (e.g., 'github.com/user/repo')
- * @param options Fetch options including pantry directory
+ * @param options Export options; upstream discovery is owned by the version updater
  * @returns Complete package information
  */
 export async function fetchPantryPackageWithMetadata(
   packageName: string,
   options: PackageFetchOptions = {},
 ): Promise<{ packageInfo: PkgxPackage, originalName: string, fullDomainName: string } | null> {
-  const pantryDir = options.pantryDir || 'src/pantry'
-
-  try {
-    // First, get basic package info from pantry files
-    const pantryInfo = await readPantryPackageInfo(packageName, pantryDir)
-
-    // Then fetch additional metadata from pkgx.dev
-    try {
-      const webData = await fetchPantryPackage(packageName, options)
-
-      // Get alias overrides for this domain
-      const domain = pantryInfo?.domain || webData.packageInfo.domain
-      const aliasOverrides = getAliasOverrides(domain)
-
-      // Determine final aliases
-      let finalAliases = webData.packageInfo.aliases || []
-      if (aliasOverrides.length > 0) {
-        if (shouldReplaceAliases(domain)) {
-          // Replace existing aliases completely
-          finalAliases = aliasOverrides
-        }
-        else {
-          // Add to existing aliases, avoiding duplicates
-          finalAliases = [...new Set([...finalAliases, ...aliasOverrides])]
-        }
-      }
-
-      // If web data has no versions or programs, preserve existing TS file data
-      // to avoid wiping out manually-curated metadata for custom/local packages
-      let preservedVersions: string[] = []
-      let preservedPrograms: string[] = []
-      let preservedDescription = ''
-      let preservedHomepageUrl = ''
-
-      const webVersions = webData.packageInfo.versions || []
-      const webPrograms = webData.packageInfo.programs || []
-      const pantryPrograms = pantryInfo?.programs || []
-
-      if (webVersions.length === 0 || (webPrograms.length === 0 && pantryPrograms.length === 0)) {
-        const outputDir = options.outputDir || 'src/packages'
-        const domainParts = packageName.split('/')
-        const existingTsPath = domainParts.length > 1
-          ? path.join(outputDir, ...domainParts.slice(0, -1), `${domainParts[domainParts.length - 1]}.ts`)
-          : path.join(outputDir, `${packageName.replace(/\./g, '')}.ts`)
-
-        if (fs.existsSync(existingTsPath)) {
-          try {
-            const existingContent = fs.readFileSync(existingTsPath, 'utf-8')
-
-            if (webVersions.length === 0) {
-              const versionsMatch = existingContent.match(/versions:\s*\[([\s\S]*?)\]\s*as\s*const/)
-              if (versionsMatch && versionsMatch[1].trim()) {
-                preservedVersions = versionsMatch[1].match(/'([^']+)'/g)?.map(v => v.replace(/'/g, '')) || []
-              }
-            }
-
-            if (webPrograms.length === 0 && pantryPrograms.length === 0) {
-              const programsMatch = existingContent.match(/programs:\s*\[([\s\S]*?)\]\s*as\s*const/)
-              if (programsMatch && programsMatch[1].trim()) {
-                preservedPrograms = programsMatch[1].match(/'([^']+)'/g)?.map(v => v.replace(/'/g, '')) || []
-              }
-            }
-
-            if (!webData.packageInfo.description) {
-              const descMatch = existingContent.match(/description:\s*'([^']*)'\s*as\s*const/)
-              if (descMatch && descMatch[1]) {
-                preservedDescription = descMatch[1]
-              }
-            }
-
-            if (!webData.packageInfo.homepageUrl && !pantryInfo?.homepageUrl) {
-              const homeMatch = existingContent.match(/homepageUrl:\s*'([^']*)'\s*as\s*const/)
-              if (homeMatch && homeMatch[1]) {
-                preservedHomepageUrl = homeMatch[1]
-              }
-            }
-          }
-          catch { /* ignore parse errors */ }
-        }
-      }
-
-      // Combine pantry data with web data, giving priority to pantry for dependencies/companions
-      const combinedPackageInfo: PkgxPackage = {
-        ...webData.packageInfo,
-        // Override with pantry data where available
-        dependencies: pantryInfo?.dependencies && pantryInfo.dependencies.length > 0
-          ? pantryInfo.dependencies
-          : webData.packageInfo.dependencies,
-        buildDependencies: pantryInfo?.buildDependencies && pantryInfo.buildDependencies.length > 0
-          ? pantryInfo.buildDependencies
-          : webData.packageInfo.buildDependencies,
-        companions: pantryInfo?.companions && pantryInfo.companions.length > 0
-          ? pantryInfo.companions
-          : webData.packageInfo.companions,
-        // Use pantry programs if web data has none, then preserved, then empty
-        programs: webPrograms.length > 0
-          ? webPrograms
-          : (pantryPrograms.length > 0 ? pantryPrograms : (preservedPrograms.length > 0 ? preservedPrograms : [])),
-        // Preserve existing versions if web fetch returned empty
-        versions: webVersions.length > 0 ? webVersions : preservedVersions,
-        domain: pantryInfo?.domain || webData.packageInfo.domain,
-        description: webData.packageInfo.description || preservedDescription || '',
-        // For name, prefer web data (which extracts actual program names) over pantry data (which uses generic path segments)
-        // Only use pantry name if web data doesn't have a name
-        name: webData.packageInfo.name || pantryInfo?.name || packageName.split('/').pop() || packageName,
-        // Use pantry URLs if available, otherwise fallback to web data, then preserved
-        homepageUrl: pantryInfo?.homepageUrl || webData.packageInfo.homepageUrl || preservedHomepageUrl,
-        githubUrl: pantryInfo?.githubUrl || webData.packageInfo.githubUrl,
-        // Apply alias overrides
-        aliases: finalAliases,
-      }
-
-      return {
-        packageInfo: combinedPackageInfo,
-        originalName: webData.originalName,
-        fullDomainName: webData.fullDomainName,
-      }
-    }
-    catch (webError) {
-      if (!pantryInfo) {
-        console.warn(`No pantry or web data available for ${packageName}:`, webError)
-        return null
-      }
-
-      console.warn(`Failed to fetch web metadata for ${packageName}, using pantry data only:`, webError)
-
-      // Try to preserve existing TS file data (versions, programs, description)
-      // so we don't wipe out manually-curated or previously-fetched metadata
-      let existingVersions: string[] = []
-      let existingPrograms: string[] = []
-      let existingDescription = ''
-      let existingHomepageUrl = ''
-
-      const outputDir = options.outputDir || 'src/packages'
-      const domainParts = packageName.split('/')
-      const existingTsPath = domainParts.length > 1
-        ? path.join(outputDir, ...domainParts.slice(0, -1), `${domainParts[domainParts.length - 1]}.ts`)
-        : path.join(outputDir, `${packageName.replace(/\./g, '')}.ts`)
-
-      if (fs.existsSync(existingTsPath)) {
-        try {
-          const existingContent = fs.readFileSync(existingTsPath, 'utf-8')
-
-          // Extract existing versions
-          const versionsMatch = existingContent.match(/versions:\s*\[([\s\S]*?)\]\s*as\s*const/)
-          if (versionsMatch && versionsMatch[1].trim()) {
-            existingVersions = versionsMatch[1].match(/'([^']+)'/g)?.map(v => v.replace(/'/g, '')) || []
-          }
-
-          // Extract existing programs
-          const programsMatch = existingContent.match(/programs:\s*\[([\s\S]*?)\]\s*as\s*const/)
-          if (programsMatch && programsMatch[1].trim()) {
-            existingPrograms = programsMatch[1].match(/'([^']+)'/g)?.map(v => v.replace(/'/g, '')) || []
-          }
-
-          // Extract existing description
-          const descMatch = existingContent.match(/description:\s*'([^']*)'\s*as\s*const/)
-          if (descMatch && descMatch[1]) {
-            existingDescription = descMatch[1]
-          }
-
-          // Extract existing homepage URL
-          const homeMatch = existingContent.match(/homepageUrl:\s*'([^']*)'\s*as\s*const/)
-          if (homeMatch && homeMatch[1]) {
-            existingHomepageUrl = homeMatch[1]
-          }
-        }
-        catch { /* ignore parse errors */ }
-      }
-
-      // Prefer pantry-extracted programs, then existing, then empty
-      const programs = (pantryInfo.programs && pantryInfo.programs.length > 0)
-        ? pantryInfo.programs
-        : existingPrograms
-
-      // Create a package from pantry data, preserving existing metadata
-      const packageInfo: PkgxPackage = {
-        name: pantryInfo.name || packageName.split('/').pop() || packageName,
-        domain: pantryInfo.domain || packageName,
-        description: existingDescription || '',
-        installCommand: `pantry install ${packageName}`,
-        pantryInstallCommand: `pantry install ${packageName}`,
-          programs,
-        companions: pantryInfo.companions || [],
-        dependencies: pantryInfo.dependencies || [],
-        versions: existingVersions,
-        buildDependencies: pantryInfo.buildDependencies || [],
-        packageYmlUrl: `https://github.com/pkgxdev/pantry/tree/main/projects/${packageName}/package.yml`,
-        homepageUrl: existingHomepageUrl || pantryInfo.homepageUrl || '',
-        githubUrl: pantryInfo.githubUrl || '',
-      }
-
-      return {
-        packageInfo,
-        originalName: packageName,
-        fullDomainName: packageName,
-      }
-    }
-  }
-  catch (error) {
-    console.error(`Error processing pantry package ${packageName}:`, error)
-    return null
-  }
+  return fetchPantryPackage(packageName, options)
 }

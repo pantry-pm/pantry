@@ -109,7 +109,7 @@ export interface PackageFetchOptions {
   limit?: number
 
   /**
-   * Whether to use cached data if available and not expired
+   * Whether to write an exported metadata cache. Catalog data remains authoritative.
    * @default true
    */
   cache?: boolean
@@ -138,9 +138,12 @@ export interface PackageFetchOptions {
    */
   outputJson?: boolean
 
+  /** Export package files as JSON instead of TypeScript. */
+  json?: boolean
+
   /**
-   * Directory containing the local pantry files
-   * @default 'src/pantry'
+   * Legacy raw-recipe directory. Catalog exports use the maintained package index.
+   * @deprecated Use readPantryPackageInfo for explicit raw-recipe inspection.
    */
   pantryDir?: string
 }

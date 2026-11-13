@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import type { DependencyResolverOptions } from '../src/dependency-resolver'
-import type { PackageFetchOptions } from '../src/types'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
@@ -14,15 +13,14 @@ import { provisionMacApp } from '../src/app-store-connect'
 import { findDependencyFiles, parseDependencyFile, resolveDependencyFile } from '../src/dependency-resolver'
 import {
   cleanStaleOutputFiles,
-  cleanupBrowserResources,
   DEFAULT_CACHE_DIR,
   DEFAULT_CACHE_EXPIRATION_MINUTES,
   DEFAULT_TIMEOUT_MS,
-  fetchAndSaveAllPackages,
   fetchPantryPackageWithMetadata,
   generateAliases,
   generateDocs,
   generateIndex,
+  pantry,
   savePackageAsTypeScript,
   saveToCacheAndOutput,
 } from '../src/index'
@@ -312,43 +310,6 @@ function parseInstallPlatform(value?: string): { os: 'darwin' | 'linux' | 'windo
 
 const cli = new CLI('ts-pantry')
 
-// Force exit after a maximum timeout to prevent hung processes
-// This is a safety mechanism in case Playwright doesn't close properly
-const EXIT_TIMEOUT = 1500000 // 25 minutes
-const forceExitTimeout = setTimeout(() => {
-  console.error('Force exiting after timeout - process may have hung') // so GitHub Actions doesn't run forever
-  process.exit(1)
-}, EXIT_TIMEOUT)
-
-// Clear the force exit timeout if process exits normally
-process.on('exit', () => {
-  clearTimeout(forceExitTimeout)
-})
-
-// Clean exit handler for SIGINT and SIGTERM
-async function exitHandler(signal: string) {
-  console.log(`\nReceived ${signal} signal. Cleaning up resources...`)
-  clearTimeout(forceExitTimeout)
-
-  try {
-    await cleanupBrowserResources()
-    console.log('Resources cleaned up. Exiting.')
-  }
-  catch (err) {
-    console.error('Error during cleanup:', err)
-  }
-
-  // Force exit after cleanup attempt
-  setTimeout(() => {
-    console.log('Forcing process exit...')
-    process.exit(0)
-  }, 1000)
-}
-
-// Process interrupt handling to ensure clean exit
-process.on('SIGINT', () => exitHandler('SIGINT'))
-process.on('SIGTERM', () => exitHandler('SIGTERM'))
-
 /**
  * Convert a domain name to a friendly alias name if available
  */
@@ -383,20 +344,20 @@ function getFriendlyNames(domainNames: string[]): { friendlyNames: string[], mix
 
 // Unified fetch command with all functionality
 cli
-  .command('fetch [packageName]', 'Fetch package information from pkgx.dev')
+  .command('fetch [packageName]', 'Export metadata from the maintained Pantry catalog')
   .option('-a, --all', 'Fetch all packages')
   .option('-p, --pkg <packageNames>', 'Comma-separated list of package names to fetch')
   .option('-o, --output-dir <dir>', 'Directory to save package data', { default: 'src/packages' })
-  .option('-c, --cache-dir <dir>', 'Directory to cache package data', { default: DEFAULT_CACHE_DIR })
-  .option('-n, --no-cache', 'Disable caching')
-  .option('-e, --cache-expiration <minutes>', 'Cache expiration time in minutes', { default: DEFAULT_CACHE_EXPIRATION_MINUTES })
+  .option('-c, --cache-dir <dir>', 'Directory to write exported metadata cache', { default: DEFAULT_CACHE_DIR })
+  .option('-n, --no-cache', 'Do not write metadata cache')
+  .option('-e, --cache-expiration <minutes>', 'Legacy cache-expiration argument; catalog queries are local', { default: DEFAULT_CACHE_EXPIRATION_MINUTES })
   .option('-l, --limit <count>', 'Limit the number of packages to fetch (use with --all)')
-  .option('-t, --timeout <ms>', 'Timeout for network requests in milliseconds', { default: DEFAULT_TIMEOUT_MS })
-  .option('-r, --max-retries <count>', 'Maximum number of retry attempts for failed requests', { default: 3 })
+  .option('-t, --timeout <ms>', 'Legacy remote-discovery timeout argument', { default: DEFAULT_TIMEOUT_MS })
+  .option('-r, --max-retries <count>', 'Legacy remote-discovery retry argument', { default: 3 })
   .option('-j, --json', 'Save as JSON instead of TypeScript')
-  .option('-d, --debug', 'Enable debug mode (save screenshots)')
+  .option('-d, --debug', 'Legacy remote-discovery debug flag')
   .option('-v, --verbose', 'Enable verbose output')
-  .option('-y, --concurrency <count>', 'Number of packages to fetch concurrently (default: 8)', { default: 8 })
+  .option('-y, --concurrency <count>', 'Legacy remote-discovery concurrency argument', { default: 8 })
   .option('--output-json', 'Output results as JSON (for CI integration)')
   .action(async (packageName: string | undefined, options: FetchOptions) => {
     // Extract options with appropriate types
@@ -405,213 +366,56 @@ cli
       outputDir = 'src/packages',
       cacheDir = DEFAULT_CACHE_DIR,
       cache = true,
-      cacheExpiration = DEFAULT_CACHE_EXPIRATION_MINUTES,
       limit,
-      timeout = DEFAULT_TIMEOUT_MS,
       json: saveAsJson = false,
-      debug = false,
       verbose = false,
-      concurrency = 8,
       pkg,
       outputJson = false,
     } = options
 
-    // Ensure output directory exists
     const outputDirPath = path.resolve(process.cwd(), outputDir)
-    if (!fs.existsSync(outputDirPath)) {
-      fs.mkdirSync(outputDirPath, { recursive: true })
-    }
-
-    // Ensure cache directory exists if caching is enabled
     const cacheDirPath = path.resolve(process.cwd(), cacheDir)
-    if (cache) {
-      if (!fs.existsSync(cacheDirPath)) {
-        fs.mkdirSync(cacheDirPath, { recursive: true })
-      }
-    }
 
     try {
-      let savedPackages: string[] = []
-      let actuallyFetched: string[] = []
+      const allDomains = [...new Set(Object.values(pantry).map(pkg => pkg.domain))].sort()
+      const requested = fetchAll
+        ? (limit && Number(limit) > 0 ? allDomains.slice(0, Number(limit)) : allDomains)
+        : pkg ? pkg.split(',').map((name: string) => name.trim()).filter(Boolean)
+        : packageName ? [packageName] : []
+      if (!requested.length) throw new Error('Please specify package metadata with a name, --pkg, or --all')
 
-      if (fetchAll) {
-        // Fetch all packages
-        if (!outputJson) {
-          console.log('Fetching all packages...')
-        }
-        const fetchOptions: PackageFetchOptions = {
-          outputDir,
-          cacheDir,
+      // Resolve every request before creating or changing any output/cache files.
+      // The immutable catalog owns metadata; a legacy cache cannot override it.
+      const results = await Promise.all(requested.map(async (name: string) => {
+        const result = await fetchPantryPackageWithMetadata(name, { outputDir: outputDirPath })
+        if (!result) throw new Error(`No maintained package metadata for ${name}`)
+        return result
+      }))
+      const savedPackages: string[] = []
+      const actuallyFetched: string[] = []
+      for (const result of new Map(results.map(result => [result.fullDomainName, result])).values()) {
+        const { outputPath } = saveToCacheAndOutput(result.fullDomainName, result.packageInfo, {
+          cacheDir: cacheDirPath,
+          outputDir: outputDirPath,
           cache,
-          cacheExpirationMinutes: cacheExpiration,
-          timeout: Number.parseInt(String(timeout), 10),
-          debug,
-          limit: limit ? Number.parseInt(String(limit), 10) : undefined,
-          concurrency: Math.min(Number.parseInt(String(concurrency), 10), 12),
-          outputJson,
-        }
-
-        savedPackages = await fetchAndSaveAllPackages(fetchOptions)
-        // For the bulk fetch, we'll consider all returned packages as "actually fetched"
-        // since the function only returns packages that were successfully processed
-        actuallyFetched = [...savedPackages]
-      }
-      else if (pkg) {
-        // Fetch specific packages
-        const packageNames = pkg.split(',').map((p: string) => p.trim())
-        if (!outputJson) {
-          console.log(`Fetching ${packageNames.length} packages: ${packageNames.join(', ')}`)
-        }
-
-        // Process each package sequentially using the new pantry-based approach
-        for (const name of packageNames) {
-          try {
-            // Check cache first
-            const cacheFile = path.join(cacheDir, `${name.replace(/\//g, '-')}.json`)
-            let usedCache = false
-
-            if (cache && fs.existsSync(cacheFile)) {
-              const stats = fs.statSync(cacheFile)
-              const ageMinutes = (Date.now() - stats.mtime.getTime()) / (1000 * 60)
-
-              if (ageMinutes < cacheExpiration) {
-                if (!outputJson) {
-                  console.log(`Using cached data for ${name} (age: ${Math.round(ageMinutes)} minutes)`)
-                }
-                try {
-                  const cachedData = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'))
-                  // Remove fetchedAt before generating TypeScript
-                  delete cachedData.fetchedAt
-                  const tsFilePath = savePackageAsTypeScript(outputDir, name, cachedData)
-                  if (verbose && !outputJson) {
-                    console.log(`Using cached data for ${name} (saved to ${tsFilePath})`)
-                  }
-                  savedPackages.push(name)
-                  usedCache = true
-                  continue
-                }
-                catch {
-                  console.warn(`Cache file corrupted for ${name}, will refetch`)
-                }
-              }
-            }
-
-            if (!usedCache) {
-              // Use the new pantry-based fetch approach
-              const result = await fetchPantryPackageWithMetadata(name, {
-                timeout: Number.parseInt(String(timeout), 10),
-                debug,
-                outputJson,
-                cacheDir,
-                cache,
-                cacheExpirationMinutes: cacheExpiration,
-              })
-
-              if (result) {
-                // Save to cache and output
-                const { outputPath } = saveToCacheAndOutput(name, result.packageInfo, {
-                  cacheDir,
-                  outputDir,
-                  cache,
-                })
-
-                savedPackages.push(name)
-                actuallyFetched.push(name)
-                if (verbose && !outputJson) {
-                  console.log(`Successfully saved ${name} to ${outputPath}`)
-                }
-              }
-            }
-          }
-          catch (error) {
-            console.error(`Error processing ${name}:`, error)
-          }
-        }
-      }
-      else if (packageName) {
-        // Fetch a single package using the new pantry-based approach
-        if (!outputJson) {
-          console.log(`Fetching package: ${packageName}`)
-        }
-
-        try {
-          // Check cache first
-          const cacheFile = path.join(cacheDirPath, `${packageName.replace(/\//g, '-')}.json`)
-          let usedCache = false
-
-          if (cache && fs.existsSync(cacheFile)) {
-            const stats = fs.statSync(cacheFile)
-            const ageMinutes = (Date.now() - stats.mtime.getTime()) / (1000 * 60)
-
-            if (ageMinutes < cacheExpiration) {
-              if (!outputJson) {
-                console.log(`Using cached data for ${packageName} (age: ${Math.round(ageMinutes)} minutes)`)
-              }
-              try {
-                const cachedData = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'))
-                // Remove fetchedAt before generating TypeScript
-                delete cachedData.fetchedAt
-                const tsFilePath = savePackageAsTypeScript(outputDirPath, packageName, cachedData)
-                if (verbose && !outputJson) {
-                  console.log(`Using cached data for ${packageName} (saved to ${tsFilePath})`)
-                }
-                savedPackages.push(packageName)
-                usedCache = true
-              }
-              catch {
-                console.warn(`Cache file corrupted for ${packageName}, will refetch`)
-              }
-            }
-          }
-
-          if (!usedCache) {
-            // Use the new pantry-based fetch approach
-            const result = await fetchPantryPackageWithMetadata(packageName, {
-              timeout: Number.parseInt(String(timeout), 10),
-              debug,
-              outputJson,
-              cacheDir,
-              cache,
-              cacheExpirationMinutes: cacheExpiration,
-            })
-
-            if (result) {
-              // Save to cache and output
-              const { outputPath } = saveToCacheAndOutput(packageName, result.packageInfo, {
-                cacheDir,
-                outputDir,
-                cache,
-              })
-
-              savedPackages.push(packageName)
-              actuallyFetched.push(packageName)
-              if (verbose && !outputJson) {
-                console.log(`Successfully saved ${packageName} to ${outputPath}`)
-              }
-            }
-          }
-        }
-        catch (error) {
-          console.error(`Error processing ${packageName}:`, error)
-        }
-      }
-      else {
-        if (!outputJson) {
-          console.error('Error: Please specify a package name, use --pkg, or use --all')
-        }
-        process.exit(1)
+          json: saveAsJson,
+        })
+        savedPackages.push(result.fullDomainName)
+        actuallyFetched.push(result.fullDomainName)
+        if (verbose && !outputJson) console.log(`Exported ${result.fullDomainName} to ${outputPath}`)
       }
 
       // Generate index file after fetching packages
       if (!saveAsJson && savedPackages.length > 0) {
-        const indexPath = await generateIndex()
+        const indexPath = await generateIndex(outputDirPath)
+        if (!indexPath) throw new Error(`Could not generate metadata index in ${outputDirPath}`)
         if (!outputJson) {
           console.log(`Successfully generated ${indexPath}`)
         }
       }
 
       // Clean up stale generated files that are no longer in the package list
-      if (fetchAll && savedPackages.length > 0) {
+      if (fetchAll && !limit && !saveAsJson && savedPackages.length > 0) {
         const removed = cleanStaleOutputFiles(outputDirPath, savedPackages)
         if (removed.length > 0 && !outputJson) {
           console.log(`Cleaned up ${removed.length} stale generated file(s)`)
@@ -643,14 +447,6 @@ cli
         console.log(`Processed ${savedPackages.length} packages.`)
       }
 
-      // Clear the force exit timeout as we're finishing normally
-      clearTimeout(forceExitTimeout)
-
-      // Clean up and exit
-      await cleanupBrowserResources()
-
-      // Force exit after cleanup to prevent hanging
-      setTimeout(() => process.exit(0), 1000)
     }
     catch (error) {
       if (outputJson) {
@@ -666,11 +462,7 @@ cli
         console.error('Error:', error)
       }
 
-      // Attempt to clean up resources even on error
-      await cleanupBrowserResources()
-
-      // Force exit with error code
-      setTimeout(() => process.exit(1), 1000)
+      process.exitCode = 1
     }
   })
 

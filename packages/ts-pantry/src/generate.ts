@@ -1010,7 +1010,7 @@ export function toPackageVarName(moduleName: string, packagesDir?: string): stri
  */
 export async function generateIndex(packagesDir?: string): Promise<string | null> {
   try {
-    console.log('🔧 Generating package index...')
+    console.error('🔧 Generating package index...')
 
     // Use provided packages directory or default
     const targetPackagesDir = packagesDir || PACKAGES_DIR
@@ -1018,7 +1018,7 @@ export async function generateIndex(packagesDir?: string): Promise<string | null
 
     // Ensure the target directory exists
     if (!fs.existsSync(targetPackagesDir)) {
-      console.log(`Creating packages directory: ${targetPackagesDir}`)
+      console.error(`Creating packages directory: ${targetPackagesDir}`)
       fs.mkdirSync(targetPackagesDir, { recursive: true })
     }
 
@@ -1050,7 +1050,7 @@ export async function generateIndex(packagesDir?: string): Promise<string | null
       }
 
       packageFiles = scanForPackageFiles(targetPackagesDir)
-      console.log(`Found ${packageFiles.length} package files`)
+      console.error(`Found ${packageFiles.length} package files`)
     }
     catch (error) {
       console.error(`Error reading packages directory ${targetPackagesDir}:`, error)
@@ -1074,7 +1074,7 @@ export const packages: Packages = pantry
 
     // If we have package files, generate the proper complete index
     if (packageFiles.length > 0) {
-      console.log(`Processing ${packageFiles.length} package files...`)
+      console.error(`Processing ${packageFiles.length} package files...`)
 
       // Use the same logic as the real implementation
       // const pantry = await importPantry(targetPackagesDir) // Not needed for simple index generation
@@ -1265,7 +1265,7 @@ export const packages: Packages = pantry
     // Write to the index file
     try {
       fs.writeFileSync(targetIndexFile, content)
-      console.log(`Successfully generated ${targetIndexFile}`)
+      console.error(`Successfully generated ${targetIndexFile}`)
     }
     catch (error) {
       console.error(`Error writing index file ${targetIndexFile}:`, error)
@@ -1296,14 +1296,14 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
 
   // Don't import PACKAGE_ALIASES to avoid circular dependency
   // Aliases will be generated purely from package files
-  console.log(`Generating aliases from package files (avoiding circular dependency)`)
+  console.error(`Generating aliases from package files (avoiding circular dependency)`)
 
   // Use provided packages directory or default to current working directory
   const targetPackagesDir = packagesDir || path.join(process.cwd(), 'src', 'packages')
 
   // Check if packages directory exists
   if (!fs.existsSync(targetPackagesDir)) {
-    console.log(`Packages directory does not exist: ${targetPackagesDir}`)
+    console.error(`Packages directory does not exist: ${targetPackagesDir}`)
     return allAliases
   }
 
@@ -1328,7 +1328,7 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
 
   const files = scanForPackageFiles(targetPackagesDir).sort()
 
-  console.log(`Found ${files.length} package files`)
+  console.error(`Found ${files.length} package files`)
 
   // Process each file to extract aliases
   for (const file of files) {
@@ -1349,10 +1349,10 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
       if (!shouldReplaceAliases(domain) && packageName && packageName !== domain && isValidAlias(packageName, domain)) {
         if (!allAliases[packageName]) {
           allAliases[packageName] = domain
-          console.log(`Auto-generated alias: ${packageName} -> ${domain}`)
+          console.error(`Auto-generated alias: ${packageName} -> ${domain}`)
         }
         else {
-          console.log(`Skipped auto-generated alias ${packageName} -> ${domain} (already exists as ${allAliases[packageName]})`)
+          console.error(`Skipped auto-generated alias ${packageName} -> ${domain} (already exists as ${allAliases[packageName]})`)
         }
       }
 
@@ -1389,14 +1389,14 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
               // Don't override predefined aliases from PACKAGE_ALIASES
               if (!allAliases[cleanAlias]) {
                 allAliases[cleanAlias] = domain
-                console.log(`Found explicit alias ${cleanAlias} -> ${domain}`)
+                console.error(`Found explicit alias ${cleanAlias} -> ${domain}`)
               }
               else {
-                console.log(`Skipped explicit alias ${cleanAlias} -> ${domain} (already exists as ${allAliases[cleanAlias]})`)
+                console.error(`Skipped explicit alias ${cleanAlias} -> ${domain} (already exists as ${allAliases[cleanAlias]})`)
               }
             }
             else {
-              console.log(`Filtered out invalid alias: ${cleanAlias} for ${domain}`)
+              console.error(`Filtered out invalid alias: ${cleanAlias} for ${domain}`)
             }
           }
         }
@@ -1406,18 +1406,18 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
       if (domain === 'aws.amazon.com/cli') {
         if (!allAliases.aws) {
           allAliases.aws = domain
-          console.log(`Added AWS CLI alias: aws -> ${domain}`)
+          console.error(`Added AWS CLI alias: aws -> ${domain}`)
         }
         if (!allAliases['aws/cli']) {
           allAliases['aws/cli'] = domain
-          console.log(`Added AWS CLI path alias: aws/cli -> ${domain}`)
+          console.error(`Added AWS CLI path alias: aws/cli -> ${domain}`)
         }
       }
 
       if (domain === 'aws.amazon.com/cdk') {
         if (!allAliases['aws/cdk']) {
           allAliases['aws/cdk'] = domain
-          console.log(`Added AWS CDK path alias: aws/cdk -> ${domain}`)
+          console.error(`Added AWS CDK path alias: aws/cdk -> ${domain}`)
         }
       }
 
@@ -1433,13 +1433,13 @@ async function extractAllAliases(packagesDir?: string): Promise<Record<string, s
   for (const [alias, domain] of Object.entries(aliasOverrides)) {
     if (!allAliases[alias]) {
       allAliases[alias] = domain
-      console.log(`Added alias override: ${alias} -> ${domain}`)
+      console.error(`Added alias override: ${alias} -> ${domain}`)
     }
     else {
       // Force override existing aliases with the configured overrides
       const previousDomain = allAliases[alias]
       allAliases[alias] = domain
-      console.log(`Overrode alias ${alias}: ${previousDomain} -> ${domain}`)
+      console.error(`Overrode alias ${alias}: ${previousDomain} -> ${domain}`)
     }
   }
 
