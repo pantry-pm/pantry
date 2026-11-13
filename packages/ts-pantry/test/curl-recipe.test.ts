@@ -3,6 +3,8 @@ import { curlPackage } from '../src/packages/curlse'
 import { recipe } from '../src/recipes/curl.se'
 import { recipe as ssl3 } from '../src/recipes/curl.se/ssl3'
 import { loadRecipe } from '../scripts/recipe-loader'
+import { versionSatisfies } from '../scripts/build-package'
+import { curlsessl3Package } from '../src/packages/curl.se/ssl3'
 
 describe('curl recipe dependencies', () => {
   it('discovers current releases from upstream curl tags', () => {
@@ -38,7 +40,7 @@ describe('curl recipe dependencies', () => {
     for (const domain of ['openssl.org', 'zlib.net', 'nghttp2.org', 'gnu.org/libidn2', 'github.com/google/brotli', 'facebook.com/zstd'])
       expect(recipe.dependencies?.[domain]).toBeString()
     expect(recipe.test?.required).toBe(true)
-    expect(recipe.test?.script).toContain('env -u LD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH {{prefix}}/bin/curl --version')
+    expect(recipe.test?.script).toContain('env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH {{prefix}}/bin/curl --version')
   })
 
   it('the historical OpenSSL 3 domain declares the full runtime closure and checks its own binary', async () => {
@@ -55,5 +57,25 @@ describe('curl recipe dependencies', () => {
     const loaded = await loadRecipe('curl.se')
 
     expect(loaded.recipe.test?.required).toBe(true)
+  })
+
+  it('both curl identities preserve the accepted archive while publishing owned runtime revisions', async () => {
+    for (const domain of ['curl.se', 'curl.se/ssl3']) {
+      const loaded = await loadRecipe(domain, 'darwin-arm64', '8.23.0.1')
+      expect(loaded.upstreamVersion).toBe('8.23.0')
+      expect(loaded.publicationVersion).toBe('8.23.0.1')
+      expect(loaded.requiresRecipeBuild).toBe(true)
+      expect(loaded.recipe.test?.required).toBe(true)
+    }
+    expect(curlPackage.versions).toContain('8.23.0.1')
+    expect(curlsessl3Package.versions).toContain('8.23.0.1')
+  })
+
+  it('requires the corrected IDN runtime rather than silently selecting the unrecorded older artifact', () => {
+    const constraint = recipe.dependencies!['gnu.org/libidn2'] as string
+    expect(versionSatisfies('2.3.8', constraint)).toBe(false)
+    expect(versionSatisfies('2.3.8.1', constraint)).toBe(true)
+    for (const metadata of [curlPackage, curlsessl3Package])
+      expect(metadata.dependencies).toContain('gnu.org/libidn2^2.3.8.1')
   })
 })

@@ -2,7 +2,7 @@
  * **ssl3** - pkgx package
  *
  * @domain `curl.se/ssl3`
- * @version `8.23.0` (20 versions available)
+ * @version `8.23.0.1` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install curl.se/ssl3`
@@ -14,7 +14,7 @@
  *
  * const pkg = pantry.curlsessl3
  * console.log(pkg.name)        // "ssl3"
- * console.log(pkg.versions[0]) // "8.23.0" (latest)
+ * console.log(pkg.versions[0]) // "8.23.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/curl-se/ssl3.md
@@ -53,7 +53,7 @@ export const curlsessl3Package = {
     'curl.se/ca-certs',
     'zlib.net^1.2.11',
     'nghttp2.org',
-    'gnu.org/libidn2',
+    'gnu.org/libidn2^2.3.8.1',
     'github.com/google/brotli',
     'facebook.com/zstd',
   ] as const,
@@ -63,6 +63,7 @@ export const curlsessl3Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.23.0.1',
     '8.23.0',
     '8.22.0',
     '8.21.0',

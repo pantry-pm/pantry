@@ -3,13 +3,13 @@
  *
  * @domain `curl.se`
  * @programs `curl`, `curl-config`
- * @version `8.23.0` (51 versions available)
+ * @version `8.23.0.1` (52 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install curl.se`
  * @aliases `curl`
  * @homepage https://curl.se
- * @dependencies `openssl.org^3`, `curl.se/ca-certs`, `zlib.net^1.2.11`, ... (+1 more)
+ * @dependencies `openssl.org^3`, `curl.se/ca-certs`, `zlib.net^1.2.11`, ... (+4 more)
  *
  * @example
  * ```typescript
@@ -23,7 +23,7 @@
  * console.log(pkg.name)        // "cURL"
  * console.log(pkg.description) // "A command line tool and library for transferrin..."
  * console.log(pkg.programs)    // ["curl", "curl-config"]
- * console.log(pkg.versions[0]) // "8.23.0" (latest)
+ * console.log(pkg.versions[0]) // "8.23.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/curl-se.md
@@ -69,6 +69,9 @@ export const curlPackage = {
     'curl.se/ca-certs',
     'zlib.net^1.2.11',
     'nghttp2.org',
+    'gnu.org/libidn2^2.3.8.1',
+    'github.com/google/brotli',
+    'facebook.com/zstd',
   ] as const,
   buildDependencies: [] as const,
   /**
@@ -76,6 +79,7 @@ export const curlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.23.0.1',
     '8.23.0',
     '8.22.0',
     '8.21.0',
