@@ -142,6 +142,9 @@ jobs:
 
       - name: Setup Pantry
         uses: ./packages/action
+        with:
+          # The native job has published this exact tag before SDK packing.
+          version: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
 
       - name: Install Dependencies
         run: bun install
@@ -152,7 +155,9 @@ jobs:
 
       - name: Verify strict packed consumers before publication
         id: sdk-candidate
-        run: bun run test:sdk
+        run: |
+          pantry pack packages/ts-pantry --ignore-scripts --filename artifacts/npm-publication/candidate.tgz
+          bun .github/scripts/verify-ts-sdk.ts artifacts/npm-publication/candidate.tgz
         env:
           PANTRY_SDK_EVIDENCE: ${{ runner.temp }}/pantry-sdk-candidate
 
@@ -168,6 +173,7 @@ jobs:
             exit "${publication_statuses[1]}"
           fi
           PANTRY_NPM_PUBLISH_EXIT_CODE="${publication_statuses[0]}" bun .github/scripts/npm-publication-readback.ts
+          bun .github/scripts/verify-canonical-archive.ts artifacts/npm-publication/candidate.tgz artifacts/npm-publication/package.tgz > artifacts/npm-publication/identity.json
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -196,6 +202,8 @@ jobs:
             artifacts/npm-publication/proof.json
             artifacts/npm-publication/publish.log
             artifacts/npm-publication/package.tgz
+            artifacts/npm-publication/candidate.tgz
+            artifacts/npm-publication/identity.json
           if-no-files-found: error
 
   notify:

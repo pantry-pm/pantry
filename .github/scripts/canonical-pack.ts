@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { chmod, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, resolve } from 'node:path'
-import { archiveMember } from './published-archive'
+import { archiveMember, archiveMembers } from './published-archive'
 
 assert(process.env.PANTRY_SOURCE_CLI, 'Supply the real source CLI')
 const cli = resolve(process.env.PANTRY_SOURCE_CLI)
@@ -54,6 +54,7 @@ try {
   const result = await pack(['--ignore-scripts'])
   assert.equal(result.code, 0, result.output)
   const archive = await readFile(output)
+  await writeFile(join(evidence, 'pack-before-hooks.tgz'), archive)
   receipt.archiveSha256 = Bun.SHA256.hash(archive, 'hex')
   const files = await new Bun.Archive(archive).files()
   assert.equal(await files.get('package/LICENSE.md')?.text(), 'root license bytes\n')
@@ -120,16 +121,16 @@ try {
     assert.equal(serverError, undefined)
     assert.equal(code, 0, stdout + stderr)
     assert.equal(uploads, 1)
+    await writeFile(join(evidence, 'uploaded.tgz'), uploaded)
     assert(metadataReads > 0 && tarballReads > 0, 'Publisher did not verify its uploaded archive')
-    const published = await new Bun.Archive(uploaded).files()
-    assert.deepEqual([...published.keys()].sort(), [...files.keys()].sort(), 'Publisher and pack chose different members')
-    for (const [path, file] of files) {
-      assert.deepEqual(await published.get(path)!.arrayBuffer(), await file.arrayBuffer(), path)
-      assert.deepEqual(archiveMember(uploaded, path), archiveMember(archive, path), path)
-    }
+    const packedMembers = archiveMembers(archive)
+    const publishedMembers = archiveMembers(uploaded)
+    assert.deepEqual([...publishedMembers.keys()].sort(), [...packedMembers.keys()].sort(), 'Publisher and pack chose different members')
+    for (const [path, member] of packedMembers)
+      assert.deepEqual(publishedMembers.get(path), member, path)
     assert(!await Bun.file(join(owner, 'LICENSE.md')).exists())
     assert.equal(await readFile(join(owner, 'package.json'), 'utf8'), manifestBytes)
-    receipt.publicationParity = { uploads, metadataReads, tarballReads, members: files.size, passed: true }
+    receipt.publicationParity = { uploads, metadataReads, tarballReads, members: packedMembers.size, passed: true }
   }
   finally {
     await registry.stop(true)
@@ -163,6 +164,7 @@ if (event === 'postpack') await Bun.write('assets/late.txt', 'after archive crea
   await writeFile(join(owner, 'package.json'), JSON.stringify({ ...manifest, files: ['../../outside.txt'] }))
   const escaped = await pack(['--ignore-scripts'])
   assert.notEqual(escaped.code, 0, escaped.output)
+  assert(escaped.output.includes('Error: Could not create package archive: TarballCreationFailed'), escaped.output)
   assert.deepEqual(await readFile(output), completed, 'Invalid package entry replaced the previous qualified archive')
   assert.equal(await readFile(join(root, 'outside.txt'), 'utf8'), 'outside package bytes\n')
 

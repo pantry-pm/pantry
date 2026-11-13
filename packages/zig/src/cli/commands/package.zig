@@ -780,7 +780,12 @@ pub fn packCommand(allocator: std.mem.Allocator, target: []const u8, options: Pa
         }
     }
 
-    const archive = try createTarball(allocator, package_dir, metadata.name, metadata.version, cwd);
+    const archive = createTarball(allocator, package_dir, metadata.name, metadata.version, cwd) catch |err| {
+        return .{
+            .exit_code = 1,
+            .message = try std.fmt.allocPrint(allocator, "Error: Could not create package archive: {s}", .{@errorName(err)}),
+        };
+    };
     defer archive.deinit(allocator);
     if (!options.ignore_scripts) {
         if (scripts) |hooks| {
@@ -2508,6 +2513,24 @@ test "pack archive: another invocation with the same package identity cannot rep
     const retained = try io_helper.readFileAlloc(allocator, first.path, 1024 * 1024);
     try std.testing.expectEqualSlices(u8, original, retained);
     try std.testing.expect(!std.mem.eql(u8, first.path, second.path));
+}
+
+test "pack archive: invalid file selection returns a command failure with its archive diagnostic" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    try temporary.dir.writeFile(io_helper.io, .{
+        .sub_path = "package.json",
+        .data = "{\"name\":\"invalid-pack-selection\",\"version\":\"1.0.0\",\"files\":[\"../../outside.txt\"]}",
+    });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buffer[0..try temporary.dir.realPathFile(io_helper.io, ".", &buffer)];
+    var result = try packCommand(allocator, root, .{ .ignore_scripts = true });
+    defer result.deinit(allocator);
+    try std.testing.expectEqual(@as(u8, 1), result.exit_code);
+    try std.testing.expectEqualStrings("Error: Could not create package archive: TarballCreationFailed", result.message.?);
 }
 
 /// Format byte size as human-readable string (e.g. "3.56KB", "0.98MB")

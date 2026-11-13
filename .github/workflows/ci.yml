@@ -416,7 +416,16 @@ jobs:
       - name: Verify canonical package archives through the source CLI
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
-        run: bun .github/scripts/canonical-pack.ts
+        run: |
+          bun .github/scripts/canonical-pack.ts
+          bun .github/scripts/verify-canonical-archive.ts artifacts/canonical-pack/pack-before-hooks.tgz artifacts/canonical-pack/uploaded.tgz
+      - name: Verify the canonical SDK archive with strict installed consumers
+        env:
+          PANTRY_SDK_EVIDENCE: artifacts/canonical-pack/sdk-consumer
+        run: |
+          bun run --cwd packages/ts-pantry build
+          packages/zig/zig-out/bin/pantry pack packages/ts-pantry --ignore-scripts --filename artifacts/canonical-pack/sdk.tgz
+          bun .github/scripts/verify-ts-sdk.ts artifacts/canonical-pack/sdk.tgz
       - name: Verify npm publication archives and transport deadlines
         run: |
           set -o pipefail
