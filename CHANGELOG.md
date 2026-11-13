@@ -1,3 +1,19 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.202...v0.11.203)
+
+## 🐛 Bug Fixes
+
+- **ci**: target baseline CPUs in transferred source CLI builds ([072ff8e](https://github.com/pantry-pm/pantry/commit/072ff8e)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#340](https://github.com/pantry-pm/pantry/issues/340), [#339](https://github.com/pantry-pm/pantry/issues/339), [#332](https://github.com/pantry-pm/pantry/issues/332))
+- **ci**: isolate publication checks from the browser deadline ([59b24fd](https://github.com/pantry-pm/pantry/commit/59b24fd)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#339](https://github.com/pantry-pm/pantry/issues/339), [#332](https://github.com/pantry-pm/pantry/issues/332), [#325](https://github.com/pantry-pm/pantry/issues/325), [stacksjs/dtsx#3139](https://github.com/stacksjs/dtsx/issues/3139))
+
+## 🔧 Chores
+
+- release v0.11.203 ([cec1803](https://github.com/pantry-pm/pantry/commit/cec1803)) _(by Chris <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.201...v0.11.202)
 
 ## ✨ Features
