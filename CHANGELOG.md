@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.201...v0.11.202)
+
+## ✨ Features
+
+- **pack**: expose canonical npm archives without uploading ([9b12f9d](https://github.com/pantry-pm/pantry/commit/9b12f9d)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#332](https://github.com/pantry-pm/pantry/issues/332), [#334](https://github.com/pantry-pm/pantry/issues/334), [stacksjs/stacks#3288](https://github.com/stacksjs/stacks/issues/3288))
+
+## 🐛 Bug Fixes
+
+- **publish**: stage ignored files natively without rsync ([833ab4b](https://github.com/pantry-pm/pantry/commit/833ab4b)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#338](https://github.com/pantry-pm/pantry/issues/338), [#332](https://github.com/pantry-pm/pantry/issues/332), [#336](https://github.com/pantry-pm/pantry/issues/336), [#337](https://github.com/pantry-pm/pantry/issues/337))
+- **process**: inherit the Windows environment in concurrent child launches ([83ebf04](https://github.com/pantry-pm/pantry/commit/83ebf04)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#337](https://github.com/pantry-pm/pantry/issues/337), [#336](https://github.com/pantry-pm/pantry/issues/336), [#332](https://github.com/pantry-pm/pantry/issues/332))
+- **publish**: match portable workspace paths on native filesystems ([71b94c4](https://github.com/pantry-pm/pantry/commit/71b94c4)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#336](https://github.com/pantry-pm/pantry/issues/336), [#332](https://github.com/pantry-pm/pantry/issues/332))
+- **test**: resolve SDK evidence paths before changing cwd ([bc69b95](https://github.com/pantry-pm/pantry/commit/bc69b95)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#332](https://github.com/pantry-pm/pantry/issues/332))
+- **pack**: report archive errors and require complete payload parity ([e7e5db1](https://github.com/pantry-pm/pantry/commit/e7e5db1)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#332](https://github.com/pantry-pm/pantry/issues/332), [stacksjs/stacks#3288](https://github.com/stacksjs/stacks/issues/3288))
+- **publish**: give each canonical archive an owned lifetime ([5aa6c4d](https://github.com/pantry-pm/pantry/commit/5aa6c4d)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#332](https://github.com/pantry-pm/pantry/issues/332))
+
+## 🔧 Chores
+
+- release v0.11.202 ([2d9c9bd](https://github.com/pantry-pm/pantry/commit/2d9c9bd)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update apko, Arc, Arkade, Brave Browser, browser-use, Claude Desktop, claude-code, CLIProxyAPI, cmake, craft, Cursor, depot, Dia, Element, encore, exr, Figma, fly, gh, goreleaser, k6, lavinmq, LibreOffice, LLaMA.cpp, Obsidian, opa, projen, pscale, pulumi, railway, Raycast, rio, rust, scw, tailscale, terraform-docs, vale, vim, Warp ([6f77493](https://github.com/pantry-pm/pantry/commit/6f77493)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.200...v0.11.201)
 
 ## 🐛 Bug Fixes
