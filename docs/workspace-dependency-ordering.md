@@ -14,6 +14,16 @@ When you run scripts across multiple workspace packages using `--filter`, Pantry
 
 ## How It Works
 
+### Project Ownership
+
+Pantry selects an ancestor workspace only when the nearest project manifest is
+at its root or matches a declared workspace member path. Commands run from a
+member's source directory retain that member's workspace. A nested standalone
+project with its own `deps.yaml`, `pantry.json` or other recognized manifest
+keeps its own installation and lock unless its directory is itself declared as
+a member. Merely placing an example or generated consumer inside a repository
+does not make it part of that repository's workspace.
+
 ### Dependency Detection
 
 Pantry looks at three dependency fields in each workspace member's configuration:

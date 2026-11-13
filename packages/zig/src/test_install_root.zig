@@ -1,5 +1,6 @@
 // Import these files explicitly so their launch and install invariants run in CI.
 test {
+    _ = @import("deps/detector.zig");
     _ = @import("io_helper.zig");
     // The install failure report and transient-failure classification.
     _ = @import("cli/style.zig");

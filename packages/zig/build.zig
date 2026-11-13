@@ -501,6 +501,9 @@ pub fn build(b: *std.Build) void {
         },
     });
     const run_install_tests = b.addRunArtifact(b.addTest(.{ .root_module = install_test_mod }));
+    const project_selection_step = b.step("test:project-selection", "Keep standalone projects separate from unrelated ancestor workspaces");
+    const project_selection_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{"workspace discovery:"} });
+    project_selection_step.dependOn(&b.addRunArtifact(project_selection_tests).step);
     const install_routing_step = b.step("test:install-routing", "Infer desktop package kinds without changing project installs");
     const install_routing_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "desktop routing", "an explicit kind retains control", "add routing" } });
     install_routing_step.dependOn(&b.addRunArtifact(install_routing_tests).step);
