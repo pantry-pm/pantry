@@ -1,0 +1,19 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "files": [
+    "update-fixture-lifecycle.test.ts",
+    "update_install_result_e2e.test.ts",
+    "update-install-success-e2e.test.ts",
+    "update-install-thrown-e2e.test.ts",
+    "update-metadata-failure-e2e.test.ts",
+    "update-no-candidate-e2e.test.ts",
+    "update-metadata-malformed-e2e.test.ts",
+    "update-metadata-empty-body-e2e.test.ts",
+    "update-metadata-schema-e2e.test.ts"
+  ],
+  "include": [],
+  "exclude": []
+}

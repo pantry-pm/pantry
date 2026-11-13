@@ -405,6 +405,10 @@ pub fn execute(allocator: std.mem.Allocator, args: []const []const u8) !CommandR
 
     style.print("\n", .{});
 
+    if (errors_encountered > 0) {
+        return CommandResult.err(allocator, "Failed to check packages for updates");
+    }
+
     if (dry_run) {
         const message = try std.fmt.allocPrint(
             allocator,
@@ -425,6 +429,7 @@ pub fn execute(allocator: std.mem.Allocator, args: []const []const u8) !CommandR
             .force = true,
         };
         const install_result = try install_mod.installCommandWithOptions(allocator, &[_][]const u8{}, install_opts);
+        if (install_result.exit_code != 0) return install_result;
         if (install_result.message) |msg| {
             allocator.free(msg);
         }
@@ -493,17 +498,13 @@ fn updatePackage(
             const url = try std.fmt.allocPrint(allocator, "https://registry.npmjs.org/{s}", .{clean_name});
             defer allocator.free(url);
 
-            const body = cachedHttpGet(allocator, url) catch {
-                return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
-            };
+            const body = try cachedHttpGet(allocator, url);
             defer allocator.free(body);
-            if (body.len == 0) return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
+            if (body.len == 0) return error.InvalidPackageMetadata;
 
-            const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
-                return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
-            };
+            const parsed = try std.json.parseFromSlice(std.json.Value, allocator, body, .{});
             defer parsed.deinit();
-            if (parsed.value != .object) return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
+            if (parsed.value != .object) return error.InvalidPackageMetadata;
 
             // Get dist-tags.latest
             const latest_version = blk: {
@@ -571,22 +572,16 @@ fn updateSystemPackage(
     );
     defer allocator.free(metadata_url);
 
-    const body = cachedHttpGet(allocator, metadata_url) catch {
-        return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
-    };
+    const body = try cachedHttpGet(allocator, metadata_url);
     defer allocator.free(body);
-    if (body.len == 0) return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
+    if (body.len == 0) return error.InvalidPackageMetadata;
 
-    const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
-        return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
-    };
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, body, .{});
     defer parsed.deinit();
-    if (parsed.value != .object) return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
+    if (parsed.value != .object) return error.InvalidPackageMetadata;
 
-    const versions_obj = parsed.value.object.get("versions") orelse {
-        return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
-    };
-    if (versions_obj != .object) return UpdateResult{ .has_update = false, .new_version = null, .current_version = installed_version };
+    const versions_obj = parsed.value.object.get("versions") orelse return error.InvalidPackageMetadata;
+    if (versions_obj != .object) return error.InvalidPackageMetadata;
 
     // Find best matching version
     var best: ?[]const u8 = null;

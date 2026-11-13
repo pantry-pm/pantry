@@ -73,7 +73,9 @@ jobs:
         run: bun install
 
       - name: Typecheck
-        run: bun run typecheck
+        run: |
+          bun run typecheck
+          bun --bun tsc --noEmit -p packages/zig/test/tsconfig.update.json
 
   test:
     runs-on: ubuntu-latest
@@ -120,6 +122,7 @@ jobs:
       # incremental-metadata test. That regression keeps its short rebuild
       # budget; a cold compiler bootstrap is setup rather than a cache check.
       - name: Test the source CLI workspace lifecycle
+        id: source_cli
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           command -v zig >/dev/null
@@ -131,6 +134,23 @@ jobs:
           cd packages/zig
           zig build -Doptimize=Debug -j2
           PANTRY_SOURCE_CLI="$PWD/zig-out/bin/pantry" bun test test/workspace-companion-e2e.test.ts
+
+      - name: Test source CLI update metadata and installation results
+        if: ${{ !cancelled() && steps.source_cli.outcome == 'success' }}
+        run: |
+          set -e
+          cd packages/zig
+          for fixture in \
+            test/update_install_result_e2e.test.ts \
+            test/update-install-success-e2e.test.ts \
+            test/update-install-thrown-e2e.test.ts \
+            test/update-metadata-failure-e2e.test.ts \
+            test/update-no-candidate-e2e.test.ts \
+            test/update-metadata-malformed-e2e.test.ts \
+            test/update-metadata-empty-body-e2e.test.ts \
+            test/update-metadata-schema-e2e.test.ts; do
+            PANTRY_SOURCE_CLI="$PWD/zig-out/bin/pantry" bun test "$fixture"
+          done
 
       - name: Verify this source migrates its published bootstrap to the committed workspace lock
         run: |
