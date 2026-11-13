@@ -36,9 +36,10 @@ interface CiGateReceipt {
   runId: number
   url: string
   requiredJobs: CiJob[]
+  mainLineage?: { source: string, mainHead: string, kind: 'current-main' | 'ancestor-of-main' }
 }
 
-/** Deployment and publication both depend on the full main-push verdict. */
+/** Require full owned CI for the exact source; dispatched runs must prove Main lineage. */
 export async function waitForSourceCi(options: GateOptions): Promise<CiGateReceipt> {
   const { repository, sha, read } = options
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^[a-f0-9]{40}$/.test(sha))
@@ -54,14 +55,35 @@ export async function waitForSourceCi(options: GateOptions): Promise<CiGateRecei
     return read(path, Math.min(30_000, remaining))
   }
   while (now() < deadline) {
-    const response = await readWithinBudget(`repos/${repository}/actions/workflows/ci.yml/runs?branch=main&event=push&head_sha=${sha}&per_page=100`) as { workflow_runs: CiRun[] }
+    const response = await readWithinBudget(`repos/${repository}/actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100`) as { workflow_runs: CiRun[] }
     const run = response.workflow_runs.filter(run => run.head_sha === sha
-      && run.head_branch === 'main' && run.event === 'push'
+      && ((run.head_branch === 'main' && run.event === 'push')
+        || (run.event === 'workflow_dispatch' && typeof run.head_branch === 'string' && run.head_branch.trim().length > 0))
       && run.path === '.github/workflows/ci.yml'
-      && run.head_repository.full_name === repository).sort((a, b) => b.id - a.id)[0]
+      && run.head_repository?.full_name === repository).sort((a, b) => b.id - a.id)[0]
     if (run?.status === 'completed') {
       if (run.conclusion !== 'success')
         throw new Error(`Exact source CI concluded ${run.conclusion}: ${run.html_url}`)
+      let mainLineage: CiGateReceipt['mainLineage']
+      if (run.event === 'workflow_dispatch') {
+        const reference = await readWithinBudget(`repos/${repository}/git/ref/heads/main`) as {
+          ref?: unknown, object?: { type?: unknown, sha?: unknown } | null
+        } | null
+        const mainHead = reference?.object?.sha
+        if (reference?.ref !== 'refs/heads/main' || reference.object?.type !== 'commit'
+          || typeof mainHead !== 'string' || !/^[a-f0-9]{40}$/.test(mainHead))
+          throw new Error('Dispatched source CI requires an authoritative Main commit reference')
+        if (mainHead !== sha) {
+          const comparison = await readWithinBudget(`repos/${repository}/compare/${sha}...${mainHead}`) as {
+            status?: unknown, ahead_by?: unknown, behind_by?: unknown, base_commit?: { sha?: unknown } | null, merge_base_commit?: { sha?: unknown } | null
+          } | null
+          if (comparison?.status !== 'ahead' || comparison.base_commit?.sha !== sha || comparison.merge_base_commit?.sha !== sha
+            || comparison.behind_by !== 0 || typeof comparison.ahead_by !== 'number'
+            || !Number.isSafeInteger(comparison.ahead_by) || comparison.ahead_by < 1)
+            throw new Error('Dispatched source CI must be an exact ancestor of Main')
+        }
+        mainLineage = { source: sha, mainHead, kind: mainHead === sha ? 'current-main' : 'ancestor-of-main' }
+      }
       const jobs: CiJob[] = []
       for (let page = 1; page <= 10; page++) {
         const result = await readWithinBudget(`repos/${repository}/actions/runs/${run.id}/jobs?per_page=100&page=${page}`) as { total_count: number, jobs: CiJob[] }
@@ -75,7 +97,7 @@ export async function waitForSourceCi(options: GateOptions): Promise<CiGateRecei
           throw new Error(`Source CI must execute and pass ${name}`)
       }
       if (now() >= deadline) throw new Error('Source CI verification exceeded its wait budget')
-      return { repository, sha, workflow: '.github/workflows/ci.yml', runId: run.id, url: run.html_url, requiredJobs: jobs.filter(job => requiredSourceJobs.some(name => name === job.name)) }
+      return { repository, sha, workflow: '.github/workflows/ci.yml', runId: run.id, url: run.html_url, requiredJobs: jobs.filter(job => requiredSourceJobs.some(name => name === job.name)), ...(mainLineage ? { mainLineage } : {}) }
     }
     await sleep(Math.min(15_000, Math.max(0, deadline - now())))
   }
