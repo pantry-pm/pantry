@@ -3,7 +3,7 @@
  *
  * @domain `k6.io`
  * @programs `k6`
- * @version `2.4.0` (59 versions available)
+ * @version `2.4.0` (60 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install k6.io`
@@ -73,6 +73,7 @@ export const k6ioPackage = {
     '2.1.0',
     '2.0.0',
     '2.0.0-rc1',
+    '1.8.3',
     '1.8.2',
     '1.8.1',
     '1.8.0',

@@ -1,0 +1,22 @@
+{
+  "id": "43459287398-1",
+  "domains": [
+    "buildpacks.io",
+    "claude.ai",
+    "digitalocean.com/doctl",
+    "dozzle.dev",
+    "github.com/ggerganov/llama.cpp",
+    "helm.sh",
+    "k6.io",
+    "mise.jdx.dev",
+    "nim-lang.org",
+    "openai.com/codex",
+    "opencode.ai",
+    "openshift.com",
+    "railway.app",
+    "rioterm.com",
+    "steampipe.io",
+    "traefik.io",
+    "zig-dtsx.stacksjs.org"
+  ]
+}

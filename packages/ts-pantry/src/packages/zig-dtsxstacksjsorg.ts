@@ -3,7 +3,7 @@
  *
  * @domain `zig-dtsx.stacksjs.org`
  * @programs `zig-dtsx`
- * @version `0.11.54` (20 versions available)
+ * @version `0.11.55` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zig-dtsx.stacksjs.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "dtsx-native"
  * console.log(pkg.description) // "High-performance .d.ts emitter for TypeScript, ..."
  * console.log(pkg.programs)    // ["zig-dtsx"]
- * console.log(pkg.versions[0]) // "0.11.54" (latest)
+ * console.log(pkg.versions[0]) // "0.11.55" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/zig-dtsx-stacksjs-org.md
@@ -69,6 +69,7 @@ export const zigdtsxPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.11.55',
     '0.11.54',
     '0.11.53',
     '0.11.52',
