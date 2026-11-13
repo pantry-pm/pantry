@@ -99,7 +99,7 @@ var environ_initialized = false;
 /// could not read `~/.gitconfig` (commits failed with "Author identity unknown")
 /// or `~/.config/git/ignore`. Capturing the libc `environ` here makes spawned
 /// children inherit pantry's full environment, exactly as a shell-launched child
-/// would. (Windows already uses the global block via `init_single_threaded`.)
+/// would. Windows selects the live global block in `initializeIo`.
 fn ensureEnvironInitialized() void {
     if (is_windows or environ_initialized) return;
     environ_initialized = true;
@@ -119,7 +119,12 @@ fn ensureEnvironInitialized() void {
 /// the full backend before using any I/O helper.
 pub fn initializeIo() void {
     if (@import("builtin").is_test or io_initialized) return;
-    io_instance = Threaded.init(std.heap.page_allocator, .{});
+    io_instance = Threaded.init(std.heap.page_allocator, .{
+        // A fresh concurrent backend defaults to an empty child environment.
+        // Windows must explicitly inherit the live OS block, just as the
+        // single-threaded backend did before initialization replaced it.
+        .environ = if (is_windows) .{ .block = .global } else .empty,
+    });
     io_initialized = true;
     ensureEnvironInitialized();
 }

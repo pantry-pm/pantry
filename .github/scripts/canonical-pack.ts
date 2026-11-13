@@ -15,7 +15,7 @@ const sibling = join(root, 'packages/sibling')
 const output = join(evidence, 'canonical.tgz')
 const commands: Array<Record<string, unknown>> = []
 const receipt: Record<string, unknown> = { passed: false, cli, cliSha256: Bun.SHA256.hash(await readFile(cli), 'hex'), root, commands }
-const env = { ...process.env, HOME: join(root, 'home'), XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PATH: `${dirname(process.execPath)}${delimiter}${process.env.PATH ?? ''}`, NPM_TOKEN: '', NODE_AUTH_TOKEN: '', BUN_AUTH_TOKEN: '', PANTRY_TOKEN: '' }
+const env = { ...process.env, HOME: join(root, 'home'), XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PATH: `${dirname(process.execPath)}${delimiter}${process.env.PATH ?? ''}`, PANTRY_PACK_ENV_SENTINEL: 'inherited-by-real-lifecycle-child', NPM_TOKEN: '', NODE_AUTH_TOKEN: '', BUN_AUTH_TOKEN: '', PANTRY_TOKEN: '' }
 
 async function pack(args: string[] = [], extra: Record<string, string> = {}) {
   const child = Bun.spawn([cli, 'pack', owner, '--filename', output, ...args], { cwd: root, env: { ...env, ...extra }, stdout: 'pipe', stderr: 'pipe', stdin: 'ignore', timeout: 30_000 })
@@ -139,6 +139,7 @@ try {
   const hooks = { ...manifest, scripts: Object.fromEntries(['prepack', 'prepare', 'postpack', 'prepublishOnly', 'publish'].map(event => [event, `bun hook.ts ${event}`])) }
   await writeFile(join(owner, 'package.json'), JSON.stringify(hooks))
   await writeFile(join(owner, 'hook.ts'), `import { appendFile } from 'node:fs/promises'
+if (process.env.PANTRY_PACK_ENV_SENTINEL !== 'inherited-by-real-lifecycle-child') throw new Error('Lifecycle child lost its inherited environment')
 const event = process.argv[2]!
 await appendFile('events.log', event + '\\n')
 if (process.env.PANTRY_PACK_HOOK_FAIL === event) process.exit(9)
