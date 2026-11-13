@@ -61,21 +61,37 @@ describe('curl recipe dependencies', () => {
 
   it('both curl identities preserve the accepted archive while publishing owned runtime revisions', async () => {
     for (const domain of ['curl.se', 'curl.se/ssl3']) {
-      const loaded = await loadRecipe(domain, 'darwin-arm64', '8.23.0.1')
+      const loaded = await loadRecipe(domain, 'darwin-arm64', '8.23.0.2')
       expect(loaded.upstreamVersion).toBe('8.23.0')
-      expect(loaded.publicationVersion).toBe('8.23.0.1')
+      expect(loaded.publicationVersion).toBe('8.23.0.2')
       expect(loaded.requiresRecipeBuild).toBe(true)
       expect(loaded.recipe.test?.required).toBe(true)
     }
     expect(curlPackage.versions).toContain('8.23.0.1')
     expect(curlsessl3Package.versions).toContain('8.23.0.1')
+    expect(curlPackage.versions[0]).toBe('8.23.0.2')
+    expect(curlsessl3Package.versions[0]).toBe('8.23.0.2')
   })
 
   it('requires the corrected IDN runtime rather than silently selecting the unrecorded older artifact', () => {
     const constraint = recipe.dependencies!['gnu.org/libidn2'] as string
     expect(versionSatisfies('2.3.8', constraint)).toBe(false)
-    expect(versionSatisfies('2.3.8.1', constraint)).toBe(true)
+    expect(versionSatisfies('2.3.8.1', constraint)).toBe(false)
+    expect(versionSatisfies('2.3.8.2', constraint)).toBe(true)
     for (const metadata of [curlPackage, curlsessl3Package])
-      expect(metadata.dependencies).toContain('gnu.org/libidn2^2.3.8.1')
+      expect(metadata.dependencies).toContain('gnu.org/libidn2^2.3.8.2')
+  })
+
+  it('requires the portable Brotli and Zstd source builds', () => {
+    for (const [domain, old, current] of [
+      ['github.com/google/brotli', '1.2.0', '1.2.0.1'],
+      ['facebook.com/zstd', '1.5.7.1', '1.5.7.2'],
+    ]) {
+      const constraint = recipe.dependencies![domain] as string
+      expect(versionSatisfies(old, constraint)).toBe(false)
+      expect(versionSatisfies(current, constraint)).toBe(true)
+      for (const metadata of [curlPackage, curlsessl3Package])
+        expect(metadata.dependencies.some(spec => spec === `${domain}^${current}`)).toBe(true)
+    }
   })
 })

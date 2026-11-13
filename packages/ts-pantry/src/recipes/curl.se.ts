@@ -3,7 +3,7 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'curl.se',
   name: 'cURL',
-  revisions: { '8.23.0': 1 },
+  revisions: { '8.23.0': 2 },
   description: 'A command line tool and library for transferring data with URL syntax, supporting DICT, FILE, FTP, FTPS, GOPHER, GOPHERS, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, MQTT, POP3, POP3S, RTMP, RTMPS, RTSP, SCP, SFTP, SMB, SMBS, SMTP, SMTPS, TELNET, TFTP, WS and WSS. libcurl offers a myriad of powerful features',
   homepage: 'https://curl.se',
   github: 'https://github.com/curl/curl',
@@ -34,9 +34,9 @@ export const recipe: Recipe = {
     // pkg-config for libcurl. php.net failed first on libidn2 and then, once
     // that was declared, on libbrotlidec — one at a time, because the list was
     // never read in full.
-    'gnu.org/libidn2': '^2.3.8.1',
-    'github.com/google/brotli': '*',
-    'facebook.com/zstd': '*',
+    'gnu.org/libidn2': '^2.3.8.2',
+    'github.com/google/brotli': '^1.2.0.1',
+    'facebook.com/zstd': '^1.5.7.2',
   },
 
   build: {
@@ -46,6 +46,7 @@ export const recipe: Recipe = {
     ],
     env: {
       'ARGS': ['--prefix={{prefix}}', '--with-openssl', '--without-libpsl', '--with-ca-fallback', '--with-nghttp2'],
+      'darwin': { MACOSX_DEPLOYMENT_TARGET: '14.0' },
     },
   },
   test: {
@@ -71,7 +72,7 @@ static int supports(const curl_version_info_data *info, const char *name, int le
 int main(void) {
   if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) return 1;
   const curl_version_info_data *info = curl_version_info(CURLVERSION_NOW);
-  if (!info || info->version_num != LIBCURL_VERSION_NUM || !supports(info, "SSL", CURL_VERSION_SSL) || !supports(info, "IDN", CURL_VERSION_IDN) || !supports(info, "HTTP2", CURL_VERSION_HTTP2)) {
+  if (!info || info->version_num != LIBCURL_VERSION_NUM || !supports(info, "SSL", CURL_VERSION_SSL) || !supports(info, "IDN", CURL_VERSION_IDN) || !supports(info, "HTTP2", CURL_VERSION_HTTP2) || !supports(info, "brotli", CURL_VERSION_BROTLI) || !supports(info, "zstd", CURL_VERSION_ZSTD)) {
     curl_global_cleanup();
     return 2;
   }
