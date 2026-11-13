@@ -3,11 +3,11 @@
  *
  * @domain `gnu.org/libiconv`
  * @programs `iconv`
- * @version `1.19.0` (3 versions available)
+ * @version `1.19.0.1` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gnu.org/libiconv`
- * @dependencies `linux:gnu.org/gcc/libstdcxx@14` (includes OS-specific dependencies with `os:package` format)
+ * @dependencies `darwin:gnu.org/gettext`, `linux:gnu.org/gcc/libstdcxx@14` (includes platform-specific dependencies)
  *
  * @example
  * ```typescript
@@ -16,7 +16,7 @@
  * const pkg = pantry.gnuorglibiconv
  * console.log(pkg.name)        // "iconv"
  * console.log(pkg.programs)    // ["iconv"]
- * console.log(pkg.versions[0]) // "1.19.0" (latest)
+ * console.log(pkg.versions[0]) // "1.19.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/gnu-org/libiconv.md
@@ -55,9 +55,10 @@ export const gnuorglibiconvPackage = {
   /**
   * Runtime dependencies for this package.
   * These are required when running the package.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:freetype.org`).
   */
   dependencies: [
+    'darwin:gnu.org/gettext',
     'linux:gnu.org/gcc/libstdcxx@14',
   ] as const,
   buildDependencies: [] as const,
@@ -66,6 +67,7 @@ export const gnuorglibiconvPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.19.0.1',
     '1.19.0',
     '1.18.0',
     '1.17.0',

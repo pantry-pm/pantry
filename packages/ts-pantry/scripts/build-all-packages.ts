@@ -1662,6 +1662,7 @@ export const CUSTOM_BUILD_DOMAINS: ReadonlySet<string> = new Set<string>([
   'gnu.org/automake', // require the managed Autoconf/Automake integration fixture
   'gnu.org/libtool', // require relocated libtoolize and a real shared-library build
   'gnu.org/libidn2', // preserve declared Unicode/runtime owners and native IDNA health checks
+  'gnu.org/libiconv', // preserve declared gettext ownership and real conversion consumers
   'cmake.org', // publish managed curl, curses and relocatable CMake module paths
   'mysql.com', // preserve official native distributions and the supported source ABI
   'openssh.com', // scp/sftp must resolve managed ssh after relocating the package

@@ -10268,10 +10268,10 @@ pub const packages = [_]PackageInfo{ .{
     .description = "",
     .homepage_url = null,
     .programs = &[_][]const u8{"iconv"},
-    .dependencies = &[_][]const u8{"linux:gnu.org/gcc/libstdcxx@14"},
+    .dependencies = &[_][]const u8{ "darwin:gnu.org/gettext", "linux:gnu.org/gcc/libstdcxx@14" },
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.19.0", "1.18.0", "1.17.0" },
+    .versions = &[_][]const u8{ "1.19.0.1", "1.19.0", "1.18.0", "1.17.0" },
 }, .{
     .name = "idn",
     .domain = "gnu.org/libidn",

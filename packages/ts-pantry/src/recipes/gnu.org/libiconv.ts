@@ -3,11 +3,15 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/libiconv',
   name: 'iconv',
+  revisions: { '1.19.0': 1 },
   description: 'GNU charset conversion library and iconv program',
   homepage: 'https://www.gnu.org/software/libiconv/',
   programs: ['iconv'],
   // pkgx: linux needs libstdcxx at runtime.
   dependencies: {
+    darwin: {
+      'gnu.org/gettext': '*',
+    },
     linux: {
       'gnu.org/gcc/libstdcxx': '14',
     },
@@ -64,9 +68,29 @@ export const recipe: Recipe = {
   },
 
   test: {
+    required: true,
     script: [
-      'OUT=$(echo hello | iconv -f UTF-8 -t UTF-8)',
+      'OUT=$(printf hello | env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH {{prefix}}/bin/iconv -f UTF-8 -t UTF-8)',
       'test "$OUT" = "hello"',
+      `cat > iconv-consumer.c <<'PANTRY_C'
+#include <iconv.h>
+#include <string.h>
+int main(void) {
+  iconv_t conversion = iconv_open("UTF-16LE", "UTF-8");
+  if (conversion == (iconv_t)-1) return 1;
+  char input[] = { 'h', (char)0xc3, (char)0xa9 };
+  char output[8] = { 0 };
+  char *in = input, *out = output;
+  size_t in_left = sizeof(input), out_left = sizeof(output);
+  size_t result = iconv(conversion, &in, &in_left, &out, &out_left);
+  const unsigned char expected[] = { 0x68, 0x00, 0xe9, 0x00 };
+  int failed = result == (size_t)-1 || in_left != 0 || out - output != 4 || memcmp(output, expected, 4) != 0;
+  iconv_close(conversion);
+  return failed;
+}
+PANTRY_C`,
+      'cc -I"{{prefix}}/include" iconv-consumer.c -L"{{prefix}}/lib" -Wl,-rpath,"{{prefix}}/lib" -liconv -o iconv-consumer',
+      'env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH ./iconv-consumer',
     ],
   },
 }
