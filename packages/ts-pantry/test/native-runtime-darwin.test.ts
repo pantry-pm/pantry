@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fixUp } from '../scripts/fix-up'
 
-test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declared recursive runtime libraries and survives relocation', async () => {
+for (const resolution of [
+  { name: 'same-version rebuild', version: '1.0', canonicalFirst: false },
+  { name: 'resolved version upgrade', version: '1.1', canonicalFirst: false },
+  { name: 'resolved version upgrade with the canonical owner first', version: '1.1', canonicalFirst: true },
+]) {
+test.skipIf(process.platform !== 'darwin')(`Mach-O publication uses only declared recursive runtime libraries and survives relocation (${resolution.name})`, async () => {
   const root = mkdtempSync(join(tmpdir(), 'pantry-macho-runtime-'))
   const environment = { ...process.env }
   for (const key of ['DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH', 'LD_LIBRARY_PATH', 'LD_PRELOAD']) delete environment[key]
@@ -15,7 +20,8 @@ test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declare
   }
   try {
     const first = join(root, 'dependencies/first')
-    const second = join(root, 'dependencies/second')
+    let second = join(root, 'dependencies/second')
+    let secondVersion = '1.0'
     const stage = join(root, 'artifact')
     for (const path of [join(first, 'lib'), join(second, 'lib64'), join(stage, 'lib'), join(stage, 'bin')]) mkdirSync(path, { recursive: true })
     writeFileSync(join(first, 'LICENSE'), 'First fixture license\n')
@@ -28,7 +34,8 @@ test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declare
     writeFileSync(join(root, 'second.c'), 'int second(void) { return 41; }')
     writeFileSync(join(root, 'first.c'), 'extern int second(void); int first(void) { return second() + 1; }')
     writeFileSync(join(root, 'main.c'), '#include <stdio.h>\nextern int first(void); int main(void) { printf("%d\\n", first()); return 0; }')
-    const secondLib = join(second, 'lib64/libfixture-second.1.dylib')
+    let secondLib = join(second, 'lib64/libfixture-second.1.0.dylib')
+    symlinkSync('libfixture-second.1.0.dylib', join(second, 'lib64/libfixture-second.1.dylib'))
     const firstLib = join(first, 'lib/libfixture-first.1.dylib')
     run(['xcrun', 'clang', '-dynamiclib', join(root, 'second.c'), '-Wl,-headerpad_max_install_names', '-install_name', '@rpath/libfixture-second.1.dylib', '-o', secondLib])
     run(['xcrun', 'clang', '-dynamiclib', join(root, 'first.c'), secondLib, `-Wl,-rpath,${second}/lib64`, '-Wl,-headerpad_max_install_names', '-install_name', '@rpath/first.example/v1.0/lib/libfixture-first.1.dylib', '-o', firstLib])
@@ -49,22 +56,33 @@ test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declare
     writeFileSync(bundledSecond, Buffer.concat([canonicalBytes, Buffer.from('tampered')]))
     await expect(fixUp(stage, 'darwin-arm64', [], [{ domain: 'first.example', version: '1.0', prefix: first }, { domain: 'second.example', version: '1.0', prefix: second }])).rejects.toThrow('Invalid bundled runtime provenance')
     writeFileSync(bundledSecond, canonicalBytes)
-    writeFileSync(join(root, 'second.c'), 'int second(void) { return 41; } int canonical_rebuild_marker(void) { return 0; }')
+    if (resolution.version === '1.1') {
+      second = join(root, 'dependencies/second-1.1')
+      secondVersion = '1.1'
+      mkdirSync(join(second, 'lib64'), { recursive: true })
+      writeFileSync(join(second, 'COPYING'), 'Current second fixture license\n')
+      secondLib = join(second, 'lib64/libfixture-second.1.1.dylib')
+      symlinkSync('libfixture-second.1.1.dylib', join(second, 'lib64/libfixture-second.1.dylib'))
+    }
+    const expected = resolution.version === '1.1' ? '44' : '42'
+    writeFileSync(join(root, 'second.c'), `int second(void) { return ${resolution.version === '1.1' ? 43 : 41}; } int canonical_rebuild_marker(void) { return 0; }`)
     run(['xcrun', 'clang', '-dynamiclib', join(root, 'second.c'), '-Wl,-headerpad_max_install_names', '-install_name', '@rpath/libfixture-second.1.dylib', '-o', secondLib])
     const currentSecondSha256 = new Bun.CryptoHasher('sha256').update(readFileSync(secondLib)).digest('hex')
-    await fixUp(stage, 'darwin-arm64', [], [{ domain: 'first.example', version: '1.0', prefix: first, resources: ['lib/runtime-data'] }, { domain: 'second.example', version: '1.0', prefix: second }])
+    const dependencies = [{ domain: 'first.example', version: '1.0', prefix: first, resources: ['lib/runtime-data'] }, { domain: 'second.example', version: secondVersion, prefix: second }]
+    await fixUp(stage, 'darwin-arm64', [], resolution.canonicalFirst ? dependencies.reverse() : dependencies)
     run(['codesign', '--verify', '--strict', join(stage, 'bin/fixture')])
     const fresh = join(root, 'fresh consumer/pantry/example.org/v1.0')
     mkdirSync(dirname(fresh), { recursive: true })
     renameSync(stage, fresh)
     rmSync(join(root, 'dependencies'), { recursive: true })
     rmSync(incomplete, { recursive: true })
-    expect(run([join(fresh, 'bin/fixture')])).toBe('42')
+    expect(run([join(fresh, 'bin/fixture')])).toBe(expected)
     expect(readFileSync(join(fresh, 'lib/runtime-data/init.txt'), 'utf8')).toBe('required library data\n')
     const provenance = JSON.parse(readFileSync(join(fresh, 'share/pantry/runtime-libraries.json'), 'utf8'))
     expect(provenance.libraries.map((library: { domain: string }) => library.domain).sort()).toEqual(['first.example', 'second.example'])
     expect(provenance.libraries.find((library: { domain: string }) => library.domain === 'first.example').resources[0].path).toBe('lib/runtime-data/init.txt')
     expect(provenance.libraries.find((library: { domain: string }) => library.domain === 'second.example').sourceSha256).toBe(currentSecondSha256)
+    expect(provenance.libraries.find((library: { domain: string }) => library.domain === 'second.example').version).toBe(secondVersion)
     for (const library of provenance.libraries) {
       expect(library.sourceSha256).toMatch(/^[a-f0-9]{64}$/)
       expect(library.bundledSha256).toMatch(/^[a-f0-9]{64}$/)
@@ -73,3 +91,4 @@ test.skipIf(process.platform !== 'darwin')('Mach-O publication uses only declare
   }
   finally { rmSync(root, { recursive: true, force: true }) }
 }, 60_000)
+}

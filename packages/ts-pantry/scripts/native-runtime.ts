@@ -1,11 +1,12 @@
-import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path'
 
 export interface RuntimePackage { domain: string, version: string, prefix: string, resources?: string[] }
 export interface RuntimeResourceReceipt { path: string, sha256: string }
 export interface RuntimeLibraryReceipt { name: string, domain: string, version: string, source: string, sourceSha256: string, licenseFiles: string[], resources?: RuntimeResourceReceipt[] }
+interface RuntimeLibraryCandidate { file: string, dependency?: RuntimePackage, bundledOrigin?: RuntimeLibraryReceipt & { bundledSha256: string } }
 
 const linuxStandardLibraries = /^(?:lib(?:c|m|dl|pthread|rt|resolv|util|anl)\.so\.[0-9]+|libstdc\+\+\.so\.6|libgcc_s\.so\.1|ld-linux[^/]*\.so\.[0-9]+|ld-musl[^/]*\.so\.[0-9]+)$/
 const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex')
@@ -118,7 +119,7 @@ export function bundleRuntimeLibraries(
 ): RuntimeLibraryReceipt[] {
   const linux = platform.startsWith('linux-')
   const root = realpathSync(prefix)
-  const index = new Map<string, { file: string, dependency?: RuntimePackage }[]>()
+  const index = new Map<string, RuntimeLibraryCandidate[]>()
   const queue: string[] = []
   const receipts: RuntimeLibraryReceipt[] = []
   const licenses = new Map<string, string[]>()
@@ -135,28 +136,32 @@ export function bundleRuntimeLibraries(
       if (!isBinary(actual)) return
       // A dependency can already carry a normalized copy of another declared
       // package. Loader-path rewrites change its hash without creating a new
-      // provider. Verify the embedded copy's receipt, then use the currently
-      // resolved checksummed package, including a repaired rebuild at the same
-      // version, instead of retaining its stale bundled copy.
+      // provider. Verify its recorded bytes before resolving its origin against
+      // the complete current dependency cohort below.
       const receipt = bundled.find(library => actual === join(owner, 'lib', library.name))
       if (receipt) {
         if (hash(actual) !== receipt.bundledSha256) throw new Error(`Invalid bundled runtime provenance for ${receipt.name}`)
-        const canonical = dependencies.find(pkg => pkg.domain === receipt.domain && pkg.version === receipt.version)
-        if (canonical) {
-          const sourceRoot = realpathSync(canonical.prefix)
-          const source = realpathSync(join(sourceRoot, receipt.source))
-          if (!inside(sourceRoot, source) || !/^[a-f0-9]{64}$/.test(receipt.sourceSha256))
-            throw new Error(`Invalid canonical runtime provenance for ${receipt.name}`)
-          return
-        }
+        if (isAbsolute(receipt.source) || receipt.source.includes('\\') || receipt.source.split('/').some(part => !part || part === '.' || part === '..') || !/^[a-f0-9]{64}$/.test(receipt.sourceSha256))
+          throw new Error(`Invalid canonical runtime provenance for ${receipt.name}`)
       }
       const entries = index.get(basename(file)) || []
-      if (!entries.some(entry => entry.file === actual)) entries.push({ file: actual, dependency })
+      if (!entries.some(entry => entry.file === actual)) entries.push({ file: actual, dependency, bundledOrigin: receipt })
       index.set(basename(file), entries)
     })
   }
   register(root)
   for (const dependency of dependencies) register(dependency.prefix, dependency)
+  // A receipt names the package that originally supplied a bundled copy, not
+  // a second provider. Resolve the requested ABI name against that owner's
+  // currently declared package, including compatible version upgrades whose
+  // physical filenames differ. Gather the full cohort first so order cannot
+  // change selection. Unrelated providers still collide and fail below.
+  for (const [name, candidates] of index) {
+    index.set(name, candidates.filter((candidate) => {
+      const origin = candidate.bundledOrigin
+      return !origin || !candidates.some(canonical => !canonical.bundledOrigin && canonical.dependency?.domain === origin.domain)
+    }))
+  }
   for (const part of ['bin', 'sbin', 'lib', 'lib64', 'libexec']) walk(join(root, part), (file) => {
     if (!lstatSync(file).isSymbolicLink() && isBinary(file)) queue.push(file)
   })

@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fixUp } from '../scripts/fix-up'
 
-test.skipIf(process.platform !== 'linux')('native runtime closure survives fresh relocation and loads through FFI without build dependencies', async () => {
+for (const resolution of [
+  { name: 'same-version rebuild', version: '1.0', canonicalFirst: false },
+  { name: 'resolved version upgrade', version: '1.1', canonicalFirst: false },
+  { name: 'resolved version upgrade with the canonical owner first', version: '1.1', canonicalFirst: true },
+]) {
+test.skipIf(process.platform !== 'linux')(`native runtime closure survives fresh relocation and loads through FFI without build dependencies (${resolution.name})`, async () => {
   const root = mkdtempSync(join(tmpdir(), 'pantry-runtime-closure-'))
   const compiler: string[] = process.env.PANTRY_TEST_CC ? JSON.parse(process.env.PANTRY_TEST_CC) : ['cc']
   const cleanEnv = { ...process.env }
@@ -16,7 +21,8 @@ test.skipIf(process.platform !== 'linux')('native runtime closure survives fresh
   }
   try {
     const first = join(root, 'dependencies/first')
-    const second = join(root, 'dependencies/second')
+    let second = join(root, 'dependencies/second')
+    let secondVersion = '1.0'
     const stage = join(root, 'artifact')
     for (const path of [join(first, 'lib'), join(second, 'lib64'), join(stage, 'lib'), join(stage, 'bin')]) mkdirSync(path, { recursive: true })
     writeFileSync(join(first, 'LICENSE'), 'First fixture license\n')
@@ -30,7 +36,9 @@ test.skipIf(process.platform !== 'linux')('native runtime closure survives fresh
     writeFileSync(join(root, 'first.c'), 'extern int second(void); int first(void) { return second() + 1; }')
     writeFileSync(join(root, 'api.c'), 'extern int first(void); int value(void) { return first(); }')
     writeFileSync(join(root, 'main.c'), '#include <stdio.h>\nextern int first(void); int main(void) { printf("%d\\n", first()); return 0; }')
-    run([...compiler, '-shared', '-fPIC', join(root, 'second.c'), '-Wl,-soname,libfixture-second.so.1', '-o', join(second, 'lib64/libfixture-second.so.1')])
+    let secondLib = join(second, 'lib64/libfixture-second.so.1.0')
+    symlinkSync('libfixture-second.so.1.0', join(second, 'lib64/libfixture-second.so.1'))
+    run([...compiler, '-shared', '-fPIC', join(root, 'second.c'), '-Wl,-soname,libfixture-second.so.1', '-o', secondLib])
     run([...compiler, '-shared', '-fPIC', join(root, 'first.c'), '-Wl,-soname,libfixture-first.so.1', join(second, 'lib64/libfixture-second.so.1'), `-Wl,-rpath,${second}/lib64`, '-o', join(first, 'lib/libfixture-first.so.1')])
     const link = [join(first, 'lib/libfixture-first.so.1'), `-Wl,-rpath,${first}/lib`, `-Wl,-rpath-link,${second}/lib64`]
     run([...compiler, '-shared', '-fPIC', join(root, 'api.c'), ...link, '-o', join(stage, 'lib/libfixture-api.so')])
@@ -51,24 +59,35 @@ test.skipIf(process.platform !== 'linux')('native runtime closure survives fresh
     chmodSync(firstLibrary, 0o555)
     await fixUp(first, 'linux-x86-64', [], [{ domain: 'second.example', version: '1.0', prefix: second }])
     expect(statSync(firstLibrary).mode & 0o777).toBe(0o555)
-    writeFileSync(join(root, 'second.c'), 'int second(void) { return 41; } int canonical_rebuild_marker(void) { return 0; }')
-    run([...compiler, '-shared', '-fPIC', join(root, 'second.c'), '-Wl,-soname,libfixture-second.so.1', '-o', join(second, 'lib64/libfixture-second.so.1')])
-    const currentSecondSha256 = new Bun.CryptoHasher('sha256').update(readFileSync(join(second, 'lib64/libfixture-second.so.1'))).digest('hex')
-    await fixUp(stage, 'linux-x86-64', [], [{ domain: 'first.example', version: '1.0', prefix: first, resources: ['lib/runtime-data'] }, { domain: 'second.example', version: '1.0', prefix: second }])
+    if (resolution.version === '1.1') {
+      second = join(root, 'dependencies/second-1.1')
+      secondVersion = '1.1'
+      mkdirSync(join(second, 'lib64'), { recursive: true })
+      writeFileSync(join(second, 'COPYING'), 'Current second fixture license\n')
+      secondLib = join(second, 'lib64/libfixture-second.so.1.1')
+      symlinkSync('libfixture-second.so.1.1', join(second, 'lib64/libfixture-second.so.1'))
+    }
+    const expected = resolution.version === '1.1' ? '44' : '42'
+    writeFileSync(join(root, 'second.c'), `int second(void) { return ${resolution.version === '1.1' ? 43 : 41}; } int canonical_rebuild_marker(void) { return 0; }`)
+    run([...compiler, '-shared', '-fPIC', join(root, 'second.c'), '-Wl,-soname,libfixture-second.so.1', '-o', secondLib])
+    const currentSecondSha256 = new Bun.CryptoHasher('sha256').update(readFileSync(secondLib)).digest('hex')
+    const dependencies = [{ domain: 'first.example', version: '1.0', prefix: first, resources: ['lib/runtime-data'] }, { domain: 'second.example', version: secondVersion, prefix: second }]
+    await fixUp(stage, 'linux-x86-64', [], resolution.canonicalFirst ? dependencies.reverse() : dependencies)
     const fresh = join(root, 'fresh consumer/pantry/example.org/v1.0')
     mkdirSync(dirname(fresh), { recursive: true })
     renameSync(stage, fresh)
     rmSync(join(root, 'dependencies'), { recursive: true })
     rmSync(incomplete, { recursive: true })
-    expect(run([join(fresh, 'bin/fixture')])).toBe('42')
+    expect(run([join(fresh, 'bin/fixture')])).toBe(expected)
     expect(readFileSync(join(fresh, 'lib/runtime-data/init.txt'), 'utf8')).toBe('required library data\n')
     const probe = join(root, 'ffi.ts')
     writeFileSync(probe, `import { dlopen } from 'bun:ffi'; const lib = dlopen(process.argv[2], { value: { args: [], returns: 'i32' } }); try { console.log(lib.symbols.value()) } finally { lib.close() }`)
-    expect(run([process.execPath, probe, join(fresh, 'lib/libfixture-api.so')])).toBe('42')
+    expect(run([process.execPath, probe, join(fresh, 'lib/libfixture-api.so')])).toBe(expected)
     const provenance = JSON.parse(readFileSync(join(fresh, 'share/pantry/runtime-libraries.json'), 'utf8'))
     expect(provenance.libraries.map((library: { domain: string }) => library.domain).sort()).toEqual(['first.example', 'second.example'])
     expect(provenance.libraries.find((library: { domain: string }) => library.domain === 'first.example').resources[0].path).toBe('lib/runtime-data/init.txt')
     expect(provenance.libraries.find((library: { domain: string }) => library.domain === 'second.example').sourceSha256).toBe(currentSecondSha256)
+    expect(provenance.libraries.find((library: { domain: string }) => library.domain === 'second.example').version).toBe(secondVersion)
     for (const library of provenance.libraries) {
       expect(library.sourceSha256).toMatch(/^[a-f0-9]{64}$/)
       expect(library.bundledSha256).toMatch(/^[a-f0-9]{64}$/)
@@ -78,3 +97,4 @@ test.skipIf(process.platform !== 'linux')('native runtime closure survives fresh
   }
   finally { rmSync(root, { recursive: true, force: true }) }
 }, 60_000)
+}
