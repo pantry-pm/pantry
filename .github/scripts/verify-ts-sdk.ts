@@ -96,7 +96,8 @@ export { domain }
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fetchPantryPackage, pantry, programsForPlatform } from 'ts-pantry'
+import { pathToFileURL } from 'node:url'
+import { fetchPantryPackage, pantry, programsForPlatform, savePackageAsTypeScript } from 'ts-pantry'
 const actual = programsForPlatform({ programs: ['common'], platformPrograms: { linux: ['native'] } }, 'linux-x86-64', '3.0')
 if (JSON.stringify(actual) !== JSON.stringify(['common', 'native'])) throw new Error('Incorrect public platform programs')
 console.log('platform programs: ok')
@@ -113,6 +114,13 @@ const exported = spawnSync(process.execPath, [cli, 'fetch', 'zstd', '--json', '-
 assert.equal(exported.status, 0, String(exported.error ?? exported.stderr))
 assert.deepEqual(JSON.parse(readFileSync(join(output, 'facebook.com/zstd.json'), 'utf8')), pantry.facebookcomzstd)
 console.log('installed canonical metadata CLI: ok')
+for (const identity of [{ domain: 'metadata.example/nested', aliases: ['2way'] }, { domain: '42tools.example', aliases: [] }]) {
+  const data = (await fetchPantryPackage('facebook.com/zstd')).packageInfo
+  Object.assign(data, identity)
+  const file = savePackageAsTypeScript(output, identity.domain, data)
+  assert.deepEqual(Object.values(await import(pathToFileURL(file).href)), [data])
+}
+console.log('installed metadata TypeScript identifiers: ok')
 `)
   let normalLock: string | undefined
   for (const frozen of [false, true]) {

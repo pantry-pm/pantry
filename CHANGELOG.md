@@ -2,6 +2,7 @@
 
 ## 🐛 Bug Fixes
 
+- Emit valid TypeScript identifiers when metadata aliases or domains start with digits ([#349](https://github.com/pantry-pm/pantry/issues/349)).
 - export authoritative package metadata without fabrication (#349) ([0d2eb1e](https://github.com/pantry-pm/pantry/commit/0d2eb1e)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#349](https://github.com/pantry-pm/pantry/issues/349))
 - own portable Darwin Git inputs and verify real native consumers (#346) ([b83e1c0](https://github.com/pantry-pm/pantry/commit/b83e1c0)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#346](https://github.com/pantry-pm/pantry/issues/346))
 - build portable Curl with qualified IDN and compression runtimes (#346) ([97c887c](https://github.com/pantry-pm/pantry/commit/97c887c)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#346](https://github.com/pantry-pm/pantry/issues/346))

@@ -457,7 +457,8 @@ function generateTypeScriptContent(packageInfo: PkgxPackage, domainName: string,
   }
 
   // Ensure the variable name doesn't contain any invalid JavaScript identifier characters
-  const safeVarName = existingExport || varName.replace(/[^\w$]/g, '')
+  const identifier = existingExport || varName.replace(/[^\w$]/g, '')
+  const safeVarName = /^[A-Za-z_$]/.test(identifier) ? identifier : `_${identifier}`
 
   // Generate comprehensive JSDoc documentation
   const jsdoc = generatePackageJSDoc(packageInfo, domainName, packageDisplayName)

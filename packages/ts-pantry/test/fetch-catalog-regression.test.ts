@@ -35,6 +35,21 @@ test('TypeScript metadata export preserves aliases, escaped strings and metadata
   finally { rmSync(root, { recursive: true, force: true }) }
 })
 
+test.each([
+  { domain: 'metadata.example/nested', aliases: ['2way'] },
+  { domain: '42tools.example', aliases: [] },
+])('TypeScript export creates valid identifiers for numeric metadata names: %j', async (identity) => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-metadata-identifier-'))
+  try {
+    const { packageInfo } = await fetchPantryPackage('facebook.com/zstd')
+    Object.assign(packageInfo, identity)
+    const file = savePackageAsTypeScript(root, identity.domain, packageInfo)
+    const generated = await import(pathToFileURL(file).href)
+    expect(Object.values(generated)).toEqual([packageInfo])
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 const cli = resolve(import.meta.dir, '../bin/cli.ts')
 const authored = readFileSync(resolve(import.meta.dir, '../src/packages/facebook.com/zstd.ts'), 'utf8')
 
