@@ -7,9 +7,8 @@
 //! top-level `node_modules`, and `bin/watch` matches at every depth, where
 //! gitignore anchors any pattern with a slash in the middle (#202).
 //!
-//! So matching happens here, with gitignore rules, against the real tree.
-//! rsync is still the copier, but it only ever sees ANCHORED, LITERAL paths
-//! (`/packages/a/node_modules`) — the one pattern form every rsync agrees on.
+//! Matching happens here, with gitignore rules, against the real tree.
+//! Publication staging uses these rules directly in its native traversal.
 //!
 //! Supported syntax (gitignore):
 //!   - blank lines and `#` comments are skipped; `\#` / `\!` escape them

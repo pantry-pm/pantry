@@ -3,11 +3,95 @@ const builtin = @import("builtin");
 const io_helper = @import("io_helper.zig");
 const registry = @import("cli/commands/registry.zig");
 const publish_archive = @import("cli/commands/publish_archive.zig");
+const publish_stage = @import("cli/commands/publish_stage.zig");
+const publish_ignore = @import("cli/commands/publish_ignore.zig");
 
 fn write(path: []const u8, content: []const u8) !void {
     const file = try io_helper.createFile(path, .{ .truncate = true });
     defer io_helper.closeFile(file);
     try io_helper.writeAllToFile(file, content);
+}
+
+test "publish archive: native filtered staging preserves selections, bytes and source modes" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const root = try io_helper.uniqueTempPath(allocator, "pantry-native-stage");
+    defer io_helper.deleteTree(root) catch {};
+    const source = try std.fs.path.join(allocator, &.{ root, "source" });
+    const destination = try std.fs.path.join(allocator, &.{ root, "destination" });
+    for ([_][]const u8{ "assets", "excluded", "nested" }) |directory|
+        try io_helper.makePath(try std.fs.path.join(allocator, &.{ source, directory }));
+    for ([_][]const u8{ "assets/tool", "assets/data", "assets/drop.tmp", "assets/keep.tmp", "excluded/keep.tmp", "root-only", "nested/root-only" }) |name|
+        try write(try std.fs.path.join(allocator, &.{ source, name }), name);
+    var rules = publish_ignore.IgnoreRules.init(std.testing.allocator);
+    defer rules.deinit();
+    for ([_][]const u8{ "excluded/", "*.tmp", "!keep.tmp", "/root-only" }) |rule| _ = try rules.add(rule);
+    const tool = try std.fs.path.join(allocator, &.{ source, "assets/tool" });
+    const data = try std.fs.path.join(allocator, &.{ source, "assets/data" });
+    const assets = try std.fs.path.join(allocator, &.{ source, "assets" });
+    if (comptime io_helper.File.Permissions.has_executable_bit) {
+        try io_helper.cwd().setFilePermissions(io_helper.io, tool, .fromMode(0o755), .{});
+        try io_helper.cwd().setFilePermissions(io_helper.io, data, .fromMode(0o640), .{});
+        try io_helper.cwd().setFilePermissions(io_helper.io, assets, .fromMode(0o555), .{});
+    }
+    defer if (comptime io_helper.File.Permissions.has_executable_bit) {
+        io_helper.cwd().setFilePermissions(io_helper.io, assets, .fromMode(0o755), .{}) catch {};
+        const staged_assets = std.fs.path.join(allocator, &.{ destination, "assets" }) catch unreachable;
+        io_helper.cwd().setFilePermissions(io_helper.io, staged_assets, .fromMode(0o755), .{}) catch {};
+    };
+    try publish_stage.copyFiltered(std.testing.allocator, source, destination, &rules);
+    for ([_][]const u8{ "assets/tool", "assets/data", "assets/keep.tmp", "nested/root-only" }) |name| {
+        try std.testing.expectEqualStrings(name, try io_helper.readFileAlloc(allocator, try std.fs.path.join(allocator, &.{ destination, name }), 1024));
+        try std.testing.expectEqualStrings(name, try io_helper.readFileAlloc(allocator, try std.fs.path.join(allocator, &.{ source, name }), 1024));
+    }
+    for ([_][]const u8{ "excluded", "assets/drop.tmp", "root-only" }) |name|
+        try std.testing.expectError(error.FileNotFound, io_helper.statFile(try std.fs.path.join(allocator, &.{ destination, name })));
+    if (comptime io_helper.File.Permissions.has_executable_bit) {
+        for ([_][]const u8{ source, destination }) |directory| {
+            for ([_][]const u8{ "assets/tool", "assets/data", "assets" }, [_]u32{ 0o755, 0o640, 0o555 }) |name, mode|
+                try std.testing.expectEqual(mode, (try io_helper.statFile(try std.fs.path.join(allocator, &.{ directory, name }))).mode & 0o777);
+        }
+    }
+}
+
+test "publish archive: native filtered staging retains raw links without traversing them" {
+    if (builtin.os.tag == .windows) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    const root = try io_helper.uniqueTempPath(allocator, "pantry-native-stage-links");
+    defer io_helper.deleteTree(root) catch {};
+    const source = try std.fs.path.join(allocator, &.{ root, "source" });
+    const destination = try std.fs.path.join(allocator, &.{ root, "destination" });
+    try io_helper.makePath(try std.fs.path.join(allocator, &.{ root, "outside" }));
+    try io_helper.makePath(source);
+    try write(try std.fs.path.join(allocator, &.{ root, "outside", "secret" }), "outside source");
+    for ([_][]const u8{ "../outside/secret", "../outside", "missing" }, [_][]const u8{ "file-link", "directory-link", "dangling-link" }) |target, name|
+        try io_helper.symLink(target, try std.fs.path.join(allocator, &.{ source, name }));
+    var rules = publish_ignore.IgnoreRules.init(std.testing.allocator);
+    defer rules.deinit();
+    try publish_stage.copyFiltered(std.testing.allocator, source, destination, &rules);
+    for ([_][]const u8{ "../outside/secret", "../outside", "missing" }, [_][]const u8{ "file-link", "directory-link", "dangling-link" }) |target, name| {
+        const staged = try std.fs.path.join(allocator, &.{ destination, name });
+        try std.testing.expectEqualStrings(target, try io_helper.readLinkAlloc(allocator, staged));
+        try std.testing.expectEqual(.sym_link, (try io_helper.cwd().statFile(io_helper.io, staged, .{ .follow_symlinks = false })).kind);
+    }
+    try std.testing.expectEqualStrings("outside source", try io_helper.readFileAlloc(allocator, try std.fs.path.join(allocator, &.{ root, "outside", "secret" }), 1024));
+}
+
+test "publish archive: native filtered staging propagates a missing source" {
+    const allocator = std.testing.allocator;
+    const root = try io_helper.uniqueTempPath(allocator, "pantry-native-stage-missing");
+    defer allocator.free(root);
+    defer io_helper.deleteTree(root) catch {};
+    const source = try std.fs.path.join(allocator, &.{ root, "missing" });
+    defer allocator.free(source);
+    const destination = try std.fs.path.join(allocator, &.{ root, "destination" });
+    defer allocator.free(destination);
+    var rules = publish_ignore.IgnoreRules.init(allocator);
+    defer rules.deinit();
+    try std.testing.expectError(error.FileNotFound, publish_stage.copyFiltered(allocator, source, destination, &rules));
 }
 
 test "publish archive: portable tar metadata handles text bins, links and long names without chmod" {

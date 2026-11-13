@@ -172,7 +172,26 @@ if (event === 'postpack') await Bun.write('assets/late.txt', 'after archive crea
   await writeFile(join(owner, 'package.json'), JSON.stringify({ ...manifest, files: undefined }))
   await writeFile(join(owner, '.npmignore'), 'LICENSE.md\nexcluded.txt\nhook.ts\nevents.log\n')
   await writeFile(join(owner, '.env'), 'PRIVATE_FIXTURE=not-shipped\n')
-  const filtered = await pack(['--ignore-scripts'])
+  const filteredEnvironment: Record<string, string> = {}
+  if (process.platform !== 'win32') {
+    // Keep the real system archive providers, with no rsync installed on PATH.
+    // Windows exercises the same missing-dependency boundary natively.
+    const tools = join(root, 'archive tools')
+    await mkdir(tools)
+    const providers: Array<Record<string, string>> = []
+    for (const name of ['sh', 'find', 'tar', 'stat', 'gzip', 'cp']) {
+      const source = (await Promise.all(['/usr/bin', '/bin'].map(async base => {
+        const path = join(base, name)
+        return await Bun.file(path).exists() ? path : undefined
+      }))).find(Boolean)
+      assert(source, `Missing real system archive provider ${name}`)
+      await symlink(source, join(tools, name))
+      providers.push({ name, source, sha256: Bun.SHA256.hash(await readFile(source), 'hex') })
+    }
+    filteredEnvironment.PATH = tools
+    receipt.filteredArchiveProviders = providers
+  }
+  const filtered = await pack(['--ignore-scripts'], filteredEnvironment)
   assert.equal(filtered.code, 0, filtered.output)
   const filteredFiles = await new Bun.Archive(await readFile(output)).files()
   for (const path of ['package/LICENSE.md', 'package/excluded.txt', 'package/.env', 'package/hook.ts'])

@@ -2772,14 +2772,7 @@ fn createTarball(
     } else {
         // No `files` array - use exclusion-based approach (legacy behavior)
 
-        const src_path = try std.fmt.allocPrint(allocator, "{s}/", .{package_dir});
-        defer allocator.free(src_path);
-        const dst_path = try std.fmt.allocPrint(allocator, "{s}/", .{staging_pkg});
-        defer allocator.free(dst_path);
-
-        // Ignore rules use gitignore semantics, matched here rather than by
-        // rsync, whose pattern language differs between GNU rsync and macOS's
-        // openrsync (see publish_ignore.zig and #202).
+        // Ignore rules use the same gitignore semantics on every platform.
         var rules = publish_ignore.IgnoreRules.init(allocator);
         defer rules.deinit();
 
@@ -2865,20 +2858,7 @@ fn createTarball(
             while (lines.next()) |line| _ = try rules.add(line);
         }
 
-        const exclude_list_path = try std.fs.path.join(allocator, &[_][]const u8{ staging_base, "rsync-excludes" });
-        defer allocator.free(exclude_list_path);
-        _ = try publish_ignore.writeExcludeFile(allocator, &rules, package_dir, exclude_list_path);
-        const exclude_from = try std.fmt.allocPrint(allocator, "--exclude-from={s}", .{exclude_list_path});
-        defer allocator.free(exclude_from);
-
-        const cp_result = try io_helper.childRun(allocator, &[_][]const u8{ "rsync", "-a", exclude_from, src_path, dst_path });
-        defer allocator.free(cp_result.stdout);
-        defer allocator.free(cp_result.stderr);
-
-        if (cp_result.term != .exited or cp_result.term.exited != 0) {
-            style.print("rsync failed. stderr: {s}\n", .{cp_result.stderr});
-            return error.TarballCreationFailed;
-        }
+        try @import("publish_stage.zig").copyFiltered(allocator, package_dir, staging_pkg, &rules);
         try stageRootMetadata(allocator, package_dir, staging_pkg, root_files_dir, &rules);
     }
 
