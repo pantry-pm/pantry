@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.206...v0.11.207)
+
+## 🐛 Bug Fixes
+
+- **ci**: require separated acceptance before publication ([1239b02](https://github.com/pantry-pm/pantry/commit/1239b02)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#360](https://github.com/pantry-pm/pantry/issues/360))
+- **ci**: isolate SDK and native integration job budgets ([05b17ff](https://github.com/pantry-pm/pantry/commit/05b17ff)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#360](https://github.com/pantry-pm/pantry/issues/360), [#355](https://github.com/pantry-pm/pantry/issues/355), [#356](https://github.com/pantry-pm/pantry/issues/356), [#357](https://github.com/pantry-pm/pantry/issues/357), [#358](https://github.com/pantry-pm/pantry/issues/358), [#359](https://github.com/pantry-pm/pantry/issues/359))
+- **loader**: add only runtime paths needed by unresolved dependencies ([4614858](https://github.com/pantry-pm/pantry/commit/4614858)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#358](https://github.com/pantry-pm/pantry/issues/358), [#355](https://github.com/pantry-pm/pantry/issues/355), [#357](https://github.com/pantry-pm/pantry/issues/357), [#350](https://github.com/pantry-pm/pantry/issues/350))
+- **workspace**: honor the nearest project membership boundary ([e610ba3](https://github.com/pantry-pm/pantry/commit/e610ba3)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#357](https://github.com/pantry-pm/pantry/issues/357), [#355](https://github.com/pantry-pm/pantry/issues/355))
+- **activation**: preserve declared package runtime environments ([bf00c98](https://github.com/pantry-pm/pantry/commit/bf00c98)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#355](https://github.com/pantry-pm/pantry/issues/355), [#350](https://github.com/pantry-pm/pantry/issues/350))
+- **llvm**: declare and select the complete debugger runtime closure (#350) ([f67475a](https://github.com/pantry-pm/pantry/commit/f67475a)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#350](https://github.com/pantry-pm/pantry/issues/350))
+- **publish**: require current targeted versions despite sweep exclusions (#354) ([349ff9b](https://github.com/pantry-pm/pantry/commit/349ff9b)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#354](https://github.com/pantry-pm/pantry/issues/354))
+
+## ✅ Tests
+
+- **registry**: use owned metadata for access policy reads ([0bf31f6](https://github.com/pantry-pm/pantry/commit/0bf31f6)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#356](https://github.com/pantry-pm/pantry/issues/356))
+
+## 🔧 Chores
+
+- release v0.11.207 ([dcd1607](https://github.com/pantry-pm/pantry/commit/dcd1607)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.205...v0.11.206)
 
 ## 🐛 Bug Fixes
