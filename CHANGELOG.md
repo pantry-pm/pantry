@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.205...v0.11.206)
+
+## 🐛 Bug Fixes
+
+- **release**: qualify landed checked-push CI (#353) ([fde607b](https://github.com/pantry-pm/pantry/commit/fde607b)) _(by Chris <chris@stacksjs.com>)_ ([#353](https://github.com/pantry-pm/pantry/issues/353))
+- **llvm**: build owned revision with complete debugger runtimes (#350) ([f64bb83](https://github.com/pantry-pm/pantry/commit/f64bb83)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#350](https://github.com/pantry-pm/pantry/issues/350))
+- **update**: propagate metadata and installation failures (#333, #347) ([f709b83](https://github.com/pantry-pm/pantry/commit/f709b83)) _(by Chris <chris@stacksjs.com>)_ ([#333](https://github.com/pantry-pm/pantry/issues/333), [#347](https://github.com/pantry-pm/pantry/issues/347))
+- **build**: preserve failing workspace build status (#352) ([65c2955](https://github.com/pantry-pm/pantry/commit/65c2955)) _(by Chris <chris@stacksjs.com>)_ ([#352](https://github.com/pantry-pm/pantry/issues/352))
+- require portable LLVM sanitizer consumers before publication (#350) ([e055514](https://github.com/pantry-pm/pantry/commit/e055514)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#350](https://github.com/pantry-pm/pantry/issues/350))
+
+## 🔧 Chores
+
+- release v0.11.206 ([1e1df99](https://github.com/pantry-pm/pantry/commit/1e1df99)) _(by Chris <chris@stacksjs.com>)_
+- update Brave Browser, Claude Desktop, codex, Codex, doctl, dozzle, dtsx-native, helm, LLaMA.cpp, mise, nim-lang, Notion, oc, opencode.ai, pack, railway, rio, steampipe, traefik ([6efbdb7](https://github.com/pantry-pm/pantry/commit/6efbdb7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chris@stacksjs.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.204...HEAD)
 
 ## 🐛 Bug Fixes
