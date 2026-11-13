@@ -3,7 +3,7 @@
  *
  * @domain `figma.com`
  * @programs `figma`
- * @version `126.11.8` (4 versions available)
+ * @version `126.11.9` (5 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install figma.com`
@@ -22,6 +22,7 @@ export const figmacomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '126.11.9',
     '126.11.8',
     '124.7.4',
     '124.7.3',

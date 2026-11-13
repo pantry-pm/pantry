@@ -3,7 +3,7 @@
  *
  * @domain `zig-dtsx.stacksjs.org`
  * @programs `zig-dtsx`
- * @version `0.11.54` (3 versions available)
+ * @version `0.11.54` (20 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install zig-dtsx.stacksjs.org`
@@ -72,6 +72,23 @@ export const zigdtsxPackage = {
     '0.11.54',
     '0.11.53',
     '0.11.52',
+    '0.11.51',
+    '0.11.50',
+    '0.11.48',
+    '0.11.47',
+    '0.11.46',
+    '0.11.45',
+    '0.11.44',
+    '0.11.43',
+    '0.11.42',
+    '0.11.41',
+    '0.11.40',
+    '0.11.39',
+    '0.11.38',
+    '0.11.37',
+    '0.11.36',
+    '0.11.35',
+    '0.11.34',
   ] as const,
   aliases: [] as const,
 }

@@ -3,7 +3,7 @@
  *
  * @domain `brave.com`
  * @programs `brave`
- * @version `1.102.1` (30 versions available)
+ * @version `1.102.3` (32 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install brave.com`
@@ -22,6 +22,8 @@ export const bravecomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.102.3',
+    '1.102.2',
     '1.102.1',
     '1.101.47',
     '1.101.40',

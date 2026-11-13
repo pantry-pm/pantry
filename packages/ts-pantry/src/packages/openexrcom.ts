@@ -3,7 +3,7 @@
  *
  * @domain `openexr.com`
  * @programs `exr2aces`, `exrenvmap`, `exrheader`, `exrmakepreview`, `exrmaketiled`, ... (+3 more)
- * @version `3.5.4-rc` (149 versions available)
+ * @version `3.5.4` (150 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openexr.com`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "exr"
  * console.log(pkg.description) // "The OpenEXR project provides the specification ..."
  * console.log(pkg.programs)    // ["exr2aces", "exrenvmap", ...]
- * console.log(pkg.versions[0]) // "3.5.4-rc" (latest)
+ * console.log(pkg.versions[0]) // "3.5.4" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/openexr-com.md
@@ -86,6 +86,7 @@ export const openexrcomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.5.4',
     '3.5.4-rc',
     '3.5.3',
     '3.5.3-rc',
