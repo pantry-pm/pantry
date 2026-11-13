@@ -24,11 +24,10 @@ export function revisedPackageVersions(upstream: readonly string[], revisions?: 
   const declared = entries(revisions)
   if (!declared.length) return [...upstream]
   for (const version of upstream) {
-    // Unrelated vendor releases can shorten their tuple (zlib1.4 follows
-    // 1.3.2). Only an actual collision with a declared packaging identity is
-    // ambiguous; the existence of one repair must not freeze discovery.
-    if (!/^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))+$/u.test(version)
-      || declared.some(([base]) => version.startsWith(`${base}.`)))
+    // Unrelated vendor releases can shorten their tuple or publish prereleases.
+    // Only a collision with a declared packaging identity is ambiguous; one
+    // repair must not freeze the vendor's other release channels.
+    if (declared.some(([base]) => version.startsWith(`${base}.`)))
       throw new Error(`Upstream version ${version} conflicts with the recipe's package build revision format`)
   }
   return upstream.map(version => revisions?.[version] ? `${version}.${revisions[version]}` : version)

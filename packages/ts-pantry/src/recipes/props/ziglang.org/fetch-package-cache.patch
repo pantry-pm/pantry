@@ -1,0 +1,51 @@
+--- a/lib/compiler/Maker.zig
++++ b/lib/compiler/Maker.zig
+@@ -1702,6 +1702,7 @@
+     var opt_path_or_url: ?[]const u8 = null;
+     var override_local_cache_dir: ?[]const u8 = EnvVar.ZIG_LOCAL_CACHE_DIR.get(environ_map);
+     var override_pkg_dir: ?[]const u8 = EnvVar.ZIG_LOCAL_PKG_DIR.get(environ_map);
++    var override_package_cache_dir: ?[]const u8 = null;
+     var debug_hash: bool = false;
+     var save: union(enum) {
+         no,
+@@ -1719,6 +1720,8 @@
+                 override_local_cache_dir = nextArgOrFatal(args, &arg_i);
+             } else if (mem.eql(u8, arg, "--pkg-dir")) {
+                 override_pkg_dir = nextArgOrFatal(args, &arg_i);
++            } else if (mem.eql(u8, arg, "--package-cache-dir")) {
++                override_package_cache_dir = nextArgOrFatal(args, &arg_i);
+             } else if (mem.eql(u8, arg, "--debug-hash")) {
+                 debug_hash = true;
+             } else if (mem.eql(u8, arg, "--debug-log")) {
+@@ -1760,6 +1763,14 @@
+ 
+     const cwd_path = try std.zig.getResolvedCwd(io, arena);
+ 
++    // Fetch storage can be request-local without recompiling Maker in a new
++    // compiler cache. The default continues to use the global cache.
++    const package_cache = if (override_package_cache_dir) |path|
++        std.zig.Directories.openUnresolved(arena, io, cwd_path, path, .@"global cache")
++    else
++        graph.global_cache_root;
++    defer if (override_package_cache_dir != null) package_cache.handle.close(io);
++
+     const local_storage_ptr = switch (save) {
+         .no => null,
+         .yes, .exact => ls: {
+@@ -1784,7 +1795,7 @@
+     var job_queue: Fetch.JobQueue = .{
+         .io = io,
+         .http_client = &http_client,
+-        .global_cache = graph.global_cache_root,
++        .global_cache = package_cache,
+         .local_storage = local_storage_ptr,
+         .recursive = false,
+         .read_only = false,
+@@ -2091,6 +2102,7 @@
+     \\  -h, --help                    Print this help and exit
+     \\  --cache-dir [path]            Override path to local cache directory
+     \\  --pkg-dir [path]              Override path to local package directory
++    \\  --package-cache-dir [path]    Override fetch storage independently of the compiler cache
+     \\  --debug-hash                  Print verbose hash information to stdout
+     \\  --debug-log [scope]           Enable printing debug/info log messages for scope
+     \\  --save                        Add the fetched package to build.zig.zon

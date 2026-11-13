@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'ziglang.org',
   name: 'zig',
+  revisions: { '0.17.1': 1 },
+  propsDir: 'props/ziglang.org',
   description: 'General-purpose programming language and toolchain for maintaining robust, optimal, and reusable software.',
   homepage: 'https://ziglang.org/',
   github: 'https://github.com/ziglang/zig',
@@ -39,6 +41,13 @@ export const recipe: Recipe = {
     },
   },
 
+  buildDependencies: {
+    'curl.se': '*',
+    'gnu.org/tar': '*',
+    'tukaani.org/xz': '*',
+    'gnu.org/patch': '^2.8',
+  },
+
   build: {
     script: [
       'VERSION={{version}}',
@@ -64,6 +73,18 @@ export const recipe: Recipe = {
       '',
       'install -Dm755 "zig-${PLATFORM}-${DOWNLOAD_VERSION}/zig" {{prefix}}/bin/zig',
       'cp -a "zig-${PLATFORM}-${DOWNLOAD_VERSION}/lib" {{prefix}}',
+      '',
+      // Maker is compiler source shipped with Zig and compiled lazily by the
+      // unchanged native executable. Apply the source repair during packaging.
+      'if test "$VERSION" = 0.17.1; then',
+      '  patch -d "{{prefix}}" -p1 < props/fetch-package-cache.patch',
+      '  sh props/verify-fetch-cache.sh "{{prefix}}/bin/zig"',
+      'fi',
     ],
+  },
+
+  test: {
+    required: true,
+    script: ['test "$("{{prefix}}/bin/zig" version)" = "{{version}}"'],
   },
 }

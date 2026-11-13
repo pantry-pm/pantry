@@ -10,6 +10,26 @@ import { resolve } from 'node:path'
 import { llvmorgPackage } from '../src/packages/llvmorg'
 import { versionSatisfies } from '../scripts/build-package'
 
+test('Zig package cache repair retains vendor and prerelease identities', async () => {
+  expect(revisedPackageVersions(['0.18.0-dev.1005+75d48dfff', '0.17.1', '0.17.0'], { '0.17.1': 1 }))
+    .toEqual(['0.18.0-dev.1005+75d48dfff', '0.17.1.1', '0.17.0'])
+  for (const platform of ['darwin-arm64', 'darwin-x86-64', 'linux-x86-64', 'linux-arm64']) {
+    const loaded = await loadRecipe('ziglang.org', platform, '0.17.1.1')
+    expect(loaded.upstreamVersion).toBe('0.17.1')
+    expect(loaded.publicationVersion).toBe('0.17.1.1')
+    expect(loaded.requiresRecipeBuild).toBe(true)
+    expect(recipeAllowsMirror('0.17.1.1', { upstream: loaded.upstreamVersion!, current: loaded.publicationVersion! }, loaded.requiresRecipeBuild)).toBe(false)
+    expect(() => requireCurrentRecipeBuild('0.17.1', loaded.publicationVersion!)).toThrow('refusing to replace')
+    expect(loaded.recipe.build?.dependencies?.['gnu.org/patch']).toBe('^2.8')
+    const tokens = buildTokens('ziglang.org', loaded.upstreamVersion!, platform, '/package/v0.17.1.1', '/source', {})
+    const script = applyTokens((loaded.recipe.build!.script as string[]).join('\n'), tokens)
+    expect(script).toContain('VERSION=0.17.1\n')
+    expect(script).toContain('patch -d "/package/v0.17.1.1" -p1 < props/fetch-package-cache.patch')
+    expect(script).toContain('sh props/verify-fetch-cache.sh "/package/v0.17.1.1/bin/zig"')
+    expect(loaded.recipe.test?.required).toBe(true)
+  }
+})
+
 test('the LLVM runtime repair executes its owned recipe and retains the vendor source identity', async () => {
   for (const platform of ['darwin-arm64', 'linux-x86-64', 'linux-arm64']) {
     const loaded = await loadRecipe('llvm.org', platform, '23.1.5.2')

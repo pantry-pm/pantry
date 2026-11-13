@@ -3,12 +3,12 @@
  *
  * @domain `ziglang.org`
  * @programs `zig`
- * @version `0.18.0-dev.1005+75d48dfff` (143 versions available)
+ * @version `0.18.0-dev.1005+75d48dfff` (144 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ziglang.org`
  * @homepage https://ziglang.org/
- * @buildDependencies `curl.se`, `gnu.org/tar`, `tukaani.org/xz` - required only when building from source
+ * @buildDependencies `curl.se`, `gnu.org/tar`, `tukaani.org/xz`, ... (+1 more) - required only when building from source
  *
  * @example
  * ```typescript
@@ -63,6 +63,7 @@ export const ziglangorgPackage = {
     'curl.se',
     'gnu.org/tar',
     'tukaani.org/xz',
+    'gnu.org/patch^2.8',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -95,6 +96,7 @@ export const ziglangorgPackage = {
     '0.18.0-dev.4+5a23bf4b2',
     '0.18.0-dev.2+faa537cf9',
     '0.18.0-dev.1+a6c6412a8',
+    '0.17.1.1',
     '0.17.1',
     '0.17.0',
     '0.17.0-dev.2384+ac77c23af',
@@ -214,6 +216,7 @@ export const ziglangorgPackage = {
     '0.1.1',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type ZiglangorgPackage = typeof ziglangorgPackage
