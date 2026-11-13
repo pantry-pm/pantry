@@ -413,6 +413,14 @@ jobs:
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
         run: bun .github/scripts/verify-publication-retry.ts
+      - name: Verify canonical package archives through the source CLI
+        env:
+          PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
+        run: bun .github/scripts/canonical-pack.ts
+      - name: Verify npm publication archives and transport deadlines
+        run: |
+          set -o pipefail
+          bun .github/scripts/verify-npm-publication.ts packages/zig/zig-out/bin/pantry 2>&1 | tee artifacts/canonical-pack/npm-publication.log
       - name: Verify publish lifecycle controls through the native transport
         env:
           PANTRY_SOURCE_CLI: packages/zig/zig-out/bin/pantry
@@ -438,6 +446,7 @@ jobs:
           path: |
             artifacts/linux-native-browser
             artifacts/git-revision-identity
+            artifacts/canonical-pack
             artifacts/native-catalog/native-registry-lookup.json
           if-no-files-found: error
 
@@ -568,6 +577,16 @@ jobs:
       - name: Verify executable bin metadata in real Windows npm uploads
         shell: bash
         run: bun .github/scripts/verify-npm-publication.ts artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/pantry.exe encoding
+      - name: Verify canonical package archives through the native Windows CLI
+        env:
+          PANTRY_SOURCE_CLI: artifacts/windows-source-runtime/artifacts/windows-source-cli/bin/pantry.exe
+        run: bun .github/scripts/canonical-pack.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-canonical-pack
+          path: artifacts/canonical-pack
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:

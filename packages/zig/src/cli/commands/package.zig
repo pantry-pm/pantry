@@ -739,6 +739,75 @@ const publish_conflict = @import("publish_conflict.zig");
 pub const ConflictKind = publish_conflict.ConflictKind;
 pub const classifyConflict = publish_conflict.classifyConflict;
 
+pub const PackOptions = struct {
+    filename: ?[]const u8 = null,
+    ignore_scripts: bool = false,
+};
+
+/// Export the same staged archive used by npm publication, without registry
+/// resolution, authentication or uploads. Source files remain unchanged unless
+/// the package explicitly runs its own packing lifecycle scripts.
+pub fn packCommand(allocator: std.mem.Allocator, target: []const u8, options: PackOptions) !CommandResult {
+    const cwd = try io_helper.realpathAlloc(allocator, ".");
+    defer allocator.free(cwd);
+    const requested = try std.fs.path.resolve(allocator, &.{ cwd, target });
+    defer allocator.free(requested);
+    const package_dir = try io_helper.realpathAlloc(allocator, requested);
+    defer allocator.free(package_dir);
+    const config_path = try std.fs.path.join(allocator, &.{ package_dir, "package.json" });
+    defer allocator.free(config_path);
+    const content = io_helper.readFileAlloc(allocator, config_path, 10 * 1024 * 1024) catch
+        return CommandResult.err(allocator, common.ERROR_NO_CONFIG);
+    defer allocator.free(content);
+    const parsed = try std.json.parseFromSlice(std.json.Value, allocator, content, .{});
+    defer parsed.deinit();
+    if (parsed.value != .object) return CommandResult.err(allocator, common.ERROR_CONFIG_NOT_OBJECT);
+    const publish_lib = @import("../../packages/publish.zig");
+    var metadata = try publish_lib.extractMetadata(allocator, config_path);
+    defer metadata.deinit(allocator);
+    try publish_lib.validatePackageName(metadata.name);
+    try publish_lib.validateVersion(metadata.version);
+    const scripts: ?std.json.ObjectMap = if (parsed.value.object.get("scripts")) |value|
+        if (value == .object) value.object else null
+    else
+        null;
+    if (!options.ignore_scripts) {
+        if (scripts) |hooks| {
+            for ([_][]const u8{ "prepack", "prepare" }) |event| {
+                if (!lib.lifecycle.runScriptIfExists(allocator, hooks, event, package_dir))
+                    return CommandResult.err(allocator, "Package packing lifecycle failed");
+            }
+        }
+    }
+
+    const archive = try createTarball(allocator, package_dir, metadata.name, metadata.version, cwd);
+    defer archive.deinit(allocator);
+    if (!options.ignore_scripts) {
+        if (scripts) |hooks| {
+            if (!lib.lifecycle.runPostPackScripts(allocator, hooks, package_dir))
+                return CommandResult.err(allocator, "Package postpack lifecycle failed");
+        }
+    }
+
+    const destination = try std.fs.path.resolve(allocator, &.{ cwd, options.filename orelse std.fs.path.basename(archive.path) });
+    defer allocator.free(destination);
+    if (std.mem.eql(u8, destination, config_path))
+        return CommandResult.err(allocator, "Archive destination would replace package.json");
+    const parent = std.fs.path.dirname(destination) orelse return error.InvalidArchiveDestination;
+    try io_helper.makePath(parent);
+    const transaction = try io_helper.createPrivateDirectory(allocator, parent, "pack-output");
+    defer {
+        io_helper.deleteTree(transaction) catch {};
+        allocator.free(transaction);
+    }
+    const candidate = try std.fs.path.join(allocator, &.{ transaction, "archive.tgz" });
+    defer allocator.free(candidate);
+    try io_helper.copyFile(archive.path, candidate);
+    try io_helper.renameClassified(candidate, destination);
+    style.print("Packed {s}@{s}\nShasum: {s}\nIntegrity: {s}\n", .{ metadata.name, metadata.version, archive.shasum, archive.integrity });
+    return CommandResult.success(allocator, destination);
+}
+
 pub const PublishOptions = struct {
     /// Explicit CLI overrides. Null preserves publishConfig and registry defaults.
     access: ?[]const u8 = null,
@@ -784,6 +853,8 @@ pub const PublishOptions = struct {
     /// reporting it pending, in milliseconds (`--confirm-timeout`, seconds).
     /// Null uses `npm_readback_timeout_ms`.
     confirm_timeout_ms: ?u64 = null,
+    /// Batch metadata belongs in the private archive stage, not the checkout.
+    root_files_dir: ?[]const u8 = null,
 };
 
 pub const DeferredReadback = publish_plan.DeferredReadback;
@@ -871,22 +942,6 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
         }
         style.print("----------------------------------------\n", .{});
 
-        // Detect root files to propagate to packages that don't have their own
-        const root_files = [_][]const u8{ "README.md", "LICENSE", "LICENSE.md" };
-        var has_root_file: [root_files.len]bool = undefined;
-        var root_file_paths: [root_files.len]?[]const u8 = undefined;
-        for (root_files, 0..) |file_name, i| {
-            const root_path = std.fs.path.join(allocator, &[_][]const u8{ cwd, file_name }) catch null;
-            root_file_paths[i] = root_path;
-            has_root_file[i] = if (root_path) |p| blk: {
-                io_helper.accessAbsolute(p, .{}) catch break :blk false;
-                break :blk true;
-            } else false;
-        }
-        defer for (&root_file_paths) |*p| {
-            if (p.*) |path| allocator.free(path);
-        };
-
         // Accepted uploads waiting for their public readback (see
         // PublishOptions.deferred_readbacks).
         var readbacks: ReadbackQueue = .empty;
@@ -895,6 +950,7 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
             readbacks.deinit(allocator);
         }
         var batch_options = options;
+        batch_options.root_files_dir = cwd;
         if (options.readback) batch_options.deferred_readbacks = &readbacks;
 
         var failed: usize = 0;
@@ -935,40 +991,7 @@ pub fn publishCommand(allocator: std.mem.Allocator, args: []const []const u8, op
                 }
             } else |_| {}
 
-            // Propagate root files (README, LICENSE) to package if missing
-            var copied_files: [root_files.len]?[]const u8 = @splat(null);
-            for (root_files, 0..) |file_name, i| {
-                if (!has_root_file[i]) continue;
-                const pkg_file_path = std.fs.path.join(allocator, &[_][]const u8{ pkg.path, file_name }) catch continue;
-                // Check if package already has its own copy
-                io_helper.accessAbsolute(pkg_file_path, .{}) catch {
-                    // Package doesn't have this file — copy from root
-                    if (root_file_paths[i]) |root_path| {
-                        if (io_helper.copyFile(root_path, pkg_file_path)) {
-                            copied_files[i] = pkg_file_path;
-                            style.print("  Copied root {s} to {s}\n", .{ file_name, pkg.name });
-                        } else |_| {
-                            allocator.free(pkg_file_path);
-                        }
-                    } else {
-                        allocator.free(pkg_file_path);
-                    }
-                    continue;
-                };
-                // File exists in package — don't overwrite
-                allocator.free(pkg_file_path);
-            }
-
             const result = publishSingleToNpm(allocator, pkg.path, pkg.config_path, batch_options);
-
-            // Cleanup: remove propagated files after publish
-            for (&copied_files) |*cf| {
-                if (cf.*) |path| {
-                    io_helper.deleteFile(path) catch {};
-                    allocator.free(path);
-                    cf.* = null;
-                }
-            }
 
             // Detect rate-limit failures up front so we can extend the
             // inter-package cooldown before processing the result data.
@@ -1353,7 +1376,7 @@ fn publishSingleToNpm(
     }
 
     // Create tarball
-    const tarball_info = createTarball(allocator, package_dir, metadata.name, metadata.version) catch |err| {
+    const tarball_info = createTarball(allocator, package_dir, metadata.name, metadata.version, options.root_files_dir) catch |err| {
         if (err == error.UnresolvableWorkspaceDependency) {
             return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
         }
@@ -2477,10 +2500,10 @@ test "pack archive: another invocation with the same package identity cannot rep
     }
     try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "first/value.txt", .data = "first invocation\n" });
     try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "second/value.txt", .data = "second invocation\n" });
-    const first = try createTarball(allocator, try std.fs.path.join(allocator, &.{ root, "first" }), name, "1.0.0");
+    const first = try createTarball(allocator, try std.fs.path.join(allocator, &.{ root, "first" }), name, "1.0.0", null);
     defer first.deinit(allocator);
     const original = try io_helper.readFileAlloc(allocator, first.path, 1024 * 1024);
-    const second = try createTarball(allocator, try std.fs.path.join(allocator, &.{ root, "second" }), name, "1.0.0");
+    const second = try createTarball(allocator, try std.fs.path.join(allocator, &.{ root, "second" }), name, "1.0.0", null);
     defer second.deinit(allocator);
     const retained = try io_helper.readFileAlloc(allocator, first.path, 1024 * 1024);
     try std.testing.expectEqualSlices(u8, original, retained);
@@ -2498,12 +2521,37 @@ fn formatSize(buf: []u8, size: u64) []const u8 {
     }
 }
 
+/// Root metadata is part of the publication snapshot. Never temporarily add
+/// it to the source package: concurrent packers must not remove each other's
+/// files, and packing must leave the checkout unchanged.
+fn stageRootMetadata(allocator: std.mem.Allocator, package_dir: []const u8, stage: []const u8, root: ?[]const u8, rules: ?*const publish_ignore.IgnoreRules) !void {
+    const root_dir = root orelse return;
+    for ([_][]const u8{ "README.md", "LICENSE", "LICENSE.md" }) |name| {
+        if (rules) |ignore| if (ignore.isPathExcluded(name, false)) continue;
+        const own = try std.fs.path.join(allocator, &.{ package_dir, name });
+        defer allocator.free(own);
+        if (io_helper.accessAbsolute(own, .{})) |_| continue else |err| {
+            if (err != error.FileNotFound) return err;
+        }
+        const source = try std.fs.path.join(allocator, &.{ root_dir, name });
+        defer allocator.free(source);
+        io_helper.accessAbsolute(source, .{}) catch |err| {
+            if (err == error.FileNotFound) continue;
+            return err;
+        };
+        const destination = try std.fs.path.join(allocator, &.{ stage, name });
+        defer allocator.free(destination);
+        try io_helper.copyFile(source, destination);
+    }
+}
+
 /// Create tarball for package following npm's `files` array and publish standards
 fn createTarball(
     allocator: std.mem.Allocator,
     package_dir: []const u8,
     package_name: []const u8,
     version: []const u8,
+    root_files_dir: ?[]const u8,
 ) !TarballInfo {
     // Sanitize package name for tarball filename (replace @ and / with -)
     var sanitized_name = try allocator.alloc(u8, package_name.len);
@@ -2601,15 +2649,18 @@ fn createTarball(
             io_helper.accessAbsolute(src, .{}) catch continue;
 
             // Copy the file
-            io_helper.copyFile(src, dst) catch continue;
+            try io_helper.copyFile(src, dst);
         }
 
         // Copy each file/directory from the `files` array
         for (files) |file_entry| {
+            const dst = publish_bins.stagedEntryPath(allocator, staging_pkg, file_entry) catch {
+                style.print("  Error: package file entry escapes its stage: {s}\n", .{file_entry});
+                return error.TarballCreationFailed;
+            };
+            defer allocator.free(dst);
             const src = try std.fs.path.join(allocator, &[_][]const u8{ package_dir, file_entry });
             defer allocator.free(src);
-            const dst = try std.fs.path.join(allocator, &[_][]const u8{ staging_pkg, file_entry });
-            defer allocator.free(dst);
 
             // Check if source exists
             io_helper.accessAbsolute(src, .{}) catch {
@@ -2694,6 +2745,7 @@ fn createTarball(
                 }
             }
         }
+        try stageRootMetadata(allocator, package_dir, staging_pkg, root_files_dir, null);
     } else {
         // No `files` array - use exclusion-based approach (legacy behavior)
 
@@ -2804,6 +2856,7 @@ fn createTarball(
             style.print("rsync failed. stderr: {s}\n", .{cp_result.stderr});
             return error.TarballCreationFailed;
         }
+        try stageRootMetadata(allocator, package_dir, staging_pkg, root_files_dir, &rules);
     }
 
     // Resolve workspace and catalog protocol dependencies in the staged

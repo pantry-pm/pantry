@@ -3,10 +3,18 @@ const std = @import("std");
 const io_helper = @import("../../io_helper.zig");
 
 pub fn stagedPath(allocator: std.mem.Allocator, package_root: []const u8, name: []const u8) ![]const u8 {
+    const path = try stagedEntryPath(allocator, package_root, name);
+    errdefer allocator.free(path);
+    if (std.mem.eql(u8, path, package_root)) return error.InvalidBinTarget;
+    return path;
+}
+
+/// `files` may select the package directory itself; executable targets may not.
+pub fn stagedEntryPath(allocator: std.mem.Allocator, package_root: []const u8, name: []const u8) ![]const u8 {
     if (name.len == 0 or std.fs.path.isAbsolute(name)) return error.InvalidBinTarget;
     const path = try std.fs.path.resolve(allocator, &.{ package_root, name });
     errdefer allocator.free(path);
-    if (!try withinPackage(allocator, package_root, path)) return error.InvalidBinTarget;
+    if (!std.mem.eql(u8, path, package_root) and !try withinPackage(allocator, package_root, path)) return error.InvalidBinTarget;
     return path;
 }
 
@@ -21,13 +29,15 @@ fn validatedTarget(allocator: std.mem.Allocator, package_root: []const u8, name:
     const path = try stagedPath(allocator, package_root, name);
     defer allocator.free(path);
     const actual = try io_helper.cwd().realPathFileAlloc(io_helper.io, path, allocator);
-    errdefer allocator.free(actual);
+    defer allocator.free(actual);
     // Internal bin links are valid, but never chmod a target outside our stage.
     if (!try withinPackage(allocator, package_root, actual)) return error.InvalidBinTarget;
     const file = try io_helper.openFileAbsolute(actual, .{});
     defer file.close(io_helper.io);
     if ((try file.stat(io_helper.io)).kind != .file) return error.InvalidBinTarget;
-    return actual;
+    // realPathFileAlloc owns a sentinel byte; the public target API owns plain
+    // slices, whose callers free exactly len bytes.
+    return allocator.dupe(u8, actual);
 }
 
 pub fn normalize(allocator: std.mem.Allocator, staging_base: []const u8) !void {
@@ -85,4 +95,22 @@ pub fn targets(allocator: std.mem.Allocator, staging_base: []const u8, bytes: []
         else => {},
     }
     return paths.toOwnedSlice(allocator);
+}
+
+test "pack archive: bin targets retain their allocation shape across the public slice boundary" {
+    const allocator = std.testing.allocator;
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    try temporary.dir.createDirPath(io_helper.io, "package");
+    try temporary.dir.writeFile(io_helper.io, .{ .sub_path = "package/cli", .data = "#!/bin/sh\n" });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buffer[0..try temporary.dir.realPathFile(io_helper.io, ".", &buffer)];
+    const bins = try targets(allocator, root, "{\"bin\":{\"fixture\":\"./cli\"}}");
+    // The returned API deliberately owns ordinary slices. A sentinel allocation
+    // erased to []const u8 must not cross this boundary and be freed one byte short.
+    defer {
+        for (bins) |path| allocator.free(path);
+        allocator.free(bins);
+    }
+    try std.testing.expectEqual(@as(usize, 1), bins.len);
 }

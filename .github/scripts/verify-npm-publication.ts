@@ -91,13 +91,18 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
   }))
   // Both command surfaces must preserve the explicit private registry URL.
   const command = mode === 'generic-command' ? ['publish', '--npm'] : ['npm:publish']
-  const child = Bun.spawn([executable, ...command, '--no-oidc', '--ignore-scripts', '--access', privateMode ? 'restricted' : 'public', '--registry', server.url.origin], {
+  // Exercise the public readback deadline explicitly. Production's 600-second
+  // default exceeds this fixture's independent 145-second outer guard.
+  const child = Bun.spawn([executable, ...command, '--no-oidc', '--ignore-scripts', '--confirm-timeout', '30', '--access', privateMode ? 'restricted' : 'public', '--registry', server.url.origin], {
     cwd, env: { ...process.env, NPM_TOKEN: 'disposable-loopback-fixture-only' }, stdout: 'pipe', stderr: 'pipe',
   })
-  const timeout = setTimeout(() => child.kill(), 145_000)
+  let guardFired = false
+  const timeout = setTimeout(() => { guardFired = true; child.kill() }, 145_000)
   try {
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     const output = stdout + stderr
+    if (guardFired || child.signalCode) throw new Error(`${mode}: the outer guard killed publication instead of its own deadline completing\n${output}`)
+    if (/error\(DebugAllocator\)/.test(stderr)) throw new Error(`${mode}: allocator failure\n${stderr}`)
     if (uploads !== 1) throw new Error(`${mode}: expected exactly one upload, got ${uploads}; requests=${JSON.stringify(requests)}; exit=${code}\n${output}`)
     if (archiveMemberMode(tarball, 'package/cli') !== 0o755) throw new Error(`${mode}: uploaded bin lost its executable mode`)
     if (archiveMemberMode(tarball, 'package/index.txt') !== 0o755) throw new Error(`${mode}: declared text bin lost its executable mode`)
@@ -112,12 +117,19 @@ async function check(mode: 'metadata-delay' | 'tarball-delay' | 'wrong-bytes' | 
     if (foreignCredentialReads) throw new Error('Restricted credentials crossed a redirect origin')
     if (downloadServer && !foreignTarballReads) throw new Error('The separate tarball origin was not exercised')
     const success = mode === 'metadata-delay' || mode === 'tarball-delay' || mode === 'generic-command' || privateMode || mode === 'compressed-metadata' || mode === 'compressed-tarball'
+    const acceptedPending = mode === 'never-visible' || mode === 'stalled-tarball'
     if (success && (code !== 0 || !tarballReads)) throw new Error(`${mode}: publication was not verified\n${output}`)
-    if (!success && (code === 0 || /✓ Published/.test(output))) throw new Error(`${mode}: unverified publication was reported successful\n${output}`)
+    // #245 intentionally lets an accepted upload finish while its readback is
+    // pending. That is distinct from both a verified publication and an upload
+    // whose outcome is ambiguous. Never label pending bytes as Published.
+    if (acceptedPending && (code !== 0 || !/✓ Uploaded/.test(output) || /✓ Published/.test(output) || !/Upload accepted; publication is pending/.test(output)))
+      throw new Error(`${mode}: accepted upload lost its explicit pending receipt\n${output}`)
+    if (!success && !acceptedPending && (code === 0 || /✓ Published/.test(output))) throw new Error(`${mode}: unverified publication was reported successful\n${output}`)
     if (mode === 'metadata-delay' && metadataReads < 3) throw new Error('Metadata delay was not exercised')
     if (mode === 'tarball-delay' && tarballReads < 3) throw new Error('Tarball delay was not exercised')
-    if ((mode === 'never-visible' || mode === 'stalled-tarball') && !/pending|not yet.*public/i.test(output)) throw new Error(`An accepted upload must remain pending, not be declared missing\n${output}`)
-    console.log(JSON.stringify({ mode, code, uploads, metadataReads, tarballReads, credentialReads, foreignCredentialReads, foreignTarballReads, verified: success }))
+    if (mode === 'never-visible' && (metadataReads < 2 || tarballReads)) throw new Error('Missing metadata must be polled without inventing a tarball URL')
+    if (mode === 'stalled-tarball' && !tarballReads) throw new Error('Stalled tarball response was not exercised')
+    console.log(JSON.stringify({ mode, code, uploads, metadataReads, tarballReads, credentialReads, foreignCredentialReads, foreignTarballReads, verified: success, acceptedPending }))
   }
   finally {
     clearTimeout(timeout)
@@ -132,6 +144,10 @@ async function checkAmbiguousUpload(mode: 'lost-response' | 'server-error-after-
   const cwd = join(root, mode)
   await mkdir(cwd)
   await writeFile(join(cwd, 'index.txt'), 'Immutable ambiguous-response fixture\n')
+  // A valid package must reach the transport boundary. Its declared bin is
+  // required even though this fixture's files whitelist names only index.txt.
+  await writeFile(join(cwd, 'cli'), '#!/bin/sh\nprintf "publication-fixture"\n')
+  await chmod(join(cwd, 'cli'), 0o644)
   const marker = join(cwd, 'postpublish-ran')
   const prepublishMarker = join(cwd, 'prepublish-ran')
   const precheckFailure = mode.startsWith('precheck-') && mode !== 'precheck-recovers'
@@ -219,13 +235,16 @@ async function checkAmbiguousUpload(mode: 'lost-response' | 'server-error-after-
       postpublish: `bun -e 'await Bun.write("postpublish-ran", "yes")'`,
     },
   }))
-  const child = Bun.spawn([executable, 'npm:publish', '--no-oidc', '--access', 'public', '--otp', '123456', '--registry', origin], {
+  const child = Bun.spawn([executable, 'npm:publish', '--no-oidc', '--confirm-timeout', '30', '--access', 'public', '--otp', '123456', '--registry', origin], {
     cwd, env: { ...process.env, NPM_TOKEN: 'disposable-loopback-fixture-only' }, stdout: 'pipe', stderr: 'pipe',
   })
-  const timeout = setTimeout(() => child.kill(), 145_000)
+  let guardFired = false
+  const timeout = setTimeout(() => { guardFired = true; child.kill() }, 145_000)
   try {
     const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     const output = stdout + stderr
+    if (guardFired || child.signalCode) throw new Error(`${mode}: the outer guard killed publication instead of its own deadline completing\n${output}`)
+    if (/error\(DebugAllocator\)/.test(stderr)) throw new Error(`${mode}: allocator failure\n${stderr}`)
     if (foreignRequests || foreignCredentialRequests) throw new Error(`${mode}: sensitive upload followed a foreign redirect; requests=${foreignRequests}, credentialRequests=${foreignCredentialRequests}`)
     if (precheckFailure) {
       if (code === 0 || uploads !== 0 || !metadataReads || existsSync(marker) || existsSync(prepublishMarker) || !output.includes('Upload was not started'))

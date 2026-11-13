@@ -78,6 +78,9 @@ pub const outdatedCommand = package_commands.outdatedCommand;
 
 pub const uninstallCommand = package_commands.uninstallCommand;
 
+pub const PackOptions = package_commands.PackOptions;
+pub const packCommand = package_commands.packCommand;
+
 pub const PublishOptions = package_commands.PublishOptions;
 pub const publishCommand = package_commands.publishCommand;
 

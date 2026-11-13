@@ -956,6 +956,23 @@ fn confirmTimeoutMs(ctx: *cli.BaseCommand.ParseContext) ?u64 {
     return seconds * 1000;
 }
 
+fn packAction(ctx: *cli.BaseCommand.ParseContext) !void {
+    if (ctx.getArgument(1) != null) {
+        style.print("Pack accepts one package directory\n", .{});
+        std.process.exit(1);
+    }
+    const result = try lib.commands.packCommand(ctx.allocator, ctx.getArgument(0) orelse ".", .{
+        .filename = ctx.getOption("filename"),
+        .ignore_scripts = ctx.hasOption("ignore-scripts"),
+    });
+    defer {
+        var owned = result;
+        owned.deinit(ctx.allocator);
+    }
+    if (result.message) |message| style.print("{s}\n", .{message});
+    std.process.exit(result.exit_code);
+}
+
 fn publishAction(ctx: *cli.BaseCommand.ParseContext) !void {
     const allocator = ctx.allocator;
 
@@ -3011,6 +3028,7 @@ fn printHelp() void {
 
     // Publishing
     style.print("    " ++ bold_cyan ++ "Publishing:" ++ style.reset ++ "\n", .{});
+    style.print("      " ++ style.cyan ++ "pack" ++ style.reset ++ "                Create the canonical npm package archive\n", .{});
     style.print("      " ++ style.cyan ++ "publish" ++ style.reset ++ "             Publish package to Pantry registry (S3)\n", .{});
     style.print("      " ++ style.cyan ++ "npm:publish" ++ style.reset ++ "         Publish package to npm (supports OIDC)\n", .{});
     style.print("      " ++ style.cyan ++ "publisher:add" ++ style.reset ++ "       Add a trusted publisher (OIDC)\n", .{});
@@ -4924,6 +4942,13 @@ pub fn main() !void {
     // ========================================================================
     // Publish Command (Pantry Registry - S3/DynamoDB)
     // ========================================================================
+    var pack_cmd = try cli.BaseCommand.init(allocator, "pack", "Create the canonical npm archive without uploading");
+    _ = try pack_cmd.addArgument(cli.Argument.init("path", "Package directory (default: current directory)", .string).withRequired(false));
+    _ = try pack_cmd.addOption(cli.Option.init("filename", "filename", "Destination archive filename", .string));
+    _ = try pack_cmd.addOption(cli.Option.init("ignore-scripts", "ignore-scripts", "Skip prepack, prepare and postpack scripts", .bool));
+    _ = pack_cmd.setAction(packAction);
+    _ = try root.addCommand(pack_cmd);
+
     var publish_cmd = try cli.BaseCommand.init(allocator, "publish", "Publish package to Pantry registry (S3)");
 
     const pub_access_opt = cli.Option.init("access", "access", "Package access level (public/restricted)", .string);
