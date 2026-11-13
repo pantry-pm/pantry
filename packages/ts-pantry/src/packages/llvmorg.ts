@@ -3,13 +3,13 @@
  *
  * @domain `llvm.org`
  * @programs `lld`, `lldb`, `clang`, `clang++`, `cc`, ... (+10 more)
- * @version `23.1.5.1` (70 versions available)
+ * @version `23.1.5.2` (71 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install llvm.org`
  * @homepage http://llvm.org
- * @dependencies `zlib.net@1`, `facebook.com/zstd`, `invisible-island.net/ncurses^6.6.0.1`
- * @buildDependencies `cmake.org>=3<3.29`, `ninja-build.org@1`, `python.org>=3<3.12`, ... (+1 more) - required only when building from source
+ * @dependencies `zlib.net@1`, `facebook.com/zstd`, `invisible-island.net/ncurses^6.6.0.1`, ... (+2 more)
+ * @buildDependencies `cmake.org>=3<3.29`, `ninja-build.org@1`, `crates.io/semverator` - required only when building from source
  *
  * @example
  * ```typescript
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "llvm"
  * console.log(pkg.description) // "The LLVM Project is a collection of modular and..."
  * console.log(pkg.programs)    // ["lld", "lldb", ...]
- * console.log(pkg.versions[0]) // "23.1.5.1" (latest)
+ * console.log(pkg.versions[0]) // "23.1.5.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/llvm-org.md
@@ -77,6 +77,8 @@ export const llvmorgPackage = {
     'zlib.net@1',
     'facebook.com/zstd',
     'invisible-island.net/ncurses^6.6.0.1',
+    'gnome.org/libxml2~2.13',
+    'python.org>=3<3.12',
   ] as const,
   /**
   * Build dependencies for this package.
@@ -85,7 +87,6 @@ export const llvmorgPackage = {
   buildDependencies: [
     'cmake.org>=3<3.29',
     'ninja-build.org@1',
-    'python.org>=3<3.12',
     'crates.io/semverator',
   ] as const,
   /**
@@ -93,6 +94,7 @@ export const llvmorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '23.1.5.2',
     '23.1.5.1',
     '23.1.5',
     '23.1.4',

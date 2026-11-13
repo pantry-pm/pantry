@@ -3,7 +3,7 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'llvm.org',
   name: 'llvm',
-  revisions: { '23.1.5': 1 },
+  revisions: { '23.1.5': 2 },
   description: 'The LLVM Project is a collection of modular and reusable compiler and toolchain technologies.',
   homepage: 'https://llvm.org',
   github: 'https://github.com/llvm/llvm-project',
@@ -21,11 +21,12 @@ export const recipe: Recipe = {
     'zlib.net': '1',
     'facebook.com/zstd': '*',
     'invisible-island.net/ncurses': '^6.6.0.1',
+    'gnome.org/libxml2': '~2.13',
+    'python.org': '>=3<3.12',
   },
   buildDependencies: {
     'cmake.org': '>=3<3.29',
     'ninja-build.org': '1',
-    'python.org': '>=3<3.12',
     'crates.io/semverator': '*',
   },
 
@@ -62,7 +63,7 @@ export const recipe: Recipe = {
       '',
     ],
     env: {
-      'ARGS': ['-DCMAKE_INSTALL_PREFIX={{prefix}}', '-DCMAKE_BUILD_TYPE=Release', '-DLLVM_ENABLE_PROJECTS=\'lld;lldb;clang;clang-tools-extra\'', '-DLLVM_INCLUDE_DOCS=OFF', '-DLLVM_INCLUDE_TESTS=OFF', '-DLLVM_ENABLE_RTTI=ON', '-DLLVM_BUILD_LLVM_DYLIB=ON'],
+      'ARGS': ['-DCMAKE_INSTALL_PREFIX={{prefix}}', '-DCMAKE_BUILD_TYPE=Release', '-DLLVM_ENABLE_PROJECTS=\'lld;lldb;clang;clang-tools-extra\'', '-DLLVM_INCLUDE_DOCS=OFF', '-DLLVM_INCLUDE_TESTS=OFF', '-DLLVM_ENABLE_RTTI=ON', '-DLLVM_BUILD_LLVM_DYLIB=ON', '-DLibXml2_ROOT={{deps.gnome.org/libxml2.prefix}}', '-DPython3_ROOT_DIR={{deps.python.org.prefix}}', '-DLLVM_ENABLE_LIBXML2=ON', '-DLLDB_ENABLE_PYTHON=ON'],
       darwin: {
         MACOSX_DEPLOYMENT_TARGET: '14.0',
       },
@@ -74,6 +75,9 @@ export const recipe: Recipe = {
       '"{{prefix}}/bin/clang" --version',
       '"{{prefix}}/bin/clang++" --version',
       '"{{prefix}}/bin/lldb" --version',
+      'env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH -u PYTHONHOME -u PYTHONPATH "{{prefix}}/bin/lldb" --no-lldbinit --batch -o \'script print("PANTRY_LLDB_PYTHON_OK")\' > debugger-python.log',
+      'cat debugger-python.log',
+      'grep -Fx PANTRY_LLDB_PYTHON_OK debugger-python.log',
       `cat > compiler-consumer.cpp <<'PANTRY_CPP'
 #include <cstdio>
 #include <vector>
