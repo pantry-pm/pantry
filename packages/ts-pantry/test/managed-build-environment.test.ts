@@ -1,6 +1,9 @@
 import { expect, test } from 'bun:test'
 import { generateBuildScript } from '../scripts/buildkit'
 import { collectBuildDependencies, externalRuntimePackages } from '../scripts/build-package'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 test('runtime cycles use the current artifact while retaining different versions and dependencies', () => {
   const self = { domain: 'tukaani.org/xz', version: '5.8.2', prefix: '/old-self' }
@@ -126,4 +129,50 @@ test('a build tool can use XML 2.13 while the target links XML 2.15', async () =
     expect(value).toContain('/managed/xml.example')
     expect(value).not.toContain('/.build-tools/gettext.example/xml.example')
   }
+})
+
+test.skipIf(process.platform === 'win32')('a real native build tool loads its declared private ABI while the target links its own ABI', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-build-tool-loader-'))
+  const target = join(root, 'target-dependency')
+  const tool = join(root, 'build-tool')
+  const privateRuntime = join(root, 'private-runtime')
+  const compiler: string[] = process.platform === 'darwin' ? ['xcrun', 'clang'] : process.env.PANTRY_TEST_CC ? JSON.parse(process.env.PANTRY_TEST_CC) : ['cc']
+  const environment = { ...process.env }
+  for (const key of ['LD_LIBRARY_PATH', 'LD_PRELOAD', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH', 'LIBRARY_PATH', 'LDFLAGS']) delete environment[key]
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`
+  const run = (command: string[]) => {
+    const result = Bun.spawnSync(command, { cwd: root, env: environment, stdout: 'pipe', stderr: 'pipe' })
+    expect(result.exitCode, result.stderr.toString()).toBe(0)
+    return result.stdout.toString().trim()
+  }
+  try {
+    for (const directory of [join(target, 'lib'), join(tool, 'bin'), join(privateRuntime, 'lib64')]) mkdirSync(directory, { recursive: true })
+    writeFileSync(join(root, 'main.c'), '#include <stdio.h>\nextern int pantry_fixture(void); int main(void) { printf("%d\\n", pantry_fixture()); }\n')
+    for (const [abi, directory] of [[17, join(target, 'lib')], [19, join(privateRuntime, 'lib64')]] as const) {
+      const source = join(root, `library-${abi}.c`)
+      writeFileSync(source, `int pantry_fixture(void) { return ${abi}; }\n`)
+      const name = process.platform === 'darwin' ? `libpantry_fixture.${abi}.dylib` : `libpantry_fixture.so.${abi}`
+      run([...compiler, ...(process.platform === 'darwin' ? ['-dynamiclib', '-install_name', name] : ['-shared', '-fPIC', `-Wl,-soname,${name}`]), source, '-o', join(directory, name)])
+      symlinkSync(name, join(directory, process.platform === 'darwin' ? 'libpantry_fixture.dylib' : 'libpantry_fixture.so'))
+    }
+    const executable = join(tool, 'bin/fixture-tool')
+    run([...compiler, join(root, 'main.c'), `-L${privateRuntime}/lib64`, '-lpantry_fixture', '-o', executable])
+    const missing = Bun.spawnSync([executable], { cwd: root, env: environment, stdout: 'pipe', stderr: 'pipe' })
+    expect(missing.exitCode).not.toBe(0)
+    expect(missing.stderr.toString()).toContain(process.platform === 'darwin' ? 'libpantry_fixture.19.dylib' : 'libpantry_fixture.so.19')
+    const script = generateBuildScript({ build: { script: ['true'] } }, 'fixture', '1.0.0', `${process.platform === 'darwin' ? 'darwin' : 'linux'}-${process.arch === 'arm64' ? 'arm64' : 'x86-64'}`, '/artifact', '/build', {
+      'deps.target.example.prefix': target,
+      'deps.tool.example.prefix': tool,
+      'build-tools.tool.example:private.example.prefix': privateRuntime,
+    })
+    const exports = script.split('\n').filter(line => /^export (LD_LIBRARY_PATH|DYLD_FALLBACK_LIBRARY_PATH|LIBRARY_PATH|LDFLAGS|CMAKE_PREFIX_PATH|PKG_CONFIG_PATH)=/.test(line))
+    const binary = join(root, 'target-consumer')
+    const command = `${exports.join('\n')}\n${quote(executable)}\n${compiler.map(quote).join(' ')} ${quote(join(root, 'main.c'))} -lpantry_fixture $LDFLAGS -o ${quote(binary)}\n${quote(binary)}`
+    expect(run(['bash', '-ec', command])).toBe('19\n17')
+    for (const line of exports.filter(line => !/^export (LD_LIBRARY_PATH|DYLD_FALLBACK_LIBRARY_PATH)=/.test(line))) {
+      expect(line).toContain(target)
+      expect(line).not.toContain(privateRuntime)
+    }
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
 })

@@ -309,7 +309,7 @@ function caretMatch(version: number[], constraint: number[]): boolean {
     upper[1] = (upper[1] ?? 0) + 1
     upper[2] = 0
   }
-else {
+  else {
     upper[0] = upper[0] + 1
     upper[1] = 0
     upper[2] = 0
@@ -383,7 +383,7 @@ export function platformReduce(
           else if (!Array.isArray(result[subKey])) result[subKey] = [result[subKey]]
           result[subKey].push(...subValue)
         }
-else {
+        else {
           result[subKey] = subValue
         }
       }
@@ -411,7 +411,7 @@ export function expandEnv(
     if (Array.isArray(value)) {
       expanded = value.map(v => transformEnvValue(v, tokens)).join(' ')
     }
-else {
+    else {
       expanded = transformEnvValue(value, tokens)
     }
 
@@ -475,7 +475,7 @@ export function processScript(
       if (Array.isArray(run)) {
         run = run.map((x: string) => applyTokens(String(x), tokens)).join('\n')
       }
-else {
+      else {
         run = applyTokens(String(run), tokens)
       }
 
@@ -503,9 +503,9 @@ else {
         const rawContent = typeof prop === 'string'
           ? prop
           : (() => {
-              const c = prop.content ?? prop.contents ?? ''
-              return Array.isArray(c) ? c.join('\n') : String(c)
-            })()
+          const c = prop.content ?? prop.contents ?? ''
+          return Array.isArray(c) ? c.join('\n') : String(c)
+        })()
         const propContent = applyTokens(rawContent, tokens)
         const extname = (typeof prop === 'object' && prop.extname) ? `.${prop.extname.replace(/^\./, '')}` : ''
         // Single-quoted heredoc (<<'EOF') prevents bash variable expansion,
@@ -573,9 +573,9 @@ export function generateBuildScript(
 
   // Narrow build to object form (or undefined) for property access throughout this function
   const build: RecipeBuildConfig | undefined =
-    recipe.build && typeof recipe.build === 'object' && !Array.isArray(recipe.build)
-      ? recipe.build
-      : undefined
+  recipe.build && typeof recipe.build === 'object' && !Array.isArray(recipe.build)
+    ? recipe.build
+    : undefined
 
   // Detect Go builds. Go recipes pass the env LDFLAGS straight into `go build
   // -ldflags="$LDFLAGS"`, where they're interpreted by the Go *internal* linker
@@ -587,8 +587,8 @@ export function generateBuildScript(
   const rawScript = typeof recipe.build === 'string'
     ? recipe.build
     : Array.isArray(recipe.build)
-      ? recipe.build.join('\n')
-      : (build?.script ? (Array.isArray(build.script) ? build.script.join('\n') : String(build.script)) : '')
+    ? recipe.build.join('\n')
+    : (build?.script ? (Array.isArray(build.script) ? build.script.join('\n') : String(build.script)) : '')
   const hasGoDep = !!(recipe.buildDependencies?.['go.dev'] || build?.dependencies?.['go.dev'] || recipe.dependencies?.['go.dev'])
   const usesGo = hasGoDep || /\bgo\s+(?:build|install)\b/.test(rawScript)
 
@@ -658,7 +658,7 @@ export function generateBuildScript(
     sections.push('export CFLAGS="$(__keep_cflags -Wno-error=incompatible-function-pointer-types -Wno-error=int-conversion -Wno-error=implicit-function-declaration) ${CFLAGS:-}"')
     sections.push('export CXXFLAGS="$(__keep_cflags -Wno-error=incompatible-function-pointer-types) ${CXXFLAGS:-}"')
   }
-else if (osName === 'linux') {
+  else if (osName === 'linux') {
     // Modern GCC/Clang treat certain warnings as errors (C23 defaults) — relax them.
     // This applies to ALL linux arches (x86-64 AND aarch64); previously it was gated to
     // x86-64 only, which left arm64 C/autotools builds without -fPIC and the relaxed
@@ -918,6 +918,7 @@ else if (osName === 'linux') {
   // Add dependency paths to PATH and pkg-config
   const depBinPaths: string[] = []
   const depLibPaths: string[] = []
+  const depRuntimeLibPaths: string[] = []
   const depIncludePaths: string[] = []
   if (pythonModulePaths.length) {
     const quoted = `'${pythonModulePaths.join(':').replaceAll("'", "'\\''")}'`
@@ -936,6 +937,9 @@ else if (osName === 'linux') {
     // Only use .prefix keys for PATH construction (skip .version, .version.major, etc.)
     if (!key.endsWith('.prefix')) continue
     depBinPaths.push(`${depPath}/bin`)
+    // Build tools execute against their declared runtime closure, but their
+    // private headers and libraries must not enter the target linker graph.
+    depRuntimeLibPaths.push(`${depPath}/lib`, `${depPath}/lib64`)
     if (key.startsWith('build-tools.')) continue
     depLibPaths.push(`${depPath}/lib`, `${depPath}/lib64`)
     depAclocalPaths.push(`${depPath}/share/aclocal`)
@@ -973,9 +977,12 @@ else if (osName === 'linux') {
         sections.push(`export PATH="${depBinPaths.join(':')}:$PATH"`)
       }
     }
+    if (depRuntimeLibPaths.length > 0) {
+      sections.push(`export LD_LIBRARY_PATH="${[...new Set(depRuntimeLibPaths)].join(':')}"`)
+      if (osName === 'darwin') sections.push(`export DYLD_FALLBACK_LIBRARY_PATH="${[...new Set(depRuntimeLibPaths)].join(':')}"`)
+    }
     if (depLibPaths.length > 0) {
       sections.push(`export LIBRARY_PATH="${depLibPaths.join(':')}"`)
-      sections.push(`export LD_LIBRARY_PATH="${depLibPaths.join(':')}"`)
       if (!usesGo) {
         // Compiler drivers may search their standard library directories before
         // LIBRARY_PATH. Explicit target paths keep headers and linked ABIs paired.
@@ -1029,7 +1036,7 @@ else if (osName === 'linux') {
     }
     // CMAKE_PREFIX_PATH: help CMake find deps (ported from brewkit)
     const depPrefixes = Object.entries(depPaths)
-      .filter(([k]) => k.endsWith('.prefix'))
+      .filter(([k]) => k.endsWith('.prefix') && !k.startsWith('build-tools.'))
       .map(([, v]) => v)
     if (depPrefixes.length > 0) {
       sections.push(`export CMAKE_PREFIX_PATH="${depPrefixes.join(':')}"`)
@@ -1372,11 +1379,10 @@ else if (osName === 'linux') {
     sections.push('# Build script from pantry recipe')
     sections.push(processScript(buildScript, tokens, platform, version))
   }
-else {
+  else {
     sections.push('echo "No build script found in recipe"')
     sections.push('exit 1')
   }
-
 
   return sections.join('\n')
 }
