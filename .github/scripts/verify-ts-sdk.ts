@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const root = resolve(import.meta.dir, '../..')
-const evidenceBase = process.env.PANTRY_SDK_EVIDENCE ?? tmpdir()
+// Child commands change cwd; retain absolute consumer/compiler paths even
+// when the caller selects a relative evidence directory.
+const evidenceBase = resolve(process.env.PANTRY_SDK_EVIDENCE ?? tmpdir())
 await mkdir(evidenceBase, { recursive: true })
 const directory = await mkdtemp(join(evidenceBase, 'pantry-sdk-'))
 const archive = process.argv[2] ? resolve(process.argv[2]) : join(directory, 'package.tgz')
