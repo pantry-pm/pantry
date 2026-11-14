@@ -26,6 +26,9 @@ on:
 concurrency:
   group: build-versions
   cancel-in-progress: false
+  # Keep supervised requests instead of replacing the single pending run.
+  # https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency
+  queue: max
 
 env:
   # Share verified dependency archives across packages, stripes, and CI runs.
