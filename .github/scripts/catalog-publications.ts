@@ -28,6 +28,28 @@ function git(cwd: string, ...args: string[]): string {
   return result.stdout.toString().trim()
 }
 
+/**
+ * What a receipt or a superseded tag points at: a blob that holds the source
+ * commit's id, not the commit.
+ *
+ * A tag on the commit itself is refused when the workflow's own token pushes
+ * it and that commit's workflow files are not the ones main has now ("refusing
+ * to allow a GitHub App to create or update workflow"): which is any request
+ * older than the last workflow change. A blob carries no workflow files, and
+ * names the source as exactly. Tags that point at the commit, from before
+ * this, are still read.
+ */
+function sourceMarker(cwd: string, sha: string, write = false): string {
+  const result = Bun.spawnSync(['git', 'hash-object', ...(write ? ['-w'] : []), '--stdin'], { cwd, stdin: Buffer.from(`${sha}\n`), stdout: 'pipe', stderr: 'pipe' })
+  if (result.exitCode !== 0) throw new Error(`git hash-object failed: ${result.stderr.toString()}`)
+  return result.stdout.toString().trim()
+}
+
+/** Records `prefix``id` for the request whose source is `sha`. */
+export function markPublication(cwd: string, prefix: 'published' | 'superseded', id: string, sha: string): void {
+  git(cwd, 'push', 'origin', `${sourceMarker(cwd, sha, true)}:${prefix === 'published' ? receiptPrefix : supersededPrefix}${id}`)
+}
+
 export function parsePublication(raw: string): Publication {
   const value = JSON.parse(raw) as Publication
   if (!/^[0-9]+-[0-9]+$/.test(value.id) || !Array.isArray(value.domains) || !value.domains.length
@@ -88,9 +110,10 @@ export async function pendingPublications(cwd: string): Promise<Array<Publicatio
     const sha = git(cwd, 'log', '-1', '--format=%H', '--', path)
     if (!sha) throw new Error('Recovery requires a committed publication request')
     if (git(cwd, 'show', `${sha}:${path}`) !== raw.trim()) throw new Error('Publication requests must be immutable')
-    if (receipts.get(publication.id) === sha) continue
+    const names = (target: string | undefined) => target === sha || target === sourceMarker(cwd, sha)
+    if (names(receipts.get(publication.id))) continue
     if (receipts.has(publication.id)) throw new Error('Publication receipt points to a different source commit')
-    if (superseded.get(publication.id) === sha) continue
+    if (names(superseded.get(publication.id))) continue
     if (superseded.has(publication.id)) throw new Error('Superseded publication points to a different source commit')
     pending.push({ ...publication, sha })
   }
@@ -270,8 +293,8 @@ if (import.meta.main) {
         const result = await recoverPublication(publication, { repository, api, createdAfter: git(cwd, 'show', '-s', '--format=%cI', publication.sha), retryFailed: process.env.RETRY_FAILED === 'true',
           // Only requests that are still pending take over: each is retried or reported in its own right.
           covering: domains => laterRequestsCovering({ id: publication.id, domains }, pending),
-          supersede: async (id, sha) => { git(cwd, 'push', 'origin', `${sha}:${supersededPrefix}${id}`) },
-          receipt: async (id, sha) => { git(cwd, 'push', 'origin', `${sha}:${receiptPrefix}${id}`) } })
+          supersede: async (id, sha) => { markPublication(cwd, 'superseded', id, sha) },
+          receipt: async (id, sha) => { markPublication(cwd, 'published', id, sha) } })
         console.log(`${publication.id}: ${result}`)
       }
       catch (error) { failures.push(String(error)) }

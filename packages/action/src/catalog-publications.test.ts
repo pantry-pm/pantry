@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'bun:test'
-import { failedDomains, laterRequestsCovering, parsePublication, pendingPublications, preparePublications, publicationDirectory, recoverPublication, waitForPublisherCompletion } from '../../../.github/scripts/catalog-publications'
+import { failedDomains, laterRequestsCovering, markPublication, parsePublication, pendingPublications, preparePublications, publicationDirectory, recoverPublication, waitForPublisherCompletion } from '../../../.github/scripts/catalog-publications'
 
 const publication = { id: '123-1', sha: 'a'.repeat(40), domains: ['curl.se'] }
 const title = `catalog:${publication.id}:${publication.sha}:all:false`
@@ -228,6 +228,23 @@ test('real Git outbox survives restarts, filters desktop packages, and only prun
     await expect(pendingPublications(cwd)).rejects.toThrow('Superseded publication points to a different source commit')
     git('push', 'origin', '--delete', 'refs/tags/catalog-superseded/123-1')
     git('push', 'origin', `${sha}:refs/tags/catalog-superseded/123-1`)
+    expect(await pendingPublications(cwd)).toEqual([])
+    // What recovery itself records points at a blob naming the source, not at the commit: the
+    // workflow token may not tag a commit whose workflow files differ from main's.
+    git('push', 'origin', '--delete', 'refs/tags/catalog-superseded/123-1')
+    expect(await pendingPublications(cwd)).toHaveLength(1)
+    markPublication(cwd, 'superseded', '123-1', sha)
+    const marker = git('ls-remote', 'origin', 'refs/tags/catalog-superseded/123-1').split(/\s+/)[0]!
+    expect(marker).not.toBe(sha)
+    expect(git('cat-file', '-t', marker)).toBe('blob')
+    expect(git('cat-file', '-p', marker)).toBe(sha)
+    expect(await pendingPublications(cwd)).toEqual([])
+    git('push', 'origin', '--delete', 'refs/tags/catalog-superseded/123-1')
+    // A marker for another source is as wrong as a tag on another commit.
+    markPublication(cwd, 'published', '123-1', git('rev-parse', 'HEAD^'))
+    await expect(pendingPublications(cwd)).rejects.toThrow('different source commit')
+    git('push', 'origin', '--delete', 'refs/tags/catalog-published/123-1')
+    markPublication(cwd, 'published', '123-1', sha)
     expect(await pendingPublications(cwd)).toEqual([])
     await preparePublications(cwd, '125-1')
     expect(await Bun.file(path).exists()).toBe(false)
