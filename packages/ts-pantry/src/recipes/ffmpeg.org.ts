@@ -3,6 +3,12 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'ffmpeg.org',
   name: 'ffmpeg',
+  // 9.0.2 for darwin-arm64 was a mirrored vendor archive linked against
+  // `harfbuzz.org/v8`, a release the registry does not carry, and its dylibs
+  // had no Mach-O header padding: installs failed rewriting load commands, or
+  // succeeded and ffmpeg could not start. Revision 1 is this recipe's own
+  // build, which carries the libraries it links and proves an encode.
+  revisions: { '9.0.2': 1 },
   description: 'Play, record, convert, and stream audio and video',
   homepage: 'https://ffmpeg.org/',
   github: 'https://github.com/FFmpeg/FFmpeg',
@@ -75,6 +81,14 @@ export const recipe: Recipe = {
       'done',
       'export PKG_CONFIG_PATH',
       '',
+      '# The publisher and the installer both rewrite Mach-O load commands',
+      '# (install names, dependency references, rpaths). ffmpeg links its',
+      '# libraries with only the linker\'s default slack, 56 bytes in',
+      '# libavutil and libswresample, which a rewritten path does not fit in.',
+      'if [ "$(uname)" = "Darwin" ]; then',
+      '  ARGS="$ARGS --extra-ldflags=-Wl,-headerpad_max_install_names"',
+      'fi',
+      '',
       './configure $ARGS',
       'make --jobs {{hw.concurrency}}',
       'make install',
@@ -94,5 +108,24 @@ export const recipe: Recipe = {
       ],
       'CFLAGS': ['-Wno-incompatible-function-pointer-types'],
     },
+  },
+
+  // Run with the loader variables cleared, so the binaries have to find every
+  // library through what the artifact itself carries.
+  test: {
+    required: true,
+    script: [
+      'run() { env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$@"; }',
+      'run {{prefix}}/bin/ffmpeg -version',
+      'run {{prefix}}/bin/ffprobe -version',
+      'run {{prefix}}/bin/ffmpeg -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc=duration=1:size=160x120:rate=10 -f lavfi -i sine=frequency=440:duration=1 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -movflags +faststart h264.mp4',
+      'test "$(run {{prefix}}/bin/ffprobe -v error -show_entries stream=codec_name -of csv=p=0 h264.mp4 | tr \'\\n\' \' \')" = "h264 aac "',
+      'run {{prefix}}/bin/ffmpeg -nostdin -hide_banner -loglevel error -y -i h264.mp4 -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -c:a libopus vp9.webm',
+      'test "$(run {{prefix}}/bin/ffprobe -v error -show_entries stream=codec_name -of csv=p=0 vp9.webm | tr \'\\n\' \' \')" = "vp9 opus "',
+      'run {{prefix}}/bin/ffmpeg -nostdin -hide_banner -loglevel error -y -i h264.mp4 -c:v libx265 -preset ultrafast -c:a libmp3lame hevc.mp4',
+      'test "$(run {{prefix}}/bin/ffprobe -v error -show_entries stream=codec_name -of csv=p=0 hevc.mp4 | tr \'\\n\' \' \')" = "hevc mp3 "',
+      'run {{prefix}}/bin/ffmpeg -nostdin -hide_banner -loglevel error -y -i h264.mp4 -frames:v 1 -c:v libwebp frame.webp',
+      'run {{prefix}}/bin/ffmpeg -hide_banner -filters | grep " drawtext " >/dev/null',
+    ],
   },
 }
