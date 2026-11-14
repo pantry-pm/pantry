@@ -122,7 +122,7 @@ export interface GlibcRequirement {
 /** Every ELF file in a `.tar.gz` that requires glibc, with the version it requires. */
 export async function tarballGlibcRequirements(tarball: string): Promise<GlibcRequirement[]> {
   const found: GlibcRequirement[] = []
-  let pending = Buffer.alloc(0)
+  let pending: Buffer = Buffer.alloc(0)
   let longName: string | null = null
   // The entry being read: how much of it is left, its padding, and its bytes
   // when it turned out to be ELF (anything else is skipped without buffering).

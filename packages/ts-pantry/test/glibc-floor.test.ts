@@ -134,7 +134,7 @@ test('a Linux package above the floor is refused before it reaches the registry'
   globalThis.fetch = (async (input: Parameters<typeof fetch>[0]) => {
     requests.push(String(input instanceof Request ? input.url : input))
     throw new Error('registry reached')
-  }) as typeof fetch
+  }) as unknown as typeof fetch
   try {
     const options = { package: 'curl.se', version: '8.23.0.3', registryUrl: 'http://127.0.0.1:9', token: 'test' }
     await expect(uploadToS3({ ...options, artifactsDir: stage('linux-x86-64', ['GLIBC_2.43']) })).rejects.toThrow(/newer than the supported floor 2\.39/)
