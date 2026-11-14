@@ -22,7 +22,16 @@ export function isBinarySyncDomain(domain: string): boolean {
 export function sanitizeDomainList(input: string): string[] {
   return input
     .split(',')
-    .map(domain => domain.trim().replace(/[^a-zA-Z0-9._\-/]/g, ''))
+    .map((entry) => {
+      const request = entry.trim()
+      const at = request.indexOf('@')
+      if (at > 0 && !request.slice(at + 1).trim())
+        throw new Error(`Pinned package selector needs a version: "${request}"`)
+      // A version selects an artifact to build, while metadata is owned by
+      // its domain. Removing only '@' would concatenate two different IDs.
+      const domain = at > 0 ? request.slice(0, at) : request
+      return domain.replace(/[^a-zA-Z0-9._\-/]/g, '')
+    })
     .filter(Boolean)
 }
 
