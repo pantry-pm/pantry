@@ -3,7 +3,7 @@
  *
  * @domain `curl.se`
  * @programs `curl`, `curl-config`
- * @version `8.23.0.2` (53 versions available)
+ * @version `8.23.0.3` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install curl.se`
@@ -23,7 +23,7 @@
  * console.log(pkg.name)        // "cURL"
  * console.log(pkg.description) // "A command line tool and library for transferrin..."
  * console.log(pkg.programs)    // ["curl", "curl-config"]
- * console.log(pkg.versions[0]) // "8.23.0.2" (latest)
+ * console.log(pkg.versions[0]) // "8.23.0.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/curl-se.md
@@ -79,6 +79,7 @@ export const curlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.23.0.3',
     '8.23.0.2',
     '8.23.0.1',
     '8.23.0',

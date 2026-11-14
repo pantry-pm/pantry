@@ -28,8 +28,8 @@ for (const [domain, upstream, publication] of [
   ['gnu.org/libunistring', '1.4.2', '1.4.2.2'],
   ['gnu.org/libidn2', '2.3.8', '2.3.8.2'],
   ['facebook.com/zstd', '1.5.7', '1.5.7.2'],
-  ['curl.se', '8.23.0', '8.23.0.2'],
-  ['curl.se/ssl3', '8.23.0', '8.23.0.2'],
+  ['curl.se', '8.23.0', '8.23.0.3'],
+  ['curl.se/ssl3', '8.23.0', '8.23.0.3'],
 ]) {
   test(`${domain} publishes a portable source revision with required real consumers`, async () => {
     const loaded = await loadRecipe(domain, 'darwin-arm64', upstream)

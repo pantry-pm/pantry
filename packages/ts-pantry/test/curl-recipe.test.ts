@@ -61,16 +61,20 @@ describe('curl recipe dependencies', () => {
 
   it('both curl identities preserve the accepted archive while publishing owned runtime revisions', async () => {
     for (const domain of ['curl.se', 'curl.se/ssl3']) {
-      const loaded = await loadRecipe(domain, 'darwin-arm64', '8.23.0.2')
+      const loaded = await loadRecipe(domain, 'darwin-arm64', '8.23.0.3')
       expect(loaded.upstreamVersion).toBe('8.23.0')
-      expect(loaded.publicationVersion).toBe('8.23.0.2')
+      expect(loaded.publicationVersion).toBe('8.23.0.3')
       expect(loaded.requiresRecipeBuild).toBe(true)
       expect(loaded.recipe.test?.required).toBe(true)
     }
     expect(curlPackage.versions).toContain('8.23.0.1')
     expect(curlsessl3Package.versions).toContain('8.23.0.1')
-    expect(curlPackage.versions[0]).toBe('8.23.0.2')
-    expect(curlsessl3Package.versions[0]).toBe('8.23.0.2')
+    // 8.23.0.1 and 8.23.0.2 for linux-x86-64 were built on Ubuntu 26.04 and
+    // need glibc 2.43; revision 3 is the same recipe built at the 2.39 floor.
+    expect(curlPackage.versions).toContain('8.23.0.2')
+    expect(curlsessl3Package.versions).toContain('8.23.0.2')
+    expect(curlPackage.versions[0]).toBe('8.23.0.3')
+    expect(curlsessl3Package.versions[0]).toBe('8.23.0.3')
   })
 
   it('requires the corrected IDN runtime rather than silently selecting the unrecorded older artifact', () => {
