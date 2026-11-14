@@ -4,13 +4,17 @@ export const recipe: Recipe = {
   propsDir: 'props/git-scm.org',
   domain: 'git-scm.org',
   name: 'git',
+  // linux-x86-64 builds of these were made on Ubuntu 26.04 against a curl whose
+  // libcurl.so needs glibc 2.43 and shipped it in lib/. Revision 1 is the same
+  // recipe at the glibc 2.39 floor, bundling the corrected curl.
+  revisions: { '2.52.0': 1, '2.53.1': 1, '2.54.0': 1, '2.54.1': 1, '2.55.0': 1, '2.55.1': 1 },
   description: 'Git Source Code Mirror - This is a publish-only repository but pull requests can be turned into patches to the mailing list via GitGitGadget (https://gitgitgadget.github.io/). Please follow Documentation/SubmittingPatches procedure for any of your improvements.',
   github: 'https://github.com/git/git',
   programs: ['git', 'git-cvsserver', 'git-receive-pack', 'git-shell', 'git-upload-archive', 'git-upload-pack', 'scalar'],
   platformPrograms: { darwin: ['git-credential-osxkeychain'] },
   dependencies: {
     'zlib.net': '1',
-    'curl.se': '^8.23.0.2',
+    'curl.se': '^8.23.0.3',
     'curl.se/ca-certs': '*',
     'perl.org': '*',
     'libexpat.github.io': '~2',

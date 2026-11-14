@@ -3,11 +3,11 @@
  *
  * @domain `git-scm.org`
  * @programs `git`, `git-cvsserver`, `git-receive-pack`, `git-shell`, `git-upload-archive`, ... (+2 more)
- * @version `2.56.1` (57 versions available)
+ * @version `2.56.1` (63 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-scm.org`
- * @dependencies `zlib.net@1`, `curl.se^8.23.0.2`, `curl.se/ca-certs`, ... (+5 more) (includes platform-specific dependencies)
+ * @dependencies `zlib.net@1`, `curl.se^8.23.0.3`, `curl.se/ca-certs`, ... (+5 more) (includes platform-specific dependencies)
  * @buildDependencies `rust-lang.org>=1.49`, `rust-lang.org/cargo` - required only when building from source
  *
  * @example
@@ -67,7 +67,7 @@ export const gitscmorgPackage = {
   */
   dependencies: [
     'zlib.net@1',
-    'curl.se^8.23.0.2',
+    'curl.se^8.23.0.3',
     'curl.se/ca-certs',
     'perl.org',
     'libexpat.github.io~2',
@@ -93,21 +93,27 @@ export const gitscmorgPackage = {
     '2.56.0-rc2',
     '2.56.0-rc1',
     '2.56.0-rc0',
+    '2.55.1.1',
     '2.55.1',
+    '2.55.0.1',
     '2.55.0',
     '2.55.0-rc2',
     '2.55.0-rc1',
     '2.55.0-rc0',
+    '2.54.1.1',
     '2.54.1',
+    '2.54.0.1',
     '2.54.0',
     '2.54.0-rc2',
     '2.54.0-rc1',
     '2.54.0-rc0',
+    '2.53.1.1',
     '2.53.1',
     '2.53.0',
     '2.53.0-rc2',
     '2.53.0-rc1',
     '2.53.0-rc0',
+    '2.52.0.1',
     '2.52.0',
     '2.52.0-rc2',
     '2.52.0-rc1',
