@@ -58,7 +58,7 @@ permissions:
 jobs:
   prepare:
     name: Prepare build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -105,11 +105,11 @@ jobs:
           PLATFORMS="$REQUESTED_PLATFORMS"
 
           if [ "$PLATFORMS" = "all" ]; then
-            MATRIX='{"include":[{"os":"macos-latest","platform":"darwin-arm64"},{"os":"ubuntu-latest","platform":"linux-x86-64"},{"os":"ubuntu-24.04-arm","platform":"linux-arm64"}]}'
+            MATRIX='{"include":[{"os":"macos-latest","platform":"darwin-arm64"},{"os":"ubuntu-24.04","platform":"linux-x86-64"},{"os":"ubuntu-24.04-arm","platform":"linux-arm64"}]}'
           elif [ "$PLATFORMS" = "darwin-arm64" ]; then
             MATRIX='{"include":[{"os":"macos-latest","platform":"darwin-arm64"}]}'
           elif [ "$PLATFORMS" = "linux-x86-64" ]; then
-            MATRIX='{"include":[{"os":"ubuntu-latest","platform":"linux-x86-64"}]}'
+            MATRIX='{"include":[{"os":"ubuntu-24.04","platform":"linux-x86-64"}]}'
           elif [ "$PLATFORMS" = "linux-arm64" ]; then
             MATRIX='{"include":[{"os":"ubuntu-24.04-arm","platform":"linux-arm64"}]}'
           else
@@ -222,7 +222,7 @@ jobs:
   upload-to-s3:
     name: Publish scanned binaries
     needs: [prepare, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Publication downloads every platform artifact, uploads it to object
     # storage, and scans it. The upload is the long pole, not the scan: a
     # 275MB artifact was still staging 45 minutes in, and curl retries up to
@@ -297,7 +297,7 @@ jobs:
     # timeout reported as "cancelled" - which reads as a human aborting it
     # rather than a budget being too small. Both now say so out loud.
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: ./.github/actions/discord-notify

@@ -57,7 +57,7 @@ jobs:
   discover:
     name: Discover buildable packages
     if: github.event.inputs.packages == '' || github.event.inputs.packages == null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       batches: ${{ steps.discover.outputs.batches }}
       total: ${{ steps.discover.outputs.total }}
@@ -110,7 +110,7 @@ jobs:
           # Intel macOS platform advertised by those native recipes.
           - os: macos-15-intel
             name: darwin-x86-64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: linux-x86-64
           - os: ubuntu-24.04-arm
             name: linux-arm64
@@ -241,7 +241,7 @@ jobs:
     name: Repair targeted package metadata
     needs: build-targeted
     if: always() && github.event.inputs.packages != '' && github.event.inputs.packages != null
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -285,7 +285,7 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: linux-x86-64
           - os: ubuntu-24.04-arm
             name: linux-arm64
@@ -410,7 +410,7 @@ jobs:
     name: discord-failure-alert
     needs: [build-targeted, build]
     if: always() && (needs.build-targeted.result == 'failure' || needs.build.result == 'failure')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Build fields

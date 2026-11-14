@@ -54,7 +54,7 @@ jobs:
   classify-targets:
     name: Classify requested packages
     if: github.event.inputs.packages != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       has_source: ${{ steps.classify.outputs.has_source }}
     steps:
@@ -81,7 +81,7 @@ jobs:
         include:
           - os: macos-15
             platform: darwin-arm64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             platform: linux-x86-64
           - os: ubuntu-24.04-arm
             platform: linux-arm64
@@ -169,7 +169,7 @@ jobs:
     name: Verify binary metadata
     needs: sync-prebuilt
     if: needs.sync-prebuilt.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
 
@@ -220,7 +220,7 @@ jobs:
   discover:
     name: Discover buildable packages
     if: github.event.inputs.packages == ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       batches: ${{ steps.discover.outputs.batches }}
@@ -262,7 +262,7 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: linux-x86-64
           - os: ubuntu-24.04-arm
             name: linux-arm64
@@ -396,7 +396,7 @@ jobs:
         platform:
           - os: macos-15
             name: darwin-arm64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: linux-x86-64
           - os: ubuntu-24.04-arm
             name: linux-arm64
@@ -518,7 +518,7 @@ jobs:
     name: discord-failure-alert
     needs: [sync-prebuilt, verify-metadata, build-targeted, build]
     if: always() && (needs.sync-prebuilt.result == 'failure' || needs.verify-metadata.result == 'failure' || needs.build-targeted.result == 'failure' || needs.build.result == 'failure')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Build fields

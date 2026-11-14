@@ -76,7 +76,7 @@ jobs:
   # `matrix`, hence the dynamic matrix). Match the target architecture and OS so
   # runtime normalization uses native ELF or Mach-O tools.
   setup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.gen.outputs.matrix }}
       download_matrix: ${{ steps.gen.outputs.download_matrix }}
@@ -93,7 +93,7 @@ jobs:
           # (2026-09-07T06:11 run) against 25-53 for linux-x86-64: roughly 347
           # minutes of darwin download work in total, which unstriped exceeds
           # even the 6-hourly cron. Four stripes puts it near 87 minutes each.
-          BASE='[{"name":"linux-x86-64","os":"ubuntu-latest","stripes":4,"dl_stripes":2},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2,"dl_stripes":2},{"name":"darwin-arm64","os":"macos-15","stripes":2,"dl_stripes":4}]'
+          BASE='[{"name":"linux-x86-64","os":"ubuntu-24.04","stripes":4,"dl_stripes":2},{"name":"linux-arm64","os":"ubuntu-24.04-arm","stripes":2,"dl_stripes":2},{"name":"darwin-arm64","os":"macos-15","stripes":2,"dl_stripes":4}]'
           if [ -n "$PLATFORM" ]; then
             BASE=$(echo "$BASE" | jq -c --arg p "$PLATFORM" '[.[] | select(.name == $p)]')
             # An unrecognised value selected nothing, and an empty matrix is not

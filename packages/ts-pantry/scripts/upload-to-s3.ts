@@ -12,6 +12,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { publishBinaryArtifact } from './binary-publish-client'
+import { GLIBC_FLOOR, verifyGlibcFloor } from './glibc-floor'
 
 export interface UploadOptions {
   package: string
@@ -63,6 +64,13 @@ export async function uploadToS3(options: UploadOptions): Promise<void> {
     const platforms = platformOverride || [`${platformMatch![1]}-${platformMatch![2]}`]
     const filePath = join(artifactPath, tarball)
     const size = statSync(filePath).size
+
+    // Before anything is staged: a package built against a newer glibc than
+    // the supported floor installs everywhere and starts nowhere older.
+    if (platforms.some(platform => platform.startsWith('linux-'))) {
+      const checked = await verifyGlibcFloor(filePath)
+      console.log(`   Verified ${checked} ELF file(s) against glibc ${GLIBC_FLOOR}`)
+    }
 
     console.log(`   Staging ${tarball} (${(size / 1024 / 1024).toFixed(2)} MB) for ${platforms.join(', ')}`)
     const result = await publishBinaryArtifact({

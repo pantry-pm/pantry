@@ -84,7 +84,7 @@ permissions:
 jobs:
   detect:
     name: Detect changed packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       domains: ${{ steps.owners.outputs.domains }}
       desktop: ${{ steps.owners.outputs.desktop }}
@@ -186,7 +186,7 @@ jobs:
     name: Publish desktop changes through the vendor planner
     needs: detect
     if: github.ref == 'refs/heads/main' && needs.detect.outputs.desktop != '' && inputs.verify-tools-only != true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: write
@@ -212,7 +212,7 @@ jobs:
         # Linux publications execute on matching native CPU architectures.
         # Darwin publication is handled by the native macOS job below.
         platform:
-          - { name: linux-x86-64, os: ubuntu-latest, needs_toolchain: true }
+          - { name: linux-x86-64, os: ubuntu-24.04, needs_toolchain: true }
           - { name: linux-arm64, os: ubuntu-24.04-arm, needs_toolchain: true }
     steps:
       - uses: actions/checkout@v6
@@ -359,7 +359,7 @@ jobs:
     if: >-
       always() && !cancelled() && inputs.request-id != '' &&
       inputs.platform == 'all' && inputs.verify-tools-only != true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     permissions:
       contents: read

@@ -13,6 +13,12 @@ The main entry points are:
 
 Linux x64 and ARM packages run on matching Linux runners. Darwin ARM packages run on macOS, including recipes that download an upstream binary. A vendor archive still needs native Mach-O inspection, loader normalization and any required runtime health checks. A Linux download does not replace those checks.
 
+### Supported glibc floor: 2.39
+
+A Linux package starts only on systems whose glibc is at least as new as the build host's, so the build host decides where the catalog runs. The supported floor is glibc 2.39 (Ubuntu 24.04). Every workflow that builds or publishes Linux packages names `ubuntu-24.04` or `ubuntu-24.04-arm`; never `ubuntu-latest`, which moved to Ubuntu 26.04 (glibc 2.43) in November 2026 and published a `curl.se` that could not start on 24.04.
+
+Publication enforces the floor: `upload-to-s3.ts` reads the version requirements of every ELF file in a Linux archive (`scripts/glibc-floor.ts`) and refuses one that needs a newer glibc before anything is staged. A package published above the floor is repaired by a new recipe revision built on a pinned runner. Lowering the floor needs an older build environment first, then a rebuild of what was published above the new floor.
+
 The targeted publisher and the manual Build, Build Multi-Version Packages and Sync Pre-Built Binaries workflows select their native tools through `native-publisher-toolchain.ts` and install them through the Pantry action. Tool verification rejects a host executable or an entry outside the managed prefix. Recipe dependencies supply additional compilers, build tools and libraries; the macOS runner supplies Apple’s licensed SDK. These publishing workflows do not bootstrap through apt, Homebrew, pip, rustup or Docker.
 
 Both the scheduled mirror and targeted publisher follow this rule. The targeted publisher preserves exact `domain@version` selectors when handing work to the macOS job. Custom recipes retain their own build configuration even when a vendor prebuilt exists.

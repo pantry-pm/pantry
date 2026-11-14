@@ -41,7 +41,7 @@ permissions:
 jobs:
   catalog:
     if: ${{ !inputs.verify-public-chrome }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.verify-chrome && 45 || 15 }}
     steps:
       - uses: actions/checkout@v6
@@ -215,7 +215,7 @@ jobs:
           if-no-files-found: error
   public-chrome:
     if: inputs.verify-public-chrome
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
@@ -252,7 +252,7 @@ jobs:
       fail-fast: false
       matrix:
         segment: [metadata, rate-limit, diagnostics, artifact-stalled-head, artifact-stalled-body]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -285,7 +285,7 @@ jobs:
           if-no-files-found: error
   workspace-graph:
     needs: catalog
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -327,7 +327,7 @@ jobs:
       fail-fast: false
       matrix:
         segment: [transport, lookup, availability, encoding]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
