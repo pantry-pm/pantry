@@ -676,32 +676,41 @@ function domainToKey(domain: string): string {
 
 // Extract dependency domains from YAML build.dependencies object
 // Handles both flat: { "domain.com": ">=1.0" } and platform-specific: { linux: { "domain.com": "*" } }
-function extractYamlDeps(depsObj: any, platform: string): string[] {
+/**
+ * Dependencies a recipe declares for `platform`. A group is keyed by an OS
+ * (`linux`), an OS and architecture (`linux/aarch64`), or an architecture
+ * alone (`x86-64`), which applies on every OS, as in the catalogs that
+ * `recipeDepsToSpecs` writes. The architecture used to be ignored: an
+ * `x86-64` group was dropped whole, so ffmpeg's x86 assembler (nasm) was
+ * never installed and its linux-x86-64 source build stopped in configure,
+ * and a `linux/aarch64` group was installed on x86-64 too.
+ */
+export function extractYamlDeps(depsObj: any, platform: string): string[] {
   if (!depsObj || typeof depsObj !== 'object') return []
-  const [os] = platform.split('-')
-  const osName = os === 'darwin' ? 'darwin' : 'linux'
+  const dash = platform.indexOf('-')
+  const osName = (dash === -1 ? platform : platform.slice(0, dash)) === 'darwin' ? 'darwin' : 'linux'
+  const archName = normalizeDependencyArch(dash === -1 ? 'x86-64' : platform.slice(dash + 1))
   const deps: string[] = []
+  const add = (name: string, value: unknown): void => {
+    if (!name.includes('.') && !name.includes('/')) return
+    // Include version constraint (e.g., "python.org: ~3.11" → "python.org ~3.11")
+    const constraint = typeof value === 'string' ? value.trim() : ''
+    deps.push(constraint && constraint !== '*' ? `${name} ${constraint}` : name)
+  }
 
   for (const [key, value] of Object.entries(depsObj)) {
-    // Check if this is a platform key (darwin, linux, darwin/aarch64)
-    if (/^(?:darwin|linux)(?:\/.*)?$/.test(key)) {
-      // Only include deps from matching platform
-      const [condOs] = key.split('/')
-      if (condOs === osName && typeof value === 'object' && value !== null) {
-        for (const [subKey, subVal] of Object.entries(value)) {
-          if (subKey.includes('.') || subKey.includes('/')) {
-            // Include version constraint (e.g., "python.org: ~3.11" → "python.org ~3.11")
-            const constraint = typeof subVal === 'string' ? subVal.trim() : ''
-            deps.push(constraint && constraint !== '*' ? `${subKey} ${constraint}` : subKey)
-          }
-        }
-      }
-    }
-else if (key.includes('.') || key.includes('/')) {
+    const group = /^(?:(darwin|linux|windows)(?:\/(.+))?|(x86-64|x86_64|aarch64|arm64))$/.exec(key)
+    if (!group) {
       // Regular dependency domain — include constraint from value
-      const constraint = typeof value === 'string' ? value.trim() : ''
-      deps.push(constraint && constraint !== '*' ? `${key} ${constraint}` : key)
+      add(key, value)
+      continue
     }
+    const [, groupOs, groupArch, bareArch] = group
+    if (groupOs && groupOs !== osName) continue
+    const arch = groupArch ?? bareArch
+    if (arch && normalizeDependencyArch(arch) !== archName) continue
+    if (typeof value !== 'object' || value === null) continue
+    for (const [subKey, subVal] of Object.entries(value)) add(subKey, subVal)
   }
   return deps
 }
