@@ -17329,7 +17329,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "curl.se", "info-zip.org/unzip", "gnu.org/coreutils" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"1.4.4.1"},
+    .versions = &[_][]const u8{ "1.4.4.2", "1.4.4.1" },
 }, .{
     .name = "starship",
     .domain = "starship.rs",

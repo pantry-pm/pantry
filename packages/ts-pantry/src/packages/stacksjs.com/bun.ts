@@ -3,7 +3,7 @@
  *
  * @domain `stacksjs.com/bun`
  * @programs `bun`, `bunx`
- * @version `1.4.4.1` (1 versions available)
+ * @version `1.4.4.2` (2 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install stacksjs.com/bun`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "stacks-bun"
  * console.log(pkg.description) // "Bun with MySQL and Postgres calls that answer w..."
  * console.log(pkg.programs)    // ["bun", "bunx"]
- * console.log(pkg.versions[0]) // "1.4.4.1" (latest)
+ * console.log(pkg.versions[0]) // "1.4.4.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/stacksjs-com/bun.md
@@ -70,6 +70,7 @@ export const stacksjscombunPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.4.2',
     '1.4.4.1',
   ] as const,
   aliases: [] as const,
