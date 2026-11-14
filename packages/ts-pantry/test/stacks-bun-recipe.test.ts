@@ -93,6 +93,16 @@ describe('stacksjs.com/bun build script', () => {
     expect(generated).not.toContain('{{')
   })
 
+  it('says the one release Linux cannot start is unavailable there, and only that one', () => {
+    const lines = recipe.build.script.filter((line): line is string => typeof line === 'string')
+    const guard = lines.slice(lines.indexOf('VERSION="{{version}}"'), lines.findIndex(line => line === 'fi') + 1).join('\n')
+    const exit = (platform: string, version: string) => Bun.spawnSync(['bash', '-euc', guard.replaceAll('{{hw.platform}}', platform).replace('{{version}}', version)]).exitCode
+    expect(exit('linux', '1.4.4.1')).toBe(42)
+    expect(exit('darwin', '1.4.4.1')).toBe(0)
+    expect(exit('linux', '1.4.4.2')).toBe(0)
+    expect(exit('linux', '1.4.5.1')).toBe(0)
+  })
+
   it('fails the build on a binary without the calls it is published for', () => {
     expect(recipe.test?.required).toBe(true)
     const health = recipe.test!.script.join('\n')

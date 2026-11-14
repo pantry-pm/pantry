@@ -50,6 +50,14 @@ export const recipe: Recipe = {
       'esac',
       '',
       ...tagFromVersion,
+      // bun-v1.4.4-stacks.1 was built on a runner with glibc 2.43, and its
+      // Linux binary starts nowhere older: not on Ubuntu 24.04, and not on the
+      // floor this registry publishes for. It is a release Linux does not
+      // have, which is what 42 says, so the next build is taken instead of
+      // this one being tried again. The macOS binary of it is fine.
+      'if [ "{{hw.platform}}" = linux ] && [ "$VERSION" = 1.4.4.1 ]; then',
+      '  echo "stacksjs/bun $TAG has no Linux binary that starts on glibc 2.39" >&2; exit 42',
+      'fi',
       'RELEASE="https://github.com/stacksjs/bun/releases/download/${TAG}"',
       'curl -fSL --connect-timeout 30 --max-time 600 "$RELEASE/${ASSET}.zip" -o "${ASSET}.zip"',
       'curl -fSL --connect-timeout 30 --max-time 300 "$RELEASE/SHASUMS256.txt" -o SHASUMS256.txt',
