@@ -64,6 +64,11 @@ jobs:
 
       - name: Setup Pantry
         uses: ./packages/action
+        with:
+          install: 'false'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Discover packages
         id: discover
@@ -85,6 +90,9 @@ jobs:
           echo "batches=$BATCHES"
           echo "batches=$BATCHES" >> $GITHUB_OUTPUT
 
+  # Publication runs Bun scripts; recipes own their native build tools.
+  # Setup-only provides the declared Bun without requiring a missing registry
+  # artifact or the unrelated Git inputs used to compile the Pantry CLI.
   # Targeted multi-version build (specific packages)
   build-targeted:
     name: Build targeted (${{ matrix.platform.name }})
@@ -114,9 +122,11 @@ jobs:
 
       - name: Setup Pantry
         uses: ./packages/action
+        with:
+          install: 'false'
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Preflight source build
         id: source-preflight
@@ -237,9 +247,11 @@ jobs:
 
       - name: Setup Pantry
         uses: ./packages/action
+        with:
+          install: 'false'
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Rebuild metadata from registry objects
         env:
@@ -285,9 +297,11 @@ jobs:
 
       - name: Setup Pantry
         uses: ./packages/action
+        with:
+          install: 'false'
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Preflight source build
         id: source-preflight

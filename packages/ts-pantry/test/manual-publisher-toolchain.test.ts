@@ -17,6 +17,18 @@ const sources = [
 ]
 
 describe('manual native publisher tool ownership', () => {
+  test('multi-version publication bootstraps its declared runtime without requiring the artifacts it publishes', () => {
+    const workflow = Bun.YAML.parse(readFileSync(new URL('../../../.github/workflows/build-versions.yml', import.meta.url), 'utf8')) as Workflow
+    for (const name of ['discover', 'build-targeted', 'repair-targeted-metadata', 'build']) {
+      const steps = workflow.jobs[name]!.steps!
+      const setup = steps.find(step => step.name === 'Setup Pantry')!
+      expect(setup.uses).toBe('./packages/action')
+      expect(setup.with?.install).toBe('false')
+      expect(setup.with?.packages).toBeUndefined()
+      expect(steps.find(step => step.name?.toLowerCase() === 'install dependencies')?.run).toBe('bun install --frozen-lockfile')
+    }
+  })
+
   for (const { file, jobs } of sources) {
     const source = readFileSync(new URL(`../../../.github/workflows/${file}`, import.meta.url), 'utf8')
     const workflow = Bun.YAML.parse(source) as Workflow

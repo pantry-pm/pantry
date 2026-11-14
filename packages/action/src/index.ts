@@ -926,7 +926,7 @@ export async function run(): Promise<void> {
     // Bun is part of the action's baseline runtime contract even when callers
     // provide an explicit package/service list. Keep downstream `bun` steps
     // working without requiring every workflow to repeat `bun.sh`.
-    await installSystemPackages(['bun.sh'], pantryDir, lockedVersions, path.join(installDir, platform.binaryName), resolvedSystemVersions)
+    await installSystemPackages([requiredBunPackageSpec(extractSystemDeps())], pantryDir, lockedVersions, path.join(installDir, platform.binaryName), resolvedSystemVersions)
 
     // Put `pantry/.bin` (and `~/.pantry/bin`) on PATH *before* any install
     // branch runs. `core.addPath` mutates `process.env.PATH` in-process in
