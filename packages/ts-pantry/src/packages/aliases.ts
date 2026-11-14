@@ -1460,6 +1460,7 @@ export const aliases: Record<string, string> = {
   'sshx': 'sshx.io',
   'ssl3': 'curl.se/ssl3',
   'Stable Diffusion web UI': 'github.com/AUTOMATIC1111/stable-diffusion-webui',
+  'stacks-bun': 'stacksjs.com/bun',
   'stargazers': 'github.com/spencerkimball/stargazers',
   'starpls': 'github.com/withered-magic/starpls',
   'starship': 'starship.rs',

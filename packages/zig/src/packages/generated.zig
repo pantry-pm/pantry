@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1772
+//! Total packages: 1773
 
 const std = @import("std");
 
@@ -35,7 +35,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1772 total)
+/// All known packages (1773 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -17319,6 +17319,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "2023.11.14", "0.4.1", "0.4.0", "0.3.1", "0.3.0", "0.2.5", "0.2.4", "0.2.3" },
+}, .{
+    .name = "stacks-bun",
+    .domain = "stacksjs.com/bun",
+    .kind = .cli,
+    .description = "Bun with MySQL and Postgres calls that answer where they are written: query.wait(), executeSync(), cancelSync() and sql.reserveSync(). Official Bun plus those changes, built by stacksjs/bun.",
+    .homepage_url = "https://github.com/stacksjs/bun#readme",
+    .programs = &[_][]const u8{ "bun", "bunx" },
+    .dependencies = &[_][]const u8{},
+    .build_dependencies = &[_][]const u8{ "curl.se", "info-zip.org/unzip", "gnu.org/coreutils" },
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"1.4.4.1"},
 }, .{
     .name = "starship",
     .domain = "starship.rs",

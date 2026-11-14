@@ -1580,6 +1580,7 @@ import { squawkhqcomPackage } from './squawkhqcom'
 import { srhtscdocPackage } from './sr.ht/scdoc'
 import { srtallianceorgPackage } from './srtallianceorg'
 import { sshxioPackage } from './sshxio'
+import { stacksjscombunPackage } from './stacksjs.com/bun'
 import { starshiprsPackage } from './starshiprs'
 import { steampipeioPackage } from './steampipeio'
 import { stedolangithubiojqPackage } from './stedolan.github.io/jq'
@@ -4422,6 +4423,8 @@ export interface Pantry {
   srhtscdoc: typeof srhtscdocPackage
   srtallianceorg: typeof srtallianceorgPackage
   sshxio: typeof sshxioPackage
+
+  stacksjscombun: typeof stacksjscombunPackage
   starshiprs: typeof starshiprsPackage
   steampipeio: typeof steampipeioPackage
 
@@ -6170,6 +6173,7 @@ export interface Pantry {
   sshx: typeof sshxioPackage
   ssl3: typeof curlsessl3Package
   'Stable Diffusion web UI': typeof stablediffusionwebuiPackage
+  'stacks-bun': typeof stacksjscombunPackage
   stargazers: typeof stargazersPackage
   starpls: typeof starplsPackage
   starship: typeof starshiprsPackage
@@ -9150,6 +9154,8 @@ export const pantry: Pantry = {
   srhtscdoc: srhtscdocPackage,
   srtallianceorg: srtallianceorgPackage,
   sshxio: sshxioPackage,
+
+  stacksjscombun: stacksjscombunPackage,
   starshiprs: starshiprsPackage,
   steampipeio: steampipeioPackage,
 
@@ -10898,6 +10904,7 @@ export const pantry: Pantry = {
   sshx: sshxioPackage,
   ssl3: curlsessl3Package,
   'Stable Diffusion web UI': stablediffusionwebuiPackage,
+  'stacks-bun': stacksjscombunPackage,
   stargazers: stargazersPackage,
   starpls: starplsPackage,
   starship: starshiprsPackage,
