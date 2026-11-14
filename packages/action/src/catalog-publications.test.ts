@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'bun:test'
-import { parsePublication, pendingPublications, preparePublications, publicationDirectory, recoverPublication, waitForPublisherCompletion } from '../../../.github/scripts/catalog-publications'
+import { failedDomains, laterRequestsCovering, parsePublication, pendingPublications, preparePublications, publicationDirectory, recoverPublication, waitForPublisherCompletion } from '../../../.github/scripts/catalog-publications'
 
 const publication = { id: '123-1', sha: 'a'.repeat(40), domains: ['curl.se'] }
 const title = `catalog:${publication.id}:${publication.sha}:all:false`
@@ -57,6 +57,98 @@ test('failed builds wait before retrying and retain unconfirmed work after the a
   await expect(recoverPublication(publication, exhausted.options)).rejects.toThrow('failed three times')
   expect(exhausted.receipts).toEqual([])
   expect(await recoverPublication(publication, { ...exhausted.options, retryFailed: true })).toBe('dispatched')
+})
+
+test('a request that gave up is retired only when later requests name every package it names', async () => {
+  const older = { id: '100-1', domains: ['broken.example', 'curl.se'] }
+  const all = [older, { id: '99-1', domains: ['broken.example', 'curl.se'] }, { id: '101-1', domains: ['broken.example'] }, { id: '100-2', domains: ['curl.se'] }]
+  // An earlier request never takes over, and one package without a later request keeps the request alive.
+  expect(laterRequestsCovering(older, all)).toEqual(['100-2', '101-1'])
+  expect(laterRequestsCovering(older, all.slice(0, 3))).toEqual([])
+  expect(laterRequestsCovering(older, [older])).toEqual([])
+  expect(laterRequestsCovering({ id: '9-1', domains: ['curl.se'] }, [{ id: '10-1', domains: ['curl.se'] }])).toEqual(['10-1'])
+
+  const failed = { ...run, conclusion: 'failure' }
+  const three = [failed, { ...failed, id: 11 }, { ...failed, id: 12 }]
+  const superseded: string[][] = []
+  const supersede = async (id: string, sha: string) => { superseded.push([id, sha]) }
+  const asked: string[][] = []
+  const covering = (later: string[]) => (domains: string[]) => { asked.push(domains); return later }
+
+  // Still retried: giving up comes first, whatever later requests exist.
+  const retrying = fixture([failed])
+  expect(await recoverPublication(publication, { ...retrying.options, covering: covering(['124-1']), supersede })).toBe('dispatched')
+  expect(superseded).toEqual([])
+  expect(asked).toEqual([])
+
+  // Its jobs say nothing readable (the fixture's have no annotations): every package is owed.
+  const exhausted = fixture(three)
+  expect(await recoverPublication(publication, { ...exhausted.options, covering: covering(['124-1', '125-1']), supersede })).toBe('superseded by 124-1, 125-1 (curl.se)')
+  expect(asked).toEqual([['curl.se']])
+  expect(superseded).toEqual([[publication.id, publication.sha]])
+  expect(exhausted.receipts).toEqual([])
+  expect(exhausted.calls.every(call => !call.init)).toBe(true)
+
+  // Nothing later names its packages: it stays, and the failure says which packages.
+  await expect(recoverPublication(publication, { ...fixture(three).options, covering: covering([]), supersede })).rejects.toThrow('failed three times (curl.se)')
+  expect(superseded).toHaveLength(1)
+})
+
+test('what a request still owes is the packages its last attempt could not publish, not every package it names', async () => {
+  const batch = { id: '200-1', sha: 'b'.repeat(40), domains: ['broken.example', 'curl.se', 'zlib.net'] }
+  const failed = { ...run, display_title: `catalog:${batch.id}:${batch.sha}:all:false`, conclusion: 'failure' }
+  const runs = [failed, { ...failed, id: 11 }, { ...failed, id: 12 }]
+  const publishers = [
+    { id: 1, name: 'Detect changed packages', conclusion: 'success' },
+    { id: 2, name: 'Publish (linux-x86-64)', conclusion: 'failure' },
+    { id: 3, name: 'Publish (linux-arm64)', conclusion: 'success' },
+    { id: 4, name: 'Publish darwin-arm64 (native macOS)', conclusion: 'failure' },
+    { id: 5, name: 'Publish desktop changes through the vendor planner', conclusion: 'skipped' },
+  ]
+  const result = (message: string) => [{ title: 'pantry-publication-result', message }, { title: 'something else', message: 'curl.se' }]
+  function reporting(annotations: Record<number, unknown[]>) {
+    const read: string[] = []
+    const options = { repository: 'pantry-pm/pantry', createdAfter: '2026-01-01T00:00:00Z', now: () => Date.parse('2026-01-01T02:00:00Z'),
+      receipt: async () => { throw new Error('nothing was confirmed') },
+      api: async (path: string, init?: RequestInit) => {
+        if (init) throw new Error('nothing may be dispatched')
+        read.push(path)
+        if (path.includes('/check-runs/')) return annotations[Number(path.split('/check-runs/')[1]!.split('/')[0])] ?? []
+        return path.includes('/jobs?') ? { jobs: publishers } : { workflow_runs: runs }
+      } }
+    return { read, options }
+  }
+
+  const told = reporting({ 2: result('broken.example'), 3: result('none'), 4: result('broken.example,elsewhere.example') })
+  // Read from the newest attempt, and only from the jobs that publish.
+  expect(await failedDomains(12, told.options)).toEqual(['broken.example', 'elsewhere.example'])
+  expect(told.read.filter(path => path.includes('/check-runs/')).map(path => path.split('/check-runs/')[1]!.split('/')[0])).toEqual(['2', '3', '4'])
+  expect(told.read[0]).toContain('/actions/runs/12/jobs?filter=latest')
+
+  // curl.se and zlib.net were delivered: only the broken package has to be in a later request.
+  const asked: string[][] = []
+  const superseded: string[][] = []
+  const outcome = await recoverPublication(batch, { ...told.options,
+    covering: (domains) => { asked.push(domains); return ['201-1'] },
+    supersede: async (id, sha) => { superseded.push([id, sha]) } })
+  expect(outcome).toBe('superseded by 201-1 (broken.example)')
+  expect(asked).toEqual([['broken.example']])
+  expect(superseded).toEqual([[batch.id, batch.sha]])
+
+  // No later request has it: the failure names that package and no other.
+  await expect(recoverPublication(batch, { ...told.options, covering: () => [], supersede: async () => {} }))
+    .rejects.toThrow('failed three times (broken.example); inspect')
+
+  // A job that says nothing, or something this code did not write, leaves every package in doubt.
+  expect(await failedDomains(12, reporting({ 2: result('broken.example'), 3: result('none') }).options)).toBeNull()
+  expect(await failedDomains(12, reporting({ 2: result('broken.example; rm -rf /'), 3: result('none'), 4: result('none') }).options)).toBeNull()
+  await expect(recoverPublication(batch, { ...reporting({}).options, covering: () => [], supersede: async () => {} }))
+    .rejects.toThrow('failed three times (broken.example, curl.se, zlib.net)')
+
+  // Red jobs that name no package (a runner died): nothing is superseded on their word.
+  const unnamed = reporting({ 2: result('none'), 3: result('none'), 4: result('none') })
+  await expect(recoverPublication(batch, { ...unnamed.options, covering: () => ['201-1'], supersede: async () => { throw new Error('must not retire') } }))
+    .rejects.toThrow('its jobs failed without naming a package')
 })
 
 for (const mismatch of [{ display_title: 'wrong' }, { event: 'push' }, { path: '.github/workflows/other.yml' }, { head_repository: { full_name: 'fork/pantry' } }]) {
@@ -129,6 +221,13 @@ test('real Git outbox survives restarts, filters desktop packages, and only prun
     await expect(pendingPublications(cwd)).rejects.toThrow('different source commit')
     git('push', 'origin', '--delete', 'refs/tags/catalog-published/123-1')
     git('push', 'origin', `${sha}:refs/tags/catalog-published/123-1`)
+    expect(await pendingPublications(cwd)).toEqual([])
+    // A superseded request is retired the same way, and as strictly tied to its source.
+    git('push', 'origin', '--delete', 'refs/tags/catalog-published/123-1')
+    git('push', 'origin', 'HEAD^:refs/tags/catalog-superseded/123-1')
+    await expect(pendingPublications(cwd)).rejects.toThrow('Superseded publication points to a different source commit')
+    git('push', 'origin', '--delete', 'refs/tags/catalog-superseded/123-1')
+    git('push', 'origin', `${sha}:refs/tags/catalog-superseded/123-1`)
     expect(await pendingPublications(cwd)).toEqual([])
     await preparePublications(cwd, '125-1')
     expect(await Bun.file(path).exists()).toBe(false)

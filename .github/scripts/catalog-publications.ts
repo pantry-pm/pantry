@@ -1,10 +1,13 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { packageDomain, versionsChanged } from '../../packages/ts-pantry/scripts/changed-package-domains'
+import { packageDomain, parsePublicationResult, PUBLICATION_RESULT_TITLE, versionsChanged } from '../../packages/ts-pantry/scripts/changed-package-domains'
 import { createGitHubApi } from './github-api'
 
 export const publicationDirectory = '.github/catalog-publications'
 const receiptPrefix = 'refs/tags/catalog-published/'
+// A request that gave up, and whose every package a later request names. The
+// later request is where that package's publication is tracked from then on.
+const supersededPrefix = 'refs/tags/catalog-superseded/'
 interface Publication { id: string, domains: string[] }
 interface Run { id: number, display_title: string, event: string, path: string, status: string, conclusion: string | null, updated_at: string, head_repository: { full_name: string } }
 interface RecoveryOptions {
@@ -14,6 +17,9 @@ interface RecoveryOptions {
   now?: () => number
   retryFailed?: boolean
   createdAfter?: string
+  /** The later requests that between them name every one of `domains`, or none: see `laterRequestsCovering`. */
+  covering?: (domains: string[]) => string[]
+  supersede?: (id: string, sha: string) => Promise<void>
 }
 
 function git(cwd: string, ...args: string[]): string {
@@ -31,14 +37,48 @@ export function parsePublication(raw: string): Publication {
   return value
 }
 
+/** Request identities are `<workflow run>-<attempt>`: later runs have larger numbers. */
+function requestOrder(a: string, b: string): number {
+  const [runA, attemptA] = a.split('-').map(Number)
+  const [runB, attemptB] = b.split('-').map(Number)
+  return runA! - runB! || attemptA! - attemptB!
+}
+
+/**
+ * The later requests that name the domains of `publication`, when between them
+ * they name all of them; otherwise none.
+ *
+ * A package whose build is broken fails every request it is in. Each of its
+ * releases adds another request, each is retried three times, and each then
+ * stays, reported as failed every hour: twenty-seven of them at the time this
+ * was written, for four broken recipes. Only the newest request says anything
+ * that is still true about such a package, so an older one that has given up
+ * hands its packages to the later ones and is retired.
+ */
+export function laterRequestsCovering(publication: Publication, all: readonly Publication[]): string[] {
+  const later = all.filter(other => requestOrder(other.id, publication.id) > 0)
+  const covering = new Set<string>()
+  for (const domain of publication.domains) {
+    const by = later.find(other => other.domains.includes(domain))
+    if (!by) return []
+    covering.add(by.id)
+  }
+  return [...covering].sort(requestOrder)
+}
+
+function remoteTags(cwd: string, prefix: string): Map<string, string> {
+  return new Map(git(cwd, 'ls-remote', 'origin', `${prefix}*`).split('\n').filter(Boolean)
+    .map(line => { const [sha, ref] = line.split(/\s+/); return [ref!.slice(prefix.length), sha!] }))
+}
+
 export async function pendingPublications(cwd: string): Promise<Array<Publication & { sha: string }>> {
   const directory = join(cwd, publicationDirectory)
   const files = await readdir(directory).catch((error: NodeJS.ErrnoException) => {
     if (error.code === 'ENOENT') return []
     throw error
   })
-  const receipts = new Map(git(cwd, 'ls-remote', 'origin', `${receiptPrefix}*`).split('\n').filter(Boolean)
-    .map(line => { const [sha, ref] = line.split(/\s+/); return [ref!.slice(receiptPrefix.length), sha!] }))
+  const receipts = remoteTags(cwd, receiptPrefix)
+  const superseded = remoteTags(cwd, supersededPrefix)
   const pending = []
   for (const file of files.filter(file => file.endsWith('.json')).sort()) {
     const path = `${publicationDirectory}/${file}`
@@ -50,6 +90,8 @@ export async function pendingPublications(cwd: string): Promise<Array<Publicatio
     if (git(cwd, 'show', `${sha}:${path}`) !== raw.trim()) throw new Error('Publication requests must be immutable')
     if (receipts.get(publication.id) === sha) continue
     if (receipts.has(publication.id)) throw new Error('Publication receipt points to a different source commit')
+    if (superseded.get(publication.id) === sha) continue
+    if (superseded.has(publication.id)) throw new Error('Superseded publication points to a different source commit')
     pending.push({ ...publication, sha })
   }
   return pending
@@ -98,6 +140,32 @@ export async function preparePublications(cwd: string, id: string, claimedDomain
   }
 }
 
+/**
+ * The packages a publication run could not publish, from what its publisher
+ * jobs annotated (`PUBLICATION_RESULT_TITLE`). null when any publisher job that
+ * ran says nothing readable: a run from before the annotation, or a job that
+ * died before it got that far. Every package of the request is in doubt then.
+ */
+export async function failedDomains(runId: number, options: Pick<RecoveryOptions, 'repository' | 'api'>): Promise<string[] | null> {
+  const { repository, api } = options
+  const result = await api(`repos/${repository}/actions/runs/${runId}/jobs?filter=latest&per_page=100`)
+  const publishers = (result.jobs as any[]).filter(job => /^Publish (\(|darwin)/.test(job.name) && job.conclusion !== 'skipped')
+  if (!publishers.length) return null
+  const failed = new Set<string>()
+  for (const job of publishers) {
+    const annotations = await api(`repos/${repository}/check-runs/${job.id}/annotations?per_page=100`) as Array<{ title?: string, message?: string }>
+    if (!Array.isArray(annotations)) return null
+    const reported = annotations.filter(annotation => annotation.title === PUBLICATION_RESULT_TITLE)
+    if (!reported.length) return null
+    for (const annotation of reported) {
+      const domains = parsePublicationResult(annotation.message ?? '')
+      if (!domains) return null
+      for (const domain of domains) failed.add(domain)
+    }
+  }
+  return [...failed].sort()
+}
+
 /** Receipt tags survive workflow-log retention and do not need a main commit. */
 export async function recoverPublication(publication: Publication & { sha: string }, options: RecoveryOptions): Promise<string> {
   const { repository, api } = options
@@ -139,7 +207,21 @@ export async function recoverPublication(publication: Publication & { sha: strin
     await options.receipt(publication.id, publication.sha)
     return 'confirmed'
   }
-  if (!options.retryFailed && matches.length >= 3) throw new Error(`Publication ${publication.id} failed three times; inspect its build diagnostics before retrying manually`)
+  if (!options.retryFailed && matches.length >= 3) {
+    // What is still owed is the packages its last attempt could not publish.
+    // The others were delivered, in a run that is red because of these.
+    const last = [...matches].sort((a, b) => b.id - a.id)[0]!
+    const reported = await failedDomains(last.id, options)
+    const owed = reported?.filter(domain => publication.domains.includes(domain)) ?? publication.domains
+    // Each of them is in a later request: that one carries it now.
+    const later = owed.length ? options.covering?.(owed) ?? [] : []
+    if (later.length && options.supersede) {
+      await options.supersede(publication.id, publication.sha)
+      return `superseded by ${later.join(', ')} (${owed.join(', ')})`
+    }
+    const which = owed.length ? owed.join(', ') : 'its jobs failed without naming a package'
+    throw new Error(`Publication ${publication.id} failed three times (${which}); inspect its build diagnostics before retrying manually`)
+  }
   const latest = matches.sort((a, b) => b.id - a.id)[0]
   if (latest && (options.now ?? Date.now)() - Date.parse(latest.updated_at) < 60 * 60_000) return 'backoff'
   await api(`repos/${repository}/actions/workflows/publish-changed-packages.yml/dispatches`, {
@@ -181,10 +263,14 @@ if (import.meta.main) {
     const api = createGitHubApi({ token: process.env.GH_TOKEN ?? '' })
     if (process.env.PUBLISHER_RUN) await waitForPublisherCompletion({ repository, runId: process.env.PUBLISHER_RUN, api })
     const failures = []
-    for (const publication of await pendingPublications(cwd)) {
+    const pending = await pendingPublications(cwd)
+    for (const publication of pending) {
       try {
         git(cwd, 'merge-base', '--is-ancestor', publication.sha, 'HEAD')
         const result = await recoverPublication(publication, { repository, api, createdAfter: git(cwd, 'show', '-s', '--format=%cI', publication.sha), retryFailed: process.env.RETRY_FAILED === 'true',
+          // Only requests that are still pending take over: each is retried or reported in its own right.
+          covering: domains => laterRequestsCovering({ id: publication.id, domains }, pending),
+          supersede: async (id, sha) => { git(cwd, 'push', 'origin', `${sha}:${supersededPrefix}${id}`) },
           receipt: async (id, sha) => { git(cwd, 'push', 'origin', `${sha}:${receiptPrefix}${id}`) } })
         console.log(`${publication.id}: ${result}`)
       }

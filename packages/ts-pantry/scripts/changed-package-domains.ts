@@ -84,3 +84,29 @@ if (import.meta.main) {
   }
   console.log(changedPackageDomains(beforeRef, afterRef).join(' '))
 }
+
+/**
+ * How a publisher job says which packages it could not publish: one workflow
+ * annotation with this title, whose message is their domains, comma separated
+ * (`none` when every package was published or was already there).
+ *
+ * A request names many packages and its jobs are red when any one of them
+ * fails. Recovery reads this to tell the packages that failed from the ones
+ * that were delivered, which the job's conclusion alone cannot say.
+ */
+export const PUBLICATION_RESULT_TITLE = 'pantry-publication-result'
+
+/** The annotation for a job that could not publish `failedDomains`. */
+export function publicationResultAnnotation(failedDomains: readonly string[]): string {
+  const domains = [...new Set(failedDomains)].sort()
+  return domains.length
+    ? `::error title=${PUBLICATION_RESULT_TITLE}::${domains.join(',')}`
+    : `::notice title=${PUBLICATION_RESULT_TITLE}::none`
+}
+
+/** The domains of that annotation's message. null: not one this function wrote. */
+export function parsePublicationResult(message: string): string[] | null {
+  if (message === 'none') return []
+  const domains = message.split(',')
+  return domains.every(domain => /^[a-zA-Z0-9._/-]{1,128}$/.test(domain)) ? domains : null
+}

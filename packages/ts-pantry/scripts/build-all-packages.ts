@@ -39,6 +39,7 @@ import { uploadToS3 as uploadToS3Impl } from './upload-to-s3.ts'
 import { BINARY_SYNC_DOMAIN_SET } from './binary-sync-packages.ts'
 import { parseDep, versionSatisfies } from './build-package'
 import { publicationOrder } from './publication-order'
+import { publicationResultAnnotation } from './changed-package-domains'
 import { recipeAllowsMirror, recipeBuildVersion } from './package-revisions'
 import { loadRecipe, loadRecipeRevisions } from './recipe-loader'
 // package-overrides.ts removed — all build logic now in src/recipes/*.ts
@@ -3360,6 +3361,11 @@ else {
 
   const attempted = uploaded.length + failed.length
   console.log(`\nTotal: ${uploaded.length} uploaded, ${skipped.length} skipped, ${unavailable.length} unavailable, ${failed.length} failed`)
+
+  // For catalog publication recovery, which has only this job's conclusion to
+  // go by otherwise: which packages are the reason it is red.
+  if (process.env.GITHUB_ACTIONS === 'true')
+    console.log(publicationResultAnnotation(failed.map(([key]) => multiVersion ? key.replace(/@[^@]*$/, '') : key)))
 
   if (values['download-only'])
     console.log(`download-only mode: built ${uploaded.length} download recipes, skipped ${downloadOnlySkipped} source recipes`)
