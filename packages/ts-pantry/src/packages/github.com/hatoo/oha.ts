@@ -3,7 +3,7 @@
  *
  * @domain `github.com/hatoo/oha`
  * @programs `oha`
- * @version `1.16.0` (20 versions available)
+ * @version `1.17.0` (21 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/hatoo/oha`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "oha"
  * console.log(pkg.description) // "Native HTTP load generator with paced requests ..."
  * console.log(pkg.programs)    // ["oha"]
- * console.log(pkg.versions[0]) // "1.16.0" (latest)
+ * console.log(pkg.versions[0]) // "1.17.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/hatoo/oha.md
@@ -69,6 +69,7 @@ export const ohaPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.17.0',
     '1.16.0',
     '1.15.0',
     '1.14.0',

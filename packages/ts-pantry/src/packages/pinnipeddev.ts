@@ -3,7 +3,7 @@
  *
  * @domain `pinniped.dev`
  * @programs `pinniped`
- * @version `0.44.0` (19 versions available)
+ * @version `0.48.0` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pinniped.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pinniped"
  * console.log(pkg.description) // "Pinniped is the easy, secure way to log in to y..."
  * console.log(pkg.programs)    // ["pinniped"]
- * console.log(pkg.versions[0]) // "0.44.0" (latest)
+ * console.log(pkg.versions[0]) // "0.48.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pinniped-dev.md
@@ -67,6 +67,7 @@ export const pinnipeddevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.48.0',
     '0.47.0',
     '0.46.0',
     '0.45.0',

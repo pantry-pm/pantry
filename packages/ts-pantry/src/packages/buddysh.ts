@@ -22,7 +22,7 @@
  * console.log(pkg === samePkg) // true
  * console.log(pkg.name)        // "buddy"
  * console.log(pkg.programs)    // ["buddy"]
- * console.log(pkg.versions[0]) // "0.11.15" (latest)
+ * console.log(pkg.versions[0]) // "0.11.16" (latest)
  * ```
  */
 export const buddyPackage = {
@@ -75,6 +75,7 @@ export const buddyPackage = {
   * whose zips have been pruned would produce a build that 404s.
   */
   versions: [
+    '0.11.16',
     '0.11.15',
     '0.11.14',
     '0.11.13',

@@ -3,7 +3,7 @@
  *
  * @domain `temporal.io`
  * @programs `temporal`
- * @version `1.10.0` (42 versions available)
+ * @version `1.10.1` (43 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install temporal.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "temporal"
  * console.log(pkg.description) // "Command-line interface for running Temporal Ser..."
  * console.log(pkg.programs)    // ["temporal"]
- * console.log(pkg.versions[0]) // "1.10.0" (latest)
+ * console.log(pkg.versions[0]) // "1.10.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/temporal-io.md
@@ -67,6 +67,7 @@ export const temporalioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.10.1',
     '1.10.0',
     '1.9.1',
     '1.9.0',

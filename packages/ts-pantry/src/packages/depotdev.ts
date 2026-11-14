@@ -3,7 +3,7 @@
  *
  * @domain `depot.dev`
  * @programs `depot`
- * @version `2.103.12` (138 versions available)
+ * @version `2.103.17` (143 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install depot.dev`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "depot"
  * console.log(pkg.description) // "🖥️ Depot CLI, build your Docker images in the ..."
  * console.log(pkg.programs)    // ["depot"]
- * console.log(pkg.versions[0]) // "2.103.12" (latest)
+ * console.log(pkg.versions[0]) // "2.103.17" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/depot-dev.md
@@ -68,6 +68,11 @@ export const depotdevPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.103.17',
+    '2.103.16',
+    '2.103.15',
+    '2.103.14',
+    '2.103.13',
     '2.103.12',
     '2.103.11',
     '2.103.10',

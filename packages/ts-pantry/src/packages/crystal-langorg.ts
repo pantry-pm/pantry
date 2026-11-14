@@ -3,7 +3,7 @@
  *
  * @domain `crystal-lang.org`
  * @programs `crystal`
- * @version `1.22.2` (36 versions available)
+ * @version `1.22.3` (37 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install crystal-lang.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "crystal"
  * console.log(pkg.description) // "Fast and statically typed, compiled language wi..."
  * console.log(pkg.programs)    // ["crystal"]
- * console.log(pkg.versions[0]) // "1.22.2" (latest)
+ * console.log(pkg.versions[0]) // "1.22.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/crystal-lang-org.md
@@ -83,6 +83,7 @@ export const crystallangorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.22.3',
     '1.22.2',
     '1.22.1',
     '1.22.0',

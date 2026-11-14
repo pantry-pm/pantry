@@ -1,0 +1,23 @@
+{
+  "id": "43589631687-1",
+  "domains": [
+    "anthropic.com/claude-code",
+    "browser-use.com",
+    "buddy.sh",
+    "claude.ai",
+    "crystal-lang.org",
+    "depot.dev",
+    "fluentci.io",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/hatoo/oha",
+    "github.com/router-for-me/CLIProxyAPI",
+    "github.com/tw93/mole",
+    "gohugo.io",
+    "julialang.org",
+    "pinniped.dev",
+    "pnpm.io",
+    "temporal.io",
+    "tilt.dev",
+    "vim.org"
+  ]
+}
