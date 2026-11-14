@@ -45,14 +45,15 @@ test('publication requires real encodes through every linked codec, without load
 })
 
 // The linux-x86-64 build of 9.0.2.1 stopped at "nasm not found or too old":
-// the recipe's `'x86-64': { 'nasm.us': '2' }` build dependency was dropped.
+// the recipe's `x86-64` build dependency group was dropped, and once it was
+// read, `nasm.us 2` matched no archive: the registry only builds nasm 3.x.
 test('an architecture group of dependencies reaches the builds of that architecture only', async () => {
   const { extractYamlDeps } = await import('../scripts/build-package')
   const build = (await loadRecipe('ffmpeg.org', 'linux-x86-64', '9.0.2')).recipe.build!.dependencies
-  expect(extractYamlDeps(build, 'linux-x86-64')).toContain('nasm.us 2')
-  expect(extractYamlDeps(build, 'darwin-x86-64')).toContain('nasm.us 2')
-  expect(extractYamlDeps(build, 'linux-arm64')).not.toContain('nasm.us 2')
-  expect(extractYamlDeps(build, 'darwin-arm64')).not.toContain('nasm.us 2')
+  expect(extractYamlDeps(build, 'linux-x86-64')).toContain('nasm.us >=2.14')
+  expect(extractYamlDeps(build, 'darwin-x86-64')).toContain('nasm.us >=2.14')
+  expect(extractYamlDeps(build, 'linux-arm64')).not.toContain('nasm.us >=2.14')
+  expect(extractYamlDeps(build, 'darwin-arm64')).not.toContain('nasm.us >=2.14')
 
   const groups = { 'a.org': '^1', 'b.org': '*', 'linux': { 'c.org': '2' }, 'linux/aarch64': { 'd.org': '3' }, 'darwin/x86-64': { 'e.org': '4' }, 'aarch64': { 'f.org': '5' } }
   expect(extractYamlDeps(groups, 'linux-arm64')).toEqual(['a.org ^1', 'b.org', 'c.org 2', 'd.org 3', 'f.org 5'])

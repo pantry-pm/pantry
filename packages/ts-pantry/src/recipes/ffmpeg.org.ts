@@ -37,7 +37,9 @@ export const recipe: Recipe = {
   },
   buildDependencies: {
     'x86-64': {
-      'nasm.us': '2',
+      // The registry's nasm 2.x entries have no archives; 3.x is what it
+      // builds, and ffmpeg's x86 assembly needs 2.14 or newer.
+      'nasm.us': '>=2.14',
     },
   },
 
