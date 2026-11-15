@@ -7,7 +7,8 @@ export const recipe: Recipe = {
   // linux-x86-64 builds of these were made on Ubuntu 26.04 against a curl whose
   // libcurl.so needs glibc 2.43 and shipped it in lib/. Revision 1 is the same
   // recipe at the glibc 2.39 floor, bundling the corrected curl.
-  revisions: { '2.52.0': 1, '2.53.1': 1, '2.54.0': 1, '2.54.1': 1, '2.55.0': 1, '2.55.1': 1 },
+  // Command-line and repository aliases retain their Git option context in the launcher.
+  revisions: { '2.53.0': 1, '2.56.1': 1, '2.52.0': 1, '2.53.1': 1, '2.54.0': 1, '2.54.1': 1, '2.55.0': 1, '2.55.1': 1 },
   description: 'Git Source Code Mirror - This is a publish-only repository but pull requests can be turned into patches to the mailing list via GitGitGadget (https://gitgitgadget.github.io/). Please follow Documentation/SubmittingPatches procedure for any of your improvements.',
   github: 'https://github.com/git/git',
   programs: ['git', 'git-cvsserver', 'git-receive-pack', 'git-shell', 'git-upload-archive', 'git-upload-pack', 'scalar'],
@@ -130,12 +131,19 @@ export const recipe: Recipe = {
       `runtime="$(mktemp -d)"
       trap 'rm -rf "$runtime"' EXIT
       git="{{prefix}}/bin/git"
-      if [ "$(uname -s)" = Linux ]; then
+      mkdir -p "$runtime/provider-trap"
+      printf '%s\\n' '#!/bin/sh' 'printf called >> "$PANTRY_GIT_PROVIDER_TRACE"' 'exit 1' > "$runtime/provider-trap/pkgx"
+      chmod +x "$runtime/provider-trap/pkgx"
+      export PANTRY_GIT_PROVIDER_TRACE="$runtime/provider-trace"
+      export PATH="$runtime/provider-trap:$PATH"
+      if [ "$(uname -s)" = Linux ]
+      then
         mkdir -p "$runtime/git-scm.org/v{{version}}"
         cp -a "{{prefix}}/." "$runtime/git-scm.org/v{{version}}/"
         IFS=: read -r -a runtime_libs <<< "\${LD_LIBRARY_PATH:-}"
         index=0
-        for lib in "\${runtime_libs[@]}"; do
+        for lib in "\${runtime_libs[@]}"
+        do
           [ -d "$lib" ] || continue
           index=$((index + 1))
           mkdir -p "$runtime/dependencies/library-$index/v1"
@@ -151,6 +159,8 @@ export const recipe: Recipe = {
       env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" config pantry.nativeprobe PantryGit
       env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" config alias.nativeprobe 'config --get pantry.nativeprobe'
       test "$(env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" nativeprobe)" = PantryGit
+      test "$(env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -c alias.commandline='!printf CommandLineGit' commandline)" = CommandLineGit
+      test ! -e "$PANTRY_GIT_PROVIDER_TRACE"
       printf '%s\\n' PantryGit > "$runtime/repo/native-probe"
       env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" add native-probe
       test "$(env -u LD_LIBRARY_PATH -u DYLD_LIBRARY_PATH -u DYLD_FALLBACK_LIBRARY_PATH "$git" -C "$runtime/repo" ls-files)" = native-probe`,

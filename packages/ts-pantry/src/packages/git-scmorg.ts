@@ -3,7 +3,7 @@
  *
  * @domain `git-scm.org`
  * @programs `git`, `git-cvsserver`, `git-receive-pack`, `git-shell`, `git-upload-archive`, ... (+2 more)
- * @version `2.56.1` (63 versions available)
+ * @version `2.56.1.1` (65 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install git-scm.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "git"
  * console.log(pkg.description) // "Git Source Code Mirror - This is a publish-only..."
  * console.log(pkg.programs)    // ["git", "git-cvsserver", ...]
- * console.log(pkg.versions[0]) // "2.56.1" (latest)
+ * console.log(pkg.versions[0]) // "2.56.1.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/git-scm-org.md
@@ -88,6 +88,7 @@ export const gitscmorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.56.1.1',
     '2.56.1',
     '2.56.0',
     '2.56.0-rc2',
@@ -109,6 +110,7 @@ export const gitscmorgPackage = {
     '2.54.0-rc0',
     '2.53.1.1',
     '2.53.1',
+    '2.53.0.1',
     '2.53.0',
     '2.53.0-rc2',
     '2.53.0-rc1',

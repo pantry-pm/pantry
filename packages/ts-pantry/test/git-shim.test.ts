@@ -78,3 +78,37 @@ test('Git shell helpers source the real gettext library and return to their call
   }
   finally { rmSync(directory, { recursive: true, force: true }) }
 })
+
+test('command-line and repository aliases never trigger external provider discovery', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'pantry-git-alias-context-'))
+  try {
+    const prefix = join(directory, 'pantry/git-scm.org/v2.53.0')
+    const trap = join(directory, 'trap')
+    const repository = join(directory, 'repository with spaces')
+    const marker = join(directory, 'provider-was-called')
+    for (const path of [join(prefix, 'bin'), join(prefix, 'libexec'), trap]) mkdirSync(path, { recursive: true })
+    const shim = join(prefix, 'bin/git')
+    writeFileSync(shim, readFileSync(join(import.meta.dir, '../src/recipes/props/git-scm.org/git-shim')))
+    // The operating system Git is the authored fixture engine. The copied
+    // launcher is the source under test, with real native alias parsing.
+    writeFileSync(join(prefix, 'libexec/git'), '#!/bin/sh\nexec /usr/bin/git "$@"\n')
+    writeFileSync(join(trap, 'pkgx'), '#!/bin/sh\nprintf called >> "$PROVIDER_MARKER"\nexit 9\n')
+    for (const path of [shim, join(prefix, 'libexec/git'), join(trap, 'pkgx')]) chmodSync(path, 0o755)
+    expect(Bun.spawnSync(['/usr/bin/git', 'init', '--bare', repository], { stdout: 'pipe', stderr: 'pipe' }).exitCode).toBe(0)
+    expect(Bun.spawnSync(['/usr/bin/git', '--git-dir', repository, 'config', 'alias.saved', '!printf repository-alias']).exitCode).toBe(0)
+    const cases = [
+      { args: ['-c', 'alias.inline=!printf command-line-alias', 'inline'], output: 'command-line-alias' },
+      { args: [`--git-dir=${repository}`, 'saved'], output: 'repository-alias' },
+      { args: ['-c', 'alias.inline=!printf ignored', '-c', 'alias.inline=!printf overridden', 'inline'], output: 'overridden' },
+      { args: ['--git-dir', repository, 'saved'], output: 'repository-alias' },
+      { args: ['--config-env=alias.inline=PANTRY_ALIAS_FIXTURE', 'inline'], output: 'environment-alias' },
+    ]
+    for (const entry of cases) {
+      const child = Bun.spawn([shim, ...entry.args], { env: { ...process.env, PANTRY_ALIAS_FIXTURE: '!printf environment-alias', PROVIDER_MARKER: marker, PATH: `${trap}:/usr/bin:/bin` }, stdout: 'pipe', stderr: 'pipe' })
+      const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
+      expect({ args: entry.args, code, stdout, stderr }).toEqual({ args: entry.args, code: 0, stdout: entry.output, stderr: '' })
+      expect(await Bun.file(marker).exists()).toBe(false)
+    }
+  }
+  finally { rmSync(directory, { recursive: true, force: true }) }
+})

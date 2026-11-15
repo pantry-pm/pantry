@@ -98,9 +98,37 @@ _provides() {
   fi
 }
 
-_is_alias() {
-  "$libexec/git" config --get-regexp '^alias\.' | awk '{ print $1 }' | sed 's/alias\.//' | grep -qx "$cmd"
-}
+_is_alias() (
+  # Keep Git's global options, including -c, --config-env and repository
+  # context, while replacing only the subcommand with a config read. Rotate
+  # arguments rather than rebuilding a shell string: spaces and shell syntax
+  # inside an alias must remain one literal argument, never evaluated here.
+  remaining=$#
+  expects_value=0
+  while [ "$remaining" -gt 0 ]; do
+    argument=$1
+    shift
+    remaining=$((remaining - 1))
+    if [ "$expects_value" -eq 1 ]; then
+      set -- "$@" "$argument"
+      expects_value=0
+      continue
+    fi
+    case $argument in
+      -C | --git-dir | --work-tree | --namespace | --super-prefix | --config-env | -c)
+        set -- "$@" "$argument"
+        expects_value=1
+        ;;
+      -*) set -- "$@" "$argument" ;;
+      *) break ;;
+    esac
+  done
+  while [ "$remaining" -gt 0 ]; do
+    shift
+    remaining=$((remaining - 1))
+  done
+  "$libexec/git" "$@" config --get-regexp '^alias\.' | awk '{ print $1 }' | sed 's/alias\.//' | grep -qx "$cmd"
+)
 
 if [ -z "$cmd" ]; then
   exec "$libexec/git" "$@"
@@ -108,7 +136,7 @@ elif [ -x "$libexec/git-$cmd" ] && [ -f "$libexec/git-$cmd" ]; then
   exec "$libexec/git" "$@"
 elif type "git-$cmd" >/dev/null 2>&1; then
   exec "$libexec/git" "$@"
-elif ! _is_alias && command -v pkgx >/dev/null 2>&1 && pkg=$(_provides); then
+elif ! _is_alias "$@" && command -v pkgx >/dev/null 2>&1 && pkg=$(_provides); then
   exec pkgx +"$pkg" "$libexec/git" "$@"
 else
   exec "$libexec/git" "$@"

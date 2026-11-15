@@ -35,12 +35,20 @@ test('Darwin Git owns its GNU iconv input instead of discovering a host installa
   expect(gitscmorgPackage.dependencies).toContain('darwin:gnu.org/libiconv^1.19.0.2')
 })
 
-test('the missing Darwin publication retains the real upstream Git version', async () => {
+test('the alias repair retains its real upstream Git version and gets a new package identity', async () => {
   for (const platform of ['darwin-arm64', 'linux-arm64', 'linux-x86-64']) {
     const loaded = await loadRecipe('git-scm.org', platform, '2.56.1')
     expect(loaded.upstreamVersion).toBe('2.56.1')
-    expect(loaded.publicationVersion).toBe('2.56.1')
+    expect(loaded.publicationVersion).toBe('2.56.1.1')
     expect(loaded.recipe.test?.required).toBe(true)
   }
-  expect(gitscmorgPackage.versions[0]).toBe('2.56.1')
+  expect(gitscmorgPackage.versions[0]).toBe('2.56.1.1')
+})
+
+
+test('the ReviewOS Git pin gets an immutable repaired launcher revision', async () => {
+  const loaded = await loadRecipe('git-scm.org', 'darwin-arm64', '2.53.0.1')
+  expect(loaded.upstreamVersion).toBe('2.53.0')
+  expect(loaded.publicationVersion).toBe('2.53.0.1')
+  expect(gitscmorgPackage.versions).toContain('2.53.0.1')
 })
