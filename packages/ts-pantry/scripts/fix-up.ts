@@ -136,11 +136,42 @@ function isDynamicElf(filePath: string): boolean {
     for (let index = 0; index < count; index++) {
       if (readSync(file, type, 0, 4, offset + index * size) !== 4)
         throw new Error(`Truncated ELF program header in ${filePath}`)
-      if (new DataView(type.buffer).getUint32(0, little) === 2) return true
+      if (new DataView(type.buffer).getUint32(0, little) === 2) return !isDetachedDebugInfo(file, view, bits, little, offset + index * size)
     }
     return false
   }
   finally { closeSync(file) }
+}
+
+/**
+ * A detached debug file (`objcopy --only-keep-debug`, Julia's `*.so.debug`)
+ * keeps the program headers of the image it was split from, PT_DYNAMIC
+ * included, but its `.dynamic` section is SHT_NOBITS: the loader paths are not
+ * in the file. Nothing loads it and patchelf leaves it untouched, so a rewrite
+ * could never be read back. Only that exact shape is excluded: an image whose
+ * section table has no SHT_DYNAMIC section and a NOBITS one at the dynamic
+ * segment's address. Stripped section tables still count as dynamic.
+ */
+function isDetachedDebugInfo(file: number, header: DataView, bits: number, little: boolean, dynamicHeader: number): boolean {
+  const wide = bits === 2
+  const tableOffset = wide ? Number(header.getBigUint64(40, little)) : header.getUint32(32, little)
+  const entrySize = header.getUint16(wide ? 58 : 46, little)
+  const count = header.getUint16(wide ? 60 : 48, little)
+  if (!Number.isSafeInteger(tableOffset) || tableOffset === 0 || count === 0 || entrySize < (wide ? 64 : 40)) return false
+  const segment = new Uint8Array(wide ? 24 : 12)
+  if (readSync(file, segment, 0, segment.length, dynamicHeader) !== segment.length) return false
+  const address = wide ? new DataView(segment.buffer).getBigUint64(16, little) : BigInt(new DataView(segment.buffer).getUint32(8, little))
+  const table = new Uint8Array(entrySize * count)
+  if (readSync(file, table, 0, table.length, tableOffset) !== table.length) return false
+  const sections = new DataView(table.buffer)
+  let withoutContents = false
+  for (let index = 0; index < count; index++) {
+    const type = sections.getUint32(index * entrySize + 4, little)
+    if (type === 6) return false
+    const sectionAddress = wide ? sections.getBigUint64(index * entrySize + 16, little) : BigInt(sections.getUint32(index * entrySize + 12, little))
+    if (type === 8 && sectionAddress === address) withoutContents = true
+  }
+  return withoutContents
 }
 
 export function applyElfRpath(filePath: string, rpath: string, patchelf = 'patchelf'): void {

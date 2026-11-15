@@ -692,6 +692,17 @@ const SKIP_VERSIONS: Record<string, string[]> = {
   'wasmer.io': ['<7.0.0'],
   // Old mise Rust build fails on darwin; 2025.12.13+ works on both
   'mise.jdx.dev': ['<2025.0.0'],
+  // ninja before 1.10.0 has no CMakeLists.txt (the recipe's build system); it
+  // only bootstraps through configure.py/bootstrap.py scripts of that era.
+  'ninja-build.org': ['<1.10.0'],
+  // Open MPI prerelease and vendor tags already in the catalog (the recipe's
+  // tagPattern now admits final releases only). The 6.0.0 candidates need
+  // PMIx 7, which does not exist; the amzn tags have no upstream tarball.
+  'open-mpi.org': [
+    '6.0.0rc3', '6.0.0rc2', '6.0.0rc1', '5.0.11rc1', '5.0.10rc2', '5.0.10rc1',
+    '5.0.9rc2', '5.0.9rc1', '5.0.9amzn1', '5.0.8rc3', '5.0.8rc2', '5.0.8rc1',
+    '5.0.8amzn1', '5.0.7rc2', '5.0.7rc1',
+  ],
   // gitui Rust build fails on darwin; 0.27.0+ works (0.26.3 also fails)
   'crates.io/gitui': ['<0.27.0'],
   // Old dxc cmake fails; 1.8.2505.1+ works on both
@@ -1666,6 +1677,7 @@ export const CUSTOM_BUILD_DOMAINS: ReadonlySet<string> = new Set<string>([
   'gnu.org/libiconv', // preserve declared gettext ownership and real conversion consumers
   'gnu.org/libunistring', // preserve owned iconv and required compiled Unicode consumers
   'cmake.org', // publish managed curl, curses and relocatable CMake module paths
+  'coder.com/code-server', // delete foreign-libc and foreign-OS prebuilds the vendor archive carries; a mirror runs no recipe step
   'mysql.com', // preserve official native distributions and the supported source ABI
   'openssh.com', // scp/sftp must resolve managed ssh after relocating the package
   'git-scm.org', // alias detection uses libexec/git to avoid recursive PATH wrapper calls

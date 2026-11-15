@@ -174,7 +174,11 @@ export function bundleRuntimeLibraries(
     options.prepareBinary?.(file)
     const needed = linux
       ? execFileSync(patchelf, ['--print-needed', file], { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
-      : execFileSync('otool', ['-L', file], { encoding: 'utf8' }).trim().split('\n').slice(1).map(line => line.trim().replace(/\s+\(.*$/, '')).filter(Boolean)
+      // Load commands are the indented lines. A universal image prints one
+      // unindented `<file> (architecture <arch>):` header per slice, and
+      // dropping only the first line read the later headers as the image
+      // depending on itself.
+      : [...new Set(execFileSync('otool', ['-L', file], { encoding: 'utf8' }).split('\n').filter(line => /^\s/.test(line)).map(line => line.trim().replace(/\s+\(.*$/, '')).filter(Boolean))]
     const ownInstallName = linux ? undefined : execFileSync('otool', ['-D', file], { encoding: 'utf8' }).trim().split('\n')[1]?.trim()
     for (const dependencyName of needed) {
       if (dependencyName === ownInstallName) continue

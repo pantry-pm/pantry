@@ -13,6 +13,11 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'python.org': '~3.12', // no torch<2.3.0 for 3.13
+    // The Playwright wheel carries the official Node binary as its driver,
+    // and that binary links libatomic.so.1.
+    linux: {
+      'gnu.org/gcc/libatomic': '*',
+    },
   },
   buildDependencies: {
     'rust-lang.org': '*', // for rpds

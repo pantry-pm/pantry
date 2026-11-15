@@ -15,6 +15,15 @@ export const recipe: Recipe = {
     url: 'https://static.rust-lang.org/dist/rustc-{{version}}-src.tar.gz',
     stripComponents: 1,
   },
+  // The bundled LLVM (librustc_driver and the llvm tools under
+  // lib/rustlib/<triple>/bin) links zlib and zstd dynamically on Linux; the
+  // aarch64 artifact does today. macOS resolves both from the system.
+  dependencies: {
+    linux: {
+      'zlib.net': '^1',
+      'facebook.com/zstd': '^1',
+    },
+  },
 
   build: {
     script: [

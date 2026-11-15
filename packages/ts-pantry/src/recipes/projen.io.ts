@@ -20,7 +20,8 @@ export const recipe: Recipe = {
   },
   buildDependencies: {
     'classic.yarnpkg.com': '^1',
-    'npmjs.com': '~11.4.2',
+    // Any npm 11: the 11.4 line is no longer a published binary.
+    'npmjs.com': '^11',
   },
 
   build: {

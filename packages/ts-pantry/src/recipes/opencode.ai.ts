@@ -19,8 +19,10 @@ export const recipe: Recipe = {
       'case {{hw.platform}}+{{hw.arch}} in',
       '  darwin+aarch64) ASSET=opencode-darwin-arm64.zip ;;',
       '  darwin+x86-64) ASSET=opencode-darwin-x64.zip ;;',
-      '  linux+x86-64) ASSET=opencode-linux-x64-musl.tar.gz ;;',
-      '  linux+aarch64) ASSET=opencode-linux-arm64-musl.tar.gz ;;',
+      // The glibc builds: the -musl assets link libc.musl-*.so.1 dynamically,
+      // which no declared dependency provides.
+      '  linux+x86-64) ASSET=opencode-linux-x64.tar.gz ;;',
+      '  linux+aarch64) ASSET=opencode-linux-arm64.tar.gz ;;',
       '  *) echo "unsupported platform {{hw.platform}}/{{hw.arch}}" >&2; exit 42 ;;',
       'esac',
       'curl -Lfo "$ASSET" "https://github.com/anomalyco/opencode/releases/download/v{{version}}/$ASSET"',

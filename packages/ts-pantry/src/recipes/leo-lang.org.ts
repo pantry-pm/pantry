@@ -14,6 +14,14 @@ export const recipe: Recipe = {
   // Triples: aarch64-apple-darwin, x86_64-apple-darwin, x86_64-unknown-linux-gnu.
   // NOTE: upstream ships NO linux/aarch64 binary — that platform is gated out.
   distributable: null,
+  // The Linux binaries link OpenSSL 1.1 (libssl.so.1.1, libcrypto.so.1.1),
+  // and 4.0.0 also links libcurl.so.4. Neither is part of the base system.
+  dependencies: {
+    'openssl.org': '^1.1',
+    linux: {
+      'curl.se': '*',
+    },
+  },
   versionSource: {
     type: 'github-releases',
     repo: 'ProvableHQ/leo',

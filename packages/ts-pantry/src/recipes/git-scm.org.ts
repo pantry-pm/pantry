@@ -43,6 +43,23 @@ export const recipe: Recipe = {
   build: {
     script: [
       'mv props/config.mak .',
+      // NO_HOMEBREW (below) only exists from 2.53. Before that, config.mak.uname
+      // unconditionally adds /opt/homebrew to the header and library search
+      // paths and sets MSGFMT=/opt/homebrew/bin/msgfmt when the runner has
+      // Homebrew. That msgfmt then loads this build's own gettext libraries
+      // through the dependency loader path and aborts ("Symbol not found:
+      // _rpl_stat"). Drop the three assignments so msgfmt, libintl and libiconv
+      // come from the declared dependencies. A no-op from 2.53 on.
+      {
+        run: [
+          'sed -i.bak',
+          '-e \'\\|^[[:space:]]*BASIC_CFLAGS += -I/opt/homebrew/include$|d\'',
+          '-e \'\\|^[[:space:]]*BASIC_LDFLAGS += -L/opt/homebrew/lib$|d\'',
+          '-e \'\\|^[[:space:]]*MSGFMT = /opt/homebrew/bin/msgfmt$|d\'',
+          'config.mak.uname',
+        ].join(' '),
+        if: 'darwin',
+      },
       {
         run: 'printf \'%s\\n\' \'NO_HOMEBREW = YesPlease\' \'ICONVDIR = {{deps.gnu.org/libiconv.prefix}}\' \'HAS_GOOD_LIBICONV = YesPlease\' >> config.mak',
         if: 'darwin',

@@ -21,6 +21,39 @@ function dynamicElf(path: string, bits = 2, little = true, dynamic = true): void
   writeFileSync(path, bytes)
 }
 
+/** A dynamic image with a section table: `.dynamic` either real (6) or NOBITS (8). */
+function sectionedElf(path: string, dynamicSectionType: number, bits = 2, little = true): void {
+  const wide = bits === 2
+  const programs = wide ? 64 : 52
+  const programSize = wide ? 56 : 32
+  const sectionSize = wide ? 64 : 40
+  const sections = programs + programSize
+  const address = 0x3df8
+  const bytes = new Uint8Array(sections + sectionSize * 2)
+  bytes.set([0x7f, 0x45, 0x4c, 0x46, bits, little ? 1 : 2, 1])
+  const view = new DataView(bytes.buffer)
+  view.setUint16(16, 3, little)
+  if (wide) {
+    view.setBigUint64(32, BigInt(programs), little)
+    view.setBigUint64(40, BigInt(sections), little)
+    view.setBigUint64(programs + 16, BigInt(address), little)
+    view.setBigUint64(sections + sectionSize + 16, BigInt(address), little)
+  }
+  else {
+    view.setUint32(28, programs, little)
+    view.setUint32(32, sections, little)
+    view.setUint32(programs + 8, address, little)
+    view.setUint32(sections + sectionSize + 12, address, little)
+  }
+  view.setUint16(wide ? 54 : 42, programSize, little)
+  view.setUint16(wide ? 56 : 44, 1, little)
+  view.setUint16(wide ? 58 : 46, sectionSize, little)
+  view.setUint16(wide ? 60 : 48, 2, little)
+  view.setUint32(programs, 2, little)
+  view.setUint32(sections + sectionSize + 4, dynamicSectionType, little)
+  writeFileSync(path, bytes)
+}
+
 function fixture(): { dir: string, tool: string } {
   const dir = mkdtempSync(join(tmpdir(), 'pantry-elf-prefix-'))
   tempDirs.push(dir)
@@ -77,6 +110,32 @@ describe('ELF RPATH fix-up', () => {
     dynamicElf(join(dir, 'bin', 'static'), 2, true, false)
     writeFileSync(join(dir, 'bin', 'script'), '#!/bin/sh\nexit 0\n')
     expect(() => fixElfRpaths(dir, join(dir, 'missing-tool'))).not.toThrow()
+  })
+
+  test('detached debug files keep their program headers but have no loader paths to rewrite', () => {
+    // Julia ships lib/julia/libccalltest.so.debug (objcopy --only-keep-debug).
+    // patchelf leaves a NOBITS .dynamic untouched, so the rewrite could never
+    // be read back and the whole mirrored package was refused.
+    const { dir, tool } = fixture()
+    mkdirSync(join(dir, 'lib', 'julia'))
+    for (const bits of [1, 2]) {
+      for (const little of [false, true]) {
+        const debug = join(dir, 'lib', 'julia', `libccalltest-${bits}-${little}.so.debug`)
+        const image = join(dir, 'lib', 'julia', `libccalltest-${bits}-${little}.so`)
+        sectionedElf(debug, 8, bits, little)
+        sectionedElf(image, 6, bits, little)
+      }
+    }
+    fixElfRpaths(dir, tool)
+    for (const bits of [1, 2]) {
+      for (const little of [false, true]) {
+        expect(existsSync(join(dir, 'lib', 'julia', `libccalltest-${bits}-${little}.so.debug.rpath`))).toBe(false)
+        expect(readFileSync(join(dir, 'lib', 'julia', `libccalltest-${bits}-${little}.so.rpath`), 'utf8').split(':')[0]).toBe('$ORIGIN/..')
+      }
+    }
+    // An ineffective patcher is still refused for the loadable image alone.
+    writeFileSync(tool, '#!/bin/sh\nexit 0\n')
+    expect(() => fixElfRpaths(dir, tool)).toThrow(/libccalltest-[12]-(?:true|false)\.so: rewritten loader path did not match/)
   })
 
   test('missing, failing and ineffective patchers refuse publication', () => {

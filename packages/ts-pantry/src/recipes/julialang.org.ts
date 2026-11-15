@@ -25,8 +25,10 @@ export const recipe: Recipe = {
       'mkdir -p {{prefix}}',
       'cp -av ./* {{prefix}}/',
     ],
-    // since these are vendored, all paths are relative; we don't need to fix-machos
-    skip: ['fix-machos'],
+    // since these are vendored, all paths are relative; we don't need to fix-machos.
+    // The same holds for ELF: julia opens lib/julia/* both through the linker
+    // and by path, so a flattened second copy in lib/ would be a second identity.
+    skip: ['fix-machos', 'fix-patchelf'],
     env: {
       'linux/x86-64': {
         PLATFORM: 'linux',

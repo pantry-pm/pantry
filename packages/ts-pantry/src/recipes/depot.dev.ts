@@ -16,7 +16,8 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   buildDependencies: {
-    'go.dev': '~1.21',
+    // go.mod asks for go >= 1.26.8 as of 2.103.17; the toolchain is local-only.
+    'go.dev': '^1.26',
     'gnu.org/coreutils': '*',
   },
 

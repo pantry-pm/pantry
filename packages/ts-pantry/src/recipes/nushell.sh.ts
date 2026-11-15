@@ -17,6 +17,10 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'openssl.org': '^1',
+    // bin/nu links libz.so.1 on Linux; macOS uses the system zlib.
+    linux: {
+      'zlib.net': '^1',
+    },
   },
   buildDependencies: {
     'rust-lang.org': '^1.60.0',

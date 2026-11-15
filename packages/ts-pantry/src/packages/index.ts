@@ -963,6 +963,7 @@ import { gnuorgfindutilsPackage } from './gnu.org/findutils'
 import { gnuorgfribidiPackage } from './gnu.org/fribidi'
 import { gnuorggawkPackage } from './gnu.org/gawk'
 import { gnuorggccPackage } from './gnu.org/gcc'
+import { gnuorggcclibatomicPackage } from './gnu.org/gcc/libatomic'
 import { gnuorggcclibgompPackage } from './gnu.org/gcc/libgomp'
 import { gnuorggcclibstdcxxPackage } from './gnu.org/gcc/libstdcxx'
 import { gnuorggdbmPackage } from './gnu.org/gdbm'
@@ -3488,9 +3489,11 @@ export interface Pantry {
 
   gnuorggcc: typeof gnuorggccPackage
 
-  gnuorggcc1: typeof gnuorggcclibgompPackage
+  gnuorggcc1: typeof gnuorggcclibatomicPackage
 
-  gnuorggcc2: typeof gnuorggcclibstdcxxPackage
+  gnuorggcc2: typeof gnuorggcclibgompPackage
+
+  gnuorggcc3: typeof gnuorggcclibstdcxxPackage
 
   gnuorggdbm: typeof gnuorggdbmPackage
 
@@ -5501,6 +5504,7 @@ export interface Pantry {
   libarchive: typeof libarchiveorgPackage
   libass: typeof libassPackage
   'libassuan-config': typeof gnupgorglibassuanPackage
+  libatomic: typeof gnuorggcclibatomicPackage
   libatomic_ops: typeof libatomic_opsPackage
   libatspi: typeof freedesktoporgatspi2corelibatspiPackage
   libb2: typeof blake2netlibb2Package
@@ -8219,9 +8223,11 @@ export const pantry: Pantry = {
 
   gnuorggcc: gnuorggccPackage,
 
-  gnuorggcc1: gnuorggcclibgompPackage,
+  gnuorggcc1: gnuorggcclibatomicPackage,
 
-  gnuorggcc2: gnuorggcclibstdcxxPackage,
+  gnuorggcc2: gnuorggcclibgompPackage,
+
+  gnuorggcc3: gnuorggcclibstdcxxPackage,
 
   gnuorggdbm: gnuorggdbmPackage,
 
@@ -10232,6 +10238,7 @@ export const pantry: Pantry = {
   libarchive: libarchiveorgPackage,
   libass: libassPackage,
   'libassuan-config': gnupgorglibassuanPackage,
+  libatomic: gnuorggcclibatomicPackage,
   libatomic_ops: libatomic_opsPackage,
   libatspi: freedesktoporgatspi2corelibatspiPackage,
   libb2: blake2netlibb2Package,

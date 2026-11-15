@@ -11,7 +11,11 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-tags',
     repo: 'open-mpi/ompi',
-    tagPattern: /^v(.+)$/,
+    // Final releases only. `v(.+)` also took `v6.0.0rc3` and `v5.0.9amzn1`:
+    // release candidates then filled every build slot ahead of the newest
+    // stable, and the 6.0 candidates cannot configure at all (their PRRTE
+    // wants PMIx 7, newer than any openpmix release).
+    tagPattern: /^v(\d+\.\d+\.\d+)$/,
   },
   distributable: {
     url: 'https://download.open-mpi.org/release/open-mpi/v{{version.marketing}}/openmpi-{{version}}.tar.bz2',
@@ -21,6 +25,11 @@ export const recipe: Recipe = {
     'open-mpi.org/hwloc': '*',
     'openpmix.github.io': '5',
     'libevent.org': '*',
+    // The Fortran bindings (libmpi_mpifh, libmpi_usempif08, ...) load
+    // libgfortran.so.5 and libquadmath.so.0, and mpifort drives gfortran.
+    // pkgx lists gcc as a companion; here a loaded library needs a declared
+    // runtime provider or the artifact is refused at publication.
+    'gnu.org/gcc': '*',
   },
   buildDependencies: {
     'zlib.net': '^1',

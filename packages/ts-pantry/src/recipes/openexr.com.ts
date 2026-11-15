@@ -10,7 +10,9 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-tags',
     repo: 'AcademySoftwareFoundation/openexr',
-    tagPattern: /^v(.+)$/,
+    // Final releases only: `v(.+)` also took every `-rc` and `-alpha` tag, and
+    // those are source-built (pkgx has no prebuilt to mirror) on each run.
+    tagPattern: /^v(\d+\.\d+\.\d+)$/,
   },
   distributable: {
     url: 'https://github.com/AcademySoftwareFoundation/openexr/archive/refs/tags/v{{version}}.tar.gz',
@@ -43,6 +45,13 @@ export const recipe: Recipe = {
       ARGS: [
         '-DCMAKE_INSTALL_PREFIX={{prefix}}',
         '-DCMAKE_BUILD_TYPE=Release',
+        // 3.5 added zstd compression: it links an external libzstd when CMake
+        // can find one, else the copy vendored in external/zstd. With no zstd
+        // declared it still found the one inside cmake's own tool closure and
+        // linked that, leaving libOpenEXRCore with a library no declared
+        // dependency provides. Use the vendored copy, as the mirrored pkgx
+        // builds do. Older releases ignore the option.
+        '-DOPENEXR_FORCE_INTERNAL_ZSTD=ON',
       ],
       linux: {
         ARGS: [

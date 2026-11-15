@@ -13,8 +13,10 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   buildDependencies: {
-    'go.dev': '^1.21',
-    'nodejs.org': '18.19.0',
+    // go.mod asks for go >= 1.26 and upstream's Dockerfile builds the vite
+    // frontend on node 20; the old exact node 18.19.0 pin is not a published binary.
+    'go.dev': '^1.26',
+    'nodejs.org': '^20',
     'classic.yarnpkg.com': '^1',
   },
 

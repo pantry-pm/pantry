@@ -19,9 +19,14 @@ export const recipe: Recipe = {
   },
   distributable: null,
   dependencies: {
+    // What the official ubuntu archives actually load (DT_NEEDED), one provider
+    // per library. `gnu.org/gcc` is not one of them: it ships its own
+    // libstdc++.so.6 beside the libstdcxx package's, and two different files
+    // for one SONAME are refused at publication.
     linux: {
-      'gnu.org/gcc/libstdcxx': '14',
-      'gnu.org/gcc': '14',
+      'gnu.org/gcc/libstdcxx': '14', // libstdc++.so.6, libgcc_s.so.1
+      'gnu.org/gcc/libgomp': '*', // libgomp.so.1 (the libggml-cpu-* backends)
+      'openssl.org': '^3', // libssl.so.3, libcrypto.so.3 (llama-cli, llama-server)
     },
   },
   build: {
@@ -46,6 +51,14 @@ export const recipe: Recipe = {
       'cp -R "llama-b${BASE}/." {{prefix}}/bin/',
       'chmod +x {{prefix}}/bin/llama* {{prefix}}/bin/rpc-server 2>/dev/null || true',
       'ln -sf llama-cli {{prefix}}/bin/llama.cpp',
+      // The archive is flat and stays flat in bin/: ggml finds its CPU backends
+      // (libggml-cpu-*.so) by scanning the executable's own directory. Runtime
+      // normalization resolves a package's libraries through lib/ only and
+      // points every loader path there, so name each library in lib/ too.
+      'mkdir -p {{prefix}}/lib',
+      'for LIB in {{prefix}}/bin/lib*.so* {{prefix}}/bin/lib*.dylib; do',
+      '  if [ -e "$LIB" ]; then ln -sf "../bin/${LIB##*/}" "{{prefix}}/lib/${LIB##*/}"; fi',
+      'done',
     ],
   },
   test: {

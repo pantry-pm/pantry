@@ -23,6 +23,24 @@ export const recipe: Recipe = {
       './koch boot -d:release',
       './koch tools',
       './install.sh {{prefix}}',
+      // install.sh puts everything under {{prefix}}/nim (nim/bin, nim/lib, ...).
+      // Lift it into the prefix, or nothing lands in {{prefix}}/bin.
+      {
+        run: [
+          'rm -rf nim/compiler',
+          'cp -r nim/* .',
+          'rm -rf nim',
+        ],
+        'working-directory': '{{prefix}}',
+      },
+      // install.sh installs the compiler only; `koch tools` left the rest in bin/.
+      {
+        run: 'cp $BINS {{prefix}}/bin/',
+        'working-directory': 'bin',
+      },
     ],
+    env: {
+      BINS: ['atlas', 'nim', 'nim-gdb', 'nim_dbg', 'nimble', 'nimgrep', 'nimpretty', 'nimsuggest', 'testament'],
+    },
   },
 }

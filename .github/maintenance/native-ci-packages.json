@@ -10,5 +10,6 @@
   "netfilter.org/nftables": ["1.1.7"],
   "systemd.io/libudev": ["262.1"],
   "zig-dtsx.stacksjs.org": ["0.11.54"],
-  "stacksjs.com/bun": ["1.4.4.1"]
+  "stacksjs.com/bun": ["1.4.4.1"],
+  "gnu.org/gcc/libatomic": ["15.2.0"]
 }

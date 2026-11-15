@@ -15,6 +15,13 @@ export const recipe: Recipe = {
     url: 'https://github.com/scala/scala3/archive/refs/tags/{{version.tag}}.tar.gz',
     stripComponents: 1,
   },
+  // The coursier and scala-cli native images (bin/.cs.aux,
+  // bin/.scala-cli.aux) link libz.so.1 on Linux.
+  dependencies: {
+    linux: {
+      'zlib.net': '^1',
+    },
+  },
 
   build: {
     script: [

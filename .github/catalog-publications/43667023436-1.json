@@ -1,0 +1,27 @@
+{
+  "id": "43667023436-1",
+  "domains": [
+    "browser-use.com",
+    "cloudnative-pg.io",
+    "coder.com/code-server",
+    "depot.dev",
+    "git-scm.org",
+    "github.com/ggerganov/llama.cpp",
+    "gnu.org/gcc/libatomic",
+    "grpc.io",
+    "helix-editor.com",
+    "julialang.org",
+    "lavinmq.com",
+    "leo-lang.org",
+    "micro-editor.github.io",
+    "mise.jdx.dev",
+    "mongodb.com",
+    "nim-lang.org",
+    "nodejs.org",
+    "nushell.sh",
+    "openexr.com",
+    "plantuml.com",
+    "projen.io",
+    "rust-lang.org"
+  ]
+}

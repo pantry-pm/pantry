@@ -36,6 +36,12 @@ export const recipe: Recipe = {
         '--disable-cairo',
         '--without-x',
         '--disable-cpuid',
+        // Each of these is found on the build host and linked if present, and
+        // none is a declared dependency: a consumer that bundles libhwloc is
+        // then refused for libudev, libpciaccess and libxml2 it cannot name.
+        '--disable-libudev',
+        '--disable-pci',
+        '--disable-libxml2',
       ],
     },
   },

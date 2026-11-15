@@ -20,11 +20,13 @@ export const recipe: Recipe = {
     'pcre.org/v2': '10',
     'libevent.org': '2',
     'hboehm.info/gc': '8',
+    // bin/lavinmq links liblz4 dynamically; it is a runtime library, not
+    // only a build input.
+    'lz4.org': '^1',
   },
   buildDependencies: {
     'crystal-lang.org': '~1.19',
     'crystal-lang.org/shards': '*',
-    'lz4.org': '^1',
     'gnu.org/help2man': '*',
     'perl.org': '=5.42.0',
     'etcd.io': '*',

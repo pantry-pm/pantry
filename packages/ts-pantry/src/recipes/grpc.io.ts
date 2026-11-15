@@ -6,7 +6,10 @@ export const recipe: Recipe = {
   description: 'The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)',
   homepage: 'https://grpc.io/',
   github: 'https://github.com/grpc/grpc',
-  programs: ['grpc_csharp_plugin', 'grpc_node_plugin', 'grpc_cpp_plugin', 'grpc_python_plugin', 'grpc_objective_c_plugin', 'grpc_ruby_plugin', 'grpc_php_plugin', 'grpc_cli'],
+  programs: ['grpc_csharp_plugin', 'grpc_node_plugin', 'grpc_cpp_plugin', 'grpc_python_plugin', 'grpc_objective_c_plugin', 'grpc_ruby_plugin', 'grpc_php_plugin'],
+  // grpc_cli is only built on darwin (see the build script); declaring it for
+  // linux fails the declared-program check on an artifact that never has it.
+  platformPrograms: { darwin: ['grpc_cli'] },
   versionSource: {
     type: 'github-releases',
     repo: 'grpc/grpc',
@@ -18,21 +21,23 @@ export const recipe: Recipe = {
     ref: 'v{{version}}',
   },
   dependencies: {
-    // grpc 1.81.0 vendors abseil 20250512.1 (third_party/abseil-cpp submodule +
-    // bazel/grpc_deps.bzl). Newer abseil (e.g. 20260107.1) installs a CMake
-    // package whose abslTargets.cmake references files grpc's
-    // `find_package(absl REQUIRED CONFIG)` can't resolve ("not all the files it
-    // references"), so pin to the vendored, known-good release. This still
-    // satisfies protobuf.dev's abseil floor (^20250127).
-    'abseil.io': '20250512.1',
+    // grpc vendors the abseil 20250512 LTS line (third_party/abseil-cpp submodule +
+    // bazel/grpc_deps.bzl), so build against that line. Bound it by line, not by
+    // patch: only the newest patch of an LTS line is published (20250512.2), and
+    // an exact `20250512.1` pin has no binary on any platform, which fails
+    // dependency resolution before the build starts. Patch releases of one LTS
+    // line share the same inline namespace and SONAME, so they are ABI-equal.
+    'abseil.io': '^20250512',
     'c-ares.org': '*',
     'openssl.org': '^1.1',
     'github.com/google/re2': '*',
     'zlib.net': '*',
-    // grpc links to specific versions, so we use theirs on linux
     'linux': {
       'gnu.org/gcc/libstdcxx': '14',
-      'protobuf.dev': '30.0.0',
+      // linux links the packaged protobuf (gRPC_PROTOBUF_PROVIDER=package).
+      // This is a floor, not a pin: protobuf 30.0.0 was never published, and
+      // the working linux builds linked the newest published protobuf.
+      'protobuf.dev': '>=30',
     },
   },
   buildDependencies: {

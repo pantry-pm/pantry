@@ -16,7 +16,9 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   buildDependencies: {
-    'go.dev': '=1.22.0',
+    // go.mod asks for go >= 1.26.6 as of 4.51, and an exact patch pin only
+    // resolves while that one binary is published.
+    'go.dev': '^1.26',
   },
 
   build: {

@@ -17,7 +17,8 @@ export const recipe: Recipe = {
     stripComponents: 1,
   },
   buildDependencies: {
-    'go.dev': '~1.23',
+    // go.mod asks for go >= 1.26.4 as of 1.30; the toolchain is local-only.
+    'go.dev': '^1.26',
   },
 
   build: {
@@ -34,7 +35,9 @@ export const recipe: Recipe = {
         '-X github.com/cloudnative-pg/cloudnative-pg/pkg/versions.buildVersion={{version}}',
       ],
       'linux': {
-        GO_LDFLAGS: '-buildmode=pie',
+        // An array supplements the base flags; a scalar replaced them and
+        // dropped the version stamp on linux.
+        GO_LDFLAGS: ['-buildmode=pie'],
       },
     },
   },

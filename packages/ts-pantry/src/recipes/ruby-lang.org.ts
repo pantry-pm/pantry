@@ -22,6 +22,11 @@ export const recipe: Recipe = {
     'openssl.org': '^1.1',
     'pyyaml.org': '^0.2',
     'zlib.net': '^1',
+    // bin/ruby links libcrypt.so.1 for String#crypt. glibc no longer ships
+    // it, so it has to come from libxcrypt, as it does for python.org.
+    linux: {
+      'github.com/besser82/libxcrypt': '^4',
+    },
   },
 
   buildDependencies: {

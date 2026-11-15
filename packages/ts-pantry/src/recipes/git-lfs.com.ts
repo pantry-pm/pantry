@@ -24,9 +24,6 @@ export const recipe: Recipe = {
   dependencies: {
     'git-scm.org': '*',
   },
-  buildDependencies: {
-    'gnu.org/wget': '*',
-  },
 
   build: {
     env: {
@@ -48,13 +45,17 @@ export const recipe: Recipe = {
       },
     },
     script: [
-      'wget $DOWNLOAD_URL',
+      // curl, not the pantry wget: that one has no CA bundle on linux and
+      // refused github.com. An HTTP error (curl 22) means upstream ships no
+      // asset for this platform at this version (darwin/arm64 starts at 2.13).
+      'curl -fSL --retry 3 -o "${DOWNLOAD_URL##*/}" "$DOWNLOAD_URL" || { [ $? -eq 22 ] && exit 42; exit 1; }',
       '$UNARCHIVE',
-      'cd git-lfs-{{version}}',
+      // Archives before 3.2.0 are flat; later ones nest under git-lfs-<version>.
+      'if [ -d git-lfs-{{version}} ]; then cd git-lfs-{{version}}; fi',
       'mkdir -p {{prefix}}/bin',
       'install ./git-lfs {{prefix}}/bin/git-lfs',
-      'mkdir -p {{prefix}}/man',
-      'mv ./man/* {{prefix}}/man/',
+      // 2.12 and older carry no man pages.
+      'if [ -d man ]; then mkdir -p {{prefix}}/man && mv ./man/* {{prefix}}/man/; fi',
     ],
   },
 }

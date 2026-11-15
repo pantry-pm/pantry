@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { chmodSync, cpSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fixUp } from '../scripts/fix-up'
@@ -92,3 +92,55 @@ test.skipIf(process.platform !== 'darwin')(`Mach-O publication uses only declare
   finally { rmSync(root, { recursive: true, force: true }) }
 }, 60_000)
 }
+
+// kerberos.node in code-server is a universal add-on. `otool -L` prints one
+// `<file> (architecture <arch>):` header per slice, and the later headers were
+// read as load commands: the add-on appeared to depend on its own path, which
+// no library directory provides when the application lives under libexec.
+test.skipIf(process.platform !== 'darwin')('a universal add-on does not depend on its own per-architecture otool headers', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-macho-universal-'))
+  const environment = { ...process.env }
+  for (const key of ['DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH', 'LD_LIBRARY_PATH', 'LD_PRELOAD']) delete environment[key]
+  const run = (command: string[]) => {
+    const child = Bun.spawnSync(command, { cwd: root, env: environment, stdout: 'pipe', stderr: 'pipe' })
+    expect(child.exitCode, child.stderr.toString()).toBe(0)
+    return child.stdout.toString().trim()
+  }
+  try {
+    const stage = join(root, 'artifact')
+    const modules = join(stage, 'libexec/vendor/node_modules/addon/build/Release')
+    mkdirSync(modules, { recursive: true })
+    mkdirSync(join(stage, 'bin'))
+    mkdirSync(join(stage, 'lib'))
+    writeFileSync(join(stage, 'bin/launcher'), '#!/bin/sh\nexit 0\n', { mode: 0o755 })
+    writeFileSync(join(root, 'helper.c'), 'int helper(void) { return 41; }')
+    writeFileSync(join(root, 'addon.c'), 'extern int helper(void); int addon(void) { return helper() + 1; }')
+    const universal = ['-arch', 'arm64', '-arch', 'x86_64', '-Wl,-headerpad_max_install_names']
+    const helper = join(stage, 'lib/libaddon-helper.dylib')
+    const addon = join(modules, 'addon.node')
+    run(['xcrun', 'clang', ...universal, '-dynamiclib', join(root, 'helper.c'), '-install_name', '@rpath/libaddon-helper.dylib', '-o', helper])
+    run(['xcrun', 'clang', ...universal, '-bundle', join(root, 'addon.c'), helper, '-Wl,-rpath,@loader_path/../../../../../../lib', '-o', addon])
+    expect(run(['otool', '-L', addon]).split('\n').filter(line => line.includes('(architecture ')).length).toBe(2)
+    const digest = (file: string) => new Bun.CryptoHasher('sha256').update(readFileSync(file)).digest('hex')
+    const before = [digest(addon), digest(helper)]
+    // A vendored application keeps its own loader layout and signatures.
+    await fixUp(stage, 'darwin-arm64', ['fix-machos'])
+    expect([digest(addon), digest(helper)]).toEqual(before)
+    // Without that skip both slices are normalized and the image is re-signed.
+    await fixUp(stage, 'darwin-arm64')
+    expect(run(['otool', '-L', addon]).split('\n').filter(line => line.includes('@rpath/libaddon-helper.dylib')).length).toBe(2)
+    run(['codesign', '--verify', '--strict', addon])
+    expect(existsSync(join(stage, 'lib/addon.node'))).toBe(false)
+    // A library no declared package provides is still refused, once.
+    writeFileSync(join(root, 'orphan.c'), 'extern int absent(void); int orphan(void) { return absent(); }')
+    writeFileSync(join(root, 'absent.c'), 'int absent(void) { return 0; }')
+    run(['xcrun', 'clang', ...universal, '-dynamiclib', join(root, 'absent.c'), '-install_name', '@rpath/libabsent.dylib', '-o', join(root, 'libabsent.dylib')])
+    run(['xcrun', 'clang', ...universal, '-bundle', join(root, 'orphan.c'), join(root, 'libabsent.dylib'), '-o', join(modules, 'orphan.node')])
+    let message = ''
+    try { await fixUp(stage, 'darwin-arm64', ['fix-machos']) }
+    catch (error) { message = String(error) }
+    expect(message.split('Undeclared or missing runtime library').length - 1).toBe(1)
+    expect(message).toContain('@rpath/libabsent.dylib required by libexec/vendor/node_modules/addon/build/Release/orphan.node')
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+}, 60_000)

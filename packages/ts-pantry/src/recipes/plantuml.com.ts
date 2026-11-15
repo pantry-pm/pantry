@@ -10,6 +10,9 @@ export const recipe: Recipe = {
   versionSource: {
     type: 'github-releases',
     repo: 'plantuml/plantuml',
+    // `v1.2026.4-native` releases carry GraalVM native images, not the jar this
+    // recipe installs; they are a second artifact of 1.2026.4, not a version.
+    tagPattern: /^v(\d+\.\d+\.\d+)$/,
   },
   distributable: {
     url: 'https://github.com/plantuml/plantuml/archive/v{{version}}.tar.gz',
@@ -19,13 +22,15 @@ export const recipe: Recipe = {
     'graphviz.org': '*',
     'openjdk.org': '*',
   },
-  buildDependencies: {
-    'gnu.org/wget': '*',
-  },
 
   build: {
     script: [
-      'wget https://github.com/plantuml/plantuml/releases/download/v{{version}}/plantuml-{{version}}.jar',
+      // The catalog never prunes, so the `-native` entries already in it keep
+      // being selected. Those releases publish no plantuml-<version>.jar.
+      'case "{{version}}" in *-native) echo "plantuml {{version}} is a native-image release with no jar" >&2; exit 42 ;; esac',
+      // curl, not wget: the wget dependency has no CA bundle configured in the
+      // build environment and refused github.com's certificate.
+      'curl -fL -o plantuml-{{version}}.jar https://github.com/plantuml/plantuml/releases/download/v{{version}}/plantuml-{{version}}.jar',
       'mkdir -p {{prefix}}/libexec',
       'install plantuml-{{version}}.jar {{prefix}}/libexec/',
       'cat <<EOS > plantuml',

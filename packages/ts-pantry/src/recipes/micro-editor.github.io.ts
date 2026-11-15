@@ -22,6 +22,9 @@ export const recipe: Recipe = {
 
   build: {
     script: [
+      // 1.x predates Go modules (no go.mod, dependencies in git submodules the
+      // tag archive does not carry), so it has no buildable source here.
+      { if: '<2', run: 'echo "micro {{ version }} predates Go modules and cannot be built from its tag archive" >&2; exit 42' },
       'mkdir -p "{{ prefix }}"/bin "{{ prefix }}"/share/man/man1',
       'go build -trimpath -ldflags "$LDFLAGS -X \'github.com/zyedidia/micro/v2/internal/util.CompileDate=$(go run tools/build-date.go)\'" ./cmd/micro',
       'install -m755 micro "{{ prefix }}"/bin',

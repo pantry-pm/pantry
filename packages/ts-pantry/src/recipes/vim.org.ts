@@ -21,6 +21,14 @@ export const recipe: Recipe = {
     'invisible-island.net/ncurses': '>=6.3',
     'perl.org': '>=5.36',
     'ruby-lang.org': '>=3.2',
+    // perl.org ships a static libperl (-Duseshrplib=false), so --enable-perlinterp
+    // links perl's crypt() user into bin/vim itself and vim gains a direct
+    // libcrypt.so.1 NEEDED entry. glibc no longer provides libcrypt, so without a
+    // declared provider the link resolved it from the build host and ELF
+    // normalization refused the artifact.
+    linux: {
+      'github.com/besser82/libxcrypt': '^4',
+    },
   },
   buildDependencies: {
     'gnu.org/make': '^4.3',
