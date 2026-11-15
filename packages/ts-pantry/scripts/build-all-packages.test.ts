@@ -660,3 +660,18 @@ describe('build-metadata spellings', () => {
     expect(await selectVersionsForBuild(pkg, 10)).toContain('0.18.0-dev.368_aaaaaaaaa')
   })
 })
+
+test('a package that throws around its build fails alone, and the batch goes on', async () => {
+  const { failureAsResult } = await import('./build-all-packages')
+  const shown: string[] = []
+  const error = console.error
+  console.error = (...args: unknown[]) => { shown.push(args.join(' ')) }
+  try {
+    expect(await failureAsResult('broken.example', async () => { throw new Error('Cannot normalize ELF loader paths: Undeclared or missing runtime library libz.so.1') }))
+      .toEqual({ status: 'failed', error: 'Cannot normalize ELF loader paths: Undeclared or missing runtime library libz.so.1' })
+    expect(await failureAsResult('fine.example', async () => ({ status: 'uploaded' }))).toEqual({ status: 'uploaded' })
+  }
+  finally { console.error = error }
+  expect(shown).toHaveLength(1)
+  expect(shown[0]).toContain('broken.example')
+})

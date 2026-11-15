@@ -1984,6 +1984,26 @@ function installDirHasFiles(dir: string): boolean {
  * were not (the packaging/upload failure path, and every skip) are exactly the
  * ones that hid a 74-minute stall behind a line that printed no duration.
  */
+/**
+ * One package of a batch. `buildAndUpload` reports a failed build as a result,
+ * but what runs around the build can still throw: a mirrored prebuilt whose
+ * runtime libraries cannot be normalized, a dependency with no published
+ * binary. That is this package failing, not the batch: the packages after it
+ * are still owed their turn, and the summary still has to say which one it was.
+ */
+export async function failureAsResult(domain: string, build: () => Promise<BuildResult>): Promise<BuildResult> {
+  try { return await build() }
+  catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`   ❌ Failed: ${domain}: ${message}`)
+    return { status: 'failed', error: message }
+  }
+}
+
+function buildOne(...args: Parameters<typeof buildAndUpload>): Promise<BuildResult> {
+  return failureAsResult(args[0].domain, () => buildAndUpload(...args))
+}
+
 async function buildAndUpload(
   pkg: BuildablePackage,
   bucket: string,
@@ -3310,13 +3330,13 @@ else {
 
         // Create a modified package with ONLY this version (prevent fallback to other versions)
         const versionPkg = { ...pkg, latestVersion: ver, versions: [ver] }
-        const result = await buildAndUpload(versionPkg, bucket, region, platform, force)
+        const result = await buildOne(versionPkg, bucket, region, platform, force)
         const key = `${pkg.domain}@${ver}`
         results[key] = { ...result, version: ver }
       }
     }
 else {
-      const result = await buildAndUpload(pkg, bucket, region, platform, force)
+      const result = await buildOne(pkg, bucket, region, platform, force)
       results[pkg.domain] = { ...result, version: pkg.latestVersion }
     }
   }
