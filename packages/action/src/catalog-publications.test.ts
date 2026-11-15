@@ -145,6 +145,23 @@ test('what a request still owes is the packages its last attempt could not publi
   await expect(recoverPublication(batch, { ...reporting({}).options, covering: () => [], supersede: async () => {} }))
     .rejects.toThrow('failed three times (broken.example, curl.se, zlib.net)')
 
+  // A request older than the annotation is built by a script that cannot write it.
+  // Its red jobs still end in the build summary, and its green ones owe nothing.
+  const summary = (...entries: string[]) => ['2026-01-01T00:00:00.0000000Z Build Summary', '2026-01-01T00:00:00.0000000Z ', `2026-01-01T00:00:00.0000000Z Failed (${entries.length}):`,
+    ...entries.map(entry => `2026-01-01T00:00:00.0000000Z    - ${entry}: build-package.ts exited with code 1: error`), '2026-01-01T00:00:00.0000000Z ',
+    `2026-01-01T00:00:00.0000000Z Total: 0 uploaded, 3 skipped, 0 unavailable, ${entries.length} failed`].join('\n')
+  const logs: Record<number, string> = { 2: summary('broken.example@1.0.0', 'broken.example@1.0.1'), 4: summary('broken.example@1.0.1') }
+  const old = reporting({})
+  const fetched: number[] = []
+  const jobLog = async (id: number) => { fetched.push(id); return logs[id] ?? null }
+  expect(await failedDomains(12, { ...old.options, jobLog })).toEqual(['broken.example'])
+  expect(fetched).toEqual([2, 4])
+  expect(await recoverPublication(batch, { ...old.options, jobLog, covering: () => ['201-1'], supersede: async () => {} }))
+    .toBe('superseded by 201-1 (broken.example)')
+  // A red job whose log cannot be had, or has no summary, leaves every package in doubt.
+  expect(await failedDomains(12, { ...old.options, jobLog: async id => id === 2 ? logs[2]! : null })).toBeNull()
+  expect(await failedDomains(12, { ...old.options, jobLog: async () => 'the runner lost communication with the server' })).toBeNull()
+
   // Red jobs that name no package (a runner died): nothing is superseded on their word.
   const unnamed = reporting({ 2: result('none'), 3: result('none'), 4: result('none') })
   await expect(recoverPublication(batch, { ...unnamed.options, covering: () => ['201-1'], supersede: async () => { throw new Error('must not retire') } }))

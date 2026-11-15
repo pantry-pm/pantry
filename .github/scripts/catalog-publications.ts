@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { packageDomain, parsePublicationResult, PUBLICATION_RESULT_TITLE, versionsChanged } from '../../packages/ts-pantry/scripts/changed-package-domains'
+import { packageDomain, parseBuildSummaryFailures, parsePublicationResult, PUBLICATION_RESULT_TITLE, versionsChanged } from '../../packages/ts-pantry/scripts/changed-package-domains'
 import { createGitHubApi } from './github-api'
 
 export const publicationDirectory = '.github/catalog-publications'
@@ -20,6 +20,8 @@ interface RecoveryOptions {
   /** The later requests that between them name every one of `domains`, or none: see `laterRequestsCovering`. */
   covering?: (domains: string[]) => string[]
   supersede?: (id: string, sha: string) => Promise<void>
+  /** A job's log as text, or null when it cannot be had. Read only for a red job that left no annotation. */
+  jobLog?: (jobId: number) => Promise<string | null>
 }
 
 function git(cwd: string, ...args: string[]): string {
@@ -169,7 +171,7 @@ export async function preparePublications(cwd: string, id: string, claimedDomain
  * ran says nothing readable: a run from before the annotation, or a job that
  * died before it got that far. Every package of the request is in doubt then.
  */
-export async function failedDomains(runId: number, options: Pick<RecoveryOptions, 'repository' | 'api'>): Promise<string[] | null> {
+export async function failedDomains(runId: number, options: Pick<RecoveryOptions, 'repository' | 'api' | 'jobLog'>): Promise<string[] | null> {
   const { repository, api } = options
   const result = await api(`repos/${repository}/actions/runs/${runId}/jobs?filter=latest&per_page=100`)
   const publishers = (result.jobs as any[]).filter(job => /^Publish (\(|darwin)/.test(job.name) && job.conclusion !== 'skipped')
@@ -179,7 +181,17 @@ export async function failedDomains(runId: number, options: Pick<RecoveryOptions
     const annotations = await api(`repos/${repository}/check-runs/${job.id}/annotations?per_page=100`) as Array<{ title?: string, message?: string }>
     if (!Array.isArray(annotations)) return null
     const reported = annotations.filter(annotation => annotation.title === PUBLICATION_RESULT_TITLE)
-    if (!reported.length) return null
+    if (!reported.length) {
+      // A source commit older than the annotation: its build script cannot
+      // write one. A green job delivered what it was asked; a red one still
+      // lists what failed at the end of its log.
+      if (job.conclusion === 'success') continue
+      const log = job.conclusion === 'failure' ? await options.jobLog?.(job.id) : null
+      const listed = log ? parseBuildSummaryFailures(log) : null
+      if (!listed) return null
+      for (const domain of listed) failed.add(domain)
+      continue
+    }
     for (const annotation of reported) {
       const domains = parsePublicationResult(annotation.message ?? '')
       if (!domains) return null
@@ -284,13 +296,22 @@ if (import.meta.main) {
     const repository = process.env.GITHUB_REPOSITORY ?? ''
     if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error('Expected repository')
     const api = createGitHubApi({ token: process.env.GH_TOKEN ?? '' })
+    // Logs are text behind a redirect to a signed URL, which the JSON client does not read.
+    const jobLog = async (jobId: number): Promise<string | null> => {
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repository}/actions/jobs/${jobId}/logs`, {
+          headers: { 'Authorization': `Bearer ${process.env.GH_TOKEN ?? ''}`, 'X-GitHub-Api-Version': '2022-11-28' }, signal: AbortSignal.timeout(60_000) })
+        return response.ok ? await response.text() : null
+      }
+      catch { return null }
+    }
     if (process.env.PUBLISHER_RUN) await waitForPublisherCompletion({ repository, runId: process.env.PUBLISHER_RUN, api })
     const failures = []
     const pending = await pendingPublications(cwd)
     for (const publication of pending) {
       try {
         git(cwd, 'merge-base', '--is-ancestor', publication.sha, 'HEAD')
-        const result = await recoverPublication(publication, { repository, api, createdAfter: git(cwd, 'show', '-s', '--format=%cI', publication.sha), retryFailed: process.env.RETRY_FAILED === 'true',
+        const result = await recoverPublication(publication, { repository, api, jobLog, createdAfter: git(cwd, 'show', '-s', '--format=%cI', publication.sha), retryFailed: process.env.RETRY_FAILED === 'true',
           // Only requests that are still pending take over: each is retried or reported in its own right.
           covering: domains => laterRequestsCovering({ id: publication.id, domains }, pending),
           supersede: async (id, sha) => { markPublication(cwd, 'superseded', id, sha) },

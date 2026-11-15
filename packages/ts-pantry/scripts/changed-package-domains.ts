@@ -110,3 +110,40 @@ export function parsePublicationResult(message: string): string[] | null {
   const domains = message.split(',')
   return domains.every(domain => /^[a-zA-Z0-9._/-]{1,128}$/.test(domain)) ? domains : null
 }
+
+/**
+ * The domains a publisher job's own summary says failed, for a job that left no
+ * annotation. A request is built from its source commit, so one older than the
+ * annotation runs a build script that cannot write it, however new the
+ * workflow is. Its log still ends in the summary every version of that script
+ * prints:
+ *
+ *   Failed (2):
+ *      - broken.example@1.2.3: build-package.ts exited with code 1: ...
+ *   Total: 0 uploaded, 16 skipped, 0 unavailable, 2 failed
+ *
+ * Only the last summary is read, since a build's output comes before it and
+ * could print a summary of its own, and it has to add up: as many entries as
+ * its total says failed. A message that runs over several lines is one entry. null: no summary, or one that does not add up, or a
+ * summary of nothing failing (the job is red for a reason it does not name).
+ */
+export function parseBuildSummaryFailures(log: string): string[] | null {
+  const lines = log.split('\n').map(line => line.replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z /, '').trimEnd())
+  const start = lines.lastIndexOf('Build Summary')
+  if (start < 0) return null
+  const summary = lines.slice(start)
+  const total = summary.map(line => line.match(/^Total: \d+ uploaded, .*\b(\d+) failed$/)).find(Boolean)
+  const heading = summary.findIndex(line => /^Failed \(\d+\):$/.test(line))
+  if (!total || heading < 0) return null
+  const domains: string[] = []
+  for (const line of summary.slice(heading + 1)) {
+    if (!line) break
+    // A failure's message can run over several lines; only its first names a package.
+    const entry = line.match(/^ {3}- (\S+)@[^\s@]+: /)
+    if (!entry) continue
+    if (!/^[a-zA-Z0-9._/-]{1,128}$/.test(entry[1]!)) return null
+    domains.push(entry[1]!)
+  }
+  if (!domains.length || domains.length !== Number(total[1])) return null
+  return [...new Set(domains)].sort()
+}
