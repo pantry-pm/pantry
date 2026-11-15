@@ -239,6 +239,10 @@ Direct macOS releases require `APPLE_APPLICATION_CERTIFICATE` (base64 P12),
 `APP_STORE_CONNECT_PRIVATE_KEY`, or the `APPLE_ID`,
 `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` alternative. Local runs can use
 `APPLE_NOTARY_KEYCHAIN_PROFILE` or `APP_STORE_CONNECT_API_KEY_PATH` instead.
+Stacks and Buddy apps need no renaming: `APP_STORE_CONNECT_API_ISSUER_ID` is
+read as the issuer, and `APP_STORE_CONNECT_API_KEY` as the key when it holds the
+PEM text of the `.p8` file (line breaks may be literal `\n`). An explicit
+`APP_STORE_CONNECT_PRIVATE_KEY` wins, then `APP_STORE_CONNECT_API_KEY_PATH`.
 Pantry selects the imported certificates by fingerprint, signs the outer DMG
 with a secure timestamp, and requires Gatekeeper to accept both the app and
 the notarized DMG. Only Apple's Accepted status allows stapling; explicit

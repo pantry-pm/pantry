@@ -37,6 +37,8 @@ Enable `native.macos.appStore` in `pantry.json`. Keep listing metadata in `app-s
 
 Set `native.registry.domain` in `pantry.json`, for example `github.com/your-org/your-app`. Keep `native.macos.notarize` enabled. The native release action qualifies the app, staples its own notarization ticket, archives the Developer ID bundle and publishes it through Pantry's staged, malware-scanned binary API. The Store-signed bundle is reserved for Apple delivery. The archive and a credential-free publication receipt are attached to the GitHub release.
 
+Notarization reads `APP_STORE_CONNECT_API_KEY_ID`, an issuer in `APP_STORE_CONNECT_ISSUER_ID` or `APP_STORE_CONNECT_API_ISSUER_ID`, and the `.p8` key from `APP_STORE_CONNECT_PRIVATE_KEY`, `APP_STORE_CONNECT_API_KEY_PATH` or `APP_STORE_CONNECT_API_KEY`, in that order. `APP_STORE_CONNECT_API_KEY` is the name Stacks and Buddy apps already keep in their encrypted `.env.production`; it must hold the PEM text of the key, and line breaks may be literal `\n`. `APPLE_NOTARY_KEYCHAIN_PROFILE`, or `APPLE_ID` with `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID`, remain alternatives.
+
 The caller of `pantry-pm/pantry/.github/workflows/native-app.yml` passes `PANTRY_TOKEN` as an optional workflow secret. Registry publication runs only for releases whose manifest enables that target. Checks and pull requests need no registry credential.
 
 Application archives carry their `.app` bundle directly. Pantry validates the bundle manifest and a non-empty executable before materialization, preserving the bundle and its notarization ticket. The catalog's `programs` field lists exported command line tools; a GUI-only application declares an empty list.

@@ -331,6 +331,29 @@ describe('Apple native publishing', () => {
     await expect(notarizeNativeArtifact(dmg, { keychainProfile: 'existing' }, async () => ({ ...ok, stdout: JSON.stringify({ id: 'rejected-id', status: 'Invalid' }) }))).rejects.toThrow('did not accept')
     expect(() => resolveNotaryCredentials({ APP_STORE_CONNECT_API_KEY_ID: 'partial' })).toThrow('complete')
   })
+  test('accepts the App Store Connect key variable Stacks and Buddy apps store', () => {
+    const pem = '-----BEGIN PRIVATE KEY-----\nfixture\n-----END PRIVATE KEY-----'
+    const identity = { APP_STORE_CONNECT_API_KEY_ID: 'ABC123', APP_STORE_CONNECT_API_ISSUER_ID: 'issuer' }
+    const expected = { apiKeyId: 'ABC123', issuerId: 'issuer', privateKey: `${pem}\n` }
+    expect(resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: pem })).toEqual(expected)
+    // A dotenv value keeps its line breaks as a literal backslash-n.
+    expect(resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: pem.replaceAll('\n', '\\n') })).toEqual(expected)
+    expect(resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: `  ${pem}\n` })).toEqual(expected)
+
+    // Pantry's own variable, then a key file, win over the alias.
+    expect(resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: pem, APP_STORE_CONNECT_PRIVATE_KEY: 'explicit key' })).toMatchObject({ privateKey: 'explicit key' })
+    const keyPath = join(temporary(), 'AuthKey_ABC123.p8')
+    writeFileSync(keyPath, 'key from file')
+    expect(resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: pem, APP_STORE_CONNECT_API_KEY_PATH: keyPath })).toMatchObject({ privateKey: 'key from file' })
+    // An explicit key is used as given, so an unusable alias beside it is never read.
+    expect(resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: 'not a key', APP_STORE_CONNECT_PRIVATE_KEY: 'explicit key' })).toMatchObject({ privateKey: 'explicit key' })
+
+    // A path or a base64 blob is not the PEM text, and never reaches notarytool.
+    for (const value of ['/keys/AuthKey_ABC123.p8', Buffer.from(pem).toString('base64')])
+      expect(() => resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: value })).toThrow('PEM text')
+    expect(() => resolveNotaryCredentials({ APP_STORE_CONNECT_API_KEY: pem })).toThrow('complete')
+    expect(() => resolveNotaryCredentials({ ...identity, APP_STORE_CONNECT_API_KEY: '  ' })).toThrow('complete')
+  })
   test('retries interrupted ticket transport without resubmitting notarization', async () => {
     const dmg = join(temporary(), 'Example.dmg')
     writeFileSync(dmg, 'signed')

@@ -9,11 +9,28 @@ import { runNativeCommand, succeeded } from './command'
 
 export type NotaryCredentials = { keychainProfile: string } | { apiKeyId: string, issuerId: string, privateKey: string } | { appleId: string, password: string, teamId: string }
 
+/**
+ * `APP_STORE_CONNECT_API_KEY` as Stacks and Buddy define it: the PEM text of the
+ * .p8 key. A value that went through a dotenv file keeps its line breaks as a
+ * literal `\\n`, so both spellings are accepted. Anything else, such as a path
+ * or a base64 blob, is refused here instead of reaching notarytool as a key.
+ */
+function appStoreConnectApiKeyPem(value: string | undefined): string | undefined {
+  const pem = value?.trim().replaceAll('\\n', '\n')
+  if (!pem) return undefined
+  if (!pem.includes('-----BEGIN PRIVATE KEY-----')) throw new Error('APP_STORE_CONNECT_API_KEY must hold the PEM text of the .p8 key')
+  return `${pem}\n`
+}
+
 export function resolveNotaryCredentials(env: NodeJS.ProcessEnv = process.env): NotaryCredentials {
   if (env.APPLE_NOTARY_KEYCHAIN_PROFILE) return { keychainProfile: env.APPLE_NOTARY_KEYCHAIN_PROFILE }
   const apiKeyId = env.APP_STORE_CONNECT_API_KEY_ID
   const issuerId = env.APP_STORE_CONNECT_ISSUER_ID || env.APP_STORE_CONNECT_API_ISSUER_ID
-  const privateKey = env.APP_STORE_CONNECT_PRIVATE_KEY || (env.APP_STORE_CONNECT_API_KEY_PATH ? readFileSync(env.APP_STORE_CONNECT_API_KEY_PATH, 'utf8') : undefined)
+  // Precedence: Pantry's own variable, then a key file, then the variable Stacks
+  // and Buddy apps keep in their encrypted environment.
+  const privateKey = env.APP_STORE_CONNECT_PRIVATE_KEY
+    || (env.APP_STORE_CONNECT_API_KEY_PATH ? readFileSync(env.APP_STORE_CONNECT_API_KEY_PATH, 'utf8') : undefined)
+    || appStoreConnectApiKeyPem(env.APP_STORE_CONNECT_API_KEY)
   if (apiKeyId || issuerId || privateKey) {
     if (!apiKeyId || !issuerId || !privateKey) throw new Error('Notarization requires complete App Store Connect API credentials')
     if (!/^[A-Z0-9]+$/.test(apiKeyId)) throw new Error('Invalid App Store Connect API key ID')
