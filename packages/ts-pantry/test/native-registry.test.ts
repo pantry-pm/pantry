@@ -50,6 +50,35 @@ test('registry delivery archives the qualified app, preserves its identity and r
   finally { rmSync(root, { recursive: true, force: true }) }
 })
 
+test('registry delivery creates dist for an app built outside it', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'native-registry-'))
+  try {
+    writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { macos: { notarize: true }, registry: { domain: 'github.com/stacksjs/notes' } } }))
+    // An AppKit app from a Stacks project: built under storage/, with compiled screens instead of a web page.
+    const app = join(root, 'storage/framework/desktop/macos/Notes.app')
+    for (const directory of ['Contents/MacOS', 'Contents/Resources']) mkdirSync(join(app, directory), { recursive: true })
+    writeFileSync(join(app, 'Contents/MacOS/Notes'), Buffer.from('cffaedfe0000', 'hex'))
+    for (const file of ['Contents/Info.plist', 'Contents/Resources/native-screen.js', 'Contents/Resources/craft-app.json']) writeFileSync(join(app, file), '{}')
+    const metadata = { CFBundleIdentifier: 'com.stacksjs.notes', CFBundleShortVersionString: '0.1.0', CFBundleVersion: '1' }
+    const command: NativeCommand = async (bin, args) => {
+      if (bin === 'tar') {
+        const process = Bun.spawnSync([bin, ...args])
+        return { exitCode: process.exitCode, stdout: process.stdout.toString(), stderr: process.stderr.toString() }
+      }
+      return { exitCode: 0, stderr: '', stdout: bin === 'plutil' ? JSON.stringify(metadata) : bin === 'lipo' ? 'arm64' : bin === 'codesign' ? 'Authority=Developer ID Application: Test' : bin === 'spctl' ? 'source=Notarized Developer ID' : '' }
+    }
+    const prepared = { config: readNativeAppConfig(root)!, files: [], version: '0.1.0', artifact: { path: join(root, 'storage/framework/desktop-dmg/Notes-0.1.0.dmg'), appPath: app, name: 'Notes', bundleId: metadata.CFBundleIdentifier, version: '0.1.0', buildNumber: '1', target: 'macos' } }
+    const result = await publishPreparedNativeRegistry(root, prepared, {
+      command, env: { PANTRY_TOKEN: 'test', GITHUB_SHA: 'c'.repeat(40) },
+      publish: async options => ({ success: true, domain: options.domain, version: options.version, platforms: { 'darwin-arm64': { tarball: 'binaries/app.tar.gz', sha256: 'b'.repeat(64), size: options.size, uploadedAt: new Date().toISOString() } }, scan: { verdict: 'clean', engine: 'test', artifactSha256: 'b'.repeat(64) } }),
+    })
+    expect(result.archive).toBe(join(root, 'dist/Notes-0.1.0-1-darwin-arm64.tar.gz'))
+    expect(Bun.spawnSync(['tar', '-tzf', result.archive]).stdout.toString()).toContain('Notes.app/Contents/Resources/native-screen.js')
+    expect(readFileSync(result.receipt, 'utf8')).toContain('com.stacksjs.notes')
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 test('registry publishing rejects invalid targets and build numbers before accessing credentials', async () => {
   await expect(publishNativeRegistry('/absent', { buildNumber: '0' })).rejects.toThrow('positive integer')
   const root = mkdtempSync(join(tmpdir(), 'native-registry-policy-'))

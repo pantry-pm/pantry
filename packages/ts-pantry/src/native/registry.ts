@@ -1,4 +1,4 @@
-import { existsSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { publishBinaryArtifact } from '../binary-publish'
 import type { PublishedBinaryArtifact } from '../binary-publish'
@@ -59,6 +59,8 @@ export async function publishPreparedNativeRegistry(root: string, prepared: Nati
   const filename = `${slug}-${prepared.version}-${artifact.buildNumber}-${platforms.join("_")}.tar.gz`
   const archive = insideProject(root, join('dist', filename))
   if (existsSync(archive)) throw new Error('Refusing to overwrite an existing native registry archive')
+  // A project that builds elsewhere (a Stacks app builds into storage/framework/desktop) has no dist/ yet.
+  mkdirSync(dirname(archive), { recursive: true })
   succeeded('Archive notarized app', await command('tar', ['-czf', archive, '-C', dirname(app), basename(app)], { cwd: root, env }))
   const publication = await (dependencies.publish ?? publishBinaryArtifact)({
     domain: target.domain, version: prepared.version, platforms, filePath: archive,
