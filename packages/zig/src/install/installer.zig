@@ -1010,7 +1010,14 @@ pub const Installer = struct {
                 // package (postgresql.org: 9.8s) on an install with nothing to do.
                 const unchanged = used_cache and self.fresh_installs.load(.monotonic) == fresh_before;
                 if (!(unchanged and libraryPathsCurrent(self.allocator, install_path, tree_root))) {
-                    try reconcileLibraryPaths(self.allocator, install_path, tree_root);
+                    const pristine = PristineArchive{
+                        .installer = self,
+                        .spec = resolved_spec,
+                        .domain = domain,
+                        .install_path = install_path,
+                        .options = options,
+                    };
+                    try reconcileOrRestoreLibraryPaths(self.allocator, install_path, tree_root, used_cache, &pristine);
                 }
             }
         }
@@ -3235,6 +3242,55 @@ pub const Installer = struct {
         try libfixer.fixDirectoryLibraryPathsInTree(allocator, install_path, tree_root);
         markLibraryPathsCurrent(allocator, install_path, tree_root);
     }
+
+    /// `reconcileLibraryPaths` for a copy this run may have reused.
+    ///
+    /// A reused copy carries whatever an earlier CLI wrote into its Mach-O
+    /// headers, and those edits spend header space the archive shipped with:
+    /// libtiff's tools have 64 spare bytes, an older normalization put a
+    /// 56-byte global `LC_RPATH` there, and the project-relative references
+    /// this revision writes then had nowhere to go. The install failed with
+    /// `MacOSLibraryDependencyFixFailed` on every machine that had installed
+    /// libtiff before, and passed on a new one. Such a copy cannot be repaired
+    /// where it stands, so put the verified archive back and normalize that.
+    ///
+    /// Only a reused copy is restored, and only once: a copy extracted in this
+    /// run is already the archive, so its failure is the package's own and is
+    /// returned, as is a failure that survives the restore.
+    fn reconcileOrRestoreLibraryPaths(allocator: std.mem.Allocator, install_path: []const u8, tree_root: ?[]const u8, reused: bool, pristine: anytype) !void {
+        reconcileLibraryPaths(allocator, install_path, tree_root) catch |err| {
+            if (!reused or !libfixer.isLoadCommandEditFailure(err)) return err;
+            try pristine.restore();
+            return reconcileLibraryPaths(allocator, install_path, tree_root);
+        };
+    }
+
+    /// The verified registry archive of an installed package, for replacing a
+    /// copy whose headers an earlier normalization left without room.
+    const PristineArchive = struct {
+        installer: *Installer,
+        spec: PackageSpec,
+        domain: []const u8,
+        install_path: []const u8,
+        options: InstallOptions,
+
+        /// Replace `install_path` with the archive's contents, read from the
+        /// local archive cache when it is there and from the registry when
+        /// not. The replacement is the same atomic publication a download
+        /// uses, so the old copy stays in place if the archive cannot be had.
+        fn restore(self: *const PristineArchive) !void {
+            var options = self.options;
+            // Any archive identity here was resolved for the caller's request;
+            // the lookup below supplies this package's own.
+            options.native_archive = null;
+            // The package's progress line is finished; do not redraw it.
+            options.inline_progress = null;
+            if (self.installer.verbose) std.debug.print("[verbose:installer] restoring {s} @ {s} from its archive: the installed copy has no header space left to normalize\n", .{ self.domain, self.spec.version });
+            // Despite its name this writes to any package directory: a global
+            // one is normalized without a tree root, as a global download is.
+            try self.installer.downloadAndInstallToProject(self.spec, self.domain, self.install_path, options, null);
+        }
+    };
 
     fn markLibraryPathsCurrent(allocator: std.mem.Allocator, install_path: []const u8, tree_root: ?[]const u8) void {
         const marker = std.fs.path.join(allocator, &.{ install_path, library_paths_marker }) catch return;
@@ -5973,4 +6029,124 @@ test "library normalization failure invalidates a previously current marker" {
     }
     try std.testing.expectError(error.AccessDenied, Installer.reconcileLibraryPaths(a, root, root));
     try std.testing.expect(!Installer.libraryPathsCurrent(a, root, root));
+}
+
+/// Stands in for `Installer.PristineArchive`: puts a saved tree back.
+const TestPristineTree = struct {
+    allocator: std.mem.Allocator,
+    source: []const u8,
+    destination: []const u8,
+    calls: usize = 0,
+
+    fn restore(self: *TestPristineTree) !void {
+        self.calls += 1;
+        try replaceTestTree(self.allocator, self.source, self.destination);
+    }
+};
+
+fn replaceTestTree(allocator: std.mem.Allocator, source: []const u8, destination: []const u8) !void {
+    for ([_][]const []const u8{ &.{ "/bin/rm", "-rf", destination }, &.{ "/bin/cp", "-R", source, destination } }) |argv| {
+        const result = try io_helper.childRun(allocator, argv);
+        if (result.term != .exited or result.term.exited != 0) return error.TestTreeCopyFailed;
+    }
+}
+
+test "library normalization restores a reused copy an older CLI left without header space" {
+    // The defect this guards: libtiff 4.7.1's tools ship with 64 spare header
+    // bytes. A CLI before the normalization marker added a global LC_RPATH to
+    // each, which used 56 of them. A project install then copied that global
+    // package and could not write the longer project-relative references, so
+    // `pantry install` ended 67/68 with MacOSLibraryDependencyFixFailed on any
+    // machine that had installed libtiff earlier, and passed from a clean HOME.
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    // Not `std.testing.tmpDir`: that sits under this repository's `packages/`,
+    // and a path with `/packages/` in it is read as a global package store.
+    const made = try io_helper.childRun(a, &.{ "/usr/bin/mktemp", "-d" });
+    try std.testing.expect(made.term == .exited and made.term.exited == 0);
+    const root = try io_helper.realpathAlloc(a, std.mem.trim(u8, made.stdout, " \r\n"));
+    try std.testing.expect(std.mem.indexOf(u8, root, "/packages/") == null);
+    defer _ = io_helper.childRun(a, &.{ "/bin/rm", "-rf", root }) catch {};
+
+    // A project tree holding the dependency, reached through its major link.
+    const tree = try std.fs.path.join(a, &.{ root, "pantry" });
+    const dep_lib = try std.fs.path.join(a, &.{ tree, "dep.test", "v1.0.0", "lib" });
+    try io_helper.makePath(dep_lib);
+    try io_helper.symLink("v1.0.0", try std.fs.path.join(a, &.{ tree, "dep.test", "v1" }));
+    const main_source = try std.fs.path.join(a, &.{ root, "main.c" });
+    const dep_source = try std.fs.path.join(a, &.{ root, "dep.c" });
+    for ([_][2][]const u8{
+        .{ main_source, "#include <stdio.h>\nextern int answer(void);\nint main(void) { printf(\"%d\\n\", answer()); return 0; }\n" },
+        .{ dep_source, "int answer(void) { return 42; }\n" },
+    }) |entry| {
+        const file = try io_helper.createFileAbsolute(entry[0], .{});
+        defer io_helper.closeFile(file);
+        try io_helper.writeAllToFile(file, entry[1]);
+    }
+    const dep = try std.fs.path.join(a, &.{ dep_lib, "libdep.dylib" });
+    const cc_dep = try io_helper.childRun(a, &.{ "/usr/bin/clang", "-dynamiclib", dep_source, "-Wl,-install_name,@rpath/dep.test/v1/lib/libdep.dylib", "-o", dep });
+    try std.testing.expect(cc_dep.term == .exited and cc_dep.term.exited == 0);
+
+    // The archive's contents: a tool with little header padding, as registry
+    // artifacts have, naming its dependency by registry path.
+    const pristine = try std.fs.path.join(a, &.{ root, "archive" });
+    const pristine_bin = try std.fs.path.join(a, &.{ pristine, "bin" });
+    try io_helper.makePath(pristine_bin);
+    try io_helper.makePath(try std.fs.path.join(a, &.{ pristine, "lib" }));
+    const cc_tool = try io_helper.childRun(a, &.{ "/usr/bin/clang", main_source, dep, "-Wl,-headerpad,0x80", "-Wl,-rpath,@loader_path/../../..", "-o", try std.fs.path.join(a, &.{ pristine_bin, "tool" }) });
+    try std.testing.expect(cc_tool.term == .exited and cc_tool.term.exited == 0);
+
+    // What the older CLI left: its global rpath, and (from its repeated
+    // passes) further ones until the header had no room for another command.
+    const stale = try std.fs.path.join(a, &.{ root, "stale" });
+    try replaceTestTree(a, pristine, stale);
+    const stale_tool = try std.fs.path.join(a, &.{ stale, "bin", "tool" });
+    const old_global = try io_helper.childRun(a, &.{ "install_name_tool", "-add_rpath", "/Users/builder/.local/share/pantry/global", stale_tool });
+    try std.testing.expect(old_global.term == .exited and old_global.term.exited == 0);
+    var filler: u8 = 'a';
+    while (filler <= 'z') : (filler += 1) {
+        const added = try io_helper.childRun(a, &.{ "install_name_tool", "-add_rpath", &.{ '/', filler }, stale_tool });
+        if (added.term != .exited or added.term.exited != 0) break;
+    } else return error.TestHeaderNeverFilled;
+
+    const installed = try std.fs.path.join(a, &.{ tree, "app.test", "v1.0.0" });
+    try io_helper.makePath(std.fs.path.dirname(installed).?);
+    const tool = try std.fs.path.join(a, &.{ installed, "bin", "tool" });
+
+    // Before: the reused copy cannot be normalized where it stands.
+    try replaceTestTree(a, stale, installed);
+    try std.testing.expectError(error.MacOSLibraryDependencyFixFailed, Installer.reconcileLibraryPaths(a, installed, tree));
+
+    // A copy extracted in this run is the archive already: its failure is real.
+    var from_archive = TestPristineTree{ .allocator = a, .source = pristine, .destination = installed };
+    try replaceTestTree(a, stale, installed);
+    try std.testing.expectError(error.MacOSLibraryDependencyFixFailed, Installer.reconcileOrRestoreLibraryPaths(a, installed, tree, false, &from_archive));
+    try std.testing.expectEqual(@as(usize, 0), from_archive.calls);
+
+    // An archive that itself cannot be normalized still fails, after one restore.
+    var unusable_archive = TestPristineTree{ .allocator = a, .source = stale, .destination = installed };
+    try std.testing.expectError(error.MacOSLibraryDependencyFixFailed, Installer.reconcileOrRestoreLibraryPaths(a, installed, tree, true, &unusable_archive));
+    try std.testing.expectEqual(@as(usize, 1), unusable_archive.calls);
+    try std.testing.expect(!Installer.libraryPathsCurrent(a, installed, tree));
+
+    // After: the reused copy is replaced by the archive and normalized fresh.
+    try replaceTestTree(a, stale, installed);
+    try Installer.reconcileOrRestoreLibraryPaths(a, installed, tree, true, &from_archive);
+    try std.testing.expectEqual(@as(usize, 1), from_archive.calls);
+    try std.testing.expect(Installer.libraryPathsCurrent(a, installed, tree));
+    const references = try io_helper.childRun(a, &.{ "otool", "-L", tool });
+    try std.testing.expect(std.mem.indexOf(u8, references.stdout, "@loader_path/../../../dep.test/v1/lib/libdep.dylib") != null);
+    const commands = try io_helper.childRun(a, &.{ "otool", "-l", tool });
+    try std.testing.expect(std.mem.indexOf(u8, commands.stdout, "/Users/builder/.local/share/pantry/global") == null);
+    const run = try io_helper.childRun(a, &.{tool});
+    if (run.term != .exited or run.term.exited != 0) std.debug.print("{s}\n", .{run.stderr});
+    try std.testing.expect(run.term == .exited and run.term.exited == 0);
+    try std.testing.expectEqualStrings("42\n", run.stdout);
+
+    // A copy that normalizes where it stands is left alone.
+    try replaceTestTree(a, pristine, installed);
+    try Installer.reconcileOrRestoreLibraryPaths(a, installed, tree, true, &from_archive);
+    try std.testing.expectEqual(@as(usize, 1), from_archive.calls);
 }

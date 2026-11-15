@@ -6,6 +6,15 @@ const symlink = @import("symlink.zig");
 
 pub const normalization_revision = "3\n";
 
+/// Whether `err` is install_name_tool refusing to rewrite a load command: a
+/// reference, an install name or an rpath. The usual cause is a header with no
+/// room left for the longer command, which no further edit of that file fixes.
+pub fn isLoadCommandEditFailure(err: anyerror) bool {
+    return err == error.MacOSLibraryDependencyFixFailed or
+        err == error.MacOSLibraryIdentityFixFailed or
+        err == error.MacOSLibraryRpathFixFailed;
+}
+
 /// Fix macOS library paths using install_name_tool
 /// This discovers @rpath dependencies using otool and fixes them to use absolute paths
 pub fn fixMacOSLibraryPaths(
