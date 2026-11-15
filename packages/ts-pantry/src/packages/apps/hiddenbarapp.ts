@@ -3,7 +3,7 @@
  *
  * @domain `hiddenbar.app`
  * @programs `hiddenbar`
- * @version `1.11.1` (12 versions available)
+ * @version `1.11.2` (13 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install hiddenbar.app`
@@ -22,6 +22,7 @@ export const hiddenbarappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.11.2',
     '1.11.1',
     '1.10',
     '1.9',

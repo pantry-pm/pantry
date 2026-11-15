@@ -3,7 +3,7 @@
  *
  * @domain `open-mpi.org`
  * @programs `mpic++`, `mpiCC`, `mpicc`, `mpicxx`, `mpiexec`, ... (+6 more)
- * @version `6.0.0rc3` (29 versions available)
+ * @version `6.0.0rc3` (35 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install open-mpi.org`
@@ -123,9 +123,15 @@ export const openmpiorgPackage = {
     '5.0.3',
     '5.0.2',
     '5.0.1',
+    '5.0.0',
     '4.1.8',
     '4.1.7',
+    '4.1.6',
     '4.1.5',
+    '4.1.4',
+    '4.1.3',
+    '4.1.2',
+    '4.1.1',
   ] as const,
   aliases: [] as const,
 }

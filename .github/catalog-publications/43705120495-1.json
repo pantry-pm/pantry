@@ -1,0 +1,12 @@
+{
+  "id": "43705120495-1",
+  "domains": [
+    "casdoor.org",
+    "craft-native.org",
+    "fluentci.io",
+    "github.com/ggerganov/llama.cpp",
+    "open-mpi.org",
+    "projen.io",
+    "rsync.samba.org"
+  ]
+}

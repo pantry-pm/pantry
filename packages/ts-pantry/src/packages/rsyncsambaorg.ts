@@ -3,7 +3,7 @@
  *
  * @domain `rsync.samba.org`
  * @programs `rsync`, `rsync-ssl`
- * @version `3.5.2` (10 versions available)
+ * @version `3.5.2` (11 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install rsync.samba.org`
@@ -79,6 +79,7 @@ export const rsyncsambaorgPackage = {
     '3.4.1',
     '3.4.0',
     '3.3.0',
+    '3.2.8',
     '3.2.7',
   ] as const,
   aliases: [] as const,
