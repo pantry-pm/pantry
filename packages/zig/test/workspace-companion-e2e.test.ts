@@ -104,6 +104,37 @@ describe.skipIf(!binary)('source CLI companion workspace lifecycle', () => {
     finally { rmSync(root, { recursive: true, force: true }) }
   }, 45_000)
 
+  it('keeps the deps.yaml companion when pantry.json holds only native release settings', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pantry-native-manifest-'))
+    try {
+      const member = join(root, 'packages/local')
+      mkdirSync(member, { recursive: true })
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'native-manifest', private: true, workspaces: ['packages/*'] }))
+      writeFileSync(join(member, 'package.json'), JSON.stringify({ name: '@pantry-fixture/native-manifest', version: '1.0.0' }))
+      writeFileSync(join(root, 'deps.yaml'), 'dependencies:\n  bun.sh: 1.4.2\n')
+      const env = { ...process.env, XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PANTRY_ENV_DEPS: '0' }
+      const run = (args: string[]) => {
+        const result = spawnSync(binary!, ['install', '--ignore-scripts', ...args], { cwd: root, env, encoding: 'utf8', timeout: 45_000 })
+        if (result.error) throw result.error
+        if (result.status !== 0) throw new Error(result.stdout + result.stderr)
+      }
+      run([])
+      const lockPath = join(root, 'pantry.lock')
+      const committed = readFileSync(lockPath, 'utf8')
+      expect(JSON.parse(committed).workspaces[''].system['bun.sh']).toBe('1.4.2')
+      expect(JSON.parse(committed).packages['bun.sh@1.4.2']?.version).toBe('1.4.2')
+
+      // The native release block is not a dependency manifest. Adding it must
+      // leave the deps.yaml packages in the install and in the lock.
+      writeFileSync(join(root, 'pantry.json'), JSON.stringify({ native: { environment: 'production', macos: { notarize: true }, registry: { domain: 'github.com/example/app' } } }))
+      for (const args of [[], ['--frozen-lockfile']]) {
+        run(args)
+        expect(readFileSync(lockPath, 'utf8')).toBe(committed)
+      }
+    }
+    finally { rmSync(root, { recursive: true, force: true }) }
+  }, 120_000)
+
   it('replays a compatible companion native pin instead of installing a newer release', () => {
     const root = mkdtempSync(join(tmpdir(), 'pantry-companion-pin-'))
     try {

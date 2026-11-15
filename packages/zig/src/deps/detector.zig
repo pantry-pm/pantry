@@ -70,18 +70,85 @@ const deps_files_table = [_]DepsFileInfo{
     .{ .name = "composer.json", .format = .composer_json },
 };
 
+/// Top-level keys that make a pantry.json(c) a dependency manifest. These are
+/// the keys `parseZigPackageJson` reads, plus `workspaces`, whose members carry
+/// the dependencies. `pantry.dependencies` and `pantry.devDependencies` are
+/// checked separately because they are nested.
+const pantry_manifest_dependency_keys = [_][]const u8{
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "system",
+    "composer",
+    "workspaces",
+};
+
+/// Whether a pantry.json(c) declares dependency content.
+///
+/// pantry.json also holds settings that have nothing to do with dependencies,
+/// such as the `native` release block. A file with only those must not shadow
+/// the deps.yaml (or package.json) beside it, or its packages silently fall out
+/// of the install and the lockfile.
+///
+/// An unreadable or unparsable file answers true: it stays selected, so the
+/// parser reports the real error instead of a lower-priority file hiding it.
+pub fn pantryManifestDeclaresDependencies(allocator: std.mem.Allocator, path: []const u8) bool {
+    const jsonc = @import("../utils/jsonc.zig");
+    const contents = io_helper.readFileAlloc(allocator, path, 10 * 1024 * 1024) catch return true;
+    defer allocator.free(contents);
+    const uncommented = jsonc.stripComments(allocator, contents) catch return true;
+    defer allocator.free(uncommented);
+    const normalized = jsonc.stripTrailingCommas(allocator, uncommented) catch return true;
+    defer allocator.free(normalized);
+    const parsed = std.json.parseFromSlice(std.json.Value, allocator, normalized, .{}) catch return true;
+    defer parsed.deinit();
+    if (parsed.value != .object) return true;
+    const root = parsed.value.object;
+    for (pantry_manifest_dependency_keys) |key| {
+        if (root.get(key) != null) return true;
+    }
+    if (root.get("pantry")) |pantry| {
+        if (pantry == .object) {
+            if (pantry.object.get("dependencies") != null) return true;
+            if (pantry.object.get("devDependencies") != null) return true;
+        }
+    }
+    return false;
+}
+
+/// A pantry.json(c) that exists but declares no dependencies. It yields to the
+/// next file in priority order, and is used only when the directory has no
+/// other dependency file, so it still marks the project root.
+fn isSettingsOnlyPantryManifest(allocator: std.mem.Allocator, format: DepsFile.FileFormat, path: []const u8) bool {
+    if (format != .pantry_json and format != .pantry_jsonc) return false;
+    return !pantryManifestDeclaresDependencies(allocator, path);
+}
+
+/// Pick the dependency file a single directory owns, in priority order.
+/// Returns an index into `deps_files_table`.
+fn selectDepsFileIndex(allocator: std.mem.Allocator, directory: []const u8) ?usize {
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    var settings_only: ?usize = null;
+    for (deps_files_table, 0..) |entry, i| {
+        const full_path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ directory, entry.name }) catch continue;
+        io_helper.accessAbsolute(full_path, .{}) catch continue;
+        if (isSettingsOnlyPantryManifest(allocator, entry.format, full_path)) {
+            if (settings_only == null) settings_only = i;
+            continue;
+        }
+        return i;
+    }
+    return settings_only;
+}
+
 /// Find a dependency file owned by this directory, without walking to a parent.
 pub fn findDepsFileInDirectory(allocator: std.mem.Allocator, directory: []const u8) !?DepsFile {
-    for (deps_files_table) |entry| {
-        const path = try std.fs.path.join(allocator, &.{ directory, entry.name });
-        errdefer allocator.free(path);
-        io_helper.accessAbsolute(path, .{}) catch {
-            allocator.free(path);
-            continue;
-        };
-        return .{ .path = path, .format = entry.format };
-    }
-    return null;
+    const index = selectDepsFileIndex(allocator, directory) orelse return null;
+    const entry = deps_files_table[index];
+    return .{
+        .path = try std.fs.path.join(allocator, &.{ directory, entry.name }),
+        .format = entry.format,
+    };
 }
 
 /// Find dependency file in directory or parent directories
@@ -94,24 +161,7 @@ pub fn findDepsFile(allocator: std.mem.Allocator, start_dir: []const u8) !?DepsF
 
     // Walk up the directory tree
     while (true) {
-        // Perf: Use stack buffer for path construction (avoids allocator per candidate)
-        var path_buf: [std.fs.max_path_bytes]u8 = undefined;
-
-        // Try each dependency file name
-        for (deps_files_table) |entry| {
-            const full_path = std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ dir_path, entry.name }) catch continue;
-
-            // Check if file exists
-            io_helper.accessAbsolute(full_path, .{}) catch {
-                continue;
-            };
-
-            // Found a dependency file!
-            return DepsFile{
-                .path = try allocator.dupe(u8, full_path),
-                .format = entry.format,
-            };
-        }
+        if (try findDepsFileInDirectory(allocator, dir_path)) |file| return file;
 
         // Move to parent directory
         const parent = std.fs.path.dirname(dir_path) orelse break;
@@ -240,14 +290,6 @@ pub const DepsAndWorkspaceResult = struct {
 /// Find both dependency file and workspace file in a single directory walk.
 /// This avoids the overhead of two separate realpath + directory traversals.
 pub fn findDepsAndWorkspaceFile(allocator: std.mem.Allocator, start_dir: []const u8) !DepsAndWorkspaceResult {
-    const dep_file_names = [_][]const u8{
-        "pantry.json",    "pantry.jsonc",     "pantry.yaml",       "pantry.yml",
-        "deps.yaml",      "deps.yml",         "dependencies.yaml", "pkgx.yaml",
-        "config/deps.ts", ".config/deps.ts",  "pantry.config.ts",  ".config/pantry.ts",
-        "package.json",   "package.jsonc",    "zig.json",          "Cargo.toml",
-        "pyproject.toml", "requirements.txt", "Gemfile",           "go.mod",
-        "composer.json",
-    };
     const workspace_file_names = [_][]const u8{ "pantry.json", "pantry.jsonc", "package.json" };
 
     var current_dir_buf: [std.fs.max_path_bytes]u8 = undefined;
@@ -270,17 +312,9 @@ pub fn findDepsAndWorkspaceFile(allocator: std.mem.Allocator, start_dir: []const
     while (true) {
         // Check for deps file (if not already found)
         if (result.deps_file == null) {
-            for (dep_file_names, 0..) |file_name, i| {
-                const full_path = try std.fs.path.join(allocator, &[_][]const u8{ dir_path, file_name });
-                defer allocator.free(full_path);
-                io_helper.accessAbsolute(full_path, .{}) catch continue;
-                const format: DepsFile.FileFormat = @fromBackingInt(@intCast(i));
-                result.deps_file = DepsFile{
-                    .path = try allocator.dupe(u8, full_path),
-                    .format = format,
-                };
+            if (try findDepsFileInDirectory(allocator, dir_path)) |file| {
+                result.deps_file = file;
                 project_dir = try allocator.dupe(u8, dir_path);
-                break;
             }
         }
 

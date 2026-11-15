@@ -39,6 +39,128 @@ test "root companion lookup does not select a member manifest or escape to a par
     try testing.expect((try lib.deps.detector.findDepsFileInDirectory(allocator, empty)) == null);
 }
 
+const native_only_manifest =
+    \\{"native":{"environment":"production","macos":{"notarize":true},"registry":{"domain":"github.com/example/app"}}}
+;
+
+/// Workspace root with a package.json, a deps.yaml and a pantry.json holding
+/// `pantry_json`. Returns the directory; the caller cleans it up.
+fn createNativeManifestWorkspace(allocator: std.mem.Allocator, pantry_json: []const u8) ![]const u8 {
+    const tmp = try createTempDir(allocator);
+    errdefer cleanupTempDir(allocator, tmp);
+    for ([_][2][]const u8{
+        .{ "package.json", "{\"workspaces\":[\"packages/*\"]}" },
+        .{ "deps.yaml", "dependencies:\n  bun.sh: 1.4.4\n" },
+        .{ "pantry.json", pantry_json },
+    }) |file| {
+        const path = try std.fs.path.join(allocator, &.{ tmp, file[0] });
+        defer allocator.free(path);
+        try writeFile(path, file[1]);
+    }
+    return tmp;
+}
+
+fn expectSelectedDepsFile(allocator: std.mem.Allocator, dir: []const u8, name: []const u8, format: lib.deps.detector.DepsFile.FileFormat) !void {
+    const detector = lib.deps.detector;
+    const expected = try std.fs.path.join(allocator, &.{ dir, name });
+    defer allocator.free(expected);
+
+    const companion = (try detector.findDepsFileInDirectory(allocator, dir)).?;
+    defer allocator.free(companion.path);
+    try testing.expectEqualStrings(expected, companion.path);
+    try testing.expectEqual(format, companion.format);
+
+    const walked = (try detector.findDepsFile(allocator, dir)).?;
+    defer allocator.free(walked.path);
+    try testing.expectEqualStrings(expected, walked.path);
+    try testing.expectEqual(format, walked.format);
+
+    const lookup = try detector.findDepsAndWorkspaceFile(allocator, dir);
+    defer if (lookup.deps_file) |df| allocator.free(df.path);
+    defer if (lookup.workspace_file) |ws| {
+        allocator.free(ws.path);
+        allocator.free(ws.root_dir);
+    };
+    try testing.expectEqualStrings(expected, lookup.deps_file.?.path);
+    try testing.expectEqual(format, lookup.deps_file.?.format);
+}
+
+test "native manifest: a pantry.json with only native settings does not shadow deps.yaml" {
+    const allocator = testing.allocator;
+    const tmp = try createNativeManifestWorkspace(allocator, native_only_manifest);
+    defer cleanupTempDir(allocator, tmp);
+    try expectSelectedDepsFile(allocator, tmp, "deps.yaml", .deps_yaml);
+
+    // The workspace is still the package.json beside it.
+    const workspace = (try lib.deps.detector.findWorkspaceFile(allocator, tmp)).?;
+    defer allocator.free(workspace.path);
+    defer allocator.free(workspace.root_dir);
+    try testing.expectEqualStrings("package.json", std.fs.path.basename(workspace.path));
+}
+
+test "native manifest: a pantry.jsonc with only native settings does not shadow deps.yaml" {
+    const allocator = testing.allocator;
+    const tmp = try createNativeManifestWorkspace(allocator, "{}");
+    defer cleanupTempDir(allocator, tmp);
+    const plain = try std.fs.path.join(allocator, &.{ tmp, "pantry.json" });
+    defer allocator.free(plain);
+    try lib.io_helper.deleteFile(plain);
+    const commented = try std.fs.path.join(allocator, &.{ tmp, "pantry.jsonc" });
+    defer allocator.free(commented);
+    try writeFile(commented, "{\n  // release settings\n  \"native\": { \"environment\": \"production\", },\n}");
+    try expectSelectedDepsFile(allocator, tmp, "deps.yaml", .deps_yaml);
+}
+
+test "native manifest: a pantry.json that declares dependencies keeps its priority" {
+    const allocator = testing.allocator;
+    for ([_][]const u8{
+        "{\"native\":{},\"dependencies\":{\"bun.sh\":\"1.4.4\"}}",
+        "{\"native\":{},\"devDependencies\":{\"bun.sh\":\"1.4.4\"}}",
+        "{\"native\":{},\"peerDependencies\":{\"bun.sh\":\"1.4.4\"}}",
+        "{\"native\":{},\"system\":{\"bun\":\"1.4.4\"}}",
+        "{\"native\":{},\"composer\":{\"monolog/monolog\":\"^3.0\"}}",
+        "{\"native\":{},\"pantry\":{\"dependencies\":{\"bun.sh\":\"1.4.4\"}}}",
+        "{\"native\":{},\"pantry\":{\"devDependencies\":{\"bun.sh\":\"1.4.4\"}}}",
+        // An empty declaration is still a declaration.
+        "{\"native\":{},\"dependencies\":{}}",
+    }) |manifest| {
+        const tmp = try createNativeManifestWorkspace(allocator, manifest);
+        defer cleanupTempDir(allocator, tmp);
+        try expectSelectedDepsFile(allocator, tmp, "pantry.json", .pantry_json);
+    }
+}
+
+test "native manifest: an unparsable pantry.json stays selected so its error surfaces" {
+    const allocator = testing.allocator;
+    for ([_][]const u8{ "{\"native\":", "[]" }) |manifest| {
+        const tmp = try createNativeManifestWorkspace(allocator, manifest);
+        defer cleanupTempDir(allocator, tmp);
+        try expectSelectedDepsFile(allocator, tmp, "pantry.json", .pantry_json);
+    }
+}
+
+test "native manifest: a pantry.json alone still marks its project" {
+    const allocator = testing.allocator;
+    const tmp = try createTempDir(allocator);
+    defer cleanupTempDir(allocator, tmp);
+    // A parent manifest must not be picked over the project's own file.
+    const parent_deps = try std.fs.path.join(allocator, &.{ tmp, "deps.yaml" });
+    defer allocator.free(parent_deps);
+    try writeFile(parent_deps, "dependencies:\n  bun.sh: 1.4.4\n");
+    const project = try std.fs.path.join(allocator, &.{ tmp, "app" });
+    defer allocator.free(project);
+    try lib.io_helper.makePath(project);
+    const manifest = try std.fs.path.join(allocator, &.{ project, "pantry.json" });
+    defer allocator.free(manifest);
+    try writeFile(manifest, native_only_manifest);
+    try expectSelectedDepsFile(allocator, project, "pantry.json", .pantry_json);
+
+    const parser = lib.deps.parser;
+    const deps = try parser.inferDependencies(allocator, .{ .path = manifest, .format = .pantry_json });
+    defer allocator.free(deps);
+    try testing.expectEqual(@as(usize, 0), deps.len);
+}
+
 test "detector.findWorkspaceFile - returns null when no workspace file exists" {
     const allocator = testing.allocator;
 
