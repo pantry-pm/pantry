@@ -1,3 +1,52 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.207...v0.11.208)
+
+## ✨ Features
+
+- **native**: accept APP_STORE_CONNECT_API_KEY for notarization ([288c868](https://github.com/pantry-pm/pantry/commit/288c868)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **recipes**: stacksjs.com/bun, the Bun that stacksjs/bun builds ([ffe4bac](https://github.com/pantry-pm/pantry/commit/ffe4bac)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **deps**: keep deps.yaml when pantry.json holds only native settings ([e592158](https://github.com/pantry-pm/pantry/commit/e592158)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **git**: retain command and repository alias context ([49c8be0](https://github.com/pantry-pm/pantry/commit/49c8be0)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **native**: create dist before archiving an app for the registry ([3980237](https://github.com/pantry-pm/pantry/commit/3980237)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **recipes**: repair the 40 packages the catalog publications still owed ([1a3eb52](https://github.com/pantry-pm/pantry/commit/1a3eb52)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: a package that throws around its build fails alone ([b70af50](https://github.com/pantry-pm/pantry/commit/b70af50)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recovery**: read what failed from the build summary when a job left no annotation ([3c3ca73](https://github.com/pantry-pm/pantry/commit/3c3ca73)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recovery**: a receipt names its source in a blob, so the workflow token can record it ([d83de41](https://github.com/pantry-pm/pantry/commit/d83de41)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ffmpeg**: build the x86 assembly with a nasm the registry has ([6e5b2a9](https://github.com/pantry-pm/pantry/commit/6e5b2a9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recovery**: a request that gave up owes only the packages that failed, and hands them on ([b34527c](https://github.com/pantry-pm/pantry/commit/b34527c)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **build**: install a recipe's architecture-specific dependencies ([46f63b0](https://github.com/pantry-pm/pantry/commit/46f63b0)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ffmpeg**: publish revision 1 as a recipe build that starts and encodes ([a4e5de4](https://github.com/pantry-pm/pantry/commit/a4e5de4)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recipes**: stacksjs.com/bun 1.4.4.1 is a release Linux does not have ([3137731](https://github.com/pantry-pm/pantry/commit/3137731)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: type the glibc floor archive reader for the CI typecheck ([de03331](https://github.com/pantry-pm/pantry/commit/de03331)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **git**: republish the versions that shipped a libcurl above the glibc floor ([306ad00](https://github.com/pantry-pm/pantry/commit/306ad00)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **curl**: publish revision 3 built at the glibc 2.39 floor ([dce0c5d](https://github.com/pantry-pm/pantry/commit/dce0c5d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: build Linux packages on Ubuntu 24.04 and refuse a newer glibc ([c0a4351](https://github.com/pantry-pm/pantry/commit/c0a4351)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: preserve queued native publication requests ([443d920](https://github.com/pantry-pm/pantry/commit/443d920)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#361](https://github.com/pantry-pm/pantry/issues/361))
+- **publish**: keep version pins out of metadata domain keys ([6b3d7f0](https://github.com/pantry-pm/pantry/commit/6b3d7f0)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#361](https://github.com/pantry-pm/pantry/issues/361), [#359](https://github.com/pantry-pm/pantry/issues/359))
+- **publish**: bootstrap recipes without a workspace artifact cycle ([88575a0](https://github.com/pantry-pm/pantry/commit/88575a0)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#361](https://github.com/pantry-pm/pantry/issues/361), [#359](https://github.com/pantry-pm/pantry/issues/359))
+- **sdk**: preserve source-repaired Zig package identities ([a53fa80](https://github.com/pantry-pm/pantry/commit/a53fa80)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#359](https://github.com/pantry-pm/pantry/issues/359))
+- **zig**: add independent native fetch package storage ([50b60dd](https://github.com/pantry-pm/pantry/commit/50b60dd)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#359](https://github.com/pantry-pm/pantry/issues/359))
+
+## 🔧 Chores
+
+- release v0.11.208 ([913d253](https://github.com/pantry-pm/pantry/commit/913d253)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **action**: rebuild the bundle with the notarization key change ([6a6fe83](https://github.com/pantry-pm/pantry/commit/6a6fe83)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update appium, biome, CLIProxyAPI, craft, depot, LLaMA.cpp, mvn, oh-my-posh, projen, qsv, squawk, Stats, vim, zig ([f60f7a3](https://github.com/pantry-pm/pantry/commit/f60f7a3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update casdoor, fluentci, Hidden Bar, LLaMA.cpp, projen ([83f6991](https://github.com/pantry-pm/pantry/commit/83f6991)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.505 ([e33b3dd](https://github.com/pantry-pm/pantry/commit/e33b3dd)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.503 ([0837013](https://github.com/pantry-pm/pantry/commit/0837013)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update appium, CLIProxyAPI, depot, fluentci, libffi, LLaMA.cpp, rio, valhalla, vim, zig ([3bde716](https://github.com/pantry-pm/pantry/commit/3bde716)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stacks-bun to 1.4.4.3 ([75ec52f](https://github.com/pantry-pm/pantry/commit/75ec52f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update stacks-bun to 1.4.4.2 ([bc9c94f](https://github.com/pantry-pm/pantry/commit/bc9c94f)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update browser-use, buddy, Claude Desktop, claude-code, CLIProxyAPI, crystal, Cursor, depot, fluentci, hugo, julia, LLaMA.cpp, mole, oha, pinniped, pnp, temporal, tilt, vim ([38b0787](https://github.com/pantry-pm/pantry/commit/38b0787)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.502 ([f3df0e7](https://github.com/pantry-pm/pantry/commit/f3df0e7)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.206...v0.11.207)
 
 ## 🐛 Bug Fixes
