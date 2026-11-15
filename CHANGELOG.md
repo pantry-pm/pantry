@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.208...v0.11.209)
+
+## 🐛 Bug Fixes
+
+- **install**: restore a reused package an older CLI left without header space ([c7a01b6](https://github.com/pantry-pm/pantry/commit/c7a01b6)) _(by Chris <chrisbreuer93@gmail.com>)_ ([#358](https://github.com/pantry-pm/pantry/issues/358))
+
+## 🔧 Chores
+
+- release v0.11.209 ([ab9c0c1](https://github.com/pantry-pm/pantry/commit/ab9c0c1)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.207...v0.11.208)
 
 ## ✨ Features
