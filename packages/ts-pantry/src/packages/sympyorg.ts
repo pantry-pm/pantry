@@ -2,7 +2,7 @@
  * **sympy** - A computer algebra system written in pure Python
  *
  * @domain `sympy.org`
- * @version `1.14.0` (7 versions available)
+ * @version `1.15.0rc1` (29 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install sympy.org`
@@ -16,7 +16,7 @@
  * const pkg = pantry.sympyorg
  * console.log(pkg.name)        // "sympy"
  * console.log(pkg.description) // "A computer algebra system written in pure Python"
- * console.log(pkg.versions[0]) // "1.14.0" (latest)
+ * console.log(pkg.versions[0]) // "1.15.0rc1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/sympy-org.md
@@ -59,6 +59,7 @@ export const sympyorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.15.0rc1',
     '1.14.0',
     '1.13.3',
     '1.13.2',
