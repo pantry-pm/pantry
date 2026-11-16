@@ -134,16 +134,16 @@ test('ambiguous tuples and invalid revisions fail before catalog generation or a
 })
 
 test('the normal recipe loader and build tokens download the vendor version for the revised package', async () => {
-  const loaded = await loadRecipe('google.com/chrome', 'linux-x86-64', '155.0.8059.84.1')
+  const loaded = await loadRecipe('google.com/chrome', 'linux-x86-64', '155.0.8059.84.2')
   expect(loaded.upstreamVersion).toBe('155.0.8059.84')
-  expect(loaded.publicationVersion).toBe('155.0.8059.84.1')
+  expect(loaded.publicationVersion).toBe('155.0.8059.84.2')
   expect(loaded.requiresRecipeBuild).toBe(true)
   expect((await loadRecipe('google.com/chrome', 'linux-x86-64', '155.0.8059.85')).requiresRecipeBuild).toBe(true)
-  const tokens = buildTokens('google.com/chrome', loaded.upstreamVersion!, 'linux-x86-64', '/package/v155.0.8059.84.1', '/source', {})
+  const tokens = buildTokens('google.com/chrome', loaded.upstreamVersion!, 'linux-x86-64', '/package/v155.0.8059.84.2', '/source', {})
   const script = applyTokens((loaded.recipe.build!.script as string[]).join('\n'), tokens)
   expect(script).toContain('chrome-for-testing-public/155.0.8059.84/linux64/')
-  expect(script).not.toContain('chrome-for-testing-public/155.0.8059.84.1/')
-  expect(script).toContain('/package/v155.0.8059.84.1/lib')
+  expect(script).not.toContain('chrome-for-testing-public/155.0.8059.84.2/')
+  expect(script).toContain('/package/v155.0.8059.84.2/lib')
 })
 
 test('both JavaScript catalogs and installer bounds preserve all five identity components', () => {

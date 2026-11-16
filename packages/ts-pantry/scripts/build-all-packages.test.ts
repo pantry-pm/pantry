@@ -591,8 +591,8 @@ describe('automatic package build revisions', () => {
   })
 
   test('does not spend a one-version budget on a superseded latest marker', async () => {
-    const chrome = { ...postgres, domain: 'google.com/chrome', name: 'chrome', versions: ['155.0.8059.84.1', '155.0.8059.84', '155.0.8059.83'], latestVersion: '155.0.8059.84' }
-    expect(await selectVersionsForBuild(chrome, 1)).toEqual(['155.0.8059.84.1'])
+    const chrome = { ...postgres, domain: 'google.com/chrome', name: 'chrome', versions: ['155.0.8059.84.2', '155.0.8059.84.1', '155.0.8059.84', '155.0.8059.83'], latestVersion: '155.0.8059.84' }
+    expect(await selectVersionsForBuild(chrome, 1)).toEqual(['155.0.8059.84.2'])
   })
 
   test('preserves explicit historical pins for the immutable build guard', async () => {
@@ -601,8 +601,8 @@ describe('automatic package build revisions', () => {
   })
 
   test('resolves recipe revisions independently of vendor tuple length', async () => {
-    const chrome = { ...postgres, domain: 'google.com/chrome', name: 'chrome', versions: ['155.0.8059.84.1', '155.0.8059.84', '155.0.8059.83'], latestVersion: '155.0.8059.84.1' }
-    expect(await selectVersionsForBuild(chrome, 10)).toEqual(['155.0.8059.84.1', '155.0.8059.83'])
+    const chrome = { ...postgres, domain: 'google.com/chrome', name: 'chrome', versions: ['155.0.8059.84.2', '155.0.8059.84.1', '155.0.8059.84', '155.0.8059.83'], latestVersion: '155.0.8059.84.2' }
+    expect(await selectVersionsForBuild(chrome, 10)).toEqual(['155.0.8059.84.2', '155.0.8059.83'])
   })
 })
 
