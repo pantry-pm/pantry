@@ -1,0 +1,23 @@
+# Build-only Python inputs, resolved from the PyPI release JSON for each version.
+
+# https://pypi.org/pypi/Mako/1.3.10/json
+Mako==1.3.10 \
+    --hash=sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59
+
+# https://pypi.org/pypi/MarkupSafe/3.0.3/json
+MarkupSafe==3.0.3 \
+    --hash=sha256:6b5420a1d9450023228968e7e6a9ce57f65d148ab56d2313fcd589eee96a7a50 \
+    --hash=sha256:0bf2a864d67e76e5c9a34dc26ec616a66b9888e25e7b9460e1c76d3293bd9dbf
+
+# https://pypi.org/pypi/packaging/25.0/json
+packaging==25.0 \
+    --hash=sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484
+
+# https://pypi.org/pypi/PyYAML/6.0.3/json
+PyYAML==6.0.3 \
+    --hash=sha256:10892704fc220243f5305762e276552a0395f7beb4dbf9b14ec8fd43b57f126c \
+    --hash=sha256:b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d
+
+# https://pypi.org/pypi/meson/1.9.1/json
+meson==1.9.1 \
+    --hash=sha256:f824ab770c041a202f532f69e114c971918ed2daff7ea56583d80642564598d0

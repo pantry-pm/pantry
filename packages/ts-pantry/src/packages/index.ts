@@ -1256,6 +1256,7 @@ import { mercurerocksPackage } from './mercurerocks'
 import { mercurialscmorgPackage } from './mercurial-scmorg'
 import { mergestatcommergestatlitePackage } from './mergestat.com/mergestat-lite'
 import { mergiraforgPackage } from './mergiraforg'
+import { mesa3dorglibgbmPackage } from './mesa3d.org/libgbm'
 import { mesa3dorgPackage } from './mesa3dorg'
 import { mesonbuildcomPackage } from './mesonbuildcom'
 import { microeditorgithubioPackage } from './micro-editorgithubio'
@@ -3936,6 +3937,8 @@ export interface Pantry {
   mergestat_lite: typeof mergestatcommergestatlitePackage
   mergestatcommergestatlite: typeof mergestatcommergestatlitePackage
   mergiraforg: typeof mergiraforgPackage
+
+  mesa3dorglibgbm: typeof mesa3dorglibgbmPackage
   mesa3dorg: typeof mesa3dorgPackage
   mesonbuildcom: typeof mesonbuildcomPackage
   micro_editorgithubio: typeof microeditorgithubioPackage
@@ -5529,6 +5532,7 @@ export interface Pantry {
   libffi: typeof sourcewareorglibffiPackage
   libfontenc: typeof xorglibfontencPackage
   libfyaml: typeof libfyamlPackage
+  libgbm: typeof mesa3dorglibgbmPackage
   libgcrypt: typeof gnupgorglibgcryptPackage
   'libgd.github': typeof libgdgithubioPackage
   libgeotiff: typeof libgeotiffPackage
@@ -8670,6 +8674,8 @@ export const pantry: Pantry = {
   mergestat_lite: mergestatcommergestatlitePackage,
   mergestatcommergestatlite: mergestatcommergestatlitePackage,
   mergiraforg: mergiraforgPackage,
+
+  mesa3dorglibgbm: mesa3dorglibgbmPackage,
   mesa3dorg: mesa3dorgPackage,
   mesonbuildcom: mesonbuildcomPackage,
   micro_editorgithubio: microeditorgithubioPackage,
@@ -10263,6 +10269,7 @@ export const pantry: Pantry = {
   libffi: sourcewareorglibffiPackage,
   libfontenc: xorglibfontencPackage,
   libfyaml: libfyamlPackage,
+  libgbm: mesa3dorglibgbmPackage,
   libgcrypt: gnupgorglibgcryptPackage,
   'libgd.github': libgdgithubioPackage,
   libgeotiff: libgeotiffPackage,

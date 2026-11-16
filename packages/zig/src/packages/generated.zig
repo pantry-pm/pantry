@@ -1,6 +1,6 @@
 //! Package definitions generated from ts-pantry
 //! DO NOT EDIT MANUALLY - This file is auto-generated
-//! Total packages: 1774
+//! Total packages: 1775
 
 const std = @import("std");
 
@@ -35,7 +35,7 @@ pub const PackageInfo = struct {
     versions: []const []const u8,
 };
 
-/// All known packages (1774 total)
+/// All known packages (1775 total)
 pub const packages = [_]PackageInfo{ .{
     .name = "1Password",
     .domain = "1password.com",
@@ -13578,6 +13578,17 @@ pub const packages = [_]PackageInfo{ .{
     .build_dependencies = &[_][]const u8{ "linux:curl.se", "linux:cmake.org@3", "gnu.org/bison", "mesonbuild.com", "ninja-build.org", "freedesktop.org/pkg-config", "pygments.org", "python.org~3.11", "x.org/protocol", "github.com/westes/flex", "llvm.org^22" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "26.0.3", "26.0.2", "26.0.1", "26.0.0", "25.3.6", "25.3.5", "25.3.4", "25.3.3", "25.3.2", "25.3.1", "25.3.0", "25.2.8", "25.2.7", "25.2.6", "25.2.5", "25.2.4", "25.2.3", "25.2.2", "25.2.1", "25.2.0", "25.1.9", "25.1.8", "25.1.7", "25.1.6", "25.1.5", "25.1.4", "25.1.3", "25.1.2", "25.1.1", "25.1.0", "25.0.7", "25.0.6", "25.0.5", "25.0.4", "25.0.3", "25.0.2", "25.0.1", "25.0.0", "24.3.4", "24.3.3", "24.3.2", "24.3.1", "24.3.0", "24.2.8", "24.2.7", "24.2.6", "24.2.5", "24.2.4", "24.2.3", "24.2.2", "24.2.1", "24.2.0", "24.1.7", "24.1.6", "24.1.5", "24.1.4", "24.1.3", "24.1.2", "24.1.1", "24.1.0", "24.0.9", "24.0.8", "24.0.7", "24.0.6", "24.0.5", "24.0.4", "24.0.3", "24.0.2", "24.0.1", "24.0.0", "23.3.6", "23.3.5", "23.3.4", "23.3.3", "23.3.2", "23.3.1", "23.3.0", "23.2.1", "23.1.8", "23.1.7" },
+}, .{
+    .name = "libgbm",
+    .domain = "mesa3d.org/libgbm",
+    .kind = .library,
+    .description = "Mesa Generic Buffer Management client library",
+    .homepage_url = "https://www.mesa3d.org/",
+    .programs = &[_][]const u8{},
+    .dependencies = &[_][]const u8{ "dri.freedesktop.org^2.4.110", "libexpat.github.io^2", "systemd.io/libudev^262" },
+    .build_dependencies = &[_][]const u8{ "python.org~3.11", "ninja-build.org", "freedesktop.org/pkg-config^0.29", "gnu.org/coreutils", "gnu.org/binutils", "bun.com^1.3" },
+    .aliases = &[_][]const u8{},
+    .versions = &[_][]const u8{"26.0.6"},
 }, .{
     .name = "MesloLG Nerd Font",
     .domain = "meslo-lg-nerd-font",
