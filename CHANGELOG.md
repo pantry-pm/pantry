@@ -1,3 +1,28 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.209...v0.11.210)
+
+## ✨ Features
+
+- **recipes**: provide the Mesa GBM client as its own package ([1a8d59d](https://github.com/pantry-pm/pantry/commit/1a8d59d)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- **recipes**: use the GBM client runtime for Chrome ([8b95d8c](https://github.com/pantry-pm/pantry/commit/8b95d8c)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **recipes**: preserve explicit empty GBM driver selections ([8d7dfa6](https://github.com/pantry-pm/pantry/commit/8d7dfa6)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- advance Chrome recipe fixtures to the GBM revision ([b11f505](https://github.com/pantry-pm/pantry/commit/b11f505)) _(by Chris Breuer <chris@stacksjs.com>)_
+- require browser installs to exclude LLVM ([3099f32](https://github.com/pantry-pm/pantry/commit/3099f32)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.210 ([5d98d06](https://github.com/pantry-pm/pantry/commit/5d98d06)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update DBeaver, LLaMA.cpp, sympy ([cef3766](https://github.com/pantry-pm/pantry/commit/cef3766)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.208...v0.11.209)
 
 ## 🐛 Bug Fixes
