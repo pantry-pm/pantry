@@ -74,9 +74,10 @@ try {
   // The exact published package and ordinary install path used by HQ's CI.
   // A private XDG tree prevents an inherited installation from hiding failure.
   await run('install', [cli, 'install', 'git-scm.org@2.53.0', `google.com/chrome@${recipeBuildVersion('155.0.8059.84', chrome.revisions).current}`, '--no-save', '--verbose'], 600_000)
+  await assert.rejects(lstat(join(root, 'pantry/llvm.org')), { code: 'ENOENT' }, 'The browser runtime must not materialize LLVM')
   proof.materializationFootprint = {
     wholeNativeTreeRegularBytes: await regularBytes(join(root, 'pantry')),
-    llvmRegularBytes: await regularBytes(join(root, 'pantry/llvm.org')),
+    llvmRegularBytes: 0,
     scope: 'post-install unique-inode regular-file bytes; 500ms filesystem-free samples observe pressure, not a guaranteed peak bound',
   }
   const entry = join(root, 'pantry/.bin/google-chrome-stable')
