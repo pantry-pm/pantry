@@ -3,7 +3,7 @@
  *
  * @domain `google.com/chrome`
  * @programs `google-chrome-stable`
- * @version `157.0.8103.78` (8 versions available)
+ * @version `157.0.8103.78` (9 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install google.com/chrome`
@@ -70,7 +70,7 @@ export const googlecomchromePackage = {
     'x.org/xcb^1',
     'xkbcommon.org^1',
     'alsa-project.org/alsa-lib^1',
-    'mesa3d.org^26',
+    'mesa3d.org/libgbm^26',
     'dri.freedesktop.org^2',
     'x.org/x11^1',
     'x.org/exts^1',
@@ -101,10 +101,12 @@ export const googlecomchromePackage = {
     '156.0.8078.80',
     '156.0.8078.73',
     '156.0.8078.47',
+    '155.0.8059.84.2',
     '155.0.8059.84.1',
     '155.0.8059.84',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type GooglecomchromePackage = typeof googlecomchromePackage

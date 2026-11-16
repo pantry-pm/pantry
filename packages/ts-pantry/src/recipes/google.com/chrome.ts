@@ -17,7 +17,7 @@ export const recipe: Recipe = {
   homepage: 'https://developer.chrome.com/docs/chromedriver/downloads',
   programs: ['google-chrome-stable'],
   platforms: ['linux/x86-64'],
-  revisions: { '155.0.8059.84': 1 },
+  revisions: { '155.0.8059.84': 2 },
   versionSource: {
     type: 'custom',
     async fetch() {
@@ -40,7 +40,7 @@ export const recipe: Recipe = {
     'x.org/xcb': '^1',
     'xkbcommon.org': '^1',
     'alsa-project.org/alsa-lib': '^1',
-    'mesa3d.org': '^26',
+    'mesa3d.org/libgbm': '^26',
     'dri.freedesktop.org': '^2',
     'x.org/x11': '^1',
     'x.org/exts': '^1',

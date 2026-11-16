@@ -10769,10 +10769,10 @@ pub const packages = [_]PackageInfo{ .{
     .description = "Versioned Chrome for server browser automation",
     .homepage_url = "https://developer.chrome.com/docs/chromedriver/downloads",
     .programs = &[_][]const u8{"google-chrome-stable"},
-    .dependencies = &[_][]const u8{ "gnome.org/glib^2", "mozilla.org/nspr^4", "mozilla.org/nss^3", "gnome.org/atk^2", "freedesktop.org/at-spi2-atk^2", "freedesktop.org/at-spi2-core/libatspi~2.38", "freedesktop.org/dbus^1", "openprinting.github.io/cups^2", "libexpat.github.io^2", "x.org/xcb^1", "xkbcommon.org^1", "alsa-project.org/alsa-lib^1", "mesa3d.org^26", "dri.freedesktop.org^2", "x.org/x11^1", "x.org/exts^1", "cairographics.org^1", "gnome.org/pango^1", "systemd.io/libudev^262", "x.org/xcomposite^0", "x.org/xdamage^1", "x.org/xfixes^6", "x.org/xrandr^1" },
+    .dependencies = &[_][]const u8{ "gnome.org/glib^2", "mozilla.org/nspr^4", "mozilla.org/nss^3", "gnome.org/atk^2", "freedesktop.org/at-spi2-atk^2", "freedesktop.org/at-spi2-core/libatspi~2.38", "freedesktop.org/dbus^1", "openprinting.github.io/cups^2", "libexpat.github.io^2", "x.org/xcb^1", "xkbcommon.org^1", "alsa-project.org/alsa-lib^1", "mesa3d.org/libgbm^26", "dri.freedesktop.org^2", "x.org/x11^1", "x.org/exts^1", "cairographics.org^1", "gnome.org/pango^1", "systemd.io/libudev^262", "x.org/xcomposite^0", "x.org/xdamage^1", "x.org/xfixes^6", "x.org/xrandr^1" },
     .build_dependencies = &[_][]const u8{ "info-zip.org/unzip", "bun.com>=1.3" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "157.0.8103.78", "157.0.8103.50", "157.0.8103.38", "156.0.8078.80", "156.0.8078.73", "156.0.8078.47", "155.0.8059.84.1", "155.0.8059.84" },
+    .versions = &[_][]const u8{ "157.0.8103.78", "157.0.8103.50", "157.0.8103.38", "156.0.8078.80", "156.0.8078.73", "156.0.8078.47", "155.0.8059.84.2", "155.0.8059.84.1", "155.0.8059.84" },
 }, .{
     .name = "double-conversion",
     .domain = "google.com/double-conversion",
