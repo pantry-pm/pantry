@@ -3,7 +3,7 @@
  *
  * @domain `scala-sbt.org`
  * @programs `sbt`
- * @version `2.0.12` (53 versions available)
+ * @version `2.1.0` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install scala-sbt.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "sbt"
  * console.log(pkg.description) // "sbt, the interactive build tool"
  * console.log(pkg.programs)    // ["sbt"]
- * console.log(pkg.versions[0]) // "2.0.12" (latest)
+ * console.log(pkg.versions[0]) // "2.1.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/scala-sbt-org.md
@@ -67,6 +67,7 @@ export const scalasbtorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.0',
     '2.0.12',
     '2.0.11',
     '2.0.10',

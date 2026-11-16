@@ -813,6 +813,7 @@ export const aliases: Record<string, string> = {
   'libffi': 'sourceware.org/libffi',
   'libfontenc': 'x.org/libfontenc',
   'libfyaml': 'github.com/pantoniou/libfyaml',
+  'libgbm': 'mesa3d.org/libgbm',
   'libgcrypt': 'gnupg.org/libgcrypt',
   'libgd.github': 'libgd.github.io',
   'libgeotiff': 'github.com/OSGeo/libgeotiff',

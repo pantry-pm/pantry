@@ -1,0 +1,31 @@
+{
+  "id": "43954660086-1",
+  "domains": [
+    "ast-grep.github.io",
+    "browser-use.com",
+    "coder.com",
+    "depot.dev",
+    "digitalocean.com/doctl",
+    "fastlane.tools",
+    "fluentci.io",
+    "fly.io",
+    "github.com/chainguard-dev/apko",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/router-for-me/CLIProxyAPI",
+    "imagemagick.org",
+    "infracost.io",
+    "lavinmq.com",
+    "meilisearch.com",
+    "mise.jdx.dev",
+    "numpy.org",
+    "projen.io",
+    "rabbitmq.com",
+    "railway.app",
+    "rubygems.org",
+    "scala-sbt.org",
+    "seaweedfs.com",
+    "sniffnet.net",
+    "xpra.org",
+    "ziglang.org"
+  ]
+}

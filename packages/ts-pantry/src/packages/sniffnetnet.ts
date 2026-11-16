@@ -3,7 +3,7 @@
  *
  * @domain `sniffnet.net`
  * @programs `sniffnet`
- * @version `1.4.2` (5 versions available)
+ * @version `1.6.0` (19 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install sniffnet.net`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "sniffnet"
  * console.log(pkg.description) // "Cross-platform application to monitor your netw..."
  * console.log(pkg.programs)    // ["sniffnet"]
- * console.log(pkg.versions[0]) // "1.4.2" (latest)
+ * console.log(pkg.versions[0]) // "1.6.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/sniffnet-net.md
@@ -71,6 +71,7 @@ export const sniffnetnetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.6.0',
     '1.5.1',
     '1.5.0',
     '1.4.2',
