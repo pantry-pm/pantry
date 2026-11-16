@@ -30,7 +30,7 @@ export const recipe: Recipe = {
       'python -m venv .build-python',
       '.build-python/bin/python -m pip install --only-binary=:all: --require-hashes --no-cache-dir -r "{{srcroot}}/props/requirements.txt"',
       'export PATH="$PWD/.build-python/bin:$PATH"',
-      'meson setup build --prefix={{prefix}} --libdir=lib --buildtype=release --wrap-mode=nofallback -Dauto_features=disabled -Dplatforms=[] -Dgallium-drivers=[] -Dvulkan-drivers=[] -Dopengl=false -Dgles1=disabled -Dgles2=disabled -Dglx=disabled -Degl=disabled -Dgbm=enabled -Dllvm=disabled -Dbuild-tests=false -Dtools=[]',
+      'meson setup build --prefix={{prefix}} --libdir=lib --buildtype=release --wrap-mode=nofallback -Dauto_features=disabled "-Dplatforms=[]" "-Dgallium-drivers=[]" "-Dvulkan-drivers=[]" -Dopengl=false -Dgles1=disabled -Dgles2=disabled -Dglx=disabled -Degl=disabled -Dgbm=enabled -Dllvm=disabled -Dbuild-tests=false "-Dtools=[]"',
       'ninja -C build -j{{hw.concurrency}}',
       'ninja -C build install',
       'install -Dm644 docs/license.rst "{{prefix}}/share/licenses/libgbm/license.rst"',
