@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path'
 
 export interface RuntimePackage { domain: string, version: string, prefix: string, resources?: string[] }
@@ -234,6 +235,45 @@ export function bundleRuntimeLibraries(
   return receipts
 }
 
+/**
+ * The entitlements a binary was signed with, as an XML plist, or null when it
+ * is unsigned or has none. Readable even after `install_name_tool` has
+ * invalidated the signature: the signature blob is still embedded.
+ */
+export function machoEntitlements(file: string): string | null {
+  try {
+    const xml = execFileSync('codesign', ['-d', '--entitlements', '-', '--xml', file], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    return xml.includes('<plist') && xml.includes('<key>') ? xml : null
+  }
+  catch {
+    return null
+  }
+}
+
+/**
+ * Ad-hoc re-signs a Mach-O file, keeping the entitlements it was signed with.
+ * A plain `codesign --force --sign -` drops them, which breaks software that
+ * needs them at runtime: lima's limactl loses
+ * com.apple.security.virtualization (its VMs fail to start) and qemu loses
+ * com.apple.security.hypervisor (HVF acceleration is refused).
+ */
+export function resignPreservingEntitlements(file: string): void {
+  const entitlements = machoEntitlements(file)
+  if (!entitlements) {
+    execFileSync('codesign', ['--force', '--sign', '-', file], { stdio: 'pipe' })
+    return
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'pantry-entitlements-'))
+  try {
+    const plist = join(dir, 'entitlements.plist')
+    writeFileSync(plist, entitlements)
+    execFileSync('codesign', ['--force', '--sign', '-', '--entitlements', plist, file], { stdio: 'pipe' })
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
 /** Normalize loader paths without searching or copying any host libraries. */
 export function normalizeMachoRuntime(prefix: string, isBinary: (file: string) => boolean, additionalFiles: readonly string[] = []): void {
   const root = realpathSync(prefix)
@@ -277,7 +317,7 @@ export function normalizeMachoRuntime(prefix: string, isBinary: (file: string) =
         if (typeof status !== 'number' || !Number.isInteger(status) || status <= 0) throw error
       }
     }
-    execFileSync('codesign', ['--force', '--sign', '-', file], { stdio: 'pipe' })
+    resignPreservingEntitlements(file)
   }
   for (const part of ['bin', 'sbin', 'lib', 'lib64', 'libexec']) walk(join(prefix, part), normalize)
   for (const file of additionalFiles) {
