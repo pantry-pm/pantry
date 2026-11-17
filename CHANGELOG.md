@@ -1,3 +1,37 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.210...v0.11.211)
+
+## ✨ Features
+
+- **ci**: build darwin source recipes on a self-hosted Mac runner ([2afcc17](https://github.com/pantry-pm/pantry/commit/2afcc17)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **app-store**: keep an app out of chosen territories ([e3527ef](https://github.com/pantry-pm/pantry/commit/e3527ef)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **app-store**: apply a listing and submit it with app-store:listing ([fce4b19](https://github.com/pantry-pm/pantry/commit/fce4b19)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: forward app-store and native release commands to ts-pantry ([0420150](https://github.com/pantry-pm/pantry/commit/0420150)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **app-store**: sign with a local identity, and package and deliver any app ([bc3785d](https://github.com/pantry-pm/pantry/commit/bc3785d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **install**: keep entitlements when re-signing installed Mach-O files ([9a3a17a](https://github.com/pantry-pm/pantry/commit/9a3a17a)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **ci**: type the disk guard's default and the router test's matrix entries ([89876df](https://github.com/pantry-pm/pantry/commit/89876df)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **python**: read C_INCLUDE_PATH in the <3.12 setup.py patch ([cc70909](https://github.com/pantry-pm/pantry/commit/cc70909)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: stage dependencies at their installed v<version> path too ([72d57fd](https://github.com/pantry-pm/pantry/commit/72d57fd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **qemu**: build against capstone 5 ([3553efd](https://github.com/pantry-pm/pantry/commit/3553efd)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **qemu**: build from source so it links Pantry's ncurses ABI ([652fe76](https://github.com/pantry-pm/pantry/commit/652fe76)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: keep entitlements when re-signing Mach-O binaries ([1fd6956](https://github.com/pantry-pm/pantry/commit/1fd6956)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **app-store**: apply a first version's listing without What's New ([691e0fa](https://github.com/pantry-pm/pantry/commit/691e0fa)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.211 ([280450e](https://github.com/pantry-pm/pantry/commit/280450e)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.512 ([440a5d2](https://github.com/pantry-pm/pantry/commit/440a5d2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.511 ([319caa6](https://github.com/pantry-pm/pantry/commit/319caa6)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update Brave Browser, claude-code, CLIProxyAPI, dprint, LLaMA.cpp, llm, postgrest, pscale, virtualenv, zig, zrok ([5b3072a](https://github.com/pantry-pm/pantry/commit/5b3072a)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update AltTab, apko, ast-grep.github, Brave Browser, browser-use, CLIProxyAPI, coder, depot, doctl, f2py, fastlane, fluentci, fly, Hidden Bar, infracost, lavinmq, LLaMA.cpp, meilisearch, mise, Notion, projen, rabbitmq, railway, rubygems, sbt, SeaweedFS, Slack, sniffnet, xpra, zig ([1f651c1](https://github.com/pantry-pm/pantry/commit/1f651c1)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.209...v0.11.210)
 
 ## ✨ Features
