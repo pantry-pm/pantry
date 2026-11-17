@@ -929,10 +929,7 @@ fn fixMacOSLibraryDirectory(
             if (!try fixDylibInstallName(allocator, path, lib_dir)) continue;
             try fixMacOSLibraryPathsInTree(allocator, path, lib_dir, tree_root);
             try addRpathEntries(allocator, path, package_dir);
-            const signed = try io_helper.childRun(allocator, &.{ "codesign", "-s", "-", "-f", path });
-            defer allocator.free(signed.stdout);
-            defer allocator.free(signed.stderr);
-            if (signed.term != .exited or signed.term.exited != 0) return error.MacOSLibrarySigningFailed;
+            try resignAdHoc(allocator, path);
         }
     }
 }
@@ -1127,13 +1124,59 @@ fn codesignDirectory(allocator: std.mem.Allocator, dir_path: []const u8) !void {
         defer allocator.free(image.stdout);
         defer allocator.free(image.stderr);
         if (image.term != .exited or image.term.exited != 0) continue;
-        const result = try io_helper.childRun(allocator, &[_][]const u8{
-            "codesign", "-s", "-", "-f", file_path,
-        });
-        defer allocator.free(result.stdout);
-        defer allocator.free(result.stderr);
-        if (result.term != .exited or result.term.exited != 0) return error.MacOSLibrarySigningFailed;
+        try resignAdHoc(allocator, file_path);
     }
+}
+
+/// Ad-hoc re-signs a Mach-O file whose load commands were just rewritten.
+/// A plain `codesign -s - -f` writes a fresh signature with no entitlements,
+/// which silently disables anything that needs one: qemu installed this way
+/// could not use Hypervisor.framework ("Could not access HVF ... signed with
+/// com.apple.security.hypervisor"). The publisher signed the entitlements
+/// in; carry them into the new signature.
+fn resignAdHoc(allocator: std.mem.Allocator, path: []const u8) !void {
+    const result = try io_helper.childRun(allocator, &.{ "codesign", "-s", "-", "-f", "--preserve-metadata=entitlements", path });
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+    if (result.term != .exited or result.term.exited != 0) return error.MacOSLibrarySigningFailed;
+}
+
+test "re-signing after an rpath rewrite keeps the publisher's entitlements" {
+    if (@import("builtin").os.tag != .macos) return error.SkipZigTest;
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const a = arena.allocator();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(io_helper.io, "package/bin");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "main.c", .data = "int main(void) { return 0; }\n" });
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "hypervisor.plist", .data =
+        \\<?xml version="1.0" encoding="UTF-8"?>
+        \\<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        \\<plist version="1.0"><dict><key>com.apple.security.hypervisor</key><true/></dict></plist>
+        \\
+    });
+    var buffer: [std.fs.max_path_bytes]u8 = undefined;
+    const length = try tmp.dir.realPathFile(io_helper.io, ".", &buffer);
+    const root = buffer[0..length];
+    const bin = try std.fs.path.join(a, &.{ root, "package/bin" });
+    const binary = try std.fs.path.join(a, &.{ bin, "vm" });
+    const compiled = try io_helper.childRun(a, &.{ "/usr/bin/clang", try std.fs.path.join(a, &.{ root, "main.c" }), "-o", binary });
+    try std.testing.expect(compiled.term == .exited and compiled.term.exited == 0);
+    const signed = try io_helper.childRun(a, &.{ "codesign", "-s", "-", "-f", "--entitlements", try std.fs.path.join(a, &.{ root, "hypervisor.plist" }), binary });
+    try std.testing.expect(signed.term == .exited and signed.term.exited == 0);
+
+    // What install normalization does: rewrite load commands, then re-sign.
+    const rewritten = try io_helper.childRun(a, &.{ "install_name_tool", "-add_rpath", "@loader_path/../lib", binary });
+    try std.testing.expect(rewritten.term == .exited and rewritten.term.exited == 0);
+    try codesignDirectory(a, bin);
+
+    const entitlements = try io_helper.childRun(a, &.{ "codesign", "-d", "--entitlements", "-", "--xml", binary });
+    try std.testing.expect(std.mem.indexOf(u8, entitlements.stdout, "com.apple.security.hypervisor") != null);
+    const verified = try io_helper.childRun(a, &.{ "codesign", "--verify", "--strict", binary });
+    try std.testing.expect(verified.term == .exited and verified.term.exited == 0);
+    const run = try io_helper.childRun(a, &.{binary});
+    try std.testing.expect(run.term == .exited and run.term.exited == 0);
 }
 
 test "an @rpath registry reference resolves against a project install's root" {
