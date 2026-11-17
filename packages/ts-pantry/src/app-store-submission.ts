@@ -76,6 +76,11 @@ export interface AppStoreMetadata {
   releaseType?: AppStoreReleaseType
   /** Make the app available in every current and future territory. @default true */
   availableInNewTerritories?: boolean
+  /**
+   * ISO 3166-1 alpha-3 territories to keep the app out of, for example CHN
+   * for China mainland, which asks for an ICP filing and a security assessment.
+   */
+  excludedTerritories?: string[]
   /** Declare that the app does not use the advertising identifier. @default false */
   usesIdfa?: boolean
   /** Export-compliance answer applied to uploaded builds. @default false */
@@ -304,13 +309,15 @@ async function ensurePrice(client: AppStoreConnectClient, appId: string, config:
   })
 }
 
-async function ensureAvailability(client: AppStoreConnectClient, appId: string, availableInNewTerritories = true): Promise<void> {
+async function ensureAvailability(client: AppStoreConnectClient, appId: string, availableInNewTerritories = true, excludedTerritories: string[] = []): Promise<void> {
+  const excluded = new Set(excludedTerritories.map(id => id.toUpperCase()))
   try {
     const existing = await client.request<ResourceResponse<{ availableInNewTerritories: boolean }>>(`/apps/${appId}/appAvailabilityV2`)
-    if (existing.data.attributes.availableInNewTerritories === availableInNewTerritories)
-      return
-    // Apple currently exposes creation and territory updates, but no direct
-    // app-availability PATCH. Keep existing territory choices intact.
+    // Apple has no app-availability PATCH, only per-territory updates, so an
+    // existing record keeps its choices apart from the territories excluded
+    // here, which are switched off one by one.
+    if (excluded.size)
+      await excludeTerritories(client, existing.data.id, excluded)
     return
   }
   catch (error) {
@@ -324,7 +331,7 @@ async function ensureAvailability(client: AppStoreConnectClient, appId: string, 
     return {
       type: 'territoryAvailabilities',
       id,
-      attributes: { available: true },
+      attributes: { available: !excluded.has(territory.id) },
       relationships: { territory: { data: { type: 'territories', id: territory.id } } },
     }
   })
@@ -344,6 +351,20 @@ async function ensureAvailability(client: AppStoreConnectClient, appId: string, 
       included,
     }),
   })
+}
+
+async function excludeTerritories(client: AppStoreConnectClient, availabilityId: string, excluded: Set<string>): Promise<void> {
+  const listing = await client.request<ListResponse<{ available: boolean }>>(`/v2/appAvailabilities/${availabilityId}/territoryAvailabilities?include=territory&limit=200`)
+  for (const item of listing.data) {
+    const territory = item.relationships?.territory?.data
+    const territoryId = territory && !Array.isArray(territory) ? territory.id : undefined
+    if (!territoryId || !excluded.has(territoryId) || item.attributes.available === false)
+      continue
+    await client.request(`/territoryAvailabilities/${item.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ data: { type: 'territoryAvailabilities', id: item.id, attributes: { available: false } } }),
+    })
+  }
 }
 
 async function ensureVersionLocalization(
@@ -707,7 +728,7 @@ export async function prepareAppStoreSubmission(
 
   await updateAppInfo(client, appId, store)
   await ensurePrice(client, appId, store)
-  await ensureAvailability(client, appId, store.availableInNewTerritories ?? true)
+  await ensureAvailability(client, appId, store.availableInNewTerritories ?? true, store.excludedTerritories)
 
   const results: AppStoreSubmissionResult['versions'] = []
   for (const version of versions) {

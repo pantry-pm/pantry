@@ -243,3 +243,49 @@ describe('App Store review contact', () => {
     }
   })
 })
+
+describe('App Store territories', () => {
+  it('switches off excluded territories on an existing availability, and only those', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pantry-store-'))
+    const keyPath = join(dir, 'AuthKey_TEST.p8')
+    const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+    writeFileSync(keyPath, privateKey.export({ type: 'pkcs8', format: 'pem' }))
+    const patches: Array<{ path: string, body: any }> = []
+    const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(String(input))
+      const method = init?.method ?? 'GET'
+      if (method === 'PATCH') {
+        patches.push({ path: url.pathname, body: JSON.parse(String(init?.body)) })
+        return Response.json({ data: {} })
+      }
+      if (url.pathname.endsWith('/apps/app-123/appInfos'))
+        return Response.json({ data: [{ type: 'appInfos', id: 'info-123', attributes: { appStoreState: 'PREPARE_FOR_SUBMISSION' } }] })
+      if (url.pathname.endsWith('/appInfos/info-123/appInfoLocalizations'))
+        return Response.json({ data: [{ type: 'appInfoLocalizations', id: 'info-loc', attributes: { locale: 'en-US' } }] })
+      if (url.pathname.endsWith('/appPriceSchedules/app-123/manualPrices'))
+        return Response.json({ data: [{ type: 'appPrices', id: 'price', attributes: {} }], included: [{ type: 'appPricePoints', id: 'free', attributes: { customerPrice: '0.0' } }] })
+      if (url.pathname.endsWith('/apps/app-123/appAvailabilityV2'))
+        return Response.json({ data: { type: 'appAvailabilities', id: 'availability-1', attributes: { availableInNewTerritories: true } } })
+      if (url.pathname.endsWith('/appAvailabilities/availability-1/territoryAvailabilities'))
+        return Response.json({ data: [
+          { type: 'territoryAvailabilities', id: 'ta-usa', attributes: { available: true }, relationships: { territory: { data: { type: 'territories', id: 'USA' } } } },
+          { type: 'territoryAvailabilities', id: 'ta-chn', attributes: { available: true }, relationships: { territory: { data: { type: 'territories', id: 'CHN' } } } },
+        ] })
+      return Response.json({ data: [] })
+    }) as unknown as typeof fetch
+    const client = new AppStoreConnectClient({ keyId: 'KEY', issuerId: 'ISSUER', keyPath, fetch: fetcher })
+    try {
+      await prepareAppStoreSubmission(client, {
+        subtitle: 'Subtitle', privacyPolicyUrl: 'https://example.test/privacy', description: 'Description', keywords: 'one',
+        supportUrl: 'https://example.test/support', copyright: '2026 Example', primaryCategory: 'UTILITIES',
+        contentRightsDeclaration: 'DOES_NOT_USE_THIRD_PARTY_CONTENT', price: '0', screenshots: [], excludedTerritories: ['chn'],
+      }, 'app-123', [])
+      const territoryPatches = patches.filter(item => item.path.includes('/territoryAvailabilities/'))
+      expect(territoryPatches.map(item => item.path)).toEqual(['/v1/territoryAvailabilities/ta-chn'])
+      expect(territoryPatches[0]!.body.data.attributes).toEqual({ available: false })
+    }
+    finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
