@@ -1696,6 +1696,7 @@ export const CUSTOM_BUILD_DOMAINS: ReadonlySet<string> = new Set<string>([
   'python.org', // compile extensions against the declared managed ABI, including Linux NIS
   'openjdk.org', // exact Temurin release, checksum and runtime identity; never latest-per-major
   'freedesktop.org/at-spi2-core/libatspi', // client ABI only; no accessibility session services
+  'qemu.org', // pkgx's prebuilt binds COLS and the wide curses API to pkgx's single libncurses; Pantry's ncurses splits narrow/wide and tinfo, so the mirrored binary failed to launch (_COLS not found). Link Pantry's ncursesw/tinfow instead
 ])
 
 /** Current targeted versions and every exact pin are required, even when broad sweeps exclude the domain. */
