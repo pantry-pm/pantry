@@ -200,6 +200,12 @@ jobs:
           POPULAR_MAXV: ${{ github.event.inputs.popular-max-versions || '20' }}
         run: |
           set -euo pipefail
+          # Darwin publishes on our own Mac (source) or a 10x macOS runner
+          # (mirror): only the newest versions are worth that. Exact
+          # domain@version pins are unaffected and always build.
+          DARWIN_MAX_VERSIONS=2
+          [ "$MAXV" -gt "$DARWIN_MAX_VERSIONS" ] && MAXV=$DARWIN_MAX_VERSIONS
+          [ "$POPULAR_MAXV" -gt "$DARWIN_MAX_VERSIONS" ] && POPULAR_MAXV=$DARWIN_MAX_VERSIONS
           SOURCE=""
           if [ -n "$NATIVE" ]; then
             SOURCE=$(bun scripts/build-all-packages.ts --platform darwin-arm64 -p "${NATIVE// /,}" \
@@ -382,6 +388,12 @@ jobs:
           PKGS=$(echo "${{ matrix.domains }}" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
           POPULAR_MAXV="${{ github.event.inputs.popular-max-versions || '20' }}"
+          # Darwin publishes on our own Mac (source) or a 10x macOS runner
+          # (mirror): only the newest versions are worth that. Exact
+          # domain@version pins are unaffected and always build.
+          DARWIN_MAX_VERSIONS=2
+          [ "$MAXV" -gt "$DARWIN_MAX_VERSIONS" ] && MAXV=$DARWIN_MAX_VERSIONS
+          [ "$POPULAR_MAXV" -gt "$DARWIN_MAX_VERSIONS" ] && POPULAR_MAXV=$DARWIN_MAX_VERSIONS
           # Recipe changes must replace existing native artifacts too. Custom
           # builds keep their source patches even when pkgx has a prebuilt.
           FORCE_ARGS=()
