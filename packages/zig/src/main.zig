@@ -3092,6 +3092,14 @@ fn printHelp() void {
     style.print("      " ++ style.cyan ++ "shim:list" ++ style.reset ++ "           List all shims\n", .{});
     style.print("      " ++ style.cyan ++ "shim:remove" ++ style.reset ++ "         Remove a shim\n\n", .{});
 
+    // Apple and native releases (implemented by ts-pantry; see forwardToTsPantry)
+    style.print("    " ++ bold_cyan ++ "App Store & native releases:" ++ style.reset ++ "\n", .{});
+    style.print("      " ++ style.cyan ++ "app-store:provision" ++ style.reset ++ " Register the bundle ID and make the Mac App Store profile\n", .{});
+    style.print("      " ++ style.cyan ++ "app-store:csr" ++ style.reset ++ "       Generate keys and CSRs for Mac App Store certificates\n", .{});
+    style.print("      " ++ style.cyan ++ "app-store:package" ++ style.reset ++ "   Check a signed, sandboxed app and write its installer package\n", .{});
+    style.print("      " ++ style.cyan ++ "app-store:deliver" ++ style.reset ++ "   Validate and upload a package to App Store Connect\n", .{});
+    style.print("      " ++ style.cyan ++ "native:release" ++ style.reset ++ "      Qualify, version and release a native app\n\n", .{});
+
     // Inspector
     style.print("    " ++ bold_cyan ++ "Inspector:" ++ style.reset ++ "\n", .{});
     style.print("      " ++ style.cyan ++ "inspector" ++ style.reset ++ "           Open the package inspector UI in your browser\n\n", .{});
@@ -3371,6 +3379,31 @@ fn warnIfInvokedAsLaunchpad() void {
 /// Only the exact argv shapes emitted by the shell hook are handled — any
 /// other form (flags, --help, missing args) falls through to the full CLI so
 /// behavior there is unchanged. Exits the process when it handles the call.
+/// Commands ts-pantry implements and the Zig CLI forwards.
+pub fn isTsPantryCommand(name: []const u8) bool {
+    return std.mem.startsWith(u8, name, "app-store:") or std.mem.startsWith(u8, name, "native:");
+}
+
+fn forwardToTsPantry(allocator: std.mem.Allocator, rest: []const []const u8) void {
+    var args: std.ArrayList([]const u8) = .empty;
+    args.append(allocator, "ts-pantry@" ++ version_options.version) catch std.process.exit(1);
+    args.appendSlice(allocator, rest) catch std.process.exit(1);
+    const result = lib.commands.pxCommand(allocator, args.items, .{ .silent = true }) catch |err| {
+        style.printForced("Could not run ts-pantry: {s}\n", .{@errorName(err)});
+        std.process.exit(1);
+    };
+    if (result.message) |message| style.printForced("{s}\n", .{message});
+    std.process.exit(result.exit_code);
+}
+
+test "forwards the App Store and native release commands to ts-pantry" {
+    try std.testing.expect(isTsPantryCommand("app-store:deliver"));
+    try std.testing.expect(isTsPantryCommand("app-store:provision"));
+    try std.testing.expect(isTsPantryCommand("native:release"));
+    try std.testing.expect(!isTsPantryCommand("install"));
+    try std.testing.expect(!isTsPantryCommand("publish:commit"));
+}
+
 fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
     const args = io_helper.argsAlloc(allocator) catch return;
     // Free args on the fall-through path. defers do NOT run on std.process.exit,
@@ -3386,6 +3419,14 @@ fn maybeFastPathShellDispatch(allocator: std.mem.Allocator) void {
     // parent `pantry install`. See install/mas.zig (installIsolated).
     if (args.len == 3 and std.mem.eql(u8, args[1], "__mas-install")) {
         std.process.exit(if (lib.install.mas.install(args[2])) 0 else 1);
+    }
+
+    // The Apple and native release commands live in ts-pantry, the TypeScript
+    // half of pantry. Forwarded here, pinned to this pantry's own version, so
+    // `pantry app-store:deliver` works without the caller having to know which
+    // half implements it, or reach for `pantry px ts-pantry`.
+    if (args.len >= 2 and isTsPantryCommand(args[1])) {
+        forwardToTsPantry(allocator, args[1..]);
     }
 
     if (args.len == 3 and std.mem.eql(u8, args[1], "shell:lookup") and
