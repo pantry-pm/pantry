@@ -1,0 +1,15 @@
+{
+  "id": "44011732574-1",
+  "domains": [
+    "anthropic.com/claude-code",
+    "dprint.dev",
+    "github.com/ggerganov/llama.cpp",
+    "github.com/router-for-me/CLIProxyAPI",
+    "llm.datasette.io",
+    "planetscale.com",
+    "postgrest.org",
+    "virtualenv.pypa.io",
+    "ziglang.org",
+    "zrok.io"
+  ]
+}
