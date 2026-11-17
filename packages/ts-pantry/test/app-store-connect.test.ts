@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import process from 'node:process'
 import { spawnSync } from 'node:child_process'
 import { generateKeyPairSync } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -7,7 +8,9 @@ import { join } from 'node:path'
 import {
   AppStoreConnectClient,
   appStoreConnectToken,
+  certificateFingerprint,
   ensureAppStoreVersions,
+  localSigningFingerprints,
   provisionMacApp,
   waitForAppStoreBuilds,
 } from '../src/app-store-connect'
@@ -371,4 +374,90 @@ test('asset uploads send the exact binary slice with length and verify server in
     finally { server.stop(true) }
   }
   finally { rmSync(directory, { recursive: true, force: true }) }
+})
+
+describe('provisionMacApp with local signing identities', () => {
+  test('builds the profile around a distribution certificate whose key is on this machine', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'pantry-local-identity-'))
+    try {
+      const keyPath = join(directory, 'AuthKey.p8')
+      writeFileSync(keyPath, generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({ type: 'pkcs8', format: 'pem' }))
+      const remote = keyMaterial(directory, 'remote')
+      const unified = keyMaterial(directory, 'unified')
+      const installer = keyMaterial(directory, 'installer')
+      const fingerprint = (content: string) => certificateFingerprint(content)!
+      const certificate = (id: string, content: string) => ({
+        type: 'certificates',
+        id,
+        attributes: { activated: true, expirationDate: '2999-01-01T00:00:00Z', certificateContent: content },
+      })
+      const writes: any[] = []
+      const result = await provisionMacApp({
+        identifier: 'com.example.desktop',
+        name: 'Example Desktop',
+        keyId: 'KEY123',
+        issuerId: 'issuer',
+        keyPath,
+        baseUrl: 'https://example.test/v1',
+        checkOnly: false,
+        // The team's Mac App Distribution certificate was issued on another
+        // Mac; this one only has the Apple Distribution and installer keys.
+        signingFingerprints: [fingerprint(unified.certificateContent), fingerprint(installer.certificateContent).toLowerCase()],
+        fetch: (async (input: string | URL | Request, init?: RequestInit) => {
+          const url = new URL(String(input))
+          const body = init?.body ? JSON.parse(String(init.body)) : undefined
+          if (url.pathname.endsWith('/bundleIds') && url.search)
+            return Response.json({ data: [{ type: 'bundleIds', id: 'bundle-1', attributes: { identifier: 'com.example.desktop', platform: 'MAC_OS' } }] })
+          if (url.pathname.endsWith('/bundleIdCapabilities'))
+            return Response.json({ data: [] })
+          if (url.pathname.endsWith('/certificates') && url.search) {
+            const kind = url.searchParams.get('filter[certificateType]')
+            if (kind === 'MAC_APP_DISTRIBUTION')
+              return Response.json({ data: [certificate('remote-cert', remote.certificateContent)] })
+            if (kind === 'DISTRIBUTION')
+              return Response.json({ data: [certificate('unified-cert', unified.certificateContent)] })
+            return Response.json({ data: [certificate('installer-cert', installer.certificateContent)] })
+          }
+          if (url.pathname.endsWith('/profiles') && url.search)
+            return Response.json({ data: [{ type: 'profiles', id: 'stale', attributes: { name: 'Example Desktop Mac App Store', profileState: 'ACTIVE' }, relationships: { certificates: { data: [{ type: 'certificates', id: 'remote-cert' }] } } }] })
+          if (url.pathname.endsWith('/profiles') && init?.method === 'POST') {
+            writes.push(body)
+            return Response.json({ data: { ...body.data, id: 'profile-2', attributes: { ...body.data.attributes, profileState: 'ACTIVE', profileContent: 'cHJvZmlsZQ==' } } }, { status: 201 })
+          }
+          if (url.pathname.endsWith('/apps'))
+            return Response.json({ data: [] })
+          throw new Error(`Unexpected request: ${url}`)
+        }) as typeof fetch,
+      })
+
+      expect(result.certificates.map(item => [item.type, item.id, item.localKey])).toEqual([
+        ['DISTRIBUTION', 'unified-cert', true],
+        ['MAC_INSTALLER_DISTRIBUTION', 'installer-cert', true],
+      ])
+      // The existing profile names the remote certificate, so a new one is made.
+      expect(result.profile).toMatchObject({ id: 'profile-2', created: true })
+      expect(writes[0].data.relationships.certificates.data).toEqual([{ type: 'certificates', id: 'unified-cert' }])
+    }
+    finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  test('reads fingerprints from both identity lists', () => {
+    const calls: string[][] = []
+    const run = ((command: string, args: string[]) => {
+      calls.push(args)
+      return { stdout: args.includes('codesigning')
+        ? '  1) 7F7B5D4CF54EB312637278976CA1CA8CA3BDB7B6 "Apple Distribution: Example (TEAM)"\n     1 valid identities found\n'
+        : '  1) 338A0D52D324EF6FCB6EE4DD12F69A92C62A8929 "3rd Party Mac Developer Installer: Example (TEAM)"\n' }
+    }) as any
+    const found = localSigningFingerprints(run)
+    if (process.platform === 'darwin') {
+      expect(found.sort()).toEqual(['338A0D52D324EF6FCB6EE4DD12F69A92C62A8929', '7F7B5D4CF54EB312637278976CA1CA8CA3BDB7B6'])
+      expect(calls.length).toBe(2)
+    }
+    else {
+      expect(found).toEqual([])
+    }
+  })
 })

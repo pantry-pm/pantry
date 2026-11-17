@@ -1,7 +1,7 @@
 import type { NativeCommand } from './command'
 import process from 'node:process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -106,10 +106,31 @@ export async function notarizeNativeArtifact(file: string, credentials: NotaryCr
   finally { rmSync(directory, { recursive: true, force: true }) }
 }
 
+/** Files and folders inside a bundle that users other than the owner cannot read (or enter). */
+export function ownerOnlyFiles(directory: string): string[] {
+  const found: string[] = []
+  const walk = (path: string): void => {
+    const stat = lstatSync(path)
+    if (stat.isSymbolicLink()) return
+    if (stat.isDirectory()) {
+      if ((stat.mode & 0o005) !== 0o005) found.push(path)
+      for (const name of readdirSync(path)) walk(join(path, name))
+    }
+    else if ((stat.mode & 0o004) === 0) found.push(path)
+  }
+  walk(directory)
+  return found
+}
+
 export async function packageNativeAppStore(app: string, output: string, installerIdentity: string, command: NativeCommand = runNativeCommand): Promise<string> {
   if (!app.endsWith('.app') || !existsSync(app) || !output.endsWith('.pkg') || !installerIdentity) throw new Error('App Store packaging requires an app, .pkg output and installer identity')
   if (existsSync(output)) throw new Error(`Refusing to overwrite an existing package: ${output}`)
   if (!existsSync(join(app, 'Contents/embedded.provisionprofile'))) throw new Error('App Store app is missing its provisioning profile')
+  // App Store Connect rejects a package with anything only its owner can read
+  // (90255): the installed app runs as the user, who could not then verify its
+  // signature. Caught here, by name, instead of after an upload attempt.
+  const unreadable = ownerOnlyFiles(app)
+  if (unreadable.length) throw new Error(`App Store app contains files other users cannot read: ${unreadable.slice(0, 10).map(file => file.slice(app.length + 1)).join(', ')}${unreadable.length > 10 ? ` and ${unreadable.length - 10} more` : ''}`)
   succeeded('App signature', await command('codesign', ['--verify', '--deep', '--strict', app]))
   const signed = succeeded('Read signed entitlements', await command('codesign', ['-d', '--entitlements', ':-', app]))
   const directory = mkdtempSync(join(tmpdir(), 'pantry-app-store-package-'))

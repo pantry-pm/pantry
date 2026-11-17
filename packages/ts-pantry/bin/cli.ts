@@ -9,7 +9,7 @@ import {
   exportAppleCertificateP12,
   generateMacCertificateRequests,
 } from '../src/apple-certificates'
-import { provisionMacApp } from '../src/app-store-connect'
+import { localSigningFingerprints, provisionMacApp } from '../src/app-store-connect'
 import { findDependencyFiles, parseDependencyFile, resolveDependencyFile } from '../src/dependency-resolver'
 import {
   cleanStaleOutputFiles,
@@ -1564,6 +1564,67 @@ cli
   })
 
 cli
+  .command('app-store:package <app>', 'Package a signed, sandboxed .app as a signed App Store installer package')
+  .option('--output <pkg>', 'Path of the .pkg to write (must not exist)')
+  .option('--installer-identity <identity>', 'Mac Installer Distribution identity name or SHA-1 fingerprint')
+  .action(async (app: string, options: { output?: string, installerIdentity?: string }) => {
+    // The same checks the native pipeline applies, for any app that builds its
+    // own bundle: a verified signature, the App Sandbox entitlement, an
+    // embedded provisioning profile, then productbuild and pkgutil.
+    try {
+      const installerIdentity = options.installerIdentity || process.env.APPLE_STORE_INSTALLER_IDENTITY
+      if (!options.output || !installerIdentity)
+        throw new Error('--output and --installer-identity (or APPLE_STORE_INSTALLER_IDENTITY) are required')
+      const { packageNativeAppStore } = await import('../src/native/apple')
+      const output = await packageNativeAppStore(path.resolve(app), path.resolve(options.output), installerIdentity)
+      console.log(JSON.stringify({ package: output }, null, 2))
+      process.exit(0)
+    }
+    catch (error) {
+      console.error('App Store packaging failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+cli
+  .command('app-store:deliver <pkg>', 'Validate, and unless --validate-only upload, an installer package to App Store Connect')
+  .option('--api-key-id <id>', 'App Store Connect API key ID (or APP_STORE_CONNECT_API_KEY_ID)')
+  .option('--api-issuer-id <id>', 'App Store Connect API issuer ID (or APP_STORE_CONNECT_ISSUER_ID)')
+  .option('--api-key-path <path>', 'AuthKey .p8 file (or APP_STORE_CONNECT_API_KEY_PATH / APP_STORE_CONNECT_PRIVATE_KEY)')
+  .option('--bundle-id <id>', 'Bundle identifier, recorded in the receipt')
+  .option('--app-version <version>', 'Marketing version, recorded in the receipt')
+  .option('--build-number <number>', 'Build number, recorded in the receipt')
+  .option('--validate-only', 'Validate against App Store Connect without uploading')
+  .option('--retry-existing', 'Treat an already-uploaded build number as delivered')
+  .action(async (pkg: string, options: { apiKeyId?: string, apiIssuerId?: string, apiKeyPath?: string, bundleId?: string, appVersion?: string, buildNumber?: string, validateOnly?: boolean, retryExisting?: boolean }) => {
+    try {
+      const apiKeyId = options.apiKeyId || process.env.APP_STORE_CONNECT_API_KEY_ID || ''
+      const issuerId = options.apiIssuerId || process.env.APP_STORE_CONNECT_ISSUER_ID || process.env.APP_STORE_CONNECT_API_ISSUER_ID || ''
+      const keyPath = options.apiKeyPath || process.env.APP_STORE_CONNECT_API_KEY_PATH
+      const privateKey = keyPath ? fs.readFileSync(path.resolve(keyPath), 'utf8') : (process.env.APP_STORE_CONNECT_PRIVATE_KEY || '')
+      const { deliverReleaseToAppStore } = await import('../src/native/release-app-store')
+      const receipt = await deliverReleaseToAppStore({
+        package: path.resolve(pkg),
+        bundleId: options.bundleId,
+        version: options.appVersion,
+        buildNumber: options.buildNumber,
+        apiKeyId,
+        issuerId,
+        privateKey,
+        validateOnly: Boolean(options.validateOnly),
+        retryExisting: Boolean(options.retryExisting),
+        dryRun: false,
+      })
+      console.log(JSON.stringify(receipt, null, 2))
+      process.exit(0)
+    }
+    catch (error) {
+      console.error('App Store delivery failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+cli
   .command('app-store:csr', 'Generate private keys and CSRs for Mac App Store certificates')
   .option('--name <name>', 'App name used in certificate request common names')
   .option('--output <dir>', 'Output directory (default: .pantry/apple)')
@@ -1597,6 +1658,7 @@ cli
   .option('--profile-name <name>', 'Provisioning profile name')
   .option('--output <dir>', 'Output directory (default: .pantry/apple)')
   .option('--p12-password <password>', 'Export newly issued certificates as password-protected P12 files')
+  .option('--ignore-local-identities', 'Do not prefer certificates whose private keys are in this machine\'s keychain')
   .option('--apply', 'Apply the plan; the default only reports missing resources')
   .action(async (options: {
     bundleId?: string
@@ -1610,6 +1672,7 @@ cli
     profileName?: string
     output?: string
     p12Password?: string
+    ignoreLocalIdentities?: boolean
     apply?: boolean
   }) => {
     try {
@@ -1632,25 +1695,26 @@ cli
         issuerId: options.apiIssuerId,
         keyPath: options.apiKeyPath,
         checkOnly: !options.apply,
+        signingFingerprints: options.ignoreLocalIdentities ? undefined : localSigningFingerprints(),
       })
 
       for (const certificate of result.certificates) {
         if (!certificate.certificateContent) continue
-        const fileName = certificate.type === 'MAC_APP_DISTRIBUTION'
-          ? 'mac-app-distribution'
-          : 'mac-installer-distribution'
+        const fileName = certificate.type === 'MAC_INSTALLER_DISTRIBUTION'
+          ? 'mac-installer-distribution'
+          : 'mac-app-distribution'
         const certificatePath = path.join(outputDirectory, `${fileName}.cer`)
         fs.writeFileSync(certificatePath, Buffer.from(certificate.certificateContent, 'base64'), { mode: 0o600 })
-        const csrPath = certificate.type === 'MAC_APP_DISTRIBUTION'
-          ? options.appCertificateCsr
-          : options.installerCertificateCsr
+        const csrPath = certificate.type === 'MAC_INSTALLER_DISTRIBUTION'
+          ? options.installerCertificateCsr
+          : options.appCertificateCsr
         if (options.p12Password && csrPath) {
           exportAppleCertificateP12({
             certificatePath,
             privateKeyPath: path.resolve(csrPath.replace(/\.csr$/i, '.key')),
             outputPath: path.join(outputDirectory, `${fileName}.p12`),
             password: options.p12Password,
-            name: `${options.name} ${certificate.type === 'MAC_APP_DISTRIBUTION' ? 'Mac App Distribution' : 'Mac Installer Distribution'}`,
+            name: `${options.name} ${certificate.type === 'MAC_INSTALLER_DISTRIBUTION' ? 'Mac Installer Distribution' : 'Mac App Distribution'}`,
           })
         }
       }

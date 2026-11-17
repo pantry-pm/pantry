@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { spawnSync } from 'node:child_process'
 import { createHash, createPrivateKey, createPublicKey, sign, X509Certificate } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
@@ -6,7 +7,13 @@ const APP_STORE_CONNECT_BASE_URL = 'https://api.appstoreconnect.apple.com/v1'
 
 export type BundleIdPlatform = 'IOS' | 'MAC_OS' | 'UNIVERSAL'
 export type AppStoreVersionPlatform = 'IOS' | 'MAC_OS'
-export type MacDistributionCertificateType = 'MAC_APP_DISTRIBUTION' | 'MAC_INSTALLER_DISTRIBUTION'
+/**
+ * Certificates a Mac App Store build can be signed or packaged with.
+ * `DISTRIBUTION` is Apple's unified "Apple Distribution" certificate, which
+ * signs Mac App Store apps as well as the older `MAC_APP_DISTRIBUTION`
+ * ("3rd Party Mac Developer Application") one does.
+ */
+export type MacDistributionCertificateType = 'MAC_APP_DISTRIBUTION' | 'MAC_INSTALLER_DISTRIBUTION' | 'DISTRIBUTION'
 
 export interface AppStoreConnectAuth {
   keyId?: string
@@ -588,6 +595,15 @@ export interface MacAppProvisionOptions extends AppStoreConnectClientOptions {
   installerCertificateCsr?: string
   profileName?: string
   checkOnly?: boolean
+  /**
+   * SHA-1 fingerprints of the signing identities whose private keys are on
+   * this machine (see `localSigningFingerprints`). When given, the profile is
+   * built around a distribution certificate this machine can actually sign
+   * with, instead of whichever active one the team happens to have: a profile
+   * naming a certificate whose key lives on another Mac signs nothing here,
+   * and the mismatch only surfaces when the upload is rejected.
+   */
+  signingFingerprints?: string[]
 }
 
 export interface MacAppProvisionResult {
@@ -601,6 +617,8 @@ export interface MacAppProvisionResult {
     created: boolean
     expirationDate?: string
     certificateContent?: string
+    /** Whether this machine holds the certificate's private key, when that was checked. */
+    localKey?: boolean
   }>
   profile: {
     id?: string
@@ -639,6 +657,30 @@ export function certificateRequestPublicKey(csrContent: string): string | undefi
   if (result.error || result.status !== 0)
     return undefined
   return spkiFromPem(result.stdout)
+}
+
+/** A certificate's SHA-1 fingerprint, upper-case hex, as `security find-identity` prints it. */
+export function certificateFingerprint(certificateContent: string | undefined): string | undefined {
+  if (!certificateContent)
+    return undefined
+  return createHash('sha1').update(Buffer.from(certificateContent, 'base64')).digest('hex').toUpperCase()
+}
+
+/**
+ * Fingerprints of every signing identity in the keychain search list: code
+ * signing ones and installer ones, which `security` lists separately.
+ * Empty off macOS or when `security` is unavailable.
+ */
+export function localSigningFingerprints(run: typeof spawnSync = spawnSync): string[] {
+  if (process.platform !== 'darwin')
+    return []
+  const fingerprints = new Set<string>()
+  for (const args of [['find-identity', '-v', '-p', 'codesigning'], ['find-identity', '-v', '-p', 'basic']]) {
+    const result = run('security', args, { encoding: 'utf8' })
+    for (const match of String(result.stdout ?? '').matchAll(/^\s*\d+\)\s+([0-9A-F]{40})\s/gm))
+      fingerprints.add(match[1]!)
+  }
+  return [...fingerprints]
 }
 
 /** The public key in an App Store Connect certificateContent, as base64 SPKI DER. */
@@ -700,7 +742,39 @@ export async function provisionMacApp(options: MacAppProvisionOptions): Promise<
     ['MAC_APP_DISTRIBUTION', options.appCertificateCsr],
     ['MAC_INSTALLER_DISTRIBUTION', options.installerCertificateCsr],
   ]
+  const local = new Set((options.signingFingerprints ?? []).map(fingerprint => fingerprint.toUpperCase()))
   for (const [certificateType, csrContent] of certificateInputs) {
+    // Without a CSR, an app certificate this machine can sign with comes
+    // first, of either kind Apple accepts for the Store.
+    if (!csrContent && local.size > 0) {
+      const kinds: MacDistributionCertificateType[] = certificateType === 'MAC_APP_DISTRIBUTION'
+        ? ['MAC_APP_DISTRIBUTION', 'DISTRIBUTION']
+        : [certificateType]
+      let usable: AppStoreConnectResource<CertificateAttributes> | undefined
+      let usableType = certificateType
+      for (const kind of kinds) {
+        const candidates = (await client.listCertificates(kind))
+          .filter(certificate => local.has(certificateFingerprint(certificate.attributes.certificateContent) ?? ''))
+        usable = activeCertificate(candidates)
+        if (usable) {
+          usableType = kind
+          break
+        }
+      }
+      if (usable) {
+        certificateResults.push({
+          type: usableType,
+          id: usable.id,
+          exists: true,
+          created: false,
+          expirationDate: usable.attributes.expirationDate,
+          certificateContent: usable.attributes.certificateContent,
+          localKey: true,
+        })
+        continue
+      }
+      actions.push(`No active ${kinds.join(' or ')} certificate has its private key on this machine; signing here will fail until one is imported or issued from a local CSR`)
+    }
     const listed = await client.listCertificates(certificateType)
     // With a CSR, only a certificate issued for its key is usable: one made
     // from another machine's key can sign nothing here and cannot be exported.
@@ -718,6 +792,7 @@ export async function provisionMacApp(options: MacAppProvisionOptions): Promise<
         created: false,
         expirationDate: existing.attributes.expirationDate,
         certificateContent: existing.attributes.certificateContent,
+        ...(local.size > 0 && !csrContent ? { localKey: local.has(certificateFingerprint(existing.attributes.certificateContent) ?? '') } : {}),
       })
       continue
     }
@@ -742,7 +817,7 @@ export async function provisionMacApp(options: MacAppProvisionOptions): Promise<
     }
   }
 
-  const appCertificate = certificateResults.find(certificate => certificate.type === 'MAC_APP_DISTRIBUTION')
+  const appCertificate = certificateResults.find(certificate => certificate.type === 'MAC_APP_DISTRIBUTION' || certificate.type === 'DISTRIBUTION')
   const profileName = options.profileName || `${options.name} Mac App Store`
   const profiles = bundleId ? await client.listProfiles(bundleId.id) : []
   const activeProfile = profiles.find(profile => (
@@ -767,7 +842,7 @@ export async function provisionMacApp(options: MacAppProvisionOptions): Promise<
       if (!bundleId)
         throw new Error('[pantry] Bundle ID was not created')
       if (!appCertificate?.id)
-        throw new Error('[pantry] MAC_APP_DISTRIBUTION certificate is required to create the profile')
+        throw new Error('[pantry] A MAC_APP_DISTRIBUTION or DISTRIBUTION certificate is required to create the profile')
       const created = await client.createMacAppStoreProfile(
         profiles.some(item => item.attributes.name === profileName) ? `${profileName} ${appCertificate.id.slice(0, 8)}` : profileName,
         bundleId.id,
