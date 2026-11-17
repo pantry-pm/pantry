@@ -71,11 +71,14 @@ export const recipe: Recipe = {
         if: '^2',
       },
 
-      // fixes the build scripts so they use the standard environment variables we set
+      // fixes the build scripts so they use the standard environment variables we set.
+      // buildkit exports declared headers as C_INCLUDE_PATH and unsets CPATH
+      // (CPATH would override a project's explicit -isystem headers), so read
+      // C_INCLUDE_PATH, and tolerate either variable being absent.
       {
         run: [
-          'sed -i -e \'s|system_lib_dirs = .*|system_lib_dirs = os.getenv("LIBRARY_PATH").split(":")|\' ./setup.py',
-          'sed -i -e \'s|system_include_dirs = .*|system_include_dirs = os.getenv("CPATH").split(":")|\' ./setup.py',
+          'sed -i -e \'s|system_lib_dirs = .*|system_lib_dirs = [d for d in os.getenv("LIBRARY_PATH", "").split(":") if d]|\' ./setup.py',
+          'sed -i -e \'s|system_include_dirs = .*|system_include_dirs = [d for d in os.getenv("C_INCLUDE_PATH", "").split(":") if d]|\' ./setup.py',
         ].join('\n'),
         if: '<3.12',
       },
