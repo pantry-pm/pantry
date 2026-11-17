@@ -8,7 +8,7 @@
  *
  * @install `pantry install qemu.org`
  * @homepage https://www.qemu.org/
- * @dependencies `gnome.org/glib@2`, `capstone-engine.org^4`, `pixman.org^0`, ... (+7 more)
+ * @dependencies `gnome.org/glib@2`, `capstone-engine.org^5`, `pixman.org^0`, ... (+7 more)
  * @buildDependencies `gnu.org/bison`, `github.com/westes/flex`, `python.org@~3.11`, ... (+1 more) - required only when building from source
  *
  * @example
@@ -94,7 +94,7 @@ export const qemuorgPackage = {
   */
   dependencies: [
     'gnome.org/glib@2',
-    'capstone-engine.org^4',
+    'capstone-engine.org^5',
     'pixman.org^0',
     'gnutls.org^3',
     'freedesktop.org/slirp^4',

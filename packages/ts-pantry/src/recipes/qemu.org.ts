@@ -12,7 +12,10 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'gnome.org/glib': '2',
-    'capstone-engine.org': '^4',
+    // capstone 4.0.2's published headers live only under include/capstone/,
+    // so qemu's `#include <capstone.h>` probe fails; 5.x also installs it at
+    // include/. qemu accepts capstone >= 3.0.5.
+    'capstone-engine.org': '^5',
     'pixman.org': '^0',
     'gnutls.org': '^3',
     'freedesktop.org/slirp': '^4',

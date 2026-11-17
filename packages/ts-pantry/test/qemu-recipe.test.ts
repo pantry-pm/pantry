@@ -12,6 +12,10 @@ describe('qemu recipe', () => {
     expect(customBuilds).toContain(`'qemu.org'`)
   })
 
+  it('uses a capstone whose published headers satisfy qemu\'s <capstone.h> probe', () => {
+    expect(recipe.dependencies?.['capstone-engine.org']).toBe('^5')
+  })
+
   it('links the curses UI against the declared Pantry ncurses', () => {
     expect(recipe.dependencies?.['invisible-island.net/ncurses']).toBe('^6')
     const args = (recipe.build?.env as Record<string, unknown>)?.ARGS as string[]
