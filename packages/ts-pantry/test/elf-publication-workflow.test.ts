@@ -156,7 +156,7 @@ test('build.yml routes targeted darwin source builds to the self-hosted Mac only
       })
       expect(result.status, result.stderr).toBe(0)
       const line = readFileSync(output, 'utf8').trim()
-      return JSON.parse(line.slice('matrix='.length)) as Array<{ os: string, name: string, packages: string, self_hosted: boolean }>
+      return JSON.parse(line.slice('matrix='.length)) as Array<{ os: string, name: string, label: string, packages: string, self_hosted: boolean }>
     }
     // A whole-catalog or apps-only sweep never lands on the laptop.
     expect(route({}).map(entry => entry.os)).toEqual(['macos-15', 'ubuntu-24.04', 'ubuntu-24.04-arm', 'windows-latest'])

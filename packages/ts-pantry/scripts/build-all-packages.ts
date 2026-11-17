@@ -2036,7 +2036,7 @@ export function freeGiB(path: string): number {
  * laptop with other work): a package started below it could fill the disk for
  * everything else on the machine. Unset or 0 disables the guard.
  */
-export function diskGuardFailure(path: string, minFreeGb: number, free = freeGiB(path)): string | null {
+export function diskGuardFailure(path: string, minFreeGb: number, free: number = freeGiB(path)): string | null {
   if (!(minFreeGb > 0) || free >= minFreeGb)
     return null
   return `only ${free.toFixed(1)} GB free under ${path}; PANTRY_MIN_FREE_GB requires ${minFreeGb} GB before starting a build`
