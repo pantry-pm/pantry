@@ -368,23 +368,30 @@ async function ensureVersionLocalization(
     localization = created.data
   }
 
-  await client.request(`/appStoreVersionLocalizations/${localization.id}`, {
+  const attributes: Record<string, string> = {
+    description: config.description,
+    keywords: config.keywords,
+    supportUrl: config.supportUrl,
+    ...(config.marketingUrl ? { marketingUrl: config.marketingUrl } : {}),
+    ...(config.promotionalText ? { promotionalText: config.promotionalText } : {}),
+    ...(config.whatsNew ? { whatsNew: config.whatsNew } : {}),
+  }
+  const patch = (body: Record<string, string>) => client.request(`/appStoreVersionLocalizations/${localization.id}`, {
     method: 'PATCH',
-    body: JSON.stringify({
-      data: {
-        type: 'appStoreVersionLocalizations',
-        id: localization.id,
-        attributes: {
-          description: config.description,
-          keywords: config.keywords,
-          supportUrl: config.supportUrl,
-          ...(config.marketingUrl ? { marketingUrl: config.marketingUrl } : {}),
-          ...(config.promotionalText ? { promotionalText: config.promotionalText } : {}),
-          ...(config.whatsNew ? { whatsNew: config.whatsNew } : {}),
-        },
-      },
-    }),
+    body: JSON.stringify({ data: { type: 'appStoreVersionLocalizations', id: localization.id, attributes: body } }),
   })
+  try {
+    await patch(attributes)
+  }
+  catch (error) {
+    // An app's first version has no "What's New": Apple refuses the field until
+    // a version has been released, so the rest of the listing goes without it.
+    if (!attributes.whatsNew || !(error instanceof Error) || !/\(409\)/.test(error.message) || !error.message.includes('whatsNew'))
+      throw error
+    const rest = { ...attributes }
+    delete rest.whatsNew
+    await patch(rest)
+  }
   return localization.id
 }
 
