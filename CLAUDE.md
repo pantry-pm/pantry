@@ -145,9 +145,11 @@ PREFIX bug, and OpenSSL 4.0.2's patch applying cleanly were all settled without
 allocating a single macOS runner. Reach for a Mac runner only to PUBLISH, never
 to diagnose.
 
-**But the dev Mac's toolchain is AHEAD of the runners', so a local failure is
-not proof of a CI failure.** This machine is on Xcode 27 / Apple clang 21;
-`publish-darwin-native` runs macos-14 with Xcode 16.2. perl 5.44.0 is the worked
+**But the dev Mac's toolchain is AHEAD of the hosted runners', so a local failure is
+not proof of a hosted-CI failure.** This machine is on Xcode 27 / Apple clang 21;
+the hosted mirror legs run macos-15. (darwin source builds themselves now run on
+this Mac — the `pantry-mac-self-hosted` runner — so for those a local failure IS
+the CI failure.) perl 5.44.0 is the worked
 example: it dies here with `panic: del_backref` while miniperl bootstraps, and
 builds and publishes perfectly on the runner. So a local **success** is strong
 evidence, and a local **failure** means "reproduce the toolchain or check the
@@ -159,9 +161,70 @@ that needs a newer SDK may pass here and fail there.
 - **darwin-arm64 DOWNLOAD recipes** → `mirror.yml` (every 6h, download-only, all platforms) + the Hetzner xdl fleet (continuous). No Mac.
 - **new versions on update** → `publish-changed-packages.yml`, **download-first and ubuntu-first**: `linux-x86-64` + `linux-arm64` run `--pkgx-mirror` (mirror pkgx's prebuilt; source-build only what pkgx lacks or we customize — php/postgres — natively), and `darwin-arm64` runs FROM UBUNTU in two safe download passes (`--pkgx-mirror --mirror-only` for pkgx prebuilts, then `--download-only` for zig-style recipes — no source-build, no cross-compile). Apps/fonts are excluded here (handled by check-desktop-updates).
 - **desktop apps + fonts** → `check-desktop-updates.yml` (daily). Discovery, the zip/archive publishes and the manifest commit are all ubuntu. `.dmg`/`.pkg` recipes need Apple's own tools — the userspace readers do not handle every DMG filesystem, which is what made Karabiner and LibreOffice fail silently — so they publish on a **gated** `publish-macos` job: the ubuntu discovery pass emits the out-of-date disk-image domains (`--platform=macos --print-selected`) and the Mac is allocated only when that list is non-empty, which is almost never. A skipped `publish-macos` counts as success for the `record` job, or the gate would wedge the only writer. (The darling-dmg/apfs-fuse/7zz shim is a **fleet-box** thing — `provision-build-workers.ts` builds it on the Hetzner workers — not something this workflow uses.)
-- **darwin-arm64 SOURCE recipes** (pkgx has no prebuilt AND it's not a download recipe) genuinely need real Mac hardware. `publish-changed-packages.yml` handles these via a **tightly-gated `publish-darwin-native` macOS job**: the `detect` job computes the darwin-native set with `build-all-packages … --platform darwin-arm64 --source-only --print-selected`, and the macOS job runs **only if that set is non-empty** (`if: needs.detect.outputs.darwin_native != ''`) — so a pure pkgx/download update allocates NO macOS runner. It builds only those domains `--source-only --pkgx-mirror` **without `--force`**, so anything the ubuntu legs already published is skipped and only true pkgx-misses compile. This is one of the two narrow macOS paths that run automatically (the other being check-desktop-updates' `publish-macos`) — it exists specifically so a genuine darwin update is published properly instead of silently skipped. Everything else macOS stays `workflow_dispatch`-only (a supervised `Build` dispatch).
+- **darwin-arm64 SOURCE recipes** (`CUSTOM_BUILD_DOMAINS`, or pkgx has no prebuilt AND it's not a download recipe) genuinely need real Mac hardware, and they now compile on **our own Mac, the self-hosted runner labelled `pantry-mac-self-hosted`** (see the next section), not on a hosted runner. `publish-changed-packages.yml`'s `detect` job computes the darwin-native set with `--print-selected`, then splits it with `--print-selected --exclude-pkgx-covered` into `darwin_legs`: the **source** leg runs on `pantry-mac-self-hosted`, the **mirror** leg (versions pkgx already ships) on hosted `macos-15`, which still does the native Mach-O normalization and health checks. `publish-darwin-native` is a matrix over those legs and runs **only if the set is non-empty** — a pure linux/download update allocates no Mac at all. It builds **without `--force`** unless a rebuild was explicitly requested, so anything already published is skipped. This is one of the two narrow automatic macOS paths (the other being check-desktop-updates' `publish-macos`). Everything else macOS stays `workflow_dispatch`-only (a supervised `Build` dispatch).
 
 **Publish-on-update is ubuntu-only.** `update-packages.yml` (hourly; `drain-release-queue.yml` dispatches it within minutes of a release, and a dispatch escapes GitHub's scheduled-workflow throttling) commits version bumps, then dispatches `publish-changed-packages.yml` so the registry updates AS bumps land — on ubuntu, never macOS. Set pantry up BEFORE `bun install` in any job that does both: the Setup Pantry action runs `pantry install`, which lays out node_modules itself, and slotting it between `bun install` and the steps that need node_modules is what broke this workflow for three days in September 2026. It **dispatches explicitly** (`gh workflow run`) rather than relying on publish-changed's `push` trigger, because bot commits are pushed with `GITHUB_TOKEN` (no `PAT_TOKEN` secret is set) and `GITHUB_TOKEN` pushes do not fire other workflows' `push` triggers — that suppression is exactly why version updates never used to publish. It previously dispatched `build.yml -f platform=unix`, which source-compiled every bump on a macOS-15 runner unsupervised; that path is gone.
+
+## Self-hosted Mac runner (`pantry-mac-self-hosted`)
+
+Chris's Apple-silicon laptop is registered to `pantry-pm/pantry` as a
+self-hosted runner with exactly one label, `pantry-mac-self-hosted`
+(`--no-default-labels`, so `runs-on: self-hosted`/`macOS` never lands there).
+It builds **darwin-arm64 source recipes only**; everything pantry mirrors from
+dist.pkgx.dev keeps downloading on hosted runners. The long-term goal is for
+pantry to build everything on runners it controls; until then this is the only
+place darwin source builds run.
+
+- **Install / reinstall:** `.github/self-hosted-runner/install-macos.sh
+  [runner-version]`, as Chris (never root, no sudo). It downloads the official
+  `actions/runner` osx-arm64 release, checks its SHA-256 against both the
+  release asset digest and the release notes, registers it, and installs a
+  launchd **LaunchAgent** (`~/Library/LaunchAgents/actions.runner.pantry-pm-pantry.*.plist`,
+  runner in `~/actions-runners/pantry`). A LaunchAgent starts at login: after a
+  reboot the Mac must be logged in for the runner to come back. The installer
+  replaces the PATH/env `config.sh` snapshots from the installing shell with
+  the system PATH, so builds never see a developer's dev binaries or globals.
+- **Routing:** `build.yml`'s `route` job splits a **targeted** darwin dispatch
+  (`packages` set) into a `darwin-arm64 source` entry on the self-hosted label
+  and a `darwin-arm64 mirror` entry on `macos-15`; an apps-only or
+  whole-catalog darwin sweep stays on hosted `macos-15` (a laptop with a shared
+  disk is not where a catalog sweep belongs). `publish-changed-packages.yml`
+  splits the same way (previous section). A recipe revision that pkgx covers
+  but whose repair must run through the recipe lands on the mirror leg and
+  source-builds there — correct, just not on the laptop.
+- **Security (the repo is public):** the runner's job-started hook
+  (`job-started.sh`, copied into the runner directory, so no workflow or PR can
+  edit what runs) refuses every job unless the repository is pantry-pm/pantry,
+  the event is `push` or `workflow_dispatch`, the ref is `refs/heads/main`, and
+  `GITHUB_WORKFLOW_REF` is `build.yml` or `publish-changed-packages.yml` on main.
+  A `pull_request` job that names the label fails before its first step, even
+  if someone approves it. Fork PRs still need approval to run at all. Never add
+  the label to a workflow with a `pull_request`/`pull_request_target` trigger,
+  and add any new workflow that should use it to the hook's allowlist (then
+  reinstall).
+- **Cleanup after every build:** `BUILDKIT_ROOT=/tmp/pantry-runner` (runner
+  `.env`; keep it two levels deep — buildkit derives `PKGX_DIR` from the first
+  two path components of a dependency prefix). `build-all-packages.ts` removes
+  each package's `buildkit-*` / `-install` / `-artifacts` / `-deps` trees after
+  every attempt, whatever the outcome; the job-completed hook then removes
+  `/tmp/pantry-runner` and everything under the runner's `_work` (checkout,
+  Pantry/Bun installs, dependency-archive cache, `_temp`, `_tool`). The jobs
+  point `TMPDIR` at `$RUNNER_TEMP`. Nothing outside those paths is touched,
+  because this Mac runs other sessions that use `/tmp` and `~/.cache`.
+- **Disk guard:** `PANTRY_MIN_FREE_GB` (runner `.env`, default 12). The
+  job-started hook refuses to start a job below it, and `build-all-packages.ts`
+  checks it before **every package** and stops (exit 1) rather than start a
+  build that could fill the disk. Unset on hosted runners, where it is off.
+- **Toolchain:** the laptop runs Apple's current Xcode, ahead of hosted
+  `macos-15`, so the jobs set `MACOSX_DEPLOYMENT_TARGET=15.0` — buildkit
+  otherwise defaults it to the host's macOS version and the published binaries
+  would refuse to run on macOS 15. A darwin source failure on this runner is
+  now a failure on the same toolchain you get locally (perl 5.44.0's
+  `panic: del_backref` under Xcode 27 is the known example — see above).
+- **Health:** `gh api repos/pantry-pm/pantry/actions/runners` shows it
+  online/idle; logs are in `~/Library/Logs/actions.runner.pantry-pm-pantry.*`
+  and `~/actions-runners/pantry/_diag`. While it is offline, source legs queue
+  (GitHub fails them after 24h) and mirror legs proceed on hosted runners.
 
 ## Build-status dashboard reporting (authenticated — the same token)
 

@@ -27,7 +27,7 @@
  */
 
 import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statfsSync, writeFileSync } from 'node:fs'
 import { execSync, spawn } from 'node:child_process'
 import { basename, dirname, join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
@@ -2013,6 +2013,54 @@ export async function failureAsResult(domain: string, build: () => Promise<Build
   }
 }
 
+/**
+ * Free space, in GiB, on the volume that holds `path`; Infinity when it cannot
+ * be measured (a missing path is measured at its nearest existing parent).
+ */
+export function freeGiB(path: string): number {
+  let probe = path
+  while (!existsSync(probe) && dirname(probe) !== probe)
+    probe = dirname(probe)
+  try {
+    const stats = statfsSync(probe)
+    return (Number(stats.bavail) * Number(stats.bsize)) / 1024 ** 3
+  }
+  catch {
+    return Number.POSITIVE_INFINITY
+  }
+}
+
+/**
+ * Why a build must not start, or null when it may. `PANTRY_MIN_FREE_GB` is set
+ * on hosts that are not disposable (the pantry-mac-self-hosted runner shares a
+ * laptop with other work): a package started below it could fill the disk for
+ * everything else on the machine. Unset or 0 disables the guard.
+ */
+export function diskGuardFailure(path: string, minFreeGb: number, free = freeGiB(path)): string | null {
+  if (!(minFreeGb > 0) || free >= minFreeGb)
+    return null
+  return `only ${free.toFixed(1)} GB free under ${path}; PANTRY_MIN_FREE_GB requires ${minFreeGb} GB before starting a build`
+}
+
+/** Every per-package tree buildAndUpload creates under BUILDKIT_ROOT. */
+export function packageBuildTrees(buildkitRoot: string, domain: string): string[] {
+  const safe = domain.replace(/\//g, '-')
+  return ['', '-install', '-artifacts', '-deps'].map(suffix => `${buildkitRoot}/buildkit${suffix}-${safe}`)
+}
+
+/**
+ * Remove a package's build trees once its attempt is over, whatever the
+ * outcome. buildAndUpload cleans up on its own success and failure paths; this
+ * also covers an unexpected throw, so the next package starts with the space
+ * the last one used.
+ */
+function removePackageBuildTrees(buildkitRoot: string, domain: string): void {
+  for (const tree of packageBuildTrees(buildkitRoot, domain)) {
+    try { rmSync(tree, { recursive: true, force: true }) }
+    catch (error) { console.warn(`Warning: cleanup failed for ${tree}: ${(error as Error).message}`) }
+  }
+}
+
 function buildOne(...args: Parameters<typeof buildAndUpload>): Promise<BuildResult> {
   return failureAsResult(args[0].domain, () => buildAndUpload(...args))
 }
@@ -3317,11 +3365,20 @@ else {
   // left unbuilt every run, so the number is now the caller's to state.
   const BATCH_TIME_BUDGET_MS = Math.max(1, Number(process.env.PANTRY_BATCH_BUDGET_MIN) || 100) * 60 * 1000
 
+  const buildkitRootForGuard = process.env.BUILDKIT_ROOT || '/tmp'
+  const minFreeGb = Number(process.env.PANTRY_MIN_FREE_GB) || 0
+  let diskGuardStop: string | null = null
+
   for (const pkg of packagesToBuild) {
     const elapsed = Date.now() - batchStartTime
     if (elapsed > BATCH_TIME_BUDGET_MS) {
       const remaining = packagesToBuild.length - Object.keys(results).length
       console.log(`\n⏱️  Batch time budget exceeded (${Math.round(elapsed / 60000)} min elapsed). Skipping remaining ${remaining} packages.`)
+      break
+    }
+    diskGuardStop = diskGuardFailure(buildkitRootForGuard, minFreeGb)
+    if (diskGuardStop) {
+      console.error(`\n💾 Disk guard: ${diskGuardStop}. Not starting ${pkg.domain} or anything after it.`)
       break
     }
 
@@ -3342,14 +3399,23 @@ else {
         catch (e) { console.warn(`Warning: failed to clean artifacts dir: ${(e as Error).message}`) }
 
         // Create a modified package with ONLY this version (prevent fallback to other versions)
+        diskGuardStop = diskGuardFailure(buildkitRootForGuard, minFreeGb)
+        if (diskGuardStop) {
+          console.error(`\n💾 Disk guard: ${diskGuardStop}. Not starting ${pkg.domain}@${ver} or anything after it.`)
+          break
+        }
         const versionPkg = { ...pkg, latestVersion: ver, versions: [ver] }
         const result = await buildOne(versionPkg, bucket, region, platform, force)
+        removePackageBuildTrees(buildkitRootForGuard, pkg.domain)
         const key = `${pkg.domain}@${ver}`
         results[key] = { ...result, version: ver }
       }
+      if (diskGuardStop)
+        break
     }
 else {
       const result = await buildOne(pkg, bucket, region, platform, force)
+      removePackageBuildTrees(buildkitRootForGuard, pkg.domain)
       results[pkg.domain] = { ...result, version: pkg.latestVersion }
     }
   }
@@ -3467,6 +3533,13 @@ else {
     catch (e) {
       console.warn('Could not write job summary:', e)
     }
+  }
+
+  // Packages the guard never started were not built: a run that stopped for
+  // disk space has not done its job, whatever the counts above say.
+  if (diskGuardStop) {
+    console.error(`\nDisk guard stopped this run: ${diskGuardStop}`)
+    process.exit(1)
   }
 
   if (failed.length > 0) {

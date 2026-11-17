@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { CUSTOM_BUILD_DOMAINS, hasVersionSpelling, publishedRecordFor, versionSpellings, classifyTargetedFailures as classify, selectedPackageSelectors, applyVersionPins, selectVersionsForBuild, assignStripe, selectRecentVersions, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, parseRequestedPackages, pkgxHasPrebuilt, relocateMirroredPaths, normalizeMirroredArtifact, summariseTimings, type PackageTiming } from './build-all-packages'
+import { CUSTOM_BUILD_DOMAINS, hasVersionSpelling, publishedRecordFor, versionSpellings, classifyTargetedFailures as classify, selectedPackageSelectors, applyVersionPins, selectVersionsForBuild, assignStripe, selectRecentVersions, isAppRecipePath, isPublishedArtifactRecord, isSourceUnavailableError, scriptCompiles, matchesRequestedPackage, parseRequestedPackages, pkgxHasPrebuilt, relocateMirroredPaths, normalizeMirroredArtifact, summariseTimings, diskGuardFailure, freeGiB, packageBuildTrees, type PackageTiming } from './build-all-packages'
 
 test('an explicitly requested excluded version fails instead of reporting an empty successful publication', () => {
   const child = Bun.spawnSync(['bun', 'scripts/build-all-packages.ts', '--platform', 'linux-arm64', '-p', 'unicode.org@70.1.0', '--source-only', '--print-selected'], { cwd: import.meta.dir + '/..', stdout: 'pipe', stderr: 'pipe' })
@@ -674,4 +674,34 @@ test('a package that throws around its build fails alone, and the batch goes on'
   finally { console.error = error }
   expect(shown).toHaveLength(1)
   expect(shown[0]).toContain('broken.example')
+})
+
+describe('free-space guard for shared build hosts', () => {
+  test('is off unless PANTRY_MIN_FREE_GB is a positive number', () => {
+    expect(diskGuardFailure('/tmp', 0, 0.5)).toBeNull()
+    expect(diskGuardFailure('/tmp', Number.NaN, 0.5)).toBeNull()
+  })
+
+  test('refuses to start below the threshold and names the shortfall', () => {
+    expect(diskGuardFailure('/tmp/pantry-runner', 12, 12)).toBeNull()
+    const reason = diskGuardFailure('/tmp/pantry-runner', 12, 7.25)
+    expect(reason).toContain('7.3 GB free under /tmp/pantry-runner')
+    expect(reason).toContain('requires 12 GB')
+  })
+
+  test('measures a root that does not exist yet at its nearest parent', () => {
+    const free = freeGiB(join(tmpdir(), 'pantry-guard-missing', 'deeper'))
+    expect(Number.isFinite(free)).toBe(true)
+    expect(free).toBeGreaterThan(0)
+  })
+
+  test('cleans up every tree buildAndUpload creates for a package', () => {
+    expect(packageBuildTrees('/tmp/pantry-runner', 'qemu.org')).toEqual([
+      '/tmp/pantry-runner/buildkit-qemu.org',
+      '/tmp/pantry-runner/buildkit-install-qemu.org',
+      '/tmp/pantry-runner/buildkit-artifacts-qemu.org',
+      '/tmp/pantry-runner/buildkit-deps-qemu.org',
+    ])
+    expect(packageBuildTrees('/mnt/buildkit', 'gnu.org/libtool')[0]).toBe('/mnt/buildkit/buildkit-gnu.org-libtool')
+  })
 })

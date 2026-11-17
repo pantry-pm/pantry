@@ -89,6 +89,9 @@ jobs:
       domains: ${{ steps.owners.outputs.domains }}
       desktop: ${{ steps.owners.outputs.desktop }}
       darwin_native: ${{ steps.darwin.outputs.domains }}
+      # The darwin-native set split by runner: source builds go to the
+      # self-hosted Mac, pkgx mirrors stay on hosted macos-15.
+      darwin_legs: ${{ steps.darwin-legs.outputs.legs }}
       # Forced rebuilding requires an explicit manual input, never a recipe diff.
       rebuild_existing: ${{ steps.detect.outputs.rebuild_existing }}
     steps:
@@ -181,6 +184,36 @@ jobs:
             --platform darwin-arm64 -p "$PKGS" --print-selected | tr -s ' ' | sed 's/^ *//; s/ *$//')
           echo "darwin-native (need a real Mac): ${NATIVE:-<none>}"
           echo "domains=$NATIVE" >> "$GITHUB_OUTPUT"
+
+      # Source builds (CUSTOM_BUILD_DOMAINS, and versions pkgx has no prebuilt
+      # for) compile on the self-hosted Mac labelled pantry-mac-self-hosted.
+      # Everything pkgx already covers keeps mirroring on hosted macos-15,
+      # where the native Mach-O normalization and health checks still run.
+      - name: Split darwin source builds from pkgx mirrors
+        if: inputs.platform != 'linux'
+        id: darwin-legs
+        working-directory: packages/ts-pantry
+        shell: bash
+        env:
+          NATIVE: ${{ steps.darwin.outputs.domains }}
+          MAXV: ${{ github.event.inputs.max-versions || '3' }}
+          POPULAR_MAXV: ${{ github.event.inputs.popular-max-versions || '20' }}
+        run: |
+          set -euo pipefail
+          SOURCE=""
+          if [ -n "$NATIVE" ]; then
+            SOURCE=$(bun scripts/build-all-packages.ts --platform darwin-arm64 -p "${NATIVE// /,}" \
+              --print-selected --exclude-pkgx-covered \
+              --multi-version --max-versions "$MAXV" --popular-max-versions "$POPULAR_MAXV")
+          fi
+          MIRROR=$(comm -23 <(tr ' ' '\n' <<<"$NATIVE" | sed '/^$/d' | sort -u) <(tr ' ' '\n' <<<"$SOURCE" | sed '/^$/d' | sort -u) | paste -sd' ' -)
+          echo "darwin source builds (pantry-mac-self-hosted): ${SOURCE:-<none>}"
+          echo "darwin pkgx mirrors (macos-15): ${MIRROR:-<none>}"
+          LEGS=$(jq -cn --arg source "$SOURCE" --arg mirror "$MIRROR" '[
+            (select($source != "") | {leg: "source", runner: "pantry-mac-self-hosted", self_hosted: true, domains: $source}),
+            (select($mirror != "") | {leg: "mirror", runner: "macos-15", self_hosted: false, domains: $mirror})
+          ]')
+          echo "legs=$LEGS" >> "$GITHUB_OUTPUT"
 
   desktop-updates:
     name: Publish desktop changes through the vendor planner
@@ -280,15 +313,22 @@ jobs:
           retention-days: 7
 
   # Every Darwin publication runs natively so downloaded and compiled binaries
-  # receive the same loader checks and required runtime health checks.
+  # receive the same loader checks and required runtime health checks. Source
+  # builds run on the self-hosted Mac (pantry-mac-self-hosted: its job hooks
+  # refuse anything but push/dispatch of main, guard free disk space and clean
+  # up after the job); pkgx mirrors run on hosted macos-15.
   publish-darwin-native:
-    name: Publish darwin-arm64 (native macOS)
+    name: Publish darwin-arm64 (${{ matrix.leg }}, ${{ matrix.runner }})
     needs: detect
-    if: needs.detect.outputs.darwin_native != '' && inputs.platform != 'linux'
+    if: needs.detect.outputs.darwin_legs != '' && needs.detect.outputs.darwin_legs != '[]' && inputs.platform != 'linux'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect.outputs.darwin_legs) }}
     # Current dependency binaries use APIs supplied by macOS 15 (for example
     # gettext's strchrnul). The native host must satisfy their runtime floor.
-    runs-on: macos-15
-    timeout-minutes: 180
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.self_hosted && 360 || 180 }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -301,6 +341,16 @@ jobs:
 
       - name: Install dependencies
         run: bun install
+
+      # The self-hosted Mac is a shared laptop on a newer macOS than the hosted
+      # runners: keep temp files in the runner-owned RUNNER_TEMP, and target
+      # the macOS 15 floor instead of buildkit's default of the host version.
+      - name: Contain the self-hosted Mac build
+        if: matrix.self_hosted
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> "$GITHUB_ENV"
+          df -h "$BUILDKIT_ROOT"
 
       - name: Select managed native build tools
         id: build-tools
@@ -329,7 +379,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          PKGS=$(echo "${{ needs.detect.outputs.darwin_native }}" | tr ' ' ',')
+          PKGS=$(echo "${{ matrix.domains }}" | tr ' ' ',')
           MAXV="${{ github.event.inputs.max-versions || '3' }}"
           POPULAR_MAXV="${{ github.event.inputs.popular-max-versions || '20' }}"
           # Recipe changes must replace existing native artifacts too. Custom
@@ -348,7 +398,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: publisher-diagnostics-darwin-native
+          name: publisher-diagnostics-darwin-native-${{ matrix.leg }}
           path: ${{ runner.temp }}/pantry-build-diagnostics
           if-no-files-found: ignore
           retention-days: 7

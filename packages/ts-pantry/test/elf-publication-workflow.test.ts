@@ -80,7 +80,7 @@ test('Darwin vendor downloads are selected for the native Mach-O publisher', () 
       expect(readFileSync(output, 'utf8').trim()).toBe(`domains=${domains}`)
     }
     const native = workflow.jobs['publish-darwin-native']
-    expect(native['runs-on']).toBe('macos-15')
+    expect(native['runs-on']).toBe('${{ matrix.runner }}')
     expect(native.steps.find(step => step.name === 'Build and publish darwin-arm64 (native)')!.run).not.toContain('--source-only')
     expect(workflow.jobs.build.if).toContain("inputs.platform != 'darwin-arm64'")
     expect(workflow.jobs.build.strategy!.matrix.platform.every(platform => platform.name.startsWith('linux-'))).toBe(true)
@@ -104,6 +104,69 @@ test('scheduled Darwin mirror and download matrices use native macOS runners', (
     const matrices = Object.fromEntries(readFileSync(output, 'utf8').trim().split('\n').map(line => [line.slice(0, line.indexOf('=')), JSON.parse(line.slice(line.indexOf('=') + 1))]))
     for (const name of ['matrix', 'download_matrix'])
       expect(matrices[name].include).toEqual([{ name: 'darwin-arm64', os: 'macos-15', stripe: '0/1' }])
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('Darwin source builds go to the self-hosted Mac and mirrors stay on hosted macos-15', () => {
+  const workflow = Bun.YAML.parse(readFileSync(new URL('../../../.github/workflows/publish-changed-packages.yml', import.meta.url), 'utf8')) as {
+    jobs: Record<string, { steps: Array<{ name?: string, id?: string, run?: string, if?: string }> }>
+  }
+  const split = workflow.jobs.detect.steps.find(step => step.id === 'darwin-legs')!
+  const root = mkdtempSync(join(tmpdir(), 'pantry-darwin-legs-'))
+  try {
+    const output = join(root, 'output')
+    // qemu.org is a custom source build: --exclude-pkgx-covered keeps it
+    // without consulting pkgx, so this needs no network.
+    for (const [native, legs] of [
+      ['', []],
+      ['qemu.org', [{ leg: 'source', runner: 'pantry-mac-self-hosted', self_hosted: true, domains: 'qemu.org' }]],
+    ] as const) {
+      writeFileSync(output, '')
+      const result = spawnSync('bash', ['-c', split.run!], {
+        cwd: new URL('..', import.meta.url),
+        env: { ...process.env, NATIVE: native, MAXV: '1', POPULAR_MAXV: '1', GITHUB_OUTPUT: output },
+        encoding: 'utf8',
+      })
+      expect(result.status, result.stderr).toBe(0)
+      const line = readFileSync(output, 'utf8').trim()
+      expect(JSON.parse(line.slice('legs='.length))).toEqual(legs)
+    }
+    const contain = (workflow.jobs['publish-darwin-native'].steps).find(step => step.name === 'Contain the self-hosted Mac build')!
+    expect(contain.if).toBe('matrix.self_hosted')
+    expect(contain.run).toContain('MACOSX_DEPLOYMENT_TARGET=15.0')
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('build.yml routes targeted darwin source builds to the self-hosted Mac only', () => {
+  const workflow = Bun.YAML.parse(readFileSync(new URL('../../../.github/workflows/build.yml', import.meta.url), 'utf8')) as {
+    jobs: Record<string, { 'runs-on'?: string, steps: Array<{ id?: string, name?: string, run?: string, if?: string }> }>
+  }
+  const script = workflow.jobs.route.steps.find(step => step.id === 'matrix')!.run!
+  const root = mkdtempSync(join(tmpdir(), 'pantry-build-route-'))
+  try {
+    const output = join(root, 'output')
+    const route = (env: Record<string, string>) => {
+      writeFileSync(output, '')
+      const result = spawnSync('bash', ['-c', script], {
+        cwd: new URL('../../..', import.meta.url),
+        env: { ...process.env, PLATFORM: 'all', APPS_ONLY: 'false', PACKAGES: '', MULTI_VERSION: 'false', GITHUB_OUTPUT: output, ...env },
+        encoding: 'utf8',
+      })
+      expect(result.status, result.stderr).toBe(0)
+      const line = readFileSync(output, 'utf8').trim()
+      return JSON.parse(line.slice('matrix='.length)) as Array<{ os: string, name: string, packages: string, self_hosted: boolean }>
+    }
+    // A whole-catalog or apps-only sweep never lands on the laptop.
+    expect(route({}).map(entry => entry.os)).toEqual(['macos-15', 'ubuntu-24.04', 'ubuntu-24.04-arm', 'windows-latest'])
+    expect(route({ APPS_ONLY: 'true' }).some(entry => entry.self_hosted)).toBe(false)
+    // A custom source build is routed to the self-hosted label, alone.
+    expect(route({ PLATFORM: 'darwin-arm64', PACKAGES: 'qemu.org' })).toEqual([
+      { os: 'pantry-mac-self-hosted', name: 'darwin-arm64', label: 'darwin-arm64 source', packages: 'qemu.org', self_hosted: true },
+    ])
+    const steps = (workflow.jobs.build as unknown as { steps: Array<{ name?: string, if?: string }> }).steps
+    expect(steps.find(step => step.name === 'Setup Xcode (macOS)')!.if).toContain('!matrix.platform.self_hosted')
   }
   finally { rmSync(root, { recursive: true, force: true }) }
 })

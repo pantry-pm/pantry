@@ -71,39 +71,126 @@ permissions:
   contents: read
 
 jobs:
+  # Decide which runner builds what. darwin-arm64 SOURCE builds (custom
+  # recipes in CUSTOM_BUILD_DOMAINS and anything pkgx has no prebuilt for) go
+  # to the self-hosted Mac labelled pantry-mac-self-hosted; darwin packages
+  # pkgx already covers keep mirroring on a hosted macos-15 runner. Only a
+  # targeted dispatch (`packages` set) is split: an apps-only or whole-catalog
+  # darwin sweep stays on hosted macos-15, because a laptop with a shared disk
+  # is not where a catalog sweep belongs.
+  route:
+    name: Route builds to runners
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Pantry
+        uses: ./packages/action
+        with:
+          install: 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build the runner matrix
+        id: matrix
+        shell: bash
+        env:
+          PLATFORM: ${{ github.event.inputs.platform || 'all' }}
+          APPS_ONLY: ${{ github.event.inputs.apps-only || 'false' }}
+          PACKAGES: ${{ github.event.inputs.packages }}
+          MULTI_VERSION: ${{ github.event.inputs.multi_version }}
+        run: |
+          set -euo pipefail
+          PACKAGES=$(echo "$PACKAGES" | tr -cd 'a-zA-Z0-9._@\-/, ' | tr ', ' '\n\n' | sed '/^$/d' | paste -sd' ' -)
+          if [ "$APPS_ONLY" = "true" ]; then
+            PLATFORMS="darwin-arm64 windows-x64"
+          else
+            case "$PLATFORM" in
+              all)  PLATFORMS="darwin-arm64 linux-x86-64 linux-arm64 windows-x64" ;;
+              unix) PLATFORMS="darwin-arm64 linux-x86-64 linux-arm64" ;;
+              *)    PLATFORMS="$PLATFORM" ;;
+            esac
+          fi
+
+          entries=()
+          entry() { # os name label packages self_hosted
+            entries+=("$(jq -cn --arg os "$1" --arg name "$2" --arg label "$3" --arg packages "$4" --argjson self_hosted "$5" \
+              '{os: $os, name: $name, label: $label, packages: $packages, self_hosted: $self_hosted}')")
+          }
+          for platform in $PLATFORMS; do
+            case "$platform" in
+              linux-x86-64) entry ubuntu-24.04 "$platform" "$platform" "$PACKAGES" false ;;
+              linux-arm64)  entry ubuntu-24.04-arm "$platform" "$platform" "$PACKAGES" false ;;
+              windows-x64)  entry windows-latest "$platform" "$platform" "$PACKAGES" false ;;
+              darwin-arm64)
+                if [ "$APPS_ONLY" = "true" ] || [ -z "$PACKAGES" ]; then
+                  entry macos-15 "$platform" "$platform" "$PACKAGES" false
+                  continue
+                fi
+                VERSION_ARGS=()
+                if [ "$MULTI_VERSION" = "true" ]; then VERSION_ARGS=(--multi-version --max-versions 5); fi
+                cd packages/ts-pantry
+                SELECTED=$(bun scripts/build-all-packages.ts --platform darwin-arm64 -p "${PACKAGES// /,}" --print-selected ${VERSION_ARGS[@]+"${VERSION_ARGS[@]}"})
+                SOURCE=""
+                if [ -n "$SELECTED" ]; then
+                  SOURCE=$(bun scripts/build-all-packages.ts --platform darwin-arm64 -p "${SELECTED// /,}" --print-selected --exclude-pkgx-covered ${VERSION_ARGS[@]+"${VERSION_ARGS[@]}"})
+                fi
+                cd - >/dev/null
+                MIRROR=$(comm -23 <(tr ' ' '\n' <<<"$SELECTED" | sed '/^$/d' | sort -u) <(tr ' ' '\n' <<<"$SOURCE" | sed '/^$/d' | sort -u) | paste -sd' ' -)
+                echo "darwin-arm64 source builds (pantry-mac-self-hosted): ${SOURCE:-<none>}"
+                echo "darwin-arm64 pkgx mirrors (macos-15): ${MIRROR:-<none>}"
+                if [ -n "$SOURCE" ]; then entry pantry-mac-self-hosted "$platform" "$platform source" "$SOURCE" true; fi
+                if [ -n "$MIRROR" ]; then entry macos-15 "$platform" "$platform mirror" "$MIRROR" false; fi
+                ;;
+            esac
+          done
+          MATRIX=$(printf '%s\n' ${entries[@]+"${entries[@]}"} | jq -cs .)
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "$MATRIX" | jq .
+
   build:
-    name: Build (${{ matrix.platform.name }})
+    name: Build (${{ matrix.platform.label }})
+    needs: route
+    if: needs.route.outputs.matrix != '[]'
     strategy:
       fail-fast: false
       matrix:
         # "all" = darwin + linux + windows
         # "unix" = darwin + linux (for system packages that don't support Windows)
         # apps-only = darwin + windows (GUI apps)
-        platform: ${{
-          (github.event_name == 'schedule' || github.event.inputs.apps-only == 'true')
-            && fromJson('[{"os":"macos-15","name":"darwin-arm64"},{"os":"windows-latest","name":"windows-x64"}]')
-          || github.event.inputs.platform == 'unix'
-            && fromJson('[{"os":"macos-15","name":"darwin-arm64"},{"os":"ubuntu-24.04","name":"linux-x86-64"},{"os":"ubuntu-24.04-arm","name":"linux-arm64"}]')
-          || github.event.inputs.platform == 'darwin-arm64'
-            && fromJson('[{"os":"macos-15","name":"darwin-arm64"}]')
-          || github.event.inputs.platform == 'linux-x86-64'
-            && fromJson('[{"os":"ubuntu-24.04","name":"linux-x86-64"}]')
-          || github.event.inputs.platform == 'linux-arm64'
-            && fromJson('[{"os":"ubuntu-24.04-arm","name":"linux-arm64"}]')
-          || github.event.inputs.platform == 'windows-x64'
-            && fromJson('[{"os":"windows-latest","name":"windows-x64"}]')
-          || fromJson('[{"os":"macos-15","name":"darwin-arm64"},{"os":"ubuntu-24.04","name":"linux-x86-64"},{"os":"ubuntu-24.04-arm","name":"linux-arm64"},{"os":"windows-latest","name":"windows-x64"}]')
-          }}
+        platform: ${{ fromJson(needs.route.outputs.matrix) }}
     runs-on: ${{ matrix.platform.os }}
     permissions:
       contents: read
     # macOS runners bill 10x — cap them tighter so a hung mac job can't burn money.
     # Latest-only builds never need anywhere near this; the cap is a runaway backstop.
-    timeout-minutes: ${{ contains(matrix.platform.os, 'macos') && 70 || 120 }}
+    # The self-hosted Mac costs nothing per minute, and is where long source
+    # builds (qemu, llvm-sized trees) land.
+    timeout-minutes: ${{ matrix.platform.self_hosted && 300 || (contains(matrix.platform.os, 'macos') && 70 || 120) }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      # The self-hosted Mac is a shared laptop, not a disposable VM. Its
+      # job hooks gate the event, guard free space and clean up after the job;
+      # here, keep temp files in the runner-owned RUNNER_TEMP, and target the
+      # same macOS floor as the hosted runners rather than this Mac's newer OS
+      # (buildkit defaults MACOSX_DEPLOYMENT_TARGET to the host's version).
+      - name: Contain the self-hosted Mac build
+        if: matrix.platform.self_hosted
+        shell: bash
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> "$GITHUB_ENV"
+          echo "BUILDKIT_ROOT: $BUILDKIT_ROOT"
+          df -h "$BUILDKIT_ROOT"
 
       - name: Setup Pantry and Bun (Windows)
         if: runner.os == 'Windows'
@@ -146,8 +233,8 @@ jobs:
           if [ "${{ github.event.inputs.multi_version }}" = "true" ]; then
             ARGS="$ARGS --multi-version --max-versions 5"
           fi
-          PACKAGES="${{ github.event.inputs.packages }}"
-          PACKAGES=$(echo "$PACKAGES" | tr -cd 'a-zA-Z0-9._\-/, ')
+          PACKAGES="${{ matrix.platform.packages }}"
+          PACKAGES=$(echo "$PACKAGES" | tr -cd 'a-zA-Z0-9._@\-/, ')
           if [ -n "$PACKAGES" ]; then
             PACKAGES="${PACKAGES// /,}"
             ARGS="$ARGS -p $PACKAGES"
@@ -196,7 +283,7 @@ jobs:
           df -h / /mnt
 
       - name: Setup Xcode (macOS)
-        if: runner.os == 'macOS' && github.event_name != 'schedule' && github.event.inputs.apps-only != 'true' && steps.source-preflight.outputs.needs_build != 'false'
+        if: runner.os == 'macOS' && !matrix.platform.self_hosted && github.event_name != 'schedule' && github.event.inputs.apps-only != 'true' && steps.source-preflight.outputs.needs_build != 'false'
         run: |
           XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -n "$XCODE_PATH" ]; then
@@ -269,9 +356,9 @@ jobs:
             echo "Building apps only"
           else
             # Pass specific packages if provided
-            PACKAGES="${{ github.event.inputs.packages }}"
+            PACKAGES="${{ matrix.platform.packages }}"
             # Validate package input (only allow safe characters)
-            PACKAGES=$(echo "$PACKAGES" | tr -cd 'a-zA-Z0-9._\-/, ')
+            PACKAGES=$(echo "$PACKAGES" | tr -cd 'a-zA-Z0-9._@\-/, ')
             if [ -n "$PACKAGES" ]; then
               PACKAGES="${PACKAGES// /,}"
               ARGS="$ARGS -p $PACKAGES"
@@ -304,6 +391,8 @@ jobs:
           # runner uses all its cores and effective concurrency = runners x PAR.
           PAR=$(echo "${{ github.event.inputs.parallel }}" | tr -cd '0-9'); PAR=${PAR:-1}
           [ "${PAR:-1}" -lt 1 ] && PAR=1
+          # One build tree at a time on the shared-disk self-hosted Mac.
+          [ "${{ matrix.platform.self_hosted }}" = "true" ] && PAR=1
           if [ -z "${STRIPE:-}" ] && [ "$PAR" -gt 1 ]; then
             STRIPE="0/1"
           fi
@@ -326,7 +415,7 @@ jobs:
           [ -n "$STRIPE" ] && ARGS="$ARGS --stripe $STRIPE"
           echo "Running: bun scripts/build-all-packages.ts $ARGS"
           bun scripts/build-all-packages.ts $ARGS
-        timeout-minutes: ${{ contains(matrix.platform.os, 'macos') && 60 || 110 }}
+        timeout-minutes: ${{ matrix.platform.self_hosted && 290 || (contains(matrix.platform.os, 'macos') && 60 || 110) }}
 
   notify:
     name: discord-notification
