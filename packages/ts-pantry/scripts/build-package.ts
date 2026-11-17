@@ -6,7 +6,7 @@
 
 import { verifyDesktopInstall } from './desktop-artifacts'
 import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
 import type { BuildArchiveOptions } from '../../action/src/build-archive-cache'
 import { ArchiveChecksumError, obtainBuildArchive } from '../../action/src/build-archive-cache'
@@ -827,6 +827,26 @@ interface BuildDependencyStorage {
 }
 
 // Download declared dependencies; never compile against an undeclared host ABI.
+/**
+ * Stage a `v<version>` alias next to a dependency unpacked at
+ * `<depsDir>/<domain>/<version>`. An installed package lives at
+ * `<root>/<domain>/v<version>`, and artifacts mirrored from pkgx reference
+ * their own libraries through that directory name: python.org 3.11.16's
+ * `bin/python3.11` loads `@loader_path/../../v3.11.16/lib/libpython3.11.dylib`.
+ * Without the alias such a dependency cannot run during a build — qemu's
+ * meson setup aborted in dyld on exactly that python.
+ */
+export function linkInstalledVersionAlias(depsDir: string, domain: string, version: string): void {
+  if (version.startsWith('v')) return
+  const alias = join(depsDir, domain, `v${version}`)
+  try {
+    lstatSync(alias)
+    return
+  }
+  catch { /* absent: create it */ }
+  symlinkSync(version, alias)
+}
+
 export async function downloadDependencies(
   dependencies: string[],
   depsDir: string,
@@ -905,6 +925,7 @@ catch {
           })
           execSync(`tar -xf "${tarballPath}" -C "${depInstallDir}"`, { stdio: 'pipe' })
           execSync(`rm "${tarballPath}"`)
+          linkInstalledVersionAlias(depsDir, domain, depVersion)
         }
 catch (cause) {
           if (cause instanceof ArchiveChecksumError) throw new BuildDependencyResolutionError(cause.message)
