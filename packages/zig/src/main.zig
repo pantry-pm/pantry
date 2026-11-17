@@ -3098,6 +3098,7 @@ fn printHelp() void {
     style.print("      " ++ style.cyan ++ "app-store:csr" ++ style.reset ++ "       Generate keys and CSRs for Mac App Store certificates\n", .{});
     style.print("      " ++ style.cyan ++ "app-store:package" ++ style.reset ++ "   Check a signed, sandboxed app and write its installer package\n", .{});
     style.print("      " ++ style.cyan ++ "app-store:deliver" ++ style.reset ++ "   Validate and upload a package to App Store Connect\n", .{});
+    style.print("      " ++ style.cyan ++ "app-store:listing" ++ style.reset ++ "   Apply app-store.config.ts and submit for App Review\n", .{});
     style.print("      " ++ style.cyan ++ "native:release" ++ style.reset ++ "      Qualify, version and release a native app\n\n", .{});
 
     // Inspector

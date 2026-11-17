@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { AppStoreConnectClient, ensureAppStoreVersions, waitForAppStoreBuilds } from '../app-store-connect'
-import { prepareAppStoreSubmission, submitAppStore } from '../app-store-submission'
+import { hasReviewContact, prepareAppStoreSubmission, submitAppStore } from '../app-store-submission'
 import type { AppStoreMetadata, AppStoreSubmissionResult } from '../app-store-submission'
 import { loadNativeEnvironment } from './environment'
 import { readNativeAppConfig } from './config'
@@ -29,14 +29,20 @@ export interface NativeApplePublication {
   submission?: AppStoreSubmissionResult
 }
 
-async function metadataFor(root: string, env: NodeJS.ProcessEnv): Promise<AppStoreMetadata> {
+/**
+ * The listing in app-store.config.ts or app-store.config.json. The review
+ * contact may come from encrypted APP_STORE_REVIEW_CONTACT instead, and is only
+ * required when the listing is about to be submitted for review.
+ */
+export async function readAppStoreMetadata(root: string, env: NodeJS.ProcessEnv = process.env, options: { requireReviewContact?: boolean } = {}): Promise<AppStoreMetadata> {
   const source = join(root, 'app-store.config.ts')
   const json = join(root, 'app-store.config.json')
   const metadata = (existsSync(json) ? JSON.parse(readFileSync(json, 'utf8')) : existsSync(source) ? (await import(pathToFileURL(source).href)).default : null) as NativeAppStoreMetadata | null
   if (!metadata) throw new Error('Create app-store.config.ts or app-store.config.json before publishing')
   const contact = metadata.reviewContact ?? (env.APP_STORE_REVIEW_CONTACT ? JSON.parse(env.APP_STORE_REVIEW_CONTACT) : undefined)
-  if (!contact?.firstName || !contact.lastName || !contact.phone || !contact.email) throw new Error('Provide reviewContact in app-store.config or encrypted APP_STORE_REVIEW_CONTACT')
+  if ((options.requireReviewContact ?? true) && !hasReviewContact(contact)) throw new Error('Provide reviewContact in app-store.config or encrypted APP_STORE_REVIEW_CONTACT')
   if (metadata.subtitle && metadata.subtitle.length > 30) throw new Error('App Store subtitle must be at most 30 characters')
+  if (!hasReviewContact(contact)) return { ...metadata, reviewContact: undefined }
   return { ...metadata, reviewContact: { ...contact, ...(metadata.reviewNotes ? { notes: metadata.reviewNotes } : {}) } }
 }
 
@@ -60,7 +66,7 @@ export async function publishNativeApple(root: string, options: NativeAppleOptio
   if (options.validateOnly && options.submitForReview) throw new Error('Validation-only cannot submit a release')
   const env = { ...process.env, ...loadNativeEnvironment(root, config.environment ?? 'production') }
   if (options.buildNumber) env.PANTRY_BUILD_NUMBER = options.buildNumber
-  const metadata = options.packageOnly || options.validateOnly ? undefined : await metadataFor(root, env)
+  const metadata = options.packageOnly || options.validateOnly ? undefined : await readAppStoreMetadata(root, env)
   const prepared = await prepareNativeRelease(root, 'release', { env })
   if (!prepared.appStorePackage || !prepared.artifact) throw new Error('The native pipeline did not produce a qualified App Store package')
   if (options.packageOnly) return { prepared }
@@ -87,7 +93,7 @@ export async function submitNativeApple(root: string, options: { buildNumber: st
   if (options.buildNumber !== undefined && !/^[1-9]\d*$/.test(options.buildNumber)) throw new Error('App Store build number must be a positive integer')
   const config = readNativeAppConfig(root, true)!
   const env = { ...process.env, ...loadNativeEnvironment(root, config.environment ?? 'production') }
-  const metadata = await metadataFor(root, env)
+  const metadata = await readAppStoreMetadata(root, env)
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }
   const bundleId = options.bundleId ?? (JSON.parse(readFileSync(join(root, '.pantry/native/artifact.json'), 'utf8')) as { bundleId: string }).bundleId
   return await withStoreClient(env, async (client, keyPath) => {

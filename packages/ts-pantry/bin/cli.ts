@@ -1625,6 +1625,49 @@ cli
   })
 
 cli
+  .command('app-store:listing', 'Apply app-store.config.ts to the Mac App Store version, and with --submit send it to App Review')
+  .option('--bundle-id <id>', 'Bundle identifier of the App Store Connect app')
+  .option('--app-version <version>', 'Marketing version (default: the version in package.json)')
+  .option('--build-number <number>', 'Wait for this uploaded build to process and select it for the version')
+  .option('--submit', 'Submit the version for App Review once the listing is applied')
+  .option('--api-key-id <id>', 'App Store Connect API key ID (or APP_STORE_CONNECT_API_KEY_ID)')
+  .option('--api-issuer-id <id>', 'App Store Connect API issuer ID (or APP_STORE_CONNECT_ISSUER_ID)')
+  .option('--api-key-path <path>', 'AuthKey .p8 file (or APP_STORE_CONNECT_API_KEY_PATH)')
+  .action(async (options: { bundleId?: string, appVersion?: string, buildNumber?: string, submit?: boolean, apiKeyId?: string, apiIssuerId?: string, apiKeyPath?: string }) => {
+    try {
+      const root = process.cwd()
+      if (!options.bundleId) throw new Error('Pass --bundle-id')
+      if (options.buildNumber !== undefined && !/^[1-9]\d*$/.test(String(options.buildNumber))) throw new Error('--build-number must be a positive integer')
+      const submit = Boolean(options.submit)
+      const { readAppStoreMetadata } = await import('../src/native/store-publish')
+      const { AppStoreConnectClient, ensureAppStoreVersions, waitForAppStoreBuilds } = await import('../src/app-store-connect')
+      const { prepareAppStoreSubmission } = await import('../src/app-store-submission')
+      const metadata = await readAppStoreMetadata(root, process.env, { requireReviewContact: submit })
+      const version = options.appVersion || (JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string }).version
+      const client = new AppStoreConnectClient({
+        keyId: options.apiKeyId,
+        issuerId: options.apiIssuerId || process.env.APP_STORE_CONNECT_ISSUER_ID,
+        keyPath: options.apiKeyPath ? path.resolve(options.apiKeyPath) : undefined,
+      })
+      const app = await client.findApp(options.bundleId)
+      if (!app) throw new Error(`No App Store Connect app has the bundle ID ${options.bundleId}`)
+      const versions = await ensureAppStoreVersions(client, app.id, [{ platform: 'MAC_OS', version }])
+      const blocked = versions.find(item => item.status !== 'ready')
+      if (blocked) throw new Error(blocked.reason ?? `The App Store version ${version} is not editable`)
+      const builds = options.buildNumber ? await waitForAppStoreBuilds(client, app.id, versions, String(options.buildNumber)) : []
+      if (!metadata.reviewContact)
+        console.warn('No review contact yet: the listing is applied, but App Review needs one before you submit.')
+      const result = await prepareAppStoreSubmission(client, metadata, app.id, versions.map(item => ({ platform: 'macos', id: item.id, buildId: builds.find(build => build.versionId === item.id)?.buildId })), { cwd: root, submit })
+      console.log(JSON.stringify({ version, builds, ...result }, null, 2))
+      process.exit(0)
+    }
+    catch (error) {
+      console.error('App Store listing failed:', error instanceof Error ? error.message : error)
+      process.exit(1)
+    }
+  })
+
+cli
   .command('app-store:csr', 'Generate private keys and CSRs for Mac App Store certificates')
   .option('--name <name>', 'App name used in certificate request common names')
   .option('--output <dir>', 'Output directory (default: .pantry/apple)')

@@ -83,7 +83,8 @@ export interface AppStoreMetadata {
   /** Apple-approved declaration to reuse for builds containing non-exempt encryption. */
   encryptionDeclarationId?: string
   ageRating?: AppStoreAgeRating
-  reviewContact: AppStoreReviewContact
+  /** Required to submit for review; a listing can be prepared without it. */
+  reviewContact?: AppStoreReviewContact
   /** Screenshot files keyed by Apple's display type. Paths are relative to the project root. */
   screenshots: AppStoreScreenshotGroup[] | Partial<Record<AppStoreScreenshotDisplayType, string[]>>
   /** Submit complete versions to App Review after upload. @default false */
@@ -387,15 +388,22 @@ async function ensureVersionLocalization(
   return localization.id
 }
 
+/** Apple rejects a review detail without every contact field. */
+export function hasReviewContact(contact: AppStoreReviewContact | undefined): contact is AppStoreReviewContact {
+  return Boolean(contact?.firstName && contact.lastName && contact.phone && contact.email)
+}
+
 async function ensureReviewDetail(client: AppStoreConnectClient, versionId: string, config: AppStoreMetadata): Promise<void> {
+  const contact = config.reviewContact
+  if (!hasReviewContact(contact)) return
   const response = await client.request<{ data: Resource<Record<string, unknown>> | null }>(`/appStoreVersions/${versionId}/appStoreReviewDetail`)
   const attributes = {
-    contactFirstName: config.reviewContact.firstName,
-    contactLastName: config.reviewContact.lastName,
-    contactPhone: config.reviewContact.phone,
-    contactEmail: config.reviewContact.email,
+    contactFirstName: contact.firstName,
+    contactLastName: contact.lastName,
+    contactPhone: contact.phone,
+    contactEmail: contact.email,
     demoAccountRequired: false,
-    ...(config.reviewContact.notes ? { notes: config.reviewContact.notes } : {}),
+    ...(contact.notes ? { notes: contact.notes } : {}),
   }
   if (response.data) {
     await client.request(`/appStoreReviewDetails/${response.data.id}`, {
@@ -683,6 +691,9 @@ export async function prepareAppStoreSubmission(
     throw new Error('[pantry] An encryption declaration requires usesNonExemptEncryption: true')
   if (store.usesNonExemptEncryption === true && !store.encryptionDeclarationId)
     throw new Error('[pantry] Non-exempt encryption requires an Apple-approved encryptionDeclarationId')
+  const shouldSubmit = options.submit ?? store.submitForReview ?? false
+  if (shouldSubmit && !hasReviewContact(store.reviewContact))
+    throw new Error('[pantry] Submitting for review requires a review contact with a first name, last name, phone and email')
   const cwd = options.cwd ?? process.cwd()
   const timeoutMs = options.screenshotTimeoutMs ?? 10 * 60_000
   const pollIntervalMs = options.screenshotPollIntervalMs ?? 5_000
@@ -701,7 +712,6 @@ export async function prepareAppStoreSubmission(
     results.push({ platform: version.platform, versionId: version.id, localizationId })
   }
 
-  const shouldSubmit = options.submit ?? store.submitForReview ?? false
   return {
     appId,
     versions: results,

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { AppStoreConnectClient } from '../src/app-store-connect'
-import { prepareAppStoreSubmission, submitAppStore } from '../src/app-store-submission'
+import { hasReviewContact, prepareAppStoreSubmission, submitAppStore } from '../src/app-store-submission'
 
 describe('App Store Connect submission', () => {
   let dir: string
@@ -203,5 +203,43 @@ describe('App Store Connect submission', () => {
 
     expect(result.reviewSubmissionIds).toEqual(['review-123'])
     expect(writes).toBe(0)
+  })
+})
+
+describe('App Store review contact', () => {
+  const listing = {
+    subtitle: 'Subtitle',
+    privacyPolicyUrl: 'https://example.test/privacy',
+    description: 'Description',
+    keywords: 'one,two',
+    supportUrl: 'https://example.test/support',
+    copyright: '2026 Example',
+    primaryCategory: 'UTILITIES',
+    contentRightsDeclaration: 'DOES_NOT_USE_THIRD_PARTY_CONTENT' as const,
+    price: '0',
+    screenshots: [],
+  }
+
+  it('needs every field Apple asks for', () => {
+    expect(hasReviewContact(undefined)).toBe(false)
+    expect(hasReviewContact({ firstName: 'Ada', lastName: 'Lovelace', phone: '', email: 'ada@example.test' })).toBe(false)
+    expect(hasReviewContact({ firstName: 'Ada', lastName: 'Lovelace', phone: '+1 555 0100', email: 'ada@example.test' })).toBe(true)
+  })
+
+  it('refuses to submit without one, before touching App Store Connect', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pantry-store-'))
+    const keyPath = join(dir, 'AuthKey_TEST.p8')
+    const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+    writeFileSync(keyPath, privateKey.export({ type: 'pkcs8', format: 'pem' }))
+    let requests = 0
+    const client = new AppStoreConnectClient({ keyId: 'KEY', issuerId: 'ISSUER', keyPath, fetch: (async () => { requests++; return Response.json({ data: [] }) }) as unknown as typeof fetch })
+    try {
+      await expect(prepareAppStoreSubmission(client, listing, 'app-123', [{ platform: 'macos', id: 'mac-version' }], { submit: true }))
+        .rejects.toThrow('requires a review contact')
+      expect(requests).toBe(0)
+    }
+    finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
