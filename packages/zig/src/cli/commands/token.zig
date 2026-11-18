@@ -34,6 +34,27 @@ const CommandResult = common.CommandResult;
 /// Credential key used when the caller doesn't name one.
 pub const default_key = "PANTRY_TOKEN";
 
+/// The public registry, used when neither `--registry` nor PANTRY_REGISTRY_URL names one.
+pub const public_registry = "https://registry.pantry.dev";
+
+/// The registry a credential lookup addresses: the one asked for, else
+/// PANTRY_REGISTRY_URL, else the public registry. The same rule every other
+/// command uses to pick its registry.
+///
+/// `get` and `sync` used to look up with no registry at all, which matches
+/// only unscoped entries, so a token that `pantry token set` had stored under
+/// the public registry was listed by `pantry token list` and then not found:
+/// "No PANTRY_TOKEN found to sync".
+pub fn effectiveRegistry(requested: ?[]const u8) []const u8 {
+    if (requested) |r| {
+        if (r.len > 0) return r;
+    }
+    if (io_helper.getenv("PANTRY_REGISTRY_URL")) |env| {
+        if (env.len > 0) return env;
+    }
+    return public_registry;
+}
+
 /// Environment variables consulted before the credentials file, in order.
 /// Both names are accepted because the registry server, the GitHub action and
 /// this CLI have each historically used one or the other.
@@ -558,7 +579,7 @@ pub const LookupOptions = struct {
 /// Print the raw value to stdout with no trailing newline, so it pipes cleanly:
 ///   pantry token get | gh secret set PANTRY_TOKEN --repo owner/repo
 pub fn getCommand(allocator: std.mem.Allocator, options: LookupOptions) !CommandResult {
-    const resolved = try resolve(allocator, null, options.registry, options.key);
+    const resolved = try resolve(allocator, null, effectiveRegistry(options.registry), options.key);
     if (resolved) |token| {
         defer token.deinit(allocator);
         // Straight to stdout, bypassing the styled printer: no newline, no
@@ -685,7 +706,7 @@ pub fn syncCommand(allocator: std.mem.Allocator, options: SyncOptions) !CommandR
         );
     }
 
-    const resolved = try resolve(allocator, null, options.registry, options.key);
+    const resolved = try resolve(allocator, null, effectiveRegistry(options.registry), options.key);
     if (resolved == null) {
         const message = try std.fmt.allocPrint(
             allocator,
@@ -902,4 +923,21 @@ test "saved credentials are not readable by other users" {
     defer io_helper.closeFile(file);
     const st = try file.stat(io_helper.io);
     try testing.expectEqual(@as(u32, 0o600), @as(u32, @intCast(@backingInt(st.permissions))) & 0o777);
+}
+
+test "get and sync find a token stored under the public registry without --registry" {
+    var store = try tempStore(testing.allocator, "effective-registry");
+    defer {
+        io_helper.deleteFile(store.path) catch {};
+        store.deinit();
+    }
+    try store.set(default_key, public_registry, "ptry_scoped");
+    // The lookup `get` and `sync` make when no registry is given. Unscoped-only
+    // lookups (registry = null) missed this entry.
+    try testing.expect(store.get(default_key, null) == null);
+    if (io_helper.getenv("PANTRY_REGISTRY_URL") == null) {
+        try testing.expectEqualStrings(public_registry, effectiveRegistry(null));
+        try testing.expectEqualStrings("ptry_scoped", store.get(default_key, effectiveRegistry(null)).?.value);
+    }
+    try testing.expectEqualStrings("https://example.test", effectiveRegistry("https://example.test"));
 }
