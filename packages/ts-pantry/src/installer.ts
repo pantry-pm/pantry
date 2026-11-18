@@ -587,6 +587,10 @@ export async function installPackage(
     fs.mkdirSync(extractDir, { recursive: true })
     try {
       await extractArchive(archivePath, extractDir, format)
+      // An extractor can report success and write nothing; say so here rather
+      // than later as a missing executable.
+      if (fs.readdirSync(extractDir).length === 0)
+        throw new Error(`Extracting ${url} (${format}) reported success but produced no files in ${extractDir}`)
     }
     catch (error) {
       // A cached archive that no longer unpacks is dropped, so the next run downloads it.
@@ -623,11 +627,11 @@ export async function installPackage(
       // A registry package's binaries are known only now, from what it shipped.
       const binaries = declared ?? installedRegistryBinaries(candidate)
       if (binaries.length === 0) {
-        throw new Error(`${domain}@${version} unpacked with no executables in bin/`)
+        throw new Error(`${domain}@${version} unpacked with no executables in bin/\n${describeUnpackedLayout(candidate, sourceDir, extractDir)}`)
       }
 
       if (!installedBinary(candidate, binaries[0], resolver?.binaryDirectory))
-        throw new Error(`${domain}@${version} unpacked without its required primary executable ${binaries[0]}`)
+        throw new Error(`${domain}@${version} unpacked without its required primary executable ${binaries[0]}\n${describeUnpackedLayout(candidate, sourceDir, extractDir)}`)
 
       // Make binaries executable (non-Windows)
       if (platform.os !== 'windows') {
@@ -1567,11 +1571,34 @@ export async function downloadFileReliably(url: string, dest: string, options: D
   )
 }
 
-async function extractArchive(archivePath: string, destDir: string, format: string): Promise<void> {
+/**
+ * The tar that ships with Windows (bsdtar, in System32 since Windows 10 1803;
+ * Bun itself needs 1809), which reads zip archives as well as tarballs.
+ *
+ * Named by its full path because the `tar` on PATH is often Git for Windows'
+ * GNU tar, which cannot read a zip and takes `C:\...` for a remote host.
+ */
+export function windowsSystemTar(env: Record<string, string | undefined> = process.env): string {
+  const root = env.SystemRoot || env.SYSTEMROOT || env.windir || env.WINDIR || 'C:\\Windows'
+  return path.win32.join(root, 'System32', 'tar.exe')
+}
+
+export async function extractArchive(archivePath: string, destDir: string, format: string): Promise<void> {
   if (format === 'zip') {
-    // Use system unzip (available on all platforms)
     if (process.platform === 'win32') {
-      execFileSync('powershell', ['-NoProfile', '-Command', 'Expand-Archive', '-Path', archivePath, '-DestinationPath', destDir, '-Force'], { stdio: 'pipe' })
+      // Not PowerShell's Expand-Archive. Windows PowerShell resolves that
+      // cmdlet through PSModulePath, and a pwsh 7 parent (every GitHub Actions
+      // `run:` step on Windows) puts its own module directory first. Runner
+      // image 20261116 ships pwsh's Microsoft.PowerShell.Archive 1.2.7, which
+      // calls a .NET Core overload of ExtractToDirectory that Windows
+      // PowerShell's .NET Framework lacks: it printed a MethodException, exited
+      // 0 and left the destination empty, so a fresh Windows install of Bun
+      // failed as "unpacked without bun.exe". tar takes its paths as argv
+      // entries, with no command string or module lookup in between.
+      const tar = windowsSystemTar()
+      if (!fs.existsSync(tar))
+        throw new Error(`Cannot extract ${archivePath}: ${tar} is missing (it ships with Windows 10 1803 and later)`)
+      execFileSync(tar, ['-xf', archivePath, '-C', destDir], { stdio: 'pipe' })
     }
     else {
       execFileSync('unzip', ['-o', '-q', archivePath, '-d', destDir], { stdio: 'pipe' })
@@ -1586,6 +1613,61 @@ async function extractArchive(archivePath: string, destDir: string, format: stri
   else {
     throw new Error(`Unsupported archive format: ${format}`)
   }
+}
+
+/**
+ * What an unpacked archive actually contained, for an install that found no
+ * usable executable in it. "unpacked without bun.exe" alone leaves the next
+ * person guessing between an empty extraction, an unexpected top-level folder
+ * and a zero-byte file; the listing says which.
+ */
+export function describeDirectory(dir: string, options: { maxEntries?: number, maxDepth?: number } = {}): string {
+  const maxEntries = options.maxEntries ?? 40
+  const maxDepth = options.maxDepth ?? 3
+  const lines: string[] = []
+  let total = 0
+  const walk = (current: string, depth: number): void => {
+    let entries: fs.Dirent[]
+    try { entries = fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)) }
+    catch (error) {
+      lines.push(`${'  '.repeat(depth)}<unreadable: ${(error as NodeJS.ErrnoException).code ?? error}>`)
+      return
+    }
+    for (const entry of entries) {
+      total++
+      if (lines.length >= maxEntries) continue
+      const entryPath = path.join(current, entry.name)
+      let detail: string
+      if (entry.isSymbolicLink()) {
+        let target = '?'
+        try { target = fs.readlinkSync(entryPath) } catch { /* reported as unknown */ }
+        detail = `${entry.name} -> ${target}`
+      }
+      else if (entry.isDirectory()) {
+        detail = `${entry.name}/`
+      }
+      else {
+        let size = '?'
+        try { size = String(fs.statSync(entryPath).size) } catch { /* reported as unknown */ }
+        detail = `${entry.name} (${size} bytes)`
+      }
+      lines.push(`${'  '.repeat(depth)}${detail}`)
+      if (entry.isDirectory() && depth + 1 < maxDepth) walk(entryPath, depth + 1)
+    }
+  }
+  walk(dir, 0)
+  if (total === 0 && lines.length === 0) return '(empty)'
+  if (total > lines.length) lines.push(`... ${total - lines.length} more entries`)
+  return lines.join('\n')
+}
+
+function describeUnpackedLayout(candidate: string, sourceDir: string, extractDir: string): string {
+  const indent = (text: string) => text.split('\n').map(line => `    ${line}`).join('\n')
+  const parts = [`  Installed candidate ${candidate} contained:\n${indent(describeDirectory(candidate))}`]
+  if (path.resolve(sourceDir) !== path.resolve(extractDir))
+    parts.push(`  Archive folder ${sourceDir} contained:\n${indent(describeDirectory(sourceDir))}`)
+  parts.push(`  Extraction directory ${extractDir} contained:\n${indent(describeDirectory(extractDir))}`)
+  return parts.join('\n')
 }
 
 function copyDirRecursive(src: string, dest: string): void {

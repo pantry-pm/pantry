@@ -541,18 +541,57 @@ pub fn extractArchiveWithVerification(
 }
 
 /// Extract a .zip archive using platform-appropriate tools.
-/// Windows: PowerShell Expand-Archive. macOS/Linux: unzip command.
+/// Windows: the bsdtar in System32. macOS/Linux: unzip.
+///
+/// Not PowerShell's Expand-Archive: Windows PowerShell resolves it through
+/// PSModulePath, which a pwsh 7 parent fills with its own modules. On GitHub's
+/// windows-2025 image 20261116, pwsh's Microsoft.PowerShell.Archive 1.2.7 calls
+/// a .NET Core overload Windows PowerShell lacks, printed a MethodException,
+/// exited 0 and extracted nothing. The exit status was discarded here too.
 fn extractZipArchive(allocator: std.mem.Allocator, archive_path: []const u8, dest_dir: []const u8) !void {
     const builtin = @import("builtin");
     if (comptime builtin.os.tag == .windows) {
-        // PowerShell: use separate arguments to avoid command injection
-        _ = try io_helper.childRun(allocator, &[_][]const u8{
-            "powershell",       "-NoProfile", "-Command",
-            "Expand-Archive",   "-Path",      archive_path,
-            "-DestinationPath", dest_dir,     "-Force",
-        });
-    } else {
-        // Unix: unzip -o -q <zip> -d <dir>
-        _ = try io_helper.childRun(allocator, &[_][]const u8{ "unzip", "-o", "-q", archive_path, "-d", dest_dir });
+        const tar = try windowsSystemTar(allocator);
+        defer allocator.free(tar);
+        return runZipExtractor(allocator, &[_][]const u8{ tar, "-xf", archive_path, "-C", dest_dir }, archive_path);
     }
+    return runZipExtractor(allocator, &[_][]const u8{ "unzip", "-o", "-q", archive_path, "-d", dest_dir }, archive_path);
+}
+
+/// `%SystemRoot%\System32\tar.exe`, by full path: the `tar` on PATH is often
+/// Git for Windows' GNU tar, which cannot read a zip.
+fn windowsSystemTar(allocator: std.mem.Allocator) ![]u8 {
+    const root: []const u8 = io_helper.getenv("SystemRoot") orelse io_helper.getenv("windir") orelse "C:\\Windows";
+    return std.fmt.allocPrint(allocator, "{s}\\System32\\tar.exe", .{root});
+}
+
+fn runZipExtractor(allocator: std.mem.Allocator, argv: []const []const u8, archive_path: []const u8) !void {
+    const result = io_helper.childRun(allocator, argv) catch |err| {
+        style.printForced("  [pantry:extract] could not run {s} on {s}: {s}\n", .{ argv[0], archive_path, @errorName(err) });
+        return err;
+    };
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+    if (result.term != .exited or result.term.exited != 0) {
+        style.printForced("  [pantry:extract] {s} failed on {s}: {s}\n", .{ argv[0], archive_path, std.mem.trim(u8, result.stderr, " \t\r\n") });
+        return error.ExtractionFailed;
+    }
+}
+
+test "archive backend: a zip the extractor rejects is an extraction failure, not an empty success" {
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var temp = std.testing.tmpDir(.{});
+    defer temp.cleanup();
+    try temp.dir.writeFile(io_helper.io, .{ .sub_path = "archive.zip", .data = "not a zip archive" });
+    try temp.dir.createDirPath(io_helper.io, "out");
+    var root_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root_len = try temp.dir.realPathFile(io_helper.io, ".", &root_buf);
+    const root = root_buf[0..root_len];
+    const archive = try std.fmt.allocPrint(allocator, "{s}/archive.zip", .{root});
+    defer allocator.free(archive);
+    const out = try std.fmt.allocPrint(allocator, "{s}/out", .{root});
+    defer allocator.free(out);
+
+    try std.testing.expectError(error.ExtractionFailed, extractArchive(allocator, archive, out, "zip"));
 }
