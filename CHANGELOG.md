@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.212...v0.11.213)
+
+## 🐛 Bug Fixes
+
+- **installer**: unpack Windows zips with the system tar, not Expand-Archive ([1f68f28](https://github.com/pantry-pm/pantry/commit/1f68f28)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **token**: get and sync default to the registry other commands use ([c23373b](https://github.com/pantry-pm/pantry/commit/c23373b)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## ✅ Tests
+
+- **ci**: prove fresh Windows installs do not depend on PSModulePath ([335d563](https://github.com/pantry-pm/pantry/commit/335d563)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 👷 Build System
+
+- **action**: rebuild dist with the Windows zip extraction fix ([ebe4462](https://github.com/pantry-pm/pantry/commit/ebe4462)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🔧 Chores
+
+- release v0.11.213 ([8c7c677](https://github.com/pantry-pm/pantry/commit/8c7c677)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.514 ([91f729b](https://github.com/pantry-pm/pantry/commit/91f729b)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.211...v0.11.212)
 
 ## 🐛 Bug Fixes
