@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { existsSync, readdirSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { installPackage } from '../../packages/ts-pantry/src/installer'
 
 assert.equal(process.platform, 'win32', 'This fixture must run on a real Windows host')
 const cli = resolve(process.env.PANTRY_TEST_CLI!)
@@ -74,15 +77,72 @@ try {
   proof.workspaceSourcePreservedThroughRepeatedRelinking = true
   proof.workspaceSourceSha256 = sourceHash
 
+  // Windows PowerShell resolves Expand-Archive through PSModulePath, and the
+  // pwsh 7 running this step puts its own modules first. On runner image
+  // 20261116 that module could not run under Windows PowerShell: it printed a
+  // MethodException, exited 0 and extracted nothing, so every fresh SDK
+  // install of Bun failed as "unpacked without bun.exe" on that image and
+  // passed on the previous one. Shadow the cmdlet with one that fails the
+  // same way, on every image, and first prove the shadow takes effect.
+  const poisonedModules = join(owned, 'poisoned modules')
+  await mkdir(join(poisonedModules, 'Microsoft.PowerShell.Archive'), { recursive: true })
+  await Bun.write(join(poisonedModules, 'Microsoft.PowerShell.Archive', 'Microsoft.PowerShell.Archive.psm1'), [
+    // A short marker: Windows PowerShell wraps long error lines in redirected output.
+    'function Expand-Archive { Write-Error "PANTRY_SHADOWED_EXPAND_ARCHIVE" }',
+    'Export-ModuleMember -Function Expand-Archive',
+    '',
+  ].join('\n'))
+  const poisonedPSModulePath = `${poisonedModules};${process.env.PSModulePath ?? ''}`
+  const probeArchive = join(owned, 'probe.zip')
+  const probeSource = join(owned, 'probe-source')
+  await mkdir(probeSource)
+  await Bun.write(join(probeSource, 'probe.txt'), 'probe\n')
+  const systemTar = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+  assert.equal(spawnSync(systemTar, ['-a', '-cf', probeArchive, '-C', probeSource, 'probe.txt']).status, 0)
+  const probeOut = join(owned, 'probe-out')
+  await mkdir(probeOut)
+  const probe = spawnSync('powershell', ['-NoProfile', '-Command', 'Expand-Archive', '-Path', probeArchive, '-DestinationPath', probeOut, '-Force'], {
+    env: { ...process.env, PSModulePath: poisonedPSModulePath }, encoding: 'utf8',
+  })
+  assert.match(probe.stderr, /PANTRY_SHADOWED_EXPAND_ARCHIVE/, 'the shadowing module must be the Expand-Archive Windows PowerShell runs')
+  assert.deepEqual(readdirSync(probeOut), [], 'the shadowed Expand-Archive must extract nothing, as the broken module did')
+  proof.poisonedExpandArchiveReproduced = true
+
+  // A fresh SDK install of the declared runtime, with no archive cache, under
+  // the poisoned module path and through temporary and install paths that
+  // PowerShell would split or expand if they ever became script text again.
+  const freshRoot = join(owned, "fresh sdk $(install) 'bun' [1]; @x")
+  const freshTemp = join(freshRoot, 'temp dir')
+  await mkdir(freshTemp, { recursive: true })
+  const saved = { PSModulePath: process.env.PSModulePath, PANTRY_ARCHIVE_CACHE: process.env.PANTRY_ARCHIVE_CACHE, TEMP: process.env.TEMP, TMP: process.env.TMP }
+  Object.assign(process.env, { PSModulePath: poisonedPSModulePath, PANTRY_ARCHIVE_CACHE: '0', TEMP: freshTemp, TMP: freshTemp })
+  let fresh
+  try {
+    fresh = await installPackage('bun.com', '1.4.4', { installDir: join(freshRoot, 'pantry'), quiet: true })
+  }
+  finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
+  assert.equal(fresh.version, '1.4.4')
+  assert(existsSync(join(fresh.installPath, 'bun.exe')))
+  assert.equal((await run('sdk-fresh-bun-version', [join(freshRoot, 'pantry/.bin/bun.exe'), '--version'], owned)).trim(), '1.4.4')
+  assert.deepEqual(readdirSync(freshTemp), [], 'the fresh install must clean its download directory')
+  proof.freshSdkInstallIndependentOfPSModulePath = true
+
   // Exercise the bundled Action itself. A missing local dependency must fail
   // inside workspace installation, before the Action can say setup completed.
+  // It installs Bun fresh (no dependency cache) under the poisoned module path.
   const negative = join(owned, 'required-workspace-failure')
   await mkdir(negative)
   await Bun.write(join(negative, 'package.json'), JSON.stringify({ name: 'required-workspace-fixture', private: true, dependencies: { '@fixture/missing': 'file:./missing' } }))
   const output = await run('action-required-workspace-failure', [sdkBinary, action], negative, {
     INPUT_VERSION: '0.11.99', INPUT_INSTALL: 'true', INPUT_PACKAGES: '', INPUT_CACHE: 'false',
-    INPUT_SERVICES: '', INPUT_RELEASE: 'false', INPUT_PUBLISH: '',
+    INPUT_SERVICES: '', INPUT_RELEASE: 'false', INPUT_PUBLISH: '', PSModulePath: poisonedPSModulePath,
   }, 1)
+  assert.match(output, /Dependency cache service unavailable/)
   assert.match(output, /Installing workspace dependencies/)
   assert.doesNotMatch(output, /Setup complete/)
   assert.doesNotMatch(output, /warning.*pantry workspace install failed/)
