@@ -1,3 +1,25 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.211...v0.11.212)
+
+## 🐛 Bug Fixes
+
+- **install**: keep declared Zig dependencies when syncing build.zig.zon ([fada053](https://github.com/pantry-pm/pantry/commit/fada053)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ci**: target the hosted macOS floor on the self-hosted Mac ([8d2e007](https://github.com/pantry-pm/pantry/commit/8d2e007)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **qemu**: build against the macOS 27 SDK ([8e7d018](https://github.com/pantry-pm/pantry/commit/8e7d018)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💚 Continuous Integration
+
+- **darwin**: publish only the two newest versions per package on macOS ([87fcf94](https://github.com/pantry-pm/pantry/commit/87fcf94)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.212 ([ec40434](https://github.com/pantry-pm/pantry/commit/ec40434)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.513 ([305c114](https://github.com/pantry-pm/pantry/commit/305c114)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.210...v0.11.211)
 
 ## ✨ Features
