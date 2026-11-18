@@ -134,7 +134,7 @@ test('Darwin source builds go to the self-hosted Mac and mirrors stay on hosted 
     }
     const contain = (workflow.jobs['publish-darwin-native'].steps).find(step => step.name === 'Contain the self-hosted Mac build')!
     expect(contain.if).toBe('matrix.self_hosted')
-    expect(contain.run).toContain('MACOSX_DEPLOYMENT_TARGET=15.0')
+    expect(contain.run).toContain('MACOSX_DEPLOYMENT_TARGET=15.8')
   }
   finally { rmSync(root, { recursive: true, force: true }) }
 })

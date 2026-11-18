@@ -181,14 +181,17 @@ jobs:
       # The self-hosted Mac is a shared laptop, not a disposable VM. Its
       # job hooks gate the event, guard free space and clean up after the job;
       # here, keep temp files in the runner-owned RUNNER_TEMP, and target the
-      # same macOS floor as the hosted runners rather than this Mac's newer OS
-      # (buildkit defaults MACOSX_DEPLOYMENT_TARGET to the host's version).
+      # same macOS floor as the hosted macos-15 image rather than this Mac's
+      # newer OS (buildkit defaults MACOSX_DEPLOYMENT_TARGET to the host's
+      # version). Not lower than that image either: the darwin catalog was
+      # built there, and a bundled dependency newer than the declared target
+      # fails runtime qualification (qemu: libp11-kit requires 15.7).
       - name: Contain the self-hosted Mac build
         if: matrix.platform.self_hosted
         shell: bash
         run: |
           echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
-          echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=15.8" >> "$GITHUB_ENV"
           echo "BUILDKIT_ROOT: $BUILDKIT_ROOT"
           df -h "$BUILDKIT_ROOT"
 

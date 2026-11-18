@@ -45,8 +45,10 @@ export const recipe: Recipe = {
       // ParavirtualizedGraphics stub; replacement available from macOS 15.2),
       // so apple-gfx.m fails to link with "Undefined symbols:
       // _PGNewDeviceWithDescriptor". apple-gfx.m uses manual retain/release,
-      // where both functions return a +1 object, so the rename is exact. The
-      // 15.2 floor is below the 15.8 our darwin dependencies already require.
+      // where both functions return a +1 object, so the rename is exact. It
+      // needs macOS 15.2, below the 15.7+ floor our darwin dependencies carry,
+      // so no recipe-level MACOSX_DEPLOYMENT_TARGET: one lower than those
+      // dependencies fails runtime qualification.
       { run: 'test ! -f hw/display/apple-gfx.m || sed -i -e "s/PGNewDeviceWithDescriptor/PGCreateDeviceWithDescriptor/g" hw/display/apple-gfx.m', if: 'darwin' },
 
       './configure $ARGS',
@@ -59,8 +61,6 @@ export const recipe: Recipe = {
       'ARGS': ['--prefix={{prefix}}', '--disable-bsd-user', '--disable-guest-agent', '--enable-slirp', '--enable-capstone', '--enable-curses', '--enable-libssh', '--enable-vde', '--enable-zstd', '--extra-cflags=-DNCURSES_WIDECHAR=1', '--disable-sdl', '--disable-docs'],
       'darwin': {
         ARGS: ['--enable-virtfs'],
-        // PGCreateDeviceWithDescriptor (see the apple-gfx step) needs 15.2.
-        MACOSX_DEPLOYMENT_TARGET: '15.2',
       },
     },
   },

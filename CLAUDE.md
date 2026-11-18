@@ -216,9 +216,13 @@ place darwin source builds run.
   checks it before **every package** and stops (exit 1) rather than start a
   build that could fill the disk. Unset on hosted runners, where it is off.
 - **Toolchain:** the laptop runs Apple's current Xcode, ahead of hosted
-  `macos-15`, so the jobs set `MACOSX_DEPLOYMENT_TARGET=15.0` — buildkit
+  `macos-15`, so the jobs set `MACOSX_DEPLOYMENT_TARGET=15.8` — buildkit
   otherwise defaults it to the host's macOS version and the published binaries
-  would refuse to run on macOS 15. A darwin source failure on this runner is
+  would refuse to run on macOS 15. It is the hosted image's version on
+  purpose, not lower: the darwin catalog was built there (15.7/15.8), and a
+  bundled dependency newer than the declared target fails runtime
+  qualification (`libp11-kit … requires macOS 15.7, newer than declared`).
+  **Raise it when the hosted macos-15 image moves.** A darwin source failure on this runner is
   now a failure on the same toolchain you get locally (perl 5.44.0's
   `panic: del_backref` under Xcode 27 is the known example — see above).
 - **Health:** `gh api repos/pantry-pm/pantry/actions/runners` shows it
