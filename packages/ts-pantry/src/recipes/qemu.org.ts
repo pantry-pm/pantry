@@ -41,6 +41,14 @@ export const recipe: Recipe = {
       // https://gitlab.com/qemu-project/qemu/-/issues/1853
       { run: 'sed -i -e"s/-isystem\', /-isystem\' + /g" meson.build', if: '>=8.1.4' },
 
+      // The macOS 27 SDK obsoletes PGNewDeviceWithDescriptor (removed from the
+      // ParavirtualizedGraphics stub; replacement available from macOS 15.2),
+      // so apple-gfx.m fails to link with "Undefined symbols:
+      // _PGNewDeviceWithDescriptor". apple-gfx.m uses manual retain/release,
+      // where both functions return a +1 object, so the rename is exact. The
+      // 15.2 floor is below the 15.8 our darwin dependencies already require.
+      { run: 'test ! -f hw/display/apple-gfx.m || sed -i -e "s/PGNewDeviceWithDescriptor/PGCreateDeviceWithDescriptor/g" hw/display/apple-gfx.m', if: 'darwin' },
+
       './configure $ARGS',
       'make --jobs {{hw.concurrency}} install',
 
@@ -51,6 +59,8 @@ export const recipe: Recipe = {
       'ARGS': ['--prefix={{prefix}}', '--disable-bsd-user', '--disable-guest-agent', '--enable-slirp', '--enable-capstone', '--enable-curses', '--enable-libssh', '--enable-vde', '--enable-zstd', '--extra-cflags=-DNCURSES_WIDECHAR=1', '--disable-sdl', '--disable-docs'],
       'darwin': {
         ARGS: ['--enable-virtfs'],
+        // PGCreateDeviceWithDescriptor (see the apple-gfx step) needs 15.2.
+        MACOSX_DEPLOYMENT_TARGET: '15.2',
       },
     },
   },
