@@ -6,6 +6,8 @@ const common = @import("common.zig");
 const style = @import("../style.zig");
 const services = lib.services;
 const service_io = @import("../../io_helper.zig");
+const Paths = @import("../../core/platform.zig").Paths;
+const shared_libs = @import("../../install/shared_libs.zig");
 
 const CommandResult = common.CommandResult;
 const ServiceManager = services.ServiceManager;
@@ -582,13 +584,30 @@ pub fn startCommandWithContext(allocator: std.mem.Allocator, args: []const []con
     return startSingleService(allocator, service_name, project_root, port_override);
 }
 
-/// Resolve service health-check executables through the project-local Pantry
-/// bin directory while preserving system tools on PATH.
-pub fn buildHealthCheckCommand(allocator: std.mem.Allocator, health_command: []const u8, project_root: ?[]const u8) ![]u8 {
+/// Resolve project tools and their shared libraries just as the service unit
+/// does. Pass paths as arguments to `env`, outside the shell command.
+fn buildHealthCheckArgs(allocator: std.mem.Allocator, health_command: []const u8, project_root: ?[]const u8) ![]const []const u8 {
+    var argv = std.ArrayList([]const u8).empty;
     if (project_root) |root| {
-        return std.fmt.allocPrint(allocator, "PATH=\"{s}/pantry/.bin:$PATH\" {s}", .{ root, health_command });
+        try argv.append(allocator, "env");
+        const path = service_io.getenv("PATH") orelse "/usr/local/bin:/usr/bin:/bin";
+        try argv.append(allocator, try std.fmt.allocPrint(allocator, "PATH={s}/pantry/.bin{c}{s}", .{ root, Paths.pathSeparator(), path }));
+
+        const library_var = Paths.libraryPathVar();
+        if (!std.mem.eql(u8, library_var, "PATH")) {
+            const packages_root = try std.fs.path.join(allocator, &.{ root, "pantry" });
+            var dirs = try shared_libs.collectLibDirs(allocator, packages_root);
+            if (dirs.items.len > 0) {
+                if (service_io.getenv(library_var)) |inherited| {
+                    if (inherited.len > 0) try dirs.append(allocator, inherited);
+                }
+                const library_path = try std.mem.join(allocator, ":", dirs.items);
+                try argv.append(allocator, try std.fmt.allocPrint(allocator, "{s}={s}", .{ library_var, library_path }));
+            }
+        }
     }
-    return allocator.dupe(u8, health_command);
+    try argv.appendSlice(allocator, &.{ "sh", "-c", health_command });
+    return argv.toOwnedSlice(allocator);
 }
 
 /// Wait until a started service accepts its declared health check. A process
@@ -602,12 +621,13 @@ pub fn waitForServiceHealth(
     delay_ms: u64,
 ) !bool {
     const health_command = config.health_check orelse return true;
-    const command = try buildHealthCheckCommand(allocator, health_command, project_root);
-    defer allocator.free(command);
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const argv = try buildHealthCheckArgs(arena.allocator(), health_command, project_root);
 
     var attempt: u32 = 0;
     while (attempt < max_attempts) : (attempt += 1) {
-        const result = service_io.childRun(allocator, &[_][]const u8{ "sh", "-c", command }) catch {
+        const result = service_io.childRun(allocator, argv) catch {
             if (delay_ms > 0) service_io.nanosleep(delay_ms / 1000, (delay_ms % 1000) * std.time.ns_per_ms);
             continue;
         };
@@ -2316,18 +2336,27 @@ fn detectCwdProjectHash(allocator: std.mem.Allocator) ?[]const u8 {
     return computeProjectHash(allocator, project_root) catch null;
 }
 
-test "health checks resolve project-local Pantry binaries" {
-    const allocator = std.testing.allocator;
-    const local = try buildHealthCheckCommand(allocator, "redis-cli -p 6379 ping", "/workspace/app");
-    defer allocator.free(local);
-    try std.testing.expectEqualStrings(
-        "PATH=\"/workspace/app/pantry/.bin:$PATH\" redis-cli -p 6379 ping",
-        local,
-    );
+test "health checks resolve project-local Pantry binaries and shared libraries" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    try tmp.dir.createDirPath(std.testing.io, "pantry/openssl.org/v1.1.1w/lib");
+    const root = try tmp.dir.realPathFileAlloc(std.testing.io, ".", allocator);
+    const cmd = "redis-cli -p 6379 ping";
+    const local = try buildHealthCheckArgs(allocator, cmd, root);
+    try std.testing.expectEqualStrings("env", local[0]);
+    try std.testing.expect(std.mem.startsWith(u8, local[1], try std.fmt.allocPrint(allocator, "PATH={s}/pantry/.bin", .{root})));
+    if (!std.mem.eql(u8, Paths.libraryPathVar(), "PATH")) {
+        const library_assignment = try std.fmt.allocPrint(allocator, "{s}={s}/pantry/openssl.org/v1.1.1w/lib", .{ Paths.libraryPathVar(), root });
+        try std.testing.expect(std.mem.startsWith(u8, local[2], library_assignment));
+    }
+    try std.testing.expectEqualStrings(cmd, local[local.len - 1]);
 
-    const global = try buildHealthCheckCommand(allocator, "redis-cli ping", null);
-    defer allocator.free(global);
-    try std.testing.expectEqualStrings("redis-cli ping", global);
+    const global = try buildHealthCheckArgs(allocator, cmd, null);
+    try std.testing.expectEqual(@as(usize, 3), global.len);
+    try std.testing.expectEqualStrings(cmd, global[2]);
 }
 
 // ============================================================================
