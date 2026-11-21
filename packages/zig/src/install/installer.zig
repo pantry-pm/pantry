@@ -24,6 +24,11 @@ const Paths = core.Paths;
 const PackageCache = cache.PackageCache;
 const PackageSpec = packages.PackageSpec;
 
+fn zigArchiveFormat(mirrored: bool, os: std.Target.Os.Tag) []const u8 {
+    if (mirrored) return "tar.gz";
+    return if (os == .windows) "zip" else "tar.xz";
+}
+
 /// The lockfile extraction fast path is only safe for entries that carry an
 /// immutable HTTP tarball URL and an exact resolved version. Registry markers
 /// and legacy constraint-only entries must go through their source-aware
@@ -2685,9 +2690,9 @@ pub const Installer = struct {
         defer staging.deinit();
         const temp_dir = staging.root;
 
-        // Mirrored Unix archives are gzip; official Zig archives are xz.
-        const is_windows = comptime @import("builtin").os.tag == .windows;
-        const archive_ext = if (is_windows) "zip" else if (registry_artifact != null) "tar.gz" else "tar.xz";
+        // The registry publishes tar.gz on every platform. The upstream
+        // download uses ZIP on Windows and tar.xz elsewhere.
+        const archive_ext = zigArchiveFormat(registry_artifact != null, @import("builtin").os.tag);
         const archive_path = try std.fmt.allocPrint(
             self.allocator,
             "{s}/zig.{s}",
@@ -5150,6 +5155,15 @@ test "project links stay inside pantry/ when it is installed through a worktree'
         try std.testing.expect(result.term == .exited and result.term.exited == 0);
         try std.testing.expectEqualStrings(case.out, result.stdout);
     }
+}
+
+test "Zig archive format follows the source on Windows and Unix" {
+    try std.testing.expectEqualStrings("tar.gz", zigArchiveFormat(true, .windows));
+    try std.testing.expectEqualStrings("tar.gz", zigArchiveFormat(true, .linux));
+    try std.testing.expectEqualStrings("tar.gz", zigArchiveFormat(true, .macos));
+    try std.testing.expectEqualStrings("zip", zigArchiveFormat(false, .windows));
+    try std.testing.expectEqualStrings("tar.xz", zigArchiveFormat(false, .linux));
+    try std.testing.expectEqualStrings("tar.xz", zigArchiveFormat(false, .macos));
 }
 
 test "native materialization: Zig archives have isolated staging and preserve prior installs on corruption" {

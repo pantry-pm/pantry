@@ -51,6 +51,21 @@ try {
   proof.sdkRuntimeSha256 = originalHash
   proof.nativeRuntimeReusedAndActivated = true
 
+  // This archived dev compiler exercises the registry format through the
+  // native CLI, which previously treated every Windows Zig archive as a ZIP.
+  const zigVersion = '0.18.0-dev.146+35accc06e'
+  const zigProject = join(owned, 'mirrored-zig')
+  await mkdir(zigProject)
+  await Bun.write(join(zigProject, 'pantry.jsonc'), JSON.stringify({ dependencies: { 'ziglang.org': zigVersion } }))
+  const zigInstall = await run('native-mirrored-zig-install', [cli, 'install', '--no-save', '--verbose'], zigProject)
+  assert.match(zigInstall, /Downloading mirrored Zig dev from registry\.pantry\.dev/)
+  const zig = join(zigProject, 'pantry/.bin/zig.exe')
+  assert.equal((await run('native-mirrored-zig-version', [zig, 'version'], zigProject)).trim(), zigVersion)
+  await Bun.write(join(zigProject, 'probe.zig'), 'const std = @import("std"); pub fn main() void { std.debug.print("zig-archive-ok\\n", .{}); }\n')
+  await run('native-mirrored-zig-build', [zig, 'build-exe', 'probe.zig', '-femit-bin=probe.exe'], zigProject)
+  assert.equal((await run('native-mirrored-zig-probe', [join(zigProject, 'probe.exe')], zigProject)).trim(), 'zig-archive-ok')
+  proof.mirroredZigVersion = zigVersion
+
   // Cached workspace links point back into the source checkout. Reconciliation
   // must replace the directory link itself, never walk and empty its target.
   const workspace = join(owned, 'linked-workspaces')
