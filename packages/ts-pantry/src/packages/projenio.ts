@@ -3,7 +3,7 @@
  *
  * @domain `projen.io`
  * @programs `projen`
- * @version `0.105.2` (218 versions available)
+ * @version `0.105.6` (222 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install projen.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "projen"
  * console.log(pkg.description) // "Rapidly build modern applications with advanced..."
  * console.log(pkg.programs)    // ["projen"]
- * console.log(pkg.versions[0]) // "0.105.2" (latest)
+ * console.log(pkg.versions[0]) // "0.105.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/projen-io.md
@@ -78,6 +78,10 @@ export const projenioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.105.6',
+    '0.105.5',
+    '0.105.4',
+    '0.105.3',
     '0.105.2',
     '0.105.1',
     '0.105.0',

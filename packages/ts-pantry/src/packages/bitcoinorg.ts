@@ -3,7 +3,7 @@
  *
  * @domain `bitcoin.org`
  * @programs `bitcoin-cli`, `bitcoin-tx`, `bitcoin-util`, `bitcoin-wallet`, `bitcoind`
- * @version `32.1` (77 versions available)
+ * @version `32.1` (79 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install bitcoin.org`
@@ -75,9 +75,11 @@ export const bitcoinorgPackage = {
   */
   versions: [
     '32.1',
+    '31.3',
     '31.2',
     '31.1',
     '31.0',
+    '30.5',
     '30.4',
     '30.3',
     '30.2',

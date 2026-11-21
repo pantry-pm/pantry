@@ -3,7 +3,7 @@
  *
  * @domain `gohugo.io`
  * @programs `hugo`
- * @version `0.170.0` (69 versions available)
+ * @version `0.170.1` (70 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install gohugo.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "hugo"
  * console.log(pkg.description) // "The world’s fastest framework for building webs..."
  * console.log(pkg.programs)    // ["hugo"]
- * console.log(pkg.versions[0]) // "0.170.0" (latest)
+ * console.log(pkg.versions[0]) // "0.170.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/gohugo-io.md
@@ -67,6 +67,7 @@ export const gohugoioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.170.1',
     '0.170.0',
     '0.169.0',
     '0.168.0',

@@ -3,7 +3,7 @@
  *
  * @domain `harfbuzz.org`
  * @programs `hb-shape`, `hb-subset`, `hb-view`
- * @version `999.999.999` (66 versions available)
+ * @version `999.999.999` (67 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install harfbuzz.org`
@@ -83,6 +83,7 @@ export const harfbuzzorgPackage = {
   */
   versions: [
     '999.999.999',
+    '15.2.0',
     '15.1.0',
     '15.0.0',
     '14.6.0',

@@ -3,7 +3,7 @@
  *
  * @domain `bun.sh`
  * @programs `bun`, `bunx`
- * @version `1.4.4` (147 versions available)
+ * @version `1.4.5` (148 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install bun.sh`
@@ -24,7 +24,7 @@
  * console.log(pkg.name)        // "bun"
  * console.log(pkg.description) // "Incredibly fast JavaScript runtime, bundler, te..."
  * console.log(pkg.programs)    // ["bun", "bunx"]
- * console.log(pkg.versions[0]) // "1.4.4" (latest)
+ * console.log(pkg.versions[0]) // "1.4.5" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/bun-sh.md
@@ -75,6 +75,7 @@ export const bunPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.5',
     '1.4.4',
     '1.4.3',
     '1.4.2',

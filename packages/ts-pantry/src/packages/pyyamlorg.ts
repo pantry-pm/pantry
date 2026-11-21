@@ -2,7 +2,7 @@
  * **pyyaml** - Canonical source repository for LibYAML
  *
  * @domain `pyyaml.org`
- * @version `0.2.5` (1 versions available)
+ * @version `0.2.6` (2 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pyyaml.org`
@@ -15,7 +15,7 @@
  * const pkg = pantry.pyyamlorg
  * console.log(pkg.name)        // "pyyaml"
  * console.log(pkg.description) // "Canonical source repository for LibYAML"
- * console.log(pkg.versions[0]) // "0.2.5" (latest)
+ * console.log(pkg.versions[0]) // "0.2.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pyyaml-org.md
@@ -52,6 +52,7 @@ export const pyyamlorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.2.6',
     '0.2.5',
   ] as const,
   aliases: [] as const,

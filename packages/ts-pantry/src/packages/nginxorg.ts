@@ -3,7 +3,7 @@
  *
  * @domain `nginx.org`
  * @programs `nginx`
- * @version `1.31.8` (47 versions available)
+ * @version `1.31.9` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install nginx.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "nginx"
  * console.log(pkg.description) // "HTTP(S) server and reverse proxy, and IMAP/POP3..."
  * console.log(pkg.programs)    // ["nginx"]
- * console.log(pkg.versions[0]) // "1.31.8" (latest)
+ * console.log(pkg.versions[0]) // "1.31.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/nginx-org.md
@@ -69,6 +69,7 @@ export const nginxorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.31.9',
     '1.31.8',
     '1.31.7',
     '1.31.6',
@@ -78,6 +79,7 @@ export const nginxorgPackage = {
     '1.31.2',
     '1.31.1',
     '1.31.0',
+    '1.30.7',
     '1.30.6',
     '1.30.5',
     '1.30.4',

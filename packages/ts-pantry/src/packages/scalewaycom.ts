@@ -3,7 +3,7 @@
  *
  * @domain `scaleway.com`
  * @programs `scw`
- * @version `2.66.0` (67 versions available)
+ * @version `2.66.2` (69 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install scaleway.com`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "scw"
  * console.log(pkg.description) // "Command Line Interface for Scaleway"
  * console.log(pkg.programs)    // ["scw"]
- * console.log(pkg.versions[0]) // "2.66.0" (latest)
+ * console.log(pkg.versions[0]) // "2.66.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/scaleway-com.md
@@ -67,6 +67,8 @@ export const scalewaycomPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.66.2',
+    '2.66.1',
     '2.66.0',
     '2.65.2',
     '2.65.1',
