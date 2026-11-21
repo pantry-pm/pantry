@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.213...v0.11.214)
+
+## 🐛 Bug Fixes
+
+- **install**: validate Windows executable extensions ([2d2eb64](https://github.com/pantry-pm/pantry/commit/2d2eb64)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **install**: extract Windows Zig mirrors as registry tarballs ([ee36d06](https://github.com/pantry-pm/pantry/commit/ee36d06)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: archive signed Zig dev builds for every installer platform ([abbe64a](https://github.com/pantry-pm/pantry/commit/abbe64a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.214 ([d9525ee](https://github.com/pantry-pm/pantry/commit/d9525ee)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.526 ([0ed0225](https://github.com/pantry-pm/pantry/commit/0ed0225)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update package metadata ([dfed07d](https://github.com/pantry-pm/pantry/commit/dfed07d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.521 ([0eca94c](https://github.com/pantry-pm/pantry/commit/0eca94c)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.515 ([76468f3](https://github.com/pantry-pm/pantry/commit/76468f3)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.212...v0.11.213)
 
 ## 🐛 Bug Fixes
