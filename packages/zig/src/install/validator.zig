@@ -176,6 +176,12 @@ fn programIsRequired(package: *const package_registry.PackageInfo, program: []co
     return true;
 }
 
+fn declaredProgramExtensions(program: []const u8) []const []const u8 {
+    if (@import("builtin").os.tag == .windows and std.fs.path.extension(program).len == 0)
+        return &io_helper.windows_executable_extensions;
+    return &.{""};
+}
+
 fn programsAreUsable(allocator: std.mem.Allocator, package: *const package_registry.PackageInfo, package_root: []const u8, version: ?[]const u8) bool {
     var checked: usize = 0;
     for (package.programs) |program| {
@@ -186,15 +192,16 @@ fn programsAreUsable(allocator: std.mem.Allocator, package: *const package_regis
         checked += 1;
 
         var usable = false;
-        for ([_][]const u8{ "bin", "sbin", "" }) |directory| {
-            const candidate = if (directory.len > 0)
-                std.fs.path.join(allocator, &.{ package_root, directory, program }) catch continue
-            else
-                std.fs.path.join(allocator, &.{ package_root, program }) catch continue;
-            defer allocator.free(candidate);
-            if (isUsableExecutable(candidate)) {
-                usable = true;
-                break;
+        locations: for ([_][]const u8{ "bin", "sbin", "" }) |directory| {
+            const base = std.fs.path.join(allocator, &.{ package_root, directory, program }) catch continue;
+            defer allocator.free(base);
+            for (declaredProgramExtensions(program)) |extension| {
+                const candidate = std.mem.concat(allocator, u8, &.{ base, extension }) catch continue;
+                defer allocator.free(candidate);
+                if (isUsableExecutable(candidate)) {
+                    usable = true;
+                    break :locations;
+                }
             }
         }
         if (!usable) return false;
@@ -220,13 +227,17 @@ pub fn reportUnusableDeclaredPrograms(allocator: std.mem.Allocator, package_name
         single.programs = &.{program};
         if (programsAreUsable(allocator, &single, package_root, version)) continue;
         for ([_][]const u8{ "bin", "sbin", "" }) |directory| {
-            const path = std.fs.path.join(allocator, &.{ package_root, directory, program }) catch continue;
-            defer allocator.free(path);
-            const stat = io_helper.statFile(path) catch |err| {
-                std.debug.print("[pantry:validate] {s}: {s}\n", .{ path, @errorName(err) });
-                continue;
-            };
-            std.debug.print("[pantry:validate] {s}: kind={s} size={d} executable={}\n", .{ path, @tagName(stat.kind), stat.size, io_helper.isExecutable(path) });
+            const base = std.fs.path.join(allocator, &.{ package_root, directory, program }) catch continue;
+            defer allocator.free(base);
+            for (declaredProgramExtensions(program)) |extension| {
+                const path = std.mem.concat(allocator, u8, &.{ base, extension }) catch continue;
+                defer allocator.free(path);
+                const stat = io_helper.statFile(path) catch |err| {
+                    std.debug.print("[pantry:validate] {s}: {s}\n", .{ path, @errorName(err) });
+                    continue;
+                };
+                std.debug.print("[pantry:validate] {s}: kind={s} size={d} executable={}\n", .{ path, @tagName(stat.kind), stat.size, io_helper.isExecutable(path) });
+            }
         }
     }
 }

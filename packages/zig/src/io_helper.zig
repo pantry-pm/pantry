@@ -905,6 +905,8 @@ test "PATH lookup skips missing entries and resolves native executable names" {
     try std.testing.expect((try findExecutableInPath(allocator, "absent-runtime", path)) == null);
 }
 
+pub const windows_executable_extensions = [_][]const u8{ ".exe", ".com", ".cmd", ".bat" };
+
 /// Check if `path` exists and is regular-or-symlink with at least one
 /// execute bit set. Uses libc `access(path, X_OK)` for portability.
 pub fn isExecutable(path: []const u8) bool {
@@ -912,8 +914,10 @@ pub fn isExecutable(path: []const u8) bool {
         const metadata = statFile(path) catch return false;
         if (metadata.kind != .file or metadata.size == 0) return false;
         const extension = std.fs.path.extension(path);
-        return std.ascii.eqlIgnoreCase(extension, ".exe") or std.ascii.eqlIgnoreCase(extension, ".com") or
-            std.ascii.eqlIgnoreCase(extension, ".cmd") or std.ascii.eqlIgnoreCase(extension, ".bat");
+        for (windows_executable_extensions) |candidate| {
+            if (std.ascii.eqlIgnoreCase(extension, candidate)) return true;
+        }
+        return false;
     }
     var path_buf: [std.fs.max_path_bytes:0]u8 = undefined;
     if (path.len >= path_buf.len) return false;
