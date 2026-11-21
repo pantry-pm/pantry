@@ -1,13 +1,13 @@
 name: Sync Zig Dev
 
-# Hourly dispatch of build-versions.yml targeted at ziglang.org so the latest
-# master build from ziglang.org/download/index.json is mirrored into
-# Pantry before framework and application workflows request the rolling channel.
-
 on:
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Zig development version to restore (empty archives the current build)
+        type: string
 
 concurrency:
   group: sync-zig-dev
@@ -17,22 +17,26 @@ permissions:
   contents: read
 
 jobs:
-  trigger:
-    name: Dispatch build-versions for ziglang.org
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-      contents: read
+  archive:
+    name: Archive signed Zig development builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Trigger build-versions.yml
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Setup Pantry
+        uses: ./packages/action
+        with:
+          install: 'false'
+
+      - name: Install archive and signature tools
         run: |
-          gh workflow run build-versions.yml \
-            -R ${{ github.repository }} \
-            -f packages=ziglang.org \
-            -f max-versions=1 \
-            -f force=false
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libarchive-tools minisign
+
+      - name: Publish missing compiler archives
+        env:
+          ZIG_VERSION: ${{ inputs.version }}
+          PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+        run: bun packages/ts-pantry/scripts/sync-zig-dev.ts "$ZIG_VERSION"
