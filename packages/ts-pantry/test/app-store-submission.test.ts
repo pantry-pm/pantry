@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { AppStoreConnectClient } from '../src/app-store-connect'
+import { AppStoreConnectClient, assertAppStoreVersionCanSubmit } from '../src/app-store-connect'
 import { hasReviewContact, prepareAppStoreSubmission, submitAppStore } from '../src/app-store-submission'
 
 describe('App Store Connect submission', () => {
@@ -27,6 +27,10 @@ describe('App Store Connect submission', () => {
     const writes: Array<{ path: string, method: string, body?: any }> = []
     let screenshotCreated = false
     let screenshotUploaded = false
+    const previous = completed ? Array.from({ length: 10 }, (_, index) => ({
+      type: 'appAssetLibraryPlacements', id: `old-${index}`, attributes: { placementType: 'APP_SCREENSHOT', placementGroup: 'MAC_GROUP_FROM_APPLE' },
+      relationships: { image: { data: { type: 'appAssetLibraryImages', id: `old-image-${index}` } } },
+    })) : []
     const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(String(input))
       const method = init?.method ?? 'GET'
@@ -67,7 +71,7 @@ describe('App Store Connect submission', () => {
           uploadOperations: [{ method: 'PUT', url: 'https://upload.example.test/part', length: 15, offset: 0, requestHeaders: [{ name: 'Content-Type', value: 'image/png' }] }],
         } }] : [] })
       if (url.pathname.endsWith('/appStoreVersionLocalizations/version-loc/placements'))
-        return Response.json({ data: [] })
+        return Response.json({ data: previous })
       if (url.pathname.endsWith('/appAssetLibraryImages') && method === 'POST') {
         screenshotCreated = true
         return Response.json({ data: { type: 'appAssetLibraryImages', id: 'shot-123', attributes: {
@@ -77,8 +81,11 @@ describe('App Store Connect submission', () => {
       }
       if (url.pathname.endsWith('/appAssetLibraryImages/shot-123') && method === 'GET')
         return Response.json({ data: { type: 'appAssetLibraryImages', id: 'shot-123', attributes: { fileName: 'mac.png', state: 'PREPARE_FOR_SUBMISSION', specId: 'mac-spec' } } })
-      if (url.pathname.endsWith('/appAssetLibraryPlacements') && method === 'POST')
+      if (url.pathname.endsWith('/appAssetLibraryPlacements') && method === 'POST') {
+        if (completed && !writes.some(write => write.method === 'DELETE' && write.path === '/v1/appAssetLibraryPlacements/old-0'))
+          return Response.json({ errors: [{ detail: 'the screenshot placement group allows at most 10 placements' }] }, { status: 409 })
         return Response.json({ data: { ...body.data, id: 'placement-123' } }, { status: 201 })
+      }
       if (url.pathname.endsWith('/apps/app-123/reviewSubmissions'))
         return Response.json({ data: completed ? [{ type: 'reviewSubmissions', id: 'old-review', attributes: { platform: 'MAC_OS', state: 'COMPLETE' } }] : [] })
       if (url.pathname.endsWith('/reviewSubmissions/old-review/items'))
@@ -125,12 +132,28 @@ describe('App Store Connect submission', () => {
     const committed = writes.find(write => write.path === '/v1/appAssetLibraryImages/shot-123' && write.method === 'PATCH')
     expect(committed?.body.data.attributes).toEqual({ uploaded: true })
     expect(writes.find(write => write.path === '/v1/appAssetLibraryPlacements')?.body.data.attributes.placementGroup).toBe('MAC_GROUP_FROM_APPLE')
+    if (completed) {
+      const create = writes.findIndex(write => write.path === '/v1/appAssetLibraryPlacements')
+      expect(writes.slice(0, create).filter(write => write.method === 'DELETE').map(write => write.path)).toEqual(['/v1/appAssetLibraryPlacements/old-0'])
+      expect(writes.slice(create).filter(write => write.method === 'DELETE')).toHaveLength(9)
+    }
     expect(writes.find(write => write.path === '/v1/appAssetLibraryPlacementOrderingRequests')?.body.data.relationships.orderedPlacements.data).toEqual([{ type: 'appAssetLibraryPlacements', id: 'placement-123' }])
     expect(writes.some(write => write.path.includes('appScreenshots'))).toBe(false)
     expect(result.reviewSubmissionIds).toEqual(['review-123'])
     expect(writes.some(write => write.path === '/v1/ageRatingDeclarations/info-123' && write.body.data.attributes.advertising === false)).toBe(true)
     expect(writes.some(write => write.path === '/v1/builds/mac-build' && write.body.data.attributes.usesNonExemptEncryption === false)).toBe(true)
     expect(writes.some(write => write.path === '/v1/reviewSubmissions/review-123' && write.body.data.attributes.submitted === true)).toBe(true)
+  })
+
+  it('blocks uploading a different version while the Mac app is in review', async () => {
+    const fetcher = (async (_input: string | URL | Request, init?: RequestInit) => {
+      expect(init?.method ?? 'GET').toBe('GET')
+      return Response.json({ data: [{
+        type: 'appStoreVersions', id: 'mac-version', attributes: { platform: 'MAC_OS', versionString: '1.0.0', appStoreState: 'WAITING_FOR_REVIEW' },
+      }] })
+    }) as typeof fetch
+    const client = new AppStoreConnectClient({ keyId: 'KEY123', issuerId: 'issuer-123', keyPath, fetch: fetcher, baseUrl: 'https://example.test/v1' })
+    await expect(assertAppStoreVersionCanSubmit(client, 'app-123', 'MAC_OS', '1.0.1')).rejects.toThrow('1.0.0 is WAITING_FOR_REVIEW')
   })
 
   it('keeps an active review submission intact when a submit command is retried', async () => {

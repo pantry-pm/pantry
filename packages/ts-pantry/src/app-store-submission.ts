@@ -559,9 +559,19 @@ async function syncScreenshotPlacements(
     const limit = catalog.features.find(feature => feature.featureId === 'APP_STORE_VERSIONS')?.placementPolicies.find(policy => policy.placementType === 'APP_SCREENSHOT')?.groupLimits.find(limit => limit.groupIds.includes(group))?.maxCount
     if (limit === undefined || images.length > limit) throw new Error(`[pantry] Screenshot count exceeds Apple's limit for ${group}`)
     const current = placements.filter(placement => placement.attributes.placementGroup === group)
+    const imageIdOf = (placement: typeof current[number]) => {
+      const image = placement.relationships?.image?.data
+      return image && !Array.isArray(image) ? image.id : undefined
+    }
+    const replacing = current.filter(placement => !images.includes(imageIdOf(placement) ?? ''))
+    const newCount = images.filter(imageId => !current.some(placement => imageIdOf(placement) === imageId)).length
+    const removeFirst = Math.max(0, current.length + newCount - limit)
+    // Apple counts placements rather than assets. Free only the needed slots after all images have processed.
+    for (const placement of replacing.slice(0, removeFirst))
+      await client.request(`/appAssetLibraryPlacements/${placement.id}`, { method: 'DELETE' })
     const ordered: Array<{ type: string; id: string }> = []
     for (const imageId of images) {
-      let placement = current.find(item => item.relationships?.image?.data && !Array.isArray(item.relationships.image.data) && item.relationships.image.data.id === imageId)
+      let placement = current.find(item => imageIdOf(item) === imageId)
       if (!placement) placement = (await client.request<ResourceResponse<{ placementType: string; placementGroup: string }>>('/appAssetLibraryPlacements', {
         method: 'POST', body: JSON.stringify({ data: {
           type: 'appAssetLibraryPlacements', attributes: { placementType: 'APP_SCREENSHOT', placementGroup: group },
@@ -570,8 +580,8 @@ async function syncScreenshotPlacements(
       })).data
       ordered.push({ type: 'appAssetLibraryPlacements', id: placement.id })
     }
-    for (const placement of current)
-      if (!ordered.some(item => item.id === placement.id)) await client.request(`/appAssetLibraryPlacements/${placement.id}`, { method: 'DELETE' })
+    for (const placement of replacing.slice(removeFirst))
+      await client.request(`/appAssetLibraryPlacements/${placement.id}`, { method: 'DELETE' })
     await client.request('/appAssetLibraryPlacementOrderingRequests', { method: 'POST', body: JSON.stringify({ data: {
       type: 'appAssetLibraryPlacementOrderingRequests', attributes: { placementGroup: group },
       relationships: { orderedPlacements: { data: ordered }, appStoreVersionLocalization: { data: { type: 'appStoreVersionLocalizations', id: localizationId } } },

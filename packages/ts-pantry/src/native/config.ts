@@ -23,6 +23,7 @@ export interface NativeAppConfig {
     entitlements?: { direct?: Entitlements, appStore?: Entitlements }
     notarize?: boolean
     appStore?: boolean
+    appStoreResources?: Record<string, string>
   }
   android?: { bundle: string, packageName: string, track: string, status: 'draft' | 'completed' | 'inProgress', userFraction?: number }
   registry?: { domain: string, url?: string }
@@ -56,6 +57,14 @@ export function readNativeAppConfig(root: string, required = false): NativeAppCo
   }
   if (config.macos?.maxBundleSize !== undefined && (!Number.isSafeInteger(config.macos.maxBundleSize) || config.macos.maxBundleSize <= 0))
     throw new Error('maxBundleSize must be a positive byte count')
+  const storeResources = config.macos?.appStoreResources
+  if (storeResources !== undefined && (!storeResources || typeof storeResources !== 'object' || Array.isArray(storeResources)))
+    throw new Error('App Store resources must map filenames to project files')
+  for (const [name, source] of Object.entries(storeResources ?? {})) {
+    if (!/^[a-z0-9][a-z0-9._-]*$/i.test(name) || typeof source !== 'string' || !source)
+      throw new Error('App Store resources must map a plain filename to a project file')
+    insideProject(root, source)
+  }
   if (config.registry) {
     if (typeof config.registry.domain !== 'string' || !/^[a-z0-9](?:[a-z0-9._-]|\/(?=[a-z0-9])){0,213}$/i.test(config.registry.domain) || config.registry.domain.includes('..') || config.registry.domain.endsWith('/'))
       throw new Error('Native registry publishing requires an exact package domain')

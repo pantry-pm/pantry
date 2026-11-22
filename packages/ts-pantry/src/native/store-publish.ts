@@ -2,12 +2,12 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { AppStoreConnectClient, ensureAppStoreVersions, waitForAppStoreBuilds } from '../app-store-connect'
+import { AppStoreConnectClient, assertAppStoreVersionCanSubmit, ensureAppStoreVersions, waitForAppStoreBuilds } from '../app-store-connect'
 import { hasReviewContact, prepareAppStoreSubmission, submitAppStore } from '../app-store-submission'
 import type { AppStoreMetadata, AppStoreSubmissionResult } from '../app-store-submission'
 import { loadNativeEnvironment } from './environment'
 import { readNativeAppConfig } from './config'
-import { prepareNativeRelease } from './pipeline'
+import { prepareNativeAppStoreRelease, prepareNativeRelease } from './pipeline'
 import type { NativePipelineResult } from './pipeline'
 import { deliverReleaseToAppStore } from './release-app-store'
 import type { AppStoreReleaseReceipt } from './release-app-store'
@@ -22,6 +22,7 @@ export interface NativeAppleOptions {
   validateOnly?: boolean
   submitForReview?: boolean
   buildNumber?: string
+  storeOnly?: boolean
 }
 export interface NativeApplePublication {
   prepared: NativePipelineResult
@@ -61,18 +62,29 @@ async function withStoreClient<T>(env: NodeJS.ProcessEnv, run: (client: AppStore
 export async function publishNativeApple(root: string, options: NativeAppleOptions = {}): Promise<NativeApplePublication> {
   if (options.buildNumber !== undefined && !/^[1-9]\d*$/.test(options.buildNumber)) throw new Error('App Store build number must be a positive integer')
   const config = readNativeAppConfig(root, true)!
-  if (!config.macos?.appStore) throw new Error('Enable native.macos.appStore in pantry.json before publishing to Apple')
+  if (!options.storeOnly && !config.macos?.appStore) throw new Error('Enable native.macos.appStore in pantry.json before publishing to Apple')
   if (options.packageOnly && (options.validateOnly || options.submitForReview)) throw new Error('Package-only cannot validate or submit a release')
   if (options.validateOnly && options.submitForReview) throw new Error('Validation-only cannot submit a release')
   const env = { ...process.env, ...loadNativeEnvironment(root, config.environment ?? 'production') }
   if (options.buildNumber) env.PANTRY_BUILD_NUMBER = options.buildNumber
   const metadata = options.packageOnly || options.validateOnly ? undefined : await readAppStoreMetadata(root, env)
-  const prepared = await prepareNativeRelease(root, 'release', { env })
+  if (options.storeOnly && metadata) {
+    const buildConfig = (await import(pathToFileURL(join(root, 'craft.config.ts')).href)).default as { bundleId?: string }
+    if (!buildConfig.bundleId) throw new Error('craft.config.ts must declare the App Store bundle ID')
+    const version = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }).version
+    await withStoreClient(env, async (client) => {
+      const app = await client.findApp(buildConfig.bundleId!)
+      if (!app) throw new Error('Create the App Store Connect app record before preparing its listing')
+      await assertAppStoreVersionCanSubmit(client, app.id, 'MAC_OS', version)
+    })
+  }
+  const prepared = options.storeOnly ? await prepareNativeAppStoreRelease(root, env) : await prepareNativeRelease(root, 'release', { env })
   if (!prepared.appStorePackage || !prepared.artifact) throw new Error('The native pipeline did not produce a qualified App Store package')
   if (options.packageOnly) return { prepared }
   const delivery = await deliverReleaseToAppStore({
     package: prepared.appStorePackage, bundleId: prepared.artifact.bundleId,
     version: prepared.version, buildNumber: prepared.artifact.buildNumber,
+    sourceRevision: env.GITHUB_SHA,
     apiKeyId: env.APP_STORE_CONNECT_API_KEY_ID!, issuerId: env.APP_STORE_CONNECT_ISSUER_ID!, privateKey: env.APP_STORE_CONNECT_PRIVATE_KEY!,
     validateOnly: options.validateOnly ?? false, retryExisting: false, dryRun: false,
   })

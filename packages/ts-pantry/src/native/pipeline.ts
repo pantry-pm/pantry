@@ -2,7 +2,7 @@ import type { NativeArtifact } from './build'
 import type { NativeCommand } from './command'
 import type { NativeAppConfig } from './config'
 import process from 'node:process'
-import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { constants, copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { signNativeAndroidBundle } from './android'
@@ -75,6 +75,66 @@ export async function validateNativeMacApp(artifact: NativeArtifact, maxBytes: n
     if (!`${benchmark.stdout}${benchmark.stderr}`.includes('ready')) throw new Error('Native app did not report ready')
   }
   finally { rmSync(dataRoot, { recursive: true }) }
+}
+
+/** Prepare just the Store package. The source checkout already has the chosen marketing version. */
+export async function prepareNativeAppStoreRelease(root: string, env: NodeJS.ProcessEnv, command: NativeCommand = runNativeCommand): Promise<NativePipelineResult> {
+  const config = readNativeAppConfig(root, true)!
+  const version = (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version?: string }).version
+  const buildNumber = env.PANTRY_BUILD_NUMBER
+  if (!version || !/^\d+\.\d+\.\d+$/.test(version) || !buildNumber || !/^[1-9]\d*$/.test(buildNumber))
+    throw new Error('The App Store requires a three-part marketing version and a positive integer build number')
+  if (config.macos?.entitlements?.appStore?.['com.apple.security.app-sandbox'] !== true)
+    throw new Error('Enable the App Sandbox in native.macos.entitlements.appStore')
+  if (env.CRAFT_BIN) throw new Error('Release builds must use the configured immutable runtime; CRAFT_BIN is a development override')
+  const run = async (args: string[], stepEnv = env) => succeeded(args[0]!, await command(args[0]!, args.slice(1), { cwd: root, env: stepEnv, inherit: true }))
+  await run(['bun', 'install', '--frozen-lockfile'])
+  for (const check of config.checks?.before ?? []) await run(check)
+  const signing = await setupAppleSigning({
+    applicationCertificate: env.APPLE_APP_STORE_APPLICATION_CERTIFICATE!,
+    installerCertificate: env.APPLE_APP_STORE_INSTALLER_CERTIFICATE,
+    certificatePassword: env.APPLE_CERTIFICATE_PASSWORD || '',
+    provisioningProfile: env.APPLE_APP_STORE_PROVISIONING_PROFILE_BASE64,
+  })
+  try {
+    if (!signing.provisioningProfilePath || !signing.installerFingerprint)
+      throw new Error('App Store packaging requires an installer certificate and provisioning profile')
+    const storeEnv = { ...env, PANTRY_DISTRIBUTION: 'app-store', APPLE_SIGNING_IDENTITY: signing.applicationFingerprint, APPLE_PROVISIONING_PROFILE_PATH: signing.provisioningProfilePath }
+    rmSync(join(root, '.pantry/native/artifact.json'), { force: true })
+    rmSync(insideProject(root, '.pantry/native/app-store'), { recursive: true, force: true })
+    await run(['bun', 'run', 'build'], storeEnv)
+    const artifact = readNativeArtifact(root)
+    const app = artifact.appPath ?? artifact.path
+    if (artifact.version !== version || artifact.buildNumber !== buildNumber)
+      throw new Error('App Store bundle version and build must match the requested release')
+    const resources = Object.entries(config.macos.appStoreResources ?? {})
+    if (resources.length) {
+      const entitlements = succeeded('Read Store entitlements', await command('codesign', ['-d', '--entitlements', '-', '--xml', app])).stdout
+      if (!entitlements) throw new Error('Could not read the Store signature before adding resources')
+      const file = join(dirname(signing.provisioningProfilePath), 'store-entitlements.plist')
+      writeFileSync(file, entitlements, { mode: 0o600 })
+      for (const [name, source] of resources)
+        copyFileSync(insideProject(root, source), join(app, 'Contents/Resources', name), constants.COPYFILE_EXCL)
+      succeeded('Seal Store resources', await command('codesign', ['--force', '--sign', signing.applicationFingerprint, '--keychain', signing.keychainPath, '--entitlements', file, app]))
+    }
+    await validateNativeMacBundle(artifact, config.macos.maxBundleSize, command)
+    const binaries = join(app, 'Contents/MacOS')
+    for (const name of readdirSync(binaries)) {
+      const executable = join(binaries, name)
+      if (!lstatSync(executable).isFile()) continue
+      const info = succeeded('Inspect Store executable', await command('file', ['-b', executable])).stdout
+      if (!info.includes('Mach-O')) continue
+      const libraries = succeeded('Check Store executable dependencies', await command('otool', ['-L', executable])).stdout
+      if (/\/usr\/lib\/libicucore\b/.test(libraries)) throw new Error(`${name} links to Apple's system ICU. Use the pinned upstream-ICU Bun runtime for the Store edition.`)
+    }
+    for (const check of config.checks?.after ?? []) await run(check, storeEnv)
+    const output = insideProject(root, 'dist/app-store')
+    mkdirSync(output, { recursive: true })
+    const appStorePackage = join(output, `${basename(app, '.app')}-${version}-${buildNumber}.pkg`)
+    await packageNativeAppStore(app, appStorePackage, signing.installerFingerprint, command)
+    return { config, version, artifact, appStorePackage, files: [appStorePackage] }
+  }
+  finally { await removeAppleSigningKeychain(signing.keychainPath) }
 }
 
 /** Shared local/CI pipeline. It prepares artifacts; providers deliver only after checks pass. */

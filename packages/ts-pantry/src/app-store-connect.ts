@@ -462,6 +462,18 @@ const releasedVersionStates = new Set([
   'REMOVED_FROM_SALE',
 ])
 
+/** A release job must leave existing review submissions and pending releases intact. */
+export async function assertAppStoreVersionCanSubmit(client: AppStoreConnectClient, appId: string, platform: AppStoreVersionPlatform, version: string): Promise<void> {
+  const versions = await client.listAppStoreVersions(appId)
+  for (const { attributes } of versions) {
+    if (attributes.platform !== platform) continue
+    if (releasedVersionStates.has(attributes.appStoreState) && attributes.versionString === version)
+      throw new Error(`${platform} version ${version} has already been released`)
+    if (!editableVersionStates.has(attributes.appStoreState) && !releasedVersionStates.has(attributes.appStoreState))
+      throw new Error(`${platform} version ${attributes.versionString} is ${attributes.appStoreState}. Its review or release must finish before publishing another build.`)
+  }
+}
+
 /** Create or align an editable App Store version for each requested Apple platform. */
 export async function ensureAppStoreVersions(
   client: AppStoreConnectClient,

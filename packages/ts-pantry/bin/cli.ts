@@ -1564,6 +1564,25 @@ cli
   })
 
 cli
+  .command('app-store:release', 'Build, sign and validate a native Mac App Store release')
+  .option('--build-number <number>', 'App Store Connect build number')
+  .option('--submit', 'Upload, apply listing metadata and submit for App Review')
+  .option('--package-only', 'Build the installer package without contacting App Store Connect')
+  .action(async (options: { buildNumber?: string, submit?: boolean, packageOnly?: boolean }) => {
+    if (!options.buildNumber || !/^[1-9]\d*$/.test(String(options.buildNumber)))
+      throw new Error('--build-number must be a positive integer')
+    if (options.packageOnly && options.submit) throw new Error('Choose packaging or submission')
+    const { publishNativeApple } = await import('../src/native/store-publish')
+    const result = await publishNativeApple(process.cwd(), {
+      storeOnly: true, buildNumber: String(options.buildNumber), submitForReview: Boolean(options.submit),
+      packageOnly: Boolean(options.packageOnly), validateOnly: !options.submit && !options.packageOnly,
+    })
+    if (result.delivery)
+      fs.writeFileSync(path.join(path.dirname(result.prepared.appStorePackage!), 'app-store-receipt.json'), `${JSON.stringify(result.delivery, null, 2)}\n`)
+    console.log(JSON.stringify({ package: result.prepared.appStorePackage, delivery: result.delivery, submission: result.submission }, null, 2))
+  })
+
+cli
   .command('app-store:package <app>', 'Package a signed, sandboxed .app as a signed App Store installer package')
   .option('--output <pkg>', 'Path of the .pkg to write (must not exist)')
   .option('--installer-identity <identity>', 'Mac Installer Distribution identity name or SHA-1 fingerprint')
