@@ -3200,6 +3200,12 @@ pub const Installer = struct {
     /// `constraint` accepts ("latest", "*" or empty: any), and whose package is
     /// complete and usable; null when there is none. Only real version
     /// directories count: `v3` and `v3.6` are links to `v3.6.5`.
+    ///
+    /// A build the catalog has since revised is not reused for a range the
+    /// revision satisfies: a tree that installed facebook.com/zstd 1.5.7 kept
+    /// it for every `^1` after 1.5.7.2 repaired its RPATH, and its `zstd`
+    /// went on loading the host's libzstd. The registry lookup picks the
+    /// revision instead (or the old build again, if this platform has none).
     fn installedProjectVersion(self: *Installer, project_root: []const u8, domain: []const u8, constraint: []const u8) ?[]const u8 {
         const domain_dir = std.fmt.allocPrint(self.allocator, "{s}/{s}/{s}", .{ project_root, self.modules_dir, domain }) catch return null;
         defer self.allocator.free(domain_dir);
@@ -3220,6 +3226,12 @@ pub const Installer = struct {
             if (!self.hasPackageStructure(package_dir) or !validator.hasUsableDeclaredPrograms(self.allocator, domain, package_dir)) continue;
             if (best) |current| self.allocator.free(current);
             best = self.allocator.dupe(u8, version) catch null;
+        }
+        if (best) |newest| {
+            if (semver.catalogBuildRevision(domain, newest, parsed) != null) {
+                self.allocator.free(newest);
+                return null;
+            }
         }
         return best;
     }
@@ -4456,6 +4468,49 @@ test "a sub-dependency installs at its constraint, not generated.zig's newest" {
     try std.testing.expectEqualStrings("latest", dependencyInstallVersion("latest", "8.5.11"));
     try std.testing.expectEqualStrings("1.6.58", dependencyInstallVersion("", "1.6.58"));
 }
+
+test "a project build the catalog has revised does not satisfy a range the revision does" {
+    // A runner tree kept facebook.com/zstd 1.5.7, whose Linux zstd has the
+    // RPATH `/../lib`, for every `^1` after 1.5.7.2 was published.
+    const allocator = std.testing.allocator;
+
+    var tmp_dir = std.testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+    var path_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const tmp_len = try tmp_dir.dir.realPath(io_helper.io, &path_buf);
+    const root = path_buf[0..tmp_len];
+
+    const zstd = package_registry_for_tests.getPackageByDomain("facebook.com/zstd").?;
+    for ([_][]const u8{ "1.5.6", "1.5.7" }) |version| {
+        for (zstd.programs) |program| {
+            const sub_path = try std.fmt.allocPrint(allocator, "pantry/facebook.com/zstd/v{s}/bin/{s}", .{ version, program });
+            defer allocator.free(sub_path);
+            try tmp_dir.dir.createDirPath(io_helper.io, std.fs.path.dirname(sub_path).?);
+            const file = try tmp_dir.dir.createFile(io_helper.io, sub_path, .{ .permissions = .executable_file, .truncate = true });
+            try io_helper.writeAllToFile(file, "#!/bin/sh\nexit 0\n");
+            file.close(io_helper.io);
+        }
+    }
+
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+
+    // 1.5.7 is the newest build on disk but superseded: the range goes to the
+    // registry rather than settling for it, or for the older 1.5.6.
+    try std.testing.expect(installer.installedProjectVersion(root, "facebook.com/zstd", "^1") == null);
+    try std.testing.expect(installer.installedProjectVersion(root, "facebook.com/zstd", "latest") == null);
+    // An exact pin keeps its own identity; an unrevised build is still reused.
+    const exact = installer.installedProjectVersion(root, "facebook.com/zstd", "1.5.7") orelse return error.TestExpectedExactReuse;
+    defer allocator.free(exact);
+    try std.testing.expectEqualStrings("1.5.7", exact);
+    const older = installer.installedProjectVersion(root, "facebook.com/zstd", "<1.5.7") orelse return error.TestExpectedRangeReuse;
+    defer allocator.free(older);
+    try std.testing.expectEqualStrings("1.5.6", older);
+}
+
+const package_registry_for_tests = @import("../packages/generated.zig");
 
 test "a verified registry archive is kept for the next project install" {
     // The defect this guards: project installs read the package cache but

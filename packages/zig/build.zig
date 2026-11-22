@@ -534,6 +534,9 @@ pub fn build(b: *std.Build) void {
     const registry_archive_cache_step = b.step("test:registry-archive-cache", "Keep verified registry archives for the next project install");
     const registry_archive_cache_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"a verified registry archive is kept"} });
     registry_archive_cache_step.dependOn(&b.addRunArtifact(registry_archive_cache_tests).step);
+    const build_revision_step = b.step("test:build-revisions", "Prefer a published build revision over the installed build it repaired");
+    const build_revision_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "a build revision supersedes", "the catalog knows zstd", "a project build the catalog has revised" } });
+    build_revision_step.dependOn(&b.addRunArtifact(build_revision_tests).step);
     const archive_resume_mod = b.createModule(.{
         .root_source_file = b.path("src/test_archive_resume_root.zig"),
         .target = target,

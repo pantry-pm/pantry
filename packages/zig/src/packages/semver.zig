@@ -581,6 +581,75 @@ pub fn resolveVersion(domain: []const u8, constraint_str: []const u8) ?[]const u
     return null;
 }
 
+/// The newest Pantry build revision of `version` in `versions` that
+/// `constraint` accepts (null: any), or null when there is none.
+///
+/// A build revision repackages one vendor release under one more numeric
+/// component: facebook.com/zstd 1.5.7.2 is upstream 1.5.7 rebuilt, and the
+/// 1.5.7 Linux artifact it replaces carries an RPATH of `/../lib` that loads
+/// the host's libzstd. Both identities stay published and an exact pin keeps
+/// its own, but a range that accepts the revision must not settle for the
+/// build it repaired just because that build is already on disk.
+pub fn newerBuildRevision(versions: []const []const u8, version: []const u8, constraint: ?Constraint) ?[]const u8 {
+    // When `version` is itself a revision (1.5.7.1 of a listed 1.5.7), a
+    // later revision of the same release (1.5.7.2) supersedes it too.
+    const release: ?[]const u8 = blk: {
+        const dot = std.mem.lastIndexOfScalar(u8, version, '.') orelse break :blk null;
+        if (!allDigits(version[dot + 1 ..])) break :blk null;
+        for (versions) |listed| if (std.mem.eql(u8, listed, version[0..dot])) break :blk listed;
+        break :blk null;
+    };
+    var best: ?[]const u8 = null;
+    for (versions) |candidate| {
+        const revises = isBuildRevisionOf(candidate, version) or
+            (release != null and isBuildRevisionOf(candidate, release.?) and compareVersions(candidate, version) == .gt);
+        if (!revises) continue;
+        if (constraint) |bound| if (!satisfiesConstraint(candidate, bound)) continue;
+        if (best) |current| if (compareVersions(candidate, current) != .gt) continue;
+        best = candidate;
+    }
+    return best;
+}
+
+/// `candidate` is `release` plus one numeric component.
+fn isBuildRevisionOf(candidate: []const u8, release: []const u8) bool {
+    return candidate.len > release.len + 1 and
+        std.mem.startsWith(u8, candidate, release) and
+        candidate[release.len] == '.' and
+        allDigits(candidate[release.len + 1 ..]);
+}
+
+fn allDigits(text: []const u8) bool {
+    for (text) |c| if (!std.ascii.isDigit(c)) return false;
+    return text.len > 0;
+}
+
+/// `newerBuildRevision` against the compiled package catalog.
+pub fn catalogBuildRevision(domain: []const u8, version: []const u8, constraint: ?Constraint) ?[]const u8 {
+    const pkg = generated.getPackageByDomain(domain) orelse return null;
+    return newerBuildRevision(pkg.versions, version, constraint);
+}
+
+test "a build revision supersedes its base version for ranges that accept it" {
+    const zstd = [_][]const u8{ "1.5.7.2", "1.5.7.1", "1.5.7", "1.5.6" };
+    try std.testing.expectEqualStrings("1.5.7.2", newerBuildRevision(&zstd, "1.5.7", null).?);
+    try std.testing.expectEqualStrings("1.5.7.2", newerBuildRevision(&zstd, "1.5.7", try parseConstraint("^1")).?);
+    try std.testing.expectEqualStrings("1.5.7.2", newerBuildRevision(&zstd, "1.5.7.1", try parseConstraint("^1.5.7")).?);
+    // An exact pin names one identity, and a range can stop short of the revision.
+    try std.testing.expect(newerBuildRevision(&zstd, "1.5.7", try parseConstraint("1.5.7")) == null);
+    try std.testing.expectEqualStrings("1.5.7.1", newerBuildRevision(&zstd, "1.5.7", try parseConstraint("<=1.5.7.1")).?);
+    try std.testing.expect(newerBuildRevision(&zstd, "1.5.7", try parseConstraint("<1.5.7.1")) == null);
+    // Nothing revises the newest build, an older release, or a non-numeric tail.
+    try std.testing.expect(newerBuildRevision(&zstd, "1.5.7.2", null) == null);
+    try std.testing.expect(newerBuildRevision(&zstd, "1.5.6", null) == null);
+    const tagged = [_][]const u8{ "2.0.0.rc1", "2.0.0" };
+    try std.testing.expect(newerBuildRevision(&tagged, "2.0.0", null) == null);
+}
+
+test "the catalog knows zstd 1.5.7 was rebuilt" {
+    try std.testing.expect(catalogBuildRevision("facebook.com/zstd", "1.5.7", try parseConstraint("^1")) != null);
+}
+
 test "latest resolves to newest stable, not a prerelease" {
     // ziglang.org's catalog leads with dev builds (0.17.0-dev.*) followed by
     // stable 0.16.0 — `latest` must skip the dev builds (npm semantics).
