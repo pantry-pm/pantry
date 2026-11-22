@@ -181,12 +181,17 @@ export function readElfLoaderPaths(bytes: Uint8Array): { rpath?: string, runpath
 // Streaming tar
 // ---------------------------------------------------------------------------
 
+interface ChunkSource {
+  read: () => Promise<{ done: boolean, value?: Uint8Array }>
+  cancel: () => Promise<void>
+}
+
 /** Exact-length reads over a byte stream. */
 class ByteReader {
   private chunks: Uint8Array[] = []
   private buffered = 0
   private done = false
-  constructor(private readonly reader: ReadableStreamDefaultReader<Uint8Array>) {}
+  constructor(private readonly reader: ChunkSource) {}
 
   private async fill(n: number): Promise<boolean> {
     while (this.buffered < n && !this.done) {
@@ -278,7 +283,7 @@ function paxPath(data: Uint8Array): string | undefined {
 export async function forEachElfMember(
   stream: ReadableStream<Uint8Array>,
   visit: (path: string, bytes: Uint8Array) => void,
-  maxMemberBytes = 2 ** 31,
+  maxMemberBytes: number = 2 ** 31,
 ): Promise<void> {
   const reader = new ByteReader(stream.getReader())
   let longName: string | undefined
