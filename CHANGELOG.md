@@ -1,3 +1,18 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.216...v0.11.217)
+
+## 🐛 Bug Fixes
+
+- honor registry cooldowns during Pantry installs ([8b4b330](https://github.com/pantry-pm/pantry/commit/8b4b330)) _(by Chris <chris@stacksjs.com>)_
+- **scripts**: type the ELF audit's stream reader for isolated declarations ([18f4ddb](https://github.com/pantry-pm/pantry/commit/18f4ddb)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.217 ([d56cacf](https://github.com/pantry-pm/pantry/commit/d56cacf)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.215...v0.11.216)
 
 ## ✨ Features
