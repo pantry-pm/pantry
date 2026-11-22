@@ -25,6 +25,9 @@ export interface TransientInstallOptions {
 
 /** Pantry's own markers: `(transient)` on the summary line, `[transient: ...]` on the error. */
 const TRANSIENT_MARKER = /\(transient\)|\[transient:/i
+const PACKAGE_RETRY_AFTER = /^::error title=pantry install failed::[^\n]* registry answered HTTP \d+ \(Retry-After (\d+)s\)/gm
+const LEGACY_RATE_LIMIT = /^::error title=pantry install failed::[^\n]* registry answered HTTP 429\b/m
+const LEGACY_LONG_COOLDOWN = /Registry GET HTTP 429[^\n]*; Retry-After exceeds request budget/
 
 export function isTransientPantryFailure(output: string): boolean {
   return TRANSIENT_MARKER.test(output)
@@ -54,7 +57,16 @@ export async function runRetryingTransientInstall(
     if (code === 0 || attempt === attempts || !isTransientPantryFailure(output))
       return code
 
-    const delay = delays[Math.min(attempt - 1, delays.length - 1)]!
+    const retryAfterSeconds = Array.from(output.matchAll(PACKAGE_RETRY_AFTER))
+      .reduce((latest, response) => Math.max(latest, Number(response[1])), 0)
+    const maxDelay = Math.max(...delays)
+    if (retryAfterSeconds * 1000 > maxDelay || (LEGACY_RATE_LIMIT.test(output) && LEGACY_LONG_COOLDOWN.test(output))) {
+      const cooldown = retryAfterSeconds ? `Retry-After ${retryAfterSeconds}s` : 'Retry-After exceeds the download budget'
+      options.onRetry?.(`${description} stopped after the registry cooldown exceeded the action retry budget (${cooldown})`)
+      return code
+    }
+
+    const delay = Math.max(delays[Math.min(attempt - 1, delays.length - 1)]!, retryAfterSeconds * 1000)
     options.onRetry?.(
       `${description} failed with a transient error (attempt ${attempt} of ${attempts}); `
       + `running it again in ${Math.round(delay / 1000)}s`,

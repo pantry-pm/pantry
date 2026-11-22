@@ -2209,6 +2209,28 @@ test "archive GET shares one fixed budget across gateway and interrupted bodies"
     try std.testing.expectError(error.FileNotFound, cwd().openFile(io, path, .{}));
 }
 
+test "archive GET retains a rate limit beyond the download retry budget" {
+    const allocator = std.testing.allocator;
+    const address = try std.Io.net.IpAddress.parse("127.0.0.1", 0);
+    var fixture: ArchiveGetFixture = .{ .server = try address.listen(std.testing.io, .{ .reuse_address = true }), .responses = &.{
+        "HTTP/1.1 429 Too Many Requests\r\nRetry-After: 1861\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+    } };
+    defer fixture.server.deinit(std.testing.io);
+    var serving = try std.testing.io.concurrent(ArchiveGetFixture.serve, .{&fixture});
+    defer serving.cancel(std.testing.io) catch {};
+    const url = try std.fmt.allocPrint(allocator, "http://127.0.0.1:{d}/archive", .{fixture.server.socket.address.getPort()});
+    defer allocator.free(url);
+    const path = try uniqueTempPath(allocator, "pantry-archive-rate-limit");
+    defer allocator.free(path);
+    defer deleteFile(path) catch {};
+    resetTransientGetRecord();
+    defer resetTransientGetRecord();
+    try std.testing.expectError(error.RegistryRateLimited, runWithTimeout(httpDownloadFile, .{ allocator, url, path }, 1000));
+    try serving.await(std.testing.io);
+    try std.testing.expectEqual(@as(usize, 1), fixture.requests.load(.monotonic));
+    try std.testing.expectEqual(TransientGetRecord{ .status = 429, .retry_after_seconds = 1861 }, lastTransientGetRecord().?);
+}
+
 test "archive GET leaves authentication absence and filesystem failures terminal" {
     const allocator = std.testing.allocator;
     const cases = [_]struct { response: []const u8, expected: anyerror, filesystem_failure: bool = false }{
@@ -2462,19 +2484,19 @@ fn httpStreamGetOptions(allocator: std.mem.Allocator, url: []const u8, budget: *
             continue;
         }
         const status = @backingInt(stream.response.head.status);
-        const retry_delay = responseRetryDelay(&stream.response, budget.used +| 1);
-        if (transientGetStatus(status) and budget.used < budget.max_retries and retry_delay != null) {
+        const retry = responseGetRetry(&stream.response, budget.used +| 1);
+        if (transientGetStatus(status) and budget.used < budget.max_retries and retry.fitsBudget()) {
             budget.used += 1;
             stream.req.deinit();
             request_open = false;
             if (stream.authorization) |authorization| allocator.free(authorization);
             stream.authorization = null;
-            printGetStatus(uri, status, budget.used, retry_delay, budget.max_retries);
-            try waitGetRetrySeconds(retry_delay.?);
+            printGetStatus(uri, status, retry, budget.used, budget.max_retries, false);
+            try waitGetRetrySeconds(retry.delay);
             continue;
         }
         if (status != 200 and !(range != null and (status == 206 or status == 416))) {
-            printGetStatus(uri, status, null, retry_delay, budget.max_retries);
+            printGetStatus(uri, status, retry, null, budget.max_retries, false);
             return switch (status) {
                 401, 403 => error.RegistryAuthenticationRequired,
                 404 => error.RegistryArtifactNotFound,
@@ -2758,15 +2780,23 @@ fn transientGetStatus(status: u16) bool {
 // A delay that cannot finish inside the caller's deadline is not waited out:
 // the status is returned instead (see `retryFitsDeadline`), so the caller
 // reports the registry's answer rather than a bare `Timeout`.
-fn responseRetryDelay(response: *std.http.Client.Response, retries: u32) ?u64 {
+const GetRetry = struct {
+    after: ?u64 = null,
+    delay: u64,
+
+    fn fitsBudget(self: GetRetry) bool {
+        return self.delay <= http_retry.max_delay_seconds;
+    }
+};
+
+fn responseGetRetry(response: *std.http.Client.Response, retries: u32) GetRetry {
     var headers = response.head.iterateHeaders();
     while (headers.next()) |header| {
         if (!std.ascii.eqlIgnoreCase(header.name, "Retry-After")) continue;
         const seconds = http_retry.retryAfterSeconds(header.value, @divFloor(getMilliTimestamp(), 1000)) orelse continue;
-        if (seconds > http_retry.max_delay_seconds) return null;
-        return @max(@as(u64, retries), seconds);
+        return .{ .after = seconds, .delay = @max(@as(u64, retries), seconds) };
     }
-    return retries;
+    return .{ .delay = retries };
 }
 
 /// Whether waiting `delay_seconds` before another attempt still ends before
@@ -2823,26 +2853,24 @@ test "transient registry answers are kept for the failure report" {
     try std.testing.expectEqual(@as(u32, 60), record.retry_after_seconds);
 }
 
-const GetStatusNote = enum { none, retry_after_exceeds_budget, retry_after_exceeds_deadline };
-
 // Log the responding origin, including after redirects, without exposing a
 // signed path, query, user information, or authorization header.
-fn printGetStatus(uri: std.Uri, status: u16, retry: ?u32, delay: ?u64, max_retries: u32) void {
-    printGetStatusNote(uri, status, retry, delay, max_retries, if (delay == null) .retry_after_exceeds_budget else .none);
-}
-
-fn printGetStatusNote(uri: std.Uri, status: u16, retry: ?u32, delay: ?u64, max_retries: u32, note: GetStatusNote) void {
-    recordTransientGet(status, delay);
+fn printGetStatus(uri: std.Uri, status: u16, retry: GetRetry, attempt: ?u32, max_retries: u32, outlasts_deadline: bool) void {
+    recordTransientGet(status, retry.after);
     var buffer: [512]u8 = undefined;
     const host = if (uri.host) |value| value.toRaw(&buffer) catch "<invalid host>" else "<missing host>";
     const style = @import("cli/style.zig");
     style.print("  Registry GET HTTP {d} from {s}://{s}", .{ status, uri.scheme, host });
     if (uri.port) |port| style.print(":{d}", .{port});
-    if (retry) |attempt| style.print("; retry {d}/{d} after {d}s", .{ attempt, max_retries, delay.? });
-    switch (note) {
-        .none => {},
-        .retry_after_exceeds_budget => style.print("; Retry-After exceeds request budget", .{}),
-        .retry_after_exceeds_deadline => style.print("; Retry-After {d}s outlasts the request deadline, not retrying", .{delay.?}),
+    if (attempt) |number| {
+        style.print("; retry {d}/{d} after {d}s", .{ number, max_retries, retry.delay });
+    } else if (!retry.fitsBudget() or outlasts_deadline) {
+        const limit = if (outlasts_deadline) "request deadline" else "request budget";
+        if (retry.after) |seconds| {
+            style.print("; Retry-After {d}s outlasts the {s}", .{ seconds, limit });
+        } else {
+            style.print("; retry would outlast the {s}", .{limit});
+        }
     }
     style.print("\n", .{});
 }
@@ -2944,14 +2972,14 @@ fn httpGetAttemptWithClient(client: *std.http.Client, allocator: std.mem.Allocat
     }
     const status = @backingInt(response.head.status);
     if (transientGetStatus(status)) {
-        const delay = responseRetryDelay(&response, retries + 1);
-        if (retries < 2 and delay != null) {
-            if (retryFitsDeadline(delay.?, deadline_ms, getMilliTimestamp())) {
-                printGetStatus(uri, status, retries + 1, delay, 2);
-                return .{ .retry_status = .{ .status = status, .delay = delay.? } };
+        const retry = responseGetRetry(&response, retries + 1);
+        if (retries < 2 and retry.fitsBudget()) {
+            if (retryFitsDeadline(retry.delay, deadline_ms, getMilliTimestamp())) {
+                printGetStatus(uri, status, retry, retries + 1, 2, false);
+                return .{ .retry_status = .{ .status = status, .delay = retry.delay } };
             }
-            printGetStatusNote(uri, status, null, delay, 2, .retry_after_exceeds_deadline);
-        } else printGetStatus(uri, status, null, delay, 2);
+            printGetStatus(uri, status, retry, null, 2, true);
+        } else printGetStatus(uri, status, retry, null, 2, false);
     }
     if (status_only_errors and (status < 200 or status >= 300)) return .{ .response = .{ .status = status, .body = try allocator.alloc(u8, 0) } };
     const decompress_buffer: []u8 = switch (response.head.content_encoding) {

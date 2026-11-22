@@ -1754,8 +1754,8 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
         // A requested package whose install fails for a transient reason (the
         // network, a deadline, a registry gateway answer) gets one more try.
-        // The HTTP layer already retries within its own deadline; this covers
-        // the case it cannot, a Retry-After longer than that deadline.
+        // The HTTP layer already retries within its deadline. A second install
+        // can wait longer, within the package retry budget.
         io_helper.resetTransientGetRecord();
         var retried = false;
         var result = attempt: while (true) {
@@ -1774,10 +1774,14 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                     else => style.friendlyErrorName(err),
                 };
                 var reason_buffer: [512]u8 = undefined;
-                const error_msg = describeInstallFailure(&reason_buffer, base_msg, io_helper.lastTransientGetRecord(), retried);
-                if (!is_transitive_dep and !retried and style.isTransientInstallError(err)) {
+                const transient = io_helper.lastTransientGetRecord();
+                const error_msg = describeInstallFailure(&reason_buffer, base_msg, transient, retried);
+                const retry_delay = if (!is_transitive_dep and !retried and style.isTransientInstallError(err))
+                    transientRetryDelaySeconds(transient)
+                else
+                    null;
+                if (retry_delay) |delay| {
                     retried = true;
-                    const delay = transientRetryDelaySeconds(io_helper.lastTransientGetRecord());
                     style.printForced("\n  ! {s}@{s}: {s} (transient); retrying once in {d}s\n", .{ name, spec.version, error_msg, delay });
                     io_helper.sleepMs(delay * 1000);
                     io_helper.resetTransientGetRecord();
@@ -1958,12 +1962,13 @@ fn describeInstallFailure(
     return writer.buffered();
 }
 
-/// How long to wait before the one package-level retry: what the registry
-/// asked for, bounded to 5-60 s, or 10 s when it asked for nothing.
-fn transientRetryDelaySeconds(transient: ?io_helper.TransientGetRecord) u64 {
+/// Wait at least five seconds for the package retry. If the registry requires
+/// more than the retry budget, leave the retry to the caller.
+fn transientRetryDelaySeconds(transient: ?io_helper.TransientGetRecord) ?u64 {
     const record = transient orelse return 10;
     if (record.retry_after_seconds == 0) return 10;
-    return std.math.clamp(@as(u64, record.retry_after_seconds), 5, 60);
+    if (record.retry_after_seconds > 60) return null;
+    return @max(5, @as(u64, record.retry_after_seconds));
 }
 
 test "install failure reasons keep the registry answer and the retry" {
@@ -1977,9 +1982,10 @@ test "install failure reasons keep the registry answer and the retry" {
 }
 
 test "the package-level retry waits a bounded time" {
-    try std.testing.expectEqual(@as(u64, 10), transientRetryDelaySeconds(null));
-    try std.testing.expectEqual(@as(u64, 60), transientRetryDelaySeconds(.{ .status = 503, .retry_after_seconds = 600 }));
-    try std.testing.expectEqual(@as(u64, 5), transientRetryDelaySeconds(.{ .status = 429, .retry_after_seconds = 1 }));
+    try std.testing.expectEqual(@as(?u64, 10), transientRetryDelaySeconds(null));
+    try std.testing.expectEqual(@as(?u64, 60), transientRetryDelaySeconds(.{ .status = 503, .retry_after_seconds = 60 }));
+    try std.testing.expectEqual(@as(?u64, null), transientRetryDelaySeconds(.{ .status = 429, .retry_after_seconds = 1861 }));
+    try std.testing.expectEqual(@as(?u64, 5), transientRetryDelaySeconds(.{ .status = 429, .retry_after_seconds = 1 }));
     try std.testing.expectEqual(@as(u64, 10), transientRetryDelaySeconds(.{ .status = 502, .retry_after_seconds = 0 }));
 }
 
