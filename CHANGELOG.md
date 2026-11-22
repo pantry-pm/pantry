@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.214...v0.11.215)
+
+## ✨ Features
+
+- **native**: release Mac App Store builds independently ([e624e24](https://github.com/pantry-pm/pantry/commit/e624e24)) _(by Chris Breuer <chris@stacksjs.com>)_
+
+## 🐛 Bug Fixes
+
+- load project libraries in service health probes ([9fcca8b](https://github.com/pantry-pm/pantry/commit/9fcca8b)) _(by Chris Breuer <chris@stacksjs.com>)_ ([#368](https://github.com/pantry-pm/pantry/issues/368))
+
+## 🔧 Chores
+
+- release v0.11.215 ([5aec0aa](https://github.com/pantry-pm/pantry/commit/5aec0aa)) _(by Chris Breuer <chris@stacksjs.com>)_
+- update craft to 0.0.529 ([73f9627](https://github.com/pantry-pm/pantry/commit/73f9627)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.213...v0.11.214)
 
 ## 🐛 Bug Fixes
