@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.215...v0.11.216)
+
+## ✨ Features
+
+- **scripts**: audit published Linux artifacts for broken ELF loader paths ([4da6b51](https://github.com/pantry-pm/pantry/commit/4da6b51)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **install**: prefer a published build revision over the build it repaired ([3a87f3f](https://github.com/pantry-pm/pantry/commit/3a87f3f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.216 ([8650bf0](https://github.com/pantry-pm/pantry/commit/8650bf0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.530 ([17ddc3d](https://github.com/pantry-pm/pantry/commit/17ddc3d)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.214...v0.11.215)
 
 ## ✨ Features
