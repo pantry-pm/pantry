@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.217...v0.11.218)
+
+## 🐛 Bug Fixes
+
+- **install**: replace locked and installed builds that a build revision superseded ([01002c6](https://github.com/pantry-pm/pantry/commit/01002c6)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.218 ([a1425b4](https://github.com/pantry-pm/pantry/commit/a1425b4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.216...v0.11.217)
 
 ## 🐛 Bug Fixes
