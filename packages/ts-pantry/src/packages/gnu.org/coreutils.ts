@@ -162,6 +162,7 @@ export const gnuorgcoreutilsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '9.10.0.3',
     '9.10.0.2',
     '9.10.0.1',
     '9.10.0',

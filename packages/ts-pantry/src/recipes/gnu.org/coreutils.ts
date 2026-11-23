@@ -5,8 +5,9 @@ export const recipe: Recipe = {
   name: 'coreutils',
   // Revision 1 mirrored the vendor build, which has no chcon, runcon or stdbuf.
   // The catalog declares the first two, so it failed every install. Revision 2
-  // is refused as a mirror for that reason and builds this recipe.
-  revisions: { '9.10.0': 2 },
+  // built this recipe, on a host without SELinux headers, where configure
+  // leaves both out as well. Revision 3 builds them unconditionally.
+  revisions: { '9.10.0': 3 },
   revisionReasons: { '9.10.0': 'elf-loader-paths' },
   programs: [
     '[',
@@ -16,6 +17,7 @@ export const recipe: Recipe = {
     'basename',
     'basenc',
     'cat',
+    'chcon',
     'chgrp',
     'chmod',
     'chown',
@@ -75,6 +77,7 @@ export const recipe: Recipe = {
     'realpath',
     'rm',
     'rmdir',
+    'runcon',
     'seq',
     'sha1sum',
     'sha224sum',
@@ -126,7 +129,10 @@ export const recipe: Recipe = {
       // Self-contained: configure otherwise links whatever libcrypto and libgmp
       // the build host has, which the package neither declares nor ships. The
       // bundled hash implementations and mini-gmp replace them.
-      './configure --prefix={{ prefix }} --with-openssl=no --without-libgmp $ARGS',
+      // --with-selinux: the catalog promises chcon and runcon, and configure
+      // only builds them by default where the host has SELinux headers. Forced,
+      // they build on gnulib's stubs and link nothing from the host.
+      './configure --prefix={{ prefix }} --with-openssl=no --without-libgmp --with-selinux $ARGS',
       'make --jobs {{ hw.concurrency }} install',
     ],
     env: {

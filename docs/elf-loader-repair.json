@@ -29,13 +29,13 @@
     {
       "domain": "gnu.org/coreutils",
       "oldBuild": "9.10.0",
-      "revision": "9.10.0.2",
+      "revision": "9.10.0.3",
       "platforms": [
         "linux-x86-64"
       ],
       "batch": 1,
       "status": "pending",
-      "note": "9.10.0.1 mirrored the vendor build, which lacks chcon, runcon and stdbuf; the catalog declares the first two, so it failed every install. 9.10.0.2 is refused as a mirror and built from the recipe."
+      "note": "9.10.0.1 mirrored the vendor build, which lacks chcon, runcon and stdbuf; the catalog declares the first two, so it failed every install. 9.10.0.2 was built from the recipe on a host without SELinux headers and lacks them too. 9.10.0.3 forces both."
     },
     {
       "domain": "gnu.org/grep",
