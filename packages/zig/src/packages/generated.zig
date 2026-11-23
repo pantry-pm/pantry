@@ -10027,7 +10027,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "5.3.0", "5.2.37", "5.2.32", "5.2.21", "5.2.15", "5.1.16" },
+    .versions = &[_][]const u8{ "5.3.0.1", "5.3.0", "5.2.37", "5.2.32", "5.2.21", "5.2.15", "5.1.16" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "5.3.0", .revision = 1 }},
 }, .{
     .name = "bc",
     .domain = "gnu.org/bc",
@@ -10049,7 +10050,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "gnu.org/bison", "gnu.org/texinfo", "facebook.com/zstd", "linux:gnu.org/gcc", "linux:perl.org@~5.40" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.46.0", "2.45.1", "2.45.0", "2.44.0", "2.43.1", "2.43.0", "2.42.0", "2.41.0", "2.40.0", "2.39.0" },
+    .versions = &[_][]const u8{ "2.46.0.1", "2.46.0", "2.45.1", "2.45.0", "2.44.0", "2.43.1", "2.43.0", "2.42.0", "2.41.0", "2.40.0", "2.39.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.46.0", .revision = 1 }},
 }, .{
     .name = "bison",
     .domain = "gnu.org/bison",
@@ -10071,7 +10073,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "9.10.0", "9.9.0", "9.8.0", "9.7.0", "9.6.0", "9.5.0", "9.4.0", "9.1.0" },
+    .versions = &[_][]const u8{ "9.10.0.1", "9.10.0", "9.9.0", "9.8.0", "9.7.0", "9.6.0", "9.5.0", "9.4.0", "9.1.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "9.10.0", .revision = 1 }},
 }, .{
     .name = "diffutils",
     .domain = "gnu.org/diffutils",
@@ -10237,7 +10240,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"pcre.org/v2"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "3.12.0", "3.11.0", "3.8.0" },
+    .versions = &[_][]const u8{ "3.12.0.1", "3.12.0", "3.11.0", "3.8.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "3.12.0", .revision = 1 }},
 }, .{
     .name = "groff",
     .domain = "gnu.org/groff",
@@ -10405,7 +10409,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"gnu.org/m4@1"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"4.3.0"},
+    .versions = &[_][]const u8{ "4.3.0.1", "4.3.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "4.3.0", .revision = 1 }},
 }, .{
     .name = "mpc",
     .domain = "gnu.org/mpc",
@@ -10494,7 +10499,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "4.10", "4.9", "4.9.0", "4.8" },
+    .versions = &[_][]const u8{ "4.10.1", "4.10", "4.9", "4.9.0", "4.8" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "4.10", .revision = 1 }},
 }, .{
     .name = "source-highlight",
     .domain = "gnu.org/source-highlight",
@@ -10527,7 +10533,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "gnu.org/patch", "gnu.org/autoconf", "gnu.org/automake" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.35.0", "1.34.0" },
+    .versions = &[_][]const u8{ "1.35.0.1", "1.35.0", "1.34.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.35.0", .revision = 1 }},
 }, .{
     .name = "texinfo",
     .domain = "gnu.org/texinfo",
@@ -15185,7 +15192,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "sourceware.org/bzip2@1", "zlib.net@1" },
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"8.45.0"},
+    .versions = &[_][]const u8{ "8.45.0.1", "8.45.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "8.45.0", .revision = 1 }},
 }, .{
     .name = "pcre2",
     .domain = "pcre.org/v2",

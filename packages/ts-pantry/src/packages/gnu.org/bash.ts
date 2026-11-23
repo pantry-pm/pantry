@@ -61,6 +61,7 @@ export const gnuorgbashPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.3.0.1',
     '5.3.0',
     '5.2.37',
     '5.2.32',

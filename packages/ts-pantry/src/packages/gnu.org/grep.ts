@@ -65,6 +65,7 @@ export const gnuorggrepPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.12.0.1',
     '3.12.0',
     '3.11.0',
     '3.8.0',

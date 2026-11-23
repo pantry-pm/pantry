@@ -65,6 +65,7 @@ export const gnuorgmakePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.3.0.1',
     '4.3.0',
   ] as const,
   aliases: [] as const,

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/bash',
   name: 'bash',
+  revisions: { '5.3.0': 1 },
+  revisionReasons: { '5.3.0': 'elf-loader-paths' },
   programs: [
     'bash',
     'bashbug',

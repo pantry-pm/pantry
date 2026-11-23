@@ -83,6 +83,7 @@ export const gnuorgbinutilsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.46.0.1',
     '2.46.0',
     '2.45.1',
     '2.45.0',

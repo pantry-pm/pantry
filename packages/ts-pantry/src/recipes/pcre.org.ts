@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'pcre.org',
   name: 'pcre',
+  revisions: { '8.45.0': 1 },
+  revisionReasons: { '8.45.0': 'elf-loader-paths' },
   description: 'Perl compatible regular expressions library',
   homepage: 'https://www.pcre.org/',
   programs: ['pcre-config', 'pcregrep', 'pcretest'],

@@ -70,6 +70,7 @@ export const pcreorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.45.0.1',
     '8.45.0',
   ] as const,
   aliases: [] as const,

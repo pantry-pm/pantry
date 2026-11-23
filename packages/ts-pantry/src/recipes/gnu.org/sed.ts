@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/sed',
   name: 'sed',
+  revisions: { '4.10': 1 },
+  revisionReasons: { '4.10': 'elf-loader-paths' },
   description: 'GNU implementation of the famous stream editor',
   homepage: 'https://www.gnu.org/software/sed/',
   programs: ['sed'],

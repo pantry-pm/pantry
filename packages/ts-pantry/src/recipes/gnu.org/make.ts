@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/make',
   name: 'make',
+  revisions: { '4.3.0': 1 },
+  revisionReasons: { '4.3.0': 'elf-loader-paths' },
   programs: [
     'make',
   ],

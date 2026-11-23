@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/binutils',
   name: 'binutils',
+  revisions: { '2.46.0': 1 },
+  revisionReasons: { '2.46.0': 'elf-loader-paths' },
   programs: [],
   buildDependencies: {
     'gnu.org/bison': '*',

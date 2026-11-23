@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/coreutils',
   name: 'coreutils',
+  revisions: { '9.10.0': 1 },
+  revisionReasons: { '9.10.0': 'elf-loader-paths' },
   programs: [
     '[',
     'b2sum',

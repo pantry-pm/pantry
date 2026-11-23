@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   propsDir: '../props/gnu.org/tar',
   domain: 'gnu.org/tar',
   name: 'tar',
+  revisions: { '1.35.0': 1 },
+  revisionReasons: { '1.35.0': 'elf-loader-paths' },
   programs: [
     'tar',
   ],
