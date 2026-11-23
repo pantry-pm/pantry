@@ -539,6 +539,8 @@ pub fn build(b: *std.Build) void {
     build_revision_step.dependOn(&b.addRunArtifact(build_revision_tests).step);
     const build_revision_reconcile_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{"build revisions:"} });
     build_revision_step.dependOn(&b.addRunArtifact(build_revision_reconcile_tests).step);
+    const zig_publish_step = b.step("test:zig-publish", "Publish build.zig.zon packages exactly as the action's publish: zig did");
+    zig_publish_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = install_test_mod, .filters = &.{"zig publish:"} })).step);
     const archive_resume_mod = b.createModule(.{
         .root_source_file = b.path("src/test_archive_resume_root.zig"),
         .target = target,

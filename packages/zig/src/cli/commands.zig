@@ -111,6 +111,7 @@ pub const LoginOptions = @import("commands/login.zig").LoginOptions;
 // Registry publish command (uploads to Pantry registry S3)
 pub const RegistryPublishOptions = registry_commands.RegistryPublishOptions;
 pub const registryPublishCommand = registry_commands.registryPublishCommand;
+pub const publish_zig = @import("commands/publish_zig.zig");
 
 // ============================================================================
 // Re-export Publish Commit Command (pkg-pr-new equivalent)

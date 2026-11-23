@@ -1576,6 +1576,27 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         }
     }
 
+    // --zig, or a build.zig.zon package with no package.json: the Zig
+    // endpoint, as the GitHub action's `publish: zig` did.
+    if (!use_npm and !std.mem.eql(u8, registry, "npm")) {
+        const zig_dir: ?[]const u8 = if (paths.items.len > 0) paths.items[0] else null;
+        if (ctx.hasOption("zig") or (paths.items.len <= 1 and lib.commands.publish_zig.isZigPackageDir(allocator, zig_dir orelse "."))) {
+            if (paths.items.len > 1) {
+                style.print("--zig publishes one package directory at a time.\n", .{});
+                std.process.exit(1);
+            }
+            var zig_result = try lib.commands.publish_zig.publishZigCommand(allocator, zig_dir, .{
+                .registry = registry,
+                .token = token,
+                .dry_run = dry_run,
+                .verify = !ctx.hasOption("no-readback"),
+            });
+            defer zig_result.deinit(allocator);
+            if (zig_result.message) |msg| style.print("{s}\n", .{msg});
+            std.process.exit(zig_result.exit_code);
+        }
+    }
+
     // Route --npm or --registry npm to the npm publish flow
     if (use_npm or std.mem.eql(u8, registry, "npm")) {
         if (verify_existing) {
@@ -5014,6 +5035,8 @@ pub fn main() !void {
 
     const pub_npm_opt = cli.Option.init("npm", "npm", "Publish to npm registry instead of Pantry registry", .bool);
     _ = try publish_cmd.addOption(pub_npm_opt);
+
+    _ = try publish_cmd.addOption(cli.Option.init("zig", "zig", "Publish a build.zig.zon package to the registry's Zig endpoint (the default when there is no package.json)", .bool));
 
     const pub_otp_opt = cli.Option.init("otp", "otp", "One-time password for npm token authentication", .string);
     _ = try publish_cmd.addOption(pub_otp_opt);

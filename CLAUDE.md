@@ -33,6 +33,7 @@ There are two distinct publish targets:
 
 - **`pantry publish --npm --access public`**— publishes JS/TS packages to**npm** (npmjs.org). Used by monorepo release workflows for public packages (skips `"private": true`). Authenticates with OIDC in CI (set up with `pantry login` + `pantry publisher:add`), else `NPM_TOKEN` / `NODE_AUTH_TOKEN` / `BUN_AUTH_TOKEN` or an npmrc token.
 - **`pantry publish:commit './packages/*'`**— publishes packages to the**pantry registry** (registry.pantry.dev) under a commit SHA. Used in CI continuous-release for commit-based installs (like pkg-pr-new). Auth: AWS credentials (direct S3 upload) or `PANTRY_REGISTRY_TOKEN` (HTTP upload to registry API).
+- **`pantry publish --zig [dir]`** — publishes a `build.zig.zon` package to the registry's Zig endpoint (`/zig/publish`), the same request the action's `publish: zig` makes, then reads the tarball back and checks its `zig fetch` hash. It is the default for a directory with build.zig.zon and no package.json; `--dry-run` lists every tarball entry. Auth: the stored `pantry token` (or `PANTRY_TOKEN`/`PANTRY_REGISTRY_TOKEN`), so no GitHub Actions run is needed.
 
 ## Registry Operations
 

@@ -16,6 +16,8 @@ test {
     _ = @import("cli/commands/access.zig");
     // `pantry publish` to a Pantry registry: rejection hints, visibility.
     _ = @import("cli/commands/registry.zig");
+    // `pantry publish --zig`: build.zig.zon packages to a Pantry registry.
+    _ = @import("cli/commands/publish_zig.zig");
     // `pantry release`'s preflight: which repository it would ask GitHub
     // about, and which secret names its workflows read. It belongs with the
     // publish commands above rather than with the credential store, and it
