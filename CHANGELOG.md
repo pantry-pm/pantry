@@ -1,3 +1,22 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.218...v0.11.219)
+
+## ✨ Features
+
+- **publish**: publish build.zig.zon packages from the CLI ([72f60fb](https://github.com/pantry-pm/pantry/commit/72f60fb)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ✅ Tests
+
+- give the metadata e2e's cold zig build runner time on shared CI runners ([d27eccc](https://github.com/pantry-pm/pantry/commit/d27eccc)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.219 ([844ad84](https://github.com/pantry-pm/pantry/commit/844ad84)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.531 ([f73a6fb](https://github.com/pantry-pm/pantry/commit/f73a6fb)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.217...v0.11.218)
 
 ## 🐛 Bug Fixes
