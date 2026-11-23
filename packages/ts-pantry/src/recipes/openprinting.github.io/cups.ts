@@ -15,6 +15,8 @@ export const recipe: Recipe = {
     'zlib.net': '*',
     linux: {
       'openssl.org': '^1.1',
+      // libcups links libcrypt.so.1, which glibc no longer ships.
+      'github.com/besser82/libxcrypt': '^4',
     },
   },
   distributable: {

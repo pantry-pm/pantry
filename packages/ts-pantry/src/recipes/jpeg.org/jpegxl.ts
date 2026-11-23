@@ -16,7 +16,8 @@ export const recipe: Recipe = {
     'google.com/highway': '^1',
     'google.com/webp': '^1',
     'giflib.sourceforge.io': '^5',
-    'openexr.com': '^3',
+    // cjxl/djxl link libOpenEXR-3_3.so.32: OpenEXR's soname changes with every minor.
+    'openexr.com': '~3.3',
     'libpng.org': '^1',
   },
   buildDependencies: {

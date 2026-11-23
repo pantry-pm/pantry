@@ -14,6 +14,10 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'openssl.org': '^1.1',
+    // The ldap* tools link libuuid.so.1, which util-linux provides.
+    linux: {
+      'github.com/util-linux/util-linux': '^2',
+    },
   },
   buildDependencies: {
     'gnu.org/sed': '*',

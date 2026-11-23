@@ -13,7 +13,8 @@ export const recipe: Recipe = {
   dependencies: {
     'libusb.info': '^1',
     linux: {
-      'systemd.io': '^254', // libudev
+      // libudev.so.1 keeps its soname across systemd majors; 257 is the one published.
+      'systemd.io': '>=254', // libudev
     },
   },
   buildDependencies: {
