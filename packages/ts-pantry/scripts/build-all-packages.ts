@@ -40,8 +40,8 @@ import { BINARY_SYNC_DOMAIN_SET } from './binary-sync-packages.ts'
 import { parseDep, versionSatisfies } from './build-package'
 import { publicationOrder } from './publication-order'
 import { publicationResultAnnotation } from './changed-package-domains'
-import { recipeAllowsMirror, recipeBuildVersion } from './package-revisions'
-import { loadRecipe, loadRecipeRevisions } from './recipe-loader'
+import { recipeAllowsMirror, revisionAppliesTo, revisionReason, selectRevisionVersions } from './package-revisions'
+import { loadRecipe, loadRecipeRevisionReasons, loadRecipeRevisions } from './recipe-loader'
 // package-overrides.ts removed — all build logic now in src/recipes/*.ts
 const packageOverrides: Record<string, any> = {}
 
@@ -1188,13 +1188,15 @@ const POPULAR_PACKAGES = new Set<string>([
   'alacritty.org', 'charm.sh/glow', 'charm.sh/gum', 'restic.net/restic',
 ])
 
-export async function selectVersionsForBuild(pkg: BuildablePackage, maxVersions: number): Promise<string[]> {
+export async function selectVersionsForBuild(pkg: BuildablePackage, maxVersions: number, platform = 'linux-x86-64'): Promise<string[]> {
   if (pkg.pinnedVersions?.length) return [...pkg.pinnedVersions]
   // Historical identities remain installable, but a current recipe cannot
-  // republish them. Filter before spending the automatic version budget.
+  // republish them. Filter before spending the automatic version budget. A
+  // revision that does not apply to this platform (a Linux loader-path
+  // repair, on macOS) leaves its published base as the current identity.
   const revisions = await loadRecipeRevisions(pkg.domain)
   const currentVersions = revisions
-    ? pkg.versions.filter(version => recipeBuildVersion(version, revisions).current === version)
+    ? selectRevisionVersions(pkg.versions, revisions, await loadRecipeRevisionReasons(pkg.domain), platform)
     : pkg.versions
   const candidates = {
     ...pkg,
@@ -1870,12 +1872,12 @@ function pkgxDistArch(platform: string): { os: string, arch: string } | null {
 // so the existing package+upload path treats it identically. pkgx tarballs nest
 // under <domain>/v<ver>/, which we strip. Returns true on success, false if pkgx
 // has no such artifact (→ caller falls back to a source build).
-async function tryPkgxMirror(domain: string, version: string, platform: string, installDir: string, buildkitRoot: string): Promise<boolean> {
+async function tryPkgxMirror(domain: string, version: string, platform: string, installDir: string, buildkitRoot: string, sourceVersion = version): Promise<boolean> {
   const m = pkgxDistArch(platform)
   if (!m)
     return false
   const safe = domain.replace(/\//g, '-')
-  const url = `https://dist.pkgx.dev/${domain}/${m.os}/${m.arch}/v${version}.tar.xz`
+  const url = `https://dist.pkgx.dev/${domain}/${m.os}/${m.arch}/v${sourceVersion}.tar.xz`
   const dl = `${buildkitRoot}/pkgx-${safe}.tar.xz`
   const ex = `${buildkitRoot}/pkgx-ex-${safe}`
   try {
@@ -1892,7 +1894,7 @@ async function tryPkgxMirror(domain: string, version: string, platform: string, 
   let versionDir: string
   try {
     execSync(`rm -rf "${ex}" && mkdir -p "${ex}" && tar -xJf "${dl}" -C "${ex}"`, { stdio: 'pipe' })
-    let prefixRoot = join(ex, domain, `v${version}`)
+    let prefixRoot = join(ex, domain, `v${sourceVersion}`)
     if (!existsSync(prefixRoot)) {
       // version string mismatch (rare) — fall back to the single v* dir present.
       const domDir = join(ex, domain)
@@ -2228,12 +2230,15 @@ else {
       if (!recipeAllowsMirror(candidateVersion, {
         upstream: loaded.upstreamVersion ?? candidateVersion,
         current: loaded.publicationVersion ?? candidateVersion,
-      }, loaded.requiresRecipeBuild)) break
+      }, loaded.requiresRecipeBuild, loaded.revisionReason)) break
       // tryPkgxMirror reports the "mirroring from pkgx" event ITSELF, but only once
       // the download confirms pkgx actually ships this artifact — so packages pkgx
       // doesn't host (our apps/deps, source builds) are never mislabeled as mirrored.
+      // A loader-path revision mirrors its vendor release and publishes it, with
+      // normalised ELF loader paths, under the revision identity.
+      const sourceVersion = loaded.upstreamVersion ?? candidateVersion
       // eslint-disable-next-line no-await-in-loop
-      if (await timePhase(phases, 'mirror', () => tryPkgxMirror(domain, candidateVersion, platform, installDir, buildkitRoot))) {
+      if (await timePhase(phases, 'mirror', () => tryPkgxMirror(domain, candidateVersion, platform, installDir, buildkitRoot, sourceVersion))) {
         const { downloadRuntimePackages } = await import('./build-package')
         const recipe = (await loadRecipe(domain, platform, candidateVersion)).recipe
         selectPublishedFiles(installDir, recipe.publish?.include)
@@ -3232,6 +3237,22 @@ Options:
   // native macOS build is even needed before allocating a (10x) mac runner.
   if (values['print-selected']) {
     let selected = packagesToBuild
+    // A push that only adds a Linux loader-path revision has nothing for
+    // another platform to build: its published base is still current there,
+    // and naming the domain would allocate a native runner for nothing.
+    if (!platform.startsWith('linux-')) {
+      const kept: typeof packagesToBuild = []
+      for (const pkg of selected) {
+        const newest = pkg.pinnedVersions?.length ? undefined : pkg.versions[0]
+        const revisions = newest ? await loadRecipeRevisions(pkg.domain) : undefined
+        const reason = newest && revisions ? revisionReason(newest, revisions, await loadRecipeRevisionReasons(pkg.domain)) : undefined
+        if (reason && !revisionAppliesTo(reason, platform))
+          console.error(`  ${pkg.domain}@${newest} is a Linux-only repair (${reason}) — nothing to build for ${platform}`)
+        else
+          kept.push(pkg)
+      }
+      selected = kept
+    }
     if (values['exclude-pkgx-covered']) {
       // Drop a domain only when EVERY version this run would build is already
       // a pkgx prebuilt for the target. The caller uses the result to decide
@@ -3244,7 +3265,7 @@ Options:
           kept.push(pkg)
           continue
         }
-        const versions = await selectVersionsForBuild(pkg, maxVersions)
+        const versions = await selectVersionsForBuild(pkg, maxVersions, platform)
         const covered = versions.length > 0
           && (await Promise.all(versions.map(v => pkgxHasPrebuilt(pkg.domain, v, platform)))).every(Boolean)
         if (covered)
@@ -3315,7 +3336,7 @@ Options:
 
     for (const pkg of packagesToBuild) {
       if (multiVersion) {
-        const versions = await selectVersionsForBuild(pkg, maxVersions)
+        const versions = await selectVersionsForBuild(pkg, maxVersions, platform)
         for (const v of versions) {
           const exists = await checkExistsInS3(pkg.domain, v, platform, bucket, region)
           console.error(`  - ${pkg.domain}@${v} ${exists ? '(already in S3)' : '(missing from S3)'}`)
@@ -3337,7 +3358,7 @@ else {
     console.log('\n[DRY RUN] Would build:')
     for (const pkg of packagesToBuild) {
       if (multiVersion) {
-        const versions = await selectVersionsForBuild(pkg, maxVersions)
+        const versions = await selectVersionsForBuild(pkg, maxVersions, platform)
         console.log(`  - ${pkg.domain}:`)
         for (const v of versions) {
           const exists = await checkExistsInS3(pkg.domain, v, platform, bucket, region)
@@ -3384,7 +3405,7 @@ else {
 
     if (multiVersion) {
       // Multi-version mode: build multiple important versions per package
-      const versions = await selectVersionsForBuild(pkg, maxVersions)
+      const versions = await selectVersionsForBuild(pkg, maxVersions, platform)
 
       console.log(`\n📦 ${pkg.domain}: building ${versions.length} versions [${versions.join(', ')}]`)
 

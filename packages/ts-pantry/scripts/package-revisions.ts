@@ -53,8 +53,67 @@ export function requireCurrentRecipeBuild(packageVersion: string, currentVersion
     throw new Error(`Recipe requires package build ${currentVersion}; refusing to replace ${packageVersion}`)
 }
 
-/** Vendor prebuilts cannot contain a Pantry packaging repair. */
-export function recipeAllowsMirror(packageVersion: string, identity: { upstream: string, current: string }, requiresRecipeBuild = false): boolean {
+/**
+ * Why a revision exists, by upstream release.
+ *
+ * `elf-loader-paths`: the earlier Linux build's RPATH/RUNPATH entries lost
+ * `$ORIGIN` (fix-up ran patchelf through a shell before 468ded425, and mirrored
+ * artifacts were not normalised before 6e7a524cc), so `bin/zstd` carried
+ * `/../lib` and loaded the host's library. The vendor build itself is sound:
+ * mirroring it again and normalising its loader paths
+ * (`normalizeMirroredArtifact`) is the repair, and only Linux artifacts are ELF.
+ */
+export type RevisionReason = 'elf-loader-paths'
+export type PackageRevisionReasons = Readonly<Record<string, RevisionReason>>
+
+const knownReasons: ReadonlySet<string> = new Set<RevisionReason>(['elf-loader-paths'])
+
+/** Every reason names a declared revision and a known repair. */
+export function validateRevisionReasons(revisions?: PackageRevisions, reasons?: PackageRevisionReasons): void {
+  for (const [release, reason] of Object.entries(reasons ?? {})) {
+    if (!revisions?.[release]) throw new Error(`Revision reason for ${release}, which has no revision`)
+    if (!knownReasons.has(reason)) throw new Error(`Unknown revision reason ${reason} for ${release}`)
+  }
+}
+
+/** The reason for `packageVersion` when it is a revision identity (current or historical). */
+export function revisionReason(packageVersion: string, revisions?: PackageRevisions, reasons?: PackageRevisionReasons): RevisionReason | undefined {
+  const { upstream } = recipeBuildVersion(packageVersion, revisions)
+  return upstream === packageVersion ? undefined : reasons?.[upstream]
+}
+
+/**
+ * Whether the recipe must execute for its vendor releases. A repair the
+ * vendor build cannot contain (a patch, a different configuration) means it
+ * must, for later releases too; a loader-path repair does not.
+ */
+export function recipeRequiresBuild(revisions?: PackageRevisions, reasons?: PackageRevisionReasons): boolean {
+  return Object.keys(revisions ?? {}).some(release => reasons?.[release] !== 'elf-loader-paths')
+}
+
+/** Platforms a revision is published for: a loader-path repair is Linux-only. */
+export function revisionAppliesTo(reason: RevisionReason | undefined, platform: string): boolean {
+  return reason !== 'elf-loader-paths' || platform.startsWith('linux-')
+}
+
+/**
+ * The publishable versions for `platform`: current identities, except that
+ * where a revision does not apply to the platform its published base stays.
+ */
+export function selectRevisionVersions(versions: readonly string[], revisions: PackageRevisions | undefined, reasons: PackageRevisionReasons | undefined, platform: string): string[] {
+  if (!revisions) return [...versions]
+  return versions.filter((version) => {
+    const identity = recipeBuildVersion(version, revisions)
+    const applies = revisionAppliesTo(reasons?.[identity.upstream], platform)
+    if (identity.upstream !== identity.current && !applies)
+      return version === identity.upstream
+    return identity.current === version
+  })
+}
+
+/** Vendor prebuilts cannot contain a Pantry packaging repair, except a loader-path one. */
+export function recipeAllowsMirror(packageVersion: string, identity: { upstream: string, current: string }, requiresRecipeBuild = false, reason?: RevisionReason): boolean {
   requireCurrentRecipeBuild(packageVersion, identity.current)
-  return !requiresRecipeBuild && identity.upstream === packageVersion
+  if (identity.upstream === packageVersion) return !requiresRecipeBuild
+  return reason === 'elf-loader-paths'
 }

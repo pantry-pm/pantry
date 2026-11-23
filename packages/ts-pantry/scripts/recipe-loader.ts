@@ -15,7 +15,7 @@ import type { Recipe, LoadedRecipe } from './recipe-types'
 import type { NormalizedRecipe } from './buildkit'
 import { evaluateCondition } from './buildkit'
 import { programsForPlatform } from '../src/programs'
-import { recipeBuildVersion, type PackageRevisions } from './package-revisions'
+import { recipeBuildVersion, recipeRequiresBuild, revisionReason, validateRevisionReasons, type PackageRevisionReasons, type PackageRevisions, type RevisionReason } from './package-revisions'
 import desktopCatalog from '../../../catalog/desktop.json'
 
 // package-overrides.ts removed — overrides migrated to src/recipes/*.ts
@@ -33,6 +33,27 @@ async function readRecipeDefinition(recipePath: string): Promise<Recipe | undefi
 export async function loadRecipeRevisions(domain: string): Promise<PackageRevisions | undefined> {
   const recipePath = findRecipeFile(domain)
   return recipePath ? (await readRecipeDefinition(recipePath))?.revisions : undefined
+}
+
+/** A recipe's revision reasons, validated against its revisions. */
+export async function loadRecipeRevisionReasons(domain: string): Promise<PackageRevisionReasons | undefined> {
+  const recipePath = findRecipeFile(domain)
+  const def = recipePath ? await readRecipeDefinition(recipePath) : undefined
+  validateRevisionReasons(def?.revisions, def?.revisionReasons)
+  return def?.revisionReasons
+}
+
+/** The identity facts loadRecipe reports for `version`. */
+export function recipeIdentity(def: Pick<Recipe, 'revisions' | 'revisionReasons'>, version: string): { upstreamVersion: string, publicationVersion: string, requiresRecipeBuild: boolean, revisionReason?: RevisionReason } {
+  validateRevisionReasons(def.revisions, def.revisionReasons)
+  const identity = recipeBuildVersion(version, def.revisions)
+  const reason = revisionReason(version, def.revisions, def.revisionReasons)
+  return {
+    upstreamVersion: identity.upstream,
+    publicationVersion: identity.current,
+    requiresRecipeBuild: recipeRequiresBuild(def.revisions, def.revisionReasons),
+    ...(reason ? { revisionReason: reason } : {}),
+  }
 }
 
 /**
@@ -57,14 +78,15 @@ export async function loadRecipe(
         const desktopApp = recipePath.includes('/recipes/apps/') || desktopCatalog.apps.some(app => app.domain === def.domain)
         const normalized = recipeDefToNormalized(def, _platform, version ? recipeBuildVersion(version, def.revisions).upstream : undefined)
         if (desktopApp) normalized.build.skip = [...new Set([...(normalized.build.skip ?? []), 'fix-machos'])]
-        const identity = version ? recipeBuildVersion(version, def.revisions) : undefined
+        const identity = version ? recipeIdentity(def, version) : undefined
         return {
           recipe: normalized,
           desktopApp,
           bundleVersionPattern: def.bundleVersionPattern,
-          upstreamVersion: identity?.upstream,
-          publicationVersion: identity?.current,
-          requiresRecipeBuild: Object.keys(def.revisions ?? {}).length > 0,
+          upstreamVersion: identity?.upstreamVersion,
+          publicationVersion: identity?.publicationVersion,
+          requiresRecipeBuild: recipeRequiresBuild(def.revisions, def.revisionReasons),
+          revisionReason: identity?.revisionReason,
           source: 'recipe',
           propsDir: def.propsDir ? join(recipePath, '..', def.propsDir) : undefined,
         }

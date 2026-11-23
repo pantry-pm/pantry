@@ -133,6 +133,9 @@ export interface Recipe {
   /** Pantry packaging revisions by exact upstream numeric version; published identities are never overwritten. */
   revisions?: import('./package-revisions').PackageRevisions
 
+  /** Why a revision exists, by upstream release (see package-revisions.ts `RevisionReason`). */
+  revisionReasons?: import('./package-revisions').PackageRevisionReasons
+
   /** Source archive to download (null for pre-built binaries) */
   distributable?: RecipeDistributable | null
 
@@ -187,6 +190,8 @@ export interface LoadedRecipe {
   publicationVersion?: string
   /** Pantry packaging repairs must keep using this recipe for later vendor releases too. */
   requiresRecipeBuild?: boolean
+  /** Why this identity is a revision, when it is one with a declared reason. */
+  revisionReason?: import('./package-revisions').RevisionReason
   /** The normalized recipe in buildkit-compatible format */
   recipe: {
     distributable?: { url: string, 'strip-components'?: number } | null

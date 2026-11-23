@@ -203,3 +203,53 @@ test('the native catalog names every recipe build revision, so installs can repl
   }
   expect(revised).toBeGreaterThan(0)
 })
+
+test('an ELF loader-path revision may mirror and normalise, applies to Linux only, and keeps later releases mirrorable', async () => {
+  const { recipeRequiresBuild, revisionReason, revisionAppliesTo, validateRevisionReasons } = await import('../scripts/package-revisions')
+  const revisions = { '1.2.3': 1 }
+  const reasons = { '1.2.3': 'elf-loader-paths' } as const
+  expect(validateRevisionReasons(revisions, reasons)).toBeUndefined()
+  expect(() => validateRevisionReasons(revisions, { '1.2.4': 'elf-loader-paths' })).toThrow('no revision')
+  expect(() => validateRevisionReasons(revisions, { '1.2.3': 'other' as never })).toThrow('Unknown revision reason')
+
+  expect(revisionReason('1.2.3.1', revisions, reasons)).toBe('elf-loader-paths')
+  expect(revisionReason('1.2.3', revisions, reasons)).toBeUndefined()
+  expect(revisionReason('1.2.4', revisions, reasons)).toBeUndefined()
+  // The repair is a mirrored vendor build with normalised loader paths.
+  expect(recipeAllowsMirror('1.2.3.1', recipeBuildVersion('1.2.3.1', revisions), recipeRequiresBuild(revisions, reasons), 'elf-loader-paths')).toBe(true)
+  // Any other revision still executes the recipe.
+  expect(recipeAllowsMirror('1.2.3.1', recipeBuildVersion('1.2.3.1', revisions), recipeRequiresBuild(revisions, {}))).toBe(false)
+  expect(recipeRequiresBuild(revisions, {})).toBe(true)
+  expect(recipeRequiresBuild(revisions, reasons)).toBe(false)
+  expect(recipeRequiresBuild({ '1.2.3': 1, '1.2.4': 1 }, reasons)).toBe(true)
+  // A later vendor release stays a plain mirror.
+  expect(recipeAllowsMirror('1.2.4', recipeBuildVersion('1.2.4', revisions), recipeRequiresBuild(revisions, reasons))).toBe(true)
+  // Never republishes the superseded identity.
+  expect(() => recipeAllowsMirror('1.2.3', recipeBuildVersion('1.2.3', revisions), false, 'elf-loader-paths')).toThrow('refusing to replace')
+
+  expect(revisionAppliesTo('elf-loader-paths', 'linux-x86-64')).toBe(true)
+  expect(revisionAppliesTo('elf-loader-paths', 'linux-arm64')).toBe(true)
+  expect(revisionAppliesTo('elf-loader-paths', 'darwin-arm64')).toBe(false)
+  expect(revisionAppliesTo(undefined, 'darwin-arm64')).toBe(true)
+})
+
+test('a Linux-only revision is selected on Linux and leaves macOS on its published base', async () => {
+  const { selectRevisionVersions } = await import('../scripts/package-revisions')
+  const versions = ['1.2.3.1', '1.2.3', '1.2.2']
+  const revisions = { '1.2.3': 1 }
+  const reasons = { '1.2.3': 'elf-loader-paths' } as const
+  expect(selectRevisionVersions(versions, revisions, reasons, 'linux-x86-64')).toEqual(['1.2.3.1', '1.2.2'])
+  expect(selectRevisionVersions(versions, revisions, reasons, 'darwin-arm64')).toEqual(['1.2.3', '1.2.2'])
+  // A revision for any other reason applies everywhere.
+  expect(selectRevisionVersions(versions, revisions, {}, 'darwin-arm64')).toEqual(['1.2.3.1', '1.2.2'])
+  expect(selectRevisionVersions(versions, undefined, undefined, 'darwin-arm64')).toEqual(versions)
+})
+
+test('a recipe declaring an ELF loader-path revision loads as mirrorable on Linux', async () => {
+  const { recipeIdentity } = await import('../scripts/recipe-loader')
+  const identity = recipeIdentity({ revisions: { '1.2.3': 1 }, revisionReasons: { '1.2.3': 'elf-loader-paths' } } as never, '1.2.3.1')
+  expect(identity).toEqual({ upstreamVersion: '1.2.3', publicationVersion: '1.2.3.1', requiresRecipeBuild: false, revisionReason: 'elf-loader-paths' })
+  const plain = recipeIdentity({ revisions: { '1.2.3': 1 } } as never, '1.2.3.1')
+  expect(plain.requiresRecipeBuild).toBe(true)
+  expect(plain.revisionReason).toBeUndefined()
+})
