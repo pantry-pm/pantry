@@ -67,6 +67,7 @@ export const bcryptsourceforgenetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.1.0.1',
     '1.1.0',
   ] as const,
   aliases: [] as const,

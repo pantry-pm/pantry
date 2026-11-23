@@ -66,6 +66,7 @@ export const awsiamauthenticatorPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.7.12.1',
     '0.7.12',
     '0.7.11',
     '0.7.10',

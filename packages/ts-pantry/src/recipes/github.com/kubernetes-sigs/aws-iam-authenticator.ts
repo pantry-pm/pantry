@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/kubernetes-sigs/aws-iam-authenticator',
   name: 'aws-iam-authenticator',
+  revisions: { '0.7.12': 1 },
+  revisionReasons: { '0.7.12': 'elf-loader-paths' },
   programs: [
     'aws-iam-authenticator',
   ],

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'open-mpi.org/hwloc',
   name: 'hwloc',
+  revisions: { '2.13.0': 1 },
+  revisionReasons: { '2.13.0': 'elf-loader-paths' },
   programs: [
     'hwloc-annotate',
     'hwloc-bind',

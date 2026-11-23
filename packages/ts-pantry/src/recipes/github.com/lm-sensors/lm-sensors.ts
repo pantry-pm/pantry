@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'github.com/lm-sensors/lm-sensors',
   platforms: ['linux'],
   name: 'lm-sensors',
+  revisions: { '3.6.0': 1 },
+  revisionReasons: { '3.6.0': 'elf-loader-paths' },
   programs: [
     'sensors',
   ],

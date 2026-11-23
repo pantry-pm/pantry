@@ -70,6 +70,7 @@ export const epsilonprojectsourceforgeioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.9.2.1',
     '0.9.2',
   ] as const,
   aliases: [] as const,

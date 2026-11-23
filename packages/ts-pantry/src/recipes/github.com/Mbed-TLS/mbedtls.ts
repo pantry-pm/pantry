@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/Mbed-TLS/mbedtls',
   name: 'mbedtls',
+  revisions: { '3.6.3.1': 1 },
+  revisionReasons: { '3.6.3.1': 'elf-loader-paths' },
   programs: [
     'aead_demo',
     'cert_app',

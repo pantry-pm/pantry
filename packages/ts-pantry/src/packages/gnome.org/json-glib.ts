@@ -65,6 +65,7 @@ export const gnomeorgjsonglibPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.10.8.1',
     '1.10.8',
     '1.10.6',
     '1.10.0',

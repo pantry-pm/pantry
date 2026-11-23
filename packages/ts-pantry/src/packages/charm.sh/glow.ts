@@ -66,6 +66,7 @@ export const charmshglowPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.1.1',
     '2.1.1',
     '2.1.0',
     '2.0.0',

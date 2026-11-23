@@ -77,6 +77,7 @@ export const libxmlbPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.3.25.1',
     '0.3.25',
     '0.3.24',
     '0.3.23',

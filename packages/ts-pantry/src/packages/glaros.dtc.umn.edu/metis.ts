@@ -73,6 +73,7 @@ export const glarosdtcumnedumetisPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.2.1.2.1',
     '5.2.1.2',
     '5.2.1.1',
     '5.1.0.4',

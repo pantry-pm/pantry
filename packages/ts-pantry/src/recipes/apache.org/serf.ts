@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'apache.org/serf',
   name: 'serf',
+  revisions: { '1.3.10': 1 },
+  revisionReasons: { '1.3.10': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'apache.org/apr': '^1',

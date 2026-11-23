@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'epsilon-project.sourceforge.io',
   name: 'epsilon',
+  revisions: { '0.9.2': 1 },
+  revisionReasons: { '0.9.2': 'elf-loader-paths' },
   description: 'Powerful wavelet image compressor',
   homepage: 'https://sourceforge.net/projects/epsilon-project/',
   programs: ['epsilon'],

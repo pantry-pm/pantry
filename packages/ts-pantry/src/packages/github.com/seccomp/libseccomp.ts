@@ -67,6 +67,7 @@ export const libseccompPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.6.0.1',
     '2.6.0',
     '2.5.6',
     '2.5.5',

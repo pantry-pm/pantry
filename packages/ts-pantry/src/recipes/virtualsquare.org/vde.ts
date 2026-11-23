@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'virtualsquare.org/vde',
   name: 'vde',
+  revisions: { '2.3.3': 1 },
+  revisionReasons: { '2.3.3': 'elf-loader-paths' },
   programs: [
     'vde_autolink',
     'vde_over_ns',

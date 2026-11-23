@@ -70,6 +70,7 @@ export const apacheorgserfPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.3.10.1',
     '1.3.10',
   ] as const,
   aliases: [] as const,

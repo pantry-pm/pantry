@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'glaros.dtc.umn.edu/metis',
   name: 'metis',
+  revisions: { '5.2.1.2': 1 },
+  revisionReasons: { '5.2.1.2': 'elf-loader-paths' },
   programs: [
     'cmpfillin',
     'gpmetis',

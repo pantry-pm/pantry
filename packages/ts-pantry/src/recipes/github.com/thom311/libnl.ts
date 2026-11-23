@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'github.com/thom311/libnl',
   platforms: ['linux'],
   name: 'libnl',
+  revisions: { '3.12.0': 1 },
+  revisionReasons: { '3.12.0': 'elf-loader-paths' },
   programs: [],
   buildDependencies: {
     'gnu.org/bison': '*',

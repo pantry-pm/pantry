@@ -67,6 +67,7 @@ export const googlecomprotobufgoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.36.11.1',
     '1.36.11',
     '1.36.10',
     '1.36.9',

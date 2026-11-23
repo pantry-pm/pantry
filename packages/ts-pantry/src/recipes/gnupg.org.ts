@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   propsDir: 'props/gnupg.org',
   domain: 'gnupg.org',
   name: 'gnupg',
+  revisions: { '2.4.8': 1 },
+  revisionReasons: { '2.4.8': 'elf-loader-paths' },
   description: 'GNU Pretty Good Privacy (PGP) package',
   homepage: 'https://gnupg.org/',
   programs: ['gpg', 'gpg-agent', 'gpg-connect-agent', 'gpg-wks-server', 'gpgconf', 'gpgparsemail', 'gpgscm', 'gpgsm', 'gpgsplit', 'gpgtar', 'gpgv', 'kbxutil', 'watchgnupg'],

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'crates.io/zoxide',
   name: 'zoxide',
+  revisions: { '0.9.9': 1 },
+  revisionReasons: { '0.9.9': 'elf-loader-paths' },
   programs: [
     'zoxide',
   ],

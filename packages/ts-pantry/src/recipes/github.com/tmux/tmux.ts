@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/tmux/tmux',
   name: 'tmux',
+  revisions: { '3.6a': 1 },
+  revisionReasons: { '3.6a': 'elf-loader-paths' },
   programs: [
     'tmux',
   ],

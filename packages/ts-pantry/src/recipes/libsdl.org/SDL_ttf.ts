@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'libsdl.org/SDL_ttf',
   name: 'SDL_ttf',
+  revisions: { '2.24.0': 1 },
+  revisionReasons: { '2.24.0': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'freetype.org': '>=2.0.4',

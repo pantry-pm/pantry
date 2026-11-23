@@ -59,6 +59,7 @@ export const virtualsquareorgvdePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.3.1',
     '2.3.3',
   ] as const,
   aliases: [] as const,

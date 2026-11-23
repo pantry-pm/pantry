@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'x.org/xpm',
   name: 'xpm',
+  revisions: { '3.5.18': 1 },
+  revisionReasons: { '3.5.18': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'x.org/x11': '*',

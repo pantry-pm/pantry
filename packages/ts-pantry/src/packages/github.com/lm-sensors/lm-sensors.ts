@@ -69,6 +69,7 @@ export const lmsensorsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.6.0.1',
     '3.6.0',
   ] as const,
   aliases: [] as const,

@@ -67,6 +67,7 @@ export const dockercomcomposePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.1.1.1',
     '5.1.1',
     '5.1.0',
     '5.0.2',

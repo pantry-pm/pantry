@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'crates.io/ripgrep',
   name: 'ripgrep',
+  revisions: { '15.1.0': 1 },
+  revisionReasons: { '15.1.0': 'elf-loader-paths' },
   programs: [
     'rg',
   ],

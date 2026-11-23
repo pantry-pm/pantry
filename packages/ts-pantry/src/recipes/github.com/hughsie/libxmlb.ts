@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/hughsie/libxmlb',
   name: 'libxmlb',
+  revisions: { '0.3.25': 1 },
+  revisionReasons: { '0.3.25': 'elf-loader-paths' },
   programs: [
     'xb-tool',
   ],

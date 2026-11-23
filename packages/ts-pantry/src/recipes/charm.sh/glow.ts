@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'charm.sh/glow',
   name: 'glow',
+  revisions: { '2.1.1': 1 },
+  revisionReasons: { '2.1.1': 'elf-loader-paths' },
   programs: [
     'glow',
   ],

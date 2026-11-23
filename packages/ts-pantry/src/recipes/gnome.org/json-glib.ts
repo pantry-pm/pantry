@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnome.org/json-glib',
   name: 'json-glib',
+  revisions: { '1.10.8': 1 },
+  revisionReasons: { '1.10.8': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'gnome.org/glib': '^2.78',

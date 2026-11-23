@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'github.com/seccomp/libseccomp',
   platforms: ['linux'],
   name: 'libseccomp',
+  revisions: { '2.6.0': 1 },
+  revisionReasons: { '2.6.0': 'elf-loader-paths' },
   programs: [
     'scmp_sys_resolver',
   ],

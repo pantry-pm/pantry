@@ -60,6 +60,7 @@ export const cratesiozoxidePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.9.9.1',
     '0.9.9',
     '0.9.8',
     '0.9.7',

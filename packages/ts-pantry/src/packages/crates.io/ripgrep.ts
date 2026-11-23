@@ -65,6 +65,7 @@ export const ripgrepPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '15.1.0.1',
     '15.1.0',
     '15.0.0',
     '14.1.1',

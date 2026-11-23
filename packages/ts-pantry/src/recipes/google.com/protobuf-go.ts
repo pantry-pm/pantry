@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'google.com/protobuf-go',
   name: 'protobuf-go',
+  revisions: { '1.36.11': 1 },
+  revisionReasons: { '1.36.11': 'elf-loader-paths' },
   programs: [
     'protoc-gen-go',
   ],

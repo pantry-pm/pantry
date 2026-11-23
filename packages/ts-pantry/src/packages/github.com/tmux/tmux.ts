@@ -75,6 +75,7 @@ export const tmuxPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.6a.pantry1',
     '3.6a',
     '3.6.0',
     '3.5a',

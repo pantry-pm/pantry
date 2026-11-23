@@ -68,6 +68,7 @@ export const libmaxminddbPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.13.3.1',
     '1.13.3',
     '1.13.2',
     '1.13.1',

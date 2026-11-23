@@ -77,6 +77,7 @@ export const openmpiorghwlocPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.13.0.1',
     '2.13.0',
     '2.12.2',
     '2.12.1',

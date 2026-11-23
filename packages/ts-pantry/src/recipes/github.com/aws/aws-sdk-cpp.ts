@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/aws/aws-sdk-cpp',
   name: 'aws-sdk-cpp',
+  revisions: { '1.11.774': 1 },
+  revisionReasons: { '1.11.774': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'curl.se': '*',

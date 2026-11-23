@@ -67,6 +67,7 @@ export const awssdkcppPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.11.774.1',
     '1.11.774',
     '1.11.773',
     '1.11.772',

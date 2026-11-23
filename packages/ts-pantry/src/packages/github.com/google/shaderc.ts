@@ -67,6 +67,7 @@ export const shadercPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2026.1.0.1',
     '2026.1.0',
     '2025.5.0',
     '2025.4.0',

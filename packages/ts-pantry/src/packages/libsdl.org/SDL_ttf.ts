@@ -59,6 +59,7 @@ export const libsdlorgsdl_ttfPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.24.0.1',
     '2.24.0',
   ] as const,
   aliases: [] as const,

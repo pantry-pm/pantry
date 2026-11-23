@@ -65,6 +65,7 @@ export const xorgxpmPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.5.18.1',
     '3.5.18',
     '3.5.17',
     '3.5.15',

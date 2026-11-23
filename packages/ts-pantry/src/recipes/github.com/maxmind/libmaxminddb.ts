@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/maxmind/libmaxminddb',
   name: 'libmaxminddb',
+  revisions: { '1.13.3': 1 },
+  revisionReasons: { '1.13.3': 'elf-loader-paths' },
   programs: [
     'mmdblookup',
   ],
