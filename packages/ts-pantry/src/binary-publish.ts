@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { createReadStream } from 'node:fs'
+import { closeSync, createReadStream, openSync, readSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 
 export interface PublishBinaryArtifactOptions {
@@ -337,10 +337,39 @@ async function initiateBinaryUpload(
  * registry can promote it into binaries/, and only after a clean verdict for
  * the exact expected SHA-256 and byte length.
  */
+/**
+ * Why `head` (an archive's first bytes) is not a gzip stream, or null.
+ *
+ * In July 2026 the malware backfill read retained artifacts back through an
+ * object-storage client whose `getObjectBuffer` decoded them as UTF-8 text
+ * (fixed in ts-cloud 00b70e0a) and republished what it got: every byte over
+ * 0x7f became U+FFFD, the checksum was taken over the mangled bytes, and
+ * akuity.io/kargo 1.9.5 went out as an archive no client can open. A `.tar.gz`
+ * that does not start with the gzip magic is never a valid upload.
+ */
+export function gzipFrameProblem(head: Uint8Array): string | null {
+  if (head.length >= 3 && head[0] === 0x1F && head[1] === 0x8B && head[2] === 0x08) return null
+  const hex = [...head.subarray(0, 4)].map(b => b.toString(16).padStart(2, '0')).join(' ')
+  if (head[0] === 0x1F && head[1] === 0xEF && head[2] === 0xBF && head[3] === 0xBD)
+    return `starts ${hex}: the archive's bytes were decoded as text (U+FFFD replacements) before upload`
+  return `starts ${hex}, not the gzip magic 1f 8b 08`
+}
+
+function assertGzipArtifact(filePath: string, filename: string): void {
+  if (!/\.(?:tar\.gz|tgz)$/.test(filename)) return
+  const head = new Uint8Array(4)
+  const fd = openSync(filePath, 'r')
+  try { readSync(fd, head, 0, 4, 0) }
+  finally { closeSync(fd) }
+  const problem = gzipFrameProblem(head)
+  if (problem) throw new Error(`Refusing to publish ${filename}: it ${problem}`)
+}
+
 export async function publishBinaryArtifact(
   options: PublishBinaryArtifactOptions,
 ): Promise<PublishedBinaryArtifact> {
   const { registryUrl, token } = registryConfig(options)
+  assertGzipArtifact(options.filePath, options.filename)
   const sha256 = await sha256File(options.filePath)
   const auth = { Authorization: `Bearer ${token}` }
 

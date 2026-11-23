@@ -347,7 +347,8 @@ describe('upload initiation', () => {
 
   function artifact() {
     const file = join(mkdtempSync(join(tmpdir(), 'pantry-initiate-')), 'a.tar.gz')
-    writeFileSync(file, 'artifact bytes')
+    // A gzip header, then filler: the publisher refuses anything else as a .tar.gz.
+    writeFileSync(file, Buffer.concat([Buffer.from([0x1F, 0x8B, 0x08]), Buffer.from('artifact byt')]))
     tempFiles.push(file)
     return file
   }
@@ -541,5 +542,33 @@ describe('a rejection has to say what matched', () => {
     expect(message).not.toContain('undefined')
     expect(message).not.toContain('signature=')
     expect(message).toContain('verdict=blocked')
+  })
+})
+
+describe('archive framing', () => {
+  test('a gzip tarball whose bytes were decoded as text is refused before any upload', async () => {
+    const { gzipFrameProblem } = await import('../src/binary-publish')
+    expect(gzipFrameProblem(new Uint8Array([0x1F, 0x8B, 0x08, 0x00]))).toBeNull()
+    expect(gzipFrameProblem(new Uint8Array([0x1F, 0xEF, 0xBF, 0xBD]))).toContain('decoded as text')
+    expect(gzipFrameProblem(new Uint8Array([0x50, 0x4B, 0x03, 0x04]))).toContain('not the gzip magic')
+
+    const dir = mkdtempSync(join(tmpdir(), 'pantry-mangled-'))
+    try {
+      const file = join(dir, 'akuity.io-kargo-1.9.5.tar.gz')
+      writeFileSync(file, new Uint8Array([0x1F, 0xEF, 0xBF, 0xBD, 0x08, 0x00]))
+      await expect(publishBinaryArtifact({
+        filePath: file,
+        domain: 'akuity.io/kargo',
+        version: '1.9.5',
+        platforms: ['linux-x86-64'],
+        filename: 'akuity.io-kargo-1.9.5.tar.gz',
+        size: 6,
+        registryUrl: 'http://127.0.0.1:9',
+        token: 'test',
+      } as never)).rejects.toThrow('Refusing to publish akuity.io-kargo-1.9.5.tar.gz')
+    }
+    finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

@@ -63,10 +63,18 @@ export function requireCurrentRecipeBuild(packageVersion: string, currentVersion
  * mirroring it again and normalising its loader paths
  * (`normalizeMirroredArtifact`) is the repair, and only Linux artifacts are ELF.
  */
-export type RevisionReason = 'elf-loader-paths'
+export type RevisionReason = 'elf-loader-paths' | 'corrupt-archive'
 export type PackageRevisionReasons = Readonly<Record<string, RevisionReason>>
 
-const knownReasons: ReadonlySet<string> = new Set<RevisionReason>(['elf-loader-paths'])
+/**
+ * `corrupt-archive`: the published archive itself is damaged (akuity.io/kargo
+ * 1.9.5 was republished with its bytes decoded as text), not the build, so the
+ * vendor release may be mirrored again, on every platform.
+ */
+const knownReasons: ReadonlySet<string> = new Set<RevisionReason>(['elf-loader-paths', 'corrupt-archive'])
+
+/** Reasons whose repair is a fresh copy of the vendor build rather than a recipe change. */
+const mirrorableReasons: ReadonlySet<string> = new Set<RevisionReason>(['elf-loader-paths', 'corrupt-archive'])
 
 /** Every reason names a declared revision and a known repair. */
 export function validateRevisionReasons(revisions?: PackageRevisions, reasons?: PackageRevisionReasons): void {
@@ -88,7 +96,7 @@ export function revisionReason(packageVersion: string, revisions?: PackageRevisi
  * must, for later releases too; a loader-path repair does not.
  */
 export function recipeRequiresBuild(revisions?: PackageRevisions, reasons?: PackageRevisionReasons): boolean {
-  return Object.keys(revisions ?? {}).some(release => reasons?.[release] !== 'elf-loader-paths')
+  return Object.keys(revisions ?? {}).some(release => !mirrorableReasons.has(reasons?.[release] ?? ''))
 }
 
 /** Platforms a revision is published for: a loader-path repair is Linux-only. */
@@ -111,9 +119,9 @@ export function selectRevisionVersions(versions: readonly string[], revisions: P
   })
 }
 
-/** Vendor prebuilts cannot contain a Pantry packaging repair, except a loader-path one. */
+/** Vendor prebuilts cannot contain a Pantry packaging repair, except a loader-path or archive one. */
 export function recipeAllowsMirror(packageVersion: string, identity: { upstream: string, current: string }, requiresRecipeBuild = false, reason?: RevisionReason): boolean {
   requireCurrentRecipeBuild(packageVersion, identity.current)
   if (identity.upstream === packageVersion) return !requiresRecipeBuild
-  return reason === 'elf-loader-paths'
+  return reason !== undefined && mirrorableReasons.has(reason)
 }

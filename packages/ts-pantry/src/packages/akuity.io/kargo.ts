@@ -67,6 +67,7 @@ export const akuityiokargoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.9.5.1',
     '1.9.5',
     '1.9.4',
     '1.9.3',

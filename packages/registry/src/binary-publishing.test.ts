@@ -1644,6 +1644,17 @@ describe('a retry does not start a competing scan', () => {
     expect(scanner.contexts).toHaveLength(1)
   })
 
+  it('refuses an archive whose bytes were decoded as text before it reached the publisher', async () => {
+    const store = new MemoryArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new ControlledTestScanner(), {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    // akuity.io/kargo 1.9.5 as the July 2026 backfill republished it.
+    const mangled = Buffer.from([0x1F, 0xEF, 0xBF, 0xBD, 0x08, 0x00, 0x00])
+    await expect(publisher.publishBuffer(request(mangled), mangled, '_admin'))
+      .rejects.toMatchObject({ code: 'BINARY_NOT_GZIP', status: 422 })
+  })
+
   it('makes an in-process caller wait for the verdict instead of handing it a 425', async () => {
     // publishBuffer and the pkgx fallback run inside the process with nothing
     // to poll with. A retryable "ask again later" is an error they cannot act

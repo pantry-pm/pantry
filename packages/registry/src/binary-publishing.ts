@@ -1092,6 +1092,11 @@ export class BinaryArtifactPublisher {
     const request = validateBinaryPublishRequest(input, this.maxBytes)
     if (bytes.byteLength !== request.size)
       throw new BinaryPublishError('Artifact buffer size does not match the publish request', 422, 'BINARY_SIZE_MISMATCH')
+    // Native artifacts are gzip tarballs. Bytes that lost their framing, such
+    // as an archive decoded as UTF-8 text and re-encoded (gzip magic 1f ef bf
+    // bd), would be scanned, hashed and published as an archive nobody can open.
+    if (/\.(?:tar\.gz|tgz)$/.test(request.filename) && !(bytes[0] === 0x1F && bytes[1] === 0x8B && bytes[2] === 0x08))
+      throw new BinaryPublishError('Artifact is not a gzip archive', 422, 'BINARY_NOT_GZIP')
     const initiated = this.initiate(request, publisher)
     const claim = this.verifyClaim(initiated.uploadId)
     await this.store.putObject(claim.stagingKey, bytes, 'application/gzip')

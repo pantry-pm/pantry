@@ -1,7 +1,7 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN, repaired by elf-loader-paths revisions (scripts/elf-loader-revisions.ts, audited with scripts/audit-elf-rpaths.ts).",
   "summary": {
-    "pending": 8
+    "pending": 9
   },
   "packages": [
     {
@@ -83,6 +83,20 @@
       ],
       "batch": 1,
       "status": "pending"
+    },
+    {
+      "domain": "akuity.io/kargo",
+      "oldBuild": "1.9.5",
+      "revision": "1.9.5.1",
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86-64",
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 2,
+      "status": "pending",
+      "note": "corrupt-archive: the July 2026 malware backfill republished the archive with its bytes decoded as text (gzip magic 1f ef bf bd); darwin-x86-64 is retired and is not rebuilt"
     }
   ]
 }

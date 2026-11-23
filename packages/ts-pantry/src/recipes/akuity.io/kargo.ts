@@ -3,6 +3,10 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'akuity.io/kargo',
   name: 'kargo',
+  // 1.9.5 was republished in July 2026 with its archive bytes decoded as text
+  // (gzip magic 1f ef bf bd), so no client could open it on any platform.
+  revisions: { '1.9.5': 1 },
+  revisionReasons: { '1.9.5': 'corrupt-archive' },
   programs: [
     'kargo',
   ],

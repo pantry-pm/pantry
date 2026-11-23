@@ -253,3 +253,13 @@ test('a recipe declaring an ELF loader-path revision loads as mirrorable on Linu
   expect(plain.requiresRecipeBuild).toBe(true)
   expect(plain.revisionReason).toBeUndefined()
 })
+
+test('a corrupt published archive is repaired by mirroring the vendor release again, on every platform', async () => {
+  const { recipeRequiresBuild, revisionAppliesTo, selectRevisionVersions } = await import('../scripts/package-revisions')
+  const revisions = { '1.9.5': 1 }
+  const reasons = { '1.9.5': 'corrupt-archive' } as const
+  expect(recipeRequiresBuild(revisions, reasons)).toBe(false)
+  expect(recipeAllowsMirror('1.9.5.1', recipeBuildVersion('1.9.5.1', revisions), false, 'corrupt-archive')).toBe(true)
+  expect(revisionAppliesTo('corrupt-archive', 'darwin-arm64')).toBe(true)
+  expect(selectRevisionVersions(['1.9.5.1', '1.9.5'], revisions, reasons, 'darwin-arm64')).toEqual(['1.9.5.1'])
+})
