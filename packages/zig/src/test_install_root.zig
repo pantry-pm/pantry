@@ -5,6 +5,8 @@ test {
     // The install failure report and transient-failure classification.
     _ = @import("cli/style.zig");
     _ = @import("cli/commands/install/core.zig");
+    // Replacing locked or installed builds that a build revision superseded.
+    _ = @import("install/build_revisions.zig");
     _ = @import("cli/commands/install/workspace.zig");
     // Scope pinning: private scopes resolve from their Pantry registry only.
     // Rooted here rather than in test_registry_root.zig because reading a

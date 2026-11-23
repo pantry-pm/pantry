@@ -171,3 +171,35 @@ test('the normal version updater checks declared packaging repairs without an up
   expect(result.stdout.toString()).toContain('Done: 1 checked,')
   expect(readFileSync(metadata, 'utf8')).toBe(before)
 })
+
+test('the native catalog names every recipe build revision, so installs can replace defective builds', async () => {
+  const { zigBuildRevisions } = await import('../src/generate-zig')
+  expect(zigBuildRevisions(undefined)).toBe('')
+  expect(zigBuildRevisions({ '1.5.7': 2 })).toBe('\n        .build_revisions = &[_]BuildRevision{ .{ .release = "1.5.7", .revision = 2 } },')
+  expect(() => zigBuildRevisions({ '1.5.7-rc1': 1 })).toThrow('Invalid package build revision')
+
+  const { readdirSync, statSync } = await import('node:fs')
+  const recipesDir = resolve(import.meta.dir, '../src/recipes')
+  const catalog = readFileSync(resolve(import.meta.dir, '../../zig/src/packages/generated.zig'), 'utf8')
+  const files: string[] = []
+  const walk = (dir: string): void => {
+    for (const name of readdirSync(dir)) {
+      const path = resolve(dir, name)
+      if (statSync(path).isDirectory()) { if (name !== 'props') walk(path) }
+      else if (name.endsWith('.ts')) files.push(path)
+    }
+  }
+  walk(recipesDir)
+  let revised = 0
+  for (const file of files) {
+    const recipe = (await import(file)).recipe
+    if (!recipe?.revisions || !Object.keys(recipe.revisions).length) continue
+    revised++
+    const start = catalog.indexOf(`.domain = "${recipe.domain}",`)
+    expect(start).toBeGreaterThan(0)
+    const entry = catalog.slice(start, catalog.indexOf('\n    }', start))
+    for (const [release, revision] of Object.entries(recipe.revisions))
+      expect(entry).toContain(`.release = "${release}", .revision = ${revision} }`)
+  }
+  expect(revised).toBeGreaterThan(0)
+})

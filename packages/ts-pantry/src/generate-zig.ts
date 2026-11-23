@@ -33,6 +33,8 @@ interface ZigPackageDefinition {
   buildDependencies: string[]
   aliases: string[]
   versions: string[]
+  /** Recipe `revisions`: upstream release -> newest Pantry build revision. */
+  buildRevisions?: Readonly<Record<string, number>>
 }
 
 /**
@@ -197,8 +199,26 @@ function packageToZigStruct(pkg: ZigPackageDefinition): string {
 ${pkg.sourceablePrograms.length ? `        .sourceable_programs = &[_][]const u8{ ${pkg.sourceablePrograms.map(name => `"${escapeZigString(name)}"`).join(', ')} },\n` : ''}        .dependencies = &[_][]const u8{ ${deps} },
         .build_dependencies = &[_][]const u8{ ${buildDeps} },
         .aliases = &[_][]const u8{ ${aliases} },
-        .versions = &[_][]const u8{ ${versions} },
+        .versions = &[_][]const u8{ ${versions} },${zigBuildRevisions(pkg.buildRevisions)}
     }`
+}
+
+/**
+ * The catalog field naming a recipe's build revisions, or nothing. A build
+ * revision (`1.5.7.2`) is a packaging rebuild of one upstream release
+ * (`1.5.7`); the installer replaces an installed or locked older build of that
+ * release with it, and must not mistake an ordinary upstream release that
+ * happens to add a component (`1.3` -> `1.3.1`) for one. Only the recipe knows.
+ */
+export function zigBuildRevisions(revisions?: Readonly<Record<string, number>>): string {
+  const entries = Object.entries(revisions ?? {}).sort(([a], [b]) => compareVersions(a, b))
+  if (!entries.length) return ''
+  for (const [release, revision] of entries) {
+    if (!/^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))+$/.test(release) || !Number.isSafeInteger(revision) || revision <= 0 || revision > 0xFFFFFFFF)
+      throw new Error(`Invalid package build revision: ${release}@${revision}`)
+  }
+  const items = entries.map(([release, revision]) => `.{ .release = "${escapeZigString(release)}", .revision = ${revision} }`).join(', ')
+  return `\n        .build_revisions = &[_]BuildRevision{ ${items} },`
 }
 
 /**
@@ -226,7 +246,7 @@ function depKey(spec: string): string {
 /** Load a package's build-recipe runtime dependencies (src/recipes/<domain>.ts),
  * if any, as metadata-style specs. The recipe is authoritative for what we
  * actually compiled against, so its deps must flow into the catalog. */
-async function loadRecipeMetadata(recipesDir: string, domain: string, programs: string[]): Promise<{ dependencies: string[], sourceablePrograms: string[], runtimeEnvironment: Readonly<Record<string, string>> }> {
+async function loadRecipeMetadata(recipesDir: string, domain: string, programs: string[]): Promise<{ dependencies: string[], sourceablePrograms: string[], runtimeEnvironment: Readonly<Record<string, string>>, revisions?: Readonly<Record<string, number>> }> {
   const file = path.join(recipesDir, `${domain}.ts`)
   if (!fs.existsSync(file))
     return { dependencies: [], sourceablePrograms: [], runtimeEnvironment: {} }
@@ -239,7 +259,7 @@ async function loadRecipeMetadata(recipesDir: string, domain: string, programs: 
     throw new Error(`Invalid recipe program interfaces for ${domain}`)
   const runtimeEnvironment = mod.recipe?.runtime?.env ?? {}
   resolveRuntimeEnvironment(runtimeEnvironment, '/package-prefix-validation')
-  return { dependencies: recipeDepsToSpecs(mod.recipe?.dependencies), sourceablePrograms: sourceable, runtimeEnvironment }
+  return { dependencies: recipeDepsToSpecs(mod.recipe?.dependencies), sourceablePrograms: sourceable, runtimeEnvironment, revisions: mod.recipe?.revisions }
 }
 
 /** A dependency spec without a trailing note: `git-scm.org^2 # v0.7.0 requires it`
@@ -346,6 +366,7 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
         buildDependencies: Array.isArray(pkgData.buildDependencies) ? pkgData.buildDependencies.map(stripSpecComment) : [],
         aliases: mergeAliases(pkgData.domain, Array.isArray(pkgData.aliases) ? pkgData.aliases : []),
         versions: sortedVersions,
+        buildRevisions: recipe.revisions,
       })
 
       processed++
@@ -432,6 +453,13 @@ pub const RuntimeEnvironmentVariable = struct {
     value: []const u8,
 };
 
+/// A recipe's packaging rebuilds of one upstream release: \`release\`.1
+/// through \`release\`.\`revision\` are build revisions of \`release\`.
+pub const BuildRevision = struct {
+    release: []const u8,
+    revision: u32,
+};
+
 /// Package information
 pub const PackageInfo = struct {
     name: []const u8,
@@ -447,6 +475,7 @@ pub const PackageInfo = struct {
     build_dependencies: []const []const u8,
     aliases: []const []const u8,
     versions: []const []const u8,
+    build_revisions: []const BuildRevision = &.{},
 };
 
 /// All known packages (${packages.length} total)

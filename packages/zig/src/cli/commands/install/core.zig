@@ -408,6 +408,112 @@ test "explicit native pins remain available to recursive installs in either root
     }
 }
 
+const build_revisions = @import("../../../install/build_revisions.zig");
+
+const RevisionHooks = struct {
+    installer: *install.Installer,
+    project_root: []const u8,
+    options: types.InstallOptions,
+
+    fn newestPublished(context: *anyopaque, allocator: std.mem.Allocator, domain: []const u8, range: []const u8) anyerror!?[]u8 {
+        _ = context;
+        const found = (try install.downloader.lookupS3Registry(allocator, domain, range)) orelse return null;
+        allocator.free(found.tarball_url);
+        // Only a complete artifact for this platform is worth moving to.
+        if (found.archive_identity == null) {
+            allocator.free(found.version);
+            return null;
+        }
+        return @constCast(found.version);
+    }
+
+    fn installBuild(context: *anyopaque, domain: []const u8, version: []const u8) anyerror!void {
+        const self: *RevisionHooks = @ptrCast(@alignCast(context));
+        var result = try self.installer.install(.{ .name = domain, .version = version }, .{
+            .project_root = self.project_root,
+            .quiet = true,
+            .verbose = self.options.verbose,
+        });
+        result.deinit(self.installer.allocator);
+    }
+};
+
+/// Replace locked or installed builds that a build revision has superseded
+/// (install/build_revisions.zig) before the install proper decides anything.
+/// Best-effort: a failure here leaves the tree as it was.
+fn reviseSupersededBuilds(allocator: std.mem.Allocator, package_args: []const []const u8, options: types.InstallOptions) void {
+    const detector = @import("../../../deps/detector.zig");
+    const parser = @import("../../../deps/parser.zig");
+    const cwd = io_helper.getCwdAlloc(allocator) catch return;
+    defer allocator.free(cwd);
+
+    var deps_file: ?detector.DepsFile = null;
+    defer if (deps_file) |df| allocator.free(df.path);
+    var owned_root: ?[]const u8 = null;
+    defer if (owned_root) |r| allocator.free(r);
+    const root = blk: {
+        if (detector.findWorkspaceFile(allocator, cwd) catch null) |ws| {
+            allocator.free(ws.path);
+            owned_root = ws.root_dir;
+            break :blk ws.root_dir;
+        }
+        deps_file = detector.findDepsFile(allocator, cwd) catch null;
+        if (deps_file) |df| {
+            owned_root = allocator.dupe(u8, std.fs.path.dirname(df.path) orelse cwd) catch return;
+            break :blk owned_root.?;
+        }
+        break :blk cwd;
+    };
+
+    // Nothing to revise without a lock or a tree, and no reason to look further.
+    const lock_path = std.fs.path.join(allocator, &.{ root, "pantry.lock" }) catch return;
+    defer allocator.free(lock_path);
+    const tree_path = std.fs.path.join(allocator, &.{ root, options.modules_dir }) catch return;
+    defer allocator.free(tree_path);
+    const has_lock = if (io_helper.accessAbsolute(lock_path, .{})) |_| true else |_| false;
+    const has_tree = if (io_helper.accessAbsolute(tree_path, .{})) |_| true else |_| false;
+    if (!has_lock and !has_tree) return;
+
+    // Exact versions the user wrote keep their own build.
+    var pins: std.ArrayList(build_revisions.ExactPin) = .empty;
+    defer pins.deinit(allocator);
+    for (package_args) |arg| {
+        const parts = helpers.splitPackageSpec(arg);
+        if (isExactVersion(parts.version)) pins.append(allocator, .{ .domain = helpers.resolvePackageAlias(parts.name), .version = parts.version }) catch return;
+    }
+    const declared: []parser.PackageDependency = if (deps_file) |df| parser.inferDependencies(allocator, df) catch &.{} else &.{};
+    defer {
+        for (declared) |*dep| dep.deinit(allocator);
+        if (declared.len > 0) allocator.free(declared);
+    }
+    for (declared) |dep| {
+        const version = if (std.mem.startsWith(u8, dep.version, "=")) dep.version[1..] else dep.version;
+        if (isExactVersion(version)) pins.append(allocator, .{ .domain = helpers.resolvePackageAlias(dep.name), .version = version }) catch return;
+    }
+
+    var pkg_cache = cache.PackageCache.init(allocator) catch return;
+    defer pkg_cache.deinit();
+    var installer = install.Installer.init(allocator, &pkg_cache) catch return;
+    defer installer.deinit();
+    installer.modules_dir = options.modules_dir;
+    installer.verbose = options.verbose;
+    var context = RevisionHooks{ .installer = &installer, .project_root = root, .options = options };
+
+    const changes = build_revisions.reconcile(allocator, .{
+        .project_root = root,
+        .modules_dir = options.modules_dir,
+        .exact_pins = pins.items,
+        .save_lockfile = !options.no_save,
+    }, .{ .context = &context, .newestPublished = RevisionHooks.newestPublished, .install = RevisionHooks.installBuild }) catch |err| {
+        if (options.verbose) style.print("  ! Could not check for rebuilt packages: {s}\n", .{@errorName(err)});
+        return;
+    };
+    defer build_revisions.freeChanges(allocator, changes);
+    for (changes) |change| {
+        style.print("  {s}~{s} {s} {s} -> {s} {s}(rebuilt package){s}\n", .{ style.dim, style.reset, change.domain, change.from, change.to, style.dim, style.reset });
+    }
+}
+
 /// Install packages - main entry point
 pub fn installCommand(allocator: std.mem.Allocator, args: []const []const u8) !types.CommandResult {
     return installCommandWithOptions(allocator, args, .{});
@@ -521,6 +627,11 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     if (is_global and package_args.items.len > 0) {
         return try global.installPackagesGloballyCommand(allocator, package_args.items);
     }
+
+    // A tree converged before a build revision existed would otherwise keep
+    // the defective build forever: see install/build_revisions.zig.
+    if (!options.frozen_lockfile and !offline.isOfflineMode())
+        reviseSupersededBuilds(allocator, package_args.items, options);
 
     // Otherwise, normal install flow
     if (package_args.items.len == 0) {

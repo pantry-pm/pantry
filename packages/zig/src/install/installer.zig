@@ -3228,7 +3228,7 @@ pub const Installer = struct {
             best = self.allocator.dupe(u8, version) catch null;
         }
         if (best) |newest| {
-            if (semver.catalogBuildRevision(domain, newest, parsed) != null) {
+            if (semver.hasNewerBuildRevision(semver.catalogBuildRevisions(domain), newest, parsed)) {
                 self.allocator.free(newest);
                 return null;
             }

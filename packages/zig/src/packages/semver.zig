@@ -581,73 +581,105 @@ pub fn resolveVersion(domain: []const u8, constraint_str: []const u8) ?[]const u
     return null;
 }
 
-/// The newest Pantry build revision of `version` in `versions` that
-/// `constraint` accepts (null: any), or null when there is none.
+/// Where `version` stands among a recipe's build revisions: which upstream
+/// release it builds, which build it is (0 for the base), and the newest.
 ///
 /// A build revision repackages one vendor release under one more numeric
-/// component: facebook.com/zstd 1.5.7.2 is upstream 1.5.7 rebuilt, and the
-/// 1.5.7 Linux artifact it replaces carries an RPATH of `/../lib` that loads
-/// the host's libzstd. Both identities stay published and an exact pin keeps
-/// its own, but a range that accepts the revision must not settle for the
-/// build it repaired just because that build is already on disk.
-pub fn newerBuildRevision(versions: []const []const u8, version: []const u8, constraint: ?Constraint) ?[]const u8 {
-    // When `version` is itself a revision (1.5.7.1 of a listed 1.5.7), a
-    // later revision of the same release (1.5.7.2) supersedes it too.
-    const release: ?[]const u8 = blk: {
-        const dot = std.mem.lastIndexOfScalar(u8, version, '.') orelse break :blk null;
-        if (!allDigits(version[dot + 1 ..])) break :blk null;
-        for (versions) |listed| if (std.mem.eql(u8, listed, version[0..dot])) break :blk listed;
-        break :blk null;
-    };
-    var best: ?[]const u8 = null;
-    for (versions) |candidate| {
-        const revises = isBuildRevisionOf(candidate, version) or
-            (release != null and isBuildRevisionOf(candidate, release.?) and compareVersions(candidate, version) == .gt);
-        if (!revises) continue;
-        if (constraint) |bound| if (!satisfiesConstraint(candidate, bound)) continue;
-        if (best) |current| if (compareVersions(candidate, current) != .gt) continue;
-        best = candidate;
+/// component, because the earlier build is defective: facebook.com/zstd
+/// 1.5.7.2 is upstream 1.5.7 rebuilt, and the 1.5.7 Linux artifact carries
+/// an RPATH of `/../lib` that loads the host's libzstd. Only the recipe's
+/// `revisions` (carried into the catalog as `build_revisions`) can say
+/// which identities are rebuilds; an upstream release that adds a component
+/// (`1.3` -> `1.3.1`) is not one.
+pub const BuildPosition = struct {
+    release: []const u8,
+    build: u32,
+    newest: u32,
+};
+
+pub fn buildPosition(revisions: []const generated.BuildRevision, version: []const u8) ?BuildPosition {
+    for (revisions) |entry| {
+        if (std.mem.eql(u8, version, entry.release)) return .{ .release = entry.release, .build = 0, .newest = entry.revision };
+        if (version.len <= entry.release.len + 1 or !std.mem.startsWith(u8, version, entry.release) or version[entry.release.len] != '.') continue;
+        const build = std.fmt.parseInt(u32, version[entry.release.len + 1 ..], 10) catch continue;
+        if (build == 0 or build > entry.revision) continue;
+        return .{ .release = entry.release, .build = build, .newest = entry.revision };
     }
-    return best;
+    return null;
 }
 
-/// `candidate` is `release` plus one numeric component.
-fn isBuildRevisionOf(candidate: []const u8, release: []const u8) bool {
-    return candidate.len > release.len + 1 and
-        std.mem.startsWith(u8, candidate, release) and
-        candidate[release.len] == '.' and
-        allDigits(candidate[release.len + 1 ..]);
+/// True when a later build of `version`'s upstream release exists that
+/// `constraint` accepts (null: any). An exact pin accepts none.
+pub fn hasNewerBuildRevision(revisions: []const generated.BuildRevision, version: []const u8, constraint: ?Constraint) bool {
+    const position = buildPosition(revisions, version) orelse return false;
+    var build = position.newest;
+    var buf: [128]u8 = undefined;
+    while (build > position.build) : (build -= 1) {
+        const candidate = std.fmt.bufPrint(&buf, "{s}.{d}", .{ position.release, build }) catch return false;
+        if (constraint) |bound| if (!satisfiesConstraint(candidate, bound)) continue;
+        return true;
+    }
+    return false;
 }
 
-fn allDigits(text: []const u8) bool {
-    for (text) |c| if (!std.ascii.isDigit(c)) return false;
-    return text.len > 0;
+/// The range of later builds of `version`'s upstream release: `>1.5.7
+/// <=1.5.7.2` for 1.5.7 or `>1.5.7.1 <=1.5.7.2` for 1.5.7.1. Only builds of
+/// the same release satisfy it, so a registry lookup over it never moves
+/// the upstream version. Null when nothing newer is declared. Caller owns it.
+pub fn revisionRange(allocator: std.mem.Allocator, revisions: []const generated.BuildRevision, version: []const u8) !?[]u8 {
+    const position = buildPosition(revisions, version) orelse return null;
+    if (position.build >= position.newest) return null;
+    return try std.fmt.allocPrint(allocator, ">{s} <={s}.{d}", .{ version, position.release, position.newest });
 }
 
-/// `newerBuildRevision` against the compiled package catalog.
-pub fn catalogBuildRevision(domain: []const u8, version: []const u8, constraint: ?Constraint) ?[]const u8 {
-    const pkg = generated.getPackageByDomain(domain) orelse return null;
-    return newerBuildRevision(pkg.versions, version, constraint);
+/// The catalog's build revisions for `domain` (empty when it has none).
+pub fn catalogBuildRevisions(domain: []const u8) []const generated.BuildRevision {
+    const pkg = generated.getPackageByDomain(domain) orelse return &.{};
+    return pkg.build_revisions;
 }
 
-test "a build revision supersedes its base version for ranges that accept it" {
-    const zstd = [_][]const u8{ "1.5.7.2", "1.5.7.1", "1.5.7", "1.5.6" };
-    try std.testing.expectEqualStrings("1.5.7.2", newerBuildRevision(&zstd, "1.5.7", null).?);
-    try std.testing.expectEqualStrings("1.5.7.2", newerBuildRevision(&zstd, "1.5.7", try parseConstraint("^1")).?);
-    try std.testing.expectEqualStrings("1.5.7.2", newerBuildRevision(&zstd, "1.5.7.1", try parseConstraint("^1.5.7")).?);
+const zstd_revisions = [_]generated.BuildRevision{.{ .release = "1.5.7", .revision = 2 }};
+
+test "a build revision supersedes earlier builds of its release for ranges that accept it" {
+    try std.testing.expect(hasNewerBuildRevision(&zstd_revisions, "1.5.7", null));
+    try std.testing.expect(hasNewerBuildRevision(&zstd_revisions, "1.5.7", try parseConstraint("^1")));
+    try std.testing.expect(hasNewerBuildRevision(&zstd_revisions, "1.5.7.1", try parseConstraint("^1.5.7")));
     // An exact pin names one identity, and a range can stop short of the revision.
-    try std.testing.expect(newerBuildRevision(&zstd, "1.5.7", try parseConstraint("1.5.7")) == null);
-    try std.testing.expectEqualStrings("1.5.7.1", newerBuildRevision(&zstd, "1.5.7", try parseConstraint("<=1.5.7.1")).?);
-    try std.testing.expect(newerBuildRevision(&zstd, "1.5.7", try parseConstraint("<1.5.7.1")) == null);
-    // Nothing revises the newest build, an older release, or a non-numeric tail.
-    try std.testing.expect(newerBuildRevision(&zstd, "1.5.7.2", null) == null);
-    try std.testing.expect(newerBuildRevision(&zstd, "1.5.6", null) == null);
-    const tagged = [_][]const u8{ "2.0.0.rc1", "2.0.0" };
-    try std.testing.expect(newerBuildRevision(&tagged, "2.0.0", null) == null);
+    try std.testing.expect(!hasNewerBuildRevision(&zstd_revisions, "1.5.7", try parseConstraint("1.5.7")));
+    try std.testing.expect(hasNewerBuildRevision(&zstd_revisions, "1.5.7", try parseConstraint("<=1.5.7.1")));
+    try std.testing.expect(!hasNewerBuildRevision(&zstd_revisions, "1.5.7", try parseConstraint("<1.5.7.1")));
+    // Nothing revises the newest build, another release, or an undeclared build.
+    try std.testing.expect(!hasNewerBuildRevision(&zstd_revisions, "1.5.7.2", null));
+    try std.testing.expect(!hasNewerBuildRevision(&zstd_revisions, "1.5.6", null));
+    try std.testing.expect(!hasNewerBuildRevision(&zstd_revisions, "1.5.7.3", null));
+    // An upstream release that adds a component is not a build revision.
+    const zlib = [_]generated.BuildRevision{};
+    try std.testing.expect(!hasNewerBuildRevision(&zlib, "1.3", null));
+}
+
+test "a revision range admits only later builds of the same upstream release" {
+    const a = std.testing.allocator;
+    const range = (try revisionRange(a, &zstd_revisions, "1.5.7")).?;
+    defer a.free(range);
+    try std.testing.expectEqualStrings(">1.5.7 <=1.5.7.2", range);
+    const bound = try parseConstraint(range);
+    try std.testing.expect(satisfiesConstraint("1.5.7.2", bound));
+    try std.testing.expect(satisfiesConstraint("1.5.7.1", bound));
+    try std.testing.expect(!satisfiesConstraint("1.5.7", bound));
+    try std.testing.expect(!satisfiesConstraint("1.5.8", bound));
+    const from_revision = (try revisionRange(a, &zstd_revisions, "1.5.7.1")).?;
+    defer a.free(from_revision);
+    try std.testing.expectEqualStrings(">1.5.7.1 <=1.5.7.2", from_revision);
+    try std.testing.expect(try revisionRange(a, &zstd_revisions, "1.5.7.2") == null);
+    const chrome = [_]generated.BuildRevision{.{ .release = "155.0.8059.84", .revision = 2 }};
+    const chrome_range = (try revisionRange(a, &chrome, "155.0.8059.84")).?;
+    defer a.free(chrome_range);
+    try std.testing.expect(satisfiesConstraint("155.0.8059.84.2", try parseConstraint(chrome_range)));
+    try std.testing.expect(!satisfiesConstraint("155.0.8059.85", try parseConstraint(chrome_range)));
 }
 
 test "the catalog knows zstd 1.5.7 was rebuilt" {
-    try std.testing.expect(catalogBuildRevision("facebook.com/zstd", "1.5.7", try parseConstraint("^1")) != null);
+    try std.testing.expect(hasNewerBuildRevision(catalogBuildRevisions("facebook.com/zstd"), "1.5.7", try parseConstraint("^1")));
 }
 
 test "latest resolves to newest stable, not a prerelease" {
