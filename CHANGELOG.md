@@ -1,3 +1,41 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.219...v0.11.220)
+
+## ✨ Features
+
+- **scripts**: confirm a repaired revision ships the programs its catalog entry declares ([061a8f5](https://github.com/pantry-pm/pantry/commit/061a8f5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **revisions**: build revisions for prerelease and lettered releases ([fd8b97a](https://github.com/pantry-pm/pantry/commit/fd8b97a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: check and confirm ELF repairs; probe pkgx for a revision's vendor release ([045e6f8](https://github.com/pantry-pm/pantry/commit/045e6f8)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **scripts**: plan and apply ELF loader-path revisions from the audit ([baa3b50](https://github.com/pantry-pm/pantry/commit/baa3b50)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: mirror and normalise ELF loader-path revisions, Linux only ([3fee139](https://github.com/pantry-pm/pantry/commit/3fee139)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **recipes**: repair ELF loader paths for 25 more packages (batch 5) ([ace0c98](https://github.com/pantry-pm/pantry/commit/ace0c98)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: declare the runtime libraries file, gpgme, cfitsio and tcl link; point gdk-pixbuf at a published libjpeg ([d655409](https://github.com/pantry-pm/pantry/commit/d655409)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **build**: name the command that failed a required health check ([f0e7344](https://github.com/pantry-pm/pantry/commit/f0e7344)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **mirror**: build the recipe when a vendor build links libraries our dependencies lack ([4871209](https://github.com/pantry-pm/pantry/commit/4871209)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: repair ELF loader paths for 25 more packages (batch 4) ([3b3c82f](https://github.com/pantry-pm/pantry/commit/3b3c82f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: declare the runtime libraries jpegxl, openldap, cups and pcsclite link ([55f2531](https://github.com/pantry-pm/pantry/commit/55f2531)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **coreutils**: build chcon and runcon on every host; 9.10.0 revision 3 ([0e30a95](https://github.com/pantry-pm/pantry/commit/0e30a95)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **coreutils**: build without the host's libcrypto and libgmp ([a5b9fcb](https://github.com/pantry-pm/pantry/commit/a5b9fcb)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **mirror**: refuse a vendor build that lacks the catalog's programs; rebuild coreutils 9.10.0 ([6213460](https://github.com/pantry-pm/pantry/commit/6213460)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **recipes**: repair ELF loader paths for 24 more libraries and tools (batch 3) ([2a9eaca](https://github.com/pantry-pm/pantry/commit/2a9eaca)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: declare the runtime libraries dbus, acl and wayland link ([35443a3](https://github.com/pantry-pm/pantry/commit/35443a3)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **fix-up**: rewrite the loader paths of read-only vendor binaries ([f67fcbc](https://github.com/pantry-pm/pantry/commit/f67fcbc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: repair ELF loader paths for 25 core libraries and GNU tools (batch 2) ([292b1fc](https://github.com/pantry-pm/pantry/commit/292b1fc)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **binutils**: declare the zstd runtime its tools link ([043a9c0](https://github.com/pantry-pm/pantry/commit/043a9c0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **publish**: refuse archives that lost their gzip framing; republish kargo 1.9.5 ([e9b508b](https://github.com/pantry-pm/pantry/commit/e9b508b)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: repair ELF loader paths for pcre, bash, coreutils, grep, sed, tar, make and binutils (batch 1) ([e8d7d0d](https://github.com/pantry-pm/pantry/commit/e8d7d0d)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.220 ([b96766f](https://github.com/pantry-pm/pantry/commit/b96766f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chris@stacksjs.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.218...v0.11.219)
 
 ## ✨ Features
