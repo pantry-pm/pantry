@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/findutils',
   name: 'findutils',
+  revisions: { '4.10.0': 1 },
+  revisionReasons: { '4.10.0': 'elf-loader-paths' },
   programs: [
     'find',
     'locate',

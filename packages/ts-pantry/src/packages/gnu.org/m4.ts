@@ -60,6 +60,7 @@ export const gnuorgm4Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.21.1',
     '1.4.21',
     '1.4.20',
     '1.4.19',

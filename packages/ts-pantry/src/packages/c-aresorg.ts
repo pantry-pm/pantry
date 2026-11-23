@@ -58,6 +58,7 @@ export const caresorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.34.6.1',
     '1.34.6',
     '1.34.5',
     '1.34.4',

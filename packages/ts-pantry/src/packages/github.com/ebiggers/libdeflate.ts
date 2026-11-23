@@ -67,6 +67,7 @@ export const libdeflatePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.25.0.1',
     '1.25.0',
     '1.24.0',
     '1.23.0',

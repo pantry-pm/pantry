@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/ebiggers/libdeflate',
   name: 'libdeflate',
+  revisions: { '1.25.0': 1 },
+  revisionReasons: { '1.25.0': 'elf-loader-paths' },
   programs: [
     'libdeflate-gzip',
     'libdeflate-gunzip',

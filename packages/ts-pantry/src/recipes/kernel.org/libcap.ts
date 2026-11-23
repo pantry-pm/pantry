@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'kernel.org/libcap',
   platforms: ['linux'],
   name: 'libcap',
+  revisions: { '1.2.77': 1 },
+  revisionReasons: { '1.2.77': 'elf-loader-paths' },
   programs: [
     'capsh',
     'getcap',

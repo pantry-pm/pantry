@@ -60,6 +60,7 @@ export const gnuorglibidnPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.43.0.1',
     '1.43.0',
     '1.42.0',
     '1.41.0',

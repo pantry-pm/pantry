@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/libtasn1',
   name: 'libtasn1',
+  revisions: { '4.21.0': 1 },
+  revisionReasons: { '4.21.0': 'elf-loader-paths' },
   programs: [
     'asn1Coding',
     'asn1Decoding',

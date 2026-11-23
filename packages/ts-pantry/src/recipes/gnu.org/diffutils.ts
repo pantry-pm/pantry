@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/diffutils',
   name: 'diffutils',
+  revisions: { '3.12.0': 1 },
+  revisionReasons: { '3.12.0': 'elf-loader-paths' },
   programs: [
     'cmp',
     'diff',

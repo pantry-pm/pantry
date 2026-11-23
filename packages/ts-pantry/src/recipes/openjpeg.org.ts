@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'openjpeg.org',
   name: 'opj',
+  revisions: { '2.5.4': 1 },
+  revisionReasons: { '2.5.4': 'elf-loader-paths' },
   description: 'Official repository of the OpenJPEG project',
   homepage: 'https://www.openjpeg.org/',
   github: 'https://github.com/uclouvain/openjpeg',

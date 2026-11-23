@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/libidn',
   name: 'libidn',
+  revisions: { '1.43.0': 1 },
+  revisionReasons: { '1.43.0': 'elf-loader-paths' },
   programs: [
     'idn',
   ],

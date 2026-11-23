@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'wayland.freedesktop.org',
   name: 'wayland',
+  revisions: { '1.25.0': 1 },
+  revisionReasons: { '1.25.0': 'elf-loader-paths' },
   programs: ['wayland-scanner'],
   platforms: ['linux'],
   distributable: null,

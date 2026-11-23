@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/Cyan4973/xxHash',
   name: 'xxHash',
+  revisions: { '0.8.3': 1 },
+  revisionReasons: { '0.8.3': 'elf-loader-paths' },
   programs: [
     'xxhsum',
     'xxh32sum',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/nettle',
   name: 'nettle',
+  revisions: { '4.0.0': 1 },
+  revisionReasons: { '4.0.0': 'elf-loader-paths' },
   description: 'GNU low-level cryptographic library (used by gnutls)',
   homepage: 'https://www.lysator.liu.se/~nisse/nettle/',
   programs: ['nettle-hash', 'nettle-pbkdf2', 'sexp-conv', 'pkcs1-conv'],

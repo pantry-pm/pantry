@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'alsa-project.org/alsa-lib',
   platforms: ['linux'],
   name: 'alsa-lib',
+  revisions: { '1.2.15.3': 1 },
+  revisionReasons: { '1.2.15.3': 'elf-loader-paths' },
   programs: [
     'aserver',
   ],

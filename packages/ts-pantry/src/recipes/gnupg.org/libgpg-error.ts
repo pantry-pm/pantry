@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnupg.org/libgpg-error',
   name: 'libgpg-error',
+  revisions: { '1.59.0': 1 },
+  revisionReasons: { '1.59.0': 'elf-loader-paths' },
   description: 'Common error values for all GnuPG components',
   homepage: 'https://www.gnupg.org/related_software/libgpg-error/',
   github: 'https://github.com/gpg/libgpg-error',

@@ -62,6 +62,7 @@ export const gnuorglibtasn1Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.21.0.1',
     '4.21.0',
     '4.20.0',
     '4.19.0',

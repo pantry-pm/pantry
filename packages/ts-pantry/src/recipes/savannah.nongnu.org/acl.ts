@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'savannah.nongnu.org/acl',
   platforms: ['linux'],
   name: 'acl',
+  revisions: { '2.3.2': 1 },
+  revisionReasons: { '2.3.2': 'elf-loader-paths' },
   programs: [
     'chacl',
     'getfacl',

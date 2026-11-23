@@ -59,6 +59,7 @@ export const freedesktoporgpkgconfigPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.29.2.1',
     '0.29.2',
   ] as const,
   aliases: [] as const,

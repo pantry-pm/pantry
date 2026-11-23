@@ -61,6 +61,7 @@ export const gnuorggawkPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.4.0.1',
     '5.4.0',
     '5.3.2',
     '5.3.1',

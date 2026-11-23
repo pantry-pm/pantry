@@ -69,6 +69,7 @@ export const savannahnongnuorgattrPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.5.2.1',
     '2.5.2',
     '2.5.1',
   ] as const,

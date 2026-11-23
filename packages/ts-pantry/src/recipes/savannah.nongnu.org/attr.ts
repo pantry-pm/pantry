@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   domain: 'savannah.nongnu.org/attr',
   platforms: ['linux'],
   name: 'attr',
+  revisions: { '2.5.2': 1 },
+  revisionReasons: { '2.5.2': 'elf-loader-paths' },
   programs: [
     'attr',
     'getfattr',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnupg.org/libgcrypt',
   name: 'libgcrypt',
+  revisions: { '1.12.1': 1 },
+  revisionReasons: { '1.12.1': 'elf-loader-paths' },
   description: 'Cryptographic library based on the code from GnuPG',
   homepage: 'https://gnupg.org/related_software/libgcrypt/',
   github: 'https://github.com/gpg/libgcrypt',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'c-ares.org',
   name: 'c-ares',
+  revisions: { '1.34.6': 1 },
+  revisionReasons: { '1.34.6': 'elf-loader-paths' },
   description: 'A C library for asynchronous DNS requests',
   programs: ['c-ares'],
   distributable: {

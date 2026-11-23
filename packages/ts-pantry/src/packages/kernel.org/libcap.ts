@@ -61,6 +61,7 @@ export const kernelorglibcapPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.2.77.1',
     '1.2.77',
     '1.2.76',
     '1.2.75',

@@ -102,11 +102,17 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
+let packageIndex: Map<string, string> | undefined
+
 export function packageFile(domain: string): string | undefined {
-  for (const file of walk(packagesDir)) {
-    if (readFileSync(file, 'utf8').includes(`domain: '${domain}' as const`)) return file
+  if (!packageIndex) {
+    packageIndex = new Map()
+    for (const file of walk(packagesDir)) {
+      const match = readFileSync(file, 'utf8').match(/\bdomain:\s*'([^']+)' as const/)
+      if (match) packageIndex.set(match[1]!, file)
+    }
   }
-  return undefined
+  return packageIndex.get(domain)
 }
 
 export function recipeFile(domain: string): string | undefined {

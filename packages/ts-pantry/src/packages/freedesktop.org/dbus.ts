@@ -79,6 +79,7 @@ export const freedesktoporgdbusPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.16.2.1',
     '1.16.2',
     '1.16.0',
     '1.15.92',

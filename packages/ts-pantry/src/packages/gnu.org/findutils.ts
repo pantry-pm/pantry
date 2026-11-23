@@ -61,6 +61,7 @@ export const gnuorgfindutilsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.10.0.1',
     '4.10.0',
     '4.9.0',
   ] as const,

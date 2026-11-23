@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'freedesktop.org/dbus',
   name: 'dbus',
+  revisions: { '1.16.2': 1 },
+  revisionReasons: { '1.16.2': 'elf-loader-paths' },
   programs: [
     'dbus-cleanup-sockets',
     'dbus-daemon',

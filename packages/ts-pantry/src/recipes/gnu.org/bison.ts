@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/bison',
   name: 'bison',
+  revisions: { '3.8.2': 1 },
+  revisionReasons: { '3.8.2': 'elf-loader-paths' },
   description: 'Parser generator',
   homepage: 'https://www.gnu.org/software/bison/',
   github: 'https://github.com/akimd/bison',

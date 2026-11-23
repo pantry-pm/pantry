@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/m4',
   name: 'm4',
+  revisions: { '1.4.21': 1 },
+  revisionReasons: { '1.4.21': 'elf-loader-paths' },
   programs: [
     'm4',
   ],

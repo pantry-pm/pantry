@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/patch',
   name: 'patch',
+  revisions: { '2.8.0': 1 },
+  revisionReasons: { '2.8.0': 'elf-loader-paths' },
   programs: [
     'patch',
   ],

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/gmp',
   name: 'gmp',
+  revisions: { '6.3.0': 1 },
+  revisionReasons: { '6.3.0': 'elf-loader-paths' },
   description: 'GNU multiple precision arithmetic library',
   homepage: 'https://gmplib.org',
   programs: [],

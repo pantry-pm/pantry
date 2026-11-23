@@ -81,6 +81,7 @@ export const oraclecomberkeleydbPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '18.1.40.1',
     '18.1.40',
   ] as const,
   aliases: [] as const,

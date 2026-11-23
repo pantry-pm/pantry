@@ -58,6 +58,7 @@ export const gnuorgpatchPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.8.0.1',
     '2.8.0',
     '2.7.6',
   ] as const,

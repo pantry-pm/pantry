@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/gdbm',
   name: 'gdbm',
+  revisions: { '1.26.0': 1 },
+  revisionReasons: { '1.26.0': 'elf-loader-paths' },
   programs: [
     'gdbm_dump',
     'gdbm_load',

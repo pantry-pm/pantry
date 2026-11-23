@@ -109,7 +109,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"go.dev@^1.19"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.9.5", "1.9.4", "1.9.3", "1.9.2", "1.9.1", "1.9.0", "1.8.12", "1.8.11", "1.8.10", "1.8.9", "1.8.8", "1.8.7", "1.8.6", "1.8.5", "1.8.4", "1.8.3", "1.8.2", "1.8.1", "1.8.0", "1.7.9", "1.7.8", "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.3", "1.7.2", "1.7.1", "1.7.0", "1.6.4", "1.6.3", "1.6.2", "1.6.1", "1.6.0", "1.5.3", "1.5.2", "1.5.1", "1.5.0", "1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0", "1.3.4", "1.3.3", "1.3.2", "1.3.1", "1.3.0", "1.2.3", "1.2.2", "1.2.1", "1.2.0", "1.1.3", "1.1.2", "1.1.1", "1.1.0", "1.0.4", "1.0.3", "1.0.2", "1.0.1", "1.0.0", "0.9.2", "0.9.1", "0.9.0", "0.8.8", "0.8.7", "0.8.6", "0.8.5", "0.8.4", "0.8.3", "0.8.2", "0.8.1", "0.8.0", "0.7.1" },
+    .versions = &[_][]const u8{ "1.9.5.1", "1.9.5", "1.9.4", "1.9.3", "1.9.2", "1.9.1", "1.9.0", "1.8.12", "1.8.11", "1.8.10", "1.8.9", "1.8.8", "1.8.7", "1.8.6", "1.8.5", "1.8.4", "1.8.3", "1.8.2", "1.8.1", "1.8.0", "1.7.9", "1.7.8", "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.3", "1.7.2", "1.7.1", "1.7.0", "1.6.4", "1.6.3", "1.6.2", "1.6.1", "1.6.0", "1.5.3", "1.5.2", "1.5.1", "1.5.0", "1.4.4", "1.4.3", "1.4.2", "1.4.1", "1.4.0", "1.3.4", "1.3.3", "1.3.2", "1.3.1", "1.3.0", "1.2.3", "1.2.2", "1.2.1", "1.2.0", "1.1.3", "1.1.2", "1.1.1", "1.1.0", "1.0.4", "1.0.3", "1.0.2", "1.0.1", "1.0.0", "0.9.2", "0.9.1", "0.9.0", "0.8.8", "0.8.7", "0.8.6", "0.8.5", "0.8.4", "0.8.3", "0.8.2", "0.8.1", "0.8.0", "0.7.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.9.5", .revision = 1 }},
 }, .{
     .name = "alacritty",
     .domain = "alacritty.org",
@@ -142,7 +143,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.2.15.3", "1.2.15.2", "1.2.15.1", "1.2.14", "1.2.13", "1.2.12", "1.2.11", "1.2.10", "1.2.9" },
+    .versions = &[_][]const u8{ "1.2.15.3.1", "1.2.15.3", "1.2.15.2", "1.2.15.1", "1.2.14", "1.2.13", "1.2.12", "1.2.11", "1.2.10", "1.2.9" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.2.15.3", .revision = 1 }},
 }, .{
     .name = "AltTab",
     .domain = "alttab.app",
@@ -1077,7 +1079,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "cmake.org@^3", "curl.se" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.34.6", "1.34.5", "1.34.4", "1.34.3", "1.34.2", "1.34.1", "1.33.1", "1.33.0", "1.32.3", "1.32.2", "1.32.1", "1.32.0", "1.31.0", "1.30.0", "1.29.0", "1.28.1", "1.28.0", "1.27.0", "1.26.0", "1.25.0", "1.24.0", "1.23.0", "1.22.1", "1.22.0", "1.21.0", "1.20.1", "1.20.0", "1.19.1", "1.19.0" },
+    .versions = &[_][]const u8{ "1.34.6.1", "1.34.6", "1.34.5", "1.34.4", "1.34.3", "1.34.2", "1.34.1", "1.33.1", "1.33.0", "1.32.3", "1.32.2", "1.32.1", "1.32.0", "1.31.0", "1.30.0", "1.29.0", "1.28.1", "1.28.0", "1.27.0", "1.26.0", "1.25.0", "1.24.0", "1.23.0", "1.22.1", "1.22.0", "1.21.0", "1.20.1", "1.20.0", "1.19.1", "1.19.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.34.6", .revision = 1 }},
 }, .{
     .name = "caddy",
     .domain = "caddyserver.com",
@@ -4624,7 +4627,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "pagure.io/xmlto", "libexpat.github.io", "mesonbuild.com", "darwin:gnu.org/patch" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.16.2", "1.16.0", "1.15.92", "1.15.90", "1.15.12", "1.15.10", "1.15.8" },
+    .versions = &[_][]const u8{ "1.16.2.1", "1.16.2", "1.16.0", "1.15.92", "1.15.90", "1.15.12", "1.15.10", "1.15.8" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.16.2", .revision = 1 }},
 }, .{
     .name = "desktop-file-utils",
     .domain = "freedesktop.org/desktop-file-utils",
@@ -4712,7 +4716,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"0.29.2"},
+    .versions = &[_][]const u8{ "0.29.2.1", "0.29.2" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "0.29.2", .revision = 1 }},
 }, .{
     .name = "polkit",
     .domain = "freedesktop.org/polkit",
@@ -6165,7 +6170,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "0.8.3", "0.8.2", "0.8.1" },
+    .versions = &[_][]const u8{ "0.8.3.1", "0.8.3", "0.8.2", "0.8.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "0.8.3", .revision = 1 }},
 }, .{
     .name = "safe_hashes",
     .domain = "github.com/Cyfrin/safe-tx-hashes-util",
@@ -6352,7 +6358,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"cmake.org@^3"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.25.0", "1.24.0", "1.23.0", "1.22.0", "1.21.0", "1.20.0", "1.19.0" },
+    .versions = &[_][]const u8{ "1.25.0.1", "1.25.0", "1.24.0", "1.23.0", "1.22.0", "1.21.0", "1.20.0", "1.19.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.25.0", .revision = 1 }},
 }, .{
     .name = "kcat",
     .domain = "github.com/edenhill/kcat",
@@ -10047,7 +10054,7 @@ pub const packages = [_]PackageInfo{ .{
     .description = "GNU binary tools for native development",
     .homepage_url = "https://www.gnu.org/software/binutils/binutils.html",
     .programs = &[_][]const u8{ "addr2line", "ar", "c++filt", "elfedit", "nm", "objcopy", "objdump", "ranlib", "readelf", "size", "strings", "strip" },
-    .dependencies = &[_][]const u8{},
+    .dependencies = &[_][]const u8{"facebook.com/zstd^1.5.7.2"},
     .build_dependencies = &[_][]const u8{ "gnu.org/bison", "gnu.org/texinfo", "facebook.com/zstd", "linux:gnu.org/gcc", "linux:perl.org@~5.40" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "2.46.0.1", "2.46.0", "2.45.1", "2.45.0", "2.44.0", "2.43.1", "2.43.0", "2.42.0", "2.41.0", "2.40.0", "2.39.0" },
@@ -10062,7 +10069,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"gnu.org/m4@1"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "3.8.2", "3.8.1", "3.8", "3.7.91", "3.7.90", "3.7.6", "3.7.5", "3.7.4", "3.7.3", "3.7.2", "3.7.1", "3.7", "3.6.93", "3.6.92", "3.6.91", "3.6.90", "3.6.4", "3.6.3", "3.6.2", "3.6.1", "3.6", "3.5.94", "3.5.93", "3.5.92", "3.5.91", "3.5.90", "3.5.4", "3.5.3", "3.5.2", "3.5.1", "3.5", "3.4.92", "3.4.91", "3.4.90", "3.4.2", "3.4.1", "3.4", "3.3.91", "3.3.90", "3.3.2", "3.3.1", "3.3", "3.2.91", "3.2.90", "3.2.4", "3.2.3", "3.2.2", "3.2.1.0", "3.2.1", "3.2", "3.1.91", "3.1.90", "3.1", "3.0.5", "3.0.4", "3.0.3", "3.0.2", "3.0.1", "3.0", "2.7.91", "2.7.90", "2.7.1", "2.7", "2.6.90", "2.6.5", "2.6.4", "2.6.3", "2.6.2", "2.6.1", "2.6", "2.5.1", "2.5.1_rc2", "2.5", "2.5_rc1", "2.4.3", "2.4.3_rc1", "2.4.2", "2.4.1", "2.4.1b", "2.4.1a", "2.4", "2.1", "2.0", "1.875", "1.75", "1.35", "1.34", "1.33", "1.32", "1.31", "1.30" },
+    .versions = &[_][]const u8{ "3.8.2.1", "3.8.2", "3.8.1", "3.8", "3.7.91", "3.7.90", "3.7.6", "3.7.5", "3.7.4", "3.7.3", "3.7.2", "3.7.1", "3.7", "3.6.93", "3.6.92", "3.6.91", "3.6.90", "3.6.4", "3.6.3", "3.6.2", "3.6.1", "3.6", "3.5.94", "3.5.93", "3.5.92", "3.5.91", "3.5.90", "3.5.4", "3.5.3", "3.5.2", "3.5.1", "3.5", "3.4.92", "3.4.91", "3.4.90", "3.4.2", "3.4.1", "3.4", "3.3.91", "3.3.90", "3.3.2", "3.3.1", "3.3", "3.2.91", "3.2.90", "3.2.4", "3.2.3", "3.2.2", "3.2.1.0", "3.2.1", "3.2", "3.1.91", "3.1.90", "3.1", "3.0.5", "3.0.4", "3.0.3", "3.0.2", "3.0.1", "3.0", "2.7.91", "2.7.90", "2.7.1", "2.7", "2.6.90", "2.6.5", "2.6.4", "2.6.3", "2.6.2", "2.6.1", "2.6", "2.5.1", "2.5.1_rc2", "2.5", "2.5_rc1", "2.4.3", "2.4.3_rc1", "2.4.2", "2.4.1", "2.4.1b", "2.4.1a", "2.4", "2.1", "2.0", "1.875", "1.75", "1.35", "1.34", "1.33", "1.32", "1.31", "1.30" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "3.8.2", .revision = 1 }},
 }, .{
     .name = "coreutils",
     .domain = "gnu.org/coreutils",
@@ -10085,7 +10093,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "3.12.0", "3.11.0", "3.2.0" },
+    .versions = &[_][]const u8{ "3.12.0.1", "3.12.0", "3.11.0", "3.2.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "3.12.0", .revision = 1 }},
 }, .{
     .name = "ed",
     .domain = "gnu.org/ed",
@@ -10118,7 +10127,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "4.10.0", "4.9.0" },
+    .versions = &[_][]const u8{ "4.10.0.1", "4.10.0", "4.9.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "4.10.0", .revision = 1 }},
 }, .{
     .name = "fribidi",
     .domain = "gnu.org/fribidi",
@@ -10140,7 +10150,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "5.4.0", "5.3.2", "5.3.1", "5.3.0", "5.2.2", "5.2.1" },
+    .versions = &[_][]const u8{ "5.4.0.1", "5.4.0", "5.3.2", "5.3.1", "5.3.0", "5.2.2", "5.2.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "5.4.0", .revision = 1 }},
 }, .{
     .name = "gcc",
     .domain = "gnu.org/gcc",
@@ -10195,7 +10206,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.26.0", "1.25.0", "1.24.0", "1.23.0" },
+    .versions = &[_][]const u8{ "1.26.0.1", "1.26.0", "1.25.0", "1.24.0", "1.23.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.26.0", .revision = 1 }},
 }, .{
     .name = "gettext",
     .domain = "gnu.org/gettext",
@@ -10218,7 +10230,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"gnu.org/m4@1"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "6.3.0", "6.2.1" },
+    .versions = &[_][]const u8{ "6.3.0.1", "6.3.0", "6.2.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "6.3.0", .revision = 1 }},
 }, .{
     .name = "gperf",
     .domain = "gnu.org/gperf",
@@ -10319,7 +10332,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.43.0", "1.42.0", "1.41.0" },
+    .versions = &[_][]const u8{ "1.43.0.1", "1.43.0", "1.42.0", "1.41.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.43.0", .revision = 1 }},
 }, .{
     .name = "idn2",
     .domain = "gnu.org/libidn2",
@@ -10364,7 +10378,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "4.21.0", "4.20.0", "4.19.0" },
+    .versions = &[_][]const u8{ "4.21.0.1", "4.21.0", "4.20.0", "4.19.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "4.21.0", .revision = 1 }},
 }, .{
     .name = "libtool",
     .domain = "gnu.org/libtool",
@@ -10398,7 +10413,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.4.21", "1.4.20", "1.4.19" },
+    .versions = &[_][]const u8{ "1.4.21.1", "1.4.21", "1.4.20", "1.4.19" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.4.21", .revision = 1 }},
 }, .{
     .name = "make",
     .domain = "gnu.org/make",
@@ -10443,7 +10459,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"gnu.org/gmp"},
     .build_dependencies = &[_][]const u8{ "gnu.org/gmp", "gnu.org/m4" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "4.0.0", "3.10.2", "3.10.1", "3.10.0", "3.9.1", "3.9.0", "3.8.1" },
+    .versions = &[_][]const u8{ "4.0.0.1", "4.0.0", "3.10.2", "3.10.1", "3.10.0", "3.9.1", "3.9.0", "3.8.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "4.0.0", .revision = 1 }},
 }, .{
     .name = "parallel",
     .domain = "gnu.org/parallel",
@@ -10465,7 +10482,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.8.0", "2.7.6" },
+    .versions = &[_][]const u8{ "2.8.0.1", "2.8.0", "2.7.6" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.8.0", .revision = 1 }},
 }, .{
     .name = "plotutils",
     .domain = "gnu.org/plotutils",
@@ -10622,7 +10640,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"gnupg.org/libgpg-error^1.49"},
     .build_dependencies = &[_][]const u8{ "darwinsys.com/file", "darwin:llvm.org", "linux:gnu.org/gcc" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.12.1", "1.12.0", "1.11.2", "1.11.1", "1.11.0", "1.10.3", "1.10.1", "1.8.12" },
+    .versions = &[_][]const u8{ "1.12.1.1", "1.12.1", "1.12.0", "1.11.2", "1.11.1", "1.11.0", "1.10.3", "1.10.1", "1.8.12" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.12.1", .revision = 1 }},
 }, .{
     .name = "libgpg-error",
     .domain = "gnupg.org/libgpg-error",
@@ -10633,7 +10652,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.59.0", "1.57.0", "1.56.0", "1.55", "1.55.0", "1.54.0", "1.53.0", "1.52.0", "1.51", "1.51.0", "1.50", "1.50.0", "1.49.0", "1.48.0", "1.47.0", "1.45.0" },
+    .versions = &[_][]const u8{ "1.59.0.1", "1.59.0", "1.57.0", "1.56.0", "1.55", "1.55.0", "1.54.0", "1.53.0", "1.52.0", "1.51", "1.51.0", "1.50", "1.50.0", "1.49.0", "1.48.0", "1.47.0", "1.45.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.59.0", .revision = 1 }},
 }, .{
     .name = "libksba",
     .domain = "gnupg.org/libksba",
@@ -12197,7 +12217,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.2.77", "1.2.76", "1.2.75", "1.2.74", "1.2.73" },
+    .versions = &[_][]const u8{ "1.2.77.1", "1.2.77", "1.2.76", "1.2.75", "1.2.74", "1.2.73" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.2.77", .revision = 1 }},
 }, .{
     .name = "linux-headers",
     .domain = "kernel.org/linux-headers",
@@ -14818,7 +14839,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "libpng.org^1", "simplesystems.org/libtiff^4" },
     .build_dependencies = &[_][]const u8{"cmake.org@^3"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.5.4", "2.5.3", "2.5.2", "2.5.1", "2.5.0", "2.4.0", "2.3.1", "2.3.0", "2.2.0", "2.1.2", "2.1.1" },
+    .versions = &[_][]const u8{ "2.5.4.1", "2.5.4", "2.5.3", "2.5.2", "2.5.1", "2.5.0", "2.4.0", "2.3.1", "2.3.0", "2.2.0", "2.1.2", "2.1.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.5.4", .revision = 1 }},
 }, .{
     .name = "ldap",
     .domain = "openldap.org",
@@ -15016,7 +15038,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"openssl.org^1.1.1"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"18.1.40"},
+    .versions = &[_][]const u8{ "18.1.40.1", "18.1.40" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "18.1.40", .revision = 1 }},
 }, .{
     .name = "oci",
     .domain = "oracle.com/oci-cli",
@@ -16745,7 +16768,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "linux:gnu.org/gcc", "gnu.org/libtool", "savannah.nongnu.org/attr" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"2.3.2"},
+    .versions = &[_][]const u8{ "2.3.2.1", "2.3.2" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.3.2", .revision = 1 }},
 }, .{
     .name = "attr",
     .domain = "savannah.nongnu.org/attr",
@@ -16756,7 +16780,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"gnu.org/gettext"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.5.2", "2.5.1" },
+    .versions = &[_][]const u8{ "2.5.2.1", "2.5.2", "2.5.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.5.2", .revision = 1 }},
 }, .{
     .name = "scala-lang",
     .domain = "scala-lang.org",
@@ -18661,7 +18686,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "libexpat.github.io", "sourceware.org/libffi", "gnome.org/libxml2" },
     .build_dependencies = &[_][]const u8{ "mesonbuild.com", "gnu.org/make", "cmake.org", "curl.se", "tukaani.org/xz" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.25.0", "1.24.91", "1.24.0", "1.23.93", "1.23.92", "1.23.91", "1.23.1", "1.23.0", "1.22.93", "1.22.92", "1.22.91", "1.22.0" },
+    .versions = &[_][]const u8{ "1.25.0.1", "1.25.0", "1.24.91", "1.24.0", "1.23.93", "1.23.92", "1.23.91", "1.23.1", "1.23.0", "1.22.93", "1.22.92", "1.22.91", "1.22.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.25.0", .revision = 1 }},
 }, .{
     .name = "wayland-protocols",
     .domain = "wayland.freedesktop.org/protocols",

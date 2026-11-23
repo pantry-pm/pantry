@@ -57,6 +57,7 @@ export const gnuorggmpPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.3.0.1',
     '6.3.0',
     '6.2.1',
   ] as const,

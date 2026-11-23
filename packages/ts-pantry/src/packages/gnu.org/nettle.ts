@@ -72,6 +72,7 @@ export const gnuorgnettlePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.0.0.1',
     '4.0.0',
     '3.10.2',
     '3.10.1',

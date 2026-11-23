@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'oracle.com/berkeley-db',
   name: 'berkeley-db',
+  revisions: { '18.1.40': 1 },
+  revisionReasons: { '18.1.40': 'elf-loader-paths' },
   programs: [
     'db_verify',
     'db_upgrade',

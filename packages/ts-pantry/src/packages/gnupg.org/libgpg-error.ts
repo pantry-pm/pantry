@@ -63,6 +63,7 @@ export const gnupgorglibgpgerrorPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.59.0.1',
     '1.59.0',
     '1.57.0',
     '1.56.0',
