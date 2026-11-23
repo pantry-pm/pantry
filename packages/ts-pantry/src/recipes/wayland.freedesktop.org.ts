@@ -11,7 +11,8 @@ export const recipe: Recipe = {
   dependencies: {
     'libexpat.github.io': '*',
     'sourceware.org/libffi': '*',
-    'gnome.org/libxml2': '*',
+    // wayland-scanner links libxml2.so.2; libxml2 2.14 renamed it libxml2.so.16.
+    'gnome.org/libxml2': '~2.13',
   },
   buildDependencies: {
     'mesonbuild.com': '*',

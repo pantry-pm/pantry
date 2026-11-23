@@ -11,6 +11,10 @@ export const recipe: Recipe = {
     'getfacl',
     'setfacl',
   ],
+  // getfacl, setfacl and chacl link libattr.so.1 at run time.
+  dependencies: {
+    'savannah.nongnu.org/attr': '^2.5',
+  },
   buildDependencies: {
     linux: {
       'gnu.org/gcc': '*',

@@ -16,6 +16,14 @@ export const recipe: Recipe = {
     'dbus-update-activation-environment',
     'dbus-uuidgen',
   ],
+  // dbus-daemon and its launch helper link libexpat.so.1 at run time, and
+  // the Linux dbus-launch links libX11.so.6 for X session autolaunch.
+  dependencies: {
+    'libexpat.github.io': '^2',
+    linux: {
+      'x.org/x11': '^1',
+    },
+  },
   buildDependencies: {
     'freedesktop.org/pkg-config': '*',
     'pagure.io/xmlto': '*',
