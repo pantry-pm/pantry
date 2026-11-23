@@ -11,6 +11,11 @@ export const recipe: Recipe = {
   ],
   dependencies: {
     'zlib.net': '1',
+    // The Linux build of file links libzstd and liblzma for compressed input.
+    linux: {
+      'facebook.com/zstd': '^1.5.7.2',
+      'tukaani.org/xz': '^5.8.2.1',
+    },
   },
   buildDependencies: {
     'gnu.org/patch': '*',

@@ -11,7 +11,8 @@ export const recipe: Recipe = {
     'gdk-pixbuf-query-loaders',
   ],
   dependencies: {
-    'ijg.org': '9.6',
+    // libjpeg.so.9; the registry publishes 9.5.0 (and 10), never a 9.6.
+    'ijg.org': '~9.5',
     'gnome.org/glib': '2',
     'libpng.org': '1',
     'freedesktop.org/shared-mime-info': '2',

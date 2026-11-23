@@ -6,10 +6,9 @@ export const recipe: Recipe = {
   revisions: { '4.6.3': 1 },
   revisionReasons: { '4.6.3': 'elf-loader-paths' },
   programs: [],
+  // funpack, imcopy and libcfitsio link libz.so.1 on every platform.
   dependencies: {
-    darwin: {
-      'zlib.net': '*',
-    },
+    'zlib.net': '^1',
   },
   distributable: {
     url: 'https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-{{version}}.tar.gz',

@@ -10,6 +10,11 @@ export const recipe: Recipe = {
     'gpgme-json',
     'gpgme-tool',
   ],
+  // gpgme-json and gpgme-tool link libgpg-error.so.0 and libassuan.so.0 (2.x).
+  dependencies: {
+    'gnupg.org/libassuan': '^2.0.2',
+    'gnupg.org/libgpg-error': '^1.11',
+  },
   buildDependencies: {
     'gnupg.org': '*',
     'gnupg.org/libassuan': '^2.0.2',

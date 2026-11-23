@@ -10,6 +10,10 @@ export const recipe: Recipe = {
     'tclsh{{version.major}}.{{version.minor}}',
     'tclsh',
   ],
+  // tclsh and libtcl link libz.so.1 (Tcl 9's built-in zlib commands).
+  dependencies: {
+    'zlib.net': '^1',
+  },
   distributable: {
     url: 'https://prdownloads.sourceforge.net/tcl/tcl{{ version }}-src.tar.gz',
     stripComponents: 1,
