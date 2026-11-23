@@ -123,7 +123,10 @@ export const recipe: Recipe = {
         run: 'export ARGS="$ARGS --enable-install-program=kill,uptime"',
         if: '>=3.9.0',
       },
-      './configure --prefix={{ prefix }} $ARGS',
+      // Self-contained: configure otherwise links whatever libcrypto and libgmp
+      // the build host has, which the package neither declares nor ships. The
+      // bundled hash implementations and mini-gmp replace them.
+      './configure --prefix={{ prefix }} --with-openssl=no --without-libgmp $ARGS',
       'make --jobs {{ hw.concurrency }} install',
     ],
     env: {
