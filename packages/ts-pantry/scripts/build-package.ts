@@ -1057,6 +1057,9 @@ else if (Array.isArray(test.script)) {
   const testScript = [
     '#!/bin/bash',
     'set -eo pipefail',
+    // A failing `test` or `grep -q` says nothing on its own; name the command,
+    // or a required health check fails as a bare "Command failed: bash _test.sh".
+    'trap \'status=$?; echo "health check failed (exit $status) at line $LINENO: $BASH_COMMAND" >&2\' ERR',
     `export PATH="${testPath}"`,
     `export ${libVar}="${libParts.join(':')}"`,
     `export PKG_CONFIG_PATH="${prefix}/lib/pkgconfig"`,
