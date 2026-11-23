@@ -65,6 +65,7 @@ export const heasarcgsfcnasagovcfitsioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.6.3.1',
     '4.6.3',
     '4.6.2',
     '4.6.0',

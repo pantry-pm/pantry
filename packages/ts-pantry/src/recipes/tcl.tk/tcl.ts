@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'tcl.tk/tcl',
   name: 'tcl',
+  revisions: { '9.0.3': 1 },
+  revisionReasons: { '9.0.3': 'elf-loader-paths' },
   programs: [
     'sqlite3_analyzer',
     'tclsh{{version.major}}.{{version.minor}}',

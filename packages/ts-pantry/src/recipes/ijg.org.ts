@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   propsDir: 'props/ijg.org',
   domain: 'ijg.org',
   name: 'ijg',
+  revisions: { '10.0.0': 1 },
+  revisionReasons: { '10.0.0': 'elf-loader-paths' },
   programs: ['cjpeg', 'djpeg', 'jpegtran', 'rdjpgcom', 'wrjpgcom'],
   distributable: {
     url: 'https://ijg.org/files/jpegsrc.v{{version.raw}}.tar.gz',

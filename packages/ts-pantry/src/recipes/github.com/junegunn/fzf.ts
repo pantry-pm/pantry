@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/junegunn/fzf',
   name: 'fzf',
+  revisions: { '0.70.0': 1 },
+  revisionReasons: { '0.70.0': 'elf-loader-paths' },
   programs: [
     'fzf',
   ],

@@ -69,6 +69,7 @@ export const rockdabootgithubiolibpslPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.21.5.1',
     '0.21.5',
     '0.21.2',
   ] as const,

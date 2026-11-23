@@ -69,6 +69,7 @@ export const jbig2deccomPackage = {
   */
   versions: [
     '0.20',
+    '0.19.0.1',
     '0.19.0',
   ] as const,
   aliases: [] as const,

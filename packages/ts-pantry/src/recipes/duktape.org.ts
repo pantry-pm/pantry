@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'duktape.org',
   name: 'duk',
+  revisions: { '2.7.0': 1 },
+  revisionReasons: { '2.7.0': 'elf-loader-paths' },
   description: 'Duktape - embeddable Javascript engine with a focus on portability and compact footprint',
   homepage: 'https://duktape.org',
   github: 'https://github.com/svaarala/duktape',

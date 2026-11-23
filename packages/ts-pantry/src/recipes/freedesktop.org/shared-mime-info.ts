@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'freedesktop.org/shared-mime-info',
   name: 'shared-mime-info',
+  revisions: { '2.4.0': 1 },
+  revisionReasons: { '2.4.0': 'elf-loader-paths' },
   programs: [
     'update-mime-database',
   ],

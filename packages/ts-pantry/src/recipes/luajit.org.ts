@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'luajit.org',
   name: 'luajit',
+  revisions: { '2.1.0': 1 },
+  revisionReasons: { '2.1.0': 'elf-loader-paths' },
   description: 'Mirror of the LuaJIT git repository',
   homepage: 'https://luajit.org',
   github: 'https://github.com/LuaJIT/LuaJIT',

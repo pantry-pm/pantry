@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/rrthomas/libpaper',
   name: 'libpaper',
+  revisions: { '2.2.7': 1 },
+  revisionReasons: { '2.2.7': 'elf-loader-paths' },
   programs: [
     'paper',
   ],

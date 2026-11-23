@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnome.org/gobject-introspection',
   name: 'gobject-introspection',
+  revisions: { '1.86.0': 1 },
+  revisionReasons: { '1.86.0': 'elf-loader-paths' },
   programs: [
     'g-ir-annotation-tool',
     'g-ir-compiler',

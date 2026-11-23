@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'apache.org/avro',
   name: 'avro',
+  revisions: { '1.12.0': 1 },
+  revisionReasons: { '1.12.0': 'elf-loader-paths' },
   programs: [
     'avroappend',
     'avrocat',

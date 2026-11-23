@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/mikefarah/yq',
   name: 'yq',
+  revisions: { '4.52.4': 1 },
+  revisionReasons: { '4.52.4': 'elf-loader-paths' },
   programs: [
     'yq',
   ],

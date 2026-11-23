@@ -2,8 +2,7 @@
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN, repaired by elf-loader-paths revisions (scripts/elf-loader-revisions.ts, audited with scripts/audit-elf-rpaths.ts).",
   "summary": {
     "verified": 28,
-    "pending": 30,
-    "skipped": 1
+    "pending": 56
   },
   "packages": [
     {
@@ -515,17 +514,6 @@
       "status": "pending"
     },
     {
-      "domain": "libgeos.org",
-      "oldBuild": "3.15.0rc1",
-      "revision": "",
-      "platforms": [
-        "linux-x86-64"
-      ],
-      "batch": 3,
-      "status": "skipped",
-      "note": "version 3.15.0rc1 is not a numeric tuple, so it cannot carry a build revision"
-    },
-    {
       "domain": "libimobiledevice.org/libplist",
       "oldBuild": "2.7.0",
       "revision": "2.7.0.1",
@@ -613,6 +601,283 @@
         "linux-x86-64"
       ],
       "batch": 3,
+      "status": "pending"
+    },
+    {
+      "domain": "apache.org/avro",
+      "oldBuild": "1.12.0",
+      "revision": "1.12.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "apache.org/thrift",
+      "oldBuild": "0.22.0",
+      "revision": "0.22.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "crates.io/fd-find",
+      "oldBuild": "10.4.2",
+      "revision": "10.4.2.1",
+      "platforms": [
+        "linux-arm64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "duktape.org",
+      "oldBuild": "2.7.0",
+      "revision": "2.7.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "fftw.org",
+      "oldBuild": "3.3.10",
+      "revision": "3.3.10.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "freedesktop.org/shared-mime-info",
+      "oldBuild": "2.4.0",
+      "revision": "2.4.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "freedesktop.org/uchardet",
+      "oldBuild": "0.0.8",
+      "revision": "0.0.8.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "github.com/junegunn/fzf",
+      "oldBuild": "0.70.0",
+      "revision": "0.70.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "github.com/mikefarah/yq",
+      "oldBuild": "4.52.4",
+      "revision": "4.52.4.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "github.com/numactl/numactl",
+      "oldBuild": "2.0.16",
+      "revision": "2.0.16.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "github.com/rrthomas/libpaper",
+      "oldBuild": "2.2.7",
+      "revision": "2.2.7.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "gnome.org/gobject-introspection",
+      "oldBuild": "1.86.0",
+      "revision": "1.86.0.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "graphite.sil.org",
+      "oldBuild": "1.3.15",
+      "revision": "1.3.15.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "heasarc.gsfc.nasa.gov/cfitsio",
+      "oldBuild": "4.6.3",
+      "revision": "4.6.3.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "ijg.org",
+      "oldBuild": "10.0.0",
+      "revision": "10.0.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "jbig2dec.com",
+      "oldBuild": "0.19.0",
+      "revision": "0.19.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "lame.sourceforge.io",
+      "oldBuild": "3.100.0",
+      "revision": "3.100.0.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "libgd.github.io",
+      "oldBuild": "2.3.3",
+      "revision": "2.3.3.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "libgeos.org",
+      "oldBuild": "3.15.0rc1",
+      "revision": "3.15.0rc1.pantry1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "luajit.org",
+      "oldBuild": "2.1.0",
+      "revision": "2.1.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "mpg123.de",
+      "oldBuild": "1.33.4",
+      "revision": "1.33.4.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "rockdaboot.github.io/libpsl",
+      "oldBuild": "0.21.5",
+      "revision": "0.21.5.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "tcl.tk/tcl",
+      "oldBuild": "9.0.3",
+      "revision": "9.0.3.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "unixodbc.org",
+      "oldBuild": "2.3.14",
+      "revision": "2.3.14.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "videolan.org/x265",
+      "oldBuild": "4.1.0",
+      "revision": "4.1.0.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
+      "status": "pending"
+    },
+    {
+      "domain": "xiph.org/flac",
+      "oldBuild": "1.5.0",
+      "revision": "1.5.0.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 4,
       "status": "pending"
     }
   ]

@@ -59,6 +59,7 @@ export const cratesiofdfindPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '10.4.2.1',
     '10.4.2',
     '10.4.1',
     '10.4.0',

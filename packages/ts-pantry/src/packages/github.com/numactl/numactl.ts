@@ -61,6 +61,7 @@ export const numactlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.0.16.1',
     '2.0.16',
   ] as const,
   aliases: [] as const,

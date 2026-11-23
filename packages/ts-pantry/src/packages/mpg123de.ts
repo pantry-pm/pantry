@@ -60,6 +60,7 @@ export const mpg123dePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.33.4.1',
     '1.33.4',
     '1.33.3',
     '1.33.2',

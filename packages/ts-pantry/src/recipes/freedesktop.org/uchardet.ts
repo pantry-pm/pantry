@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'freedesktop.org/uchardet',
   name: 'uchardet',
+  revisions: { '0.0.8': 1 },
+  revisionReasons: { '0.0.8': 'elf-loader-paths' },
   programs: [
     'uchardet',
   ],

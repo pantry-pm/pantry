@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/numactl/numactl',
   name: 'numactl',
+  revisions: { '2.0.16': 1 },
+  revisionReasons: { '2.0.16': 'elf-loader-paths' },
   programs: [],
   platforms: ['linux'],
   buildDependencies: {

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'xiph.org/flac',
   name: 'flac',
+  revisions: { '1.5.0': 1 },
+  revisionReasons: { '1.5.0': 'elf-loader-paths' },
   programs: [
     'flac',
   ],

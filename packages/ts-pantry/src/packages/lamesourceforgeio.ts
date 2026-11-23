@@ -60,6 +60,7 @@ export const lamesourceforgeioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.100.0.1',
     '3.100.0',
   ] as const,
   aliases: [] as const,

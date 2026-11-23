@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'libgd.github.io',
   name: 'libgd.github',
+  revisions: { '2.3.3': 1 },
+  revisionReasons: { '2.3.3': 'elf-loader-paths' },
   description: 'Graphics library to dynamically manipulate images',
   homepage: 'https://libgd.github.io/',
   github: 'https://github.com/libgd/libgd',

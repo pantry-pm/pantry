@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'mpg123.de',
   name: 'mpg123',
+  revisions: { '1.33.4': 1 },
+  revisionReasons: { '1.33.4': 'elf-loader-paths' },
   description: 'MP3 player for Linux and UNIX',
   homepage: 'https://www.mpg123.de/',
   programs: ['mpg123'],

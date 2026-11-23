@@ -67,6 +67,7 @@ export const libpaperPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.2.7.1',
     '2.2.7',
     '2.2.6',
     '2.2.5',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'unixodbc.org',
   name: 'unixodbc',
+  revisions: { '2.3.14': 1 },
+  revisionReasons: { '2.3.14': 'elf-loader-paths' },
   description: 'The unixODBC Project goals are to develop and promote unixODBC to be the definitive standard for ODBC on non MS Windows platforms.',
   homepage: 'https://www.unixodbc.org/',
   github: 'https://github.com/lurcher/unixODBC',

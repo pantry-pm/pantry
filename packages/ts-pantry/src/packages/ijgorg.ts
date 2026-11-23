@@ -69,6 +69,7 @@ export const ijgorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '10.0.0.1',
     '10.0.0',
     '9.5.0',
     '9f',

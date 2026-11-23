@@ -70,6 +70,7 @@ export const fftworgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.3.10.1',
     '3.3.10',
   ] as const,
   aliases: [] as const,

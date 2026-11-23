@@ -68,6 +68,7 @@ export const videolanorgx265Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.1.0.1',
     '4.1.0',
     '3.2.1',
   ] as const,

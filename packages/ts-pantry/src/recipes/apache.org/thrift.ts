@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'apache.org/thrift',
   name: 'thrift',
+  revisions: { '0.22.0': 1 },
+  revisionReasons: { '0.22.0': 'elf-loader-paths' },
   programs: [
     'thrift',
   ],

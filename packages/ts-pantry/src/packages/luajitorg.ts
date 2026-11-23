@@ -69,6 +69,7 @@ export const luajitorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.1.0.1',
     '2.1.0',
   ] as const,
   aliases: [] as const,

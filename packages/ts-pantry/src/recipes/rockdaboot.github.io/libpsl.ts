@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'rockdaboot.github.io/libpsl',
   name: 'libpsl',
+  revisions: { '0.21.5': 1 },
+  revisionReasons: { '0.21.5': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'unicode.org': '^71',

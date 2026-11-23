@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'jbig2dec.com',
   name: 'jbig2dec',
+  revisions: { '0.19.0': 1 },
+  revisionReasons: { '0.19.0': 'elf-loader-paths' },
   description: 'This is a mirror: the canonical repo is: git.ghostscript.com/jbig2dec.git. This repo does not host releases, they are here: https://github.com/ArtifexSoftware/jbig2dec/tags',
   homepage: 'https://jbig2dec.com/',
   github: 'https://github.com/ArtifexSoftware/jbig2dec',

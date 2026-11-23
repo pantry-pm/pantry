@@ -60,6 +60,7 @@ export const tcltktclPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '9.0.3.1',
     '9.0.3',
     '9.0.2',
     '9.0.1',

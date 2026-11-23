@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'crates.io/fd-find',
   name: 'fd-find',
+  revisions: { '10.4.2': 1 },
+  revisionReasons: { '10.4.2': 'elf-loader-paths' },
   programs: [
     'fd',
   ],

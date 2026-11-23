@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'lame.sourceforge.io',
   name: 'lame',
+  revisions: { '3.100.0': 1 },
+  revisionReasons: { '3.100.0': 'elf-loader-paths' },
   description: 'High quality MPEG Audio Layer III (MP3) encoder',
   homepage: 'https://lame.sourceforge.io/',
   programs: ['lame'],

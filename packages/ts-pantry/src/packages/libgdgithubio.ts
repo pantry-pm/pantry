@@ -86,6 +86,7 @@ export const libgdgithubioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.3.1',
     '2.3.3',
     '2.3.2',
     '2.3.1',

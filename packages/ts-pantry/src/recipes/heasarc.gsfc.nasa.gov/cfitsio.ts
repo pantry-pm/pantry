@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'heasarc.gsfc.nasa.gov/cfitsio',
   name: 'cfitsio',
+  revisions: { '4.6.3': 1 },
+  revisionReasons: { '4.6.3': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     darwin: {

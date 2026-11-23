@@ -67,6 +67,7 @@ export const freedesktoporguchardetPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.0.8.1',
     '0.0.8',
   ] as const,
   aliases: [] as const,

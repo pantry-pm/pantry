@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'graphite.sil.org',
   name: 'gr2fonttest',
+  revisions: { '1.3.15': 1 },
+  revisionReasons: { '1.3.15': 'elf-loader-paths' },
   description: 'Graphite is a "smart font" system developed specifically to handle the complexities of lesser-known languages of the world.',
   homepage: 'https://graphite.sil.org/',
   github: 'https://github.com/silnrsi/graphite',

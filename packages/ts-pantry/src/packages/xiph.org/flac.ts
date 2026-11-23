@@ -76,6 +76,7 @@ export const xiphorgflacPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.5.0.1',
     '1.5.0',
     '1.4.3',
     '1.4.2',

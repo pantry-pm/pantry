@@ -82,6 +82,7 @@ export const gnomeorggobjectintrospectionPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.86.0.1',
     '1.86.0',
     '1.84.0',
     '1.83.4',

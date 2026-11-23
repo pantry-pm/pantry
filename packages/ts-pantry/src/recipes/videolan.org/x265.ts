@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'videolan.org/x265',
   name: 'x265',
+  revisions: { '4.1.0': 1 },
+  revisionReasons: { '4.1.0': 'elf-loader-paths' },
   programs: [
     'x265',
   ],

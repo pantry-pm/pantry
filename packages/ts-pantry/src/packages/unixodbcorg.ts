@@ -72,6 +72,7 @@ export const unixodbcorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.3.14.1',
     '2.3.14',
     '2.3.13',
     '2.3.12',

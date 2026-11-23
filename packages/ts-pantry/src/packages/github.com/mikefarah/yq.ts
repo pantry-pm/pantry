@@ -68,6 +68,7 @@ export const yqPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.52.4.1',
     '4.52.4',
     '4.52.2',
     '4.52.1',

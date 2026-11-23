@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'fftw.org',
   name: 'fftw',
+  revisions: { '3.3.10': 1 },
+  revisionReasons: { '3.3.10': 'elf-loader-paths' },
   description: 'C routines to compute the Discrete Fourier Transform',
   homepage: 'https://fftw.org',
   programs: ['fftw-wisdom', 'fftw-wisdom-to-conf', 'fftwf-wisdom', 'fftwl-wisdom'],

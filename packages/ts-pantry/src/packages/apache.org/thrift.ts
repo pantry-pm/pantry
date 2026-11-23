@@ -79,6 +79,7 @@ export const apacheorgthriftPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.22.0.1',
     '0.22.0',
     '0.21.0',
     '0.20.0',
