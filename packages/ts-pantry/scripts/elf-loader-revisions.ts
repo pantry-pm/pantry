@@ -277,6 +277,47 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === 'check') {
+    // Which revisions the registry now serves on every platform their base was on.
+    for (const row of ledger) {
+      if (!row.revision || (row.status !== 'pending' && row.status !== 'published')) continue
+      const response = await fetch(`https://registry.pantry.dev/binaries/${row.domain}/metadata.json`)
+      if (!response.ok) continue
+      const metadata = await response.json() as { versions?: Record<string, { platforms?: Record<string, { sha256?: string }> }> }
+      const base = Object.keys(metadata.versions?.[row.oldBuild]?.platforms ?? {})
+      const wanted = base.filter(p => p.startsWith('linux-') || row.note?.startsWith('corrupt-archive')).filter(p => p !== 'darwin-x86-64')
+      const served = Object.entries(metadata.versions?.[row.revision]?.platforms ?? {}).filter(([, r]) => r.sha256).map(([p]) => p)
+      const missing = wanted.filter(p => !served.includes(p))
+      if (!missing.length && row.status === 'pending') row.status = 'published'
+      console.log(`${row.domain}@${row.revision}: ${missing.length ? `missing ${missing.join(',')}` : 'served'} (${row.status})`)
+    }
+    writeLedger(ledgerPath, ledger)
+    return
+  }
+
+  if (command === 'confirm') {
+    // A published revision is verified once a re-audit of its own artifacts
+    // (audit-elf-rpaths.ts --scope newest) finds no broken loader path.
+    if (!values.audit) throw new Error('--audit <re-audit progress.jsonl> is required')
+    const rows = readAudit(values.audit)
+    for (const row of ledger) {
+      if (row.status !== 'published') continue
+      const audited = rows.filter(r => r.domain === row.domain && r.version === row.revision && !r.error)
+      if (!audited.length) continue
+      const bad = audited.filter(r => r.findings.some(f => f.issues.length))
+      if (bad.length) {
+        row.status = 'failed'
+        row.note = `re-audit still finds broken loader paths on ${bad.map(r => r.platform).join(',')}`
+      }
+      else {
+        row.status = 'verified'
+      }
+      console.log(`${row.domain}@${row.revision}: ${row.status}`)
+    }
+    writeLedger(ledgerPath, ledger)
+    return
+  }
+
   if (!values.audit) throw new Error('--audit <progress.jsonl> is required')
   const targets = brokenTargets(readAudit(values.audit))
 

@@ -3266,8 +3266,17 @@ Options:
           continue
         }
         const versions = await selectVersionsForBuild(pkg, maxVersions, platform)
+        // A mirrorable revision (loader-path or archive repair) is produced
+        // from its vendor release, so that is the prebuilt to look for; any
+        // other revision must run its recipe and is never covered.
         const covered = versions.length > 0
-          && (await Promise.all(versions.map(v => pkgxHasPrebuilt(pkg.domain, v, platform)))).every(Boolean)
+          && (await Promise.all(versions.map(async (v) => {
+            const loaded = await loadRecipe(pkg.domain, platform, v)
+            const upstream = loaded.upstreamVersion ?? v
+            if (upstream !== v && !recipeAllowsMirror(v, { upstream, current: loaded.publicationVersion ?? v }, loaded.requiresRecipeBuild, loaded.revisionReason))
+              return false
+            return pkgxHasPrebuilt(pkg.domain, upstream, platform)
+          }))).every(Boolean)
         if (covered)
           console.error(`  pkgx already has every selected ${pkg.domain} version for ${platform} — no native runner needed`)
         else
