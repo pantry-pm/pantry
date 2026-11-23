@@ -705,3 +705,10 @@ describe('free-space guard for shared build hosts', () => {
     expect(packageBuildTrees('/mnt/buildkit', 'gnu.org/libtool')[0]).toBe('/mnt/buildkit/buildkit-gnu.org-libtool')
   })
 })
+
+test('a mirror refused for libraries our dependencies lack falls back to the recipe build', async () => {
+  const { mirrorRefusal } = await import('./build-all-packages')
+  expect(mirrorRefusal(new Error('Cannot normalize ELF loader paths: Undeclared or missing runtime library libavif.so.15 required by bin/gdcmpgif'))).toBe(true)
+  expect(mirrorRefusal(new Error('Cannot normalize ELF loader paths for bin/x: patchelf failed'))).toBe(false)
+  expect(mirrorRefusal('not an error')).toBe(false)
+})

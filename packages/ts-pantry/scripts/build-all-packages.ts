@@ -1873,6 +1873,11 @@ function pkgxDistArch(platform: string): { os: string, arch: string } | null {
 // so the existing package+upload path treats it identically. pkgx tarballs nest
 // under <domain>/v<ver>/, which we strip. Returns true on success, false if pkgx
 // has no such artifact (→ caller falls back to a source build).
+/** A mirror failure the recipe build can avoid: libraries the vendor linked that our dependencies lack. */
+export function mirrorRefusal(error: unknown): boolean {
+  return error instanceof Error && /Undeclared or missing runtime library/.test(error.message)
+}
+
 async function tryPkgxMirror(domain: string, version: string, platform: string, installDir: string, buildkitRoot: string, sourceVersion = version): Promise<boolean> {
   const m = pkgxDistArch(platform)
   if (!m)
@@ -2258,7 +2263,22 @@ else {
           break
         }
         const runtime = await downloadRuntimePackages(domain, candidateVersion, platform, depsDir, bucket, region)
-        await fixUp(installDir, platform, [], runtime)
+        try {
+          await fixUp(installDir, platform, [], runtime)
+        }
+        catch (error) {
+          // A vendor build linked against libraries this package's published
+          // dependencies do not provide (pkgx's libgd wants libavif.so.15, the
+          // registry carries libavif 1.x) cannot be normalised into a working
+          // artifact. The recipe, built against the registry's own
+          // dependencies, can: build it instead (or, mirror-only, leave it to
+          // a native runner).
+          if (!mirrorRefusal(error)) throw error
+          console.log(`   ⚠️  pkgx prebuilt refused for ${domain}@${candidateVersion} (${platform}): ${(error as Error).message.slice(0, 300)}`)
+          rmSync(installDir, { recursive: true, force: true })
+          mkdirSync(installDir, { recursive: true })
+          break
+        }
         usedVersion = candidateVersion
         mirrored = true
         console.log(`   ⬇️  Mirrored ${domain}@${candidateVersion} from pkgx (${platform}) — no source build`)
