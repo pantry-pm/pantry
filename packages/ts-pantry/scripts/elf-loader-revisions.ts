@@ -296,18 +296,33 @@ async function main(): Promise<void> {
     // A published revision is verified once a re-audit of its own artifacts
     // (audit-elf-rpaths.ts --scope newest) finds no broken loader path.
     if (!values.audit) throw new Error('--audit <re-audit progress.jsonl> is required')
-    const rows = readAudit(values.audit)
+    const rows = readAudit(values.audit) as Array<AuditRow & { executables?: string[] }>
     for (const row of ledger) {
-      if (row.status !== 'published') continue
+      if (row.status !== 'published' && !(values.status === 'recheck' && row.status === 'verified')) continue
       const audited = rows.filter(r => r.domain === row.domain && r.version === row.revision && !r.error)
       if (!audited.length) continue
       const bad = audited.filter(r => r.findings.some(f => f.issues.length))
+      // A mirrored vendor build can lack programs the recipe's own build had
+      // (coreutils' chcon and runcon); every client checks declared programs.
+      const file = packageFile(row.domain)
+      // Program names can be templated on the release (gawk's `gawk-{{version}}`).
+      const [major = '', minor = '', patch = ''] = row.oldBuild.split('.')
+      const declared = (file ? arrayItems(readFileSync(file, 'utf8'), 'programs') : [])
+        .map(p => p.replace(/\{\{\s*version\.major\s*\}\}/g, major).replace(/\{\{\s*version\.minor\s*\}\}/g, minor)
+          .replace(/\{\{\s*version\.patch\s*\}\}/g, patch).replace(/\{\{\s*version(?:\.raw)?\s*\}\}/g, row.oldBuild))
+        .filter(p => !p.includes('{{'))
+      const lacking = audited.flatMap(r => r.executables ? declared.filter(p => !r.executables!.includes(p)).map(p => `${p} (${r.platform})`) : [])
       if (bad.length) {
         row.status = 'failed'
         row.note = `re-audit still finds broken loader paths on ${bad.map(r => r.platform).join(',')}`
       }
+      else if (lacking.length) {
+        row.status = 'failed'
+        row.note = `the revision lacks declared programs: ${lacking.join(', ')}`
+      }
       else {
         row.status = 'verified'
+        if (row.note?.startsWith('the revision lacks') || row.note?.startsWith('re-audit still')) delete row.note
       }
       console.log(`${row.domain}@${row.revision}: ${row.status}`)
     }

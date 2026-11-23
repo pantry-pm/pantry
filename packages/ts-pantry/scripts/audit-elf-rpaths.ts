@@ -64,6 +64,8 @@ export interface ArtifactResult extends ArtifactSelection {
   elfMembers: number
   findings: LoaderPathFinding[]
   absoluteEntries: number
+  /** Names under bin/ and sbin/, to compare with the programs the catalog declares. */
+  executables?: string[]
   error?: string
 }
 
@@ -284,6 +286,7 @@ export async function forEachElfMember(
   stream: ReadableStream<Uint8Array>,
   visit: (path: string, bytes: Uint8Array) => void,
   maxMemberBytes: number = 2 ** 31,
+  onEntry?: (path: string, type: string) => void,
 ): Promise<void> {
   const reader = new ByteReader(stream.getReader())
   let longName: string | undefined
@@ -303,6 +306,7 @@ export async function forEachElfMember(
         longName = type === 'L' ? tarString(data, 0, data.length) : paxPath(data)
         continue
       }
+      onEntry?.(name, type)
       if ((type !== '0' && type !== '7') || size < 52) {
         await reader.skip(padded)
         continue
@@ -447,6 +451,12 @@ export async function auditArtifact(registry: string, selection: ArtifactSelecti
     const response = await fetchWithRetry(`${registry}/${selection.tarball}`, 6, true)
     if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`)
     const stream = response.body.pipeThrough(new DecompressionStream('gzip'))
+    const executables = new Set<string>()
+    const recordExecutable = (path: string, type: string): void => {
+      const match = /^(?:\.\/)?(?:[^/]+\/v[^/]+\/)?s?bin\/([^/]+)$/.exec(path)
+      if (match && (type === '0' || type === '7' || type === '2' || type === '1')) executables.add(match[1]!)
+    }
+    result.executables = []
     await forEachElfMember(stream, (member, bytes) => {
       result.elfMembers++
       let paths: ReturnType<typeof readElfLoaderPaths>
@@ -463,7 +473,8 @@ export async function auditArtifact(registry: string, selection: ArtifactSelecti
         result.absoluteEntries += absolute
         if (issues.length) result.findings.push({ member, tag, value, issues })
       }
-    })
+    }, 2 ** 31, recordExecutable)
+    result.executables = [...executables].sort()
   }
   catch (error) {
     result.error = (error as Error).message
