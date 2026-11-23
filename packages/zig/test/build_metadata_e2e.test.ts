@@ -33,7 +33,9 @@ pub fn build(b: *std.Build) void {
 }
 `)
       function run(command: string[], cwd = root): string {
-        const result = spawnSync(command[0]!, command.slice(1), { cwd, encoding: 'utf8', timeout: 25_000 })
+        // The first `zig build` compiles the build runner from a cold cache;
+        // on a shared two-core runner that alone has taken more than 25s.
+        const result = spawnSync(command[0]!, command.slice(1), { cwd, encoding: 'utf8', timeout: 180_000 })
         if (result.error || result.status !== 0) throw new Error(`${command[0]} failed: ${result.error || result.stderr || result.stdout}`)
         return result.stdout.trim()
       }
@@ -90,5 +92,5 @@ pub fn build(b: *std.Build) void {
     finally {
       rmSync(root, { recursive: true, force: true })
     }
-  }, 60_000)
+  }, 600_000)
 })
