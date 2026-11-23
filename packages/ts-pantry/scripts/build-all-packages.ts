@@ -41,6 +41,7 @@ import { parseDep, versionSatisfies } from './build-package'
 import { publicationOrder } from './publication-order'
 import { publicationResultAnnotation } from './changed-package-domains'
 import { recipeAllowsMirror, revisionAppliesTo, revisionReason, selectRevisionVersions } from './package-revisions'
+import { missingCatalogProgram } from './catalog-programs'
 import { loadRecipe, loadRecipeRevisionReasons, loadRecipeRevisions } from './recipe-loader'
 // package-overrides.ts removed — all build logic now in src/recipes/*.ts
 const packageOverrides: Record<string, any> = {}
@@ -2244,6 +2245,18 @@ else {
         selectPublishedFiles(installDir, recipe.publish?.include)
         writeProgramInterfaces(installDir, recipe.sourceablePrograms)
         writeRuntimeEnvironment(installDir, recipe.runtime?.env)
+        // A vendor build is not this package unless it has the programs the
+        // catalog promises: every client checks them after extracting, so a
+        // mirror without them publishes and then fails each install. Build
+        // the recipe instead (or, mirror-only, leave it to a native runner).
+        // eslint-disable-next-line no-await-in-loop
+        const lacking = await missingCatalogProgram(installDir, domain, platform, sourceVersion)
+        if (lacking) {
+          console.log(`   ⚠️  pkgx prebuilt refused for ${domain}@${candidateVersion} (${platform}): ${lacking}`)
+          rmSync(installDir, { recursive: true, force: true })
+          mkdirSync(installDir, { recursive: true })
+          break
+        }
         const runtime = await downloadRuntimePackages(domain, candidateVersion, platform, depsDir, bucket, region)
         await fixUp(installDir, platform, [], runtime)
         usedVersion = candidateVersion

@@ -10088,8 +10088,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "9.10.0.1", "9.10.0", "9.9.0", "9.8.0", "9.7.0", "9.6.0", "9.5.0", "9.4.0", "9.1.0" },
-    .build_revisions = &[_]BuildRevision{.{ .release = "9.10.0", .revision = 1 }},
+    .versions = &[_][]const u8{ "9.10.0.2", "9.10.0.1", "9.10.0", "9.9.0", "9.8.0", "9.7.0", "9.6.0", "9.5.0", "9.4.0", "9.1.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "9.10.0", .revision = 2 }},
 }, .{
     .name = "diffutils",
     .domain = "gnu.org/diffutils",

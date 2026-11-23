@@ -3,7 +3,10 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/coreutils',
   name: 'coreutils',
-  revisions: { '9.10.0': 1 },
+  // Revision 1 mirrored the vendor build, which has no chcon, runcon or stdbuf.
+  // The catalog declares the first two, so it failed every install. Revision 2
+  // is refused as a mirror for that reason and builds this recipe.
+  revisions: { '9.10.0': 2 },
   revisionReasons: { '9.10.0': 'elf-loader-paths' },
   programs: [
     '[',

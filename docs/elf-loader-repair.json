@@ -1,8 +1,8 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN, repaired by elf-loader-paths revisions (scripts/elf-loader-revisions.ts, audited with scripts/audit-elf-rpaths.ts).",
   "summary": {
-    "verified": 29,
-    "pending": 29,
+    "verified": 28,
+    "pending": 30,
     "skipped": 1
   },
   "packages": [
@@ -29,12 +29,13 @@
     {
       "domain": "gnu.org/coreutils",
       "oldBuild": "9.10.0",
-      "revision": "9.10.0.1",
+      "revision": "9.10.0.2",
       "platforms": [
         "linux-x86-64"
       ],
       "batch": 1,
-      "status": "verified"
+      "status": "pending",
+      "note": "9.10.0.1 mirrored the vendor build, which lacks chcon, runcon and stdbuf; the catalog declares the first two, so it failed every install. 9.10.0.2 is refused as a mirror and built from the recipe."
     },
     {
       "domain": "gnu.org/grep",
