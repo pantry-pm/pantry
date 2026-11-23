@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/fribidi',
   name: 'fribidi',
+  revisions: { '1.0.16': 1 },
+  revisionReasons: { '1.0.16': 'elf-loader-paths' },
   programs: [
     'fribidi',
   ],

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnupg.org/pinentry',
   name: 'pinentry',
+  revisions: { '1.3.2': 1 },
+  revisionReasons: { '1.3.2': 'elf-loader-paths' },
   description: 'Passphrase entry dialog utilizing the Assuan protocol',
   homepage: 'https://www.gnupg.org/related_software/pinentry/',
   github: 'https://github.com/gpg/pinentry',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'pcsclite.apdu.fr',
   name: 'pcsc-lite',
+  revisions: { '2.4.1': 1 },
+  revisionReasons: { '2.4.1': 'elf-loader-paths' },
   programs: ['pcscd'],
   distributable: {
     url: 'https://pcsclite.apdu.fr/files/pcsc-lite-{{version}}.tar.xz',

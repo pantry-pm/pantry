@@ -58,6 +58,7 @@ export const xiphorgvorbisPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.3.7.1',
     '1.3.7',
   ] as const,
   aliases: [] as const,

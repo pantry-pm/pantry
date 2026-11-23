@@ -92,6 +92,7 @@ export const elfutilsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.194.0.1',
     '0.194.0',
     '0.193.0',
     '0.192.0',

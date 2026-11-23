@@ -83,6 +83,7 @@ export const jpegorgjpegxlPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.11.1.1',
     '0.11.1',
     '0.11.0',
     '0.10.4',

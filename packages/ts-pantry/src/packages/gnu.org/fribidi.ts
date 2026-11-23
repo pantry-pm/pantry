@@ -59,6 +59,7 @@ export const gnuorgfribidiPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.16.1',
     '1.0.16',
     '1.0.15',
     '1.0.14',

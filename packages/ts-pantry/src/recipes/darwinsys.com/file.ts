@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'darwinsys.com/file',
   name: 'file',
+  revisions: { '5.47.0': 1 },
+  revisionReasons: { '5.47.0': 'elf-loader-paths' },
   propsDir: '../props/darwinsys.com/file',
   programs: [
     'file',

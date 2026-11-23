@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnome.org/gdk-pixbuf',
   name: 'gdk-pixbuf',
+  revisions: { '2.44.5': 1 },
+  revisionReasons: { '2.44.5': 'elf-loader-paths' },
   programs: [
     'gdk-pixbuf-csource',
     'gdk-pixbuf-pixdata',

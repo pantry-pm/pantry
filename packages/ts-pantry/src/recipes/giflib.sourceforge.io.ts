@@ -4,6 +4,8 @@ export const recipe: Recipe = {
   propsDir: 'props/giflib.sourceforge.io',
   domain: 'giflib.sourceforge.io',
   name: 'gif',
+  revisions: { '5.2.2': 1 },
+  revisionReasons: { '5.2.2': 'elf-loader-paths' },
   description: 'Library and utilities for processing GIFs',
   homepage: 'https://giflib.sourceforge.net/',
   programs: ['gif2rgb', 'gifbuild', 'gifclrmp', 'giffix', 'giftext', 'giftool'],

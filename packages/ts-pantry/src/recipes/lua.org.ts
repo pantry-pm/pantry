@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'lua.org',
   name: 'lua',
+  revisions: { '5.5.0': 1 },
+  revisionReasons: { '5.5.0': 'elf-loader-paths' },
   description: 'Powerful, lightweight programming language',
   homepage: 'https://www.lua.org/',
   programs: ['lua', 'luac'],

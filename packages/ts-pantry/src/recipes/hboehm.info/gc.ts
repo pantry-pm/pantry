@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'hboehm.info/gc',
   name: 'gc',
+  revisions: { '8.2.12': 1 },
+  revisionReasons: { '8.2.12': 'elf-loader-paths' },
   programs: [],
   buildDependencies: {
     'freedesktop.org/pkg-config': '*',

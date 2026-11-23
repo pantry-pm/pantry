@@ -85,6 +85,7 @@ export const openldaporgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.6.13.1',
     '2.6.13',
     '2.6.12',
     '2.6.10',

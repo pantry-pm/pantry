@@ -73,6 +73,7 @@ export const gnomeorglibsecretPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.21.7.1',
     '0.21.7',
     '0.21.6',
     '0.21.5',

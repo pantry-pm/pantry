@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnome.org/libsecret',
   name: 'libsecret',
+  revisions: { '0.21.7': 1 },
+  revisionReasons: { '0.21.7': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'gnome.org/glib': '*',

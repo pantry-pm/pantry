@@ -68,6 +68,7 @@ export const luaorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.5.0.1',
     '5.5.0',
     '5.4.8',
     '5.4.7',

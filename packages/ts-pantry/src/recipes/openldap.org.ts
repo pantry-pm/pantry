@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'openldap.org',
   name: 'ldap',
+  revisions: { '2.6.13': 1 },
+  revisionReasons: { '2.6.13': 'elf-loader-paths' },
   description: 'Open source suite of directory software',
   homepage: 'https://www.openldap.org/software/',
   programs: ['ldapcompare', 'ldapdelete', 'ldapexop', 'ldapmodify', 'ldapmodrdn', 'ldappasswd', 'ldapsearch', 'ldapurl', 'ldapvc', 'ldapwhoami'],

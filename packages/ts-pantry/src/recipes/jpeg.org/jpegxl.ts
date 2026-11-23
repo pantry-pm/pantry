@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'jpeg.org/jpegxl',
   name: 'jpegxl',
+  revisions: { '0.11.1': 1 },
+  revisionReasons: { '0.11.1': 'elf-loader-paths' },
   programs: [
     'cjxl',
     'djxl',

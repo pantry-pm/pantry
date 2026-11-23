@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnupg.org/gpgme',
   name: 'gpgme',
+  revisions: { '2.0.1': 1 },
+  revisionReasons: { '2.0.1': 'elf-loader-paths' },
   programs: [
     'gpgme-config',
     'gpgme-json',

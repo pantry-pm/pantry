@@ -52,6 +52,7 @@ export const hboehminfogcPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.2.12.1',
     '8.2.12',
     '8.2.10',
     '8.2.8',

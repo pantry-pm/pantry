@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'rust-lang.org/cargo',
   name: 'cargo',
+  revisions: { '0.95.0': 1 },
+  revisionReasons: { '0.95.0': 'elf-loader-paths' },
   programs: [
     'cargo',
   ],

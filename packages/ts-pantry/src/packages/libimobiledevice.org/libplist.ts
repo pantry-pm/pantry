@@ -60,6 +60,7 @@ export const libimobiledeviceorglibplistPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.7.0.1',
     '2.7.0',
     '2.6.0',
     '2.5.0',

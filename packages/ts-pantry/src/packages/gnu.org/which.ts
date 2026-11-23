@@ -58,6 +58,7 @@ export const gnuorgwhichPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.23.0.1',
     '2.23.0',
     '2.22.0',
     '2.21.0',

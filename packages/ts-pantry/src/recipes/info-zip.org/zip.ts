@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'info-zip.org/zip',
   name: 'zip',
+  revisions: { '3.0.0': 1 },
+  revisionReasons: { '3.0.0': 'elf-loader-paths' },
   programs: [
     'zip',
     'zipcloak',

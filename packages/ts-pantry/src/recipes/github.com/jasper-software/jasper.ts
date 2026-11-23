@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/jasper-software/jasper',
   name: 'jasper',
+  revisions: { '4.2.9': 1 },
+  revisionReasons: { '4.2.9': 'elf-loader-paths' },
   programs: [
     'jasper',
   ],

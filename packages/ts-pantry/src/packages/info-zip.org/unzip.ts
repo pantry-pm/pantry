@@ -69,6 +69,7 @@ export const unzipPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '6.0.0.1',
     '6.0.0',
   ] as const,
   /**

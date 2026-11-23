@@ -138,6 +138,7 @@ export const mozillaorgnssPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.92.0.1',
     '3.92.0',
   ] as const,
   aliases: [] as const,

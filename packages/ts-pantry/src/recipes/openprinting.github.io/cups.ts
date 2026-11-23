@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'openprinting.github.io/cups',
   name: 'cups',
+  revisions: { '2.4.16': 1 },
+  revisionReasons: { '2.4.16': 'elf-loader-paths' },
   programs: [
     'cups-config',
     'ippeveprinter',

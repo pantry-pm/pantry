@@ -82,6 +82,7 @@ export const rustlangorgcargoPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.95.0.1',
     '0.95.0',
     '0.94.0',
     '0.93.0',

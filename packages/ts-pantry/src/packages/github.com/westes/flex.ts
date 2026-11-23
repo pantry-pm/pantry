@@ -68,6 +68,7 @@ export const flexPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.6.4.1',
     '2.6.4',
   ] as const,
   aliases: [] as const,

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'info-zip.org/unzip',
   name: 'unzip',
+  revisions: { '6.0.0': 1 },
+  revisionReasons: { '6.0.0': 'elf-loader-paths' },
   programs: [
     'funzip',
     'unzip',

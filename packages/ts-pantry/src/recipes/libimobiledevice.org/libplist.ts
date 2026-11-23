@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'libimobiledevice.org/libplist',
   name: 'libplist',
+  revisions: { '2.7.0': 1 },
+  revisionReasons: { '2.7.0': 'elf-loader-paths' },
   programs: [
     'plistutil',
   ],

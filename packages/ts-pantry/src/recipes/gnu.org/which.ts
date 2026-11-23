@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/which',
   name: 'which',
+  revisions: { '2.23.0': 1 },
+  revisionReasons: { '2.23.0': 'elf-loader-paths' },
   programs: [
     'which',
   ],

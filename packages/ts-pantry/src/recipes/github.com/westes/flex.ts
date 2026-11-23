@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/westes/flex',
   name: 'flex',
+  revisions: { '2.6.4': 1 },
+  revisionReasons: { '2.6.4': 'elf-loader-paths' },
   programs: [
     'flex',
     'flex++',

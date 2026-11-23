@@ -81,6 +81,7 @@ export const gnomeorggdkpixbufPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.44.5.1',
     '2.44.5',
     '2.44.4',
     '2.44.3',

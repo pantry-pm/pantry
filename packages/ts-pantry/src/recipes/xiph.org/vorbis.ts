@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'xiph.org/vorbis',
   name: 'vorbis',
+  revisions: { '1.3.7': 1 },
+  revisionReasons: { '1.3.7': 'elf-loader-paths' },
   programs: [],
   dependencies: {
     'xiph.org/ogg': '^1',

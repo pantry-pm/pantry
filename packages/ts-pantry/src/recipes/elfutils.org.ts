@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'elfutils.org',
   name: 'elfutils',
+  revisions: { '0.194.0': 1 },
+  revisionReasons: { '0.194.0': 'elf-loader-paths' },
   programs: ['eu-addr2line', 'eu-ar', 'eu-elfclassify', 'eu-elfcmp', 'eu-elfcompress', 'eu-elflint', 'eu-findtextrel', 'eu-nm', 'eu-objdump', 'eu-ranlib', 'eu-readelf', 'eu-size', 'eu-stack', 'eu-strings', 'eu-strip', 'eu-unstrip'],
   platforms: ['linux'],
   distributable: {

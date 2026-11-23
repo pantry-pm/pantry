@@ -74,6 +74,7 @@ export const darwinsyscomfilePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.47.0.1',
     '5.47.0',
     '5.46.0',
     '5.45.0',

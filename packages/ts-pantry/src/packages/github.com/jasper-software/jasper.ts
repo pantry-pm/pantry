@@ -74,6 +74,7 @@ export const jasperPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.2.9.1',
     '4.2.9',
     '4.2.8',
     '4.2.7',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'php.net',
   name: 'php',
+  revisions: { '8.5.10': 1 },
+  revisionReasons: { '8.5.10': 'elf-loader-paths' },
   description: 'General-purpose scripting language',
   homepage: 'https://www.php.net/',
   github: 'https://github.com/php/php-src',

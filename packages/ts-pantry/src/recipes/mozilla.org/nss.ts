@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'mozilla.org/nss',
   name: 'nss',
+  revisions: { '3.92.0': 1 },
+  revisionReasons: { '3.92.0': 'elf-loader-paths' },
   programs: [
     'addbuiltin',
     'certutil',

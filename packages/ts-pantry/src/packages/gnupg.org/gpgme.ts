@@ -70,6 +70,7 @@ export const gnupgorggpgmePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.0.1.1',
     '2.0.1',
     '2.0.0',
     '1.24.3',
