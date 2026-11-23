@@ -175,7 +175,19 @@ function isDetachedDebugInfo(file: number, header: DataView, bits: number, littl
 }
 
 export function applyElfRpath(filePath: string, rpath: string, patchelf = 'patchelf'): void {
-  execFileSync(patchelf, ['--force-rpath', '--set-rpath', rpath, filePath], { stdio: 'pipe' })
+  // Vendor archives can ship read-only binaries (pkgx's oracle.com/berkeley-db
+  // installs bin/* as 0555), and patchelf rewrites in place: "open: Permission
+  // denied". Lend the owner write permission for the rewrite, then restore it.
+  // A missing file is patchelf's to report.
+  const mode = existsSync(filePath) ? statSync(filePath).mode & 0o7777 : 0o644
+  const lent = (mode & 0o200) === 0
+  if (lent) chmodSync(filePath, mode | 0o200)
+  try {
+    execFileSync(patchelf, ['--force-rpath', '--set-rpath', rpath, filePath], { stdio: 'pipe' })
+  }
+  finally {
+    if (lent) chmodSync(filePath, mode)
+  }
 }
 
 /**

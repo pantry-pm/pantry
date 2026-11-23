@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { applyElfRpath, fixElfRpaths } from '../scripts/fix-up'
@@ -92,6 +92,27 @@ describe('ELF RPATH fix-up', () => {
     expect(readFileSync(`${plugin}.rpath`, 'utf8')).toBe('$ORIGIN/..:$ORIGIN/../../lib64:$ORIGIN/../../../perl.org/v5/lib:$ORIGIN/../../../perl.org/v5/lib64:$ORIGIN/../../../perl.org/v5')
     fixElfRpaths(dir, tool)
     expect(readFileSync(`${executable}.rpath`, 'utf8')).toBe('$ORIGIN/../lib:$ORIGIN/../lib64:$ORIGIN/../../../perl.org/v5/lib:$ORIGIN/../../../perl.org/v5/lib64:$ORIGIN/../../../perl.org/v5')
+  })
+
+  test('rewrites a read-only vendor binary and leaves its mode as it was', () => {
+    const { dir } = fixture()
+    // patchelf rewrites in place: a 0555 file fails with "open: Permission denied".
+    const tool = join(dir, 'strict-patchelf')
+    writeFileSync(tool, `#!/bin/sh
+if [ "$1" = "--print-rpath" ]; then
+  if [ -f "$2.rpath" ]; then cat "$2.rpath"; else printf '%s' '/../lib'; fi
+else
+  [ -w "$4" ] || { echo 'patchelf: open: Permission denied' >&2; exit 1; }
+  printf '%s' "$3" > "$4.rpath"
+fi
+`)
+    chmodSync(tool, 0o755)
+    const binary = join(dir, 'bin', 'db_checkpoint')
+    dynamicElf(binary)
+    chmodSync(binary, 0o555)
+    fixElfRpaths(dir, tool)
+    expect(readFileSync(`${binary}.rpath`, 'utf8')).toBe('$ORIGIN/../lib:$ORIGIN/../lib64')
+    expect(statSync(binary).mode & 0o777).toBe(0o555)
   })
 
   test('recognizes both ELF widths and byte orders without executing foreign binaries', () => {
