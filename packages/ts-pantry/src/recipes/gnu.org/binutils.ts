@@ -6,6 +6,10 @@ export const recipe: Recipe = {
   revisions: { '2.46.0': 1 },
   revisionReasons: { '2.46.0': 'elf-loader-paths' },
   programs: [],
+  // Built --with-zstd since 2.39: as, ld, objdump and the rest link libzstd.so.1.
+  dependencies: {
+    'facebook.com/zstd': '^1.5.7.2',
+  },
   buildDependencies: {
     'gnu.org/bison': '*',
     'gnu.org/texinfo': '*',
